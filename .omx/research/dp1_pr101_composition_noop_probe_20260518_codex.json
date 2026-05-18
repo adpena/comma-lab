@@ -1,0 +1,72 @@
+{
+  "archive_components": {
+    "archive_sha256": "507d2a000ecf5a220e9b1ab765f75e39015cfb7b2af00606be3cb0758b8eb855",
+    "archive_size_bytes": 204344,
+    "base_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "base_archive_size_bytes": 178517,
+    "base_substrate": "pr101",
+    "base_tag_hex": "50523031",
+    "dp1_prefix_sha256": "b11bab015fa5c0c60c4587713413511fca18e194cb3c1c36f06db3afae4ee0e9",
+    "dp1_prefix_size_bytes": 25814,
+    "header_size_bytes": 13,
+    "schema_version": 1
+  },
+  "archive_manifest_path": "experiments/results/dp1_plus_fec6_composition_20260517/archive_manifest.json",
+  "archive_path": "experiments/results/dp1_plus_fec6_composition_20260517/archive.zip",
+  "blockers": [
+    "no_paired_contest_cuda_cpu_eval",
+    "frame_axis_effect_deferred_to_l2",
+    "not_score_authority"
+  ],
+  "build_manifest_path": "experiments/results/dp1_plus_fec6_composition_20260517/build_manifest.json",
+  "created_utc": "2026-05-18T06:00:33Z",
+  "evidence_axis": "[byte-closed local structural proof]",
+  "frame_axis_effect_status": "deferred_l2_strength_zero",
+  "inflate_l2_guard": {
+    "exists": true,
+    "has_l2_runtime_guard": true,
+    "has_strength_env": true,
+    "has_strength_gt_zero_guard": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/dp1_plus_fec6_composition_20260517/inflate.py"
+  },
+  "lane_id": "lane_dp1_plus_fec6_dual_stacking_build_20260517",
+  "operational_mechanism_status": "OPERATIONAL_DEFERRED_TO_L2",
+  "packet_dir": "experiments/results/dp1_plus_fec6_composition_20260517",
+  "paradigm_claim_allowed": false,
+  "probe_id": "dp1_pr101_composition_noop_detector",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_axis_delta_formula": "25 * (composed_archive_bytes - base_archive_bytes) / 37545489",
+  "rate_axis_delta_if_frames_identical": 0.017197139182,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "research_only": true,
+  "result_review": {
+    "classification": "l1_rate_axis_cost_and_noop_guard_verified",
+    "reactivation_criteria": [
+      "paired same-runtime fec6-vs-composed full-frame inflate parity",
+      "L2 DP1 prior application implementation for strength > 0.0",
+      "claimed CPU and CUDA exact-eval artifacts for the byte-closed packet"
+    ],
+    "score_authority": "none"
+  },
+  "schema": "dp1_pr101_composition_noop_detector_v1",
+  "score_claim": false,
+  "source_files": {
+    "dp1_source": {
+      "exists": true,
+      "path": "experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/0.bin",
+      "sha256": "b11bab015fa5c0c60c4587713413511fca18e194cb3c1c36f06db3afae4ee0e9",
+      "size_bytes": 25814
+    },
+    "fec6_source": {
+      "exists": true,
+      "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+      "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "size_bytes": 178517
+    }
+  },
+  "structural_blockers": [],
+  "structural_pass": true,
+  "verdict": "l1_rate_only_noop_verified"
+}

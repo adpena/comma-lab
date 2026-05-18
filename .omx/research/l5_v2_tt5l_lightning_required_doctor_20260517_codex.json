@@ -1,0 +1,94 @@
+{
+  "checks": {
+    "argparse_surface": {
+      "commands": [
+        "__main__",
+        "component-response",
+        "component-sensitivity",
+        "doctor",
+        "exact-eval",
+        "harvest-component-response-local",
+        "harvest-component-response-ssh",
+        "harvest-component-sensitivity-local",
+        "harvest-component-sensitivity-ssh",
+        "harvest-local",
+        "harvest-ssh",
+        "list",
+        "list-machines",
+        "refresh-status",
+        "stop",
+        "validate-artifacts",
+        "validate-component-response-artifacts",
+        "validate-component-sensitivity-artifacts"
+      ],
+      "ok": true,
+      "remote_related_options": [
+        "--allow-skip-remote-preflight-reason",
+        "--no-remote-supply-chain",
+        "--remote-artifact-dir",
+        "--remote-preflight-ssh-bin",
+        "--remote-preflight-ssh-connect-timeout",
+        "--remote-preflight-ssh-target",
+        "--remote-supply-chain",
+        "--require-remote-supply-chain",
+        "--require-ssh",
+        "--ssh-bin",
+        "--ssh-connect-timeout",
+        "--ssh-target"
+      ]
+    },
+    "local_supply_chain": {
+      "ok": true,
+      "payload": {
+        "hostname": "Primary",
+        "package_versions": {
+          "lightning": null,
+          "lightning-sdk": "2026.4.23",
+          "lightning_sdk": "2026.4.23",
+          "pytorch-lightning": null
+        },
+        "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+        "recorded_at_utc": "2026-05-18T06:11:55Z",
+        "repo_root": "/Users/adpena/Projects/pact",
+        "schema_version": 1,
+        "status": "OK",
+        "strict": true,
+        "tool": "scripts/scan_lightning_supply_chain.py",
+        "violation_count": 0,
+        "violations": []
+      },
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"hostname\": \"Primary\",\n  \"package_versions\": {\n    \"lightning\": null,\n    \"lightning-sdk\": \"2026.4.23\",\n    \"lightning_sdk\": \"2026.4.23\",\n    \"pytorch-lightning\": null\n  },\n  \"python\": \"/Users/adpena/Projects/pact/.venv/bin/python\",\n  \"recorded_at_utc\": \"2026-05-18T06:11:55Z\",\n  \"repo_root\": \"/Users/adpena/Projects/pact\",\n  \"schema_version\": 1,\n  \"status\": \"OK\",\n  \"strict\": true,\n  \"tool\": \"scripts/scan_lightning_supply_chain.py\",\n  \"violation_count\": 0,\n  \"violations\": []\n}\n"
+    },
+    "machine_inventory": {
+      "error": "--require-machine-inventory set but --teamspace was not provided or inventory disabled",
+      "ok": false
+    },
+    "remote_supply_chain": {
+      "error": "--require-remote-supply-chain set but remote scan was not run",
+      "ok": false
+    },
+    "ssh_auth": {
+      "error": "--require-ssh set but --ssh-target/SSH alias was not provided",
+      "ok": false
+    }
+  },
+  "failed_checks": [
+    "ssh_auth",
+    "remote_supply_chain",
+    "machine_inventory"
+  ],
+  "package_versions": {
+    "lightning": null,
+    "lightning-sdk": "2026.4.23",
+    "lightning_sdk": "2026.4.23",
+    "pytorch-lightning": null
+  },
+  "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-18T06:11:53Z",
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema_version": 1,
+  "status": "FAIL",
+  "tool": "scripts/launch_lightning_batch_job.py doctor"
+}

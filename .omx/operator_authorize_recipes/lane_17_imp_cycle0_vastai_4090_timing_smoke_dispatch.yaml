@@ -1,0 +1,152 @@
+schema_version: 1
+name: lane_17_imp_cycle0_vastai_4090_timing_smoke_dispatch
+lane_id: lane_17_imp_10cycle
+summary: Lane 17 IMP cycle-0 timing-smoke staging recipe. This keeps the Frankle/LTH resurrection candidate visible in ASYMPTOTIC PURSUIT queues without authorizing spend. It is research_only and dispatch_enabled=false until the 2026-05-17 symposium binding revisions are implemented.
+
+platform: vastai
+gpu: "4090"
+min_vram_gb: 24
+min_smoke_gpu: "4090"
+video_input_strategy: tarball_anchor_copy
+pyav_decode_strategy: remote_nvdec_probe_then_training
+target_modes:
+  - research_substrate
+
+research_only: true
+smoke_only: true
+dispatch_enabled: false
+trainer_contract: legacy_remote_lane_script
+trainer_contract_source: scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh
+
+dispatch_blockers:
+  - lane_17_imp_requires_catalog308_cycle0_empirical_regression_ratio_disambiguation
+  - lane_17_imp_requires_catalog123_score_gradient_saliency_sidecar_for_authority
+  - lane_17_imp_requires_train_distill_swap_and_pcc3_wall_clock_evidence_refresh
+  - lane_17_imp_requires_score_aware_distillation_objective_confirmation
+  - lane_17_imp_requires_quantizr_composition_plan_before_frontier_score_claim
+  - lane_17_imp_requires_operator_budget_lane_claim_and_vastai_instance_before_spend
+
+cost_band:
+  epochs: 100
+  predicted_cost_usd: 2.0
+  hand_calibrated_fallback_p50_usd: 2.0
+  platform_key: vastai
+  gpu_key: "4090"
+  max_dph_usd: 0.50
+
+predicted_score_target: null
+predicted_band: [0.17705, 0.18705]
+predicted_band_kind: predicted_score_band
+predicted_band_axis: contest-CPU
+predicted_band_validation_status: research_wave_prior_prebuild
+predicted_band_reactivation_criteria: "Research-wave prediction only. The Catalog #308 magnitude-criteria disambiguator is built at .omx/research/lane17_imp_magnitude_criteria_disambiguator_20260518_codex.json, but Lane 17 IMP still needs cycle-0 empirical regression-ratio disambiguation, Catalog #123 score-gradient saliency sidecar evidence, train_distill/PCC3 wall-clock refresh, and a post-smoke Quantizr composition plan before any score, rank, promotion, or paid dispatch authority."
+predicted_delta: "[-0.015, -0.005] vs current 0.19205 [contest-CPU] frontier; research-wave prior only"
+predicted_delta_basis: ".omx/research/comprehensive_research_wave_20260518.md TOP-5 row #5 + council_per_substrate_symposium_lane_17_imp_20260517 posterior"
+provenance_kind: research_wave_prediction_not_empirical
+literature_anchor: |
+  Frankle-Carbin 2019 Lottery Ticket Hypothesis; Renda-Frankle-Carbin 2020
+  linear-mode connectivity; 2024-2026 pruning/distillation updates cited by
+  the comprehensive research wave. These are hypothesis anchors, not score
+  evidence for the contest renderer.
+
+source_supports: |
+  Lane registry `lane_17_imp_10cycle` is L2 with real archive byte-savings
+  evidence (`reports/lane_17_imp_real_archive.json`) and deploy runbook
+  evidence (`scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh`).
+  The 2026-05-17 per-substrate symposium withdrew the old stub-loop kill but
+  returned PROCEED_WITH_REVISIONS, so the candidate must stay visible and
+  fail-closed.
+
+catalog308_disambiguator:
+  tool: tools/probe_imp_magnitude_criteria_disambiguator.py
+  artifact: .omx/research/lane17_imp_magnitude_criteria_disambiguator_20260518_codex.json
+  evidence_axis: "[local-IMP-mask-byte-proxy advisory]"
+  verdict: catalog308_disambiguator_landed_pending_cycle0_empirical_runs
+  score_claim: false
+  promotion_eligible: false
+  ready_for_paid_dispatch: false
+  observed_criteria:
+    - l1_per_tensor_canonical_frankle
+    - global_l1_canonical_frankle
+    - hessian_trace_per_tensor_obd_proxy
+    - score_gradient_saliency_catalog123
+  byte_proxy_note: >
+    No-spend local anchor measurement only: per-tensor L1 measured 154552 IMPS
+    bytes at 89.3% sparsity vs global L1 177466 bytes on the same Lane G v3
+    FP4A anchor. The Catalog #123 score-gradient branch is deliberately not
+    measured until a real score-gradient saliency sidecar is supplied; the
+    probe refuses a global-L1 surrogate for that branch. This is not scorer
+    parity, not cycle-0 recovery, and not dispatch authority.
+
+paper_claim_scope: |
+  No score claim. No promotion claim. No rank/kill authority. This recipe is
+  a queue/actuator visibility surface for a future $1-2 timing smoke only
+  after operator approval and lane-claim hygiene.
+
+risk: |
+  The old 1.98 [contest-CUDA] cycle-0 result was a stub-loop artifact, but
+  standalone Lane-G-v3 recovery is not frontier authority. The frontier-EV
+  path is IMP plus Quantizr/FP4 composition after a legitimate cycle-0 smoke.
+
+envelope_status: "FITS $1-2 timing-smoke envelope but dispatch is blocked pending symposium revisions"
+remote_driver: scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh
+timeout_hours: 1.0
+
+required_input_files_trainer: experiments/train_imp_cycle.py
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+    required_input_file: true
+  - flag: --anchor-renderer
+    default_path: experiments/results/lane_g_v3_landed/iter_0/renderer.bin
+    required_input_file: true
+
+vastai:
+  label: lane_17_imp_cycle0_timing_smoke
+  max_dph: 0.50
+  min_disk_gb: 60
+  launcher: scripts/launch_lane_on_vastai.py
+  phase1_dry_run_only_until_dispatch_enabled: true
+
+env_overrides:
+  IMP_QUICK_VARIANT: "1"
+  IMP_AUTH_EVAL_CYCLES: "0"
+  EPOCHS_PER_CYCLE_DISTILL: "100"
+  IMP_BASELINE_SCORE: "1.05"
+
+dependencies:
+  - scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh
+  - experiments/train_imp_cycle.py
+  - experiments/train_distill.py
+  - src/tac/iterative_magnitude_pruning.py
+  - src/tac/imps_renderer_archive.py
+  - tools/probe_imp_magnitude_criteria_disambiguator.py
+  - reports/lane_17_imp_real_archive.json
+  - .omx/research/lane17_imp_magnitude_criteria_disambiguator_20260518_codex.json
+  - upstream/videos/0.mkv
+
+sentinel_files:
+  - scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh
+  - experiments/train_imp_cycle.py
+  - experiments/train_distill.py
+  - src/tac/iterative_magnitude_pruning.py
+  - src/tac/imps_renderer_archive.py
+  - tools/probe_imp_magnitude_criteria_disambiguator.py
+
+notes: |
+  Recommended no-spend dry-run visibility check:
+    .venv/bin/python scripts/launch_lane_on_vastai.py \
+      --lane-script scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh \
+      --label lane_17_imp_cycle0_timing_smoke \
+      --predicted-band 0.17705 0.18705 \
+      --estimated-cost 2.0 \
+      --max-dph 0.50 \
+      --min-disk-gb 60 \
+      --dry-run
+
+  Paid dispatch remains blocked. Before spend: run the Catalog #308 cycle-0
+  empirical regression-ratio disambiguation using the landed criteria probe,
+  supply/compute Catalog #123 score-gradient saliency for the score-aware
+  branch, refresh train_distill/PCC3 evidence, claim the lane with
+  tools/claim_lane_dispatch.py, and preserve terminal claim plus Vast tracker
+  evidence.

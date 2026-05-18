@@ -1,0 +1,598 @@
+{
+  "anchor": {
+    "bytes": 296776,
+    "magic": "ASYM",
+    "path": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+    "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+  },
+  "blockers": [
+    "not_score_authority",
+    "not_promotion_authority",
+    "requires_cycle0_empirical_regression_ratio_before_dispatch",
+    "requires_train_distill_swap_and_pcc3_wall_clock_evidence_refresh",
+    "requires_quantizr_composition_plan_before_frontier_score_claim",
+    "requires_catalog123_score_gradient_saliency_sidecar"
+  ],
+  "catalog_308": {
+    "required_alternative_methodologies": [
+      "l1_per_tensor_canonical_frankle",
+      "hessian_trace_per_tensor_obd",
+      "score_gradient_saliency_per_catalog_123"
+    ],
+    "score_gradient_helper": "tac.score_gradient_param_saliency.compute_score_gradient_param_saliency",
+    "score_gradient_saliency_metadata": {
+      "blocker": "score_gradient_saliency_json_not_supplied",
+      "loaded": false,
+      "path": null
+    },
+    "three_magnitude_criteria_callable": true
+  },
+  "created_utc": "2026-05-18T08:00:32Z",
+  "criteria": [
+    {
+      "archive_measurement": {
+        "delta_vs_anchor_bytes": -142224,
+        "imps_archive_bytes": 154552,
+        "imps_archive_sha256": "82ff3817cdc19e05e915b9e4c35eacd224ec277ef02b92f5df8eeb98cbea2bfd",
+        "savings_vs_anchor_pct": 47.923012642531745
+      },
+      "criterion_id": "l1_per_tensor_canonical_frankle",
+      "label": "L1 per-tensor canonical Frankle 2019",
+      "mask_stats": {
+        "kept": 30118,
+        "mask_sha256": "daa80013aed6f0bee001ba64b872ce85e63e6e8c3be460ce0f11d840776af459",
+        "pruned": 251830,
+        "sparsity": 0.893178884049541,
+        "tensor_count": 20,
+        "tensors": [
+          {
+            "kept": 986,
+            "name": "motion.bottleneck.conv1.weight",
+            "pruned": 8230,
+            "sparsity": 0.8930121527777778,
+            "value_count": 9216
+          },
+          {
+            "kept": 984,
+            "name": "motion.bottleneck.conv2.weight",
+            "pruned": 8232,
+            "sparsity": 0.8932291666666666,
+            "value_count": 9216
+          },
+          {
+            "kept": 986,
+            "name": "motion.down.0.weight",
+            "pruned": 8230,
+            "sparsity": 0.8930121527777778,
+            "value_count": 9216
+          },
+          {
+            "kept": 218,
+            "name": "motion.fuse.weight",
+            "pruned": 1830,
+            "sparsity": 0.8935546875,
+            "value_count": 2048
+          },
+          {
+            "kept": 182,
+            "name": "motion.head.weight",
+            "pruned": 1546,
+            "sparsity": 0.8946759259259259,
+            "value_count": 1728
+          },
+          {
+            "kept": 615,
+            "name": "motion.stem.0.weight",
+            "pruned": 5145,
+            "sparsity": 0.8932291666666666,
+            "value_count": 5760
+          },
+          {
+            "kept": 986,
+            "name": "motion.up_conv.weight",
+            "pruned": 8230,
+            "sparsity": 0.8930121527777778,
+            "value_count": 9216
+          },
+          {
+            "kept": 3469,
+            "name": "renderer.bottleneck.conv1.weight",
+            "pruned": 28931,
+            "sparsity": 0.8929320987654321,
+            "value_count": 32400
+          },
+          {
+            "kept": 3462,
+            "name": "renderer.bottleneck.conv2.weight",
+            "pruned": 28938,
+            "sparsity": 0.8931481481481481,
+            "value_count": 32400
+          },
+          {
+            "kept": 2080,
+            "name": "renderer.down_conv.weight",
+            "pruned": 17360,
+            "sparsity": 0.8930041152263375,
+            "value_count": 19440
+          },
+          {
+            "kept": 3469,
+            "name": "renderer.down_res.conv1.weight",
+            "pruned": 28931,
+            "sparsity": 0.8929320987654321,
+            "value_count": 32400
+          },
+          {
+            "kept": 3457,
+            "name": "renderer.down_res.conv2.weight",
+            "pruned": 28943,
+            "sparsity": 0.8933024691358025,
+            "value_count": 32400
+          },
+          {
+            "kept": 277,
+            "name": "renderer.fuse_conv.weight",
+            "pruned": 2315,
+            "sparsity": 0.8931327160493827,
+            "value_count": 2592
+          },
+          {
+            "kept": 10,
+            "name": "renderer.head.weight",
+            "pruned": 98,
+            "sparsity": 0.9074074074074074,
+            "value_count": 108
+          },
+          {
+            "kept": 276,
+            "name": "renderer.stem_conv.weight",
+            "pruned": 2316,
+            "sparsity": 0.8935185185185185,
+            "value_count": 2592
+          },
+          {
+            "kept": 1243,
+            "name": "renderer.stem_res.conv1.weight",
+            "pruned": 10421,
+            "sparsity": 0.8934327846364883,
+            "value_count": 11664
+          },
+          {
+            "kept": 1248,
+            "name": "renderer.stem_res.conv2.weight",
+            "pruned": 10416,
+            "sparsity": 0.8930041152263375,
+            "value_count": 11664
+          },
+          {
+            "kept": 3685,
+            "name": "renderer.up_conv.weight",
+            "pruned": 30875,
+            "sparsity": 0.8933738425925926,
+            "value_count": 34560
+          },
+          {
+            "kept": 1244,
+            "name": "renderer.up_res.conv1.weight",
+            "pruned": 10420,
+            "sparsity": 0.8933470507544582,
+            "value_count": 11664
+          },
+          {
+            "kept": 1241,
+            "name": "renderer.up_res.conv2.weight",
+            "pruned": 10423,
+            "sparsity": 0.8936042524005487,
+            "value_count": 11664
+          }
+        ],
+        "top_tensor_pruned_share": 0.1226025493388397,
+        "value_count": 281948
+      },
+      "methodology": "per_tensor_lowest_abs_weight",
+      "pruning_scope": "per_tensor",
+      "saliency_source": "weight_magnitude_non_score_aware",
+      "sparsity_increment": 0.2,
+      "status": "ready_local_byte_mask_proxy",
+      "target_cycles": 10,
+      "target_sparsity_formula": "1 - (1 - 0.2)**10"
+    },
+    {
+      "archive_measurement": {
+        "delta_vs_anchor_bytes": -119310,
+        "imps_archive_bytes": 177466,
+        "imps_archive_sha256": "1b2eda28980a1daf35896081574970a37cc984856111648397e32efe14b26ac4",
+        "savings_vs_anchor_pct": 40.202037900638864
+      },
+      "criterion_id": "global_l1_canonical_frankle",
+      "label": "Global L1 magnitude control",
+      "mask_stats": {
+        "kept": 30246,
+        "mask_sha256": "4e1893bffbe9072f8700577c6b2a779b486694de5dd2356e5fd1b78ef11c8b53",
+        "pruned": 251702,
+        "sparsity": 0.8927248996268815,
+        "tensor_count": 20,
+        "tensors": [
+          {
+            "kept": 1105,
+            "name": "motion.bottleneck.conv1.weight",
+            "pruned": 8111,
+            "sparsity": 0.8800998263888888,
+            "value_count": 9216
+          },
+          {
+            "kept": 727,
+            "name": "motion.bottleneck.conv2.weight",
+            "pruned": 8489,
+            "sparsity": 0.9211154513888888,
+            "value_count": 9216
+          },
+          {
+            "kept": 847,
+            "name": "motion.down.0.weight",
+            "pruned": 8369,
+            "sparsity": 0.9080946180555556,
+            "value_count": 9216
+          },
+          {
+            "kept": 50,
+            "name": "motion.fuse.weight",
+            "pruned": 1998,
+            "sparsity": 0.9755859375,
+            "value_count": 2048
+          },
+          {
+            "kept": 342,
+            "name": "motion.head.weight",
+            "pruned": 1386,
+            "sparsity": 0.8020833333333334,
+            "value_count": 1728
+          },
+          {
+            "kept": 489,
+            "name": "motion.stem.0.weight",
+            "pruned": 5271,
+            "sparsity": 0.9151041666666667,
+            "value_count": 5760
+          },
+          {
+            "kept": 397,
+            "name": "motion.up_conv.weight",
+            "pruned": 8819,
+            "sparsity": 0.9569227430555556,
+            "value_count": 9216
+          },
+          {
+            "kept": 3695,
+            "name": "renderer.bottleneck.conv1.weight",
+            "pruned": 28705,
+            "sparsity": 0.8859567901234567,
+            "value_count": 32400
+          },
+          {
+            "kept": 4380,
+            "name": "renderer.bottleneck.conv2.weight",
+            "pruned": 28020,
+            "sparsity": 0.8648148148148148,
+            "value_count": 32400
+          },
+          {
+            "kept": 932,
+            "name": "renderer.down_conv.weight",
+            "pruned": 18508,
+            "sparsity": 0.9520576131687243,
+            "value_count": 19440
+          },
+          {
+            "kept": 4102,
+            "name": "renderer.down_res.conv1.weight",
+            "pruned": 28298,
+            "sparsity": 0.8733950617283951,
+            "value_count": 32400
+          },
+          {
+            "kept": 3288,
+            "name": "renderer.down_res.conv2.weight",
+            "pruned": 29112,
+            "sparsity": 0.8985185185185185,
+            "value_count": 32400
+          },
+          {
+            "kept": 980,
+            "name": "renderer.fuse_conv.weight",
+            "pruned": 1612,
+            "sparsity": 0.6219135802469136,
+            "value_count": 2592
+          },
+          {
+            "kept": 5,
+            "name": "renderer.head.weight",
+            "pruned": 103,
+            "sparsity": 0.9537037037037037,
+            "value_count": 108
+          },
+          {
+            "kept": 414,
+            "name": "renderer.stem_conv.weight",
+            "pruned": 2178,
+            "sparsity": 0.8402777777777778,
+            "value_count": 2592
+          },
+          {
+            "kept": 1170,
+            "name": "renderer.stem_res.conv1.weight",
+            "pruned": 10494,
+            "sparsity": 0.8996913580246914,
+            "value_count": 11664
+          },
+          {
+            "kept": 840,
+            "name": "renderer.stem_res.conv2.weight",
+            "pruned": 10824,
+            "sparsity": 0.9279835390946503,
+            "value_count": 11664
+          },
+          {
+            "kept": 2001,
+            "name": "renderer.up_conv.weight",
+            "pruned": 32559,
+            "sparsity": 0.9421006944444444,
+            "value_count": 34560
+          },
+          {
+            "kept": 1481,
+            "name": "renderer.up_res.conv1.weight",
+            "pruned": 10183,
+            "sparsity": 0.8730281207133059,
+            "value_count": 11664
+          },
+          {
+            "kept": 3001,
+            "name": "renderer.up_res.conv2.weight",
+            "pruned": 8663,
+            "sparsity": 0.7427126200274349,
+            "value_count": 11664
+          }
+        ],
+        "top_tensor_pruned_share": 0.12935534878546853,
+        "value_count": 281948
+      },
+      "methodology": "global_lowest_abs_weight",
+      "pruning_scope": "global",
+      "saliency_source": "weight_magnitude_non_score_aware",
+      "sparsity_increment": 0.2,
+      "status": "ready_local_byte_mask_proxy",
+      "target_cycles": 10,
+      "target_sparsity_formula": "1 - (1 - 0.2)**10"
+    },
+    {
+      "archive_measurement": {
+        "delta_vs_anchor_bytes": -114606,
+        "imps_archive_bytes": 182170,
+        "imps_archive_sha256": "46d23274e2af6b40a475039edf1297c2de09599a096553d2dd2d61997942f136",
+        "savings_vs_anchor_pct": 38.617004070410005
+      },
+      "criterion_id": "hessian_trace_per_tensor_obd_proxy",
+      "label": "Hessian-trace per-tensor OBD proxy",
+      "mask_stats": {
+        "kept": 30261,
+        "mask_sha256": "ee5ad397a5242a10406892b39bacd386f1a7e36c4269ec9de9cc55b6244db150",
+        "pruned": 251687,
+        "sparsity": 0.8926716983273512,
+        "tensor_count": 20,
+        "tensors": [
+          {
+            "kept": 1427,
+            "name": "motion.bottleneck.conv1.weight",
+            "pruned": 7789,
+            "sparsity": 0.8451605902777778,
+            "value_count": 9216
+          },
+          {
+            "kept": 937,
+            "name": "motion.bottleneck.conv2.weight",
+            "pruned": 8279,
+            "sparsity": 0.8983289930555556,
+            "value_count": 9216
+          },
+          {
+            "kept": 1143,
+            "name": "motion.down.0.weight",
+            "pruned": 8073,
+            "sparsity": 0.8759765625,
+            "value_count": 9216
+          },
+          {
+            "kept": 341,
+            "name": "motion.fuse.weight",
+            "pruned": 1707,
+            "sparsity": 0.83349609375,
+            "value_count": 2048
+          },
+          {
+            "kept": 381,
+            "name": "motion.head.weight",
+            "pruned": 1347,
+            "sparsity": 0.7795138888888888,
+            "value_count": 1728
+          },
+          {
+            "kept": 899,
+            "name": "motion.stem.0.weight",
+            "pruned": 4861,
+            "sparsity": 0.8439236111111111,
+            "value_count": 5760
+          },
+          {
+            "kept": 576,
+            "name": "motion.up_conv.weight",
+            "pruned": 8640,
+            "sparsity": 0.9375,
+            "value_count": 9216
+          },
+          {
+            "kept": 2910,
+            "name": "renderer.bottleneck.conv1.weight",
+            "pruned": 29490,
+            "sparsity": 0.9101851851851852,
+            "value_count": 32400
+          },
+          {
+            "kept": 3580,
+            "name": "renderer.bottleneck.conv2.weight",
+            "pruned": 28820,
+            "sparsity": 0.8895061728395062,
+            "value_count": 32400
+          },
+          {
+            "kept": 1148,
+            "name": "renderer.down_conv.weight",
+            "pruned": 18292,
+            "sparsity": 0.9409465020576132,
+            "value_count": 19440
+          },
+          {
+            "kept": 3309,
+            "name": "renderer.down_res.conv1.weight",
+            "pruned": 29091,
+            "sparsity": 0.8978703703703703,
+            "value_count": 32400
+          },
+          {
+            "kept": 2503,
+            "name": "renderer.down_res.conv2.weight",
+            "pruned": 29897,
+            "sparsity": 0.922746913580247,
+            "value_count": 32400
+          },
+          {
+            "kept": 1481,
+            "name": "renderer.fuse_conv.weight",
+            "pruned": 1111,
+            "sparsity": 0.42862654320987653,
+            "value_count": 2592
+          },
+          {
+            "kept": 33,
+            "name": "renderer.head.weight",
+            "pruned": 75,
+            "sparsity": 0.6944444444444444,
+            "value_count": 108
+          },
+          {
+            "kept": 982,
+            "name": "renderer.stem_conv.weight",
+            "pruned": 1610,
+            "sparsity": 0.621141975308642,
+            "value_count": 2592
+          },
+          {
+            "kept": 1330,
+            "name": "renderer.stem_res.conv1.weight",
+            "pruned": 10334,
+            "sparsity": 0.8859739368998628,
+            "value_count": 11664
+          },
+          {
+            "kept": 955,
+            "name": "renderer.stem_res.conv2.weight",
+            "pruned": 10709,
+            "sparsity": 0.9181241426611797,
+            "value_count": 11664
+          },
+          {
+            "kept": 1365,
+            "name": "renderer.up_conv.weight",
+            "pruned": 33195,
+            "sparsity": 0.9605034722222222,
+            "value_count": 34560
+          },
+          {
+            "kept": 1655,
+            "name": "renderer.up_res.conv1.weight",
+            "pruned": 10009,
+            "sparsity": 0.8581104252400549,
+            "value_count": 11664
+          },
+          {
+            "kept": 3306,
+            "name": "renderer.up_res.conv2.weight",
+            "pruned": 8358,
+            "sparsity": 0.7165637860082305,
+            "value_count": 11664
+          }
+        ],
+        "top_tensor_pruned_share": 0.13189000623790662,
+        "value_count": 281948
+      },
+      "methodology": "global_lowest_weight2_fan_in_curvature_proxy",
+      "pruning_scope": "global",
+      "saliency_source": "hessian_trace_proxy_without_score_loss",
+      "sparsity_increment": 0.2,
+      "status": "advisory_proxy_requires_score_loss_hessian_for_authority",
+      "target_cycles": 10,
+      "target_sparsity_formula": "1 - (1 - 0.2)**10"
+    },
+    {
+      "archive_measurement": null,
+      "criterion_id": "score_gradient_saliency_catalog123",
+      "label": "Score-gradient saliency per Catalog #123",
+      "mask_stats": null,
+      "measurement_blockers": [
+        "requires_catalog123_score_gradient_saliency_sidecar",
+        "no_global_l1_surrogate_emitted_for_score_gradient_branch"
+      ],
+      "methodology": "global_lowest_abs_weight_times_score_gradient_saliency",
+      "pruning_scope": "global",
+      "saliency_source": "score_gradient_param_saliency",
+      "sparsity_increment": 0.2,
+      "status": "blocked_missing_score_gradient_saliency_sidecar_for_authority",
+      "target_cycles": 10,
+      "target_sparsity_formula": "1 - (1 - 0.2)**10"
+    }
+  ],
+  "evidence_axis": "[local-IMP-mask-byte-proxy advisory]",
+  "lane_id": "lane_17_imp_10cycle",
+  "pairwise_mask_jaccard": [
+    {
+      "intersection_pruned": 246936,
+      "left": "l1_per_tensor_canonical_frankle",
+      "pruned_set_jaccard": 0.9623532712902774,
+      "right": "global_l1_canonical_frankle",
+      "union_pruned": 256596
+    },
+    {
+      "intersection_pruned": 246012,
+      "left": "l1_per_tensor_canonical_frankle",
+      "pruned_set_jaccard": 0.9553678569348169,
+      "right": "hessian_trace_per_tensor_obd_proxy",
+      "union_pruned": 257505
+    },
+    {
+      "intersection_pruned": 247888,
+      "left": "global_l1_canonical_frankle",
+      "pruned_set_jaccard": 0.9702036391247001,
+      "right": "hessian_trace_per_tensor_obd_proxy",
+      "union_pruned": 255501
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_paid_dispatch": false,
+  "schema": "lane17_imp_magnitude_criteria_disambiguator_v1",
+  "score_claim": false,
+  "substrate_id": "lane_17_imp",
+  "summary": {
+    "callable_criteria": [
+      "l1_per_tensor_canonical_frankle",
+      "global_l1_canonical_frankle",
+      "hessian_trace_per_tensor_obd_proxy",
+      "score_gradient_saliency_catalog123"
+    ],
+    "catalog308_disambiguator_landed": true,
+    "criteria_count": 4,
+    "recipe_blocker_replacement": "lane_17_imp_requires_catalog308_cycle0_empirical_regression_ratio_disambiguation",
+    "score_gradient_sidecar_supplied": false,
+    "verdict": "catalog308_disambiguator_landed_pending_cycle0_empirical_runs"
+  }
+}
