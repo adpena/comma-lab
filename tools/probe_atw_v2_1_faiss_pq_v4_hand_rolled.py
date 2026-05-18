@@ -57,12 +57,18 @@ def v4_hand_rolled_spec() -> PqVariantSpec:
     M=2, ksub=128, top-k=3 — the Dykstra-feasibility transition zone between
     V3 (k_topk=1, MI=0.12) and V2 (k_topk=8, MI=2.46). Predicted byte cost:
     600 * 3 * (log2(128) + log2(64))/8 + codebook ~ ~3KB.
+
+    Note: nlist=32 (NOT 64) because ksub=128 (nbits=7) needs ~5000+ training
+    points for Faiss to safely train; at 600 pairs * 16 regions = 9600 points
+    we're above the floor, but at any smaller N (smoke runs) Faiss IndexIVFPQ
+    can SIGSEGV with insufficient training data. nlist=32 halves the training
+    requirement (~2500 minimum) which fits 100-pair smokes cleanly.
     """
     return PqVariantSpec(
         variant_id="v4_hand_rolled_m2_ksub128_topk3",
         n_regions=16,
         grid_side=4,
-        nlist=64,  # IVF coarse quantizer (same as V2/V3)
+        nlist=32,  # Reduced from V2/V3's 64 to fit ksub=128 training-data budget
         m_subq=2,  # M=2 sub-quantizers per Symposium #1 spec
         nbits=7,  # ksub=128 → 7 bits per sub-quantizer
         top_k_regions=3,  # top-k=3 per Symposium #1 spec

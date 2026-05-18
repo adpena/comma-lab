@@ -110,8 +110,12 @@ def _resolve_master_gradient_anchor(
     if not jsonl_path.exists():
         raise PlannerError(
             f"no master_gradient_anchors.jsonl at {jsonl_path}; "
-            f"run tools/extract_master_gradient.py --target local-cpu "
-            f"--archive {archive_sha256}"
+            "materialize one with `tools/extract_master_gradient.py "
+            "--archive <archive.zip> --inflate-py <submission_dir/inflate.py> "
+            "--upstream-dir upstream --axis '[macOS-CPU advisory]' "
+            "--device cpu --output-npy <sidecar.npy>` for local advisory "
+            "planning, or use a full-pair contest axis on authoritative "
+            f"hardware. Requested archive_sha256={archive_sha256!r}."
         )
 
     matching_anchors = []

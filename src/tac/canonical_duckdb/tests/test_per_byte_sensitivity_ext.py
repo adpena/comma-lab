@@ -204,11 +204,55 @@ def test_refresh_per_byte_sensitivity_uses_advisory_correction_row(
     bootstrap_per_byte_sensitivity_table(con)
     assert refresh_per_byte_sensitivity(con, repo) == 20
     rows = con.execute(
-        "SELECT DISTINCT source_measurement_axis, evidence_grade, promotion_eligible "
+        "SELECT DISTINCT source_measurement_axis, evidence_grade, "
+        "source_anchor_authoritative, promotion_eligible "
         "FROM per_byte_sensitivity WHERE archive_sha256 = ?",
         [base["archive_sha256"]],
     ).fetchall()
-    assert rows == [("[macOS-CPU advisory]", "diagnostic", False)]
+    assert rows == [("[macOS-CPU advisory]", "diagnostic", False, False)]
+    con.close()
+
+
+def test_refresh_per_byte_sensitivity_marks_derived_contest_rows_non_promotable(
+    tmp_path: Path,
+) -> None:
+    """Per-byte sensitivity rows are planning rows even from authoritative sources."""
+    repo = tmp_path
+    state_dir = repo / ".omx/state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    arr = np.ones((10, 3), dtype=np.float32)
+    npy_path = state_dir / "contest.npy"
+    np.save(npy_path, arr)
+    archive_sha = "e" * 64
+    anchor = {
+        "archive_sha256": archive_sha,
+        "scored_archive_sha256": archive_sha,
+        "scored_archive_bytes": 12345,
+        "operating_point": {"d_seg": 1e-3, "d_pose": 1e-4, "rate": 5e-3, "score": 0.2},
+        "gradient_array_path": ".omx/state/contest.npy",
+        "n_bytes": 10,
+        "measurement_method": "autograd_per_parameter_projected_full",
+        "measurement_axis": "[contest-CUDA]",
+        "measurement_hardware": "linux_x86_64_t4_cuda",
+        "measurement_call_id": "fc-test",
+        "measurement_utc": "2026-05-18T00:00:00Z",
+        "n_pairs_used": 600,
+        "n_pairs_total": 600,
+        "gradient_tensor_kind": "aggregate_per_byte_v1",
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    (state_dir / "master_gradient_anchors.jsonl").write_text(json.dumps(anchor) + "\n")
+
+    db_path = repo / "test.duckdb"
+    con = connect(db_path)
+    bootstrap_per_byte_sensitivity_table(con)
+    assert refresh_per_byte_sensitivity(con, repo) == 10
+    rows = con.execute(
+        "SELECT DISTINCT evidence_grade, source_anchor_authoritative, "
+        "promotion_eligible FROM per_byte_sensitivity WHERE archive_sha256 = ?",
+        [archive_sha],
+    ).fetchall()
+    assert rows == [("diagnostic_from_contest_authoritative_source", True, False)]
     con.close()
 
 

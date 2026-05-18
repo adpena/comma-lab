@@ -208,6 +208,18 @@ CONSUMER_OUTPUT_ROOT = Path(".omx/state/master_gradient_consumers")
 # ──────────────────────────────────────────────────────────────────────────── #
 
 
+def _anchor_has_tensor_kind(anchor: dict, tensor_kind: str) -> bool:
+    """Match tensor kind, with a legacy method-name fallback for older rows."""
+
+    kind = anchor.get("gradient_tensor_kind")
+    if kind is not None:
+        return kind == tensor_kind
+    method = str(anchor.get("measurement_method", "")).lower()
+    if tensor_kind == PER_PAIR_GRADIENT_TENSOR_KIND:
+        return "per_pair" in method
+    return "per_pair" not in method
+
+
 def _latest_per_pair_anchor(
     anchors: list[dict] | None = None, *, archive_sha256: str | None = None
 ) -> dict | None:
@@ -221,7 +233,7 @@ def _latest_per_pair_anchor(
         anchors = load_anchors_lenient()
     candidates = [
         a for a in anchors
-        if "per_pair" in str(a.get("measurement_method", "")).lower()
+        if _anchor_has_tensor_kind(a, PER_PAIR_GRADIENT_TENSOR_KIND)
         and is_authoritative_axis_anchor(a)
     ]
     if archive_sha256 is not None:
@@ -281,10 +293,9 @@ def load_aggregate_gradient_from_anchor(
     Returns (gradient_array, anchor_dict). Shape ``(N_bytes, 3)``.
     """
     anchors = load_anchors_lenient(anchor_path)
-    # Aggregate = does NOT contain "per_pair" in method
     candidates = [
         a for a in anchors
-        if "per_pair" not in str(a.get("measurement_method", "")).lower()
+        if _anchor_has_tensor_kind(a, AGGREGATE_GRADIENT_TENSOR_KIND)
         and is_authoritative_axis_anchor(a)
     ]
     if archive_sha256 is not None:

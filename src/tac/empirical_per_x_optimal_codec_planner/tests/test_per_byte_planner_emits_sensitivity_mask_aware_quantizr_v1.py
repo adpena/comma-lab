@@ -307,7 +307,7 @@ def test_planner_rejects_quantiles_not_monotonic(tmp_path: Path) -> None:
 def test_planner_raises_on_missing_anchor(tmp_path: Path) -> None:
     """If no master_gradient anchor exists, raise PlannerError with actionable message."""
     from tac.empirical_per_x_optimal_codec_planner import PlannerError
-    with pytest.raises(PlannerError, match="no master_gradient_anchors.jsonl"):
+    with pytest.raises(PlannerError) as excinfo:
         plan_per_byte_from_master_gradient(
             archive_sha256="nonexistent_archive",
             codec_menu=("fp16", "int8", "int6", "int4"),
@@ -315,6 +315,12 @@ def test_planner_raises_on_missing_anchor(tmp_path: Path) -> None:
             sensitivity_threshold_quantiles=(0.02, 0.05, 0.20, 1.00),
             repo_root=tmp_path,  # empty repo
         )
+    message = str(excinfo.value)
+    assert "no master_gradient_anchors.jsonl" in message
+    assert "--target local-cpu" not in message
+    assert "--axis '[macOS-CPU advisory]'" in message
+    assert "--device cpu" in message
+    assert "--inflate-py <submission_dir/inflate.py>" in message
 
 
 def test_planner_canonical_alias_equivalent() -> None:

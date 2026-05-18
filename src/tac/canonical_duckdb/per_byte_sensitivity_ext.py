@@ -26,6 +26,7 @@ The table schema is:
         source_measurement_method VARCHAR,
         source_measurement_utc VARCHAR,
         evidence_grade VARCHAR,
+        source_anchor_authoritative BOOLEAN,
         promotion_eligible BOOLEAN,
         PRIMARY KEY (archive_sha256, byte_idx)
     )
@@ -52,7 +53,10 @@ from tac.canonical_duckdb.backfill import (
     canonical_duckdb_lock,
 )
 from tac.canonical_duckdb.schema import connect
-from tac.master_gradient import is_authoritative_axis_anchor
+from tac.master_gradient import (
+    is_authoritative_axis_anchor,
+    is_authoritative_contest_axis_anchor,
+)
 
 
 PER_BYTE_SENSITIVITY_BOOTSTRAP_SQL = """
@@ -91,6 +95,7 @@ def bootstrap_per_byte_sensitivity_table(con) -> None:
         "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS source_measurement_method VARCHAR",
         "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS source_measurement_utc VARCHAR",
         "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS evidence_grade VARCHAR",
+        "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS source_anchor_authoritative BOOLEAN",
         "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS promotion_eligible BOOLEAN",
     ):
         con.execute(ddl)
@@ -187,6 +192,7 @@ def refresh_per_byte_sensitivity(
                 str(r.get("measurement_hardware") or ""),
                 str(r.get("measurement_method") or ""),
                 str(r.get("measurement_utc") or ""),
+                bool(is_authoritative_contest_axis_anchor(r)),
             )
         )
 
@@ -210,6 +216,7 @@ def refresh_per_byte_sensitivity(
         measurement_hardware,
         measurement_method,
         measurement_utc,
+        source_anchor_authoritative,
     ) in anchors:
         npy_path = repo_root / npy_path_rel
         if not npy_path.exists():
@@ -239,10 +246,11 @@ def refresh_per_byte_sensitivity(
                 measurement_hardware,
                 measurement_method,
                 measurement_utc,
-                "diagnostic"
-                if not measurement_axis.startswith("[contest-")
-                else "contest_authoritative",
-                bool(measurement_axis.startswith("[contest-")),
+                "diagnostic_from_contest_authoritative_source"
+                if source_anchor_authoritative
+                else "diagnostic",
+                bool(source_anchor_authoritative),
+                False,
             )
             for i in range(n)
         ]
@@ -262,8 +270,9 @@ def refresh_per_byte_sensitivity(
                 source_measurement_method,
                 source_measurement_utc,
                 evidence_grade,
+                source_anchor_authoritative,
                 promotion_eligible
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )

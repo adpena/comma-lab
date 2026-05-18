@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import pytest
 import torch
 
 from tac.mae_mask_aug import MAEMaskAugConfig, MAEMaskAugmenter
@@ -48,6 +49,23 @@ def test_mask_ratio_within_tolerance() -> None:
     p = aug.config.patch_size
     pixel_active = patch_mask.repeat_interleave(p, dim=1).repeat_interleave(p, dim=2)
     assert torch.equal(out[~pixel_active], masks[~pixel_active])
+
+
+def test_384x512_patch16_ratio_masks_exactly_25_percent_geometry() -> None:
+    """Council arithmetic guard: 384x512, patch=16, ratio=.25 masks 25%, not 79%."""
+    patch_size = 16
+    height, width = 384, 512
+    n_patch_h = height // patch_size
+    n_patch_w = width // patch_size
+    n_patches = n_patch_h * n_patch_w
+    masked_patches = int(n_patches * 0.25)
+    masked_pixels = masked_patches * patch_size * patch_size
+
+    assert (n_patch_h, n_patch_w) == (24, 32)
+    assert n_patches == 768
+    assert masked_patches == 192
+    assert masked_pixels == 49_152
+    assert masked_pixels / (height * width) == pytest.approx(0.25)
 
 
 def test_gradient_flows_through_token_logits() -> None:

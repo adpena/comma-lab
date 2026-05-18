@@ -71,6 +71,8 @@ __all__ = [
     "compute_marginal_coefficients",
     "contest_axis_authority_violation_reason",
     "is_authoritative_axis_anchor",
+    "is_authoritative_contest_axis_anchor",
+    "is_usable_planning_anchor",
     "latest_anchor_for_archive",
     "latest_rejected_contest_axis_anchor_for_archive",
     "load_anchors_lenient",
@@ -511,8 +513,31 @@ def contest_axis_authority_violation_reason(
 
 
 def is_authoritative_axis_anchor(row: Mapping[str, object]) -> bool:
-    """Return whether a row can be consumed as an authoritative contest-axis anchor."""
+    """Backward-compatible alias for :func:`is_usable_planning_anchor`.
+
+    Non-contest diagnostic/advisory rows return True here because they do not
+    claim contest-axis authority. Use
+    :func:`is_authoritative_contest_axis_anchor` when a caller specifically
+    needs a contest-CPU/contest-CUDA source row.
+    """
+    return is_usable_planning_anchor(row)
+
+
+def is_usable_planning_anchor(row: Mapping[str, object]) -> bool:
+    """Return whether a row is safe for diagnostic/planning consumption.
+
+    Diagnostic/advisory axes are usable planning signal. Contest axes are usable
+    only when their hardware/method/pair-count/runtime custody is complete.
+    """
     return contest_axis_authority_violation_reason(row) is None
+
+
+def is_authoritative_contest_axis_anchor(row: Mapping[str, object]) -> bool:
+    """Return whether a row has authoritative contest-axis custody."""
+    return (
+        _normalized_contest_axis(row.get("measurement_axis")) is not None
+        and contest_axis_authority_violation_reason(row) is None
+    )
 
 
 def unresolved_contest_axis_authority_violations(

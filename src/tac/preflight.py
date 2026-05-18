@@ -2382,6 +2382,19 @@ def preflight_all(
         check_submission_inflate_works_with_empty_pythonpath(
             strict=True, verbose=verbose,
         )
+        # 2026-05-18 Catalog #328 - SUBMISSION INFLATE.PY LOC BUDGET AUDIT.
+        # The T3 inflate.py extreme-compression symposium correctly found
+        # that the contest rate term charges archive.zip bytes, not inflate.py
+        # source bytes. Keep the source-size discipline as a review/runtime-
+        # closure guard instead of a score claim: direct submissions whose
+        # inflate.py exceeds 200 physical lines should extract reusable helpers
+        # or carry an explicit source-faithful/runtime-closure waiver.
+        # Initial wire-in is WARN-ONLY because live submissions still include
+        # known >200 LOC runtimes; strict-flip after OP-2/OP-5 cleanup drives
+        # the count to 0.
+        check_submission_inflate_py_under_loc_budget(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-16 Catalog #296 - SUBSTRATE PREDICTED-BAND HAS DYKSTRA-
         # FEASIBILITY CHECK. Empirical anchor: NSCS06 v6 dispatch landed
         # 105.15 vs predicted [0.10, 0.20] (553x OUTSIDE band) because
@@ -64171,6 +64184,75 @@ def check_submission_inflate_works_with_empty_pythonpath(
             "alongside (NSCS06 v6 pattern @ commit 90bca47ff) OR carry an "
             "explicit `# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>` "
             "waiver:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #328 - check_submission_inflate_py_under_loc_budget
+# ============================================================================
+# The 2026-05-18 inflate.py extreme-compression symposium resolved a subtle
+# authority problem: compressing Python source does NOT improve contest score
+# because the scorer charges `archive.zip` bytes, not runtime source bytes.
+# Source size still matters as a review/runtime-closure constraint. This gate
+# keeps direct `submissions/*/inflate.py` files small enough to audit and nudges
+# large runtimes toward reusable helpers or explicit waivers.
+# ============================================================================
+
+
+def check_submission_inflate_py_under_loc_budget(
+    *,
+    repo_root: Path | None = None,
+    max_lines: int = 200,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #328 - flag direct submission ``inflate.py`` files over budget.
+
+    This is deliberately not score evidence. The contest rate term charges
+    archive bytes. The budget exists to prevent source-review opacity, hidden
+    dependency creep, and cargo-culted "compress inflate.py" score claims.
+    """
+
+    from tac.submission_inflate_loc_budget import (
+        scan_submission_inflate_py_loc_budget,
+    )
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    findings = scan_submission_inflate_py_loc_budget(
+        root,
+        max_lines=max_lines,
+    )
+    violations = [finding.format() for finding in findings]
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_submission_inflate_py_under_loc_budget] "
+                f"{len(violations)} violation(s) over {max_lines} physical "
+                "lines (warn-only until cleanup):"
+            )
+            for violation in violations[:10]:
+                print(f"    - {violation[:280]}")
+        else:
+            print(
+                f"  [check_submission_inflate_py_under_loc_budget] OK "
+                f"(all direct submissions/inflate.py files <= {max_lines} lines)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_submission_inflate_py_under_loc_budget found "
+            f"{len(violations)} direct submission inflate.py file(s) over "
+            f"{max_lines} physical lines per Catalog #328. This is a "
+            "review/runtime-closure guard, not a score claim: the contest "
+            "charges archive.zip bytes. Extract reusable runtime helpers, "
+            "remove dead source, or add an explicit "
+            "`# INFLATE_PY_LOC_BUDGET_OK:<rationale>` waiver in the first "
+            "40 lines for a source-faithful exception:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
