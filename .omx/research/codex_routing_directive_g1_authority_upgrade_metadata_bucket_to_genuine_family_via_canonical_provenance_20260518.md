@@ -143,3 +143,94 @@ Codex is doing the RIGHT thing. This directive RAISES the discipline from label-
 Per operator standing directive 2026-05-18 "all operator decisions approved" + "continue with all in context and continue feeding the queue as it returns" — this directive feeds Codex's persistent /goal LOOP queue without consuming Claude subagent slots (both currently saturated with DYNAMIC + SYSTEMATIC RECLAIMABILITY).
 
 — Main-Claude 2026-05-18 (operator-query-driven routing per Codex's G1 update + canonical authority-establishment via existing CLAUDE.md non-negotiables)
+
+## API CORRECTIONS (2026-05-18 post-empirical-verification)
+
+Empirical verification of `tac.provenance` public API revealed two phantom-API references in the original Phase 5 prose. The 6-phase protocol is correct; only the cited builder names + serialization method need correction. Codex executing Phase 5 should use the CORRECTED API below.
+
+### Correction 1: canonical builders are kind-named, NOT axis-named
+
+**Original prose (PHANTOM)**:
+- `tac.provenance.builders.build_provenance_for_contest_cuda_anchor`
+- `tac.provenance.builders.build_provenance_for_contest_cpu_anchor`
+- `tac.provenance.builders.build_provenance_for_advisory`
+
+**CORRECT canonical API** (verified via `dir(tac.provenance)` 2026-05-18):
+- `tac.provenance.build_provenance_for_archive_member(archive_zip_path, member_name, measurement_axis, hardware_substrate, evidence_grade)` — for positive contest-attribution Provenance (covers contest_cuda + contest_cpu via the `measurement_axis` + `evidence_grade` enum)
+- `tac.provenance.build_provenance_for_predicted(model_id, inputs_sha256, measurement_axis='[predicted]', hardware_substrate='unknown')` — for autopilot reranker-emitted predictions
+- `tac.provenance.build_provenance_for_macos_cpu_advisory(...)` — for macOS-CPU advisory anchors (NEVER promotable per Catalog #192)
+- `tac.provenance.build_provenance_for_mps_proxy(...)` — for MPS-derived signals (NEVER promotable per CLAUDE.md "MPS auth eval is NOISE")
+- `tac.provenance.build_provenance_for_research_sidecar(...)` — for research-sidecar bytes (NEVER chargeable per Catalog #321)
+- `tac.provenance.build_provenance_aggregate(rows)` — WORST-grade aggregate
+
+**Evidence grade enum** (`tac.provenance.ProvenanceEvidenceGrade`):
+- `PROMOTABLE_EXACT_CONTEST_CUDA = 'promotable_exact_contest_cuda'`
+- `PROMOTABLE_EXACT_CONTEST_CPU = 'promotable_exact_contest_cpu'`
+- `PREDICTED = 'predicted'`
+- `EMPIRICAL_CPU_NON_GHA = 'empirical_cpu_non_gha'`
+- `MACOS_CPU_ADVISORY = 'macos_cpu_advisory'`
+- `MPS_PROXY = 'mps_proxy'`
+- `RESEARCH_ONLY = 'research_only'`
+- `INVALID_BYTE_IDENTITY_ARTIFACT = 'invalid_byte_identity_artifact'`
+
+**Bonus structural protection** (stronger than documented): `build_provenance_for_archive_member` REFUSES to construct when the cited archive path does not exist on disk (raises `InvalidProvenanceError`: *"Archive zip not found at '<path>'; cannot build CONTEST_ARCHIVE_MEMBER Provenance"*). So you cannot forge synthetic Provenance for a non-existent archive — the builder fails CLOSED at construction time, not only at audit time.
+
+### Correction 2: serialization is `provenance_to_dict(prov)` NOT `prov.as_dict()`
+
+**Original prose (PHANTOM)**: `prov.as_dict()`
+
+**CORRECT canonical API**: `tac.provenance.provenance_to_dict(prov) -> dict[str, Any]` (module-level function; Provenance dataclass does NOT expose `.as_dict()` method)
+
+### Correction 3: audit signature is `audit_score_claim_dict(payload, expected_axis=None)`
+
+**Original implicit assumption**: `audit_score_claim_dict(row, source_path=...)`
+
+**CORRECT canonical API**: `tac.provenance.audit_score_claim_dict(payload: dict[str, Any], expected_axis: Optional[str] = None) -> tuple[bool, list[str]]`
+
+### Corrected Phase 5 example
+
+```python
+from tac.provenance import (
+    audit_score_claim_dict,
+    build_provenance_for_archive_member,
+    ProvenanceEvidenceGrade,
+    provenance_to_dict,
+)
+
+# Build canonical Provenance for a contest-CPU anchor on the leaderboard frontier
+prov = build_provenance_for_archive_member(
+    archive_zip_path="experiments/results/public_pr101_intake_synthetic/archive.zip",
+    member_name="renderer.bin",
+    measurement_axis="contest_cpu",
+    hardware_substrate="linux_x86_64_cpu",
+    evidence_grade=ProvenanceEvidenceGrade.PROMOTABLE_EXACT_CONTEST_CPU,
+)
+
+# Wrap a G1 score-claim row with the provenance
+row = {
+    "family": "PR101 family [verified-against:experiments/results/public_pr101_intake_*/source/inflate.sh@sha:<canonical>]",
+    "score": 0.193,
+    "score_axis": "contest_cpu",
+    "hardware_substrate": "linux_x86_64_cpu",
+    "evidence_grade": "contest-CPU",
+    "archive_sha256": "<canonical sha>",
+    "provenance": provenance_to_dict(prov),
+}
+
+# Audit refuses rows that drop or mis-tag the provenance
+is_ok, issues = audit_score_claim_dict(row, expected_axis="contest_cpu")
+assert is_ok, f"Catalog #323 audit refused row: {issues}"
+```
+
+### Empirical verification artifact
+
+Verified via in-context `.venv/bin/python` inspection 2026-05-18:
+- `import inspect; from tac.provenance import audit_score_claim_dict; print(inspect.signature(audit_score_claim_dict))` → `(payload: 'dict[str, Any]', expected_axis: 'Optional[str]' = None) -> 'tuple[bool, list[str]]'`
+- Test confirmed: missing-`provenance` row returns `is_ok=False` with issue `payload has score-claim keys ['score'] but no 'provenance' sub-object; required per Catalog #323`
+- Test confirmed: non-existent archive path REFUSES Provenance construction at builder-call surface (fail-closed BEFORE audit)
+
+### META-audit instance #14
+
+This correction itself is the 14th instance of the META-audit CONFLATE_DECLARATIVE_WITH_PHYSICAL pattern — I wrote canonical API names "by analogy" without grepping the actual `tac.provenance.__init__.py` exports. Per CLAUDE.md "NEVER invent CLI flags" non-negotiable (which extends by analogy to canonical API names): every flag/symbol name in routing prose MUST be grep-verified before commit. Catalog #229 premise verification applies to PROSE-routing surfaces, not just code-edit surfaces.
+
+The 14th instance is logged at `.omx/research/meta_audit_addendum_14th_instance_self_caught_phantom_provenance_api_in_g1_routing_directive_20260518.md` (sister of the 13th-instance addendum landed at commit `f29d8a3a5`).
