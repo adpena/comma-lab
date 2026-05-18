@@ -1,0 +1,158 @@
+{
+  "blockers": [
+    "no_paired_exact_eval_json",
+    "no_contest_cpu_cuda_pair",
+    "not_score_authority"
+  ],
+  "decision_delta_s": 0.005,
+  "deltas": {
+    "identity_minus_full_archive_bytes": 319,
+    "identity_minus_full_contest_archive_bytes_basis": 175,
+    "identity_minus_full_parsed_member_bytes": 319,
+    "identity_minus_full_rate_term_basis": 0.00011652531679637998,
+    "identity_minus_full_zip_bytes": 175
+  },
+  "evidence_grade": "byte_closed_archive_pair_no_score",
+  "exact_eval": null,
+  "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
+  "paired": true,
+  "paired_archive_checks": {
+    "decoder_state_dict_equal": true,
+    "ego_motion_equal": true,
+    "encoder_state_dict_equal": true,
+    "latent_init_equal": true,
+    "predictor_keysets_equal": true,
+    "predictor_state_dict_equal": true,
+    "residuals_equal": true
+  },
+  "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+  "paradigm_claim_allowed": false,
+  "probe_id": "z6_predictive_coding_vs_identity_disambiguator",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "provide both paired contest_auth_eval JSON files for the exact same ZIP sidecars",
+    "keep axis labels adjacent to all score language",
+    "treat full_minus_identity_score <= -decision_delta_s as a full-FiLM win",
+    "do not promote, rank, or kill from this probe without operator review"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "result_review": {
+    "classification": "byte_closed_archive_pair_no_score",
+    "component_score_authority": false,
+    "contest_compliance_authority": false,
+    "full_minus_identity_score_semantics": "negative means full-FiLM lower score; positive means identity lower score",
+    "next_authoritative_gate": "paired contest-CUDA exact eval with matching ZIP custody",
+    "score_claim_authority": false,
+    "score_formula_recomputed": false
+  },
+  "schema": "z6_predictive_coding_vs_identity_disambiguator_v1",
+  "score_claim": false,
+  "source_archives": [
+    {
+      "bytes": 194747,
+      "contest_archive_bytes_basis": 194119,
+      "contest_archive_sha256_basis": "28b12f7cc136eb369e28df04135cca802fbbdec6eb73b07d22a796f570e11dce",
+      "effective_predictor_hidden_dim": 72,
+      "ego_motion_dim": 8,
+      "identity_predictor": false,
+      "identity_predictor_disambiguator": false,
+      "lambda_residual_entropy": 1.0,
+      "latent_dim": 24,
+      "mode": "full_film_predictor",
+      "num_pairs": 2,
+      "parsed_member_bytes": 194747,
+      "path": "experiments/results/z6_candidate4c_full_disambiguator_paircap2_codex_20260518T0234Z/0.bin",
+      "predictor_architecture": "single_layer_film_75k",
+      "predictor_depth": 1,
+      "predictor_film_mlp_hidden_dim": 32,
+      "predictor_hidden_dim": 72,
+      "predictor_kernel_size": 3,
+      "predictor_state_dict_key_count": 8,
+      "predictor_state_dict_keys": [
+        "film_mlp.0.bias",
+        "film_mlp.0.weight",
+        "film_mlp.2.bias",
+        "film_mlp.2.weight",
+        "input_conv.bias",
+        "input_conv.weight",
+        "output_conv.bias",
+        "output_conv.weight"
+      ],
+      "requested_predictor_hidden_dim": 72,
+      "schema_version": 1,
+      "sha256": "e83f8019690a9a87c1066a5791299dcc018bded9ab97f261db6444ba89b2f05b",
+      "zip_bytes": 194119,
+      "zip_member_matches_path_bytes": true,
+      "zip_member_rows": [
+        {
+          "compress_size": 194011,
+          "compression_method": 8,
+          "crc": "28b11bca",
+          "file_size": 194747,
+          "name": "0.bin",
+          "sha256": "e83f8019690a9a87c1066a5791299dcc018bded9ab97f261db6444ba89b2f05b"
+        }
+      ],
+      "zip_members": [
+        "0.bin"
+      ],
+      "zip_path": "experiments/results/z6_candidate4c_full_disambiguator_paircap2_codex_20260518T0234Z/archive.zip",
+      "zip_sha256": "28b12f7cc136eb369e28df04135cca802fbbdec6eb73b07d22a796f570e11dce"
+    },
+    {
+      "bytes": 195066,
+      "contest_archive_bytes_basis": 194294,
+      "contest_archive_sha256_basis": "4298f449c7477704d979f2c6e46467665f0cb4ff4fc09bfa9a59de2a2b77228d",
+      "effective_predictor_hidden_dim": 72,
+      "ego_motion_dim": 8,
+      "identity_predictor": true,
+      "identity_predictor_disambiguator": true,
+      "lambda_residual_entropy": 1.0,
+      "latent_dim": 24,
+      "mode": "identity_predictor",
+      "num_pairs": 2,
+      "parsed_member_bytes": 195066,
+      "path": "experiments/results/z6_candidate4c_full_disambiguator_paircap2_codex_20260518T0234Z/0_identity_predictor_disambiguator.bin",
+      "predictor_architecture": "single_layer_film_75k",
+      "predictor_depth": 1,
+      "predictor_film_mlp_hidden_dim": 32,
+      "predictor_hidden_dim": 72,
+      "predictor_kernel_size": 3,
+      "predictor_state_dict_key_count": 8,
+      "predictor_state_dict_keys": [
+        "film_mlp.0.bias",
+        "film_mlp.0.weight",
+        "film_mlp.2.bias",
+        "film_mlp.2.weight",
+        "input_conv.bias",
+        "input_conv.weight",
+        "output_conv.bias",
+        "output_conv.weight"
+      ],
+      "requested_predictor_hidden_dim": 72,
+      "schema_version": 1,
+      "sha256": "854a009ae8e9ab2e08c4faa1afcadc92615a40bad8d7586afc84366ba7ea1f11",
+      "zip_bytes": 194294,
+      "zip_member_matches_path_bytes": true,
+      "zip_member_rows": [
+        {
+          "compress_size": 194186,
+          "compression_method": 8,
+          "crc": "3551df8b",
+          "file_size": 195066,
+          "name": "0.bin",
+          "sha256": "854a009ae8e9ab2e08c4faa1afcadc92615a40bad8d7586afc84366ba7ea1f11"
+        }
+      ],
+      "zip_members": [
+        "0.bin"
+      ],
+      "zip_path": "experiments/results/z6_candidate4c_full_disambiguator_paircap2_codex_20260518T0234Z/archive_identity_predictor_disambiguator.zip",
+      "zip_sha256": "4298f449c7477704d979f2c6e46467665f0cb4ff4fc09bfa9a59de2a2b77228d"
+    }
+  ],
+  "substrate_tag": "time_traveler_l5_z6",
+  "verdict": "pending_paired_exact_eval_json"
+}
