@@ -61,6 +61,8 @@ cost_band:
 
 predicted_score_target: null
 predicted_band: [0.140, 0.150]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324: before promotion or full-run score-band authority, measure Tier-C density on the post-training Wyner-Ziv cooperative-receiver smoke archive and replace this pending status with validated_post_training plus artifact path; until then the band is planning-only, not dispatch/promotion authority."
 smoke_score_band: [0.05, 0.50]
 predicted_delta: "-0.05 vs PR101 0.193 [wyner-ziv-prediction, first-principles-bound]"
 predicted_delta_basis: ".omx/research/expert_team_signal_processing_alien_tech_20260513.md §N3 (Wyner-Ziv)"

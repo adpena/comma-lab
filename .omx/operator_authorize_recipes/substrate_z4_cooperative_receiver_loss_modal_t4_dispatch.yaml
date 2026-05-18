@@ -67,6 +67,8 @@ cost_band:
 
 predicted_score_target: null
 predicted_band: [0.180, 0.188]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324: before promotion or full-run score-band authority, measure Tier-C density on the post-training Z4 cooperative-receiver-loss smoke archive and replace this pending status with validated_post_training plus artifact path; until then the band is planning-only, not dispatch/promotion authority."
 smoke_score_band: [0.15, 0.30]
 predicted_delta: "-0.005 to -0.010 vs Z3 baseline 0.193 [mathematical-derivation; gradient-alignment-dominated]"
 predicted_delta_basis: ".omx/research/campaign_z4_cooperative_receiver_loss_20260514.md (Time-Traveler L5 staircase Step 2)"

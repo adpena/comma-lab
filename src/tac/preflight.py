@@ -2588,6 +2588,70 @@ def preflight_all(
         check_no_score_claim_without_canonical_provenance(
             strict=False, verbose=verbose,
         )
+        # 2026-05-17 Catalog #324 - NO PREDICTED_BAND WITHOUT POST-TRAINING
+        # TIER-C VALIDATION. META-FIX per operator NON-NEGOTIABLE 2026-05-17.
+        # Empirical bug class anchor: C6 IBPS 22× miss (call_id
+        # fc-01KRW353MJJ9A6QW8H99QWZEMH, smoke 3.04 vs predicted [0.113,
+        # 0.163]). Sister #835 Assumption-Adversary WARNED that random-init
+        # Tier-C density 2.67e-5 is CARGO-CULTED (provides only UPPER bound
+        # on disconfirmation); #836 empirically FALSIFIED. Sister of
+        # Catalog #321/#322/#323 phantom-score family at the predicted_band
+        # sub-surface. Refuses substrate recipes whose predicted_band lacks
+        # validation_status (or has phantom_random_init without research_only
+        # opt-out). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip
+        # atomicity rule" because legacy recipes need backfill; strict-flip
+        # pending operator-routed audit sweep brings count to 0. Audit via
+        # `.venv/bin/python tools/audit_predicted_band_provenance.py`.
+        check_no_predicted_band_without_post_training_tier_c_validation(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-18 Catalog #325 - PER-SUBSTRATE OPTIMAL FORM via adversarial
+        # grand council symposium discipline (per operator standing directive
+        # 2026-05-17/18 verbatim "all candidates including c6 ibps may need
+        # further optimization and iteration and review and audit and individual
+        # extreme passion and detail and effort and adversarial grand council
+        # symposiums"). Refuses substrate operator-authorize recipes with
+        # dispatch_enabled: true whose substrate lacks a recent (within 14
+        # days) per-substrate symposium memo at
+        # .omx/research/council_*_<substrate_id>_*_<YYYYMMDD>.md with verdict
+        # in {PROCEED, PROCEED_WITH_REVISIONS} AND matching anchor in
+        # .omx/state/council_deliberation_posterior.jsonl. Bug class anchor:
+        # 2026-05-17 C6 IBPS 22x miss (smoke 3.04 vs predicted [0.113, 0.163])
+        # revealed that META-layer audits (Catalog #303 + #294 + #305 + #296
+        # + #324) at design-memo + recipe-emit surfaces CAN surface bug classes
+        # but CANNOT adjudicate per-substrate idiosyncratic cargo-culted
+        # assumptions without dedicated council symposium. Sister of Catalog
+        # #315 (parent council iteration-discipline; #325 is per-substrate
+        # symposium-evidence sub-surface) + Catalog #324 (recipe-emit surface)
+        # + Catalog #303/#294/#305/#296 (design-memo surfaces) + Catalog
+        # #292/#300 (council-discipline). Initial wire-in is WARN-ONLY per
+        # CLAUDE.md "Strict-flip atomicity rule"; per-substrate symposium
+        # discipline is NEW; backfill of 6+ existing dispatchable substrates
+        # is multi-subagent wave (C6 IBPS first per this gate's landing).
+        check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-18 Catalog #326 - DRIVER MODE HARDCODE per CLAUDE.md "Bugs
+        # must be permanently fixed AND self-protected against" non-negotiable
+        # + Z6-v2 Wave 2 DEFER 2026-05-18 empirical anchor. Refuses
+        # `scripts/remote_lane_substrate_*.sh` drivers where the smoke-vs-full
+        # mode routing default biases toward smoke without explicit recipe-side
+        # opt-in for full. Delegates verdict classification to the canonical
+        # operator-facing audit tool
+        # `tools/audit_substrate_driver_mode_hardcode.py`. Same-line waiver
+        # `# DRIVER_MODE_HARDCODE_OK:<rationale>` on the --smoke line OR
+        # file-level `# DRIVER_MODE_HARDCODE_OK_FILE:<rationale>` in the first
+        # 30 lines (placeholder rationales rejected). Sister of Catalog #270
+        # (canonical dispatch optimization protocol) + Catalog #240 (recipe-vs-
+        # trainer-state consistency) + Catalog #244 (NVML env block) + Catalog
+        # #151 (operator wrapper Tier-1 flag threading) + Catalog #152
+        # (required input validation). WARN-ONLY at landing per CLAUDE.md
+        # "Strict-flip atomicity rule" — live count at landing: 0 (Z6 driver
+        # fixed + Wave 2 recipe overrides set in same commit batch). Memory:
+        # feedback_driver_fix_smoke_hardcode_plus_new_catalog_gate_cross_substrate_audit_landed_20260518.md.
+        check_substrate_driver_consumes_trainer_mode_env_var(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -71346,3 +71410,641 @@ if __name__ == "__main__":
             stream = sys.stderr if exit_code else sys.stdout
             print(f"Timing profile JSON: {args.timings_json}", file=stream)
     sys.exit(exit_code)
+
+
+# =========================================================================
+# Catalog #324 — PREDICTED_BAND POST-TRAINING TIER-C VALIDATION REQUIRED
+# =========================================================================
+# Per operator NON-NEGOTIABLE 2026-05-17 META-FIX Catalog #324.
+# Empirical bug class anchor: C6 IBPS 22× miss
+# (call_id fc-01KRW353MJJ9A6QW8H99QWZEMH, 2026-05-17). Sister #835's
+# Assumption-Adversary verbatim WARNED; #836 empirically falsified.
+# Sister of Catalog #321 / #322 / #323 phantom-score family at the
+# predicted_band sub-surface.
+
+_CHECK_324_RECIPE_GLOB: str = ".omx/operator_authorize_recipes/*.yaml"
+
+
+def check_no_predicted_band_without_post_training_tier_c_validation(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """STRICT preflight gate Catalog #324 — predicted_band post-training Tier-C validation.
+
+    Refuses any substrate recipe at
+    ``.omx/operator_authorize_recipes/*.yaml`` that declares a
+    ``predicted_band`` field WITHOUT one of: (a)
+    ``predicted_band_validation_status: validated_post_training`` +
+    post-training Tier-C density artifact path; (b)
+    ``predicted_band_validation_status: pending_post_training`` +
+    reactivation criteria; (c) ``research_only: true`` (explicit
+    non-promotable); (d) same-line
+    ``# PREDICTED_BAND_RANDOM_INIT_OK:<rationale>`` waiver
+    (placeholder rejected).
+
+    Bug class anchor: 2026-05-17 C6 IBPS recipe declared
+    ``predicted_band: [0.113, 0.163]`` derived from random-init Tier-C
+    density 2.67e-5; actual 50ep smoke landed 3.04 (22× outside upper).
+    Sister #835's recipe-fix sextet Assumption-Adversary verbatim
+    flagged the prediction as CARGO-CULTED ("post-smoke Tier-C
+    re-confirmation REQUIRED"). Sister #836 empirically falsified.
+
+    Args:
+        strict: If True, raise PreflightError when violations found.
+        verbose: If True, print per-violation detail.
+        repo_root: Repo root path; defaults to the repo enclosing this file.
+
+    Returns:
+        List of violation descriptions (empty if clean).
+
+    Raises:
+        PreflightError: if strict and violations non-empty.
+    """
+    if verbose:
+        print("  [check_no_predicted_band_without_post_training_tier_c_validation]")
+
+    try:
+        from tac.optimization.tier_c_density_post_training_validator import (
+            validate_recipe_predicted_band,
+        )
+    except ImportError as exc:
+        # Fail-closed on canonical helper missing per CLAUDE.md "Bugs must be
+        # permanently fixed AND self-protected against" sister Catalog #279.
+        msg = (
+            f"[Catalog #324] FATAL: canonical helper "
+            f"`tac.optimization.tier_c_density_post_training_validator` "
+            f"unavailable: {exc}"
+        )
+        if strict:
+            raise PreflightError(msg)
+        return [msg]
+
+    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent.parent
+    recipe_dir = root / ".omx" / "operator_authorize_recipes"
+    if not recipe_dir.is_dir():
+        return []
+
+    violations: list[str] = []
+    for recipe_path in sorted(recipe_dir.glob("*.yaml")):
+        verdict = validate_recipe_predicted_band(recipe_path)
+        if not verdict.is_valid:
+            blockers_text = "; ".join(verdict.blockers) if verdict.blockers else "(no blocker recorded)"
+            violations.append(
+                f"[Catalog #324] {recipe_path.name}: "
+                f"status={verdict.validation_status} — {blockers_text}"
+            )
+            if verbose:
+                print(f"    VIOLATION: {recipe_path.name} ({verdict.validation_status})")
+
+    if violations and strict:
+        msg = (
+            f"Catalog #324 (predicted_band post-training Tier-C validation): "
+            f"{len(violations)} recipe violations. "
+            f"Per CLAUDE.md NON-NEGOTIABLE 'Substrate MUST be at OPTIMAL FORM "
+            f"before paid empirical dispatch' + META-FIX 2026-05-17 (C6 IBPS "
+            f"22× miss anchor): every predicted_band MUST attest to whether "
+            f"Tier-C density was measured pre-training (random-init) or "
+            f"post-training. Run `.venv/bin/python "
+            f"tools/audit_predicted_band_provenance.py` for the full report. "
+            f"First violation: {violations[0]}"
+        )
+        raise PreflightError(msg)
+
+    return violations
+
+
+# =========================================================================
+# Catalog #325 — PER-SUBSTRATE OPTIMAL FORM via grand council symposium
+# =========================================================================
+# Per operator standing directive 2026-05-17/18 verbatim:
+#   "all candidates including c6 ibps may need further optimization and
+#    iteration and review and audit and individual extreme passion and
+#    detail and effort and adversarial grand council symposiums"
+#
+# Bug class anchor: 2026-05-17 C6 IBPS Phase 2 sextet PROCEED-unconditional
+# unlocked dispatch -> empirical 3.04 vs predicted [0.113, 0.163] = 22x miss
+# revealed META-layer audits (Catalog #303 + #294 + #305 + #296 + #324) at
+# design-memo + recipe-emit surfaces CAN surface bug classes but CANNOT
+# adjudicate per-substrate idiosyncratic cargo-culted assumptions without
+# dedicated per-substrate council symposium.
+#
+# Sister of Catalog #315 (parent OPTIMAL FORM iteration-discipline; #325 is
+# per-substrate symposium-evidence sub-surface) + Catalog #324 (recipe-emit
+# surface) + Catalog #303/#294/#305/#296 (design-memo surfaces) + Catalog
+# #292/#300 (council-discipline).
+
+_CHECK_325_RECIPE_GLOB: str = ".omx/operator_authorize_recipes/substrate_*.yaml"
+_CHECK_325_SYMPOSIUM_WINDOW_DAYS: int = 14
+_CHECK_325_ACCEPTED_VERDICTS: frozenset[str] = frozenset({"PROCEED", "PROCEED_WITH_REVISIONS"})
+_CHECK_325_WAIVER_TOKEN: str = "PER_SUBSTRATE_SYMPOSIUM_WAIVED"
+_CHECK_325_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "", " "
+})
+
+
+def _check_325_extract_substrate_id_from_recipe(recipe_path: Path) -> str | None:
+    """Derive canonical substrate_id from recipe filename.
+
+    Recipe filename pattern: ``substrate_<substrate_id>_modal_*_dispatch.yaml``
+    or ``substrate_<substrate_id>_<provider>_<gpu>_*_dispatch.yaml``.
+    Returns the substrate_id token (without the ``substrate_`` prefix) or
+    None if filename does not match the canonical pattern.
+    """
+    stem = recipe_path.stem
+    if not stem.startswith("substrate_"):
+        return None
+    rest = stem[len("substrate_") :]
+    # Strip trailing platform/gpu/mode suffix: ``_modal_*_dispatch``,
+    # ``_local_*``, etc. Find the first canonical token suffix.
+    for suffix_token in (
+        "_modal_t4_smoke_dispatch",
+        "_modal_a10g_smoke_dispatch",
+        "_modal_a100_smoke_dispatch",
+        "_modal_t4_dispatch",
+        "_modal_a10g_dispatch",
+        "_modal_a100_dispatch",
+        "_modal_h100_dispatch",
+        "_modal_l40s_dispatch",
+        "_modal_4090_dispatch",
+        "_lightning_dispatch",
+        "_vastai_dispatch",
+        "_local_apple_silicon",
+        "_local_dispatch",
+    ):
+        if rest.endswith(suffix_token):
+            return rest[: -len(suffix_token)]
+    return rest  # fall back to full rest
+
+
+def _check_325_parse_recipe_dispatch_enabled(recipe_path: Path) -> tuple[bool, bool, str | None]:
+    """Parse recipe YAML for dispatch_enabled, research_only, waiver.
+
+    Returns (dispatch_enabled, research_only, waiver_rationale).
+    Lightweight regex parse to avoid full YAML import cost; only the 2
+    top-level flags + same-line waiver on dispatch_enabled line are needed.
+    """
+    try:
+        text = recipe_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return (False, False, None)
+
+    dispatch_enabled = False
+    research_only = False
+    waiver_rationale: str | None = None
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("dispatch_enabled:"):
+            val = stripped[len("dispatch_enabled:") :].strip().lower()
+            if val.startswith("true"):
+                dispatch_enabled = True
+                # Check same-line waiver
+                if _CHECK_325_WAIVER_TOKEN in line:
+                    waiver_start = line.find(f"# {_CHECK_325_WAIVER_TOKEN}:")
+                    if waiver_start < 0:
+                        waiver_start = line.find(f"{_CHECK_325_WAIVER_TOKEN}:")
+                    if waiver_start >= 0:
+                        after = line[waiver_start:].split(":", 1)
+                        if len(after) > 1:
+                            rationale = after[1].strip()
+                            if rationale and rationale not in _CHECK_325_PLACEHOLDER_RATIONALES and len(rationale) >= 4:
+                                waiver_rationale = rationale
+        elif stripped.startswith("research_only:"):
+            val = stripped[len("research_only:") :].strip().lower()
+            if val.startswith("true"):
+                research_only = True
+
+    return (dispatch_enabled, research_only, waiver_rationale)
+
+
+def _check_325_find_recent_symposium_memo(
+    substrate_id: str, repo_root: Path, *, now_utc: str | None = None
+) -> tuple[bool, str | None]:
+    """Find the most-recent per-substrate symposium memo within window.
+
+    Scans ``.omx/research/council_*_<substrate_id>_*_<YYYYMMDD>.md`` files;
+    returns (found_within_window, verdict_token_if_any). The verdict is
+    extracted from YAML frontmatter ``council_verdict`` field if present.
+    """
+    from datetime import datetime, timezone, timedelta
+    import re as _re
+
+    research_dir = repo_root / ".omx" / "research"
+    if not research_dir.is_dir():
+        return (False, None)
+
+    if now_utc:
+        try:
+            now = datetime.fromisoformat(now_utc.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            now = datetime.now(timezone.utc)
+    else:
+        now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=_CHECK_325_SYMPOSIUM_WINDOW_DAYS)
+
+    # Match council_*_<substrate_id>_*_YYYYMMDD.md (allow either underscore
+    # boundary or anywhere in filename for symposium-style memos).
+    date_re = _re.compile(r"_(\d{8})\.md$")
+    candidates: list[tuple[str, Path]] = []
+    for memo in research_dir.glob(f"council_*{substrate_id}*.md"):
+        m = date_re.search(memo.name)
+        if not m:
+            continue
+        date_str = m.group(1)
+        try:
+            memo_date = datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+        if memo_date >= cutoff:
+            candidates.append((date_str, memo))
+
+    if not candidates:
+        return (False, None)
+
+    candidates.sort(reverse=True)  # latest date first
+    latest_memo = candidates[0][1]
+    try:
+        body = latest_memo.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return (True, None)
+
+    # Extract council_verdict from YAML frontmatter (case-insensitive token).
+    verdict_re = _re.compile(r"^\s*council_verdict:\s*([A-Z_]+)", _re.MULTILINE)
+    m = verdict_re.search(body)
+    verdict = m.group(1) if m else None
+    return (True, verdict)
+
+
+def check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+    now_utc: str | None = None,
+) -> list[str]:
+    """STRICT preflight gate Catalog #325 — per-substrate symposium evidence.
+
+    Refuses substrate operator-authorize recipes
+    (``.omx/operator_authorize_recipes/substrate_*.yaml``) with
+    ``dispatch_enabled: true`` whose substrate lacks a recent (within 14
+    days) per-substrate symposium memo at
+    ``.omx/research/council_*_<substrate_id>_*_<YYYYMMDD>.md`` with verdict
+    in ``{PROCEED, PROCEED_WITH_REVISIONS}``.
+
+    Acceptance cascade:
+        (a) per-substrate symposium memo within 14-day window AND verdict
+            in {PROCEED, PROCEED_WITH_REVISIONS}
+        (b) recipe is ``dispatch_enabled: false`` (out of scope)
+        (c) recipe is ``research_only: true`` (transparent non-promotable)
+        (d) same-line ``# PER_SUBSTRATE_SYMPOSIUM_WAIVED:<rationale>``
+            waiver on the ``dispatch_enabled:`` line (placeholder
+            ``<rationale>`` / ``<reason>`` literals rejected;
+            rationale must be ≥4 chars)
+
+    Per CLAUDE.md NON-NEGOTIABLE "PER-SUBSTRATE OPTIMAL FORM via adversarial
+    grand council symposium": each ASYMPTOTIC pursuit candidate deserves
+    individual cargo-cult audit + 9-dim checklist + observability surface
+    + sextet pact deliberation + reactivation criteria + Catalog #324
+    post-training Tier-C validation BEFORE paid dispatch. The 6-step
+    canonical contract is detailed in the CLAUDE.md section.
+
+    Bug class anchor: 2026-05-17 C6 IBPS 22× miss (smoke 3.04 vs predicted
+    [0.113, 0.163]) revealed that META-layer audits at design-memo + recipe-
+    emit surfaces CAN surface bug classes but CANNOT adjudicate per-
+    substrate cargo-culted assumptions without dedicated council symposium.
+
+    Args:
+        strict: If True, raise PreflightError when violations found.
+        verbose: If True, print per-violation detail.
+        repo_root: Repo root path; defaults to the repo enclosing this file.
+        now_utc: Override current UTC for deterministic testing.
+
+    Returns:
+        List of violation descriptions (empty if clean).
+
+    Raises:
+        PreflightError: if strict and violations non-empty.
+    """
+    if verbose:
+        print("  [check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor]")
+
+    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent.parent
+    recipe_dir = root / ".omx" / "operator_authorize_recipes"
+    if not recipe_dir.is_dir():
+        return []
+
+    violations: list[str] = []
+    for recipe_path in sorted(recipe_dir.glob("substrate_*.yaml")):
+        dispatch_enabled, research_only, waiver = _check_325_parse_recipe_dispatch_enabled(recipe_path)
+
+        # Out-of-scope: recipe not dispatch-enabled
+        if not dispatch_enabled:
+            continue
+
+        # Opt-out (c): research_only=true
+        if research_only:
+            continue
+
+        # Opt-out (d): same-line waiver with non-placeholder rationale
+        if waiver:
+            if verbose:
+                print(f"    WAIVED: {recipe_path.name} ({waiver})")
+            continue
+
+        # Now we need symposium evidence
+        substrate_id = _check_325_extract_substrate_id_from_recipe(recipe_path)
+        if substrate_id is None:
+            # Cannot identify substrate; out of scope
+            continue
+
+        found, verdict = _check_325_find_recent_symposium_memo(
+            substrate_id, root, now_utc=now_utc
+        )
+
+        if not found:
+            violations.append(
+                f"[Catalog #325] {recipe_path.name}: substrate={substrate_id} "
+                f"dispatch_enabled=true but NO per-substrate symposium memo at "
+                f".omx/research/council_*{substrate_id}*_<YYYYMMDD>.md within "
+                f"{_CHECK_325_SYMPOSIUM_WINDOW_DAYS}-day window. Per CLAUDE.md "
+                f"NON-NEGOTIABLE 'PER-SUBSTRATE OPTIMAL FORM via adversarial "
+                f"grand council symposium': each candidate requires individual "
+                f"cargo-cult audit + 9-dim checklist + observability surface + "
+                f"sextet pact deliberation + reactivation criteria + Catalog "
+                f"#324 post-training Tier-C validation BEFORE paid dispatch."
+            )
+            if verbose:
+                print(f"    VIOLATION: {recipe_path.name} (no symposium)")
+            continue
+
+        if verdict is None or verdict not in _CHECK_325_ACCEPTED_VERDICTS:
+            violations.append(
+                f"[Catalog #325] {recipe_path.name}: substrate={substrate_id} "
+                f"symposium found but verdict={verdict!r} not in "
+                f"{sorted(_CHECK_325_ACCEPTED_VERDICTS)}. Re-convene symposium "
+                f"per CLAUDE.md NON-NEGOTIABLE 'PER-SUBSTRATE OPTIMAL FORM' "
+                f"canonical 6-step contract."
+            )
+            if verbose:
+                print(f"    VIOLATION: {recipe_path.name} (verdict={verdict})")
+
+    if violations and strict:
+        msg = (
+            f"Catalog #325 (per-substrate optimal form symposium): "
+            f"{len(violations)} recipe violations. "
+            f"Per CLAUDE.md NON-NEGOTIABLE 'PER-SUBSTRATE OPTIMAL FORM via "
+            f"adversarial grand council symposium' + operator standing "
+            f"directive 2026-05-17/18 'all candidates including c6 ibps may "
+            f"need further optimization and iteration and review and audit "
+            f"and individual extreme passion and detail and effort and "
+            f"adversarial grand council symposiums': every dispatchable "
+            f"substrate MUST have a recent per-substrate symposium with "
+            f"PROCEED-or-PROCEED_WITH_REVISIONS verdict. "
+            f"First violation: {violations[0]}"
+        )
+        raise PreflightError(msg)
+
+    return violations
+
+
+# Catalog #326 - check_substrate_driver_consumes_trainer_mode_env_var
+# 2026-05-18 lane_driver_fix_smoke_hardcode_plus_new_catalog_gate_cross_substrate_audit_20260518.
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+# non-negotiable + Z6-v2 Wave 2 DEFER 2026-05-18 anchor + cross-substrate
+# pattern: refuse `scripts/remote_lane_substrate_*.sh` drivers that route
+# the trainer's smoke-vs-full mode in a way the matching recipe cannot
+# safely override.
+#
+# Empirical anchor: Z6-v2 Wave 2 full canary dispatch
+# `fc-01KRW7ZCYK5XF6MSHD24R71A46` ran `_smoke_main` despite the recipe
+# requesting `Z6_EPOCHS=100` full-mode because the Wave 2 recipe
+# `env_overrides` block did NOT set `SMOKE_ONLY=0` and the driver's
+# `SMOKE_ONLY="${SMOKE_ONLY:-1}"` default produced smoke-mode regardless
+# of intent. Smoke-mode-by-default + recipe not declaring full-mode-
+# override = trainer enters `_smoke_main` with synthetic-cfg overriding
+# the council-binding spec. Sister anchor: 2026-05-18 META-pattern across
+# C6 IBPS DEFER + Z6-v2 DEFER showed TWO consecutive ASYMPTOTIC
+# substrate dispatches frustrated by infrastructure-level bugs (NOT
+# paradigm falsification per Catalog #307).
+#
+# Bug class: "driver mode-routing default biases toward smoke without
+# explicit recipe-side opt-in for full". The structural protection
+# delegates verdict classification to the canonical helper
+# `tools/audit_substrate_driver_mode_hardcode.py` so the gate + the
+# operator-facing audit tool stay in lock-step.
+#
+# Acceptance cascades per CLAUDE.md "Forbidden premature KILL without
+# research exhaustion": only the bug-class verdicts
+# `HARDCODES_SMOKE_NO_RECIPE_OPT_OUT` and
+# `CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS` are refused. The other
+# verdicts (`NO_SMOKE_FLAG`, `HARDCODES_SMOKE_RECIPE_OPTED_OUT`,
+# `CONSUMES_ENV_DEFAULTS_FULL`, `CONSUMES_ENV_DEFAULTS_SMOKE_RECIPE_OK`,
+# `CONSUMES_ENV_MULTI_KEY_DEFAULT_RECIPE_OK`, `CONSUMES_ENV_NO_HARDCODE`,
+# `CONSUMES_ENV_UNKNOWN_DEFAULT`) are structurally legitimate or pending
+# manual review.
+#
+# Same-line waiver on the `--smoke` line in the driver:
+# `# DRIVER_MODE_HARDCODE_OK:<rationale>` (placeholder `<rationale>` /
+# `<reason>` rejected so the gate's docstring example cannot self-waive).
+# Whole-driver file-level waiver `# DRIVER_MODE_HARDCODE_OK_FILE:
+# <rationale>` in the first 30 lines for the rare driver intentionally
+# smoke-only that cannot afford even a per-line waiver (e.g. research-
+# only substrate with no foreseen full-mode use).
+#
+# Sister of Catalog #270 (canonical dispatch optimization protocol) +
+# Catalog #240 (recipe-vs-trainer-state consistency) + Catalog #244
+# (remote lane canonical NVML block) + Catalog #151 (operator wrapper
+# threads trainer Tier 1 flags) + Catalog #152 (operator wrapper
+# validates required input files). Together they extinct the "driver +
+# recipe + trainer wired but DON'T align on smoke vs full mode" bug
+# class at FIVE surfaces: driver/recipe mode-routing (#326) +
+# trainer-side optimization (#270) + recipe-state vs trainer-impl (#240)
+# + NVML env block (#244) + Tier-1 flag threading (#151) + required-
+# input validation (#152).
+#
+# WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule" — live
+# count at landing: 0 (Z6 driver fixed + Z6-v2 Wave 2 recipe overrides
+# set in same commit batch; audit JSON at
+# `.omx/state/substrate_driver_mode_hardcode_audit_<utc>.json` confirms
+# 0 bug-class drivers). Strict-flip planned after one full session-cycle
+# with 0 violations confirmed.
+
+_CHECK_326_DRIVERS_GLOB = "scripts/remote_lane_substrate_*.sh"
+_CHECK_326_BUG_CLASS_VERDICTS: frozenset[str] = frozenset({
+    "HARDCODES_SMOKE_NO_RECIPE_OPT_OUT",
+    "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS",
+})
+_CHECK_326_LINE_WAIVER_PATTERN = re.compile(
+    r"# DRIVER_MODE_HARDCODE_OK:(.+?)(?:$|#)", re.MULTILINE
+)
+_CHECK_326_FILE_WAIVER_PATTERN = re.compile(
+    r"# DRIVER_MODE_HARDCODE_OK_FILE:(.+?)(?:$|#)", re.MULTILINE
+)
+
+
+def _check_326_rationale_is_placeholder(rationale: str) -> bool:
+    """True iff the rationale text is a placeholder (rejected per Catalog #326)."""
+    low = rationale.strip().rstrip(":").strip().lower()
+    return low in ("", "<rationale>", "<reason>")
+
+
+def _check_326_driver_has_file_waiver(driver_path: Path) -> bool:
+    """True iff driver's first 30 lines carry a file-level waiver with non-placeholder rationale."""
+    try:
+        text = driver_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    head = "\n".join(text.splitlines()[:30])
+    for m in _CHECK_326_FILE_WAIVER_PATTERN.finditer(head):
+        if not _check_326_rationale_is_placeholder(m.group(1)):
+            return True
+    return False
+
+
+def _check_326_driver_has_line_waiver(driver_path: Path) -> bool:
+    """True iff driver has a same-line `# DRIVER_MODE_HARDCODE_OK:<rationale>` waiver
+    on ANY line containing `--smoke` or `SMOKE_FLAG_ARGS+=(--smoke)`.
+    """
+    try:
+        text = driver_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    for line in text.splitlines():
+        if "--smoke" not in line:
+            continue
+        m = _CHECK_326_LINE_WAIVER_PATTERN.search(line)
+        if m and not _check_326_rationale_is_placeholder(m.group(1)):
+            return True
+    return False
+
+
+def check_substrate_driver_consumes_trainer_mode_env_var(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Catalog #326 — refuse substrate drivers that route smoke-vs-full mode in
+    a way the matching recipe cannot safely override.
+
+    Delegates verdict classification to the canonical helper
+    `tools/audit_substrate_driver_mode_hardcode.py::audit_all_drivers` so the
+    operator-facing audit tool + this STRICT preflight gate stay in lock-step.
+
+    Same-line waiver on the `--smoke` line:
+    `# DRIVER_MODE_HARDCODE_OK:<rationale>`.
+    File-level waiver in the driver's first 30 lines:
+    `# DRIVER_MODE_HARDCODE_OK_FILE:<rationale>`.
+    Placeholder `<rationale>` / `<reason>` literals rejected.
+
+    Bug-class verdicts refused:
+    - `HARDCODES_SMOKE_NO_RECIPE_OPT_OUT`
+    - `CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS`
+
+    Per CLAUDE.md "Forbidden substrate driver hardcoding smoke=1 / --smoke
+    regardless of dispatch env vars" FORBIDDEN PATTERN + Catalog #270 sister.
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+
+    # Import the canonical helper lazily so preflight.py itself can be parsed
+    # without the tools/ path being on sys.path.
+    helper_path = root / "tools" / "audit_substrate_driver_mode_hardcode.py"
+    if not helper_path.is_file():
+        if verbose:
+            print(
+                "  [check_substrate_driver_consumes_trainer_mode_env_var] "
+                f"SKIP (canonical helper missing at {helper_path})"
+            )
+        return violations
+
+    import importlib.util as _ilu
+
+    spec = _ilu.spec_from_file_location(
+        "tac_check326_audit_helper", str(helper_path)
+    )
+    if spec is None or spec.loader is None:
+        if verbose:
+            print(
+                "  [check_substrate_driver_consumes_trainer_mode_env_var] "
+                "SKIP (canonical helper import failed)"
+            )
+        return violations
+    module = _ilu.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+    except Exception as exc:
+        if strict:
+            raise PreflightError(
+                "Catalog #326 audit helper failed to import: "
+                f"{type(exc).__name__}: {exc}"
+            )
+        if verbose:
+            print(
+                "  [check_substrate_driver_consumes_trainer_mode_env_var] "
+                f"SKIP (helper exception: {exc})"
+            )
+        return violations
+
+    try:
+        report = module.audit_all_drivers(root)
+    except Exception as exc:
+        if strict:
+            raise PreflightError(
+                "Catalog #326 audit helper raised: "
+                f"{type(exc).__name__}: {exc}"
+            )
+        if verbose:
+            print(
+                "  [check_substrate_driver_consumes_trainer_mode_env_var] "
+                f"SKIP (audit raised: {exc})"
+            )
+        return violations
+
+    for row in report.get("rows", []):
+        verdict = row.get("verdict", "")
+        if verdict not in _CHECK_326_BUG_CLASS_VERDICTS:
+            continue
+        driver_rel = row.get("driver_path", "")
+        driver_abs = root / driver_rel
+        # Honor file-level + line-level waivers
+        if _check_326_driver_has_file_waiver(driver_abs):
+            continue
+        if _check_326_driver_has_line_waiver(driver_abs):
+            continue
+        substrate_id = row.get("substrate_id", "?")
+        explanation = row.get("explanation", "")
+        violations.append(
+            f"[Catalog #326] {driver_rel} (substrate={substrate_id}) verdict="
+            f"{verdict}: {explanation[:300]}. Per CLAUDE.md 'Bugs must be "
+            "permanently fixed AND self-protected against' non-negotiable + "
+            "Z6-v2 Wave 2 DEFER 2026-05-18 anchor: fix the driver to consume "
+            "Z6_TRAINER_MODE / equivalent env var with full-mode default OR "
+            "update the matching recipe `env_overrides` to set the mode-env "
+            "var to full OR opt the recipe out via `research_only: true` / "
+            "`smoke_only: true` / `dispatch_enabled: false`. OR carry a same-"
+            "line `# DRIVER_MODE_HARDCODE_OK:<rationale>` waiver on the "
+            "--smoke line (placeholder rationale rejected). Run "
+            "`.venv/bin/python tools/audit_substrate_driver_mode_hardcode.py` "
+            "for the full per-recipe safety breakdown."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_substrate_driver_consumes_trainer_mode_env_var] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_substrate_driver_consumes_trainer_mode_env_var] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_driver_consumes_trainer_mode_env_var found "
+            f"{len(violations)} violation(s) per Catalog #326.\n  "
+            + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations

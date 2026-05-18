@@ -59,21 +59,33 @@ cost_band:
   platform_key: modal
   gpu_key: A10G
 
-predicted_score_target: null
-# 2026-05-16 CARGO-CULT-UNWIND: predicted_band REVISED from [0.113, 0.163] to null
-# pending Dykstra-feasibility polytope + Tier C anchor reconciliation.
-# Per Catalog #219 Z1 ablation + Catalog #227 Tier C: C6 5ep IBPS1 anchor classified
-# WITHIN-CLASS; old band is structurally inconsistent with Z1 within-class plateau.
-predicted_band: null
+predicted_score_target: 0.138
+# Catalog #324 post-smoke correction: the original predicted band was derived
+# from random-init Tier-C density, then empirically falsified by the 2026-05-17
+# Modal A10G smoke (call_id fc-01KRW353MJJ9A6QW8H99QWZEMH; final_score=3.04,
+# 18-22x outside the upper band). Keep the historical band visible for
+# debrief/debugging, but do not allow it to authorize further spend until a
+# post-training Tier-C density measurement replaces the random-init basis.
+predicted_band: [0.113, 0.163]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324: dispatch remains disabled until the C6 smoke archive receives post-training Tier-C density validation and a revised score band, or an explicit operator waiver with rationale is recorded. Current band is a falsified random-init-derived prediction."
 smoke_score_band: [0.10, 0.30]
-predicted_delta: "NULL pending Dykstra-feasibility polytope + Tier C anchor reconciliation [prediction] per cargo-cult-unwind 2026-05-16; OLD band [0.113, 0.163] retired as carried-forward-post-Z1 without within-class haircut"
-predicted_delta_basis: ".omx/research/c6_e4_mdl_ibps_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND) + .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md §1.2 + Catalog #219 Z1 ablation citation"
-# CARGO-CULT-UNWIND reactivation criteria (per design memo §Reactivation criteria):
-dispatch_blockers:
-  - tools_check_substrate_dykstra_feasibility_polytope_emitted_at_omx_state_dykstra_feasibility_c6_e4_mdl_ibps_json
-  - predicted_band_revised_in_both_unwind_memo_and_this_recipe_to_polytope_distortion_axis_intersection
-  - tier_c_anchor_reconciliation_landed_post_smoke_mdl_ablation_classifies_within_or_across_class_per_catalog_227
-  - grand_council_consensus_sextet_pact_sign_off_on_revised_band_per_CLAUDE_md_design_decisions_non_negotiable
+predicted_delta: "predicted delta -0.080 to -0.030 from PR101 baseline 0.193 -> predicted band [0.113, 0.163] [prediction] per Dykstra-feasibility polytope projection [0.099879, 0.531541] containing the predicted band + Tier-C ACROSS_CLASS verdict 2.67e-5 + sextet PROCEED-unconditional 2026-05-17"
+predicted_delta_basis: ".omx/research/c6_e4_mdl_ibps_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND landed 2026-05-16) + .omx/state/dykstra_feasibility_c6_e4_mdl_ibps.json (Dykstra polytope 2026-05-17 FEASIBLE) + .omx/state/tier_c_density_reconciliation_c6_e4_mdl_ibps.json (Tier-C ACROSS_CLASS 2026-05-17) + .omx/state/composition_alpha_c6_e4_mdl_ibps_x_wyner_ziv.json (composition_alpha=1.0 ORTHOGONAL with WZ pipeline-stage 2026-05-17) + .omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md (sextet PROCEED-unconditional 2026-05-17 6-of-6 + Catalog #315 satisfied) + Catalog #219 Z1 ablation + Catalog #227 Tier-C boundary semantics + Catalog #296 Dykstra-feasibility + Catalog #315 OPTIMAL FORM"
+# 2026-05-17 DISPATCH UNLOCK: All 4 dispatch_blockers cleared via canonical 4-step fix.
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" +
+# Catalog #315 + Catalog #324. Disabled after the C6 smoke falsified the
+# random-init-derived band; re-enable only with post-training Tier-C evidence.
+dispatch_enabled: false
+dispatch_blockers_cleared:
+  - tools_check_substrate_dykstra_feasibility_polytope_emitted_at_omx_state_dykstra_feasibility_c6_e4_mdl_ibps_json__CLEARED_2026_05_17
+  - predicted_band_revised_to_polytope_distortion_axis_intersection_113_to_163__CLEARED_2026_05_17
+  - tier_c_anchor_reconciliation_landed_across_class_per_catalog_227__CLEARED_2026_05_17
+  - grand_council_consensus_sextet_pact_proceed_unconditional_6_of_6__CLEARED_2026_05_17
+# Post-dispatch responsibility: post-smoke Tier-C re-confirmation REQUIRED per
+# Assumption-Adversary CARGO-CULTED classification ("$0.76 sufficient" is an
+# UPPER bound on disconfirmation, not a guarantee of confirmation). Register
+# probe-outcome verdict via Catalog #313 ledger AFTER smoke lands.
 literature_anchor: |
   Tishby & Zaslavsky (2015) "Deep Learning and the Information Bottleneck Principle"
     IEEE Info. Theory Workshop DOI 10.1109/ITW.2015.7133169;
@@ -165,8 +177,17 @@ dependencies:
 notes: |
   unwind_landed: true (2026-05-16 per .omx/research/c6_e4_mdl_ibps_cargo_cult_unwind_design_20260516.md)
   unwind_audit_source: .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md (commit 3768a4f3d) §1.2
-  cargo_cult_unwound: 3 cargo-cults classified (CC-3 HIGH; CC-1 + CC-2 MEDIUM); Z1 within-class haircut required
-  reactivation_criteria: 4 criteria pinned in dispatch_blockers above; per CLAUDE.md "Forbidden premature KILL" NO kill verdict
+  cargo_cult_unwound: 3 cargo-cults classified (CC-3 HIGH; CC-1 + CC-2 MEDIUM); Z1 within-class haircut DOES NOT apply (Tier-C ACROSS_CLASS)
+  reactivation_criteria: 4 criteria ALL CLEARED 2026-05-17 via lane_c6_ibps_4_recipe_fixes_dispatch_unlock_20260517; per CLAUDE.md "Forbidden premature KILL" NO kill verdict
+
+  DISPATCH UNLOCK LANDED 2026-05-17:
+    - Fix 1 (Dykstra polytope FEASIBLE): .omx/state/dykstra_feasibility_c6_e4_mdl_ibps.json
+    - Fix 2 (composition_alpha=1.0 ORTHOGONAL with WZ pipeline-stage codec): .omx/state/composition_alpha_c6_e4_mdl_ibps_x_wyner_ziv.json
+    - Fix 3 (Tier-C ACROSS_CLASS per Catalog #227): .omx/state/tier_c_density_reconciliation_c6_e4_mdl_ibps.json
+    - Fix 4 (sextet PROCEED-unconditional 6-of-6 per Catalog #315): .omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md
+    - Catalog #315 OPTIMAL FORM: SATISFIED (chronologically later than prior PROCEED_WITH_REVISIONS)
+    - Predicted band [0.113, 0.163] REVALIDATED at FRONTIER-PURSUIT horizon class
+    - Mission contribution: frontier_breaking
 
   C6 MDL-IBPS substrate first-anchor dispatch recipe.
 

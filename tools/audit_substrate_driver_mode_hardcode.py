@@ -1,0 +1,537 @@
+#!/usr/bin/env python3
+"""Cross-substrate driver mode-hardcode audit per Catalog #326 + DRIVER-FIX wave 2026-05-18.
+
+Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+non-negotiable + Z6-v2 Wave 2 DEFER 2026-05-18 anchor: scan every
+``scripts/remote_lane_substrate_*.sh`` driver for the bug class where the
+trainer is invoked with ``--smoke`` flag (or equivalent ``smoke=1`` /
+``SMOKE=1`` shell pattern) WITHOUT consulting an env var to determine
+smoke-vs-full mode.
+
+Empirical anchor: Z6-v2 Wave 2 full canary dispatch
+``fc-01KRW7ZCYK5XF6MSHD24R71A46`` ran ``_smoke_main`` despite the recipe
+requesting ``Z6_EPOCHS=100`` full-mode because the Z6-v2 Wave 2 recipe
+``env_overrides`` block did NOT set ``SMOKE_ONLY=0``. The driver's
+``SMOKE_ONLY="${SMOKE_ONLY:-1}"`` default produced smoke-mode regardless
+of intent. The bug class is: "driver mode-routing default biases toward
+smoke without explicit recipe-side opt-in for full".
+
+Per-driver verdict taxonomy:
+
+- ``HARDCODES_SMOKE_NO_RECIPE_OPT_OUT``: driver hardcodes ``--smoke`` AND
+  the matching recipe does NOT declare ``smoke_only: true`` /
+  ``research_only: true`` / ``dispatch_enabled: false``. This is the
+  active bug class.
+- ``HARDCODES_SMOKE_RECIPE_OPTED_OUT``: driver hardcodes ``--smoke`` but
+  the recipe explicitly opts out of full-mode via the standard
+  research-only / smoke-only / dispatch-disabled mechanism. Acceptable.
+- ``CONSUMES_ENV_DEFAULTS_SMOKE``: driver supports env-var smoke/full
+  toggle BUT default is smoke. If the recipe does NOT set the env var,
+  the driver runs smoke. This is the Z6 bug class.
+- ``CONSUMES_ENV_DEFAULTS_FULL``: driver supports env-var smoke/full
+  toggle AND default is full (or recipe sets it explicitly). Healthy.
+- ``NO_SMOKE_FLAG``: driver passes no ``--smoke`` flag at all (trainer
+  internally branches on epochs). Out of scope for this audit.
+
+Usage::
+
+    .venv/bin/python tools/audit_substrate_driver_mode_hardcode.py
+    .venv/bin/python tools/audit_substrate_driver_mode_hardcode.py --apply  # writes report JSON
+
+The audit JSON path is
+``.omx/state/substrate_driver_mode_hardcode_audit_<utc>.json``.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+_DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
+DRIVERS_GLOB = "scripts/remote_lane_substrate_*.sh"
+
+
+def _recipes_dir(repo_root: Path) -> Path:
+    return repo_root / ".omx" / "operator_authorize_recipes"
+
+# Patterns: any line invoking trainer w/ --smoke flag.
+# After stripping trailing comments, ANY occurrence of --smoke on a
+# code line is hardcoded — the conditional accumulator pattern is
+# detected separately by _SMOKE_CONDITIONAL_PATTERNS.
+_SMOKE_FLAG_PATTERNS = (
+    # Match --smoke as a whole-word shell token. Use lookarounds because
+    # `\b` does not match around `-` (non-word char). The flag must be
+    # preceded by whitespace or start-of-line and followed by whitespace,
+    # end-of-line, `\`, or `)`.
+    re.compile(r"(?:^|\s)--smoke(?=$|\s|\\|\))"),
+)
+# Patterns that indicate --smoke is INSIDE a conditional accumulator
+# (not unconditional hardcoding):
+_SMOKE_CONDITIONAL_PATTERNS = (
+    re.compile(r"SMOKE_FLAG_ARGS\s*\+=\s*\(\s*--smoke\s*\)"),  # Z6-style accumulator
+    re.compile(r"SMOKE_ARGS\s*\+=\s*\(\s*--smoke\s*\)"),
+    re.compile(r"if\s+\[.*?--smoke"),  # if-test with --smoke literal
+)
+# Env-var smoke/full mode tokens
+_MODE_ENV_TOKENS = (
+    "SMOKE_ONLY",
+    "TRAINER_MODE",
+    "DISPATCH_MODE",
+    "RUN_MODE",
+    "SMOKE_MODE",
+    "FULL_MODE",
+    "MODE_FULL",
+)
+# Recipe-side opt-out markers (driver hardcoded --smoke is acceptable IF
+# the recipe explicitly opts out of full-mode dispatch)
+_RECIPE_OPT_OUT_TOKENS = (
+    "smoke_only: true",
+    "smoke_only:true",
+    "research_only: true",
+    "research_only:true",
+    "dispatch_enabled: false",
+    "dispatch_enabled:false",
+)
+
+
+def _read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def _substrate_id_from_driver(driver_path: Path) -> str:
+    name = driver_path.stem
+    prefix = "remote_lane_substrate_"
+    if name.startswith(prefix):
+        return name[len(prefix):]
+    return name
+
+
+def _find_matching_recipes(
+    substrate_id: str, driver_path: Path, repo_root: Path
+) -> list[Path]:
+    """Find recipes that reference this driver.
+
+    Two lookup strategies (union):
+    1. Filename prefix match (e.g. ``substrate_<id>_*.yaml`` → recipe).
+    2. Reverse content lookup: recipes whose ``remote_driver:`` or
+       ``lane_script:`` field points at this driver's relative path. This
+       catches recipes like ``substrate_z6_v2_candidate_1_*.yaml`` that
+       share the Z6 driver but don't carry the substrate_id in the
+       filename.
+    """
+    recipes_dir = _recipes_dir(repo_root)
+    if not recipes_dir.is_dir():
+        return []
+    pattern_a = f"substrate_{substrate_id}_*.yaml"
+    pattern_b = f"substrate_{substrate_id}.yaml"
+    hits: set[Path] = set()
+    for pattern in (pattern_a, pattern_b):
+        hits.update(recipes_dir.glob(pattern))
+    # Reverse content lookup
+    try:
+        driver_rel = str(driver_path.relative_to(repo_root))
+    except ValueError:
+        driver_rel = str(driver_path)
+    driver_name = driver_path.name
+    for recipe_path in recipes_dir.glob("substrate_*.yaml"):
+        text = _read(recipe_path)
+        # Match recipes whose remote_driver: or lane_script: line points at
+        # this driver (either by relative path or by basename).
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not (stripped.startswith("remote_driver:") or stripped.startswith("lane_script:")):
+                continue
+            if driver_rel in stripped or driver_name in stripped:
+                hits.add(recipe_path)
+                break
+    return sorted(hits)
+
+
+def _recipe_opted_out_of_full_mode(recipe_path: Path) -> bool:
+    """True iff recipe has a TOP-LEVEL YAML key (not a comment) setting any
+    of the opt-out fields to true / false-as-appropriate.
+
+    Checks:
+    - ``research_only: true`` (top-level)
+    - ``smoke_only: true`` (top-level)
+    - ``dispatch_enabled: false`` (top-level)
+
+    Comment lines (starting with ``#`` after leading whitespace) are excluded
+    so explanatory prose mentioning ``research_only: true`` does NOT
+    falsely satisfy the opt-out test.
+    """
+    text = _read(recipe_path)
+    if not text:
+        return False
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        # Skip comment lines
+        if stripped.startswith("#") or not stripped:
+            continue
+        # Strip trailing comment
+        code = stripped.split("#", 1)[0].rstrip()
+        if not code:
+            continue
+        # Match exact YAML key: value (lenient on whitespace)
+        for key, expected in (
+            ("research_only", "true"),
+            ("smoke_only", "true"),
+            ("dispatch_enabled", "false"),
+        ):
+            m = re.match(rf"^{key}\s*:\s*([A-Za-z0-9_\"']+)\s*$", code)
+            if m and m.group(1).strip().strip('"').strip("'").lower() == expected:
+                return True
+    return False
+
+
+def _driver_has_hardcoded_smoke(driver_text: str) -> bool:
+    """True iff driver passes --smoke flag unconditionally on a command line
+    (NOT inside a conditional accumulator like SMOKE_FLAG_ARGS+=(--smoke)).
+
+    Strip trailing comments before matching so a same-line ``# DRIVER_MODE_*``
+    waiver does NOT mask the bug class — the waiver is detected separately at
+    the gate-acceptance layer.
+    """
+    lines = driver_text.splitlines()
+    for line in lines:
+        # Strip trailing comments to expose --smoke even when followed by a
+        # waiver comment.
+        stripped = line.split("#", 1)[0]
+        if "--smoke" not in stripped:
+            continue
+        # Reject lines that are conditional accumulator patterns (Z6-style)
+        # — those use env-var gating and are not literally hardcoded.
+        cond_match = any(p.search(stripped) for p in _SMOKE_CONDITIONAL_PATTERNS)
+        if cond_match:
+            continue
+        # Match unconditional --smoke patterns
+        for pattern in _SMOKE_FLAG_PATTERNS:
+            if pattern.search(stripped):
+                return True
+    return False
+
+
+def _driver_consumes_env_mode(driver_text: str) -> tuple[bool, str | None]:
+    """Detect if driver uses any env-var to select mode.
+
+    Returns ``(consumes, env_var_name_or_none)``. Detects either:
+    - ``VAR="${VAR:-...}"`` parameter expansion of mode token, OR
+    - ``if [ "$VAR" = "1" ]; then SMOKE_FLAG_ARGS+=(--smoke); fi`` conditional pattern.
+    """
+    for token in _MODE_ENV_TOKENS:
+        if token in driver_text:
+            return True, token
+    return False, None
+
+
+def _driver_env_default_value(driver_text: str, env_var: str) -> str | None:
+    """Extract the default value from ``VAR="${VAR:-default}"`` pattern."""
+    # Match patterns like SMOKE_ONLY="${SMOKE_ONLY:-1}"
+    pattern = re.compile(
+        rf'^\s*{re.escape(env_var)}\s*=\s*["\']?\$\{{{re.escape(env_var)}:-([^}}]*)\}}',
+        re.MULTILINE,
+    )
+    match = pattern.search(driver_text)
+    if match:
+        return match.group(1).strip().strip('"').strip("'")
+    return None
+
+
+def _recipe_sets_env_var(recipe_path: Path, env_var: str) -> str | None:
+    """Read the recipe's ``env_overrides`` block and extract ``env_var``.
+
+    This intentionally does not scan the whole recipe: notes, comments, or
+    unrelated top-level keys mentioning ``SMOKE_ONLY: "0"`` are not dispatch
+    environment overrides and must not make a smoke-default driver look safe.
+    """
+    text = _read(recipe_path)
+    if not text:
+        return None
+    in_env_overrides = False
+    base_indent: int | None = None
+    key_pattern = re.compile(
+        rf"^\s*{re.escape(env_var)}\s*:\s*['\"]?([^'\"\n#]+?)['\"]?\s*(?:#.*)?$"
+    )
+    top_level_key = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_-]*\s*:")
+    for line in text.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if re.match(r"^env_overrides\s*:\s*(?:#.*)?$", line):
+            in_env_overrides = True
+            base_indent = len(line) - len(line.lstrip())
+            continue
+        if not in_env_overrides:
+            continue
+        indent = len(line) - len(line.lstrip())
+        if base_indent is not None and indent <= base_indent and top_level_key.match(line):
+            break
+        match = key_pattern.match(line)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
+def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
+    text = _read(driver_path)
+    substrate_id = _substrate_id_from_driver(driver_path)
+    recipes = _find_matching_recipes(substrate_id, driver_path, repo_root)
+    def _rel(p: Path) -> str:
+        try:
+            return str(p.relative_to(repo_root))
+        except ValueError:
+            return str(p)
+    recipe_paths_str = [_rel(p) for p in recipes]
+    any_recipe_opted_out = any(_recipe_opted_out_of_full_mode(p) for p in recipes)
+
+    has_hardcoded = _driver_has_hardcoded_smoke(text)
+    # The SMOKE_FLAG_ARGS+=(--smoke) conditional accumulator is also a
+    # "could-route-smoke" pattern when the env-var default biases to smoke.
+    has_conditional_smoke = any(
+        p.search(text) for p in _SMOKE_CONDITIONAL_PATTERNS
+    )
+    consumes_env, env_var = _driver_consumes_env_mode(text)
+
+    if not has_hardcoded and not consumes_env and not has_conditional_smoke:
+        verdict = "NO_SMOKE_FLAG"
+        explanation = (
+            "Driver does not pass --smoke flag; trainer determines mode internally."
+        )
+    elif has_hardcoded and not consumes_env:
+        all_recipes_opted_out = bool(recipes) and all(
+            _recipe_opted_out_of_full_mode(p) for p in recipes
+        )
+        if all_recipes_opted_out:
+            verdict = "HARDCODES_SMOKE_RECIPE_OPTED_OUT"
+            explanation = (
+                "Driver unconditionally passes --smoke flag; matching recipe "
+                "set all declares research_only/smoke_only/dispatch_enabled=false. "
+                "Acceptable per CLAUDE.md HNeRV parity L2 (research-only by construction)."
+            )
+        else:
+            unsafe_recipes = [
+                _rel(p) for p in recipes if not _recipe_opted_out_of_full_mode(p)
+            ]
+            verdict = "HARDCODES_SMOKE_NO_RECIPE_OPT_OUT"
+            explanation = (
+                "Driver unconditionally passes --smoke flag AND no matching "
+                "recipe set fully opts out via research_only/smoke_only/"
+                "dispatch_enabled=false. ACTIVE BUG CLASS — driver cannot "
+                f"honor a full-mode recipe. Unsafe recipes: {unsafe_recipes}"
+            )
+    elif consumes_env and not has_hardcoded and not has_conditional_smoke:
+        # Driver references env var but does not pass --smoke anywhere
+        # (literal nor conditional accumulator).
+        verdict = "CONSUMES_ENV_NO_HARDCODE"
+        explanation = (
+            f"Driver references env var {env_var} but does not literally "
+            f"hardcode --smoke (may use conditional accumulator pattern)."
+        )
+    else:
+        # consumes_env AND (has_hardcoded OR has_conditional_smoke) — most
+        # likely Z6 pattern with SMOKE_FLAG_ARGS+=(--smoke) inside
+        # `if [ "$SMOKE_ONLY" = "1" ]`
+        default_value = _driver_env_default_value(text, env_var) if env_var else None
+        # Check per-recipe: does each individual recipe opt out OR override env?
+        recipe_status: list[dict[str, Any]] = []
+        for rp in recipes:
+            rp_rel = _rel(rp)
+            rp_opted_out = _recipe_opted_out_of_full_mode(rp)
+            rp_env_value = _recipe_sets_env_var(rp, env_var) if env_var else None
+            rp_env_full = (
+                rp_env_value is not None
+                and rp_env_value.strip().lower() in ("0", "false", "no", "off", "full")
+            )
+            # A recipe is "safe" if (a) opted out, (b) sets env to full, or
+            # (c) driver default is already full.
+            driver_default_is_full = (
+                default_value is not None
+                and default_value.strip().lower() in ("0", "false", "no", "off", "full")
+            )
+            safe = rp_opted_out or rp_env_full or driver_default_is_full
+            recipe_status.append({
+                "recipe": rp_rel,
+                "opted_out_of_full_mode": rp_opted_out,
+                "env_var_value_in_recipe": rp_env_value,
+                "env_var_forces_full": rp_env_full,
+                "safe_for_driver_smoke_default": safe,
+            })
+        if default_value and default_value.strip().lower() in ("0", "false", "no", "off", "full"):
+            verdict = "CONSUMES_ENV_DEFAULTS_FULL"
+            explanation = (
+                f"Driver consumes env var {env_var} with default '{default_value}' "
+                f"(full-mode); recipes can opt into smoke explicitly."
+            )
+        elif default_value and default_value.strip().lower() in ("1", "true", "yes", "on", "smoke"):
+            # Bug class fires if ANY recipe is neither opted-out nor overrides env to full
+            unsafe_recipes = [r["recipe"] for r in recipe_status if not r["safe_for_driver_smoke_default"]]
+            if unsafe_recipes:
+                verdict = "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS"
+                explanation = (
+                    f"Driver consumes env var {env_var} with default '{default_value}' "
+                    f"(smoke-mode) AND at least one matching recipe does NOT override "
+                    f"the env var to full AND does NOT opt out of full-mode. "
+                    f"Z6-v2 Wave 2 BUG CLASS — unsafe recipes: {unsafe_recipes}"
+                )
+            elif recipes:
+                verdict = "CONSUMES_ENV_DEFAULTS_SMOKE_RECIPE_OK"
+                explanation = (
+                    f"Driver consumes env var {env_var} with default '{default_value}' "
+                    f"(smoke-mode); ALL matching recipes either explicitly set full OR "
+                    f"opt out of full-mode entirely. Acceptable."
+                )
+            else:
+                verdict = "CONSUMES_ENV_DEFAULTS_SMOKE_NO_RECIPE"
+                explanation = (
+                    f"Driver consumes env var {env_var} with default '{default_value}' "
+                    f"(smoke-mode) but no matching recipe was found. Out of scope."
+                )
+        else:
+            # No statically-determinable default. Check if ALL matching recipes
+            # are safe (either opted out or explicitly override env). If so,
+            # this is acceptable — the driver uses a multi-key mode-resolution
+            # pattern (e.g. Z6's Z6_TRAINER_MODE > SMOKE_ONLY > default).
+            all_recipes_safe = all(r["safe_for_driver_smoke_default"] for r in recipe_status) if recipe_status else False
+            if all_recipes_safe and recipes:
+                verdict = "CONSUMES_ENV_MULTI_KEY_DEFAULT_RECIPE_OK"
+                explanation = (
+                    f"Driver consumes env var {env_var} via multi-key mode resolution "
+                    f"(no single statically-determinable default); all matching recipes "
+                    f"are safe (either opt out OR explicitly override env to full)."
+                )
+            else:
+                verdict = "CONSUMES_ENV_UNKNOWN_DEFAULT"
+                explanation = (
+                    f"Driver consumes env var {env_var} but default value could not be "
+                    f"determined statically AND at least one matching recipe does NOT "
+                    f"override the env var to full AND does NOT opt out of full-mode."
+                )
+        # Attach per-recipe detail to row
+        return {
+            "substrate_id": substrate_id,
+            "driver_path": _rel(driver_path),
+            "recipes": recipe_paths_str,
+            "verdict": verdict,
+            "explanation": explanation,
+            "any_recipe_opted_out_of_full_mode": any_recipe_opted_out,
+            "consumes_env_var": env_var,
+            "env_var_default_in_driver": (
+                _driver_env_default_value(text, env_var) if (consumes_env and env_var) else None
+            ),
+            "per_recipe_safety": recipe_status,
+        }
+    return {
+        "substrate_id": substrate_id,
+        "driver_path": _rel(driver_path),
+        "recipes": recipe_paths_str,
+        "verdict": verdict,
+        "explanation": explanation,
+        "any_recipe_opted_out_of_full_mode": any_recipe_opted_out,
+        "consumes_env_var": env_var,
+        "env_var_default_in_driver": (
+            _driver_env_default_value(text, env_var) if (consumes_env and env_var) else None
+        ),
+    }
+
+
+def audit_all_drivers(repo_root: Path | None = None) -> dict[str, Any]:
+    if repo_root is None:
+        repo_root = _DEFAULT_REPO_ROOT
+    repo_root = Path(repo_root).resolve()
+    drivers = sorted((repo_root / "scripts").glob("remote_lane_substrate_*.sh"))
+    rows = [_classify_driver(d, repo_root) for d in drivers]
+    verdict_counts: dict[str, int] = {}
+    for row in rows:
+        verdict_counts[row["verdict"]] = verdict_counts.get(row["verdict"], 0) + 1
+    bug_class_rows = [
+        row for row in rows
+        if row["verdict"] in (
+            "HARDCODES_SMOKE_NO_RECIPE_OPT_OUT",
+            "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS",
+        )
+    ]
+    return {
+        "schema_version": 1,
+        "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "audit_tool": "tools/audit_substrate_driver_mode_hardcode.py",
+        "catalog_reference": "Catalog #326 (NEW) + DRIVER-FIX wave 2026-05-18 anchor",
+        "empirical_anchor_z6_v2_wave_2_defer": {
+            "smoke_call_id": "fc-01KRW7RHFHP640BHTQ0FZM3M38",
+            "full_canary_call_id": "fc-01KRW7ZCYK5XF6MSHD24R71A46",
+            "date_utc": "2026-05-18",
+            "root_cause": (
+                "Z6-v2 Wave 2 recipe env_overrides did NOT set SMOKE_ONLY=0; "
+                "driver default SMOKE_ONLY=1 produced --smoke flag; trainer "
+                "entered _smoke_main with synthetic-cfg overriding council-binding spec."
+            ),
+        },
+        "total_drivers_scanned": len(rows),
+        "verdict_counts": verdict_counts,
+        "bug_class_count": len(bug_class_rows),
+        "bug_class_drivers": [r["substrate_id"] for r in bug_class_rows],
+        "rows": rows,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Audit substrate drivers for smoke/full mode hardcoding bug class.",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write report JSON to .omx/state/substrate_driver_mode_hardcode_audit_<utc>.json",
+    )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=_DEFAULT_REPO_ROOT,
+        help="Repo root path (default: auto-detect).",
+    )
+    parser.add_argument(
+        "--format",
+        choices=("json", "summary"),
+        default="summary",
+        help="Output format (default: summary).",
+    )
+    args = parser.parse_args()
+
+    report = audit_all_drivers(args.repo_root)
+    if args.format == "json":
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print("=" * 70)
+        print("Substrate driver mode-hardcode audit (Catalog #326)")
+        print(f"Generated: {report['generated_at_utc']}")
+        print(f"Drivers scanned: {report['total_drivers_scanned']}")
+        print()
+        print("Verdict counts:")
+        for verdict, count in sorted(report["verdict_counts"].items()):
+            marker = " ← BUG CLASS" if "BUG_CLASS" in verdict or "NO_RECIPE_OPT_OUT" in verdict else ""
+            print(f"  {verdict:50s} {count:3d}{marker}")
+        print()
+        print(f"Bug class count: {report['bug_class_count']}")
+        if report["bug_class_drivers"]:
+            print("Bug class drivers:")
+            for sid in report["bug_class_drivers"]:
+                print(f"  - {sid}")
+
+    if args.apply:
+        utc_stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        out_path = args.repo_root / ".omx/state" / f"substrate_driver_mode_hardcode_audit_{utc_stamp}.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
+        print(f"\nWrote: {out_path.relative_to(args.repo_root)}")
+        return 0 if report["bug_class_count"] == 0 else 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

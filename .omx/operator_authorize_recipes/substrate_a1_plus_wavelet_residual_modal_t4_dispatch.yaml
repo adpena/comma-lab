@@ -37,6 +37,8 @@ council_verdicts:
 # Wider band [0.180, 0.210] absorbs the empirical drift without false
 # refusal at smoke-band gate.
 predicted_band: [0.180, 0.210]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324: before promotion or full-run score-band authority, measure Tier-C density on the post-training A1+wavelet smoke archive and replace this pending status with validated_post_training plus artifact path; until then the band is planning-only, not dispatch/promotion authority."
 
 risk: |
   META-COUNCIL §6b highest-EV/$ competing path retarget.  The wavelet

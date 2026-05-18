@@ -62,6 +62,8 @@ council_verdicts:
     dispatched separately via operator wrapper).
 
 predicted_band: [0.165, 0.185]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324: before promotion or full-run score-band authority, measure Tier-C density on the post-training SABOR smoke archive and replace this pending status with validated_post_training plus artifact path; until then the band is planning-only, not dispatch/promotion authority."
 
 risk: >-
   First-anchor SABOR dispatch on Modal T4. The φ1 audit empirically proved

@@ -41,6 +41,8 @@ council_verdicts:
   D6: "BOTH AXES contest-CPU + contest-CUDA (10-0)"
 
 predicted_band: [0.185, 0.195]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324: before promotion or full-run score-band authority, measure Tier-C density on the post-training A1+LAPose smoke archive and replace this pending status with validated_post_training plus artifact path; until then the band is planning-only, not dispatch/promotion authority."
 
 risk: |
   First-anchor D1.D composition dispatch.  A1 substrate is FROZEN (loaded

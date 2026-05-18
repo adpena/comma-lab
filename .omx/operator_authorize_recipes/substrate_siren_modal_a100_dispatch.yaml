@@ -48,6 +48,8 @@ cost_band:
 
 predicted_score_target: null
 predicted_band: [0.180, 0.250]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324: before promotion or full-run score-band authority, measure Tier-C density on the post-training SIREN smoke archive and replace this pending status with validated_post_training plus artifact path; until then the band is planning-only, not dispatch/promotion authority."
 smoke_score_band: [0.050, 5.000]
 predicted_delta: "naked_siren_replacement literature-prediction only; no score claim"
 predicted_delta_basis: ".omx/research/siren_literature_review_20260513.md#recommendations"
