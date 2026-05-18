@@ -192,6 +192,41 @@ The 6-step contract:
 
 **Net**: 5 FORK_BECAUSE_PRINCIPLED + 1 UNCLEAR_NEEDS_EMPIRICAL + 7 ADOPT_CANONICAL. Forks all documented + tied to specific cargo-cult or empirical anchor.
 
+### Codex adversarial online-review supersession - 2026-05-18
+
+Codex reviewed the current Z7-Mamba-2 runtime plan against the Z7-GRU runtime
+bug found earlier today and against Mamba/Mamba-2 implementation constraints:
+
+```text
+sources:
+  Mamba: https://arxiv.org/abs/2312.00752
+  Mamba-2: https://arxiv.org/abs/2405.21060
+  Z7-GRU runtime bug: brotli dependency removed in favor of stdlib zlib
+```
+
+Supersession: the previous "torch + brotli + mamba_ssm" inflate runtime
+waiver is too permissive for contest promotion. Any future Z7-Mamba runtime
+must satisfy:
+
+```text
+runtime may use torch
+runtime must not require brotli
+runtime must not require mamba_ssm unless vendored and proven inside the exact
+  contest runtime closure
+preferred path: pure-PyTorch exported selective-SSM recurrence in <=200 LOC
+fallback path: keep research_only=true until dependency closure is proven
+```
+
+This does not demote Mamba-2 as a research branch. It narrows the promotion
+contract so a proxy win cannot hide the same dependency-closure failure class
+already observed in Z7-GRU.
+
+Second online-review consequence: DCVC argues that "predicted frame plus
+residual" is weaker than contextual/conditional coding. If Z7-Mamba-2 is built,
+its unique implementation should not be only a GRU->Mamba swap. It should test
+whether selective SSM state conditions decoder features and residual-symbol
+scales better than the GRU baseline at the same archive bytes.
+
 ## 7. Architectural specification
 
 ```
@@ -381,7 +416,42 @@ The Z7-GRU Wave 2 disambiguator AND the Z7-Mamba-2 Wave N+1 disambiguator AND th
 
 The required structural protection: when the operator commits the entire asymptotic_pursuit budget to recurrent-state predictive coding, the assumption-adversary surface MUST raise this hypothesis at every per-substrate symposium until at least ONE recurrent-state substrate has paired contest-CUDA evidence beating PR106 format0d.
 
-## 15. Backlinks + cross-references
+## 15. Codex adversarial hardening pass - invalid source score claims block Z7 disambiguation
+
+Follow-up pass on 2026-05-18 found a score-custody gap in
+`tools/probe_z7_temporal_coherence_vs_static_capacity_disambiguator.py`: the
+tool parsed `score_claim_valid` from each source exact-eval JSON but did not
+use that field when deciding comparability. A recurrent-vs-static pair could
+therefore produce `z7_recurrent_temporal_coherence_win` even when the recurrent
+source JSON explicitly carried `score_claim_valid: false` or omitted the field.
+That is a false-authority path because the probe's output is meant to arbitrate
+the Wave N+1 recurrent-vs-static design question, not launder invalid source
+custody into a method verdict.
+
+Fix landed:
+
+- `_eval_row()` now emits `score_claim_valid_missing_or_false` unless the source
+  JSON carries `score_claim_valid: true`;
+- `evaluate_exact_eval_pair()` prefixes that blocker by mode, so invalid
+  recurrent or static-control sources both fail closed as
+  `blocked_paired_exact_eval_not_comparable`;
+- a focused regression test proves an invalid recurrent source cannot become a
+  Z7 recurrent win even when the recomputed formula and same-byte/same-axis
+  constraints otherwise pass.
+
+Verification:
+
+```text
+.venv/bin/python -m pytest src/tac/tests/test_probe_z7_temporal_coherence_vs_static_capacity_disambiguator.py -q
+5 passed in 0.16s
+```
+
+Evidence grade: `[local-test]`; no score claim, no promotion claim, no provider
+dispatch, and no lane claim. This hardening does not move Z7-Mamba-2 out of
+`DESIGN_MEMO_ONLY_PENDING_WAVE_N_PLUS_1_COUNCIL`; it only prevents invalid
+paired exact-eval JSON from becoming arbitration authority.
+
+## 16. Backlinks + cross-references
 
 - **Parent Z7 symposium**: `.omx/research/council_per_substrate_symposium_z7_lstm_predictive_coding_20260517.md`
 - **Research wave deliverable**: `.omx/research/comprehensive_research_wave_20260518.md` (TOP-5 #2; §3.6 DreamerV3-Mamba convergence; §11 truth audit Mamba-2 CARGO-CULTED-PENDING)
@@ -393,7 +463,7 @@ The required structural protection: when the operator commits the entire asympto
 - **DreamerV3 upstream**: https://github.com/danijar/dreamerv3 ; arxiv 2301.04104
 - **RWKV-7 upstream**: https://github.com/BlinkDL/RWKV-LM ; arxiv 2503.14456 (Peng et al. 2025)
 
-## 16. Scaffold deliverables (this lane)
+## 17. Scaffold deliverables (this lane)
 
 Delivered in same commit batch via main-Claude sister commit (this subagent does NOT commit per parent prompt):
 

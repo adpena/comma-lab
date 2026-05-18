@@ -1,13 +1,13 @@
 # ATW V2-1 Byte-Closed Side-Info Probe
 
-- observed_at_utc: `2026-05-18T06:24:31+00:00`
+- observed_at_utc: `2026-05-18T08:11:56+00:00`
 - axis_label: `[diagnostic-CPU; ATW V2-1 byte-closed side-info MI probe]`
 - score_claim: `false`
 - promotion_eligible: `false`
 - dispatch_attempted: `false`
 - provider_spend_attempted: `false`
 - source_reducer_json: `experiments/results/alternative_reducer_probes_20260516T225900Z/tishby_ib_pure_per_pair_reducer_outputs.json`
-- output_dir: `experiments/results/atw_v2_1_sideinfo_probe_20260518T062431Z`
+- output_dir: `experiments/results/atw_v2_1_sideinfo_probe_20260518T081156Z`
 - side_info_budget_bytes: `2048`
 - phase2_status: `byte_closed_channels_only_weak_conditioning`
 - recommended_next_gate: `design_substrate_native_scorer_logit_sketch_or_trained_atw_residual_probe`

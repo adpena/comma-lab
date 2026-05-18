@@ -127,6 +127,12 @@ N_PAIRS_FULL = 600
 CONTEST_NORMALIZER = 37_545_489.0
 
 
+def _runtime_lane_id() -> str:
+    """Return the lane id bound by the dispatch recipe, falling back to base Z6."""
+
+    return os.environ.get("Z6_LANE_ID", "").strip() or SUBSTRATE_LANE_ID
+
+
 # ---------------------------------------------------------------------------
 # Z6-v2 Candidate 1 Wave 2 BUILD predictor-architecture resolver per Phase 3
 # council §9. Maps the operator-facing --predictor-architecture flag to the
@@ -924,7 +930,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
     final = losses[-1] if losses else {"loss": float("inf")}
     stats = {
-        "lane_id": SUBSTRATE_LANE_ID,
+        "lane_id": _runtime_lane_id(),
         "substrate_tag": SUBSTRATE_TAG,
         "smoke": True,
         "requested_epochs": args.epochs,
@@ -2079,7 +2085,7 @@ def _full_main(args: argparse.Namespace) -> int:
             substrate.eval()
 
             archive_meta = {
-                "lane_id": SUBSTRATE_LANE_ID,
+                "lane_id": _runtime_lane_id(),
                 "encoder_input_channels": cfg.encoder_input_channels,
                 "encoder_hidden_dim": cfg.encoder_hidden_dim,
                 "decoder_embed_dim": cfg.decoder_embed_dim,
@@ -2301,7 +2307,7 @@ def _full_main(args: argparse.Namespace) -> int:
         and args.max_pairs < N_PAIRS_FULL
     )
     provenance = {
-        "lane_id": SUBSTRATE_LANE_ID,
+        "lane_id": _runtime_lane_id(),
         "substrate_tag": SUBSTRATE_TAG,
         "started_at_utc": stage_log[0]["at"] if stage_log else _utc_now_iso(),
         "completed_at_utc": _utc_now_iso(),
@@ -2381,7 +2387,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
     manifest = {
         "schema": "time_traveler_l5_z6_training_artifact_manifest_v1",
-        "lane_id": SUBSTRATE_LANE_ID,
+        "lane_id": _runtime_lane_id(),
         "substrate_tag": SUBSTRATE_TAG,
         "training_mode": "pair_capped_smoke" if pair_capped else "full",
         "research_only": pair_capped,

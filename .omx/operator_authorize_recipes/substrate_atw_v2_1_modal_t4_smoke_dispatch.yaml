@@ -1,0 +1,326 @@
+schema_version: 1
+name: substrate_atw_v2_1_modal_t4_smoke_dispatch
+lane_id: lane_top5_3_atw_v2_1_faiss_ivf_pq_scaffold_design_20260518
+
+# RESEARCH-ONLY recipe at landing per CLAUDE.md "Substrate scaffolds MUST be
+# COMPLETE or RESEARCH-ONLY" + Catalog #240 + Catalog #324 + Catalog #325
+# per-substrate symposium-evidence requirement.
+#
+# ATW V2-1 is the substrate-engineering successor of ATW V2 that replaces V2's
+# `scorer_class_prior_table_fp16` slot (currently per-pair argmax composite
+# collapsed to 2 unique signatures per the 2026-05-16 D4 INDEPENDENT verdict)
+# with Faiss-IVF-PQ encoded per-region SegNet softmax histograms (Atick
+# ranking #2 channel; per ATW V2 reactivation symposium 2026-05-18).
+#
+# Dispatch is GATED on FOUR reactivation criteria (per design memo §12):
+#   1. ``uv pip install faiss-cpu`` locally on dispatch machine (done 2026-05-18)
+#   2. V1/V2/V3 disambiguator probe lands MI + byte-budget verdict per variant
+#      (done 2026-05-18; see .omx/state/atw_v2_1_faiss_pq_disambiguator_probe.json)
+#   2b. Cached scorer-softmax sketch probe tests the immediately available
+#      non-PQ scorer-derived sketches (done 2026-05-18; all byte-closed but WEAK,
+#      see .omx/state/atw_v2_1_scorer_softmax_sketch_probe.json)
+#   3. Z6 Wave 2 4c outcome lands per ATW V2 symposium Revision #5
+#      cross-pollination binding (done 2026-05-18; zero-epoch full/identity
+#      exact eval did NOT validate scorer-logit channel at delta >= 0.005)
+#   4. Wave 3 sextet pact symposium ratifies V2-1 channel pick per Catalog #325
+#   5. New D4 probe on selected V2-1 channel returns MEANINGFUL_CONDITIONING
+#      (MI >= 0.5 bits/symbol per cooperative-receiver threshold)
+#   6. Catalog #324 post-training Tier-C validation declared
+#   7. Catalog #270 dispatch optimization protocol verdict PASS
+research_only: true
+dispatch_enabled: false
+smoke_only: false
+smoke_validation_contract: contest_cuda_auth_eval_v1
+
+# Per Catalog #324: predicted_band remains NULL after the V1/V2/V3 probe because
+# the only byte-closed shippable variant was weak and the meaningful variants
+# are high-cardinality upper bounds, not dispatch authority.
+# Research wave §0 cited [-0.015, -0.005] rate-axis ⇒ [0.177, 0.187] contest-CPU
+# but the design memo §6.3 audit reclassified this as CARGO-CULTED-PENDING-EMPIRICAL.
+predicted_band: null
+predicted_band_validation_status: pending_post_training
+predicted_score_target: null
+smoke_score_band: null
+
+predicted_delta: |
+  NULL after V1/V2/V3 disambiguator probe + before any new D4 probe on a
+  selected channel. Measured 2026-05-18 diagnostic outcomes:
+    - V1 dense full-PQ: NOT SHIPPABLE; +0.518 rate cost dwarfs any plausible
+      ΔS gain; diagnostic only.
+    - V2 sparse top-k: MEANINGFUL MI 2.4574 but high-cardinality upper-bound only
+      (unique_fraction=1.0) and 7,941 Brotli bytes; not dispatch authority.
+    - V3 pool-shared: SHIPPABLE at 3,114 Brotli bytes but WEAK MI 0.121512;
+      not dispatch authority.
+    - Cached scorer-softmax sketches: all byte-closed under 2KB and no
+      high-cardinality guard, but best MI only 0.076162617811; not dispatch
+      authority.
+  Predicted band scales with disambiguator outcome:
+    - MEANINGFUL_CONDITIONING (MI >= 0.5 on V3 SHIPPABLE): [-0.015, -0.005] rate-axis
+    - WEAK_CONDITIONING (0.01 <= MI < 0.5 on V3 SHIPPABLE): [-0.005, -0.002] rate-axis
+    - INDEPENDENT on V3: pivot to V2 ARGUABLE; if V2 ALSO INDEPENDENT pivot per
+      ATW V2 symposium Revision #4 (DIFFERENT base substrate OR G2-PARTIAL).
+
+predicted_delta_basis: |
+  .omx/research/atw_v2_1_faiss_ivf_pq_substrate_design_memo_20260518.md §5 + §6.3
+  + .omx/research/council_per_substrate_symposium_atw_v2_reactivation_20260518.md (parent symposium)
+  + .omx/state/atw_v2_1_byte_closed_side_info_probe.json (existing 323-byte WEAK_CONDITIONING anchor)
+  + .omx/state/atw_v2_1_scorer_softmax_sketch_probe.json (cached scorer-softmax sketch WEAK anchor)
+  Dykstra-feasibility intersection of 4 polytopes per design memo §5:
+    - Atick-Redlich rate constraint: R_AR >= H(X) - I(X; Y_cooperative)
+    - IB constraint: I(X;T) - beta*I(T;Y) <= K_IB (Tao+Boyd Blahut-Arimoto floor)
+    - Wyner-Ziv side-info constraint: R_WZ >= R(D) - I(X; Y_side_PQ_encoded)
+    - Contest rate budget: 25 * archive_bytes / 37545489
+  Intersection polytope non-empty IFF: I(X; Y_side_PQ) on shipped bytes >= 0.5 bits/symbol
+  AND archive_bytes added <= ~5KB (V3 pool-shared regime).
+
+literature_anchor: |
+  - Atick & Redlich (1990) "Towards a theory of early visual processing"
+    Neural Computation 2(3):308-320 (cooperative-receiver theorem; channel #2 ranking)
+  - Tishby, Pereira & Bialek (1999) "The information bottleneck method" Proc. 37th Allerton
+  - Wyner & Ziv (1976) "The rate-distortion function for source coding with side information
+    at the decoder" IEEE Trans Info Theory 22(1):1-10
+  - Jégou, Douze & Schmid (2011) "Product quantization for nearest neighbor search"
+    IEEE PAMI 33(1):117-128 (canonical Faiss-IVF-PQ algorithm)
+  - Faiss 1.8 (2024) GitHub `facebookresearch/faiss` (GPU-accelerated PQ)
+  - ATW V2 reactivation symposium 2026-05-18 (Revisions #1-#7 binding)
+  - Comprehensive research wave 2026-05-18 §0 (TOP-5 #3)
+  Source-supports: paper-grade information-theoretic + cooperative-receiver bounds
+  + canonical Faiss IVF-PQ algorithm Jégou-Douze-Schmid 2011.
+  PACT must prove: the Faiss-IVF-PQ encoded per-region SegNet softmax histogram
+  channel or successor trained residual/raw-logit channel produces MI >= 0.5
+  bits/symbol against A1 latents at <2KB per pair OR <5KB total (V3 pool-shared
+  regime), measured via a byte-closed local disambiguator before any paid Modal
+  A100 dispatch authorizes.
+
+paper_claim_scope: |
+  Atick-Redlich 1990 establishes cooperative-receiver loss is provably optimal
+  for known downstream receiver R. Tishby IB 1999 establishes encoder p*(t|x)
+  is closed-form modulo numerical tractability. Wyner-Ziv 1976 establishes
+  R_WZ(D) = R_X|S(D) <= R(D) for side-info at decoder. Jégou-Douze-Schmid 2011
+  establishes PQ as approximate vector quantization with bounded reconstruction
+  error. All four bounds are theoretical; PACT must prove the Faiss-IVF-PQ
+  realization preserves enough I(X; Y_side) at the shipped-bytes budget to
+  beat the existing 323-byte WEAK_CONDITIONING anchor (MI=0.047 bits/symbol).
+
+pact_must_prove: |
+  V2-1 Faiss-IVF-PQ encoded channel produces:
+    (a) MI >= 0.5 bits/symbol on V3 pool-shared variant at <5KB total archive
+        contribution (V1/V2/V3 disambiguator probe; $0 CPU local M5 Max).
+    (b) Contest-CUDA + contest-CPU paired score in the predicted band
+        conditional on disambiguator outcome (Modal A100 smoke + paired exact
+        eval per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA").
+
+decode_complexity_evidence: |
+  Inflate runtime ~200 LOC (substrate_engineering waiver per HNeRV L4 + L7);
+  inherits ATW V2's inflate.py + adds Faiss codebook decode (<1ms per pair per
+  Jégou-Douze-Schmid 2011 benchmark; total <600ms for 600 pairs).
+  Dependencies: torch + brotli + numpy + faiss-cpu (4 total; +1 vs V2; HNeRV L4
+  substrate_engineering waiver).
+  Per-pair compute: 1 forward through decoder + WZ side-info head + Faiss
+  reconstruct (~ms each) + range decode of z_residual via G1 CDF (~ms per 600 pairs).
+  Total inflate budget << contest 30-min runtime.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: lane_atw_codec_v2_substrate_build_20260516
+
+active_dispatch_contract: atw_v2_1_substrate_research_only
+dispatch_contracts:
+  - id: atw_v2_1_substrate_research_only
+    archive_role: monolithic_atw21pq_self_contained
+    builder_surface: experiments/train_substrate_atw_v2_1.py
+    status: research_only_design_time
+    exact_eval_path: not_dispatchable_until_v1_v2_v3_disambiguator_plus_new_d4_probe_plus_wave_n_plus_1_sextet_pact
+
+dispatch_blockers:
+  - faiss_pq_disambiguator_completed_20260518_v3_pool_shared_only_weak_conditioning_mi_0_121512378237
+  - faiss_pq_v2_sparse_top_k_meaningful_mi_high_cardinality_upper_bound_only_unique_fraction_1_0
+  - faiss_pq_v1_dense_meaningful_mi_high_cardinality_upper_bound_only_and_over_budget_rate_cost_0_301500268115
+  - scorer_softmax_sketch_completed_20260518_all_byte_closed_but_best_mi_0_076162617811_weak
+  - selected_next_gate_is_trained_atw_residual_probe_or_raw_scorer_logit_head_design
+  - z6_wave_2_4c_zeroepoch_exact_outcome_did_not_validate_scorer_logit_channel_delta_below_0_005
+  - new_d4_probe_on_selected_variant_must_return_MEANINGFUL_CONDITIONING_before_dispatch_eligible
+  - wave_n_plus_1_sextet_pact_council_symposium_required_per_catalog_325
+  - dykstra_feasibility_intersection_polytope_must_be_non_empty_per_catalog_296
+  - catalog_324_post_training_tier_c_validation_pending
+  - catalog_270_dispatch_optimization_protocol_verdict_pending
+
+cost_band:
+  epochs: 200
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 5.00
+  estimated_usd_max: 10.00
+  platform_key: modal
+  gpu_key: T4
+
+council_phase_5_prediction: null  # V1/V2/V3 probe complete; no dispatch-authority variant selected
+substrate_tradition: ATW_V2_1_FAISS_IVF_PQ_DESIGN_MEMO_2026_05_18_V3_POOL_SHARED_DEFAULT
+
+risk: |
+  MEDIUM-VARIANCE substrate when dispatch_enabled is lifted. Architectural
+  risks per design memo §11:
+
+  (a) BYTE BUDGET COLLAPSE — per §6.3, V1 dense full-PQ NOT SHIPPABLE
+      (+0.518 rate cost dwarfs any plausible -0.015 ΔS gain); V2 sparse
+      top-k ARGUABLE (+0.011 rate cost; net -0.004 if MI clears 0.5); V3
+      pool-shared SHIPPABLE (+0.003 rate cost; sister to existing 323-byte
+      probe at WEAK MI=0.047). Local M5 Max disambiguator probe $0 cost MUST
+      run before any paid dispatch.
+
+  (b) FAISS-CPU DEPENDENCY — +1 dep beyond HNeRV L4 budget (3 → 4 with
+      substrate_engineering waiver); first-pass Modal smoke validates wheel
+      size + import cost.
+
+  (c) CROSS-POLLINATION DEPENDENCY — V2-1 channel pick AWAITS Z6 4c outcome
+      per ATW V2 symposium Revision #5; sequencing dependency.
+
+  (d) CODEBOOK GENERALIZATION — trained on contest video only (no held-out
+      split); per CLAUDE.md mutation frontier this is the canonical contest
+      workflow.
+
+  Modal T4 cost band: $5-10 smoke; CONDITIONAL Modal A100 full $15-25 only
+  AFTER disambiguator + Wave 3 sextet pact + new D4 probe MEANINGFUL_CONDITIONING.
+
+envelope_status: "research_only_post_faiss_pq_and_scorer_softmax_sketch_diagnostics; no paid ATW V2-1 envelope until trained residual or raw-logit channel replaces weak/high-cardinality scorer-side channels"
+
+remote_driver: scripts/remote_lane_substrate_atw_v2_1.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_atw_v2_1.sh
+  cost_band_trainer: experiments/train_substrate_atw_v2_1.py
+  cost_band_epochs: 200
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_atw_v2_1.py
+
+# Per Catalog #191 (sentinel-files per Catalog #166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/optimization/faiss_ivf_pq_atw_channel.py
+  - src/tac/substrates/atw_codec_v2/__init__.py
+  - src/tac/substrates/atw_codec_v2/architecture.py
+  - src/tac/substrates/atw_codec_v2/archive.py
+  - src/tac/substrates/atw_codec_v2/inflate.py
+  - src/tac/substrates/atw_codec_v2/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/_shared/smoke_auth_eval_gate.py
+  - src/tac/substrates/score_aware_common.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
+
+env_overrides:
+  ATW_V2_1_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  ATW_V2_1_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  ATW_V2_1_OUTPUT_DIR: /workspace/pact/lane_atw_v2_1_results/output
+  ATW_V2_1_UPSTREAM_DIR: /workspace/pact/upstream
+  ATW_V2_1_EPOCHS: "200"
+  ATW_V2_1_PQ_VARIANT: "v3_pool_shared"
+  ATW_V2_1_PQ_N_REGIONS: "16"
+  ATW_V2_1_PQ_NLIST: "64"
+  ATW_V2_1_PQ_M_SUBQ: "2"
+  ATW_V2_1_DEVICE: cuda
+  ATW_V2_1_TRAINER_MODE: "smoke"  # Per Catalog #326: explicit mode env var; recipe defaults to smoke
+  SMOKE_ONLY: "1"  # Per Catalog #326: legacy compat; full mode requires explicit recipe-side override
+  LOCAL_CUDA_WORKER: "1"
+  # Dispatch cannot fire because dispatch_enabled:false at top level + the
+  # 7-blocker cascade above. env overrides are design-time placeholders for
+  # post-reactivation activation.
+
+dependencies:
+  - scripts/remote_lane_substrate_atw_v2_1.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_atw_v2_1.py
+  - src/tac/optimization/faiss_ivf_pq_atw_channel.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  ATW V2-1 design-time research-only recipe — TOP-5 #3 from comprehensive
+  research wave 2026-05-18 §0 (Faiss-IVF-PQ per-region SegNet softmax histogram
+  channel; Atick canonical ranking #2 channel realization).
+
+  V2 SCAFFOLD sister: lane_atw_codec_v2_substrate_build_20260516 (research_only
+  at L1 SCAFFOLD; V2-1 inherits V2's architecture + replaces scorer_class_prior_table
+  with faiss_codebook + pq_codeword_stream per design memo §6.1 ATW21PQ grammar).
+
+  research_only=true per CLAUDE.md HNeRV parity discipline lesson 2 (export-first
+  design) + Catalog #240 (recipe-vs-trainer-state consistency) + Catalog #324
+  (predicted_band Tier-C post-training validation pending).
+
+  lane_class=substrate_engineering per HNeRV parity discipline lesson 7
+  (substrate engineering happens ONCE per architecture class; ATW V2-1 binds
+  Atick-Redlich + Tishby IB + Wyner-Ziv + Faiss IVF-PQ into ONE substrate-
+  engineering scaffold).
+
+  Reactivation criteria (ALL required to lift dispatch_enabled:false):
+    1. Faiss-cpu installed locally (``uv pip install faiss-cpu``) — DONE 2026-05-18
+    2. V1/V2/V3 disambiguator probe lands MI + byte-budget verdict per variant — DONE 2026-05-18
+       Output: tools/probe_atw_v2_1_faiss_pq_disambiguator.py + .omx/state/atw_v2_1_faiss_pq_disambiguator_probe.json
+       Consequence: V3 byte-closed but WEAK; V2/V1 meaningful only as high-cardinality upper bounds.
+    2b. Cached scorer-softmax sketch probe lands low-cardinality packet verdict — DONE 2026-05-18
+       Output: tools/probe_atw_v2_1_scorer_softmax_sketch.py + .omx/state/atw_v2_1_scorer_softmax_sketch_probe.json
+       Consequence: all tested softmax sketches are byte-closed but WEAK; next gate is trained residual or raw-logit head.
+    3. Z6 Wave 2 4c outcome lands (sister subagent a58961ea35f767306)
+       Cross-pollination decision tree per design memo §7
+    4. Wave 3 sextet pact symposium ratifies V2-1 channel pick per Catalog #325
+       Memo: feedback_atw_v2_1_faiss_pq_council_<YYYYMMDD>.md
+    5. New D4 probe on selected V2-1 channel returns MEANINGFUL_CONDITIONING
+       (MI >= 0.5 bits/symbol) per ATW V2 symposium Revision #4 binding
+       Output: .omx/state/h_latent_given_scorer_class_atw_v2_1.json
+    6. Catalog #324 post-training Tier-C validation declared
+       Output: .omx/state/predicted_band_audit_atw_v2_1.json
+    7. Catalog #270 dispatch optimization protocol verdict PASS
+       Output: tools/canonical_dispatch_optimization_protocol.py verdict
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable: when
+  dispatched, modal_train_lane.py uses .spawn(); harvest within 24h via
+  tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval — BOTH CPU AND
+  CUDA": when dispatched, ends with paired CPU+CUDA auth eval on EMA shadow.
+  Use tools/dispatch_modal_paired_auth_eval.py with
+  --skip-axis-if-promotable-anchor-exists per Catalog #246.
+
+  9-DIMENSION SUCCESS CHECKLIST per Catalog #294 + design memo §3:
+    1. UNIQUENESS: V2-1 distinguishing-feature is Faiss-IVF-PQ encoded per-region
+       SegNet softmax histogram channel (CONDITIONAL across-class IFF new D4 probe
+       returns MEANINGFUL_CONDITIONING)
+    2. BEAUTY/ELEGANCE: ≤350 LOC substrate package + ≤200 LOC inflate
+    3. DISTINCTNESS: only substrate using Faiss-IVF-PQ as side-info channel encoder
+    4. RIGOR: 8 PVs + 8 cargo-cult-classified assumptions per design memo §2
+    5. OPTIMIZATION PER TECHNIQUE: 6 ADOPT canonical + 5 UNIQUE FORK + 1 UNCLEAR
+       per design memo §1 (canonical-vs-unique decision per layer)
+    6. STACK-OF-STACKS-COMPOSABILITY: sister to V2; composable with A1 + NSCS06v8
+       + DP1 + D1 per ATW V2 design memo §13
+    7. DETERMINISTIC REPRODUCIBILITY: ATW21PQ archive grammar byte-stable per
+       Catalog #19; Faiss codebook trained with fixed seed=42
+    8. EXTREME OPTIMIZATION: compress ~3-4h A100 (inherits V2); inflate <30 min;
+       faiss-cpu decode <1ms per pair per Jégou-Douze-Schmid 2011
+    9. OPTIMAL MINIMAL CONTEST SCORE: predicted band NULL after disambiguator;
+       FRONTIER_PURSUIT class per Catalog #309
+
+  Cross-references:
+    .omx/research/atw_v2_1_faiss_ivf_pq_substrate_design_memo_20260518.md (THIS substrate's design memo)
+    .omx/research/council_per_substrate_symposium_atw_v2_reactivation_20260518.md (parent symposium)
+    .omx/research/comprehensive_research_wave_20260518.md §0 (TOP-5 #3 source)
+    .omx/state/atw_v2_1_byte_closed_side_info_probe.json (existing 323-byte WEAK_CONDITIONING anchor)
+    .omx/state/atw_v2_1_scorer_softmax_sketch_probe.json (cached scorer-softmax sketch WEAK anchor)
+    .omx/research/atw_codec_v2_d4_probe_verdict_20260516_codex.json (D4 INDEPENDENT anchor)
+    src/tac/optimization/faiss_ivf_pq_atw_channel.py (canonical helper)
+    src/tac/substrates/atw_codec_v2/ (V2 sister; inherits architecture + score_aware_loss)
+    src/tac/codec/cooperative_receiver/atick_redlich.py (canonical primitive)
+    tools/probe_atw_v2_1_byte_closed_side_info_channel.py (existing dict-packet probe;
+      sister to completed Faiss-IVF-PQ probe tools/probe_atw_v2_1_faiss_pq_disambiguator.py)
+    tools/probe_atw_v2_1_scorer_softmax_sketch.py (cached softmax sketch gate)

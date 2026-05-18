@@ -18,8 +18,9 @@
     "frame_axis_effect_deferred_to_l2",
     "not_score_authority"
   ],
+  "build_manifest_lane_id": "lane_dp1_plus_fec6_dual_stacking_build_20260517",
   "build_manifest_path": "experiments/results/dp1_plus_fec6_composition_20260517/build_manifest.json",
-  "created_utc": "2026-05-18T06:00:33Z",
+  "created_utc": "2026-05-18T08:30:00Z",
   "evidence_axis": "[byte-closed local structural proof]",
   "frame_axis_effect_status": "deferred_l2_strength_zero",
   "inflate_l2_guard": {

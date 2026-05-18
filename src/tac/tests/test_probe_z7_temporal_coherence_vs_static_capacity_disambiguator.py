@@ -50,7 +50,14 @@ def test_z7_disambiguator_plan_is_fail_closed() -> None:
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_paid_dispatch"] is False
-    assert "z7_trainer_missing" in payload["blockers"]
+    assert (
+        "z7_full_main_proxy_export_smoke_not_score_authority"
+        in payload["blockers"]
+    )
+    assert (
+        "z7_proxy_trained_packet_not_score_aware_or_auth_eval_validated"
+        in payload["blockers"]
+    )
     assert payload["decision_rule"]["same_archive_bytes_required"] is True
 
 
@@ -120,5 +127,26 @@ def test_z7_disambiguator_blocks_formula_mismatch(tmp_path: Path) -> None:
     assert payload["verdict"] == "blocked_paired_exact_eval_not_comparable"
     assert (
         "z7_recurrent_temporal_coherence:reported_score_mismatches_recomputed_formula"
+        in payload["blockers"]
+    )
+
+
+def test_z7_disambiguator_blocks_invalid_source_score_claim(tmp_path: Path) -> None:
+    tool = _load_tool()
+    recurrent_path = tmp_path / "recurrent.json"
+    static_path = tmp_path / "static.json"
+    invalid_recurrent = _eval_payload(0.0010, 0.0010, 200_000)
+    invalid_recurrent["score_claim_valid"] = False
+    recurrent_path.write_text(json.dumps(invalid_recurrent), encoding="utf-8")
+    static_path.write_text(
+        json.dumps(_eval_payload(0.0011, 0.0010, 200_000)),
+        encoding="utf-8",
+    )
+
+    payload = tool.evaluate_exact_eval_pair(recurrent_path, static_path)
+
+    assert payload["verdict"] == "blocked_paired_exact_eval_not_comparable"
+    assert (
+        "z7_recurrent_temporal_coherence:score_claim_valid_missing_or_false"
         in payload["blockers"]
     )

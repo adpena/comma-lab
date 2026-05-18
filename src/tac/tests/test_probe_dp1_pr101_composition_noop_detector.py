@@ -124,6 +124,9 @@ def test_build_probe_payload_verifies_l1_rate_only_noop_packet(tmp_path: Path) -
     assert payload["ready_for_paid_dispatch"] is False
     assert payload["structural_blockers"] == []
     assert "not_score_authority" in payload["blockers"]
+    assert payload["build_manifest_lane_id"] == (
+        "lane_dp1_plus_fec6_dual_stacking_build_20260517"
+    )
     assert payload["archive_components"]["base_substrate"] == "pr101"
     assert payload["archive_components"]["header_size_bytes"] == DPCOMP_HEADER_SIZE
 
@@ -154,6 +157,22 @@ def test_build_probe_payload_blocks_manifest_source_mismatch(tmp_path: Path) -> 
     assert "archive_manifest_fec6_source_sha256_mismatch" in payload[
         "structural_blockers"
     ]
+    assert payload["score_claim"] is False
+
+
+def test_build_probe_payload_blocks_wrong_build_manifest_lane(tmp_path: Path) -> None:
+    packet_dir = _write_packet(tmp_path)
+    manifest_path = packet_dir / "build_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["lane_id"] = "lane_unrelated_pr101_packet"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    payload = build_probe_payload(packet_dir, repo_root=tmp_path)
+
+    assert payload["verdict"] == "blocked_structural_mismatch"
+    assert payload["structural_pass"] is False
+    assert payload["build_manifest_lane_id"] == "lane_unrelated_pr101_packet"
+    assert "build_manifest_lane_id_mismatch" in payload["structural_blockers"]
     assert payload["score_claim"] is False
 
 

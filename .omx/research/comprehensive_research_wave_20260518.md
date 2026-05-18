@@ -50,6 +50,28 @@ This memo is INTENTIONALLY DENSE. The operator's directive is "comprehensive —
 | 4 | **DP1 + PR101 composition** (cross-substrate stacking) | Stack DP1 driving prior on the PR101 frame_exploit substrate. DP1 codebook bytes (~700KB) are amortized across all 1200 frames; PR101 grammar-bolt-on stays orthogonal. The composition is sub-additive per Catalog #322 anti-pattern protection but the ASYMPTOTIC FLOOR potential is large IF DP1 captures real driving priors (per OpenDriveLab DriveGPT / Wayve LINGO-1 evidence in 2024) | `[-0.012, -0.004]` ⇒ `[0.180, 0.188]` [contest-CPU] | Hinton distillation 2014 + Buciluă-Caruana-Niculescu-Mizil 2006 model compression + LINGO-1 (Wayve 2023) + DriveGPT (OpenDriveLab CVPR 2024) world-model pretraining | ~$10-15 Modal A100 |
 | 5 | **lane_17_imp + Frankle LTH** (pre-rigor reactivation) | Frankle Lottery Ticket Hypothesis (LTH) + iterative magnitude pruning (IMP) on PR101 substrate weights. The 2026-04-30 KILL verdict was a stats.json stub-loop artifact (Catalog #91+#94 closed); paradigm is intact. 2024-2026 LTH evidence shows 80%+ sparsity achievable on conv nets without accuracy loss; if PR101 renderer.bin sparsifies 50%+ the rate term drops linearly | `[-0.015, -0.005]` ⇒ `[0.177, 0.187]` [contest-CPU] | Frankle-Carbin 2019 (arxiv 1803.03635) Lottery Ticket Hypothesis + Renda-Frankle-Carbin 2020 Linear Mode Connectivity + Chen-Frankle 2021 LTH at scale + 2024 NTK theory connections | ~$1-2 standalone Vast.ai 4090 |
 
+#### 2026-05-18 Codex intake-band guard
+
+`tools/research_wave_intake_queue.py` now refuses malformed or non-lowering
+prediction bands as actionable intake evidence. A row must parse to a finite
+predicted ΔS interval whose upper endpoint is still negative, plus a finite
+ordered absolute frontier-score band. Otherwise the candidate keeps
+`score_claim=false`, `promotion_eligible=false`, and `ready_for_paid_dispatch=false`
+and receives explicit blockers such as
+`predicted_delta_s_band_missing_or_malformed`,
+`predicted_frontier_score_band_missing_or_malformed`, or
+`predicted_delta_s_band_not_strictly_score_lowering`. This prevents research
+tables from silently entering the asymptotic queue as priority rows when the
+math says "unknown" or "regression" instead of "score-lowering hypothesis."
+
+The intake artifact also separates `research_priority_order` from
+`actionable_priority_order`. The former preserves finite score-lowering
+research hypotheses for follow-up design work; the latter is provider-dispatch
+actionable only when the row is finite, strictly score-lowering,
+`[contest-CUDA]`, current readiness is `READY`, and current readiness blockers
+are empty. The TOP-5 rows above are therefore research-priority rows, not paid
+dispatch priority rows, until their contest-CUDA and readiness blockers clear.
+
 ### TOP-5 cross-disciplinary convergent-truth findings
 
 1. **Shannon entropy ↔ Tishby IB ↔ Rate-Distortion ↔ MDL ↔ Bayesian inference ↔ Kolmogorov complexity** all measure the SAME underlying truth (the minimum description length needed to capture a signal under a fidelity constraint). Engineering convergence: **CompressAI** (Bégaint et al. 2020, GitHub `InterDigitalInc/CompressAI`) implements Ballé's hyperprior in PyTorch; **constriction** (Bamler 2022, GitHub `bamler-lab/constriction`) provides ANS / Range / arithmetic coders; both ship Shannon-bound entropy coders that match IB-theoretical floor within 0.1-0.5%. **2024-2026 update**: SOTA neural codecs (DCVC-FM, ELIC 2024) now reach 90-95% of theoretical R(D) floor on CLIC video benchmarks.

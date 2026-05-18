@@ -52,7 +52,7 @@ byte-closed gate each candidate needs before any score claim or provider spend.
 | Rank | Intake substrate | Crosswalk substrate_id | Axis | Current readiness | Next gate | Blocking summary |
 |---|---|---|---|---|---|---|
 | 1 | TT5L V2 | `time_traveler_l5_autonomy` | `[contest-CPU]` | `DEFER` | `resolve_modal_billing_or_lightning_doctor_env_then_stage_manifest_and_claim` | Existing recipe has the C1/Z5/TT5L probe blocker, research-only gating, prediction-band custody blockers, Modal billing blocker, and now a concrete Lightning doctor failure: `ssh_auth`, `remote_supply_chain`, and `machine_inventory`. The byte-closed work unit and Lightning bundle exist, but non-dry-run submit is fail-closed at `0/10` ready cells. |
-| 2 | Z7-as-GRU / Mamba | `time_traveler_l5_z7_lstm_predictive_coding` | `[contest-CPU]` | `DEFER` | `land_z7_mamba_design_memo_recipe_and_timing_smoke` | New research-only recipe/readiness surface exists; blocks on missing trainer, missing substrate package, Z6 4c paired exact-eval outcome, Wave N+1 council, C6 beta anchor, and paired exact-eval JSONs for the Z7 disambiguator. |
+| 2 | Z7-as-GRU / Mamba | `time_traveler_l5_z7_lstm_predictive_coding` | `[contest-CPU]` | `DEFER` | `scale_z7_score_aware_smoke_to_ratified_packet_then_pair_exact_eval` | Z7-GRU now has predictor/substrate, Z7PCWM1 archive grammar, scorer-free runtime, a real-video proxy full-main export smoke, and a one-pair local score-aware scorer-loss smoke. It remains blocked on contest authority: Wave N+1 council, C6 beta anchor, same-bytes disambiguator, and paired exact-eval JSONs for the Z7 disambiguator. |
 | 3 | ATW V2-1 | `atw_codec_v2` | `[contest-CPU]` | `DEFER` | `design_substrate_native_scorer_logit_sketch_or_trained_atw_residual_probe` | V2-1 side-info packets are byte-closed and under budget, but conditioning remains too weak: best `per_region_histogram` packet is 323 bytes with MI `0.047381530305` bits/symbol versus threshold `1.0`; other channels are weak or independent. Existing D4, PROCEED_WITH_REVISIONS, research-only, Dykstra, and variant-adjudication blockers still apply. |
 | 4 | DP1 + PR101 composition | `dp1_pr101_composition` | `[contest-CPU]` | `DEFER` | `run_full_frame_parity_or_path2_lambda_prior_disambiguator_after_l1_noop_probe` | Current readiness joins the existing DP1 dual-stack lane. L1 no-op/rate proof landed; remaining blockers are `_full_main` NotImplementedError, research-only gating, variant A/B decision, PATH 2 lambda/prior-effect disambiguator, and pr101_lc_v2 integration premise verification. |
 | 5 | lane_17_imp + Frankle LTH | `lane_17_imp` | `[contest-CPU]` | no current readiness row | `run_imp_cycle0_timing_smoke_after_operator_budget_and_claim` | Needs current readiness/recipe surface before budgeted provider work. |
@@ -248,7 +248,7 @@ Current Z7 queue facts:
 - `top_2_substrate`: readiness/dispatch queue now surfaces Z7 as the Stage 2
   stacking candidate behind Candidate 4c
 
-Z7 blockers carried forward:
+Z7 blockers carried forward at the initial recipe landing:
 
 - `TRAINER_MISSING`
 - `CATALOG_240_FULL_MAIN_BLOCKED:TRAINER_FILE_MISSING`
@@ -260,7 +260,9 @@ Z7 blockers carried forward:
 - `z7_dispatch_requires_wave_n_plus_1_council_after_z6_4c_outcome`
 - `z7_beta_ib_parameter_requires_c6_ibps_phase2_empirical_beta_anchor`
 - `z7_wave2_probe_requires_paired_exact_eval_json_from_probe_z7_temporal_coherence_vs_static_capacity_disambiguator`
-- `z7_requires_same_archive_bytes_identity_disambiguator_before_full_dispatch`
+- `z7_same_archive_bytes_identity_control_exact_eval_required` (supersedes
+  the earlier missing-control-arm wording after the local same-byte control
+  artifact landed)
 
 ## Z7 disambiguator surface added
 
@@ -278,9 +280,9 @@ The tool is fail-closed:
 - The output remains `score_claim=false`, `promotion_eligible=false`,
   `ready_for_paid_dispatch=false`.
 
-This removes the "probe tool absent" blocker while preserving the real blockers:
-no Z7 trainer, no Z7 substrate package, no paired exact-eval JSONs, and no
-Wave N+1 council authorization.
+This removes the "probe tool absent" blocker while preserving the then-current
+real blockers: no Z7 trainer, no Z7 substrate package, no paired exact-eval
+JSONs, and no Wave N+1 council authorization.
 
 ## DP1 L1 no-op proof and rate arithmetic correction
 
@@ -466,6 +468,155 @@ OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=13.000 \
 ```
 
 No provider job was launched and no lane claim was opened.
+
+## Z7 exact-eval handoff doctor and online-review hardening
+
+Codex added a no-spend handoff doctor for the current Z7 same-byte
+recurrent/static packet:
+
+```text
+tools/verify_z7_exact_eval_handoff.py
+src/tac/tests/test_verify_z7_exact_eval_handoff.py
+.omx/state/z7_exact_eval_handoff/z7_exact_eval_handoff_20260518T133855Z.json
+.omx/research/z7_exact_eval_handoff_and_online_lit_review_20260518_codex.md
+```
+
+Current handoff verdict:
+
+```text
+ready_for_exact_eval_handoff=false
+current_pair_count=1
+required_pair_count=600
+result_review_blockers=[z7_exact_handoff_current_packet_not_600_pairs]
+same_archive_zip_bytes=true
+runtime_output_changed_vs_recurrent=true
+score_claim=false
+promotion_eligible=false
+provider_dispatch_attempted=false
+lane_claim_opened=false
+```
+
+This preserves the local mechanism signal while blocking accidental exact-eval
+dispatch of the one-pair smoke. The next Z7 score-moving artifact is a ratified
+600-pair recurrent/static packet, not another plan-only handoff.
+
+Online review also tightened the design target:
+
+- DCVC-style contextual coding suggests Z7 should condition decoder features and
+  residual-symbol scales, not only predict a latent and ship an int8 residual.
+- HNeRV/HiNeRV-style evidence argues decoder capacity should be a deliberate
+  Z7-specific decision rather than automatic Z6-decoder reuse.
+- Mamba/Mamba-2 evidence does not prove a speed/score win at 600 pairs x small
+  latents; Z7-Mamba remains a measured-disambiguator branch.
+- The Z7-Mamba runtime must not rely on external `brotli` or unproven
+  `mamba_ssm` availability at inflate time; pure-PyTorch exported selective SSM
+  recurrence is the promotion path unless dependency closure is proven.
+
+## Candidate 4c paired exact-eval handoff repaired
+
+The full-600 Candidate 4c handoff is now represented as a paired exact-eval
+surface rather than four copyable single-axis Modal commands. The packet doctor
+generates:
+
+- `full_paired_contest_cpu_cuda`
+- `identity_paired_contest_cpu_cuda`
+
+Both commands route through `tools/dispatch_modal_paired_auth_eval.py`, use
+archive SHA-256 guards, carry a paired group id, request
+`--expected-runtime-tree-sha256 auto`, and keep `[contest-CUDA]` and
+`[contest-CPU]` axes paired by construction.
+
+Current no-spend packet:
+
+- `.omx/state/candidate4c_launch_packet/candidate4c_no_spend_launch_packet_20260518T105922Z.json`
+- `exact_eval_handoff.ready_for_exact_eval_handoff=true`
+- `exact_eval_handoff.latest_pair_count=600`
+- `ready_for_operator_paid_execution=false`
+- `provider_dispatch_attempted=false`
+- `lane_claim_opened=false`
+- `score_claim=false`
+- `promotion_eligible=false`
+
+This changes the next actionable Candidate 4c step from "choose a wrapper
+command" to "open the paired exact-eval dispatch lifecycle deliberately." No
+provider job was launched and no lane claim was opened.
+
+## Candidate 4c paired exact-eval dispatch opened
+
+The paired exact-eval lifecycle has now been opened for Candidate 4c. Four
+detached Modal calls were accepted:
+
+- full `[contest-CUDA]`: `fc-01KRXC3V6N13J3H9R5XZSXHPQ1`
+- full `[contest-CPU]`: `fc-01KRXC4EZ3GY615KF1EJE33VZ2`
+- identity `[contest-CUDA]`: `fc-01KRXC3WYZKE2ZEE04R7P714KE`
+- identity `[contest-CPU]`: `fc-01KRXC4M333B38CRV7Q6HXNVN1`
+
+Dispatch ledger:
+
+- `.omx/research/z6_candidate4c_paired_modal_exact_eval_dispatch_20260518_codex.md`
+
+Current claim summary after dispatch:
+
+- `active=4`
+- `stale_nonterminal=0`
+- `score_claim=false`
+- `promotion_eligible=false`
+
+The next queue action is harvest/adjudication, not another launch. Do not
+dispatch the same four lane ids while these calls are active.
+
+CUDA harvest then landed for both Candidate 4c zero-epoch archives:
+
+- full `[contest-CUDA]`: `90.58142803863508`
+- identity `[contest-CUDA]`: `90.58427695093009`
+- identity-minus-full: `0.0028489122950077217`
+- active claims remaining: `2` (`[contest-CPU]` full and identity)
+
+Queue consequence: do not promote or retire Candidate 4c from this. The
+zero-epoch control packet is measured bad; the full-vs-identity delta is below
+the disambiguator threshold; the trained Candidate 4c path remains the relevant
+score-moving substrate after CPU harvest closes the paired result.
+
+CPU harvest then landed:
+
+- full `[contest-CPU]`: `90.57816474855734`
+- identity `[contest-CPU]`: `90.58102532784203`
+- identity-minus-full: `0.0028605792846860822`
+- active claims after terminal rows: `0`
+
+Final queue consequence: Candidate 4c zero-epoch exact eval is closed as a
+bad-control anchor. It proves the predictive path is consumed and marginally
+beats identity on both axes, but it does not meet the disambiguator delta and
+does not represent trained Candidate 4c score potential.
+
+## Candidate 4c full-600 handoff status
+
+The Candidate 4c row remains TOP-1 by planning priority, but its status changed
+from "exact handoff blocked by 2-pair archive pair" to "exact handoff ready,
+paid training recipe still disabled".
+
+Current artifacts:
+
+- refreshed queue:
+  `.omx/state/asymptotic_pursuit/dispatch_queue_20260518T104919Z.json`
+- refreshed no-spend packet:
+  `.omx/state/candidate4c_launch_packet/candidate4c_no_spend_launch_packet_20260518T104931Z.json`
+- full-600 packet ledger:
+  `.omx/research/z6_candidate4c_full600_zeroepoch_handoff_20260518_codex.md`
+
+Current packet status:
+
+- `exact_eval_handoff.ready_for_exact_eval_handoff=true`
+- `exact_eval_handoff.latest_pair_count=600`
+- `local_identity_disambiguator_probe.runtime_output_changed=true`
+- `ready_for_operator_paid_execution=false`
+- `top_ready_substrate=null`
+- `ready_for_paid_dispatch_count=0`
+
+The next queue action is not the diagnostic Candidate 4c training recipe. The
+next score-bearing action is paired exact eval of the full and identity ZIPs
+through claimed `[contest-CUDA]` and `[contest-CPU]` lanes, using the generated
+commands in the no-spend packet.
 
 ## Lane 17 Catalog #308 magnitude-criteria disambiguator
 
@@ -747,5 +898,674 @@ Current packet state:
 - `lane_claim_opened=false`
 - `score_claim=false`
 - `promotion_eligible=false`
+
+No provider job was launched and no lane claim was opened.
+
+## Candidate 4c packet supersession after queue-immediate gate
+
+Later adversarial review found that the no-spend packet was still trusting
+`top_ready_substrate` plus an audit-backed command string instead of the queue's
+new `immediately_runnable_paid_launch` contract. The older packet artifacts
+above that say `ready_for_operator_paid_execution=true` are historical only and
+must not be used as current launch authority.
+
+Current latest packet:
+`.omx/state/candidate4c_launch_packet/candidate4c_no_spend_launch_packet_20260518T091134Z.json`
+
+Current verdict:
+
+- `ready_for_operator_paid_execution=false`
+- `queue_immediate_launch_ready=false`
+- `next_paid_command_ready=true`
+- `catalog202_audit_backed_bypass_probe_accepted=true`
+- `checks_ok=true`
+- `provider_dispatch_attempted=false`
+- `lane_claim_opened=false`
+- `score_claim=false`
+- `promotion_eligible=false`
+
+The packet is fail-closed because the live queue reports
+`immediately_runnable_paid_dispatch_count=0` and non-empty Catalog #202
+preconditions. This is a custody/dispatch correction only; Candidate 4c remains
+the top ready candidate in the planning queue, but it is not immediately
+launchable from the current shell until the Catalog #202 env/audit preconditions
+are satisfied and a fresh packet verifies that state. No provider job was
+launched and no lane claim was opened.
+
+## Candidate 4c diagnostic-only handoff doctor repair
+
+After Candidate 4c was split back to a diagnostic-only Modal training recipe,
+the launch-packet doctor still modeled the lane as a paid-launch surface. That
+was a false blocker shape: the stale Catalog #202 audit hash and missing paid
+command were consequences of `dispatch_enabled=false`, not the real score-moving
+handoff blocker.
+
+Codex repaired `tools/verify_candidate4c_launch_packet.py` and reran the
+no-spend packet:
+
+- artifact:
+  `.omx/state/candidate4c_launch_packet/candidate4c_no_spend_launch_packet_20260518T103550Z.json`
+- `current_mode=diagnostic_only_exact_eval_handoff_required`
+- `checks_ok=true`
+- `active_lane_claims_clean=true`
+- `diagnostic_smoke_dry_run_ready=true`
+- `catalog202_audit_backed_bypass_probe_accepted=true` because the bypass probe
+  is now explicitly skipped while paid training is out of scope
+- `provider_dispatch_attempted=false`
+- `lane_claim_opened=false`
+- `score_claim=false`
+- `promotion_eligible=false`
+- `exact_eval_handoff.ready_for_exact_eval_handoff=false`
+- blocker: `candidate4c_exact_handoff_latest_archive_pair_not_600_pairs`
+
+The latest full/identity archive pair remains the 2-pair local artifact in
+`.omx/research/z6_candidate4c_identity_archive_pair_disambiguator_20260518_codex.json`.
+It is byte-closed and proves runtime-output difference, but it is not score
+authority. The doctor now emits only exact-eval command templates until a full
+600-pair archive/runtime packet exists, so the pair-capped artifact cannot be
+accidentally laundered into a Modal dispatch surface.
+
+Queue consequence: Candidate 4c remains high-EV, but the next concrete artifact
+is a harvested full 600-pair Candidate 4c archive pair, followed by four claimed
+auth-eval axes: full/identity `[contest-CUDA]` and full/identity
+`[contest-CPU]`. No provider spend, lane claim, score claim, or promotion claim
+occurred in this repair.
+
+## ATW V2-1 Faiss-PQ disambiguator completed
+
+Codex converted TOP-5 #3 (`ATW V2-1`) from "planned V1/V2/V3
+disambiguator" into a completed local diagnostic artifact:
+
+- state artifact: `.omx/state/atw_v2_1_faiss_pq_disambiguator_probe.json`
+- research JSON: `.omx/research/atw_v2_1_faiss_pq_disambiguator_probe_20260518_codex.json`
+- research Markdown: `.omx/research/atw_v2_1_faiss_pq_disambiguator_probe_20260518_codex.md`
+- local forensic bytes: `experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/`
+- axis: `[diagnostic-CPU; ATW V2-1 Faiss-PQ side-info MI probe]`
+- `score_claim=false`, `promotion_eligible=false`, `provider_spend_attempted=false`
+
+Engineering/adversarial findings:
+
+- `faiss-cpu` and Torch abort on this macOS host when Faiss training occurs in
+  the same Python process as Torch. The probe now saves Torch/SegNet softmax
+  arrays first and runs the Faiss worker in an isolated subprocess.
+- The Faiss helper now pads 5-class SegNet softmax vectors to a PQ-compatible
+  dimension and trims decoded tensors back to 5 classes.
+- The Faiss helper now serializes trained quantizers only (`ntotal=0`); adding
+  training vectors to the IVF index had produced false over-budget codebooks.
+
+Measured post-fix consequence:
+
+| Variant | Brotli archive bytes | MI bits/symbol | Guarded verdict |
+|---|---:|---:|---|
+| `v3_pool_shared` | 3,114 | 0.121512378237 | byte-closed but `WEAK_CONDITIONING`; no dispatch authority |
+| `v2_sparse_top_k` | 7,941 | 2.457397664695 | `MEANINGFUL_CONDITIONING` only as high-cardinality plug-in MI upper bound (`unique_fraction=1.0`); no dispatch authority |
+| `v1_dense` | 452,799 | 2.457397664695 | high-cardinality upper bound and over-budget; no dispatch authority |
+
+Queue consequence: ATW V2-1 should remain `research_only=true` /
+`dispatch_enabled=false`. The actionable next gate is no longer "run the
+Faiss-PQ disambiguator"; it is
+`pivot_to_scorer_logit_compression_or_trained_atw_residual_probe`, preserving
+the ATW cooperative-receiver paradigm while rejecting this measured Faiss-PQ
+channel configuration. No provider job was launched and no lane claim was
+opened.
+
+## Candidate 4c Modal diagnostic-only split
+
+The Candidate 4c pre-dispatch blocker was converted into a corrected launch
+architecture. The Modal training recipe is now diagnostic-only and no longer
+advertises a normal contest-exact paid launch.
+
+Artifacts:
+
+- queue: `.omx/state/asymptotic_pursuit/dispatch_queue_20260518T095039Z.json`
+- packet:
+  `.omx/state/candidate4c_launch_packet/candidate4c_no_spend_launch_packet_20260518T095046Z.json`
+- review:
+  `.omx/state/candidate4c_launch_packet/candidate4c_codex_pre_dispatch_review_20260518T0952Z.json`
+
+Current queue interpretation:
+
+- TOP-1 substrate remains `z6_v2_candidate_4c_scorer_logit`
+- TOP-1 verdict is `NEEDS_FIX`
+- ready paid dispatch count is `0`
+- no top ready paid command exists
+- Candidate 4c blockers are:
+  `RECIPE_dispatch_enabled=false` and
+  `RECIPE_DISPATCH_BLOCKER:candidate4c_modal_training_recipe_is_diagnostic_only_exact_cuda_handoff_required`
+- fresh Codex review is `approve`
+- no provider dispatch, no lane claim, no score claim, no promotion claim
+
+Corrected architecture:
+
+- Pair-capped Modal run is `training_artifact_v1` only.
+- `Z6_MAX_PAIRS=64` and `Z6_SKIP_AUTH_EVAL=1` prevent truncated diagnostic
+  archives from entering auth-eval.
+- Exact-CUDA authority is a later handoff from a full 600-pair archive/runtime
+  packet through a canonical exact-eval provider path.
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest -q \
+  src/tac/tests/test_run_modal_smoke_before_full.py \
+  src/tac/tests/test_z6_v2_candidate_1_wave_2_build.py \
+  src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py \
+  src/tac/tests/test_verify_candidate4c_launch_packet.py \
+  src/tac/tests/test_check_271_pre_dispatch_codex_review.py
+# 197 passed in 29.68s
+```
+
+No provider job was launched and no lane claim was opened.
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest -q \
+  src/tac/tests/test_verify_candidate4c_launch_packet.py \
+  src/tac/tests/test_check_271_pre_dispatch_codex_review.py \
+  src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py
+# 125 passed in 16.79s
+
+.venv/bin/python tools/check_dispatch_cli_shell_hazards.py --strict
+# PASS
+```
+
+## Candidate 4c env-attested immediate launch packet
+
+The Catalog #202 env/audit preconditions were then replayed explicitly with the
+current sentinel audit tuple, producing an operator-attested no-spend handoff:
+
+- env-attested queue:
+  `.omx/state/asymptotic_pursuit/dispatch_queue_20260518T091517Z.json`
+- env-attested launch packet:
+  `.omx/state/candidate4c_launch_packet/candidate4c_no_spend_launch_packet_20260518T091519Z.json`
+
+Current env-attested verdict:
+
+- `ready_for_paid_dispatch_count=1`
+- `immediately_runnable_paid_dispatch_count=1`
+- `ready_for_operator_paid_execution=true`
+- `queue_immediate_launch_ready=true`
+- `queue_immediate_launch_blockers=[]`
+- `catalog202_audit_backed_bypass_probe_accepted=true`
+- `active_lane_claims_clean=true`
+- `provider_dispatch_attempted=false`
+- `lane_claim_opened=false`
+- `score_claim=false`
+- `promotion_eligible=false`
+
+Required env tuple:
+
+```bash
+OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1
+OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=catalog202_sentinel_audit:a04c09b40cca80dd98c41968770ce7d2b19b672e2553d6a2bbb5c03b1a5aa387
+OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_AUDIT_JSON=.omx/state/catalog202_sentinel_cleanliness/substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch_20260518T072226Z.json
+OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1
+OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=13.000
+```
+
+Interpretation: the unauthenticated-shell packet and the env-attested packet
+now intentionally disagree. The former proves fail-closed behavior without
+Catalog #202 authority; the latter is the current no-spend green handoff for a
+future explicit claimed paid smoke/full launch. No provider job was launched
+and no lane claim was opened.
+
+Verification:
+
+```bash
+.venv/bin/python tools/verify_candidate4c_launch_packet.py --json \
+  --queue-path .omx/state/asymptotic_pursuit/dispatch_queue_20260518T091517Z.json
+# rc=0; ready_for_operator_paid_execution=true
+
+.venv/bin/python -m pytest -q \
+  src/tac/tests/test_verify_candidate4c_launch_packet.py \
+  src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py
+# 69 passed in 12.33s
+
+.venv/bin/python tools/check_dispatch_cli_shell_hazards.py --strict
+# PASS
+```
+
+## Candidate 4c codex pre-dispatch blocker
+
+The env-attested packet was then run through the mandatory Catalog #271 codex
+pre-dispatch review. That review is currently blocking paid execution:
+
+- review artifact:
+  `.omx/state/candidate4c_launch_packet/candidate4c_codex_pre_dispatch_review_20260518T0920Z.json`
+- latest no-spend packet:
+  `.omx/state/candidate4c_launch_packet/candidate4c_no_spend_launch_packet_20260518T092725Z.json`
+
+Current verdict:
+
+- `queue_immediate_launch_ready=true`
+- `codex_pre_dispatch_review_ready=false`
+- `codex_pre_dispatch_review_blockers=[
+  candidate4c_codex_pre_dispatch_review_blocking_needs-attention]`
+- `ready_for_operator_paid_execution=false`
+- `provider_dispatch_attempted=false`
+- `lane_claim_opened=false`
+- `score_claim=false`
+- `promotion_eligible=false`
+
+Blocking finding:
+
+```text
+- [high] Contest-CUDA smoke contract is incompatible with the Modal training runtime's forced CPU auth-eval
+```
+
+Interpretation: Candidate 4c remains the top planning row, and its
+Catalog #202/env-attested queue state is immediately runnable mechanically, but
+the current Modal recipe should not be launched as contest-CUDA because the
+Modal worker forces CPU advisory auth-eval while the smoke validator expects a
+contest-CUDA claim. Next score-moving action is to either move the exact-CUDA
+eval handoff to a runtime/provider path that does not force CPU auth-eval, or
+split the current Modal run into an explicit diagnostic archive-producing
+smoke plus a separate claimed exact-CUDA eval handoff. No provider job was
+launched and no lane claim was opened.
+
+## ATW V2-1 queue visibility refresh
+
+The ATW V2-1 Faiss-IVF-PQ WIP is now visible in the canonical dispatch queue as
+`atw_codec_v2_1_faiss_ivf_pq`, with recipe
+`.omx/operator_authorize_recipes/substrate_atw_v2_1_modal_t4_smoke_dispatch.yaml`
+and lane `lane_top5_3_atw_v2_1_faiss_ivf_pq_scaffold_design_20260518`.
+
+Queue artifact:
+
+```text
+.omx/state/asymptotic_pursuit/dispatch_queue_20260518T112720Z.json
+```
+
+The row is correctly `DEFER`, not spend authority. Its first blockers are the
+actual current blockers:
+
+- `_full_main` still raises `NotImplementedError`.
+- ATW V2-1 still has `PROCEED_WITH_REVISIONS` council state.
+- Recipe remains `research_only=true`.
+- The Faiss-PQ disambiguator found V3 pool-shared weak (`MI=0.121512378237`,
+  `3114` bytes) and V2/V1 high-cardinality upper-bound positives, not dispatch
+  authority.
+- The stale pending Z6 4c cross-pollination blocker was replaced with the
+  measured exact outcome:
+  `z6_wave_2_4c_zeroepoch_exact_outcome_did_not_validate_scorer_logit_channel_delta_below_0_005`.
+
+Dedicated ledger:
+
+```text
+.omx/research/atw_v2_1_queue_visibility_and_blocker_refresh_20260518_codex.md
+```
+
+## ATW V2-1 scorer-softmax sketch gate
+
+Codex ran the next $0 ATW V2-1 gate named by the Faiss-PQ result: convert the
+cached A1/SegNet softmax arrays into byte-closed scorer-derived sketches and
+test whether any low-cardinality packet preserves enough latent information to
+justify a new D4 probe.
+
+Artifacts:
+
+```text
+tool: tools/probe_atw_v2_1_scorer_softmax_sketch.py
+tests: src/tac/tests/test_probe_atw_v2_1_scorer_softmax_sketch.py
+state: .omx/state/atw_v2_1_scorer_softmax_sketch_probe.json
+research_json: .omx/research/atw_v2_1_scorer_softmax_sketch_probe_20260518_codex.json
+research_md: .omx/research/atw_v2_1_scorer_softmax_sketch_probe_20260518_codex.md
+local_packets: experiments/results/atw_v2_1_scorer_softmax_sketch_probe_20260518T113825Z/
+```
+
+Measured diagnostic result:
+
+```text
+[diagnostic-CPU; ATW V2-1 scorer-softmax sketch MI probe]
+best_variant=region256_coarse_entropy_anchor_q4
+best_mi=0.076162617811 bits/symbol
+best_packet_bytes=378
+best_high_cardinality_bias_guard=false
+phase2_status=scorer_softmax_sketches_only_weak_or_biased_conditioning
+recommended_next_gate=trained_atw_residual_probe_or_raw_scorer_logit_head_design
+score_claim=false
+promotion_eligible=false
+provider_spend_attempted=false
+```
+
+Interpretation: the cached scorer-softmax family is byte-closed but too weak.
+This supersedes `pivot_to_scorer_logit_compression_or_trained_atw_residual_probe`
+with the narrower gate `trained_atw_residual_probe_or_raw_scorer_logit_head_design`.
+The branch is not retired as a representation family; it needs a trained
+residual channel or raw-logit capture, not another low-cardinality softmax
+sketch.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile tools/probe_atw_v2_1_scorer_softmax_sketch.py
+.venv/bin/python -m pytest src/tac/tests/test_probe_atw_v2_1_scorer_softmax_sketch.py -q
+.venv/bin/python tools/probe_atw_v2_1_scorer_softmax_sketch.py
+```
+
+Queue refresh:
+
+```text
+.omx/state/asymptotic_pursuit/dispatch_queue_20260518T114053Z.json
+```
+
+The ATW V2-1 row remains `DEFER`; its blocking issues now include
+`scorer_softmax_sketch_completed_20260518_all_byte_closed_but_best_mi_0_076162617811_weak`
+and `selected_next_gate_is_trained_atw_residual_probe_or_raw_scorer_logit_head_design`.
+
+## Candidate 4c diagnostic-DEFER queue fix
+
+The dispatch queue was still classifying Candidate 4c as `NEEDS_FIX` solely
+because the Modal training recipe had `dispatch_enabled=false`. That was a
+false-actionability bug after the diagnostic-only split: the current recipe is
+not supposed to become a contest-CUDA launch surface, and the zero-epoch
+full/identity archive pair has already been paired-evaluated on both axes.
+
+Patch:
+
+```text
+tools/asymptotic_pursuit_candidate_readiness_assessment.py
+src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py
+```
+
+Dedicated ledger:
+
+```text
+.omx/research/candidate4c_diagnostic_defer_queue_fix_20260518_codex.md
+```
+
+Refreshed queue:
+
+```text
+.omx/state/asymptotic_pursuit/dispatch_queue_20260518T114641Z.json
+```
+
+Current queue consequence:
+
+```text
+candidate4c.readiness_verdict=DEFER
+candidate4c.ready_for_paid_dispatch=false
+ready_for_paid_dispatch_count=0
+top_1_substrate=time_traveler_l5_z7_lstm_predictive_coding
+top_1_readiness_verdict=DEFER
+```
+
+This keeps Candidate 4c visible as a high-EV trained-method branch without
+inviting an unsafe `dispatch_enabled=true` edit on a diagnostic training recipe.
+The reactivation path is a trained 600-pair archive/runtime packet followed by
+a fresh claimed paired exact-eval handoff, not another zero-epoch handoff and
+not a direct Modal training score claim.
+
+## Z7-Mamba-2 queue visibility and predicted-band axis fix
+
+The Z7-Mamba-2 scaffold already existed as WIP, but it was not represented in
+the canonical asymptotic-pursuit queue. Direct assessment fell through to the
+wrong `_modal_t4_` recipe basename, which hid the active recipe/trainer/ledger
+surface and produced false `RECIPE_MISSING` / `LANE_REGISTRY_NOT_REGISTERED`
+diagnostics.
+
+Patch:
+
+```text
+tools/asymptotic_pursuit_candidate_readiness_assessment.py
+src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py
+```
+
+Dedicated ledger:
+
+```text
+.omx/research/z7_mamba2_queue_visibility_and_axis_fix_20260518_codex.md
+```
+
+The same pass fixed a predicted-band evidence bug: when a recipe carries
+explicit `predicted_band` plus `predicted_band_kind`, the readiness assessment
+now prefers that labelled recipe metadata over loose design-memo regex
+extraction. This prevents a `predicted_delta_s_band` such as
+`[-0.025, -0.008]` from being mislabeled as a `predicted_score_band`.
+
+Refreshed queue:
+
+```text
+.omx/state/asymptotic_pursuit/dispatch_queue_20260518T115056Z.json
+```
+
+Current Z7-Mamba-2 queue row:
+
+```text
+substrate_id=time_traveler_l5_z7_mamba2
+readiness_verdict=DEFER
+predicted_score_band=[0.167, 0.184]
+predicted_band_axis=contest-CPU
+horizon_class=frontier_pursuit
+```
+
+This is not spend authority. It preserves WIP signal and keeps the next real
+gate explicit: implement the trainer `_full_main` / substrate package only
+after the Z7-GRU sequencing dependency, C6 beta anchor, and Wave-N+1 council or
+operator override are resolved.
+
+## Z7-GRU prebuild scaffold landed
+
+The top queue row for `time_traveler_l5_z7_lstm_predictive_coding` no longer
+fails as an absent trainer/package. Codex added the narrow prebuild scaffold:
+
+```text
+src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/__init__.py
+src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/architecture.py
+experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py
+src/tac/tests/test_z7_lstm_predictive_coding_scaffold.py
+```
+
+The scaffold exports a `GruRecurrentPredictor` with the Z6-compatible
+`forward(z_prev, ego_motion) -> z_pred` signature, identity-predictor mode,
+state reset, batch-first sequence unroll, parameter counting, and smoke stats.
+It now also exports `Z7GruPredictiveCodingSubstrate`, binding the recurrent
+predictor to a Z6-compatible RGB decoder plus latent/residual/ego-motion
+streams. `_full_main` emits a byte-closed proxy packet instead of stopping at a
+hard prebuild exception.
+
+Recipe/probe blocker refresh after the trainer/package scaffold, superseded by
+the later score-aware smoke lift:
+
+```text
+z7_score_aware_one_pair_smoke_not_contest_authority
+z7_score_aware_packet_requires_paired_exact_eval
+```
+
+The archive surface was then advanced to a deterministic Z7PCWM1 parser/replay
+scaffold:
+
+```text
+src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/archive.py
+```
+
+That scaffold packs/parses encoder, decoder, GRU predictor, latent init,
+predictive residuals, ego-motion, and metadata sections. It also provides a
+`replay_latent_sequence(...)` proof that the GRU predictor bytes are consumed:
+mutating the predictor state changes the replayed latent sequence.
+
+The follow-on scorer-free runtime scaffold lives at:
+
+```text
+src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/inflate.py
+```
+
+It replays parsed GRU latents, consumes the Z6-compatible decoder weight stream,
+and writes contest-shaped raw RGB output. The full-main export smoke produced a
+real-video proxy packet and exposed one runtime dependency bug: `brotli` was
+not available under default `python3`. Z7PCWM1 now uses stdlib `zlib`, and the
+rebuilt runtime passes the contest-style inflate signature.
+
+Local artifact:
+
+```text
+experiments/results/z7_gru_prebuild_export_codex_20260518T1226Z/
+archive_zip_bytes=5178
+archive_zip_sha256=429edc1657937d93d4116f094ac2ede66059c9a0f88acd330462784c5c4b560d
+inflate_cli_raw_bytes=12208032
+inflate_cli_raw_sha256=78c365731c2023b109e2fad08d205ffa1afffe6f8aada72c2734801720cccc61
+static_control_archive_zip_bytes=5178
+static_control_archive_zip_sha256=a74a4ce637e82d8340e5e854ec2a3f2b3296552c8cc7268bc367a921bc7f0c7a
+same_archive_zip_bytes_as_recurrent=true
+static_control_raw_sha256=166ef65b0474ef05779eec5b68bc250526ed4501f934ad452a0380d296381079
+runtime_output_changed_vs_recurrent=true
+runtime_output_byte_differences_vs_recurrent=2150198
+score_claim=false
+promotion_eligible=false
+```
+
+The static-control artifact closes only the local control-arm construction
+bug. It does not make the Z7 method verdictable: recurrent and static-control
+packets still need paired exact-eval JSON on the same contest axis.
+
+Refreshed readiness consequence:
+
+```text
+substrate_id=time_traveler_l5_z7_lstm_predictive_coding
+readiness_verdict=DEFER
+trainer_path=experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py
+full_main_implemented=true
+full_main_blocker=null
+top_blocker=z7_score_aware_one_pair_smoke_not_contest_authority
+predicted_score_band=[0.10, 0.13]
+predicted_band_axis=contest-CPU
+score_claim=false
+promotion_eligible=false
+```
+
+Refreshed queue:
+
+```text
+.omx/state/asymptotic_pursuit/dispatch_queue_20260518T130645Z.json
+```
+
+This is not spend authority. It turns the top row from "missing implementation"
+and "proxy-only trainer" into a concrete build gate: scale the score-aware
+one-pair smoke to a ratified packet, then validate recurrent-vs-static-control
+under same-archive-byte paired exact-eval inputs only after Wave N+1 council and
+C6 beta anchor are ready.
+
+## Z7-GRU score-aware one-pair smoke landed
+
+The Z7 trainer now accepts an explicit `--loss-mode score_aware` path that loads
+frozen differentiable scorers at compress time only, routes reconstructed pairs
+through `score_pair_components_dispatch(...)`, and still emits a scorer-free
+runtime tree. The default remains `proxy` for cheap local export smoke.
+
+Local artifact:
+
+```text
+experiments/results/z7_gru_score_aware_smoke_codex_20260518T1255Z/
+archive_zip_bytes=5155
+archive_zip_sha256=a8a4dcc3aebb4d37317a0b1afa4bec129ef04f531584a3012dbef9616914a92b
+loss_mode=score_aware
+final_loss=39.47663497924805 [trainer-score-aware local CPU smoke; not contest-CPU or contest-CUDA]
+seg_term=0.3863946497440338
+pose_term=0.06964391469955444
+score_claim=false
+promotion_eligible=false
+```
+
+Same-byte static control:
+
+```text
+static_control_archive_zip_bytes=5155
+static_control_archive_zip_sha256=2294467c9813e9497576b958c573aa5766066254893e7a8fea86e8c9db3e02c3
+same_archive_zip_bytes_as_recurrent=true
+runtime_output_changed_vs_recurrent=true
+runtime_output_byte_differences_vs_recurrent=1011870
+```
+
+Measured local timing from the same artifact:
+
+```text
+timing_axis=[local-trainer-timing advisory]
+seconds_per_epoch=1.3555798749439418
+seconds_per_pair_epoch=1.3555798749439418
+pairs_per_second_epoch=0.7376916834512268
+score_aware_scorer_load_seconds=0.5821676668711007
+inflate_verify_seconds=0.12976029119454324
+```
+
+The lift also fixed a one-pair NaN bug in `_ego_motion_from_pairs(...)` by using
+population std (`unbiased=false`). This matters because timing/smoke probes often
+start at `--max-pairs 1`.
+
+## Z7 probe-custody queue refresh
+
+The Z7 temporal-vs-static disambiguator now has a committed fail-closed JSON
+contract and is wired into the Z7 recipe/readiness parser:
+
+```text
+.omx/research/probe_z7_temporal_coherence_vs_static_capacity_disambiguator_20260518_codex.json
+schema=z7_temporal_coherence_vs_static_capacity_disambiguator_v1
+verdict=pending_paired_exact_eval_json
+score_claim=false
+promotion_eligible=false
+ready_for_paid_dispatch=false
+same_archive_bytes_required=true
+required_axis=contest_cuda
+```
+
+Refreshed queue:
+
+```text
+.omx/state/asymptotic_pursuit/dispatch_queue_20260518T131951Z.json
+top_1_substrate=time_traveler_l5_z7_lstm_predictive_coding
+top_1_readiness_verdict=DEFER
+local_identity_disambiguator_probe.verdict=pending_paired_exact_eval_json
+local_identity_disambiguator_probe.blockers=[]
+ready_for_paid_dispatch=false
+ready_for_paid_dispatch_count=0
+```
+
+Adversarial note: this is a custody/readiness hardening artifact, not a score
+claim. It keeps the Z7 blocker machine-readable so a future exact-eval JSON
+pair must satisfy same-axis, same-sample-count, same-archive-byte comparison
+before the queue can treat recurrent temporal coherence as evidence.
+
+Catalog #202 hygiene addendum: the same pass found and fixed a sentinel parser
+bug where list-valued recipe paths could appear as literal list strings in the
+Modal sentinel snapshot. The Z7 recipe now keeps only mounted worker files in
+`sentinel_files` and moves `.omx` control-plane docs to `dependencies`.
+The refreshed queue has no malformed list sentinel and no outside-mount
+sentinel for Z7; the only remaining snapshot blocker is the intentionally
+unlanded future remote driver
+`scripts/remote_lane_substrate_time_traveler_l5_z7_lstm_predictive_coding.sh`.
+
+## Z7 remote-driver actuator landed
+
+The Z7 remote driver is now present and tested:
+
+```text
+scripts/remote_lane_substrate_time_traveler_l5_z7_lstm_predictive_coding.sh
+src/tac/tests/test_time_traveler_l5_z7_remote_driver.py
+```
+
+It is a claim-verified no-score actuator for the existing score-aware timing
+smoke. It refuses missing lane claims, writes provenance, rejects stale/missing
+stats, and terminalizes claimed jobs as either
+`completed_z7_gru_remote_driver_no_score_claim` or a precise
+`failed_z7_gru_*` status. Completion is blocked if the stats JSON asserts
+`score_claim`, `promotion_eligible`, or `ready_for_paid_dispatch`.
+
+Fresh dispatch queue:
+
+```text
+.omx/state/asymptotic_pursuit/dispatch_queue_20260518T132746Z.json
+top_1_substrate=time_traveler_l5_z7_lstm_predictive_coding
+top_1_readiness_verdict=DEFER
+ready_for_paid_dispatch_count=0
+catalog202.current_sentinel_snapshot.missing_sentinel_files=[]
+catalog202.current_sentinel_snapshot.snapshot_blockers=[]
+catalog202.current_sentinel_snapshot_valid=true
+```
+
+Interpretation: the old Z7 Catalog #202 missing-remote-driver blocker is
+cleared. This does not authorize spend or promotion. Z7 remains blocked by
+research-only dispatch state, `PROCEED_WITH_REVISIONS`, the one-pair smoke
+being non-authoritative, Wave N+1 council, C6 beta-anchor evidence, and paired
+same-byte recurrent-vs-static exact-eval JSONs on the proper contest axis.
 
 No provider job was launched and no lane claim was opened.

@@ -9,20 +9,22 @@ lane_id: lane_per_substrate_symposium_z7_lstm_predictive_coding_20260517
 research_only: true
 dispatch_enabled: false
 dispatch_blockers:
-  - z7_trainer_module_absent_verified_by_symposium_pv2
-  - z7_substrate_package_absent_verified_by_symposium_pv2
+  - z7_score_aware_one_pair_smoke_not_contest_authority
+  - z7_score_aware_packet_requires_paired_exact_eval
   - z7_dispatch_requires_z6_wave2_candidate_4c_paired_exact_eval_outcome
   - z7_dispatch_requires_wave_n_plus_1_council_after_z6_4c_outcome
   - z7_beta_ib_parameter_requires_c6_ibps_phase2_empirical_beta_anchor
   - z7_wave2_probe_requires_paired_exact_eval_json_from_probe_z7_temporal_coherence_vs_static_capacity_disambiguator
-  - z7_requires_same_archive_bytes_identity_disambiguator_before_full_dispatch
+  - z7_same_archive_bytes_identity_control_exact_eval_required
 
 summary: |
   Z7 is the GRU-bound recurrent predictive-coding substrate downstream of Z6
   Wave 2 Candidate 4c. The 2026-05-17 symposium verdict is
   PROCEED_WITH_REVISIONS for design only; paid dispatch is explicitly deferred
   until Z6 4c paired exact-eval and a Wave N+1 council ratify the trainer
-  build/smoke path.
+  build/smoke path. A local one-pair score-aware training/export smoke now
+  exists, but it remains non-authoritative until paired exact eval and the
+  same-byte static-control disambiguator land.
 
 platform: modal
 gpu: T4
@@ -47,6 +49,31 @@ cost_band:
   hand_calibrated_fallback_p50_usd: 29.5
   platform_key: modal
   gpu_key: T4
+
+timing_smoke_command: |
+  .venv/bin/python experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py \
+    --video-path upstream/videos/0.mkv \
+    --output-dir experiments/results/z7_gru_score_aware_smoke_codex_20260518T1255Z \
+    --epochs 1 --batch-size 1 --lr 1e-3 \
+    --latent-dim 6 --ego-motion-dim 3 --gru-hidden-dim 8 --gru-num-layers 1 \
+    --max-pairs 1 --decoder-embed-dim 4 --decoder-channels 4,4 \
+    --decoder-num-upsample-blocks 2 --decoder-initial-grid-h 2 \
+    --decoder-initial-grid-w 2 --output-height 16 --output-width 16 \
+    --device cpu --loss-mode score_aware --inflate-verify --emit-static-control
+timing_smoke_artifact: experiments/results/z7_gru_score_aware_smoke_codex_20260518T1255Z/z7_gru_prebuild_full_main_export_stats.json
+timing_smoke_evidence: |
+  Local CPU advisory timing only, not provider/T4 authority:
+  seconds_per_epoch=1.3555798749439418,
+  seconds_per_pair_epoch=1.3555798749439418,
+  pairs_per_second_epoch=0.7376916834512268,
+  scorer_load_seconds=0.5821676668711007,
+  inflate_verify_seconds=0.12976029119454324.
+  Archive bytes are unchanged by timing instrumentation:
+  archive_zip_sha256=a8a4dcc3aebb4d37317a0b1afa4bec129ef04f531584a3012dbef9616914a92b.
+full_run_command_template: |
+  # Blocked until Wave N+1 council, C6 beta anchor, and lane claim:
+  # .venv/bin/python tools/claim_lane_dispatch.py claim --lane-id lane_per_substrate_symposium_z7_lstm_predictive_coding_20260517 --platform modal --instance-job-id <planned-job-id> --agent codex --status planned
+  # .venv/bin/python tools/run_modal_smoke_before_full.py --recipe substrate_time_traveler_l5_z7_lstm_predictive_coding_modal_t4_dispatch --operator-handle codex:time_traveler_l5_z7_lstm_predictive_coding
 
 predicted_score_target: null
 predicted_band: [0.10, 0.13]
@@ -76,16 +103,19 @@ source_supports: |
   Phase 2 empirical evidence.
 
 pact_must_prove: |
-  Before paid full dispatch, Z7 must prove at least: (1) trainer/substrate
-  package exists; (2) Z7PCWM1 archive grammar emits byte-closed archive bytes;
+  Before paid full dispatch, Z7 must prove at least: (1) trainer _full_main
+  scales the one-pair score-aware smoke into a ratified trained Z7PCWM1 packet;
+  (2) Z7PCWM1 archive grammar emits byte-closed archive bytes;
   (3) inflate runtime consumes recurrent predictor bytes and changes output;
   (4) identity/static-capacity disambiguator at same archive bytes shows
   Z7-WIN at score delta >= 0.005 on contest-CUDA; (5) paired CPU/CUDA exact eval is
   harvested under lane claim custody.
 
 decode_complexity_evidence: |
-  Planned inflate runtime is <=200 LOC with deterministic GRU recurrent unroll,
-  per the Z7 symposium. No runtime exists yet; this is a blocker, not evidence.
+  Prebuild inflate scaffold is <=200 LOC with deterministic GRU recurrent unroll,
+  Z6-compatible decoder weight consumption, and contest-shaped raw output. This
+  is runtime existence evidence only; trained-packet and exact-eval authority
+  remain blocked.
 
 envelope_status: |
   Non-dispatchable. If all gates are later ratified, the symposium cost path is
@@ -96,20 +126,21 @@ remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z7_lstm_predictive
 
 required_input_files: []
 
-required_input_files_trainer:
-  - experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py
-  - src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/
+required_input_files_trainer: experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py
 
 sentinel_files:
-  - .omx/research/council_per_substrate_symposium_z7_lstm_predictive_coding_20260517.md
-  - .omx/research/z6_candidate4c_identity_archive_pair_disambiguator_20260518_codex.json
-  - .omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md
   - tools/probe_z7_temporal_coherence_vs_static_capacity_disambiguator.py
+
+identity_disambiguator_probe: .omx/research/probe_z7_temporal_coherence_vs_static_capacity_disambiguator_20260518_codex.json
+identity_disambiguator_probe_requires_runtime_output_changed: false
 
 dependencies:
   - .omx/research/council_per_substrate_symposium_z7_lstm_predictive_coding_20260517.md
   - .omx/research/z6_candidate4c_scorer_logit_trainer_readiness_20260518_codex.md
+  - .omx/research/z6_candidate4c_identity_archive_pair_disambiguator_20260518_codex.json
   - .omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md
+  - .omx/research/probe_z7_temporal_coherence_vs_static_capacity_disambiguator_20260518_codex.json
+  - src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/
 
 notes: |
   This recipe exists so `tools/asymptotic_pursuit_candidate_readiness_assessment.py`

@@ -1,0 +1,252 @@
+{
+  "axis_label": "[diagnostic-CPU; ATW V2-1 scorer-softmax sketch MI probe]",
+  "best_actionable_variant": null,
+  "best_variant": {
+    "byte_budget_ok": true,
+    "high_cardinality_bias_guard_triggered": false,
+    "mutual_information_bits": 0.07616261781079281,
+    "packet_bytes": 378,
+    "phase2_action": "pivot_to_raw_logit_head_or_trained_atw_residual_probe",
+    "variant_id": "region256_coarse_entropy_anchor_q4",
+    "verdict": "WEAK_CONDITIONING"
+  },
+  "command": ".venv/bin/python tools/probe_atw_v2_1_scorer_softmax_sketch.py",
+  "dispatch_attempted": false,
+  "evidence_grade": "diagnostic_cpu",
+  "high_cardinality_unique_fraction_limit": 0.25,
+  "meaningful_mi_threshold_bits": 0.5,
+  "num_pairs": 600,
+  "observed_at_utc": "2026-05-18T11:38:25+00:00",
+  "output_dir": "experiments/results/atw_v2_1_scorer_softmax_sketch_probe_20260518T113825Z",
+  "phase2_status": "scorer_softmax_sketches_only_weak_or_biased_conditioning",
+  "promotion_eligible": false,
+  "provider_spend_attempted": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "recommended_next_gate": "trained_atw_residual_probe_or_raw_scorer_logit_head_design",
+  "result_review_blockers": [
+    "diagnostic_probe_not_score_claim",
+    "softmax_sketch_not_raw_scorer_logit_channel",
+    "requires_new_d4_probe_before_dispatch_authority",
+    "requires_paired_contest_cuda_cpu_harvest_before_promotion"
+  ],
+  "schema": "atw_v2_1_scorer_softmax_sketch_probe_v1",
+  "score_claim": false,
+  "side_info_budget_bytes": 2048,
+  "softmax_provenance": {
+    "a1_archive_path": "submissions/a1/archive.zip",
+    "a1_inner_member": "x",
+    "a1_inner_member_sha256": "8e664385af0a25ec98bd02d97b697fbf0d2bb3c2d954f5aa5c95b5131330a243",
+    "cached_input_dir": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z",
+    "decoder_blob_sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+    "elapsed_seconds_softmax_collection": 785.6416743339505,
+    "grid_sides": [
+      4,
+      16
+    ],
+    "latent_blob_sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+    "latent_bytes_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/a1_latents_u8.bin",
+    "latent_provenance": {
+      "a1_archive_path": "submissions/a1/archive.zip",
+      "a1_inner_member": "x",
+      "a1_inner_member_sha256": "8e664385af0a25ec98bd02d97b697fbf0d2bb3c2d954f5aa5c95b5131330a243",
+      "decoder_blob_sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+      "latent_blob_sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+      "latent_quantizer": {
+        "max": 3.578125,
+        "min": -3.615234375,
+        "range": 7.193359375
+      },
+      "latent_shape": [
+        600,
+        28
+      ],
+      "latent_u8_bytes": 16800,
+      "latent_u8_sha256": "a374e01a1d4cd0639d97cd02c70846906e38e10a8bad99215e9b3e8793f30959",
+      "sidecar_blob_sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+    },
+    "latent_shape": [
+      600,
+      28
+    ],
+    "num_pairs": 600,
+    "scorer_signal_scope": "SegNet per-region softmax arrays from A1-rendered frame_1; raw scorer logits were not available in the cached upstream artifact",
+    "segnet_source": "tac.scorer.load_default_scorers(upstream, cpu)",
+    "sidecar_blob_sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+    "softmax_npy_paths": {
+      "16": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy",
+      "256": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy"
+    },
+    "softmax_scope": "A1 HNeRV-rendered frame_1 via SegNet canonical preprocess_input",
+    "worker_boundary": "faiss_runs_in_subprocess_to_avoid_torch_faiss_openmp_conflict"
+  },
+  "symbols_per_pair": 28,
+  "variants": [
+    {
+      "byte_budget": 2048,
+      "byte_budget_ok": true,
+      "description": "16-region mean SegNet softmax, 3-bit class buckets",
+      "dispatch_blockers": [
+        "scorer_softmax_sketch_did_not_reach_meaningful_mi_threshold"
+      ],
+      "high_cardinality_bias_guard_triggered": false,
+      "packet_bytes": 204,
+      "packet_path": "experiments/results/atw_v2_1_scorer_softmax_sketch_probe_20260518T113825Z/atw_v2_1_scorer_softmax_sketch_global_mean_softmax_q3.bin",
+      "packet_roundtrip_ok": true,
+      "packet_sha256": "e601ec579f9768b4e4fba3e5e1c83bdad6bc258e99ed6f95dacbb56ed725a46e",
+      "phase2_action": "pivot_to_raw_logit_head_or_trained_atw_residual_probe",
+      "promotion_eligible": false,
+      "ready_for_paid_dispatch": false,
+      "score_claim": false,
+      "side_info_rate_score_cost": 0.00013583522643692295,
+      "source_regions": 16,
+      "unique_fraction": 0.006666666666666667,
+      "variant_id": "global_mean_softmax_q3",
+      "verdict": {
+        "h_latent_given_side_info_bits_per_symbol": 7.016815578635122,
+        "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+        "independence_tolerance_bits": 0.01,
+        "meaningful_mi_threshold_bits": 0.5,
+        "mutual_information_bits": 0.022207682205139356,
+        "num_latent_symbols": 16800,
+        "num_side_info_symbols": 16800,
+        "num_unique_side_info_symbols": 4,
+        "verdict": "WEAK_CONDITIONING",
+        "wyner_ziv_gain_ceiling_fraction": 0.0031549380336169516
+      }
+    },
+    {
+      "byte_budget": 2048,
+      "byte_budget_ok": true,
+      "description": "global top-2 classes plus 5-bit confidence and margin",
+      "dispatch_blockers": [
+        "scorer_softmax_sketch_did_not_reach_meaningful_mi_threshold"
+      ],
+      "high_cardinality_bias_guard_triggered": false,
+      "packet_bytes": 203,
+      "packet_path": "experiments/results/atw_v2_1_scorer_softmax_sketch_probe_20260518T113825Z/atw_v2_1_scorer_softmax_sketch_global_top2_margin_q5.bin",
+      "packet_roundtrip_ok": true,
+      "packet_sha256": "239b6d426f549122c508e26ee38f862a1e4d61f3940aaf23b430f34f45213fb4",
+      "phase2_action": "pivot_to_raw_logit_head_or_trained_atw_residual_probe",
+      "promotion_eligible": false,
+      "ready_for_paid_dispatch": false,
+      "score_claim": false,
+      "side_info_rate_score_cost": 0.00013516936748380077,
+      "source_regions": 16,
+      "unique_fraction": 0.006666666666666667,
+      "variant_id": "global_top2_margin_q5",
+      "verdict": {
+        "h_latent_given_side_info_bits_per_symbol": 7.014799754382745,
+        "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+        "independence_tolerance_bits": 0.01,
+        "meaningful_mi_threshold_bits": 0.5,
+        "mutual_information_bits": 0.02422350645751692,
+        "num_latent_symbols": 16800,
+        "num_side_info_symbols": 16800,
+        "num_unique_side_info_symbols": 4,
+        "verdict": "WEAK_CONDITIONING",
+        "wyner_ziv_gain_ceiling_fraction": 0.0034413164383584253
+      }
+    },
+    {
+      "byte_budget": 2048,
+      "byte_budget_ok": true,
+      "description": "most non-uniform 16-region cell with class/confidence/entropy buckets",
+      "dispatch_blockers": [
+        "scorer_softmax_sketch_did_not_reach_meaningful_mi_threshold"
+      ],
+      "high_cardinality_bias_guard_triggered": false,
+      "packet_bytes": 209,
+      "packet_path": "experiments/results/atw_v2_1_scorer_softmax_sketch_probe_20260518T113825Z/atw_v2_1_scorer_softmax_sketch_region16_entropy_anchor_q4.bin",
+      "packet_roundtrip_ok": true,
+      "packet_sha256": "708401fd905e561c04b4ba2d42a5f431b36df0d730576b1329d2167555d8bfbf",
+      "phase2_action": "pivot_to_raw_logit_head_or_trained_atw_residual_probe",
+      "promotion_eligible": false,
+      "ready_for_paid_dispatch": false,
+      "score_claim": false,
+      "side_info_rate_score_cost": 0.00013916452120253382,
+      "source_regions": 16,
+      "unique_fraction": 0.006666666666666667,
+      "variant_id": "region16_entropy_anchor_q4",
+      "verdict": {
+        "h_latent_given_side_info_bits_per_symbol": 7.022350820722386,
+        "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+        "independence_tolerance_bits": 0.01,
+        "meaningful_mi_threshold_bits": 0.5,
+        "mutual_information_bits": 0.016672440117875276,
+        "num_latent_symbols": 16800,
+        "num_side_info_symbols": 16800,
+        "num_unique_side_info_symbols": 4,
+        "verdict": "WEAK_CONDITIONING",
+        "wyner_ziv_gain_ceiling_fraction": 0.002368572953953423
+      }
+    },
+    {
+      "byte_budget": 2048,
+      "byte_budget_ok": true,
+      "description": "top-class presence mask plus confidence and entropy buckets",
+      "dispatch_blockers": [
+        "scorer_softmax_sketch_did_not_reach_meaningful_mi_threshold"
+      ],
+      "high_cardinality_bias_guard_triggered": false,
+      "packet_bytes": 213,
+      "packet_path": "experiments/results/atw_v2_1_scorer_softmax_sketch_probe_20260518T113825Z/atw_v2_1_scorer_softmax_sketch_region16_presence_confmask_q4.bin",
+      "packet_roundtrip_ok": true,
+      "packet_sha256": "dd6a6bfdd4b2a3b3c39075fa1f641e9161107e9cb9d0a095af58b10f6f9213a0",
+      "phase2_action": "pivot_to_raw_logit_head_or_trained_atw_residual_probe",
+      "promotion_eligible": false,
+      "ready_for_paid_dispatch": false,
+      "score_claim": false,
+      "side_info_rate_score_cost": 0.0001418279570150225,
+      "source_regions": 16,
+      "unique_fraction": 0.006666666666666667,
+      "variant_id": "region16_presence_confmask_q4",
+      "verdict": {
+        "h_latent_given_side_info_bits_per_symbol": 7.012352758562943,
+        "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+        "independence_tolerance_bits": 0.01,
+        "meaningful_mi_threshold_bits": 0.5,
+        "mutual_information_bits": 0.026670502277318597,
+        "num_latent_symbols": 16800,
+        "num_side_info_symbols": 16800,
+        "num_unique_side_info_symbols": 4,
+        "verdict": "WEAK_CONDITIONING",
+        "wyner_ziv_gain_ceiling_fraction": 0.0037889493029086663
+      }
+    },
+    {
+      "byte_budget": 2048,
+      "byte_budget_ok": true,
+      "description": "most non-uniform 256-region cell collapsed to a 4x4 anchor",
+      "dispatch_blockers": [
+        "scorer_softmax_sketch_did_not_reach_meaningful_mi_threshold"
+      ],
+      "high_cardinality_bias_guard_triggered": false,
+      "packet_bytes": 378,
+      "packet_path": "experiments/results/atw_v2_1_scorer_softmax_sketch_probe_20260518T113825Z/atw_v2_1_scorer_softmax_sketch_region256_coarse_entropy_anchor_q4.bin",
+      "packet_roundtrip_ok": true,
+      "packet_sha256": "17bc8b6e9df93958971a03f38d92ec72b0c2b80846447258d2841d0f05d08344",
+      "phase2_action": "pivot_to_raw_logit_head_or_trained_atw_residual_probe",
+      "promotion_eligible": false,
+      "ready_for_paid_dispatch": false,
+      "score_claim": false,
+      "side_info_rate_score_cost": 0.00025169468428018076,
+      "source_regions": 256,
+      "unique_fraction": 0.016666666666666666,
+      "variant_id": "region256_coarse_entropy_anchor_q4",
+      "verdict": {
+        "h_latent_given_side_info_bits_per_symbol": 6.962860643029469,
+        "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+        "independence_tolerance_bits": 0.01,
+        "meaningful_mi_threshold_bits": 0.5,
+        "mutual_information_bits": 0.07616261781079281,
+        "num_latent_symbols": 16800,
+        "num_side_info_symbols": 16800,
+        "num_unique_side_info_symbols": 10,
+        "verdict": "WEAK_CONDITIONING",
+        "wyner_ziv_gain_ceiling_fraction": 0.010820054855409177
+      }
+    }
+  ]
+}

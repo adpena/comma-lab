@@ -121,6 +121,61 @@ def test_build_audit_dirty_sentinel_blocks_catalog202_attestation(
     assert payload["dirty_operator_side_paths"] == ["reports/latest.md"]
 
 
+def test_effective_sentinels_flattens_list_values_and_preserves_dot_paths(
+    tmp_path: Path,
+) -> None:
+    repo = _minimal_repo(tmp_path)
+    _write(repo / ".omx/research/operator_side.md")
+    recipe = {
+        "required_input_files_trainer": [
+            "experiments/train_example.py",
+            "./src/tac/substrates/example/archive.py",
+        ],
+        "sentinel_files": [
+            ".omx/research/operator_side.md",
+        ],
+    }
+
+    effective, missing, outside_mount = audit.effective_sentinel_files(
+        recipe, repo_root=repo
+    )
+
+    assert "experiments/train_example.py" in effective
+    assert "src/tac/substrates/example/archive.py" in effective
+    assert missing == []
+    assert outside_mount == [".omx/research/operator_side.md"]
+
+
+def test_operator_authorize_modal_sentinels_flattens_list_values(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = _minimal_repo(tmp_path)
+    _write(repo / ".omx/research/operator_side.md")
+    import operator_authorize as oa  # noqa: E402
+
+    monkeypatch.setattr(oa, "REPO_ROOT", repo)
+    recipe = oa.Recipe(
+        name="example_recipe",
+        path=repo / ".omx/operator_authorize_recipes/example_recipe.yaml",
+        raw={
+            "required_input_files_trainer": [
+                "experiments/train_example.py",
+                "./src/tac/substrates/example/archive.py",
+            ],
+            "sentinel_files": [
+                ".omx/research/operator_side.md",
+            ],
+        },
+    )
+
+    sentinels = oa._modal_sentinel_files(recipe).split(",")
+
+    assert "experiments/train_example.py" in sentinels
+    assert "src/tac/substrates/example/archive.py" in sentinels
+    assert all("[" not in path and "]" not in path for path in sentinels)
+    assert ".omx/research/operator_side.md" not in sentinels
+
+
 def test_write_artifact_preserves_false_authority_flags(tmp_path: Path, monkeypatch):
     repo = _minimal_repo(tmp_path)
     monkeypatch.setattr(audit, "git_status_paths", lambda repo_root: {})

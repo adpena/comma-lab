@@ -1,19 +1,136 @@
 {
   "blockers": [
-    "no_paired_exact_eval_json",
-    "no_contest_cpu_cuda_pair",
-    "not_score_authority"
+    "contest_cuda_delta_below_decision_threshold",
+    "contest_cpu_delta_below_decision_threshold",
+    "zero_epoch_control_not_candidate_training_result",
+    "not_promotion_authority"
   ],
   "decision_delta_s": 0.005,
   "deltas": {
     "identity_minus_full_archive_bytes": 319,
-    "identity_minus_full_contest_archive_bytes_basis": 176,
+    "identity_minus_full_contest_archive_bytes_basis": 181,
     "identity_minus_full_parsed_member_bytes": 319,
-    "identity_minus_full_rate_term_basis": 0.00011719117574950216,
-    "identity_minus_full_zip_bytes": 176
+    "identity_minus_full_rate_term_basis": 0.00012052047051511301,
+    "identity_minus_full_zip_bytes": 181
   },
-  "evidence_grade": "byte_closed_archive_pair_no_score",
-  "exact_eval": null,
+  "evidence_grade": "paired_contest_cuda_cpu_zeroepoch_control",
+  "exact_eval": {
+    "adjudication_required": true,
+    "contest_cpu": {
+      "classification": "zero_epoch_control_catastrophic_full_lower_but_below_delta",
+      "decision_delta_met": false,
+      "decision_delta_s": 0.005,
+      "full": {
+        "archive_sha256": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
+        "archive_size_bytes": 211866,
+        "avg_posenet_dist": 159.63742065,
+        "avg_segnet_dist": 0.5048244,
+        "call_id": "fc-01KRXC4EZ3GY615KF1EJE33VZ2",
+        "evidence_grade": "contest-CPU",
+        "inflated_output_aggregate_sha256": "3aa8201a294d3d01aac5bb0cc719bacc3f55153e862c253714c72f2783293e2a",
+        "n_samples": 600,
+        "rate_unscaled": 0.005642914918487278,
+        "result_path": "experiments/results/modal_auth_eval_cpu/candidate4c_full_5b371490b445_cpu/contest_auth_eval.json",
+        "runtime_content_tree_sha256": "141af7545581cf5e0eca4b096674c0d36ce57f445c06ecad1e5df2aff49eb02c",
+        "runtime_tree_sha256": "f888831ce915d37c2a6a3069646a02291569a948a1c2108b1c9ff76b1e3ab57b",
+        "score_pose_contribution": 39.95465187559516,
+        "score_rate_contribution": 0.14107287296218196,
+        "score_recomputed_from_components": 90.57816474855734,
+        "score_seg_contribution": 50.48244
+      },
+      "identity": {
+        "archive_sha256": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
+        "archive_size_bytes": 212047,
+        "avg_posenet_dist": 159.65931702,
+        "avg_segnet_dist": 0.5048244,
+        "call_id": "fc-01KRXC4M333B38CRV7Q6HXNVN1",
+        "evidence_grade": "contest-CPU",
+        "inflated_output_aggregate_sha256": "19f86fb4e9249fe122133872788490c43acb437d1dc8f81a5f7a6b3be4b07a57",
+        "n_samples": 600,
+        "rate_unscaled": 0.005647735737307882,
+        "result_path": "experiments/results/modal_auth_eval_cpu/candidate4c_identity_e6cd9bf67ca6_cpu/contest_auth_eval.json",
+        "runtime_content_tree_sha256": "141af7545581cf5e0eca4b096674c0d36ce57f445c06ecad1e5df2aff49eb02c",
+        "runtime_tree_sha256": "f888831ce915d37c2a6a3069646a02291569a948a1c2108b1c9ff76b1e3ab57b",
+        "score_pose_contribution": 39.95739193440933,
+        "score_rate_contribution": 0.14119339343269705,
+        "score_recomputed_from_components": 90.58102532784203,
+        "score_seg_contribution": 50.48244
+      },
+      "identity_minus_full": {
+        "archive_size_bytes": 181,
+        "avg_posenet_dist": 0.021896370000007437,
+        "avg_segnet_dist": 0.0,
+        "rate_unscaled": 4.8208188206042e-06,
+        "score": 0.0028605792846860822
+      },
+      "lower_score_mode": "full_film_predictor"
+    },
+    "contest_cuda": {
+      "classification": "zero_epoch_control_catastrophic_full_lower_but_below_delta",
+      "decision_delta_met": false,
+      "decision_delta_s": 0.005,
+      "full": {
+        "archive_sha256": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
+        "archive_size_bytes": 211866,
+        "avg_posenet_dist": 159.66197205,
+        "avg_segnet_dist": 0.50482631,
+        "call_id": "fc-01KRXC3V6N13J3H9R5XZSXHPQ1",
+        "evidence_grade": "contest-CUDA",
+        "inflated_output_aggregate_sha256": "c3a5b9c582ff81ed43305bb959195d0cbb86a02503ec882135d2c11a4420152b",
+        "n_samples": 600,
+        "rate_unscaled": 0.005642914918487278,
+        "result_path": "experiments/results/modal_auth_eval/candidate4c_full_5b371490b445_cuda/contest_auth_eval.json",
+        "runtime_content_tree_sha256": "141af7545581cf5e0eca4b096674c0d36ce57f445c06ecad1e5df2aff49eb02c",
+        "runtime_tree_sha256": "09f53c44b021314639a94f48b4ceb143fe3b279ab88e5c0b2dc19ad27a3ae242",
+        "score_pose_contribution": 39.9577241656729,
+        "score_rate_contribution": 0.14107287296218196,
+        "score_recomputed_from_components": 90.58142803863508,
+        "score_seg_contribution": 50.482631
+      },
+      "identity": {
+        "archive_sha256": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
+        "archive_size_bytes": 212047,
+        "avg_posenet_dist": 159.68377686,
+        "avg_segnet_dist": 0.50482631,
+        "call_id": "fc-01KRXC3WYZKE2ZEE04R7P714KE",
+        "evidence_grade": "contest-CUDA",
+        "inflated_output_aggregate_sha256": "8a6cc8524f377a89732adae9f91851be268a26da3a6bf412219c55856936d879",
+        "n_samples": 600,
+        "rate_unscaled": 0.005647735737307882,
+        "result_path": "experiments/results/modal_auth_eval/candidate4c_identity_e6cd9bf67ca6_cuda/contest_auth_eval.json",
+        "runtime_content_tree_sha256": "141af7545581cf5e0eca4b096674c0d36ce57f445c06ecad1e5df2aff49eb02c",
+        "runtime_tree_sha256": "09f53c44b021314639a94f48b4ceb143fe3b279ab88e5c0b2dc19ad27a3ae242",
+        "score_pose_contribution": 39.96045255749739,
+        "score_rate_contribution": 0.14119339343269705,
+        "score_recomputed_from_components": 90.58427695093009,
+        "score_seg_contribution": 50.482631
+      },
+      "identity_minus_full": {
+        "archive_size_bytes": 181,
+        "avg_posenet_dist": 0.021804809999991903,
+        "avg_segnet_dist": 0.0,
+        "rate_unscaled": 4.8208188206042e-06,
+        "score": 0.0028489122950077217
+      },
+      "lower_score_mode": "full_film_predictor"
+    },
+    "paired_axis_summary": {
+      "axes_recovered": [
+        "contest_cuda",
+        "contest_cpu"
+      ],
+      "both_axes_agree_lower_score_mode": true,
+      "both_axis_delta_below_decision_threshold": true,
+      "classification": "measured_zero_epoch_control_regression_not_method_kill",
+      "lower_score_mode": "full_film_predictor"
+    },
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "schema": "z6_candidate4c_exact_eval_pair_v1",
+    "score_claim": false,
+    "status": "contest_cuda_and_cpu_recovered",
+    "updated_at_utc": "2026-05-18T11:11:30Z"
+  },
   "inflate_output_comparison": {
     "blockers": [
       "inflate_output_comparison_no_score_authority",
@@ -26,11 +143,11 @@
     "evidence_grade": "local_inflate_output_comparison_no_score",
     "file_diffs": [
       {
-        "byte_differences": 22253,
-        "full_bytes": 12208032,
-        "full_sha256": "f4bb8b68e6b6f13338b7f6d1d20dec8b2892c2b6ae923dcc983e354dd608c4c4",
-        "identity_bytes": 12208032,
-        "identity_sha256": "cb92b6ed2aa4a5724d84a63ef671e986e560d658c8db3b8d01f4755011f6820f",
+        "byte_differences": 33048720,
+        "full_bytes": 3662409600,
+        "full_sha256": "7f45de88c6f8408c7136097eef8d9f0e03493e1990995ada77e36c4c956dfd85",
+        "identity_bytes": 3662409600,
+        "identity_sha256": "40315c96c5ac2fd32737e887c9851ecdd83a99b8f0b4fdaef6240890e839f908",
         "path": "0.raw",
         "same_sha256": false
       }
@@ -38,49 +155,49 @@
     "file_list_path": "upstream/public_test_video_names.txt",
     "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
     "full_output_tree": {
-      "aggregate_sha256": "2b0e3345c5eb8f00beb71de62e0bdda60cc17933acbbe775ef451b2791aacf73",
+      "aggregate_sha256": "241f9cf0d6234a728a165173e0f352beb5254d358dacf0e6d7ff027b0f58c712",
       "file_count": 1,
       "files": [
         {
-          "bytes": 12208032,
+          "bytes": 3662409600,
           "path": "0.raw",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_output/0.raw",
-          "sha256": "f4bb8b68e6b6f13338b7f6d1d20dec8b2892c2b6ae923dcc983e354dd608c4c4"
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_output/0.raw",
+          "sha256": "7f45de88c6f8408c7136097eef8d9f0e03493e1990995ada77e36c4c956dfd85"
         }
       ],
-      "path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_output",
-      "total_bytes": 12208032
+      "path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_output",
+      "total_bytes": 3662409600
     },
     "identity_output_tree": {
-      "aggregate_sha256": "856f15ea620ff704a3bebcdfef75f289e7af11d0d1e7b45f0fee7262505c6409",
+      "aggregate_sha256": "5c0673169daabf7a90cddaa86b23b157019f96c63f68daa36eed786be368d94e",
       "file_count": 1,
       "files": [
         {
-          "bytes": 12208032,
+          "bytes": 3662409600,
           "path": "0.raw",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_output/0.raw",
-          "sha256": "cb92b6ed2aa4a5724d84a63ef671e986e560d658c8db3b8d01f4755011f6820f"
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_output/0.raw",
+          "sha256": "40315c96c5ac2fd32737e887c9851ecdd83a99b8f0b4fdaef6240890e839f908"
         }
       ],
-      "path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_output",
-      "total_bytes": 12208032
+      "path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_output",
+      "total_bytes": 3662409600
     },
-    "inflate_sh_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.sh",
+    "inflate_sh_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.sh",
     "inflate_sh_sha256": "b8b9ef4e03d8215fa1dddcca8bad44fbbc3c9ecce6a857d43b8ea9face08b96a",
     "only_full_output_files": [],
     "only_identity_output_files": [],
-    "output_root": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex",
+    "output_root": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex",
     "promotion_eligible": false,
-    "python_executable": ".venv/bin/python",
+    "python_executable": "/Users/adpena/Projects/pact/.venv/bin/python",
     "rank_or_kill_eligible": false,
     "ready_for_exact_eval_dispatch": false,
     "research_only": true,
     "runs": [
       {
         "command": [
-          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.sh",
-          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_archive_dir",
-          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_output",
+          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.sh",
+          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_archive_dir",
+          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_output",
           "/Users/adpena/Projects/pact/upstream/public_test_video_names.txt"
         ],
         "mode": "full_film_predictor",
@@ -90,9 +207,9 @@
       },
       {
         "command": [
-          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.sh",
-          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_archive_dir",
-          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_output",
+          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.sh",
+          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_archive_dir",
+          "/Users/adpena/Projects/pact/experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_output",
           "/Users/adpena/Projects/pact/upstream/public_test_video_names.txt"
         ],
         "mode": "identity_predictor",
@@ -109,96 +226,91 @@
         "archive.zip",
         "archive_identity_predictor_disambiguator.zip"
       ],
-      "entrypoint": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.sh",
+      "entrypoint": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.sh",
       "file_count": 10,
       "files": [
         {
           "bytes": 482,
           "executable": false,
           "path": "inflate.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.py",
           "sha256": "4b8fa1c65ff4945203de0442fe0d762ab846b2de4f2b5dea27cf2f24aa136769"
         },
         {
           "bytes": 469,
           "executable": true,
           "path": "inflate.sh",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.sh",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.sh",
           "sha256": "b8b9ef4e03d8215fa1dddcca8bad44fbbc3c9ecce6a857d43b8ea9face08b96a"
         },
         {
           "bytes": 0,
           "executable": false,
           "path": "src/tac/__init__.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/__init__.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/__init__.py",
           "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         },
         {
           "bytes": 0,
           "executable": false,
           "path": "src/tac/substrates/__init__.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/__init__.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/__init__.py",
           "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         },
         {
           "bytes": 0,
           "executable": false,
           "path": "src/tac/substrates/_shared/__init__.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/_shared/__init__.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/_shared/__init__.py",
           "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         },
         {
           "bytes": 4148,
           "executable": false,
           "path": "src/tac/substrates/_shared/inflate_runtime.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/_shared/inflate_runtime.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/_shared/inflate_runtime.py",
           "sha256": "fc304003c4d258f27eff05f730ef5a5d47b9efe01506b47416bb125817d7c254"
         },
         {
           "bytes": 885,
           "executable": false,
           "path": "src/tac/substrates/time_traveler_l5_z6/__init__.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/__init__.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/__init__.py",
           "sha256": "995391465428ea4125e615914550d513500057d02728fd41fddac8e9568af36d"
         },
         {
           "bytes": 26931,
           "executable": false,
           "path": "src/tac/substrates/time_traveler_l5_z6/architecture.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/architecture.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/architecture.py",
           "sha256": "1fbd3b1fca17472fc8a8678078bd6821a2b1d66c69d933bb49b4360c213b36e0"
         },
         {
           "bytes": 22580,
           "executable": false,
           "path": "src/tac/substrates/time_traveler_l5_z6/archive.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/archive.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/archive.py",
           "sha256": "d078fe7d777e3dfa2bc491ddc253219697c3f01f7daa1983aa1547f95c325c3f"
         },
         {
           "bytes": 6766,
           "executable": false,
           "path": "src/tac/substrates/time_traveler_l5_z6/inflate.py",
-          "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/inflate.py",
+          "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/inflate.py",
           "sha256": "efd08bcf812f0a278fe8a01a3be9ccc5c9f93ea1c12bcfa484f5719cd25aff86"
         }
       ],
       "python_cache_files_excluded_from_runtime_hash": [
         "src/tac/__pycache__/__init__.cpython-312.pyc",
-        "src/tac/__pycache__/__init__.cpython-314.pyc",
         "src/tac/substrates/__pycache__/__init__.cpython-312.pyc",
-        "src/tac/substrates/__pycache__/__init__.cpython-314.pyc",
         "src/tac/substrates/_shared/__pycache__/__init__.cpython-312.pyc",
         "src/tac/substrates/_shared/__pycache__/inflate_runtime.cpython-312.pyc",
         "src/tac/substrates/time_traveler_l5_z6/__pycache__/__init__.cpython-312.pyc",
-        "src/tac/substrates/time_traveler_l5_z6/__pycache__/__init__.cpython-314.pyc",
         "src/tac/substrates/time_traveler_l5_z6/__pycache__/architecture.cpython-312.pyc",
-        "src/tac/substrates/time_traveler_l5_z6/__pycache__/architecture.cpython-314.pyc",
         "src/tac/substrates/time_traveler_l5_z6/__pycache__/archive.cpython-312.pyc",
-        "src/tac/substrates/time_traveler_l5_z6/__pycache__/archive.cpython-314.pyc",
         "src/tac/substrates/time_traveler_l5_z6/__pycache__/inflate.cpython-312.pyc"
       ],
-      "runtime_root": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir",
+      "runtime_root": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir",
       "schema": "z6_inflate_runtime_closure_v1",
       "total_bytes": 62261
     },
@@ -208,7 +320,7 @@
     "schema": "z6_identity_inflate_output_comparison_v1",
     "score_claim": false,
     "timeout_seconds": 600,
-    "total_byte_differences": 22253
+    "total_byte_differences": 33048720
   },
   "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
   "paired": true,
@@ -255,96 +367,91 @@
       "archive.zip",
       "archive_identity_predictor_disambiguator.zip"
     ],
-    "entrypoint": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.sh",
+    "entrypoint": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.sh",
     "file_count": 10,
     "files": [
       {
         "bytes": 482,
         "executable": false,
         "path": "inflate.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.py",
         "sha256": "4b8fa1c65ff4945203de0442fe0d762ab846b2de4f2b5dea27cf2f24aa136769"
       },
       {
         "bytes": 469,
         "executable": true,
         "path": "inflate.sh",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/inflate.sh",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/inflate.sh",
         "sha256": "b8b9ef4e03d8215fa1dddcca8bad44fbbc3c9ecce6a857d43b8ea9face08b96a"
       },
       {
         "bytes": 0,
         "executable": false,
         "path": "src/tac/__init__.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/__init__.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/__init__.py",
         "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       {
         "bytes": 0,
         "executable": false,
         "path": "src/tac/substrates/__init__.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/__init__.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/__init__.py",
         "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       {
         "bytes": 0,
         "executable": false,
         "path": "src/tac/substrates/_shared/__init__.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/_shared/__init__.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/_shared/__init__.py",
         "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       {
         "bytes": 4148,
         "executable": false,
         "path": "src/tac/substrates/_shared/inflate_runtime.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/_shared/inflate_runtime.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/_shared/inflate_runtime.py",
         "sha256": "fc304003c4d258f27eff05f730ef5a5d47b9efe01506b47416bb125817d7c254"
       },
       {
         "bytes": 885,
         "executable": false,
         "path": "src/tac/substrates/time_traveler_l5_z6/__init__.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/__init__.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/__init__.py",
         "sha256": "995391465428ea4125e615914550d513500057d02728fd41fddac8e9568af36d"
       },
       {
         "bytes": 26931,
         "executable": false,
         "path": "src/tac/substrates/time_traveler_l5_z6/architecture.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/architecture.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/architecture.py",
         "sha256": "1fbd3b1fca17472fc8a8678078bd6821a2b1d66c69d933bb49b4360c213b36e0"
       },
       {
         "bytes": 22580,
         "executable": false,
         "path": "src/tac/substrates/time_traveler_l5_z6/archive.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/archive.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/archive.py",
         "sha256": "d078fe7d777e3dfa2bc491ddc253219697c3f01f7daa1983aa1547f95c325c3f"
       },
       {
         "bytes": 6766,
         "executable": false,
         "path": "src/tac/substrates/time_traveler_l5_z6/inflate.py",
-        "repo_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/inflate.py",
+        "repo_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir/src/tac/substrates/time_traveler_l5_z6/inflate.py",
         "sha256": "efd08bcf812f0a278fe8a01a3be9ccc5c9f93ea1c12bcfa484f5719cd25aff86"
       }
     ],
     "python_cache_files_excluded_from_runtime_hash": [
       "src/tac/__pycache__/__init__.cpython-312.pyc",
-      "src/tac/__pycache__/__init__.cpython-314.pyc",
       "src/tac/substrates/__pycache__/__init__.cpython-312.pyc",
-      "src/tac/substrates/__pycache__/__init__.cpython-314.pyc",
       "src/tac/substrates/_shared/__pycache__/__init__.cpython-312.pyc",
       "src/tac/substrates/_shared/__pycache__/inflate_runtime.cpython-312.pyc",
       "src/tac/substrates/time_traveler_l5_z6/__pycache__/__init__.cpython-312.pyc",
-      "src/tac/substrates/time_traveler_l5_z6/__pycache__/__init__.cpython-314.pyc",
       "src/tac/substrates/time_traveler_l5_z6/__pycache__/architecture.cpython-312.pyc",
-      "src/tac/substrates/time_traveler_l5_z6/__pycache__/architecture.cpython-314.pyc",
       "src/tac/substrates/time_traveler_l5_z6/__pycache__/archive.cpython-312.pyc",
-      "src/tac/substrates/time_traveler_l5_z6/__pycache__/archive.cpython-314.pyc",
       "src/tac/substrates/time_traveler_l5_z6/__pycache__/inflate.cpython-312.pyc"
     ],
-    "runtime_root": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/submission_dir",
+    "runtime_root": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/submission_dir",
     "schema": "z6_inflate_runtime_closure_v1",
     "total_bytes": 62261
   },
@@ -352,9 +459,9 @@
   "score_claim": false,
   "source_archives": [
     {
-      "bytes": 194747,
-      "contest_archive_bytes_basis": 194119,
-      "contest_archive_sha256_basis": "47a776cd36577f2cd6026b71c52187618839e9fae70e30f5d8c7eaf8b1047855",
+      "bytes": 213864,
+      "contest_archive_bytes_basis": 211866,
+      "contest_archive_sha256_basis": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
       "effective_predictor_hidden_dim": 72,
       "ego_motion_dim": 8,
       "identity_predictor": false,
@@ -362,9 +469,9 @@
       "lambda_residual_entropy": 1.0,
       "latent_dim": 24,
       "mode": "full_film_predictor",
-      "num_pairs": 2,
-      "parsed_member_bytes": 194747,
-      "path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/0.bin",
+      "num_pairs": 600,
+      "parsed_member_bytes": 213864,
+      "path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/0.bin",
       "predictor_architecture": "single_layer_film_75k",
       "predictor_depth": 1,
       "predictor_film_mlp_hidden_dim": 32,
@@ -383,29 +490,29 @@
       ],
       "requested_predictor_hidden_dim": 72,
       "schema_version": 1,
-      "sha256": "4fd2e6cc2801bcb5ee9532b56219eb5468670b185b555d114b23ae30b59ae198",
-      "zip_bytes": 194119,
+      "sha256": "0f448055c3147d7cae865e31a8d40ae441617e3aa20cd5c38214f14c26957778",
+      "zip_bytes": 211866,
       "zip_member_matches_path_bytes": true,
       "zip_member_rows": [
         {
-          "compress_size": 194011,
+          "compress_size": 211758,
           "compression_method": 8,
-          "crc": "7c6bad07",
-          "file_size": 194747,
+          "crc": "f2a025c1",
+          "file_size": 213864,
           "name": "0.bin",
-          "sha256": "4fd2e6cc2801bcb5ee9532b56219eb5468670b185b555d114b23ae30b59ae198"
+          "sha256": "0f448055c3147d7cae865e31a8d40ae441617e3aa20cd5c38214f14c26957778"
         }
       ],
       "zip_members": [
         "0.bin"
       ],
-      "zip_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/archive.zip",
-      "zip_sha256": "47a776cd36577f2cd6026b71c52187618839e9fae70e30f5d8c7eaf8b1047855"
+      "zip_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/archive.zip",
+      "zip_sha256": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b"
     },
     {
-      "bytes": 195066,
-      "contest_archive_bytes_basis": 194295,
-      "contest_archive_sha256_basis": "a2c47579f2d7e1e0c7b950e7ca7deca8fb0d8d414fd17a49d4b7946e19479d64",
+      "bytes": 214183,
+      "contest_archive_bytes_basis": 212047,
+      "contest_archive_sha256_basis": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
       "effective_predictor_hidden_dim": 72,
       "ego_motion_dim": 8,
       "identity_predictor": true,
@@ -413,9 +520,9 @@
       "lambda_residual_entropy": 1.0,
       "latent_dim": 24,
       "mode": "identity_predictor",
-      "num_pairs": 2,
-      "parsed_member_bytes": 195066,
-      "path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/0_identity_predictor_disambiguator.bin",
+      "num_pairs": 600,
+      "parsed_member_bytes": 214183,
+      "path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/0_identity_predictor_disambiguator.bin",
       "predictor_architecture": "single_layer_film_75k",
       "predictor_depth": 1,
       "predictor_film_mlp_hidden_dim": 32,
@@ -434,26 +541,26 @@
       ],
       "requested_predictor_hidden_dim": 72,
       "schema_version": 1,
-      "sha256": "062fcdd033dfc9cbb1f55b0139b132ee8976b175500b971223293ead0344658a",
-      "zip_bytes": 194295,
+      "sha256": "8c274c5a11b38a9f43e3ee54bd03f47743de8e88509705e84a7b6dfa2035c9b8",
+      "zip_bytes": 212047,
       "zip_member_matches_path_bytes": true,
       "zip_member_rows": [
         {
-          "compress_size": 194187,
+          "compress_size": 211939,
           "compression_method": 8,
-          "crc": "b7e7ce2f",
-          "file_size": 195066,
+          "crc": "8e849231",
+          "file_size": 214183,
           "name": "0.bin",
-          "sha256": "062fcdd033dfc9cbb1f55b0139b132ee8976b175500b971223293ead0344658a"
+          "sha256": "8c274c5a11b38a9f43e3ee54bd03f47743de8e88509705e84a7b6dfa2035c9b8"
         }
       ],
       "zip_members": [
         "0.bin"
       ],
-      "zip_path": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/archive_identity_predictor_disambiguator.zip",
-      "zip_sha256": "a2c47579f2d7e1e0c7b950e7ca7deca8fb0d8d414fd17a49d4b7946e19479d64"
+      "zip_path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/archive_identity_predictor_disambiguator.zip",
+      "zip_sha256": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589"
     }
   ],
   "substrate_tag": "time_traveler_l5_z6",
-  "verdict": "pending_paired_exact_eval_json"
+  "verdict": "contest_cuda_cpu_recovered_full_lower_below_delta_zeroepoch_control_bad"
 }

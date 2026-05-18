@@ -132,13 +132,20 @@ SEVERITY_CRITICAL_TOKENS = ("CRITICAL", "BLOCKER", "NO-SHIP", "no-ship")
 SEVERITY_HIGH_TOKENS = ("HIGH", "high")
 SEVERITY_LOW_TOKENS = ("LOW", "MEDIUM", "advisory", "ADVISORY")
 _SEVERITY_SUFFIX_RE = r"(?:\s+(?:F?\d+|[A-Z]\d+))?\s*[:\-]"
+_BRACKETED_SEVERITY_RE = r"^\s*(?:[-*]\s*)?\[(?:{tokens})\](?=\s|:|-|$)"
 SEVERITY_CRITICAL_RE = re.compile(
-    rf"\b(?:CRITICAL|BLOCKER|NO[-_ ]SHIP)\b{_SEVERITY_SUFFIX_RE}",
+    rf"(?:\b(?:CRITICAL|BLOCKER|NO[-_ ]SHIP)\b{_SEVERITY_SUFFIX_RE}|"
+    rf"{_BRACKETED_SEVERITY_RE.format(tokens='CRITICAL|BLOCKER|NO[-_ ]SHIP')})",
     re.IGNORECASE,
 )
-SEVERITY_HIGH_RE = re.compile(rf"\bHIGH\b{_SEVERITY_SUFFIX_RE}", re.IGNORECASE)
+SEVERITY_HIGH_RE = re.compile(
+    rf"(?:\bHIGH\b{_SEVERITY_SUFFIX_RE}|"
+    rf"{_BRACKETED_SEVERITY_RE.format(tokens='HIGH')})",
+    re.IGNORECASE,
+)
 SEVERITY_LOW_RE = re.compile(
-    rf"\b(?:LOW|MEDIUM|ADVISORY)\b{_SEVERITY_SUFFIX_RE}",
+    rf"(?:\b(?:LOW|MEDIUM|ADVISORY)\b{_SEVERITY_SUFFIX_RE}|"
+    rf"{_BRACKETED_SEVERITY_RE.format(tokens='LOW|MEDIUM|ADVISORY')})",
     re.IGNORECASE,
 )
 

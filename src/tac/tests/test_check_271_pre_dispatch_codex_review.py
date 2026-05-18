@@ -118,6 +118,14 @@ class TestVerdictParsing:
         v, f = helper.parse_verdict_from_codex_output("HIGH: scorer drift")
         assert v == "needs-attention"
 
+    def test_bracketed_lowercase_high_to_needs_attention(self) -> None:
+        v, f = helper.parse_verdict_from_codex_output(
+            "Findings:\n"
+            "- [high] Contest-CUDA smoke contract is incompatible with CPU auth-eval"
+        )
+        assert v == "needs-attention"
+        assert any("[high]" in fnd for fnd in f)
+
     def test_implicit_low_to_advisory(self) -> None:
         v, f = helper.parse_verdict_from_codex_output("LOW: doc nit")
         assert v == "advisory"

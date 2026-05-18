@@ -1,0 +1,251 @@
+{
+  "axis_label": "[diagnostic-CPU; ATW V2-1 Faiss-PQ side-info MI probe]",
+  "best_variant": {
+    "actual_total_archive_contribution_bytes": 7941,
+    "high_cardinality_bias_guard_triggered": true,
+    "mutual_information_bits": 2.4573976646953524,
+    "variant_id": "v2_sparse_top_k",
+    "verdict": "MEANINGFUL_CONDITIONING"
+  },
+  "command": ".venv/bin/python tools/probe_atw_v2_1_faiss_pq_disambiguator.py --faiss-worker --latent-bytes experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/a1_latents_u8.bin --softmax-provenance-json experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/softmax_collection_provenance.json --output-dir experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z --json-out .omx/state/atw_v2_1_faiss_pq_disambiguator_probe.json --research-json .omx/research/atw_v2_1_faiss_pq_disambiguator_probe_20260518_codex.json --research-md .omx/research/atw_v2_1_faiss_pq_disambiguator_probe_20260518_codex.md --softmax-npy 16=experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_16.npy --softmax-npy 256=experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/segnet_region_softmax_256.npy",
+  "dispatch_attempted": false,
+  "evidence_grade": "diagnostic_cpu",
+  "high_cardinality_unique_fraction_limit": 0.25,
+  "meaningful_mi_threshold_bits": 0.5,
+  "num_pairs": 600,
+  "observed_at_utc": "2026-05-18T10:21:09+00:00",
+  "output_dir": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z",
+  "phase2_status": "pq_variants_not_dispatch_authority_upper_bound_or_weak",
+  "promotion_eligible": false,
+  "provider_spend_attempted": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "recommended_next_gate": "pivot_to_scorer_logit_compression_or_trained_atw_residual_probe",
+  "result_review_blockers": [
+    "diagnostic_probe_not_score_claim",
+    "faiss_pq_mi_is_upper_bound_until_trained_wz_head_and_new_d4_probe",
+    "requires_paired_contest_cuda_cpu_harvest_before_promotion"
+  ],
+  "schema": "atw_v2_1_faiss_pq_disambiguator_v1",
+  "score_claim": false,
+  "softmax_provenance": {
+    "a1_archive_path": "submissions/a1/archive.zip",
+    "a1_inner_member": "x",
+    "a1_inner_member_sha256": "8e664385af0a25ec98bd02d97b697fbf0d2bb3c2d954f5aa5c95b5131330a243",
+    "decoder_blob_sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+    "elapsed_seconds_softmax_collection": 785.6416743339505,
+    "grid_sides": [
+      4,
+      16
+    ],
+    "latent_blob_sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+    "latent_provenance": {
+      "a1_archive_path": "submissions/a1/archive.zip",
+      "a1_inner_member": "x",
+      "a1_inner_member_sha256": "8e664385af0a25ec98bd02d97b697fbf0d2bb3c2d954f5aa5c95b5131330a243",
+      "decoder_blob_sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+      "latent_blob_sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+      "latent_quantizer": {
+        "max": 3.578125,
+        "min": -3.615234375,
+        "range": 7.193359375
+      },
+      "latent_shape": [
+        600,
+        28
+      ],
+      "latent_u8_bytes": 16800,
+      "latent_u8_sha256": "a374e01a1d4cd0639d97cd02c70846906e38e10a8bad99215e9b3e8793f30959",
+      "sidecar_blob_sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+    },
+    "latent_shape": [
+      600,
+      28
+    ],
+    "num_pairs": 600,
+    "segnet_source": "tac.scorer.load_default_scorers(upstream, cpu)",
+    "sidecar_blob_sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+    "softmax_scope": "A1 HNeRV-rendered frame_1 via SegNet canonical preprocess_input",
+    "worker_boundary": "faiss_runs_in_subprocess_to_avoid_torch_faiss_openmp_conflict"
+  },
+  "symbols_per_pair": 28,
+  "variants": [
+    {
+      "actual_codebook_bytes": 3252,
+      "actual_codebook_sha256": "6138d2c54276409c3b124c05eb53a5749245330912a2b8b62e48835a79284ed2",
+      "actual_codeword_stream_bytes": 2400,
+      "actual_codeword_stream_sha256": "90502a6e0ebdd4f34449fd33ae24188db9db506781d7828cdbe3af22fedc383e",
+      "actual_rate_cost": 0.0020734847800224416,
+      "actual_total_archive_contribution_bytes": 3114,
+      "brotli_codebook_bytes": 2715,
+      "brotli_codebook_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v3_pool_shared_faiss_codebook.bin.br",
+      "brotli_codebook_sha256": "a7135341f51cb09fc9a1b2424e8846a7f6db9f1d03813fe5abf11f213584e18e",
+      "brotli_codeword_stream_bytes": 399,
+      "brotli_codeword_stream_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v3_pool_shared_pq_stream.bin.br",
+      "brotli_codeword_stream_sha256": "2f9f6a73973cbeb5d51d77a3eb8422bce3acc65adde7b17276baea9aa7af310b",
+      "budget_estimate": {
+        "contest_rate_cost_estimate": 0.002732685143613391,
+        "m_subq": 2,
+        "n_regions": 16,
+        "nbits": 6,
+        "nlist": 64,
+        "per_pair_bytes": 3,
+        "shared_codebook_bytes_estimate": 2304,
+        "shippable_verdict": "SHIPPABLE",
+        "top_k_regions": 1,
+        "total_archive_contribution_bytes": 4104,
+        "total_pair_bytes": 1800,
+        "total_pairs": 600,
+        "variant_id": "v3_pool_shared"
+      },
+      "code_size_bytes_per_selected_region": 3,
+      "codebook_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v3_pool_shared_faiss_codebook.bin",
+      "codeword_stream_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v3_pool_shared_pq_stream.bin",
+      "dispatch_blockers": [
+        "pq_variant_did_not_reach_meaningful_conditioning_threshold"
+      ],
+      "first_decode_shape": [
+        1,
+        5
+      ],
+      "high_cardinality_bias_guard_triggered": false,
+      "promotion_eligible": false,
+      "ready_for_paid_dispatch": false,
+      "region_indices_by_pair_sha256": "b76ede6e90b4d606c691d3dec9e23204573b9e0cacfe592fe06d900fa930c93b",
+      "score_claim": false,
+      "unique_fraction": 0.03333333333333333,
+      "variant_id": "v3_pool_shared",
+      "verdict": {
+        "h_latent_given_side_info_bits_per_symbol": 6.917510882603738,
+        "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+        "independence_tolerance_bits": 0.01,
+        "meaningful_mi_threshold_bits": 0.5,
+        "mutual_information_bits": 0.12151237823652394,
+        "num_latent_symbols": 16800,
+        "num_side_info_symbols": 16800,
+        "num_unique_side_info_symbols": 20,
+        "verdict": "WEAK_CONDITIONING",
+        "wyner_ziv_gain_ceiling_fraction": 0.01726267604662224
+      }
+    },
+    {
+      "actual_codebook_bytes": 3252,
+      "actual_codebook_sha256": "6138d2c54276409c3b124c05eb53a5749245330912a2b8b62e48835a79284ed2",
+      "actual_codeword_stream_bytes": 19200,
+      "actual_codeword_stream_sha256": "68b436be6a3fb3821ab12210d62ff6626c99530bc78f8905c9807471ca52cfd5",
+      "actual_rate_cost": 0.005287585946743163,
+      "actual_total_archive_contribution_bytes": 7941,
+      "brotli_codebook_bytes": 2715,
+      "brotli_codebook_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v2_sparse_top_k_faiss_codebook.bin.br",
+      "brotli_codebook_sha256": "a7135341f51cb09fc9a1b2424e8846a7f6db9f1d03813fe5abf11f213584e18e",
+      "brotli_codeword_stream_bytes": 5226,
+      "brotli_codeword_stream_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v2_sparse_top_k_pq_stream.bin.br",
+      "brotli_codeword_stream_sha256": "158aa828ac2fb39cd5172e772c50470855293b77d9ec3cbfca466f3bc3119e3b",
+      "budget_estimate": {
+        "contest_rate_cost_estimate": 0.010323477209206145,
+        "m_subq": 2,
+        "n_regions": 16,
+        "nbits": 6,
+        "nlist": 64,
+        "per_pair_bytes": 22,
+        "shared_codebook_bytes_estimate": 2304,
+        "shippable_verdict": "ARGUABLE",
+        "top_k_regions": 8,
+        "total_archive_contribution_bytes": 15504,
+        "total_pair_bytes": 13200,
+        "total_pairs": 600,
+        "variant_id": "v2_sparse_top_k"
+      },
+      "code_size_bytes_per_selected_region": 3,
+      "codebook_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v2_sparse_top_k_faiss_codebook.bin",
+      "codeword_stream_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v2_sparse_top_k_pq_stream.bin",
+      "dispatch_blockers": [
+        "pq_side_info_high_cardinality_plugin_mi_upper_bound_only",
+        "actual_pq_payload_exceeds_v3_shippable_5kb_target"
+      ],
+      "first_decode_shape": [
+        8,
+        5
+      ],
+      "high_cardinality_bias_guard_triggered": true,
+      "promotion_eligible": false,
+      "ready_for_paid_dispatch": false,
+      "region_indices_by_pair_sha256": "f6b4fc5e1ef4585dd43f4f20f5fc0a237434c55c0992d86579d5336b9de3d87d",
+      "score_claim": false,
+      "unique_fraction": 1.0,
+      "variant_id": "v2_sparse_top_k",
+      "verdict": {
+        "h_latent_given_side_info_bits_per_symbol": 4.581625596144909,
+        "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+        "independence_tolerance_bits": 0.01,
+        "meaningful_mi_threshold_bits": 0.5,
+        "mutual_information_bits": 2.4573976646953524,
+        "num_latent_symbols": 16800,
+        "num_side_info_symbols": 16800,
+        "num_unique_side_info_symbols": 600,
+        "verdict": "MEANINGFUL_CONDITIONING",
+        "wyner_ziv_gain_ceiling_fraction": 0.3491106043599021
+      }
+    },
+    {
+      "actual_codebook_bytes": 16564,
+      "actual_codebook_sha256": "3adeee750bbbc34d3bf7eff72ef8284c1d91bb0380e357cc88e55b2fde514b58",
+      "actual_codeword_stream_bytes": 768000,
+      "actual_codeword_stream_sha256": "47829209053cdd8ccc5a9cd93aa59a08addaa66733e0247474c9ec0b33ce2799",
+      "actual_rate_cost": 0.30150026811476605,
+      "actual_total_archive_contribution_bytes": 452799,
+      "brotli_codebook_bytes": 10010,
+      "brotli_codebook_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v1_dense_faiss_codebook.bin.br",
+      "brotli_codebook_sha256": "44f0b970e04d8fba882b8505cbb91c46fc27fd3616204ce9a5022baae9ca1cd9",
+      "brotli_codeword_stream_bytes": 442789,
+      "brotli_codeword_stream_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v1_dense_pq_stream.bin.br",
+      "brotli_codeword_stream_sha256": "fdf3e5c802184fba192c9fa4fd24bda4eb8a071cd84388fab62d75d8e03c3017",
+      "budget_estimate": {
+        "contest_rate_cost_estimate": 0.5175162321098016,
+        "m_subq": 4,
+        "n_regions": 256,
+        "nbits": 8,
+        "nlist": 256,
+        "per_pair_bytes": 1280,
+        "shared_codebook_bytes_estimate": 9216,
+        "shippable_verdict": "NOT_SHIPPABLE",
+        "top_k_regions": null,
+        "total_archive_contribution_bytes": 777216,
+        "total_pair_bytes": 768000,
+        "total_pairs": 600,
+        "variant_id": "v1_dense"
+      },
+      "code_size_bytes_per_selected_region": 5,
+      "codebook_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v1_dense_faiss_codebook.bin",
+      "codeword_stream_path": "experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/atw_v2_1_v1_dense_pq_stream.bin",
+      "dispatch_blockers": [
+        "pq_side_info_high_cardinality_plugin_mi_upper_bound_only",
+        "actual_pq_payload_exceeds_v3_shippable_5kb_target"
+      ],
+      "first_decode_shape": [
+        256,
+        5
+      ],
+      "high_cardinality_bias_guard_triggered": true,
+      "promotion_eligible": false,
+      "ready_for_paid_dispatch": false,
+      "region_indices_by_pair_sha256": "65a5857cd0901dc7a20ab07528a508dd3ffdf11c56bd9c2f230122bf52487b7a",
+      "score_claim": false,
+      "unique_fraction": 1.0,
+      "variant_id": "v1_dense",
+      "verdict": {
+        "h_latent_given_side_info_bits_per_symbol": 4.581625596144909,
+        "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+        "independence_tolerance_bits": 0.01,
+        "meaningful_mi_threshold_bits": 0.5,
+        "mutual_information_bits": 2.4573976646953524,
+        "num_latent_symbols": 16800,
+        "num_side_info_symbols": 16800,
+        "num_unique_side_info_symbols": 600,
+        "verdict": "MEANINGFUL_CONDITIONING",
+        "wyner_ziv_gain_ceiling_fraction": 0.3491106043599021
+      }
+    }
+  ]
+}

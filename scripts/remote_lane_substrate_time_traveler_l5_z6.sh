@@ -125,6 +125,8 @@ Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S="${Z6_PAIRED_CONTROL_
 Z6_DEVICE="${Z6_DEVICE:-cuda}"
 Z6_UPSTREAM_DIR="${Z6_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 Z6_ENABLE_AUTOCAST_FP16="${Z6_ENABLE_AUTOCAST_FP16:-false}"
+Z6_MAX_PAIRS="${Z6_MAX_PAIRS:-}"
+Z6_SKIP_AUTH_EVAL="${Z6_SKIP_AUTH_EVAL:-}"
 
 DISPATCH_INSTANCE_JOB_ID="${Z6_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${Z6_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -291,6 +293,8 @@ cat > "$PROVENANCE" <<EOF
   "emit_identity_predictor_disambiguator_archive": "$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE",
   "paired_control_disambiguator_decision_criterion_delta_s": "$Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S",
   "enable_autocast_fp16": "$Z6_ENABLE_AUTOCAST_FP16",
+  "max_pairs": "$Z6_MAX_PAIRS",
+  "skip_auth_eval": "$Z6_SKIP_AUTH_EVAL",
   "smoke_only": "$SMOKE_ONLY",
   "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
   "started_at_utc": "$(date -u +%FT%TZ)"
@@ -351,6 +355,42 @@ case "$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE" in
         ;;
 esac
 
+MAX_PAIRS_ARGS=()
+if [ -n "$Z6_MAX_PAIRS" ]; then
+    case "$Z6_MAX_PAIRS" in
+        *[!0-9]*|"")
+            log "FATAL: invalid Z6_MAX_PAIRS=$Z6_MAX_PAIRS; expected positive integer"
+            exit 30
+            ;;
+    esac
+    if [ "$Z6_MAX_PAIRS" -le 0 ]; then
+        log "FATAL: invalid Z6_MAX_PAIRS=$Z6_MAX_PAIRS; expected positive integer"
+        exit 30
+    fi
+    MAX_PAIRS_ARGS+=(--max-pairs "$Z6_MAX_PAIRS")
+fi
+
+SKIP_AUTH_EVAL=0
+case "$Z6_SKIP_AUTH_EVAL" in
+    1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+        SKIP_AUTH_EVAL=1
+        ;;
+    0|false|FALSE|False|no|NO|No|off|OFF|Off|"")
+        ;;
+    *)
+        log "FATAL: invalid Z6_SKIP_AUTH_EVAL=$Z6_SKIP_AUTH_EVAL; expected 0/1/true/false"
+        exit 31
+        ;;
+esac
+if [ -n "$Z6_MAX_PAIRS" ] && [ "$Z6_MAX_PAIRS" -lt 600 ]; then
+    SKIP_AUTH_EVAL=1
+    log "stage_4_pair_capped_smoke_skips_auth_eval max_pairs=$Z6_MAX_PAIRS full_pairs=600"
+fi
+AUTH_EVAL_ARGS=()
+if [ "$SKIP_AUTH_EVAL" = "1" ]; then
+    AUTH_EVAL_ARGS+=(--skip-auth-eval)
+fi
+
 PREEXISTING_STATS_JSON="$Z6_OUTPUT_DIR/stats.json"
 if [ -f "$PREEXISTING_STATS_JSON" ]; then
     STALE_STATS_DIR="$LOG_DIR/stale_stats_quarantine"
@@ -383,6 +423,8 @@ REMOTE_DRIVER_STAGE4_STARTED_UNIX="$(date +%s)"
     ${IDENTITY_PREDICTOR_ARGS[@]+"${IDENTITY_PREDICTOR_ARGS[@]}"} \
     ${AUTOCAST_FLAG_ARGS[@]+"${AUTOCAST_FLAG_ARGS[@]}"} \
     ${DISAMBIGUATOR_FLAG_ARGS[@]+"${DISAMBIGUATOR_FLAG_ARGS[@]}"} \
+    ${MAX_PAIRS_ARGS[@]+"${MAX_PAIRS_ARGS[@]}"} \
+    ${AUTH_EVAL_ARGS[@]+"${AUTH_EVAL_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
 # Stage 5: emit completion marker (operator + autopilot consume).
