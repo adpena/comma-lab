@@ -48,7 +48,7 @@ council_assumption_adversary_verdict:
     rationale: "SegNet output is per-pixel 5-class semantic segmentation at 384×512. MobileNetV3-S outputs image-level class. The 'majority-class label per frame' surrogate captures < 5% of SegNet's structural information. The canonical answer is SegFormer-tiny (4M params) or DeepLabV3-MobileNetV2 (3.2M params) — proper semantic segmentation students. The MobileNetV3-S choice was inherited from the skill's classification examples without checking the task structure."
   - assumption: "DINOv3 features are a good cooperative-receiver target distribution"
     classification: HARD-EARNED-PARTIAL
-    rationale: "Atick-Redlich 1990 maximize MI(stimulus; neural response) under bandwidth constraint. DINOv3 SSL maximizes I(view_a; view_b) via cross-view prediction under augmentation invariance. These are STRUCTURALLY SIMILAR but not identical — DINOv3's invariance objective biases features toward augmentation-stable signal which may not match what the contest scorer is responsive to. HARD-EARNED-PARTIAL: probe required before adopting as canonical anchor."
+    rationale: "Atick-Redlich 1990 maximize MI(stimulus; neural response) under bandwidth constraint. DINOv3 SSL maximizes I(view_a; view_b) via cross-view prediction under augmentation invariance. These are STRUCTURALLY SIMILAR but not identical — DINOv3's invariance objective biases features toward augmentation-stable signal which may not match what the contest scorer is responsive to. HARD-EARNED-PARTIAL: probe required before adopting as canonical anchor. Pin the exact HF/timm ID `timm/vit_base_patch16_dinov3.lvd1689m` (https://huggingface.co/timm/vit_base_patch16_dinov3.lvd1689m), require `timm.data.resolve_model_data_config()`/model metadata to verify the 256px transform, and strip CLS+register prefix tokens before any DINOv3 MI/probe result is promoted."
   - assumption: "The grand council symposium discipline produces actionable insight"
     classification: CARGO-CULTED-AT-CURRENT-CADENCE
     rationale: "Per Item #8 hypothesis: per-substrate symposium discipline IS structural mechanism preventing premature kills. EMPIRICALLY VERIFIED 8-of-8 today. BUT the cadence has exceeded the operator-attention budget per Catalog #300 T3 ≤3/week threshold (we held 4 T3-class symposiums + 4 T2 today = 8 deliberations vs 3-per-week budget = 1.3× over). The discipline IS producing actionable insight; the CADENCE is operationally over-budget."
@@ -57,10 +57,10 @@ council_assumption_adversary_verdict:
     rationale: "Both sister L2 lanes already canonical; bit-exact compose; LOW antagonism risk per #864 cargo-cult-unwind-monotonicity META principle. The empirical orthogonality assumption (fec6 + FEC7 + PR103 jointly orthogonal) is the one CARGO-CULTED part — needs master-gradient overlap check per Fields-Medal subagent (slot 1) to confirm or falsify."
 council_decisions_recorded:
   - "op-routable #1: STOP HF Jobs MobileNetV3-S distillation plan; PIVOT to SegFormer-tiny per Hotz dissent. Update task #875 + subagent SLOT 5 (a6580262ad3b3bb10) prompt accordingly via SendMessage if still in flight."
-  - "op-routable #2: FIRE Composition #3 ($5 PR101 fec6 + FEC7 + PR103 stack) IMMEDIATELY upon operator approval. Per Rocky-the-alien + Time-Traveler L5 + Contrarian unanimous: $5 30-min empirical anchor is highest-EV-per-deliberation-minute available. The Fields-Medal master-gradient subagent (slot 1) can simultaneously check orthogonality but should NOT block firing."
+  - "op-routable #2: PRE-STAGE Composition #3 ($5 PR101 fec6 + FEC7 + PR103 stack) immediately, then fire only upon explicit operator/provider authorization plus claim lifecycle. Per Rocky-the-alien + Time-Traveler L5 + Contrarian unanimous: $5 30-min empirical anchor is highest-EV-per-deliberation-minute available. The Fields-Medal master-gradient subagent (slot 1) can simultaneously check orthogonality but should NOT block readiness work."
   - "op-routable #3: Adopt HF Jobs for RELIABILITY + HUB INTEGRATION value (Trackio + model card + dataset hosting), NOT for cost savings. Per Assumption-Adversary CARGO-CULTED verdict: keep Vast.ai 4090 as primary substrate-trainer for cost optimization; use HF Jobs for: (a) canonical surrogate distillation + (b) experiment-tracking management + (c) public-facing Trackio/Gradio dashboards."
   - "op-routable #4: Operator-attention-budget alert per Catalog #300: T3-class deliberation cadence at 8/3-per-week-budget = 1.3× over. Recommend: NO new T3 symposiums until 2026-05-25 (7-day reset). Today's T2-T3 verdicts must propagate to dispatch action vs further symposium-recursion."
-  - "op-routable #5: DINOv3 cooperative-receiver anchor needs probe BEFORE adoption. Stage a $0-0.50 paired-CPU probe (Comma2k19 1024-frame sample) measuring: (a) MI(DINOv3 features; contest_score) vs (b) MI(per-region SegNet histogram; contest_score). If DINOv3 wins by > 0.3 nats, adopt as canonical anchor for ATW V2-1 + Z6/Z7. If not, the synthetic per-region path remains canonical (despite #872 falsification at <2KB budget — perhaps a different shippability target reveals it)."
+  - "op-routable #5: DINOv3 cooperative-receiver anchor needs probe BEFORE adoption. Stage a $0-0.50 paired-CPU probe (Comma2k19 1024-frame sample) measuring: (a) MI(DINOv3 features; contest_score) vs (b) MI(per-region SegNet histogram; contest_score). Before the probe, verify the pinned `timm/vit_base_patch16_dinov3.lvd1689m` model and resolved preprocessing transform (official HF/timm card reports 256x256), and record whether register tokens were excluded from patch-token KL. If DINOv3 wins by > 0.3 nats, adopt as canonical anchor for ATW V2-1 + Z6/Z7. If not, the synthetic per-region path remains canonical (despite #872 falsification at <2KB budget — perhaps a different shippability target reveals it)."
   - "op-routable #6: Parallel DEFER batch — per Time-Traveler L5: fund $0.20 paired-CPU smoke on EVERY pending DEFER candidate as a single batch (#869 mae_v+saug + 5 cargo-cult-failed paradigms + 6 substrate L1 staleness candidates). Total ~$2-3; updates posteriors in parallel; breaks symposium-recursion."
   - "op-routable #7: META-cargo-cult #12 candidate STATEMENT: 'we keep deliberating in the symposium discipline because we cannot empirically measure'. EMPIRICAL FIX: any T3 deliberation that proposes a $0-1 dispatch should fire the dispatch CONCURRENTLY with the deliberation, not after. Update Catalog #325 docstring accordingly."
   - "op-routable #8: Operator-routable: confirm HF plan tier (Pro/Team/Enterprise) via web UI. Adjust HF Jobs migration scope accordingly. If Pro: keep HF Jobs as RELIABILITY + INTEGRATION layer (not primary substrate-trainer surface). If Team/Enterprise: re-evaluate whether HF Jobs should expand."
@@ -264,7 +264,7 @@ From this synthesis, 2 NEW convergent-truth tuples emerge:
 **Convergence #11: Operator-Attention-Cost ↔ Dispatch-Decision-Latency ↔ Frontier-Velocity**
 - Per Rocky-the-alien: operator-attention is 100× more expensive than GPU spend in solo-research-volunteer contexts
 - Mathematical anchor: `Cost(decision_latency × operator_attention) >> Cost(GPU_spend × dispatch_count)` when dispatch < $10 per
-- Operational fix: AUTO-AUTHORIZE all dispatches < $5 with post-hoc retrospective; reserve operator-attention for $5+ decisions
+- Operational fix: pre-stage all <$5 dispatch candidates into claim-eligible exact-ready queues with post-hoc retrospective templates; reserve operator-attention for the explicit authorization moment and $5+ decisions. **Do not auto-dispatch from this memo**: AGENTS.md still requires explicit execution authority, `tools/claim_lane_dispatch.py` claim lifecycle, and provider-runtime custody before real spend.
 
 ## Section 9: META cargo-cult #12 (new candidate from this deliberation)
 
@@ -310,17 +310,19 @@ This META assumption is CARGO-CULTED because:
 
 ## Operator-routable next action
 
-**Recommended (Time-Traveler L5 + Rocky-the-alien unanimous, 19-of-25 council majority)**: ACCEPT verdict + IMMEDIATELY fire Op-routable #1 (Composition #3 $5 PR101 fec6 + FEC7 + PR103 stack) + #3 (SendMessage to slot-5 subagent to pivot from MobileNetV3-S to SegFormer-tiny). Defer #2 + #4 + #7 to after the 5-subagent wave lands.
+**Recommended (Time-Traveler L5 + Rocky-the-alien unanimous, 19-of-25 council majority)**: ACCEPT verdict + IMMEDIATELY pre-stage Op-routable #1 (Composition #3 $5 PR101 fec6 + FEC7 + PR103 stack) behind explicit operator/provider authorization + #3 (SendMessage to slot-5 subagent to pivot from MobileNetV3-S to SegFormer-tiny). Defer #2 + #4 + #7 to after the 5-subagent wave lands.
 
-The frontier has been static for 36h. Composition #3 is the cheapest way to break it. Fire.
+The frontier has been static for 36h. Composition #3 is the cheapest way to test the break hypothesis, but this memo is not a spend authorization; it is a queue/claim/readiness directive.
 
 ---
 
 ## AMENDMENT 2026-05-18 (POST-FIELDS-MEDAL-SUBAGENT-LANDING): EMPIRICAL FALSIFICATION OF COMPOSITION #3 ORTHOGONALITY + NEW MASTER-GRADIENT-EMPIRICALLY-MOTIVATED CLASS-SHIFT
 
-**Source**: Slot 1 Fields-Medal master-gradient + xray follow-up research subagent `a2807b384d8b88966` landed `.omx/research/master_gradient_xray_fields_medal_research_wave_20260518.md` (775 lines / 92 KB / 16 sections) WHILE this council deliberation was being written. The empirical findings DIRECTLY VALIDATE the operator's correction ("we have much greater insight than the raw shippable budget analysis") AND DIRECTLY FALSIFY part of the council's earlier verdict.
+**Source**: Slot 1 Fields-Medal master-gradient + xray follow-up research subagent `a2807b384d8b88966` landed `.omx/research/master_gradient_xray_fields_medal_research_wave_20260518.md` (775 lines / 92 KB / 16 sections) WHILE this council deliberation was being written. The findings validate the operator's correction ("we have much greater insight than the raw shippable budget analysis") on the measured archive/axis, and they challenge part of the council's earlier verdict pending cross-archive OP1 replication.
 
-### Empirical falsification (HARD-EARNED, the highest-grade evidence)
+### Empirical falsification (HARD-EARNED, advisory single-archive evidence)
+
+Evidence axis caveat: the master-gradient result is `[macOS-CPU advisory][8-pair subset][fec6-only]`. It is high-signal for hypothesis formation and tool prioritization, but it is not contest-CUDA promotion evidence and not yet a cross-archive theorem.
 
 1. **PC1 of fec6 per-byte gradient captures 95.9% of variance**. The (seg, pose, rate) basis is **structurally rank-degenerate** with effective rank ~1.5. `cos(seg, pose) = +0.8973` — seg and pose share **~90% of per-byte gradient direction**.
 
@@ -332,7 +334,7 @@ The frontier has been static for 36h. Composition #3 is the cheapest way to brea
 
 **Composition #3 (PR101 fec6 + FEC7 + PR103) orthogonality assumption: FALSIFIED**
 - The asymptotic-stacking audit's predicted ΔS [-0.001, -0.005] assumed bolt-on orthogonality
-- Empirically, fec6 byte-domain shows cos(seg, pose) = 0.8973 — bolt-ons operating in fec6's byte-domain will fight rather than stack
+- Empirically, fec6 byte-domain shows cos(seg, pose) = 0.8973 — the axes are co-optimizable but highly redundant/saturated, so independent-axis superadditivity is downgraded rather than proven hostile
 - **Revised predicted ΔS for Composition #3: [-0.0003, -0.0015]** (3-5× discount per master-gradient overlap)
 - Still POSITIVE expected ΔS; fire decision STANDS but EV is smaller than the asymptotic audit claimed
 
@@ -352,7 +354,7 @@ The frontier has been static for 36h. Composition #3 is the cheapest way to brea
 **Candidate A: `sensitivity_mask_aware_quantizr_v1`** (the canonical NEXT MOVE per Fields-Medal subagent)
 - Extends Quantizr 0.33 with per-byte 4-class bit allocation derived from master-gradient sensitivity rank
 - Top 2% bytes: keep at fp16 / next 5%: int8 / next 20%: int6 / remaining 73%: int4
-- Predicted ΔS (UNION with candidates B + D): **[-0.018, -0.005] → [0.174, 0.187]** [predicted, empirical-grounded with α-discount]
+- Standalone predicted ΔS: **[-0.010, -0.003]** [predicted][macOS-CPU advisory][8-pair subset][fec6-only]. Union-stack prediction with candidates B + D remains **[-0.018, -0.005] → [0.174, 0.187]** [predicted, empirical-grounded with α-discount] and must not be attributed to Candidate A alone.
 - This is MORE empirically-supported than any other path proposed today
 - Estimated cost: $5-15 (build + train + dispatch via canonical paths)
 
@@ -363,9 +365,9 @@ The frontier has been static for 36h. Composition #3 is the cheapest way to brea
 
 Per max-signal preservation rule + Catalog #292 + #303: the original verdict PROCEED_WITH_REVISIONS is preserved but **AMENDED** with two new op-routables that supersede the original priority ranking:
 
-**REVISED Op-routable #1 (NEW HIGHEST EV)**: **Materialize master gradient on 4 frontier archives** (PR101_lc_v2 + a1_baseline + PR106 format0d + PR107 apogee) via `tools/extract_master_gradient.py --target local-cpu`. ~6-12h local M5 Max CPU each ($0 GPU). Unlocks: Catalog #319 v2 cascade for ALL archives + cross-archive empirical α-orthogonality matrix + Composition #1 empirical verification + sensitivity-mask-aware QAT codec design.
+**REVISED Op-routable #1 (NEW HIGHEST EV)**: **Materialize master gradient on 4 frontier archives** (PR101_lc_v2 + a1_baseline + PR106 format0d + PR107 apogee). The memo's older `tools/extract_master_gradient.py --target local-cpu` shorthand is invalid; use the real CLI shape per archive, e.g. `.venv/bin/python tools/extract_master_gradient.py --archive <archive.zip> --inflate-py <submission_runtime/inflate.py> --upstream-dir upstream --axis "[macOS-CPU advisory]" --output-npy <artifact.npy> --device cpu --n-pairs-used 8`, or implement a dedicated wrapper before routing OP1. ~6-12h local M5 Max CPU each ($0 GPU). Unlocks: Catalog #319 v2 cascade for ALL archives + cross-archive empirical α-orthogonality matrix + Composition #1 empirical verification + sensitivity-mask-aware QAT codec design.
 
-**REVISED Op-routable #2 (NEW)**: **Build `sensitivity_mask_aware_quantizr_v1` candidate substrate** per Fields-Medal subagent's empirical motivation. Top 2% bytes fp16 / next 5% int8 / next 20% int6 / remaining 73% int4. Predicted ΔS [-0.018, -0.005] → [0.174, 0.187]. $5-15 dispatch. MOST EMPIRICALLY-SUPPORTED frontier-breaking path identified today.
+**REVISED Op-routable #2 (NEW)**: **Build `sensitivity_mask_aware_quantizr_v1` candidate substrate** per Fields-Medal subagent's empirical motivation. Top 2% bytes fp16 / next 5% int8 / next 20% int6 / remaining 73% int4. Standalone predicted ΔS [-0.010, -0.003]; union-stack predicted ΔS [-0.018, -0.005] → [0.174, 0.187]. $5-15 dispatch only after explicit authorization, lane claim, and exact-ready custody. MOST EMPIRICALLY-SUPPORTED frontier-breaking path identified today.
 
 **REVISED Op-routable #3 (UNCHANGED)**: Fire Composition #3 ($5) — STILL FIRE despite revised lower ΔS expectation; the empirical anchor (CONFIRM vs FALSIFY the orthogonality finding at the bit-exact compose level) is itself valuable signal.
 
@@ -390,5 +392,3 @@ This is the breakthrough Rocky-the-alien + Time-Traveler L5 said we already KNEW
 - (c) Defer all until Slots 2-5 land + operator review
 
 **Recommended**: (b) — concurrent fire of Composition #3 + master-gradient materialization. Composition #3 fires in 2h (cheap empirical anchor); master gradients are local $0 background work; Candidate A build follows once master gradients land. Maximum empirical velocity per Rocky-the-alien + Time-Traveler L5 unanimous directive.
-
-
