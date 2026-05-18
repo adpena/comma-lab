@@ -507,3 +507,174 @@ The unified action's GLOBAL OPTIMUM is bounded below by the theoretical floor `[
 
 ---
 
+## 6. Empirical Anchor Chain
+
+Per Section 2: ALL 9 design landings anchor on PR101_lc_v2 archive sha `f174192aeadf...` via the fp64 per-pair master-gradient extracted by Codex's 2026-05-18 `tools/extract_master_gradient.py` canonical helper landing.
+
+### 6.1 The canonical anchor chain
+
+```
+Codex 2026-05-18 landing
+  └─ tools/extract_master_gradient.py (CLI; ~640 LOC)
+       └─ src/tac/master_gradient.py (canonical helper; ~520 LOC)
+            └─ src/tac/master_gradient_consumers.py (canonical consumer; per-pair Venn classification)
+                 └─ .omx/state/master_gradient_anchors.jsonl (canonical posterior per Catalog #131/#138)
+                      └─ archive_sha256 = f174192aeadf...
+                          └─ source_substrate = pr101_lc_v2
+                              └─ 8-pair fp64 subset (current)
+                                  └─ FULL 600-pair extension (sister synthesis OP-SYN-1; ~6-12h M5 Max fp64 compute)
+                                       └─ extended to 6 archives (sister OP-SYN-1 + theoretical_floor_estimator OP-3)
+                                            └─ A1 + PR101_lc_v2 + PR106 format0d + PR107 apogee + DP1 + sane_hnerv
+```
+
+### 6.2 Per-design anchor consumption
+
+| Design | Consumer surface | What it consumes from the anchor |
+|---|---|---|
+| **VENN** | `tools/probe_n_set_venn_empirical_sparsity_atlas.py` | Per-pair byte-level granularity (Tier 4) → per-cell sparsity classification |
+| **FISHER** | `tac.riemannian_newton_meta_substrate.fisher_precondition.compute_fisher_matrix_from_per_pair_anchor()` | Per-pair fp64 master gradient → K-FAC Kronecker factorization → Levenberg-Marquardt damping → typed `FisherConditioningVerdict` |
+| **RIEM** | `tac.riemannian_newton_meta_substrate.riemannian_newton_step` | Fisher-preconditioned natural gradient → Stiefel-manifold Newton step direction |
+| **TROP** | `tac.tropical_d_seg_solver.boundary_detector.SegNetBoundaryMap` | Per-pixel boundary detection → tropical polynomial subdomain identification |
+| **Z8** | (DEFERRED-pending-Z6/Z7 trained anchor) | Per-pair stochastic-state RSSM categorical posterior projection |
+| **TT5L V2** | (DEFERRED-pending-Wave-N+1 council) | Per-section MI probes on V1 25ep state for V2 trainer build readiness |
+| **CCREZ** | V1 Faiss V5 wavelet-multi-scale probe / C6 IBPS Path B2 RSSM categorical / NSCS06 v8 Variant C surgical-addition | Per-substrate trained anchor (sister-symposium-specific) |
+| **POSEAXIS** | OP-1 Wyner-Ziv pose hoist + OP-2 master-gradient pose-byte classification + OP-7 direct master-gradient hoist | Per-pair pose-axis-specific gradient → pose-axis-specific deliverability tier |
+| **FLOOR** | `tac.theoretical_floor_estimator` (per-archive floor distance metric) | Master-gradient null-space dimension (cos(seg_grad, pose_grad) ≈ 0.8973 implies rank-1 null) → theoretical floor lower bound |
+
+### 6.3 Why the anchor extension to 6 archives matters
+
+The current 8-pair fp64 subset on PR101_lc_v2 alone is INSUFFICIENT for cross-substrate validation per the 9 designs' collective requirements:
+
+1. **FISHER**: per-substrate Fisher conditioning differs (random-init Hessian per arxiv:2506.03470 Marchenko-Pastur bulk + spike; C6 IBPS 22× miss anchor likely Fisher-near-singular at random init). Single-archive Fisher conditioning verdict is INSUFFICIENT for the canonical `FisherConditioningVerdict` enum's per-substrate dispatch.
+2. **VENN**: per-substrate Venn cell sparsity differs. The 3-set Venn empirical sparsity atlas needs cross-substrate validation to confirm "~10-15 cells out of 64 are populated" per Hafner's DreamerV3 sparsity analog.
+3. **TROP**: per-substrate tropical polynomial faithfulness differs (PR101 is mostly-linear; NSCS06 v8 is mostly-piecewise-constant; Z8 is mostly-recurrent). Single-archive faithfulness probe is INSUFFICIENT.
+4. **Z8 + TT5L V2 + CCREZ**: per-substrate-class-shift candidates require their OWN master-gradient anchor for the per-substrate Venn classification per Catalog #319 v2 cascade.
+5. **POSEAXIS**: per-substrate pose-axis-specific Venn classification needs cross-substrate validation to confirm the 271× pose marginal coefficient at PR106 frontier operating point transfers to other substrate-class operating points.
+6. **FLOOR**: per-archive floor distance metric requires per-archive Fisher conditioning + per-pair null-space dimension; cross-substrate floor distances enable comparison of which substrate is CLOSEST to floor (current PLATEAU verdict assumes PR101_lc_v2 IS the closest substrate to floor; cross-substrate extension validates).
+
+**OP-SYN-1 (extend extraction to 6 archives) is THE highest-EV synthesis-level unlock.** Without it, the 9 designs operate on single-archive evidence; with it, the cross-paradigm comparison surface that Section 5's unified action computes over is operational.
+
+### 6.4 Anchor provenance contract per Catalog #327
+
+Per CLAUDE.md FORBIDDEN_PATTERNS "Forbidden score claim from anchor with phantom provenance" + Catalog #318/#327 (master-gradient raw-byte authority guard):
+
+- Every anchor consumer MUST route via typed `CandidateModificationSpec` + `grammar_aware_operator` response rows.
+- Raw archive-byte / bit master-gradient APIs are FORBIDDEN.
+- `evidence_grade = predicted` for any downstream consumer until paired Linux x86_64 anchor lands per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE" non-negotiable.
+- `score_claim_valid = false` + `promotion_eligible = false` defaults per Catalog #127 custody validator routing.
+
+The synthesis itself does NOT bypass this contract; every numeric ΔS prediction in this memo carries `[prediction]` axis tag per Catalog #287.
+
+---
+
+## 7. Strategic Budget Envelope per Theoretical Floor Estimator
+
+Per FLOOR design memo §0 TL;DR: PLATEAU CONFIRMED HIGH; floor band `[0.026, 0.080]` rate-conservative regime; frontier sits 2.4×-7.4× above floor. The PLATEAU verdict DEFINES the strategic budget envelope.
+
+### 7.1 Per-tier budget allocation
+
+| Tier | Cost envelope per archive | Designs included | Operational gate |
+|---|---|---|---|
+| **Tier 1 (deterministic-optimizer)** | $0-$5 GPU + $0 CPU offline | FISHER + RIEM + TROP + VENN | Phase 1 byte-mutation smoke per Contrarian VETO; Catalog #167 smoke-before-full (always $0-$1 single-primitive smoke before $5-25 paired smoke per Hotz Revision #6) |
+| **Tier 2 (substrate-class-shift)** | $5-$50 GPU + $0 CPU offline | Z8 / TT5L V2 / CCREZ (V1 Faiss V5 / C6 IBPS Path B2 / NSCS06 v8 Variant C) | Per-substrate symposium per Catalog #325 (6-step contract); predecessor probe outcome ledger consultation per Catalog #313 |
+| **Tier 3 (full DP1+PR101 composition / Riemannian-Newton full)** | $50-$250 GPU + $0 CPU offline | Z8 full conjunction ($150-250 per Tao binding revision); DP1+PR101 deep composition ($10-15 per sister codex `dp1_pr101_composition_noop_probe`) | Tier 1 + Tier 2 cascade evidence (≥2 PROCEED-unconditional per Catalog #325 reactivation paths) |
+
+### 7.2 Per-week sequencing
+
+Per the pose-axis T3 council OP-9 wave scheduling + cargo-cult resurrection TOP-3 Hotz Revision #6 + cheap-probe-first sequencing:
+
+**Week 1: Cheap-probe wave ($0-$1 total)**
+- OP-SYN-1 anchor extension to 6 archives ($0; ~6-12h M5 Max fp64 compute)
+- POSEAXIS OP-1 Wyner-Ziv pose hoist ($0 CPU offline + ~$0.30 Modal A10G CPU smoke)
+- POSEAXIS OP-2 master-gradient pose-byte classification ($0 CPU only)
+- POSEAXIS OP-7 direct master-gradient pose-byte hoist ($0 CPU only)
+- POSEAXIS OP-10 cathedral autopilot v2 cascade extension ($0 CPU only)
+
+**Week 2: Tier-1 enabling primitives ($0)**
+- FISHER OP-1 Phase 1 Fisher-precondition canonical helper lands ($0 CPU only)
+- FISHER OP-2 empirical validation on PR101_lc_v2 anchor ($0 CPU only; depends on OP-SYN-1)
+- FISHER OP-4 byte-mutation smoke per Contrarian VETO ($0 CPU only)
+
+**Week 3: N-set Venn + TROP Phase 1 ($0)**
+- VENN OP-3 empirical sparsity atlas on fec6 anchor ($0 CPU only; depends on OP-SYN-1)
+- VENN OP-1 build `tac.canonical_n_set_venn_classification` package ($0 editor)
+- TROP OP-1 Mallat wavelet boundary detector ($0 editor)
+- TROP OP-2 tropical polynomial faithfulness probe ($0 CPU only)
+
+**Week 4: Tier-1 cascade integration ($0)**
+- VENN OP-2 extend Catalog #319 v2 cascade with `_v3_n_set` overload ($0 editor)
+- RIEM OP-2 Fisher-precondition empirical validation paired comparison ($0 CPU only)
+- RIEM OP-3 Geomstats integration into `tac.substrates._shared.trainer_skeleton` ($0 editor)
+- POSEAXIS OP-3 ATW V2-1 channel-pick reformulation (~$5-7 CPU probe; AWAITS Z6 Wave 2 4c outcome)
+
+**Week 5: Tier-2 cargo-cult resurrection wave ($5-15)**
+- CCREZ V1 Faiss V5 wavelet-multi-scale probe ($0.15-0.30 CPU probe)
+- CCREZ C6 IBPS Path B2 DreamerV3 RSSM categorical ($5-15 Modal T4 50-100ep)
+- CCREZ NSCS06 v8 Variant C (PRESERVE family-DEFER; $0)
+
+**Week 6+: Tier-2 strategic substrate dispatch ($10-50)**
+- POSEAXIS OP-4 pose-conditioned residual codec probe ($2-5 Modal A10G 100ep smoke; AWAITS dedicated per-substrate symposium per OP-11)
+- POSEAXIS OP-8 VGGT-encoder-as-pose-teacher distillation probe ($10-15 Modal A100; AWAITS dedicated per-substrate symposium per OP-11)
+- TT5L V2 Wave N+1 single-primitive smoke ($1 Modal T4; AWAITS Z6 4c + Z7 GRU-vs-Mamba-2 + Dykstra-feasibility check)
+- TT5L V2 Wave N+2 4-primitive composition smoke ($15-25 Modal A100; gated on single-primitive smoke result)
+
+**Week 8+: Tier-3 full asymptotic-pursuit cascade ($50-250)**
+- Z8 full conjunction dispatch (gated on 2-of-4 reactivation paths landing PROCEED-unconditional; $150-250 per Tao binding revision)
+- DP1+PR101 deep composition (sister codex dp1_pr101_composition_noop_probe; $10-15)
+- Riemannian-Newton full per-archive cascade across 4 archives (~$50 paired smoke per archive × 4 = $200)
+
+### 7.3 Cumulative spend trajectory
+
+| Cumulative week | Spend | Predicted ΔS aggregate |
+|---|---|---|
+| Week 1 | $0-$1 | `[-0.007, -0.0025]` per archive (cheap-probe family) |
+| Week 4 | $5-$8 | `[-0.025, -0.008]` per archive (Tier-1 cascade unlock) |
+| Week 5 | $10-$25 | `[-0.040, -0.015]` per archive (Tier-2 cargo-cult resurrection wave; sub-additive composition per Catalog #322) |
+| Week 6 | $25-$60 | `[-0.045, -0.020]` per archive (Tier-2 substrate dispatch) |
+| Week 8 | $75-$310 | `[-0.060, -0.030]` per archive (Tier-3 full cascade; sub-additive composition penalty per Boyd Dykstra-feasibility) |
+
+**Realistic frontier trajectory**: from `0.19205 [contest-CPU]` toward `[0.165, 0.185]` REALISTIC + `[0.155, 0.175]` OPTIMISTIC.
+
+### 7.4 Per CLAUDE.md "Mission alignment" Consequence 4
+
+> "Frontier-breaking moves DOMINATE rigor budget — when the contest leaderboard moves OR an empirical anchor reveals a sub-A1 frontier-breaking opportunity, the council apparatus + discipline gates MUST adapt: parallel-dispatch first; rigor compressed; council deliberation foregrounds the time-critical decision; operator-override invoked liberally."
+
+This synthesis is structured to RESPECT race-mode rigor inversion: Week 1 cheap-probe family ($0-$1) is the racing primitive; if the leaderboard moves during Weeks 2-8, the canonical task queue Section 9 is REORDERED to prioritize the smallest credible bolt-on per the May 4 2026 race postmortem.
+
+---
+
+## 8. 6-Hook Wire-In Synthesis (Catalog #125)
+
+Per CLAUDE.md "Subagent coherence-by-default" non-negotiable + Catalog #125 (`check_subagent_landing_has_solver_wire_in`): every subagent landing MUST declare wire-in across the 6 mandatory unified-Lagrangian wire-in hooks. The synthesis audits the 9 designs' COLLECTIVE wire-in to identify hook ORPHANS (signal produced but no consumer) + hook CONSUMERS (consumer with no producer).
+
+### 8.1 Per-hook synthesis matrix
+
+| Hook | Producers (designs contributing signal) | Consumers (designs requiring signal) | Hook status |
+|---|---|---|---|
+| **#1 Sensitivity-map (`tac.sensitivity_map.*`)** | VENN (per-cell density) / FISHER (Fisher diagonal → axis weights) / RIEM (Riemannian metric on Stiefel manifold) / TROP (per-pixel boundary density) / FLOOR (floor-distance metric) | POSEAXIS (OP-2 master-gradient pose-byte classification consumer); cathedral autopilot v2 cascade | ACTIVE (5 producers; 2 consumers; symmetric) |
+| **#2 Pareto constraint (`tac.pareto_*`)** | VENN (64-cell polytope) / FISHER (Fisher-orthogonal projection) / RIEM (Boumal-Absil-Mahony trust-region) / TROP (tropical-polynomial-degree) / Z8 (Dykstra-feasibility per Boyd Revision) / TT5L V2 (Dykstra-feasibility per Boyd Revision) / FLOOR (Pareto-floor surface) | All 9 designs feed back via aggregate alpha matrix per cross-pollination matrix Section 4 | ACTIVE (7 producers; aggregate consumer) |
+| **#3 Bit-allocator (`tac.bit_allocator`)** | VENN (per-cell tier) / FISHER (Fisher curvature per byte) / RIEM (N/A — META-canonical) / TROP (per-byte boundary impact) / TT5L V2 (per-section budget allocation per Tishby IB rebalancing) / FLOOR (floor-distance gates allocation) | POSEAXIS (OP-7 direct master-gradient pose-byte hoist) | ACTIVE (5 producers; 1 consumer) |
+| **#4 Cathedral autopilot dispatch (`tools/cathedral_autopilot_autonomous_loop.py`)** | ALL 9 designs feed via `adjust_predicted_delta_for_*` v2 cascade reward factors | Operator + autopilot ranker | ACTIVE (9 producers; aggregate consumer; the canonical hook) |
+| **#5 Continual-learning posterior (`tac.continual_learning.posterior_update_locked`)** | VENN (`tac.canonical_n_set_venn_classification`) / FISHER (`.omx/state/fisher_conditioning_anchors.jsonl`) / RIEM (`.omx/state/riemannian_newton_convergence.jsonl`) / TROP (`.omx/state/tropical_d_seg_anchors.jsonl`) / Z8 (DEFERRED) / TT5L V2 (per-section MI probe artifacts) / CCREZ (per-substrate probe outcomes per sister T3 symposiums) / POSEAXIS (per-pair pose-byte classification artifacts) / FLOOR (`.omx/state/theoretical_floor_distance/`) | Operator + autopilot ranker + Rashomon ensemble | ACTIVE (8 producers + 1 DEFERRED; aggregate consumer) |
+| **#6 Probe-disambiguator (`tools/probe_*_disambiguator.py`)** | VENN (`probe_n_set_venn_empirical_sparsity_atlas.py`) / FISHER (Phase 1 byte-mutation smoke per Contrarian VETO) / RIEM (`probe_tropical_vs_riemannian_newton_disambiguator.py`) / TROP (sister of `probe_tropical_vs_riemannian_newton_disambiguator.py`) / Z8 (DEFERRED) / TT5L V2 (single-primitive cooperative-receiver-derived foveation smoke per Hotz Revision #6) / CCREZ (per-substrate sister T3 symposiums) / POSEAXIS (`probe_tropical_vs_riemannian_newton_disambiguator.py` sister) / FLOOR (the canonical PLATEAU-vs-SATURATION disambiguator) | Operator + per-substrate symposium discipline per Catalog #325 | ACTIVE (8 producers + 1 DEFERRED; aggregate consumer) |
+
+### 8.2 Hook orphan + consumer audit
+
+**Hook ORPHANS** (signal produced but no consumer):
+- **None identified** at the synthesis level. Every signal produced by the 9 designs has at least one consumer surface either within the 9 designs OR via the cathedral autopilot ranker / autopilot v2 cascade / per-substrate symposium queue.
+
+**Hook CONSUMERS without producer** (consumer requires signal not yet produced):
+- **POSEAXIS OP-3 ATW V2-1 channel-pick reformulation**: consumes Z6 Wave 2 4c trained anchor (CURRENTLY DEFERRED per probe outcomes ledger 2026-05-18 driver-mode hardcode DEFER). The synthesis flags this as the canonical UPSTREAM DEPENDENCY for Week 4 dispatch readiness.
+- **Z8 full conjunction dispatch**: consumes Z6-v2 Candidate 1 OR 4c PROCEED-unconditional + Z7 (Mamba-2 or GRU) PROCEED-unconditional + C6 IBPS Phase 2 β-IB-optimal + ATW V2 D4 PARADIGM reactivation. ALL 4 are CURRENTLY DEFERRED.
+- **TT5L V2 4-primitive composition smoke**: consumes Z6 4c outcome + Z7 GRU-vs-Mamba-2 outcome + Dykstra-feasibility check + single-primitive cooperative-receiver-derived foveation smoke (per Hotz Revision #6). The single-primitive smoke is structurally cheaper than the 4-primitive composition; canonical sequencing per Section 7.2 Week 6+.
+
+### 8.3 The canonical unified-Lagrangian action
+
+Per CLAUDE.md "Subagent coherence-by-default" + the unified Lagrangian/action migration target `tac.unified_action.S_total(theta, archive_bytes, hardware)`:
+
+The 9 designs' COLLECTIVE 6-hook wire-in IS the canonical unified-Lagrangian action per the migration target. The migration would replace the 9 individual designs' separate Lagrangian terms with ONE composed `S_total` scalar; the 6 hooks become signal-flow surfaces inside `S_total`.
+
+**Synthesis recommendation per Catalog #125 + the migration target**: the canonical task queue Section 9 includes an OP-SYN-9 to LAND the unified action `tac.unified_action.S_total` post-Week-8 once Tier-1 + Tier-2 cascades land empirical anchors. The unified action canonicalizes the 9 designs' compositional structure as ONE scalar.
+
+---
+
