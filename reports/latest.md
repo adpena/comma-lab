@@ -90,32 +90,37 @@ Per operator directive 2026-05-17 verbatim *"Want to keep pushing to asymptotic 
 
 **Canonical readiness assessment**: `tools/asymptotic_pursuit_candidate_readiness_assessment.py` + dispatch queue `tools/asymptotic_pursuit_dispatch_queue.py`. Artifact: `.omx/state/asymptotic_pursuit/readiness_assessment_*.json`.
 
-**6-candidate readiness matrix** (per `lane_asymptotic_pursuit_substrate_class_shift_q4_pivot_top_priority_20260517`):
+**Current 7-candidate readiness matrix** (refreshed 2026-05-18 by Codex; artifact `.omx/state/asymptotic_pursuit/readiness_assessment_20260518T040149Z.json`):
 
 | Substrate | Verdict | Council | Recipe | Predicted ΔS | Cost | Blocking |
 |---|---|---|---|---|---|---|
-| `time_traveler_l5_z6` | DEFER | PROCEED_WITH_REVISIONS | research_only=true | [0.13, 0.16] *frontier_pursuit* | $1.08 | Catalog #315 + 3 recipe blockers |
-| `atw_codec_v2` | DEFER | NO_DELIBERATION | research_only=true | unknown | $1.92 | **Catalog #313 probe BLOCKED** (INDEPENDENT verdict 2026-05-16) |
-| `time_traveler_l5_autonomy` | NEEDS_FIX | NO_DELIBERATION | dispatch-enabled | unknown | $27.43 | 4 recipe-side blockers (Dykstra polytope + composition revision + Tier C reconciliation + sextet pact) |
-| `c6_e4_mdl_ibps` | NEEDS_FIX | NO_DELIBERATION | dispatch-enabled | unknown | $0.76 | 4 recipe-side blockers (Dykstra polytope + Tier C reconciliation + sextet pact) — **cheapest path forward** |
+| `z6_v2_candidate_4c_scorer_logit` | **READY** | NO_DELIBERATION | dispatch-enabled | [0.11, 0.17] *asymptotic_pursuit planning prior* | $1.08 full / $2.18 paired sequence | L1 registered; score_claim=false; promotion_eligible=false |
+| `time_traveler_l5_autonomy` | NEEDS_FIX | NO_DELIBERATION | dispatch-enabled | unknown | $27.43 | stale Dykstra/composition blockers cleared; current blockers are C1/Z5/TT5L probe-gate semantics, prediction-band custody, and provider capacity/runtime readiness |
+| `time_traveler_l5_z6` | DEFER | PROCEED_WITH_REVISIONS | research_only=true | [0.13, 0.16] *frontier_pursuit* | $1.08 | Catalog #313 Z6 Wave 2 DEFER + Catalog #315 + recipe blockers |
+| `atw_codec_v2` | DEFER | PROCEED_WITH_REVISIONS | research_only=true | unknown | $1.92 | **Catalog #313 probe BLOCKED** (INDEPENDENT verdict 2026-05-16) |
+| `c6_e4_mdl_ibps` | DEFER | PROCEED | dispatch_enabled=false | suppressed | $0.76 | **Catalog #313 smoke DEFER** + Catalog #324 falsified random-init band suppressed |
 | `nscs01_nullspace_split_renderer` | DEFER | PROCEED_WITH_REVISIONS | research_only=true | unknown | $0.43 | Catalog #315 + Phase 2 council |
-| `nscs03_end_to_end_balle_joint_codec` | DEFER | NO_DELIBERATION | research_only=true | unknown | $0.65 | research_only flag |
+| `nscs03_end_to_end_balle_joint_codec` | DEFER | PROCEED_WITH_REVISIONS | research_only=true | unknown | $1.01 | Catalog #315 + recipe blockers |
 
-**TOP-1 recommendation: `time_traveler_l5_autonomy`** (NEEDS_FIX; would require recipe blocker resolution + Dykstra polytope emission + composition revision). **TOP-2 (Stage 2 stacking): `c6_e4_mdl_ibps`** ($0.76 cost; cheapest 4-blocker path; has 7 historical Modal smokes + Tier-C density 2.67e-5 = class-shift candidate).
+**TOP-1 recommendation: `z6_v2_candidate_4c_scorer_logit`** (READY for an operator-authorized smoke-before-full probe; no spend fired by this report). **TOP-2 (Stage 2 stacking candidate): `time_traveler_l5_autonomy`** (still NEEDS_FIX).
 
-**Z6 is the highest-EV substrate** (predicted [0.13, 0.16]; $1.08; horizon_class=frontier_pursuit) BUT blocked by Catalog #315 sextet council PROCEED_WITH_REVISIONS. Recommended next operator action: convene Z6 Phase 2 sextet council to iterate to OPTIMAL FORM PROCEED-unconditional verdict, unlocking Z6 dispatch.
+**Candidate 4c is launchable, not promotable.** Its `[0.11, 0.17]` band is tagged `pending_post_training`; it is a planning prior only until paired exact-eval evidence, post-training Tier-C validation, and the full-vs-identity disambiguator land. It is registered as `lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518` at L1 with implementation, strict-test, memory, and runbook gates marked; no empirical score gates are marked. Byte-consumption/no-op proof for the scorer-logit ego section now passes at `experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/scorer_logit_ego_motion_byte_mutation_proof.json` (`0.bin@192390:16`, 2/4 mutations changed output; score_claim=false).
+
+**TT5L blocker refresh:** Dykstra score-axis sanity, move-level feasibility, contest full-frame side-info consumption, first-anchor timing smoke, Lightning preflight, execution bundle, dry-run verification, route-unblock packet, and doctor plan validate through `l5_v2_tt5l_campaign_readiness`; these are not score/rank/promotion authority. Codex removed a false probe-gate `probe_verdict_sha256_mismatch` caused by builder/validator hash-contract drift. Remaining blockers are real fail-closed semantics: `requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock`, architecture lock still false, probe blockers still nonempty, missing eligible C1/Z5/TT5L observations, `prediction_band_not_dispatch_ready` with missing baseline/anchor custody, Modal workspace billing limit, and missing Lightning target/teamspace/inventory/source/runtime probes.
 
 **ATW V2 is BLOCKED** by Catalog #313 predecessor probe outcome (`atw_v2_d4_h_latent_given_scorer_class_20260516` verdict INDEPENDENT; MI=0.006385 bits/symbol << 0.5 threshold). Per CLAUDE.md "Forbidden premature KILL" + Catalog #308: NOT a class-kill; reactivation requires richer side-information per probe notes.
+
+**C6 original recipe is DEFER, not the cheapest path forward.** Catalog #313 recorded the 3.04 smoke miss, and Catalog #324 suppresses the disabled recipe's stale predicted band until a reactivation branch supplies post-training validation or operator waiver.
 
 **Stage 2 stacking design** (Q9 per HORIZON-CLASS council): TOP-1 ⊕ TOP-2 composition deferred until first ASYMPTOTIC empirical anchor lands. Pre-entropy pairwise composition_alpha probe (OP-3 from HORIZON-CLASS council) is the dependency for any 2+ substrate composition. Per Catalog #227 substrate composition matrix.
 
 **5 op-routables for operator** (NO commits / NO paid dispatch fired by this assessment per operator NON-NEGOTIABLE):
 
-1. Convene Z6 sextet council Phase 2 PROCEED-unconditional deliberation (highest-EV unlock; $0 GPU)
-2. Land C6 IBPS recipe-side fixes: Dykstra polytope at `.omx/state/dykstra_feasibility/c6_e4_mdl_ibps.json` + composition revision memo + Tier C reconciliation + sextet sign-off (cheapest dispatch path post-fix at $0.76)
+1. If spend is approved, claim `lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518`, then run `tools/run_modal_smoke_before_full.py --recipe substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch` per Catalog #167.
+2. Keep Candidate 4c output non-promotional until paired CPU/CUDA harvest, full-vs-identity disambiguator deltas, archive/runtime custody, and terminal claim rows exist.
 3. Run pre-entropy pairwise composition_alpha probe per HORIZON-CLASS council OP-3 ($0 GPU; ~2h editor) before any Stage 2 stacking
-4. Operator decision: which top-1 candidate to prioritize for fix work — Z6 (high EV / blocked by council) vs C6 (cheap / blocked by recipe-side only)?
-5. After top-1 fix lands: operator-authorize → `tools/run_modal_smoke_before_full.py --recipe <recipe>` per Catalog #167
+4. Resolve `time_traveler_l5_autonomy` probe-gate / prediction-band / provider-capacity blockers if Candidate 4c smoke is weak or if Stage 2 stacking needs a second launchable substrate.
+5. Treat C6 original as deferred; work only a named reactivation branch (beta sweep / latent widen / Phase 2 redesign) unless an operator waiver explicitly supersedes Catalog #324.
 - A1 (`87ec7ca5f2f3`) at 0.19285 CPU is #3 — anchor for a separate (PR101-grammar minimalist) line.
 
 ## Q4 STATUS + PIVOT — REDO+PIVOT 2026-05-17
