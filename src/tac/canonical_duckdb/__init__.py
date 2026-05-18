@@ -40,7 +40,12 @@ from tac.canonical_duckdb.backfill import (
     refresh_all_tables,
     refresh_table,
 )
-from tac.canonical_duckdb.hf_push import push_to_hf
+from tac.canonical_duckdb.hf_push import (
+    DEFAULT_CANONICAL_TASK_STATUS_HF_DATASET_ID,
+    export_canonical_task_status_hf_dataset,
+    push_canonical_task_status_to_hf,
+    push_to_hf,
+)
 from tac.canonical_duckdb.query import (
     CANONICAL_QUERY_SCRIPTS,
     audit_table_provenance,
@@ -64,10 +69,13 @@ __all__ = [
     "CANONICAL_LOCK_PATH",
     "CANONICAL_QUERY_SCRIPTS",
     "CANONICAL_TABLES",
+    "DEFAULT_CANONICAL_TASK_STATUS_HF_DATASET_ID",
     "DEFAULT_DB_PATH",
     "REFRESH_DISPATCH",
     "audit_table_provenance",
     "connect",
+    "export_canonical_task_status_hf_dataset",
+    "push_canonical_task_status_to_hf",
     "push_to_hf",
     "refresh_all_tables",
     "refresh_table",
