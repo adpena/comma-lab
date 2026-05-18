@@ -35572,6 +35572,379 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518",
+      "name": "Z6-v2 Candidate 4c scorer-logit conditioning smoke-before-full launch surface",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_time_traveler_l5_z6.py implements _full_main with Z6_EGO_SOURCE=scorer_logit plus .omx/operator_authorize_recipes/substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch.yaml"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_z6_v2_candidate_1_wave_2_build.py covers scorer_logit ego source, recipe/env ladder, full-vs-identity disambiguator, and predicted-band provenance"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/z6_candidate4c_scorer_logit_trainer_readiness_20260518_codex.md documents trainer readiness, Catalog #324 planning-band guard, and readiness queue repair"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_time_traveler_l5_z6.sh plus recipe smoke-before-full notes define dispatch/harvest surface; no empirical score gates marked"
+        }
+      },
+      "notes": "Pre-registered per AGENTS.md lane-registry contract. Distinct from base Z6 capacity branch: Candidate 4c tests compress-time scorer-logit side information through the existing Z6 full trainer and smoke-before-full recipe. score_claim=false; promotion_eligible=false; predicted_band is planning-only pending paired exact-eval and full-vs-identity disambiguator.",
+      "byte_mutation_smoke_passes": "experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/scorer_logit_ego_motion_byte_mutation_proof.json",
+      "distinguishing_feature_name": "scorer_logit_ego_source",
+      "distinguishing_bytes_path": "scorer_logit_ego_motion",
+      "inflate_consumer_function": "tac.substrates.time_traveler_l5_z6.inflate.run_inflate"
+    },
+    {
+      "id": "lane_per_substrate_symposium_lane_17_imp_20260517",
+      "name": "Per-substrate symposium #856: lane_17_imp KILL-was-stats.json-stub-loop reactivation",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_pr106_05_06_reformulated_20260517",
+      "name": "Per-substrate symposium #858: PR106 lanes #05+#06 REFORMULATED paradigm-INTACT/design-CARGO-CULTED",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_nscs06_v8_path_b_20260517",
+      "name": "Per-substrate symposium #852: NSCS06 v8 Path B post-v7 44% improvement cargo-cult-unwind exemplar",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_z7_lstm_predictive_coding_20260517",
+      "name": "Per-substrate symposium #851: Z7 LSTM predictive coding sister of Z6 Phase 3",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_tt5l_foveation_lapose_20260517",
+      "name": "Per-substrate symposium #853: TT5L foveation + LAPose (L5 staircase substrate-class)",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_stc_3a_sidecar_a1_residual_20260517",
+      "name": "Per-substrate symposium STC reformulation 3a: STC-as-sidecar over A1-substrate residual stream (cheapest stc reform path $5.20 per #861 verdict)",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_dp1_deep_dive_20260517",
+      "name": "Per-substrate symposium #855: DP1 deep-dive (pretrained driving prior reused across A1/PR101/HDM8/YUCR/TT5L/sane_hnerv composition graph)",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_mae_v_saug_20260517",
+      "name": "Per-substrate symposium: lane_mae_v + lane_saug HIGH-EV \u0394S [-0.1, -0.01] null_pending_re_probe (pre-rigor inventory council priority #5)",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -35581,5 +35954,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-18T03:09:55Z"
+  "updated_at": "2026-05-18T04:29:15Z"
 }
