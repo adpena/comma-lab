@@ -47,8 +47,18 @@ from tac.optimization.substrate_composition_matrix import (
 
 def test_default_constructor():
     allocator = EndToEndBitAllocator()
-    # 39 = 24 legacy + 15 FIX-J substrate-scaffold rows (LOOPCLOSE 2026-05-12).
-    assert allocator.matrix.n_substrates() == 39
+    # 2026-05-12 LOOPCLOSE FIX-J baseline = 39 substrates (24 legacy + 15
+    # FIX-J substrate-scaffold rows). The canonical substrate inventory is
+    # forward-compatible: new substrate-class additions to the canonical
+    # inventory bump n_substrates upward over time. Per CLAUDE.md "Beauty,
+    # simplicity, and developer experience" forward-compat principle + sister
+    # #817 op-routable #4 (LOW gap closure widened wave 2026-05-17 BUCKET D
+    # regression fix): assert >= the regression floor rather than == a stale
+    # pinned count, so future canonical-inventory growth does not fail this
+    # test.
+    canonical_inventory = canonical_substrate_inventory()
+    assert allocator.matrix.n_substrates() == len(canonical_inventory)
+    assert allocator.matrix.n_substrates() >= 39  # regression floor
     assert allocator.operating_point == "pr106_r2_frontier"
 
 

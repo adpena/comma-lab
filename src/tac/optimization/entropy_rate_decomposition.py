@@ -417,13 +417,188 @@ def _bool_text(value: bool) -> str:
     return "true" if value else "false"
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LOW gap closure widened wave 2026-05-17 — BUCKET B per-byte rate attribution
+# ─────────────────────────────────────────────────────────────────────────────
+# Per `.omx/research/comprehensive_wire_in_coverage_matrix_20260517.md` LOW
+# gap candidate #3: extend entropy_rate_decomposition with per-byte allocation
+# map consumption from sister #817 Gap 1
+# (``tac.optimization.bit_allocator_end_to_end.allocate_per_pair_bits``).
+#
+# The per-byte allocation map directly attributes rate-distortion contribution
+# per byte, enabling decomposition of the archive's total rate term into
+# per-byte buckets — a structural prerequisite for byte-level rate-distortion
+# analysis per CLAUDE.md "Bit-level deconstruction and entropy discipline".
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" the outcome is
+# `[predicted; entropy-rate per-byte attribution v1]` — NO score claim.
+
+PER_BYTE_RATE_ATTRIBUTION_SCHEMA = "tac_entropy_rate_per_byte_attribution_v1"
+
+
+def attribute_rate_distortion_per_byte(
+    archive_sha256: str,
+    *,
+    per_byte_allocation_map: Mapping[int, int] | None = None,
+    archive_total_bytes: int | None = None,
+    auto_load: bool = True,
+) -> dict[str, Any]:
+    """Per-byte rate-distortion attribution per Catalog #125 hook #3.
+
+    Consumes per-byte allocation map from sister #817 Gap 1
+    (``allocate_per_pair_bits``) and decomposes the archive's total rate term
+    (= 25 * total_archive_bytes / CONTEST_ORIGINAL_BYTES) into per-byte
+    contributions::
+
+        rate_contribution_per_byte = per_byte_allocation[byte_idx] / total_archive_bytes
+        score_contribution_per_byte = 25 * rate_contribution_per_byte
+
+    The result enables decomposition of the rate term across the archive's
+    byte layout for downstream byte-level optimization.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" the outcome is
+    `[predicted; entropy-rate per-byte attribution v1]` — NO score claim.
+
+    Parameters
+    ----------
+    archive_sha256
+        64-char hex sha of the target archive bytes. Used to auto-load the
+        per-byte allocation map via sister #817 Gap 1.
+    per_byte_allocation_map
+        Optional pre-computed per-byte allocation mapping ``byte_index ->
+        allocated_bytes``. When None and ``auto_load=True``, auto-loads via
+        ``allocate_per_pair_bits``.
+    archive_total_bytes
+        Optional total archive bytes used as denominator for rate
+        attribution. Required when ``per_byte_allocation_map`` is supplied
+        without ``auto_load``; otherwise derived from the allocation map
+        total.
+    auto_load
+        When True (default), auto-loads missing inputs from canonical anchors.
+
+    Returns
+    -------
+    dict[str, Any]
+        Envelope dict with keys:
+          - ``schema``: PER_BYTE_RATE_ATTRIBUTION_SCHEMA
+          - ``archive_sha256``: input sha
+          - ``per_byte_rate_contribution``: dict[int, float] byte_idx -> [0, 1]
+          - ``per_byte_score_contribution``: dict[int, float] byte_idx -> score units
+          - ``total_rate_term``: float (sum of per-byte rate contributions)
+          - ``per_byte_allocation_consumed``: bool
+          - ``score_claim``: False
+          - ``rationale``: human-readable string
+
+    Raises
+    ------
+    EntropyRateDecompositionError on malformed inputs.
+    """
+    if (
+        not isinstance(archive_sha256, str)
+        or len(archive_sha256) < 12
+        or any(c not in "0123456789abcdefABCDEF" for c in archive_sha256)
+    ):
+        raise EntropyRateDecompositionError(
+            f"archive_sha256 must be a 12+ char hex string; got {archive_sha256!r}"
+        )
+
+    per_byte_allocation_consumed = False
+    if per_byte_allocation_map is None and auto_load:
+        try:
+            from tac.optimization.bit_allocator_end_to_end import (
+                allocate_per_pair_bits,
+            )
+
+            # Use a large hypothetical budget so the helper's cascade fires
+            # against whatever optimal_plan / wyner_ziv signal exists.
+            outcome = allocate_per_pair_bits(
+                archive_sha256=archive_sha256,
+                total_bit_budget=1_000_000,
+                auto_load=True,
+            )
+            per_byte_allocation_map = outcome.per_byte_bit_allocation
+            per_byte_allocation_consumed = True
+        except (ImportError, ValueError, FileNotFoundError, OSError):
+            per_byte_allocation_map = None
+
+    if per_byte_allocation_map is None or len(per_byte_allocation_map) == 0:
+        return {
+            "schema": PER_BYTE_RATE_ATTRIBUTION_SCHEMA,
+            "archive_sha256": archive_sha256,
+            "per_byte_rate_contribution": {},
+            "per_byte_score_contribution": {},
+            "total_rate_term": 0.0,
+            "per_byte_allocation_consumed": per_byte_allocation_consumed,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "evidence_grade": (
+                "[predicted; entropy-rate per-byte attribution v1]"
+            ),
+            "rationale": (
+                "[predicted; entropy-rate per-byte attribution v1] per-byte "
+                "allocation map unavailable; no attribution computed."
+            ),
+        }
+
+    # Derive denominator
+    allocation_sum = sum(int(v) for v in per_byte_allocation_map.values())
+    if archive_total_bytes is None:
+        archive_total_bytes = allocation_sum
+    archive_total = int(archive_total_bytes) if archive_total_bytes > 0 else 1
+
+    # CONTEST_ORIGINAL_BYTES is the canonical denominator for the rate term
+    # (matches sister `tac.optimization.bayesian_experimental_design.
+    # CONTEST_ORIGINAL_BYTES = 37_545_489`).
+    CONTEST_ORIGINAL_BYTES = 37_545_489
+
+    per_byte_rate: dict[int, float] = {}
+    per_byte_score: dict[int, float] = {}
+    for byte_idx, allocated in per_byte_allocation_map.items():
+        # Per-byte rate contribution = byte's bytes / archive_total
+        # (fraction in [0, 1])
+        rate = float(allocated) / float(archive_total)
+        # Per-byte score contribution = 25 * byte's bytes / CONTEST_ORIGINAL_BYTES
+        # (units of score-points contributed by this byte to the total rate term)
+        score = 25.0 * float(allocated) / CONTEST_ORIGINAL_BYTES
+        per_byte_rate[int(byte_idx)] = rate
+        per_byte_score[int(byte_idx)] = score
+
+    total_rate_term = (
+        25.0 * float(allocation_sum) / CONTEST_ORIGINAL_BYTES
+    )
+
+    return {
+        "schema": PER_BYTE_RATE_ATTRIBUTION_SCHEMA,
+        "archive_sha256": archive_sha256,
+        "per_byte_rate_contribution": per_byte_rate,
+        "per_byte_score_contribution": per_byte_score,
+        "total_rate_term": total_rate_term,
+        "per_byte_allocation_consumed": per_byte_allocation_consumed,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "evidence_grade": (
+            "[predicted; entropy-rate per-byte attribution v1]"
+        ),
+        "rationale": (
+            f"[predicted; entropy-rate per-byte attribution v1] per-byte "
+            f"allocation map consumed; {len(per_byte_rate)} bytes attributed; "
+            f"total rate term contribution = {total_rate_term:.6f} score units; "
+            f"composable with sister #817 Gap 1 allocate_per_pair_bits outcome."
+        ),
+    }
+
+
 __all__ = [
     "DEFAULT_EVIDENCE_GRADE",
     "DISPATCH_BLOCKERS",
+    "PER_BYTE_RATE_ATTRIBUTION_SCHEMA",
     "SCHEMA_VERSION",
     "SCORE_EVIDENCE_GRADE",
     "TOOL_NAME",
     "EntropyRateDecompositionError",
+    "attribute_rate_distortion_per_byte",
     "build_entropy_rate_decomposition",
     "entropy_bits_per_symbol",
     "render_markdown",

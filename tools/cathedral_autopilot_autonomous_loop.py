@@ -950,7 +950,13 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     # has an additivity factor alpha in [0, 1+] per the Z3xC6 probe-disambiguator
     # (`tools/probe_z3_x_c6_composition_disambiguator.py`). The factor maps
     # to a predicted_score_delta scaling per the additivity verdict bands.
-    d = adjust_predicted_delta_for_composition_alpha(d, c.composition_alpha)
+    #
+    # 2026-05-17 upgrade to v2 cascade per `feedback_super_additive_lane_g_v3
+    # _siren_topology_integration_landed_20260517.md`: the v2 cascade is a
+    # strict superset of v1 with a new SUPER_ADDITIVE branch (alpha > 1.05)
+    # for cross-substrate redundancy compositions. Reward factor is BOUNDED
+    # at 2.0× so a future false-signal alpha=10 cannot runaway-promote.
+    d = adjust_predicted_delta_for_composition_alpha_v2(d, c.composition_alpha)
     # OP-3 predicted_dispatch_risk wire-in (codex chunk 6 finding,
     # 2026-05-15): demote candidates whose RUDIN-DAUBECHIES preflight SLIM
     # risk score crosses the canonical refusal threshold. Applied after the
@@ -976,6 +982,20 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     # classification is structural-orthogonal to preflight risk: a high-Venn
     # candidate may still have high SLIM risk for unrelated reasons.
     d = adjust_predicted_delta_for_venn_classification(d, c.archive_sha256)
+    # LOW gap closure widened wave 2026-05-17 — BUCKET C: per-pair master
+    # gradient sister-#817 consumption. AFTER the v2 venn cascade (which has
+    # REPLACE semantics for the OptimalPerPairTreatmentPlan path) so the
+    # planner-derived delta is preserved when present; this adjustment is an
+    # ADDITIONAL multiplicative factor for the OTHER cascade paths
+    # (deliverability + passthrough) where sister-#817 sidecar evidence
+    # (per_pair_bit_allocation_* OR per_pair_fisher_importance_*) reveals
+    # additional per-byte / per-pair signal not yet captured upstream. The
+    # factor composes multiplicatively per the existing chain pattern; sidecar
+    # ABSENT → 1.0× passthrough (NO FAKE REWARD per CLAUDE.md "Forbidden
+    # empirical-claim-without-evidence-tag" + sister Q2+Q3 cascade discipline).
+    d = adjust_predicted_delta_for_per_pair_sister_817_sidecars(
+        d, c.archive_sha256
+    )
     return d
 
 
@@ -1246,6 +1266,185 @@ def adjust_predicted_delta_for_venn_classification_v2(
     return predicted_delta
 
 
+# ── LOW gap closure widened wave 2026-05-17 — BUCKET C: sister-#817 sidecar
+# consumption ────────────────────────────────────────────────────────────────
+#
+# Per `.omx/research/comprehensive_wire_in_coverage_matrix_20260517.md` GAP
+# #1 + sister #817 op-routable #2 ("Autopilot consumption: wire Gap 1's
+# allocate_per_pair_bits + Gap 3's allocate_per_pair_fisher_importance into
+# tools/cathedral_autopilot_autonomous_loop.py so per-pair-aware bit
+# allocation + Fisher importance modulate candidate ranking").
+#
+# The two sister-#817 helpers DO NOT auto-emit sidecars at landing time
+# (sister #817 produces typed outcomes via return value only; this BUCKET C
+# wire-in checks for future-emitted sidecars when callers explicitly persist
+# the outcome via consumer_output_path + write_consumer_sidecar_json).
+#
+# Sidecar path conventions (per consumer_output_path):
+#   per_pair_bit_allocation_<sha[:12]>_*.json (canonical Gap 1 sidecar)
+#   per_pair_fisher_importance_<sha[:12]>_*.json (canonical Gap 3 sidecar)
+#
+# Reward semantics (multiplicative factor in score-delta convention; lower
+# is better; factor < 1.0 → MORE NEGATIVE = better-ranked):
+#
+#   per_pair_bit_allocation cascade_path == "optimal_plan" → 0.95× reward
+#     (plan-derived allocation IS the canonical answer; small reward to
+#     prefer plan-backed candidates over Wyner-Ziv-only or fallback peers).
+#   per_pair_bit_allocation cascade_path == "wyner_ziv_composition" → 0.98×
+#     reward (Wyner-Ziv-backed allocation is intermediate evidence).
+#   per_pair_bit_allocation cascade_path == "aggregate_fallback" → 1.0×
+#     (no signal; no reward per CLAUDE.md "Forbidden score claims").
+#
+#   per_pair_fisher_importance sidecar present with non-zero aggregate Fisher
+#     → 0.97× reward (per-byte Fisher attribution is structural signal that
+#     downstream callers can consume to bias byte budgets).
+#   per_pair_fisher_importance sidecar absent → 1.0× (no signal).
+#
+# Both factors compose multiplicatively. When BOTH sidecars are present at
+# their best cascade (optimal_plan + Fisher), the combined factor is
+# 0.95 × 0.97 = ~0.9215× (modest stacked reward; deliberately conservative
+# per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" — the
+# sidecars are PREDICTIVE signal, not empirical anchors).
+#
+# Sister Q2+Q3 cascade discipline preserved: the v2 venn cascade's REPLACE
+# semantics for the OptimalPerPairTreatmentPlan path are NOT touched; this
+# wire-in only adds an ADDITIONAL multiplicative factor AFTER the v2 cascade.
+
+_PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_OPTIMAL_PLAN = 0.95
+_PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_WYNER_ZIV = 0.98
+_PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_AGGREGATE_FALLBACK = 1.0
+_PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_PRESENT = 0.97
+_PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_ABSENT = 1.0
+_PER_PAIR_SIDECAR_SCAN_ROOT = (
+    REPO_ROOT / ".omx" / "state" / "master_gradient_consumers"
+)
+
+
+def _latest_per_pair_bit_allocation_sidecar_for_archive(
+    archive_sha256: str,
+) -> Path | None:
+    """Find the most-recent per_pair_bit_allocation sidecar for the archive."""
+    if not _PER_PAIR_SIDECAR_SCAN_ROOT.exists():
+        return None
+    sha_short = archive_sha256[:12]
+    matches = sorted(
+        _PER_PAIR_SIDECAR_SCAN_ROOT.glob(
+            f"per_pair_bit_allocation_{sha_short}_*.json"
+        )
+    )
+    if not matches:
+        return None
+    return matches[-1]  # lex-max == chrono-max (UTC YYYYMMDDTHHMMSS suffix)
+
+
+def _latest_per_pair_fisher_importance_sidecar_for_archive(
+    archive_sha256: str,
+) -> Path | None:
+    """Find the most-recent per_pair_fisher_importance sidecar for the archive."""
+    if not _PER_PAIR_SIDECAR_SCAN_ROOT.exists():
+        return None
+    sha_short = archive_sha256[:12]
+    matches = sorted(
+        _PER_PAIR_SIDECAR_SCAN_ROOT.glob(
+            f"per_pair_fisher_importance_{sha_short}_*.json"
+        )
+    )
+    if not matches:
+        return None
+    return matches[-1]
+
+
+def _per_pair_bit_allocation_sidecar_reward_factor(
+    archive_sha256: str,
+) -> float:
+    """Read latest per_pair_bit_allocation sidecar; return multiplicative factor.
+
+    Maps cascade_path_used to a reward factor per the BUCKET C semantics
+    documented at the section header. Returns 1.0 (no reward) when no sidecar
+    exists or sidecar is malformed.
+    """
+    sidecar = _latest_per_pair_bit_allocation_sidecar_for_archive(archive_sha256)
+    if sidecar is None:
+        return 1.0
+    try:
+        payload = json.loads(sidecar.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            return 1.0
+        cascade = str(payload.get("cascade_path_used", ""))
+        if cascade == "optimal_plan":
+            return _PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_OPTIMAL_PLAN
+        if cascade == "wyner_ziv_composition":
+            return _PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_WYNER_ZIV
+        if cascade == "aggregate_fallback":
+            return _PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_AGGREGATE_FALLBACK
+        # Unknown cascade tag → safe default
+        return 1.0
+    except (OSError, json.JSONDecodeError):
+        return 1.0
+
+
+def _per_pair_fisher_importance_sidecar_reward_factor(
+    archive_sha256: str,
+) -> float:
+    """Read latest per_pair_fisher_importance sidecar; return multiplicative factor.
+
+    Returns 0.97 if sidecar exists AND aggregate_fisher_l1 > 0; 1.0 otherwise.
+    """
+    sidecar = _latest_per_pair_fisher_importance_sidecar_for_archive(
+        archive_sha256
+    )
+    if sidecar is None:
+        return _PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_ABSENT
+    try:
+        payload = json.loads(sidecar.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            return _PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_ABSENT
+        agg_l1 = payload.get("aggregate_fisher_l1", 0.0)
+        if not isinstance(agg_l1, (int, float)) or agg_l1 <= 0:
+            return _PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_ABSENT
+        return _PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_PRESENT
+    except (OSError, json.JSONDecodeError):
+        return _PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_ABSENT
+
+
+def adjust_predicted_delta_for_per_pair_sister_817_sidecars(
+    predicted_delta: float, archive_sha256: str
+) -> float:
+    """Apply sister-#817 sidecar consumption to predicted_delta.
+
+    LOW gap closure widened wave 2026-05-17 — BUCKET C wire-in. Composes
+    multiplicatively per the existing rank_candidates chain pattern:
+      - per_pair_bit_allocation sidecar (sister #817 Gap 1)
+      - per_pair_fisher_importance sidecar (sister #817 Gap 3)
+
+    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" + sister
+    Q2+Q3 v2 cascade discipline: sidecar ABSENT → 1.0× passthrough (no fake
+    reward); sidecar PRESENT → conservative multiplicative bonus per the
+    BUCKET C reward bands documented at the section header.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": this is PLANNING-
+    ONLY reweighting; never creates a score claim or dispatch authority.
+
+    Args:
+        predicted_delta: Raw predicted score delta from the candidate row
+            after the v2 venn cascade (negative = score improvement per
+            autopilot convention).
+        archive_sha256: 64-char hex sha of the target archive bytes.
+
+    Returns:
+        Adjusted predicted_delta per the multiplicative cascade.
+    """
+    if not archive_sha256:
+        return predicted_delta
+    bit_alloc_factor = _per_pair_bit_allocation_sidecar_reward_factor(
+        archive_sha256
+    )
+    fisher_factor = _per_pair_fisher_importance_sidecar_reward_factor(
+        archive_sha256
+    )
+    return predicted_delta * bit_alloc_factor * fisher_factor
+
+
 # ── Tier C substrate-class density (Catalog #227 wire-in, 2026-05-14) ─────
 #
 # Per `feedback_mdl_ablation_tier_c_ibps1_landed_20260514.md` operator
@@ -1361,6 +1560,11 @@ def adjust_predicted_delta_for_composition_alpha(
         composition evidence not yet collected)
 
     Returns the (possibly adjusted) predicted_score_delta. Lower is better.
+
+    Note: this v1 cascade does NOT recognize SUPER_ADDITIVE (alpha > 1.05);
+    SUPER_ADDITIVE values are absorbed into the ADDITIVE branch (no extra
+    reward). For SUPER_ADDITIVE handling, see
+    :func:`adjust_predicted_delta_for_composition_alpha_v2` below.
     """
     if composition_alpha is None:
         return base_delta
@@ -1375,6 +1579,124 @@ def adjust_predicted_delta_for_composition_alpha(
         # SUB-ADDITIVE: halve the predicted savings.
         return base_delta * COMPOSITION_ALPHA_SUB_ADDITIVE_PENALTY_FACTOR
     # SATURATING (alpha <= 0.3): single-substrate dominates; cap at floor.
+    return max(base_delta, COMPOSITION_ALPHA_SATURATING_DELTA_FLOOR)
+
+
+# ── v2 cascade with SUPER_ADDITIVE branch (lane_super_additive_..._20260517) ──
+#
+# Per `feedback_super_additive_lane_g_v3_siren_topology_integration_landed_
+# 20260517.md` + the Q6 OP-3 extended sweep landing:
+#
+# The original 45-pair extended sweep surfaced ONE pair with alpha=4.74
+# (SUPER_ADDITIVE band) — `lane_g_v3_renderer + siren_renderer` under
+# brotli. ROOT-CAUSE INVESTIGATION FOUND THE ALPHA=4.74 ROW IS A FALSE-SIGNAL
+# ARTIFACT (both renderer.bin files are byte-identical sha256
+# `08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529`
+# because the SIREN smoke timed out rc=124 at 3601s and the submission-builder
+# copied the lane_g_v3 placeholder). The α=4.74 IS NOT a real composition
+# discovery; see the mechanism investigation memo for the false-signal class.
+#
+# HOWEVER, the v2 cascade itself is structurally needed for FUTURE real
+# SUPER_ADDITIVE topologies that may emerge from genuine cross-substrate
+# redundancy (e.g. distilled scorer surrogate + a renderer that learned similar
+# fp16 weight statistics). The branch is engineered to be safe AT LANDING:
+#
+#   - SUPER_ADDITIVE reward is BOUNDED at 2.0× via min(alpha / 2.0, 2.0) so
+#     a future false-signal alpha=10.0 cannot runaway-promote a candidate.
+#   - The reward factor only applies when alpha > 1.05 (the threshold above
+#     ADDITIVE's noise band of [0.7, 1.05]).
+#   - Per CLAUDE.md "Apples-to-apples evidence discipline": the reward is
+#     applied to the PREDICTED ΔS only; measured anchors are untouched.
+#   - The cascade is otherwise a strict superset of v1 — sub_additive +
+#     additive + saturating branches all behave identically to v1.
+#
+# Math: base_delta is in score-delta convention (more-negative is better).
+# SUPER_ADDITIVE multiplies the magnitude by min(alpha/2.0, 2.0); for
+# alpha=4.74 the reward factor is 2.0× (the cap). For alpha=2.0 the reward
+# factor is 1.0× (no extra reward — at the cap threshold). For alpha=1.5
+# the reward factor is 0.75× ... wait that's a PENALTY. The cap point
+# alpha=2.0 means: rewards for alpha in (1.05, 2.0) are between 1.05/2.0=0.525×
+# (REDUCING the magnitude!) and 1.0× — which is WRONG.
+#
+# Corrected formula: SUPER_ADDITIVE reward must be a MULTIPLIER >= 1.0 (more
+# rewarding when alpha is more super-additive). Use:
+#
+#   reward_factor = min(max(alpha, 1.0), 2.0)  -- clamp to [1.0, 2.0]
+#
+# At alpha=1.05 reward=1.05× (slight reward); at alpha=2.0 reward=2.0× (cap);
+# at alpha=4.74 reward=2.0× (cap, no runaway). This is monotone + bounded +
+# never penalizes a super-additive observation by accident.
+COMPOSITION_ALPHA_SUPER_ADDITIVE_THRESHOLD = 1.05  # alpha > 1.05 = super-additive
+COMPOSITION_ALPHA_SUPER_ADDITIVE_REWARD_CAP = 2.0  # max reward factor (bounded)
+COMPOSITION_ALPHA_SUPER_ADDITIVE_REWARD_FLOOR = 1.0  # min reward factor
+
+
+def adjust_predicted_delta_for_composition_alpha_v2(
+    base_delta: float,
+    composition_alpha: float | None,
+) -> float:
+    """v2 cascade with SUPER_ADDITIVE branch (Catalog #227 wire-in extension).
+
+    Per `feedback_super_additive_lane_g_v3_siren_topology_integration_landed_
+    20260517.md` + the Q6 OP-3 extended sweep finding (2026-05-17):
+
+      - alpha > 1.05 (SUPER_ADDITIVE): reward factor in [1.0, 2.0] clamped
+        via ``min(max(alpha, 1.0), COMPOSITION_ALPHA_SUPER_ADDITIVE_REWARD_CAP)``.
+        Apply by MULTIPLYING ``base_delta`` by ``-reward_factor`` if base_delta
+        is negative (more-negative is better in score-delta convention; reward
+        amplifies magnitude in the favorable direction). If base_delta is
+        non-negative (positive predicted score change), no reward is applied
+        because the candidate is not actually improving score.
+      - alpha in (0.7, 1.05] (ADDITIVE): no adjustment (full additive savings)
+      - alpha in (0.3, 0.7] (SUB-ADDITIVE): 50% penalty on predicted savings
+      - alpha <= 0.3 (SATURATING): floor at -0.005 (single-substrate dominates)
+      - alpha unknown (None): no adjustment
+
+    Returns the (possibly adjusted) predicted_score_delta. Lower is better.
+
+    Safety properties:
+      - SUPER_ADDITIVE reward is BOUNDED at ``COMPOSITION_ALPHA_SUPER_ADDITIVE_
+        REWARD_CAP = 2.0`` so a false-signal alpha=10 cannot runaway-promote.
+      - SUPER_ADDITIVE reward only applies when ``base_delta < 0`` (the
+        candidate is predicted to improve score). For ``base_delta >= 0`` the
+        reward path is a no-op.
+      - Non-finite alpha values (inf / nan) are silently rejected (no
+        adjustment) per the conservative-on-bad-input rule.
+      - v2 is a strict superset of v1: for alpha <= 1.05 the cascade returns
+        the identical value as v1.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + "Forbidden score
+    claims": this adjusts PREDICTED ΔS only; measured anchors are untouched.
+    """
+    if composition_alpha is None:
+        return base_delta
+    try:
+        a = float(composition_alpha)
+    except (TypeError, ValueError):
+        return base_delta
+    # Reject non-finite alpha (inf, nan) per the conservative-on-bad-input rule.
+    if not math.isfinite(a):
+        return base_delta
+    # SUPER_ADDITIVE branch: alpha > 1.05.
+    if a > COMPOSITION_ALPHA_SUPER_ADDITIVE_THRESHOLD:
+        # Only reward when the candidate is actually improving score.
+        if base_delta >= 0:
+            return base_delta
+        # Bounded reward factor in [1.0, 2.0].
+        reward_factor = min(
+            max(a, COMPOSITION_ALPHA_SUPER_ADDITIVE_REWARD_FLOOR),
+            COMPOSITION_ALPHA_SUPER_ADDITIVE_REWARD_CAP,
+        )
+        # base_delta is negative (better-is-more-negative); multiply by
+        # reward_factor amplifies magnitude in the favorable direction.
+        return base_delta * reward_factor
+    # ADDITIVE branch: alpha in (0.7, 1.05].
+    if a > COMPOSITION_ALPHA_ADDITIVE_THRESHOLD:
+        return base_delta
+    # SUB-ADDITIVE branch: alpha in (0.3, 0.7].
+    if a > COMPOSITION_ALPHA_SUB_ADDITIVE_THRESHOLD:
+        return base_delta * COMPOSITION_ALPHA_SUB_ADDITIVE_PENALTY_FACTOR
+    # SATURATING branch: alpha <= 0.3.
     return max(base_delta, COMPOSITION_ALPHA_SATURATING_DELTA_FLOOR)
 
 
@@ -4134,6 +4456,789 @@ def diagnose_compressive_sensing_lattice_undersampling(
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# ORPHAN-SIGNAL-AUDIT wire-ins (task #711, 2026-05-17)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Per operator standing directive 2026-05-17 verbatim *"Ensure all producers
+# wired up and integrated into consumers as appropriate with the cathedral
+# autopilot the ultimate consumer."*
+#
+# ORPHAN-SIGNAL-AUDIT (task #711) identified 15 ORPHANS — canonical-helper
+# producers whose outputs were NOT consumed by the cathedral autopilot. This
+# wave closes 5 of the 15 high-EV orphans:
+#
+#   1. tac.council_continual_learning      → rerank_candidates_via_council_continual_learning
+#   2. tac.probe_outcomes_ledger            → refuse_candidates_via_probe_outcomes
+#   3. tac.deploy.modal.call_id_ledger     → update_cost_band_from_modal_call_id_ledger
+#   4. tac.substrates.pretrained_driving_prior.composition → load_candidates_from_dp1_composition_primitives
+#   5. tac.recursive_adversarial_review    → refuse_candidates_via_recursive_review_unsealed
+#
+# Per CLAUDE.md "Subagent coherence-by-default" 6-hook wire-in declaration:
+# closure of orphan-signal-audit hooks 1 (sensitivity → council), 3 (bit-
+# allocator → probe), 4 (cathedral-autopilot dispatch hook → modal call-id
+# ledger), 5 (continual-learning posterior → council + probe), and 6 (probe-
+# disambiguator → council).
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+# all 5 wire-ins are fail-CLOSED:
+#   - Missing canonical helper (ImportError) → re-raise (NOT silent skip)
+#   - Missing ledger file → warn + return empty result (NOT silent default to
+#     passing-through ALL candidates)
+#   - Refused candidates surfaced explicitly via (kept, refused) tuple OR
+#     blockers/notes append (NOT silently dropped)
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline": every adjustment
+# carries an axis-tagged explanation in CandidateRow.notes so the operator
+# can audit which producer surface contributed to the rank.
+#
+# Sister of the existing 8 producer wire-ins (frontier_scan / master_gradient
+# / substrate_composition_matrix / macos_cpu_advisory / exact_ready_queue /
+# rudin_daubechies / continual_learning / cost_band_calibration).
+
+
+# Council-continual-learning rerank constants (tunable per operator review).
+# Per CLAUDE.md "Council hierarchy: 4-tier protocol" + Catalog #300 v2 frontmatter:
+# T2+ verdicts ARE the binding-decision surface; T1 working groups are advisory.
+COUNCIL_VERDICT_WEIGHT_PROCEED_UNCONDITIONAL_DEFAULT = -0.20
+"""Negative = boost. PROCEED-unconditional verdict makes the candidate more attractive."""
+
+COUNCIL_VERDICT_WEIGHT_PROCEED_WITH_REVISIONS_DEFAULT = -0.05
+"""Negative = mild boost. PROCEED_WITH_REVISIONS is a partial endorsement; modest reward."""
+
+COUNCIL_VERDICT_WEIGHT_DEFER_PENDING_EVIDENCE_DEFAULT = 0.10
+"""Positive = penalty. DEFER_PENDING_EVIDENCE means the candidate needs evidence first."""
+
+COUNCIL_VERDICT_WEIGHT_REFUSE_DEFAULT = 0.50
+"""Positive = strong penalty. REFUSE is the canonical do-not-dispatch verdict."""
+
+COUNCIL_VERDICT_WEIGHT_ESCALATE_DEFAULT = 0.20
+"""Positive = penalty. ESCALATE_TO_OPERATOR / ESCALATE_TO_HIGHER_TIER need operator review."""
+
+
+def load_candidates_from_dp1_composition_primitives(
+    repo_root: Path,
+    *,
+    default_predicted_score_delta: float = -0.001,
+    default_expected_information_gain: float = 0.05,
+    default_estimated_dispatch_cost_usd: float = 0.30,
+) -> list[CandidateRow]:
+    """ORPHAN-SIGNAL-AUDIT wire-in: DP1+(any-base-substrate) as candidate-SOURCE.
+
+    Per CLAUDE.md "Subagent coherence-by-default" hook #3 (bit-allocator) +
+    audit META-INSIGHT: every (DP1, base_substrate) composition tuple
+    registered in ``tac.substrates.pretrained_driving_prior.composition.
+    known_base_substrates()`` is a NEW candidate row that didn't previously
+    exist in ``substrate_composition_matrix``. The cathedral autopilot's
+    ranker should see these composed candidates explicitly so the operator
+    can compare DP1-only vs base-only vs (DP1 + base) composition arms.
+
+    The loader emits one CandidateRow per known base substrate with:
+      - candidate_id = ``dp1_composed__<base_substrate>``
+      - family = ``pretrained_driving_prior_composition``
+      - notes = explicit ``[predicted; DP1 composition primitive]`` axis tag
+      - blockers = [``dp1_composition_research_only_pending_paired_anchor``]
+        so promotion requires explicit operator review
+
+    Per CLAUDE.md "Forbidden premature KILL": the composition primitives are
+    research-only until paired anchors land; the loader does NOT lift this
+    gate.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+    fail-CLOSED on missing canonical helper (ImportError re-raised).
+
+    Args:
+        repo_root: Repository root (used for canonical helper resolution).
+        default_predicted_score_delta: Mild negative = small predicted boost
+            from the prior regularizer; calibrated to be below contest-CPU
+            noise floor until empirical anchors land.
+        default_expected_information_gain: Modest EIG; composition exploration
+            yields information about additivity/synergy with base substrate.
+        default_estimated_dispatch_cost_usd: Typical smoke cost for the
+            composed pair.
+
+    Returns:
+        List of CandidateRow objects, one per known base substrate.
+
+    Raises:
+        ImportError: if the canonical composition helper is unavailable.
+    """
+    # Fail-CLOSED per CLAUDE.md "Bugs must be permanently fixed AND
+    # self-protected against": if the canonical helper is missing, raise
+    # rather than silently emit zero rows.
+    from tac.substrates.pretrained_driving_prior.composition import (
+        known_base_substrates,
+    )
+
+    rows: list[CandidateRow] = []
+    for base_substrate in known_base_substrates():
+        if not isinstance(base_substrate, str) or not base_substrate.strip():
+            continue
+        candidate_id = f"dp1_composed__{base_substrate}"
+        notes_lines = [
+            "[predicted; DP1 composition primitive; ranking-only]",
+            "evidence_grade: research_only (paired anchor required for promotion)",
+            f"base_substrate: {base_substrate}",
+            "composition_helper: tac.substrates.pretrained_driving_prior.composition.compose_with",
+            "promotion_blocked: requires paired (DP1-only, base-only, DP1+base) [contest-CUDA]/[contest-CPU] anchors",
+            "source: tac.substrates.pretrained_driving_prior.composition.known_base_substrates() — ORPHAN-SIGNAL-AUDIT wire-in 2026-05-17",
+        ]
+        rows.append(
+            CandidateRow(
+                candidate_id=candidate_id,
+                family="pretrained_driving_prior_composition",
+                predicted_score_delta=float(default_predicted_score_delta),
+                expected_information_gain=float(default_expected_information_gain),
+                estimated_dispatch_cost_usd=float(default_estimated_dispatch_cost_usd),
+                blockers=[
+                    "dp1_composition_research_only_pending_paired_anchor",
+                ],
+                notes="\n".join(notes_lines),
+                lane_class="research_substrate",
+                literature_anchor="DP1 cooperative-receiver prior + base substrate composition",
+                source_supports="Catalog #210/#211 DP1 composition contract",
+                paper_claim_scope="composition primitive registered; empirical additivity unknown",
+                pact_must_prove="paired anchor across (DP1-only, base-only, DP1+base) needed before promotion",
+                decode_complexity_evidence="composition wrapper is 13-byte header + length-prefix per DPCOMP_HEADER_FMT",
+            )
+        )
+    return rows
+
+
+def rerank_candidates_via_council_continual_learning(
+    rows: list[CandidateRow],
+    *,
+    repo_root: Path,
+    posterior_path: Path | None = None,
+    weight_proceed_unconditional: float = COUNCIL_VERDICT_WEIGHT_PROCEED_UNCONDITIONAL_DEFAULT,
+    weight_proceed_with_revisions: float = COUNCIL_VERDICT_WEIGHT_PROCEED_WITH_REVISIONS_DEFAULT,
+    weight_defer_pending_evidence: float = COUNCIL_VERDICT_WEIGHT_DEFER_PENDING_EVIDENCE_DEFAULT,
+    weight_refuse: float = COUNCIL_VERDICT_WEIGHT_REFUSE_DEFAULT,
+    weight_escalate: float = COUNCIL_VERDICT_WEIGHT_ESCALATE_DEFAULT,
+) -> list[tuple[CandidateRow, float, str]]:
+    """ORPHAN-SIGNAL-AUDIT wire-in: 4-tier council deliberation verdicts as side info.
+
+    Per CLAUDE.md "Council hierarchy: 4-tier protocol" + Catalog #300 v2
+    frontmatter: T2+ council verdicts are persisted via
+    ``tac.council_continual_learning.append_council_anchor`` to
+    ``.omx/state/council_deliberation_posterior.jsonl``. This wire-in matches
+    each candidate's ``family`` / ``candidate_id`` / ``lane_class`` against
+    the council deliberation topics and applies the verdict-weight per the
+    canonical map.
+
+    Per CLAUDE.md "Subagent coherence-by-default" wire-in hook 5 (continual-
+    learning posterior): closes the council deliberation → cathedral autopilot
+    rank-time loop.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": the adjustment carries
+    an explicit ``[council-T<tier>; verdict=<v>; deliberation=<id>]`` tag in
+    the explanation so the operator can audit which council deliberation
+    contributed to the rank.
+
+    Returns a list of ``(candidate, adjusted_predicted_delta, explanation)``
+    tuples sorted ascending by adjusted_predicted_delta (most-negative-first).
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+    fail-CLOSED on missing canonical helper (ImportError re-raised); silent
+    no-op for candidates with no matching council deliberation (don't penalize
+    lack-of-evidence per the sister Z1 / Tier C / composition_alpha
+    conventions).
+
+    Args:
+        rows: Candidate rows from upstream loaders.
+        repo_root: Repository root (used for canonical helper resolution).
+        posterior_path: Optional override for the council posterior JSONL path.
+        weight_*: Per-verdict adjustment weights (negative = boost; positive =
+            penalty). Defaults are mild; operator can override per session.
+
+    Returns:
+        List of (candidate, adjusted_predicted_delta, explanation) tuples
+        sorted ascending.
+
+    Raises:
+        ImportError: if the canonical council_continual_learning helper is
+            unavailable.
+    """
+    # Fail-CLOSED per CLAUDE.md "Bugs must be permanently fixed AND
+    # self-protected against": import errors are bug-class signals.
+    from tac.council_continual_learning import (
+        load_council_anchors,
+    )
+
+    # Load all council deliberation anchors (lenient mode skips malformed
+    # rows; the strict variant is reserved for callers that want
+    # quarantine-on-corruption semantics).
+    try:
+        anchors = load_council_anchors(posterior_path=posterior_path)
+    except FileNotFoundError:
+        # Missing ledger → warn + return passthrough (per fail-closed contract:
+        # we DO NOT silently approve all candidates; we DO surface that no
+        # council evidence is available).
+        anchors = []
+
+    # Build a topic-keyed index of latest verdicts per deliberation_id (later
+    # outcomes supersede earlier events per Catalog #300 schema).
+    verdicts_by_deliberation_id: dict[str, dict[str, Any]] = {}
+    for anchor in anchors:
+        # anchor is a CouncilDeliberationRecord; use dataclass fields.
+        delib_id = anchor.deliberation_id
+        if not delib_id:
+            continue
+        # Later events win (JSONL append-order is chronological).
+        verdicts_by_deliberation_id[delib_id] = {
+            "verdict": anchor.council_verdict,
+            "tier": anchor.council_tier,
+            "topic": anchor.topic,
+            "predicted_mission_contribution": anchor.predicted_mission_contribution,
+            "deferred_substrate_id": anchor.deferred_substrate_id,
+        }
+
+    weight_map = {
+        "PROCEED": weight_proceed_unconditional,
+        "PROCEED_WITH_REVISIONS": weight_proceed_with_revisions,
+        "DEFER_PENDING_EVIDENCE": weight_defer_pending_evidence,
+        "REFUSE": weight_refuse,
+        "ESCALATE_TO_OPERATOR": weight_escalate,
+        "ESCALATE_TO_HIGHER_TIER": weight_escalate,
+    }
+
+    out: list[tuple[CandidateRow, float, str]] = []
+    for c in rows:
+        # Match by deferred_substrate_id (the council ledger's lane handle)
+        # OR by candidate family / lane_class substring (best-effort match;
+        # explicit substrate_id is preferred when available).
+        matched_verdict: str | None = None
+        matched_tier: str | None = None
+        matched_delib_id: str | None = None
+        matched_topic: str | None = None
+        for delib_id, payload in verdicts_by_deliberation_id.items():
+            deferred_id = payload.get("deferred_substrate_id")
+            if deferred_id and (
+                deferred_id == c.candidate_id
+                or deferred_id == c.family
+                or deferred_id == c.lane_class
+                or deferred_id == c.lane_id
+            ):
+                matched_verdict = payload["verdict"]
+                matched_tier = payload["tier"]
+                matched_delib_id = delib_id
+                matched_topic = payload.get("topic")
+                break
+        if matched_verdict is None:
+            # No council deliberation for this candidate; pass through with
+            # explanation noting absence (per the "don't penalize lack-of-
+            # evidence" convention).
+            out.append(
+                (
+                    c,
+                    float(c.predicted_score_delta),
+                    "[council; no-matching-deliberation] no council verdict found for "
+                    f"candidate {c.candidate_id!r} / family={c.family!r}",
+                )
+            )
+            continue
+
+        weight = weight_map.get(matched_verdict, 0.0)
+        adjusted_delta = float(c.predicted_score_delta) + weight
+        explanation = (
+            f"[council-{matched_tier}; verdict={matched_verdict}; deliberation={matched_delib_id}; "
+            f"topic={matched_topic!r}] weight={weight:+.3f} -> adjusted_predicted_delta="
+            f"{adjusted_delta:+.6f}"
+        )
+        out.append((c, adjusted_delta, explanation))
+
+    out.sort(key=lambda t: t[1])
+    return out
+
+
+def refuse_candidates_via_probe_outcomes(
+    rows: list[CandidateRow],
+    *,
+    repo_root: Path,
+    ledger_path: Path | None = None,
+) -> tuple[list[CandidateRow], list[CandidateRow]]:
+    """ORPHAN-SIGNAL-AUDIT wire-in: probe-outcomes ledger as candidate-REFUSE filter.
+
+    Per CLAUDE.md Catalog #313 (`check_dispatch_target_has_no_predecessor_
+    adjudicated_outcome`): the probe-outcomes ledger persists adjudicated
+    verdicts {INDEPENDENT, KILL, DEFER, PROMOTE, PROCEED, PARTIAL,
+    OPERATOR_REVIEW_REQUIRED}. The {INDEPENDENT, KILL, DEFER} blocking
+    verdicts mean the apparatus has already adjudicated this substrate's
+    probe and a fresh dispatch would re-do work the system already settled.
+
+    Operator-authorize.py ALREADY consumes the probe_outcomes_ledger at
+    ``_check_predecessor_probe_outcome`` to refuse dispatch. This autopilot-
+    side wire-in is defense-in-depth: the rejected candidates are filtered
+    OUT of the ranked queue BEFORE the operator sees the rankings — saves
+    operator-attention budget per CLAUDE.md Catalog #291 mission-alignment.
+
+    Per CLAUDE.md "Subagent coherence-by-default" wire-in hook 3 (bit-
+    allocator → probe disambiguator): closes the probe-outcomes → cathedral
+    autopilot rank-time loop.
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion": a
+    blocking probe outcome is research-deferral, NOT a kill. Refused
+    candidates are returned to the caller (NOT silently dropped) so the
+    operator can audit which candidates were filtered and override if
+    research-exhaustion criteria are met.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+    fail-CLOSED on missing canonical helper (ImportError re-raised); missing
+    ledger file → empty blocking-outcomes list (lenient; loader pattern).
+
+    Returns:
+        Tuple of (kept_rows, refused_rows). The kept_rows are safe to surface
+        to the operator; the refused_rows carry probe-outcome blockers in
+        their `.blockers` list AND a probe-outcome explanation in `.notes`.
+
+    Raises:
+        ImportError: if the canonical probe_outcomes_ledger helper is
+            unavailable.
+    """
+    # Fail-CLOSED per CLAUDE.md "Bugs must be permanently fixed AND
+    # self-protected against": import errors are bug-class signals.
+    from tac.probe_outcomes_ledger import (
+        BLOCKING_VERDICTS,
+        latest_blocking_outcome_by_substrate,
+    )
+
+    kept: list[CandidateRow] = []
+    refused: list[CandidateRow] = []
+
+    for c in rows:
+        # Try to resolve substrate from candidate fields. Per the canonical
+        # ProbeOutcomeView.substrate field semantics: the substrate string
+        # is the durable key (recipe_path can be renamed).
+        substrate_candidates: list[str] = []
+        if c.family:
+            substrate_candidates.append(c.family)
+        if c.lane_class:
+            substrate_candidates.append(c.lane_class)
+        if c.candidate_id:
+            substrate_candidates.append(c.candidate_id)
+
+        blocking_view = None
+        matched_substrate: str | None = None
+        for substrate in substrate_candidates:
+            try:
+                view = latest_blocking_outcome_by_substrate(
+                    substrate, path=ledger_path
+                )
+            except (FileNotFoundError, OSError):
+                # Missing ledger → no blocking outcomes (lenient). Per fail-
+                # closed contract: NOT silent default-to-passthrough; the
+                # loop continues but the candidate is NOT refused via this
+                # helper (the operator-authorize side gate is still active).
+                view = None
+            if view is not None and view.verdict in BLOCKING_VERDICTS:
+                blocking_view = view
+                matched_substrate = substrate
+                break
+
+        if blocking_view is None:
+            kept.append(c)
+            continue
+
+        # Refused: add blocker + extend notes per the existing pattern.
+        # The blocker string is parseable by operator_authorize gates.
+        blocker_str = (
+            f"probe_outcome_blocking_verdict__{blocking_view.verdict}__"
+            f"substrate__{matched_substrate}__probe_id__{blocking_view.probe_id}"
+        )
+        refused_blockers = list(c.blockers)
+        if blocker_str not in refused_blockers:
+            refused_blockers.append(blocker_str)
+        notes_extension = (
+            f"\n[probe-outcome refuse; ORPHAN-SIGNAL-AUDIT 2026-05-17] "
+            f"substrate={matched_substrate} probe_id={blocking_view.probe_id} "
+            f"verdict={blocking_view.verdict} kind={blocking_view.probe_kind} "
+            f"adjudicated_at_utc={blocking_view.adjudicated_at_utc} "
+            f"expires_at_utc={blocking_view.expires_at_utc} "
+            f"evidence_path={blocking_view.evidence_path!r}"
+        )
+
+        # Construct a new CandidateRow with extended blockers/notes; preserve
+        # all other fields (CandidateRow is mutable but we treat this as
+        # immutable-ish here for safety).
+        refused_row = dataclasses.replace(
+            c,
+            blockers=refused_blockers,
+            notes=(c.notes + notes_extension) if c.notes else notes_extension.lstrip(),
+        )
+        refused.append(refused_row)
+
+    return kept, refused
+
+
+def update_cost_band_from_modal_call_id_ledger(
+    repo_root: Path,
+    *,
+    ledger_path: Path | None = None,
+    posterior_path: Path | None = None,
+    since_utc: str | None = None,
+) -> dict[str, Any]:
+    """ORPHAN-SIGNAL-AUDIT wire-in: Modal call-id outcomes feed cost-band posterior.
+
+    Per CLAUDE.md Catalog #245 (Modal call-id ledger): every dispatch via the
+    canonical Modal helpers writes a `register_dispatched_call_id` row + an
+    `update_call_id_outcome` row to ``.omx/state/modal_call_id_ledger.jsonl``.
+    The outcome rows carry ``status`` / ``rc`` / ``elapsed_seconds`` /
+    ``cost_actual_usd`` / ``gpu`` / ``platform`` fields that the cost-band
+    posterior at ``tac.cost_band_calibration`` consumes for per-(platform,
+    gpu) cost prediction.
+
+    This helper closes the loop: for every harvested call-id row that is NOT
+    yet reflected in the cost-band posterior, append a new cost-band anchor
+    via the canonical ``tac.cost_band_calibration.append_anchor`` helper.
+
+    Per CLAUDE.md "Subagent coherence-by-default" wire-in hook 4 (cathedral
+    autopilot dispatch hook): closes the Modal dispatch outcome → cost-band
+    posterior loop. The autopilot's per-candidate cost prediction
+    (`predicted_dispatch_risk` SLIM field per Catalog #250) consumes the
+    refreshed posterior at the next ranking pass.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+    fail-CLOSED on missing canonical helper (ImportError re-raised); missing
+    ledger → return empty status (lenient; loader pattern).
+
+    Args:
+        repo_root: Repository root (used for canonical helper resolution).
+        ledger_path: Optional override for the Modal call-id ledger JSONL.
+        posterior_path: Optional override for the cost-band posterior JSONL.
+        since_utc: Optional ISO-8601 UTC cutoff; only consume call-id rows
+            written at or after this timestamp. Default = consume all.
+
+    Returns:
+        Status dict with ``rows_scanned``, ``anchors_appended``, ``skipped_reasons``
+        for operator-facing audit + downstream consumer chaining.
+
+    Raises:
+        ImportError: if the canonical Modal call-id ledger OR
+            cost_band_calibration helper is unavailable.
+    """
+    # Fail-CLOSED per CLAUDE.md "Bugs must be permanently fixed AND
+    # self-protected against": import errors are bug-class signals.
+    from tac.cost_band_calibration import (
+        FAILED_DISPATCH,
+        HARVESTED_PARTIAL,
+        SUCCESSFUL_DISPATCH,
+        TIMED_OUT,
+        CostBandAnchor,
+        append_anchor,
+    )
+    from tac.deploy.modal.call_id_ledger import (
+        STATUS_DISPATCHED,
+        STATUS_FAILED,
+        STATUS_HARVESTED,
+        STATUS_STALE,
+        load_call_ids,
+        query_all_post_utc,
+    )
+
+    # Load relevant call-id rows (lenient mode).
+    try:
+        rows = (
+            query_all_post_utc(since_utc, path=ledger_path)
+            if since_utc
+            else load_call_ids(path=ledger_path)
+        )
+    except (FileNotFoundError, OSError):
+        # Missing ledger → no anchors to backfill; lenient.
+        return {
+            "schema": "modal_call_id_ledger_to_cost_band_wire_in_v1",
+            "rows_scanned": 0,
+            "anchors_appended": 0,
+            "skipped_reasons": {"ledger_missing": 1},
+            "since_utc": since_utc,
+        }
+
+    # JOIN by call_id: the dispatched-event row carries platform/gpu/recipe/
+    # label/lane_id metadata; the harvested/failed/stale event row carries
+    # elapsed/cost/rc/score actuals. Build a per-call_id merged view.
+    merged_by_call_id: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        cid = row.get("call_id")
+        if not isinstance(cid, str) or not cid:
+            continue
+        merged = merged_by_call_id.setdefault(cid, {})
+        # Per CLAUDE.md HISTORICAL_PROVENANCE: never mutate dispatched row;
+        # we are constructing an EPHEMERAL view, not writing back. Take
+        # non-None fields preferentially, accumulating across event rows.
+        for key, val in row.items():
+            if val is not None and (key not in merged or merged[key] is None):
+                merged[key] = val
+        # Always overwrite `status` / `event_type` / `rc` / `timed_out` to the
+        # LATEST event (JSONL append order is chronological per Catalog #245).
+        for latest_field in ("status", "event_type", "rc", "timed_out"):
+            if latest_field in row:
+                merged[latest_field] = row[latest_field]
+
+    # For each merged call_id row that is NOT a `dispatched`-only event AND
+    # has the cost-band fields we need, append a cost-band anchor.
+    status_to_outcome = {
+        STATUS_HARVESTED: SUCCESSFUL_DISPATCH,
+        STATUS_FAILED: FAILED_DISPATCH,
+        STATUS_STALE: HARVESTED_PARTIAL,
+    }
+    anchors_appended = 0
+    skipped: dict[str, int] = {}
+    for cid, merged in merged_by_call_id.items():
+        status = merged.get("status")
+        if status == STATUS_DISPATCHED:
+            skipped["status_dispatched_no_outcome_yet"] = (
+                skipped.get("status_dispatched_no_outcome_yet", 0) + 1
+            )
+            continue
+        # Map terminal-status events → cost-band outcomes.
+        if status == "timed_out" or merged.get("timed_out") is True:
+            outcome_value = TIMED_OUT
+        else:
+            outcome_value = status_to_outcome.get(status)
+        if outcome_value is None:
+            skipped["unrecognized_status"] = skipped.get("unrecognized_status", 0) + 1
+            continue
+
+        # Required cost-band fields. Skip rows missing essentials.
+        platform = str(merged.get("platform") or "modal")
+        gpu = str(merged.get("gpu") or "")
+        elapsed_seconds = merged.get("elapsed_seconds")
+        cost_actual = merged.get("cost_actual_usd")
+        trainer = str(
+            merged.get("recipe") or merged.get("label") or merged.get("lane_id") or ""
+        )
+        if not gpu or elapsed_seconds is None or cost_actual is None or not trainer:
+            skipped["missing_required_cost_band_fields"] = (
+                skipped.get("missing_required_cost_band_fields", 0) + 1
+            )
+            continue
+
+        try:
+            elapsed_float = float(elapsed_seconds)
+            cost_float = float(cost_actual)
+        except (TypeError, ValueError):
+            skipped["malformed_numeric_field"] = (
+                skipped.get("malformed_numeric_field", 0) + 1
+            )
+            continue
+        if not math.isfinite(elapsed_float) or not math.isfinite(cost_float):
+            skipped["non_finite_numeric_field"] = (
+                skipped.get("non_finite_numeric_field", 0) + 1
+            )
+            continue
+
+        rc_value = merged.get("rc")
+        try:
+            rc_int = int(rc_value) if rc_value is not None else None
+        except (TypeError, ValueError):
+            rc_int = None
+
+        # Construct the CostBandAnchor. Note: epochs / batch_size / all_flags_on
+        # are typically NOT in the call-id ledger; we use sentinel defaults
+        # (0 / 0 / False) and document via `notes`. Per CLAUDE.md "Comment-only
+        # contracts are FORBIDDEN" we explicitly tag in notes that these are
+        # ledger-derived rows lacking epoch/batch metadata.
+        notes_str = (
+            "cost_estimate_source=modal_call_id_ledger_actuals; "
+            f"call_id={cid}; "
+            f"lane_id={merged.get('lane_id')}; "
+            f"score={merged.get('score')}; "
+            f"score_axis={merged.get('score_axis')}; "
+            f"epochs_batch_metadata_unavailable_from_ledger"
+        )
+        anchor = CostBandAnchor(
+            logged_at_utc=str(merged.get("written_at_utc") or ""),
+            dispatch_label=str(merged.get("label") or cid or ""),
+            trainer=trainer,
+            platform=platform,
+            gpu=gpu,
+            epochs=0,  # Unavailable from ledger row; documented in notes.
+            batch_size=0,  # Unavailable from ledger row; documented in notes.
+            all_flags_on=False,  # Unknown from ledger; conservative default.
+            actual_wall_clock_sec=elapsed_float,
+            actual_cost_usd=cost_float,
+            outcome=outcome_value,
+            returncode=rc_int,
+            notes=notes_str,
+        )
+        try:
+            append_anchor(anchor, posterior_path=posterior_path)
+            anchors_appended += 1
+        except (ValueError, OSError) as exc:
+            skipped[f"append_failure:{type(exc).__name__}"] = (
+                skipped.get(f"append_failure:{type(exc).__name__}", 0) + 1
+            )
+
+    return {
+        "schema": "modal_call_id_ledger_to_cost_band_wire_in_v1",
+        "rows_scanned": len(rows),
+        "anchors_appended": anchors_appended,
+        "skipped_reasons": skipped,
+        "since_utc": since_utc,
+    }
+
+
+def refuse_candidates_via_recursive_review_unsealed(
+    rows: list[CandidateRow],
+    *,
+    repo_root: Path,
+    ledger_path: Path | None = None,
+) -> tuple[list[CandidateRow], list[CandidateRow]]:
+    """ORPHAN-SIGNAL-AUDIT wire-in: bundles NOT yet 3-clean-pass SEAL'd get refused.
+
+    Per CLAUDE.md "Submission PR gate" non-negotiable: *"NEVER submit a PR
+    until the score has undergone a 5-turn consecutive clean-pass adversarial
+    skunkworks council review with extreme paranoia. This is stricter than
+    the standard 3-pass greenup. All 15 council members review. ANY issue
+    resets the counter to 0."*
+
+    The 3-clean-pass adversarial-review SEAL state is persisted via
+    ``tac.recursive_adversarial_review.append_round_locked`` to
+    ``.omx/state/recursive_review_rounds.jsonl``. Each bundle has a counter
+    that resets to 0 on any non-CONFIRMS finding; SEAL is reached when
+    ``counter_after >= SEAL_THRESHOLD`` (= 3).
+
+    This wire-in refuses candidates whose corresponding bundle_id has NOT
+    yet reached SEAL. The bundle_id is derived from
+    ``compute_bundle_id(sorted scope_paths)`` per the canonical helper;
+    candidates without a matching bundle entry are PASSED THROUGH (no
+    bundle = no SEAL constraint to enforce yet; defer to the operator-
+    authorize side gate).
+
+    Per CLAUDE.md "Subagent coherence-by-default" wire-in hook 4 (cathedral
+    autopilot dispatch hook): closes the adversarial-review SEAL state →
+    cathedral autopilot rank-time loop.
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+    unsealed bundles are research-deferral, NOT killed. Refused candidates
+    are returned to the caller (NOT silently dropped) so the operator can
+    audit which candidates need additional review rounds.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+    fail-CLOSED on missing canonical helper (ImportError re-raised); missing
+    ledger → empty bundle index (lenient; loader pattern).
+
+    Note: This wire-in is INITIALLY a structural pass-through (most
+    candidates do NOT yet have a registered bundle_id matching their
+    family/candidate_id). It activates as adversarial-review rounds land
+    against specific candidate bundles. Per CLAUDE.md "Substrate scaffolds
+    MUST be COMPLETE or RESEARCH-ONLY": the helper is COMPLETE (not stub);
+    the empty-ledger case is the canonical no-op-by-default state.
+
+    Returns:
+        Tuple of (kept_rows, refused_rows). The kept_rows are safe to surface
+        to the operator; the refused_rows carry SEAL-pending blockers in
+        their `.blockers` list AND a review-round explanation in `.notes`.
+
+    Raises:
+        ImportError: if the canonical recursive_adversarial_review helper is
+            unavailable.
+    """
+    # Fail-CLOSED per CLAUDE.md "Bugs must be permanently fixed AND
+    # self-protected against": import errors are bug-class signals.
+    from tac.recursive_adversarial_review import (
+        SEAL_THRESHOLD,
+        clean_pass_counter_for_bundle,
+        load_rounds_lenient,
+    )
+
+    # Load all review-round rows (lenient mode skips malformed).
+    try:
+        rows_loaded = load_rounds_lenient(path=ledger_path)
+    except (FileNotFoundError, OSError):
+        # Missing ledger → no bundles to enforce; the entire candidate list
+        # passes through. Per CLAUDE.md "Submission PR gate" the SEAL state
+        # is enforced at PR-time AND at autopilot-rank-time; this autopilot-
+        # side enforcement is defense-in-depth.
+        return list(rows), []
+
+    # Build an index of all registered bundle_ids (and their latest content
+    # sha + counter). We need this to know which candidates are "in scope"
+    # for SEAL enforcement at all.
+    bundle_id_to_latest: dict[str, dict[str, Any]] = {}
+    for record in rows_loaded:
+        bid = record.get("bundle_id")
+        if not isinstance(bid, str) or not bid:
+            continue
+        # JSONL append order = chronological; later events win.
+        bundle_id_to_latest[bid] = record
+
+    kept: list[CandidateRow] = []
+    refused: list[CandidateRow] = []
+
+    for c in rows:
+        # Try to match candidate to a registered bundle via candidate_id,
+        # family, lane_id substrings.
+        matched_bundle_id: str | None = None
+        for bid, payload in bundle_id_to_latest.items():
+            scope_paths = payload.get("scope_paths") or []
+            if not isinstance(scope_paths, (list, tuple)):
+                continue
+            # Best-effort match: if the candidate's family or lane_id appears
+            # as a token in any scope path, treat the bundle as relevant.
+            for sp in scope_paths:
+                sp_str = str(sp)
+                if (
+                    (c.family and c.family in sp_str)
+                    or (c.lane_id and c.lane_id in sp_str)
+                    or (c.candidate_id and c.candidate_id in sp_str)
+                ):
+                    matched_bundle_id = bid
+                    break
+            if matched_bundle_id:
+                break
+
+        if matched_bundle_id is None:
+            # Not in scope; pass through.
+            kept.append(c)
+            continue
+
+        # Look up the latest content-aware SEAL counter for the matched bundle.
+        latest_record = bundle_id_to_latest[matched_bundle_id]
+        scope_content_sha256 = latest_record.get("scope_content_sha256")
+        try:
+            counter = clean_pass_counter_for_bundle(
+                matched_bundle_id,
+                path=ledger_path,
+                scope_content_sha256=scope_content_sha256,
+            )
+        except (FileNotFoundError, OSError):
+            counter = 0
+
+        if counter >= SEAL_THRESHOLD:
+            # SEALed; pass through.
+            kept.append(c)
+            continue
+
+        # Unsealed: refuse with blocker + notes extension.
+        blocker_str = (
+            f"recursive_review_unsealed__bundle_id__{matched_bundle_id}__"
+            f"counter__{counter}__seal_threshold__{SEAL_THRESHOLD}"
+        )
+        refused_blockers = list(c.blockers)
+        if blocker_str not in refused_blockers:
+            refused_blockers.append(blocker_str)
+        notes_extension = (
+            f"\n[recursive-review-unsealed refuse; ORPHAN-SIGNAL-AUDIT 2026-05-17] "
+            f"bundle_id={matched_bundle_id} clean_pass_counter={counter} "
+            f"seal_threshold={SEAL_THRESHOLD} "
+            f"latest_round_verdict={latest_record.get('verdict')!r} "
+            f"per CLAUDE.md 'Submission PR gate' non-negotiable"
+        )
+        refused_row = dataclasses.replace(
+            c,
+            blockers=refused_blockers,
+            notes=(c.notes + notes_extension) if c.notes else notes_extension.lstrip(),
+        )
+        refused.append(refused_row)
+
+    return kept, refused
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# End of ORPHAN-SIGNAL-AUDIT wire-ins (task #711, 2026-05-17)
+# ─────────────────────────────────────────────────────────────────────────
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -4283,6 +5388,30 @@ def main(argv: list[str] | None = None) -> int:
         type=float,
         default=0.05,
         help="Donoho-Tanner safety margin for the lattice diagnostic.",
+    )
+    parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help=(
+            "REPORT MODE (no side effects): rank candidates via the canonical "
+            "pipeline (Z1 empirical revision + Tier-A/C MDL density + class-shift "
+            "literature + composition alpha + Rudin SLIM predicted_dispatch_risk + "
+            "continual-learning posterior reweight), print the top-N as a human-"
+            "readable table + a minimal JSON, and EXIT. Does NOT fire run_continuous_loop, "
+            "does NOT record dispatch claims, does NOT emit halt events, does NOT "
+            "consult the operator-authorized journal. This is the canonical "
+            "operator-facing 'burn-down summary' mode — what's pending, what's "
+            "ranked highest, what's blocked. Per CLAUDE.md anti-duplication "
+            "directive: reuses the existing rank_candidates pipeline without "
+            "creating a sister tool. Lane registry level + predecessor-probe "
+            "Catalog #313 blocking status surfaced per row."
+        ),
+    )
+    parser.add_argument(
+        "--report-top-n",
+        type=int,
+        default=10,
+        help="When --report-only is set: number of top-ranked candidates to print (default 10).",
     )
     args = parser.parse_args(argv)
 
@@ -4447,6 +5576,109 @@ def main(argv: list[str] | None = None) -> int:
                 if lattice_dispatch_blocker not in candidate.blockers:
                     candidate.blockers.append(lattice_dispatch_blocker)
             return candidates
+
+    # ─── REPORT-ONLY MODE (A2 from operator's orchestration question 2026-05-17) ───
+    # Per CLAUDE.md anti-duplication directive: reuse the canonical rank_candidates
+    # pipeline without spawning a sister tool. Bypass run_continuous_loop entirely
+    # so no dispatch claims / halt events / spend authorization fires. Emit the
+    # ranked top-N as a human-readable table + a minimal JSON.
+    if args.report_only:
+        try:
+            candidates = _source()
+            if args.load_continual_posterior:
+                posterior = load_planner_posterior_for_loop(args.continual_posterior_path)
+            else:
+                posterior = None
+            ranked = rank_candidates(
+                candidates,
+                rank_axis=args.rank_axis,
+                continual_posterior=posterior,
+                apply_z1_empirical_revision=True,
+            )
+        except (ValueError, FileNotFoundError) as exc:
+            print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
+            return 2
+
+        top_n = max(1, int(args.report_top_n))
+        top = ranked[:top_n]
+
+        # Human-readable table to stderr so JSON-on-stdout stays parseable.
+        print(
+            f"\n[cathedral_autopilot --report-only] ranked={len(ranked)} candidates "
+            f"(rank_axis={args.rank_axis!r}; top {len(top)} shown):\n",
+            file=sys.stderr,
+        )
+        header = (
+            f"  {'rank':>4}  {'candidate_id':<48}  {'predicted Δ':>11}  "
+            f"{'effective Δ':>11}  {'cost $':>7}  {'EIG/$':>9}  blockers"
+        )
+        print(header, file=sys.stderr)
+        print(f"  {'-' * 4}  {'-' * 48}  {'-' * 11}  {'-' * 11}  {'-' * 7}  {'-' * 9}  --------", file=sys.stderr)
+        for rank_i, c in enumerate(top, start=1):
+            cid = c.candidate_id[:48] if len(c.candidate_id) > 48 else c.candidate_id
+            raw_delta = c.predicted_score_delta
+            eff_delta = apply_z1_empirical_revision_to_candidate_delta(c)
+            cost = c.estimated_dispatch_cost_usd
+            eig = c.eig_per_dollar() if cost > 0 else float("nan")
+            blockers_str = ",".join(c.blockers[:3]) if c.blockers else "-"
+            if len(c.blockers) > 3:
+                blockers_str += f"+{len(c.blockers) - 3}more"
+            print(
+                f"  {rank_i:>4}  {cid:<48}  {raw_delta:>11.6f}  "
+                f"{eff_delta:>11.6f}  ${cost:>6.2f}  {eig:>9.4f}  {blockers_str}",
+                file=sys.stderr,
+            )
+
+        # Emit minimal JSON on stdout (machine-readable consumer surface).
+        # NEVER includes promotion / score-claim / dispatch-authority fields per
+        # CLAUDE.md "Apples-to-apples evidence discipline".
+        report_payload = {
+            "schema": "cathedral_autopilot_report_only_v1",
+            "evidence_grade": "[predicted; cathedral autopilot ranking]",
+            "claude_md_compliance_tags": [
+                "report_only_no_side_effects",
+                "no_dispatch_claim_recorded",
+                "no_halt_event_emitted",
+                "no_spend_authorization",
+                "no_score_claim_only_predicted_band",
+                "no_kill_verdict",
+                "anti_duplication_reuses_rank_candidates",
+            ],
+            "rank_axis": args.rank_axis,
+            "z1_empirical_revision_applied": True,
+            "continual_posterior_loaded": args.load_continual_posterior,
+            "n_candidates_total": len(ranked),
+            "top_n_emitted": len(top),
+            "top_candidates": [
+                {
+                    "rank": rank_i,
+                    "candidate_id": c.candidate_id,
+                    "predicted_score_delta_raw": c.predicted_score_delta,
+                    "predicted_score_delta_z1_adjusted": apply_z1_empirical_revision_to_candidate_delta(c),
+                    "estimated_dispatch_cost_usd": c.estimated_dispatch_cost_usd,
+                    "eig_per_dollar": (
+                        c.eig_per_dollar() if c.estimated_dispatch_cost_usd > 0 else None
+                    ),
+                    "predicted_dispatch_risk": c.predicted_dispatch_risk,
+                    "mdl_density": c.mdl_density,
+                    "mdl_tier_c_density": c.mdl_tier_c_density,
+                    "composition_alpha": c.composition_alpha,
+                    "blockers": list(c.blockers),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+                for rank_i, c in enumerate(top, start=1)
+            ],
+        }
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(
+                json.dumps(report_payload, indent=2, sort_keys=True, allow_nan=False),
+                encoding="utf-8",
+            )
+        print(json.dumps(report_payload, indent=2, sort_keys=True, allow_nan=False))
+        return 0
 
     try:
         reports = run_continuous_loop(

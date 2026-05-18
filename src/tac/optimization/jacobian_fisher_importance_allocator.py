@@ -18,9 +18,14 @@ exact auth eval before any promotion/ranking decision.
 from __future__ import annotations
 
 import datetime as dt
+import fcntl
+import json
 import math
+import os
+import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -1162,6 +1167,144 @@ class PerPairFisherImportanceOutcome:
     rank_or_kill_eligible: bool = False
     evidence_grade: str = "[predicted; jacobian-fisher per-pair v1; score-gradient-derived NOT weight-domain]"
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-safe dict of this outcome (per-byte int keys stringified).
+
+        Per CLAUDE.md "Beauty, simplicity, and developer experience" — typed +
+        JSON-safe + deterministic ordering. Per-byte dict keys are stringified
+        because JSON keys must be strings; tuple fields are list-ified.
+        """
+        return {
+            "schema": self.schema,
+            "per_byte_fisher_importance": {
+                str(k): float(v) for k, v in self.per_byte_fisher_importance.items()
+            },
+            "n_bytes": int(self.n_bytes),
+            "n_pairs": int(self.n_pairs),
+            "aggregate_fisher_l1": float(self.aggregate_fisher_l1),
+            "aggregate_fisher_l2": float(self.aggregate_fisher_l2),
+            "top_k_byte_indices_by_importance": list(
+                int(i) for i in self.top_k_byte_indices_by_importance
+            ),
+            "bottom_k_byte_indices_by_importance": list(
+                int(i) for i in self.bottom_k_byte_indices_by_importance
+            ),
+            "archive_sha256": self.archive_sha256,
+            "catalog_123_invariant_satisfied": bool(self.catalog_123_invariant_satisfied),
+            "per_pair_gradient_consumed": bool(self.per_pair_gradient_consumed),
+            "rationale": self.rationale,
+            "score_claim": bool(self.score_claim),
+            "promotion_eligible": bool(self.promotion_eligible),
+            "ready_for_exact_eval_dispatch": bool(self.ready_for_exact_eval_dispatch),
+            "rank_or_kill_eligible": bool(self.rank_or_kill_eligible),
+            "evidence_grade": self.evidence_grade,
+        }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sidecar emission for BUCKET C autopilot consumer (sister #817 + #818 wave
+# producer-consumer loop closure 2026-05-17 per #818 op-routable #2; closed
+# in lane `lane_817_sidecar_emission_wire_in_bucket_c_loop_closure_20260517`).
+#
+# The BUCKET C autopilot consumer at
+# `tools/cathedral_autopilot_autonomous_loop.py::_latest_per_pair_fisher_importance_sidecar_for_archive`
+# expects sidecars at:
+#   .omx/state/master_gradient_consumers/per_pair_fisher_importance_<sha[:12]>_<utc>.json
+# with the `aggregate_fisher_l1` field at the top level of the payload dict
+# (NOT nested under "outcome") so the consumer's direct field read works.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" the
+# write is fcntl-locked (Catalog #131) + uses tmp.<uuid12> + os.replace
+# (Catalog #245 atomic-write-no-tmp-leakage). Payload pinned with
+# score_claim=False + promotion_eligible=False + ready_for_exact_eval_dispatch=False
+# per CLAUDE.md "Apples-to-apples evidence discipline" + "Forbidden score claims"
+# — the sidecar is a PREDICTIVE planning artifact, NOT an empirical anchor.
+#
+# Per CLAUDE.md FORBIDDEN PATTERNS "Forbidden weight-domain saliency on
+# score-gradient substrate" (Catalog #123) the sidecar's
+# `catalog_123_invariant_satisfied=True` flag is preserved so downstream
+# auditors can verify the score-gradient-derived provenance chain.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+_FISHER_SIDECAR_DIR_PARTS: tuple[str, ...] = (
+    ".omx",
+    "state",
+    "master_gradient_consumers",
+)
+PER_PAIR_FISHER_IMPORTANCE_SIDECAR_SCHEMA = "per_pair_fisher_importance_sidecar_v1"
+
+
+def _fisher_sidecar_dir() -> Path:
+    """Resolve the canonical .omx/state/master_gradient_consumers/ directory."""
+    # jacobian_fisher_importance_allocator.py lives at src/tac/optimization/...
+    # parents[3] = repo root.
+    repo_root = Path(__file__).resolve().parents[3]
+    sidecar_dir = repo_root.joinpath(*_FISHER_SIDECAR_DIR_PARTS)
+    sidecar_dir.mkdir(parents=True, exist_ok=True)
+    return sidecar_dir
+
+
+def _persist_per_pair_fisher_importance_sidecar(
+    outcome: PerPairFisherImportanceOutcome,
+) -> Path:
+    """Persist a per_pair_fisher_importance sidecar for BUCKET C autopilot consumption.
+
+    Per Catalog #131 (fcntl-locked writes to shared state) + Catalog #245
+    (atomic-write-no-tmp-leakage). The payload includes the outcome dict AT
+    THE TOP LEVEL (flat keys) so the BUCKET C consumer's direct `aggregate_fisher_l1`
+    read works without nesting.
+
+    Returns the canonical sidecar path. Idempotent under concurrent writers via
+    unique tmp suffix + fcntl LOCK_EX.
+    """
+    sidecar_dir = _fisher_sidecar_dir()
+    sha_short = outcome.archive_sha256[:12]
+    utc = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S") + "Z"
+    sidecar_path = sidecar_dir / f"per_pair_fisher_importance_{sha_short}_{utc}.json"
+    lock_path = sidecar_dir / f".per_pair_fisher_importance_{sha_short}.lock"
+
+    # Payload: flat keys at top level so BUCKET C consumer's direct reads work.
+    # Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #127:
+    # planning artifact, NOT score claim.
+    payload: dict[str, Any] = {
+        "sidecar_schema": PER_PAIR_FISHER_IMPORTANCE_SIDECAR_SCHEMA,
+        "outcome_schema": outcome.schema,
+        "aggregate_fisher_l1": float(outcome.aggregate_fisher_l1),  # FLAT for BUCKET C consumer
+        "aggregate_fisher_l2": float(outcome.aggregate_fisher_l2),
+        "archive_sha256": outcome.archive_sha256,
+        "n_bytes": int(outcome.n_bytes),
+        "n_pairs": int(outcome.n_pairs),
+        "catalog_123_invariant_satisfied": bool(outcome.catalog_123_invariant_satisfied),
+        "per_pair_gradient_consumed": bool(outcome.per_pair_gradient_consumed),
+        "rationale": outcome.rationale,
+        "evidence_grade": outcome.evidence_grade,
+        "score_claim": False,  # per CLAUDE.md
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "written_at_utc": utc,
+        "outcome": outcome.to_dict(),  # full outcome nested for archival
+    }
+
+    # fcntl LOCK_EX + tmp.<uuid12> + os.replace per canonical pattern
+    # (mirrors tac.deploy.modal.call_id_ledger._atomic_write_locked).
+    with open(lock_path, "w") as lock_fd:
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+        try:
+            tmp_path = sidecar_path.with_suffix(
+                f".tmp.{uuid.uuid4().hex[:12]}"
+            )
+            text = json.dumps(payload, sort_keys=True, indent=2) + "\n"
+            tmp_path.write_text(text, encoding="utf-8")
+            with open(tmp_path, "rb") as tf:
+                os.fsync(tf.fileno())
+            os.replace(tmp_path, sidecar_path)
+        finally:
+            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+
+    return sidecar_path
+
 
 def allocate_per_pair_fisher_importance(
     *,
@@ -1170,6 +1313,7 @@ def allocate_per_pair_fisher_importance(
     top_k: int = 50,
     bottom_k: int = 50,
     auto_load: bool = True,
+    persist_sidecar: bool = True,
 ) -> PerPairFisherImportanceOutcome:
     """Per-pair Fisher importance per Catalog #125 hook #3 (bit-allocator).
 
@@ -1289,7 +1433,7 @@ def allocate_per_pair_fisher_importance(
         else ()
     )
 
-    return PerPairFisherImportanceOutcome(
+    _outcome_fisher = PerPairFisherImportanceOutcome(
         schema=PER_PAIR_FISHER_IMPORTANCE_SCHEMA,
         per_byte_fisher_importance=per_byte_dict,
         n_bytes=n_bytes,
@@ -1310,6 +1454,9 @@ def allocate_per_pair_fisher_importance(
             f"byte indices surfaced."
         ),
     )
+    if persist_sidecar:
+        _persist_per_pair_fisher_importance_sidecar(_outcome_fisher)
+    return _outcome_fisher
 
 
 __all__ = [
@@ -1319,6 +1466,7 @@ __all__ = [
     "MODULE_NAME",
     "SCHEMA_VERSION",
     "PER_PAIR_FISHER_IMPORTANCE_SCHEMA",
+    "PER_PAIR_FISHER_IMPORTANCE_SIDECAR_SCHEMA",
     "AllocationPlan",
     "ImportanceAllocationError",
     "ImportanceConfig",

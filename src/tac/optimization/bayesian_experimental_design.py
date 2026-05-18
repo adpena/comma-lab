@@ -507,11 +507,138 @@ def rank_exact_eval_candidates(
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LOW gap closure widened wave 2026-05-17 — BUCKET B per-pair EIG extension
+# ─────────────────────────────────────────────────────────────────────────────
+# Per `.omx/research/comprehensive_wire_in_coverage_matrix_20260517.md` LOW
+# gap candidate #1: extend BED with per-pair Expected Information Gain (EIG)
+# estimation consuming the per-pair gradient anchor. The per-pair gradient
+# carries per-pair signal variance which directly maps to the per-pair
+# variance reduction term in the canonical EIG formula:
+#
+#   EIG_pair = 0.5 * log( 1 + per_pair_grad_var / observation_noise_var )
+#
+# This is the canonical Gaussian per-observation EIG formula applied to each
+# pair separately, exposing per-pair information gain rather than the
+# aggregate-only family-level EIG that existed pre-extension.
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" the outcome is
+# `[predicted; bayesian-experimental-design per-pair v1]` — NO score claim.
+
+PER_PAIR_EIG_SCHEMA = "tac_bayesian_experimental_design_per_pair_eig_v1"
+
+
+def compute_expected_information_gain_per_pair(
+    archive_sha256: str,
+    *,
+    per_pair_gradient: Any | None = None,  # np.ndarray (N_bytes, N_pairs, 3)
+    observation_noise_variance: float = DEFAULT_OBSERVATION_NOISE_VARIANCE,
+    auto_load: bool = True,
+) -> dict[int, float]:
+    """Per-pair Expected Information Gain (EIG) estimation per Catalog #125 hook #4.
+
+    Computes per-pair EIG directly from per-pair gradient variance using the
+    canonical Gaussian per-observation formula::
+
+        EIG_pair = 0.5 * log( 1 + per_pair_grad_var / observation_noise_var )
+
+    where ``per_pair_grad_var`` is the L2 magnitude of the per-pair gradient
+    column (a scalar per pair summarizing how much "signal energy" the pair
+    contributes across all bytes + score axes).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" the outcome is
+    `[predicted; bayesian-experimental-design per-pair v1]` — NO score claim.
+
+    Parameters
+    ----------
+    archive_sha256
+        64-char hex sha of the target archive bytes. Used to auto-load the
+        canonical per-pair gradient anchor via
+        ``tac.master_gradient_consumers.load_per_pair_gradient_from_anchor``.
+    per_pair_gradient
+        Optional (N_bytes, N_pairs, 3) tensor. When None and ``auto_load=True``,
+        the helper auto-loads from the canonical anchor.
+    observation_noise_variance
+        Gaussian observation-noise variance σ² used in the EIG formula. Default
+        ``DEFAULT_OBSERVATION_NOISE_VARIANCE`` (1e-4).
+    auto_load
+        When True (default), auto-loads missing inputs from canonical anchors.
+
+    Returns
+    -------
+    dict[int, float]
+        Per-pair EIG mapping ``pair_index -> EIG_nats``. EIG is non-negative
+        by construction. Empty dict if no per-pair gradient is available and
+        ``auto_load=False``.
+
+    Raises
+    ------
+    BayesianExperimentalDesignError
+        On malformed inputs.
+    """
+    if (
+        not isinstance(archive_sha256, str)
+        or len(archive_sha256) < 12
+        or any(c not in "0123456789abcdefABCDEF" for c in archive_sha256)
+    ):
+        raise BayesianExperimentalDesignError(
+            f"archive_sha256 must be a 12+ char hex string; got {archive_sha256!r}"
+        )
+    noise_var = float(observation_noise_variance)
+    if noise_var <= 0 or not math.isfinite(noise_var):
+        raise BayesianExperimentalDesignError(
+            f"observation_noise_variance must be positive finite; got {noise_var!r}"
+        )
+
+    if per_pair_gradient is None and auto_load:
+        try:
+            from tac.master_gradient_consumers import (
+                load_per_pair_gradient_from_anchor,
+            )
+
+            per_pair_gradient, _ = load_per_pair_gradient_from_anchor(
+                archive_sha256=archive_sha256
+            )
+        except (ImportError, ValueError, FileNotFoundError, OSError):
+            per_pair_gradient = None
+
+    if per_pair_gradient is None:
+        return {}
+
+    # Shape: (N_bytes, N_pairs, 3) per PER_PAIR_GRADIENT_TENSOR_KIND
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise BayesianExperimentalDesignError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); got "
+            f"{per_pair_gradient.shape}"
+        )
+
+    n_pairs = int(per_pair_gradient.shape[1])
+    # Per-pair signal-energy variance estimate: sum over (bytes × axes) of
+    # squared gradient → L2-squared per pair column. Each pair is treated as
+    # an independent Gaussian observation surface.
+    per_pair_sq_sum = (per_pair_gradient ** 2).sum(axis=(0, 2))  # (N_pairs,)
+    # Convert to per-pair variance estimate (divide by sample count = N_bytes × 3
+    # to get average per-element variance contribution per pair).
+    sample_count = float(per_pair_gradient.shape[0] * 3)
+    per_pair_var = per_pair_sq_sum / max(sample_count, 1.0)
+
+    eig_map: dict[int, float] = {}
+    for pair_idx in range(n_pairs):
+        var_p = float(per_pair_var[pair_idx])
+        # Canonical Gaussian EIG (in nats): 0.5 * log(1 + signal_var / noise_var)
+        eig = 0.5 * math.log(1.0 + var_p / noise_var)
+        eig_map[int(pair_idx)] = max(0.0, eig)
+
+    return eig_map
+
+
 __all__ = [
     "CONTEST_ORIGINAL_BYTES",
     "RATE_SCORE_PER_BYTE",
+    "PER_PAIR_EIG_SCHEMA",
     "SCHEMA_VERSION",
     "BayesianExperimentalDesignError",
+    "compute_expected_information_gain_per_pair",
     "contest_score",
     "expected_design_row",
     "expected_improvement_minimize",

@@ -10,8 +10,14 @@ variational/KKT/Volterra planning surface.
 
 from __future__ import annotations
 
+import datetime as dt
+import fcntl
+import json
+import os
+import uuid
 from collections import Counter
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 from typing import Any
 
 from tac.optimization.meta_lagrangian_allocator import rate_score_delta
@@ -772,12 +778,119 @@ def build_field_equation_plan(
 
 PER_PAIR_LAGRANGIAN_DUAL_SCHEMA = "tac_field_equation_planner_per_pair_lagrangian_dual_v1"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Sidecar emission for forward-compat BUCKET C autopilot consumer (sister #817
+# + #818 wave producer-consumer loop closure 2026-05-17 per #818 op-routable #2;
+# closed in `lane_817_sidecar_emission_wire_in_bucket_c_loop_closure_20260517`).
+#
+# This is the 3rd producer in the loop closure (bonus coverage). The current
+# `tools/cathedral_autopilot_autonomous_loop.py` does NOT yet have a consumer
+# for the field_equation_per_pair_lagrangian sidecar — but emitting the sidecar
+# is forward-compat for the next autopilot extension wave AND lets downstream
+# audit tooling query the bound Lagrangian dual envelope per-archive without
+# re-running the planner.
+#
+# Sidecar path:
+#   .omx/state/master_gradient_consumers/field_equation_per_pair_lagrangian_<sha[:12]>_<utc>.json
+# Schema: field_equation_per_pair_lagrangian_sidecar_v1
+# ─────────────────────────────────────────────────────────────────────────────
+
+_FIELD_EQ_SIDECAR_DIR_PARTS: tuple[str, ...] = (
+    ".omx",
+    "state",
+    "master_gradient_consumers",
+)
+FIELD_EQUATION_PER_PAIR_LAGRANGIAN_SIDECAR_SCHEMA = (
+    "field_equation_per_pair_lagrangian_sidecar_v1"
+)
+
+
+def _field_eq_sidecar_dir() -> Path:
+    """Resolve the canonical .omx/state/master_gradient_consumers/ directory."""
+    repo_root = Path(__file__).resolve().parents[3]
+    sidecar_dir = repo_root.joinpath(*_FIELD_EQ_SIDECAR_DIR_PARTS)
+    sidecar_dir.mkdir(parents=True, exist_ok=True)
+    return sidecar_dir
+
+
+def _persist_field_equation_per_pair_lagrangian_sidecar(
+    envelope: Mapping[str, Any],
+) -> Path:
+    """Persist a field_equation_per_pair_lagrangian sidecar.
+
+    Per Catalog #131 (fcntl-locked writes to shared state) + Catalog #245
+    (atomic-write-no-tmp-leakage). The envelope is a typed dict (NOT a
+    dataclass) so the entire envelope is included at the top level of the
+    sidecar payload + key `lambda_archive` / `lambda_compute` / `lambda_inflate`
+    / `nu_per_pair` / `bound_constraints` mirrored to TOP LEVEL for direct read.
+    """
+    sidecar_dir = _field_eq_sidecar_dir()
+    archive_sha256 = str(envelope.get("archive_sha256", ""))
+    if not archive_sha256:
+        raise FieldEquationPlannerError(
+            "envelope missing archive_sha256; cannot persist sidecar"
+        )
+    sha_short = archive_sha256[:12]
+    utc = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S") + "Z"
+    sidecar_path = (
+        sidecar_dir
+        / f"field_equation_per_pair_lagrangian_{sha_short}_{utc}.json"
+    )
+    lock_path = (
+        sidecar_dir / f".field_equation_per_pair_lagrangian_{sha_short}.lock"
+    )
+
+    # Tuple → list for JSON compatibility
+    nu_per_pair_value = envelope.get("nu_per_pair", ())
+    if isinstance(nu_per_pair_value, tuple):
+        nu_per_pair_value = list(nu_per_pair_value)
+
+    payload: dict[str, Any] = {
+        "sidecar_schema": FIELD_EQUATION_PER_PAIR_LAGRANGIAN_SIDECAR_SCHEMA,
+        "envelope_schema": envelope.get("schema"),
+        "cascade_path_used": envelope.get("cascade_path_used"),
+        "archive_sha256": archive_sha256,
+        "lambda_archive": envelope.get("lambda_archive"),
+        "lambda_compute": envelope.get("lambda_compute"),
+        "lambda_inflate": envelope.get("lambda_inflate"),
+        "nu_per_pair": nu_per_pair_value,
+        "n_pairs": envelope.get("n_pairs", 0),
+        "kkt_residual": envelope.get("kkt_residual"),
+        "is_pareto_feasible": envelope.get("is_pareto_feasible"),
+        "predicted_score_delta": envelope.get("predicted_score_delta"),
+        "bound_constraints": dict(envelope.get("bound_constraints", {})),
+        "optimal_plan_consumed": bool(envelope.get("optimal_plan_consumed", False)),
+        "rationale": envelope.get("rationale", ""),
+        "evidence_grade": envelope.get("evidence_grade", ""),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "written_at_utc": utc,
+    }
+
+    with open(lock_path, "w") as lock_fd:
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+        try:
+            tmp_path = sidecar_path.with_suffix(
+                f".tmp.{uuid.uuid4().hex[:12]}"
+            )
+            text = json.dumps(payload, sort_keys=True, indent=2) + "\n"
+            tmp_path.write_text(text, encoding="utf-8")
+            with open(tmp_path, "rb") as tf:
+                os.fsync(tf.fileno())
+            os.replace(tmp_path, sidecar_path)
+        finally:
+            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+
+    return sidecar_path
+
 
 def consume_per_pair_lagrangian_duals(
     *,
     archive_sha256: str,
     optimal_plan: Any | None = None,
     auto_load: bool = True,
+    persist_sidecar: bool = True,
 ) -> dict[str, Any]:
     """Bind per-pair Lagrangian dual variables to the field-equation planner.
 
@@ -840,7 +953,7 @@ def consume_per_pair_lagrangian_duals(
 
     if optimal_plan is None:
         # Fallback envelope: no per-pair dual binding; planner uses defaults
-        return {
+        _fallback_envelope = {
             "schema": PER_PAIR_LAGRANGIAN_DUAL_SCHEMA,
             "cascade_path_used": "default_constraints_fallback",
             "archive_sha256": archive_sha256,
@@ -865,6 +978,9 @@ def consume_per_pair_lagrangian_duals(
                 "default constraints (legacy planner behavior)."
             ),
         }
+        if persist_sidecar:
+            _persist_field_equation_per_pair_lagrangian_sidecar(_fallback_envelope)
+        return _fallback_envelope
 
     # ── Extract dual variables from dataclass OR dict surface ──────────────
     if hasattr(optimal_plan, "lambda_archive"):
@@ -902,7 +1018,7 @@ def consume_per_pair_lagrangian_duals(
     bound_constraints["lambda_proxy_violation"] = max(lambda_compute * 50.0, 0.0)
     bound_constraints["lambda_kkt_readiness_violation"] = max(lambda_inflate * 10.0, 0.0)
 
-    return {
+    _bound_envelope = {
         "schema": PER_PAIR_LAGRANGIAN_DUAL_SCHEMA,
         "cascade_path_used": "optimal_plan_binding",
         "archive_sha256": archive_sha256,
@@ -929,6 +1045,9 @@ def consume_per_pair_lagrangian_duals(
             f"is_pareto_feasible={is_pareto_feasible}."
         ),
     }
+    if persist_sidecar:
+        _persist_field_equation_per_pair_lagrangian_sidecar(_bound_envelope)
+    return _bound_envelope
 
 
 __all__ = [
@@ -936,6 +1055,7 @@ __all__ = [
     "SCHEMA_VERSION",
     "TOOL",
     "PER_PAIR_LAGRANGIAN_DUAL_SCHEMA",
+    "FIELD_EQUATION_PER_PAIR_LAGRANGIAN_SIDECAR_SCHEMA",
     "FieldEquationPlannerError",
     "build_field_equation_plan",
     "consume_per_pair_lagrangian_duals",

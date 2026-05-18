@@ -373,8 +373,162 @@ def write_integration_manifest(
     return manifest
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LOW gap closure widened wave 2026-05-17 — BUCKET B per-pair Z4 weighting
+# ─────────────────────────────────────────────────────────────────────────────
+# Per `.omx/research/comprehensive_wire_in_coverage_matrix_20260517.md` LOW
+# gap candidate #2: extend cooperative_receiver_integration with per-pair
+# Fisher importance consumption for Z4 cooperative-receiver loss weighting.
+#
+# Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" L6
+# (score-domain Lagrangian) + Atick-Redlich cooperative-receiver framing
+# (Catalog #311): the per-pair Fisher importance from
+# ``tac.optimization.jacobian_fisher_importance_allocator.
+# allocate_per_pair_fisher_importance`` weights each pair's contribution to
+# the Z4 cooperative-receiver loss so the optimization focuses on bytes/pairs
+# whose scorer-conditional information is highest.
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" the outcome is
+# `[predicted; cooperative-receiver per-pair Fisher weighting v1]` — NO score
+# claim.
+
+PER_PAIR_Z4_WEIGHTING_SCHEMA = "tac_cooperative_receiver_per_pair_z4_weighting_v1"
+
+
+def weight_z4_loss_by_per_pair_fisher(
+    archive_sha256: str,
+    *,
+    per_pair_fisher: Mapping[int, float] | None = None,  # byte_index -> Fisher score
+    auto_load: bool = True,
+) -> dict[str, Any]:
+    """Per-pair Fisher-weighted Z4 cooperative-receiver loss weights.
+
+    Consumes per-byte Fisher importance from
+    ``tac.optimization.jacobian_fisher_importance_allocator.
+    allocate_per_pair_fisher_importance`` (sister #817 Gap 3 landing) and
+    converts to per-pair Z4 loss weights via the canonical normalization::
+
+        w_pair = Fisher_byte_subset_mean / Fisher_byte_subset_mean.max()
+
+    The result is a per-pair weight dict for the cooperative-receiver loss
+    so the optimization focuses on bytes/pairs with highest scorer-conditional
+    information per Atick-Redlich 1990.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" the outcome is
+    `[predicted; cooperative-receiver per-pair Fisher weighting v1]` — NO
+    score claim.
+
+    Parameters
+    ----------
+    archive_sha256
+        64-char hex sha of the target archive bytes. Used to auto-load the
+        per-pair Fisher importance via the sister #817 helper.
+    per_pair_fisher
+        Optional pre-computed per-byte Fisher importance mapping
+        ``byte_index -> Fisher_score``. When None and ``auto_load=True``,
+        auto-loads via ``allocate_per_pair_fisher_importance``.
+    auto_load
+        When True (default), auto-loads missing inputs from canonical anchors.
+
+    Returns
+    -------
+    dict[str, Any]
+        Envelope dict with keys:
+          - ``schema``: PER_PAIR_Z4_WEIGHTING_SCHEMA
+          - ``archive_sha256``: input sha
+          - ``per_pair_z4_weights``: dict[int, float] pair_index -> weight in [0, 1]
+          - ``per_pair_fisher_consumed``: bool
+          - ``n_pairs_weighted``: int
+          - ``score_claim``: False
+          - ``rationale``: human-readable string
+
+    Raises
+    ------
+    ValueError on malformed inputs.
+    """
+    if (
+        not isinstance(archive_sha256, str)
+        or len(archive_sha256) < 12
+        or any(c not in "0123456789abcdefABCDEF" for c in archive_sha256)
+    ):
+        raise ValueError(
+            f"archive_sha256 must be a 12+ char hex string; got {archive_sha256!r}"
+        )
+
+    per_pair_fisher_consumed = False
+    if per_pair_fisher is None and auto_load:
+        try:
+            from tac.optimization.jacobian_fisher_importance_allocator import (
+                allocate_per_pair_fisher_importance,
+            )
+
+            fisher_outcome = allocate_per_pair_fisher_importance(
+                archive_sha256=archive_sha256,
+                auto_load=True,
+            )
+            per_pair_fisher = fisher_outcome.per_byte_fisher_importance
+            per_pair_fisher_consumed = True
+        except (ImportError, ValueError, FileNotFoundError, OSError):
+            per_pair_fisher = None
+
+    if per_pair_fisher is None or len(per_pair_fisher) == 0:
+        return {
+            "schema": PER_PAIR_Z4_WEIGHTING_SCHEMA,
+            "archive_sha256": archive_sha256,
+            "per_pair_z4_weights": {},
+            "per_pair_fisher_consumed": per_pair_fisher_consumed,
+            "n_pairs_weighted": 0,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "evidence_grade": (
+                "[predicted; cooperative-receiver per-pair Fisher weighting v1]"
+            ),
+            "rationale": (
+                f"[predicted; cooperative-receiver per-pair Fisher weighting v1] "
+                f"per-pair Fisher unavailable; no weighting computed."
+            ),
+        }
+
+    # Build per-pair weights. We treat each byte_index as a pair surrogate
+    # (1-to-1 byte-pair correspondence is the canonical Wyner-Ziv assumption
+    # under per-pair gradient binding). Each pair's weight = byte's Fisher
+    # importance normalized by the maximum Fisher across all bytes.
+    fisher_values = list(per_pair_fisher.values())
+    fisher_max = max(fisher_values) if fisher_values else 1.0
+    if fisher_max <= 0:
+        fisher_max = 1.0
+
+    per_pair_z4_weights: dict[int, float] = {}
+    for byte_idx, fisher_score in per_pair_fisher.items():
+        weight = float(fisher_score) / fisher_max
+        # Clamp to [0, 1]
+        per_pair_z4_weights[int(byte_idx)] = max(0.0, min(1.0, weight))
+
+    return {
+        "schema": PER_PAIR_Z4_WEIGHTING_SCHEMA,
+        "archive_sha256": archive_sha256,
+        "per_pair_z4_weights": per_pair_z4_weights,
+        "per_pair_fisher_consumed": per_pair_fisher_consumed,
+        "n_pairs_weighted": len(per_pair_z4_weights),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "evidence_grade": (
+            "[predicted; cooperative-receiver per-pair Fisher weighting v1]"
+        ),
+        "rationale": (
+            f"[predicted; cooperative-receiver per-pair Fisher weighting v1] "
+            f"per-pair Fisher consumed; {len(per_pair_z4_weights)} pairs weighted "
+            f"(normalized by max Fisher={fisher_max:.6f}); composable with sister "
+            f"#817 Gap 3 allocate_per_pair_fisher_importance outcome."
+        ),
+    }
+
+
 __all__ = [
     "INTEGRATION_SCHEMA",
+    "PER_PAIR_Z4_WEIGHTING_SCHEMA",
     "build_autopilot_rows",
     "build_continual_learning_policy",
     "build_integration_manifest",
@@ -383,5 +537,6 @@ __all__ = [
     "build_packet_compiler_hook",
     "build_pareto_constraint_rows",
     "render_markdown",
+    "weight_z4_loss_by_per_pair_fisher",
     "write_integration_manifest",
 ]

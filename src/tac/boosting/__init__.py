@@ -115,6 +115,10 @@ from tac.boosting.residual_cascade import (
     ResidualCascadeBuilder,
     ResidualCascadeStageSpec,
 )
+from tac.boosting.per_pair_master_gradient_wire_in import (
+    BoostingPerPairWireInOutcome,
+    compose_boosting_per_pair_wire_in,
+)
 
 __all__ = [
     "BOOSTING_STAGE_OUTCOMES_LOCK",
@@ -138,6 +142,7 @@ __all__ = [
     "BoostingNamespaceError",
     "BoostingPipelineError",
     "BoostingPipelineResult",
+    "BoostingPerPairWireInOutcome",
     "ComposableBoostingPipeline",
     "DeterminismViolation",
     "ModeEnsembleDispatch",
@@ -154,6 +159,7 @@ __all__ = [
     "_clear_stage_registry_for_tests",
     "append_stage_outcome_locked",
     "boost_stage",
+    "compose_boosting_per_pair_wire_in",
     "get_registered_stages",
     "get_stage_function",
     "load_stage_outcomes",

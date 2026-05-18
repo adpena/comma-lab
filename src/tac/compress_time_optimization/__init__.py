@@ -131,8 +131,15 @@ from tac.compress_time_optimization.simulated_annealing import (
     SimulatedAnnealingOnDiscreteCodes,
     SimulatedAnnealingSpec,
 )
+from tac.compress_time_optimization.per_pair_master_gradient_wire_in import (
+    CompressTimeOptimizationPerPairWireInOutcome,
+    compose_compress_time_optimization_per_pair_wire_in,
+)
 
 __all__ = [
+    # Per-pair master gradient wire-in (LOW gap closure widened wave 2026-05-17)
+    "CompressTimeOptimizationPerPairWireInOutcome",
+    "compose_compress_time_optimization_per_pair_wire_in",
     # Decorator + registry
     "compress_time_pass",
     "get_registered_passes",

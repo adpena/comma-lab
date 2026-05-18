@@ -1866,16 +1866,114 @@ def _project_decoder_pruning(g: np.ndarray, theta: float) -> tuple[float, float,
 
 
 def _project_wyner_ziv_hoist(g: np.ndarray, theta: float) -> tuple[float, float, int]:
-    """Wyner-Ziv side-info hoist: move pair-invariant bytes to a shared prior
-    the decoder reconstructs at inflate time. θ controls the hoist fraction.
-    Cost: NEGATIVE bytes (hoisted out of archive); no seg/pose effect at
-    pair level (the bytes are still consumed; only their location changed).
+    """REAL jacobian projection for Wyner-Ziv pipeline-stage hoist treatment.
+
+    Composes ``tac.codec.wyner_ziv_layer.insert_wyner_ziv_layer`` (the canonical
+    pipeline-stage codec primitive per sister #814 landing) instead of the
+    earlier closed-form heuristic. Per the operator amendment to Consumer 15
+    (#815 op-routable from `feedback_wyner_ziv_pipeline_stage_codec_primitive_landed_20260517.md`),
+    the planner's WZ-hoist jacobian MUST be backed by the real WZ layer so the
+    delta_rate_bytes prediction reflects the actual measurable archive savings
+    of the longest Y-derivable prefix split (NOT a `pose_l1 * 1e7` proxy).
+
+    Signature contract per Treatment.jacobian_projection (frozen at line ~1581):
+        (g: np.ndarray, theta: float) -> tuple[delta_seg, delta_pose, delta_bytes]
+
+    The theta scalar (range [0.1, 0.8] per Treatment.param_grid) maps to the
+    WZ side_info_max_bytes BUDGET. The mapping is monotone in theta:
+      - low theta → small side budget → conservative hoist
+      - high theta → large side budget → aggressive hoist
+    The actual bytes saved is whatever the WZ primitive measures via real
+    lzma compression on (per-pair gradient slice bytes, Y from torch_defaults).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #297
+    (signal-axis destruction reversibility): the WZ pipeline-stage split is
+    PROVABLY signal-preserving — ``reconstruct_from_wyner_ziv_layer`` round-trips
+    pre_entropy bytes exactly (64 tests in test_wyner_ziv_layer.py confirm).
+    Therefore ``delta_seg = delta_pose = 0.0`` is the correct theoretical answer
+    (the bytes are still consumed; only their location in the archive changed).
+
+    Fallback semantics: if the WZ primitive raises (e.g. side budget too small
+    for the compressed side stream), the projection returns ``(0.0, 0.0, 0)``
+    (no-op; the greedy primal recovery will pick a different (treatment, theta)
+    for this pair). This preserves the per-treatment additivity invariant per
+    the ADMM convergence proof.
     """
-    # Bytes hoisted scale with θ and this pair's contribution to inter-byte
-    # correlation potential. Crude proxy: this pair's pose-axis l1.
-    pose_l1 = float(np.abs(g[:, 1]).sum())
-    bytes_hoisted = int(round(float(theta) * pose_l1 * 1e7))
-    return 0.0, 0.0, -bytes_hoisted
+    # Import inline to avoid module-load circular dependency (the WZ primitive
+    # may eventually import from master_gradient for its own Y derivation).
+    from tac.codec.wyner_ziv_layer import (
+        InterceptLocation,
+        WynerZivLayerConfig,
+        WynerZivLayerError,
+        derive_side_info_from_canonical_source,
+        insert_wyner_ziv_layer,
+    )
+
+    # Map theta ∈ [0, 1] → side_info_max_bytes budget ∈ [200, 2000].
+    # Per HNeRV parity L4 (inflate.py LOC budget): 2000 bytes of compressed
+    # side stream maps to ~50 LOC overhead — well under the 100-LOC default
+    # budget. Larger budgets would push into the 200-LOC waiver territory.
+    theta_clamped = max(0.0, min(1.0, float(theta)))
+    side_budget = int(round(200 + theta_clamped * 1800))  # [200, 2000]
+
+    # Derive Y from canonical torch_defaults source (Tier 1 zero-cost per the
+    # DeliverabilityTier taxonomy; no network / disk I/O at compress time).
+    try:
+        y_full = derive_side_info_from_canonical_source("torch_defaults")
+    except Exception:
+        # Defensive: derive_side_info raises only on illegal source values;
+        # "torch_defaults" is always legal. Belt-and-suspenders for forward-compat.
+        return 0.0, 0.0, 0
+
+    # Truncate Y to the side budget (caller-budgeted; the WZ primitive will
+    # measure compressed side bytes against side_info_max_bytes and refuse
+    # if the compressed side exceeds the budget).
+    side_info_y = y_full[: min(len(y_full), side_budget * 4)]  # 4× raw → ~1× compressed lzma
+
+    # Synthesize pre-entropy bytes from the per-pair gradient slice.
+    # g has shape (N_bytes, 3); use the float32 byte serialization as a
+    # proxy for the pre-entropy payload (raw float weights / latents — the
+    # canonical PRE_ENTROPY substrate class per the sister pivot prober).
+    pre_entropy_bytes = g.astype(np.float32).tobytes()
+
+    if len(pre_entropy_bytes) == 0:
+        return 0.0, 0.0, 0
+
+    config = WynerZivLayerConfig(
+        intercept_location=InterceptLocation.STATE_DICT_SERIALIZATION,
+        side_info_source="torch_defaults",
+        side_info_max_bytes=side_budget,
+        main_codec="lzma",
+        compression_codec_for_side="lzma",
+        composition_alpha_estimate=1.0,
+        deterministic_seed=0,
+    )
+
+    try:
+        result = insert_wyner_ziv_layer(
+            pre_entropy_bytes=pre_entropy_bytes,
+            side_info_y=side_info_y,
+            config=config,
+        )
+    except WynerZivLayerError:
+        # Side budget violated OR malformed inputs — no-op; ADMM will pick
+        # a different treatment-theta combination for this pair.
+        return 0.0, 0.0, 0
+
+    # delta_rate_bytes = (compressed total) - (raw input).
+    # Negative ⇔ archive bytes SAVED (good); positive ⇔ archive bytes GROWN.
+    # The WZ primitive's score_savings_estimate uses `25 * (raw - main_compressed) / CRD`
+    # which corresponds to delta_rate_bytes = main_compressed + side_compressed - raw.
+    compressed_total = result.main_bytes_compressed + result.side_bytes_compressed_baked
+    delta_rate_bytes = int(compressed_total - len(pre_entropy_bytes))
+
+    # Per Catalog #297: WZ pipeline-stage is signal-preserving (decoder
+    # reconstructs pre_entropy_bytes byte-identically). Therefore the scorer
+    # deltas at the pair level are 0.0.
+    delta_seg = 0.0
+    delta_pose = 0.0
+
+    return delta_seg, delta_pose, delta_rate_bytes
 
 
 def _project_none(g: np.ndarray, theta: float) -> tuple[float, float, int]:
