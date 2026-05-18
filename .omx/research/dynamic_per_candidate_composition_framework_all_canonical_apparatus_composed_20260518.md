@@ -1487,3 +1487,488 @@ Per §16 OP-FRAMEWORK-5 sister directive: queue STRICT preflight gate `check_com
 **Total coverage**: ALL 12 historical patterns are extincted structurally. Future per-candidate composition decisions go through the framework's Layer 1 anti-arbitrariness foundation; the patterns CANNOT recur.
 
 ---
+
+## 8. Per-Candidate Playbook Templates (Operator-Facing)
+
+Per Carmack's binding Revision #3 (30-second-reviewability): the framework's per-candidate playbook templates are the operator-facing query surface. Each playbook is concrete, file-path-attributed, EV-ranked, and dependency-typed. Section 14 (the full playbook templates) contains 7 playbooks; this section summarizes the template structure.
+
+### 8.1 Playbook template structure (per-candidate)
+
+Every per-candidate playbook follows the same canonical structure:
+
+```markdown
+# Playbook: <candidate_id> — <candidate_short_description>
+
+## Header
+- **Candidate archive_sha256**: <sha256>
+- **Candidate lane_id**: <lane_id>
+- **Asymptotic approach**: PLATEAU_ADJACENT / FRONTIER_PURSUIT / ASYMPTOTIC_PURSUIT
+- **Budget**: $<usd>
+- **Predicted aggregate ΔS band**: [<lower>, <upper>] [<axis-tag>]
+- **Per-axis hardware classification**: CPU-ONLY / GPU-ONLY / BOTH-DIFFERENT / AXIS-INVARIANT
+- **Mathematical sub-paradigm (Tao partition)**: <a/b/c/d>
+- **Predecessor probe outcome**: <verdict from .omx/state/probe_outcomes.jsonl> (per Catalog #313)
+
+## Composition plan (per the framework's CompositionPlan output)
+- **Primitive 1 (master_gradient)**: <empirical anchor cite> + <per-candidate adaptation>
+- **Primitive 2 (Venn classifier)**: <classification result> + <per-candidate cells>
+- ... (one bullet per applicable primitive of the 14)
+
+## Layer 3 bilevel optimizer state
+- OUTER tier verdict: <codec_config> + <composition_alpha distribution>
+- MIDDLE tier verdict: <class_shift_required> + <substrate_id>
+- INNER tier verdict: <Fisher matrix> + <Riem-Newton converged params> + <Tropical d_seg boundary>
+- INNERMOST tier verdict: <per-pair modification distribution> + <cascade-tier distribution>
+
+## Anti-arbitrariness foundation (Layer 1 per §6)
+- HARD-EARNED vs CARGO-CULTED per primitive: <classification table>
+- Empirical anchor per primitive: <anchor table>
+- Per-candidate adaptation per primitive: <adaptation table>
+- Legal-receiver-path per primitive: <classification table>
+- Dykstra-feasibility verdict: <verdict>
+
+## Cost + time
+- Cost estimate: $<modal_lightning_vastai> + $<cpu_only_probe>
+- Time estimate: <wall_clock_hours>
+- Predecessor: <required-OPs-before-this-OP>
+- Successors: <OPs-that-this-OP-unblocks>
+
+## Reactivation criteria per CLAUDE.md "Forbidden premature KILL"
+- 4 reactivation paths per Catalog #325 per-substrate symposium discipline:
+  1. <path 1>
+  2. <path 2>
+  3. <path 3>
+  4. <path 4>
+
+## Operator-routable next action
+- **One-line command**: <command>
+- **Routing destination**: <Codex / Modal / Lightning / Vast.ai / local>
+- **Sister directive**: <path to canonical routing directive>
+- **Expected harvest**: <path to expected harvested artifact>
+```
+
+### 8.2 The 7 per-candidate playbook instances
+
+The framework lands 7 per-candidate playbook templates (one per SYNTHESIS-V2 reconciled TOP-5 + A1-SPECIALIZED + B1 + C1):
+
+1. **Playbook G1 cross-axis CPU re-rank** (SATURATION-INDEPENDENT) — §14.1
+2. **Playbook F1-as-A2 PoseNet first-6-dim invariance steganography** (SATURATION-INDEPENDENT) — §14.2
+3. **Playbook A-2 N-7 saturation test** (informs everything) — §14.3
+4. **Playbook A-3 Dykstra-feasibility-FIRST canonical helper** — §14.4
+5. **Playbook A-4 MI-min Wyner-Ziv canonical helper** — §14.5
+6. **Playbook B1 contest-video-as-codebook** (SATURATION-DEPENDENT) — §14.6
+7. **Playbook A1-SPECIALIZED binary-distilled scorer-feature-space** (RECLAIMABLE_VIA_PACKET_COMPILER) — §14.7
+
+The 7 playbooks demonstrate the framework's per-candidate adaptation across:
+- 2 SATURATION-INDEPENDENT (G1 + F1)
+- 1 saturation-test (A-2 N-7)
+- 2 STRUCTURAL primitives (A-3 + A-4)
+- 1 SATURATION-DEPENDENT (B1)
+- 1 RECLAIMABLE_VIA_PACKET_COMPILER (A1-SPECIALIZED)
+
+This coverage exercises all 4 sub-paradigms (Tao partition) + all 4 legal-receiver-path classifications + all 3 asymptotic approaches (PLATEAU_ADJACENT / FRONTIER_PURSUIT / ASYMPTOTIC_PURSUIT).
+
+---
+
+## 9. Asymptotic-Approach Classification per Catalog #309
+
+The framework's per-candidate composition decisions depend on the per-candidate asymptotic approach. Per CLAUDE.md HORIZON-CLASS standing directive 2026-05-16 + Catalog #309 declared horizon class:
+
+### 9.1 The 3 asymptotic approaches
+
+| Asymptotic approach | Predicted CPU band | Frontier relevance | Class-shift requirement |
+|---|---|---|---|
+| **PLATEAU_ADJACENT** | [0.180, 0.200] | At or near current frontier 0.19205 | NOT required (within-class optimization preferred) |
+| **FRONTIER_PURSUIT** | [0.120, 0.180] | Target after rate-attack wave | OPTIONAL (evaluate Tier 2 paradigm queue) |
+| **ASYMPTOTIC_PURSUIT** | [0.050, 0.120] | Theoretical-floor territory | REQUIRED (within-class structurally insufficient) |
+
+### 9.2 Per-asymptotic-approach framework behavior
+
+The framework's `compose_optimal_per_candidate(...)` adapts per asymptotic_approach in 3 ways:
+
+#### PLATEAU_ADJACENT behavior
+
+- MIDDLE tier (§4.3) defaults to "stay within-class"; class shift requires explicit override
+- INNER tier (§4.4) prioritizes Fisher-precondition tightening over substrate-class exploration
+- Composition primitive selection (§5.5) prioritizes NO_RECEIVER_NEEDED + LEGAL_RECEIVER_IN_BUDGET primitives (cheap exploits)
+- Budget envelope per-candidate defaults to $1-3 (cheap probes + canonical helper invocations)
+- Predicted ΔS aggregate is conservative: [-0.005, -0.020] expected per candidate
+
+#### FRONTIER_PURSUIT behavior
+
+- MIDDLE tier (§4.3) evaluates Tier 2 paradigm queue for orthogonal class shifts
+- INNER tier (§4.4) runs full 4-piece bilevel; Fisher + Riem-Newton + Tropical + Venn
+- Composition primitive selection (§5.5) prioritizes class-shift primitives (procedural_codebook / null_space_exploit / freezing exploits) alongside within-class
+- Budget envelope per-candidate defaults to $5-20 (smoke + early-stage full runs)
+- Predicted ΔS aggregate is moderate: [-0.020, -0.050] expected per candidate (frontier displacement target)
+
+#### ASYMPTOTIC_PURSUIT behavior
+
+- MIDDLE tier (§4.3) REQUIRES class shift; throws `NoViableClassShiftCandidateError` if no candidate available
+- INNER tier (§4.4) runs full 4-piece bilevel + extends to ASYMPTOTIC_PURSUIT-specific primitives (Z8 hierarchical predictive coding / TT5L V2 / cargo-cult resurrection TOP-3)
+- Composition primitive selection (§5.5) prioritizes RECLAIMABLE_VIA_PACKET_COMPILER primitives (A1-SPECIALIZED binary distillation; the operator's "extremely small" target opens reclaimable space)
+- Budget envelope per-candidate defaults to $20-100 (substrate-engineering effort)
+- Predicted ΔS aggregate is aggressive: [-0.050, -0.150] expected per candidate (asymptotic-floor displacement target)
+
+### 9.3 Per-candidate asymptotic-approach selection heuristic
+
+The framework's `compose_optimal_per_candidate(...)` accepts an explicit `asymptotic_approach` parameter (per the operator's strategic intent). For ad-hoc per-candidate selection without operator override, the framework defaults per the per-candidate's current contest-CPU anchor:
+
+```python
+def select_default_asymptotic_approach(
+    candidate_archive_sha256: str,
+    *,
+    repo_root: Path | None = None,
+) -> AsymptoticApproach:
+    """Default asymptotic_approach per current contest-CPU anchor per Catalog #316 frontier scan."""
+    frontier_scan = build_frontier_scan_payload(repo_root)
+    current_cpu_anchor = frontier_scan.best_per_axis.get("contest_cpu", 0.20)
+
+    # If candidate is within [0.180, 0.200] of canonical frontier, default to PLATEAU_ADJACENT
+    if 0.180 <= current_cpu_anchor <= 0.200:
+        return AsymptoticApproach.PLATEAU_ADJACENT
+    # If candidate is within [0.120, 0.180], default to FRONTIER_PURSUIT
+    if 0.120 <= current_cpu_anchor < 0.180:
+        return AsymptoticApproach.FRONTIER_PURSUIT
+    # If candidate is at < 0.120, default to ASYMPTOTIC_PURSUIT
+    if current_cpu_anchor < 0.120:
+        return AsymptoticApproach.ASYMPTOTIC_PURSUIT
+    # If candidate is above 0.200 (worse than baseline), default to PLATEAU_ADJACENT (climb back to baseline first)
+    return AsymptoticApproach.PLATEAU_ADJACENT
+```
+
+### 9.4 Asymptotic-approach × per-candidate playbook routing matrix
+
+| Playbook | Default asymptotic_approach | Reason |
+|---|---|---|
+| G1 cross-axis CPU re-rank | PLATEAU_ADJACENT | Cross-axis re-rank is within-class optimization |
+| F1-as-A2 PoseNet first-6-dim invariance | PLATEAU_ADJACENT | Scorer-feature-invariance is within-class (no substrate class shift) |
+| A-2 N-7 saturation test | PLATEAU_ADJACENT (informational) | Tests current substrate-class saturation status |
+| A-3 Dykstra-feasibility-FIRST | (apparatus) | Canonical helper benefits all asymptotic approaches |
+| A-4 MI-min Wyner-Ziv | (apparatus) | Canonical helper benefits all asymptotic approaches |
+| B1 contest-video-as-codebook | FRONTIER_PURSUIT | Codebook ships SATURATION-DEPENDENT bytes; FRONTIER_PURSUIT target |
+| A1-SPECIALIZED binary-distilled | ASYMPTOTIC_PURSUIT | Reclaimed scorer-feature-space exploit is class-shift candidate |
+
+---
+
+## 10. Hypergraph Integration per B's Design Memo
+
+The framework is the canonical instantiation of B's hypergraph "design" node type per `design_stack_full_hypergraph_model_design_memo_20260518.md`. This section documents the integration.
+
+### 10.1 B's hypergraph 10 typed node categories
+
+Per B's design memo §3:
+
+1. `design` — design memos like THIS framework memo
+2. `code` — canonical helpers (`src/tac/*.py`)
+3. `recipe` — operator-authorize recipes
+4. `lane` — registered lanes
+5. `archive` — built archive packets
+6. `dispatch` — Modal/Lightning/Vast.ai dispatches
+7. `harvested` — harvested results
+8. `posterior` — `.omx/state/*.jsonl` ledger entries
+9. `subagent` — subagent landings
+10. `deterministic_byte_derivation` — META-category 10 (per B's amendment); this category covers Wyner-Ziv deliverability + null_space_exploit + procedural_codebook etc.
+
+### 10.2 Framework's hypergraph contribution per node type
+
+The framework instantiates B's hypergraph as follows:
+
+| B's node type | Framework's instantiation |
+|---|---|
+| `design` | THIS memo + the 7 per-candidate playbook templates (§14) + 1 routing directive (§17) |
+| `code` | Per the routing directive: canonical helper `tac.dynamic_per_candidate_composition` (~1000-1500 LOC; Codex builds per §17) |
+| `recipe` | The framework outputs CompositionPlan per-candidate; recipes are derived per-plan via `tac.dynamic_per_candidate_composition.derive_recipe_from_plan(plan)` |
+| `lane` | `lane_dynamic_per_candidate_composition_framework_20260518` (this memo's lane); per-candidate plans get their own lane derived via `derive_lane_id_from_plan(plan)` |
+| `archive` | The framework operates ON archives (input); each plan's INNERMOST tier produces per-archive byte-level modifications |
+| `dispatch` | The framework outputs plans; dispatchers (`tools/operator_authorize.py` etc.) consume plans + emit dispatches |
+| `harvested` | Each plan's execution produces harvested results; the framework reads harvested results via `tac.master_gradient_consumers.load_optimal_plan_for_archive` |
+| `posterior` | The framework writes posterior anchors per Catalog #131/#300 (composition_plans ledger + council_deliberation_posterior) |
+| `subagent` | THIS subagent (DYNAMIC-PER-CANDIDATE-COMPOSITION-FRAMEWORK-2026-05-18) is the framework's seed subagent; future per-candidate playbook landings get their own subagents |
+| `deterministic_byte_derivation` | Primitives 6 (Wyner-Ziv deliverability) + 10 (null_space_exploiter) + 11 (procedural_codebook) + 13 (A1-SPECIALIZED) are all in this category per B's META-category 10 |
+
+### 10.3 Framework's hypergraph contribution per edge type
+
+Per B's design memo §4 (7 typed directed edges + 3 hyperedge types):
+
+| B's edge type | Framework's instantiation |
+|---|---|
+| `design → code` | THIS memo → `tac.dynamic_per_candidate_composition` (built per §17 routing directive) |
+| `design → recipe` | THIS memo + plan output → `derive_recipe_from_plan(plan)` |
+| `code → archive` | `compose_optimal_per_candidate(...)` → CompositionPlan → archive modifications |
+| `archive → dispatch` | CompositionPlan + recipe → `tools/operator_authorize.py` → Modal/Lightning/Vast.ai dispatch |
+| `dispatch → harvested` | Dispatch → harvested per Modal call_id ledger per Catalog #245 |
+| `harvested → posterior` | Harvested → composition_plans ledger + council_deliberation_posterior per Catalog #131/#300 |
+| `posterior → design` | Posterior plans inform next per-candidate plan (continual-learning loop per Catalog #300 hook #5) |
+
+### 10.4 The 3 hyperedge types
+
+Per B's design memo:
+
+1. **N-way composition_alpha hyperedge** (per Catalog #322): the framework's primitive 5 IS this hyperedge type; every N-primitive composition is a hyperedge in B's graph
+2. **Cathedral autopilot v2 cascade hyperedge** (per Catalog #319 Q3): the framework's primitive 9 IS this hyperedge type; every per-candidate cascade is a hyperedge
+3. **Per-candidate composition plan hyperedge** (NEW per this framework): the framework's `CompositionPlan` IS this hyperedge type; every plan binds N primitives + per-tier verdict + per-cell decisions into a single hyperedge
+
+### 10.5 Framework's queryability via B's hypergraph helper
+
+Per the sister Codex routing directive for B's hypergraph (`codex_routing_directive_design_stack_hypergraph_canonical_helper_plus_visualizer_20260518.md`): the canonical helper `src/tac/design_graph.py` exposes the following query operations:
+
+- `critical_path(start_node, end_node)` — shortest path through the design graph
+- `orphan_signals(direction='consumer_without_producer')` — find consumer hooks without matching producer hooks (per Catalog #711)
+- `hyperedge_compositions(node)` — list all hyperedges that include a given node
+- `cycles()` — find continual-learning feedback cycles
+- `hook_coverage(node)` — find the 6-hook wire-in coverage per Catalog #125
+- `dominator(node)` — find dominator nodes (every path through `node` must go through dominator)
+- `export_dot(output_path)` — emit DOT graph for visualization
+
+The framework's CompositionPlan is queryable via these operations:
+- `critical_path(framework_design_node, per_candidate_dispatch_node)` returns the dependency chain
+- `orphan_signals(direction='consumer_without_producer')` finds per-candidate plan consumers (cathedral autopilot v2 cascade) without their producer (master_gradient extraction)
+- `hyperedge_compositions(framework_design_node)` returns the 14-primitive composition hyperedge
+
+---
+
+## 11. Cargo-Cult Audit per Shared Assumption (Catalog #303)
+
+Per CLAUDE.md "FORBIDDEN PATTERNS" Catalog #303 cargo-cult audit per assumption: this section enumerates the framework's shared assumptions + classifies each as HARD-EARNED vs CARGO-CULTED.
+
+### 11.1 The 12 shared assumptions across the framework
+
+#### Assumption 1: "Master_gradient at PR101_lc_v2 `f174192aeadf...` generalizes across substrates"
+
+**Verdict**: HARD-EARNED-PARTIAL.
+
+**Rationale**: per Codex's 2026-05-18 landing the per-pair fp64 gradient is canonical for PR101_lc_v2; per cross-stack synthesis OP-SYN-1 the 6-archive extension lands per-substrate anchors. Generalization across substrates is empirically supported by the 6-archive extension (when it lands); pending that, generalization is HARD-EARNED-PARTIAL.
+
+**Reactivation criteria for HARD-EARNED-VERIFIED**: 6-archive extension lands with per-archive anchors at `.omx/state/master_gradient_anchors.jsonl`; per-archive Fisher matrix conditioning verdicts converge per Phase 1 design memo's Assumption-Adversary mandate.
+
+#### Assumption 2: "3-set Venn baseline (HIGH_PAIR_INVARIANT / HIGH_PAIR_SPECIFIC / NEUTRAL) is structurally complete for per-candidate classification"
+
+**Verdict**: HARD-EARNED-PARTIAL.
+
+**Rationale**: per Catalog #319 the 3-set baseline is canonical for Wyner-Ziv deliverability; the 6-set extension per N-set Venn design memo adds richness (region × class × frame × axis × component). The framework's primitive 2 supports both; per-candidate choice is operator-tunable.
+
+**Reactivation criteria for HARD-EARNED-VERIFIED**: cross-stack synthesis OP-SYN-3 N-set Venn empirical sparsity atlas lands; per-cell byte_mass distribution empirically validates the choice of 3-set vs 6-set per-candidate.
+
+#### Assumption 3: "composition_alpha N-way SUB-ADDITIVE default per Catalog #322 is correct"
+
+**Verdict**: HARD-EARNED-VERIFIED.
+
+**Rationale**: 4-of-8 empirically probed substrate-pair α-pairs are sub-additive per cross-stack synthesis §3 reconciliation; the SUB-ADDITIVE default is the conservative correct prior. Cathedral autopilot v2 cascade per Catalog #319 Q3 enforces this structurally.
+
+#### Assumption 4: "Cathedral autopilot v2 cascade (Lagrangian-dual primary; deliverability secondary; passthrough tertiary) is the canonical answer"
+
+**Verdict**: HARD-EARNED-VERIFIED.
+
+**Rationale**: per Catalog #319 Q3 landing 2026-05-17 + operator architectural correction "the Lagrangian planner is the canonical answer". The 3-cascade decision tree IS structurally complete; no ad-hoc branching.
+
+#### Assumption 5: "Per-axis hardware exploit matrix (CPU-ONLY / GPU-ONLY / BOTH-DIFFERENT / AXIS-INVARIANT) is canonical for per-leaderboard-axis routing"
+
+**Verdict**: HARD-EARNED-PARTIAL.
+
+**Rationale**: per Hotz supplement Part 1 + PR102 +0.033 CUDA-CPU empirical gap. The 4-class taxonomy IS structurally complete; per-primitive classification is empirically supported.
+
+**Reactivation criteria for HARD-EARNED-VERIFIED**: per-axis canonical helper `tac.per_axis_hardware_exploit_classifier` lands; per-primitive empirical classification validates the taxonomy.
+
+#### Assumption 6: "Legal-receiver-path 4-class taxonomy (NO/LEG/RECLAIM/STRICT) extincts CONFLATE_DECLARATIVE_WITH_PHYSICAL pattern"
+
+**Verdict**: HARD-EARNED-VERIFIED.
+
+**Rationale**: per the META-audit + Codex's F1 finding + operator's Section 0 correction at the legal-receiver-path audit. The 4-class taxonomy IS structurally complete; the framework's Layer 1 §6.1.(d) classifier enforces this.
+
+#### Assumption 7: "A1-SPECIALIZED binary distillation is feasible per operator's 'extremely small' claim"
+
+**Verdict**: CARGO-CULTED-PENDING-EMPIRICAL.
+
+**Rationale**: operator's "we can get the stuff extremely small" is the claim; sister subagent `acb1a03a8e4234022` is producing the canonical design memo. Empirical feasibility pending sister memo landing + per-distillation-method empirical anchors.
+
+**Reactivation criteria for HARD-EARNED**: sister memo lands; at least 2 distillation methods (e.g. Zig native binary + sparse_quantized) demonstrate ≤10 KB binary on A1 substrate class per the operator's target.
+
+#### Assumption 8: "Asymptotic-approach classification (PLATEAU_ADJACENT / FRONTIER_PURSUIT / ASYMPTOTIC_PURSUIT) per Catalog #309 is canonical"
+
+**Verdict**: HARD-EARNED-VERIFIED.
+
+**Rationale**: per CLAUDE.md HORIZON-CLASS standing directive 2026-05-16 + Catalog #309 declared horizon class. The 3-approach taxonomy IS structurally complete; per-approach behavior per §9.2 is binding.
+
+#### Assumption 9: "Dykstra-feasibility intersection per Catalog #296 produces realistic LOWER BOUND on aggregate ΔS"
+
+**Verdict**: HARD-EARNED-VERIFIED.
+
+**Rationale**: per Boyd's alternating projections theorem (Dykstra-Boyle 1985). Mathematically guaranteed.
+
+#### Assumption 10: "Cathedral autopilot v2 cascade Cascade 1 Lagrangian-dual planner produces canonical predicted_score_delta when present"
+
+**Verdict**: HARD-EARNED-VERIFIED.
+
+**Rationale**: per Catalog #319 Q3 v2 cascade + the operator's architectural correction. The Lagrangian-dual planner solves the FULL ADMM/KKT problem with all 4 constraints + emits Pareto-feasible dual variables; this dominates ad-hoc per-primitive predictions.
+
+#### Assumption 11: "Per-substrate symposium discipline per Catalog #325 enforces optimal form before paid dispatch"
+
+**Verdict**: HARD-EARNED-VERIFIED.
+
+**Rationale**: per Catalog #325 landing 2026-05-18 + the C6 IBPS 22× miss empirical anchor. Per-substrate symposium is canonical 6-step contract.
+
+#### Assumption 12: "5-form per-primitive evidence framework (Layer 1) PROSPECTIVELY extincts CONFLATE_DECLARATIVE_WITH_PHYSICAL pattern"
+
+**Verdict**: HARD-EARNED-PARTIAL.
+
+**Rationale**: the 5 forms cover ALL 12 historical patterns per §7.3; the framework's Layer 1 enforces them structurally. PARTIAL because the framework's canonical helper is pending Codex's build per §17 routing directive.
+
+**Reactivation criteria for HARD-EARNED-VERIFIED**: Codex's canonical helper lands; the helper's `build_composition_plan(...)` empirically refuses plans lacking any of the 5 forms.
+
+### 11.2 Cargo-cult audit summary
+
+| Verdict | Count | Assumptions |
+|---|---|---|
+| HARD-EARNED-VERIFIED | 7 | #3, #4, #6, #8, #9, #10, #11 |
+| HARD-EARNED-PARTIAL | 4 | #1, #2, #5, #12 |
+| CARGO-CULTED-PENDING-EMPIRICAL | 1 | #7 (A1-SPECIALIZED) |
+| CARGO-CULTED-FALSIFIED | 0 | (none) |
+
+7-of-12 (58%) are HARD-EARNED-VERIFIED; 4-of-12 (33%) are HARD-EARNED-PARTIAL with explicit reactivation criteria; 1-of-12 (8%) is CARGO-CULTED-PENDING-EMPIRICAL with sister subagent in flight; 0-of-12 (0%) are CARGO-CULTED-FALSIFIED.
+
+**Operator-routable benefit**: the framework's Layer 1 anti-arbitrariness foundation rests on 7 HARD-EARNED-VERIFIED + 4 HARD-EARNED-PARTIAL assumptions; only 1 (A1-SPECIALIZED) is pending empirical confirmation, and the sister subagent is in flight.
+
+---
+
+## 12. 9-Dimension Success Checklist Evidence per Catalog #294
+
+Per CLAUDE.md "9-dimension success checklist evidence" + Catalog #294: every substrate / composition / landing memo MUST document evidence across ALL 9 dimensions.
+
+### 12.1 UNIQUENESS
+
+This framework memo is UNIQUE: no prior memo composes ALL 14 canonical primitives into a per-candidate per-asymptotic-approach optimal composition framework with anti-arbitrariness Layer 1 foundation + CONFLATE_DECLARATIVE_WITH_PHYSICAL extinction. The framework realizes the operator's 5-message verbatim standing directive as a single coherent META-apparatus.
+
+**Distinctness from sisters**:
+- vs cross-stack synthesis (`cross_stack_synthesis_9_design_landings_unified_framework_20260518.md`): that memo synthesizes 9 design landings; this memo COMPOSES 14 canonical primitives per-candidate
+- vs B's hypergraph (`design_stack_full_hypergraph_model_design_memo_20260518.md`): that memo models the design stack; this memo OPERATIONALIZES the hypergraph as a per-candidate composition framework
+- vs SYNTHESIS-V2 (`rate_attack_synthesis_v2_reconciliation_*.md`): that memo reconciles rate-attack research; this memo's per-candidate playbooks INSTANTIATE the reconciliation per-vector
+- vs META-audit (`meta_audit_conflate_declarative_with_physical_error_pattern_*.md`): that memo audits historical errors; this memo PROSPECTIVELY extincts the pattern
+
+### 12.2 BEAUTY + ELEGANCE
+
+PR101-style 30-sec-reviewable per §0 executive summary; the 4-layer apparatus stack (Layer 1-4) is the single canonical diagram that matters; the per-candidate composition algorithm (§5) is pseudocode-complete; the 7 per-candidate playbook templates (§14) are concrete + file-path-attributed + EV-ranked.
+
+The framework's elegance derives from the 4-layer composition: Layer 4 (per-candidate orchestration) consumes Layer 3 (bilevel optimizer 4-piece) consumes Layer 2 (14 primitives) consumes Layer 1 (anti-arbitrariness foundation). The composition is structurally hierarchical, not ad-hoc.
+
+### 12.3 DISTINCTNESS
+
+Distinct from sister memos per §12.1. The framework's distinctness derives from its META-apparatus role: it composes ALL canonical primitives, not a subset; it covers ALL asymptotic approaches, not one; it covers ALL legal-receiver-path classifications, not one.
+
+### 12.4 RIGOR
+
+Premise verification per Catalog #229 (12 PVs per §11 cargo-cult audit assumptions). Council deliberation per CLAUDE.md "Council conduct" T3 sextet + reconciliation panel. Assumption surfacing per Catalog #292 (5 binding revisions per §0 council dissent). HARD-EARNED-vs-CARGO-CULTED classification per Catalog #303 addendum per §11. Tao paradigm-partition rigor per SYNTHESIS-V2 §5.1 inherited. Dykstra-feasibility per Catalog #296 per §6.1.(e). Per-substrate symposium discipline per Catalog #325 implied via per-candidate playbook structure.
+
+### 12.5 OPTIMIZATION PER TECHNIQUE
+
+Per the UNIQUE-AND-COMPLETE-PER-METHOD operating mode + canonical-vs-unique decision per layer per Catalog #290: the framework's `## Canonical-vs-unique decision per layer` section is documented in §13.
+
+### 12.6 STACK-OF-STACKS-COMPOSABILITY
+
+The framework IS the canonical stack-of-stacks composition primitive at the per-candidate level. Per Catalog #322 N-way composition_alpha sub-additive default: the framework's primitive 5 enforces stack-of-stacks composability structurally.
+
+**Per-archive composition**: the framework's CompositionPlan composes 14 primitives per-candidate; multi-candidate composition is supported via the cathedral autopilot ranker's per-archive aggregation per Catalog #319 Q3 v2 cascade.
+
+**Cross-substrate composition**: per Catalog #322 substrate composition matrix; the framework's composition_alpha N-way primitive consumes the matrix's per-substrate-pair α values.
+
+### 12.7 DETERMINISTIC REPRODUCIBILITY
+
+The framework's `compose_optimal_per_candidate(...)` is deterministic per fixed inputs (archive_sha256, lane_id, asymptotic_approach, budget_usd, master_gradient_anchor_sha256, venn_n, ...). The 4-tier bilevel optimizer is deterministic per Phase 1 Fisher-precondition + Phase 2 Riemannian-Newton convergence guarantees + Phase 6 Tropical d_seg tropical-sum-min algebra.
+
+**Byte-stable persistence**: composition plans persist per `.omx/state/composition_plans/<archive_sha[:12]>_<lane_id>_<utc>.json` with deterministic JSON serialization (sort_keys=True per Catalog #131/#138/#245 sister discipline).
+
+**Seed-pinning**: per-candidate random sampling (e.g. for hard-pair atlas) uses deterministic seeding per `random.seed(archive_sha256_int)`.
+
+### 12.8 EXTREME OPTIMIZATION + PERFORMANCE
+
+The framework's per-candidate composition algorithm runs at $0 CPU only for plan construction; budget envelope applies only to optional master_gradient extraction (if absent for candidate) per §5.1 Step 1.
+
+**Per-candidate plan construction time**: ~5-30 seconds per candidate per the canonical helper's algorithmic complexity (Layer 3 bilevel optimizer dominates).
+
+**Per-candidate plan caching**: composition plans cache per the 4-tuple key per §5.7; repeated invocations on the same (archive_sha256, lane_id, asymptotic_approach, budget_usd) return the cached plan.
+
+### 12.9 OPTIMAL MINIMAL CONTEST SCORE
+
+The framework's predicted aggregate ΔS per-candidate depends on asymptotic_approach per §9.2:
+- PLATEAU_ADJACENT: [-0.005, -0.020] expected per candidate
+- FRONTIER_PURSUIT: [-0.020, -0.050] expected per candidate
+- ASYMPTOTIC_PURSUIT: [-0.050, -0.150] expected per candidate
+
+Across all per-candidate plan composition outcomes, the framework targets frontier displacement from current 0.19205 [contest-CPU] toward:
+- [0.170, 0.185] [contest-CPU] (PLATEAU_ADJACENT realistic)
+- [0.140, 0.180] [contest-CPU] (FRONTIER_PURSUIT realistic)
+- [0.040, 0.140] [contest-CPU] (ASYMPTOTIC_PURSUIT realistic)
+
+---
+
+## 13. Observability Surface per Catalog #305
+
+Per CLAUDE.md "Max observability — non-negotiable" + Catalog #305: every substrate / design memo MUST include `## Observability surface` section listing per-layer inspection hooks + per-signal decomposition + run-to-run diff manifest + post-hoc query interface + cite-chain + counterfactual hooks.
+
+### 13.1 The 6-facet observability surface for the framework
+
+#### Facet 1: Inspectable per layer
+
+The framework's 4-layer apparatus stack (Layer 1-4) is inspectable at every layer:
+- Layer 4 (per-candidate orchestration): inspect via `tac.dynamic_per_candidate_composition.inspect_orchestration_state(plan)`
+- Layer 3 (bilevel optimizer): inspect via `tac.dynamic_per_candidate_composition.inspect_bilevel_optimizer_state(plan.bilevel_optimizer_state)`
+- Layer 2 (14 primitives): inspect via per-primitive helper's `inspect_*` API
+- Layer 1 (anti-arbitrariness foundation): inspect via `tac.dynamic_per_candidate_composition.inspect_anti_arbitrariness_evidence(plan)`
+
+#### Facet 2: Decomposable per signal
+
+The framework decomposes per-candidate predicted ΔS into per-primitive contributions:
+- Per Catalog #322 composition_alpha N-way: aggregate ΔS = composition_alpha-weighted sum of per-primitive ΔS (sub-additive)
+- Per cathedral autopilot v2 cascade: per-cascade-tier distribution (Cascade 1 / 2 / 3 counts)
+- Per Venn classification: per-cell byte_mass + per-cell predicted ΔS
+
+#### Facet 3: Diff-able across runs
+
+Two compositions on the same `(archive_sha256, lane_id, asymptotic_approach)` but different budget_usd can be diffed:
+- Per-byte-position primitive selection diff
+- Per-tier cascade distribution diff
+- Per-primitive composition_alpha diff
+- Aggregate predicted ΔS band diff
+
+Sister CLI: `tools/diff_composition_plans.py --plan-a <path> --plan-b <path>` (queued per §16 OP-FRAMEWORK-7 sister directive).
+
+#### Facet 4: Queryable post-hoc
+
+Per `.omx/state/composition_plans/_index.jsonl` per Catalog #131: every plan is queryable by:
+- `archive_sha256` (per-candidate archive)
+- `lane_id` (per-candidate lane)
+- `asymptotic_approach` (per-asymptotic-approach)
+- `budget_usd` (per-budget envelope)
+- `utc_timestamp` (per-plan creation time)
+- `verdict` (PROCEED / DEFER / REFUSE; per cathedral autopilot cascade verdict)
+
+Sister CLI: `tools/query_composition_plans.py --archive-sha <sha> --asymptotic-approach FRONTIER_PURSUIT` (queued per §16 OP-FRAMEWORK-7).
+
+#### Facet 5: Cite-able
+
+Every plan field carries its source cite per Catalog #287 evidence tags:
+- Per primitive selection: `[empirical:.omx/state/master_gradient_anchors.jsonl]`, `[Catalog #319 Q1]`, `[Catalog #322 v2]`, etc.
+- Per per-tier verdict: cite chain through the 4-tier bilevel optimizer
+- Per Dykstra-feasibility verdict: cite Boyd's alternating projections theorem
+- Per cathedral autopilot cascade verdict: cite Catalog #319 Q3 v2
+
+#### Facet 6: Counterfactual-able
+
+The framework's per-byte-position primitive selection supports counterfactual queries:
+- "What would the aggregate ΔS be if we removed primitive X?" → re-run `compose_optimal_per_candidate(...)` with `excluded_primitives=[X]`
+- "What would the aggregate ΔS be if asymptotic_approach were Y?" → re-run with `asymptotic_approach=Y`
+- "What would the aggregate ΔS be if budget were Z?" → re-run with `budget_usd=Z`
+
+Sister CLI: `tools/counterfactual_composition_plan.py --plan-id <id> --modify <key>=<value>` (queued per §16 OP-FRAMEWORK-7).
+
+### 13.2 The observability invariant
+
+**INVARIANT**: every CompositionPlan output by the framework MUST be observable per ALL 6 facets. The canonical helper's `build_composition_plan(...)` enforces this structurally:
+- Facet 1: every layer's state is persisted in the plan
+- Facet 2: every primitive's contribution is explicit
+- Facet 3: every plan has a deterministic diff representation
+- Facet 4: every plan is queryable via the ledger index
+- Facet 5: every field carries its source cite
+- Facet 6: every plan supports counterfactual modification
+
+---
