@@ -1972,3 +1972,336 @@ Sister CLI: `tools/counterfactual_composition_plan.py --plan-id <id> --modify <k
 - Facet 6: every plan supports counterfactual modification
 
 ---
+
+## 14. Per-Candidate Playbook Templates (7 Instances)
+
+This section instantiates the playbook template (§8.1) for each of the 7 per-candidate scenarios. Each playbook is operator-routable, file-path-attributed, EV-ranked, and dependency-typed.
+
+### 14.1 Playbook G1 — cross-axis CPU re-rank (SATURATION-INDEPENDENT)
+
+**Header**:
+- **Candidate**: any of OUR submission candidates with paired dual-eval (CPU + CUDA) anchors
+- **Candidate archive_sha256 examples**: `6bae0201...` (fec6_fixed_huffman_k16; current CPU frontier 0.19205) + sister archives in `.omx/state/continual_learning_posterior.jsonl`
+- **Candidate lane_id**: `pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean` + sister lanes
+- **Asymptotic approach**: PLATEAU_ADJACENT (cross-axis re-rank is within-class optimization)
+- **Budget**: $0 (re-ranking uses existing dual-eval data; no GPU spend)
+- **Predicted aggregate ΔS band**: `[-0.010, -0.003]` [contest-CPU] per PR102 +0.033 cross-axis empirical anchor (HARD-EARNED-EMPIRICAL per SYNTHESIS-V2)
+- **Per-axis hardware classification**: AXIS-INVARIANT mechanism (re-ranking is axis-agnostic) + CPU-axis-OPTIMAL operationally (re-rank for CPU since leaderboard ranks CPU)
+- **Mathematical sub-paradigm (Tao partition)**: (c) Pareto-tightening — axis-conditioned RD frontier optimization
+- **Predecessor probe outcome**: no INDEPENDENT/KILL/DEFER per `.omx/state/probe_outcomes.jsonl`; G1 is novel territory per SYNTHESIS-V2
+
+**Composition plan (per the framework's CompositionPlan output)**:
+- **Primitive 1 (master_gradient)**: NOT-REQUIRED for G1 (re-rank uses whole-archive scores, not per-byte gradient); per-candidate adaptation = none
+- **Primitive 14 (per-axis hardware exploit matrix)**: PRIMARY (G1 IS the matrix classifier's CPU-axis routing application)
+- **Primitive 9 (cathedral autopilot v2 cascade)**: ACTIVE (cascade re-ranks per-archive candidates by CPU-axis score)
+- **Primitive 7 (probe_outcomes ledger)**: ACTIVE (no predecessor; G1 outcome registers a new entry)
+- **Primitives 1-6, 8, 10-13**: NOT APPLICABLE (G1 doesn't touch per-byte / per-pair structure; it operates on whole-archive scores)
+
+**Layer 3 bilevel optimizer state**:
+- OUTER tier verdict: codec_config = N/A (G1 doesn't change codec); per_primitive_alpha = 1.0 (G1 is single-primitive)
+- MIDDLE tier verdict: class_shift_required = False (within-class optimization)
+- INNER tier verdict: N/A (G1 is per-archive whole-score re-rank, not per-substrate parameter optimization)
+- INNERMOST tier verdict: N/A (G1 doesn't touch per-pair byte-level decisions)
+
+**Anti-arbitrariness foundation per §6**:
+- HARD-EARNED vs CARGO-CULTED: HARD-EARNED-EMPIRICAL per PR102 + PR107 + PR101 GOLD 3 independent anchors at consistent +0.033
+- Empirical anchor: `[contest-CPU]` PR102 0.19538; `[contest-CUDA]` PR102 0.22839; ΔAXIS = +0.033 (3 archives consistent)
+- Per-candidate adaptation: re-rank per-candidate's existing dual-eval data; differs per candidate-set membership
+- Legal-receiver-path: NO_RECEIVER_NEEDED (re-rank doesn't modify archives; no inflate code change)
+- Dykstra-feasibility: TRIVIAL (single-primitive; no composition)
+
+**Cost + time**:
+- Cost estimate: $0 (local re-ranking using existing dual-eval state)
+- Time estimate: ~1-2 hours (Codex /goal LOOP picks up routing directive)
+- Predecessor: none (G1 is operator-routable IMMEDIATELY per Hotz binding)
+- Successors: G1 verdict informs which of OUR submission candidates to submit per CPU-axis ranking
+
+**Reactivation criteria per CLAUDE.md "Forbidden premature KILL"** (if G1 returns INDEPENDENT verdict):
+1. Re-run G1 with extended per-candidate set (include public PR archives via reverse-engineered dual-eval if license-compatible)
+2. Re-run G1 with per-cell-Venn-class-conditioned re-rank (per primitive 2)
+3. Re-run G1 with per-hardest-pair-conditioned re-rank (per primitive 4)
+4. Pivot to F1-as-A2 playbook (SATURATION-INDEPENDENT sister)
+
+**Operator-routable next action**:
+- **One-line command**: routing directive `83440e8a5` already landed at `.omx/research/codex_routing_directive_g1_immediate_execution_cpu_axis_dominance_re_rank_20260518.md`; Codex /goal LOOP picks up
+- **Routing destination**: Codex
+- **Sister directive**: `83440e8a5`
+- **Expected harvest**: `experiments/results/g1_cross_axis_rerank_<utc>/report.json` with per-candidate CPU-axis ranking + chosen submission candidate
+
+### 14.2 Playbook F1-as-A2 — PoseNet first-6-dim invariance steganography (SATURATION-INDEPENDENT)
+
+**Header**:
+- **Candidate**: any per-frame RGB sequence that PoseNet's first-6-dim is invariant to (per META-audit's CONFLATE_DECLARATIVE_WITH_PHYSICAL correction: this is NOT "free bytes in dim 7-12"; this IS adversarial-steganographic perturbations to RGB that produce same PoseNet first-6-dim output)
+- **Candidate archive_sha256 examples**: any frontier archive; F1-as-A2 is a per-pair perturbation overlay
+- **Candidate lane_id**: lane TBD per probe verdict
+- **Asymptotic approach**: PLATEAU_ADJACENT (scorer-feature-invariance is within-class)
+- **Budget**: $0 probe + $1-3 build
+- **Predicted aggregate ΔS band**: `[-0.012, -0.004]` [contest-CPU] per HARD-EARNED-STRUCTURAL via upstream/modules.py:84 source-verification
+- **Per-axis hardware classification**: AXIS-INVARIANT (Hydra dims 7-12 are scorer-invariant on both CPU and CUDA per source line `[..., : h.out // 2]`)
+- **Mathematical sub-paradigm (Tao partition)**: (a) MI-min Wyner-Ziv — zero-rate side channel through scorer-feature-invariance
+- **Predecessor probe outcome**: none per `.omx/state/probe_outcomes.jsonl`; F1-as-A2 is novel territory per SYNTHESIS-V2
+
+**Composition plan (per the framework's CompositionPlan output)**:
+- **Primitive 1 (master_gradient)**: ACTIVE (use per-pair gradient signature on Hydra dims 7-12 region to identify RGB perturbation directions that maximize dim 7-12 magnitude while preserving dim 0-5)
+- **Primitive 2 (Venn classifier)**: ACTIVE (classify per-pair RGB positions by their gradient-to-dim-7-12 vs gradient-to-dim-0-5 ratio; HIGH_PAIR_INVARIANT for high-ratio pairs)
+- **Primitive 4 (hard-pair atlas + sensitivity_map)**: ACTIVE (identify hardest pairs for dim 7-12 channel encoding capacity)
+- **Primitive 6 (Wyner-Ziv deliverability)**: PRIMARY (F1-as-A2 IS the canonical Wyner-Ziv example; bits ship through scorer-feature-invariance channel at zero rate cost)
+- **Primitive 8 (xray observability)**: ACTIVE (xray scorer output to verify first-6-dim invariance per perturbation)
+- **Primitive 10 (null_space_exploiter)**: ACTIVE (RGB perturbations that produce identical PoseNet first-6-dim ARE null-space directions; the canonical null_space_exploit per Codex landing)
+- **Primitives 3, 5, 7, 9, 11-14**: per cathedral autopilot v2 cascade routing (ACTIVE per pair-classification)
+
+**Layer 3 bilevel optimizer state**:
+- OUTER tier verdict: codec_config = current; per_primitive_alpha = sub-additive composition (primitive 1 × 6 × 10 expected at α ≈ 0.7)
+- MIDDLE tier verdict: class_shift_required = False (within-class)
+- INNER tier verdict: Fisher matrix per-pair gradient signature on Hydra dims; Riem-Newton converged perturbation directions
+- INNERMOST tier verdict: per-pair RGB perturbation magnitude per cathedral autopilot v2 cascade
+
+**Anti-arbitrariness foundation per §6**:
+- HARD-EARNED vs CARGO-CULTED: HARD-EARNED-VERIFIED-FROM-SOURCE per upstream/modules.py:84 line `[..., : h.out // 2]` with h.out=12
+- Empirical anchor: source-verified per `upstream/modules.py:84`; recoverability of arbitrary bits at full fidelity pending PROBE per SYNTHESIS-V2 §3.2
+- Per-candidate adaptation: per-pair RGB perturbation directions differ per per-pair gradient signature
+- Legal-receiver-path: NO_RECEIVER_NEEDED (perturbations modify RGB in-place; inflate.py reads modified RGB identically; scorer first-6-dim output unchanged)
+- Dykstra-feasibility: per primitives 1 + 6 + 10 composition; Boyd's alternating projections converge per the SUB-ADDITIVE prior
+
+**Cost + time**:
+- Cost estimate: $0 probe (CPU-only RGB perturbation generation + scorer forward) + $1-3 build (Modal A10G smoke for full per-pair encoding)
+- Time estimate: ~1-2 days probe + ~2-3 days build conditional on probe PASS
+- Predecessor: none (F1-as-A2 is operator-routable per Fridrich+Contrarian probe-FIRST revision)
+- Successors: F1-as-A2 verdict informs sister vector A2 (Adversarial steganography on scorer blind-spots; Fridrich + Yousfi PhD territory)
+
+**Reactivation criteria per CLAUDE.md "Forbidden premature KILL"** (if probe returns INDEPENDENT verdict):
+1. Re-run probe with extended perturbation magnitude range (test smaller / larger perturbations)
+2. Re-run probe with per-pair Venn-class-conditioned perturbation (use HIGH_PAIR_INVARIANT pairs only)
+3. Pivot to F3-F6 (deeper scorer layer invariance per META-audit reclaimability table)
+4. Pivot to A2 direct (Fridrich+Yousfi adversarial steganography literature)
+
+**Operator-routable next action**:
+- **One-line command**: routing directive `83440e8a5` (probe+build for F1) already landed; probe gate at step 1; Codex /goal LOOP picks up
+- **Routing destination**: Codex (CPU-only probe) → Modal A10G (conditional build)
+- **Sister directive**: `83440e8a5` (sister to G1 directive)
+- **Expected harvest**: `experiments/results/f1_as_a2_probe_<utc>/report.json` (probe verdict) + `experiments/results/f1_as_a2_build_<utc>/report.json` (build score)
+
+### 14.3 Playbook A-2 N-7 — saturation test (informs all SATURATION-DEPENDENT primitives)
+
+**Header**:
+- **Candidate**: standard compressor sweep on current frontier archive bytes (CPU-axis Tier-1 standard compressors: brotli levels 1-11, zstd levels 1-22, gzip levels 1-9, xz preset 0-9)
+- **Candidate archive_sha256**: `6bae0201...` (current CPU frontier) + sister archives
+- **Candidate lane_id**: `lane_a2_n7_compressor_sweep_20260518`
+- **Asymptotic approach**: PLATEAU_ADJACENT (informational; tests current substrate-class saturation status)
+- **Budget**: $0 (CPU-only sweep)
+- **Predicted aggregate ΔS band**: N/A (saturation test; informs other vectors)
+- **Per-axis hardware classification**: TESTS AXIS-INVARIANT exploits across all standard compressors
+- **Mathematical sub-paradigm (Tao partition)**: (b) Kolmogorov-complexity-min via standard-compressor proxy (Cilibrasi-Vitányi 2005)
+- **Predecessor probe outcome**: none per `.omx/state/probe_outcomes.jsonl`; A-2 N-7 is novel territory per SYNTHESIS-V2
+
+**Composition plan**:
+- **Primitive 5 (composition_alpha N-way)**: ACTIVE (A-2 N-7 verdict informs SUB-ADDITIVE composition_alpha priors for SATURATION-DEPENDENT primitives)
+- **Primitive 7 (probe_outcomes ledger)**: PRIMARY (A-2 N-7 verdict registers as canonical probe outcome per Catalog #313)
+- **Primitive 9 (cathedral autopilot v2 cascade)**: ACTIVE (A-2 N-7 verdict gates cascade routing for SATURATION-DEPENDENT primitives)
+- **Other primitives**: NOT APPLICABLE (A-2 N-7 is a standard-compressor sweep, not a per-primitive composition)
+
+**Layer 3 bilevel optimizer state**:
+- OUTER tier verdict: codec_config = sweep across standard compressors; per_primitive_alpha = N/A
+- MIDDLE tier verdict: class_shift_required = False (informational)
+- INNER tier verdict: N/A (A-2 N-7 is per-archive whole-byte sweep, not per-substrate parameter optimization)
+- INNERMOST tier verdict: per-archive per-compressor compressed-size delta
+
+**Anti-arbitrariness foundation per §6**:
+- HARD-EARNED vs CARGO-CULTED: HARD-EARNED-EMPIRICAL (sweep produces empirical compressed-size delta per compressor)
+- Empirical anchor: `[empirical:experiments/results/a2_n7_compressor_sweep_<utc>/report.json]`
+- Per-candidate adaptation: sweep per-candidate archive; differs per archive bytes
+- Legal-receiver-path: N/A (probe; doesn't ship bytes)
+- Dykstra-feasibility: TRIVIAL (single sweep; no composition)
+
+**Cost + time**:
+- Cost estimate: $0 (CPU-only)
+- Time estimate: ~4-6 hours wall-clock per A-2 N-7 routing directive
+- Predecessor: none (A-2 N-7 is operator-routable IMMEDIATELY per ADVERSARIAL mandatory anchor)
+- Successors: A-2 N-7 verdict gates B1 / Y3+Y6 / H1 / A-1 Brotli-dict per SYNTHESIS-V2 §7 verdict-driven cascade
+
+**Reactivation criteria per CLAUDE.md "Forbidden premature KILL"** (if A-2 N-7 returns SATURATION_PENDING):
+1. Run Phase 2 per-section sweep (per-block / per-segment compression)
+2. Run Phase 3 comma2k19 dictionary sweep (Brotli pre-seeded dictionary per ADVERSARIAL N-5)
+3. Run extended sweep on per-candidate archive bytes (not just current frontier)
+4. Pivot to per-axis-extended sweep (CUDA-axis archives via sister Modal dispatch)
+
+**Operator-routable next action**:
+- **One-line command**: routing directive `1ac2063de` already landed at `.omx/research/codex_routing_directive_a2_n7_cpu_axis_tier1_standard_compressor_sweep_empirical_anchor_20260518.md`; Codex /goal LOOP picks up
+- **Routing destination**: Codex (CPU-only sweep)
+- **Sister directive**: `1ac2063de`
+- **Expected harvest**: `experiments/results/a2_n7_compressor_sweep_<utc>/report.json` aggregate verdict; `.omx/state/probe_outcomes.jsonl` entry per Catalog #313
+
+### 14.4 Playbook A-3 — Dykstra-feasibility-FIRST canonical helper (STRUCTURAL primitive)
+
+**Header**:
+- **Candidate**: N/A (canonical helper, not per-candidate)
+- **Asymptotic approach**: (apparatus; benefits all asymptotic approaches)
+- **Budget**: $0 (CPU-only canonical helper landing)
+- **Predicted aggregate ΔS band**: N/A (helper; reduces wasted enumeration effort by 75-90% per Boyd)
+- **Mathematical sub-paradigm (Tao partition)**: (c) Pareto-tightening — alternating projections per Dykstra-Boyle 1985
+
+**Canonical helper specification**:
+- **Location**: `src/tac/optimization/dykstra_feasibility_first.py` (new module; ~600-1000 LOC)
+- **API**:
+  ```python
+  def dykstra_feasibility_intersection(
+      pareto_constraints: list[ParetoConstraint],
+      *,
+      max_iterations: int = 100,
+      tolerance: float = 1e-8,
+  ) -> DykstraFeasibilityVerdict:
+      """Project N convex constraints onto Pareto-feasibility via Boyd's alternating projections."""
+  
+  def prune_primitives_until_feasible(
+      primitives: list[CompositionPrimitive],
+      *,
+      max_iterations: int = 10,
+  ) -> list[CompositionPrimitive]:
+      """Prune primitives until N-primitive composition is Dykstra-feasible."""
+  ```
+
+**Operator-routable next action**:
+- **One-line command**: queue for Codex post-A-2-N-7 per SYNTHESIS-V2 RECONCILED-5
+- **Routing destination**: Codex
+- **Sister directive**: to be drafted post-A-2-N-7 landing
+- **Expected harvest**: `src/tac/optimization/dykstra_feasibility_first.py` lands with canonical API
+
+### 14.5 Playbook A-4 — MI-min Wyner-Ziv canonical helper (STRUCTURAL primitive)
+
+**Header**:
+- **Candidate**: N/A (canonical helper, not per-candidate)
+- **Asymptotic approach**: (apparatus; benefits all Wyner-Ziv-derivative primitives)
+- **Budget**: $0 (CPU-only canonical helper landing)
+- **Predicted aggregate ΔS band**: N/A (helper; provides theorem-level bounds for B1 / F1 / F2 / F3 / F4 / Y2 / C1 / N-1)
+- **Mathematical sub-paradigm (Tao partition)**: (a) MI-min Wyner-Ziv — explicit instance per Atick-Redlich 1990
+
+**Canonical helper specification**:
+- **Location**: `src/tac/rate_attack_mi_lower_bound/` (new package; ~800-1200 LOC)
+- **API**:
+  ```python
+  def compute_mi_lower_bound_for_archive(
+      archive_sha256: str,
+      *,
+      side_info: bytes,
+      n_pairs: int = 600,
+      repo_root: Path | None = None,
+  ) -> MILowerBoundVerdict:
+      """Compute Wyner-Ziv MI lower bound for per-pair encoding with side info."""
+  
+  def compute_per_byte_conditional_mi(
+      archive_bytes: bytes,
+      side_info: bytes,
+  ) -> dict[int, float]:
+      """Per-byte conditional MI estimate."""
+  ```
+
+**Operator-routable next action**:
+- **One-line command**: queue for Codex post-A-2-N-7 per SYNTHESIS-V2 RECONCILED-5
+- **Routing destination**: Codex
+- **Sister directive**: to be drafted post-A-2-N-7 landing
+- **Expected harvest**: `src/tac/rate_attack_mi_lower_bound/` package lands with canonical API
+
+### 14.6 Playbook B1 — contest-video-as-codebook (SATURATION-DEPENDENT; GATED on A-2 N-7)
+
+**Header**:
+- **Candidate**: any per-frame RGB sequence with patches that can be encoded as codebook-index references to upstream `comma2k19` patches
+- **Candidate archive_sha256**: TBD per A-2 N-7 verdict cascade
+- **Candidate lane_id**: TBD
+- **Asymptotic approach**: FRONTIER_PURSUIT (B1 ships codebook-index + offset + scale + RGB-residual bytes)
+- **Budget**: $1-8 (Modal A10G smoke + Lightning A100 full)
+- **Predicted aggregate ΔS band**: `[-0.020, -0.005]` CONDITIONAL on A-2 N-7 SATURATION_REFUTED
+- **Per-axis hardware classification**: AXIS-INVARIANT (mostly); AV1 decode is deterministic across axes; codec choice may have BOTH-WITH-DIFFERENT-OPTIMAL profile selection
+- **Mathematical sub-paradigm (Tao partition)**: (a) MI-min Wyner-Ziv (upstream patches IS the side-info) + (b) Kolmogorov-complexity-min (codebook-index encoding)
+- **Predecessor probe outcome**: GATED on A-2 N-7; no prior B1 dispatch per `.omx/state/probe_outcomes.jsonl`
+
+**Composition plan**:
+- **Primitive 11 (procedural_codebook_generator)**: PRIMARY (codebook generated from upstream patches per `weight_derived_codebook_generator.py` extension to per-frame patches)
+- **Primitive 6 (Wyner-Ziv deliverability)**: ACTIVE (codebook-index encoding IS Wyner-Ziv canonical)
+- **Primitive 13 (A1-SPECIALIZED binary distillation)**: ACTIVE (B1's codebook + inflate.py path may need binary distillation per Catalog #6 if codebook bytes > L4 budget)
+- **Primitive 14 (per-axis hardware exploit matrix)**: ACTIVE (AV1 decode profile differs per CPU vs GPU)
+- **Other primitives**: per cathedral autopilot v2 cascade routing
+
+**Layer 3 bilevel optimizer state**:
+- OUTER tier verdict: codec_config = AV1 + codebook-index; per_primitive_alpha = sub-additive (B1 × null_exploit × procedural_codebook expected at α ≈ 0.6)
+- MIDDLE tier verdict: class_shift_required = False (within-class for FRONTIER_PURSUIT)
+- INNER tier verdict: Fisher matrix per-pair codebook-residual gradient
+- INNERMOST tier verdict: per-frame codebook-index assignment via tropical sum-min over upstream patches
+
+**Anti-arbitrariness foundation per §6**:
+- HARD-EARNED vs CARGO-CULTED: CARGO-CULTED-PENDING-A-2-N-7 (B1 viability depends on A-2 N-7 saturation verdict)
+- Empirical anchor: TBD per A-2 N-7 verdict + B1 smoke
+- Per-candidate adaptation: codebook per-candidate's per-frame patches
+- Legal-receiver-path: LEGAL_RECEIVER_IN_BUDGET (AV1 decoder is in upstream deps; codebook-index encoding is ≤200 LOC inflate path)
+- Dykstra-feasibility: per primitives 6 + 11 + 14 composition; sub-additive default
+
+**Cost + time**:
+- Cost estimate: $1-3 smoke (Modal A10G 50ep) + $5-15 full (Lightning A100 100ep)
+- Time estimate: ~2-3 days smoke + ~5-10 days full
+- Predecessor: A-2 N-7 SATURATION_REFUTED verdict
+- Successors: B1 verdict informs sister vectors C1 (cross-archive bytes-as-libraries) + B2 (per-pair codebook)
+
+**Reactivation criteria per CLAUDE.md "Forbidden premature KILL"** (if B1 returns DEFER):
+1. Re-run B1 with per-cell-Venn-classified codebook (per primitive 2)
+2. Re-run B1 with extended upstream patch corpus (include sister Comma2k19 chunks)
+3. Pivot to C1 (cross-archive bytes-as-libraries)
+4. Pivot to per-pair B2 codebook
+
+**Operator-routable next action**:
+- **One-line command**: post A-2 N-7 verdict landing per Codex /goal LOOP; draft sister routing directive
+- **Routing destination**: Codex → Modal A10G smoke → Lightning A100 full
+- **Sister directive**: TBD post-A-2-N-7 verdict
+- **Expected harvest**: `experiments/results/b1_contest_video_codebook_<utc>/report.json`
+
+### 14.7 Playbook A1-SPECIALIZED — binary-distilled scorer-feature-space (RECLAIMABLE_VIA_PACKET_COMPILER)
+
+**Header**:
+- **Candidate**: A1 substrate class (scorer-feature-space encoding) per the META-audit reclaimability table
+- **Candidate archive_sha256**: TBD per sister A1-distillation subagent (`acb1a03a8e4234022`)
+- **Candidate lane_id**: TBD per sister subagent
+- **Asymptotic approach**: ASYMPTOTIC_PURSUIT (reclaimed scorer-feature-space exploit is class-shift candidate)
+- **Budget**: $10-50 (substrate-engineering effort per ASYMPTOTIC_PURSUIT)
+- **Predicted aggregate ΔS band**: `[-0.030, -0.010]` per the operator's "we can get the stuff extremely small" reclaimability claim + sister subagent's design
+- **Per-axis hardware classification**: BOTH-WITH-DIFFERENT-OPTIMAL (Zig native binary is CPU-native; CUDA path requires PTX)
+- **Mathematical sub-paradigm (Tao partition)**: (b) Kolmogorov-complexity-min (binary distillation IS the K-min realization) + (d) per-axis-hardware-exploit (Zig native binary is CPU-native)
+- **Predecessor probe outcome**: A1 original was CARGO-CULTED-PENDING per META-audit; sister subagent producing canonical design
+
+**Composition plan**:
+- **Primitive 13 (A1-SPECIALIZED binary distillation)**: PRIMARY (this playbook IS the canonical A1-SPECIALIZED instance)
+- **Primitive 6 (Wyner-Ziv deliverability)**: ACTIVE (A1-SPECIALIZED's archive bytes ship via Wyner-Ziv deliverable Tier 2 / Tier 3 per the operator's "extremely small" target)
+- **Primitive 11 (procedural_codebook_generator)**: ACTIVE (substrate weight-derived codebook per primitive 11's `weight_derived_codebook_generator.py`)
+- **Primitive 14 (per-axis hardware exploit matrix)**: ACTIVE (Zig native binary CPU-optimal; PTX path GPU-optimal)
+- **Primitive 2 (Venn classifier)**: ACTIVE (binary distillation targets specific Venn cells per per-substrate-class signature)
+- **Other primitives**: per cathedral autopilot v2 cascade routing
+
+**Layer 3 bilevel optimizer state**:
+- OUTER tier verdict: codec_config = current + A1-SPECIALIZED binary sidecar; per_primitive_alpha = ADDITIVE (class-shift; primitive 13 expected to ADD orthogonal information per ASYMPTOTIC_PURSUIT)
+- MIDDLE tier verdict: class_shift_required = TRUE (per ASYMPTOTIC_PURSUIT requirement); substrate_id = A1-SPECIALIZED
+- INNER tier verdict: Fisher matrix per-pair scorer-feature-space gradient; Riem-Newton converged distillation parameters
+- INNERMOST tier verdict: per-pair scorer-feature-space encoding via A1-SPECIALIZED binary
+
+**Anti-arbitrariness foundation per §6**:
+- HARD-EARNED vs CARGO-CULTED: CARGO-CULTED-PENDING-EMPIRICAL per operator's "extremely small" claim; sister subagent producing design memo
+- Empirical anchor: pending sister memo landing; reactivation criteria pinned per §11 assumption #7
+- Per-candidate adaptation: distillation method per-candidate (Zig codegen / sparse_quantized / symbolic_closed_form / fixed_table / ablation)
+- Legal-receiver-path: RECLAIMABLE_VIA_PACKET_COMPILER per Catalog #6 + L4 (≤10 KB satisfies budget; deterministic per `contest_one_video_replay` target)
+- Dykstra-feasibility: per primitives 6 + 11 + 13 + 14 composition; ADDITIVE override (class-shift; orthogonal information)
+
+**Cost + time**:
+- Cost estimate: $5-15 smoke (Modal A100 100ep distillation) + $15-50 full (Lightning A100 500ep distillation)
+- Time estimate: ~5-10 days smoke + ~15-30 days full per ASYMPTOTIC_PURSUIT substrate-engineering effort
+- Predecessor: sister A1-distillation subagent's design memo (`acb1a03a8e4234022` in flight)
+- Successors: A1-SPECIALIZED verdict informs sister F3-F6 reclaimability per META-audit reclaimability table
+
+**Reactivation criteria per CLAUDE.md "Forbidden premature KILL"** (if A1-SPECIALIZED returns DEFER):
+1. Re-run with different distillation method per sister memo's 5-method enumeration
+2. Re-run with extended target_bytes (≤50 KB instead of ≤10 KB; trade off against L4 budget)
+3. Pivot to F4 (PoseNet summary(512) bottleneck inverter; smaller manifold)
+4. Pivot to per-substrate-class A1 (target specific Venn cells)
+
+**Operator-routable next action**:
+- **One-line command**: await sister A1-distillation subagent's memo landing; draft sister routing directive per the memo's recommended distillation method
+- **Routing destination**: Codex → Modal A100 (substrate-engineering effort)
+- **Sister directive**: TBD post-sister-memo landing
+- **Expected harvest**: `experiments/results/a1_specialized_distillation_<method>_<utc>/report.json`
+
+---
