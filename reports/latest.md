@@ -83,7 +83,123 @@ last_refreshed_note: |
 
 - The Top-5 CUDA bucket is dominated by PR106 `format0*` family (alien-tech routing per `feedback_a1d3dd050fc09dc54`) — a clear architectural cluster worth deeper investigation.
 - The CPU/CUDA bifurcation is real: best-CPU is fec6 (PR101 family) but best-CUDA is format0d (PR106 family). Different lanes win different axes. **A binding artifact that combines fec6's selector + PR106 format0d's score-table grammar + FP4 codebook + Ballé hyperprior + Cheng2020 has every primitive we'd need for a dual-axis frontier sweep.**
+
+### ASYMPTOTIC PURSUIT pivot (2026-05-17)
+
+Per operator directive 2026-05-17 verbatim *"Want to keep pushing to asymptotic as top priority"* + Option B falsification (WZ-on-existing-archives DEFERRED; top aggregate ΔS = 0.000421 << 0.001 leaderboard precision floor). ASYMPTOTIC pivot must come from **substrate-class-shift methods** per CLAUDE.md "Substrate retirement discipline" + HORIZON-CLASS council 2026-05-17 Stage 2 deferred queue.
+
+**Canonical readiness assessment**: `tools/asymptotic_pursuit_candidate_readiness_assessment.py` + dispatch queue `tools/asymptotic_pursuit_dispatch_queue.py`. Artifact: `.omx/state/asymptotic_pursuit/readiness_assessment_*.json`.
+
+**6-candidate readiness matrix** (per `lane_asymptotic_pursuit_substrate_class_shift_q4_pivot_top_priority_20260517`):
+
+| Substrate | Verdict | Council | Recipe | Predicted ΔS | Cost | Blocking |
+|---|---|---|---|---|---|---|
+| `time_traveler_l5_z6` | DEFER | PROCEED_WITH_REVISIONS | research_only=true | [0.13, 0.16] *frontier_pursuit* | $1.08 | Catalog #315 + 3 recipe blockers |
+| `atw_codec_v2` | DEFER | NO_DELIBERATION | research_only=true | unknown | $1.92 | **Catalog #313 probe BLOCKED** (INDEPENDENT verdict 2026-05-16) |
+| `time_traveler_l5_autonomy` | NEEDS_FIX | NO_DELIBERATION | dispatch-enabled | unknown | $27.43 | 4 recipe-side blockers (Dykstra polytope + composition revision + Tier C reconciliation + sextet pact) |
+| `c6_e4_mdl_ibps` | NEEDS_FIX | NO_DELIBERATION | dispatch-enabled | unknown | $0.76 | 4 recipe-side blockers (Dykstra polytope + Tier C reconciliation + sextet pact) — **cheapest path forward** |
+| `nscs01_nullspace_split_renderer` | DEFER | PROCEED_WITH_REVISIONS | research_only=true | unknown | $0.43 | Catalog #315 + Phase 2 council |
+| `nscs03_end_to_end_balle_joint_codec` | DEFER | NO_DELIBERATION | research_only=true | unknown | $0.65 | research_only flag |
+
+**TOP-1 recommendation: `time_traveler_l5_autonomy`** (NEEDS_FIX; would require recipe blocker resolution + Dykstra polytope emission + composition revision). **TOP-2 (Stage 2 stacking): `c6_e4_mdl_ibps`** ($0.76 cost; cheapest 4-blocker path; has 7 historical Modal smokes + Tier-C density 2.67e-5 = class-shift candidate).
+
+**Z6 is the highest-EV substrate** (predicted [0.13, 0.16]; $1.08; horizon_class=frontier_pursuit) BUT blocked by Catalog #315 sextet council PROCEED_WITH_REVISIONS. Recommended next operator action: convene Z6 Phase 2 sextet council to iterate to OPTIMAL FORM PROCEED-unconditional verdict, unlocking Z6 dispatch.
+
+**ATW V2 is BLOCKED** by Catalog #313 predecessor probe outcome (`atw_v2_d4_h_latent_given_scorer_class_20260516` verdict INDEPENDENT; MI=0.006385 bits/symbol << 0.5 threshold). Per CLAUDE.md "Forbidden premature KILL" + Catalog #308: NOT a class-kill; reactivation requires richer side-information per probe notes.
+
+**Stage 2 stacking design** (Q9 per HORIZON-CLASS council): TOP-1 ⊕ TOP-2 composition deferred until first ASYMPTOTIC empirical anchor lands. Pre-entropy pairwise composition_alpha probe (OP-3 from HORIZON-CLASS council) is the dependency for any 2+ substrate composition. Per Catalog #227 substrate composition matrix.
+
+**5 op-routables for operator** (NO commits / NO paid dispatch fired by this assessment per operator NON-NEGOTIABLE):
+
+1. Convene Z6 sextet council Phase 2 PROCEED-unconditional deliberation (highest-EV unlock; $0 GPU)
+2. Land C6 IBPS recipe-side fixes: Dykstra polytope at `.omx/state/dykstra_feasibility/c6_e4_mdl_ibps.json` + composition revision memo + Tier C reconciliation + sextet sign-off (cheapest dispatch path post-fix at $0.76)
+3. Run pre-entropy pairwise composition_alpha probe per HORIZON-CLASS council OP-3 ($0 GPU; ~2h editor) before any Stage 2 stacking
+4. Operator decision: which top-1 candidate to prioritize for fix work — Z6 (high EV / blocked by council) vs C6 (cheap / blocked by recipe-side only)?
+5. After top-1 fix lands: operator-authorize → `tools/run_modal_smoke_before_full.py --recipe <recipe>` per Catalog #167
 - A1 (`87ec7ca5f2f3`) at 0.19285 CPU is #3 — anchor for a separate (PR101-grammar minimalist) line.
+
+## Q4 STATUS + PIVOT — REDO+PIVOT 2026-05-17
+
+> Last refreshed 2026-05-17 by REDO+PIVOT subagent (lane `lane_redo_pivot_fix_all_phantom_score_substrate_class_shift_q4_budget_redirect_20260517`). Per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
+
+### Wyner-Ziv on existing archives — DEFERRED-pending-pivot
+
+**Empirical falsification**: Option B archive-member sweep landed 2026-05-17 at `.omx/state/wyner_ziv_deliverability/option_b_archive_member_sweep_20260517T221034.json`:
+
+- **All 8 VALIDATED contest archives at entropy floor** (compression ratio ≥ 0.997 across lzma + brotli + zlib).
+- **Top aggregate savings: 0.000332** (apogee_int6_archive) — **below 0.001 leaderboard precision floor**.
+- **Verdict**: `recommended_q4_target=None`, `q4_verdict=DEFER_Q4`.
+- **Implication**: Pre-entropy Wyner-Ziv hoist of currently-shipping contest archive members offers NO measurable score gain. The archives are already at compression-ratio saturation.
+
+### Phantom-score class extincted by Catalog #321 + #322
+
+The PRIOR Q4 path (sister `a891faa328f9e4754` HALTED) cited 3 candidates (`pr101_state_dict`, `pr106_state_dict`, `posenet_class_sensitivity`) with positive `deliverable_score_savings_estimate` values (0.477 / 0.470 / 11.608) that were **phantom**: those bytes are research sidecars (`.pt` state dicts under `.omx/tmp/`), NOT contest `archive.zip` members. Catalog #321 (entry-side phantom revert) + Catalog #322 (downstream autopilot-consumer phantom revert) STRICT-from-byte-one extinct this class structurally at 5 surfaces. The 2 phantom-provenance `pairwise_alpha_*.json` artifacts (Q6 OP-3 extended sweep) are quarantined to `.omx/state/wyner_ziv_deliverability/quarantine_phantom_pre_catalog_322/`.
+
+### Q4 BUDGET REDIRECT — top-1 substrate-class-shift candidate
+
+Per HORIZON-CLASS Stage 2 deferred plan (CLAUDE.md Catalog #309 horizon_class taxonomy) + Catalog #310 (PRIMARY class-shift not bolt-on) + Option B `q4_alternative_paths`, Q4's redirected $0.70 budget should target **substrate-class-shift methods** that are structurally distinct from the within-class (PR101/PR106/A1) plateau cluster:
+
+| Rank | Substrate | Lane | Predicted band | Status |
+|------|-----------|------|----------------|--------|
+| **#1 redirect target** | **Z6 ego-motion-conditioned predictive coding** (Rao-Ballard + Atick-Redlich + FiLM) | `lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516` | [0.13, 0.16] [Dykstra-validated] | Phase 1B lift landed 2026-05-16; recipe `substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml` exists `research_only=true` pending Phase 2 council |
+| #2 | C6 IBPS MDL Information Bottleneck Per Pair | `lane_c6_e4_mdl_ibps_substrate_20260514` | Tier-C density pending | L1 substrate scaffold |
+| #3 | ATW V2 cooperative-receiver loss (Atick-Redlich) | `substrate_atw_codec_v2_modal_a100_dispatch.yaml` | (V2 D4 probe INDEPENDENT 2026-05-16) | Bolt-on at loss surface |
+| #4 | TT5L L5 autonomy (broader staircase) | `lane_time_traveler_l5_autonomy_substrate_20260513` | L5 deferred queue | L1 |
+| #5 | Z7 wavelet-multi-scale Daubechies | (Phase 1A scaffold) | HIGHER engineering risk per Z6/Z7/Z8 design memo §22 | L0 scaffold |
+| #6 | Z8 Hafner DreamerV3 latent dynamics | (Phase 1A scaffold) | HIGHEST risk; requires Z6+Z7 anchors first | L0 scaffold |
+
+**Q4 redirect stub** at `.omx/operator_authorize_recipes/q4_substrate_class_shift_redirect_z6_predictive_coding_20260517T222800Z.yaml` documents the decision. The actual dispatch routes through the Z6 recipe AFTER Phase 2 council consensus + Catalog #167 smoke-before-full pattern.
+
+### Lanes DEFERRED-pending-pivot (per CLAUDE.md "Forbidden premature KILL")
+
+| Lane | Reason | Reactivation criteria |
+|------|--------|------------------------|
+| `lane_super_additive_lane_g_v3_siren_topology_integration_20260517` | Sister #823 self-flagged α=4.74 as FALSE_SIGNAL ARTIFACT (byte-identical renderer.bin SIREN timeout); v2 cascade structurally landed for FUTURE genuine SUPER_ADDITIVE discoveries | Re-run pairwise_alpha probe against VALIDATED_CONTEST_MEMBER substrates only |
+| `lane_q6_preprobe_pairwise_composition_alpha_20260517` | Phantom-provenance probe inputs (pr101_state_dict / pr106_state_dict / posenet_class_sensitivity) per Catalog #321/#322 | VALIDATED_CONTEST_MEMBER inputs only |
+| `lane_batched_815_consumer_15_amendment_plus_816_meta_meta_cleanup_plus_q6_op3_extended_20260517` | Q6 OP3 extended sweep produced phantom-provenance α values | Catalog #321 revalidation |
+
+### Current frontier remains (no Q4 anchor landed)
+
+- **CPU**: 0.19205 [contest-CPU] fec6 (unchanged from 2026-05-15)
+- **CUDA**: 0.20533 [contest-CUDA] pr106 format0d (unchanged from 2026-05-16)
+- **Mission alignment** (CLAUDE.md): this REDO is `frontier_protecting` (preventing phantom anchor pollution that would corrupt dispatch ranking) + queues `frontier_breaking` substrate-class-shift work via Q4 redirect to Z6.
+
+### First ASYMPTOTIC empirical anchor — C6 IBPS smoke 2026-05-17 — DEFER
+
+**Empirical anchor**: C6 IBPS smoke 50ep Modal A10G `fc-01KRW353MJJ9A6QW8H99QWZEMH` 2026-05-17T23:08:18Z returned final_score=**3.04** [contest-CPU advisory; archive_sha=`be06a4b0972e6c...`].
+
+- **Predicted smoke band**: `[0.10, 0.30]` (recipe `smoke_score_band`)
+- **Actual**: 3.04 — **10× OUTSIDE band**
+- **Mechanism (SegNet collapse)**: `score_seg_contribution=2.60` dominates (avg_segnet_dist=0.0260, vs PR101 baseline ~0.001). IB bottleneck (24-dim z) compresses pose well (avg_posenet_dist=0.0081 OK) and rate is fine (0.0060 OK), but the bottleneck destroys segmentation.
+- **Training converged** (50ep, A10G, 33min): loss 53.49 → 4.91 (10× reduction)
+- **Archive**: 225,157 bytes zip / 226,388 bytes raw; 128K params (encoder=35K + decoder=78K + latents=14K)
+- **CPU axis (auth_eval_device=cpu, advisory_only=true)** — Modal injected CPU axis NOT CUDA; rc=1 because dispatch contract required `contest_cuda` axis. Paired full dispatch **NOT FIRED** per briefing "Score outside band → ABORT before full dispatch + emit landing memo + register Catalog #313 probe outcome verdict DEFER."
+- **Catalog #313 probe outcome registered DEFER** (`c6_e4_mdl_ibps_smoke_modal_a10g_50ep_fc01krw353mjj9a6qw8h99qwzemh_20260517`; blocker_status=blocking; expires_at_utc=2026-06-16); per CLAUDE.md "Forbidden premature KILL" + "Substrate MUST be at OPTIMAL FORM" — this is **implementation-level falsification** of `beta_ib=0.01 + latent_dim=24`, NOT a paradigm kill.
+- **Stage 2 reactivation gate clause #1** (anchor within ±10% of L5 codex band 0.138): **NOT SATISFIED** (3.04 / 0.138 = 22× outside).
+- **Frontier beat**: NO — 3.04 ≫ 0.19205 CPU baseline; no axis update.
+- **Reactivation queue** (3 paths): (1) `beta_ib` sweep `[0.0001, 0.001, 0.01, 0.1, 1.0]` to balance pose vs seg; (2) `latent_dim` widen 24 → 48/96/192 to give SegNet more capacity; (3) Phase 2 sextet cargo-cult-unwind redesign of SegNet-collapse mechanism per Catalog #303 (decoder output resolution? IB KL too tight? Phase 2 redesign).
+- **Mission alignment**: `mission_questioned` — produced a real empirical upper bound for first ASYMPTOTIC class-shift smoke; downstream operator decision: invest in C6 redesign (reactivation queue) or pivot Q4 budget to Z6 / TT5L L5 autonomy per the readiness matrix above.
+- Memory: `feedback_c6_ibps_first_asymptotic_dispatch_smoke_before_full_paired_landed_20260517.md`.
+- Lane: `lane_c6_ibps_first_asymptotic_dispatch_smoke_before_full_paired_20260517` (L1; gates: real_archive_empirical + memory_entry).
+
+### Z6-v2 Wave 2 first DISPATCH attempt 2026-05-18 — DEFER-PENDING-DRIVER-FIX (implementation-level falsification)
+
+**Wave 2 dispatch attempt** (task #847): Z6-v2 Candidate 1 (Multi-layer FiLM depth=3 ~300K params per Phase 3 council §9 binding spec) fired TWO Modal T4 dispatches via paired-env Catalog #199 bypass after operator "All approved be aggressive" 2026-05-17 + Phase 3 council §17 op-routable #1 sign-off + C6 IBPS DEFER outcome 2026-05-17 satisfied council §9 cost-adjusted recommendation.
+
+- **Smoke** (`fc-01KRW7RHFHP640BHTQ0FZM3M38`, T4, 50ep, $0): rc=0 in 10.3s; both archives emitted (52,458 B main + 52,610 B identity-predictor disambiguator at SAME archive bytes per Catalog #229 paired-control marker); `evidence_grade=smoke-no-scorer`; `score_claim_valid=false`; smoke-before-full wrapper marked SMOKE RED per band-enforcement vs synthetic-mode contract mismatch.
+- **Full canary** (`fc-01KRW7ZCYK5XF6MSHD24R71A46`, T4, 100ep, $0): rc=0 in 9.1s; SAME `_smoke_main` path executed (`evidence_grade=smoke-no-scorer`, `smoke=1`, `smoke_epoch_cap=3`); produced 27,850-param synthetic-cfg architecture NOT the council-binding ~300K depth=3 hidden_dim=96 spec.
+- **Diagnosis**: driver-level bug in `scripts/remote_lane_substrate_time_traveler_l5_z6.sh` `stage_4_trainer_begin` hardcodes `smoke=1` regardless of dispatch env vars (Z6_EPOCHS=100 + Z6_PREDICTOR_ARCHITECTURE=multi_layer_film_depth_3_300k + Z6_PREDICTOR_PARAM_COUNT_TARGET=300000 + Z6_ENABLE_AUTOCAST_FP16=true were threaded correctly but ignored by driver).
+- **Implementation-level falsification per Catalog #307**: the depth=3 ~300K Multi-layer FiLM spec was NEVER empirically tested. Atick Council Revision #6 trigger NOT MET (ΔS unmeasured). Per CLAUDE.md "Forbidden premature KILL without research exhaustion": substrate paradigm NOT killed; cargo-cult unwind methodology preserved.
+- **Catalog #245**: both call_ids registered in `.omx/state/modal_call_id_ledger.jsonl` with terminal `harvested` events.
+- **Catalog #313 probe outcome**: `z6_v2_wave_2_dispatch_smoke_before_full_paired_2026_05_18` verdict DEFER blocker_status=blocking expires_at_utc=2026-06-17T00:30:00Z.
+- **Catalog #324 post-training Tier-C re-measurement**: NOT APPLICABLE — neither archive carries the architecture-as-spec'd; post-training Tier-C cannot validate the council-binding spec against synthetic-cfg outputs.
+- **Stage 2 reactivation gate clause #1**: NOT SATISFIED.
+- **Frontier beat**: NO axis update (no empirical contest-CUDA / contest-CPU score produced; frontier remains 0.19205 CPU / 0.20533 CUDA).
+- **Total spent**: ~$0.50 across both fires (both 10s well under cost band).
+- **Reactivation queue** (3 paths): (1) **driver-fix subagent**: modify `scripts/remote_lane_substrate_time_traveler_l5_z6.sh` to accept `$Z6_TRAINER_MODE` env var (smoke|full) and dispatch trainer accordingly + re-fire $3 envelope per Phase 3 council §9; (2) trainer-side fix: gate `smoke=1` flag in `_smoke_main` invocation on env var rather than hardcoded; (3) Phase 4 council on Wave 2-outcome with empirical anchor (BLOCKED on path 1 or 2 landing first).
+- **Mission alignment**: `mission_questioned` — second consecutive ASYMPTOTIC dispatch attempt frustrated by infrastructure-level bug (C6 IBPS by SegNet collapse mechanism; Z6-v2 by driver mode hardcoding). Per CLAUDE.md "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" + Catalog #315: BOTH attempts demonstrate the iteration discipline IS structurally protecting against premature paradigm KILL by deferring; the next operator action is operator-routed driver-fix (path 1).
+- Memory: `feedback_z6_v2_wave_2_dispatch_smoke_before_full_paired_cpu_cuda_landed_20260518.md`.
+- Lane: `lane_z6_v2_wave_2_dispatch_smoke_before_full_paired_cpu_cuda_20260518` (L1; gates: impl_complete + memory_entry).
 
 ## Executive summary
 

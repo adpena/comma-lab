@@ -790,16 +790,37 @@ Adversarial review found a second completion-marker hazard:
   contain a valid-looking `stats.json` from a previous invocation. If the
   current trainer exited zero without rewriting stats, Stage 5 would classify
   the stale file as the current run's evidence.
-- Fix: Stage 4 records `REMOTE_DRIVER_STAGE4_STARTED_UNIX` immediately before
-  invoking the trainer. Stage 5 now rejects `stats.json` with mtime older than
-  that timestamp and exits `33` before writing `LANE_Z6_PCWM_DONE`.
+- Fix: before invoking the trainer, the remote driver moves any pre-existing
+  `$Z6_OUTPUT_DIR/stats.json` to
+  `$LOG_DIR/stale_stats_quarantine/stats.before_<job>.<utc>.<pid>.json`. Stage 4
+  also records `REMOTE_DRIVER_STAGE4_STARTED_UNIX` immediately before invoking
+  the trainer. Stage 5 rejects a trainer-written `stats.json` with mtime older
+  than that timestamp and exits `33` before writing `LANE_Z6_PCWM_DONE`.
 - Dispatch-ledger effect: stale stats terminalize as
   `failed_z6_pcwm_remote_driver_rc_33` with
   `evidence_marker=[not-yet-classified] score_claim=unknown`, preserving the
-  fact that the current invocation did not produce usable evidence.
+  fact that the current invocation did not produce usable evidence. A
+  pre-existing quarantined stats file followed by no current stats terminalizes
+  as `failed_z6_pcwm_remote_driver_rc_31`, with the old stats preserved for
+  forensics.
 
 This blocks a stale-output false authority path without changing model training
 or archive bytes.
+
+## Remote Pre-Existing Stats Quarantine Repair
+
+The stronger no-stale-reuse invariant is now explicit:
+
+- Any `stats.json` found before Stage 4 is previous-run evidence, not current
+  evidence.
+- The driver preserves it under `$LOG_DIR/stale_stats_quarantine/` instead of
+  deleting it.
+- The current invocation must produce a fresh `stats.json`; otherwise Stage 5
+  fails closed as missing stats (`rc=31`).
+
+This is important for reused Modal volumes and manual resume paths, where a
+directory can outlive a single trainer invocation. It prevents stale evidence
+reuse while preserving the old artifact for later forensic review.
 
 ## Verification
 
@@ -810,6 +831,8 @@ or archive bytes.
   - PASS after remote terminal-claim axis split repair: `3 passed in 0.32s`
   - PASS after remote completion stale-stats reuse repair:
     `4 passed in 0.41s`
+  - PASS after remote pre-existing stats quarantine repair:
+    `5 passed in 0.50s`
 - `.venv/bin/python -m pytest src/tac/tests/test_z6_v2_candidate_1_wave_2_build.py src/tac/tests/test_time_traveler_l5_z6_remote_driver.py src/tac/tests/test_probe_z6_predictive_coding_vs_identity_disambiguator.py -q`
   - PASS after remote completion missing-stats fail-closed repair:
     `50 passed in 13.22s`
@@ -817,12 +840,16 @@ or archive bytes.
     `50 passed in 11.88s`
   - PASS after remote completion stale-stats reuse repair:
     `51 passed in 12.55s`
+  - PASS after remote pre-existing stats quarantine repair:
+    `52 passed in 13.22s`
 - `.venv/bin/python tools/canonical_dispatch_optimization_protocol.py --trainer experiments/train_substrate_time_traveler_l5_z6.py --recipe substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch --json`
   - PASS after remote completion missing-stats fail-closed repair:
     `overall_pass=true`, `blockers=[]`, Tier 1/2/3 blockers all `[]`
   - PASS after remote terminal-claim axis split repair:
     `overall_pass=true`, `blockers=[]`, Tier 1/2/3 blockers all `[]`
   - PASS after remote completion stale-stats reuse repair:
+    `overall_pass=true`, `blockers=[]`, Tier 1/2/3 blockers all `[]`
+  - PASS after remote pre-existing stats quarantine repair:
     `overall_pass=true`, `blockers=[]`, Tier 1/2/3 blockers all `[]`
 - `git diff --check`
   - PASS after remote completion missing-stats fail-closed repair
@@ -843,6 +870,8 @@ or archive bytes.
 - `git diff --check`
   - PASS after run-dir exact-eval autodiscovery repair
 - `tools/claim_lane_dispatch.py summary --live-only --format json`
+  - `active_count=0`, `stale_nonterminal_count=0` at `2026-05-18T03:22:39Z`
+  - `active_count=0`, `stale_nonterminal_count=0` at `2026-05-18T03:20:40Z`
   - `active_count=0`, `stale_nonterminal_count=0` at `2026-05-18T03:16:38Z`
   - `active_count=0`, `stale_nonterminal_count=0` at `2026-05-18T03:13:20Z`
   - `active_count=0`, `stale_nonterminal_count=0` at `2026-05-18T03:09:30Z`

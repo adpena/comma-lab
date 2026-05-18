@@ -146,11 +146,46 @@ Three categories, three answers (rolling up to §1 elasticity model + §4.1 recu
 
 **This PR explicitly documents the score gap as a research finding**, not an oversight: the scoring landscape admits two distinct local optima depending on which device's kernel signature you optimize against. The fec6 submission targets CPU; PR106 format0d (§5) targets CUDA. Both are present in our public codebase. Comma.ai may select either depending on which axis the contest infrastructure rules will rank in production.
 
-## 5. The CUDA-axis sister: PR106 `format0d` "alien-tech" frontier
+### 4.4 macOS-CPU is contest-CPU-faithful; MPS is not
+
+The two local-eval paths on the same MacBook Pro diverge from the contest CPU axis by very different amounts:
+
+| device | hardware | PR107 score | divergence vs GHA Linux x86_64 |
+|---|---|---|---|
+| Linux x86_64 CPU | GitHub Actions `ubuntu-latest` (contest CPU axis) | `0.1966358879` | reference |
+| macOS-CPU | M5 Max MacBook Pro | `0.19664189` | `+6.0e-6` |
+| MPS | M5 Max MacBook Pro | `0.49` | `+0.29` (~145%) |
+
+Source: `feedback_dual_cpu_cuda_auth_eval_mandatory_20260508.md` + the PR107 paired-eval anchor. The asymmetry is structural per §4.1 levels 4–5: the CUDA divergence compounds Lipschitz-fashion across FastViT-T12 blocks `(1.0065)^256 ≈ 5.27`, but the macOS-CPU↔Linux-x86_64 rounding cascade does not compound at that rate even though the two CPUs are not bit-identical.
+
+Two practical consequences:
+
+**1. macOS-CPU runs as a free first-pass filter.** Candidate archives are evaluated locally on the M5 Max (~60–90 min per full 1200-frame eval, $0 marginal); only those competitive with the current frontier are sent to paid `[contest-CPU]` GHA verification (~$0.06–0.12 per eval) or `[contest-CUDA T4]` (~$0.30–1.50). The signal routes through `tac.optimization.macos_cpu_advisory_signal` with `evidence_grade="macOS-CPU-advisory"`, `score_claim=false`, `promotion_eligible=false`. Catalog #192 STRICT preflight refuses any persisted artifact that combines the advisory grade with a score claim. Across the 53+ substrates and parameter sweeps explored, the avoided-dispatch cost is on the order of $50–200.
+
+**2. The MPS measurement became a rule.** The 23× PoseNet drift on MPS (`feedback_no_local_mps_for_authoritative_kill_or_promote_20260429.md`) became Catalog #1 STRICT preflight: `--device mps` cannot be a fallback default, and every internal promote/kill decision must cite `[contest-CUDA]` or `[contest-CPU]` evidence. Several earlier decisions made against MPS were retroactively invalidated.
+
+### 4.5 One-arg local-MPS vs Modal dispatch switch
+
+Per operator directive 2026-05-17 — *"Deploying to local MPS versus modal should be super easy to configure, like one arg in a func"* — the `tools/operator_authorize.py` dispatcher now accepts a single `--target {auto|modal|vastai|lightning|local|local-mps|local-cpu}` CLI flag (CLI > recipe precedence). The new `local-mps` and `local-cpu` targets route results through the canonical `tac.optimization.mps_research_signal` / `tac.optimization.macos_cpu_advisory_signal` manifests (PERMANENTLY non-authoritative per CLAUDE.md "MPS auth eval is NOISE"); the canonical `[contest-CPU]` / `[contest-CUDA]` posterior is structurally protected by Catalog #317 STRICT preflight, by per-dispatch `evidence_grade` auto-stamping, by a loud `NON-AUTHORITATIVE` banner, and by recipe-level refusal of `score_claim: true` / `promotion_eligible: true`. The intent is to accelerate dev velocity for legitimate local proxy iteration (curve discovery, TTO sweeps, smoke gates) at $0 marginal cost while preserving every score-discipline invariant documented in §4.4.
+
+## 5. The CUDA-axis sister: PR106 `format0d` (internal codename *"alien tech"*[^alien-tech])
 
 For completeness — we explored the CUDA-frontier extensively. The `pr106_format0d_latent_score_table` archive at `9cb989cef519` scores `0.20533 [contest-CUDA T4]` / `0.22713 [contest-CPU]`. **It is NOT this PR's primary** because its CPU axis (`0.22713`) loses to fec6's CPU axis (`0.19205`) by `0.035`, and the contest leaderboard ranks on CPU.
 
-The full reverse-engineering memo is at `.omx/research/alien_tech_reverse_engineering_pr106_format0_family_20260517.md` (243 lines). Headline findings:
+[^alien-tech]: *Alien tech* is the internal nickname we used in our research notes for the PR106 `format0a/b/c/d` archive grammar family — the term reflects the surprise we had during PR mining when these archives' empirical CUDA-axis scores outclassed our predictions; it is NOT a published term, not a commercial product, and carries no formal definition outside of our session notes. See Glossary §12.1. Reverse-engineering memo: `.omx/research/alien_tech_reverse_engineering_pr106_format0_family_20260517.md`.
+
+The full mechanism has **two layers**, both essential to the empirical CUDA result:
+
+| layer | role | provenance |
+|---|---|---|
+| 1. Wire-format grammar (`format0a/b/c/d`) | exact-radix-packed per-pair dims as a base-28 integer + additive correction stream applying `latents[p, d] += delta * scale` at inflate time | `submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py:549-575`; reverse-engineering memo §3-§5 |
+| 2. *Magic codec*[^magic-codec] (per-stream entropy coder auto-selector) | for each archive stream, dynamically selects from {LZMA, Brotli, single-tensor arithmetic coding, block-FP, hessian-block-FP, custom container, ~10 other primitives} based on empirical stream entropy | `tac.packet_compiler.*` (commits `aca45146`, `a124fb91`, `7756d1b0`); `submissions/magic_codec_pr106_r2/inflate.py` |
+
+[^magic-codec]: *Magic codec* is the internal nickname we used for the per-stream optimal-entropy-coder auto-selector in `tac.packet_compiler`. The term reflects the auto-selector's behavior of producing rate-axis savings without operator intervention — it is NOT a published term, not a single algorithm, and not a commercial product. It is a dispatch table over ~16 standard entropy coders plus a meta-codec selection policy. See Glossary §12.1. Companion submission directory: `submissions/magic_codec_pr106_r2/`.
+
+The grammar without the *magic codec* (Layer 1 alone) produces archives ~30% larger; the *magic codec* applied to a non-format0 grammar produces a different elasticity surface than format0d's. The CUDA-axis advantage is the **product** of (a) grammar's per-pair additive freedom AND (b) per-stream optimal entropy coding.
+
+Headline findings from the reverse-engineering memo:
 
 - **Format0d wire format** = `format0c` base (exact-radix-packed dims as a single base-28 integer, 361 bytes) + a 523-byte additive correction stream that applies `latents[p, d] += delta * scale` at inflate time. Net overhead vs `format0c`: 549 extra bytes.
 - **Why it wins on CUDA**: `format0c` can express only single corrections per pair. The score-table sweep (per `tools/build_pr106_*` family) discovered 570 frame-pairs that benefit from **additive** corrections (552 to the same dimension, 18 to different dimensions). Format0c alone filtered all 570 optimizations as incompatible with its single-correction grammar. Format0d's extra stream expresses exactly those additive pass-throughs. **PoseNet distortion drops 20% (`3.19e-5` vs `4e-5`)** on the CUDA path.
@@ -246,6 +281,21 @@ We trained or scaffolded **49 substrate trainers across 3 families** during the 
 - Z6/Z7/Z8 predictive-coding scaffolds: research-only per Catalog #240.
 - The full empirical inventory is in `reports/latest.md` FRONTIER section (Catalog #316 STRICT-enforced).
 
+### 7.4 Cross-family finding: global configs leave meat on the bone
+
+Across PR95, PR101, PR106, and every leaderboard family reverse-engineered, the same pattern recurs: an archive element whose configuration is held constant across the video — pixel, frame, pair, bit, byte, tensor, channel, codec — is over-charging rate or under-fitting distortion relative to the per-element conditional optimum, even when the global config was selected asymmetrically.
+
+| substrate | global config | per-element conditional (the win) | empirical |
+|---|---|---|---|
+| PR101 GOLD | uniform Brotli on `decoder.bin` | n/a (baseline) | `~0.193 [contest-CPU]` |
+| fec6 (this submission) | uniform K=8 palette per pair | K=16 modes selected per pair from a fixed palette | `-0.001 [contest-CPU]` over PR101 |
+| PR106 `format0d` | uniform single-correction grammar | two-pass additive corrections selected per pair | `-0.024 [contest-CUDA]` over PR101 |
+| *magic codec* on PR106 r2 | uniform Brotli on all streams | per-stream selection across ~16 entropy primitives | `-5 to -10%` rate across mixed-entropy streams |
+
+The pattern holds whether the substrate is HNeRV-family (fec6) or PR106-grammar (`format0d`, *magic codec*), and even when the global config was tuned asymmetrically (e.g., per-tensor fp16 scale is asymmetric across tensors but uniform across bytes within a tensor — those intra-tensor bytes are over-charged).
+
+The corollary motivates §11.5's theoretical-floor analysis: every dimension still holding a single config across the video is a candidate leak. The full ~75-row inventory (categories A–J: quantization / entropy coding / per-element conditional codes / training-time configs / unwired primitives / search coverage / compute-budget / master-gradient / boosting / side-information) and the proposed `tac.*` canonical-helper namespace design with decorator API are in `.omx/research/meat_on_the_bone_inventory_and_canonical_helpers_design_20260517.md`.
+
 ## 8. Infrastructure, formalization, interpretable ML
 
 This submission also brings with it a body of contest infrastructure that we believe is independently useful for any team running this kind of paired-axis search. Per the operator's directive, comma.ai should be able to adopt these in production.
@@ -290,6 +340,8 @@ Per CLAUDE.md "Contest vs production target modes — non-negotiable" + the oper
 3. **The frontier-scan + canonical state ledger** (Catalog #245 Modal call-id ledger, Catalog #316 frontier scan) — generic "track every benchmark/eval result and refuse to regress" infrastructure.
 4. **The Rudin-Daubechies interpretable ML autopilot** (Catalog #250-#278) — explains every dispatch decision via integer-coefficient SLIM scorer + falling-rule list. Drop-in for any decision system where regulators/safety-engineers need to audit "why was this candidate dispatched to fleet?"
 5. **The pre-submission compliance check** (`scripts/pre_submission_compliance_check.py`) — the pattern (validate archive bytes + runtime-tree SHA + custody chain BEFORE shipping) is directly applicable to openpilot model release.
+6. **The per-stream optimal-entropy-coder auto-selector** (`tac.packet_compiler`, internal nickname *magic codec*[^magic-codec]) — generic mechanism for selecting LZMA / Brotli / arithmetic coding / block-FP per byte-stream of any archive based on empirical entropy. Useful for openpilot OTA model checkpoint compression where different tensor shards have different entropy characteristics (e.g., dense fp32 weights vs sparse adapter deltas vs calibration LUTs).
+7. **The recursive adversarial review canonical helper** (`tac.recursive_adversarial_review` + `tools/run_recursive_adversarial_review.py`) — landed in this session; mirrors Catalog #245's 4-layer pattern (helper + CLI + STRICT gate + operator_authorize wire-in); applicable to any artifact bundle whose joint correctness gates a costly action (model release, calibration update, OTA push). Cross-session-persistent clean-pass counter via fcntl-locked JSONL.
 
 **What does NOT transfer (contest-specific):**
 1. **The K=16 frame-conditional selector (fec6)** — assumes a fixed 600-frame-pair dataset, offline-trained selector indices, and a scorer whose CPU FastViT signature is known. Production openpilot processes live streams; no offline selector training is possible.
@@ -319,7 +371,42 @@ Both repositories are MIT-licensed (or upstream-compatible) and currently in syn
 - **`tac`** — see the `tac` Python library extracted from the same repository's `src/tac/` directory; it is the reusable codec/runtime library independent of the comma-lab research state. Public package coordinates and the canonical OSS release link are tracked in `.omx/research/` (see `feedback_PPP_oss_release_prep_v0_2_0_rc1_20260513` for the canonical release manifest).
 - **Submission archive (this PR)**: SHA-256 `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf` is reproducible from commit `cf2a5e2269550406d5381b1abede0b70e28f41ce` via `tools/build_pr101_frame_exploit_selector_packet.py --compact-selector-codec fec6_fixed_huffman_k16`.
 
-## 12. Citations
+## 11.5 Cost economics and collaboration interest
+
+| category | cost basis |
+|---|---|
+| Contest auth eval (the scorer) | essentially free: ~60–90 min on M5 Max CPU at ~$0 marginal; ~$0.06–0.12 on Modal Linux x86_64 CPU; ~$0.30–1.50 on Modal T4 CUDA. Verification round-trip <$1 per candidate. |
+| End-to-end NEW substrate retraining | ~$10–100 per substrate per attempt: 10–40 GPU-hours on Modal T4/A10G/A100, Vast.ai 4090 spot, Lightning A100, or AWS g4dn spot. Once trained, weights are reusable for cheap grammar/codec exploration. |
+| Complex curricula + family sweeps + composition validation + long-burn retrains | 2-5× retrain cost multiplier per category: staircase curricula (Quantizr 5-stage / PR95 8-stage); per-substrate rate-distortion Pareto sweeps ($20-200); joint-training composition validation ($30-150); 24-100 epoch full-resolution jobs ($50-200). Full breakdown + provider-rate variance + Hinton-surrogate amortization in `.omx/research/meat_on_the_bone_inventory_and_canonical_helpers_design_20260517.md` §6. |
+
+All of the stacking + composition + grammar work in this submission operates on existing trained PR101/PR95 weights, not on retrains. Total paid-GPU spend across the HNeRV-family stacking + composition arc to date: ~$30–50, exclusive of Claude Code + Codex subscriptions and time.
+
+**Theoretical floor.** §8.4 + `.omx/research/theoretical_floor_v2_post_z1_revision_20260514.md` place the achievable score in the range `[0.05, 0.15]` depending on which SegNet/PoseNet response-surface assumptions hold. The `0.196-0.199` cluster that holds `0.19205 [contest-CPU]` is the plateau of 53+ substrates sharing enough structural assumptions to flatten — see `feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md`. Breaking out requires class-shift families whose costs sit in the substrate-retrain rows above: cooperative-receiver (Atick-Redlich), predictive coding with ego-motion conditioning (Rao-Ballard), hierarchical predictive coding (Hafner DreamerV3), Wyner-Ziv side-information, Tishby-Zaslavsky information-bottleneck. Designs and L0/L1 scaffolds are in the public `comma-lab` repo. End-to-end exploration: ~$1,000–2,000 for the substrate retrains; verification stays cheap.
+
+**Collaboration interest.** I am a solo volunteer researcher, no sponsorships or institutional support. The cost basis above is the consequence of a discipline stack — Catalogs #1 / #167 / #192 / #245 / #270 / #316, the cathedral-autopilot + Rudin-Daubechies ranking infrastructure, the META-ASSUMPTION review cadence, the 3-clean-pass adversarial review gate — that the source code makes auditable.
+
+Yousfi's host-bot reply on PR #107 mentioned openness to dialogue about internship and employment opportunities at comma.ai. I intend to follow up on that directly via the email used on the PR #107 comment as I continue this work. Open to any of:
+
+- internship or employment at comma.ai or adjacent (the primary follow-up intent)
+- sponsorship / donation / research-grant support for the ~$1–2k class-shift exploration
+- collaboration on neural compression, predictive coding, cooperative-receiver / inverse-steganalysis architectures, world models for autonomous driving, or the interpretable-ML autopilot layer
+
+## 12.1 Glossary of internal nomenclature
+
+The following terms appear throughout this writeup, the research memos, and the source-code/path names. They are **internal nicknames adopted during our session-level iteration and AI-assisted research**, NOT published terms, NOT commercial products, and carry no formal meaning outside our codebase. We italicize them on every appearance after first definition. A reviewer / comma.ai integrator should mentally translate to the canonical descriptions below:
+
+| internal name | canonical description | code anchor |
+|---|---|---|
+| *magic codec* | per-stream optimal-entropy-coder auto-selector that picks the lowest-bitrate primitive from a dispatch table of ~16 standard entropy coders (LZMA, Brotli, single-tensor arithmetic coding, block-FP, hessian-block-FP, custom container, etc.) per archive stream | `tac.packet_compiler.*` (commits `aca45146`, `a124fb91`, `7756d1b0`); `submissions/magic_codec_pr106_r2/` |
+| *alien tech* | the PR106 `format0a/b/c/d` archive grammar family — exact-radix-packed per-pair dims + additive correction stream. The nickname reflected the surprise we had during PR mining when these archives' empirical CUDA-axis scores outclassed our reverse-engineered predictions. | `submissions/pr106_latent_sidecar_r2_pr101_grammar/`; `.omx/research/alien_tech_reverse_engineering_pr106_format0_family_20260517.md` |
+| *fec6* | Frame Exploit Compactor v6 — internal name for this PR's submission: K=16 frame-conditional dynamic-mode selector with fixed-Huffman entropy compaction on the per-pair selector indices | `submissions/pr101_fec6_fixed_huffman_k16/`; `tools/build_pr101_frame_exploit_selector_packet.py` |
+| *master gradient* | per-byte score gradient `G[byte_i, term_j] = (∂S / ∂byte_i)_{operating point}` for `term_j ∈ {seg, pose, rate}`, computed analytically via autograd + FP4 Jacobian projection at a specific operating point. Decomposes the additive contest scorer at byte-grain so per-byte interventions can be ranked by their predicted ΔS contribution. | `tac.master_gradient` (new this session, see PR's pending follow-on); `.omx/research/grand_reunion_t4_symposium_orthogonal_optimization_master_gradient_20260517.md` |
+| *cathedral autopilot* | the substrate-ranking + dispatch-routing system in `tools/cathedral_autopilot_autonomous_loop.py` that consumes the continual-learning posterior, modal call-id ledger, frontier scan, composition matrix, Rashomon ensemble, and council deliberation posterior to rerank candidate dispatches by expected information gain per dollar | `tools/cathedral_autopilot_autonomous_loop.py` |
+| *Rudin-Daubechies autopilot* | the 6-phase interpretable-ML lens composite (SLIM risk scorer + falling-rule list + Rashomon ensemble + compressive-sensing lattice + wavelet multi-scale + GOSDT dispatcher) layered on top of cathedral autopilot, named for the canonical works it operationalizes (Rudin 2016/2018/2020; Daubechies 1988/2010) | `tac.autopilot_rudin_daubechies.*` (Catalog #250-#255 + #273-#278) |
+| *substrate* | our term for a distinct end-to-end (training + archive grammar + inflate runtime) compression approach. ~53 substrates explored across HNeRV / NeRV / outside-NeRV families per `.omx/state/lane_registry.json` | n/a |
+| *contest-CUDA*, *contest-CPU* | axis labels for empirical scores ranked on NVIDIA T4 CUDA vs Linux x86_64 CPU (GHA-equivalent runner). Both required for medal-band submission per CLAUDE.md "Submission auth eval" non-negotiable | `tools/scan_best_anchor_per_axis.py` |
+
+## 12.2 Citations
 
 **Papers:**
 - Cover, T. & Thomas, J. *Elements of Information Theory*, 2nd ed., Wiley 2006 (R(D) lower bound for contest score formula; §10 channel capacity, §13 rate distortion)
