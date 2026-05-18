@@ -975,9 +975,9 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     # archive carries a HIGH PAIR_INVARIANT % (>= 80%) are reweighted as
     # higher-EV (the Wyner-Ziv-hoistable region is structurally larger);
     # candidates with HIGH PAIR_SPECIFIC % (>= 30%) carry the pair-specific
-    # trap and are reweighted as lower-EV. Reweighting reuses the existing
-    # predicted_dispatch_risk knob (factor < 1 = lower risk = higher rank;
-    # factor > 1 = higher risk = lower rank) so no new scoring axis is added.
+    # trap and are reweighted as lower-EV. Reweighting composes on the same
+    # predicted-score-delta axis: factor > 1 rewards a negative improvement
+    # estimate by making it more negative; factor < 1 penalizes it.
     # The reweighting is applied AFTER the SLIM dispatch_risk because Venn
     # classification is structural-orthogonal to preflight risk: a high-Venn
     # candidate may still have high SLIM risk for unrelated reasons.
@@ -994,6 +994,13 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     # ABSENT → 1.0× passthrough (NO FAKE REWARD per CLAUDE.md "Forbidden
     # empirical-claim-without-evidence-tag" + sister Q2+Q3 cascade discipline).
     d = adjust_predicted_delta_for_per_pair_sister_817_sidecars(
+        d, c.archive_sha256
+    )
+    # ITEM_7 closure 2026-05-18: consume the canonical per_pair_difficulty_atlas
+    # sidecar from tac.master_gradient_consumers. This is planning-only signal:
+    # a valid atlas says the archive has pair/axis difficulty structure that
+    # Cathedral should prioritize for follow-up, not that any score was proved.
+    d = adjust_predicted_delta_for_per_pair_difficulty_atlas(
         d, c.archive_sha256
     )
     return d
@@ -1285,24 +1292,25 @@ def adjust_predicted_delta_for_venn_classification_v2(
 #   per_pair_fisher_importance_<sha[:12]>_*.json (canonical Gap 3 sidecar)
 #
 # Reward semantics (multiplicative factor in score-delta convention; lower
-# is better; factor < 1.0 → MORE NEGATIVE = better-ranked):
+# is better, and improvements are negative. Therefore factor > 1.0 makes a
+# negative delta MORE NEGATIVE = better-ranked; factor < 1.0 is a penalty):
 #
-#   per_pair_bit_allocation cascade_path == "optimal_plan" → 0.95× reward
+#   per_pair_bit_allocation cascade_path == "optimal_plan" → 1.05× reward
 #     (plan-derived allocation IS the canonical answer; small reward to
 #     prefer plan-backed candidates over Wyner-Ziv-only or fallback peers).
-#   per_pair_bit_allocation cascade_path == "wyner_ziv_composition" → 0.98×
+#   per_pair_bit_allocation cascade_path == "wyner_ziv_composition" → 1.02×
 #     reward (Wyner-Ziv-backed allocation is intermediate evidence).
 #   per_pair_bit_allocation cascade_path == "aggregate_fallback" → 1.0×
 #     (no signal; no reward per CLAUDE.md "Forbidden score claims").
 #
 #   per_pair_fisher_importance sidecar present with non-zero aggregate Fisher
-#     → 0.97× reward (per-byte Fisher attribution is structural signal that
+#     → 1.03× reward (per-byte Fisher attribution is structural signal that
 #     downstream callers can consume to bias byte budgets).
 #   per_pair_fisher_importance sidecar absent → 1.0× (no signal).
 #
 # Both factors compose multiplicatively. When BOTH sidecars are present at
 # their best cascade (optimal_plan + Fisher), the combined factor is
-# 0.95 × 0.97 = ~0.9215× (modest stacked reward; deliberately conservative
+# 1.05 × 1.03 = ~1.0815× (modest stacked reward; deliberately conservative
 # per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" — the
 # sidecars are PREDICTIVE signal, not empirical anchors).
 #
@@ -1310,11 +1318,13 @@ def adjust_predicted_delta_for_venn_classification_v2(
 # semantics for the OptimalPerPairTreatmentPlan path are NOT touched; this
 # wire-in only adds an ADDITIONAL multiplicative factor AFTER the v2 cascade.
 
-_PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_OPTIMAL_PLAN = 0.95
-_PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_WYNER_ZIV = 0.98
+_PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_OPTIMAL_PLAN = 1.05
+_PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_WYNER_ZIV = 1.02
 _PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_AGGREGATE_FALLBACK = 1.0
-_PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_PRESENT = 0.97
+_PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_PRESENT = 1.03
 _PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_ABSENT = 1.0
+_PER_PAIR_DIFFICULTY_ATLAS_SIDECAR_REWARD_PRESENT = 1.04
+_PER_PAIR_DIFFICULTY_ATLAS_POSE_HARD_REWARD_PRESENT = 1.06
 _PER_PAIR_SIDECAR_SCAN_ROOT = (
     REPO_ROOT / ".omx" / "state" / "master_gradient_consumers"
 )
@@ -1347,6 +1357,23 @@ def _latest_per_pair_fisher_importance_sidecar_for_archive(
     matches = sorted(
         _PER_PAIR_SIDECAR_SCAN_ROOT.glob(
             f"per_pair_fisher_importance_{sha_short}_*.json"
+        )
+    )
+    if not matches:
+        return None
+    return matches[-1]
+
+
+def _latest_per_pair_difficulty_atlas_sidecar_for_archive(
+    archive_sha256: str,
+) -> Path | None:
+    """Find the most-recent per_pair_difficulty_atlas sidecar for the archive."""
+    if not _PER_PAIR_SIDECAR_SCAN_ROOT.exists():
+        return None
+    sha_short = archive_sha256[:12]
+    matches = sorted(
+        _PER_PAIR_SIDECAR_SCAN_ROOT.glob(
+            f"per_pair_difficulty_atlas_{sha_short}_*.json"
         )
     )
     if not matches:
@@ -1407,6 +1434,68 @@ def _per_pair_fisher_importance_sidecar_reward_factor(
         return _PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_ABSENT
 
 
+def _per_pair_difficulty_atlas_sidecar_reward_factor(
+    archive_sha256: str,
+) -> float:
+    """Read latest per_pair_difficulty_atlas sidecar; return multiplicative factor.
+
+    A valid atlas is a structural prioritization signal for Cathedral's ranker.
+    If the hardest-pair breakdown is pose-axis dominated in score-marginal-
+    weighted units, use the slightly stronger pose-hard reward from the cheap-
+    probe OP-7/OP-2 family. Missing, malformed, zero-norm, authority-bearing,
+    or raw-axis-only sidecars never receive the pose-hard reward.
+    """
+    sidecar = _latest_per_pair_difficulty_atlas_sidecar_for_archive(
+        archive_sha256
+    )
+    if sidecar is None:
+        return 1.0
+    try:
+        payload = json.loads(sidecar.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return 1.0
+    if not isinstance(payload, dict):
+        return 1.0
+    if payload.get("schema") != "master_gradient_consumer_per_pair_difficulty_v1":
+        return 1.0
+    if payload.get("consumer_id") != "per_pair_difficulty_atlas":
+        return 1.0
+    payload_archive_sha = payload.get("archive_sha256")
+    if (
+        not isinstance(payload_archive_sha, str)
+        or payload_archive_sha.lower() != archive_sha256.lower()
+    ):
+        return 1.0
+    if (
+        payload.get("score_claim") is not False
+        or payload.get("promotion_eligible") is not False
+        or payload.get("ready_for_exact_eval_dispatch") is not False
+    ):
+        return 1.0
+    aggregate_norm = payload.get("aggregate_gradient_norm_l2", 0.0)
+    if not isinstance(aggregate_norm, (int, float)) or aggregate_norm <= 0:
+        return 1.0
+    entries = payload.get("top_k_hardest_with_axis_breakdown")
+    if not isinstance(entries, list) or not entries:
+        return 1.0
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        pose = entry.get("pose_axis_score_l1", 0.0)
+        seg = entry.get("seg_axis_score_l1", 0.0)
+        rate = entry.get("rate_axis_score_l1", 0.0)
+        if (
+            isinstance(pose, (int, float))
+            and isinstance(seg, (int, float))
+            and isinstance(rate, (int, float))
+            and pose > 0
+            and pose >= seg
+            and pose >= rate
+        ):
+            return _PER_PAIR_DIFFICULTY_ATLAS_POSE_HARD_REWARD_PRESENT
+    return _PER_PAIR_DIFFICULTY_ATLAS_SIDECAR_REWARD_PRESENT
+
+
 def adjust_predicted_delta_for_per_pair_sister_817_sidecars(
     predicted_delta: float, archive_sha256: str
 ) -> float:
@@ -1443,6 +1532,17 @@ def adjust_predicted_delta_for_per_pair_sister_817_sidecars(
         archive_sha256
     )
     return predicted_delta * bit_alloc_factor * fisher_factor
+
+
+def adjust_predicted_delta_for_per_pair_difficulty_atlas(
+    predicted_delta: float, archive_sha256: str
+) -> float:
+    """Apply per_pair_difficulty_atlas sidecar consumption to predicted_delta."""
+    if not archive_sha256:
+        return predicted_delta
+    return predicted_delta * _per_pair_difficulty_atlas_sidecar_reward_factor(
+        archive_sha256
+    )
 
 
 # ── Tier C substrate-class density (Catalog #227 wire-in, 2026-05-14) ─────

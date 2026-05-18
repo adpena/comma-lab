@@ -101,7 +101,7 @@ import hashlib
 import json
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -114,7 +114,11 @@ from tac.master_gradient import (
     compute_marginal_coefficients,
     is_authoritative_axis_anchor,
     load_anchors_lenient,
-    load_anchors_strict,
+)
+from tac.master_gradient_operator_plan import (
+    PACKET_PROOFS,
+    RESPONSE_MATRIX_COLUMNS,
+    CandidateModificationSpec,
 )
 
 __all__ = [
@@ -137,6 +141,8 @@ __all__ = [
     "PerPairDifficultyEntry",
     "PerPairDifficultyAtlas",
     "per_pair_difficulty_atlas",
+    # OP-7 cheap-probe bridge — pose-axis dominant byte planning
+    "select_pose_axis_dominant_bytes",
     # Consumer 6 — Rashomon disagreement queue (K=8 bootstrap-diverse)
     "RashomonDisagreementEntry",
     "RashomonDisagreementQueue",
@@ -202,6 +208,8 @@ WYNER_ZIV_CORRELATION_THRESHOLD_LOW = 0.2  # bytes whose mutual-correlation < th
 
 
 CONSUMER_OUTPUT_ROOT = Path(".omx/state/master_gradient_consumers")
+SCORE_AXIS_LABELS: tuple[str, str, str] = ("seg", "pose", "rate")
+POSE_AXIS_INDEX = 1
 
 
 # ──────────────────────────────────────────────────────────────────────────── #
@@ -348,6 +356,175 @@ def write_consumer_sidecar_json(path: Path, payload: dict) -> None:
     payload.setdefault("ready_for_exact_eval_dispatch", False)
     payload.setdefault("evidence_grade", "[diagnostic; master-gradient consumer]")
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False), encoding="utf-8")
+
+
+def _operating_point_from_anchor(anchor: dict) -> OperatingPoint:
+    op = anchor.get("operating_point")
+    if not isinstance(op, dict):
+        raise ValueError("master-gradient anchor missing operating_point dict")
+    return OperatingPoint(
+        d_seg=float(op["d_seg"]),
+        d_pose=float(op["d_pose"]),
+        rate=float(op["rate"]),
+        score=float(op["score"]),
+    )
+
+
+def _score_axis_contributions(
+    aggregate_gradient: np.ndarray,
+    operating_point: OperatingPoint,
+) -> np.ndarray:
+    if aggregate_gradient.ndim != 2 or aggregate_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"aggregate_gradient must have shape (N_bytes, 3); got {aggregate_gradient.shape}"
+        )
+    coeffs = np.asarray(compute_marginal_coefficients(operating_point), dtype=np.float64)
+    return np.abs(aggregate_gradient.astype(np.float64, copy=False)) * coeffs[None, :]
+
+
+def _axis_share(contributions: np.ndarray, axis_index: int) -> np.ndarray:
+    denom = contributions.sum(axis=1)
+    out = np.zeros((contributions.shape[0],), dtype=np.float64)
+    np.divide(contributions[:, axis_index], denom, out=out, where=denom > 0)
+    return out
+
+
+def select_pose_axis_dominant_bytes(
+    archive_sha256: str,
+    *,
+    top_k: int = 128,
+    axis_dominance_threshold: float = 0.7,
+    anchor_path: Path | None = None,
+    write_sidecar: bool = True,
+    output_root: Path | None = None,
+) -> tuple[CandidateModificationSpec, ...]:
+    """Return planning-only typed specs for pose-axis-dominant gradient bytes.
+
+    This is the OP-7 bridge from master-gradient xray to a packet-valid
+    operator workflow. The selector may use diagnostic gradient-subject byte
+    indices for ranking, but the returned specs deliberately remain
+    ``CandidateModificationSpec`` rows with ``raw_archive_byte_coordinates_allowed=False``.
+    A later grammar-aware mutation builder must resolve these diagnostics into
+    packet coordinates and prove repack/CRC/inflate/byte-consumption closure.
+    """
+    if top_k <= 0:
+        raise ValueError("top_k must be > 0")
+    if not (0.0 <= axis_dominance_threshold <= 1.0):
+        raise ValueError("axis_dominance_threshold must be in [0, 1]")
+
+    aggregate_gradient, anchor = load_aggregate_gradient_from_anchor(
+        archive_sha256=archive_sha256,
+        anchor_path=anchor_path,
+    )
+    operating_point = _operating_point_from_anchor(anchor)
+    contributions = _score_axis_contributions(aggregate_gradient, operating_point)
+    pose_share = _axis_share(contributions, POSE_AXIS_INDEX)
+    pose_contribution = contributions[:, POSE_AXIS_INDEX]
+
+    eligible = np.flatnonzero((pose_share >= axis_dominance_threshold) & (pose_contribution > 0.0))
+    ordered = sorted(
+        (int(i) for i in eligible),
+        key=lambda i: (-float(pose_contribution[i]), -float(pose_share[i]), i),
+    )[:top_k]
+
+    scored_archive_sha = str(anchor.get("scored_archive_sha256") or archive_sha256)
+    scored_archive_bytes_obj = anchor.get("scored_archive_bytes")
+    scored_archive_bytes = (
+        int(scored_archive_bytes_obj)
+        if isinstance(scored_archive_bytes_obj, int) and not isinstance(scored_archive_bytes_obj, bool)
+        else None
+    )
+    gradient_byte_domain = str(anchor.get("gradient_byte_domain") or "scored_archive_bytes")
+
+    specs: list[CandidateModificationSpec] = []
+    selected_payload: list[dict[str, object]] = []
+    for rank, byte_idx in enumerate(ordered, start=1):
+        pose_share_i = float(pose_share[byte_idx])
+        pose_contribution_i = float(pose_contribution[byte_idx])
+        specs.append(
+            CandidateModificationSpec(
+                spec_id=f"pose_axis_dominant::{archive_sha256[:12]}::{rank:04d}",
+                source_archive_path=None,
+                source_archive_sha256=scored_archive_sha,
+                source_archive_bytes=scored_archive_bytes,
+                operator_id=f"pose_axis_dominant_gradient_subject_rank_{rank:04d}",
+                section_name=gradient_byte_domain,
+                section_role="diagnostic_master_gradient_pose_axis_dominant_byte",
+                mutation_grain="grammar_aware_operator",
+                mutation_operator="pose_axis_response_probe",
+                axis_label="pose",
+                response_matrix_columns=RESPONSE_MATRIX_COLUMNS,
+                packet_proofs_required=PACKET_PROOFS,
+                packet_proofs_available=False,
+                ready_for_operator_probe=False,
+                ready_for_provider_dispatch=False,
+                score_claim=False,
+                promotion_eligible=False,
+                rank_or_kill_eligible=False,
+                ready_for_exact_eval_dispatch=False,
+                dispatch_attempted=False,
+                coordinate_system="grammar_aware_operator_response",
+                raw_archive_byte_coordinates_allowed=False,
+                blockers=(
+                    "grammar_aware_pose_axis_mutation_builder_missing",
+                    "packet_proofs_missing",
+                ),
+                rationale=(
+                    "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+                    f"diagnostic_gradient_subject_byte_index={byte_idx}",
+                    f"pose_axis_share={pose_share_i:.6g}",
+                    f"pose_axis_abs_score_contribution={pose_contribution_i:.6g}",
+                    "operator must resolve the diagnostic index through archive grammar before probing",
+                ),
+            )
+        )
+        selected_payload.append(
+            {
+                "rank": rank,
+                "diagnostic_gradient_subject_byte_index": byte_idx,
+                "pose_axis_share": pose_share_i,
+                "pose_axis_abs_score_contribution": pose_contribution_i,
+                "seg_axis_abs_score_contribution": float(contributions[byte_idx, 0]),
+                "rate_axis_abs_score_contribution": float(contributions[byte_idx, 2]),
+            }
+        )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "pose_axis_dominant_bytes",
+            archive_sha256=archive_sha256,
+            root=output_root,
+        )
+        write_consumer_sidecar_json(
+            path,
+            {
+                "schema": "master_gradient_consumer_pose_axis_dominant_bytes_v1",
+                "consumer_id": "select_pose_axis_dominant_bytes",
+                "archive_sha256": archive_sha256,
+                "scored_archive_sha256": scored_archive_sha,
+                "scored_archive_bytes": scored_archive_bytes,
+                "gradient_byte_domain": gradient_byte_domain,
+                "measurement_axis": anchor.get("measurement_axis"),
+                "measurement_hardware": anchor.get("measurement_hardware"),
+                "gradient_tensor_kind": anchor.get("gradient_tensor_kind"),
+                "top_k": int(top_k),
+                "axis_dominance_threshold": float(axis_dominance_threshold),
+                "axis_labels": SCORE_AXIS_LABELS,
+                "score_axis_dominance": {
+                    "formula": "abs(gradient_axis) * contest_score_marginal / sum_axes(abs(gradient_axis) * marginal)",
+                    "pose_axis_index": POSE_AXIS_INDEX,
+                    "selected_count": len(selected_payload),
+                    "selected": selected_payload,
+                },
+                "candidate_modification_specs": [spec.to_manifest() for spec in specs],
+                "blockers": (
+                    "grammar_aware_pose_axis_mutation_builder_missing",
+                    "packet_proofs_missing",
+                ),
+            },
+        )
+
+    return tuple(specs)
 
 
 def load_optimal_plan_for_archive(
@@ -1088,6 +1265,7 @@ def per_pair_difficulty_atlas(
     measurement_hardware: str,
     top_k: int = 50,
     bottom_k: int = 50,
+    operating_point: OperatingPoint | None = None,
     write_sidecar: bool = True,
 ) -> PerPairDifficultyAtlas:
     """Compute per-pair difficulty atlas from per-pair gradient L2 norms.
@@ -1106,6 +1284,12 @@ def per_pair_difficulty_atlas(
     per_pair_seg_l1 = np.abs(per_pair_gradient[:, :, 0]).sum(axis=0)  # (N_pairs,)
     per_pair_pose_l1 = np.abs(per_pair_gradient[:, :, 1]).sum(axis=0)  # (N_pairs,)
     per_pair_rate_l1 = np.abs(per_pair_gradient[:, :, 2]).sum(axis=0)  # (N_pairs,)
+    score_axis_coefficients: np.ndarray | None = None
+    if operating_point is not None:
+        score_axis_coefficients = np.asarray(
+            compute_marginal_coefficients(operating_point),
+            dtype=np.float64,
+        )
 
     sorted_by_difficulty_desc = np.argsort(-per_pair_l2)
     entries = tuple(
@@ -1145,26 +1329,52 @@ def per_pair_difficulty_atlas(
 
     if write_sidecar:
         path = consumer_output_path("per_pair_difficulty_atlas", archive_sha256=archive_sha256)
+        score_axis_weighting: dict[str, object] = {
+            "available": score_axis_coefficients is not None,
+            "formula": "raw_axis_l1 * contest_score_marginal",
+        }
+        if score_axis_coefficients is not None:
+            score_axis_weighting["axis_coefficients"] = {
+                "seg": float(score_axis_coefficients[0]),
+                "pose": float(score_axis_coefficients[1]),
+                "rate": float(score_axis_coefficients[2]),
+            }
+        top_entries: list[dict[str, object]] = []
+        for e in entries[:top_k]:
+            entry: dict[str, object] = {
+                "pair_index": e.pair_index,
+                "gradient_norm_l2": e.gradient_norm_l2,
+                "seg_axis_l1": e.seg_axis_contribution_l1,
+                "pose_axis_l1": e.pose_axis_contribution_l1,
+                "rate_axis_l1": e.rate_axis_contribution_l1,
+            }
+            if score_axis_coefficients is not None:
+                seg_score = e.seg_axis_contribution_l1 * float(score_axis_coefficients[0])
+                pose_score = e.pose_axis_contribution_l1 * float(score_axis_coefficients[1])
+                rate_score = e.rate_axis_contribution_l1 * float(score_axis_coefficients[2])
+                denom = seg_score + pose_score + rate_score
+                entry.update({
+                    "seg_axis_score_l1": seg_score,
+                    "pose_axis_score_l1": pose_score,
+                    "rate_axis_score_l1": rate_score,
+                    "pose_score_axis_share": pose_score / denom if denom > 0 else 0.0,
+                })
+            top_entries.append(entry)
         payload = {
             "schema": "master_gradient_consumer_per_pair_difficulty_v1",
             "consumer_id": "per_pair_difficulty_atlas",
             "archive_sha256": archive_sha256,
             "measurement_axis": measurement_axis,
             "measurement_hardware": measurement_hardware,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
             "n_pairs": n_pairs,
             "aggregate_gradient_norm_l2": aggregate_l2,
             "top_k_hardest_pair_indices": list(top_k_indices),
             "bottom_k_easiest_pair_indices": list(bottom_k_indices),
-            "top_k_hardest_with_axis_breakdown": [
-                {
-                    "pair_index": e.pair_index,
-                    "gradient_norm_l2": e.gradient_norm_l2,
-                    "seg_axis_l1": e.seg_axis_contribution_l1,
-                    "pose_axis_l1": e.pose_axis_contribution_l1,
-                    "rate_axis_l1": e.rate_axis_contribution_l1,
-                }
-                for e in entries[:top_k]
-            ],
+            "score_axis_weighting": score_axis_weighting,
+            "top_k_hardest_with_axis_breakdown": top_entries,
             "interpretation_notes": interpretation,
         }
         write_consumer_sidecar_json(path, payload)

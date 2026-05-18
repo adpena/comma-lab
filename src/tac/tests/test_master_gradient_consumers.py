@@ -20,7 +20,6 @@ import pytest
 
 from tac import master_gradient_consumers as mgc
 
-
 # ──────────────────────────────────────────────────────────────────────────── #
 # Fixtures                                                                      #
 # ──────────────────────────────────────────────────────────────────────────── #
@@ -344,12 +343,13 @@ def test_per_pair_difficulty_atlas_ranks_pairs(per_pair_grad, archive_sha256, ax
 def test_per_pair_difficulty_atlas_sidecar_emits_axis_breakdown(
     per_pair_grad, archive_sha256, axis_meta, tmp_root
 ):
-    """Sidecar: per-pair seg/pose/rate axis L1 contributions emitted for top-K."""
+    """Sidecar: per-pair raw + score-weighted axis contributions emitted."""
     mgc.per_pair_difficulty_atlas(
         per_pair_grad,
         archive_sha256=archive_sha256,
         top_k=5,
         bottom_k=5,
+        operating_point=mgc.OperatingPoint(d_seg=0.1, d_pose=0.1, rate=0.1, score=0.1),
         write_sidecar=True,
         **axis_meta,
     )
@@ -357,10 +357,22 @@ def test_per_pair_difficulty_atlas_sidecar_emits_axis_breakdown(
     assert len(sidecars) == 1
     payload = json.loads(sidecars[0].read_text())
     assert payload["consumer_id"] == "per_pair_difficulty_atlas"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["score_axis_weighting"]["available"] is True
     assert len(payload["top_k_hardest_with_axis_breakdown"]) == 5
     for entry in payload["top_k_hardest_with_axis_breakdown"]:
         # Per-axis L1 contributions present
-        for key in ("seg_axis_l1", "pose_axis_l1", "rate_axis_l1"):
+        for key in (
+            "seg_axis_l1",
+            "pose_axis_l1",
+            "rate_axis_l1",
+            "seg_axis_score_l1",
+            "pose_axis_score_l1",
+            "rate_axis_score_l1",
+            "pose_score_axis_share",
+        ):
             assert key in entry
             assert isinstance(entry[key], (int, float))
 
@@ -591,6 +603,75 @@ def test_load_aggregate_gradient_uses_tensor_kind_over_per_pair_method_text(
     assert loaded_anchor["gradient_tensor_kind"] == "aggregate_per_byte_v1"
 
 
+def test_select_pose_axis_dominant_bytes_emits_typed_specs_and_sidecar(tmp_path: Path):
+    archive = "c" * 64
+    # d_pose=0.1 gives pose marginal ~=15.811, so row 1 is strongly pose-dominant.
+    arr = np.array(
+        [
+            [10.0, 0.01, 0.0],
+            [0.01, 10.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.01, 1.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
+    npy_path = tmp_path / "aggregate.npy"
+    np.save(npy_path, arr)
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    anchor = {
+        "archive_sha256": archive,
+        "scored_archive_sha256": archive,
+        "scored_archive_bytes": 12345,
+        "gradient_array_path": str(npy_path),
+        "gradient_tensor_kind": "aggregate_per_byte_v1",
+        "gradient_byte_domain": "zip_inner_member_payload",
+        "measurement_axis": "[diagnostic-CPU]",
+        "measurement_hardware": "linux_x86_64_cpu",
+        "measurement_method": "aggregate_projection",
+        "measurement_utc": "2026-05-18T01:00:00Z",
+        "n_bytes": 4,
+        "operating_point": {"d_pose": 0.1, "d_seg": 0.1, "rate": 0.1, "score": 0.1},
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    ledger.write_text(json.dumps(anchor) + "\n")
+    output_root = tmp_path / "consumers"
+
+    specs = mgc.select_pose_axis_dominant_bytes(
+        archive,
+        top_k=2,
+        axis_dominance_threshold=0.7,
+        anchor_path=ledger,
+        output_root=output_root,
+    )
+
+    assert len(specs) == 2
+    assert all(spec.mutation_grain == "grammar_aware_operator" for spec in specs)
+    assert all(spec.raw_archive_byte_coordinates_allowed is False for spec in specs)
+    assert all(spec.score_claim is False for spec in specs)
+    assert specs[0].axis_label == "pose"
+    assert "diagnostic_gradient_subject_byte_index=1" in specs[0].rationale
+    sidecars = list(output_root.glob(f"pose_axis_dominant_bytes_{archive[:12]}_*.json"))
+    assert len(sidecars) == 1
+    payload = json.loads(sidecars[0].read_text(encoding="utf-8"))
+    assert payload["consumer_id"] == "select_pose_axis_dominant_bytes"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["score_axis_dominance"]["selected_count"] == 2
+    assert payload["score_axis_dominance"]["selected"][0]["diagnostic_gradient_subject_byte_index"] == 1
+    assert payload["candidate_modification_specs"][0]["coordinate_system"] == "grammar_aware_operator_response"
+
+
+def test_select_pose_axis_dominant_bytes_validates_thresholds(tmp_path: Path):
+    with pytest.raises(ValueError, match="top_k"):
+        mgc.select_pose_axis_dominant_bytes("d" * 64, top_k=0, anchor_path=tmp_path / "missing.jsonl")
+    with pytest.raises(ValueError, match="axis_dominance_threshold"):
+        mgc.select_pose_axis_dominant_bytes(
+            "d" * 64,
+            axis_dominance_threshold=1.2,
+            anchor_path=tmp_path / "missing.jsonl",
+        )
+
+
 def test_public_api_completeness():
     """Verify all public symbols are exported via __all__ and importable.
 
@@ -623,6 +704,8 @@ def test_public_api_completeness():
         "PerPairDifficultyEntry",
         "PerPairDifficultyAtlas",
         "per_pair_difficulty_atlas",
+        # OP-7 cheap-probe bridge
+        "select_pose_axis_dominant_bytes",
         # Consumer 6
         "RashomonDisagreementEntry",
         "RashomonDisagreementQueue",
