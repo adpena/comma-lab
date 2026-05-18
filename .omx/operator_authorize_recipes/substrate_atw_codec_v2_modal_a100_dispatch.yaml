@@ -16,6 +16,15 @@ smoke_validation_contract: contest_cuda_auth_eval_v1
 # D4 probe gate + reactivation criteria documented in design memo §19.
 # Until D4 probe returns MEANINGFUL_CONDITIONING the recipe is research-only
 # by construction (dispatch_enabled:false + research_only:true).
+#
+# 2026-05-18 Codex V2-1 byte-closed probe:
+# `.venv/bin/python tools/probe_atw_v2_1_byte_closed_side_info_channel.py`
+# built decoder-recoverable ATW21SI side-info packets from the current richer
+# reducer artifacts and measured them against A1 latent bytes. All packets fit
+# the <=2KB side-info budget, so byte budget is not the blocker. Conditioning
+# remains weak: best channel `per_region_histogram` is 323 bytes with
+# I(latent; side_info)=0.047381530305 bits/symbol vs 1.0-bit meaningful
+# threshold; verdict `WEAK_CONDITIONING`. No dispatch/spend authorized.
 
 summary: |
   ATW codec V2 (Atick-Tishby-Wyner full-stack cooperative-receiver codec)
@@ -65,6 +74,8 @@ dispatch_contracts:
 
 dispatch_blockers:
   - d4_probe_h_latent_given_scorer_class_must_return_MEANINGFUL_CONDITIONING_before_dispatch_eligible
+  - atw_v2_1_byte_closed_sideinfo_probe_only_weak_conditioning_best_per_region_histogram_mi_0_047381530305
+  - atw_v2_1_requires_substrate_native_scorer_logit_sketch_or_trained_atw_residual_probe
   - dykstra_feasibility_intersection_polytope_must_be_non_empty_at_predicted_band_per_catalog_296
   - variant_a_vs_b_council_adjudication_memo_must_land_per_design_memo_section_19
 

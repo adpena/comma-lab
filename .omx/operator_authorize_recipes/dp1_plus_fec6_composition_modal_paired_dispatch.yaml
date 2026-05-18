@@ -21,6 +21,12 @@ target_modes:
   - contest_one_video_replay
   - contest_generalized
 canary_status: independent_substrate
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - l1_rate_only_packet_regresses_fec6_by_0p017197_unless_l2_frame_effect_lands
+  - paid_control_eval_requires_operator_decision_after_noop_probe
+  - exact_eval_only_after_full_frame_fec6_vs_composed_parity_plan
 
 cost_band:
   epochs: 0
@@ -37,19 +43,20 @@ paired_axis:
   cpu_min_smoke_gpu: "CPU"
   cpu_hand_calibrated_fallback_p50_usd: 0.40
 
-predicted_score_target: 0.19000  # mid-band of [-0.003, -0.012] from fec6 0.19205 baseline
-predicted_delta: "-0.003 to -0.012 [time-traveler-prediction]"
+score_claim: false
+promotion_eligible: false
+predicted_score_target: 0.209247139182  # L1 rate-only control if frames are identical: fec6 CPU 0.19205 + 0.017197139182
+predicted_delta: "+0.017197139182 [contest-CPU rate-only if frames identical]"
 predicted_delta_basis: |
   fec6 baseline: 0.19205 [contest-CPU] (canonical anchor sha 6bae0201). DP1
-  frame-prior on highway / sky / road bands historically yields -0.003 to -0.012
-  on substrates already exploiting frame structure (per HNeRV-DP1 distillation
-  ablation in feedback_dp1_phase_2_landed_20260514). Conservative band because
-  L1 packet ships with PACT_DP1_PRIOR_STRENGTH=0.0 — actual delta depends on
-  L2 INTEGRATION strength sweep. NO Dykstra-feasibility intersection required
-  because the composition does NOT add any new rate/distortion polytope
-  constraint at L1; the DP1 prefix is dormant bytes (CLAUDE.md "Bit-level
-  deconstruction" 2-phase composition discipline). The L1 measurement IS the
-  rate-axis cost baseline for the L2 frame-axis effect sweep.
+  composition archive adds 25,827 bytes (13-byte DPCOMP header + 25,814-byte
+  DP1 prefix). Contest rate cost is therefore 25 * 25,827 / 37,545,489 =
+  +0.017197139182, verified by
+  .omx/research/dp1_pr101_composition_noop_probe_20260518_codex.json.
+  The earlier +0.0000172 arithmetic was off by 1000x and is superseded.
+  L1 ships with PACT_DP1_PRIOR_STRENGTH=0.0, so this recipe is a rate-only
+  control, not an improvement path. Future L2 INTEGRATION must buy back more
+  than +0.017197 score via frame-axis effect before this family is score-useful.
 literature_anchor: |
   DP1 substrate L1 SCAFFOLD (lane_pretrained_driving_prior_lane_scaffold_20260513) +
   Phase 2 (lane_pretrained_driving_prior_phase_2_20260514). DPCOMP wrapper
@@ -59,15 +66,18 @@ literature_anchor: |
 council_phase_5_prediction: null
 
 risk: |
-  Low-risk paired auth-eval. The composition packet is byte-stable at L1
+  Rate-only control eval, not a score-lowering dispatch. The composition packet
+  is byte-stable at L1
   (PACT_DP1_PRIOR_STRENGTH=0.0; decompose runs but does not apply prior).
   Expected paths:
     (A) Composed inflate produces byte-identical raw frames to fec6 standalone
-        — expected ΔS_seg = 0, ΔS_pose = 0; rate increases by +25.8KB / 37,545,489 =
-        +0.0000172 contest rate term. Net ΔS ≈ +0.000017 (rate cost only).
+        — expected ΔS_seg = 0, ΔS_pose = 0; rate increases by
+        25 * 25,827 / 37,545,489 = +0.017197139182 score.
+        Net ΔS ≈ +0.017197 (rate cost only), so L1 is worse than fec6.
         This is the rate-axis baseline measurement.
     (B) Future L2 INTEGRATION (PACT_DP1_PRIOR_STRENGTH > 0) will measure the
-        frame-axis effect on the same archive bytes.
+        frame-axis effect on the same archive bytes; it must beat the +0.017197
+        rate penalty before any promotion/ranking claim is allowed.
 
   Risk: misattribution if (A) accidentally lands with PRIOR_STRENGTH > 0 (e.g.
   env var leakage). Mitigated by the L1 inflate.py explicit RuntimeError on
@@ -124,6 +134,8 @@ dependencies:
   - upstream/models/segnet.safetensors
   - tools/validate_dispatch_required_inputs.py
   - tools/run_modal_smoke_before_full.py
+  - tools/probe_dp1_pr101_composition_noop_detector.py
+  - .omx/research/dp1_pr101_composition_noop_probe_20260518_codex.json
 
 notes: |
   PATH 1 of dual-stacking build per operator 2026-05-17 directive (grand council
@@ -131,11 +143,16 @@ notes: |
   via tools/build_dp1_plus_fec6_composition_packet.py (32 dedicated tests pass).
 
   PATH 1 (this recipe) measures the rate-axis cost in isolation:
-    +25.8 KB DP1 prefix = +0.0000172 contest rate term
+    +25,827 bytes DPCOMP overhead = +0.017197139182 contest rate term
     L1 frame-axis effect = 0 (PACT_DP1_PRIOR_STRENGTH=0.0)
-    Expected paired anchors: 0.19207 CPU / 0.20535 CUDA (fec6 baseline + rate term)
-    Confirmed prediction → operator decides whether to fire L2 INTEGRATION which
-    enables PACT_DP1_PRIOR_STRENGTH > 0 frame-axis effect sweep.
+    Expected CPU control if frames are identical: 0.209247139182
+      (= fec6 0.19205 [contest-CPU] + 0.017197139182)
+    Expected CUDA control if frames are identical:
+      fec6 same-runtime CUDA baseline + 0.017197139182.
+    This corrects the earlier +0.0000172 typo-class arithmetic. The L1 packet
+    is therefore useful as a no-op/byte-closure control, but paid exact eval is
+    blocked until the operator explicitly wants that control measurement or L2
+    frame-axis prior-effect work lands.
 
   PATH 2 (paired sister recipe) is reformulated to point at pr101_lc_v2_clone
   (learned-decoder substrate) where DP1 frame-prior fits the trainer's loss
@@ -153,6 +170,8 @@ notes: |
     .omx/tmp/dp1_dual_stacking_premise_verifier.txt (10 verified premises)
     src/tac/substrates/pretrained_driving_prior/composition.py (canonical helper)
     tools/build_dp1_plus_fec6_composition_packet.py (build tool)
+    tools/probe_dp1_pr101_composition_noop_detector.py (L1 no-op/rate proof)
+    .omx/research/dp1_pr101_composition_noop_probe_20260518_codex.json
     src/tac/tests/test_dp1_plus_fec6_composition.py (32 tests, all pass)
     feedback_dp1_phase_2_landed_20260514.md (DP1 substrate Phase 2 anchor)
     feedback_permanent_fix_frontier_signal_loss_landed_20260517.md (fec6 frontier anchor)

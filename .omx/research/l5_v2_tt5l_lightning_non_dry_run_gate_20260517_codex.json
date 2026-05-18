@@ -1,23 +1,17 @@
 {
   "blockers": [
-    "doctor_output_missing",
-    "doctor_output_invalid_or_empty",
-    "doctor_output_field_missing:schema_version",
-    "doctor_output_field_missing:tool",
-    "doctor_output_field_missing:recorded_at_utc",
-    "doctor_output_field_missing:checks",
-    "doctor_output_field_missing:status",
-    "doctor_output_field_missing:failed_checks",
-    "doctor_output_checks_missing",
-    "doctor_check_missing:local_supply_chain",
-    "doctor_check_missing:ssh_auth",
-    "doctor_check_missing:remote_supply_chain",
-    "doctor_check_missing:machine_inventory",
+    "doctor_output_status_not_ok",
+    "doctor_output_failed_checks_not_empty",
+    "doctor_check_not_ok:ssh_auth",
+    "doctor_check_not_ok:remote_supply_chain",
+    "doctor_check_not_ok:machine_inventory",
+    "doctor_machine_inventory_empty",
     "zero:contest_cpu:source_manifest:json_file_missing",
     "zero:contest_cpu:source_manifest_missing",
     "zero:contest_cpu:source_manifest_invalid_or_empty",
     "zero:contest_cpu:source_manifest_artifact_paths_missing",
     "zero:contest_cpu:source_manifest_git_head_mismatch_bundle",
+    "zero:contest_cpu:source_bundle_current_head_mismatch",
     "zero:contest_cpu:source_manifest_git_head_mismatch_current",
     "zero:contest_cpu:source_manifest_archive_file_missing",
     "zero:contest_cpu:stage_receipt_missing",
@@ -33,6 +27,7 @@
     "zero:contest_cuda:source_manifest_invalid_or_empty",
     "zero:contest_cuda:source_manifest_artifact_paths_missing",
     "zero:contest_cuda:source_manifest_git_head_mismatch_bundle",
+    "zero:contest_cuda:source_bundle_current_head_mismatch",
     "zero:contest_cuda:source_manifest_git_head_mismatch_current",
     "zero:contest_cuda:source_manifest_archive_file_missing",
     "zero:contest_cuda:stage_receipt_missing",
@@ -48,6 +43,7 @@
     "random_lsb:contest_cpu:source_manifest_invalid_or_empty",
     "random_lsb:contest_cpu:source_manifest_artifact_paths_missing",
     "random_lsb:contest_cpu:source_manifest_git_head_mismatch_bundle",
+    "random_lsb:contest_cpu:source_bundle_current_head_mismatch",
     "random_lsb:contest_cpu:source_manifest_git_head_mismatch_current",
     "random_lsb:contest_cpu:source_manifest_archive_file_missing",
     "random_lsb:contest_cpu:stage_receipt_missing",
@@ -63,6 +59,7 @@
     "random_lsb:contest_cuda:source_manifest_invalid_or_empty",
     "random_lsb:contest_cuda:source_manifest_artifact_paths_missing",
     "random_lsb:contest_cuda:source_manifest_git_head_mismatch_bundle",
+    "random_lsb:contest_cuda:source_bundle_current_head_mismatch",
     "random_lsb:contest_cuda:source_manifest_git_head_mismatch_current",
     "random_lsb:contest_cuda:source_manifest_archive_file_missing",
     "random_lsb:contest_cuda:stage_receipt_missing",
@@ -78,6 +75,7 @@
     "shuffled:contest_cpu:source_manifest_invalid_or_empty",
     "shuffled:contest_cpu:source_manifest_artifact_paths_missing",
     "shuffled:contest_cpu:source_manifest_git_head_mismatch_bundle",
+    "shuffled:contest_cpu:source_bundle_current_head_mismatch",
     "shuffled:contest_cpu:source_manifest_git_head_mismatch_current",
     "shuffled:contest_cpu:source_manifest_archive_file_missing",
     "shuffled:contest_cpu:stage_receipt_missing",
@@ -93,6 +91,7 @@
     "shuffled:contest_cuda:source_manifest_invalid_or_empty",
     "shuffled:contest_cuda:source_manifest_artifact_paths_missing",
     "shuffled:contest_cuda:source_manifest_git_head_mismatch_bundle",
+    "shuffled:contest_cuda:source_bundle_current_head_mismatch",
     "shuffled:contest_cuda:source_manifest_git_head_mismatch_current",
     "shuffled:contest_cuda:source_manifest_archive_file_missing",
     "shuffled:contest_cuda:stage_receipt_missing",
@@ -108,6 +107,7 @@
     "trained:contest_cpu:source_manifest_invalid_or_empty",
     "trained:contest_cpu:source_manifest_artifact_paths_missing",
     "trained:contest_cpu:source_manifest_git_head_mismatch_bundle",
+    "trained:contest_cpu:source_bundle_current_head_mismatch",
     "trained:contest_cpu:source_manifest_git_head_mismatch_current",
     "trained:contest_cpu:source_manifest_archive_file_missing",
     "trained:contest_cpu:stage_receipt_missing",
@@ -123,6 +123,7 @@
     "trained:contest_cuda:source_manifest_invalid_or_empty",
     "trained:contest_cuda:source_manifest_artifact_paths_missing",
     "trained:contest_cuda:source_manifest_git_head_mismatch_bundle",
+    "trained:contest_cuda:source_bundle_current_head_mismatch",
     "trained:contest_cuda:source_manifest_git_head_mismatch_current",
     "trained:contest_cuda:source_manifest_archive_file_missing",
     "trained:contest_cuda:stage_receipt_missing",
@@ -138,6 +139,7 @@
     "ablated:contest_cpu:source_manifest_invalid_or_empty",
     "ablated:contest_cpu:source_manifest_artifact_paths_missing",
     "ablated:contest_cpu:source_manifest_git_head_mismatch_bundle",
+    "ablated:contest_cpu:source_bundle_current_head_mismatch",
     "ablated:contest_cpu:source_manifest_git_head_mismatch_current",
     "ablated:contest_cpu:source_manifest_archive_file_missing",
     "ablated:contest_cpu:stage_receipt_missing",
@@ -153,6 +155,7 @@
     "ablated:contest_cuda:source_manifest_invalid_or_empty",
     "ablated:contest_cuda:source_manifest_artifact_paths_missing",
     "ablated:contest_cuda:source_manifest_git_head_mismatch_bundle",
+    "ablated:contest_cuda:source_bundle_current_head_mismatch",
     "ablated:contest_cuda:source_manifest_git_head_mismatch_current",
     "ablated:contest_cuda:source_manifest_archive_file_missing",
     "ablated:contest_cuda:stage_receipt_missing",
@@ -186,6 +189,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -360,6 +364,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -534,6 +539,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -708,6 +714,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -882,6 +889,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -1056,6 +1064,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -1230,6 +1239,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -1404,6 +1414,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -1578,6 +1589,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -1752,6 +1764,7 @@
         "source_manifest_invalid_or_empty",
         "source_manifest_artifact_paths_missing",
         "source_manifest_git_head_mismatch_bundle",
+        "source_bundle_current_head_mismatch",
         "source_manifest_git_head_mismatch_current",
         "source_manifest_archive_file_missing",
         "stage_receipt_missing",
@@ -1914,33 +1927,40 @@
     "extra_cells": [],
     "missing_cells": []
   },
-  "current_head_commit": "1f1f0140789f9f12a7e9a140ed41802e99fcdaa1",
+  "current_head_commit": "d7cd940d493c722a5154c3ddc3d3459f7d6912b2",
   "dispatch_attempted": false,
   "doctor_status": {
     "checks": {
       "local_supply_chain": {
-        "blockers": [
-          "doctor_check_missing:local_supply_chain"
-        ],
-        "ok": false
+        "blockers": [],
+        "machine_count": null,
+        "ok": true,
+        "raw_ok": true
       },
       "machine_inventory": {
         "blockers": [
-          "doctor_check_missing:machine_inventory"
+          "doctor_check_not_ok:machine_inventory",
+          "doctor_machine_inventory_empty"
         ],
-        "ok": false
+        "machine_count": 0,
+        "ok": false,
+        "raw_ok": false
       },
       "remote_supply_chain": {
         "blockers": [
-          "doctor_check_missing:remote_supply_chain"
+          "doctor_check_not_ok:remote_supply_chain"
         ],
-        "ok": false
+        "machine_count": null,
+        "ok": false,
+        "raw_ok": false
       },
       "ssh_auth": {
         "blockers": [
-          "doctor_check_missing:ssh_auth"
+          "doctor_check_not_ok:ssh_auth"
         ],
-        "ok": false
+        "machine_count": null,
+        "ok": false,
+        "raw_ok": false
       }
     },
     "expected_status": "OK",
@@ -1950,9 +1970,9 @@
       "remote_supply_chain",
       "machine_inventory"
     ],
-    "status": ""
+    "status": "FAIL"
   },
-  "generated_at_utc": "2026-05-17T17:49:31Z",
+  "generated_at_utc": "2026-05-18T06:15:28Z",
   "operator_execute_required": true,
   "planning_only": false,
   "promotion_eligible": false,
@@ -1968,9 +1988,9 @@
   "source_bundle": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
   "source_bundle_sha256": "a88042f1af6db3a4bd526a955aa883e5dafc651d9029433e5ca7ca8cc0077730",
   "source_claims_ledger": ".omx/state/active_lane_dispatch_claims.md",
-  "source_claims_ledger_sha256": "298c1ab19040f44c5ce66395cbe9ec695906f9b48c920c2cfa242d60de508373",
+  "source_claims_ledger_sha256": "51437994da7c103b79e6986460492dadf1b718e39a7b48a1920730ffeca9ab67",
   "source_doctor_output": ".omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json",
-  "source_doctor_output_sha256": "",
+  "source_doctor_output_sha256": "8cd38fc53762a2b1886768155deffbbba714c091f2f5bc4bd04656992272979c",
   "source_doctor_plan": ".omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.json",
   "source_doctor_plan_sha256": "895ce331c965b5c698f63449a97b30e72d69eeaf158c2f65564ad7b4c8675ea3",
   "tool": "tools/check_l5_v2_tt5l_lightning_non_dry_run_gate.py"

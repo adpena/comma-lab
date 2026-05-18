@@ -27,8 +27,16 @@ dispatch_enabled: false
 dispatch_blockers:
   - phase_2_council_approval_required_to_lift_full_main_NotImplementedError
   - variant_a_vs_variant_b_codebook_design_decision_required
-  - probe_disambiguator_landing_required
+  - dp1_prior_lambda_disambiguator_landing_required_after_l1_noop_probe
   - pr101_lc_v2_integration_surface_premise_verification_required
+
+composition_noop_probe:
+  path: .omx/research/dp1_pr101_composition_noop_probe_20260518_codex.json
+  verdict: l1_rate_only_noop_verified
+  evidence_axis: "[byte-closed local structural proof]"
+  score_claim: false
+  promotion_eligible: false
+  note: "L1 DP1+fec6 packet structure and rate-only no-op guard landed; PATH 2 still needs lambda/prior-effect disambiguation before full dispatch."
 
 cost_band:
   epochs: 0  # scaffold smoke, no training
@@ -95,6 +103,7 @@ dependencies:
   - upstream/videos/0.mkv
   - tools/validate_dispatch_required_inputs.py
   - tools/run_modal_smoke_before_full.py
+  - tools/probe_dp1_pr101_composition_noop_detector.py
   - .omx/research/dp1_dual_stacking_design_20260517.md
 
 notes: |
@@ -108,9 +117,12 @@ notes: |
        per CLAUDE.md Catalog #146 contest_one_video_replay allowance).
     2. λ_DP1 sweep design — which values to test in parallel ({0, 0.01, 0.05,
        0.10, 0.25, 0.50} or council-selected band).
-    3. Probe-disambiguator landing: tools/probe_dp1_prior_lambda_disambiguator.py
-       sweeps λ to disambiguate prior-effect from overfitting on the canonical
-       pr101_lc_v2 lattice.
+    3. L1 composition no-op proof has landed at
+       .omx/research/dp1_pr101_composition_noop_probe_20260518_codex.json.
+       Remaining probe-disambiguator work is the PATH 2 lambda/prior-effect
+       tool: tools/probe_dp1_prior_lambda_disambiguator.py sweeps λ to
+       disambiguate prior-effect from overfitting on the canonical pr101_lc_v2
+       lattice.
     4. pr101_lc_v2_clone integration surface premise verification (Catalog
        #229): which exact loss-hook to inject DashcamPriorLoss at;
        compatibility with the canonical scorer_loss_terms_btchw lattice;
@@ -119,12 +131,13 @@ notes: |
   Per Catalog #313 probe-outcomes ledger: no blocking predecessor outcome for
   this substrate at landing (verified via tools/check_predecessor_probe_outcome.py).
 
-  PATH 1 sister recipe (ALREADY dispatchable; the operator can fire paired
-  auth-eval at any time):
+  PATH 1 sister recipe (now research-only control; paid paired auth-eval should
+  wait for explicit operator decision because L1 rate-only cost is +0.017197):
     .omx/operator_authorize_recipes/dp1_plus_fec6_composition_modal_paired_dispatch.yaml
 
   Cross-ref:
     .omx/research/dp1_dual_stacking_design_20260517.md
+    .omx/research/dp1_pr101_composition_noop_probe_20260518_codex.json
     .omx/tmp/dp1_dual_stacking_premise_verifier.txt
     experiments/train_substrate_pr101_with_dp1_prior_regularizer.py
     src/tac/tests/test_train_substrate_pr101_with_dp1_prior.py (19 tests pass)

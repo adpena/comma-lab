@@ -34,6 +34,7 @@ council_decisions_recorded:
   - "op-routable #4: Sister wire-in: cathedral_autopilot_autonomous_loop.py consumes composition_alpha=1.0 anchor + Tier-C ACROSS_CLASS verdict for C6 IBPS ranking (no code change required; canonical loaders already wire from .omx/state/ JSONs)"
   - "op-routable #5: Post-smoke Tier-C re-confirmation REQUIRED per Catalog #227 + Catalog #313 probe-outcomes ledger; sister subagent should register probe_outcome verdict after smoke lands"
   - "op-routable #6: Continual-learning posterior anchor appended via tac.council_continual_learning.append_council_anchor with full v2 frontmatter (this memo)"
+council_current_status: "SUPERSEDED_BY_CATALOG_324_DEAUTHORIZATION; current_recipe_dispatch_enabled=false; current_score_claim=false; current_promotion_eligible=false; current_reactivation_requires_post_training_tier_c_or_operator_waiver"
 council_predicted_mission_contribution: frontier_breaking
 council_override_invoked: false
 council_override_rationale: ""
@@ -138,6 +139,62 @@ Rationale: PROCEED unlocks the cost-adjusted TOP-1 ASYMPTOTIC PURSUIT candidate.
 ## 6. Continual-learning wire-in (mandatory per Catalog #300)
 
 This deliberation appended to `.omx/state/council_deliberation_posterior.jsonl` via `tac.council_continual_learning.append_council_anchor`. Full v2 frontmatter at top of this memo.
+
+### 2026-05-18 Codex posterior mission-classification repair
+
+Adversarial WIP verification found an append-only posterior drift:
+
+- RED: `src/tac/tests/test_c6_ibps_recipe_fixes_dispatch_unlock.py::test_fix_4_council_posterior_anchor_appended` selected the latest matching
+  `deliberation_id=council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517`
+  posterior row and observed `predicted_mission_contribution=frontier_protecting`.
+- Contradiction: this memo frontmatter, this memo body, and
+  `.omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml`
+  all classify the C6 dispatch unlock as `frontier_breaking`.
+- Repair: append a superseding
+  `event_type=backfilled_extension` row via
+  `tac.council_continual_learning.append_council_anchor`, preserving
+  HISTORICAL_PROVENANCE instead of editing the earlier row in place.
+- GREEN criterion: the latest matching posterior row now reports
+  `predicted_mission_contribution=frontier_breaking`.
+
+This is a state-consistency repair only. It does not create a score claim,
+dispatch claim, or promotion claim; it prevents the autopilot/ranker from
+down-classifying C6 IBPS because of a stale backfill row.
+
+### 2026-05-18 Codex Catalog #324 test supersession
+
+The original dispatch-unlock contract in this memo remains historically true
+for 2026-05-17, but it is superseded for current operator flows by Catalog
+#324 after the first C6 smoke returned `final_score=3.04`, about 22x outside
+the random-init-derived `[0.113, 0.163]` band.
+
+- Current recipe truth:
+  `.omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml`
+  keeps `dispatch_enabled=false`,
+  `predicted_band_validation_status=pending_post_training`, and a reactivation
+  criterion requiring post-training Tier-C density or explicit operator waiver.
+- Test repair: `src/tac/tests/test_c6_ibps_recipe_fixes_dispatch_unlock.py`
+  now checks the historical unlock artifacts plus the newer Catalog #324
+  deauthorization, rather than trying to re-enable a falsified-band recipe.
+- Dispatch implication: C6 reactivation should proceed through the beta/latent
+  sweep recipes and post-training Tier-C remeasurement path, not through the
+  stale original recipe.
+- Verification:
+  `.venv/bin/python -m pytest src/tac/tests/test_c6_ibps_recipe_fixes_dispatch_unlock.py::test_fix_4_council_posterior_anchor_appended -q`
+  now passes (`1 passed in 0.16s`), the C6/Catalog #324 focused pair passes
+  (`67 passed in 0.78s`), and the broader WIP slice that exposed the drift
+  passes (`454 passed in 4.59s`).
+
+### 2026-05-18 Codex frontmatter false-authority repair
+
+Adversarial WIP verification found a frontmatter-only stale-dispatch hazard:
+`council_decisions_recorded` still preserves the historical op-routable saying
+the recipe's `dispatch_enabled` flag was set true. That history remains intact,
+but the frontmatter now also carries `council_current_status` with the current
+Catalog #324 truth: recipe dispatch is disabled, `score_claim=false`,
+`promotion_eligible=false`, and reactivation requires post-training Tier-C
+density or an explicit operator waiver. This prevents frontmatter-only parsers
+from mistaking a historical unlock record for current dispatch authority.
 
 ## 7. Cross-references
 

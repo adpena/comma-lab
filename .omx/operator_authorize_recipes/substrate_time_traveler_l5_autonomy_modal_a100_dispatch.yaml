@@ -10,6 +10,9 @@ summary: |
   foveation matched to ego-motion (Gibson 1950, LAPose), differentiable world
   model, sub-100K params + Tikhonov regularization. Target archive: 95-110 KB.
 
+research_only: true
+dispatch_enabled: false
+
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
 min_vram_gb: 40
@@ -58,17 +61,60 @@ predicted_score_target: null
 # convex-intersection regime, NOT additive (old band was additive sum of per-move
 # improvements; structural over-estimate).
 predicted_band: null
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Catalog #324 + TT5L symposium #866: TT5L V1 is not rank, kill, promotion,
+  or dispatch authority while the active predicted band is null. Reactivation
+  requires: (a) a TT5L V2 design memo satisfying Catalog #294/#303/#305/#296/
+  #310/#311 plus canonical-vs-unique and cargo-cult-composition K-coverage
+  sections; (b) per-section MI probes on se3_lie, seg_boundary, hf_residual,
+  and predict_residual with positive evidence on at least 2 of 4 sections;
+  (c) Dykstra-feasibility and prediction-band baseline custody; (d) Wave N+1
+  PROCEED-unconditional before dispatch_enabled may be restored; and (e)
+  post-training Tier-C density plus paired CPU/CUDA empirical anchor before
+  predicted_band_validation_status may become validated_post_training.
 prediction_band_rank_reward_suppressed: true
 retired_predicted_band: [0.150, 0.170]
 smoke_score_band: [0.10, 0.30]
 predicted_delta: "NULL pending Dykstra-feasibility 5-move polytope + Z1 within-class haircut application [prediction] per cargo-cult-unwind 2026-05-16; OLD band [0.150, 0.170] retired as additive-composition cargo-cult per Boyd's convex-feasibility lens"
 predicted_delta_basis: ".omx/research/time_traveler_l5_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND) + .omx/research/time_traveler_architecture_reverse_engineered_20260513.md + .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md §1.4 + Catalog #219 Z1 ablation"
-# CARGO-CULT-UNWIND reactivation criteria (per design memo §Reactivation criteria):
+# 2026-05-18 Codex blocker refresh:
+# Dykstra score-axis sanity, move-level feasibility, contest full-frame
+# side-info consumption, first-anchor timing smoke, Lightning preflight,
+# execution bundle, dry-run verification, route-unblock packet, and doctor plan
+# now validate through `l5_v2_tt5l_campaign_readiness`. 2026-05-18 Codex ran
+# the required Lightning doctor output and non-dry-run gate locally:
+# `.omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json`
+# returned `status=FAIL` with failed checks `ssh_auth`,
+# `remote_supply_chain`, and `machine_inventory`; the non-dry-run gate wrote
+# `.omx/research/l5_v2_tt5l_lightning_non_dry_run_gate_20260517_codex.json`
+# with `ready_for_non_dry_run_submit=false`, `ready_cells=0/10`, and
+# `provider_spend_attempted=false`. The old Dykstra and additive-composition
+# blockers are superseded; the current dispatch blockers are probe/
+# architecture-lock semantics, prediction-band authority, and provider
+# capacity/runtime readiness. Still no score, rank, promotion, or exact-dispatch
+# authority.
 dispatch_blockers:
-  - tools_check_substrate_dykstra_feasibility_polytope_emitted_at_omx_state_dykstra_feasibility_time_traveler_l5_json
-  - predicted_target_revised_to_polytope_intersection_lower_bound_not_5_move_sum_in_both_unwind_memo_and_this_recipe
-  - z1_within_class_haircut_applied_per_catalog_219_if_tier_c_classifies_within_class
-  - sextet_pact_council_consensus_on_revised_composition_arithmetic_per_CLAUDE_md_design_decisions_non_negotiable
+  - requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock
+  - l5_v2_gate_evidence_missing_c1_z5_tt5l_probe_disambiguator
+  - l5_v2_probe_gate_artifact_semantics_invalid_recomputed_architecture_lock_allowed
+  - l5_v2_probe_gate_artifact_semantics_invalid_recomputed_probe_blockers_nonempty
+  - l5_v2_probe_gate_artifact_semantics_invalid_architecture_lock_allowed
+  - l5_v2_probe_gate_artifact_semantics_invalid_probe_blockers_nonempty
+  - l5_v2_probe_gate_artifact_semantics_missing_eligible_observations_c1_z5_tt5l
+  - prediction_band_not_dispatch_ready
+  - prediction_band_baseline_missing
+  - prediction_band_baseline_custody_missing
+  - prediction_band_empirical_anchor_missing
+  - l5_v2_tt5l_modal_provider_blocker_active_modal_workspace_billing_cycle_spend_limit_reached
+  - l5_v2_tt5l_lightning_alt_provider_blocked_missing_lightning_ssh_target
+  - l5_v2_tt5l_lightning_alt_provider_blocked_missing_lightning_teamspace
+  - l5_v2_tt5l_lightning_alt_provider_blocked_machine_inventory_not_checked
+  - l5_v2_tt5l_lightning_alt_provider_blocked_source_manifest_not_staged
+  - l5_v2_tt5l_lightning_alt_provider_blocked_remote_cuda_runtime_not_probed
+  - l5_v2_tt5l_lightning_non_dry_run_gate_failed_doctor_ssh_auth
+  - l5_v2_tt5l_lightning_non_dry_run_gate_failed_doctor_remote_supply_chain
+  - l5_v2_tt5l_lightning_non_dry_run_gate_failed_doctor_machine_inventory
 literature_anchor: |
   Atick & Redlich (1990) Neural Computation 2:308-320 (cooperative-receiver);
   Rao & Ballard (1999) Nature Neuroscience 2:79-87 (predictive coding);
@@ -166,9 +212,13 @@ notes: |
 
   Retired additive contest-CPU band: 0.150-0.170 [time-traveler-prediction]
   is NOT an active prediction and NOT a score claim. Current TT5L dispatch
-  authority requires Dykstra feasibility, full-frame side-info proof, probe
-  disambiguation, and paired CUDA + CPU auth eval on 1:1 contest-CI hardware
-  per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
+  authority requires valid probe disambiguation / architecture-lock semantics,
+  prediction-band custody, provider capacity/runtime readiness, and paired CUDA
+  + CPU auth eval on 1:1 contest-CI hardware per CLAUDE.md "Submission auth
+  eval — BOTH CPU AND CUDA". Dykstra feasibility, move-level feasibility,
+  contest full-frame side-info consumption, first-anchor timing smoke, and the
+  Lightning execution bundle path are valid as of the 2026-05-18 Codex blocker
+  refresh, but they do not by themselves authorize dispatch.
 
   Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
   .spawn(); harvest within 24h via tools/harvest_modal_calls.py or

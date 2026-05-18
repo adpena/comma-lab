@@ -10,8 +10,11 @@ lane_id: lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518
 # source with compress-time scorer-logit features.
 
 research_only: false
-dispatch_enabled: true
-dispatch_blockers: []
+dispatch_enabled: false
+dispatch_blockers:
+  - candidate4c_modal_training_recipe_is_diagnostic_only_exact_cuda_handoff_required
+smoke_only: true
+smoke_validation_contract: training_artifact_v1
 
 summary: |
   Z6-v2 Candidate 4c scorer-logit conditioning recipe. Uses the canonical
@@ -19,7 +22,9 @@ summary: |
   trainer derives the fixed-width ego buffer from compress-time SegNet logits
   plus PoseNet head features. Inflate remains scorer-free because only the
   reduced side-info vector is packed into the existing Z6PCWM1 ego-motion
-  section.
+  section. This Modal surface is a pair-capped archive-producing diagnostic
+  smoke only; contest-CUDA authority must be produced later by a separate
+  claimed exact-eval dispatcher on a harvested 600-pair archive/runtime packet.
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
@@ -39,21 +44,26 @@ dispatch_contracts:
   - id: z6_v2_candidate_4c_scorer_logit_substrate
     archive_role: monolithic_z6pcwm1_self_contained_with_disambiguator_sidecar
     builder_surface: experiments/train_substrate_time_traveler_l5_z6.py
-    status: active_recipe_contract
-    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+    status: pair_capped_modal_diagnostic_smoke_only
+    exact_eval_path: blocked_for_modal_training_runtime; harvest a full 600-pair archive/runtime packet, then use experiments/modal_auth_eval.py with provider-level --detach and a fresh lane claim
 
 cost_band:
-  epochs: 300
+  epochs: 100
   smoke_score_band: [0.13, 0.25]
   predicted_cuda_band: [0.11, 0.17]
-  predicted_cost_usd: 13.0
+  predicted_cost_usd: 1.25
   all_flags_on: true
-  hand_calibrated_fallback_p50_usd: 10.0
+  hand_calibrated_fallback_p50_usd: 1.0
   platform_key: modal
   gpu_key: T4
+  future_full_plus_paired_exact_eval_envelope_usd: 13.0
 
 predicted_score_target: null
 predicted_band: [0.11, 0.17]
+predicted_band_kind: predicted_score_band
+predicted_band_axis: contest-CUDA
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324: Candidate 4c's [0.11, 0.17] band is a planning prior until the scorer-logit smoke archive has paired exact-eval evidence and post-training Tier-C density/byte-consumption validation. Do not use this band for promotion or rank/kill authority before the full-vs-identity disambiguator and post-training validation land."
 smoke_score_band: [0.13, 0.25]
 predicted_delta: "[0.11, 0.17] band [planning-prior; Path B design memo section 4.4c; HIGH VARIANCE pending paired CPU/CUDA empirical anchor]"
 predicted_delta_basis: ".omx/research/z6_v2_cargo_cult_unwind_4_candidate_redesign_path_b_20260517.md section 4.4c + council_per_substrate_symposium_atw_v2_reactivation_20260518.md Revision #5"
@@ -71,7 +81,11 @@ source_supports: |
 
 paper_claim_scope: |
   This recipe is not a score claim. It is a launchable empirical probe for the
-  side-information-source hypothesis. Promotion requires harvested paired
+  side-information-source hypothesis. The Modal training wrapper forces CPU
+  advisory auth-eval off the promotion path, so this recipe validates only
+  a current pair-capped `training_artifact_v1` archive/runtime packet with
+  score_claim=false. Promotion requires a separate harvested 600-pair archive,
+  claimed exact-CUDA auth-eval via the canonical exact-eval dispatcher, paired
   CPU/CUDA auth-eval artifacts, archive bytes/SHA-256, runtime custody,
   component distances, and terminal lane-claim rows.
 
@@ -97,7 +111,14 @@ risk: |
   dispatch still requires the Catalog #202 paired-env attestation and the
   Catalog #166 worker-side sentinel hash check.
 
-envelope_status: "FITS $13 Candidate 4c envelope per Path B design memo section 4.4c ($1 smoke + $0.50 CPU + $10 full + $1.50 paired)"
+  Modal T4 training is diagnostic only. `experiments/modal_train_lane.py`
+  forces `AUTH_EVAL_DEVICE=cpu`, `MODAL_AUTH_EVAL_ADVISORY_ONLY=1`,
+  `SCORE_CLAIM=false`, and refuses exact-CUDA auth-eval switches. Candidate
+  4c therefore cannot use this recipe as a contest-CUDA smoke/full dispatcher;
+  exact-CUDA authority is a post-harvest handoff through `experiments/modal_auth_eval.py`
+  or another canonical exact-eval provider path.
+
+envelope_status: "FITS $1.25 diagnostic smoke envelope; full plus paired exact-eval envelope remains $13 after a 600-pair archive/runtime packet exists"
 
 remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z6.sh
 timeout_hours: 2.0
@@ -109,7 +130,7 @@ required_input_files:
 modal:
   lane_script: scripts/remote_lane_substrate_time_traveler_l5_z6.sh
   cost_band_trainer: experiments/train_substrate_time_traveler_l5_z6.py
-  cost_band_epochs: 300
+  cost_band_epochs: 100
   cost_band_batch_size: 4
   cost_band_all_flags_on: true
 
@@ -134,7 +155,7 @@ env_overrides:
   TAG: substrate_z6_v2_candidate_4c_scorer_logit
   Z6_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
   Z6_OUTPUT_DIR: /workspace/pact/lane_z6_v2_candidate_4c_results/output
-  Z6_EPOCHS: "300"
+  Z6_EPOCHS: "100"
   Z6_BATCH_SIZE: "4"
   Z6_LR: "5e-4"
   Z6_LAMBDA_RESIDUAL_ENTROPY: "1.0"
@@ -150,6 +171,8 @@ env_overrides:
   Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE: "true"
   Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S: "0.005"
   Z6_ENABLE_AUTOCAST_FP16: "true"
+  Z6_MAX_PAIRS: "64"
+  Z6_SKIP_AUTH_EVAL: "1"
   LOCAL_CUDA_WORKER: "1"
   Z6_TRAINER_MODE: "full"
   SMOKE_ONLY: "0"
@@ -162,12 +185,15 @@ dependencies:
   - tools/probe_z6_predictive_coding_vs_identity_disambiguator.py
 
 distinguishing_feature_name: scorer_logit_ego_source
-distinguishing_bytes_path: ego_motion_blob
+distinguishing_bytes_path: scorer_logit_ego_motion
+distinguishing_byte_range: 0.bin@192390:16
 inflate_consumer_function: tac.substrates.time_traveler_l5_z6.inflate.run_inflate
-byte_mutation_smoke_passes: pending_candidate_4c_smoke
+byte_mutation_smoke_passes: experiments/results/z6_candidate4c_paired_auth_stats_paircap2_codex_20260518T0256Z/scorer_logit_ego_motion_byte_mutation_proof.json
+identity_disambiguator_probe: .omx/research/z6_candidate4c_identity_archive_pair_disambiguator_20260518_codex.json
+identity_disambiguator_probe_requires_runtime_output_changed: true
 
 smoke_before_full: true
-horizon_class: frontier_pursuit
+horizon_class: asymptotic_pursuit
 
 operator_required_flags:
   TIER_1_OPERATOR_REQUIRED_FLAGS:
@@ -184,7 +210,8 @@ notes: |
   This recipe deliberately does not modify the existing Candidate 1 recipe.
   Candidate 1 remains the capacity-unwind branch; Candidate 4c is the
   side-info-channel branch. Operator choice is still required before spending,
-  but the 4c dispatch surface is now concrete and auditable.
+  but the 4c dispatch surface is now concrete, auditable, and explicitly
+  diagnostic-only under Modal training.
 
   Recommended dry-run before spend:
     .venv/bin/python tools/run_modal_smoke_before_full.py \
@@ -192,10 +219,21 @@ notes: |
       --operator-handle codex:z6_candidate4c_scorer_logit \
       --dry-run
 
-  Recommended paid path, only after explicit operator choice and fresh claim
-  hygiene:
+  Diagnostic smoke command shape, blocked while `dispatch_enabled: false`.
+  Do not run as a normal paid launch; an operator must first acknowledge the
+  diagnostic-only contract and either flip this recipe or create a dedicated
+  smoke-authorize surface:
     OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
-    OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=13.00 \
+    OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=1.25 \
     .venv/bin/python tools/run_modal_smoke_before_full.py \
       --recipe substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch \
       --operator-handle codex:z6_candidate4c_scorer_logit
+
+  Post-harvest exact-eval handoff (not runnable until a full 600-pair
+  archive/runtime packet exists and a lane claim is opened):
+    .venv/bin/modal run --detach experiments/modal_auth_eval.py \
+      --archive <harvested_full_600_pair_archive.zip> \
+      --submission-dir <harvested_submission_dir> \
+      --inflate-sh inflate.sh \
+      --gpu T4 \
+      --detach --provider-detach-ack

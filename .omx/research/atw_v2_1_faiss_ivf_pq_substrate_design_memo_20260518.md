@@ -424,6 +424,110 @@ This memo lands as L0 SCAFFOLD. After committing the 5 deliverables (this memo +
 6. Catalog #324 post-training Tier-C validation declared
 7. Catalog #270 dispatch optimization protocol verdict PASS
 
+## 13. Codex adversarial hardening pass — optional dependency must not mask local contracts
+
+Follow-up pass on 2026-05-18 found a test-authority bug in the fresh scaffold:
+`pytest.importorskip("faiss")` lived at module scope in
+`src/tac/tests/test_atw_v2_1_faiss_ivf_pq.py`. On a machine without
+`faiss-cpu`, that skipped the entire test file, including byte-budget
+arithmetic, trainer-mode resolution, `_full_main` fail-closed behavior, and
+the missing-Faiss actionable-error test. That was too broad: optional Faiss
+availability should skip only the actual codebook encode/decode round-trips.
+
+Fix landed:
+
+- moved the Faiss skip into a local `_require_faiss()` helper used only by
+  Faiss-dependent tests;
+- changed `build_pq_codebook`, `encode_per_region_histogram`,
+  `decode_per_region_histogram`, and `deserialize_codebook` so cheap shape/type
+  invariants are validated before importing the optional Faiss dependency;
+- added a regression test proving local contract errors are not hidden behind
+  `ImportError: No module named 'faiss'`.
+
+Verification:
+
+```text
+.venv/bin/python -m pytest src/tac/tests/test_atw_v2_1_faiss_ivf_pq.py -q
+24 passed, 7 skipped in 0.19s
+```
+
+Evidence grade: `[local-test]`; no score claim, no promotion claim, no provider
+dispatch, and no lane claim.
+
+## 14. Codex adversarial hardening pass — over-budget channels are not byte-closed authority
+
+Follow-up pass on 2026-05-18 found a second false-authority edge in
+`tools/probe_atw_v2_1_byte_closed_side_info_channel.py`: if every candidate
+side-info packet exceeded the configured byte budget, the payload still filled
+`best_byte_closed_channel` with the highest-MI over-budget channel and the
+Markdown rendered "Best byte-closed channel." The channel action correctly said
+`reject_or_recode_side_info_payload_before_mi_interpretation`, but the summary
+field/name could still mislead a dispatcher, council memo, or operator recipe
+into treating an over-budget sidecar as byte-closed evidence.
+
+Fix landed:
+
+- split the summary into `best_byte_closed_channel` and `best_overall_channel`;
+- set `best_byte_closed_channel: null` when no channel satisfies the configured
+  side-info byte budget;
+- render an explicit "No byte-closed channel fit the configured side-info
+  budget" Markdown verdict in that case;
+- added a regression test proving all-over-budget channels cannot emit
+  byte-closed authority language.
+
+Verification:
+
+```text
+.venv/bin/python -m pytest src/tac/tests/test_probe_atw_v2_1_byte_closed_side_info_channel.py -q
+4 passed in 0.49s
+```
+
+Evidence grade: `[local-test]`; no score claim, no promotion claim, no provider
+dispatch, and no lane claim. This is a dispatch-custody hardening only: it does
+not change the existing 323-byte / MI=0.047 byte-closed empirical anchor, but it
+prevents future budget-sweep artifacts from laundering over-budget rows as
+byte-closed candidates.
+
+## 15. Codex V1/V2/V3 Faiss-PQ disambiguator result
+
+Artifact: `.omx/state/atw_v2_1_faiss_pq_disambiguator_probe.json`
+Local forensic bytes: `experiments/results/atw_v2_1_faiss_pq_probe_20260518T100524Z/`
+Axis: `[diagnostic-CPU; ATW V2-1 Faiss-PQ side-info MI probe]`
+Authority: `score_claim=false`, `promotion_eligible=false`, `ready_for_paid_dispatch=false`; no provider dispatch and no lane claim.
+
+Codex landed and ran the missing V1/V2/V3 disambiguator. The probe renders A1
+locally, runs canonical SegNet on frame 1, region-averages softmax probabilities
+for 4x4 and 16x16 grids, then hands saved `.npy` arrays to an isolated Faiss
+worker subprocess. The subprocess boundary is required on this macOS host:
+`faiss-cpu` and Torch initialize incompatible OpenMP runtimes when trained in
+the same Python process, producing an abort instead of a catchable exception.
+
+Two implementation bugs were found and fixed before interpreting the result:
+
+- 5-class SegNet softmax vectors are now padded to a dimension divisible by
+  `m_subq` before `IndexIVFPQ` construction, then decoded tensors are trimmed
+  back to 5 classes.
+- The helper now serializes trained quantizers only (`ntotal=0`). The earlier
+  helper added training vectors to the IVF index before serialization, bloating
+  the archive-side codebook and producing false over-budget evidence.
+
+Measured post-fix outcomes:
+
+| Variant | Brotli archive bytes | Rate cost | Unique fraction | MI bits/symbol | Verdict | Dispatch consequence |
+|---|---:|---:|---:|---:|---|---|
+| `v3_pool_shared` | 3,114 | 0.002073 | 0.033 | 0.121512378237 | `WEAK_CONDITIONING` | Byte-closed but not meaningful enough; no dispatch authority. |
+| `v2_sparse_top_k` | 7,941 | 0.005288 | 1.000 | 2.457397664695 | `MEANINGFUL_CONDITIONING` | High-cardinality plug-in MI upper bound only; over the V3 5KB target; no dispatch authority. |
+| `v1_dense` | 452,799 | 0.301500 | 1.000 | 2.457397664695 | `MEANINGFUL_CONDITIONING` | High-cardinality upper bound and structurally over budget; no dispatch authority. |
+
+Conclusion: Faiss-PQ per-region histogram is not the next paid ATW V2-1
+dispatch channel. The only shippable variant is weak; the meaningful variants
+are pair-identity-like upper bounds and too byte-expensive. The recipe now
+carries concrete blockers for the weak V3 result plus the high-cardinality V2/V1
+results. Recommended next gate is
+`pivot_to_scorer_logit_compression_or_trained_atw_residual_probe`, preserving
+ATW's cooperative-receiver paradigm while rejecting this measured Faiss-PQ
+channel configuration.
+
 ## Cross-references
 
 - **ATW V2 reactivation symposium**: `.omx/research/council_per_substrate_symposium_atw_v2_reactivation_20260518.md`

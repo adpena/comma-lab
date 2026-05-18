@@ -431,3 +431,45 @@ Per V2 design memo §3 orthogonality verification: ATW V2 binds Atick-Redlich + 
 - **NO Modal/Lightning/Vast.ai dispatches** ✓
 - **Total cost**: $0 GPU, ~3h editor
 - **Lane**: `lane_per_substrate_symposium_atw_v2_reactivation_20260518` L1 (impl_complete + three_clean_review + memory_entry after operator marks gates)
+
+## 2026-05-18 Codex byte-closed V2-1 side-info probe addendum
+
+Codex landed and ran the V2-1 byte-budget side-info probe requested by this
+symposium's next-action chain:
+
+- Tool: `tools/probe_atw_v2_1_byte_closed_side_info_channel.py`
+- Tests: `src/tac/tests/test_probe_atw_v2_1_byte_closed_side_info_channel.py`
+- JSON: `.omx/research/atw_v2_1_byte_closed_side_info_probe_20260518_codex.json`
+- Markdown: `.omx/research/atw_v2_1_byte_closed_side_info_probe_20260518_codex.md`
+- Packet output dir:
+  `experiments/results/atw_v2_1_sideinfo_probe_20260518T062431Z`
+- Command: `.venv/bin/python tools/probe_atw_v2_1_byte_closed_side_info_channel.py`
+- Axis: `[diagnostic-CPU; ATW V2-1 byte-closed side-info MI probe]`
+- Score authority: `score_claim=false`, `promotion_eligible=false`,
+  `ready_for_paid_dispatch=false`
+- Dispatch/spend: none
+
+Result:
+
+| Channel | Packet bytes | Budget ok | MI bits/symbol | Threshold | Verdict |
+|---|---:|---|---:|---:|---|
+| `per_pixel_histogram` | 204 | true | 0.022656927447 | 0.5 | WEAK_CONDITIONING |
+| `per_region_histogram` | 323 | true | 0.047381530305 | 1.0 | WEAK_CONDITIONING |
+| `per_pair_class_2_fraction` | 127 | true | 0.009692520351 | 0.2 | INDEPENDENT |
+| `per_frame_argmax` | 117 | true | 0.000000000000 | 0.2 | INDEPENDENT |
+
+Interpretation:
+
+- The <=2KB Wyner-Ziv side-info byte budget is **not** the blocker for the
+  current richer reducer artifacts. Dictionary-coded ATW21SI packets are tiny:
+  best channel `per_region_histogram` is 323 bytes, with rate score cost
+  `0.000215072442`.
+- The conditioning signal is still too weak to authorize ATW Phase 2:
+  best observed MI is `0.047381530305` bits/symbol, far below the
+  `1.0` bit meaningful threshold for the per-region reducer and below the
+  global `MEANINGFUL_CONDITIONING` standard needed before paid dispatch.
+- The next gate changes from "build byte-closed side-info probe" to
+  `design_substrate_native_scorer_logit_sketch_or_trained_atw_residual_probe`.
+  That means either preserve a richer scorer-logit signal before the histogram
+  reducer collapses it, or rerun the probe on trained ATW residuals rather than
+  A1 HNeRV latents. No Modal A100 spend is justified from this evidence.

@@ -267,3 +267,164 @@ This substrate IS ego-motion-conditioned. Per Z6/Z7/Z8 design memo Pattern H + C
 - temporal-decorrelation residual via predictive-coding bottleneck
 
 Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Z6/Z7/Z8 design memo Section 11 (Atick-Redlich + Ballard FOE prior): this substrate IS the canonical ego-motion-conditioned next-frame-prediction class-shift substrate that Z6/Z7/Z8 require.
+
+## 2026-05-18 Codex Blocker Refresh
+
+Append-only correction to the 2026-05-16 reactivation state:
+
+- The prior "move-level feasibility is still missing" line is superseded.
+  `.omx/state/tt5l_move_level_feasibility.json` now validates with
+  `predicate_passed=true`, `move_level_constraint_proof=true`,
+  `residual_max=0.0`, and no status blockers.
+- The Dykstra score-axis sanity artifact remains valid:
+  `.omx/state/dykstra_feasibility_time_traveler_l5.json` SHA-256
+  `226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60`.
+- The contest full-frame side-info consumption proof is valid through
+  `.omx/research/tt5l_contest_sideinfo_consumption_proof_20260516_codex.json`
+  SHA-256 `d430dd7ccc97da125ca3985a2f70d7cef4c37d39cccad1952698d37d177c9a86`.
+- `l5_v2_tt5l_campaign_readiness(repo_root=.)` reports valid first-anchor
+  timing smoke, materialized paired work unit, side-info dispatch plan,
+  Lightning execution preflight, execution bundle, dry-run verification,
+  route-unblock packet, and doctor plan.
+
+Current TT5L readiness is still **DEFER**, not READY. The stale recipe
+blockers for Dykstra emission and additive-composition revision were removed
+from `.omx/operator_authorize_recipes/substrate_time_traveler_l5_autonomy_modal_a100_dispatch.yaml`;
+the current blockers are probe/architecture-lock semantics, prediction-band
+authority (`prediction_band_not_dispatch_ready` and missing baseline/empirical
+anchor custody), and provider capacity/runtime readiness (`Modal workspace
+billing limit` plus missing Lightning target/teamspace/inventory/source/runtime
+probe). No score claim, rank authority, promotion authority, or paid-dispatch
+authority is implied by this refresh.
+
+## 2026-05-18 Codex Probe-Gate Hash Repair + Current Failure Class
+
+The TT5L probe-gate invalidity had one stale software blocker and several real
+semantic blockers. The stale blocker was
+`l5_v2_gate_artifact_semantics_invalid:c1_z5_tt5l_probe_disambiguator:probe_verdict_sha256_mismatch`:
+`tools/build_l5_v2_probe_gate_artifact.py`/`tac.optimization.l5_v2_probe_disambiguator`
+recorded the verdict digest with the probe module's canonical JSON contract,
+while `tac.optimization.l5_staircase_v2` recomputed with a local no-newline
+contract. `src/tac/optimization/l5_staircase_v2.py` now validates the builder
+contract and retains the old no-newline digest only as a compatibility
+fallback; `src/tac/optimization/l5_v2_probe_disambiguator.py` exposes the
+builder digest helper so future gate artifacts and readiness checks share one
+contract.
+
+The derived architecture-lock packet/report were refreshed through
+`tools/build_l5_v2_architecture_lock_packet.py`; they remain no-lock artifacts
+with `score_claim=false`, `promotion_eligible=false`, and
+`ready_for_exact_eval_dispatch=false`.
+
+Focused regression:
+
+```bash
+.venv/bin/python -m pytest \
+  src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_probe_gate_status_accepts_builder_verdict_hash \
+  src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_canonical_probe_gate_evidence_auto_consumes_valid_artifact \
+  src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_canonical_probe_gate_evidence_skips_blocked_artifact \
+  src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_probe_gate_recomputes_verdict_from_observations \
+  src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_probe_gate_rejects_selected_candidate_not_min_eligible_delta \
+  src/tac/tests/test_l5_v2_probe_disambiguator.py::test_l5_v2_probe_gate_artifact_cli_exits_nonzero_when_blocked \
+  -q
+# 6 passed
+```
+
+After the hash repair, the committed probe gate artifact still remains invalid
+for real semantic reasons:
+
+- `recomputed_architecture_lock_allowed`
+- `recomputed_probe_blockers_nonempty`
+- `architecture_lock_allowed`
+- `probe_blockers_nonempty`
+- missing eligible observations for `c1_world_model_foveation`,
+  `z5_predictive_coding_world_model`, and `time_traveler_l5_autonomy`
+
+The existing TT5L paired CPU/CUDA artifacts are custody evidence for a
+byte-closed TT5L work unit, not architecture-lock evidence: TT5L still has
+`predicate_passed=false`, `sideinfo_consumed=false`, and missing per-axis
+`score_delta` fields in the probe observation intake. C1 and Z5 still have no
+paired exact-axis observations in the intake. Classification remains
+`NEEDS_FIX`, no score claim, no rank/kill authority, no promotion authority,
+and no paid-dispatch authority. The next frontier-moving action is still to
+resolve provider capacity or complete an alternate Lightning route, run the
+paired probe measurements, and convert harvested CPU/CUDA results into
+sideinfo-consumed probe observations with real score deltas.
+
+## 2026-05-18 Codex Lightning Doctor / Non-Dry-Run Gate
+
+The current TT5L campaign-readiness surface already has the local campaign
+machinery: byte-closed materialized paired work unit, first-anchor timing-smoke
+artifact, paired-axis plan, Lightning execution preflight, execution bundle,
+route-unblock packet, dry-run verification, and doctor plan. The remaining
+frontier blocker is provider execution readiness, not another local campaign
+memo.
+
+This pass ran the required Lightning doctor command from the doctor plan and
+wrote:
+
+- `.omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json`
+
+Result:
+
+- `status=FAIL`
+- local supply-chain scan passed (`lightning-sdk=2026.4.23`, no violations)
+- failed checks: `ssh_auth`, `remote_supply_chain`, `machine_inventory`
+- exact causes:
+  `--require-ssh` failed because no `--ssh-target`/`LIGHTNING_SSH_TARGET` was
+  provided; `--require-remote-supply-chain` failed because no remote scan could
+  run without SSH; `--require-machine-inventory` failed because no
+  `--teamspace`/`LIGHTNING_TEAMSPACE` was provided
+
+Then the non-dry-run gate was regenerated:
+
+- `.omx/research/l5_v2_tt5l_lightning_non_dry_run_gate_20260517_codex.json`
+- `.omx/research/l5_v2_tt5l_lightning_non_dry_run_gate_20260517_codex.md`
+
+Result:
+
+- `ready_for_non_dry_run_submit=false`
+- `ready_for_provider_dispatch=false`
+- `ready_cells=0/10`
+- blocker count: `166`
+- `dispatch_attempted=false`
+- `provider_spend_attempted=false`
+- `score_claim=false`
+- `promotion_eligible=false`
+
+The TT5L operator recipe now carries the concrete doctor-failure blockers:
+
+- `l5_v2_tt5l_lightning_non_dry_run_gate_failed_doctor_ssh_auth`
+- `l5_v2_tt5l_lightning_non_dry_run_gate_failed_doctor_remote_supply_chain`
+- `l5_v2_tt5l_lightning_non_dry_run_gate_failed_doctor_machine_inventory`
+
+Current next gate:
+
+1. Resolve the Modal workspace billing blocker or choose Lightning.
+2. For Lightning, set `LIGHTNING_SSH_TARGET`, `LIGHTNING_TEAMSPACE`, and exactly
+   one owner identity (`LIGHTNING_SDK_USER` or `LIGHTNING_ORG`).
+3. Re-run the doctor until `status=OK`.
+4. Stage source manifests, create active per-cell lane claims, remove command
+   placeholders, then submit the paired CPU/CUDA side-info cells.
+
+No provider work was launched in this refresh. No lane claim was needed because
+the artifacts are local fail-closed readiness artifacts only.
+
+## 2026-05-18 Codex TT5L Queue Blocker Reconciliation
+
+The asymptotic-pursuit queue still surfaced the stale
+`l5_v2_probe_gate_artifact_semantics_invalid_probe_verdict_sha256_mismatch`
+recipe blocker after the live probe-gate validator no longer emitted it. The
+TT5L operator-authorize recipe now mirrors the live semantic blockers instead:
+
+- `recomputed_architecture_lock_allowed`
+- `recomputed_probe_blockers_nonempty`
+- `architecture_lock_allowed`
+- `probe_blockers_nonempty`
+- missing eligible observations for the C1/Z5/TT5L probe candidates
+
+`src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py` now asserts that
+the stale hash-mismatch blocker stays out of TT5L dispatch blockers while the
+real probe-blocker and missing-observation reasons remain visible. This is a
+queue hygiene fix only: TT5L stays `NEEDS_FIX`; Candidate 4c remains the only
+current `READY` asymptotic-pursuit dispatch candidate.

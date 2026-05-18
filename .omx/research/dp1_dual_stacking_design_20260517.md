@@ -18,15 +18,53 @@ grand council T3 symposium Decision #3 + comprehensive audit META-INSIGHT
 convergence on DP1 stacking as highest-EV next move after the fec6 frontier
 0.19205 [contest-CPU] anchor landed.
 
+## 2026-05-18 supersession: PATH 1 rate arithmetic corrected
+
+`tools/probe_dp1_pr101_composition_noop_detector.py` landed a byte-closed
+structural proof for the existing L1 packet:
+`.omx/research/dp1_pr101_composition_noop_probe_20260518_codex.json`.
+
+The probe verifies:
+
+- composed archive SHA-256:
+  `507d2a000ecf5a220e9b1ab765f75e39015cfb7b2af00606be3cb0758b8eb855`
+- archive bytes: `204344`
+- base fec6 bytes: `178517`
+- DP1 prefix bytes: `25814`
+- DPCOMP header bytes: `13`
+- total L1 overhead: `25827` bytes
+- contest rate delta if frames are identical:
+  `25 * 25827 / 37545489 = +0.017197139182`
+
+This supersedes every older `+0.0000172` PATH 1 rate-axis statement below. The
+older arithmetic was off by 1000x. PATH 1 is still a useful no-op/byte-closure
+control, but it is not a score-lowering dispatch: with `PACT_DP1_PRIOR_STRENGTH=0.0`
+and frame parity, the expected CPU control is `0.209247139182`
+(`0.19205 + 0.017197139182`), not `0.19207`. Any L2 prior-effect path must buy
+back more than `0.017197` score before it can be promotion- or ranking-relevant.
+
+### 2026-05-18 Codex probe custody hardening
+
+The no-op detector now refuses a structurally valid DPCOMP packet when
+`build_manifest.json::lane_id` does not equal
+`lane_dp1_plus_fec6_dual_stacking_build_20260517`. The previous probe emitted
+the hard-coded lane id in its result payload but did not require the packet
+manifest to carry the same custody claim, which could let an unrelated PR101
+DPCOMP packet receive this lane's `l1_rate_only_noop_verified` verdict. The
+regression is
+`src/tac/tests/test_probe_dp1_pr101_composition_noop_detector.py::test_build_probe_payload_blocks_wrong_build_manifest_lane`.
+
 ## TL;DR
 
 - **PATH 1 (composition)**: DP1 + fec6 archive compose via canonical
   `tac.substrates.pretrained_driving_prior.composition.compose_with`. L1 packet
-  ships with `PACT_DP1_PRIOR_STRENGTH=0.0` default — rate-axis cost (+25.8 KB
-  DP1 prefix → +0.0000172 contest rate term) measurable in isolation BEFORE
-  L2 INTEGRATION enables frame-axis effect. Predicted ΔS CPU [-0.003, -0.012]
-  conditioned on L2 strength. **PATH 1 is BUILT + READY for paired-axis paid
-  dispatch ($1.90 envelope) at operator approval.**
+  ships with `PACT_DP1_PRIOR_STRENGTH=0.0` default — rate-axis cost
+  (`+0.017197139182` score from 25,827 wrapper bytes) measurable in isolation
+  BEFORE L2 INTEGRATION enables frame-axis effect. Predicted ΔS CPU
+  `[-0.003, -0.012]` was a pre-L2 heuristic and is not enough to overcome the
+  corrected L1 rate cost. **PATH 1 is BUILT as a byte-closure/no-op control;
+  paid paired-axis eval now needs explicit operator decision, not automatic
+  frontier pressure.**
 - **PATH 2 (training-time prior, REFORMULATED)**: operator's original "L2 on PR101
   decoder weights" is structurally incompatible with fec6 (no learned decoder
   weights) per premise-verifier PV-6. Reformulation: apply DP1 FRAME-SPACE prior
@@ -98,14 +136,14 @@ experiments/results/dp1_plus_fec6_composition_20260517/
 `PACT_DP1_PRIOR_STRENGTH=0.0` default. The decompose runs at every inflate call
 (structural byte consumption proof per Catalog #220), but the frame-axis effect
 is gated by the env var. This is the **rate-axis baseline measurement**:
-+0.0000172 contest rate term in isolation. Per Catalog #220 the operational
++0.017197139182 contest rate term in isolation. Per Catalog #220 the operational
 mechanism is `OPERATIONAL_DEFERRED_TO_L2` — bytes are structurally consumed
 (decompose runs) but frame-axis effect is deferred.
 
 **L2 INTEGRATION (DEFERRED)**: lifting `PACT_DP1_PRIOR_STRENGTH` > 0 wires
 `tac.substrates.pretrained_driving_prior.DashcamPriorLoss.apply_soft_prior` to
 the inflated RGB frames. Predicted ΔS CPU [-0.003, -0.012] from the band
-`fec6 baseline 0.19205 + rate +0.0000172 + frame-prior [-0.003, -0.012]`.
+`fec6 baseline 0.19205 + rate +0.017197139182 + frame-prior [-0.003, -0.012]`.
 L2 dispatch is operator-gated; the L1 packet's `inflate.py` explicitly raises
 RuntimeError when strength > 0 to prevent silent strength-leakage.
 
@@ -326,5 +364,5 @@ Per CLAUDE.md "Forbidden premature KILL" + Catalog #240:
 * `experiments/train_substrate_pr101_with_dp1_prior_regularizer.py` — PATH 2 scaffold
 * `src/tac/tests/test_dp1_plus_fec6_composition.py` — 32 tests
 * `src/tac/tests/test_train_substrate_pr101_with_dp1_prior.py` — 19 tests
-* `.omx/operator_authorize_recipes/dp1_plus_fec6_composition_modal_paired_dispatch.yaml` — PATH 1 paired-axis recipe (dispatchable now)
+* `.omx/operator_authorize_recipes/dp1_plus_fec6_composition_modal_paired_dispatch.yaml` — PATH 1 paired-axis recipe (research-only control after 2026-05-18 rate correction)
 * `.omx/operator_authorize_recipes/substrate_pr101_with_dp1_prior_modal_cpu_smoke_dispatch.yaml` — PATH 2 scaffold recipe (research_only)

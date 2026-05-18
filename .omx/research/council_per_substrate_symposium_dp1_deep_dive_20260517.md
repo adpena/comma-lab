@@ -74,6 +74,26 @@ related_deliberation_ids:
 **Tier:** T3 (CLAUDE.md non-negotiable interpretation — DP1 is reused by 6 substrates; per Catalog #325 a T3-tier-elevated cross-cutting wire-in is appropriate; sextet pact + 6 grand-council attendees including Hinton/Schmidhuber/Hassabis for distillation expertise + Karpathy/Selfcomp/Quantizr for substrate-consumer perspective.)
 **Cost:** $0 (read-only symposium; no GPU spend)
 
+## 2026-05-18 supersession: PATH 1 rate arithmetic corrected
+
+The DP1+fec6 L1 no-op probe landed after this symposium:
+`.omx/research/dp1_pr101_composition_noop_probe_20260518_codex.json`.
+
+It verifies the composed packet is structurally byte-closed, but corrects the
+PATH 1 rate-axis arithmetic:
+
+- DP1 prefix bytes: `25814`
+- DPCOMP header bytes: `13`
+- total added bytes: `25827`
+- contest rate delta if frames are identical:
+  `25 * 25827 / 37545489 = +0.017197139182`
+
+Therefore every older `+0.0000172`, `[+0.0000160, +0.0000180]`, and "earliest
+available dispatch" statement below is superseded for operator action. PATH 1
+is now a research-only no-op/byte-closure control unless the operator explicitly
+wants the paired control measurement. L2 DP1 prior-effect work must overcome a
+`+0.017197` score penalty before it can be promotion- or ranking-relevant.
+
 ## 1. Cargo-cult audit per assumption
 
 Per CLAUDE.md Catalog #303 + hard-earned-vs-cargo-culted addendum. See frontmatter `council_assumption_adversary_verdict` for the canonical 6-classification table. Summary tally: **3 HARD-EARNED (codebook prior / composition API / PATH 2 architectural fit) + 1 HARD-EARNED-PROVISIONAL (PATH 1 rate-axis L1 baseline) + 2 CARGO-CULTED-PENDING-EMPIRICAL (predicted ΔS band / cross-substrate composability)**.
