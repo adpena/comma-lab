@@ -116,6 +116,10 @@ from tac.master_gradient import (  # noqa: E402
     compute_marginal_coefficients,
 )
 from tac.scorer import load_differentiable_scorers  # noqa: E402
+from tac.substrates.pretrained_driving_prior.archive import (  # noqa: E402
+    DP1_SECTION_ROLES,
+    parse_dp1_archive_bytes,
+)
 
 # ---------------------------------------------------------------------------- #
 # Per-tensor parsed-from-fec6 metadata                                          #
@@ -247,6 +251,10 @@ _SUPPORTED_PROJECTORS: dict[str, tuple[str, str]] = {
 }
 
 _DETECTION_ONLY_PROJECTORS: dict[str, tuple[str, str]] = {
+    "dp1_pretrained_driving_prior": (
+        "dp1_pretrained_driving_prior_schema_projector",
+        "DP1 has canonical section offsets, but renderer/codebook/residual projection is not wired into this master-gradient extractor.",
+    ),
     "pr106_format0d": (
         "pr106_format0d_primary_payload_projector",
         "Format0d boundaries are exact, but the primary PR106 payload and ranked/no-op sidecar do not share the PR101 fixed-section Jacobian.",
@@ -266,17 +274,16 @@ _DETECTION_ONLY_PROJECTORS: dict[str, tuple[str, str]] = {
 }
 
 
-def archive_projection_contract(layout: ArchiveLayout) -> ArchiveProjectionContract:
-    """Return the fail-closed projection authority contract for ``layout``."""
-    if layout.gradient_projection_supported:
-        supported = _SUPPORTED_PROJECTORS.get(layout.grammar_name)
+def _projection_contract_for_name(grammar_name: str, *, gradient_projection_supported: bool) -> ArchiveProjectionContract:
+    if gradient_projection_supported:
+        supported = _SUPPORTED_PROJECTORS.get(grammar_name)
         if supported is None:
             raise ValueError(
-                f"layout {layout.grammar_name!r} claims gradient projection support without a registered projector"
+                f"layout {grammar_name!r} claims gradient projection support without a registered projector"
             )
         projector, reason = supported
         return ArchiveProjectionContract(
-            grammar_name=layout.grammar_name,
+            grammar_name=grammar_name,
             authority="gradient_projector_supported",
             anchor_emission_allowed=True,
             required_projector=projector,
@@ -284,16 +291,48 @@ def archive_projection_contract(layout: ArchiveLayout) -> ArchiveProjectionContr
         )
 
     projector, reason = _DETECTION_ONLY_PROJECTORS.get(
-        layout.grammar_name,
-        (f"{layout.grammar_name}_projector", "Archive grammar is detectable, but no registered projector authorizes anchor emission."),
+        grammar_name,
+        (f"{grammar_name}_projector", "Archive grammar is detectable, but no registered projector authorizes anchor emission."),
     )
     return ArchiveProjectionContract(
-        grammar_name=layout.grammar_name,
+        grammar_name=grammar_name,
         authority="fail_closed_detection_only",
         anchor_emission_allowed=False,
         required_projector=projector,
         reason=reason,
     )
+
+
+def archive_projection_contract(layout: ArchiveLayout) -> ArchiveProjectionContract:
+    """Return the fail-closed projection authority contract for ``layout``."""
+    return _projection_contract_for_name(
+        layout.grammar_name,
+        gradient_projection_supported=layout.gradient_projection_supported,
+    )
+
+
+def list_archive_grammar_contracts() -> dict[str, object]:
+    """Return the operator-facing extractor grammar registry."""
+    grammar_names = (*_SUPPORTED_PROJECTORS, *_DETECTION_ONLY_PROJECTORS)
+    grammars = [
+        {
+            **_projection_contract_for_name(
+                grammar_name,
+                gradient_projection_supported=grammar_name in _SUPPORTED_PROJECTORS,
+            ).as_dict(),
+            "gradient_projection_supported": grammar_name in _SUPPORTED_PROJECTORS,
+        }
+        for grammar_name in grammar_names
+    ]
+    return {
+        "schema": "master_gradient_archive_grammar_registry_v1",
+        "score_claim_allowed": False,
+        "promotion_eligible": False,
+        "grammar_count": len(grammars),
+        "anchor_emitting_grammars": list(_SUPPORTED_PROJECTORS),
+        "detection_only_grammars": list(_DETECTION_ONLY_PROJECTORS),
+        "grammars": grammars,
+    }
 
 
 @dataclass(frozen=True)
@@ -610,6 +649,47 @@ def parse_pr106_format0d_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
     )
 
 
+def parse_dp1_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
+    """Parse DP1 pre-trained-driving-prior archive sections without projector authority."""
+    extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
+    payload = extracted.payload
+    if extracted.member_name not in (None, "0.bin"):
+        raise ValueError(f"DP1 expected raw payload or member '0.bin', got {extracted.member_name!r}")
+    try:
+        section_ranges = parse_dp1_archive_bytes(payload)
+    except ValueError as exc:
+        raise ValueError(f"not a DP1 archive: {exc}") from exc
+    codec_by_section = {
+        "dp1_header": "raw_dp1_header",
+        "codebook_blob": "dp1_codebook_blob",
+        "renderer_blob": "brotli_fp16_renderer_state_dict",
+        "residual_blob": "brotli_int8_per_pair_residual",
+        "meta_blob": "json_metadata",
+    }
+    sections = tuple(
+        _section(
+            name,
+            offset,
+            length,
+            codec_by_section[name],
+            payload,
+            f"DP1 role: {DP1_SECTION_ROLES[name]}.",
+        )
+        for name, (offset, length) in section_ranges.items()
+    )
+    return _make_archive_layout(
+        grammar_name="dp1_pretrained_driving_prior",
+        archive_bytes=archive_bytes,
+        extracted=extracted,
+        sections=sections,
+        gradient_projection_supported=False,
+        parser_notes=(
+            "DP1 section offsets are canonical via tac.substrates.pretrained_driving_prior.archive.parse_dp1_archive_bytes.",
+            "Master-gradient anchor emission remains fail-closed until a DP1 renderer/codebook/residual projector exists.",
+        ),
+    )
+
+
 def parse_pr106_ff_packed_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
     """Parse public PR106's 0xff + uint24 packed HNeRV layout."""
     extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
@@ -735,6 +815,7 @@ def detect_archive_grammar_and_parse(archive_bytes: bytes) -> tuple[str, Archive
     for parser in (
         parse_fec6_fp11_selector_archive_layout,
         parse_pr106_format0d_archive_layout,
+        parse_dp1_archive_layout,
         parse_pr106_ff_packed_archive_layout,
         parse_hnerv_lc_v2_archive_layout,
         parse_a1_archive_layout,
@@ -1374,7 +1455,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Extract master gradient (per-byte score sensitivity) for an archive at its operating point."
     )
-    parser.add_argument("--archive", required=True, type=Path, help="Path to fec6 archive.zip or raw archive bytes")
+    parser.add_argument("--archive", default=None, type=Path, help="Path to fec6 archive.zip or raw archive bytes")
+    parser.add_argument(
+        "--list-grammars",
+        action="store_true",
+        help="Print supported/detection-only archive grammar contracts and exit.",
+    )
     parser.add_argument(
         "--inflate-py",
         default=None,
@@ -1477,6 +1563,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.storage_dtype is None:
         args.storage_dtype = args.compute_dtype
+
+    if args.list_grammars:
+        print(json.dumps(list_archive_grammar_contracts(), sort_keys=True))
+        return 0
+    if args.archive is None:
+        raise SystemExit("--archive is required unless --list-grammars is set")
 
     if args.output_npy is not None and args.output_npy.is_absolute() and str(args.output_npy).startswith(("/tmp/", "/private/tmp/", "/var/tmp/")):
         raise SystemExit(

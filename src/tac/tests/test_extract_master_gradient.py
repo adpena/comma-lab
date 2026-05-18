@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import json
+import struct
 import sys
 import zipfile
 from pathlib import Path
@@ -85,6 +86,27 @@ def _pr106_payload() -> bytes:
         + extra
         + b"FRAME!"
     )
+
+
+def _dp1_payload() -> bytes:
+    codebook = b"C" * 4
+    renderer = b"R" * 5
+    residual = b"S" * 6
+    meta = b'{"fixture":true}'
+    header = struct.pack(
+        "<4sBHHHBIIII",
+        b"DP1\x00",
+        1,
+        2,
+        384,
+        512,
+        3,
+        len(codebook),
+        len(renderer),
+        len(residual),
+        len(meta),
+    )
+    return header + codebook + renderer + residual + meta
 
 
 def _pr106_ff_payload() -> bytes:
@@ -700,6 +722,18 @@ def test_validate_measurement_authority_refuses_advisory_contest_axis():
             False,
         ),
         (
+            _zip_payload(_dp1_payload(), member_name="0.bin"),
+            "dp1_pretrained_driving_prior",
+            [
+                "dp1_header",
+                "codebook_blob",
+                "renderer_blob",
+                "residual_blob",
+                "meta_blob",
+            ],
+            False,
+        ),
+        (
             _zip_payload(_pr106_ff_payload(), member_name="0.bin"),
             "pr106_ff_packed_hnerv",
             [
@@ -777,6 +811,22 @@ def test_detect_archive_grammar_preserves_raw_domain_for_unzipped_payload():
     assert layout.member_name is None
     assert layout.gradient_byte_domain == "scored_archive_bytes"
     assert layout.archive_sha256 == layout.gradient_subject_sha256
+
+
+def test_list_grammars_cli_prints_fail_closed_registry(capsys):
+    rc = emg.main(["--list-grammars"])
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "master_gradient_archive_grammar_registry_v1"
+    assert payload["score_claim_allowed"] is False
+    assert payload["promotion_eligible"] is False
+    assert "a1_finetuned" in payload["anchor_emitting_grammars"]
+    assert "dp1_pretrained_driving_prior" in payload["detection_only_grammars"]
+    dp1 = next(row for row in payload["grammars"] if row["grammar_name"] == "dp1_pretrained_driving_prior")
+    assert dp1["authority"] == "fail_closed_detection_only"
+    assert dp1["anchor_emission_allowed"] is False
+    assert dp1["required_projector"] == "dp1_pretrained_driving_prior_schema_projector"
 
 
 def test_detect_archive_grammar_only_cli_prints_json(tmp_path, capsys):
