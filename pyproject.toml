@@ -202,6 +202,10 @@ force-exclude = true
 extend-exclude = [
     "experiments/archive",  # archived experiments — dead code
     "experiments/results",  # generated custody/artifact trees; canonicalize signal before linting
+    # Giant contest runtime with historical custom noqa markers. Broad style
+    # linting stays out of this monolith; isolated F821 still covers it via
+    # CI/preflight with --isolated so undefined names cannot hide here.
+    "submissions/robust_current/inflate_renderer.py",
 ]
 
 [tool.ruff.lint]

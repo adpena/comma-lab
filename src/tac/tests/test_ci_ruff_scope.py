@@ -22,6 +22,32 @@ def test_ruff_excludes_generated_experiment_artifacts() -> None:
     assert "force-exclude = true" in pyproject
 
 
+def test_project_ruff_excludes_giant_runtime_style_noise_without_weakening_f821() -> None:
+    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert "submissions/robust_current/inflate_renderer.py" in pyproject
+
+    result = subprocess.run(
+        [
+            str(REPO_ROOT / ".venv" / "bin" / "ruff"),
+            "check",
+            "--force-exclude",
+            "--select",
+            "RUF100",
+            "src/tac/tests/test_ci_ruff_scope.py",
+            "submissions/robust_current/inflate_renderer.py",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "Invalid `# noqa` directive" not in result.stdout
+    assert "Invalid `# noqa` directive" not in result.stderr
+
+
 def test_ruff_math_notation_is_ignored_without_weakening_f821() -> None:
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
@@ -92,3 +118,14 @@ def test_blocking_f821_probe_still_force_excludes_generated_artifacts() -> None:
     )
 
     assert result.returncode == 0
+
+
+def test_blocking_f821_probe_still_covers_contest_runtime() -> None:
+    result = _run_isolated_f821_probe(
+        stdin_filename="submissions/robust_current/inflate_renderer.py",
+        source="def f():\n    return missing_name\n",
+    )
+
+    assert result.returncode == 1
+    assert "F821" in result.stdout
+    assert "missing_name" in result.stdout
