@@ -13,6 +13,7 @@ from tac.canonical_duckdb import (
     refresh_all_tables,
     run_canonical_query,
 )
+from tac.canonical_task_status import register_task, update_status
 
 
 def _seed_repo(root: Path) -> None:
@@ -50,6 +51,41 @@ def _seed_repo(root: Path) -> None:
         "\n"
         "# Test Memo\n"
     )
+    register_task(
+        "test_memo::ITEM_1",
+        ".omx/research/test_memo.md",
+        "Pending task",
+        "codex",
+        actor="pytest",
+        session_id="test",
+        repo_root=root,
+    )
+    register_task(
+        "test_memo::ITEM_2",
+        ".omx/research/test_memo.md",
+        "Completed task",
+        "codex",
+        actor="pytest",
+        session_id="test",
+        repo_root=root,
+    )
+    update_status(
+        "test_memo::ITEM_2",
+        "in_progress",
+        actor="pytest",
+        session_id="test",
+        repo_root=root,
+    )
+    update_status(
+        "test_memo::ITEM_2",
+        "completed",
+        actor="pytest",
+        session_id="test",
+        test_status="green",
+        commit_shas=("abc123",),
+        notes="[empirical:src/tac/tests/test_canonical_duckdb_read_model.py]",
+        repo_root=root,
+    )
 
 
 def test_canonical_duckdb_refreshes_source_backed_tables(tmp_path: Path) -> None:
@@ -59,14 +95,21 @@ def test_canonical_duckdb_refreshes_source_backed_tables(tmp_path: Path) -> None
     result = refresh_all_tables(
         tmp_path,
         db_path=db_path,
-        tables=("lanes", "research_memos", "state_json_files", "state_jsonl_files"),
+        tables=(
+            "lanes",
+            "research_memos",
+            "state_json_files",
+            "state_jsonl_files",
+            "canonical_task_status",
+        ),
     )
 
     assert set(CANONICAL_TABLES) >= {"lanes", "research_memos"}
     assert result["lanes"]["row_count"] == 1
     assert result["research_memos"]["row_count"] == 1
     assert result["state_json_files"]["row_count"] >= 1
-    assert result["state_jsonl_files"]["row_count"] == 1
+    assert result["state_jsonl_files"]["row_count"] == 2
+    assert result["canonical_task_status"]["row_count"] == 4
 
     provenance = audit_table_provenance("research_memos", db_path=db_path)
     assert provenance["duckdb_is_source_of_truth"] is False
@@ -75,6 +118,18 @@ def test_canonical_duckdb_refreshes_source_backed_tables(tmp_path: Path) -> None
     rows = run_canonical_query("lanes_with_research_memos", db_path=db_path)
     assert rows[0]["lane_id"] == "lane_test"
     assert rows[0]["memo_count"] == 1
+
+    task_summary = run_canonical_query("canonical_task_status_by_memo", db_path=db_path)
+    assert task_summary[0]["source_design_memo"] == ".omx/research/test_memo.md"
+    assert task_summary[0]["memo_title"] == "Test Memo"
+    assert task_summary[0]["task_count"] == 2
+    assert task_summary[0]["pending_count"] == 1
+    assert task_summary[0]["completed_count"] == 1
+    assert task_summary[0]["green_test_count"] == 1
+
+    pending_tasks = run_canonical_query("canonical_task_status_pending_with_memo", db_path=db_path)
+    assert [row["task_id"] for row in pending_tasks] == ["test_memo::ITEM_1"]
+    assert pending_tasks[0]["memo_title"] == "Test Memo"
 
 
 def test_canonical_duckdb_hf_push_requires_operator_approval(tmp_path: Path) -> None:

@@ -15,7 +15,6 @@ from pathlib import Path
 
 from tac.canonical_duckdb.schema import CANONICAL_TABLES, connect
 
-
 CANONICAL_QUERY_SCRIPTS: dict[str, str] = {
     "research_memos_by_lane": """
         SELECT lane_id, COUNT(*) AS memo_count, SUM(bytes) AS total_bytes
@@ -37,6 +36,52 @@ CANONICAL_QUERY_SCRIPTS: dict[str, str] = {
         UNION ALL
         SELECT 'jsonl' AS kind, COUNT(*) AS file_count, SUM(bytes) AS total_bytes
         FROM state_jsonl_files
+    """,
+    "canonical_task_status_by_memo": """
+        SELECT
+            t.source_design_memo,
+            COALESCE(r.title, t.source_design_memo) AS memo_title,
+            COUNT(*) AS task_count,
+            SUM(CASE WHEN t.status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+            SUM(CASE WHEN t.status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress_count,
+            SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS completed_count,
+            SUM(CASE WHEN t.status = 'blocked' THEN 1 ELSE 0 END) AS blocked_count,
+            SUM(CASE WHEN t.test_status = 'green' THEN 1 ELSE 0 END) AS green_test_count,
+            MIN(t.event_timestamp_utc) AS oldest_event_timestamp_utc,
+            MAX(t.event_timestamp_utc) AS newest_event_timestamp_utc
+        FROM canonical_task_status_latest t
+        LEFT JOIN research_memos r ON r.path = t.source_design_memo
+        GROUP BY t.source_design_memo, memo_title
+        ORDER BY pending_count DESC, in_progress_count DESC, task_count DESC, t.source_design_memo
+    """,
+    "canonical_task_status_pending_with_memo": """
+        SELECT
+            t.task_id,
+            t.title,
+            t.status,
+            t.owner,
+            t.source_design_memo,
+            COALESCE(r.title, t.source_design_memo) AS memo_title,
+            r.lane_id,
+            r.research_only,
+            t.predicted_cost_usd,
+            t.predicted_delta_s_lower,
+            t.predicted_delta_s_upper,
+            t.started_at_utc,
+            t.event_timestamp_utc
+        FROM canonical_task_status_latest t
+        LEFT JOIN research_memos r ON r.path = t.source_design_memo
+        WHERE t.status IN ('pending', 'in_progress', 'blocked')
+        ORDER BY
+            CASE t.status
+                WHEN 'in_progress' THEN 0
+                WHEN 'blocked' THEN 1
+                ELSE 2
+            END,
+            t.predicted_delta_s_lower ASC NULLS LAST,
+            t.predicted_cost_usd ASC NULLS LAST,
+            t.event_timestamp_utc ASC,
+            t.task_id
     """,
 }
 """Named read-only SQL queries exposed by the package."""
