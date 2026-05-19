@@ -16,6 +16,7 @@ import json
 import os
 import platform
 import random
+import subprocess
 import sys
 import time
 import zipfile
@@ -116,6 +117,163 @@ def write_stored_single_member_zip(payload_path: Path, archive_path: Path) -> di
         "compression_method": "stored",
         "extra_field_bytes": len(infos[0].extra),
     }
+
+
+def _auth_eval_axis_label(device: str) -> str:
+    if device == "cuda":
+        return "contest-CUDA-candidate"
+    if device == "cpu" and platform.system() == "Linux" and platform.machine().lower() in {
+        "x86_64",
+        "amd64",
+    }:
+        return "contest-CPU-candidate"
+    if device == "cpu":
+        return "macOS-CPU advisory" if platform.system() == "Darwin" else "CPU advisory"
+    if device == "mps":
+        return "MPS diagnostic"
+    return f"{device} diagnostic"
+
+
+def _latest_training_score(results: list[dict[str, Any]]) -> float | None:
+    for result in reversed(results):
+        score = result.get("best_score")
+        if isinstance(score, (int, float)):
+            return float(score)
+    return None
+
+
+def run_auth_eval_bridge(
+    *,
+    archive_zip: Path,
+    layout: Pr95SourceLayout,
+    output_dir: Path,
+    device: str,
+    training_score: float | None,
+    score_delta_tolerance: float,
+    require_comparable: bool,
+    inflate_timeout: int,
+    evaluate_timeout: int,
+) -> dict[str, Any]:
+    """Run canonical auth eval on the just-emitted archive and summarize parity.
+
+    This intentionally preserves the evidence-grade boundary: local macOS CPU
+    and MPS runs are useful bridge signals, not promotion authority.
+    """
+
+    if not archive_zip.is_file():
+        raise FileNotFoundError(
+            f"--run-auth-eval requires an emitted archive.zip; missing {_rel(archive_zip)}. "
+            "Pass --run-codec-stage first."
+        )
+    if score_delta_tolerance < 0:
+        raise ValueError("--auth-eval-score-delta-tolerance must be non-negative")
+
+    auth_eval_py = REPO_ROOT / "experiments" / "contest_auth_eval.py"
+    json_out = output_dir / f"contest_auth_eval_{device}.json"
+    work_dir = output_dir / f"contest_auth_eval_{device}_workdir"
+    cmd = [
+        sys.executable,
+        str(auth_eval_py),
+        "--archive",
+        str(archive_zip),
+        "--inflate-sh",
+        str(layout.inflate_sh),
+        "--upstream-dir",
+        str(layout.challenge_root),
+        "--device",
+        device,
+        "--work-dir",
+        str(work_dir),
+        "--json-out",
+        str(json_out),
+        "--inflate-timeout",
+        str(inflate_timeout),
+        "--evaluate-timeout",
+        str(evaluate_timeout),
+    ]
+    env = os.environ.copy()
+    python_path_entries = [
+        Path(sys.prefix) / "bin",
+        Path(sys.executable).resolve().parent,
+    ]
+    env["PATH"] = os.pathsep.join(
+        [str(path) for path in python_path_entries] + [env.get("PATH", "")]
+    )
+    started = time.perf_counter()
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=inflate_timeout + evaluate_timeout + 300,
+        env=env,
+    )
+    elapsed = time.perf_counter() - started
+    bridge: dict[str, Any] = {
+        "schema": "pr95_local_auth_eval_bridge_v1",
+        "ok": result.returncode == 0,
+        "returncode": result.returncode,
+        "command": cmd,
+        "elapsed_seconds": elapsed,
+        "archive_path": _rel(archive_zip),
+        "archive_bytes": archive_zip.stat().st_size,
+        "archive_sha256": _sha256_file(archive_zip),
+        "inflate_sh": _rel(layout.inflate_sh),
+        "upstream_dir": _rel(layout.challenge_root),
+        "json_out": _rel(json_out),
+        "work_dir": _rel(work_dir),
+        "auth_eval_device": device,
+        "score_axis": _auth_eval_axis_label(device),
+        "outer_auth_eval_python_path_prepend": [str(path) for path in python_path_entries],
+        "training_best_score": training_score,
+        "score_delta_tolerance": score_delta_tolerance,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "stdout_tail": result.stdout[-4000:],
+        "stderr_tail": result.stderr[-4000:],
+    }
+    if result.returncode != 0:
+        (output_dir / f"auth_eval_bridge_{device}.failed.json").write_text(
+            json.dumps(bridge, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        raise RuntimeError(
+            "PR95 local auth-eval bridge failed "
+            f"(rc={result.returncode}); see stdout_tail/stderr_tail in bridge payload"
+        )
+    if not json_out.is_file():
+        raise RuntimeError(f"auth eval completed but did not write {_rel(json_out)}")
+
+    payload = json.loads(json_out.read_text(encoding="utf-8"))
+    auth_score = payload.get("canonical_score")
+    bridge["auth_eval_json_sha256"] = _sha256_file(json_out)
+    bridge["auth_eval_canonical_score"] = auth_score
+    bridge["auth_eval_final_score"] = payload.get("final_score")
+    bridge["auth_eval_archive_bytes"] = payload.get("archive_size_bytes")
+    bridge["auth_eval_archive_sha256"] = (
+        payload.get("provenance", {}).get("archive_sha256")
+        if isinstance(payload.get("provenance"), dict)
+        else None
+    )
+    if isinstance(training_score, (int, float)) and isinstance(auth_score, (int, float)):
+        delta = abs(float(auth_score) - float(training_score))
+        bridge["absolute_score_delta"] = delta
+        bridge["score_comparable"] = delta <= score_delta_tolerance
+        if require_comparable and delta > score_delta_tolerance:
+            (output_dir / f"auth_eval_bridge_{device}.failed.json").write_text(
+                json.dumps(bridge, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+            raise RuntimeError(
+                "PR95 local auth-eval bridge score mismatch: "
+                f"training={training_score} auth_eval={auth_score} "
+                f"delta={delta} tolerance={score_delta_tolerance}"
+            )
+    else:
+        bridge["absolute_score_delta"] = None
+        bridge["score_comparable"] = None
+    return bridge
 
 
 def _truthy(value: str | None) -> bool:
@@ -458,6 +616,20 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
                 "wall_seconds": time.perf_counter() - codec_started,
             }
             manifest["archive_zip"] = archive_zip_result
+        if args.run_auth_eval:
+            if "archive_zip" not in manifest:
+                raise RuntimeError("--run-auth-eval requires --run-codec-stage")
+            manifest["auth_eval_bridge"] = run_auth_eval_bridge(
+                archive_zip=output_dir / "archive.zip",
+                layout=layout,
+                output_dir=output_dir,
+                device=args.auth_eval_device,
+                training_score=_latest_training_score(results),
+                score_delta_tolerance=args.auth_eval_score_delta_tolerance,
+                require_comparable=args.require_auth_eval_comparable,
+                inflate_timeout=args.auth_eval_inflate_timeout,
+                evaluate_timeout=args.auth_eval_evaluate_timeout,
+            )
     except Exception as exc:
         manifest.update({
             "ok": False,
@@ -503,6 +675,33 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--eval-every", type=int, default=1)
     parser.add_argument("--seed", type=int, default=1234)
     parser.add_argument("--run-codec-stage", action="store_true")
+    parser.add_argument(
+        "--run-auth-eval",
+        action="store_true",
+        help="After --run-codec-stage, run canonical contest_auth_eval on the emitted archive.",
+    )
+    parser.add_argument(
+        "--auth-eval-device",
+        choices=["cuda", "cpu", "mps"],
+        default="cpu",
+        help=(
+            "Device for --run-auth-eval. Local macOS CPU/MPS remain advisory; "
+            "promotion still requires contest-axis custody."
+        ),
+    )
+    parser.add_argument(
+        "--auth-eval-score-delta-tolerance",
+        type=float,
+        default=1e-3,
+        help="Diagnostic comparability threshold between training best_score and auth_eval canonical_score.",
+    )
+    parser.add_argument(
+        "--require-auth-eval-comparable",
+        action="store_true",
+        help="Fail if auth_eval canonical_score differs from training best_score by more than the tolerance.",
+    )
+    parser.add_argument("--auth-eval-inflate-timeout", type=int, default=1800)
+    parser.add_argument("--auth-eval-evaluate-timeout", type=int, default=1800)
     parser.add_argument("--plan-only", action="store_true")
     return parser.parse_args(argv)
 

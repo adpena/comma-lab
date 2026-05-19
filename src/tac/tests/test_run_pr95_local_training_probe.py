@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -144,3 +146,93 @@ def test_plan_only_writes_plan_without_running_training(tmp_path: Path) -> None:
     assert Path(result["manifest_path"]).name == "plan.json"
     assert (tmp_path / "plan.json").exists()
     assert not (tmp_path / "stage1_stage1_v328_ce").exists()
+
+
+def test_run_auth_eval_bridge_records_comparability_without_promotion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    helper = _load_helper()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"PK-like test archive")
+    inflate_sh = tmp_path / "inflate.sh"
+    inflate_sh.write_text("#!/bin/sh\n", encoding="utf-8")
+    challenge_root = tmp_path / "upstream"
+    challenge_root.mkdir()
+    (challenge_root / "evaluate.py").write_text("", encoding="utf-8")
+    layout = helper.Pr95SourceLayout(
+        source_dir=tmp_path,
+        source_stack_dir=tmp_path,
+        challenge_root=challenge_root,
+        train_py=tmp_path / "train.py",
+        compress_sh=tmp_path / "compress.sh",
+        inflate_sh=inflate_sh,
+        public_archive=None,
+    )
+    seen: dict[str, list[str]] = {}
+
+    def fake_run(cmd, **kwargs):  # type: ignore[no-untyped-def]
+        seen["cmd"] = [str(part) for part in cmd]
+        seen["path"] = [str(kwargs["env"]["PATH"])]
+        json_out = Path(seen["cmd"][seen["cmd"].index("--json-out") + 1])
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+        json_out.write_text(
+            json.dumps({
+                "canonical_score": 1.2345,
+                "final_score": 1.2345,
+                "archive_size_bytes": archive.stat().st_size,
+                "provenance": {"archive_sha256": helper._sha256_file(archive)},
+            }),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(cmd, 0, stdout="score ok", stderr="")
+
+    monkeypatch.setattr(helper.subprocess, "run", fake_run)
+
+    bridge = helper.run_auth_eval_bridge(
+        archive_zip=archive,
+        layout=layout,
+        output_dir=tmp_path,
+        device="cpu",
+        training_score=1.2344,
+        score_delta_tolerance=1e-3,
+        require_comparable=True,
+        inflate_timeout=11,
+        evaluate_timeout=13,
+    )
+
+    assert bridge["ok"] is True
+    assert bridge["score_comparable"] is True
+    assert bridge["absolute_score_delta"] == pytest.approx(0.0001)
+    assert bridge["score_claim"] is False
+    assert bridge["promotion_eligible"] is False
+    assert bridge["rank_or_kill_eligible"] is False
+    assert bridge["outer_auth_eval_python_path_prepend"][0] in seen["path"][0]
+    assert "--work-dir" in seen["cmd"]
+    assert "--allow-temp-work-dir" not in seen["cmd"]
+
+
+def test_run_auth_eval_bridge_requires_emitted_archive(tmp_path: Path) -> None:
+    helper = _load_helper()
+    layout = helper.Pr95SourceLayout(
+        source_dir=tmp_path,
+        source_stack_dir=tmp_path,
+        challenge_root=tmp_path,
+        train_py=tmp_path / "train.py",
+        compress_sh=tmp_path / "compress.sh",
+        inflate_sh=tmp_path / "inflate.sh",
+        public_archive=None,
+    )
+
+    with pytest.raises(FileNotFoundError, match="--run-auth-eval requires"):
+        helper.run_auth_eval_bridge(
+            archive_zip=tmp_path / "archive.zip",
+            layout=layout,
+            output_dir=tmp_path,
+            device="cpu",
+            training_score=None,
+            score_delta_tolerance=1e-3,
+            require_comparable=False,
+            inflate_timeout=1,
+            evaluate_timeout=1,
+        )
