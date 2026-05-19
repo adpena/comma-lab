@@ -44,8 +44,31 @@ if [ "$MPS_GAP_INCLUDE_SCORER" = "1" ]; then
     SCORER_FLAG="--include-scorer"
 fi
 
-# Stage 2: target-device forward + components emit
-.venv/bin/python experiments/mps_gap_experiment_a10g_dispatch.py \
+# Stage 1.5: canonical bootstrap per CLAUDE.md "Forbidden re-implementing remote bootstrap
+# inline" + Catalog #163. The Modal worker image has python at /usr/bin/python but tac runtime
+# requires the uv-managed .venv with torch+pyav+brotli pinned. The canonical
+# bootstrap_runtime_deps() function in remote_archive_only_eval.sh installs uv, pins torch
+# to the correct CUDA wheel (driver-version-aware per CLAUDE.md "Forbidden uv torch install
+# without driver-version pin"), and exports PYBIN.
+if [ ! -f "$WORKSPACE/scripts/remote_archive_only_eval.sh" ]; then
+    echo "[FATAL] canonical bootstrap script missing at scripts/remote_archive_only_eval.sh"
+    exit 22
+fi
+# shellcheck source=/dev/null
+REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 source "$WORKSPACE/scripts/remote_archive_only_eval.sh"
+if declare -f bootstrap_runtime_deps > /dev/null 2>&1; then
+    bootstrap_runtime_deps
+else
+    echo "[FATAL] bootstrap_runtime_deps function not found after sourcing"
+    exit 23
+fi
+if [ -z "${PYBIN:-}" ] || [ ! -x "$PYBIN" ]; then
+    echo "[FATAL] PYBIN not set or not executable after bootstrap (PYBIN=${PYBIN:-unset})"
+    exit 24
+fi
+
+# Stage 2: target-device forward + components emit (use $PYBIN from bootstrap, NOT .venv/bin/python)
+"$PYBIN" experiments/mps_gap_experiment_a10g_dispatch.py \
     --video-path "$MPS_GAP_VIDEO_PATH" \
     --checkpoint-input "$MPS_GAP_CHECKPOINT_INPUT" \
     --frame-cache-input "$MPS_GAP_FRAME_CACHE_INPUT" \
