@@ -155,6 +155,50 @@ def test_is_tool_dispatch_rejects_hf_jobs_surrogate_kind_on_wrong_platform(
     )
 
 
+def test_hf_jobs_research_surrogate_requires_non_promotional_flags(
+    tmp_path: Path,
+) -> None:
+    trainer = tmp_path / "experiments" / "hf_jobs_surrogate.py"
+    _write_minimal_tool(trainer)
+    driver = tmp_path / "tools" / "dispatch_hf_jobs_vision_training.py"
+    _write_minimal_tool(driver)
+    recipe = {
+        "name": "hf_jobs_surrogate_test",
+        "lane_id": "lane_hf_jobs_surrogate_20260519",
+        "dispatch_enabled": True,
+        "dispatch_kind": "hf_jobs_research_surrogate",
+        "platform": "hf_jobs",
+        "gpu": "t4-small",
+        "min_vram_gb": 16,
+        "min_smoke_gpu": "T4",
+        "video_input_strategy": "shared_volume_no_contention_expected",
+        "pyav_decode_strategy": "not_applicable",
+        "target_modes": ["research_substrate"],
+        "canary_status": "independent_substrate",
+        "cost_band": {"epochs": 1, "gpu_key": "t4-small", "platform_key": "hf_jobs"},
+        "remote_driver": "tools/dispatch_hf_jobs_vision_training.py",
+        "required_input_files_trainer": "experiments/hf_jobs_surrogate.py",
+        "hf_jobs": {"expected_axis": "cuda"},
+    }
+
+    report = evaluate_dispatch_protocol_complete(
+        recipe,
+        repo_root=tmp_path,
+        native_dispatch=True,
+    )
+
+    blockers = _blockers(report)
+    assert report.dispatch_protocol_complete is False
+    assert "hf_jobs_research_surrogate_requires_research_only_true" in blockers
+    assert "hf_jobs_research_surrogate_requires_score_claim_false" in blockers
+    assert "hf_jobs_research_surrogate_requires_promotion_eligible_false" in blockers
+    assert (
+        "hf_jobs_research_surrogate_requires_ready_for_exact_eval_dispatch_false"
+        in blockers
+    )
+    assert "hf_jobs_research_surrogate_expected_axis_not_advisory" in blockers
+
+
 def test_is_tool_dispatch_returns_false_when_dispatch_kind_substrate_explicit(
     tmp_path: Path,
 ) -> None:

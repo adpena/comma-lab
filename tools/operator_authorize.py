@@ -2384,6 +2384,8 @@ def _find_hf_jobs_id_in_ledger_by_lane_label(
             continue
         hf_jobs_id = row.get("hf_jobs_id")
         if isinstance(hf_jobs_id, str) and hf_jobs_id.strip():
+            if hf_jobs_id.startswith("pending:"):
+                continue
             return hf_jobs_id.strip()
     return None
 

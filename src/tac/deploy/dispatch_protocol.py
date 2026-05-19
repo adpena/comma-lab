@@ -392,6 +392,30 @@ def _tier1_engineering(
         blockers.append("remote_driver_missing")
     if trainer is None or not trainer.is_file():
         blockers.append("required_input_files_trainer_missing")
+    dispatch_kind = str(raw_recipe.get("dispatch_kind") or "").strip().lower()
+    if dispatch_kind == "hf_jobs_research_surrogate":
+        if platform != "hf_jobs":
+            blockers.append("hf_jobs_research_surrogate_platform_not_hf_jobs")
+        if _as_bool(raw_recipe.get("research_only"), default=False) is not True:
+            blockers.append("hf_jobs_research_surrogate_requires_research_only_true")
+        if raw_recipe.get("score_claim") is not False:
+            blockers.append("hf_jobs_research_surrogate_requires_score_claim_false")
+        if raw_recipe.get("promotion_eligible") is not False:
+            blockers.append(
+                "hf_jobs_research_surrogate_requires_promotion_eligible_false"
+            )
+        if raw_recipe.get("ready_for_exact_eval_dispatch") is not False:
+            blockers.append(
+                "hf_jobs_research_surrogate_requires_ready_for_exact_eval_dispatch_false"
+            )
+        hf_cfg = raw_recipe.get("hf_jobs", {}) or {}
+        expected_axis = (
+            str(hf_cfg.get("expected_axis") or raw_recipe.get("expected_axis") or "")
+            .strip()
+            .lower()
+        )
+        if expected_axis != "advisory":
+            blockers.append("hf_jobs_research_surrogate_expected_axis_not_advisory")
     return _tier("tier1_engineering", blockers)
 
 

@@ -159,8 +159,10 @@ dispatch_command:
         --num-epochs 200 \\
         --lane-id lane_hf_jobs_segnet_surrogate_distillation_20260519 \\
         --recipe .omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch.yaml \\
-        --label hf_jobs_segnet_surrogate_distillation_200ep_first_smoke \\
-        --dry-run
+    --label hf_jobs_segnet_surrogate_distillation_200ep_first_smoke \\
+    --hub-dataset-sha 52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a \\
+    --expected-axis advisory \\
+    --dry-run
 
 # Structured operator-authorize dispatch block. Keep this in sync with
 # `dispatch_command` above; `tools/operator_authorize.py --target hf_jobs`
@@ -178,4 +180,4 @@ hf_jobs:
   train_batch_size: 32
   eval_batch_size: 32
   timeout_seconds: 14400
-  expected_axis: cuda
+  expected_axis: advisory

@@ -206,6 +206,34 @@ def test_ledger_register_dispatched_happy_path(tmp_path):
     assert rows[0]["hf_jobs_id"] == "hf_job_test_001"
 
 
+def test_ledger_registers_intent_before_remote_job_id(tmp_path):
+    from tac.deploy.hf_jobs.job_id_ledger import (
+        STATUS_INTENT,
+        query_by_lane,
+        register_hf_jobs_dispatch_intent,
+    )
+
+    ledger_path = tmp_path / "test_ledger.jsonl"
+    lock_path = tmp_path / "test_ledger.lock"
+    row = register_hf_jobs_dispatch_intent(
+        lane_id="lane_test_20260519",
+        label="test_dispatch",
+        flavor="t4-small",
+        expected_axis="advisory",
+        hub_dataset_sha="52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a",
+        path=ledger_path,
+        lock_path=lock_path,
+    )
+    assert row["event_type"] == "intent"
+    assert row["status"] == STATUS_INTENT
+    assert row["hf_jobs_id"] == "pending:test_dispatch"
+    assert row["expected_axis"] == "advisory"
+    assert row["hub_dataset_sha"] == "52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a"
+
+    rows = query_by_lane("lane_test_20260519", path=ledger_path)
+    assert [r["event_type"] for r in rows] == ["intent"]
+
+
 def test_ledger_update_outcome_appends_new_row(tmp_path):
     """Per HISTORICAL_PROVENANCE: outcomes are NEW rows, not mutations."""
     from tac.deploy.hf_jobs.job_id_ledger import (
