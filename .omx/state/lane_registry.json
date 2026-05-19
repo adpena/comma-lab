@@ -41900,6 +41900,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_oss_hardening_audit_adpena_tac_for_pr_link_20260519",
+      "name": "OSS hardening audit + tac link incorporation per operator 2026-05-19",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/oss_audit_adpena_tac_for_pr_link_20260519T185843Z.md verdict=PASS_WITH_MINOR_GAPS adpena/tac MIT public link-safe; 2 non-blocking gaps queued (CI workflow stale paths + README comma-lab links)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_oss_hardening_audit_adpena_tac_landed_20260519T185843Z.md + .omx/research/oss_audit_adpena_tac_for_pr_link_20260519T185843Z.md + .omx/state/oss_audit_tac_submission_module_url_map_20260519T185843Z.json"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -41909,5 +41950,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T18:30:50Z"
+  "updated_at": "2026-05-19T19:02:27Z"
 }
