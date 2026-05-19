@@ -78,6 +78,42 @@ class MasterGradientPerByteCorruptError(Exception):
     """
 
 
+# Canonical grain taxonomy (mirrors ``MasterGradient.gradient_byte_domain``).
+# Post-decompress grains operate at the CORRECT locality basis for
+# entropy-coded archives (sister of slot 15
+# ``MUTATION_GRAIN_POST_BROTLI_DECOMPRESS`` at
+# ``tac.master_gradient_post_brotli_decompress``). Raw-byte grains carry
+# entropy-cascade smearing risk per Catalog #318 + codex op7 finding
+# 2026-05-19 (one raw-archive-byte mutation invalidates the entire
+# downstream entropy stream so the per-byte gradient is NOT a local
+# sensitivity at the raw-byte grain).
+GRAIN_RAW_ARCHIVE_BYTE = "scored_archive_bytes"
+GRAIN_RAW_ZIP_INNER_MEMBER_PAYLOAD = "zip_inner_member_payload"
+GRAIN_POST_BROTLI_DECOMPRESS = "post_brotli_decompress_decoder_weight_bytes"
+GRAIN_POST_ARITHMETIC_DECOMPRESS = "post_arithmetic_decompress_decoder_weight_bytes"
+GRAIN_POST_DECOMPRESS_GENERIC = "post_decompress_decoder_weight_bytes"
+GRAIN_DIAGNOSTIC = "diagnostic_grade"
+
+# Grains whose locality is preserved through the inflate path (a single
+# byte mutation in this domain changes ONE downstream weight byte). The
+# consumer prefers these when both raw-byte and post-decompress anchors
+# exist for an archive.
+POST_DECOMPRESS_GRAINS: tuple[str, ...] = (
+    GRAIN_POST_BROTLI_DECOMPRESS,
+    GRAIN_POST_ARITHMETIC_DECOMPRESS,
+    GRAIN_POST_DECOMPRESS_GENERIC,
+)
+
+# Raw-archive-byte grains: entropy-cascade-smeared per Catalog #318 +
+# codex op7 finding. Consumer falls back to these only when no
+# post-decompress anchor exists AND ``fallback_to_raw_byte=True``; the
+# verdict carries an explicit ``cascade_smearing_risk`` warning.
+RAW_BYTE_GRAINS: tuple[str, ...] = (
+    GRAIN_RAW_ARCHIVE_BYTE,
+    GRAIN_RAW_ZIP_INNER_MEMBER_PAYLOAD,
+)
+
+
 @dataclass(frozen=True)
 class PerByteSensitivityPayload:
     """Typed per-byte sensitivity payload extracted from a master-gradient anchor.
@@ -114,6 +150,20 @@ class PerByteSensitivityPayload:
         normalize without re-loading the array).
     n_bytes_above_zero
         Count of bytes with non-zero aggregate importance (sparsity proxy).
+    gradient_byte_domain
+        Canonical grain identifier mirroring
+        ``MasterGradient.gradient_byte_domain``. One of the canonical
+        GRAIN_* constants. Defaults to GRAIN_RAW_ARCHIVE_BYTE for backward
+        compatibility with pre-grain anchors.
+    cascade_smearing_risk
+        True when ``gradient_byte_domain`` is a raw-byte grain
+        (entropy-coded archive). False when post-decompress. Operator-
+        facing observability flag per Catalog #305 + #318 — does NOT
+        change the verdict ``predicted_delta_adjustment`` (Catalog
+        #287/#323) but WARNS the consumer that the per-byte sensitivity
+        is subject to entropy-decoder cascade and should not be treated
+        as a true local derivative without a paired post-decompress
+        anchor cross-check.
     """
 
     archive_sha256: str
@@ -126,6 +176,8 @@ class PerByteSensitivityPayload:
     top_k_sensitivity_indices: tuple[int, ...] = field(default_factory=tuple)
     aggregate_l1_importance_sum: float = 0.0
     n_bytes_above_zero: int = 0
+    gradient_byte_domain: str = GRAIN_RAW_ARCHIVE_BYTE
+    cascade_smearing_risk: bool = False
 
     def __post_init__(self) -> None:
         if not self.archive_sha256:
@@ -159,6 +211,27 @@ class PerByteSensitivityPayload:
             raise ValueError(
                 f"n_bytes_above_zero={self.n_bytes_above_zero} must be in "
                 f"[0, {self.n_bytes}]"
+            )
+        if not isinstance(self.gradient_byte_domain, str) or not self.gradient_byte_domain:
+            raise ValueError(
+                "gradient_byte_domain must be a non-empty string"
+            )
+        if not isinstance(self.cascade_smearing_risk, bool):
+            raise TypeError(
+                "cascade_smearing_risk must be a bool, got "
+                f"{type(self.cascade_smearing_risk).__name__}"
+            )
+        # Invariant: cascade_smearing_risk MUST match grain classification.
+        # Raw-byte / unknown grains carry cascade risk; post-decompress
+        # grains do not. Inconsistent pair is a hard error so the consumer
+        # never lies about the source's locality.
+        expected_risk = self.gradient_byte_domain not in POST_DECOMPRESS_GRAINS
+        if self.cascade_smearing_risk != expected_risk:
+            raise ValueError(
+                f"cascade_smearing_risk={self.cascade_smearing_risk} inconsistent "
+                f"with gradient_byte_domain={self.gradient_byte_domain!r}: "
+                f"expected {expected_risk} per POST_DECOMPRESS_GRAINS "
+                f"({POST_DECOMPRESS_GRAINS})"
             )
 
 
@@ -231,6 +304,8 @@ def load_per_byte_sensitivity_for_archive(
     axis: str | None = None,
     top_k: int = 100,
     strict: bool = False,
+    prefer_grain: str = "post_decompress",
+    fallback_to_raw_byte: bool = True,
 ) -> PerByteSensitivityPayload | None:
     """Load the latest per-byte sensitivity payload for an archive.
 
@@ -240,6 +315,25 @@ def load_per_byte_sensitivity_for_archive(
     present. Picks the most-recent row by ``measurement_utc``, loads the
     declared (N_bytes, 3) numpy array, computes top-K + aggregate stats,
     and returns the typed :class:`PerByteSensitivityPayload`.
+
+    Grain-aware routing (slot 6 + slot 10 grain awareness landing
+    2026-05-19): sister of slot 15
+    ``tac.master_gradient_post_brotli_decompress``. When BOTH raw-byte
+    and post-decompress anchors exist for the same archive, the
+    post-decompress anchor is the CORRECT locality basis (a single
+    decompressed-byte flip changes ONE downstream weight byte). Raw-byte
+    anchors are entropy-cascade-smeared per Catalog #318 + codex op7
+    finding. The ``prefer_grain`` kwarg controls grain selection:
+
+    * ``prefer_grain="post_decompress"`` (default) — pick the most-recent
+      anchor in the post-decompress grain class first; fall back to
+      raw-byte only when ``fallback_to_raw_byte=True`` AND no
+      post-decompress anchor exists. The returned payload's
+      ``cascade_smearing_risk`` flag mirrors the chosen grain.
+    * ``prefer_grain="raw_byte"`` — pick raw-byte first (back-compat for
+      callers that explicitly want the entropy-cascade-smeared signal).
+    * ``prefer_grain="any"`` — pick the most-recent anchor regardless of
+      grain (pre-grain-aware behavior).
 
     Returns ``None`` if no matching anchor exists (or if the gradient array
     file is missing and ``strict=False``). Returns ``None`` if numpy is not
@@ -264,6 +358,12 @@ def load_per_byte_sensitivity_for_archive(
     except ImportError:  # pragma: no cover (always available in repo)
         return None
 
+    if prefer_grain not in ("post_decompress", "raw_byte", "any"):
+        raise ValueError(
+            f"prefer_grain={prefer_grain!r} must be one of "
+            "{'post_decompress', 'raw_byte', 'any'}"
+        )
+
     rows = query_anchors_by_archive(archive_sha256, path=path)
     # Filter to per-byte aggregate anchors only.
     rows = [
@@ -278,8 +378,43 @@ def load_per_byte_sensitivity_for_archive(
     if not rows:
         return None
 
+    # Grain-aware row selection per the prefer_grain cascade.
+    def _row_grain(row: dict) -> str:
+        return str(row.get("gradient_byte_domain") or GRAIN_RAW_ARCHIVE_BYTE)
+
+    post_decompress_rows = [
+        r for r in rows if _row_grain(r) in POST_DECOMPRESS_GRAINS
+    ]
+    raw_byte_rows = [r for r in rows if _row_grain(r) in RAW_BYTE_GRAINS]
+    other_rows = [
+        r
+        for r in rows
+        if _row_grain(r) not in POST_DECOMPRESS_GRAINS
+        and _row_grain(r) not in RAW_BYTE_GRAINS
+    ]
+
+    if prefer_grain == "post_decompress":
+        if post_decompress_rows:
+            candidate_rows = post_decompress_rows
+        elif fallback_to_raw_byte and (raw_byte_rows or other_rows):
+            candidate_rows = raw_byte_rows + other_rows
+        else:
+            return None
+    elif prefer_grain == "raw_byte":
+        if raw_byte_rows:
+            candidate_rows = raw_byte_rows
+        elif post_decompress_rows:
+            candidate_rows = post_decompress_rows
+        else:
+            candidate_rows = other_rows or rows
+    else:  # "any"
+        candidate_rows = rows
+
+    if not candidate_rows:
+        return None
+
     # Latest by measurement_utc (chronological).
-    latest = max(rows, key=lambda r: str(r.get("measurement_utc", "")))
+    latest = max(candidate_rows, key=lambda r: str(r.get("measurement_utc", "")))
 
     gradient_array_path_raw = str(latest.get("gradient_array_path") or "")
     if not gradient_array_path_raw:
@@ -333,6 +468,9 @@ def load_per_byte_sensitivity_for_archive(
                         top = ascending[-k_effective:][::-1]
                         top_indices = tuple(int(idx) for idx in top)
 
+    grain = str(latest.get("gradient_byte_domain") or GRAIN_RAW_ARCHIVE_BYTE)
+    cascade_risk = grain not in POST_DECOMPRESS_GRAINS
+
     return PerByteSensitivityPayload(
         archive_sha256=archive_sha256,
         gradient_array_path=str(array_path),
@@ -344,6 +482,8 @@ def load_per_byte_sensitivity_for_archive(
         top_k_sensitivity_indices=top_indices,
         aggregate_l1_importance_sum=aggregate_sum,
         n_bytes_above_zero=n_above_zero,
+        gradient_byte_domain=grain,
+        cascade_smearing_risk=cascade_risk,
     )
 
 
@@ -386,12 +526,80 @@ def summarize_payload(payload: PerByteSensitivityPayload) -> dict[str, object]:
         "measurement_axis": payload.measurement_axis,
         "measurement_hardware": payload.measurement_hardware,
         "measurement_utc": payload.measurement_utc,
+        "gradient_byte_domain": payload.gradient_byte_domain,
+        "cascade_smearing_risk": payload.cascade_smearing_risk,
     }
 
 
+def available_grains_for_archive(
+    archive_sha256: str,
+    *,
+    path: Path | None = None,
+) -> dict[str, list[str]]:
+    """Inventory available grains for an archive across the ledger.
+
+    Returns a dict with three keys:
+
+    * ``post_decompress`` — list of grain strings in POST_DECOMPRESS_GRAINS
+      that have at least one anchor for this archive.
+    * ``raw_byte`` — list of grain strings in RAW_BYTE_GRAINS with anchors.
+    * ``other`` — any non-canonical grain strings (diagnostic / unknown).
+
+    Used by:
+
+    * Slot 10 xray ``--grain compare_both`` mode to decide whether the
+      side-by-side cascade-smearing comparison plot can be emitted.
+    * Cathedral consumer rationale to surface "BOTH grains available;
+      using post_decompress" vs "ONLY raw_byte available;
+      cascade_smearing_risk WARNED" so the operator sees the routing
+      reasoning explicitly.
+
+    Returns empty lists when no anchors exist for the archive (no
+    exception).
+    """
+    if not archive_sha256:
+        return {"post_decompress": [], "raw_byte": [], "other": []}
+    try:
+        from tac.master_gradient import query_anchors_by_archive
+    except ImportError:  # pragma: no cover
+        return {"post_decompress": [], "raw_byte": [], "other": []}
+    rows = query_anchors_by_archive(archive_sha256, path=path)
+    rows = [
+        r
+        for r in rows
+        if r.get("gradient_tensor_kind", "aggregate_per_byte_v1")
+        == "aggregate_per_byte_v1"
+        and r.get("gradient_array_path")
+    ]
+    post: list[str] = []
+    raw: list[str] = []
+    other: list[str] = []
+    for r in rows:
+        grain = str(r.get("gradient_byte_domain") or GRAIN_RAW_ARCHIVE_BYTE)
+        if grain in POST_DECOMPRESS_GRAINS:
+            if grain not in post:
+                post.append(grain)
+        elif grain in RAW_BYTE_GRAINS:
+            if grain not in raw:
+                raw.append(grain)
+        else:
+            if grain not in other:
+                other.append(grain)
+    return {"post_decompress": post, "raw_byte": raw, "other": other}
+
+
 __all__ = (
+    "GRAIN_DIAGNOSTIC",
+    "GRAIN_POST_ARITHMETIC_DECOMPRESS",
+    "GRAIN_POST_BROTLI_DECOMPRESS",
+    "GRAIN_POST_DECOMPRESS_GENERIC",
+    "GRAIN_RAW_ARCHIVE_BYTE",
+    "GRAIN_RAW_ZIP_INNER_MEMBER_PAYLOAD",
     "MasterGradientPerByteCorruptError",
+    "POST_DECOMPRESS_GRAINS",
     "PerByteSensitivityPayload",
+    "RAW_BYTE_GRAINS",
+    "available_grains_for_archive",
     "load_per_byte_sensitivity_for_archive",
     "payload_provenance",
     "summarize_payload",
