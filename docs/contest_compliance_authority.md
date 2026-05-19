@@ -174,7 +174,10 @@ used as a score-bearing row, require:
 - exact archive bytes and SHA-256
 - runtime tree SHA
 - `[contest-CPU]` and `[contest-CUDA]` labels kept distinct
-- compliance note that names one of `archive_seeded` or `runtime_constant`
+- compliance note that names one of `archive_seeded` or `weight_derived`
+- `runtime_constant` only when an explicit maintainer/operator ruling and
+  non-payload proof establish that the constant is decoder logic rather than a
+  relocated score-bearing payload
 - explicit statement that no uncharged large artifact, original-video read,
   hidden script payload, or unmetered scorer weight is used at inflate time
 

@@ -56,6 +56,9 @@ MINIMAL_CANONICAL_TEXTS = {
         "#68 loophole_v2\n"
         "#78 qzs3_script_payload_r147\n"
         "Task-Aware Compression (`tac`) design path\n"
+        "compliance note that names one of `archive_seeded` or `weight_derived`\n"
+        "`runtime_constant` only when an explicit maintainer/operator ruling\n"
+        "non-payload proof establish that the constant is decoder logic\n"
     ),
     "docs/README.md": (
         "# Documentation Index\n"
@@ -267,6 +270,54 @@ def test_stale_public_tac_and_frontier_phrases_are_rejected(tmp_path: Path) -> N
     assert "reports/latest.md" in rendered
     assert "live-leader claims" in rendered
     assert "contest-to-production transfer" in rendered
+
+
+def test_stale_deterministic_compiler_and_compliance_authority_phrases_are_rejected(
+    tmp_path: Path,
+) -> None:
+    module = _load_tool()
+    _write_canonical_texts(tmp_path)
+    writeup = tmp_path / "docs" / "pr_writeups" / "bad.md"
+    writeup.parent.mkdir(parents=True, exist_ok=True)
+    writeup.write_text(
+        "The archive is byte-stable per `tac.deterministic_compiler`.\n"
+        "Same decoder weights use `canonical_emit()`.\n",
+        encoding="utf-8",
+    )
+    compliance = tmp_path / "docs" / "contest_compliance_authority.md"
+    compliance.write_text(
+        MINIMAL_CANONICAL_TEXTS["docs/contest_compliance_authority.md"]
+        + "compliance note that names one of `archive_seeded` or `runtime_constant`\n",
+        encoding="utf-8",
+    )
+
+    findings = module.check_repo(tmp_path)
+
+    rendered = "\n".join(finding.render() for finding in findings)
+    assert "tac.packet_compiler.deterministic_compiler" in rendered
+    assert "compile_packet" in rendered
+    assert "runtime_constant needs explicit ruling" in rendered
+
+
+def test_fec6_cpu_writeup_cannot_claim_gha_when_gha_pending(tmp_path: Path) -> None:
+    module = _load_tool()
+    _write_canonical_texts(tmp_path)
+    writeup = tmp_path / "docs" / "pr_writeups" / "fec6.md"
+    writeup.parent.mkdir(parents=True, exist_ok=True)
+    writeup.write_text(
+        "| `[contest-CPU GHA Linux x86_64]` | `0.00056029` | `2.943e-05` |\n"
+        "| runner | Modal Linux x86_64 CPU (1:1 with GHA `ubuntu-latest`) |\n"
+        "- This PR claims **only** the `[contest-CPU GHA Linux x86_64]` and `[contest-CUDA T4]` axes.\n"
+        "- The CPU score was computed on Modal Linux x86_64 CPU. We have NOT yet validated against GHA.\n",
+        encoding="utf-8",
+    )
+
+    findings = module.check_repo(tmp_path)
+
+    rendered = "\n".join(finding.render() for finding in findings)
+    assert "do not label the FEC6 Modal CPU row as GHA" in rendered
+    assert "GHA pending" in rendered
+    assert "same doc says GHA is pending" in rendered
 
 
 def test_cli_strict_passes_live_docs() -> None:

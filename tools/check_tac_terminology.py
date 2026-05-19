@@ -84,6 +84,30 @@ STALE_PUBLIC_PHRASES: tuple[tuple[str, str], ...] = (
         "ArXiv writeup track",
         "public docs must avoid venue commitments; use paper/writeup draft language",
     ),
+    (
+        "tac.deterministic_compiler",
+        "use tac.packet_compiler.deterministic_compiler and the compile_packet(...) API",
+    ),
+    (
+        "canonical_emit()",
+        "use tac.packet_compiler.deterministic_compiler.compile_packet(...)",
+    ),
+    (
+        "[contest-CPU GHA Linux x86_64]` | `0.00056029`",
+        "do not label the FEC6 Modal CPU row as GHA until a real GHA artifact exists",
+    ),
+    (
+        "Modal Linux x86_64 CPU (1:1 with GHA",
+        "do not claim Modal CPU is 1:1 with GHA; say GHA pending unless a GHA artifact exists",
+    ),
+    (
+        "claims **only** the `[contest-CPU GHA Linux x86_64]` and `[contest-CUDA T4]` axes",
+        "do not claim the FEC6 CPU row as GHA while the same doc says GHA is pending",
+    ),
+    (
+        "compliance note that names one of `archive_seeded` or `runtime_constant`",
+        "promotion gate must require archive_seeded or weight_derived; runtime_constant needs explicit ruling and non-payload proof",
+    ),
 )
 
 
@@ -522,6 +546,18 @@ def check_repo(root: Path) -> list[Finding]:
         ("#68 loophole_v2", "script-payload loophole precedent"),
         ("#78 qzs3_script_payload_r147", "withdrawn payload-relocation precedent"),
         ("Task-Aware Compression (`tac`) design path", "expanded procedural generation TAC phrasing"),
+        (
+            "compliance note that names one of `archive_seeded` or `weight_derived`",
+            "promotion gate excludes runtime_constant as default score-bearing mode",
+        ),
+        (
+            "`runtime_constant` only when an explicit maintainer/operator ruling",
+            "runtime_constant requires explicit ruling",
+        ),
+        (
+            "non-payload proof establish that the constant is decoder logic",
+            "runtime_constant non-payload proof",
+        ),
     ):
         _require_contains(
             findings,

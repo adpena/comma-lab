@@ -13,7 +13,7 @@ There are no AI-narrative claims, no extrapolated metrics, no
 
 # Contest submission: CPU frontier 0.19205 — PR101-grammar HNeRV with FEC6 frame-conditional K=16 selector
 
-**Primary axis claim:** `0.1920513169` `[contest-CPU GHA Linux x86_64]`
+**Primary CPU evidence:** `0.1920513169` `[Modal Linux x86_64 CPU; GHA pending]`
 **Secondary axis claim (same archive bytes):** `0.2262100217` `[contest-CUDA T4]`
 **Archive SHA-256:** `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`
 **Archive size:** `178,517` bytes
@@ -24,7 +24,7 @@ Per the contest's `S = 100·d_seg + √(10·d_pose) + 25·(archive_bytes / 37,54
 
 | axis | seg dist | pose dist | rate | total | runner |
 |---|---|---|---|---|---|
-| `[contest-CPU GHA Linux x86_64]` | `0.00056029` | `2.943e-05` | `0.118918` | **`0.19205`** | Modal Linux x86_64 CPU (1:1 with GHA `ubuntu-latest`) |
+| `[Modal Linux x86_64 CPU; GHA pending]` | `0.00056029` | `2.943e-05` | `0.118918` | **`0.19205`** | Modal Linux x86_64 CPU; same-axis GHA validation pending |
 | `[contest-CUDA T4]` | `0.00066299` | `0.00016846` | `0.118918` | `0.22621` | Modal T4 |
 
 Both rows derived from the same archive bytes and verified against the canonical CPU+CUDA paired auth-eval JSONs at `experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/modal_cpu_auth_eval_result.json` and `experiments/results/modal_auth_eval/archive_6bae0201fb08/modal_cuda_auth_eval_result.json`. Reproduce locally with the canonical contest path `archive.zip → inflate.sh → upstream/evaluate.py --device cpu|cuda`; see §6.
@@ -223,7 +223,7 @@ Headline findings from the reverse-engineering memo:
 
 ### 6.2 Archive contents (deterministic build)
 
-The archive is byte-stable per `tac.deterministic_compiler` (Catalog #158, `src/tac/packet_compiler/deterministic_compiler.py`). Member sizes from `packet_manifest.json`:
+The archive is byte-stable per `tac.packet_compiler.deterministic_compiler` (Catalog #158, `src/tac/packet_compiler/deterministic_compiler.py`). Member sizes from `packet_manifest.json`:
 
 ```
 archive.zip (178,517 bytes total)
@@ -241,7 +241,7 @@ The archive is reproducible from a clean checkout via `tools/build_pr101_frame_e
 Per CLAUDE.md "Canonical pipeline standard" + the deterministic packet compiler (Catalog #158 wired strict):
 
 1. Same checkout commit → same decoder weights via `torch.manual_seed` + `numpy.random.seed` + Python `random.seed`, all from the profile-pinned seed.
-2. Same decoder weights → same archive bytes via `tac.packet_compiler.deterministic_compiler.canonical_emit()` (no `ZipFile.write` non-determinism; uses `ZipInfo + writestr + fixed UTC=0`).
+2. Same decoder weights → same archive bytes via `tac.packet_compiler.deterministic_compiler.compile_packet(...)` (no `ZipFile.write` non-determinism; uses `ZipInfo + writestr + fixed UTC=0`).
 3. Same archive bytes → same SHA-256 trivially.
 4. Same SHA-256 + same `inflate.sh` runtime tree → same inflated frames (within the IEEE-754 hardware-axis limits documented in §4).
 5. Same inflated frames + same contest `upstream/evaluate.py` → same score on that device.
@@ -335,7 +335,7 @@ Per Catalog #250-#255 + #273-#278 (`feedback_rudin_daubechies_autopilot_full_imp
 Per CLAUDE.md "Contest vs production target modes — non-negotiable" + the operator's directive *"make this super easy for comma ai to review and possibly adopt in production"*:
 
 **What transfers to openpilot / production:**
-1. **The deterministic packet compiler** (`tac.deterministic_compiler`, Catalog #158) — reusable for any task where byte-stable archive output is required (model weights, calibration tables, etc.).
+1. **The deterministic packet compiler** (`tac.packet_compiler.deterministic_compiler`, Catalog #158; public API `compile_packet(...)`) — reusable for any task where byte-stable archive output is required (model weights, calibration tables, etc.).
 2. **The CPU/CUDA xray + paired-axis discipline** (`feedback_dual_cpu_cuda_auth_eval_mandatory_20260508`, Catalog #127/#205/#249) — directly applicable to openpilot's edge deployment, where on-device inference results must match the offline-trained reference within a quantified tolerance.
 3. **The frontier-scan + canonical state ledger** (Catalog #245 Modal call-id ledger, Catalog #316 frontier scan) — generic "track every benchmark/eval result and refuse to regress" infrastructure.
 4. **The Rudin-Daubechies interpretable ML autopilot** (Catalog #250-#278) — explains every dispatch decision via integer-coefficient SLIM scorer + falling-rule list. Drop-in for any decision system where regulators/safety-engineers need to audit "why was this candidate dispatched to fleet?"
@@ -358,7 +358,7 @@ Per CLAUDE.md "Contest vs production target modes — non-negotiable" + the oper
 
 Per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable:
 
-- This PR claims **only** the `[contest-CPU GHA Linux x86_64]` and `[contest-CUDA T4]` axes as cited at the top, on the exact archive bytes whose SHA-256 is `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`. No advisory/proxy/MPS/macOS-CPU scores are presented.
+- This PR claims **only** the `[contest-CUDA T4]` axis as contest-axis exact evidence. The CPU row cited at the top is `[Modal Linux x86_64 CPU; GHA pending]` evidence for the same archive bytes whose SHA-256 is `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`; it must be retagged `[contest-CPU GHA Linux x86_64]` only after an actual GHA artifact exists. No advisory/proxy/MPS/macOS-CPU scores are presented as contest claims.
 - The CUDA score (`0.22621`) was computed on Modal T4 with the same archive bytes that produced the CPU score. The contest's host-bot may produce a different CUDA score depending on its specific runner image (T4 vs A100 vs L40S etc.). We have not validated against the host-bot CUDA runner.
 - The CPU score (`0.19205`) was computed on Modal Linux x86_64 CPU. We have NOT yet validated against the contest's actual GitHub Actions `ubuntu-latest` runner. Per `feedback_dual_cpu_cuda_auth_eval_mandatory_20260508.md`, the Modal CPU runner has been within `±2e-7` of the GHA Linux x86_64 runner on every paired anchor we've measured (e.g., PR107 M5 Max `0.19664189` matched GHA Linux x86_64 `0.1966358879` within `6e-6`); we believe this archive will reproduce within the same tolerance.
 - All claimed scores are with the **exact submission archive bytes** that the contest infrastructure would download (no separate "preview" archive with different bytes).
