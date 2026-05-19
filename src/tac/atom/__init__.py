@@ -97,6 +97,24 @@ from .unified_action_bridge import (
     evaluate_action_with_atoms,
 )
 
+# --- Linguistic extensions (TOP-3 per design memo APPENDIX B) ---
+# ADDITIVE extension landed 2026-05-18 alongside ``tac.contest_oracle``.
+# Per CLAUDE.md "Subagent coherence-by-default" + Catalog #314 absorption
+# discipline: new symbols only, no mutation of existing canonical API.
+from .linguistic_extensions import (
+    ArbitrarinessClassification,
+    AtomAlgebraError,
+    TemporalLogicViolationError,
+    always_invariant,
+    classify_atom_arbitrariness,
+    complement_atom,
+    compose_atoms,
+    eventually_extincted_within,
+    intersect_atoms,
+    union_atoms,
+    valid_until,
+)
+
 __all__ = [
     # types
     "AtomKind",
@@ -138,4 +156,16 @@ __all__ = [
     "evaluate_action_with_atoms",
     "atom_pool_to_meta_lagrangian_ledger",
     "atom_pool_to_cathedral_autopilot_candidates",
+    # linguistic extensions (TOP-3 per design memo APPENDIX B)
+    "ArbitrarinessClassification",
+    "AtomAlgebraError",
+    "TemporalLogicViolationError",
+    "always_invariant",
+    "classify_atom_arbitrariness",
+    "complement_atom",
+    "compose_atoms",
+    "eventually_extincted_within",
+    "intersect_atoms",
+    "union_atoms",
+    "valid_until",
 ]

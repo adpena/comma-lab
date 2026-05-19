@@ -38707,11 +38707,11 @@
       "id": "lane_contest_oracle_canonical_package_meta_meta_15_implications_20260518",
       "name": "tac.contest_oracle canonical package + linguistic enrichment + cleanup-refactor (OSS hardening)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "14 contest_oracle modules + 11 Atom linguistic extensions + 131 tests passing [empirical:src/tac/contest_oracle/ + src/tac/atom/linguistic_extensions.py]"
         },
         "real_archive_empirical": {
           "status": false,
@@ -38734,8 +38734,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_tac_contest_oracle_canonical_package_15_implications_landed_20260518.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -38789,6 +38789,47 @@
       "id": "lane_arbitrariness_extinction_wave_2b_path3_formula_batch_20260518",
       "name": "Arbitrariness extinction Wave 2B (PATH 3 FORMULA) \u2014 11 formula extinctions",
       "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/formula_extinctions/ 11 canonical formula helpers + __init__ + 11 test files; 65/65 tests pass; 12/12 canonical recoveries verified (Goyal 5% / He 10% / Bengio kfold / Cover-Thomas qint grid R-D-optimal / axis-tag canonical / Bayesian quorum / Prechelt early-stop / HNeRV L4 LOC budget / Pascanu RNN 1.0 / Pascanu CNN 5.0 / Catalog #299 quota 400 / Smith 0.1 factor)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_arbitrariness_extinction_wave_2c_path1_experimental_zero_batch_20260518",
+      "name": "Wave 2C path1 experimental zero batch: 8 empirical-sweep extinctions at local-CPU advisory",
+      "phase": 2.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -38834,5 +38875,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T03:04:26Z"
+  "updated_at": "2026-05-19T03:11:29Z"
 }
