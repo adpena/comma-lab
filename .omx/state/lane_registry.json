@@ -40757,7 +40757,7 @@
       "id": "lane_hf_dataset_upload_and_recipe_enable_20260519",
       "name": "HF dataset upload + T1 symposium revisions integration + recipe dispatch_enabled flip (Items 1+2)",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
           "status": false,
@@ -40784,8 +40784,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Landing memo at ~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_hf_dataset_upload_plus_recipe_enable_landed_20260519.md (created) + MEMORY.md prepend; 12-revision integration manifest documented"
         },
         "deploy_runbook": {
           "status": false,
@@ -40839,11 +40839,11 @@
       "id": "lane_codex_op7_iteration_items_3_4_post_brotli_grain_plus_mps_axis_20260519",
       "name": "Codex op7 iteration: post-brotli-decompress master-gradient grain + MPS-axis cross-device probe + multiple-passes-per-byte-deterministic framework",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/master_gradient_post_brotli_decompress.py + src/tac/master_gradient_iterative_refinement.py + src/tac/master_gradient_pr101_mps_axis_probe.py + 66 dedicated tests + 106 sister regression tests pass"
         },
         "real_archive_empirical": {
           "status": false,
@@ -40866,8 +40866,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_codex_op7_iteration_items_3_4_post_brotli_plus_mps_landed_20260519.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -40925,5 +40925,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T13:06:21Z"
+  "updated_at": "2026-05-19T13:23:26Z"
 }

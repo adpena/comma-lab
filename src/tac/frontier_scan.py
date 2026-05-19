@@ -122,7 +122,8 @@ class Anchor:
         )
 
 
-def load_continual_learning_anchors(repo_root: Path) -> list[Anchor]:
+def load_continual_learning_anchors(repo_root: Path | str) -> list[Anchor]:
+    repo_root = Path(repo_root)
     path = repo_root / ".omx/state/continual_learning_posterior.json"
     if not path.is_file():
         return []
@@ -178,7 +179,8 @@ def load_continual_learning_anchors(repo_root: Path) -> list[Anchor]:
     return out
 
 
-def load_modal_call_id_ledger_anchors(repo_root: Path) -> list[Anchor]:
+def load_modal_call_id_ledger_anchors(repo_root: Path | str) -> list[Anchor]:
+    repo_root = Path(repo_root)
     path = repo_root / ".omx/state/modal_call_id_ledger.jsonl"
     if not path.is_file():
         return []
@@ -232,7 +234,8 @@ _CLAIM_SHA_ALT_RE = re.compile(r"archive_sha256=([0-9a-f]{64})", re.IGNORECASE)
 _CLAIM_LANE_RE = re.compile(r"\|\s*(lane_[a-z0-9_]+?)\s*\|", re.IGNORECASE)
 
 
-def load_active_lane_dispatch_claims_anchors(repo_root: Path) -> list[Anchor]:
+def load_active_lane_dispatch_claims_anchors(repo_root: Path | str) -> list[Anchor]:
+    repo_root = Path(repo_root)
     path = repo_root / ".omx/state/active_lane_dispatch_claims.md"
     if not path.is_file():
         return []
@@ -269,7 +272,8 @@ def load_active_lane_dispatch_claims_anchors(repo_root: Path) -> list[Anchor]:
     return out
 
 
-def load_experiments_results_anchors(repo_root: Path) -> list[Anchor]:
+def load_experiments_results_anchors(repo_root: Path | str) -> list[Anchor]:
+    repo_root = Path(repo_root)
     base = repo_root / "experiments/results"
     if not base.is_dir():
         return []
@@ -327,8 +331,16 @@ def load_experiments_results_anchors(repo_root: Path) -> list[Anchor]:
     return out
 
 
-def collect_all_anchors(repo_root: Path) -> list[Anchor]:
-    """Scan every canonical anchor source and return Anchor records."""
+def collect_all_anchors(repo_root: Path | str) -> list[Anchor]:
+    """Scan every canonical anchor source and return Anchor records.
+
+    Accepts ``repo_root`` as either ``Path`` or ``str``; normalizes via
+    ``Path(repo_root)`` for downstream loader functions. Sister normalization
+    in each loader keeps the API symmetric so callers can pass either type
+    interchangeably without producing the historical ``TypeError`` when a
+    bare string was concatenated with the ``/`` operator.
+    """
+    repo_root = Path(repo_root)
     anchors: list[Anchor] = []
     anchors.extend(load_continual_learning_anchors(repo_root))
     anchors.extend(load_modal_call_id_ledger_anchors(repo_root))
@@ -538,9 +550,10 @@ def _previous_line_axis_citations(text: str, cited: dict[str, float]) -> None:
                 continue
 
 
-def scan_frontier_citation_surface(repo_root: Path, relative_path: str) -> dict[str, float]:
+def scan_frontier_citation_surface(repo_root: Path | str, relative_path: str) -> dict[str, float]:
     """Return best CPU/CUDA scores cited in a Markdown control surface."""
 
+    repo_root = Path(repo_root)
     path = repo_root / relative_path
     if not path.is_file():
         return {}
@@ -555,7 +568,7 @@ def scan_frontier_citation_surface(repo_root: Path, relative_path: str) -> dict[
     return cited
 
 
-def scan_reports_latest_md(repo_root: Path) -> dict[str, float]:
+def scan_reports_latest_md(repo_root: Path | str) -> dict[str, float]:
     """Return the best CPU + CUDA scores currently cited in reports/latest.md.
 
     Output: ``{"contest_cpu": 0.197..., "contest_cuda": 0.231...}`` (only
@@ -617,9 +630,15 @@ def _serialize_anchor(anchor: Anchor) -> dict[str, object]:
     }
 
 
-def build_frontier_scan_payload(repo_root: Path) -> dict[str, object]:
-    """Return the canonical best-anchor scan payload for operator surfaces."""
+def build_frontier_scan_payload(repo_root: Path | str) -> dict[str, object]:
+    """Return the canonical best-anchor scan payload for operator surfaces.
 
+    Accepts ``repo_root`` as either ``Path`` or ``str``; normalizes via
+    ``Path(repo_root)`` so the canonical pointer model + DX auto-update
+    surfaces can pass either type interchangeably.
+    """
+
+    repo_root = Path(repo_root)
     all_anchors = collect_all_anchors(repo_root)
     best = best_per_axis(all_anchors)
     citation_surfaces = {
