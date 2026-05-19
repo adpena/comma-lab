@@ -76,17 +76,32 @@ REPO_ROOT = _repo_root()
 
 # Canonical HF Jobs flavors per
 # huggingface-skills:hugging-face-vision-trainer plugin directive #6.
-# Costs derived from HF Jobs published pricing (subject to change; verify
-# via `hf jobs price-list` before paid dispatch).
+# Costs fetched from the official Hugging Face Hub Jobs pricing page on
+# 2026-05-19 (subject to change; verify via `hf jobs hardware` or the
+# official docs before paid dispatch).
 HF_JOBS_FLAVOR_COSTS_USD_PER_HOUR: dict[str, float] = {
-    "t4-small": 0.50,    # baseline for OD/IC under 100M params
-    "t4-medium": 1.00,
-    "a10g-small": 1.25,
-    "a10g-large": 2.50,
-    "a100-large": 4.00,
-    "h100-small": 8.00,
-    "cpu-basic": 0.05,   # for dataset prep / inference smoke
-    "cpu-upgrade": 0.10,
+    "cpu-basic": 0.01,  # for dataset prep / inference smoke
+    "cpu-upgrade": 0.03,
+    "cpu-xl": 1.00,
+    "cpu-performance": 1.90,
+    "t4-small": 0.40,  # baseline for OD/IC under 100M params
+    "t4-medium": 0.60,
+    "l4x1": 0.80,
+    "l4x4": 3.80,
+    "l40s-x1": 1.80,
+    "l40s-x4": 8.30,
+    "l40s-x8": 23.50,
+    "a10g-small": 1.00,
+    "a10g-large": 1.50,
+    "a10g-large-x2": 3.00,
+    "a10g-large-x4": 5.00,
+    "a100-large": 2.50,
+    "a100-large-x4": 10.00,
+    "a100-large-x8": 20.00,
+    "h200": 5.00,
+    "h200-x2": 10.00,
+    "h200-x4": 20.00,
+    "h200-x8": 40.00,
 }
 
 

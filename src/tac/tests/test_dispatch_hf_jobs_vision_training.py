@@ -5,9 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import os
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -46,6 +44,10 @@ def test_flavor_cost_table_canonical(dispatcher_module):
     assert "a10g-small" in table
     assert "a100-large" in table
     assert "cpu-basic" in table
+    assert table["t4-small"] == pytest.approx(0.40)
+    assert table["a10g-large"] == pytest.approx(1.50)
+    assert table["a100-large"] == pytest.approx(2.50)
+    assert table["cpu-basic"] == pytest.approx(0.01)
     # T4-small is the canonical default per plugin directive #6
     assert table["t4-small"] > 0
     # GPU flavors cost more than CPU flavors
@@ -71,7 +73,7 @@ def test_plan_dispatch_canonical_invocation(dispatcher_module, tmp_path):
     )
     assert plan.flavor == "t4-small"
     assert plan.timeout_seconds == 7200
-    assert plan.estimated_cost_usd == pytest.approx(0.50 * 2.0)  # $0.50/hr * 2h
+    assert plan.estimated_cost_usd == pytest.approx(0.40 * 2.0)  # $0.40/hr * 2h
     assert plan.hub_dataset_repo == "adpena/test-dataset"
     assert plan.hub_model_repo == "adpena/test-model"
     assert plan.lane_id == "lane_test_20260519"
@@ -162,9 +164,9 @@ def test_cli_dry_run_smoke(dispatcher_module, tmp_path):
 
 def test_ledger_register_dispatched_happy_path(tmp_path):
     from tac.deploy.hf_jobs.job_id_ledger import (
-        register_dispatched_hf_jobs_id,
-        query_by_hf_jobs_id,
         STATUS_DISPATCHED,
+        query_by_hf_jobs_id,
+        register_dispatched_hf_jobs_id,
     )
 
     ledger_path = tmp_path / "test_ledger.jsonl"
@@ -193,10 +195,10 @@ def test_ledger_register_dispatched_happy_path(tmp_path):
 def test_ledger_update_outcome_appends_new_row(tmp_path):
     """Per HISTORICAL_PROVENANCE: outcomes are NEW rows, not mutations."""
     from tac.deploy.hf_jobs.job_id_ledger import (
+        EVENT_HARVESTED,
+        query_by_hf_jobs_id,
         register_dispatched_hf_jobs_id,
         update_hf_jobs_outcome,
-        query_by_hf_jobs_id,
-        EVENT_HARVESTED,
     )
 
     ledger_path = tmp_path / "test_ledger.jsonl"
@@ -274,8 +276,8 @@ def test_ledger_lenient_load_skips_corrupt(tmp_path):
 
 def test_ledger_query_by_lane(tmp_path):
     from tac.deploy.hf_jobs.job_id_ledger import (
-        register_dispatched_hf_jobs_id,
         query_by_lane,
+        register_dispatched_hf_jobs_id,
     )
 
     ledger_path = tmp_path / "ledger.jsonl"
@@ -303,10 +305,10 @@ def test_ledger_query_by_lane(tmp_path):
 
 def test_ledger_latest_status_returns_terminal(tmp_path):
     from tac.deploy.hf_jobs.job_id_ledger import (
+        EVENT_FAILED,
+        latest_status_by_hf_jobs_id,
         register_dispatched_hf_jobs_id,
         update_hf_jobs_outcome,
-        latest_status_by_hf_jobs_id,
-        EVENT_FAILED,
     )
 
     ledger_path = tmp_path / "ledger.jsonl"
@@ -345,8 +347,8 @@ def test_ledger_reserved_field_collision_rejected(tmp_path):
 
 def test_ledger_extra_kwargs_attached(tmp_path):
     from tac.deploy.hf_jobs.job_id_ledger import (
-        register_dispatched_hf_jobs_id,
         query_by_hf_jobs_id,
+        register_dispatched_hf_jobs_id,
     )
 
     ledger_path = tmp_path / "l.jsonl"
@@ -366,4 +368,4 @@ def test_ledger_extra_kwargs_attached(tmp_path):
 def test_canonical_ledger_path_under_omx_state(repo_root):
     from tac.deploy.hf_jobs.job_id_ledger import HF_JOBS_CALL_ID_LEDGER_PATH
 
-    assert HF_JOBS_CALL_ID_LEDGER_PATH == repo_root / ".omx" / "state" / "hf_jobs_call_id_ledger.jsonl"
+    assert repo_root / ".omx" / "state" / "hf_jobs_call_id_ledger.jsonl" == HF_JOBS_CALL_ID_LEDGER_PATH

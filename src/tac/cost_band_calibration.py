@@ -118,20 +118,33 @@ PLATFORM_RATES_USD_PER_HOUR: dict[str, dict[str, float]] = {
     "github": {
         "CPU": 0.0,  # public-repo GHA minutes used for contest-CPU harvests
     },
-    # HF Jobs published pricing (canonical flavor table per the canonical
-    # ``tools/dispatch_hf_jobs_vision_training.py::HF_JOBS_FLAVOR_COSTS_USD_PER_HOUR``;
-    # subject to change — verify via ``hf jobs price-list`` before paid
-    # dispatch). Catalog #342 sister of Catalog #245 + slot 7 operator-
-    # routable item 4 wire-in (2026-05-19).
+    # HF Jobs published pricing, fetched from the official Hub Jobs pricing
+    # page on 2026-05-19. Subject to change: verify via `hf jobs hardware`
+    # or the official docs before paid dispatch. Catalog #342 sister of
+    # Catalog #245 + WIRE_IN_6 (2026-05-19).
     "hf_jobs": {
-        "t4-small": 0.50,
-        "t4-medium": 1.00,
-        "a10g-small": 1.25,
-        "a10g-large": 2.50,
-        "a100-large": 4.00,
-        "h100-small": 8.00,
-        "cpu-basic": 0.05,
-        "cpu-upgrade": 0.10,
+        "cpu-basic": 0.01,
+        "cpu-upgrade": 0.03,
+        "cpu-xl": 1.00,
+        "cpu-performance": 1.90,
+        "t4-small": 0.40,
+        "t4-medium": 0.60,
+        "l4x1": 0.80,
+        "l4x4": 3.80,
+        "l40s-x1": 1.80,
+        "l40s-x4": 8.30,
+        "l40s-x8": 23.50,
+        "a10g-small": 1.00,
+        "a10g-large": 1.50,
+        "a10g-large-x2": 3.00,
+        "a10g-large-x4": 5.00,
+        "a100-large": 2.50,
+        "a100-large-x4": 10.00,
+        "a100-large-x8": 20.00,
+        "h200": 5.00,
+        "h200-x2": 10.00,
+        "h200-x4": 20.00,
+        "h200-x8": 40.00,
     },
 }
 
@@ -958,7 +971,7 @@ def summary_by_bucket(
 #   full  (1-12h, $2-$15)       -> Vast.ai RTX 4090 default; Modal A100 fallback
 #   long_burn (12h+, $50+)      -> Lightning A100 default (subscription);
 #                                  Vast.ai H100 race-mode fallback
-#   eval  (auth eval)           -> Modal T4 default; Modal A10G fallback
+#   eval  (auth eval)           -> Modal T4 default; HF Jobs T4 cheaper fallback
 #   cpu   (contest-CPU)         -> GHA Linux x86_64 default (free)
 #
 # Time-Traveler amendment adopted: cost-band-posterior anchor shifts >25%
@@ -1063,7 +1076,11 @@ _CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS: dict[str, list[tuple[str, str]]] = {
     "smoke": [("modal", "A10G")],
     "full": [("modal", "A100")],
     "long_burn": [],  # No cheaper alternative — A100 subscription is already free.
-    "eval": [("modal", "A10G")],
+    # WIRE_IN_6: HF Jobs t4-small is 32.2% cheaper than Modal T4 by
+    # official static rate ($0.40/h vs $0.59/h). It remains posterior-gated:
+    # select_provider_for_class() only auto-routes after successful eval
+    # anchors prove the cheaper p50 on the same evidence bucket.
+    "eval": [("hf_jobs", "t4-small"), ("modal", "A10G")],
     "cpu": [],  # GHA is the only canonical free CPU surface.
 }
 
@@ -1507,11 +1524,11 @@ def select_provider_for_class(
             f"Decision 9 canonical {_provider_label(canon_provider, canon_gpu)} "
             f"for class={dispatch_class!r}; "
             f"posterior canon_p50="
-            f"{('$%.2f' % canon_p50) if canon_p50 is not None else 'no_anchors'} "
+            f"{f'${canon_p50:.2f}' if canon_p50 is not None else 'no_anchors'} "
             f"({canon_tag}); fallback="
             f"{_provider_label(*best_fallback) if best_fallback else 'none'} "
             f"p50="
-            f"{('$%.2f' % best_fallback_p50) if best_fallback_p50 is not None else 'no_anchors'}"
+            f"{f'${best_fallback_p50:.2f}' if best_fallback_p50 is not None else 'no_anchors'}"
         )
 
     chosen_fallback_reason: FallbackReason | None = None

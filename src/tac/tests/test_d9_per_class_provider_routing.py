@@ -31,15 +31,12 @@ from tac.cost_band_calibration import (
     PER_CLASS_SOFT_COST_CEILING_USD,
     PER_CLASS_SOFT_WALLCLOCK_CEILING_HR,
     RE_ROUTING_TRIGGER_FRACTION,
-    CostBandAnchor,
-    ProviderRoutingDecision,
     SUCCESSFUL_DISPATCH,
-    append_anchor,
     classify_dispatch,
+    estimate_cost_usd,
     select_provider_for_class,
     select_provider_for_recipe,
 )
-
 
 # -- Decision-matrix invariants ---------------------------------------------
 
@@ -65,7 +62,7 @@ def test_council_decision_9_fallback_provider_matrix() -> None:
         "smoke": [("modal", "A10G")],
         "full": [("modal", "A100")],
         "long_burn": [("vastai", "H100")],
-        "eval": [("modal", "A10G")],
+        "eval": [("hf_jobs", "t4-small"), ("modal", "A10G")],
         "cpu": [],
     }
 
@@ -77,6 +74,13 @@ def test_dispatch_classes_enumeration() -> None:
 def test_re_routing_trigger_fraction_is_25_percent() -> None:
     """Time-Traveler amendment trigger MUST be 25% per the council ledger."""
     assert RE_ROUTING_TRIGGER_FRACTION == 0.25
+
+
+def test_hf_jobs_t4_small_official_cost_rate() -> None:
+    """WIRE_IN_6 pins the official HF Jobs T4 fallback rate."""
+    cost, hourly_rate = estimate_cost_usd("hf_jobs", "T4-SMALL", 3600.0)
+    assert hourly_rate == pytest.approx(0.40)
+    assert cost == pytest.approx(0.40)
 
 
 # -- classify_dispatch -------------------------------------------------------
@@ -323,7 +327,7 @@ def test_select_provider_posterior_re_routes_when_fallback_30pct_cheaper(
     confidence floor), recommend the fallback."""
     rows = []
     # 5 successful Vast.ai RTX_4090 anchors at $5.00 each (canonical for full)
-    for i in range(5):
+    for _ in range(5):
         rows.append(
             _make_anchor_dict(
                 platform="vastai",
@@ -335,7 +339,7 @@ def test_select_provider_posterior_re_routes_when_fallback_30pct_cheaper(
         )
     # 5 successful Modal A100 anchors at $3.00 each (fallback for full;
     # 40% cheaper than canonical -> trigger re-route).
-    for i in range(5):
+    for _ in range(5):
         rows.append(
             _make_anchor_dict(
                 platform="modal",
@@ -363,12 +367,70 @@ def test_select_provider_posterior_re_routes_when_fallback_30pct_cheaper(
     assert "Time-Traveler amendment trigger" in decision.re_routing_rationale
 
 
+def test_select_provider_eval_re_routes_to_hf_jobs_when_t4_fallback_cheaper(
+    tmp_path: Path,
+) -> None:
+    """HF Jobs T4 is now a posterior-gated cheaper eval fallback."""
+    rows = []
+    for _ in range(5):
+        rows.append(
+            _make_anchor_dict(
+                platform="modal",
+                gpu="T4",
+                epochs=3000,
+                actual_cost_usd=0.59,
+                actual_wall_clock_sec=3600.0,
+            )
+        )
+    for _ in range(5):
+        rows.append(
+            _make_anchor_dict(
+                platform="hf_jobs",
+                gpu="t4-small",
+                epochs=3000,
+                actual_cost_usd=0.40,
+                actual_wall_clock_sec=3600.0,
+            )
+        )
+    # Modal A10G remains a legacy fallback, but the helper should choose the
+    # cheapest successful fallback among the registered eval alternatives.
+    for _ in range(5):
+        rows.append(
+            _make_anchor_dict(
+                platform="modal",
+                gpu="A10G",
+                epochs=3000,
+                actual_cost_usd=1.10,
+                actual_wall_clock_sec=3600.0,
+            )
+        )
+    posterior, _ = _seed_posterior(tmp_path, rows)
+
+    decision = select_provider_for_class(
+        "eval",
+        posterior_path=posterior,
+        consult_posterior=True,
+        epochs_for_posterior=3000,
+    )
+
+    assert decision.re_routed is True
+    assert decision.provider == "hf_jobs"
+    assert decision.gpu == "t4-small"
+    assert decision.canonical_provider == "modal"
+    assert decision.canonical_gpu == "T4"
+    assert decision.fallback_provider == "hf_jobs"
+    assert decision.fallback_gpu == "t4-small"
+    assert decision.canonical_cost_p50_usd == pytest.approx(0.59)
+    assert decision.fallback_cost_p50_usd == pytest.approx(0.40)
+    assert "Time-Traveler amendment trigger" in decision.re_routing_rationale
+
+
 def test_select_provider_posterior_does_NOT_re_route_when_fallback_only_20pct_cheaper(
     tmp_path: Path,
 ) -> None:
     """20% < 25% threshold -> stick with canonical."""
     rows = []
-    for i in range(5):
+    for _ in range(5):
         rows.append(
             _make_anchor_dict(
                 platform="vastai",
@@ -379,7 +441,7 @@ def test_select_provider_posterior_does_NOT_re_route_when_fallback_only_20pct_ch
             )
         )
     # 20% cheaper -> below trigger.
-    for i in range(5):
+    for _ in range(5):
         rows.append(
             _make_anchor_dict(
                 platform="modal",
@@ -410,7 +472,7 @@ def test_select_provider_posterior_excludes_failed_anchors(tmp_path: Path) -> No
     per Catalog #175 + #177 cost-band-outcome discipline."""
     rows = []
     # Canonical: 5 SUCCESSFUL at $5
-    for i in range(5):
+    for _ in range(5):
         rows.append(
             _make_anchor_dict(
                 platform="vastai",
@@ -421,7 +483,7 @@ def test_select_provider_posterior_excludes_failed_anchors(tmp_path: Path) -> No
             )
         )
     # Fallback: 5 FAILED at $0.10 each (would re-route to modal/A100 if folded in)
-    for i in range(5):
+    for _ in range(5):
         rows.append(
             _make_anchor_dict(
                 platform="modal",
