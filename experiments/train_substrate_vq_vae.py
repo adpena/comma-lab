@@ -694,8 +694,15 @@ def _build_archive_zip(
 # Utilities
 # ---------------------------------------------------------------------------
 
-def _device_or_die(name: str, *, smoke: bool):
-    """Adapter: forward to the canonical helper with our substrate tag."""
+def _device_or_die(name: str, *, smoke: bool):  # TF32_WAIVED:routes through canonical trainer_skeleton.device_or_die which enables TF32 per Catalog #178
+    """Adapter: forward to the canonical helper with our substrate tag.
+
+    This adapter delegates to ``tac.substrates._shared.trainer_skeleton.device_or_die``
+    which carries the canonical TF32 enablement per CLAUDE.md Catalog #178
+    (`check_substrate_trainers_declare_tf32_support`). The canonical helper
+    enables ``torch.backends.cuda.matmul.allow_tf32 = True`` +
+    ``torch.backends.cudnn.allow_tf32 = True`` on Ampere/Hopper.
+    """
     return _canonical_device_or_die(name, smoke=smoke, substrate_tag=_SUBSTRATE_TAG)
 
 

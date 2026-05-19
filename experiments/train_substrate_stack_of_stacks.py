@@ -856,7 +856,19 @@ STACK_OF_STACKS_SUBSTRATE_CONTRACT = SubstrateContract(
 
 
 @register_substrate(STACK_OF_STACKS_SUBSTRATE_CONTRACT)
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # AUTH_EVAL_DIRECT_SUBPROCESS_OK:convergence-diagnostic-only; primary output is SGLD plateau identification not score; per E.8 recipe predicted_band_validation_status pending_post_training + Catalog #324 non-promotable verdict
+    """Stack-of-stacks substrate main entry.
+
+    Per CLAUDE.md Catalog #226 (`check_trainer_auth_eval_uses_canonical_helper`):
+    this convergence-diagnostic trainer is INTENTIONALLY auth-eval-free since
+    its primary output is the SGLD t_final convergence plateau, NOT a contest
+    score claim. Per E.8 recipe's `predicted_band_validation_status:
+    pending_post_training` and Catalog #324 discipline, any score produced by
+    this trainer is `evidence_grade=predicted` + `score_claim=False`
+    + `promotion_eligible=False`. Score-claiming downstream consumers MUST
+    re-run via `experiments/contest_auth_eval.py` through the canonical
+    `gate_auth_eval_call` helper on the actual archive bytes.
+    """
     args = _build_parser().parse_args(argv)
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
