@@ -31,7 +31,8 @@ THIS wrapper exposes the canonical CathedralConsumerContract so the
 auto-discovery loop ingests the surface (Catalog #335 paradigm shift; no
 manual cathedral_autopilot edits required).
 
-Hook numbers per Catalog #125 6-hook wire-in declaration:
+Hook numbers per Catalog #125 6-hook wire-in declaration (v1.1 update
+2026-05-19: hook #6 PROBE_DISAMBIGUATOR added per grain-aware routing):
 
 - Hook #1 SENSITIVITY_MAP — per-byte L1-importance IS the sensitivity-map
   contribution (which bytes carry score weight per CLAUDE.md "Apples-to-
@@ -40,11 +41,18 @@ Hook numbers per Catalog #125 6-hook wire-in declaration:
   priority for any future mutation campaign (canonical fan-out target).
 - Hook #4 CATHEDRAL_AUTOPILOT_DISPATCH — this wrapper surfaces the signal
   to the autopilot ranker as observability annotation.
+- Hook #6 PROBE_DISAMBIGUATOR (v1.1) — grain selection (post_decompress
+  vs raw_byte) IS the disambiguator between entropy-cascade-smeared
+  raw-byte sensitivity and locality-correct post-decompress sensitivity.
+  When BOTH grains exist the consumer routes to post_decompress + emits
+  a ``grain_routing_reason`` field. When only raw-byte exists, the
+  consumer emits ``cascade_smearing_risk=True`` so downstream operators
+  do NOT treat the signal as a true local derivative without paired
+  post-decompress cross-check.
 
-Hooks #2 PARETO_CONSTRAINT / #5 CONTINUAL_LEARNING_POSTERIOR / #6
-PROBE_DISAMBIGUATOR = N/A (per-pair consumers cover #2; the producer's
-canonical persistence covers #5; the per-byte signal is not a probe
-disambiguator on its own — that role belongs to KKT residuals consumer #12).
+Hooks #2 PARETO_CONSTRAINT / #5 CONTINUAL_LEARNING_POSTERIOR = N/A
+(per-pair consumers cover #2; the producer's canonical persistence
+covers #5).
 
 Sister of:
 
@@ -64,11 +72,22 @@ from tac.cathedral.consumer_contract import HookNumber
 
 
 CONSUMER_NAME = "per_byte_sensitivity_consumer"
-CONSUMER_VERSION = "1.0"
+# 1.1: grain-aware routing landed 2026-05-19 per slot 6 + slot 10
+# grain-awareness wave. Sister of slot 15
+# `tac.master_gradient_post_brotli_decompress` (PR101 post-decompress
+# anchor producer) + slot 17 `tac.master_gradient_post_decompress_multi_archive`
+# (5-family extension). Cathedral consumer now prefers post-decompress
+# grain when available + falls back to raw-byte with explicit
+# cascade_smearing_risk warning when only raw is available. Hook #6
+# PROBE_DISAMBIGUATOR added: grain selection IS the disambiguator between
+# entropy-cascade-smeared raw-byte and locality-correct post-decompress
+# signals per Catalog #318 + codex op7 finding.
+CONSUMER_VERSION = "1.1"
 CONSUMER_HOOK_NUMBERS = (
     HookNumber.SENSITIVITY_MAP,
     HookNumber.BIT_ALLOCATOR,
     HookNumber.CATHEDRAL_AUTOPILOT_DISPATCH,
+    HookNumber.PROBE_DISAMBIGUATOR,
 )
 
 
@@ -122,9 +141,10 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
             "per-byte sensitivity routing key unavailable"
         )
 
-    # Step 2: route through the canonical reader.
+    # Step 2: route through the canonical reader (grain-aware per v1.1).
     try:
         from tac.master_gradient_per_byte_consumer import (
+            available_grains_for_archive,
             load_per_byte_sensitivity_for_archive,
             summarize_payload,
         )
@@ -134,7 +154,17 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
             "installed or canonical helper missing); per-byte signal unrouteable"
         )
 
-    payload = load_per_byte_sensitivity_for_archive(archive_sha, top_k=100)
+    # Step 2a: inventory available grains BEFORE loading so the rationale
+    # can explain which grain was chosen vs which were available.
+    grain_inventory = available_grains_for_archive(archive_sha)
+    has_post_decompress = bool(grain_inventory["post_decompress"])
+    has_raw_byte = bool(grain_inventory["raw_byte"])
+
+    # Step 2b: prefer post-decompress grain (canonical default per Catalog
+    # #318 + codex op7 finding 2026-05-19).
+    payload = load_per_byte_sensitivity_for_archive(
+        archive_sha, top_k=100, prefer_grain="post_decompress"
+    )
     if payload is None:
         return _no_signal_verdict(
             f"no per-byte sensitivity anchor found for archive "
@@ -146,12 +176,42 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     axis_tag = _resolve_axis_tag(payload.measurement_hardware, payload.measurement_axis)
 
     summary = summarize_payload(payload)
+    grain_used = payload.gradient_byte_domain
+    cascade_risk = payload.cascade_smearing_risk
+
+    # Step 4: derive grain-routing reason for operator-facing audit trail.
+    if has_post_decompress and grain_used in grain_inventory["post_decompress"]:
+        grain_routing_reason = (
+            "post_decompress grain available + preferred (CORRECT locality "
+            "basis per Catalog #318 + codex op7 finding)"
+        )
+    elif has_post_decompress and grain_used not in grain_inventory["post_decompress"]:
+        # Should not happen with prefer_grain=post_decompress, but defensive.
+        grain_routing_reason = (
+            f"post_decompress grain available ({grain_inventory['post_decompress']}) "
+            f"but consumer landed on {grain_used} — investigate routing"
+        )
+    elif has_raw_byte and not has_post_decompress:
+        grain_routing_reason = (
+            "ONLY raw_byte grain available; falling back per "
+            "fallback_to_raw_byte=True; CASCADE_SMEARING_RISK active — the "
+            "per-byte gradient is subject to entropy-decoder cascade and "
+            "should not be treated as a true local derivative without a "
+            "post-decompress anchor cross-check"
+        )
+    else:
+        grain_routing_reason = (
+            f"grain={grain_used} (non-canonical or diagnostic) — consumer "
+            "surfaces signal but defers locality judgement to operator"
+        )
+
     rationale = (
         f"per-byte sensitivity available for {archive_sha[:12]}: "
         f"{summary['n_bytes']} bytes ({summary['n_bytes_above_zero']} non-zero, "
         f"{summary['sparsity_pct']:.1f}% sparse), top-{summary['top_k_count']} "
         f"indices ranked by L1-sum-of-abs importance "
         f"(aggregate_sum={summary['aggregate_l1_importance_sum']:.4g}); "
+        f"grain_used={grain_used} cascade_smearing_risk={cascade_risk}; "
         f"hardware={payload.measurement_hardware} axis={payload.measurement_axis} "
         f"[predicted]"
     )
@@ -178,6 +238,15 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
                 "measurement_method": payload.measurement_method,
                 "measurement_utc": payload.measurement_utc,
                 "gradient_array_path": payload.gradient_array_path,
+                # Grain-aware routing surface (v1.1).
+                "grain_used": grain_used,
+                "cascade_smearing_risk": cascade_risk,
+                "grain_routing_reason": grain_routing_reason,
+                "grain_inventory": {
+                    "post_decompress": list(grain_inventory["post_decompress"]),
+                    "raw_byte": list(grain_inventory["raw_byte"]),
+                    "other": list(grain_inventory["other"]),
+                },
             }
         },
     }
