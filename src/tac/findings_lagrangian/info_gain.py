@@ -1,0 +1,209 @@
+# SPDX-License-Identifier: MIT
+"""Closed-form KL info gain between Gaussian posteriors (Q2 binding).
+
+Per T3 grand council 3-round consolidated verdict (slot 20 + supplemental +
+second-supplemental, 2026-05-19): Q2 RATIFIED exact closed-form KL between
+Gaussian posterior-before and posterior-after. Monte Carlo fallback ONLY if
+posterior becomes mixture (Q4 DP mixture escalation deferred to Phase 3).
+
+The canonical formula (per slot 20 council memo + MacKay 1992 +
+Lindley 1956 + Foster et al 2019):
+
+    KL(p_after || p_before) = 0.5 * [
+        tr(Sigma_b^-1 Sigma_a) +
+        (mu_b - mu_a)^T Sigma_b^-1 (mu_b - mu_a) -
+        d +
+        log(|Sigma_b| / |Sigma_a|)
+    ]
+
+where d = posterior dimensionality.
+
+Per Tao dissent (supplemental): Lebesgue-continuous diagonal Gaussian is
+measure-theoretically valid for closed-form exact KL; Monte Carlo
+estimator has variance characterized by Cramer-Rao lower bound. For
+≤20-anchor regime, closed-form dominates strictly.
+
+Per Schmidhuber operating-within assumption: KL info gain IS the
+canonical bridge to active inference; the action selector picks
+the next experiment that maximizes E[KL(posterior_after || posterior_before)].
+"""
+from __future__ import annotations
+
+import math
+from typing import Iterable
+
+import numpy as np
+
+from tac.findings_lagrangian.posterior import (
+    GaussianPosterior,
+    PosteriorInvalidError,
+)
+
+
+__all__ = [
+    "kl_divergence_gaussians",
+    "expected_information_gain",
+    "monte_carlo_kl_fallback",
+]
+
+
+def kl_divergence_gaussians(
+    posterior_after: GaussianPosterior,
+    posterior_before: GaussianPosterior,
+) -> float:
+    """Exact closed-form KL(p_after || p_before) between two Gaussians.
+
+    Per Q2 binding decision: this is the canonical info gain measure for
+    determining how much a new empirical anchor would update the posterior.
+
+    Args:
+        posterior_after: posterior conditioned on hypothetical new data.
+        posterior_before: posterior from prior observations only.
+
+    Returns:
+        Non-negative KL divergence (in nats; multiply by log2(e) for bits).
+
+    Raises:
+        PosteriorInvalidError: if posteriors have mismatched equation_id or dim.
+    """
+    if posterior_after.equation_id != posterior_before.equation_id:
+        raise PosteriorInvalidError(
+            f"KL divergence requires same equation_id; got "
+            f"{posterior_after.equation_id!r} vs {posterior_before.equation_id!r}"
+        )
+    if posterior_after.dim != posterior_before.dim:
+        raise PosteriorInvalidError(
+            f"KL divergence requires same dim; got "
+            f"{posterior_after.dim} vs {posterior_before.dim}"
+        )
+
+    mu_a, sigma_a = posterior_after.as_numpy()
+    mu_b, sigma_b = posterior_before.as_numpy()
+    d = posterior_after.dim
+
+    # Symmetrize for numerical PSD.
+    sigma_a = (sigma_a + sigma_a.T) / 2.0
+    sigma_b = (sigma_b + sigma_b.T) / 2.0
+
+    # Cheap & numerically stable: use slogdet + solve.
+    try:
+        sign_a, logdet_a = np.linalg.slogdet(sigma_a)
+        sign_b, logdet_b = np.linalg.slogdet(sigma_b)
+        if sign_a <= 0 or sign_b <= 0:
+            raise PosteriorInvalidError(
+                "Covariance matrix has non-positive determinant; not PSD"
+            )
+        # tr(Sigma_b^-1 Sigma_a) via solve.
+        sigma_b_inv_sigma_a = np.linalg.solve(sigma_b, sigma_a)
+        trace_term = float(np.trace(sigma_b_inv_sigma_a))
+        # (mu_b - mu_a)^T Sigma_b^-1 (mu_b - mu_a) via solve.
+        diff = mu_b - mu_a
+        sigma_b_inv_diff = np.linalg.solve(sigma_b, diff)
+        mahalanobis = float(diff @ sigma_b_inv_diff)
+        log_ratio = float(logdet_b - logdet_a)
+    except np.linalg.LinAlgError as exc:
+        raise PosteriorInvalidError(
+            f"KL divergence failed numerically: {exc}"
+        ) from exc
+
+    kl = 0.5 * (trace_term + mahalanobis - float(d) + log_ratio)
+    # Clip to non-negative (numerical noise can produce tiny negatives).
+    return max(kl, 0.0)
+
+
+def expected_information_gain(
+    posterior_before: GaussianPosterior,
+    *,
+    hypothetical_residuals: Iterable[float],
+    sigma_obs: float = 1.0,
+) -> float:
+    """E[KL(p_after || p_before)] given a hypothetical experiment's likely residuals.
+
+    Per Lindley 1956 + Foster et al 2019 + Schmidhuber operating-within:
+    the canonical action-selector criterion is to pick the next experiment
+    whose hypothetical observation yields maximum expected KL between
+    posterior-after and posterior-before.
+
+    For diagonal Gaussian posterior + Gaussian likelihood, the expected KL
+    over the predicted observation distribution has a closed form in terms
+    of the posterior precision change:
+
+        E[KL] = 0.5 * sum_i log(1 + n_i * sigma_post_i**2 / sigma_obs**2)
+
+    where n_i = count of hypothetical observations assigned to dim i.
+
+    Args:
+        posterior_before: current posterior.
+        hypothetical_residuals: predicted residuals from the hypothetical
+            experiment (typically generated by sampling from a candidate's
+            predicted output distribution).
+        sigma_obs: observation noise std-dev.
+
+    Returns:
+        Expected KL divergence (in nats) the hypothetical experiment would
+        yield. Higher = more informative experiment.
+    """
+    from tac.findings_lagrangian.posterior import posterior_update_from_anchors
+
+    if sigma_obs <= 0:
+        raise PosteriorInvalidError(f"sigma_obs={sigma_obs} must be > 0")
+    residuals = list(hypothetical_residuals)
+    if not residuals:
+        return 0.0
+
+    # Closed-form approximation per the formula above for diagonal posteriors.
+    d = posterior_before.dim
+    count_per_dim = [0] * d
+    for k in range(len(residuals)):
+        count_per_dim[k % d] += 1
+
+    info_gain_nats = 0.0
+    for i in range(d):
+        if count_per_dim[i] == 0:
+            continue
+        sigma_post_i_sq = posterior_before.sigma[i][i]
+        precision_change_factor = 1.0 + (
+            count_per_dim[i] * sigma_post_i_sq / (sigma_obs**2)
+        )
+        info_gain_nats += 0.5 * math.log(precision_change_factor)
+
+    return info_gain_nats
+
+
+def monte_carlo_kl_fallback(
+    posterior_after: GaussianPosterior,
+    posterior_before: GaussianPosterior,
+    *,
+    n_samples: int = 1000,
+    seed: int | None = 42,
+) -> float:
+    """Monte Carlo KL estimator — reserved for Q4 DP mixture escalation.
+
+    Per Q2 binding decision: this is the FALLBACK for cases where closed-form
+    is not applicable (e.g. posterior became a mixture via DP refinement).
+    For canonical Gaussian-vs-Gaussian use :func:`kl_divergence_gaussians`
+    (exact, ~100x faster, no sampling variance).
+
+    Args:
+        posterior_after, posterior_before: see :func:`kl_divergence_gaussians`.
+        n_samples: Monte Carlo sample count.
+        seed: RNG seed.
+
+    Returns:
+        Estimated KL (with sampling variance proportional to 1/sqrt(n_samples)).
+    """
+    from tac.findings_lagrangian.posterior import posterior_sample
+
+    samples = posterior_sample(posterior_after, n_samples=n_samples, seed=seed)
+    mu_a, sigma_a = posterior_after.as_numpy()
+    mu_b, sigma_b = posterior_before.as_numpy()
+
+    # log p_after(samples) - log p_before(samples), averaged.
+    sigma_a_sym = (sigma_a + sigma_a.T) / 2.0
+    sigma_b_sym = (sigma_b + sigma_b.T) / 2.0
+
+    from scipy import stats
+
+    log_pa = stats.multivariate_normal.logpdf(samples, mean=mu_a, cov=sigma_a_sym)
+    log_pb = stats.multivariate_normal.logpdf(samples, mean=mu_b, cov=sigma_b_sym)
+    return float(np.mean(log_pa - log_pb))
