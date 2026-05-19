@@ -26,7 +26,6 @@ from __future__ import annotations
 import importlib
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -152,7 +151,7 @@ def test_all_12_new_consumers_auto_discovered() -> None:
     """The canonical auto-discovery loop picks up all 12 new consumers
     + the reference _example_consumer = 13 total.
     """
-    from cathedral_autopilot_autonomous_loop import (  # noqa: E501 — tools/ on path
+    from cathedral_autopilot_autonomous_loop import (
         discover_and_register_consumers,
     )
     regs = discover_and_register_consumers(
@@ -231,5 +230,128 @@ def test_cathedral_autopilot_module_imports_with_new_consumers_present() -> None
     """Smoke test: cathedral autopilot module imports cleanly with all
     13 consumer packages present in src/tac/cathedral_consumers/.
     """
-    import cathedral_autopilot_autonomous_loop as cap  # noqa: F401
+    import cathedral_autopilot_autonomous_loop as cap
     assert cap is not None
+
+
+def test_procedural_codebook_consumer_surfaces_archive_seed_authority_packet() -> None:
+    """The procedural consumer reads per-candidate authority packets without
+    converting them into score or promotion authority.
+    """
+    from tac.procedural_codebook_generator import build_procedural_seed_authority_packet
+
+    mod = importlib.import_module(
+        "tac.cathedral_consumers.procedural_codebook_generator_consumer"
+    )
+    packet = build_procedural_seed_authority_packet(
+        "archive-seed-candidate",
+        modes=("archive_seeded", "runtime_constant"),
+        runtime_consumption_proof=True,
+        self_contained_archive_proof=True,
+        scorer_free_inflate_proof=True,
+        no_external_state_proof=True,
+        packet_compiler_target_declared=True,
+        exact_eval_validated=False,
+    )
+
+    row = mod.consume_candidate({"procedural_seed_authority_packet": packet})
+
+    assert row["predicted_delta_adjustment"] == 0.0
+    assert row["promotable"] is False
+    assert row["procedural_authority_detected"] is True
+    authority = row["procedural_authority"]
+    assert authority["preferred_promotion_mode"] == "archive_seeded"
+    assert authority["ready_for_exact_eval_modes"] == ("archive_seeded",)
+    assert authority["promotion_eligible_modes"] == ()
+    assert "runtime_constant:script_side_per_video_payload_probe_only" in authority[
+        "authority_blockers"
+    ]
+
+
+def test_procedural_codebook_consumer_blocks_script_side_payload_semantics() -> None:
+    from tac.procedural_codebook_generator import build_procedural_seed_authority_packet
+
+    mod = importlib.import_module(
+        "tac.cathedral_consumers.procedural_codebook_generator_consumer"
+    )
+    packet = build_procedural_seed_authority_packet(
+        "script-seed-probe",
+        modes=("runtime_constant",),
+        runtime_constant_kind="per_video_payload",
+    )
+
+    row = mod.consume_candidate({"procedural_authority_packet": packet})
+
+    assert row["predicted_delta_adjustment"] == 0.0
+    assert row["promotable"] is False
+    assert row["procedural_authority"]["ready_for_exact_eval_modes"] == ()
+    assert row["procedural_authority"]["research_only"] is True
+    assert "runtime_constant:script_side_per_video_payload_probe_only" in row[
+        "procedural_authority"
+    ]["authority_blockers"]
+
+
+def test_procedural_codebook_consumer_fail_closes_overauthoritative_packets() -> None:
+    """Malformed authority packets must not become nested promotion authority."""
+    mod = importlib.import_module(
+        "tac.cathedral_consumers.procedural_codebook_generator_consumer"
+    )
+    packet = {
+        "schema": "untrusted_schema_v99",
+        "preferred_promotion_mode": "runtime_constant",
+        "ready_for_exact_eval_modes": ["runtime_constant"],
+        "promotion_eligible_modes": ["runtime_constant"],
+        "research_only": False,
+        "score_claim": True,
+        "modes": {
+            "runtime_constant": {
+                "seed_carrier": "inflate_py_literal_seed",
+                "literal_payload_kind": "per_video_payload",
+                "ready_for_exact_eval_dispatch": True,
+                "promotion_eligible": True,
+                "score_claim": True,
+            },
+        },
+    }
+
+    row = mod.consume_candidate({"procedural_seed_authority_packet": packet})
+
+    assert row["predicted_delta_adjustment"] == 0.0
+    assert row["promotable"] is False
+    authority = row["procedural_authority"]
+    assert authority["score_claim"] is False
+    assert authority["source_score_claim_blocked"] is True
+    assert authority["ready_for_exact_eval_modes"] == ()
+    assert authority["promotion_eligible_modes"] == ()
+    assert authority["research_only"] is True
+    assert "packet_schema_untrusted:'untrusted_schema_v99'" in authority[
+        "authority_blockers"
+    ]
+    assert "packet_score_claim_not_allowed" in authority["authority_blockers"]
+    assert "runtime_constant:script_side_per_video_payload_probe_only" in authority[
+        "authority_blockers"
+    ]
+    assert "runtime_constant:score_claim_not_allowed" in authority[
+        "authority_blockers"
+    ]
+
+
+def test_procedural_codebook_consumer_fail_closes_top_level_mode_mismatch() -> None:
+    from tac.procedural_codebook_generator import build_procedural_seed_authority_packet
+
+    mod = importlib.import_module(
+        "tac.cathedral_consumers.procedural_codebook_generator_consumer"
+    )
+    packet = build_procedural_seed_authority_packet(
+        "mismatched-ready-claim",
+        modes=("archive_seeded",),
+    )
+    packet["ready_for_exact_eval_modes"] = ["archive_seeded"]
+
+    row = mod.consume_candidate({"procedural_seed_authority_packet": packet})
+
+    authority = row["procedural_authority"]
+    assert authority["ready_for_exact_eval_modes"] == ()
+    assert authority["promotion_eligible_modes"] == ()
+    assert authority["research_only"] is True
+    assert "ready_for_exact_eval_modes_mismatch" in authority["authority_blockers"]
