@@ -40183,11 +40183,11 @@
       "id": "lane_cheap_signal_first_dispatch_wave_20260519",
       "name": "Cheap-signal-first dispatch wave (Z6 4c + STC + C6.3/C6.4)",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/cheap_signal_first_dispatch_wave_synthesis_20260519T063932Z.md (C6.3 design memo + C6.4 redirect memo + 2 probe outcomes + synthesis)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -40210,8 +40210,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/cheap_signal_first_dispatch_wave_synthesis_20260519T063932Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -40224,11 +40224,11 @@
       "id": "lane_mps_prescreen_cathedral_consumer_wire_in_20260519",
       "name": "MPS pre-screen cathedral consumer wire-in (META-ASSUMPTION item #2)",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/cathedral_consumers/mps_viable_prescreen_consumer/__init__.py + 21 tests pass; cumulative cathedral_consumers count 22; Catalog #335 LIVE_COUNT=0"
         },
         "real_archive_empirical": {
           "status": false,
@@ -40251,8 +40251,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/mps_prescreen_consumer_wire_in_landed_20260519T063942Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -40269,5 +40269,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T06:37:21Z"
+  "updated_at": "2026-05-19T06:41:10Z"
 }
