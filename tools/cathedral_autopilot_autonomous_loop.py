@@ -3872,6 +3872,97 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
     return rows
 
 
+# ── RATE ACH/cheap-probe read-only autopilot-row consumer ────────────────
+
+
+def load_candidates_from_rate_attack_feature_matrix_output(
+    path: Path,
+) -> list[CandidateRow]:
+    """Load RATE process-feature rows as planning-only CandidateRows.
+
+    The feature matrix is an authority surface for *refusal and ranking
+    hygiene* only: explicit disconfirming assumptions, ACH risk counters, and
+    cheap-probe spend gates. It is not a score packet, not a promotion packet,
+    and not an exact-ready queue.
+    """
+
+    if not path.is_file():
+        raise FileNotFoundError(f"RATE feature matrix JSON not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"RATE feature matrix JSON must be an object: {path}")
+    if payload.get("schema") != "rate_attack_autopilot_feature_matrix_v1_20260519":
+        raise ValueError(
+            "RATE feature matrix schema unsupported: "
+            f"{payload.get('schema')!r}"
+        )
+    for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+        _require_planning_only_flag(payload, key, context="RATE feature matrix JSON")
+    if _json_bool_field(
+        payload,
+        "dispatch_attempted",
+        default=False,
+        context="RATE feature matrix JSON",
+    ):
+        raise ValueError(
+            "RATE feature matrix has dispatch_attempted=True; refusing to "
+            "consume it as an autopilot planning source"
+        )
+    raw_rows = payload.get("autopilot_rows")
+    if not isinstance(raw_rows, list):
+        raise ValueError("RATE feature matrix missing list field 'autopilot_rows'")
+
+    rows: list[CandidateRow] = []
+    for index, raw in enumerate(raw_rows):
+        if not isinstance(raw, dict):
+            raise ValueError("RATE feature matrix autopilot_rows entries must be objects")
+        cid = raw.get("candidate_id")
+        if not cid:
+            raise ValueError("RATE feature matrix row missing candidate_id")
+        context = f"RATE feature matrix row {cid!r}"
+        for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+            _require_planning_only_flag(raw, key, context=context)
+        assumptions = raw.get("disconfirming_assumptions")
+        if not isinstance(assumptions, list) or not assumptions:
+            raise ValueError(
+                f"{context} missing nonempty disconfirming_assumptions"
+            )
+        blockers = _coerce_str_list(raw.get("blockers"))
+        if PLANNING_ONLY_SOURCE_BLOCKER not in blockers:
+            blockers.append(PLANNING_ONLY_SOURCE_BLOCKER)
+        cheap_probe = raw.get("cheap_probe")
+        if not isinstance(cheap_probe, dict):
+            raise ValueError(f"{context} missing cheap_probe object")
+        if (
+            _require_finite_nonnegative_float(
+                raw.get("estimated_dispatch_cost_usd", 0.0),
+                field="estimated_dispatch_cost_usd",
+                context=context,
+            )
+            > 1.0
+            and cheap_probe.get("verdict_exists") is not True
+            and "rate_attack_gt_1usd_spend_requires_cheap_probe_verdict" not in blockers
+        ):
+            raise ValueError(
+                f"{context} has >$1 spend without cheap-probe verdict blocker"
+            )
+        raw_notes = str(raw.get("notes", ""))
+        raw = {
+            **raw,
+            "blockers": blockers,
+            "context_order": int(raw.get("context_order", index) or index),
+            "notes": "\n".join(
+                [
+                    "[RATE ACH/cheap-probe process feature; read-only planning]",
+                    f"source_path: {path}",
+                    f"row_notes: {raw_notes}",
+                ]
+            ),
+        }
+        rows.append(_candidate_row_from_raw(raw, context=context))
+    return rows
+
+
 def candidate_substrate_ids_from_ranking(path: Path) -> dict[str, tuple[str, ...]]:
     """Map ``candidate_id`` -> tuple of substrate ids participating in the dispatch.
 
@@ -5478,6 +5569,17 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--rate-attack-feature-matrix-json",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a RATE ACH/cheap-probe feature matrix carrying read-only "
+            "autopilot_rows. Mutually exclusive with the other candidate-source "
+            "flags; rows must include disconfirming assumptions and fail closed "
+            "on score/promotion/exact-eval dispatch authority."
+        ),
+    )
+    parser.add_argument(
         "--include-out-of-envelope-ranking-candidates",
         action="store_true",
         help=(
@@ -5654,13 +5756,15 @@ def main(argv: list[str] | None = None) -> int:
                 args.candidates_jsonl,
                 args.use_substrate_composition_matrix_ranking,
                 args.probe_disambiguator_json,
+                args.rate_attack_feature_matrix_json,
             ) if x is not None
         )
         if sources_supplied != 1:
             raise ValueError(
                 "exactly one of --candidates-jsonl, "
-                "--use-substrate-composition-matrix-ranking, or "
-                "--probe-disambiguator-json must be supplied "
+                "--use-substrate-composition-matrix-ranking, "
+                "--probe-disambiguator-json, or "
+                "--rate-attack-feature-matrix-json must be supplied "
                 f"(got {sources_supplied})"
             )
         if args.candidates_jsonl is not None and not args.candidates_jsonl.is_file():
@@ -5675,6 +5779,11 @@ def main(argv: list[str] | None = None) -> int:
             and not args.probe_disambiguator_json.is_file()
         ):
             raise FileNotFoundError(args.probe_disambiguator_json)
+        if (
+            args.rate_attack_feature_matrix_json is not None
+            and not args.rate_attack_feature_matrix_json.is_file()
+        ):
+            raise FileNotFoundError(args.rate_attack_feature_matrix_json)
         approval_set = _parse_approval_flags(
             args.require_operator_approval_on or ["dispatch"]
         )
@@ -5746,6 +5855,11 @@ def main(argv: list[str] | None = None) -> int:
         def _source() -> list[CandidateRow]:
             return load_candidates_from_probe_disambiguator_output(
                 args.probe_disambiguator_json
+            )
+    elif args.rate_attack_feature_matrix_json is not None:
+        def _source() -> list[CandidateRow]:
+            return load_candidates_from_rate_attack_feature_matrix_output(
+                args.rate_attack_feature_matrix_json
             )
     else:
         def _source() -> list[CandidateRow]:
