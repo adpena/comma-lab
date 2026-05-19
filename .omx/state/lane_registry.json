@@ -40547,6 +40547,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_hf_jobs_segnet_surrogate_distillation_20260519",
+      "name": "HF Jobs SegNet surrogate distillation (Catalog #523 L2 unblock)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/hf_jobs_segnet_surrogate_distillation.py + recipe .omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch.yaml (research_only=true; dispatch_enabled=false pending operator review)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_hf_dataset_plus_hf_jobs_implementation_surface_landed_20260519.md (pending)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_hf_dataset_jobs_implementation_surface_20260519",
+      "name": "HF Jobs canonical implementation surface (dataset + ledger + dispatcher + training script + recipe + symposium)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/build_comma_video_segnet_image_level_600pairs_hf_dataset.py + src/tac/deploy/hf_jobs/job_id_ledger.py + tools/dispatch_hf_jobs_vision_training.py + experiments/hf_jobs_segnet_surrogate_distillation.py + .omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch.yaml + 36 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_hf_dataset_plus_hf_jobs_implementation_surface_landed_20260519.md (pending) + .omx/research/council_t1_hf_jobs_segnet_surrogate_distillation_symposium_20260519.md (T1 PROCEED_WITH_REVISIONS)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -40556,5 +40638,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T12:34:53Z"
+  "updated_at": "2026-05-19T12:36:29Z"
 }
