@@ -56,6 +56,13 @@ experiments/results/*
 !experiments/results/g1_cpu_axis_re_rank_*/
 experiments/results/g1_cpu_axis_re_rank_*/*
 !experiments/results/g1_cpu_axis_re_rank_*/report.json
+!experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/
+experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/*
+!experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/
+experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/*
+!experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/
+experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/*
+!experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py
 outputs/
 
 # Local Claude scheduler locks contain machine/session PIDs and must not churn.
