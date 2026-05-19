@@ -1,0 +1,198 @@
+schema_version: 1
+name: mps_gap_experiment_tiny_renderer_modal_a10g_dispatch
+lane_id: lane_phase_b_mps_gap_experiment_infrastructure_build_20260518
+
+# Phase B MPS-train CUDA-score gap diagnostic recipe.
+#
+# This is a DIAGNOSTIC recipe — NOT a contest substrate. It exists to
+# empirically answer the question: do MPS-trained weights survive CUDA
+# scoring on REAL CONTEST FRAMES within a usable tolerance? Verdict
+# unlocks (or rules out) the free local-MPS compute axis for future
+# substrate training.
+#
+# THE RECIPE IS LANDED WITH `dispatch_enabled: false` ON PURPOSE.
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# + Catalog #240 + the build-then-await pattern: the infrastructure
+# subagent BUILDS the recipe but does NOT FIRE the dispatch. The operator
+# greenlights the flip to `dispatch_enabled: true` after reviewing the
+# memo at `.omx/research/mps_gap_experiment_infrastructure_built_*.md`.
+# When the operator flips the flag, a single command fires:
+#
+#   bash tools/run_mps_gap_experiment.sh
+#
+# Predecessor: lane_mps_conv2d_wrap_fix_plus_real_frame_gap_experiment_20260518
+# (commit 24278cf06) established that the Conv2d-cliff wrapper hypothesis
+# was empirically falsified (drift 2.205e-3 with vs without wrapper) and
+# that SegNet end-to-end output drift on synthetic noise was 7.6e-5 —
+# already below the 1e-3 cumulative threshold. The remaining open question
+# THIS recipe answers: does that hold on REAL contest frames after an
+# end-to-end training loop produces a checkpoint?
+#
+# Per Catalog #192 + #317: every artifact this recipe emits is tagged
+# evidence_grade=MPS-research-signal / [diagnostic-CUDA Modal A10G].
+# ZERO contest-axis claims.
+
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - operator_review_of_phase_b_infrastructure_landing_memo_required_before_dispatch_greenlight
+  - this_is_a_diagnostic_recipe_NOT_a_contest_substrate
+
+summary: |
+  Phase B MPS-train CUDA-score gap diagnostic — runs the tiny renderer's
+  EMA shadow forward on Modal A10G CUDA against the SAME real-frame batch
+  the local MPS training used, computes per-component (pixel_l1 +
+  SegNet/PoseNet mean outputs) gap, and emits gap_results.json.
+
+  This is INFRASTRUCTURE for an empirical question; NOT a substrate. No
+  archive grammar. No contest score. Verdict thresholds:
+    - gap_relative_aggregate < 5%   -> LOCAL_MPS_TRAIN_VIABLE
+    - 5% <= gap < 20%               -> LOCAL_MPS_TRAIN_VIABLE_ADVISORY_ONLY
+    - gap >= 20%                    -> LOCAL_MPS_TRAIN_NOT_VIABLE_PIVOT_MLX_OR_VTOOLBOX
+
+platform: modal
+gpu: a10g
+min_vram_gb: 16
+min_smoke_gpu: a10g
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 1
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.50
+  platform_key: modal
+  gpu_key: a10g
+
+predicted_score_target: null
+predicted_band: [0.18, 0.30]
+predicted_band_validation_status: phantom_pre_training
+predicted_delta: "diagnostic only; no score claim"
+predicted_delta_basis: "diagnostic recipe; phantom band per Catalog #324; verdict driven by gap_relative_aggregate threshold not contest score"
+
+# Per Catalog #324 / FORBIDDEN_PATTERNS phantom-predicted-band:
+# the predicted_band is phantom_pre_training (a diagnostic placeholder; this
+# recipe never trains anything on Modal — it only runs forward + emits the
+# gap manifest). The dispatch produces NO contest score; ergo no Tier-C
+# post-training validation is required. The phantom marker is the explicit
+# acknowledgement that this band is non-binding.
+
+literature_anchor: |
+  CLAUDE.md "MPS auth eval is NOISE" non-negotiable;
+  Catalog #1 / #192 / #317 (local research-signal stamping);
+  Catalog #245 (Modal call-id ledger);
+  Predecessor lane lane_mps_conv2d_wrap_fix_plus_real_frame_gap_experiment_20260518
+    (commit 24278cf06): Conv2d wrapper hypothesis empirically falsified;
+    SegNet end-to-end drift on synthetic noise 7.6e-5 (<1e-3 threshold).
+
+source_supports: |
+  Predecessor measurement (commit 24278cf06) HARD-EARNED on synthetic noise:
+  SegNet end-to-end L_inf 7.6e-5 between MPS and CPU forward. This recipe
+  extends the question to real contest frames + an end-to-end training loop.
+
+paper_claim_scope: |
+  No paper claim. Diagnostic infrastructure only. The verdict informs future
+  build decisions (whether substrate training can happen locally on MPS) but
+  does NOT make any contest-axis statement.
+
+pact_must_prove: |
+  Empirically measures gap_relative_aggregate between MPS-forward and
+  CUDA-forward of the SAME EMA checkpoint on the SAME real-frame batch.
+  Verdict thresholds (5% / 20%) drive next-step routing per the landing memo.
+
+decode_complexity_evidence: |
+  Modal A10G forward pass over 10 real-frame pairs at 384x512 with a 7K-param
+  renderer + (optional) SegNet+PoseNet scorer-loss = sub-second per pair on
+  A10G; total wallclock ~5-10 minutes including image build / mount.
+
+risk: |
+  This is a DIAGNOSTIC recipe; the only risk is operator confusion if
+  someone treats the gap_results.json as a contest score. Every artifact
+  carries evidence_grade="MPS-research-signal" or
+  evidence_grade="diagnostic-CUDA Modal A10G" to make this unambiguous.
+
+  Modal A10G $0.50 envelope is the cap. The recipe declares
+  dispatch_enabled: false at landing per the build-then-await pattern;
+  operator must flip the flag explicitly before any spend occurs.
+
+envelope_status: "FITS $0.50 single-dispatch envelope at p50 fallback"
+
+remote_driver: scripts/remote_mps_gap_experiment_a10g.sh
+timeout_hours: 0.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --posenet-weights
+    default_path: upstream/models/posenet.safetensors
+  - flag: --segnet-weights
+    default_path: upstream/models/segnet.safetensors
+
+modal:
+  lane_script: scripts/remote_mps_gap_experiment_a10g.sh
+  cost_band_trainer: experiments/mps_gap_experiment_a10g_dispatch.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 2
+  cost_band_all_flags_on: false
+
+required_input_files_trainer: experiments/mps_gap_experiment_a10g_dispatch.py
+
+# Sentinel files per Catalog #166 / #191
+sentinel_files:
+  - src/tac/mps_gap_experiment/__init__.py
+  - src/tac/mps_gap_experiment/tiny_renderer.py
+  - src/tac/mps_gap_experiment/train_on_mps.py
+  - src/tac/mps_gap_experiment/harvest_and_verdict.py
+  - experiments/mps_gap_experiment_a10g_dispatch.py
+  - scripts/remote_mps_gap_experiment_a10g.sh
+
+env_overrides:
+  MPS_GAP_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  MPS_GAP_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  MPS_GAP_OUTPUT_DIR: /workspace/pact/mps_gap_results
+  MPS_GAP_CHECKPOINT_INPUT: /workspace/pact/local_mps_checkpoint/checkpoint_ema.pt
+  MPS_GAP_FRAME_CACHE_INPUT: /workspace/pact/local_mps_checkpoint/frame_cache.pt
+  MPS_GAP_INCLUDE_SCORER: "1"
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/remote_mps_gap_experiment_a10g.sh
+  - upstream/videos/0.mkv
+  - upstream/models/posenet.safetensors
+  - upstream/models/segnet.safetensors
+  - experiments/mps_gap_experiment_a10g_dispatch.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  DIAGNOSTIC RECIPE — NOT A CONTEST SUBSTRATE.
+
+  Dispatch flow:
+    1. Local: bash tools/run_mps_gap_experiment.sh trains the tiny renderer
+       on MPS for 100 epochs (~5-10 minutes wallclock).
+    2. Local: the harness packages checkpoint_ema.pt + frame_cache.pt into
+       a Modal mountable location.
+    3. Modal A10G: this recipe runs the trained checkpoint forward on CUDA
+       and computes gap components against the local MPS reference.
+    4. Local: tac.mps_gap_experiment.harvest_and_verdict computes the
+       aggregate gap, classifies the verdict, writes gap_results.json.
+
+  Per CLAUDE.md "Modal .spawn() HARVEST OR LOSE" + Catalog #245: the dispatch
+  registers the call_id in .omx/state/modal_call_id_ledger.jsonl via the
+  canonical helper at dispatch time; harvest within 24h.
+
+  Reactivation criteria (flip dispatch_enabled to true ONLY when):
+    1. Operator reviews infrastructure landing memo
+       (.omx/research/mps_gap_experiment_infrastructure_built_*.md)
+    2. Operator confirms $0.50 envelope acceptable + tags the dispatch as
+       diagnostic-only (no contest-axis interpretation)
+    3. Local MPS training completes successfully (produces checkpoint_ema.pt
+       + frame_cache.pt at the canonical location)
+
+  Cross-refs:
+    .omx/research/mps_conv2d_wrap_fix_empirical_finding_20260518.md (predecessor)
+    .omx/research/mps_drift_mechanism_20260519T035310Z.md (predecessor diagnostic)
+    src/tac/mps_diagnostic/layerwise_drift.py (sister layerwise diagnostic)
+    src/tac/mps_gap_experiment/__init__.py (THIS package; ~700 LOC + 10 tests)
