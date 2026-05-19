@@ -7,23 +7,21 @@ summary: |
   K=2 is optimal at lambda=1.0 (K=64 + K=256 ANTI-PARETO). Per council T3
   Finding 1 op-routable #1 (.omx/research/council_t3_finding_1_vq_codebook_anti_pareto_20260518.md).
 
-# Catalog #240: this is a diagnostic K-sweep variant. dispatch_enabled=false
-# until per-substrate symposium per Catalog #325 is operator-convened OR DRAFT
-# memo verdict is ratified by inner-quintet pact.
-dispatch_enabled: false
-research_only: true
-defer_reason: |
-  Per Catalog #325 PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
-  symposium: this K-sweep variant requires per-substrate symposium convocation
-  (T2 inner-quintet + Assumption-Adversary + vanDenOord + MacKay + Boyd + Tao)
-  within 14 days BEFORE paid dispatch can fire. DRAFT memo prepared at
-  .omx/research/council_t2_vq_vae_k_sweep_symposium_DRAFT_20260519T043602Z.md
-  awaits operator approval to convene the full symposium OR ratification of
-  DRAFT verdict by inner-quintet pact.
+# OPERATOR_FRONTIER_OVERRIDE 2026-05-19 per Catalog #300 §"Mission alignment"
+# Consequence #1. Operator verbatim "All operator fates and decisions approved"
+# captured at .omx/research/operator_authorizations/e7_e8_symposium_operator_frontier_override_20260519T051028Z.md
+# (commit 8233584e4). DRAFT symposium memo at
+# .omx/research/council_t2_vq_vae_k_sweep_symposium_DRAFT_20260519T043602Z.md
+# ratified to VERDICT=PROCEED via the override.
+dispatch_enabled: true
+research_only: false
+operator_override_rationale: "All operator fates and decisions approved"
+operator_override_memo: .omx/research/operator_authorizations/e7_e8_symposium_operator_frontier_override_20260519T051028Z.md
 
-dispatch_blockers:
-  - per_substrate_symposium_pending_operator_convocation
-  - probe_outcome_ratification_pending_post_symposium
+dispatch_blockers: []
+dispatch_blockers_cleared:
+  - per_substrate_symposium_pending_operator_convocation: ratified_via_operator_frontier_override_20260519
+  - probe_outcome_ratification_pending_post_symposium: ratified_via_operator_frontier_override_20260519
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
