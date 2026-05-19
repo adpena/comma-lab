@@ -1,0 +1,145 @@
+schema_version: 1
+name: substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch
+lane_id: lane_hf_jobs_segnet_surrogate_distillation_20260519
+summary: |
+  HF Jobs SegNet image-level surrogate distillation (Catalog #342 + #523
+  L2 scaffold). 600-pair canonical contest video at 384×512 → 2.5M-param
+  mobilenetv3_small image-classification surrogate trained via HF Jobs
+  t4-small flavor for 200 epochs.
+
+  Per the T1 working-group symposium at
+  `.omx/research/council_t1_hf_jobs_segnet_surrogate_distillation_symposium_20260519.md`
+  the surrogate is an image-level (NOT per-pixel) distillation; per-pixel
+  mIoU distillation is sister Phase 2.
+
+  Surrogate output is `[predicted]` per Catalog #287 / #323 canonical
+  Provenance until paired Linux x86_64 contest-CPU anchor + NVIDIA T4
+  contest-CUDA anchor land via the apples-to-apples evaluator.
+
+  Surrogate USE: fast advisory ranking signal for substrate-design Pareto
+  search; Hinton soft-label teacher for downstream substrate trainers
+  (Phase 2 composition).
+
+# Platform = HF Jobs (canonical dispatcher: tools/dispatch_hf_jobs_vision_training.py)
+platform: hf_jobs
+dispatch_kind: tool
+gpu: t4-small
+flavor: t4-small  # canonical hf_jobs flavor; matches plugin directive #6 for OD/IC under 100M params
+
+# Per Catalog #270 dispatch optimization protocol + Catalog #325 6-step
+# per-substrate symposium contract:
+min_vram_gb: 16  # T4 = 16 GB; matches the canonical t4-small flavor
+min_smoke_gpu: "T4"
+
+# Video input strategy — N/A for HF Jobs because the dataset is loaded
+# via load_dataset(hub_repo_id) directly (no local video decode on the
+# remote worker). Recipe-level declaration per Catalog #171.
+video_input_strategy: shared_volume_no_contention_expected
+pyav_decode_strategy: not_applicable
+target_modes:
+  - research_substrate  # Phase 1; flips to production_generalized after Phase 2 composition
+canary_status: independent_substrate
+
+# Per Catalog #240 recipe-vs-trainer-state consistency: the trainer
+# `experiments/hf_jobs_segnet_surrogate_distillation.py` has a complete
+# main() (no NotImplementedError). The first dispatch should produce a
+# usable mobilenetv3_small surrogate.
+
+active_dispatch_contract: hf_jobs_surrogate_distillation
+dispatch_contracts:
+  - id: hf_jobs_surrogate_distillation
+    archive_role: hf_hub_model_artifact_not_contest_archive
+    builder_surface: experiments/hf_jobs_segnet_surrogate_distillation.py
+    status: active_recipe_contract
+    exact_eval_path: hub_model -> downstream substrate trainer Hinton teacher -> substrate archive.zip -> contest_auth_eval.py
+
+cost_band:
+  epochs: 200
+  all_flags_on: true
+  # HF Jobs t4-small = $0.50/hr × 4h timeout = $2.00 envelope
+  hand_calibrated_fallback_p50_usd: 2.00
+  platform_key: hf_jobs
+  gpu_key: t4-small
+
+# Predicted band per Catalog #324 + symposium memo Section 6.
+# NOTE: this is the predicted band for the DOWNSTREAM contest-CPU score
+# IF the surrogate were Hinton-distillation-substituted for SegNet at
+# training time of a downstream substrate trainer. It is NOT the
+# surrogate's own image-level classification accuracy.
+predicted_band: [0.180, 0.193]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Per Catalog #324: dispatch remains research_only until BOTH
+  (a) the landed mobilenetv3_small surrogate weights AND
+  (b) the first substrate trainer that consumes the surrogate as Hinton
+      teacher signal
+  receive post-training Tier-C density validation via
+  `tools/mdl_scorer_conditional_ablation.py --tier c` on the substrate
+  trainer's archive sha after 100ep+ training. Current band is a
+  DESIGN-TIME hypothesis with phantom_random_init provenance.
+
+predicted_score_target: 0.186  # midpoint of predicted band
+smoke_score_band: [0.65, 0.85]  # expected image-level eval accuracy on 60-pair eval split
+
+# Per CLAUDE.md "Public Disclosure Hygiene" + dataset card README provenance
+hub_dataset_repo: adpena/comma-video-segnet-image-level-600pairs
+hub_model_repo: adpena/segnet-image-level-surrogate-mobilenet-v3-small-200ep
+
+# Per Catalog #152 + #151 required input file validation
+required_input_files:
+  - flag: --hub-dataset-repo
+    env: HF_JOBS_HUB_DATASET_REPO
+    default: adpena/comma-video-segnet-image-level-600pairs
+    description: "HF Hub source dataset (must exist; built via tools/build_comma_video_segnet_image_level_600pairs_hf_dataset.py)"
+    required_input_file: false  # Hub repo, not local file
+  - flag: --hub-model-repo
+    env: HF_JOBS_HUB_MODEL_REPO
+    default: adpena/segnet-image-level-surrogate-mobilenet-v3-small-200ep
+    description: "HF Hub destination model repo (created by dispatcher if absent)"
+    required_input_file: false
+
+# Per Catalog #325 per-substrate optimal form symposium evidence
+council_symposium_memo: .omx/research/council_t1_hf_jobs_segnet_surrogate_distillation_symposium_20260519.md
+council_symposium_verdict: PROCEED_WITH_REVISIONS
+
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
+# the trainer's main() is complete (no NotImplementedError) but the first
+# dispatch is research_only until operator review of post-smoke metrics +
+# Tier-C density per Catalog #324.
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - operator_review_of_council_symposium_required_before_first_paid_dispatch
+  - phase_2_per_pixel_miou_sister_lane_pending_for_full_distillation_faithfulness
+  - hub_dataset_must_exist_before_dispatch_fires_run_build_comma_video_segnet_image_level_600pairs_hf_dataset_py_upload_first
+
+# 6-hook wire-in per Catalog #125 (verbatim from symposium memo Section 7)
+solver_wire_in_hooks:
+  sensitivity_map: "N/A — image-level classifier, no per-archive-byte sensitivity"
+  pareto_constraint: "N/A — surrogate output not in contest archive"
+  bit_allocator: "N/A — no archive bytes"
+  cathedral_autopilot_dispatch: "ACTIVE — sister Catalog #335 cathedral_consumer wrapper deferred to Phase 2 composition"
+  continual_learning_posterior: "ACTIVE — every dispatch emits posterior anchor via tac.deploy.hf_jobs.job_id_ledger.register_dispatched_hf_jobs_id"
+  probe_disambiguator: "N/A — single-interpretation surrogate; no defensible alternative methodologies"
+
+# Provenance + reproduction
+build_first:
+  description: "Build + upload the HF dataset BEFORE the first HF Jobs dispatch"
+  command: |
+    .venv/bin/python tools/build_comma_video_segnet_image_level_600pairs_hf_dataset.py \\
+        --upload --hub-repo-id adpena/comma-video-segnet-image-level-600pairs
+
+dispatch_command:
+  description: "Canonical HF Jobs dispatch invocation (dry-run first; flip --dry-run to fire paid dispatch after operator review)"
+  command: |
+    .venv/bin/python tools/dispatch_hf_jobs_vision_training.py \\
+        --script experiments/hf_jobs_segnet_surrogate_distillation.py \\
+        --hub-dataset-repo adpena/comma-video-segnet-image-level-600pairs \\
+        --hub-model-repo adpena/segnet-image-level-surrogate-mobilenet-v3-small-200ep \\
+        --model timm/mobilenetv3_small_100.lamb_in1k \\
+        --flavor t4-small \\
+        --num-epochs 200 \\
+        --lane-id lane_hf_jobs_segnet_surrogate_distillation_20260519 \\
+        --recipe .omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch.yaml \\
+        --label hf_jobs_segnet_surrogate_distillation_200ep_first_smoke \\
+        --dry-run
