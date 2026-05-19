@@ -22,9 +22,11 @@ summary: |
 
 # Platform = HF Jobs (canonical dispatcher: tools/dispatch_hf_jobs_vision_training.py)
 platform: hf_jobs
-dispatch_kind: tool
+dispatch_kind: hf_jobs_research_surrogate
 gpu: t4-small
 flavor: t4-small  # canonical hf_jobs flavor; matches plugin directive #6 for OD/IC under 100M params
+remote_driver: tools/dispatch_hf_jobs_vision_training.py
+required_input_files_trainer: experiments/hf_jobs_segnet_surrogate_distillation.py
 
 # Per Catalog #270 dispatch optimization protocol + Catalog #325 6-step
 # per-substrate symposium contract:
@@ -113,8 +115,17 @@ council_symposium_verdict: PROCEED_WITH_REVISIONS
 #  - hub dataset existence: confirmed live at
 #    https://huggingface.co/datasets/adpena/comma-video-segnet-image-level-600pairs
 #    (commit_sha 52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a, 600 pairs, 310MB train.parquet)
-research_only: false
+research_only: true
 dispatch_enabled: true
+score_claim: false
+promotion_eligible: false
+ready_for_exact_eval_dispatch: false
+authority_class: research_advisory_surrogate_training
+authority_rationale: |
+  This paid HF Jobs dispatch trains an advisory SegNet surrogate, not a
+  contest archive/runtime packet. Its outputs are non-promotional research
+  signals until post-training Tier-C validation and a downstream substrate
+  archive receive paired contest-CPU + contest-CUDA custody.
 
 # Operator-approval capture per Catalog #300 Mission alignment Consequence 1
 operator_approval_rationale: "All operator routable items approved (2026-05-19 verbatim) covering Catalog #325 6-step contract; T1 symposium PROCEED_WITH_REVISIONS verdict integrated; 12 revisions integrated per Operator-approval ratification section of the symposium memo."
@@ -150,3 +161,21 @@ dispatch_command:
         --recipe .omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch.yaml \\
         --label hf_jobs_segnet_surrogate_distillation_200ep_first_smoke \\
         --dry-run
+
+# Structured operator-authorize dispatch block. Keep this in sync with
+# `dispatch_command` above; `tools/operator_authorize.py --target hf_jobs`
+# consumes these fields to run the canonical pre-deploy, lane-claim, dispatch,
+# and HF Jobs ledger-poll sequence.
+hf_jobs:
+  script: experiments/hf_jobs_segnet_surrogate_distillation.py
+  hub_dataset_repo: adpena/comma-video-segnet-image-level-600pairs
+  hub_model_repo: adpena/segnet-image-level-surrogate-mobilenet-v3-small-200ep
+  hub_dataset_sha: 52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a
+  model: timm/mobilenetv3_small_100.lamb_in1k
+  flavor: t4-small
+  num_epochs: 200
+  learning_rate: 0.0001
+  train_batch_size: 32
+  eval_batch_size: 32
+  timeout_seconds: 14400
+  expected_axis: cuda

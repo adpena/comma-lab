@@ -16,6 +16,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from tac.deploy.dispatch_protocol import (  # noqa: E402
+    LEGAL_NATIVE_PLATFORMS,
     evaluate_dispatch_protocol_complete,
 )
 
@@ -50,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
         recipe_path = Path(args.repo_root) / recipe_path
     recipe = _load_yaml(recipe_path)
     platform = str(recipe.get("platform") or "").strip().lower()
-    native_dispatch = platform in {"modal", "vastai", "vast", "local"}
+    native_dispatch = platform in LEGAL_NATIVE_PLATFORMS
     report = evaluate_dispatch_protocol_complete(
         recipe,
         repo_root=args.repo_root,

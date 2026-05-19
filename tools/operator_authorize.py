@@ -2326,6 +2326,68 @@ def _poll_ledger_for_dispatched_hf_jobs_id(
     return bool(poll_ledger_for_hf_jobs_id(hf_jobs_id, timeout_seconds=timeout_seconds))
 
 
+def _extract_hf_jobs_id_from_dispatch_stdout(stdout: str) -> str | None:
+    """Extract ``hf_jobs_id`` from dispatcher stdout.
+
+    ``tools/dispatch_hf_jobs_vision_training.py`` emits pretty-printed JSON on
+    success. A last-line parse only sees ``}``, so parse the whole stream first,
+    then scan for the last JSON object in case future wrappers prepend logs.
+    """
+
+    text = (stdout or "").strip()
+    if not text:
+        return None
+
+    def _id_from_payload(payload: object) -> str | None:
+        if isinstance(payload, dict):
+            hf_jobs_id = payload.get("hf_jobs_id")
+            if isinstance(hf_jobs_id, str) and hf_jobs_id.strip():
+                return hf_jobs_id.strip()
+        return None
+
+    try:
+        return _id_from_payload(json.loads(text))
+    except json.JSONDecodeError:
+        pass
+
+    decoder = json.JSONDecoder()
+    found: str | None = None
+    for idx, char in enumerate(text):
+        if char != "{":
+            continue
+        try:
+            payload, _end = decoder.raw_decode(text[idx:])
+        except json.JSONDecodeError:
+            continue
+        hf_jobs_id = _id_from_payload(payload)
+        if hf_jobs_id:
+            found = hf_jobs_id
+    return found
+
+
+def _find_hf_jobs_id_in_ledger_by_lane_label(
+    *, lane_id: str, label: str
+) -> str | None:
+    """Recover a dispatched HF Jobs id from the canonical ledger by lane+label."""
+
+    try:
+        from tac.deploy.hf_jobs.job_id_ledger import query_by_lane
+    except ImportError:
+        return None
+
+    try:
+        rows = query_by_lane(lane_id, strict=True)
+    except Exception:
+        rows = []
+    for row in reversed(rows):
+        if row.get("label") != label:
+            continue
+        hf_jobs_id = row.get("hf_jobs_id")
+        if isinstance(hf_jobs_id, str) and hf_jobs_id.strip():
+            return hf_jobs_id.strip()
+    return None
+
+
 def _dispatch_hf_jobs(
     recipe: Recipe,
     instance_job_id: str,
@@ -2389,7 +2451,7 @@ def _dispatch_hf_jobs(
     eval_batch_size = hf_cfg.get("eval_batch_size")
     timeout_seconds_default = hf_cfg.get("timeout_seconds", 14400)
     if timeout_hours_override is not None:
-        timeout_seconds = int(round(float(timeout_hours_override) * 3600.0))
+        timeout_seconds = round(float(timeout_hours_override) * 3600.0)
     else:
         timeout_seconds = int(timeout_seconds_default)
     hub_dataset_sha = hf_cfg.get("hub_dataset_sha")
@@ -2464,18 +2526,25 @@ def _dispatch_hf_jobs(
         return proc.returncode
 
     # Catalog #339 sister (HF Jobs) — extract the hf_jobs_id from the
-    # canonical dispatcher's stdout payload (JSON object on success) and
-    # poll the canonical ledger for the row. If the dispatch happened but
-    # the ledger row never appeared, the harvester is blind — raise
-    # SystemExit citing Catalog #339 so the operator gets an actionable
-    # diagnostic instead of silent success.
-    hf_jobs_id: str | None = None
-    try:
-        payload = json.loads(proc.stdout.strip().splitlines()[-1])
-        if isinstance(payload, dict):
-            hf_jobs_id = payload.get("hf_jobs_id")
-    except (json.JSONDecodeError, IndexError, AttributeError):
-        hf_jobs_id = None
+    # canonical dispatcher's stdout payload (pretty-printed JSON on success)
+    # and poll the canonical ledger for the row. If stdout is malformed, fall
+    # back to the ledger by the unique operator-authorize label. If neither
+    # surface yields an id, fail closed: the harvester would be blind.
+    hf_jobs_id = _extract_hf_jobs_id_from_dispatch_stdout(proc.stdout or "")
+    if not hf_jobs_id:
+        hf_jobs_id = _find_hf_jobs_id_in_ledger_by_lane_label(
+            lane_id=recipe.lane_id,
+            label=instance_job_id,
+        )
+
+    if not hf_jobs_id:
+        raise SystemExit(
+            "[operator-authorize] FATAL [Catalog #339 sister]: HF Jobs "
+            "dispatcher exited rc=0 but did not emit a parseable hf_jobs_id "
+            "and no canonical ledger row matched "
+            f"lane_id={recipe.lane_id} label={instance_job_id}. The harvester "
+            "would be blind to this dispatch; refusing silent success."
+        )
 
     if hf_jobs_id and not _poll_ledger_for_dispatched_hf_jobs_id(
         hf_jobs_id, timeout_seconds=10.0

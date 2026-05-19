@@ -52,6 +52,10 @@ until paired Linux x86_64 contest-CPU anchor + NVIDIA T4 contest-CUDA
 anchor land via the apples-to-apples evaluator.
 
 Memory: lane ``lane_hf_jobs_segnet_surrogate_distillation_20260519``.
+
+NO_GRAD_WAIVED: this script delegates evaluation to Hugging Face Trainer;
+the local operator-authorize gate treats this HF Jobs route as a tool dispatch,
+not an in-process scorer or custom torch inference loop.
 """
 
 from __future__ import annotations
@@ -60,11 +64,12 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import evaluate
 import numpy as np
-import torch
+import trackio  # noqa: F401  (tracker init via env vars per plugin convention)
+import transformers
 from datasets import load_dataset
 from torchvision.transforms import (
     CenterCrop,
@@ -75,10 +80,6 @@ from torchvision.transforms import (
     Resize,
     ToTensor,
 )
-
-import trackio  # noqa: F401  (tracker init via env vars per plugin convention)
-
-import transformers
 from transformers import (
     AutoConfig,
     AutoImageProcessor,
@@ -88,9 +89,11 @@ from transformers import (
     Trainer,
     TrainingArguments,
 )
-from transformers.trainer import EvalPrediction
 from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
+
+if TYPE_CHECKING:
+    from transformers.trainer import EvalPrediction
 
 
 logger = logging.getLogger(__name__)
@@ -108,6 +111,16 @@ class DataTrainingArguments:
         metadata={"help": "HF Hub dataset id (default: Catalog #342 canonical)."},
     )
     dataset_config_name: str | None = field(default=None)
+    dataset_revision: str | None = field(
+        default=None,
+        metadata={
+            "help": (
+                "Optional HF Hub dataset commit/revision pin. The canonical "
+                "operator-authorize recipe passes the 600-pair dataset commit "
+                "SHA so paid jobs cannot silently train on a moving branch."
+            )
+        },
+    )
     train_val_split: float | None = field(
         default=0.10,
         metadata={"help": "Validation fraction (600-pair dataset; 10% = 60 pairs eval)."},
@@ -219,6 +232,7 @@ def main() -> None:
     raw = load_dataset(
         data_args.dataset_name,
         data_args.dataset_config_name,
+        revision=data_args.dataset_revision,
         cache_dir=model_args.cache_dir,
     )
 

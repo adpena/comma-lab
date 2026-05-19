@@ -112,7 +112,7 @@ def test_dispatch_hf_jobs_refuses_missing_script(tmp_path: Path) -> None:
             },
         },
     )
-    with pytest.raises(SystemExit, match="hf_jobs.script"):
+    with pytest.raises(SystemExit, match=r"hf_jobs\.script"):
         op._dispatch_hf_jobs(recipe, "instance_x", env_overrides="")
 
 
@@ -130,7 +130,7 @@ def test_dispatch_hf_jobs_refuses_missing_hub_repos(tmp_path: Path) -> None:
 
     recipe = _hf_jobs_recipe(tmp_path)
     del recipe.raw["hf_jobs"]["hub_dataset_repo"]
-    with pytest.raises(SystemExit, match="hub_dataset_repo.*hub_model_repo"):
+    with pytest.raises(SystemExit, match=r"hub_dataset_repo.*hub_model_repo"):
         op._dispatch_hf_jobs(recipe, "instance_x", env_overrides="")
 
 
@@ -179,15 +179,33 @@ def test_dispatch_hf_jobs_fails_closed_on_missing_ledger_row(
         op._dispatch_hf_jobs(recipe, "instance_orphan", env_overrides="")
 
 
-def test_dispatch_hf_jobs_silent_no_payload_does_not_raise(
+def test_extract_hf_jobs_id_from_pretty_json_stdout() -> None:
+    """HF Jobs dispatcher emits pretty JSON; the wrapper must parse the whole object."""
+
+    stdout = json.dumps(
+        {"hf_jobs_id": "hf_pretty_id", "ledger_row": {"status": "dispatched"}},
+        indent=2,
+        sort_keys=True,
+    )
+    assert op._extract_hf_jobs_id_from_dispatch_stdout(stdout) == "hf_pretty_id"
+
+
+def test_extract_hf_jobs_id_from_stdout_with_log_prefix() -> None:
+    """Future wrapper logs before JSON must not hide the trailing payload."""
+
+    stdout = "warming cache\n" + json.dumps(
+        {"hf_jobs_id": "hf_logged_id", "ledger_row": {"status": "dispatched"}},
+        indent=2,
+        sort_keys=True,
+    )
+    assert op._extract_hf_jobs_id_from_dispatch_stdout(stdout) == "hf_logged_id"
+
+
+def test_dispatch_hf_jobs_falls_back_to_ledger_when_stdout_unparseable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Malformed dispatcher output (no JSON payload) does not trip the ledger poll.
-
-    The structural protection lives in the canonical dispatcher (fail-closed
-    registration); this wrapper only polls when it can actually extract an id.
-    """
+    """If stdout is damaged, recover id from canonical ledger by lane+label."""
 
     recipe = _hf_jobs_recipe(tmp_path)
 
@@ -195,8 +213,37 @@ def test_dispatch_hf_jobs_silent_no_payload_does_not_raise(
         return subprocess.CompletedProcess(cmd, 0, stdout="not-json-output", stderr="")
 
     monkeypatch.setattr(op.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        op,
+        "_find_hf_jobs_id_in_ledger_by_lane_label",
+        lambda **_kwargs: "hf_ledger_id",
+    )
+    monkeypatch.setattr(op, "_poll_ledger_for_dispatched_hf_jobs_id", lambda *_a, **_k: True)
+
     rc = op._dispatch_hf_jobs(recipe, "instance_x", env_overrides="")
     assert rc == 0
+
+
+def test_dispatch_hf_jobs_fails_closed_when_stdout_and_ledger_have_no_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """rc=0 without a recoverable hf_jobs_id is silent-custody loss."""
+
+    recipe = _hf_jobs_recipe(tmp_path)
+
+    def fake_run(cmd, *args, **kwargs):  # type: ignore[no-untyped-def]
+        return subprocess.CompletedProcess(cmd, 0, stdout="not-json-output", stderr="")
+
+    monkeypatch.setattr(op.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        op,
+        "_find_hf_jobs_id_in_ledger_by_lane_label",
+        lambda **_kwargs: None,
+    )
+
+    with pytest.raises(SystemExit, match="did not emit a parseable hf_jobs_id"):
+        op._dispatch_hf_jobs(recipe, "instance_x", env_overrides="")
 
 
 # ---------------------------------------------------------------------------
@@ -302,7 +349,7 @@ def test_native_dispatch_preflight_refuses_hf_jobs_recipe_missing_script(
         path=tmp_path / "unit.yaml",
         raw={"lane_id": "lane_x", "platform": "hf_jobs", "hf_jobs": {}},
     )
-    with pytest.raises(SystemExit, match="hf_jobs.script"):
+    with pytest.raises(SystemExit, match=r"hf_jobs\.script"):
         op._native_dispatch_preflight(recipe)
 
 

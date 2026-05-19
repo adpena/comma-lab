@@ -59,7 +59,9 @@ DISPATCH_PROTOCOL_SCHEMA = "pact.dispatch_protocol_complete.v1"
 #   2. Implicit: trainer_path matches ``tools/*.py`` (not ``experiments/train_substrate_*.py``).
 # Sister of the runtime scope-clarification CLAUDE.md row under "Production-hardened
 # dispatch optimization protocol".
-LEGAL_DISPATCH_KINDS = frozenset({"substrate", "tool", "local_research_signal"})
+LEGAL_DISPATCH_KINDS = frozenset(
+    {"substrate", "tool", "local_research_signal", "hf_jobs_research_surrogate"}
+)
 TOOL_DISPATCH_LEGAL_GPU_TOKENS = frozenset({"cpu", "CPU", "Cpu"})
 # Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable + operator directive
 # 2026-05-17 ("Deploying to local MPS versus modal should be super easy to
@@ -70,8 +72,17 @@ TOOL_DISPATCH_LEGAL_GPU_TOKENS = frozenset({"cpu", "CPU", "Cpu"})
 # ``local_research_signal`` dispatch_kind tells the protocol gates to skip
 # substrate-only Tier 2/3 checks (sister of Catalog #270 scope clarification
 # for tool dispatches; same precedent applied to a different kind).
+# Slot 13 (2026-05-19) wired ``_dispatch_hf_jobs`` into ``tools/operator_authorize.py``
+# but the legal-platforms enum here was NOT extended in the same commit batch
+# — slot 26's HF Jobs T4 dispatch was therefore refused by
+# ``evaluate_dispatch_protocol_complete`` with
+# ``platform 'hf_jobs' not in LEGAL_NATIVE_PLATFORMS``. Per CLAUDE.md "Bugs must
+# be permanently fixed AND self-protected against" + the slot 26 handoff,
+# extending the enum here closes the dispatch-blocked gap so HF Jobs vision
+# training jobs (per ``feedback_hf_jobs_segnet_surrogate_per_pixel_sister_lane_landed_20260519.md``)
+# can route through the canonical operator-authorize 30s harness.
 LEGAL_NATIVE_PLATFORMS = frozenset(
-    {"modal", "vastai", "vast", "local", "local_mps", "local_cpu"}
+    {"modal", "vastai", "vast", "local", "local_mps", "local_cpu", "hf_jobs"}
 )
 LOCAL_RESEARCH_SIGNAL_PLATFORMS = frozenset({"local_mps", "local_cpu"})
 LEGAL_VIDEO_INPUT_STRATEGIES = frozenset(
@@ -285,7 +296,9 @@ def _is_tool_dispatch(
     explicit_kind = str(raw_recipe.get("dispatch_kind") or "").strip().lower()
     if explicit_kind == "tool":
         return True
-    if explicit_kind == "substrate":
+    if explicit_kind == "hf_jobs_research_surrogate":
+        return str(raw_recipe.get("platform") or "").strip().lower() == "hf_jobs"
+    if explicit_kind in {"substrate", "local_research_signal"}:
         return False
     # Implicit detection by trainer path.
     if trainer_path is None:
