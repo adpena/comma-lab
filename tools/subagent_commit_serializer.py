@@ -91,6 +91,29 @@ from pathlib import Path
 # Repo root: tools/ lives one level under repo root.
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+# Catalog #340 STAGING-surface absorption-prevention helper.
+# Sister of Catalog #314 (POST-COMMIT detect) — together they extinct the
+# bare-commit-absorbs-in-flight-files class bidirectionally.
+# Imported BEFORE fcntl-lock acquisition so the guard runs early.
+sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tac.commit_safety import (  # noqa: E402
+        check_files_against_sister_checkpoints,
+        bare_override_attempted,
+        parse_override_env,
+    )
+    from tac.commit_safety.sister_checkpoint_guard import (  # noqa: E402
+        CorruptCheckpointError,
+    )
+    _CATALOG_340_HELPER_AVAILABLE = True
+except ImportError:
+    # Test fixtures may stand up a minimal repo without the package.
+    _CATALOG_340_HELPER_AVAILABLE = False
+    check_files_against_sister_checkpoints = None  # type: ignore[assignment]
+    bare_override_attempted = None  # type: ignore[assignment]
+    parse_override_env = None  # type: ignore[assignment]
+    CorruptCheckpointError = RuntimeError  # type: ignore[misc, assignment]
+
 LOCK_PATH = REPO_ROOT / ".omx/state/.commit-lock"
 LOG_PATH = REPO_ROOT / ".omx/state/commit-serializer.log"
 
@@ -520,6 +543,20 @@ def main() -> int:
             "the same file before either took its pre-lock snapshot."
         ),
     )
+    parser.add_argument(
+        "--no-sister-checkpoint-check",
+        action="store_true",
+        help=(
+            "Catalog #340 STAGING-surface PREVENT escape hatch. Skip the "
+            "tac.commit_safety.check_files_against_sister_checkpoints scan "
+            "that runs BEFORE fcntl-lock acquisition. Use ONLY when the "
+            "operator has confirmed coordination via Catalog #230 ownership "
+            "map; the paired-env bypass "
+            "(SUBAGENT_COMMIT_SISTER_CHECKPOINT_OVERRIDE=1 + "
+            "SUBAGENT_COMMIT_SISTER_CHECKPOINT_OVERRIDE_RATIONALE=<text>) is "
+            "preferred over this CLI flag because it leaves an audit trail."
+        ),
+    )
     args = parser.parse_args()
 
     # Resolve file list
@@ -641,6 +678,129 @@ def main() -> int:
         args.message if args.no_co_author
         else _append_co_author_trailer(args.message)
     )
+
+    # Catalog #340 STAGING-surface PREVENT: check that no sister subagent
+    # has declared the same files as "in_progress" in its checkpoint within
+    # the last 60 minutes. Runs BEFORE fcntl-lock acquisition so the
+    # operator gets a fast diagnostic (rc=8 ABORT / rc=9 WAIT_AND_RETRY)
+    # without burning the lock-wait window on a doomed commit.
+    #
+    # Sister of Catalog #314 (POST-COMMIT detect) — together they extinct
+    # the bare-commit-absorbs-in-flight-files bug class bidirectionally.
+    # Bug class anchor (2026-05-19): slot 5 commit `c8d51ebb5` absorbed
+    # slot 2's preflight.py + CLAUDE.md edits before slot 2's serializer
+    # call ran; Catalog #157 caught the secondary effect but the absorption
+    # was downstream of the bare `git add` that the `/commit` slash command
+    # does directly (NOT through this wrapper).
+    #
+    # Bypass options:
+    #   * --no-sister-checkpoint-check CLI flag (operator escape; rare)
+    #   * Paired-env: SUBAGENT_COMMIT_SISTER_CHECKPOINT_OVERRIDE=1 AND
+    #     SUBAGENT_COMMIT_SISTER_CHECKPOINT_OVERRIDE_RATIONALE=<text> (≥4 chars,
+    #     not a placeholder). Bare flag without rationale → rc=10.
+    if (
+        not args.no_sister_checkpoint_check
+        and not args.no_stage
+        and files
+        and _CATALOG_340_HELPER_AVAILABLE
+    ):
+        # rc=10 FIRST: bare override attempt (flag set but no rationale)
+        # is a discipline violation distinct from a "real" sister conflict.
+        # Surface it whether or not there's an actual conflict so operators
+        # get the discipline lesson early.
+        if bare_override_attempted is not None and bare_override_attempted(dict(os.environ)):
+            _append_log({
+                **base_record,
+                "outcome": "sister_checkpoint_bare_override_rejected",
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED: bare paired-env "
+                "bypass attempt. SUBAGENT_COMMIT_SISTER_CHECKPOINT_OVERRIDE=1 "
+                "REQUIRES paired SUBAGENT_COMMIT_SISTER_CHECKPOINT_OVERRIDE_"
+                "RATIONALE=<text> (≥4 chars, NOT a placeholder like "
+                "'<rationale>' or '<reason>'). Per Catalog #199 paired-env "
+                "discipline + Catalog #340 STAGING-surface PREVENT. Set "
+                "the rationale and retry, OR coordinate via Catalog #230 "
+                "ownership map.",
+                file=sys.stderr,
+            )
+            return 10
+        bypass_active = False
+        bypass_rationale = ""
+        if parse_override_env is not None:
+            bypass_active, bypass_rationale = parse_override_env(dict(os.environ))
+        if not bypass_active:
+            try:
+                verdict = check_files_against_sister_checkpoints(
+                    list(files),
+                    current_subagent_id=args.label,
+                )
+            except CorruptCheckpointError as exc:
+                # Per Catalog #138 fail-closed: corrupt checkpoint state
+                # must not silently let the commit proceed. rc=11 is the
+                # corrupt-state-fail-closed code (distinct from rc=8/9/10).
+                _append_log({
+                    **base_record,
+                    "outcome": "sister_checkpoint_corrupt_jsonl",
+                    "error": str(exc)[:400],
+                })
+                print(
+                    "[subagent-commit-serializer] REFUSED: "
+                    "subagent_progress.jsonl is corrupt. Per Catalog #138 "
+                    "fail-closed pattern + Catalog #340 STAGING-surface "
+                    "PREVENT, commit refused until the checkpoint store is "
+                    f"repaired or quarantined.\n  {exc!s}",
+                    file=sys.stderr,
+                )
+                return 11
+            if verdict.recommendation == "ABORT":
+                _append_log({
+                    **base_record,
+                    "outcome": "sister_checkpoint_abort",
+                    "sister_checkpoint_conflicts": [
+                        {"sister_id": sid, "overlap": list(files_)}
+                        for sid, files_ in verdict.conflicts
+                    ],
+                })
+                print(
+                    "[subagent-commit-serializer] REFUSED: ABORT per "
+                    "Catalog #340 STAGING-surface PREVENT (sister of "
+                    "Catalog #314 POST-COMMIT detect). At least one sister "
+                    "subagent has declared one of these files in its "
+                    "in-flight `files_touched` checkpoint within the last "
+                    "60 minutes. Coordinate via Catalog #230 ownership "
+                    "map OR opt out via the paired-env bypass.\n"
+                    + verdict.diagnostic,
+                    file=sys.stderr,
+                )
+                return 8
+            if verdict.recommendation == "WAIT_AND_RETRY":
+                _append_log({
+                    **base_record,
+                    "outcome": "sister_checkpoint_wait_and_retry",
+                    "sister_checkpoint_conflicts": [
+                        {"sister_id": sid, "overlap": list(files_)}
+                        for sid, files_ in verdict.conflicts
+                    ],
+                })
+                print(
+                    "[subagent-commit-serializer] REFUSED: WAIT_AND_RETRY "
+                    "per Catalog #340 STAGING-surface PREVENT. Sister "
+                    "subagent(s) have older (>30 min) checkpoints "
+                    "declaring these files; they may be near completion. "
+                    "Retry with exponential backoff (e.g. 30s/60s/120s); "
+                    "if still ABORT, escalate to Catalog #230 ownership "
+                    "map coordination.\n" + verdict.diagnostic,
+                    file=sys.stderr,
+                )
+                return 9
+        else:
+            # Bypass active; log it so the audit trail records who bypassed.
+            _append_log({
+                **base_record,
+                "outcome": "sister_checkpoint_paired_env_bypass",
+                "sister_checkpoint_bypass_rationale": bypass_rationale,
+            })
 
     # Acquire lock
     t0 = time.monotonic()
