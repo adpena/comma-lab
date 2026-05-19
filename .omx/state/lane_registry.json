@@ -39281,11 +39281,11 @@
       "id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
       "name": "E.7 VQ K-sweep + E.8 SGLD convergence PREP combined",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/operator_authorize_recipes/substrate_vq_vae_k_sweep_modal_t4_dispatch.yaml + .omx/operator_authorize_recipes/substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch.yaml + 2 symposium DRAFTs + synthesis memo"
         },
         "real_archive_empirical": {
           "status": false,
@@ -39308,8 +39308,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_landed_20260518.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39321,6 +39321,47 @@
     {
       "id": "lane_meta_bug_retroactive_defer_kill_falsify_audit_20260518",
       "name": "META-bug retroactive DEFER/KILL/FALSIFY audit",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/meta_bug_retroactive_defer_kill_falsify_audit_20260519T044057Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_meta_bug_retroactive_defer_kill_falsify_audit_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z7_mamba_2_stability_multi_week_path_forward_20260518",
+      "name": "Z7-Mamba-2 stability multi-week path forward",
       "phase": 5.0,
       "level": 0,
       "gates": {
@@ -39367,5 +39408,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T04:39:04Z"
+  "updated_at": "2026-05-19T04:44:26Z"
 }
