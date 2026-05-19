@@ -33,6 +33,7 @@ from tac.deploy.modal.mount_manifest import (
     build_training_image,
     collect_extra_mount_paths,
     collect_tier_required_input_files,
+    modal_output_indicates_spawned_call,
     verify_mount_set_mtime_stability,
 )
 
@@ -138,6 +139,21 @@ def test_experiments_dir_has_results_ignore(tmp_path: Path) -> None:
     assert by_rel["experiments"] == ["results/**"]
     assert by_rel["src"] is None
     assert by_rel["tools"] is None
+
+
+def test_spawn_marker_accepts_machine_readable_dispatch_completed_line() -> None:
+    output = "[modal_train_lane] dispatch_completed call_id=fc-01ABCDEF\n"
+    assert modal_output_indicates_spawned_call(output) is True
+
+
+def test_spawn_marker_rejects_modal_initialization_without_call_id() -> None:
+    output = (
+        "✓ Initialized. View run at https://modal.com/apps/ap-unit\n"
+        "✓ Created objects.\n"
+        "Created function run_lane_training_t4.\n"
+        "=== modal_train_lane: scripts/remote_lane_substrate_z6.sh ===\n"
+    )
+    assert modal_output_indicates_spawned_call(output) is False
 
 
 def test_skip_structural_omits_minimum(tmp_path: Path) -> None:

@@ -158,6 +158,7 @@ def test_modal_train_lane_main_derives_and_spawns_with_payload() -> None:
     assert "fail_on_missing_paths=True" in main_src
     assert "trainer_module_path_resolved" in main_src
     assert "trainer_extra_mount_payload_manifest" in main_src
+    assert "[modal_train_lane] dispatch_completed call_id=" in main_src
 
 
 def test_modal_train_lane_main_fails_closed_for_missing_substrate_trainer() -> None:

@@ -1846,6 +1846,7 @@ def main(
     )
     call_id = function_call_id(fn_call)
 
+    print(f"[modal_train_lane] dispatch_completed call_id={call_id}")
     print(f"\n✓ DISPATCHED via .spawn() — call_id={call_id}")
     print(
         "  Poll/recover:   "

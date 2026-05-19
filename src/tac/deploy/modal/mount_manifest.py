@@ -110,6 +110,7 @@ MODAL_MOUNT_UPLOAD_RACE_MARKERS: tuple[str, ...] = (
     "files being uploaded were modified",
 )
 MODAL_DISPATCH_SPAWN_MARKERS: tuple[str, ...] = (
+    "[modal_train_lane] dispatch_completed call_id=fc-",
     "call_id=fc-",
     "dispatched via .spawn()",
 )
@@ -612,7 +613,7 @@ def _import_trainer_module(trainer_module_path: str | Path) -> Any:
         # sys.modules.get(...) returns None. Cleanup after exec so we don't
         # pollute sys.modules with the synthetic introspect name.
         synthetic_name = spec.name
-        import sys as _sys  # noqa: PLC0415 - local-scope to keep helper hermetic
+        import sys as _sys
         _sys.modules[synthetic_name] = module
         try:
             spec.loader.exec_module(module)

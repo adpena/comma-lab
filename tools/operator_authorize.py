@@ -980,7 +980,7 @@ def _resolve_catalog202_audit_path(raw: str) -> Path:
     return path
 
 
-def _verify_catalog202_sentinel_audit(recipe: "Recipe", raw_path: str) -> None:
+def _verify_catalog202_sentinel_audit(recipe: Recipe, raw_path: str) -> None:
     """Verify a Catalog #202 sentinel audit matches current effective sentinels."""
 
     path = _resolve_catalog202_audit_path(raw_path)
@@ -1076,7 +1076,7 @@ def _verify_catalog202_sentinel_audit(recipe: "Recipe", raw_path: str) -> None:
     )
 
 
-def _whole_tree_clean_check_bypass_active(recipe: "Recipe | None" = None) -> bool:
+def _whole_tree_clean_check_bypass_active(recipe: Recipe | None = None) -> bool:
     """Catalog #202 — return True iff the paired-env bypass attestation is set.
 
     The bypass fires only when BOTH env vars are set to truthy values:
@@ -1774,10 +1774,21 @@ def _dispatch_modal(
         proc = _run_modal_dispatch_process(cmd)
         _print_modal_dispatch_output(proc)
         last_rc = proc.returncode
-        if proc.returncode == 0:
-            return 0
         combined_output = f"{proc.stdout}\n{proc.stderr}"
-        if _modal_output_indicates_spawned_call(combined_output):
+        spawned_call = _modal_output_indicates_spawned_call(combined_output)
+        if proc.returncode == 0:
+            if spawned_call:
+                return 0
+            print(
+                "[operator-authorize] FATAL: Modal dispatcher exited rc=0 "
+                "without a spawned function call marker. Refusing to treat "
+                "Modal app initialization / mount creation as a dispatched job; "
+                "expected [modal_train_lane] dispatch_completed call_id=fc-... "
+                "or an equivalent .spawn() call_id marker.",
+                file=sys.stderr,
+            )
+            return 1
+        if spawned_call:
             return proc.returncode
         if not _modal_output_indicates_mount_upload_race(combined_output):
             return proc.returncode

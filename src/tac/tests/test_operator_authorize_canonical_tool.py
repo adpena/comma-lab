@@ -367,7 +367,12 @@ def test_operator_authorize_modal_dispatch_threads_recipe_lane_id(monkeypatch) -
         op,
         "_run_modal_dispatch_process",
         lambda cmd: calls.append([str(part) for part in cmd])
-        or op.subprocess.CompletedProcess(cmd, 0, "", ""),
+        or op.subprocess.CompletedProcess(
+            cmd,
+            0,
+            "[modal_train_lane] dispatch_completed call_id=fc-unit-job\n",
+            "",
+        ),
     )
 
     rc = op._dispatch_modal(recipe, "unit_job_001", "DISPATCH_INSTANCE_JOB_ID=unit_job_001")
@@ -379,6 +384,45 @@ def test_operator_authorize_modal_dispatch_threads_recipe_lane_id(monkeypatch) -
     assert cmd[cmd.index("--lane-id") + 1] == "lane_substrate_siren_20260512"
     assert "--label" in cmd
     assert cmd[cmd.index("--label") + 1] == "unit_job_001"
+
+
+def test_operator_authorize_modal_dispatch_rejects_rc0_without_spawn_marker(
+    monkeypatch,
+    capsys,
+) -> None:
+    recipe = op.Recipe(
+        name="unit_modal",
+        path=op.RECIPES_DIR / "unit_modal.yaml",
+        raw={
+            "lane_id": "lane_substrate_siren_20260512",
+            "platform": "modal",
+            "gpu": "A100",
+            "timeout_hours": 1.0,
+            "remote_driver": "scripts/remote_lane_substrate_siren.sh",
+            "modal": {
+                "lane_script": "scripts/remote_lane_substrate_siren.sh",
+            },
+        },
+    )
+
+    def fake_run(cmd: list[str]):
+        return op.subprocess.CompletedProcess(
+            cmd,
+            0,
+            "✓ Initialized. View run at https://modal.com/apps/ap-unit\n"
+            "✓ Created objects.\n"
+            "Created function run_lane_training_t4.\n",
+            "",
+        )
+
+    monkeypatch.setattr(op, "_run_modal_dispatch_process", fake_run)
+
+    rc = op._dispatch_modal(recipe, "unit_job_no_spawn", "")
+
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "without a spawned function call marker" in captured.err
+    assert "[modal_train_lane] dispatch_completed call_id=fc-" in captured.err
 
 
 def test_operator_authorize_modal_dispatch_retries_transient_mount_upload_race(
