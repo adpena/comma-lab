@@ -5206,6 +5206,22 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #348: event-driven retroactive verdict-taint sweep.
+        # WARN-ONLY at landing per CLUSTER B routing directive + strict-flip
+        # atomicity. Any new preflight gate added to src/tac/preflight.py
+        # must either land a `.omx/research/retroactive_sweep_for_catalog_N_*.md`
+        # memo with the 4-field contract or carry an explicit same-line
+        # RETROACTIVE_SWEEP_WAIVED rationale. This is the event-driven sister
+        # to Catalog #300's time-driven deferred-substrate retrospective.
+        _parallel.run(
+            "check_new_gate_landing_includes_retroactive_sweep_evidence",
+            "[catalog-348]",
+            lambda: check_new_gate_landing_includes_retroactive_sweep_evidence(
+                strict=False, verbose=verbose
+            ),
+            strict=False,
+        )
+
         # Catalog #338: procedural codebook generator canonical-use guard.
         # WARN-ONLY at landing per the 2026-05-18 ITEM 5 directive: surfaces
         # that ship pre-baked codebook constants must route through
@@ -75686,6 +75702,341 @@ def check_council_dispatch_roster_complete_per_canonical_helper(
             "`tac.canonical_council_roster.validate_council_dispatch_roster` BEFORE "
             "dispatching any T2+ council subagent.\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #348: event-driven retroactive sweep evidence for new gates
+# ============================================================================
+# Cluster B self-protection for the meta-bug class documented in
+# `.omx/research/meta_bug_retroactive_defer_kill_falsify_audit_20260519T044057Z.md`:
+# after a new gate invalidates an old bug class, stale KILL / DEFER / FALSIFY
+# verdicts can remain in ledgers unless the gate landing also records a
+# retroactive verdict-taint sweep. This gate scans recent commits for newly
+# added `check_*` functions in `src/tac/preflight.py` and requires each
+# cataloged gate to have a sibling sweep memo or an explicit waiver.
+# ============================================================================
+
+_CHECK_348_DEFAULT_RECENT_COMMITS = 80
+_CHECK_348_ADDED_CHECK_DEF_RE = re.compile(
+    r"^\+\s*def\s+(check_[A-Za-z0-9_]+)\s*\("
+)
+_CHECK_348_SIGNATURE_TERMINATOR_RE = re.compile(
+    r"\)\s*(?:->\s*[^:]+)?\s*:\s*(?:#.*)?$"
+)
+_CHECK_348_COMMIT_MARKER = "CHECK348_COMMIT:"
+_CHECK_348_WAIVER_TOKEN = "RETROACTIVE_SWEEP_WAIVED"
+_CHECK_348_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset(
+    {"<rationale>", "<reason>", "rationale", "reason"}
+)
+_CHECK_348_REQUIRED_MEMO_TOKENS: tuple[str, ...] = (
+    "bug-class symptom signature",
+    "pre-fix window",
+    "historical-kill/defer/falsify search results",
+    "re-eval-priority assignment",
+)
+
+
+def _check_348_waiver_rationale(line: str) -> str | None:
+    marker = f"{_CHECK_348_WAIVER_TOKEN}:"
+    marker_idx = line.find(marker)
+    if marker_idx < 0:
+        return None
+    rationale = line[marker_idx + len(marker) :].strip()
+    rationale = rationale.rstrip(" `'*-/").strip()
+    if not rationale:
+        return ""
+    return rationale
+
+
+def _check_348_rationale_is_real(rationale: str | None) -> bool:
+    if rationale is None:
+        return False
+    cleaned = rationale.strip()
+    return bool(cleaned) and len(cleaned) >= 4 and cleaned.lower() not in _CHECK_348_PLACEHOLDER_RATIONALES
+
+
+def _check_348_catalog_number_for_function(root: Path, function_name: str) -> str | None:
+    claude_md = root / "CLAUDE.md"
+    if not claude_md.is_file():
+        return None
+    try:
+        text = claude_md.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    pattern = re.compile(
+        rf"^(\d+)\.\s+`?{re.escape(function_name)}`?\b",
+        re.MULTILINE,
+    )
+    match = pattern.search(text)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _check_348_sweep_memo_paths(root: Path, catalog_number: str) -> list[Path]:
+    research_dir = root / ".omx" / "research"
+    if not research_dir.is_dir():
+        return []
+    return sorted(research_dir.glob(f"retroactive_sweep_for_catalog_{catalog_number}_*.md"))
+
+
+def _check_348_sweep_memo_is_complete(
+    path: Path,
+    *,
+    catalog_number: str,
+    function_name: str,
+) -> tuple[bool, tuple[str, ...]]:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace").lower()
+    except OSError:
+        return False, _CHECK_348_REQUIRED_MEMO_TOKENS
+    missing = [token for token in _CHECK_348_REQUIRED_MEMO_TOKENS if token not in text]
+    if f"catalog #{catalog_number}" not in text and f"catalog: #{catalog_number}" not in text:
+        missing.append(f"catalog #{catalog_number}")
+    if function_name.lower() not in text:
+        missing.append(function_name)
+    if not any(
+        token in text
+        for token in (
+            "src/tac/preflight.py",
+            "git log",
+            "git diff",
+            "searched path",
+            "search command",
+        )
+    ):
+        missing.append("search command or searched path")
+    missing = tuple(missing)
+    return not missing, missing
+
+
+def _check_348_signature_complete(added_lines: list[str]) -> bool:
+    if not added_lines:
+        return False
+    last = added_lines[-1][1:].strip()
+    return bool(_CHECK_348_SIGNATURE_TERMINATOR_RE.search(last))
+
+
+def _check_348_added_check_defs_from_labeled_diff(
+    diff_text: str,
+    *,
+    default_label: str,
+) -> list[tuple[str, str, str]]:
+    rows: list[tuple[str, str, str]] = []
+    source_label = default_label
+    collecting_name: str | None = None
+    signature_lines: list[str] = []
+
+    def flush() -> None:
+        nonlocal collecting_name, signature_lines
+        if collecting_name is not None and signature_lines:
+            rows.append(
+                (
+                    source_label,
+                    collecting_name,
+                    "\n".join(line[1:].rstrip() for line in signature_lines),
+                )
+            )
+        collecting_name = None
+        signature_lines = []
+
+    for raw_line in diff_text.splitlines():
+        if raw_line.startswith(_CHECK_348_COMMIT_MARKER):
+            flush()
+            source_label = raw_line[len(_CHECK_348_COMMIT_MARKER) :].strip() or default_label
+            continue
+        if not raw_line.startswith("+") or raw_line.startswith("+++"):
+            continue
+        if collecting_name is None:
+            match = _CHECK_348_ADDED_CHECK_DEF_RE.match(raw_line)
+            if not match:
+                continue
+            collecting_name = match.group(1)
+            signature_lines = [raw_line]
+            if _check_348_signature_complete(signature_lines):
+                flush()
+            continue
+        signature_lines.append(raw_line)
+        if _check_348_signature_complete(signature_lines):
+            flush()
+    flush()
+    return rows
+
+
+def _check_348_added_check_defs_from_uncommitted(root: Path) -> list[tuple[str, str, str]]:
+    rows: list[tuple[str, str, str]] = []
+    for label, args in (
+        (
+            "INDEX",
+            ["git", "diff", "--cached", "--unified=0", "--", "src/tac/preflight.py"],
+        ),
+        (
+            "WORKTREE",
+            ["git", "diff", "--unified=0", "--", "src/tac/preflight.py"],
+        ),
+    ):
+        try:
+            proc = subprocess.run(
+                args,
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            continue
+        if proc.returncode == 0 and proc.stdout:
+            rows.extend(
+                _check_348_added_check_defs_from_labeled_diff(
+                    proc.stdout,
+                    default_label=label,
+                )
+            )
+    return rows
+
+
+def _check_348_added_check_defs_from_git(
+    root: Path,
+    *,
+    recent_commits: int,
+) -> list[tuple[str, str, str]]:
+    """Return `(source_label, function_name, added_signature)` for recent added check defs."""
+
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "log",
+                f"-n{recent_commits}",
+                f"--format={_CHECK_348_COMMIT_MARKER}%H",
+                "-p",
+                "--unified=0",
+                "--no-ext-diff",
+                "--",
+                "src/tac/preflight.py",
+            ],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return []
+    if proc.returncode != 0:
+        return []
+    return _check_348_added_check_defs_from_labeled_diff(
+        proc.stdout,
+        default_label="COMMIT",
+    )
+
+
+def check_new_gate_landing_includes_retroactive_sweep_evidence(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+    recent_commits: int = _CHECK_348_DEFAULT_RECENT_COMMITS,
+) -> list[str]:
+    """Catalog #348 - new preflight gates must carry retroactive sweep evidence.
+
+    For every recently added `check_*` function in `src/tac/preflight.py`, this
+    gate resolves its CLAUDE.md catalog number and requires a sibling
+    `.omx/research/retroactive_sweep_for_catalog_<N>_<utc>.md` memo with the
+    4-field Cluster B contract:
+
+    1. bug-class symptom signature
+    2. pre-fix window
+    3. historical-KILL/DEFER/FALSIFY search results
+    4. per-finding RE-EVAL-priority assignment
+
+    Same-line `# RETROACTIVE_SWEEP_WAIVED:<rationale>` on the added def line is
+    accepted only with a substantive, non-placeholder rationale.
+    """
+
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    if not (root / ".git").exists():
+        if verbose:
+            print("  [catalog-348] OK (not a git checkout)")
+        return []
+
+    violations: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    added_defs = [
+        *_check_348_added_check_defs_from_uncommitted(root),
+        *_check_348_added_check_defs_from_git(root, recent_commits=recent_commits),
+    ]
+    for source_label, function_name, added_signature in added_defs:
+        key = (function_name, added_signature)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        rationale = _check_348_waiver_rationale(added_signature)
+        if rationale is not None:
+            if _check_348_rationale_is_real(rationale):
+                continue
+            violations.append(
+                f"{source_label[:12]}:{function_name}: invalid RETROACTIVE_SWEEP_WAIVED "
+                "rationale; placeholders and short rationales are rejected"
+            )
+            continue
+
+        catalog_number = _check_348_catalog_number_for_function(root, function_name)
+        if catalog_number is None:
+            violations.append(
+                f"{source_label[:12]}:{function_name}: newly added gate has no CLAUDE.md "
+                "catalog row, so no retroactive sweep memo can be resolved"
+            )
+            continue
+
+        memo_paths = _check_348_sweep_memo_paths(root, catalog_number)
+        if not memo_paths:
+            violations.append(
+                f"{source_label[:12]}:{function_name}: Catalog #{catalog_number} missing "
+                f".omx/research/retroactive_sweep_for_catalog_{catalog_number}_*.md"
+            )
+            continue
+
+        complete = False
+        missing_by_path: list[str] = []
+        for path in memo_paths:
+            is_complete, missing = _check_348_sweep_memo_is_complete(
+                path,
+                catalog_number=catalog_number,
+                function_name=function_name,
+            )
+            if is_complete:
+                complete = True
+                break
+            missing_by_path.append(
+                f"{path.relative_to(root).as_posix()} missing {', '.join(missing)}"
+            )
+        if not complete:
+            violations.append(
+                f"{source_label[:12]}:{function_name}: Catalog #{catalog_number} sweep memo "
+                "exists but lacks the 4-field contract: "
+                + "; ".join(missing_by_path[:3])
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [catalog-348] {len(violations)} new-gate retroactive sweep gap(s)")
+            for violation in violations[:8]:
+                print(f"    - {violation[:240]}")
+        else:
+            print("  [catalog-348] OK (recent new gates carry retroactive sweep evidence)")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_new_gate_landing_includes_retroactive_sweep_evidence found "
+            f"{len(violations)} new gate(s) without retroactive verdict-taint "
+            "sweep evidence. Catalog #348 requires every new preflight gate to "
+            "ship `.omx/research/retroactive_sweep_for_catalog_<N>_<utc>.md` "
+            "with the 4-field contract, or an explicit same-line "
+            "RETROACTIVE_SWEEP_WAIVED rationale:\n  "
+            + "\n  ".join(v[:400] for v in violations[:8])
         )
     return violations
 
