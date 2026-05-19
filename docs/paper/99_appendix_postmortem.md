@@ -216,7 +216,9 @@ parallel-actuator file that consumes its output.
 
 - The full game-theoretic premature-convergence analysis: §7.7
 - The §7.8 in-paper summary of this postmortem (lighter weight)
-- The OSS extraction `tac` library: <https://github.com/adpena/tac>
+- The current `tac` Task-Aware Compression library docs:
+  [`src/tac/README.md`](../../src/tac/README.md). Historical OSS extraction
+  coordinates are superseded by the `comma-lab/src/tac` package boundary.
 - The empirical incident memo: `feedback_may_4_hnerv_race_postmortem_20260505.md`
 
 ## A.7 Dual-axis scorer drift addendum

@@ -149,8 +149,9 @@ Operational disclosure posture for this blueprint:
 
 - The δεζ blueprint and this harness blueprint are internal-private until
   operator authorizes disclosure on a specific surface.
-- The PR #107 (`apogee`) public disclosure already names the OSS `tac` library
-  (`https://github.com/adpena/tac`) per
+- The PR #107 (`apogee`) public disclosure historically named the OSS `tac`
+  extraction. Current repository docs identify `tac` as the Task-Aware
+  Compression library under [`src/tac/README.md`](../../src/tac/README.md), per
   `project_pr107_disclosure_tac_oss_public_20260505`.
 - comma-lab repo remains internal-private; operational levers (Joint-ADMM
   allocation weights, learned-prior architecture, FiLM-protect patterns) are

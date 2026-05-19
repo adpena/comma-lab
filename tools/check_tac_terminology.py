@@ -49,6 +49,10 @@ STALE_PUBLIC_PHRASES: tuple[tuple[str, str], ...] = (
         "describe `tac` as the reusable Task-Aware Compression runtime-contract library",
     ),
     (
+        "https://github.com/adpena/tac",
+        "point public docs to src/tac/README.md or the current comma-lab package boundary instead of the stale tac-only repository",
+    ),
+    (
         "The frontier today is",
         "durable docs must point to reports/latest.md instead of hard-coding a live frontier",
     ),

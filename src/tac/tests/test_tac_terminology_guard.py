@@ -236,6 +236,12 @@ def test_stale_public_tac_and_frontier_phrases_are_rejected(tmp_path: Path) -> N
         "- **`tac/`** — reusable codec / runtime library.\n",
         encoding="utf-8",
     )
+    stale_repo = tmp_path / "docs" / "paper" / "stale_repo.md"
+    stale_repo.parent.mkdir(parents=True, exist_ok=True)
+    stale_repo.write_text(
+        "The OSS extraction `tac` library lives at https://github.com/adpena/tac.\n",
+        encoding="utf-8",
+    )
     (tmp_path / "PROGRAM.md").write_text(
         MINIMAL_CANONICAL_TEXTS["PROGRAM.md"]
         + "The frontier today is A1 at 0.1928.\n",
@@ -253,6 +259,7 @@ def test_stale_public_tac_and_frontier_phrases_are_rejected(tmp_path: Path) -> N
     rendered = "\n".join(finding.render() for finding in findings)
     assert "Task-Aware Compression library" in rendered
     assert "runtime-contract library" in rendered
+    assert "current comma-lab package boundary" in rendered
     assert "reports/latest.md" in rendered
     assert "live-leader claims" in rendered
     assert "contest-to-production transfer" in rendered
