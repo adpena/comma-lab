@@ -1109,7 +1109,80 @@ def apply_z1_empirical_revision_to_candidate_delta(
         c.archive_sha256,
         panel_axis=score_panel_axis,
     )
+    # Grand council T3 finding #12 (2026-05-18) realistic-stacking correction:
+    # the Wave 2A 52-row composite EV [-0.139, -0.026] assumes additive
+    # composition; Wave 1 NSCS06 v8 anchor empirically refutes additivity
+    # (-78% non-monotonicity). The realistic envelope is [-0.05, -0.02].
+    # Apply LAST in the cascade so the correction operates on the final
+    # composed predicted_score_delta regardless of which cascade path
+    # produced it (composition_alpha_v2, venn_v2, sister-817, atlas).
+    # n_stacked_extinctions is derived from the candidate's available
+    # composition signal: when composition_alpha is present, the candidate
+    # is by definition a multi-substrate composition. Notes-tokens
+    # like "composed_from" or "stack of N" may also surface explicit count.
+    n_stacked = _infer_n_stacked_extinctions_for_candidate(c)
+    d = adjust_predicted_delta_for_realistic_stacking_correction(
+        d, n_stacked
+    )
     return d
+
+
+def _infer_n_stacked_extinctions_for_candidate(c: CandidateRow) -> int:
+    """Infer the count of composed extinctions for a candidate row.
+
+    Used by :func:`apply_z1_empirical_revision_to_candidate_delta` to apply
+    the Wave 2A realistic-stacking correction per grand council T3 finding
+    #12 (2026-05-18). The correction only fires for ``n >= 2`` so a value
+    of 1 (single-extinction or unknown-composition) preserves the legacy
+    predicted_score_delta unchanged.
+
+    Inference rules (highest signal first):
+
+    1. Explicit ``composed_from:N`` / ``stack_of:N`` / ``stacked_extinctions:N``
+       token in ``c.notes`` (decimal integer; clamp >= 1).
+    2. Default: return 1 (single-extinction OR composition without explicit
+       stack-count signal).
+
+    DELIBERATE: ``composition_alpha is not None`` is NOT used as a stacking
+    signal. When composition_alpha is set, the V2 cascade
+    (``adjust_predicted_delta_for_composition_alpha_v2``) ALREADY encodes the
+    empirical per-substrate stacking outcome (additive / sub-additive /
+    saturating / super-additive bands per Catalog #319). The realistic-
+    stacking correction must NOT double-discount substrates with measured
+    composition_alpha evidence. It fires only when there is a HEURISTIC
+    stacking-count signal (notes-token) WITHOUT empirical alpha — the regime
+    where grand council T3 finding #12's optimistic-vs-realistic envelope
+    discount is structurally appropriate.
+
+    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag": this is
+    a STRUCTURAL inference, NOT a measurement. The correction it gates is a
+    transient sort-key adjustment that never mutates the row.
+    """
+    notes = (c.notes or "").lower()
+    # Rule 1: explicit count token.
+    for token in ("composed_from:", "stack_of:", "stacked_extinctions:"):
+        idx = notes.find(token)
+        if idx == -1:
+            continue
+        rest = notes[idx + len(token):]
+        # Parse leading decimal digits.
+        digits = ""
+        for ch in rest:
+            if ch.isdigit():
+                digits += ch
+            else:
+                break
+        if digits:
+            try:
+                n = int(digits)
+            except ValueError:
+                continue
+            return max(1, n)
+    # Rule 2: default single-extinction.
+    # Per the docstring's DELIBERATE note: composition_alpha is NOT a stacking
+    # signal — the V2 cascade already captures empirical per-substrate
+    # stacking evidence.
+    return 1
 
 
 # ── Catalog #125 hook #4 wire-in: per-pair master gradient Venn classification ───
@@ -2057,6 +2130,120 @@ def adjust_predicted_delta_for_predicted_dispatch_risk(
         return base_delta * PREDICTED_DISPATCH_RISK_MODERATE_PENALTY_FACTOR
     # LOW (risk < 25): no adjustment.
     return base_delta
+
+
+# ── Realistic-stacking correction (Catalog #229/#287 sister, finding #12) ───
+#
+# Grand council T3 finding #12 (PROCEED_WITH_REVISIONS, 2026-05-18; see
+# `.omx/research/council_t3_finding_12_52_row_composite_ev_realistic_20260518.md`):
+# the Wave 2A 52-row arbitrariness-extinction audit composite EV
+# (`.omx/research/arbitrariness_extinction_audit_20260518.jsonl`) is
+# [-0.139, -0.026] assuming additive composition of all 52 independent
+# extinctions. Wave 1 NSCS06 v8 anchor empirically refutes additivity at
+# composition: 4-of-7 cargo-cults unwound simultaneously produced -78%
+# non-monotonicity relative to the additive prediction. Boyd's convex-
+# feasibility lens: composing N convex feasibilities yields an intersection
+# FAR SMALLER than the sum of per-constraint regions.
+#
+# Per CLAUDE.md "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE": predicted
+# deltas must be sourced from solvable math, not arbitrary heuristic. This
+# correction routes through the canonical audit composite-EV envelope so
+# the ranker's effective predicted_score_delta tracks realistic empirical
+# stacking discipline rather than optimistic additive prediction.
+#
+# Realistic envelope [-0.05, -0.02] is HARD-EARNED-FROM-WAVE-1-EMPIRICAL-
+# ANCHOR per the council's Assumption-Adversary verdict.
+# [empirical:.omx/research/arbitrariness_extinction_audit_20260518.jsonl]
+# [empirical:.omx/research/council_t3_finding_12_52_row_composite_ev_realistic_20260518.md]
+AUDIT_COMPOSITE_OPTIMISTIC_EV_LOWER = -0.139  # additive 52-row lower bound
+AUDIT_COMPOSITE_OPTIMISTIC_EV_UPPER = -0.026  # additive 52-row upper bound
+AUDIT_COMPOSITE_REALISTIC_EV_LOWER = -0.05   # T3 finding #12 lower bound
+AUDIT_COMPOSITE_REALISTIC_EV_UPPER = -0.02   # T3 finding #12 upper bound
+# Empirical saturation threshold per Catalog #319 composition_alpha=0.85
+# anchor; above this stacking count, additional extinctions saturate.
+REALISTIC_STACKING_SATURATION_COUNT = 10
+REALISTIC_STACKING_SATURATION_PENALTY_FACTOR = 0.5  # additional 50% above sat
+
+# Structural cascade floor values — preserved verbatim by the realistic-
+# stacking correction so floors carry their original "structurally dead-
+# weight" semantic. The realistic correction is a multiplicative envelope
+# adjustment for cascade outputs that have NOT already hit a structural
+# floor; a floor value is itself the authoritative verdict.
+_CASCADE_STRUCTURAL_FLOOR_VALUES: frozenset[float] = frozenset({
+    MDL_DENSITY_WITHIN_CLASS_SATURATED_DELTA_FLOOR,
+    COMPOSITION_ALPHA_SATURATING_DELTA_FLOOR,
+    PREDICTED_DISPATCH_RISK_REFUSAL_DELTA_FLOOR,
+})
+
+
+def adjust_predicted_delta_for_realistic_stacking_correction(
+    predicted_delta: float,
+    n_stacked_extinctions: int,
+    *,
+    audit_composite_optimistic_upper: float = AUDIT_COMPOSITE_OPTIMISTIC_EV_UPPER,
+    audit_composite_realistic_upper: float = AUDIT_COMPOSITE_REALISTIC_EV_UPPER,
+    saturation_count: int = REALISTIC_STACKING_SATURATION_COUNT,
+    saturation_penalty_factor: float = REALISTIC_STACKING_SATURATION_PENALTY_FACTOR,
+) -> float:
+    """Apply Wave 2A realistic-stacking correction per grand council T3 finding #12.
+
+    Optimistic EV assumes monotonic additive stacking of all 52 extinction rows
+    from the canonical arbitrariness-extinction audit
+    (`.omx/research/arbitrariness_extinction_audit_20260518.jsonl`). Empirical
+    anchors — Wave 1 NSCS06 v8 -78% non-monotonicity + Wave 2A Z3+sister
+    composition_alpha=0.85 saturating per Catalog #319 — show realistic
+    stacking saturates well before the additive prediction.
+
+    Correction factor: ``realistic_magnitude / optimistic_magnitude`` applied
+    multiplicatively to ``predicted_delta`` for any candidate that composes
+    2+ extinctions (``n_stacked_extinctions >= 2``). Single-extinction
+    candidates (``n_stacked_extinctions <= 1``) pass through unchanged — the
+    audit row IS the empirical per-extinction prediction; only COMPOSITIONS
+    suffer the non-additivity discount.
+
+    Above ``saturation_count`` (default 10) the factor is further reduced by
+    ``saturation_penalty_factor`` (default 0.5) per the Catalog #319 empirical
+    saturation anchor. This is conservative — it expresses Boyd's
+    convex-intersection bound at high stacking depths.
+
+    Per CLAUDE.md "Forbidden score claims" + "Apples-to-apples evidence
+    discipline": this adjusts PREDICTED ΔS only. The original
+    ``predicted_score_delta`` on the candidate row is NEVER mutated; this is
+    a transient sort-key adjustment composed into the canonical Z1 revision
+    cascade per :func:`apply_z1_empirical_revision_to_candidate_delta`.
+
+    Returns the (possibly demoted) predicted_score_delta. Lower is better in
+    the score-delta convention (negative = improvement).
+
+    [verified-against: grand council T3 finding #12 verdict
+     PROCEED_WITH_REVISIONS 2026-05-18; Wave 1 NSCS06 v8 -78% non-monotonicity
+     empirical anchor; Catalog #319 composition_alpha saturation regime]
+    """
+    if n_stacked_extinctions <= 1:
+        # Single-extinction or unknown — pass through unchanged. The audit
+        # row IS the per-extinction prediction; only compositions are
+        # discounted by this gate.
+        return predicted_delta
+    # Floor-preservation: if predicted_delta has already been floored to one
+    # of the structural cascade floors (saturating composition / risk-refusal
+    # / saturated MDL density), the floor is a SEMANTIC signal that the
+    # candidate is dead-weight per its upstream verdict. Further multiplying
+    # the floor by the realistic-correction factor would obscure the
+    # structural "this candidate is at the floor" semantic without changing
+    # ranking ordering. Preserve the floor verbatim.
+    if predicted_delta in _CASCADE_STRUCTURAL_FLOOR_VALUES:
+        return predicted_delta
+    optimistic_magnitude = abs(audit_composite_optimistic_upper)
+    if optimistic_magnitude == 0.0:
+        # Defensive: cannot compute ratio against zero envelope.
+        return predicted_delta
+    realistic_magnitude = abs(audit_composite_realistic_upper)
+    correction_factor = realistic_magnitude / optimistic_magnitude
+    if n_stacked_extinctions > saturation_count:
+        # Saturating regime per Catalog #319 anchor: composition_alpha=0.85
+        # observed empirically; further stacking yields diminishing returns.
+        correction_factor *= saturation_penalty_factor
+    return predicted_delta * correction_factor
 
 
 def rank_candidates(

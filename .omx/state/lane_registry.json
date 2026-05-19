@@ -38953,11 +38953,11 @@
       "id": "lane_cathedral_autopilot_realistic_ev_update_20260518",
       "name": "Cathedral autopilot realistic-EV update",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "20-tests-pass at .omx/research/cathedral_autopilot_realistic_ev_update_diff_20260519T035703Z.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -38980,8 +38980,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_cathedral_autopilot_realistic_ev_update_landed_20260518.md + .omx/research/cathedral_autopilot_realistic_ev_update_diff_20260519T035703Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -38994,11 +38994,11 @@
       "id": "lane_more_optimal_algorithms_wire_in_20260518",
       "name": "More-optimal algorithms wire-in",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/solvers/more_optimal_algorithms.py shim + atom helpers; 22 dedicated tests pass"
         },
         "real_archive_empirical": {
           "status": false,
@@ -39021,8 +39021,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_more_optimal_algorithms_wire_in_landed_20260519.md + .omx/research/more_optimal_algorithms_wire_in_callsite_plan_20260519T035635Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39039,5 +39039,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T03:56:15Z"
+  "updated_at": "2026-05-19T04:00:14Z"
 }
