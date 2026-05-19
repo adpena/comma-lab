@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -232,6 +233,66 @@ def test_ledger_registers_intent_before_remote_job_id(tmp_path):
 
     rows = query_by_lane("lane_test_20260519", path=ledger_path)
     assert [r["event_type"] for r in rows] == ["intent"]
+
+
+def test_dispatch_launch_failure_records_failed_pending_intent(
+    dispatcher_module,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    plan = dispatcher_module.plan_dispatch(
+        script=tmp_path / "fake_script.py",
+        hub_dataset_repo="adpena/test-dataset",
+        hub_model_repo="adpena/test-model",
+        lane_id="lane_test_20260519",
+        label="unit_launch_failure",
+    )
+
+    class FakeHfApi:
+        def __init__(self, token):
+            self.token = token
+
+        def run_uv_job(self, **_kwargs):
+            raise RuntimeError("402 Payment Required")
+
+    import tac.deploy.hf_jobs.job_id_ledger as ledger
+
+    intent_rows: list[dict] = []
+    failed_rows: list[dict] = []
+
+    def fake_register_intent(**kwargs):
+        row = {
+            "event_type": "intent",
+            "hf_jobs_id": f"pending:{kwargs['label']}",
+            **kwargs,
+        }
+        intent_rows.append(row)
+        return row
+
+    def fake_update_outcome(**kwargs):
+        failed_rows.append(kwargs)
+        return kwargs
+
+    monkeypatch.setenv("HF_TOKEN", "test-token")
+    monkeypatch.setitem(
+        sys.modules,
+        "huggingface_hub",
+        types.SimpleNamespace(HfApi=FakeHfApi),
+    )
+    monkeypatch.setattr(ledger, "register_hf_jobs_dispatch_intent", fake_register_intent)
+    monkeypatch.setattr(ledger, "update_hf_jobs_outcome", fake_update_outcome)
+
+    with pytest.raises(RuntimeError, match="failed before a job id"):
+        dispatcher_module.dispatch(plan, expected_axis="advisory")
+
+    assert intent_rows
+    assert failed_rows
+    assert failed_rows[0]["hf_jobs_id"] == "pending:unit_launch_failure"
+    assert failed_rows[0]["status"] == ledger.EVENT_FAILED
+    assert failed_rows[0]["rc"] == 1
+    assert failed_rows[0]["cost_actual_usd"] == 0.0
+    assert failed_rows[0]["evidence_grade"] == "remote_hf_jobs_launch_failed_before_job_id"
+    assert "402 Payment Required" in failed_rows[0]["failure_reason"]
 
 
 def test_ledger_update_outcome_appends_new_row(tmp_path):

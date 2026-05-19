@@ -300,12 +300,13 @@ def dispatch(
         )
 
     api = HfApi(token=token)
+    pending_hf_jobs_id: str | None = None
     if register_in_ledger:
         from tac.deploy.hf_jobs.job_id_ledger import (
             register_hf_jobs_dispatch_intent,
         )
 
-        register_hf_jobs_dispatch_intent(
+        intent_row = register_hf_jobs_dispatch_intent(
             lane_id=plan.lane_id,
             label=plan.label,
             flavor=plan.flavor,
@@ -322,19 +323,43 @@ def dispatch(
             hub_dataset_sha=hub_dataset_sha,
             upstream_snapshot_sha256=upstream_snapshot_sha256,
         )
+        pending_hf_jobs_id = str(intent_row["hf_jobs_id"])
 
     # Per directive #1: pass script_args (NOT edit script variables).
     # Per directive #2: secrets={"HF_TOKEN": <actual value>}.
     # Per directive #5: explicit timeout.
     # Per directive #6: flavor as configured.
-    job_info = api.run_uv_job(
-        script=str(plan.script_path),
-        script_args=plan.script_args,
-        flavor=plan.flavor,
-        timeout=plan.timeout_seconds,
-        secrets={"HF_TOKEN": token},
-        env={"PYTHONUNBUFFERED": "1"},
-    )
+    try:
+        job_info = api.run_uv_job(
+            script=str(plan.script_path),
+            script_args=plan.script_args,
+            flavor=plan.flavor,
+            timeout=plan.timeout_seconds,
+            secrets={"HF_TOKEN": token},
+            env={"PYTHONUNBUFFERED": "1"},
+        )
+    except Exception as exc:
+        if register_in_ledger and pending_hf_jobs_id:
+            from tac.deploy.hf_jobs.job_id_ledger import (
+                EVENT_FAILED,
+                update_hf_jobs_outcome,
+            )
+
+            update_hf_jobs_outcome(
+                hf_jobs_id=pending_hf_jobs_id,
+                status=EVENT_FAILED,
+                rc=1,
+                cost_actual_usd=0.0,
+                evidence_grade="remote_hf_jobs_launch_failed_before_job_id",
+                agent="claude",
+                subagent_id=subagent_id,
+                session_id=session_id,
+                failure_reason=f"{type(exc).__name__}: {str(exc)[:500]}",
+            )
+        raise RuntimeError(
+            f"HF Jobs launch failed before a job id was returned: "
+            f"{type(exc).__name__}: {exc}"
+        ) from exc
     hf_jobs_id = job_info.id  # per directive #3
 
     ledger_row: dict[str, Any] | None = None
