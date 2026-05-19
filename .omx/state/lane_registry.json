@@ -39486,11 +39486,11 @@
       "id": "lane_wiring_and_integration_audit_pass_20260519",
       "name": "Wiring and integration audit pass",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/wiring_and_integration_audit_pass_20260519T052433Z.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -39513,8 +39513,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_wiring_and_integration_audit_pass_landed_20260519.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39531,5 +39531,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T05:22:11Z"
+  "updated_at": "2026-05-19T05:27:00Z"
 }
