@@ -29,7 +29,18 @@ PYBIN="${PYBIN:-}"
 LANE_ID="lane_d4_wyner_ziv_frame_0_substrate_20260514"
 TAG="${TAG:-substrate_d4_wyner_ziv_frame_0}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_d4_wyner_ziv_frame_0_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Catalog #224 sister fix: set deterministic CUDA/runtime environment before

@@ -36,7 +36,18 @@ PYBIN="${PYBIN:-}"
 LANE_ID="lane_a1_plus_lapose_composition_20260513"
 TAG="${TAG:-substrate_a1_plus_lapose}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_a1_plus_lapose_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${A1_PLUS_LAPOSE_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$A1_PLUS_LAPOSE_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # === Catalog #152 driver-path-expectation discipline (Wave 2, 2026-05-16) ===

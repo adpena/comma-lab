@@ -32,7 +32,18 @@ PYBIN="${PYBIN:-}"
 LANE_ID="lane_nscs01_nullspace_split_renderer_20260515"
 TAG="${TAG:-substrate_nscs01_nullspace_split_renderer}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_nscs01_nullspace_split_renderer_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${NSCS01_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$NSCS01_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Catalog #244 NVML/CUDA env block — set BEFORE bootstrap or torch import.

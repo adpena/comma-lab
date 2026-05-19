@@ -51,7 +51,18 @@ PYBIN="${PYBIN:-}"
 LANE_ID="lane_substrate_ego_nerv_20260512"
 TAG="${TAG:-substrate_ego_nerv}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_ego_nerv_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${EGO_NERV_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$EGO_NERV_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Trainer flags — aligned with experiments/train_ego_nerv_as_renderer.py argparse.

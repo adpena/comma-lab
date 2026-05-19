@@ -23,13 +23,19 @@ LANE_ID="${Z7_GRU_LANE_ID:-${PACT_DISPATCH_LANE_ID:-$DEFAULT_LANE_ID}}"
 TAG="${TAG:-substrate_time_traveler_l5_z7_lstm_predictive_coding}"
 RECIPE_PATH="${Z7_GRU_RECIPE_PATH:-.omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_lstm_predictive_coding_modal_t4_dispatch.yaml}"
 
-if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -n "${DISPATCH_INSTANCE_JOB_ID:-}" ]; then
-    DEFAULT_OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
-else
-    DEFAULT_OUTPUT_DIR="$WORKSPACE/lane_substrate_time_traveler_l5_z7_gru_results/output"
-fi
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_time_traveler_l5_z7_gru_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT_DIR}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${Z7_GRU_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$Z7_GRU_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 Z7_GRU_OUTPUT_DIR="${Z7_GRU_OUTPUT_DIR:-$OUTPUT_DIR}"
 PROVENANCE="$LOG_DIR/provenance.json"
 

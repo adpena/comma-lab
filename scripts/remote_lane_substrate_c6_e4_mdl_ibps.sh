@@ -45,7 +45,18 @@ LANE_ID="${C6_E4_MDL_IBPS_LANE_ID:-${PACT_DISPATCH_LANE_ID:-$DEFAULT_LANE_ID}}"
 TAG="${TAG:-substrate_c6_e4_mdl_ibps}"
 RECIPE_PATH="${C6_E4_MDL_IBPS_RECIPE_PATH:-.omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_c6_e4_mdl_ibps_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${C6_E4_MDL_IBPS_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$C6_E4_MDL_IBPS_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 C6_E4_MDL_IBPS_VIDEO_PATH="${C6_E4_MDL_IBPS_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"

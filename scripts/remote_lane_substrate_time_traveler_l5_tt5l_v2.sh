@@ -72,14 +72,19 @@ LANE_ID="${TT5L_V2_LANE_ID:-${PACT_DISPATCH_LANE_ID:-$DEFAULT_LANE_ID}}"
 TAG="${TAG:-substrate_time_traveler_l5_tt5l_v2}"
 RECIPE_PATH="${TT5L_V2_RECIPE_PATH:-.omx/operator_authorize_recipes/substrate_time_traveler_l5_tt5l_v2_modal_a100_dispatch.yaml}"
 
-# Catalog #204: when running on Modal default output to durable provider volume.
-if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -n "${DISPATCH_INSTANCE_JOB_ID:-}" ]; then
-    DEFAULT_OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
-else
-    DEFAULT_OUTPUT_DIR="$WORKSPACE/lane_substrate_time_traveler_l5_tt5l_v2_results/output"
-fi
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_time_traveler_l5_tt5l_v2_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT_DIR}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${TT5L_V2_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$TT5L_V2_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Catalog #326 mode-routing: TT5L_V2_TRAINER_MODE > SMOKE_ONLY > default-smoke-WARN.

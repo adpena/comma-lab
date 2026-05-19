@@ -41,13 +41,19 @@ RECIPE_PATH="${Z7_MAMBA2_RECIPE_PATH:-.omx/operator_authorize_recipes/substrate_
 # Multi-candidate workspace resolution per Catalog #152 Modal-aware extension.
 # In Modal runtime the workspace lives at /workspace/pact (mounted code) AND
 # /tmp/pact (writable copy); Vast.ai uses $WORKSPACE; local uses $PWD.
-if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -n "${DISPATCH_INSTANCE_JOB_ID:-}" ]; then
-    DEFAULT_OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
-else
-    DEFAULT_OUTPUT_DIR="$WORKSPACE/lane_substrate_time_traveler_l5_z7_mamba2_results/output"
-fi
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_time_traveler_l5_z7_mamba2_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT_DIR}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${Z7_MAMBA2_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$Z7_MAMBA2_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 Z7_MAMBA2_OUTPUT_DIR="${Z7_MAMBA2_OUTPUT_DIR:-$OUTPUT_DIR}"
 PROVENANCE="$LOG_DIR/provenance.json"
 

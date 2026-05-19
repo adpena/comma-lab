@@ -33,14 +33,19 @@ PYBIN="${PYBIN:-}"
 LANE_ID="lane_z3_g1_scorer_softmax_hyperprior_gating_20260515"
 TAG="${TAG:-substrate_z3_g1_scorer_softmax_hyperprior_gating}"
 
-# Catalog #204: when running on Modal default output to durable provider volume.
-if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -n "${DISPATCH_INSTANCE_JOB_ID:-}" ]; then
-    DEFAULT_OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
-else
-    DEFAULT_OUTPUT_DIR="$WORKSPACE/lane_substrate_z3_g1_scorer_softmax_hyperprior_gating_results/output"
-fi
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_z3_g1_scorer_softmax_hyperprior_gating_results}"
-OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT_DIR}"
+# Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
+# (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts under the
+# /modal_results volume so modal_train_lane.py harvests durable custody.
+# contest_auth_eval.py refuses temp-storage evidence per CLAUDE.md "Forbidden
+# /tmp paths in any persisted artifact" non-negotiable.
+if [ -n "${Z3_G1_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$Z3_G1_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Catalog #224: CUBLAS deterministic + DALI NVML disable for stable inflate.
