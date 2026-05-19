@@ -915,7 +915,9 @@ def test_list_grammars_cli_prints_fail_closed_registry(capsys):
     dp1 = next(row for row in payload["grammars"] if row["grammar_name"] == "dp1_pretrained_driving_prior")
     assert dp1["authority"] == "fail_closed_detection_only"
     assert dp1["anchor_emission_allowed"] is False
-    assert dp1["required_projector"] == "dp1_pretrained_driving_prior_schema_projector"
+    assert dp1["required_projector"] == "dp1_deterministic_tensor_span_serializer_projector"
+    assert "Brotli(pickle(state_dict))" in dp1["reason"]
+    assert "stable tensor-byte span grammar" in dp1["reason"]
 
 
 def test_detect_archive_grammar_only_cli_prints_json(tmp_path, capsys):
@@ -1203,7 +1205,7 @@ def test_extract_all_cli_writes_batch_manifest_without_anchor_emission(tmp_path)
     assert by_label["dp1"]["projection_contract"]["authority"] == "fail_closed_detection_only"
     assert by_label["dp1"]["projection_contract"]["anchor_emission_allowed"] is False
     assert by_label["dp1"]["blockers"] == [
-        "dp1_pretrained_driving_prior_schema_projector",
+        "dp1_deterministic_tensor_span_serializer_projector",
         "anchor_emission_not_allowed_without_projector",
     ]
 

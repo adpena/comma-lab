@@ -271,8 +271,8 @@ _SUPPORTED_PROJECTORS: dict[str, tuple[str, str]] = {
 
 _DETECTION_ONLY_PROJECTORS: dict[str, tuple[str, str]] = {
     "dp1_pretrained_driving_prior": (
-        "dp1_pretrained_driving_prior_schema_projector",
-        "DP1 has canonical section offsets, but renderer/codebook/residual projection is not wired into this master-gradient extractor.",
+        "dp1_deterministic_tensor_span_serializer_projector",
+        "DP1 section offsets are canonical, but the current renderer stream is Brotli(pickle(state_dict)) and has no stable tensor-byte span grammar; codebook and residual sections also need explicit Jacobians or zero-gradient v1 contracts before anchor emission.",
     ),
     "pr106_ff_packed_hnerv": (
         "pr106_packed_brotli_schema_projector",
@@ -977,7 +977,8 @@ def parse_dp1_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
         gradient_projection_supported=False,
         parser_notes=(
             "DP1 section offsets are canonical via tac.substrates.pretrained_driving_prior.archive.parse_dp1_archive_bytes.",
-            "Master-gradient anchor emission remains fail-closed until a DP1 renderer/codebook/residual projector exists.",
+            "Master-gradient anchor emission remains fail-closed because the renderer stream is Brotli(pickle(state_dict)); a deterministic tensor-span serializer is required before byte-gradient authority.",
+            "DP1 codebook and residual sections remain score-affecting but unprojected; they require explicit section Jacobians or zero-gradient v1 contracts before anchors are allowed.",
         ),
     )
 
