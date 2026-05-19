@@ -69,9 +69,9 @@ class TestGrammarRegistryContract:
         assert mgap.is_anchor_emitting_grammar("a1_finetuned") is True
         assert mgap.is_anchor_emitting_grammar("pr101_lc_v2") is True
         assert mgap.is_anchor_emitting_grammar("pr106_format0d") is True
+        assert mgap.is_anchor_emitting_grammar("pr107_apogee_length_prefixed") is True
         assert mgap.is_anchor_emitting_grammar("pr106_ff_packed_hnerv") is False
         assert mgap.is_anchor_emitting_grammar("hnerv_lc_v2_length_prefixed") is False
-        assert mgap.is_anchor_emitting_grammar("pr107_apogee_length_prefixed") is False
         assert mgap.is_anchor_emitting_grammar("dp1_pretrained_driving_prior") is False
 
     def test_unknown_grammar_returns_false(self):

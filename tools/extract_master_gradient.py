@@ -123,6 +123,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
 )
+from tac.quantization import Uint8STE  # noqa: E402
 from tac.scorer import load_differentiable_scorers  # noqa: E402
 from tac.substrates.pretrained_driving_prior.archive import (  # noqa: E402
     DP1_SECTION_ROLES,
@@ -258,6 +259,10 @@ _SUPPORTED_PROJECTORS: dict[str, tuple[str, str]] = {
         "pr106_format0d_primary_packed_hnerv_decoder_jacobian_sidecar_zero_grad_v1",
         "Format0d PacketIR primary payload is projected through the PR106 packed-HNeRV decoder Jacobian; discrete base/extra sidecar sections are preserved with explicit zero-gradient v1 semantics.",
     ),
+    "pr107_apogee_length_prefixed": (
+        "pr107_apogee_cd1_decoder_jacobian_camera_offset_roundtrip_latents_zero_grad_v1",
+        "PR107 Apogee's CD1 decoder section is projected through its architecture-ordered HNeRV decoder Jacobian with the runtime camera-space channel offsets applied before the STE roundtrip; metadata and latent Brotli sections stay explicit zero-gradient v1 surfaces.",
+    ),
     "a1_finetuned": (
         "a1_headered_pr101_fixed_section_int8_fp16_jacobian",
         "A1 adds a 4-byte decoder-section header, then reuses the PR101-family fixed-section projector with zero-gradient header semantics.",
@@ -276,10 +281,6 @@ _DETECTION_ONLY_PROJECTORS: dict[str, tuple[str, str]] = {
     "hnerv_lc_v2_length_prefixed": (
         "hnerv_lc_v2_schema_projector",
         "True hnerv_lc_v2 is four length-prefixed streams; fixed-offset PR101 projection would misattribute byte authority.",
-    ),
-    "pr107_apogee_length_prefixed": (
-        "pr107_apogee_schema_projector",
-        "PR107 Apogee uses metadata/decoder/latent length-prefixed sections and must remain xray-only until its parser is paired with a projector.",
     ),
 }
 
@@ -1093,9 +1094,9 @@ def parse_pr107_apogee_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
         archive_bytes=archive_bytes,
         extracted=extracted,
         sections=sections,
-        gradient_projection_supported=False,
+        gradient_projection_supported=True,
         parser_notes=(
-            "PR107 Apogee boundaries are detectable from its source parser, but gradient projection is fail-closed.",
+            "PR107 Apogee exposes a CD1 decoder section with architecture-ordered INT8 symbols and fp16/fp32 scales; decoder bytes have a registered Jacobian projector while metadata/latents remain zero-gradient v1 surfaces.",
         ),
     )
 
@@ -1545,6 +1546,120 @@ def parse_pr106_format0d_projector_layout(
     )
 
 
+def _decode_pr107_meta(meta_brotli: bytes) -> dict[str, object]:
+    """Decode PR107 Apogee's Brotli-compressed JSON metadata."""
+    meta = json.loads(brotli.decompress(meta_brotli).decode("utf-8"))
+    required = ("n_pairs", "latent_dim", "base_channels", "eval_size")
+    missing = [key for key in required if key not in meta]
+    if missing:
+        raise ValueError(f"PR107 Apogee metadata missing required keys: {missing}")
+    return meta
+
+
+def _pr107_cd1_tensor_spans(
+    raw_cd1: bytes,
+    meta: Mapping[str, object],
+    decoder_cls,
+) -> tuple[_TensorByteSpan, ...]:
+    """Build tensor spans for PR107 Apogee's CD1 compact decoder payload."""
+    if len(raw_cd1) < 8:
+        raise ValueError("PR107 CD1 decoder payload is too short")
+    if raw_cd1[:3] != b"CD1":
+        raise ValueError(f"PR107 decoder is not CD1 (magic={raw_cd1[:3]!r})")
+    scale_bits = raw_cd1[3]
+    if scale_bits not in (16, 32):
+        raise ValueError(f"unsupported PR107 CD1 scale_bits={scale_bits}")
+    n_tensors = struct.unpack_from("<I", raw_cd1, 4)[0]
+    eval_size_raw = meta["eval_size"]
+    if not isinstance(eval_size_raw, Sequence) or len(eval_size_raw) != 2:
+        raise ValueError(f"bad PR107 eval_size metadata: {eval_size_raw!r}")
+    ref = decoder_cls(
+        latent_dim=int(meta["latent_dim"]),
+        base_channels=int(meta["base_channels"]),
+        eval_size=(int(eval_size_raw[0]), int(eval_size_raw[1])),
+    ).state_dict()
+    items = list(ref.items())
+    if n_tensors != len(items):
+        raise ValueError(f"PR107 CD1 n_tensors={n_tensors} != decoder state tensors={len(items)}")
+
+    spans: list[_TensorByteSpan] = []
+    pos = 8
+    for storage_index, (name, tensor) in enumerate(items):
+        scale_byte_offset = pos
+        if scale_bits == 16:
+            if pos + 2 > len(raw_cd1):
+                raise ValueError(f"PR107 CD1 truncated before fp16 scale for {name}")
+            fp_scale = float(np.frombuffer(raw_cd1, dtype=np.float16, count=1, offset=pos)[0])
+            pos += 2
+        else:
+            if pos + 4 > len(raw_cd1):
+                raise ValueError(f"PR107 CD1 truncated before fp32 scale for {name}")
+            fp_scale = float(struct.unpack_from("<f", raw_cd1, pos)[0])
+            pos += 4
+        shape = tuple(int(dim) for dim in tensor.shape)
+        numel = int(tensor.numel())
+        mantissa_byte_offset = pos
+        pos += numel
+        if pos > len(raw_cd1):
+            raise ValueError(f"PR107 CD1 truncated in mantissa stream for {name}")
+        spans.append(
+            _TensorByteSpan(
+                name=str(name),
+                storage_index=storage_index,
+                shape=shape,
+                numel=numel,
+                mantissa_byte_offset=mantissa_byte_offset,
+                scale_byte_offset=scale_byte_offset,
+                fp16_scale=fp_scale,
+                byte_map="zig",
+            )
+        )
+    if pos != len(raw_cd1):
+        raise ValueError(f"PR107 CD1 trailing bytes: parsed={pos}, payload={len(raw_cd1)}")
+    return tuple(spans)
+
+
+def parse_pr107_apogee_projector_layout(
+    archive_path: Path,
+    decoder_cls,
+) -> _Fec6ArchiveLayout:
+    """Parse PR107 Apogee for its CD1 decoder-byte Jacobian projector."""
+    archive_bytes = archive_path.read_bytes()
+    archive_sha256 = _sha256_bytes(archive_bytes)
+    detected_name, detected_layout = detect_archive_grammar_and_parse(archive_bytes)
+    if detected_name != "pr107_apogee_length_prefixed":
+        raise ValueError(f"expected PR107 Apogee layout, got {detected_name!r}")
+    sections = {section.name: section for section in detected_layout.sections}
+    meta_section = sections["meta_brotli"]
+    decoder_section = sections["decoder_blob"]
+    latents_section = sections["latents_brotli"]
+    meta = _decode_pr107_meta(archive_bytes[meta_section.offset : meta_section.end_offset])
+    decoder_blob = archive_bytes[decoder_section.offset : decoder_section.end_offset]
+    raw_cd1 = brotli.decompress(decoder_blob)
+    spans = _pr107_cd1_tensor_spans(raw_cd1, meta, decoder_cls)
+    eval_size_raw = meta["eval_size"]
+    return _Fec6ArchiveLayout(
+        archive_path=archive_path,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        n_archive_bytes=len(archive_bytes),
+        decoder_blob_offset=decoder_section.offset,
+        decoder_blob_len=decoder_section.length,
+        decoder_tensor_spans=spans,
+        decoder_raw_decompressed=raw_cd1,
+        latent_blob_offset=latents_section.offset,
+        latent_blob_len=latents_section.length,
+        sidecar_blob_offset=len(archive_bytes),
+        sidecar_blob_len=0,
+        n_pairs=int(meta["n_pairs"]),
+        latent_dim=int(meta["latent_dim"]),
+        base_channels=int(meta["base_channels"]),
+        eval_size=(int(eval_size_raw[0]), int(eval_size_raw[1])),
+        has_fp11_outer_wrapper=False,
+        has_a1_headered_decoder=False,
+    )
+
+
 # ---------------------------------------------------------------------------- #
 # Per-param gradient -> per-byte projection                                      #
 # ---------------------------------------------------------------------------- #
@@ -1706,7 +1821,7 @@ _LAYOUT_CONV4_STORAGE_PERMS_CACHE: dict[int, tuple[int, ...]] = {}
 
 def _conv4_storage_perms(codec_module):
     if codec_module is not None and not _LAYOUT_CONV4_STORAGE_PERMS_CACHE:
-        for k, v in codec_module.CONV4_STORAGE_PERMS.items():
+        for k, v in getattr(codec_module, "CONV4_STORAGE_PERMS", {}).items():
             _LAYOUT_CONV4_STORAGE_PERMS_CACHE[k] = v
     return _LAYOUT_CONV4_STORAGE_PERMS_CACHE
 
@@ -1753,6 +1868,50 @@ def _ground_truth_frame_pairs(video_path: Path, n_pairs: int, eval_size: tuple[i
     return torch.from_numpy(arr).float()
 
 
+def _apply_pr107_apogee_camera_offset_roundtrip(
+    rgb_tensor: torch.Tensor,
+    *,
+    target_h: int = 874,
+    target_w: int = 1164,
+) -> torch.Tensor:
+    """Apply PR107 Apogee's inflate-time camera-space channel offsets.
+
+    PR107 writes raw camera-resolution frames after bicubic upsampling and
+    fixed channel offsets: frame0 red/blue -= 1, frame1 green -= 1. The generic
+    master-gradient roundtrip does not know about that runtime postprocess, so
+    PR107 uses this stricter path before scorer evaluation.
+    """
+    if rgb_tensor.dim() < 4:
+        raise ValueError(
+            f"PR107 Apogee roundtrip requires (..., 2, 3, H, W); got {tuple(rgb_tensor.shape)}"
+        )
+    if rgb_tensor.shape[-4] != 2 or rgb_tensor.shape[-3] != 3:
+        raise ValueError(
+            "PR107 Apogee roundtrip expects pair/channel dims (..., 2, 3, H, W); "
+            f"got {tuple(rgb_tensor.shape)}"
+        )
+    if not rgb_tensor.is_floating_point():
+        raise ValueError(f"PR107 Apogee roundtrip requires float tensor, got {rgb_tensor.dtype}")
+
+    orig_shape = rgb_tensor.shape
+    orig_h, orig_w = orig_shape[-2], orig_shape[-1]
+    pair_count = int(np.prod(orig_shape[:-4])) if len(orig_shape) > 4 else 1
+    pair_view = rgb_tensor.reshape(pair_count, 2, 3, orig_h, orig_w)
+    flat = pair_view.reshape(pair_count * 2, 3, orig_h, orig_w)
+    up = F.interpolate(flat, size=(target_h, target_w), mode="bicubic", align_corners=False)
+    up_pairs = up.reshape(pair_count, 2, 3, target_h, target_w).clone()
+    up_pairs[:, 0, 0].sub_(1.0)
+    up_pairs[:, 0, 2].sub_(1.0)
+    up_pairs[:, 1, 1].sub_(1.0)
+    down = F.interpolate(
+        up_pairs.reshape(pair_count * 2, 3, target_h, target_w),
+        size=(orig_h, orig_w),
+        mode="bilinear",
+        align_corners=False,
+    )
+    return Uint8STE.apply(down).reshape(orig_shape)
+
+
 def compute_operating_point_and_per_param_gradients(
     decoder: torch.nn.Module,
     latents: torch.Tensor,  # (n_pairs, latent_dim)
@@ -1765,6 +1924,7 @@ def compute_operating_point_and_per_param_gradients(
     device: torch.device,
     n_pairs_used: int = 8,
     preserve_per_pair: bool = False,
+    roundtrip_mode: str = "default",
 ) -> tuple[
     OperatingPoint,
     dict[str, torch.Tensor],
@@ -1810,10 +1970,15 @@ def compute_operating_point_and_per_param_gradients(
             f"eval_size {eval_size}"
         )
 
-    # Apply contest eval roundtrip with autograd preserved
-    decoded_rt = apply_eval_roundtrip_during_training(
-        decoded, simulate_uint8=True, simulate_resize=True
-    )
+    # Apply contest eval roundtrip with autograd preserved.
+    if roundtrip_mode == "pr107_apogee_camera_offsets":
+        decoded_rt = _apply_pr107_apogee_camera_offset_roundtrip(decoded)
+    elif roundtrip_mode == "default":
+        decoded_rt = apply_eval_roundtrip_during_training(
+            decoded, simulate_uint8=True, simulate_resize=True
+        )
+    else:
+        raise ValueError(f"unknown roundtrip_mode={roundtrip_mode!r}")
     gt_rt = apply_eval_roundtrip_during_training(
         gt, simulate_uint8=True, simulate_resize=True
     )
@@ -2222,12 +2387,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise SystemExit("--inflate-py is required unless --detect-grammar-only is set")
     if args.upstream_dir is None:
         raise SystemExit("--upstream-dir is required unless --detect-grammar-only is set")
-    if detected_name not in {"fec6_fp11_selector", "pr101_lc_v2", "a1_finetuned", "pr106_format0d"}:
+    if detected_name not in {
+        "fec6_fp11_selector",
+        "pr101_lc_v2",
+        "a1_finetuned",
+        "pr106_format0d",
+        "pr107_apogee_length_prefixed",
+    }:
         raise SystemExit(
             f"archive grammar {detected_name!r} is xray/detection-only in this extractor; "
             "byte-gradient authority is currently implemented only for fec6_fp11_selector, "
-            "PR101-family fixed/headered layouts, and PR106 format0d primary packed-HNeRV "
-            "decoder bytes with matching codec.py. Re-run with --detect-grammar-only "
+            "PR101-family fixed/headered layouts, PR106 format0d primary packed-HNeRV "
+            "decoder bytes, and PR107 Apogee CD1 decoder bytes with matching codec.py. "
+            "Re-run with --detect-grammar-only "
             "or wire a grammar-aware projector before emitting a master-gradient anchor."
         )
 
@@ -2273,6 +2445,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"[master-gradient] parsing archive layout from {scratch_archive} ({len(raw_archive_bytes)} bytes)")
     if detected_name == "pr106_format0d":
         layout = parse_pr106_format0d_projector_layout(scratch_archive, codec_module)
+    elif detected_name == "pr107_apogee_length_prefixed":
+        layout = parse_pr107_apogee_projector_layout(scratch_archive, HNeRVDecoder)
     else:
         layout = parse_fec6_archive_layout(scratch_archive, codec_module)
     if layout.archive_sha256 != gradient_subject_sha256:
@@ -2284,6 +2458,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"[master-gradient] layout subject sha256={layout.archive_sha256[:16]}... n_bytes={layout.n_archive_bytes}")
     print(f"[master-gradient] decoder_blob {layout.decoder_blob_len}B, latent_blob {layout.latent_blob_len}B, sidecar {layout.sidecar_blob_len}B")
     print(f"[master-gradient] n_pairs={layout.n_pairs} eval_size={layout.eval_size} latent_dim={layout.latent_dim}")
+    roundtrip_mode = (
+        "pr107_apogee_camera_offsets"
+        if detected_name == "pr107_apogee_length_prefixed"
+        else "default"
+    )
+    if roundtrip_mode != "default":
+        print(f"[master-gradient] runtime roundtrip mode={roundtrip_mode}")
 
     device = torch.device(args.device)
 
@@ -2373,6 +2554,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             device=device,
             n_pairs_used=args.n_pairs_used,
             preserve_per_pair=args.preserve_per_pair,
+            roundtrip_mode=roundtrip_mode,
         )
         fwd_bwd_secs = time.time() - t0
         print(f"[master-gradient] forward+{backward_count}-backward done in {fwd_bwd_secs:.2f}s")
@@ -2384,6 +2566,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         measurement_method_base = (
             "autograd_per_parameter_projected_pr106_format0d_primary_packed_hnerv_decoder_jacobian_sidecar_zero_grad_v1"
             if detected_name == "pr106_format0d"
+            else "autograd_per_parameter_projected_pr107_apogee_cd1_decoder_jacobian_camera_offset_roundtrip_latents_zero_grad_v1"
+            if detected_name == "pr107_apogee_length_prefixed"
             else "autograd_per_parameter_projected_fec6_int8_fp16_jacobian"
         )
         print(f"[master-gradient] projecting per-parameter grad to per-byte ({measurement_method_base})")

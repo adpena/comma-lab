@@ -94,7 +94,7 @@ ARCHIVE_GRAMMAR_REGISTRY: tuple[tuple[str, bool], ...] = (
     ("pr106_format0d", True),
     ("pr106_ff_packed_hnerv", False),
     ("hnerv_lc_v2_length_prefixed", False),
-    ("pr107_apogee_length_prefixed", False),
+    ("pr107_apogee_length_prefixed", True),
     ("dp1_pretrained_driving_prior", False),
 )
 

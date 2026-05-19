@@ -195,6 +195,15 @@ class _TinyArchiveDecoder(nn.Module):
         self.weight = nn.Parameter(torch.zeros(2))
 
 
+class _TinyPr107Decoder(nn.Module):
+    """Tiny PR107 CD1 schema probe with architecture-ordered tensors."""
+
+    def __init__(self, latent_dim=4, base_channels=4, eval_size=(2, 2)):
+        super().__init__()
+        self.weight = nn.Parameter(torch.zeros(2))
+        self.bias = nn.Parameter(torch.zeros(1))
+
+
 class _TinyA1CodecModule:
     DECODER_BLOB_LEN = 5
     LATENT_BLOB_LEN = 3
@@ -850,7 +859,7 @@ def test_validate_measurement_authority_refuses_advisory_contest_axis():
                 "latents_brotli_len_le_u32",
                 "latents_brotli",
             ],
-            False,
+            True,
         ),
     ],
 )
@@ -1077,6 +1086,49 @@ def test_pr106_format0d_projector_layout_maps_primary_decoder_bytes(tmp_path):
     )
 
 
+def test_pr107_cd1_tensor_spans_track_scale_then_mantissa_offsets():
+    meta = {
+        "n_pairs": 1,
+        "latent_dim": 4,
+        "base_channels": 4,
+        "eval_size": [2, 2],
+    }
+    raw = (
+        b"CD1"
+        + bytes([16])
+        + (2).to_bytes(4, "little")
+        + np.float16(1.5).tobytes()
+        + bytes([0x02, 0x03])
+        + np.float16(0.25).tobytes()
+        + bytes([0x04])
+    )
+
+    spans = emg._pr107_cd1_tensor_spans(raw, meta, _TinyPr107Decoder)
+
+    assert [span.name for span in spans] == ["weight", "bias"]
+    assert [span.numel for span in spans] == [2, 1]
+    assert spans[0].scale_byte_offset == 8
+    assert spans[0].mantissa_byte_offset == 10
+    assert spans[0].fp16_scale == 1.5
+    assert spans[1].scale_byte_offset == 12
+    assert spans[1].mantissa_byte_offset == 14
+    assert spans[1].fp16_scale == 0.25
+
+
+def test_pr107_apogee_camera_offset_roundtrip_matches_inflate_postprocess():
+    decoded = torch.full((1, 2, 3, 2, 2), 100.0, dtype=torch.float32)
+
+    out = emg._apply_pr107_apogee_camera_offset_roundtrip(decoded, target_h=2, target_w=2)
+
+    assert out.shape == decoded.shape
+    torch.testing.assert_close(out[0, 0, 0], torch.full((2, 2), 99.0))
+    torch.testing.assert_close(out[0, 0, 1], torch.full((2, 2), 100.0))
+    torch.testing.assert_close(out[0, 0, 2], torch.full((2, 2), 99.0))
+    torch.testing.assert_close(out[0, 1, 0], torch.full((2, 2), 100.0))
+    torch.testing.assert_close(out[0, 1, 1], torch.full((2, 2), 99.0))
+    torch.testing.assert_close(out[0, 1, 2], torch.full((2, 2), 100.0))
+
+
 def test_pr106_format0d_sidecar_correction_passes_match_runtime_order():
     packet = emg.parse_pr106_sidecar_packet(_pr106_payload())
     latents = torch.zeros((600, 28), dtype=torch.float32)
@@ -1134,20 +1186,20 @@ def test_extract_all_cli_writes_batch_manifest_without_anchor_emission(tmp_path)
     assert payload["score_claim_allowed"] is False
     assert payload["promotion_eligible"] is False
     assert payload["archive_count"] == len(fixtures)
-    assert payload["counts"]["anchor_ready"] == 4
-    assert payload["counts"]["detection_only_blocked"] == 4
+    assert payload["counts"]["anchor_ready"] == 5
+    assert payload["counts"]["detection_only_blocked"] == 3
 
     by_label = {row["label"]: row for row in payload["archives"]}
     assert by_label["fec6"]["status"] == "anchor_ready"
     assert by_label["a1"]["status"] == "anchor_ready"
     assert by_label["pr101"]["status"] == "anchor_ready"
     assert by_label["pr106"]["status"] == "anchor_ready"
+    assert by_label["pr107"]["status"] == "anchor_ready"
     assert by_label["pr101"]["projection_contract"]["anchor_emission_allowed"] is True
     assert by_label["pr101"]["anchor_write_performed"] is False
     assert by_label["dp1"]["status"] == "detection_only_blocked"
     assert by_label["pr106_ff"]["status"] == "detection_only_blocked"
     assert by_label["hnerv_lc_v2"]["status"] == "detection_only_blocked"
-    assert by_label["pr107"]["status"] == "detection_only_blocked"
     assert by_label["dp1"]["projection_contract"]["authority"] == "fail_closed_detection_only"
     assert by_label["dp1"]["projection_contract"]["anchor_emission_allowed"] is False
     assert by_label["dp1"]["blockers"] == [
