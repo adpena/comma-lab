@@ -65,23 +65,25 @@ def test_helper_extract_substrate_id_no_substrate_prefix(tmp_path):
 def test_helper_parse_dispatch_enabled_true(tmp_path):
     recipe = tmp_path / "substrate_foo_modal_t4_dispatch.yaml"
     recipe.write_text("dispatch_enabled: true\nresearch_only: false\n")
-    enabled, ro, waiver = _check_325_parse_recipe_dispatch_enabled(recipe)
+    enabled, ro, waiver, ovr_rat, ovr_memo = _check_325_parse_recipe_dispatch_enabled(recipe)
     assert enabled is True
     assert ro is False
     assert waiver is None
+    assert ovr_rat is None
+    assert ovr_memo is None
 
 
 def test_helper_parse_dispatch_enabled_false(tmp_path):
     recipe = tmp_path / "substrate_foo_modal_t4_dispatch.yaml"
     recipe.write_text("dispatch_enabled: false\n")
-    enabled, ro, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
+    enabled, ro, _, _, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
     assert enabled is False
 
 
 def test_helper_parse_research_only_true(tmp_path):
     recipe = tmp_path / "substrate_foo_modal_t4_dispatch.yaml"
     recipe.write_text("dispatch_enabled: true\nresearch_only: true\n")
-    enabled, ro, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
+    enabled, ro, _, _, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
     assert enabled is True
     assert ro is True
 
@@ -91,7 +93,7 @@ def test_helper_parse_waiver_accepted_with_rationale(tmp_path):
     recipe.write_text(
         "dispatch_enabled: true  # PER_SUBSTRATE_SYMPOSIUM_WAIVED:emergency frontier override per operator session directive\n"
     )
-    _, _, waiver = _check_325_parse_recipe_dispatch_enabled(recipe)
+    _, _, waiver, _, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
     assert waiver is not None
     assert "emergency frontier override" in waiver
 
@@ -101,7 +103,7 @@ def test_helper_parse_waiver_placeholder_rationale_rejected(tmp_path):
     recipe.write_text(
         "dispatch_enabled: true  # PER_SUBSTRATE_SYMPOSIUM_WAIVED:<rationale>\n"
     )
-    _, _, waiver = _check_325_parse_recipe_dispatch_enabled(recipe)
+    _, _, waiver, _, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
     assert waiver is None  # placeholder rejected
 
 
@@ -110,7 +112,7 @@ def test_helper_parse_waiver_reason_placeholder_rejected(tmp_path):
     recipe.write_text(
         "dispatch_enabled: true  # PER_SUBSTRATE_SYMPOSIUM_WAIVED:<reason>\n"
     )
-    _, _, waiver = _check_325_parse_recipe_dispatch_enabled(recipe)
+    _, _, waiver, _, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
     assert waiver is None
 
 
@@ -119,8 +121,134 @@ def test_helper_parse_waiver_short_rationale_rejected(tmp_path):
     recipe.write_text(
         "dispatch_enabled: true  # PER_SUBSTRATE_SYMPOSIUM_WAIVED:abc\n"
     )
-    _, _, waiver = _check_325_parse_recipe_dispatch_enabled(recipe)
+    _, _, waiver, _, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
     assert waiver is None  # <4 chars
+
+
+# ---- R11 H1-4 fix tests: operator-frontier-override cascade (e) ----
+
+
+def test_helper_parse_operator_override_rationale_and_memo(tmp_path):
+    recipe = tmp_path / "substrate_foo_modal_t4_dispatch.yaml"
+    recipe.write_text(
+        'dispatch_enabled: true\n'
+        'operator_override_rationale: "All operator fates and decisions approved"\n'
+        'operator_override_memo: .omx/research/operator_authorizations/foo.md\n'
+    )
+    _, _, _, ovr_rat, ovr_memo = _check_325_parse_recipe_dispatch_enabled(recipe)
+    assert ovr_rat == "All operator fates and decisions approved"
+    assert ovr_memo == ".omx/research/operator_authorizations/foo.md"
+
+
+def test_helper_parse_operator_override_placeholder_rationale_rejected(tmp_path):
+    recipe = tmp_path / "substrate_foo_modal_t4_dispatch.yaml"
+    recipe.write_text(
+        'dispatch_enabled: true\n'
+        'operator_override_rationale: "<rationale>"\n'
+        'operator_override_memo: .omx/research/operator_authorizations/foo.md\n'
+    )
+    _, _, _, ovr_rat, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
+    assert ovr_rat is None
+
+
+def test_helper_parse_operator_override_short_rationale_rejected(tmp_path):
+    recipe = tmp_path / "substrate_foo_modal_t4_dispatch.yaml"
+    recipe.write_text(
+        'dispatch_enabled: true\n'
+        'operator_override_rationale: "ok"\n'
+    )
+    _, _, _, ovr_rat, _ = _check_325_parse_recipe_dispatch_enabled(recipe)
+    assert ovr_rat is None  # <4 chars
+
+
+def test_gate_operator_override_accepted_with_memo(tmp_path):
+    """Cascade (e) ACCEPT: rationale + memo present + memo file resolves."""
+    from src.tac.preflight import (
+        check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor,
+    )
+    # Build a minimal repo with canonical override structure
+    recipe_dir = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipe_dir.mkdir(parents=True)
+    memo_dir = tmp_path / ".omx" / "research" / "operator_authorizations"
+    memo_dir.mkdir(parents=True)
+    memo = memo_dir / "synthetic_override_20260519.md"
+    memo.write_text("# operator override memo\nverbatim quote: approved\n")
+    recipe = recipe_dir / "substrate_synthetic_modal_t4_dispatch.yaml"
+    recipe.write_text(
+        'dispatch_enabled: true\n'
+        'operator_override_rationale: "approved by operator session directive"\n'
+        'operator_override_memo: .omx/research/operator_authorizations/synthetic_override_20260519.md\n'
+    )
+    v = check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
+        strict=False, verbose=False, repo_root=tmp_path
+    )
+    assert v == [], f"override should ratify dispatch, but: {v}"
+
+
+def test_gate_operator_override_rejected_when_memo_missing(tmp_path):
+    """Cascade (e) REJECT: rationale present but memo path absent on disk."""
+    from src.tac.preflight import (
+        check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor,
+    )
+    recipe_dir = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipe_dir.mkdir(parents=True)
+    # Note: NO memo file
+    recipe = recipe_dir / "substrate_synthetic_modal_t4_dispatch.yaml"
+    recipe.write_text(
+        'dispatch_enabled: true\n'
+        'operator_override_rationale: "approved by operator session directive"\n'
+        'operator_override_memo: .omx/research/operator_authorizations/nonexistent.md\n'
+    )
+    v = check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
+        strict=False, verbose=False, repo_root=tmp_path
+    )
+    assert len(v) == 1
+    assert "operator-frontier-override" in v[0]
+    assert "does not resolve" in v[0]
+
+
+def test_gate_operator_override_rejected_when_memo_outside_canonical_dir(tmp_path):
+    """Cascade (e) REJECT: memo not under .omx/research/operator_authorizations/."""
+    from src.tac.preflight import (
+        check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor,
+    )
+    recipe_dir = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipe_dir.mkdir(parents=True)
+    bad_dir = tmp_path / ".omx" / "research"
+    bad_dir.mkdir(parents=True)
+    bad_memo = bad_dir / "random_memo.md"
+    bad_memo.write_text("not under canonical")
+    recipe = recipe_dir / "substrate_synthetic_modal_t4_dispatch.yaml"
+    recipe.write_text(
+        'dispatch_enabled: true\n'
+        'operator_override_rationale: "approved by operator session directive"\n'
+        'operator_override_memo: .omx/research/random_memo.md\n'
+    )
+    v = check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
+        strict=False, verbose=False, repo_root=tmp_path
+    )
+    assert len(v) == 1
+    assert "not under canonical location" in v[0]
+
+
+def test_gate_operator_override_rejected_when_only_one_field_declared(tmp_path):
+    """Cascade (e) REJECT: only operator_override_rationale, no memo."""
+    from src.tac.preflight import (
+        check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor,
+    )
+    recipe_dir = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipe_dir.mkdir(parents=True)
+    recipe = recipe_dir / "substrate_synthetic_modal_t4_dispatch.yaml"
+    recipe.write_text(
+        'dispatch_enabled: true\n'
+        'operator_override_rationale: "approved by operator session directive"\n'
+    )
+    v = check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
+        strict=False, verbose=False, repo_root=tmp_path
+    )
+    assert len(v) == 1
+    assert "operator_override_memo" in v[0]
+    assert "without operator_override_memo" in v[0]
 
 
 def test_helper_find_symposium_memo_within_window(tmp_path):

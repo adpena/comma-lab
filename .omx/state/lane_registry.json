@@ -39978,15 +39978,15 @@
       "id": "lane_mps_phase_b_options_b_plus_c_completion_20260519",
       "name": "MPS Phase B Options B + C completion (PoseNet fix + SegMap extension)",
       "phase": 5.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "commit 71960e927; 33/33 tests pass; PoseNet shape-adapter fix per CLAUDE.md Catalog #164"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/mps_gap_experiment_local/gap_results.json 3-component aggregate 7.19e-4 LOCAL_MPS_TRAIN_VIABLE [diagnostic-CUDA Modal A10G call_id fc-01KRZEC44SCJ649P8NAZ1NH1NE]"
         },
         "contest_cuda": {
           "status": false,
@@ -40005,8 +40005,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/mps_phase_b_options_b_plus_c_completion_20260519T062500Z.md + memory entry"
         },
         "deploy_runbook": {
           "status": false,
@@ -40101,6 +40101,88 @@
       "id": "lane_r11_remaining_remediations_h1_2_3_4_5_20260519",
       "name": "R11 remaining remediations (H1-2/H1-3/H1-4/H1-5 bundle)",
       "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/r11_remaining_remediations_landed_20260519T062526Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/r11_remaining_remediations_landed_20260519T062526Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_204_cross_driver_expansion_20260519",
+      "name": "Catalog #204 cross-driver expansion (47 substrate drivers)",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_cheap_signal_first_dispatch_wave_20260519",
+      "name": "Cheap-signal-first dispatch wave (Z6 4c + STC + C6.3/C6.4)",
+      "phase": 5.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -40146,5 +40228,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T06:22:44Z"
+  "updated_at": "2026-05-19T06:28:57Z"
 }

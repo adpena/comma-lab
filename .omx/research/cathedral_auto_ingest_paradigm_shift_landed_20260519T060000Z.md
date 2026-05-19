@@ -138,3 +138,30 @@ Optional future operator decision: migrate the existing 12 orphan tac.* namespac
 ## Per CLAUDE.md "Mission alignment"
 
 This is `apparatus_maintenance` mission contribution. The paradigm shift does not directly lower the contest score, but it unblocks the cathedral autopilot ranker so OTHER consumers can. Per CLAUDE.md "Mission alignment" Consequence 4: frontier-breaking moves DOMINATE rigor budget — this apparatus work satisfies the operator's explicit "fix permanently and self protect against" directive without consuming frontier-breaking capacity.
+
+---
+
+## APPEND-ONLY CORRECTION 2026-05-19 (R11 H1-3 fix)
+
+Per CLAUDE.md Catalog #110/#113 HISTORICAL_PROVENANCE discipline (no body mutation), this section APPENDS a correction for the numerical drift R11 finding H1-3 (`.omx/research/cable_h1_recursive_review_r11_findings_20260519T060942Z.md`).
+
+**Numerical drift corrected:** §"Empirical anchors" line `Catalog #335 live count: 0 across 8 consumer packages (1 reference + 7 sister-landed production consumers from convergent paradigm-shift work by Slot 3 WIRING-REMEDIATION subagent)` understated count due to concurrent sister-subagent landings during memo write. The actual canonical-directory count post-Cable-D D3 wave at 2026-05-19T06:09Z and current snapshot 2026-05-19 audit:
+
+```
+$ ls src/tac/cathedral_consumers/ (excluding __init__.py, __pycache__, README.md, _example_consumer):
+analytical_solve_extinctions_consumer / atom_consumer / contest_exploits_consumer /
+contest_oracle_consumer / engineered_correction_targeting_consumer /
+experimental_extinctions_consumer / formula_extinctions_consumer /
+gradient_informed_decoder_pruning_consumer / mps_diagnostic_consumer /
+mps_gap_experiment_consumer / per_pair_coding_budget_allocation_consumer /
+per_pair_kkt_residuals_consumer / per_pair_lagrangian_lambda_bisection_consumer /
+per_pair_lora_supervision_signal_consumer / per_pair_pareto_envelope_consumer /
+per_pair_volterra_cross_terms_consumer / procedural_codebook_generator_consumer /
+solvers_consumer / unified_action_consumer / utility_curves_consumer
+```
+
+**Corrected count: Catalog #335 live count: 0 across 20 production consumer packages + 1 reference (`_example_consumer`)** = **21 total contract-compliant packages** (vs original "8 consumer packages" claim at memo landing, which captured the snapshot mid-convergent-landing).
+
+**Per CLAUDE.md Apples-to-apples evidence discipline:** the claim "Catalog #335 live count: 0" remains EMPIRICALLY VERIFIED at this updated count (re-confirmed via canonical helper post-correction). What drifted was the package count, not the gate verdict.
+
+**Cross-reference to R11 finding H1-3:** classified MEDIUM (cosmetic numerical drift from concurrent sister landings during memo write); resolved via this append-only correction per HISTORICAL_PROVENANCE discipline. Future memos that quote package counts SHOULD cite the audit timestamp + the `ls src/tac/cathedral_consumers/` output to avoid the drift class.

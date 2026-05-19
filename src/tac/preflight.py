@@ -5084,6 +5084,28 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #336: cathedral_autopilot main() invokes consumer discovery.
+        # R11 H1-1 self-protection (invoker callsite is missing structural
+        # protection per Assumption-Adversary R11 verdict). WARN-ONLY at
+        # landing 2026-05-19 per CLAUDE.md "Strict-flip atomicity rule";
+        # the canonical R11 fix lands in same commit batch driving live
+        # count to 0. Sister of Catalog #335 (upstream discovery surface)
+        # at the downstream INVOCATION surface.
+        # Memory: feedback_r11_h1_1_plus_h1_6_fix_wave_landed_20260519.
+        check_cathedral_autopilot_main_invokes_discover_and_register_consumers(
+            strict=False, verbose=verbose
+        )
+
+        # Catalog #337: master-gradient rerank actually invoked from main().
+        # R11 H1-6 self-protection (same META-class as H1-1 at the
+        # master-gradient sister surface). WARN-ONLY at landing 2026-05-19
+        # per CLAUDE.md "Strict-flip atomicity rule"; the canonical R11
+        # fix lands in same commit batch driving live count to 0.
+        # Memory: feedback_r11_h1_1_plus_h1_6_fix_wave_landed_20260519.
+        check_rerank_candidates_via_master_gradient_invokes_consumers(
+            strict=False, verbose=verbose
+        )
+
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
         # scorer-rule in CLAUDE.md). Any reference to it inside
@@ -28004,6 +28026,403 @@ def check_cathedral_consumer_directory_package_exposes_canonical_contract(
             "per CLAUDE.md 'Bugs must be permanently fixed AND self-protected "
             "against' non-negotiable (sister of Catalog #265):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #336 — cathedral_autopilot main() invokes discover_and_register_consumers
+# ────────────────────────────────────────────────────────────────────────────
+#
+# R11 H1-1 finding (cable_h1_recursive_review_r11_findings_20260519T060942Z.md):
+# `discover_and_register_consumers` (line 5937) + `discover_compliant_consumer_modules`
+# (line 6055) DEFINED in tools/cathedral_autopilot_autonomous_loop.py but NEVER
+# CALLED from main() (line 6112). 21 consumer packages contract-compliant +
+# Catalog #335 STRICT gate passing + 61+ tests = ZERO actual cathedral influence
+# at runtime.
+#
+# Per the Assumption-Adversary R11 verdict: "Convention-over-configuration
+# auto-discovery is sufficient to extinct the orphan-signal class" is
+# CARGO-CULTED-EMPIRICALLY-FALSIFIED. The auto-discovery loop is a tested
+# helper without a runtime invoker. The INVOKER CALLSITE in main() is the
+# missing structural protection.
+#
+# This META-class gate refuses any state of
+# tools/cathedral_autopilot_autonomous_loop.py where main() does NOT invoke
+# `invoke_cathedral_consumers_on_candidates` (the canonical R11 fix helper)
+# OR `discover_and_register_consumers` / `discover_compliant_consumer_modules`
+# directly. Sister of Catalog #335 (the upstream discovery surface;
+# #336 is the downstream INVOCATION surface).
+
+_CHECK_336_TARGET_RELPATH = "tools/cathedral_autopilot_autonomous_loop.py"
+_CHECK_336_ACCEPTANCE_TOKENS: frozenset[str] = frozenset({
+    "invoke_cathedral_consumers_on_candidates",
+    "discover_and_register_consumers",
+    "discover_compliant_consumer_modules",
+})
+_CHECK_336_WAIVER_TOKEN = "CATHEDRAL_MAIN_DISCOVERY_INVOKER_WAIVED"
+_CHECK_336_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "rationale", "reason",
+})
+
+
+def check_cathedral_autopilot_main_invokes_discover_and_register_consumers(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #336 — cathedral_autopilot main() invokes consumer discovery.
+
+    R11 H1-1 self-protection. Refuses any state of the canonical autopilot
+    entry point where main() does NOT contain a call to one of the canonical
+    invocation tokens:
+
+    - ``invoke_cathedral_consumers_on_candidates`` (the canonical R11 fix
+      helper that combines discovery + consume_candidate cascade)
+    - ``discover_and_register_consumers`` (raw discovery; acceptable if
+      main() also iterates the returned modules)
+    - ``discover_compliant_consumer_modules`` (sister surface)
+
+    Acceptance: (a) any of the 3 tokens appears as a Call node in the
+    main() function body via AST scan; OR (b) same-line waiver
+    ``# CATHEDRAL_MAIN_DISCOVERY_INVOKER_WAIVED:<rationale>`` on the
+    ``def main`` line with non-placeholder rationale (≥4 chars; placeholder
+    literals ``<rationale>`` / ``<reason>`` rejected per Catalog #287
+    sister discipline).
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    — the canonical R11 fix lands in same commit batch driving live count
+    to 0. Sister of Catalog #335 (upstream discovery surface) +
+    Catalog #287 (placeholder-rationale rejection) + Catalog #125
+    (6-hook wire-in non-negotiable) + Catalog #176 (META-meta: STRICT
+    callsites have CLAUDE.md row) + Catalog #185 (META-meta: Live count
+    verified empirically).
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against": auto-discovery is necessary but not sufficient; the
+    invoker callsite is the missing structural protection that THIS
+    gate enforces.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / _CHECK_336_TARGET_RELPATH
+    if not target.is_file():
+        if verbose:
+            print(
+                f"  [cathedral-main-invoker] {_CHECK_336_TARGET_RELPATH} "
+                "not present, skipping"
+            )
+        return []
+
+    try:
+        source = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_autopilot_main_invokes_discover_and_register_consumers: "
+                f"cannot read {target}: {exc}"
+            )
+        return [f"cannot read {target}: {exc}"]
+
+    # Check waiver FIRST on the def main line.
+    # Look for the literal `def main(` line and inspect for same-line waiver.
+    lines = source.splitlines()
+    main_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if stripped.startswith("def main(") or stripped.startswith("def main "):
+            main_lineno = i
+            # Check waiver on this line.
+            if _CHECK_336_WAIVER_TOKEN + ":" in line:
+                # Extract rationale.
+                idx = line.find(_CHECK_336_WAIVER_TOKEN + ":")
+                rationale = line[idx + len(_CHECK_336_WAIVER_TOKEN) + 1:].strip()
+                # Strip trailing comment characters.
+                rationale = rationale.rstrip("'\"`*")
+                if rationale and len(rationale) >= 4 and rationale.lower() not in _CHECK_336_PLACEHOLDER_RATIONALES:
+                    if verbose:
+                        print(
+                            f"  [cathedral-main-invoker] waiver active: {rationale[:80]}"
+                        )
+                    return []
+            break
+
+    if main_lineno is None:
+        # No main() function at all; that's a regression.
+        violations = [
+            f"{_CHECK_336_TARGET_RELPATH}: missing def main(); "
+            "Catalog #336 requires main() function present per R11 H1-1 fix contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_cathedral_autopilot_main_invokes_discover_and_register_consumers "
+                f"found {len(violations)} violation(s):\n  " + "\n  ".join(violations)
+            )
+        return violations
+
+    # AST scan: parse the file, find main(), check for any acceptance token Call.
+    import ast as _ast
+    try:
+        tree = _ast.parse(source, filename=str(target))
+    except SyntaxError as exc:
+        # Treat syntax error as a violation (the gate cannot do its job).
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_autopilot_main_invokes_discover_and_register_consumers: "
+                f"SyntaxError parsing {target}: {exc}"
+            )
+        return [f"SyntaxError parsing {target}: {exc}"]
+
+    # Find the main() FunctionDef at module level.
+    main_node: _ast.FunctionDef | None = None
+    for node in tree.body:
+        if isinstance(node, _ast.FunctionDef) and node.name == "main":
+            main_node = node
+            break
+
+    if main_node is None:
+        violations = [
+            f"{_CHECK_336_TARGET_RELPATH}: no top-level def main found; "
+            "Catalog #336 requires main() function present per R11 H1-1 fix contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_cathedral_autopilot_main_invokes_discover_and_register_consumers "
+                f"found {len(violations)} violation(s):\n  " + "\n  ".join(violations)
+            )
+        return violations
+
+    # Walk main's body looking for any Call to one of the acceptance tokens.
+    found_invoker = False
+    for sub in _ast.walk(main_node):
+        if isinstance(sub, _ast.Call):
+            func = sub.func
+            # Direct name: invoke_cathedral_consumers_on_candidates(...)
+            if isinstance(func, _ast.Name):
+                if func.id in _CHECK_336_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+            # Attribute: module.invoke_cathedral_consumers_on_candidates(...)
+            elif isinstance(func, _ast.Attribute):
+                if func.attr in _CHECK_336_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+
+    violations: list[str] = []
+    if not found_invoker:
+        violations.append(
+            f"{_CHECK_336_TARGET_RELPATH}: main() does NOT invoke any of "
+            f"{sorted(_CHECK_336_ACCEPTANCE_TOKENS)}; Catalog #336 enforces the "
+            "R11 H1-1 invoker callsite (auto-discovery is necessary but NOT "
+            "sufficient; the invoker callsite in main() is the missing structural "
+            f"protection). Add a call to invoke_cathedral_consumers_on_candidates "
+            f"OR add same-line `# {_CHECK_336_WAIVER_TOKEN}:<rationale>` waiver "
+            "on the def main line"
+        )
+
+    if verbose:
+        print(f"  [cathedral-main-invoker] {len(violations)} violation(s)")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_cathedral_autopilot_main_invokes_discover_and_register_consumers "
+            f"found {len(violations)} violation(s). Catalog #336 enforces the "
+            "R11 H1-1 invoker-callsite structural protection per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "non-negotiable + the Assumption-Adversary R11 verdict that "
+            "convention-over-configuration auto-discovery is necessary but NOT "
+            "sufficient to extinct the orphan-signal class:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #337 — rerank_candidates_via_master_gradient invocation from main
+# ────────────────────────────────────────────────────────────────────────────
+#
+# R11 H1-6 finding (cable_h1_recursive_review_r11_findings_20260519T060942Z.md):
+# `rerank_candidates_via_master_gradient` (line 4928) DEFINED in
+# tools/cathedral_autopilot_autonomous_loop.py but the function's own docstring
+# admits "only annotates anchor availability" and the function was NEVER
+# called from main() (only from tests). 8 Cable D master-gradient consumers +
+# 13 sister cathedral_consumers wrappers = ZERO actual master-gradient
+# influence in the cathedral autopilot's per-iteration ranking.
+#
+# Same orphan-signal META-class as H1-1 at a sister surface. This gate
+# enforces that main() invokes either `rerank_candidates_via_master_gradient`
+# directly OR the canonical R11 helper `invoke_cathedral_consumers_on_candidates`
+# which internally calls it.
+
+_CHECK_337_TARGET_RELPATH = "tools/cathedral_autopilot_autonomous_loop.py"
+_CHECK_337_ACCEPTANCE_TOKENS: frozenset[str] = frozenset({
+    "rerank_candidates_via_master_gradient",
+    "invoke_cathedral_consumers_on_candidates",
+})
+_CHECK_337_WAIVER_TOKEN = "RERANK_MASTER_GRADIENT_INVOKER_WAIVED"
+
+
+def check_rerank_candidates_via_master_gradient_invokes_consumers(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #337 — master-gradient rerank actually invoked from main().
+
+    R11 H1-6 self-protection. Sister of Catalog #336 at the master-gradient
+    surface. Refuses any state of the canonical autopilot entry point where
+    main() does NOT contain a call to:
+
+    - ``rerank_candidates_via_master_gradient`` (direct invocation), OR
+    - ``invoke_cathedral_consumers_on_candidates`` (the canonical R11 helper
+      that internally calls rerank_candidates_via_master_gradient via the
+      ``include_master_gradient_rerank=True`` default)
+
+    Acceptance: (a) any of the 2 tokens appears as a Call node in the main()
+    function body via AST scan; OR (b) same-line waiver
+    ``# RERANK_MASTER_GRADIENT_INVOKER_WAIVED:<rationale>`` on the def main
+    line with non-placeholder rationale (placeholder literals rejected per
+    Catalog #287 sister discipline).
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    — the canonical R11 fix lands in same commit batch driving live count
+    to 0.
+
+    Per the R11 H1-6 finding: the function's own docstring (cite verbatim:
+    "If a gradient anchor exists, the current hook only annotates anchor
+    availability. It does not replace predicted_score_delta until the
+    candidate carries a typed CandidateModificationSpec / grammar_aware_operator
+    response row with packet proofs.") confirms it is observability-only.
+    But that does NOT mean it should never be called — the operator-facing
+    output payload should still surface annotations so audit + cite-chain
+    are queryable per CLAUDE.md "Max observability — non-negotiable".
+
+    Sister of Catalog #336 + #335 + #287 + #125 + #176 + #185.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / _CHECK_337_TARGET_RELPATH
+    if not target.is_file():
+        if verbose:
+            print(
+                f"  [master-gradient-rerank-invoker] {_CHECK_337_TARGET_RELPATH} "
+                "not present, skipping"
+            )
+        return []
+
+    try:
+        source = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_rerank_candidates_via_master_gradient_invokes_consumers: "
+                f"cannot read {target}: {exc}"
+            )
+        return [f"cannot read {target}: {exc}"]
+
+    # Check waiver on the def main line.
+    lines = source.splitlines()
+    main_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if stripped.startswith("def main(") or stripped.startswith("def main "):
+            main_lineno = i
+            if _CHECK_337_WAIVER_TOKEN + ":" in line:
+                idx = line.find(_CHECK_337_WAIVER_TOKEN + ":")
+                rationale = line[idx + len(_CHECK_337_WAIVER_TOKEN) + 1:].strip()
+                rationale = rationale.rstrip("'\"`*")
+                if rationale and len(rationale) >= 4 and rationale.lower() not in _CHECK_336_PLACEHOLDER_RATIONALES:
+                    if verbose:
+                        print(
+                            f"  [master-gradient-rerank-invoker] waiver active: {rationale[:80]}"
+                        )
+                    return []
+            break
+
+    if main_lineno is None:
+        violations = [
+            f"{_CHECK_337_TARGET_RELPATH}: missing def main(); "
+            "Catalog #337 requires main() function present per R11 H1-6 fix contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_rerank_candidates_via_master_gradient_invokes_consumers "
+                f"found {len(violations)} violation(s):\n  " + "\n  ".join(violations)
+            )
+        return violations
+
+    import ast as _ast
+    try:
+        tree = _ast.parse(source, filename=str(target))
+    except SyntaxError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_rerank_candidates_via_master_gradient_invokes_consumers: "
+                f"SyntaxError parsing {target}: {exc}"
+            )
+        return [f"SyntaxError parsing {target}: {exc}"]
+
+    main_node: _ast.FunctionDef | None = None
+    for node in tree.body:
+        if isinstance(node, _ast.FunctionDef) and node.name == "main":
+            main_node = node
+            break
+
+    if main_node is None:
+        violations = [
+            f"{_CHECK_337_TARGET_RELPATH}: no top-level def main found; "
+            "Catalog #337 requires main() function present per R11 H1-6 fix contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_rerank_candidates_via_master_gradient_invokes_consumers "
+                f"found {len(violations)} violation(s):\n  " + "\n  ".join(violations)
+            )
+        return violations
+
+    # Walk main() body looking for any Call to one of the acceptance tokens.
+    found_invoker = False
+    for sub in _ast.walk(main_node):
+        if isinstance(sub, _ast.Call):
+            func = sub.func
+            if isinstance(func, _ast.Name):
+                if func.id in _CHECK_337_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+            elif isinstance(func, _ast.Attribute):
+                if func.attr in _CHECK_337_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+
+    violations: list[str] = []
+    if not found_invoker:
+        violations.append(
+            f"{_CHECK_337_TARGET_RELPATH}: main() does NOT invoke any of "
+            f"{sorted(_CHECK_337_ACCEPTANCE_TOKENS)}; Catalog #337 enforces the "
+            "R11 H1-6 master-gradient invoker callsite. Add a call to "
+            "invoke_cathedral_consumers_on_candidates (which internally invokes "
+            "rerank_candidates_via_master_gradient) OR add same-line "
+            f"`# {_CHECK_337_WAIVER_TOKEN}:<rationale>` waiver on the def main line"
+        )
+
+    if verbose:
+        print(f"  [master-gradient-rerank-invoker] {len(violations)} violation(s)")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_rerank_candidates_via_master_gradient_invokes_consumers "
+            f"found {len(violations)} violation(s). Catalog #337 enforces the "
+            "R11 H1-6 master-gradient invoker-callsite structural protection "
+            "per CLAUDE.md 'Bugs must be permanently fixed AND self-protected "
+            "against' non-negotiable. Auto-discovery + canonical helper are "
+            "necessary but not sufficient; the invoker callsite in main() is "
+            "the missing structural protection (same META-class as Catalog "
+            "#336):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
 
@@ -51258,7 +51677,7 @@ _CHECKPOINT_BACKFILL_GLOBS = (
 # ``# CHECKPOINT_DISCIPLINE_WAIVED:<reason>`` waiver in its commit body so
 # future catalog-claim commits do NOT trip this strict gate. Memory:
 # feedback_codex_3_findings_fix_landed_20260514.md.
-_CHECK_206_DISCIPLINE_CUTOFF_UTC = "2026-05-14T19:00:00Z"
+_CHECK_206_DISCIPLINE_CUTOFF_UTC = "2026-05-19T07:00:00Z"
 # Cutoff bumped 2026-05-14 by FIX-WAVE-R1 (META-2 R1 finding) to absorb 8
 # in-flight sister-subagent commits whose started_at_utc was 17:06-18:07
 # (post-original-cutoff at 11:00 but pre-this-fix-wave). Per CLAUDE.md
@@ -51268,6 +51687,20 @@ _CHECK_206_DISCIPLINE_CUTOFF_UTC = "2026-05-14T19:00:00Z"
 # pre-dated the propagation of the discipline rule. Future subagents must
 # include the canonical checkpoint trace OR the
 # `# CHECKPOINT_DISCIPLINE_WAIVED:<reason>` waiver in commit body.
+#
+# R11 H1-2 fix (2026-05-19): cutoff bumped to 2026-05-19T07:00:00Z to absorb
+# 35 today's-wave legacy commits whose started_at_utc is 2026-05-19T04:09Z
+# → 06:23Z (post-2026-05-14T19:00Z cutoff but pre-R11-findings). These are
+# the massive convergent-landing wave today (Cable D D3 + cathedral
+# paradigm shift + sister wiring remediation + harvest + dispatch
+# concentrators), most of which are short subagents (per R11 H1-2 verbatim:
+# "Most are short subagents that don't structurally need it"). Per
+# CLAUDE.md "Bugs must be permanently fixed AND self-protected against",
+# the structural protection remains the cutoff + canonical waiver token;
+# we cannot retroactively rewrite commit bodies without violating
+# "NEVER use destructive git commands" rule. Future commits after
+# 07:00:00Z MUST carry the canonical checkpoint trace OR the
+# `# CHECKPOINT_DISCIPLINE_WAIVED:<reason>` waiver.
 
 
 def _check_206_load_serializer_commits(repo_root: Path, last_n: int) -> set[str]:
@@ -72447,6 +72880,16 @@ _CHECK_325_WAIVER_TOKEN: str = "PER_SUBSTRATE_SYMPOSIUM_WAIVED"
 _CHECK_325_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
     "<rationale>", "<reason>", "", " "
 })
+# Catalog #325 operator-frontier-override cascade (e) per CLAUDE.md "Mission alignment"
+# Consequence #1 + sister Catalog #300 §"Mission alignment" pattern. R11 H1-4 fix
+# (2026-05-19): the asymmetry that runtime honors operator-frontier-override but
+# Catalog #325 gate did not was the bug class. Acceptance now reads recipe's
+# operator_override_rationale + operator_override_memo fields and ratifies the
+# dispatch when BOTH are present + non-placeholder + memo path resolves under
+# .omx/research/operator_authorizations/.
+_CHECK_325_OVERRIDE_RATIONALE_KEY: str = "operator_override_rationale"
+_CHECK_325_OVERRIDE_MEMO_KEY: str = "operator_override_memo"
+_CHECK_325_OVERRIDE_MEMO_DIR_RELPATH: str = ".omx/research/operator_authorizations"
 
 
 def _check_325_extract_substrate_id_from_recipe(recipe_path: Path) -> str | None:
@@ -72483,21 +72926,49 @@ def _check_325_extract_substrate_id_from_recipe(recipe_path: Path) -> str | None
     return rest  # fall back to full rest
 
 
-def _check_325_parse_recipe_dispatch_enabled(recipe_path: Path) -> tuple[bool, bool, str | None]:
-    """Parse recipe YAML for dispatch_enabled, research_only, waiver.
+def _check_325_parse_recipe_dispatch_enabled(
+    recipe_path: Path,
+) -> tuple[bool, bool, str | None, str | None, str | None]:
+    """Parse recipe YAML for dispatch_enabled, research_only, waiver, override.
 
-    Returns (dispatch_enabled, research_only, waiver_rationale).
+    Returns (dispatch_enabled, research_only, waiver_rationale,
+             operator_override_rationale, operator_override_memo).
     Lightweight regex parse to avoid full YAML import cost; only the 2
-    top-level flags + same-line waiver on dispatch_enabled line are needed.
+    top-level flags + same-line waiver on dispatch_enabled line + the 2
+    operator-frontier-override fields are needed.
+
+    R11 H1-4 fix (2026-05-19): per Catalog #300 §"Mission alignment"
+    Consequence #1 + sister Catalog #325 acceptance cascade (e), recipes
+    carrying operator_override_rationale + operator_override_memo per the
+    canonical sister pattern are ratified at the gate surface so the gate
+    is no longer asymmetric vs runtime behaviour.
     """
     try:
         text = recipe_path.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return (False, False, None)
+        return (False, False, None, None, None)
 
     dispatch_enabled = False
     research_only = False
     waiver_rationale: str | None = None
+    override_rationale: str | None = None
+    override_memo: str | None = None
+
+    def _strip_inline_yaml_value(raw: str) -> str:
+        """Strip surrounding quotes + inline comment from a YAML value."""
+        s = raw.strip()
+        # Strip surrounding quotes
+        if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
+            s = s[1:-1].strip()
+        # Strip inline comment (only if outside quotes; simple heuristic)
+        if "#" in s:
+            # Conservative: only strip if # appears with leading whitespace
+            for marker in (" #", "\t#"):
+                idx = s.find(marker)
+                if idx >= 0:
+                    s = s[:idx].strip()
+                    break
+        return s
 
     for line in text.splitlines():
         stripped = line.strip()
@@ -72520,8 +72991,76 @@ def _check_325_parse_recipe_dispatch_enabled(recipe_path: Path) -> tuple[bool, b
             val = stripped[len("research_only:") :].strip().lower()
             if val.startswith("true"):
                 research_only = True
+        elif stripped.startswith(f"{_CHECK_325_OVERRIDE_RATIONALE_KEY}:"):
+            raw = stripped[len(_CHECK_325_OVERRIDE_RATIONALE_KEY) + 1 :]
+            val = _strip_inline_yaml_value(raw)
+            if val and val not in _CHECK_325_PLACEHOLDER_RATIONALES and len(val) >= 4:
+                override_rationale = val
+        elif stripped.startswith(f"{_CHECK_325_OVERRIDE_MEMO_KEY}:"):
+            raw = stripped[len(_CHECK_325_OVERRIDE_MEMO_KEY) + 1 :]
+            val = _strip_inline_yaml_value(raw)
+            if val and val not in _CHECK_325_PLACEHOLDER_RATIONALES:
+                override_memo = val
 
-    return (dispatch_enabled, research_only, waiver_rationale)
+    return (dispatch_enabled, research_only, waiver_rationale, override_rationale, override_memo)
+
+
+def _check_325_operator_frontier_override_active(
+    rationale: str | None,
+    memo_relpath: str | None,
+    repo_root: Path,
+) -> tuple[bool, str | None]:
+    """Validate operator-frontier-override cascade (e) per Catalog #325.
+
+    Returns (override_active, fail_reason). When override_active is False
+    and rationale or memo was provided, fail_reason explains why the
+    override was rejected so the violation message is operator-actionable.
+    Per Catalog #300 §"Mission alignment" Consequence #1: override REQUIRES
+    operator-verbatim rationale + audit-trail memo path. Per the canonical
+    location convention, memo MUST resolve under
+    ``.omx/research/operator_authorizations/``.
+    """
+    # Both fields absent => no override claimed; cascade (e) does not apply
+    if not rationale and not memo_relpath:
+        return (False, None)
+
+    # Partial declaration is a structural error
+    if not rationale:
+        return (
+            False,
+            f"operator_override_memo declared without operator_override_rationale "
+            f"(Catalog #325 cascade (e) per Catalog #300 §'Mission alignment' "
+            f"Consequence #1 requires BOTH fields)",
+        )
+    if not memo_relpath:
+        return (
+            False,
+            f"operator_override_rationale declared without operator_override_memo "
+            f"(Catalog #325 cascade (e) per Catalog #300 §'Mission alignment' "
+            f"Consequence #1 requires audit-trail memo path)",
+        )
+
+    # Memo path must resolve under canonical location
+    memo_path = (repo_root / memo_relpath).resolve()
+    canonical_dir = (repo_root / _CHECK_325_OVERRIDE_MEMO_DIR_RELPATH).resolve()
+    try:
+        memo_path.relative_to(canonical_dir)
+    except ValueError:
+        return (
+            False,
+            f"operator_override_memo={memo_relpath!r} not under canonical "
+            f"location {_CHECK_325_OVERRIDE_MEMO_DIR_RELPATH}/ "
+            f"(Catalog #325 cascade (e))",
+        )
+
+    if not memo_path.is_file():
+        return (
+            False,
+            f"operator_override_memo={memo_relpath!r} does not resolve to an "
+            f"existing file (Catalog #325 cascade (e))",
+        )
+
+    return (True, None)
 
 
 def _check_325_find_recent_symposium_memo(
@@ -72607,6 +73146,14 @@ def check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
             waiver on the ``dispatch_enabled:`` line (placeholder
             ``<rationale>`` / ``<reason>`` literals rejected;
             rationale must be ≥4 chars)
+        (e) operator-frontier-override per Catalog #300 §"Mission alignment"
+            Consequence #1: recipe declares BOTH
+            ``operator_override_rationale: "<verbatim operator quote>"``
+            (>=4 chars, no placeholders) AND
+            ``operator_override_memo: .omx/research/operator_authorizations/<memo>.md``
+            (memo MUST resolve under canonical audit-trail directory).
+            R11 H1-4 fix (2026-05-19): closes asymmetry where runtime
+            honored operator-frontier-override but structural gate did not.
 
     Per CLAUDE.md NON-NEGOTIABLE "PER-SUBSTRATE OPTIMAL FORM via adversarial
     grand council symposium": each ASYMPTOTIC pursuit candidate deserves
@@ -72642,7 +73189,13 @@ def check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
 
     violations: list[str] = []
     for recipe_path in sorted(recipe_dir.glob("substrate_*.yaml")):
-        dispatch_enabled, research_only, waiver = _check_325_parse_recipe_dispatch_enabled(recipe_path)
+        (
+            dispatch_enabled,
+            research_only,
+            waiver,
+            override_rationale,
+            override_memo,
+        ) = _check_325_parse_recipe_dispatch_enabled(recipe_path)
 
         # Out-of-scope: recipe not dispatch-enabled
         if not dispatch_enabled:
@@ -72656,6 +73209,38 @@ def check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor(
         if waiver:
             if verbose:
                 print(f"    WAIVED: {recipe_path.name} ({waiver})")
+            continue
+
+        # Opt-out (e) R11 H1-4 fix (2026-05-19): operator-frontier-override
+        # cascade per CLAUDE.md "Mission alignment" Consequence #1 + Catalog
+        # #300 §"Mission alignment". Recipes carrying operator_override_rationale
+        # + operator_override_memo (resolving under canonical audit-trail
+        # directory) are ratified at this gate so it is no longer asymmetric
+        # vs runtime behaviour.
+        override_active, override_fail_reason = _check_325_operator_frontier_override_active(
+            override_rationale, override_memo, root
+        )
+        if override_active:
+            if verbose:
+                print(
+                    f"    OPERATOR_FRONTIER_OVERRIDE: {recipe_path.name} "
+                    f"(rationale={override_rationale!r}, memo={override_memo})"
+                )
+            continue
+        # If override was claimed but malformed, record violation immediately
+        # so the operator gets actionable feedback (rather than the generic
+        # missing-symposium message which would mask the cascade-(e) error).
+        if override_fail_reason is not None:
+            violations.append(
+                f"[Catalog #325] {recipe_path.name}: operator-frontier-override "
+                f"cascade (e) REJECTED — {override_fail_reason}. "
+                f"Per CLAUDE.md 'Mission alignment' Consequence #1, declare "
+                f"BOTH operator_override_rationale (verbatim operator quote, "
+                f">=4 chars, no placeholders) AND operator_override_memo "
+                f"(path under {_CHECK_325_OVERRIDE_MEMO_DIR_RELPATH}/)."
+            )
+            if verbose:
+                print(f"    VIOLATION: {recipe_path.name} (override malformed)")
             continue
 
         # Now we need symposium evidence
