@@ -17,8 +17,8 @@ from tac.provenance import (
     ProvenanceKind,
     ScoreClaim,
     build_provenance_aggregate,
-    build_provenance_for_archive_seed_procedural_generation,
     build_provenance_for_archive_member,
+    build_provenance_for_archive_seed_procedural_generation,
     build_provenance_for_forbidden_out_of_archive_payload,
     build_provenance_for_macos_cpu_advisory,
     build_provenance_for_mps_proxy,
@@ -26,9 +26,9 @@ from tac.provenance import (
     build_provenance_for_research_sidecar,
     build_provenance_for_weight_derived_codebook,
     build_provenance_invalid_byte_identity_artifact,
+    register_forbidden_out_of_archive_payload_probe_outcome,
     requires_canonical_provenance,
 )
-
 
 # -----------------------------------------------------------------------------
 # build_provenance_for_archive_member
@@ -229,6 +229,50 @@ def test_build_forbidden_out_of_archive_payload_constructs():
     assert prov.artifact_kind == ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD
     assert not prov.score_claim_valid
     assert "outside archive.zip" in prov.rejection_reason
+
+
+def test_register_forbidden_out_of_archive_payload_probe_outcome(tmp_path: Path):
+    prov = build_provenance_for_forbidden_out_of_archive_payload(
+        payload_source_path="/external/payload.bin",
+        payload_sha256="3" * 64,
+        rejection_reason="output-affecting payload bytes are outside archive.zip",
+    )
+    ledger = tmp_path / "probe_outcomes.jsonl"
+    lock = tmp_path / "probe_outcomes.jsonl.lock"
+
+    row = register_forbidden_out_of_archive_payload_probe_outcome(
+        provenance=prov,
+        substrate="wz_hash_seed_candidate",
+        recipe_path=".omx/operator_authorize_recipes/wz.yaml",
+        evidence_path=".omx/research/forbidden_payload_review.md",
+        session_id="test-session",
+        path=ledger,
+        lock_path=lock,
+    )
+
+    assert row["verdict"] == "DEFER"
+    assert row["blocker_status"] == "blocking"
+    assert row["staleness_window_days"] == 365
+    assert row["probe_kind"] == "forbidden_out_of_archive_payload_provenance"
+    assert row["provenance_kind"] == "forbidden_out_of_archive_payload"
+    assert row["payload_source_path"] == "/external/payload.bin"
+    assert row["payload_source_sha256"] == "3" * 64
+    assert ledger.exists()
+
+
+def test_register_forbidden_probe_outcome_rejects_wrong_kind(tmp_path: Path):
+    prov = build_provenance_for_research_sidecar(
+        sidecar_path="experiments/results/dummy/state.pt",
+        reactivation_criteria="not a forbidden payload sentinel",
+    )
+    with pytest.raises(InvalidProvenanceError, match="FORBIDDEN_OUT_OF_ARCHIVE"):
+        register_forbidden_out_of_archive_payload_probe_outcome(
+            provenance=prov,
+            substrate="dummy",
+            evidence_path=".omx/research/dummy.md",
+            path=tmp_path / "probe_outcomes.jsonl",
+            lock_path=tmp_path / "probe_outcomes.jsonl.lock",
+        )
 
 
 # -----------------------------------------------------------------------------

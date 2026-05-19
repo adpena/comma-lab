@@ -6,7 +6,7 @@ canonical caller in the repo uses ONE of these helpers; non-canonical
 direct ``Provenance(...)`` construction outside these helpers is
 discouraged (and detected by the audit tool ``tools/audit_provenance_compliance.py``).
 
-The 6 canonical builders mirror the 6 ProvenanceKind values:
+The canonical builders mirror the ProvenanceKind values:
 
   * ``build_provenance_for_archive_member`` — CONTEST_ARCHIVE_MEMBER
   * ``build_provenance_for_research_sidecar`` — RESEARCH_SIDECAR
@@ -21,6 +21,8 @@ The 6 canonical builders mirror the 6 ProvenanceKind values:
   * ``build_provenance_for_weight_derived_codebook`` — WEIGHT_DERIVED_CODEBOOK
   * ``build_provenance_for_forbidden_out_of_archive_payload`` —
     FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD
+  * ``register_forbidden_out_of_archive_payload_probe_outcome`` —
+    Catalog #313 blocking probe-outcome bridge for the forbidden sentinel
 
 Plus 2 ergonomics helpers:
 
@@ -45,11 +47,11 @@ from __future__ import annotations
 
 import functools
 import hashlib
-import os
 import zipfile
-from datetime import datetime, timezone
+from collections.abc import Callable, Iterable, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Sequence
+from typing import Any
 
 from tac.provenance.contract import (
     InvalidProvenanceError,
@@ -63,7 +65,7 @@ from tac.provenance.contract import (
 
 def _utc_now_iso() -> str:
     """Canonical UTC timestamp in ISO format with trailing Z."""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _refuse_transient_path(path: str) -> None:
@@ -115,12 +117,11 @@ def _sha256_of_file(path: Path) -> str:
 
 def _sha256_of_archive_member(archive_zip_path: Path, member_name: str) -> str:
     """SHA-256 over the UNZIPPED member bytes (not the compressed bytes)."""
-    with zipfile.ZipFile(archive_zip_path, "r") as zf:
-        with zf.open(member_name) as member:
-            h = hashlib.sha256()
-            for chunk in iter(lambda: member.read(65536), b""):
-                h.update(chunk)
-            return h.hexdigest()
+    with zipfile.ZipFile(archive_zip_path, "r") as zf, zf.open(member_name) as member:
+        h = hashlib.sha256()
+        for chunk in iter(lambda: member.read(65536), b""):
+            h.update(chunk)
+        return h.hexdigest()
 
 
 # -----------------------------------------------------------------------------
@@ -133,7 +134,7 @@ def build_provenance_for_archive_member(
     measurement_axis: str,
     hardware_substrate: str,
     evidence_grade: ProvenanceEvidenceGrade,
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for CONTEST_ARCHIVE_MEMBER Provenance.
 
@@ -208,7 +209,7 @@ def build_provenance_for_research_sidecar(
     reactivation_criteria: str,
     measurement_axis: str = "[research-signal]",
     hardware_substrate: str = "unknown",
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for RESEARCH_SIDECAR Provenance (Catalog #321 anchor).
 
@@ -242,12 +243,9 @@ def build_provenance_for_research_sidecar(
             " (per CLAUDE.md 'Forbidden premature KILL')"
         )
 
-    if not sidecar_path_obj.exists():
-        # Allow missing sidecar (we record the path + a placeholder sha)
-        # so DEFERRED-pending-research artifacts can carry Provenance.
-        sha = "0" * 64
-    else:
-        sha = _sha256_of_file(sidecar_path_obj)
+    # Allow missing sidecars so DEFERRED-pending-research artifacts can carry
+    # Provenance with an explicit placeholder sha.
+    sha = "0" * 64 if not sidecar_path_obj.exists() else _sha256_of_file(sidecar_path_obj)
 
     return Provenance(
         artifact_kind=ProvenanceKind.RESEARCH_SIDECAR,
@@ -273,7 +271,7 @@ def build_provenance_for_predicted(
     inputs_sha256: str,
     measurement_axis: str = "[predicted]",
     hardware_substrate: str = "unknown",
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for PREDICTED_FROM_MODEL Provenance.
 
@@ -317,7 +315,7 @@ def build_provenance_for_predicted(
 def build_provenance_for_macos_cpu_advisory(
     archive_sha256: str,
     source_path: str,
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for macOS-CPU advisory Provenance (Catalog #192).
 
@@ -350,7 +348,7 @@ def build_provenance_for_macos_cpu_advisory(
 def build_provenance_for_mps_proxy(
     artifact_sha256: str,
     source_path: str,
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for MPS proxy Provenance.
 
@@ -383,7 +381,7 @@ def build_provenance_aggregate(
     parts: Sequence[Provenance],
     aggregation_rationale: str,
     aggregation_path: str = "<aggregate>",
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for AGGREGATE_OF_PROVENANCES (Catalog #319/#823 anchor).
 
@@ -502,7 +500,7 @@ def build_provenance_invalid_byte_identity_artifact(
     source_path_b: str,
     identical_sha256: str,
     rejection_reason: str,
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for INVALID_BYTE_IDENTITY_ARTIFACT (Catalog #823 anchor).
 
@@ -545,7 +543,7 @@ def build_provenance_for_archive_seed_procedural_generation(
     seed_source_path: str,
     seed_sha256: str,
     rationale: str,
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for archive-seed procedural-generation provenance.
 
@@ -579,7 +577,7 @@ def build_provenance_for_weight_derived_codebook(
     weight_source_path: str,
     weight_sha256: str,
     rationale: str,
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical builder for codebooks derived from shipped archive weights."""
     if not rationale or not rationale.strip():
@@ -608,7 +606,7 @@ def build_provenance_for_forbidden_out_of_archive_payload(
     payload_source_path: str,
     payload_sha256: str,
     rejection_reason: str,
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Canonical fail-closed sentinel for output-affecting external payloads."""
     if not rejection_reason or not rejection_reason.strip():
@@ -633,6 +631,89 @@ def build_provenance_for_forbidden_out_of_archive_payload(
     )
 
 
+def _probe_id_token(value: str) -> str:
+    """Return a deterministic lowercase token safe for probe_id fields."""
+    out = []
+    for ch in value.lower():
+        if ch.isalnum():
+            out.append(ch)
+        elif ch in {"-", "_", ".", "/", ":"}:
+            out.append("_")
+    token = "".join(out).strip("_")
+    return token or "unknown"
+
+
+def register_forbidden_out_of_archive_payload_probe_outcome(
+    *,
+    provenance: Provenance,
+    substrate: str,
+    evidence_path: str,
+    recipe_path: str | None = None,
+    next_action: str | None = None,
+    agent: str = "codex",
+    subagent_id: str | None = None,
+    session_id: str | None = None,
+    notes: str | None = None,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+) -> dict[str, Any]:
+    """Register a 365-day blocking probe outcome for forbidden payload provenance.
+
+    This is the explicit Catalog #313 bridge for
+    ``FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD``. Provenance construction stays pure:
+    callers opt in to the shared-state write only after they have an evidence
+    path and substrate identity for the blocking verdict.
+    """
+    if provenance.artifact_kind != ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD:
+        raise InvalidProvenanceError(
+            "register_forbidden_out_of_archive_payload_probe_outcome requires "
+            "ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD"
+        )
+    if not evidence_path or not evidence_path.strip():
+        raise InvalidProvenanceError(
+            "forbidden out-of-archive probe outcome requires non-empty evidence_path"
+        )
+    if not provenance.rejection_reason:
+        raise InvalidProvenanceError(
+            "forbidden out-of-archive probe outcome requires rejection_reason"
+        )
+
+    from tac.probe_outcomes_ledger import register_probe_outcome
+
+    source_token = _probe_id_token(provenance.source_path)[:80]
+    probe_id = (
+        "forbidden_out_of_archive_payload_"
+        f"{_probe_id_token(substrate)[:80]}_"
+        f"{provenance.source_sha256[:12]}_"
+        f"{source_token}"
+    )
+    return register_probe_outcome(
+        probe_id=probe_id,
+        substrate=substrate,
+        recipe_path=recipe_path,
+        probe_kind="forbidden_out_of_archive_payload_provenance",
+        verdict="DEFER",
+        metric_name="forbidden_out_of_archive_payload_present",
+        metric_value=1.0,
+        threshold=0.0,
+        threshold_token="ANY_OUTPUT_AFFECTING_PAYLOAD_OUTSIDE_ARCHIVE_FORBIDDEN",
+        evidence_path=evidence_path,
+        next_action=next_action
+        or "move output-affecting bytes inside archive.zip or prove no-score-impact",
+        blocker_status="blocking",
+        staleness_window_days=365,
+        agent=agent,
+        subagent_id=subagent_id,
+        session_id=session_id,
+        notes=notes or provenance.rejection_reason,
+        path=path,
+        lock_path=lock_path,
+        provenance_kind=provenance.artifact_kind.value,
+        payload_source_path=provenance.source_path,
+        payload_source_sha256=provenance.source_sha256,
+    )
+
+
 # -----------------------------------------------------------------------------
 # Class-method shorthand on Provenance (ergonomics)
 # -----------------------------------------------------------------------------
@@ -644,7 +725,7 @@ def _from_archive_zip_member(
     measurement_axis: str,
     hardware_substrate: str,
     evidence_grade: ProvenanceEvidenceGrade,
-    captured_at_utc: Optional[str] = None,
+    captured_at_utc: str | None = None,
 ) -> Provenance:
     """Class-method shim for the common case.
 
@@ -747,15 +828,16 @@ def requires_canonical_provenance(
 
 
 __all__ = [
+    "build_provenance_aggregate",
     "build_provenance_for_archive_member",
-    "build_provenance_for_research_sidecar",
-    "build_provenance_for_predicted",
+    "build_provenance_for_archive_seed_procedural_generation",
+    "build_provenance_for_forbidden_out_of_archive_payload",
     "build_provenance_for_macos_cpu_advisory",
     "build_provenance_for_mps_proxy",
-    "build_provenance_aggregate",
-    "build_provenance_invalid_byte_identity_artifact",
-    "build_provenance_for_archive_seed_procedural_generation",
+    "build_provenance_for_predicted",
+    "build_provenance_for_research_sidecar",
     "build_provenance_for_weight_derived_codebook",
-    "build_provenance_for_forbidden_out_of_archive_payload",
+    "build_provenance_invalid_byte_identity_artifact",
+    "register_forbidden_out_of_archive_payload_probe_outcome",
     "requires_canonical_provenance",
 ]

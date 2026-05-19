@@ -239,6 +239,7 @@ external = [
 "src/tac/master_gradient_consumers.py" = ["RUF022"]  # consumer-ordered public API
 "src/tac/preflight.py" = ["ALL"]  # legacy mega-gate; use focused tests/strict checks, avoid broad mechanical ruff churn
 "src/tac/packet_compiler/__init__.py" = ["I001", "RUF022"]  # public API is grouped by codec family / PR lineage
+"src/tac/provenance/__init__.py" = ["RUF022"]  # public API is grouped by authority surface: contract/builders/validator/adapters
 
 [tool.ruff.lint.isort]
 known-first-party = ["tac", "comma_lab"]

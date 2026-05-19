@@ -54,38 +54,6 @@ Cross-references:
 
 from __future__ import annotations
 
-from tac.provenance.contract import (
-    CANONICAL_HARDWARE_SUBSTRATES,
-    CANONICAL_MEASUREMENT_AXES,
-    InvalidProvenanceError,
-    MissingProvenanceError,
-    NULL_NOT_A_SCORE_CLAIM,
-    PROVENANCE_SCHEMA_VERSION,
-    Provenance,
-    ProvenanceEvidenceGrade,
-    ProvenanceKind,
-    ScoreClaim,
-)
-from tac.provenance.builders import (
-    build_provenance_aggregate,
-    build_provenance_for_archive_seed_procedural_generation,
-    build_provenance_for_archive_member,
-    build_provenance_for_forbidden_out_of_archive_payload,
-    build_provenance_for_macos_cpu_advisory,
-    build_provenance_for_mps_proxy,
-    build_provenance_for_predicted,
-    build_provenance_for_research_sidecar,
-    build_provenance_for_weight_derived_codebook,
-    build_provenance_invalid_byte_identity_artifact,
-    requires_canonical_provenance,
-)
-from tac.provenance.validator import (
-    DEFAULT_PROVENANCE_STALE_DAYS,
-    audit_score_claim_dict,
-    provenance_to_dict,
-    validate_provenance,
-    validate_score_claim,
-)
 from tac.provenance.adapters import (
     contest_result_to_provenance,
     cost_band_anchor_to_provenance,
@@ -95,6 +63,39 @@ from tac.provenance.adapters import (
     modal_call_id_ledger_event_to_provenance,
     substrate_composition_row_to_provenance,
     wyner_ziv_layer_result_to_provenance,
+)
+from tac.provenance.builders import (
+    build_provenance_aggregate,
+    build_provenance_for_archive_member,
+    build_provenance_for_archive_seed_procedural_generation,
+    build_provenance_for_forbidden_out_of_archive_payload,
+    build_provenance_for_macos_cpu_advisory,
+    build_provenance_for_mps_proxy,
+    build_provenance_for_predicted,
+    build_provenance_for_research_sidecar,
+    build_provenance_for_weight_derived_codebook,
+    build_provenance_invalid_byte_identity_artifact,
+    register_forbidden_out_of_archive_payload_probe_outcome,
+    requires_canonical_provenance,
+)
+from tac.provenance.contract import (
+    CANONICAL_HARDWARE_SUBSTRATES,
+    CANONICAL_MEASUREMENT_AXES,
+    NULL_NOT_A_SCORE_CLAIM,
+    PROVENANCE_SCHEMA_VERSION,
+    InvalidProvenanceError,
+    MissingProvenanceError,
+    Provenance,
+    ProvenanceEvidenceGrade,
+    ProvenanceKind,
+    ScoreClaim,
+)
+from tac.provenance.validator import (
+    DEFAULT_PROVENANCE_STALE_DAYS,
+    audit_score_claim_dict,
+    provenance_to_dict,
+    validate_provenance,
+    validate_score_claim,
 )
 
 __all__ = [
@@ -120,6 +121,7 @@ __all__ = [
     "build_provenance_for_archive_seed_procedural_generation",
     "build_provenance_for_weight_derived_codebook",
     "build_provenance_for_forbidden_out_of_archive_payload",
+    "register_forbidden_out_of_archive_payload_probe_outcome",
     "requires_canonical_provenance",
     # Validator
     "DEFAULT_PROVENANCE_STALE_DAYS",
