@@ -40916,6 +40916,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_master_gradient_post_decompress_grain_multi_archive_extension_20260519",
+      "name": "Post-decompress master-gradient grain extended to PR106+PR107+A1+DP1+HDM8 (brotli/HDM/LZMA/mixed cascade fix)",
+      "phase": 5.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/master_gradient_post_decompress_multi_archive.py (5 per-family post-decompress layout builders + cascade severity classifier + cross-family aggregator)"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": ".omx/research/post_decompress_multi_archive_layouts_20260519/SUMMARY.json (5 frontier archives parsed end-to-end with empirical layouts)"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/post_decompress_vs_raw_byte_master_gradient_empirical_comparison_20260519.md (cascade-smearing factor analysis + per-family recommendations)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_frontier_pointer_model_plus_de_hardcode_20260519",
+      "name": "Frontier pointer model + CLAUDE.md de-hardcode + upstream auto-fetch + DX auto-update",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/canonical_frontier_pointer.py + tools/refresh_canonical_frontier.py + Catalog #343 + DX auto-update wire-in"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #343 check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded warn-only at landing"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_frontier_pointer_model_plus_de_hardcode_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -40925,5 +41007,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T13:24:21Z"
+  "updated_at": "2026-05-19T13:26:40Z"
 }
