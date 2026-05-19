@@ -19,8 +19,12 @@ Modules:
 * :mod:`tac.solvers.sinkhorn` — Cuturi 2013 entropic-regularized optimal transport
 * :mod:`tac.solvers.riemannian_newton_stiefel` — Edelman-Arias-Smith 1998 manifold opt
 * :mod:`tac.solvers.numba_jit_water_filling` — Numba-JIT canonical water-filling
+* :mod:`tac.solvers.more_optimal_algorithms` — canonical shim package + per-algorithm
+  metadata registry (PROCEED'd at council T3 finding #6 2026-05-18) for consumer-side
+  adoption decisions per Catalog #290 canonical-vs-unique decision per layer.
 
-Each module ≤ 120 LOC per operator's "beautiful elegant composable" directive.
+Each module ≤ 200 LOC (the canonical shim is ≤ 280 incl. metadata) per operator's
+"beautiful elegant composable" directive.
 """
 
 from __future__ import annotations
@@ -31,4 +35,5 @@ __all__ = [
     "sinkhorn",
     "riemannian_newton_stiefel",
     "numba_jit_water_filling",
+    "more_optimal_algorithms",
 ]
