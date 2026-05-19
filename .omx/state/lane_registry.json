@@ -41244,6 +41244,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_findings_review_top_findings_and_operator_routable_recommendations_20260519",
+      "name": "Codex findings review: surface top-N + operator-routable recommendations + orphan-signal-class identification",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_review_top_findings_and_operator_routable_recommendations_20260519.md (review memo, 60+ codex findings classified, TOP-15 ranked, 8 orphans identified, operator-routable queue sorted by EV/$)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_codex_findings_review_top_findings_landed_20260519.md (pending \u2014 landing memo to be written next)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -41253,5 +41294,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T14:07:22Z"
+  "updated_at": "2026-05-19T14:08:31Z"
 }
