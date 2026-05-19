@@ -29,8 +29,8 @@ parse_pr107_apogee_archive_layout) under a canonical
     CLIs may delegate to tac modules, NOT the other way around).
 
 (b) The autograd extraction path in ``tools/extract_master_gradient.py``
-    can register additional archive grammars (PR106 format0d Jacobian,
-    PR107 apogee Jacobian, DP1 renderer/codebook/residual Jacobian) by
+    can register additional archive grammars (PR107 apogee Jacobian,
+    DP1 renderer/codebook/residual Jacobian) by
     populating the ``_SUPPORTED_PROJECTORS`` registry without breaking
     consumer imports.
 
@@ -91,7 +91,7 @@ ARCHIVE_GRAMMAR_REGISTRY: tuple[tuple[str, bool], ...] = (
     ("fec6_fp11_selector", True),
     ("a1_finetuned", True),
     ("pr101_lc_v2", True),
-    ("pr106_format0d", False),
+    ("pr106_format0d", True),
     ("pr106_ff_packed_hnerv", False),
     ("hnerv_lc_v2_length_prefixed", False),
     ("pr107_apogee_length_prefixed", False),

@@ -80,6 +80,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+import brotli
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -118,6 +119,7 @@ from tac.master_gradient import (  # noqa: E402
 )
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
+    decode_pr106_sidecar_packet_correction_passes,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
 )
@@ -252,6 +254,10 @@ _SUPPORTED_PROJECTORS: dict[str, tuple[str, str]] = {
         "fec6_pr101_fixed_section_int8_fp16_jacobian",
         "PR101 fixed decoder/latent/sidecar offsets match the existing split-Brotli Jacobian path.",
     ),
+    "pr106_format0d": (
+        "pr106_format0d_primary_packed_hnerv_decoder_jacobian_sidecar_zero_grad_v1",
+        "Format0d PacketIR primary payload is projected through the PR106 packed-HNeRV decoder Jacobian; discrete base/extra sidecar sections are preserved with explicit zero-gradient v1 semantics.",
+    ),
     "a1_finetuned": (
         "a1_headered_pr101_fixed_section_int8_fp16_jacobian",
         "A1 adds a 4-byte decoder-section header, then reuses the PR101-family fixed-section projector with zero-gradient header semantics.",
@@ -262,10 +268,6 @@ _DETECTION_ONLY_PROJECTORS: dict[str, tuple[str, str]] = {
     "dp1_pretrained_driving_prior": (
         "dp1_pretrained_driving_prior_schema_projector",
         "DP1 has canonical section offsets, but renderer/codebook/residual projection is not wired into this master-gradient extractor.",
-    ),
-    "pr106_format0d": (
-        "pr106_format0d_packet_ir_two_pass_jacobian_projector",
-        "Format0d PacketIR section boundaries are exact, but the primary PR106 payload plus base/extra ranked-no-op sidecars need a two-pass Jacobian projector before anchor emission.",
     ),
     "pr106_ff_packed_hnerv": (
         "pr106_packed_brotli_schema_projector",
@@ -930,10 +932,10 @@ def parse_pr106_format0d_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
         archive_bytes=archive_bytes,
         extracted=extracted,
         sections=sections,
-        gradient_projection_supported=False,
+        gradient_projection_supported=True,
         parser_notes=(
             "PR106 format0d boundary detection is PacketIR-backed and byte-identity checked via pr106_sidecar_consumed_byte_proof.",
-            "Master-gradient anchor emission remains fail-closed until the primary-payload plus base/extra sidecar two-pass Jacobian projector exists.",
+            "Primary packed-HNeRV decoder bytes are projector-backed; discrete base/extra sidecar streams retain explicit zero-gradient v1 semantics.",
         ),
     )
 
@@ -1413,6 +1415,133 @@ def parse_fec6_archive_layout(archive_path: Path, codec_module) -> _Fec6ArchiveL
         eval_size=tuple(codec_module.EVAL_SIZE),
         has_fp11_outer_wrapper=has_fp11_outer,
         has_a1_headered_decoder=has_a1_header,
+    )
+
+
+def _proof_section_by_name(packet, name: str) -> Mapping[str, object]:
+    """Return a PacketIR consumed-byte proof section by name."""
+    proof = pr106_sidecar_consumed_byte_proof(packet)
+    sections = proof.get("sections")
+    if not isinstance(sections, list):
+        raise ValueError("PR106 PacketIR proof sections payload is malformed")
+    for row in sections:
+        if isinstance(row, Mapping) and row.get("name") == name:
+            return row
+    raise ValueError(f"PR106 PacketIR proof missing section {name!r}")
+
+
+def _section_offset_length(row: Mapping[str, object]) -> tuple[int, int]:
+    """Extract canonical integer offset/length from a section row."""
+    offset = int(row.get("offset", row.get("offset_start", -1)))
+    length = int(row.get("bytes", row.get("byte_count", -1)))
+    if offset < 0 or length < 0:
+        raise ValueError(f"bad section offset/length: {row!r}")
+    return offset, length
+
+
+def _decode_pr106_packed_decoder_raw(codec_module, decoder_blob: bytes) -> bytes:
+    """Decode PR106 packed-HNeRV decoder bytes to q-stream + fp32 scales."""
+    try:
+        return brotli.decompress(decoder_blob)
+    except brotli.error as legacy_error:
+        if decoder_blob[:4] in (b"HDM3", b"HDM4", b"HDM6", b"HDM7", b"HDM8", b"HDM9"):
+            return codec_module.decode_hdm_decoder_raw(decoder_blob)
+        return codec_module.decode_pr101_schema_decoder_raw(
+            decoder_blob,
+            legacy_error=legacy_error,
+        )
+
+
+def _packed_hnerv_tensor_spans(codec_module, raw: bytes) -> tuple[_TensorByteSpan, ...]:
+    """Build tensor spans for PR106 packed-HNeRV q-stream + fp32 scales."""
+    packed_schema = tuple(codec_module.PACKED_STATE_SCHEMA)
+    q_total = sum(int(np.prod(shape)) for _name, shape in packed_schema)
+    scale_total = 4 * len(packed_schema)
+    if len(raw) != q_total + scale_total:
+        raise ValueError(
+            "PR106 packed-HNeRV raw decoder length mismatch: "
+            f"got={len(raw)} expected={q_total + scale_total}"
+        )
+
+    spans: list[_TensorByteSpan] = []
+    pos = 0
+    for scale_index, (name, shape) in enumerate(packed_schema):
+        shape_tuple = tuple(int(dim) for dim in shape)
+        numel = int(np.prod(shape_tuple))
+        scale_byte_offset = q_total + 4 * scale_index
+        scale = float(struct.unpack_from("<f", raw, scale_byte_offset)[0])
+        spans.append(
+            _TensorByteSpan(
+                name=str(name),
+                storage_index=-1,
+                shape=shape_tuple,
+                numel=numel,
+                mantissa_byte_offset=pos,
+                scale_byte_offset=scale_byte_offset,
+                fp16_scale=scale,
+                byte_map="zig",
+            )
+        )
+        pos += numel
+    return tuple(spans)
+
+
+def parse_pr106_format0d_projector_layout(
+    archive_path: Path,
+    codec_module,
+) -> _Fec6ArchiveLayout:
+    """Parse PR106 format0d for its primary packed-HNeRV decoder projector.
+
+    The discrete base/extra sidecar streams affect the decoded operating point,
+    but this projector assigns zero sidecar-byte gradient in v1, matching the
+    existing PR101 sidecar discipline. Operator-response rows remain the route
+    for packet-valid sidecar mutations.
+    """
+    archive_bytes = archive_path.read_bytes()
+    archive_sha256 = _sha256_bytes(archive_bytes)
+    packet = parse_pr106_sidecar_packet(archive_bytes)
+    if packet.format_id != PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        raise ValueError(f"expected PR106 format0d packet, got format_id=0x{packet.format_id:02x}")
+    pr106_row = _proof_section_by_name(packet, "pr106_payload")
+    pr106_offset, pr106_length = _section_offset_length(pr106_row)
+    if pr106_length != len(packet.pr106_bytes):
+        raise ValueError("PR106 PacketIR proof length disagrees with parsed primary payload")
+    pr106_payload = packet.pr106_bytes
+    if len(pr106_payload) < 5 or pr106_payload[0] != 0xFF:
+        raise ValueError("PR106 format0d primary payload is not packed-HNeRV 0xff layout")
+
+    decoder_blob_len = int.from_bytes(pr106_payload[1:4], "little")
+    decoder_blob_offset = pr106_offset + 4
+    decoder_blob_end = decoder_blob_offset + decoder_blob_len
+    if decoder_blob_len <= 0 or decoder_blob_end >= pr106_offset + pr106_length:
+        raise ValueError(f"bad PR106 format0d primary decoder length {decoder_blob_len}")
+    decoder_blob = pr106_payload[4 : 4 + decoder_blob_len]
+    decoder_raw = _decode_pr106_packed_decoder_raw(codec_module, decoder_blob)
+    spans = _packed_hnerv_tensor_spans(codec_module, decoder_raw)
+
+    latent_blob_offset = decoder_blob_end
+    latent_blob_len = pr106_length - 4 - decoder_blob_len
+    sidecar_row = _proof_section_by_name(packet, "base_format0c_sidecar_payload")
+    sidecar_offset, _sidecar_len = _section_offset_length(sidecar_row)
+    return _Fec6ArchiveLayout(
+        archive_path=archive_path,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        n_archive_bytes=len(archive_bytes),
+        decoder_blob_offset=decoder_blob_offset,
+        decoder_blob_len=decoder_blob_len,
+        decoder_tensor_spans=spans,
+        decoder_raw_decompressed=decoder_raw,
+        latent_blob_offset=latent_blob_offset,
+        latent_blob_len=latent_blob_len,
+        sidecar_blob_offset=sidecar_offset,
+        sidecar_blob_len=len(archive_bytes) - sidecar_offset,
+        n_pairs=600,
+        latent_dim=28,
+        base_channels=36,
+        eval_size=(384, 512),
+        has_fp11_outer_wrapper=False,
+        has_a1_headered_decoder=False,
     )
 
 
@@ -1907,6 +2036,25 @@ def _maybe_extract_inner_archive_from_zip(zip_path: Path) -> bytes:
     return _extract_gradient_subject_from_archive_bytes(zip_path.read_bytes()).payload
 
 
+def _apply_pr106_sidecar_correction_passes(latents: torch.Tensor, packet) -> torch.Tensor:
+    """Apply PR106 PacketIR correction passes exactly as the format0d runtime does."""
+    corrected = latents.clone()
+    for dims, deltas in decode_pr106_sidecar_packet_correction_passes(packet):
+        if len(dims) < corrected.shape[0] or len(deltas) < corrected.shape[0]:
+            raise ValueError(
+                "PR106 sidecar correction arrays shorter than decoded latents: "
+                f"dims={len(dims)} deltas={len(deltas)} latents={corrected.shape[0]}"
+            )
+        for pair_index in range(corrected.shape[0]):
+            dim = int(dims[pair_index])
+            if dim == 255:
+                continue
+            if dim < 0 or dim >= corrected.shape[1]:
+                raise ValueError(f"PR106 sidecar dim {dim} outside latent width {corrected.shape[1]}")
+            corrected[pair_index, dim] = corrected[pair_index, dim] + float(deltas[pair_index]) * 0.01
+    return corrected
+
+
 def _serialize_archive_to_temp(raw_bytes: bytes, scratch_dir: Path) -> Path:
     """Write raw archive bytes to a scratch file for layout parsing."""
     scratch_dir.mkdir(parents=True, exist_ok=True)
@@ -2074,11 +2222,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise SystemExit("--inflate-py is required unless --detect-grammar-only is set")
     if args.upstream_dir is None:
         raise SystemExit("--upstream-dir is required unless --detect-grammar-only is set")
-    if detected_name not in {"fec6_fp11_selector", "pr101_lc_v2", "a1_finetuned"}:
+    if detected_name not in {"fec6_fp11_selector", "pr101_lc_v2", "a1_finetuned", "pr106_format0d"}:
         raise SystemExit(
             f"archive grammar {detected_name!r} is xray/detection-only in this extractor; "
-            "byte-gradient authority is currently implemented only for fec6_fp11_selector "
-            "plus PR101-family fixed/headered layouts with matching codec.py. Re-run with --detect-grammar-only "
+            "byte-gradient authority is currently implemented only for fec6_fp11_selector, "
+            "PR101-family fixed/headered layouts, and PR106 format0d primary packed-HNeRV "
+            "decoder bytes with matching codec.py. Re-run with --detect-grammar-only "
             "or wire a grammar-aware projector before emitting a master-gradient anchor."
         )
 
@@ -2122,7 +2271,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"sections={len(detected_layout.sections)}"
     )
     print(f"[master-gradient] parsing archive layout from {scratch_archive} ({len(raw_archive_bytes)} bytes)")
-    layout = parse_fec6_archive_layout(scratch_archive, codec_module)
+    if detected_name == "pr106_format0d":
+        layout = parse_pr106_format0d_projector_layout(scratch_archive, codec_module)
+    else:
+        layout = parse_fec6_archive_layout(scratch_archive, codec_module)
     if layout.archive_sha256 != gradient_subject_sha256:
         raise RuntimeError(
             "layout archive sha mismatch: "
@@ -2158,7 +2310,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         # Parse decoder state_dict + latents from archive (using submitter codec)
         print("[master-gradient] decoding archive via canonical codec parser")
-        if layout.has_fp11_outer_wrapper:
+        if detected_name == "pr106_format0d":
+            packet = parse_pr106_sidecar_packet(raw_archive_bytes)
+            decoder_sd, latents, meta = codec_module.parse_packed_archive(packet.pr106_bytes)
+            latents = _apply_pr106_sidecar_correction_passes(latents, packet)
+        elif layout.has_fp11_outer_wrapper:
             # parse_archive expects inner bytes
             source_payload = raw_archive_bytes[8 : 8 + struct.unpack_from("<I", raw_archive_bytes, 4)[0]]
             decoder_sd, latents, meta = codec_module.parse_archive(source_payload)
@@ -2225,7 +2381,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         seg_marg, pose_marg, rate_per_byte = compute_marginal_coefficients(op)
         print(f"[master-gradient] marginals: dS/d_seg={seg_marg:.1f} dS/d_pose={pose_marg:.2f} dS/d_byte={rate_per_byte:.3e}")
 
-        print("[master-gradient] projecting per-parameter grad to per-byte (fec6 codec Jacobian)")
+        measurement_method_base = (
+            "autograd_per_parameter_projected_pr106_format0d_primary_packed_hnerv_decoder_jacobian_sidecar_zero_grad_v1"
+            if detected_name == "pr106_format0d"
+            else "autograd_per_parameter_projected_fec6_int8_fp16_jacobian"
+        )
+        print(f"[master-gradient] projecting per-parameter grad to per-byte ({measurement_method_base})")
         G = project_per_param_gradient_to_per_byte(
             layout, grad_seg_sd, grad_pose_sd, inner_base=0
         )
@@ -2251,7 +2412,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 operating_point=op,
                 gradient_array_path=str(args.output_npy.resolve()),
                 n_bytes=layout.n_archive_bytes,
-                measurement_method="autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+                measurement_method=measurement_method_base,
                 measurement_axis=args.axis,
                 measurement_hardware=hardware_substrate,
                 measurement_call_id=args.call_id,
@@ -2364,8 +2525,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     gradient_array_path=str(per_pair_output_npy.resolve()),
                     n_bytes=layout.n_archive_bytes,
                     measurement_method=(
-                        "autograd_per_parameter_projected_fec6_int8_fp16_jacobian"
-                        f"_per_pair_{args.n_pairs_used}pair"
+                        f"{measurement_method_base}_per_pair_{args.n_pairs_used}pair"
                     ),
                     measurement_axis=args.axis,
                     measurement_hardware=hardware_substrate,

@@ -18,6 +18,7 @@ import zipfile
 from pathlib import Path
 from typing import ClassVar
 
+import brotli
 import numpy as np
 import pytest
 import torch
@@ -79,7 +80,7 @@ def _pr101_payload() -> bytes:
     return b"\x1b\xcd\x03\xf8" + b"D" * (162_164 - 4) + b"L" * 15_387 + b"SIDE"
 
 
-def _pr106_payload() -> bytes:
+def _pr106_payload(primary: bytes | None = None) -> bytes:
     from tac.packet_compiler.pr106_sidecar_packet import (
         PR106_LATENT_N_DIMS,
         PR106_LATENT_N_PAIRS,
@@ -91,7 +92,8 @@ def _pr106_payload() -> bytes:
         encode_pr106_format0d_sidecar_payload,
     )
 
-    primary = b"P" * 5
+    if primary is None:
+        primary = b"P" * 5
     base_dims = (np.arange(PR106_LATENT_N_PAIRS) % PR106_LATENT_N_DIMS).astype(
         np.uint8
     )
@@ -797,7 +799,7 @@ def test_validate_measurement_authority_refuses_advisory_contest_axis():
                 "extra_pr101_ranked_no_op_payload",
                 "extra_framing_meta",
             ],
-            False,
+            True,
         ),
         (
             _zip_payload(_dp1_payload(), member_name="0.bin"),
@@ -916,12 +918,12 @@ def test_detect_archive_grammar_only_cli_prints_json(tmp_path, capsys):
     assert rc == 0
     parsed = json.loads(capsys.readouterr().out)
     assert parsed["grammar_name"] == "pr106_format0d"
-    assert parsed["gradient_projection_supported"] is False
-    assert parsed["projection_contract"]["authority"] == "fail_closed_detection_only"
-    assert parsed["projection_contract"]["anchor_emission_allowed"] is False
+    assert parsed["gradient_projection_supported"] is True
+    assert parsed["projection_contract"]["authority"] == "gradient_projector_supported"
+    assert parsed["projection_contract"]["anchor_emission_allowed"] is True
     assert (
         parsed["projection_contract"]["required_projector"]
-        == "pr106_format0d_packet_ir_two_pass_jacobian_projector"
+        == "pr106_format0d_primary_packed_hnerv_decoder_jacobian_sidecar_zero_grad_v1"
     )
     sections = {row["name"]: row for row in parsed["sections"]}
     assert sections["magic"]["score_affecting"] is False
@@ -932,7 +934,7 @@ def test_detect_archive_grammar_only_cli_prints_json(tmp_path, capsys):
 
 def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
     archive = tmp_path / "archive.zip"
-    archive.write_bytes(_zip_payload(_pr106_payload()))
+    archive.write_bytes(_zip_payload(_pr106_ff_payload(), member_name="0.bin"))
     fake_inflate = tmp_path / "inflate.py"
     fake_inflate.write_text("# no src import should happen before fail-closed grammar gate\n")
     fake_upstream = tmp_path / "upstream"
@@ -960,12 +962,12 @@ def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
         )
     assert not (tmp_path / "grad.npy").exists()
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
-    assert contract["grammar_name"] == "pr106_format0d"
+    assert contract["grammar_name"] == "pr106_ff_packed_hnerv"
     assert contract["projection_contract"]["authority"] == "fail_closed_detection_only"
     assert contract["projection_contract"]["anchor_emission_allowed"] is False
     assert (
         contract["projection_contract"]["required_projector"]
-        == "pr106_format0d_packet_ir_two_pass_jacobian_projector"
+        == "pr106_packed_brotli_schema_projector"
     )
 
 
@@ -999,7 +1001,7 @@ def test_pr106_format0d_live_archive_packetir_sections_are_pinned():
         "15a5dccba352838df7a8dd190a8782e51afa53b475bcf07921f05ce88c10785e"
     )
     assert layout.gradient_subject_bytes == 186_776
-    assert layout.gradient_projection_supported is False
+    assert layout.gradient_projection_supported is True
     by_name = {section.name: section for section in layout.sections}
     expected = {
         "magic": (0, 1, False, "aa687b58b0e73e2e383f8c500d75b591e188efe0168b3ffbcd3771caaa6dd4c7"),
@@ -1017,6 +1019,75 @@ def test_pr106_format0d_live_archive_packetir_sections_are_pinned():
         assert section.length == length
         assert section.score_affecting is score_affecting
         assert section.sha256 == sha256
+
+
+def test_pr106_format0d_projector_layout_maps_primary_decoder_bytes(tmp_path):
+    decoder_raw = b"\x01\x02" + struct.pack("<f", 1.25)
+    decoder_blob = brotli.compress(decoder_raw)
+    primary = b"\xff" + len(decoder_blob).to_bytes(3, "little") + decoder_blob + b"LATENT"
+    archive = tmp_path / "format0d.bin"
+    archive.write_bytes(_pr106_payload(primary=primary))
+
+    class _TinyPR106PackedCodecModule:
+        PACKED_STATE_SCHEMA: ClassVar[tuple[tuple[str, tuple[int, ...]], ...]] = (
+            ("weight", (2,)),
+        )
+
+    layout = emg.parse_pr106_format0d_projector_layout(
+        archive,
+        _TinyPR106PackedCodecModule,
+    )
+
+    assert layout.n_archive_bytes == len(archive.read_bytes())
+    assert layout.decoder_blob_offset == 10
+    assert layout.decoder_blob_len == len(decoder_blob)
+    assert layout.latent_blob_offset == 10 + len(decoder_blob)
+    assert layout.latent_blob_len == len(b"LATENT")
+    assert layout.sidecar_blob_offset > layout.latent_blob_offset
+    span = layout.decoder_tensor_spans[0]
+    assert span.name == "weight"
+    assert span.numel == 2
+    assert span.mantissa_byte_offset == 0
+    assert span.scale_byte_offset == 2
+    assert span.fp16_scale == pytest.approx(1.25)
+
+    gradient = emg.project_per_param_gradient_to_per_byte(
+        layout,
+        {"weight": torch.tensor([2.0, -1.0])},
+        {"weight": torch.tensor([0.5, 0.5])},
+    )
+    assert gradient.shape == (layout.n_archive_bytes, 3)
+    np.testing.assert_allclose(gradient[: layout.decoder_blob_offset], 0.0)
+    np.testing.assert_allclose(gradient[:, 2], 0.0)
+    np.testing.assert_allclose(
+        gradient[
+            layout.decoder_blob_offset : layout.decoder_blob_offset + layout.decoder_blob_len,
+            0,
+        ].sum(),
+        3.75,
+        rtol=1e-6,
+    )
+    np.testing.assert_allclose(
+        gradient[
+            layout.decoder_blob_offset : layout.decoder_blob_offset + layout.decoder_blob_len,
+            1,
+        ].sum(),
+        1.25,
+        rtol=1e-6,
+    )
+
+
+def test_pr106_format0d_sidecar_correction_passes_match_runtime_order():
+    packet = emg.parse_pr106_sidecar_packet(_pr106_payload())
+    latents = torch.zeros((600, 28), dtype=torch.float32)
+
+    corrected = emg._apply_pr106_sidecar_correction_passes(latents, packet)
+
+    assert torch.count_nonzero(latents) == 0
+    expected = torch.zeros_like(latents)
+    for pair_idx in range(600):
+        expected[pair_idx, pair_idx % 28] = 0.01
+    torch.testing.assert_close(corrected, expected)
 
 
 def test_extract_all_cli_writes_batch_manifest_without_anchor_emission(tmp_path):
@@ -1063,16 +1134,16 @@ def test_extract_all_cli_writes_batch_manifest_without_anchor_emission(tmp_path)
     assert payload["score_claim_allowed"] is False
     assert payload["promotion_eligible"] is False
     assert payload["archive_count"] == len(fixtures)
-    assert payload["counts"]["anchor_ready"] == 3
-    assert payload["counts"]["detection_only_blocked"] == 5
+    assert payload["counts"]["anchor_ready"] == 4
+    assert payload["counts"]["detection_only_blocked"] == 4
 
     by_label = {row["label"]: row for row in payload["archives"]}
     assert by_label["fec6"]["status"] == "anchor_ready"
     assert by_label["a1"]["status"] == "anchor_ready"
     assert by_label["pr101"]["status"] == "anchor_ready"
+    assert by_label["pr106"]["status"] == "anchor_ready"
     assert by_label["pr101"]["projection_contract"]["anchor_emission_allowed"] is True
     assert by_label["pr101"]["anchor_write_performed"] is False
-    assert by_label["pr106"]["status"] == "detection_only_blocked"
     assert by_label["dp1"]["status"] == "detection_only_blocked"
     assert by_label["pr106_ff"]["status"] == "detection_only_blocked"
     assert by_label["hnerv_lc_v2"]["status"] == "detection_only_blocked"
@@ -1086,17 +1157,17 @@ def test_extract_all_cli_writes_batch_manifest_without_anchor_emission(tmp_path)
 
 
 def test_extract_all_cli_strict_fails_on_detection_only_grammar(tmp_path):
-    pr106 = tmp_path / "pr106.zip"
-    pr106.write_bytes(_zip_payload(_pr106_payload()))
+    dp1 = tmp_path / "dp1.zip"
+    dp1.write_bytes(_zip_payload(_dp1_payload(), member_name="0.bin"))
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
         json.dumps(
             {
                 "archives": [
                     {
-                        "label": "pr106",
-                        "path": str(pr106),
-                        "expected_grammar": "pr106_format0d",
+                        "label": "dp1",
+                        "path": str(dp1),
+                        "expected_grammar": "dp1_pretrained_driving_prior",
                     }
                 ]
             }

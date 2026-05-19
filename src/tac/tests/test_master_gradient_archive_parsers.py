@@ -62,13 +62,13 @@ class TestGrammarRegistryContract:
     def test_anchor_emitting_grammars_pinned(self):
         # Per CLAUDE.md "Catalog #327 raw byte authority NOT landed":
         # only grammars with a wired Jacobian projector emit anchors.
-        # At landing: fec6 + A1 + PR101_lc_v2 are anchor-eligible;
-        # PR106_format0d / PR107_apogee / DP1 / packed PR106 / hnerv_lc_v2
-        # are detection-only.
+        # At landing: fec6 + A1 + PR101_lc_v2 are anchor-eligible; PR106
+        # format0d later gained a primary packed-HNeRV decoder projector with
+        # sidecar zero-gradient v1 semantics.
         assert mgap.is_anchor_emitting_grammar("fec6_fp11_selector") is True
         assert mgap.is_anchor_emitting_grammar("a1_finetuned") is True
         assert mgap.is_anchor_emitting_grammar("pr101_lc_v2") is True
-        assert mgap.is_anchor_emitting_grammar("pr106_format0d") is False
+        assert mgap.is_anchor_emitting_grammar("pr106_format0d") is True
         assert mgap.is_anchor_emitting_grammar("pr106_ff_packed_hnerv") is False
         assert mgap.is_anchor_emitting_grammar("hnerv_lc_v2_length_prefixed") is False
         assert mgap.is_anchor_emitting_grammar("pr107_apogee_length_prefixed") is False
@@ -129,8 +129,7 @@ class TestLiveArchiveDetectionRegressionGuards:
         assert grammar_name == "pr106_format0d"
         # Per CLAUDE.md / inventory memo: PR106 format0d frontier sha is 9cb989cef519...
         assert layout.archive_sha256.startswith("9cb989cef519")
-        # gradient_projection_supported=False (detection-only per Catalog #327)
-        assert layout.gradient_projection_supported is False
+        assert layout.gradient_projection_supported is True
 
     @pytest.mark.skipif(
         not LIVE_A1_ARCHIVE.exists(),
