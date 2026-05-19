@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from tac.procedural_codebook_generator import (
+    build_procedural_seed_authority_packet,
     classify_procedural_seed_authority,
     derive_codebook_from_archive_bytes,
     emit_seed,
@@ -287,3 +288,34 @@ def test_score_affecting_generic_inflate_py_decoder_constant_can_be_gated():
     assert authority["ready_for_exact_eval_dispatch"] is True
     assert authority["promotion_eligible"] is False
     assert authority["research_only"] is True
+
+
+def test_authority_packet_keeps_runtime_literal_probe_separate():
+    packet = build_procedural_seed_authority_packet(
+        "seed_probe_alpha",
+        modes=("archive_seeded", "runtime_constant"),
+        runtime_consumption_proof=True,
+        self_contained_archive_proof=True,
+        scorer_free_inflate_proof=True,
+        no_external_state_proof=True,
+        packet_compiler_target_declared=True,
+        exact_eval_validated=True,
+    )
+
+    assert packet["schema"] == "procedural_seed_authority_packet_v1"
+    assert packet["preferred_promotion_mode"] == "archive_seeded"
+    assert packet["promotion_eligible"] is True
+    assert packet["score_claim"] is False
+    assert packet["promotion_eligible_modes"] == ["archive_seeded"]
+    assert packet["modes"]["archive_seeded"]["promotion_eligible"] is True
+    assert packet["modes"]["runtime_constant"]["promotion_eligible"] is False
+    assert packet["modes"]["runtime_constant"]["research_only"] is True
+    assert packet["contest_compliance_authority"] == "docs/contest_compliance_authority.md"
+
+
+def test_authority_packet_rejects_unknown_or_empty_modes():
+    with pytest.raises(ValueError, match="unknown procedural authority mode"):
+        build_procedural_seed_authority_packet("bad", modes=("archive_seeded", "banana"))
+
+    with pytest.raises(ValueError, match="at least one procedural authority mode"):
+        build_procedural_seed_authority_packet("empty", modes=())

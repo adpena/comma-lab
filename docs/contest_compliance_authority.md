@@ -71,6 +71,52 @@ unless proven otherwise. For score claims, score-bearing information must be cha
 meter it, and make `inflate.py` a deterministic interpreter for the charged
 payload.
 
+## How To Establish Authority
+
+For every procedural, deterministic-packet, scorer-aware, or distilled-runtime
+candidate, build an authority packet before promotion. The packet is not a
+score claim; it is the proof checklist that decides whether exact eval is worth
+running and whether the result can later rank.
+
+Minimum packet fields:
+
+- `candidate_id`, archive path, archive bytes, archive SHA-256, runtime tree
+  SHA, and exact inflate command.
+- `compliance_mode`: one of `archive_seeded`, `weight_derived`,
+  `runtime_constant`, or a stricter project-specific subtype.
+- Payload carrier inventory: seed bytes, weights, generated code, lookup
+  tables, distilled transducers, runtime constants, and every source of
+  decoder-side information.
+- Source-of-information classification: charged archive member, fixed public
+  runtime code, upstream contest asset allowed by the README, or forbidden
+  external/local state.
+- Mutation proof: changing the charged seed/weight/table changes the generated
+  frames, and changing an uncharged literal does not hide per-video payload.
+- Scorer-free inflate proof: no PoseNet, SegNet, scorer checkpoint, original
+  video read, or untracked sidecar is consumed at inflate time unless a stricter
+  compliance memo and archive charging rule covers it.
+- Exact auth-eval result for the exact archive/runtime pair, with `[contest-CPU]`
+  and `[contest-CUDA]` kept distinct.
+
+When both seed placements are defensible, pursue two variants:
+
+| Variant | Purpose | Promotion default |
+|---|---|---|
+| `archive_seeded` | Put score-bearing seed, weights, generated tables, or distilled transducer bytes in `archive.zip`. | Canonical promotion path after proof stack and exact eval. |
+| `runtime_constant` | Put only generic decoder logic or tiny implementation constants in `inflate.py`. | Research/probe path unless a maintainer/operator ruling proves it is code rather than payload relocation. |
+
+This avoids the false dichotomy between "procedural generation is forbidden"
+and "procedural generation is free." Procedural generation is allowed when the
+information that determines scored frames is charged, public, or explicitly
+ruled to be decoder logic.
+
+The reusable code helper is
+`tac.procedural_codebook_generator.build_procedural_seed_authority_packet`.
+Use it before routing procedural generation into Cathedral autopilot or any
+dispatch queue. It emits a fail-closed packet that keeps the archive-seeded
+variant separate from the runtime-constant variant, so exact eval cannot
+silently launder an uncharged payload into a score claim.
+
 ## Deterministic Packet Compiler Rule
 
 The deterministic packet compiler path is valid when it remains byte-closed:

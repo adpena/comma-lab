@@ -40,6 +40,8 @@ References:
 - MPEG-AI Part 4, [Feature coding for machines](https://www.mpeg.org/standards/MPEG-AI/4/)
 - MPEG WG 4, [Video Coding Working Group](https://www.mpeg.org/structure/video-coding/)
 - CVPR 2023, [AccelIR: Task-aware Image Compression for Accelerating Neural Restoration](https://openaccess.thecvf.com/content/CVPR2023/papers/Ye_AccelIR_Task-Aware_Image_Compression_for_Accelerating_Neural_Restoration_CVPR_2023_paper.pdf)
+- CVPR 2025, [Real-Time Rate Control for Task-Aware Video Compression Using Reinforcement Learning](https://research.nvidia.com/labs/par/publication/realtime_rate_control_video_compression.html)
+- NeurIPS 2023, [Task-aware Distributed Source Coding](https://proceedings.neurips.cc/paper_files/paper/2023/file/016c63403370d81c24c1ca0123de6cfa-Paper-Conference.pdf)
 
 ## Scope
 
@@ -67,7 +69,7 @@ or dated `.omx/research/` ledgers.
 | `tac.master_gradient_consumers` | Venn maps, per-pair atlases, Wyner-Ziv covariance, and treatment plans |
 | `tac.scorer` | Contest score formula, scorer loading, and score-axis helpers |
 | `tac.optimizer` | Exact-readiness, dispatch authority, proxy-candidate contracts, and planning gates |
-| `tac.procedural_codebook_generator` | Archive-seeded and weight-derived deterministic codebook generation |
+| `tac.procedural_codebook_generator` | Archive-seeded and weight-derived deterministic codebook generation, including procedural-seed authority packets |
 | `tac.preflight` | Reusable contest/runtime/package validity checks |
 
 ## Active Workflows
@@ -81,7 +83,8 @@ high-traffic workflows are:
 - master-gradient, xray, Venn, and sensitivity-map surfaces for score-aware
   optimization;
 - procedural generation from archive-contained seeds or weights, with explicit
-  provenance and mutation-proof checks;
+  provenance, mutation-proof checks, and authority packets that keep
+  archive-seeded promotion paths separate from runtime-constant probes;
 - Cathedral autopilot candidate rows that stay false-authority until archive
   bytes, inflate/runtime consumption, full-frame parity, and exact eval land;
 - contest-compliant replay and deconstruction of public submissions.

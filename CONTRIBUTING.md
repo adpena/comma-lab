@@ -17,6 +17,16 @@ Be excellent to each other. Bad-faith contributions (license violations,
 plagiarism, harassment, malicious code, attempts to leak operator infrastructure
 state) are not welcome.
 
+## Naming rule
+
+`tac` means Task-Aware Compression: the reusable compression library and
+algorithmic engine. Use `codec` only for concrete encoders, decoders, entropy
+coders, archive grammars, or wire formats inside that broader stack.
+`comma_lab` owns lab operations, custody, state projection, and reporting; it
+is not a second compression engine. See `docs/terminology_and_boundaries.md`
+for the canonical terminology and `docs/contest_compliance_authority.md` for
+procedural-generation compliance authority.
+
 ## Development workflow
 
 ```bash

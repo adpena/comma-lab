@@ -12,6 +12,7 @@ from pathlib import Path
 
 CANONICAL_FILES = (
     "README.md",
+    "CONTRIBUTING.md",
     "HANDOFF.md",
     "PROGRAM.md",
     "SYSTEM_MAP.md",
@@ -110,6 +111,22 @@ def check_repo(root: Path) -> list[Finding]:
             rationale="public docs pointer",
         )
 
+    contributing = texts["CONTRIBUTING.md"]
+    for needle, rationale in (
+        ("`tac` means Task-Aware Compression", "contributing TAC expansion"),
+        ("Use `codec` only for concrete encoders", "contributing codec/compression distinction"),
+        ("`comma_lab` owns lab operations", "contributing comma_lab boundary"),
+        ("docs/terminology_and_boundaries.md", "contributing terminology pointer"),
+        ("docs/contest_compliance_authority.md", "contributing contest authority pointer"),
+    ):
+        _require_contains(
+            findings,
+            relpath="CONTRIBUTING.md",
+            text=contributing,
+            needle=needle,
+            rationale=rationale,
+        )
+
     handoff = texts["HANDOFF.md"]
     for needle, rationale in (
         ("`tac` means Task-Aware Compression", "operator handoff TAC expansion"),
@@ -163,6 +180,7 @@ def check_repo(root: Path) -> list[Finding]:
         ("Feature coding for machines", "FCM terminology"),
         ("Use **compression** for the project and research program", "codec/compression distinction"),
         ("procedural generation from archive-contained seeds or weights", "procedural generation boundary"),
+        ("procedural-seed authority packets", "procedural authority packet boundary"),
         ("docs/contest_compliance_authority.md", "contest authority pointer"),
     ):
         _require_contains(
@@ -223,6 +241,7 @@ def check_repo(root: Path) -> list[Finding]:
         ('Never expand TAC as "Task-Aware Codec."', "negative expansion rule"),
         ("`comma_lab.task_codec` is a legacy compatibility namespace", "legacy task_codec boundary"),
         ("Contest Compliance Boundary", "contest compliance section"),
+        ("build_procedural_seed_authority_packet", "procedural authority packet helper"),
     ):
         _require_contains(
             findings,
@@ -234,6 +253,7 @@ def check_repo(root: Path) -> list[Finding]:
     for needle in (
         "Procedural generation from an archive-contained seed",
         "Constants in `inflate.py` may describe how to decode a charged payload",
+        "archive-seeded version is the canonical promotion path",
         "Package Ownership",
         "docs/contest_compliance_authority.md",
     ):
@@ -253,6 +273,8 @@ def check_repo(root: Path) -> list[Finding]:
         ("archive_seeded", "procedural archive-seeded mode"),
         ("runtime_constant", "procedural runtime-constant mode"),
         ("score-bearing information must be charged through `archive.zip`", "payload relocation guard"),
+        ("How To Establish Authority", "procedural authority packet protocol"),
+        ("build_procedural_seed_authority_packet", "procedural authority packet helper"),
         ("#35 tensor_inversion", "scorer inflate precedent"),
         ("#68 loophole_v2", "script-payload loophole precedent"),
         ("#78 qzs3_script_payload_r147", "withdrawn payload-relocation precedent"),

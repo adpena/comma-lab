@@ -10,6 +10,7 @@ are ordinary code but still require self-contained scorer-free replay proof.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Literal
 
 SeedCarrier = Literal[
@@ -22,6 +23,18 @@ LiteralPayloadKind = Literal[
     "generic_decoder_constant",
     "compliance_ruled_payload",
 ]
+AuthorityMode = Literal[
+    "archive_seeded",
+    "weight_derived",
+    "runtime_constant",
+]
+
+
+_DEFAULT_AUTHORITY_MODES: tuple[AuthorityMode, ...] = (
+    "archive_seeded",
+    "weight_derived",
+    "runtime_constant",
+)
 
 
 def classify_procedural_seed_authority(
@@ -170,6 +183,107 @@ def classify_procedural_seed_authority(
     raise ValueError(f"unknown procedural seed carrier: {seed_carrier!r}")
 
 
+def build_procedural_seed_authority_packet(
+    candidate_id: str,
+    *,
+    modes: Iterable[AuthorityMode] = _DEFAULT_AUTHORITY_MODES,
+    runtime_constant_kind: LiteralPayloadKind = "per_video_payload",
+    score_affecting: bool = True,
+    runtime_consumption_proof: bool = False,
+    self_contained_archive_proof: bool = False,
+    scorer_free_inflate_proof: bool = False,
+    no_external_state_proof: bool = False,
+    packet_compiler_target_declared: bool = False,
+    exact_eval_validated: bool = False,
+) -> dict[str, object]:
+    """Build the authority packet for procedural seed/weight variants.
+
+    Ambiguous procedural-generation designs should carry both the charged
+    archive-seeded variant and any proposed ``inflate.py`` constant variant.
+    The packet makes that arbitration explicit: archive-contained seed/weight
+    carriers may become promotion-eligible after the proof stack and exact eval;
+    a per-video runtime literal stays research-only unless it has an explicit
+    compliance ruling. This is the code surface behind the repository docs'
+    two-track ``archive_seeded`` / ``runtime_constant`` authority protocol.
+    """
+
+    normalized_modes: list[AuthorityMode] = []
+    seen: set[str] = set()
+    for mode in modes:
+        if mode not in _DEFAULT_AUTHORITY_MODES:
+            raise ValueError(f"unknown procedural authority mode: {mode!r}")
+        if mode not in seen:
+            normalized_modes.append(mode)
+            seen.add(mode)
+    if not normalized_modes:
+        raise ValueError("at least one procedural authority mode is required")
+
+    records: dict[str, dict[str, object]] = {}
+    if "archive_seeded" in normalized_modes:
+        records["archive_seeded"] = classify_procedural_seed_authority(
+            "archive_member_seed",
+            score_affecting=score_affecting,
+            runtime_consumption_proof=runtime_consumption_proof,
+            self_contained_archive_proof=self_contained_archive_proof,
+            scorer_free_inflate_proof=scorer_free_inflate_proof,
+            no_external_state_proof=no_external_state_proof,
+            packet_compiler_target_declared=packet_compiler_target_declared,
+            exact_eval_validated=exact_eval_validated,
+        )
+    if "weight_derived" in normalized_modes:
+        records["weight_derived"] = classify_procedural_seed_authority(
+            "archive_member_weight_derived",
+            score_affecting=score_affecting,
+            runtime_consumption_proof=runtime_consumption_proof,
+            self_contained_archive_proof=self_contained_archive_proof,
+            scorer_free_inflate_proof=scorer_free_inflate_proof,
+            no_external_state_proof=no_external_state_proof,
+            packet_compiler_target_declared=packet_compiler_target_declared,
+            exact_eval_validated=exact_eval_validated,
+        )
+    if "runtime_constant" in normalized_modes:
+        records["runtime_constant"] = classify_procedural_seed_authority(
+            "inflate_py_literal_seed",
+            score_affecting=score_affecting,
+            literal_payload_kind=runtime_constant_kind,
+            runtime_consumption_proof=runtime_consumption_proof,
+            self_contained_archive_proof=self_contained_archive_proof,
+            scorer_free_inflate_proof=scorer_free_inflate_proof,
+            no_external_state_proof=no_external_state_proof,
+            packet_compiler_target_declared=packet_compiler_target_declared,
+            exact_eval_validated=exact_eval_validated,
+        )
+
+    preferred_mode = "archive_seeded" if "archive_seeded" in records else normalized_modes[0]
+    preferred_record = records[preferred_mode]
+    promotion_eligible_modes = [
+        mode for mode, record in records.items() if bool(record.get("promotion_eligible"))
+    ]
+    ready_for_exact_eval_modes = [
+        mode for mode, record in records.items() if bool(record.get("ready_for_exact_eval_dispatch"))
+    ]
+    return {
+        "schema": "procedural_seed_authority_packet_v1",
+        "candidate_id": str(candidate_id),
+        "preferred_promotion_mode": preferred_mode,
+        "mode_count": len(records),
+        "modes": records,
+        "promotion_eligible_modes": promotion_eligible_modes,
+        "ready_for_exact_eval_modes": ready_for_exact_eval_modes,
+        "score_claim": False,
+        "promotion_eligible": bool(preferred_record.get("promotion_eligible")),
+        "rank_or_kill_eligible": bool(preferred_record.get("rank_or_kill_eligible")),
+        "ready_for_exact_eval_dispatch": bool(preferred_record.get("ready_for_exact_eval_dispatch")),
+        "research_only": not bool(preferred_record.get("promotion_eligible")),
+        "authority_protocol": (
+            "compare archive_seeded and runtime_constant variants when both are "
+            "defensible; promote only byte-closed variants whose score-bearing "
+            "information is archive-charged or explicitly ruled decoder logic"
+        ),
+        "contest_compliance_authority": "docs/contest_compliance_authority.md",
+    }
+
+
 def _record(
     *,
     seed_carrier: str,
@@ -221,4 +335,10 @@ def _record(
     }
 
 
-__all__ = ["LiteralPayloadKind", "SeedCarrier", "classify_procedural_seed_authority"]
+__all__ = [
+    "AuthorityMode",
+    "LiteralPayloadKind",
+    "SeedCarrier",
+    "build_procedural_seed_authority_packet",
+    "classify_procedural_seed_authority",
+]

@@ -6,7 +6,13 @@ perform provider dispatch, or load contest scorers.
 
 from __future__ import annotations
 
-from .authority import LiteralPayloadKind, SeedCarrier, classify_procedural_seed_authority
+from .authority import (
+    AuthorityMode,
+    LiteralPayloadKind,
+    SeedCarrier,
+    build_procedural_seed_authority_packet,
+    classify_procedural_seed_authority,
+)
 from .hash_seed_codebook_generator import (
     emit_seed,
     expand_seed_to_codebook,
@@ -19,8 +25,10 @@ from .weight_derived_codebook_generator import (
 )
 
 __all__ = [
+    "AuthorityMode",
     "LiteralPayloadKind",
     "SeedCarrier",
+    "build_procedural_seed_authority_packet",
     "classify_procedural_seed_authority",
     "derive_codebook_from_archive_bytes",
     "emit_seed",

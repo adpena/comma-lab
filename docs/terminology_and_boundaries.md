@@ -70,6 +70,11 @@ Repo policy is stricter than the permissive edge of that rule:
   Score-bearing seeds, weights, tables, generated code, or distilled
   transducers belong in `archive.zip` unless a compliance memo proves they are
   merely decoder logic.
+- Ambiguous seed-placement designs should carry both variants through an
+  authority packet. The archive-seeded version is the canonical promotion path;
+  the runtime-constant version remains research/probe evidence unless it proves
+  the literal is decoder logic rather than relocated payload. The reusable
+  helper is `tac.procedural_codebook_generator.build_procedural_seed_authority_packet`.
 - Generated code, tiny transducers, and fixed tables are valid design tools
   when they remain self-contained, documented, and cheaper than shipping the
   equivalent bytes directly.
@@ -131,3 +136,8 @@ Run the terminology guard before public-facing documentation commits:
 - CVPR 2023 AccelIR, Task-aware Image Compression for Accelerating Neural
   Restoration:
   <https://openaccess.thecvf.com/content/CVPR2023/html/Ye_AccelIR_Task-Aware_Image_Compression_for_Accelerating_Neural_Restoration_CVPR_2023_paper.html>
+- CVPR 2025, Real-Time Rate Control for Task-Aware Video Compression Using
+  Reinforcement Learning:
+  <https://research.nvidia.com/labs/par/publication/realtime_rate_control_video_compression.html>
+- NeurIPS 2023, Task-aware Distributed Source Coding:
+  <https://proceedings.neurips.cc/paper_files/paper/2023/file/016c63403370d81c24c1ca0123de6cfa-Paper-Conference.pdf>

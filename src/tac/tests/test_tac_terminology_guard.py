@@ -17,6 +17,13 @@ MINIMAL_CANONICAL_TEXTS = {
         "docs/terminology_and_boundaries.md\n"
         "docs/contest_compliance_authority.md\n"
     ),
+    "CONTRIBUTING.md": (
+        "`tac` means Task-Aware Compression\n"
+        "Use `codec` only for concrete encoders\n"
+        "`comma_lab` owns lab operations\n"
+        "docs/terminology_and_boundaries.md\n"
+        "docs/contest_compliance_authority.md\n"
+    ),
     "HANDOFF.md": (
         "`tac` means Task-Aware Compression\n"
         "`comma_lab` is the lab\noperations\n"
@@ -38,6 +45,8 @@ MINIMAL_CANONICAL_TEXTS = {
         "archive_seeded\n"
         "runtime_constant\n"
         "score-bearing information must be charged through `archive.zip`\n"
+        "How To Establish Authority\n"
+        "build_procedural_seed_authority_packet\n"
         "#35 tensor_inversion\n"
         "#68 loophole_v2\n"
         "#78 qzs3_script_payload_r147\n"
@@ -49,6 +58,8 @@ MINIMAL_CANONICAL_TEXTS = {
         "Contest Compliance Boundary\n"
         "Procedural generation from an archive-contained seed\n"
         "Constants in `inflate.py` may describe how to decode a charged payload\n"
+        "archive-seeded version is the canonical promotion path\n"
+        "build_procedural_seed_authority_packet\n"
         "Package Ownership\n"
         "docs/contest_compliance_authority.md\n"
     ),
@@ -58,6 +69,7 @@ MINIMAL_CANONICAL_TEXTS = {
         "Feature coding for machines\n"
         "Use **compression** for the project and research program\n"
         "procedural generation from archive-contained seeds or weights\n"
+        "procedural-seed authority packets\n"
         "docs/contest_compliance_authority.md\n"
     ),
     "src/comma_lab/README.md": (
