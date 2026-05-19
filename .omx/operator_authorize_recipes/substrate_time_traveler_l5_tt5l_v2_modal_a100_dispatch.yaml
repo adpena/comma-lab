@@ -1,0 +1,246 @@
+schema_version: 1
+name: substrate_time_traveler_l5_tt5l_v2_modal_a100_dispatch
+lane_id: lane_tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_20260518
+
+# TT5L V2 PRE-BUILD readiness surface per Catalog #240. This recipe exists
+# so the canonical readiness/queue tooling (e.g.
+# tools/asymptotic_pursuit_candidate_readiness_assessment.py) can surface
+# TT5L V2 as an explicit DEFER candidate with exact blockers.
+#
+# Per the design memo:
+#   .omx/research/tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_memo_20260518.md
+# Per the parent TT5L V1 symposium:
+#   .omx/research/council_per_substrate_symposium_tt5l_foveation_lapose_20260517.md
+# Per the per-substrate symposium memo at landing:
+#   .omx/research/council_symposium_tt5l_v2_full_landing_20260518.md
+# Per the deep-research wave TOP-5 #1:
+#   .omx/research/comprehensive_research_wave_20260518.md
+
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - tt5l_v2_trainer_full_main_raises_NotImplementedError_per_catalog_240
+  - tt5l_v2_substrate_module_absent_pre_build_per_design_memo_revisions_5_6_7
+  - tt5l_v2_dispatch_requires_per_section_MI_probes_on_V1_25ep_state_per_parent_866_revision_1
+  - tt5l_v2_dispatch_requires_boyd_dykstra_feasibility_analytical_check_per_parent_866_revision_5
+  - tt5l_v2_dispatch_requires_sister_z6_4c_z7_mamba2_z8_atw_v2_v2_1_c6_ibps_phase_2_outcomes_per_parent_866_revision_7
+  - tt5l_v2_dispatch_requires_cheapest_signal_first_wave_2_single_primitive_smoke_per_hotz_revision_6
+  - tt5l_v2_dispatch_requires_wave_n_plus_1_council_PROCEED_unconditional_per_catalog_315
+  - tt5l_v2_dispatch_requires_wyner_ziv_deliverability_proof_for_dust3r_prior_section_per_catalog_319
+  - tt5l_v2_dispatch_requires_vggt_pretrained_weights_load_path_validated_pre_dispatch
+  - tt5l_v2_predecessor_v1_DEFER_verdict_must_be_referenced_per_catalog_313
+
+summary: |
+  TT5L V2 is the canonical Pattern G + H + I PRIMARY substrate response to
+  parent #866's REFUSE verdict on TT5L V1 (empirical 25ep CUDA 3.9007;
+  19x worse than 0.20533 contest-CUDA frontier). V1 was empirically
+  falsified at the IMPLEMENTATION level (NOT paradigm; per Catalog #307);
+  cargo-cult-unwind methodology applied + this scaffold lands the 4-primitive
+  redesign per DEEP-RESEARCH-WAVE TOP-5 #1:
+    1. VGGT (Wang CVPR 2025; arxiv 2503.11651) - compress-time teacher
+       (0 archive bytes; Atick-Redlich cooperative-receiver)
+    2. DreamerV3 RSSM categorical (Hafner arxiv 2301.04104) - archive-shipped
+       predict_residual section (12 KB GRU + 32-one-hot categorical-stochastic)
+    3. NVIDIA VRSS 2 principle (cooperative-receiver-derived foveation map;
+       0 archive bytes)
+    4. DUSt3R/MASt3R (Wang ECCV 2024; arxiv 2312.14132 + 2406.09756) -
+       optional distilled prior (0-10 KB)
+  Total V2 archive: ~35-55 KB. Per Boyd Dykstra-feasibility-revised
+  predicted band: [0.16, 0.26] [contest-CPU prediction; HIGH VARIANCE];
+  parent prompt's hypothetical [0.172, 0.184] sits in lower-region.
+
+platform: modal
+gpu: A100
+min_smoke_gpu: A100
+min_vram_gb: 40
+target_modes:
+  - research_substrate
+
+horizon_class: asymptotic_pursuit
+active_dispatch_contract: tt5l_v2_prebuild_research_gate
+dispatch_contracts:
+  - id: tt5l_v2_prebuild_research_gate
+    archive_role: planned_tt5lv2_monolithic_payload
+    builder_surface: experiments/train_substrate_time_traveler_l5_tt5l_v2.py
+    status: pre_build_research_only
+    exact_eval_path: blocked_pending_trainer_full_main_and_wave_n_plus_1_council
+    blocker_basis: .omx/research/tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_memo_20260518.md
+
+cost_band:
+  epochs: 100
+  predicted_cost_usd: 30.0
+  hand_calibrated_fallback_p50_usd: 30.0
+  platform_key: modal
+  gpu_key: A100
+
+# Catalog #324 post-training Tier-C validation discipline + design memo §8
+predicted_score_target: null
+predicted_band: null  # NULL pending Boyd Dykstra-feasibility polytope projection
+predicted_band_kind: predicted_score_band
+predicted_band_axis: contest-CPU
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Per Catalog #324: parent-prompt-cited band [-0.020, -0.008] is
+  DEEP-RESEARCH-WAVE TOP-5 #1 HYPOTHESIS, not validated. Boyd
+  Dykstra-feasibility revised band: [0.16, 0.26] (HIGH VARIANCE)
+  per design memo §11. Requires before any predicted_band promotion:
+    (a) Boyd Dykstra-feasibility polytope projection at $0 analytical
+        (tools/check_substrate_dykstra_feasibility.py --substrate
+         tt5l_v2_4_primitive)
+    (b) Wave N+1 single-primitive smoke (cooperative-receiver-derived
+        foveation only; $1 Modal T4 ~30 min) per Hotz Revision #6
+    (c) per-section MI probes on V1 25ep state ($12-20 CPU) per Atick
+        + Tishby + Wyner verbatim
+    (d) Wave N+1 council PROCEED-unconditional per Catalog #315
+    (e) Post-training Tier-C density measurement on landed V2 archive sha
+
+predicted_delta_s_band: null  # NULL pending Wave N+1 single-primitive smoke
+predicted_delta_s_axis: contest-CPU
+predicted_delta_s_basis: |
+  Per .omx/research/comprehensive_research_wave_20260518.md TOP-5 row #1
+  the deep-research-wave HYPOTHESIS was ΔS [-0.020, -0.008] -> contest-CPU
+  [0.172, 0.184]. Per Boyd Dykstra-feasibility revision (design memo §11):
+  the 4-primitive composition is at best SUBADDITIVE; achievable band is
+  the polytope INTERSECTION LOWER BOUND (NOT additive sum). Per Catalog
+  #322 anti-phantom composition_alpha: composition α > 0.7 is ADDITIVE
+  (rare); α 0.3-0.7 SUB-ADDITIVE; α <= 0.3 SATURATING. The parent prompt
+  band assumes α > 0.7 across all 4 primitives - UNTESTED. score_claim=false.
+  Dispatch requires paired CPU/CUDA exact-eval harvest per Catalog #226 +
+  Catalog #324 post-training Tier-C validation discipline.
+
+smoke_score_band: null  # NULL pending Wave N+1 single-primitive cooperative-receiver-foveation smoke
+predicted_delta: |
+  TT5L V2 hypothetical ΔS [-0.020, -0.008] [contest-CPU prediction; from
+  deep-research wave TOP-5 #1]; Boyd Dykstra-feasibility revised band
+  [0.16, 0.26] (HIGH VARIANCE). NOT a score claim per design memo §11
+  + Catalog #322.
+predicted_delta_basis: |
+  Derived from .omx/research/tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_memo_20260518.md
+  and .omx/research/council_symposium_tt5l_v2_full_landing_20260518.md
+  and .omx/research/comprehensive_research_wave_20260518.md TOP-5 #1.
+  The band is a research prior + Dykstra-revised analytical bound only.
+  It is not contest-CUDA evidence and must not be used for ranking,
+  promotion, or kill decisions without paired exact-eval harvest per
+  Catalog #226 + Catalog #324 post-training Tier-C validation discipline.
+
+literature_anchor: |
+  VGGT (Wang et al. CVPR 2025 Best Paper; arxiv 2503.11651) - feedforward
+  3D scene understanding; DreamerV3 RSSM categorical (Hafner et al. arxiv
+  2301.04104) - GRU-deterministic + 32-one-hot categorical-stochastic
+  latent dynamics; NVIDIA VRSS 2 (Variable Rate Shading 2; production
+  NVIDIA Driver R465+) - hardware foveation principle; DUSt3R (Wang et al.
+  ECCV 2024; arxiv 2312.14132) + MASt3R (Wang et al. ECCV 2024; arxiv
+  2406.09756) - feedforward dense stereo + metric 3D reconstruction;
+  Atick-Redlich 1990 - cooperative-receiver theorem; Rao-Ballard 1999 -
+  hierarchical predictive coding; Gibson 1950 - ecological-optics
+  foveation-FoE; Tishby-Zaslavsky 2015 - information-bottleneck;
+  Wyner-Ziv 1976 - source coding with side information; Mallat 1989 -
+  wavelet hierarchical decomposition.
+
+source_supports: |
+  The design memo binds TT5L V2 as the canonical Pattern G F-asymptote-
+  class-shift-not-bolt-on response (Catalog #310) to parent #866 REFUSE
+  on V1. Each of the 4 primitives' PRINCIPLE has empirical canonical-theory
+  citation. The COMPOSITION of all 4 primitives at substrate architectural
+  core IS structurally distinct from V1 + all sister substrates (Z6 Multi-
+  layer FiLM / Z7-Mamba-2 selective state-space / Z8 hierarchical-
+  quadruple / A1 frontier / PR101 frontier).
+
+pact_must_prove: |
+  Before paid full dispatch, TT5L V2 must prove at least: (1) trainer
+  _full_main implemented per Wave N+1 council PROCEED-unconditional;
+  (2) TT5LV2 archive grammar emits byte-closed archive bytes; (3) inflate
+  runtime consumes RSSM categorical predict_residual section bytes + SE(3)
+  se3_lie + per-pixel SegNet logits seg_boundary + (optionally) DUSt3R
+  distilled dust3r_prior and changes output (Catalog #220 + #272 byte-
+  mutation smoke per primitive); (4) cooperative-receiver-derived foveation
+  map derivation AT INFLATE TIME from scorer weights produces consistent
+  output across runs (Catalog #166 Modal HEAD-parity ledger); (5) per-
+  primitive ablation isolates contribution (Catalog #322 anti-phantom);
+  (6) Boyd Dykstra-feasibility polytope projection confirms achievable
+  region intersects predicted band; (7) per-section MI probes on V1 25ep
+  state vs V2 100ep state show > 0.5 bits/symbol on >= 2 of 4 sections
+  (per Assumption-Adversary hypothesis); (8) paired CPU/CUDA exact eval
+  harvested under lane claim custody per Catalog #226 + #245.
+
+decode_complexity_evidence: |
+  Planned inflate runtime is ~250 LOC with VGGT NOT loaded (compress-time
+  teacher only; 0 archive bytes) + DreamerV3 RSSM categorical deterministic
+  unroll across 600 pairs + cooperative-receiver foveation map derived at
+  inflate time from scorer weights + per-pixel SegNet logits product-
+  quantized decoder + optional DUSt3R distilled prior decoder + SE(3) Lie
+  algebra ego-pose (substrate-engineering HNeRV parity L4 waiver explicit).
+  Runtime deps: torch + brotli + numpy + (faiss for product-quantization)
+  (4 deps; exceeds default L4 budget of <=2 per HNeRV parity L4; substrate-
+  engineering L7 waiver applies). No runtime exists yet; this is a
+  blocker, not evidence.
+
+envelope_status: |
+  Non-dispatchable. If all gates are later ratified, the canonical cost
+  path (per design memo §1 cost path + §7 reactivation paths a-e):
+    - Design $0 + ~6h editor (this scaffold)
+    - Wave N+1 council $0 + ~90 min
+    - Dykstra-feasibility check $0 analytical
+    - Per-section MI probes on V1 25ep state $12-20 CPU
+    - Wave 2 single-primitive smoke $1 Modal T4 ~30 min
+    - Wave 3 2-primitive smoke (CONDITIONAL): $3-5 Modal A100 ~60 min
+    - Wave 4 3-primitive smoke (CONDITIONAL): $10-15 Modal A100 ~120 min
+    - Wave 5 4-primitive smoke (CONDITIONAL): $15-25 Modal A100 ~150 min
+    - Wave 6 100-300 ep full training (CONDITIONAL): $30-50 Modal A100
+    - Wave 7 cross-substrate composition (CONDITIONAL): $40-80 per composition
+  Total path-(a)-budget if full 4-primitive composition selected after all
+  gates pass: $45-75. Per Catalog #322 anti-phantom: composition α must be
+  measured before composition cost is justified.
+
+remote_driver: scripts/remote_lane_substrate_time_traveler_l5_tt5l_v2.sh
+
+required_input_files: []
+
+required_input_files_trainer:
+  - experiments/train_substrate_time_traveler_l5_tt5l_v2.py
+
+sentinel_files:
+  - .omx/research/tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_memo_20260518.md
+  - .omx/research/council_symposium_tt5l_v2_full_landing_20260518.md
+  - .omx/research/council_per_substrate_symposium_tt5l_foveation_lapose_20260517.md
+  - .omx/research/comprehensive_research_wave_20260518.md
+
+dependencies:
+  - .omx/research/tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_memo_20260518.md
+  - .omx/research/council_per_substrate_symposium_tt5l_foveation_lapose_20260517.md
+  - .omx/research/comprehensive_research_wave_20260518.md
+  - .omx/research/z7_mamba2_substrate_design_memo_20260518.md
+  - .omx/research/z7_lstm_full_main_design_20260518.md
+  - .omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md
+  - .omx/research/time_traveler_l5_cargo_cult_unwind_design_20260516.md
+
+# Per Catalog #181 + #182 + #171 + #173 canary discipline.
+pyav_decode_strategy: cpu_thread_async_upload
+video_input_strategy: per_dispatch_local_copy
+canary_status: post_canary_dependent
+canary_dependency: z6_v2_4c_scorer_logit_or_tt5l_v1_per_section_MI_probes
+
+# Per Catalog #244 canonical NVML/CUDA env block.
+env_overrides:
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+  TT5L_V2_TRAINER_MODE: "smoke"  # Catalog #326 driver mode-routing default
+  SMOKE_ONLY: "1"
+
+# Catalog #325 per-substrate symposium evidence
+council_symposium_memo: .omx/research/council_symposium_tt5l_v2_full_landing_20260518.md
+council_verdict: PROCEED_WITH_REVISIONS  # design only; NOT paid dispatch authorization
+
+notes: |
+  This recipe exists so tools/asymptotic_pursuit_candidate_readiness_assessment.py
+  and tools/asymptotic_pursuit_dispatch_queue.py can surface TT5L V2 as
+  an explicit DEFER candidate with exact blockers. It is NOT operator-
+  spend authority. Per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via
+  adversarial grand council symposium" + Catalog #325: this recipe
+  satisfies the per-substrate-symposium-evidence requirement via the
+  design memo at
+  .omx/research/tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_memo_20260518.md
+  + the symposium memo at
+  .omx/research/council_symposium_tt5l_v2_full_landing_20260518.md (within
+  14 days of 2026-05-18 per Catalog #325 validity window).
