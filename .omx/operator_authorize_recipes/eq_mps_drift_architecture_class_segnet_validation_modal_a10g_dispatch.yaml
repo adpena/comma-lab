@@ -1,0 +1,132 @@
+schema_version: 1
+name: eq_mps_drift_architecture_class_segnet_validation_modal_a10g_dispatch
+lane_id: lane_canonical_equation_mps_drift_segnet_class_validation_20260519
+
+# SegNet-class Modal A10G validation for canonical equation #2
+# `mps_drift_architecture_class_dependent_v1`.
+#
+# THIS IS A DIAGNOSTIC RECIPE — NOT a contest substrate. It exists to
+# empirically RATIFY (or REFUTE) the canonical equation's prediction on
+# the architecture class that actually has the noise sources slot 9's
+# corrections target (SegNet: EfficientNet-B2 + softmax-class + deeper
+# matmul depth than the Phase B TinyRenderer's 12K-param Conv2d-only
+# architecture).
+#
+# Per slot 16 falsification: TinyRenderer empirical was 1.00x (NO-OP);
+# predicted was 30x. The canonical equation #2 documents this residual
+# as 30.0 for the tinyrenderer axis. SegNet is the canonical "predicted
+# correction applies here" axis the equation needs to validate.
+#
+# THE RECIPE IS LANDED WITH `dispatch_enabled: false` ON PURPOSE.
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# + Catalog #240 + the build-then-await pattern: the canonical equations
+# subagent BUILDS the recipe but does NOT FIRE the dispatch. The operator
+# greenlights the flip to `dispatch_enabled: true` after reviewing the
+# landing memo `feedback_canonical_equations_and_models_registry_formalization_landed_20260519.md`.
+#
+# After dispatch + harvest, the resulting per-component drift gap is
+# absorbed into the canonical equation as a new EmpiricalAnchor via
+# `tac.canonical_equations.update_equation_with_empirical_anchor`.
+# Predicted 30x reduction at SegNet axis → calibration confirmed;
+# significantly different → equation parameters refit via
+# auto_recalibrate_from_continual_learning_posterior.
+
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - operator_review_required_to_flip_dispatch_enabled
+dispatch_kind: tool  # one-shot CUDA forward-inference + harvest; same scope as Phase B sister recipe per CLAUDE.md "Scope clarification: substrate trainer vs tool dispatch"
+
+summary: |
+  SegNet-class MPS-vs-CUDA drift validation for canonical equation #2.
+
+  Runs the upstream SegNet (EfficientNet-B2 + softmax-class) forward on
+  matched random-init weights on (a) Modal A10G CUDA + (b) macOS M5 Max MPS,
+  computes per-component pixel_l1 + segnet-output-mean drift before AND
+  after applying the slot 9 corrections (Kahan Conv2d + pinned softmax +
+  fp32 matmul). Emits gap_results.json with the empirical drift_reduction
+  factor that the canonical equation #2 expects to be ~30x.
+
+  This recipe SHARES infrastructure with the Phase B TinyRenderer Modal
+  recipe (sister `mps_gap_experiment_tiny_renderer_modal_a10g_dispatch`)
+  — only the architecture-under-test changes.
+
+  Verdict thresholds for canonical equation #2 calibration:
+    - drift_reduction >= 20x   -> EQUATION_RATIFIED (residual <2 for segnet axis)
+    - 5x <= drift_reduction <20x -> EQUATION_PARTIAL_RATIFICATION (refit)
+    - drift_reduction < 5x      -> EQUATION_FALSIFIED_FOR_SEGNET_CLASS (refit)
+
+platform: modal
+gpu: A10G
+min_vram_gb: 16
+min_smoke_gpu: A10G
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 1
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: A10G
+
+predicted_score_target: null
+predicted_band: [0.18, 0.30]
+predicted_band_validation_status: phantom_pre_training
+predicted_delta: "diagnostic only; no score claim"
+predicted_delta_basis: "diagnostic recipe for canonical equation #2 ratification; phantom band per Catalog #324; verdict driven by drift_reduction threshold not contest score"
+
+# OBSERVABILITY SURFACE (Catalog #305)
+# - inspectable per layer: SegNet stem / encoder / head; per-layer activation
+#   captured at runtime via torch.utils.hooks
+# - decomposable per signal: pixel_l1 vs segnet-output-mean (5-class logits)
+# - diff-able across runs: paired (with_corrections, without_corrections)
+# - queryable post-hoc: gap_results.json emitted alongside the canonical
+#   equation update event in the registry
+# - cite-able: provenance via Catalog #245 modal_call_id_ledger + new
+#   EmpiricalAnchor row in canonical_equations_registry.jsonl
+# - counterfactual-able: re-run with different correction subset (Kahan-only
+#   vs softmax-only vs matmul-only) to attribute residual reduction
+
+# Cargo-cult audit per assumption (Catalog #303)
+# 1. ASSUMPTION: SegNet has softmax-noise sources the corrections target.
+#    HARD-EARNED: cited from upstream/modules.py (Unet uses smp.Unet with
+#    classes=5 + softmax post-processing); CARGO-CULTED-PENDING: empirical
+#    softmax-noise magnitude on real frames unknown.
+# 2. ASSUMPTION: SegNet's matmul depth matches the slot 9 fp32-matmul fix
+#    target. HARD-EARNED: EfficientNet-B2 backbone has matmul depth >> 1
+#    by construction; CARGO-CULTED-PENDING: per-layer fp16 accumulation
+#    error not measured on this exact backbone.
+# 3. ASSUMPTION: 30x reduction generalizes from theoretical-correction
+#    analysis to empirical-class-shift behavior. CARGO-CULTED: slot 16
+#    TinyRenderer empirical FALSIFIED this for the wrong architecture
+#    class. This recipe IS the per-class unwind.
+
+# 9-dimension success checklist evidence (Catalog #294)
+# (1) UNIQUENESS: per-class architectural validation is a new measurement
+# (2) BEAUTY: minimal-LOC; one drift-reduction number emitted
+# (3) DISTINCTNESS: differs from TinyRenderer recipe by architecture only
+# (4) RIGOR: predicted vs empirical residual auto-absorbed into registry
+# (5) OPTIMIZATION-PER-TECHNIQUE: paired with-correction/without-correction
+# (6) STACK-OF-STACKS-COMPOSABILITY: NA (diagnostic)
+# (7) DETERMINISTIC REPRODUCIBILITY: seeds pinned; matched random-init
+# (8) EXTREME OPTIMIZATION: ~$0.30 / ~1-2 hr wall-clock budget
+# (9) OPTIMAL MINIMAL CONTEST SCORE: NA (diagnostic; no contest score)
+
+# Hard runtime requirements (Catalog #203/#244 sister env block)
+env_overrides:
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+  SEGNET_CLASS_VALIDATION_MODE: "1"
+
+# Cross-references
+# - Canonical equation #2: mps_drift_architecture_class_dependent_v1
+#   (.omx/state/canonical_equations_registry.jsonl)
+# - Sister recipe: mps_gap_experiment_tiny_renderer_modal_a10g_dispatch
+# - Slot 9 corrections module: src/tac/mps_diagnostic/drift_predictor.py
+# - Slot 16 TinyRenderer falsification anchor (canonical equation #2 row 1)
+# - Landing memo: feedback_canonical_equations_and_models_registry_formalization_landed_20260519.md

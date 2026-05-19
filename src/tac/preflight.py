@@ -3260,6 +3260,23 @@ def preflight_all(
         check_continual_learning_writes_use_lock(
             strict=True, verbose=verbose,
         )
+        # 2026-05-19 Council canonical-roster anti-recurrence (#346):
+        # operator 3-correction sequence ('rubin and her mentor' -> 'and the
+        # time traveler' -> 'i think there are others missing too' -> 'the PR 95
+        # author has been added to the inner council as well') proved the
+        # under-rostering bug class. Per CLAUDE.md "Experiment design - non-
+        # negotiable" + "Council conduct" + "Grand Council (advisory)" +
+        # "Council hierarchy: 4-tier protocol": every T2+ council deliberation
+        # MUST dispatch the canonical mandatory roster per
+        # tac.canonical_council_roster.validate_council_dispatch_roster.
+        # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+        # rule" - live count at landing: 2 (slot 20 + slot 20-supplemental are
+        # the bug-class anchors). Strict-flip planned after sister waiver
+        # backfill OR Round 4 deliberation drives count to 0.
+        # Memory: feedback_t3_second_supplemental_missing_voices_plus_canonical_roster_helper_landed_20260519.md
+        check_council_dispatch_roster_complete_per_canonical_helper(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-09 proactive META-class custody+concurrency audit (#130):
         # extends catalog #127 (`AUTHORITATIVE_TAGS` membership) to also catch
         # the broader META class - `evidence_grade in {...}` set-membership +
@@ -5154,6 +5171,17 @@ def preflight_all(
         # fix lands in same commit batch driving live count to 0.
         # Memory: feedback_r11_h1_1_plus_h1_6_fix_wave_landed_20260519.
         check_rerank_candidates_via_master_gradient_invokes_consumers(
+            strict=False, verbose=verbose
+        )
+
+        # Catalog #344: canonical equations registry — refuse new empirical-
+        # finding memos missing canonical equation reference. WARN-ONLY at
+        # landing 2026-05-19 per CLAUDE.md "Strict-flip atomicity rule"
+        # because today's pre-framework memos predate this gate; strict-flip
+        # planned after the initial 6 equations populate + the first wave
+        # of memo backfills complete.
+        # Memory: feedback_canonical_equations_and_models_registry_formalization_landed_20260519.
+        check_empirical_finding_memo_references_canonical_equation(
             strict=False, verbose=verbose
         )
 
@@ -39044,6 +39072,13 @@ _SHARED_STATE_PATH_MARKERS: tuple[str, ...] = (
     # write_canonical_frontier_pointer_locked`` are refused.
     "canonical_frontier_pointer",
     "CANONICAL_FRONTIER_POINTER_PATH",
+    # Catalog #344 — canonical equations + models registry (operator-facing
+    # SoT for formalized empirical findings; extincts the tribal-knowledge
+    # bug class per operator NON-NEGOTIABLE 2026-05-19). Direct writes
+    # outside ``tac.canonical_equations.registry.register_canonical_equation``
+    # / ``update_equation_with_empirical_anchor`` are refused.
+    "canonical_equations_registry",
+    "CANONICAL_EQUATIONS_REGISTRY_PATH",
 )
 
 _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
@@ -39123,6 +39158,13 @@ _BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS: tuple[str, ...] = (
     "refresh_canonical_frontier_from_local_state",
     "refresh_canonical_frontier_from_upstream_leaderboard",
     "auto_refresh_canonical_frontier_after_dispatch_outcome",
+    # Catalog #344 — canonical equations registry helpers (operator-facing
+    # SoT for formalized empirical findings; extincts tribal-knowledge per
+    # operator NON-NEGOTIABLE 2026-05-19).
+    "register_canonical_equation",
+    "update_equation_with_empirical_anchor",
+    "load_equation_registry_strict",
+    "load_registry_events_lenient",
 )
 
 # Files that legitimately implement canonical fcntl-locked helpers OR are
@@ -39147,6 +39189,7 @@ _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/probe_outcomes_ledger.py",  # canonical (Catalog #313)
     "src/tac/codex_to_claude_inbox.py",  # canonical (Catalog #333)
     "src/tac/canonical_frontier_pointer.py",  # canonical (Catalog #343)
+    "src/tac/canonical_equations/registry.py",  # canonical (Catalog #344)
     "src/tac/deploy/vastai/client.py",  # routes through register_instance (vastai_tracker)
     "src/tac/preflight.py",  # this gate's own scanning code
     "src/tac/preflight_fs_cache.py",  # threading.Lock (in-process cache only)
@@ -74799,5 +74842,430 @@ def check_modal_dispatcher_registers_call_id_before_successful_exit(
             f"{len(violations)} silent-no-spawn violation(s) (Catalog #339 — "
             "SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION; 2026-05-19 anchor); "
             "first 3:\n  " + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #344 - check_empirical_finding_memo_references_canonical_equation
+#
+# CANONICAL-EQUATIONS-AND-MODELS-REGISTRY self-protection 2026-05-19 per
+# operator NON-NEGOTIABLE verbatim: *"we need to formalize all of this and
+# canonicalize and operationalize because I am afraid we are learning but
+# if we don't have systems of equations and models and such we are just
+# gaining tribal knowledge"*.
+#
+# Refuses .omx/research/*.md memos dated >= 2026-05-19 that contain
+# empirical-finding tokens without an adjacent canonical-equation reference.
+# Same-line waiver `# FORMALIZATION_PENDING:<rationale>` (placeholder
+# rejected per Catalog #287 sister discipline).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because today's pre-framework memos predate this gate; strict-flip
+# planned after the initial 6 equations populate the registry + the
+# first wave of memo backfills complete.
+
+_CHECK_344_RESEARCH_RELPATH = ".omx/research"
+_CHECK_344_CUTOFF_DATE_SUFFIX_INT = 20260519  # framework's birthday
+_CHECK_344_DESIGN_FILENAME_RE = re.compile(r".*_(\d{8})(?:T\d{6}Z)?(?:_codex)?\.md$")
+
+# Empirical-finding tokens that trigger the gate. Case-insensitive substring match.
+_CHECK_344_EMPIRICAL_FINDING_TOKENS: tuple[str, ...] = (
+    "empirical reduction",
+    "empirical anchor",
+    "predicted vs measured",
+    "predicted vs empirical",
+    "falsified",
+    "ratified",
+    "bayesian update",
+    "posterior update",
+    "prediction-vs-empirical",
+    "empirical residual",
+)
+
+# Acceptance tokens that satisfy the gate (case-insensitive substring).
+_CHECK_344_CANONICAL_EQUATION_REFERENCE_TOKENS: tuple[str, ...] = (
+    "tac.canonical_equations",
+    "canonical_equations_registry",
+    "canonical_equations.registry",
+    "tools/list_canonical_equations.py",
+    "tools/recalibrate_equation.py",
+    "register_canonical_equation",
+    "update_equation_with_empirical_anchor",
+    "canonicalequation",  # dataclass mention; case-insensitive
+)
+
+# Same-line waiver token (sister of Catalog #303 design).
+_CHECK_344_WAIVER_MARKER = "FORMALIZATION_PENDING"
+_CHECK_344_WAIVER_RE = re.compile(
+    r"#\s*" + re.escape(_CHECK_344_WAIVER_MARKER) + r":\s*(?P<rationale>[^\n]+)"
+)
+
+# Placeholder rationales rejected per Catalog #287 sister discipline.
+_CHECK_344_PLACEHOLDER_RATIONALES: tuple[str, ...] = ("<rationale>", "<reason>")
+_CHECK_344_MIN_RATIONALE_LEN = 4
+
+# Self-exempt: the gate's own definition file plus its dedicated test file.
+_CHECK_344_SELF_EXEMPT_PATHS: tuple[str, ...] = (
+    "src/tac/preflight.py",
+    "src/tac/tests/test_check_344_canonical_equation_referenced.py",
+    # The canonical equation registry's landing memo itself REFERENCES
+    # tac.canonical_equations heavily but ALSO mentions "ratified"/etc;
+    # it satisfies the gate via acceptance tokens, so no exemption needed.
+)
+
+
+def _check_344_text_has_empirical_finding(text: str) -> bool:
+    """True iff text contains any empirical-finding trigger token."""
+    low = text.lower()
+    return any(token in low for token in _CHECK_344_EMPIRICAL_FINDING_TOKENS)
+
+
+def _check_344_text_has_canonical_equation_reference(text: str) -> bool:
+    """True iff text contains any canonical-equation reference token."""
+    low = text.lower()
+    return any(
+        token.lower() in low for token in _CHECK_344_CANONICAL_EQUATION_REFERENCE_TOKENS
+    )
+
+
+def _check_344_text_has_valid_waiver(text: str) -> bool:
+    """True iff text carries a well-formed FORMALIZATION_PENDING waiver."""
+    for m in _CHECK_344_WAIVER_RE.finditer(text):
+        rationale = m.group("rationale").strip()
+        if not rationale:
+            continue
+        if rationale in _CHECK_344_PLACEHOLDER_RATIONALES:
+            continue
+        if len(rationale) < _CHECK_344_MIN_RATIONALE_LEN:
+            continue
+        return True
+    return False
+
+
+def check_empirical_finding_memo_references_canonical_equation(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #344 — refuse NEW empirical-finding memos without canonical
+    equation reference.
+
+    Per CLAUDE.md "Canonical equations + models registry" non-negotiable +
+    operator NON-NEGOTIABLE 2026-05-19. Scans repo-local
+    ``.omx/research/*.md`` files dated >= 2026-05-19 for empirical-finding
+    tokens (``empirical reduction`` / ``predicted vs empirical`` / etc.)
+    without an adjacent canonical-equation reference token
+    (``tac.canonical_equations`` / ``canonical_equations_registry`` /
+    sister names). Accepts same-line waiver
+    ``# FORMALIZATION_PENDING:<rationale>`` (placeholder rejected per
+    Catalog #287 sister discipline).
+
+    Sister of Catalog #290 + #294 + #296 + #297 + #303 + #305 + #309 +
+    #324 (design-memo discipline cluster) and Catalog #287 (empirical-
+    claim-evidence-tag at the source-text surface).
+
+    Memory: ``feedback_canonical_equations_and_models_registry_formalization_landed_20260519.md``.
+    Lane: ``lane_canonical_equations_and_models_registry_formalization_framework_20260519``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    research_root = root / _CHECK_344_RESEARCH_RELPATH
+    if not research_root.is_dir():
+        if verbose:
+            print(
+                f"  [catalog-344] {_CHECK_344_RESEARCH_RELPATH} not present, skipping"
+            )
+        return []
+
+    violations: list[str] = []
+    try:
+        candidates = sorted(research_root.iterdir())
+    except OSError:
+        return []
+
+    for entry in candidates:
+        if not entry.is_file() or not entry.name.endswith(".md"):
+            continue
+        try:
+            rel = entry.relative_to(root)
+        except ValueError:
+            rel = entry
+        rel_str = str(rel)
+        if any(exempt in rel_str for exempt in _CHECK_344_SELF_EXEMPT_PATHS):
+            continue
+        m = _CHECK_344_DESIGN_FILENAME_RE.match(entry.name)
+        if not m:
+            continue
+        try:
+            date_int = int(m.group(1))
+        except (TypeError, ValueError):
+            continue
+        if date_int < _CHECK_344_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            text = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if not _check_344_text_has_empirical_finding(text):
+            continue
+        if _check_344_text_has_canonical_equation_reference(text):
+            continue
+        if _check_344_text_has_valid_waiver(text):
+            continue
+        violations.append(
+            f"{rel}: memo dated {date_int} contains empirical-finding "
+            f"token(s) but does NOT reference any canonical equation. Per "
+            f"CLAUDE.md \"Canonical equations + models registry\" non-"
+            f"negotiable + operator NON-NEGOTIABLE 2026-05-19, every new "
+            f"empirical-finding memo MUST cite the corresponding canonical "
+            f"equation via ``tac.canonical_equations`` import / equation_id "
+            f"citation, OR carry same-line waiver "
+            f"`# FORMALIZATION_PENDING:<rationale>` (placeholder rejected). "
+            f"Catalog #344 (sister of #287/#290/#294/#296/#297/#303/#305)."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-344] {len(violations)} memo(s) missing canonical "
+                "equation reference"
+            )
+        else:
+            print("  [catalog-344] OK (no empirical-finding memos lack reference)")
+    if violations and strict:
+        raise PreflightError(
+            "check_empirical_finding_memo_references_canonical_equation found "
+            f"{len(violations)} memo(s) missing the required canonical equation "
+            "reference. Per CLAUDE.md \"Canonical equations + models registry\" "
+            "non-negotiable + operator NON-NEGOTIABLE 2026-05-19. Catalog #344 "
+            "(sister of #287 / #290 / #294 / #296 / #297 / #303 / #305).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #346: check_council_dispatch_roster_complete_per_canonical_helper
+# ============================================================================
+# Anti-recurrence for the under-rostering bug class anchored 2026-05-19 (operator
+# correction sequence: "rubin and her mentor" -> "and the time traveler" -> "i
+# think there are others missing too" -> "the time traveler is a mysterious
+# figure...the PR 95 author has been added to the inner council as well").
+#
+# Refuses council deliberation memos under .omx/research/ dated >= 2026-05-19
+# that lack tier-appropriate canonical roster per
+# tac.canonical_council_roster.validate_council_dispatch_roster.
+# ============================================================================
+
+_CHECK_346_CUTOFF_UTC_YYYYMMDD = "20260519"
+_CHECK_346_COUNCIL_FILENAME_GLOBS = (
+    "feedback_*council*_landed_*.md",
+    "feedback_*grand_council*_landed_*.md",
+    "feedback_*skunkworks_council*_landed_*.md",
+    "feedback_*symposium*_landed_*.md",
+    "grand_council_*_2026*.md",
+    "council_*_2026*.md",
+    "skunkworks_council_*_2026*.md",
+    "reunion_*_symposium_*_2026*.md",
+)
+_CHECK_346_WAIVER_TOKEN = "# COUNCIL_ROSTER_INCOMPLETE_OK"
+_CHECK_346_PLACEHOLDER_RATIONALES = (
+    "<rationale>", "<reason>", "<rationale_here>", "<reason_here>",
+)
+
+
+def _check_346_extract_tier_attendees_topic(text: str) -> tuple[str | None, frozenset[str], frozenset[str]]:
+    """Parse council memo frontmatter to extract tier + attendees + topic tokens.
+
+    Returns (tier, attendees, topic_tokens) or (None, frozenset(), frozenset())
+    if the memo lacks recognizable Catalog #300 v2 frontmatter.
+    """
+    import re
+
+    tier: str | None = None
+    attendees: set[str] = set()
+    topic_tokens: set[str] = set()
+
+    # Catalog #300 v2: council_tier: T2 / T3 / T4
+    m = re.search(r"^council_tier:\s*(T[1-4])", text, re.MULTILINE)
+    if m:
+        tier = m.group(1)
+
+    # Catalog #300 v2: council_attendees: [A, B, C, ...] (single line) OR YAML list
+    m = re.search(
+        r"^council_attendees:\s*\[([^\]]*)\]", text, re.MULTILINE,
+    )
+    if m:
+        raw = m.group(1)
+        for piece in raw.split(","):
+            name = piece.strip().strip("'\"")
+            if name:
+                attendees.add(name)
+    else:
+        # Try YAML block list: "council_attendees:\n  - Foo\n  - Bar"
+        m2 = re.search(
+            r"^council_attendees:\s*\n((?:\s*-\s*\S.*\n?)+)",
+            text, re.MULTILINE,
+        )
+        if m2:
+            for line in m2.group(1).splitlines():
+                stripped = line.strip().lstrip("-").strip().strip("'\"")
+                if stripped:
+                    attendees.add(stripped)
+
+    # Topic extraction heuristic: pull text from `topic:` field or fall back to
+    # the deliberation_id / lane_id / filename hints. We look for explicit
+    # `topic_tokens:` first (Catalog #346 schema extension), then `topic:`.
+    m = re.search(r"^topic_tokens:\s*\[([^\]]*)\]", text, re.MULTILINE)
+    if m:
+        for piece in m.group(1).split(","):
+            tok = piece.strip().strip("'\"").lower()
+            if tok:
+                topic_tokens.add(tok)
+    else:
+        m = re.search(r"^topic:\s*\"?([^\"\n]+)\"?", text, re.MULTILINE)
+        if m:
+            for tok in re.findall(r"[a-z][a-z0-9_]+", m.group(1).lower()):
+                topic_tokens.add(tok)
+
+    return tier, frozenset(attendees), frozenset(topic_tokens)
+
+
+def _check_346_has_waiver(text: str) -> tuple[bool, str]:
+    """Return (waived, rationale) per same-line `# COUNCIL_ROSTER_INCOMPLETE_OK:<rationale>`."""
+    import re
+
+    pattern = re.compile(
+        rf"{re.escape(_CHECK_346_WAIVER_TOKEN)}:\s*(.+?)(?:\s*-->|\s*$)",
+        re.MULTILINE,
+    )
+    m = pattern.search(text)
+    if not m:
+        return False, ""
+    rationale = m.group(1).strip()
+    if not rationale or len(rationale) < 4:
+        return False, rationale
+    if rationale.lower() in {p.lower() for p in _CHECK_346_PLACEHOLDER_RATIONALES}:
+        return False, rationale
+    return True, rationale
+
+
+def _check_346_date_suffix_in_filename(fname: str) -> str | None:
+    """Extract trailing _<YYYYMMDD> date suffix from a memo filename, else None."""
+    import re
+
+    m = re.search(r"_(\d{8})(?:\.|$)", fname)
+    if m:
+        return m.group(1)
+    return None
+
+
+def check_council_dispatch_roster_complete_per_canonical_helper(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Refuse post-2026-05-19 council deliberation memos lacking canonical roster.
+
+    Per CLAUDE.md "Experiment design — non-negotiable" + "Council conduct" +
+    "Grand Council (advisory)" + "Council hierarchy: 4-tier protocol": every
+    T2+ council deliberation MUST dispatch the canonical mandatory roster per
+    `tac.canonical_council_roster.validate_council_dispatch_roster`.
+
+    Bug class anchor: 2026-05-19 slot 20 + slot 20-supplemental + slot
+    20-second-supplemental sequence. Operator's 3-correction pattern
+    ("rubin and her mentor" -> "and the time traveler" -> "i think there are
+    others missing too") proved the under-rostering bug class. Structural fix
+    is THIS gate + canonical helper.
+
+    Acceptance:
+        (a) memo's `council_tier`, `council_attendees`, and topic tokens
+            yield `complete=True` per validate_council_dispatch_roster
+        (b) same-line waiver `# COUNCIL_ROSTER_INCOMPLETE_OK:<rationale>`
+            in the memo body (placeholder rationales rejected)
+        (c) memo predates the 2026-05-19 cutoff (legacy exemption per the
+            "Strict-flip atomicity rule")
+
+    Args:
+        strict: if True, raise PreflightError on any violation
+        verbose: if True, print per-violation summary
+        repo_root: optional repo root override (defaults to PACT_ROOT)
+
+    Returns:
+        List of violation messages (empty if clean).
+    """
+    from tac.canonical_council_roster import validate_council_dispatch_roster
+
+    root = Path(repo_root) if repo_root else REPO_ROOT
+    research_dir = root / ".omx" / "research"
+    violations: list[str] = []
+
+    if not research_dir.exists():
+        if verbose:
+            print(f"  [catalog-346] research_dir absent: {research_dir}")
+        return []
+
+    cutoff = _CHECK_346_CUTOFF_UTC_YYYYMMDD
+
+    candidates: list[Path] = []
+    for glob in _CHECK_346_COUNCIL_FILENAME_GLOBS:
+        candidates.extend(research_dir.glob(glob))
+    # De-dupe (a memo may match multiple globs)
+    candidates = sorted(set(candidates))
+
+    for memo_path in candidates:
+        # Date filter — only memos dated >= cutoff are in scope
+        date_suffix = _check_346_date_suffix_in_filename(memo_path.name)
+        if date_suffix is None or date_suffix < cutoff:
+            continue
+        try:
+            text = memo_path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+
+        waived, _waiver_rationale = _check_346_has_waiver(text)
+        if waived:
+            continue
+
+        tier, attendees, topic_tokens = _check_346_extract_tier_attendees_topic(text)
+        if tier is None or not attendees:
+            # Memo lacks Catalog #300 v2 frontmatter — Catalog #300 handles
+            # that gap separately; this gate only fires when frontmatter is
+            # parseable but roster is incomplete.
+            continue
+
+        verdict = validate_council_dispatch_roster(
+            list(attendees), list(topic_tokens), tier,
+        )
+        if not verdict.complete:
+            violations.append(
+                f"{memo_path.relative_to(root)}: tier={tier} roster INCOMPLETE; "
+                f"missing_inner={list(verdict.missing_inner_council)}; "
+                f"missing_grand_topical={list(verdict.missing_relevant_grand_council)[:5]}"
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [catalog-346] {len(violations)} council memo(s) under-rostered:")
+            for v in violations[:5]:
+                print(f"    - {v}")
+        else:
+            print("  [catalog-346] OK (all council memos satisfy canonical roster)")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_council_dispatch_roster_complete_per_canonical_helper found "
+            f"{len(violations)} council memo(s) with INCOMPLETE canonical roster. "
+            "Per CLAUDE.md 'Experiment design - non-negotiable' + 'Council conduct' "
+            "+ 'Grand Council (advisory)' + 'Council hierarchy: 4-tier protocol'. "
+            "Catalog #346 (sister of #292/#300/#325). Operator-correction-anchor: "
+            "2026-05-19 'rubin and her mentor'/'and the time traveler'/'i think "
+            "there are others missing too'/'the PR 95 author has been added to "
+            "the inner council as well'. Run "
+            "`tac.canonical_council_roster.validate_council_dispatch_roster` BEFORE "
+            "dispatching any T2+ council subagent.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

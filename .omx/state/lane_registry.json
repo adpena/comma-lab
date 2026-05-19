@@ -41003,11 +41003,11 @@
       "id": "lane_canonical_equations_and_models_registry_formalization_framework_20260519",
       "name": "Canonical equations + models registry + initial population + operationalization (anti-tribal-knowledge)",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/canonical_equations/ package + 6 initial equations registered + 24th cathedral consumer + 64 tests pass"
         },
         "real_archive_empirical": {
           "status": false,
@@ -41022,16 +41022,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #344 check_empirical_finding_memo_references_canonical_equation in preflight_all() strict=False at landing; 19 tests pass"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_canonical_equations_and_models_registry_formalization_landed_20260519.md + MEMORY.md prepend"
         },
         "deploy_runbook": {
           "status": false,
@@ -41121,6 +41121,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_t3_second_supplemental_missing_voices_plus_canonical_roster_helper_20260519",
+      "name": "T3 SECOND SUPPLEMENTAL: 4 inner council + 7 grand council voices added + canonical_council_roster helper landed (anti-recurrence)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/canonical_council_roster.py + check_council_dispatch_roster_complete_per_canonical_helper STRICT preflight gate Catalog #346 + .omx/research/grand_council_t3_second_supplemental_missing_voices_inner_council_plus_topic_relevant_grand_council_20260519.md symposium memo with 34 attendees + 7 AMEND verdicts + canonical_council_roster helper + 40 dedicated tests passing"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "check_council_dispatch_roster_complete_per_canonical_helper wired warn-only in preflight_all; live count 2 (slot 20 + slot 20-supplemental anchors); strict-flip pending waiver backfill"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_t3_second_supplemental_missing_voices_plus_canonical_roster_helper_landed_20260519.md + .omx/research/grand_council_t3_second_supplemental_missing_voices_inner_council_plus_topic_relevant_grand_council_20260519.md + council deliberation posterior anchor appended via tac.council_continual_learning.append_council_anchor"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_canonical_council_roster_maintenance_pr95_author_plus_time_traveler_reframe_20260519",
+      "name": "canonical_council_roster maintenance: PR 95 author added to inner council + Time-Traveler operator-reframed per 2026-05-19",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "12 inner-council seats verified (was 11; PR95Author added per operator 2026-05-19) + 20 grand-council seats verified (was 19; TimeTraveler mentor seat added per operator-reframe) + 40 sister tests pass [empirical:src/tac/tests/test_canonical_council_roster.py 40 passed]; helper extended in src/tac/canonical_council_roster.py + CLAUDE.md APPEND-ONLY edits per HISTORICAL_PROVENANCE Catalog #110"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_canonical_council_roster_maintenance_pr95_author_plus_time_traveler_reframe_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_t3_supplemental_rudin_daubechies_time_traveler_findings_lagrangian_symposium_20260519",
+      "name": "T3 SUPPLEMENTAL: Rudin + Daubechies + Time-Traveler added to findings Lagrangian + PP integration deliberation",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/grand_council_t3_supplemental_rudin_daubechies_time_traveler_findings_lagrangian_design_symposium_20260519.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_t3_supplemental_rudin_daubechies_time_traveler_findings_lagrangian_symposium_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -41130,5 +41253,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T13:49:06Z"
+  "updated_at": "2026-05-19T14:07:22Z"
 }
