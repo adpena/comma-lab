@@ -58,12 +58,11 @@ import fcntl
 import json
 import os
 import socket
-import sys
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 # --------------------------------------------------------------------------
 # Schema / constants
@@ -137,7 +136,7 @@ class HFJobsLedgerCorruptError(RuntimeError):
 def _now_iso() -> str:
     """Return current UTC time as ISO-8601 with timezone suffix."""
 
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # --------------------------------------------------------------------------
@@ -555,7 +554,7 @@ def update_hf_jobs_outcome(
             score_axis=score_axis,
             archive_sha256=archive_sha256,
         )
-    except Exception:  # noqa: BLE001 — fail-quiet per the contract
+    except Exception:
         pass
 
     return appended
@@ -822,13 +821,13 @@ __all__ = [
     "EVENT_INTENT",
     "EVENT_STALE",
     "HF_JOBS_CALL_ID_LEDGER_PATH",
-    "HFJobsLedgerCorruptError",
-    "HFJobsLedgerRegistrationFailedError",
     "SCHEMA_VERSION",
     "STATUS_DISPATCHED",
     "STATUS_INTENT",
     "TERMINAL_STATUSES",
     "VALID_EVENT_TYPES",
+    "HFJobsLedgerCorruptError",
+    "HFJobsLedgerRegistrationFailedError",
     "latest_status_by_hf_jobs_id",
     "load_hf_jobs",
     "load_hf_jobs_strict",
