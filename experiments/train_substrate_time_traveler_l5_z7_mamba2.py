@@ -770,13 +770,11 @@ def _build_score_aware_loss(
 
     Per CLAUDE.md "eval_roundtrip" non-negotiable + Catalog #164
     (canonical scorer-preprocess routing): use canonical
-    `load_differentiable_scorers` from tac.differentiable_eval_roundtrip
-    + patch upstream YUV6 before scorer load.
+    ``load_differentiable_scorers`` from ``tac.scorer`` + patch upstream
+    YUV6 before scorer load.
     """
-    from tac.differentiable_eval_roundtrip import (
-        load_differentiable_scorers,
-        patch_upstream_yuv6_globally,
-    )
+    from tac.differentiable_eval_roundtrip import patch_upstream_yuv6_globally
+    from tac.scorer import load_differentiable_scorers
 
     patch_upstream_yuv6_globally()
     upstream_dir = Path(args.upstream_dir)
