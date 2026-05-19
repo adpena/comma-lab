@@ -39527,11 +39527,11 @@
       "id": "lane_wiring_remediation_t1_plus_t2_20260519",
       "name": "Wiring remediation T1 + T2 batch",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "T1 cleared Catalog #185 5-violation drift + Catalog #300 4-violation frontmatter at commit edf666474; T2 landed 12 cathedral consumer packages + 76 tests at commit 179dc2501 [empirical:.omx/research/wiring_remediation_t1_t2_landed_20260519T055500Z.md]"
         },
         "real_archive_empirical": {
           "status": false,
@@ -39546,16 +39546,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #185 LIVE_COUNT drift detector re-verified 0 post-landing; Catalog #335 cathedral consumer directory contract verified 0; Catalog #300 council v2 frontmatter verified 0"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/wiring_remediation_t1_t2_landed_20260519T055500Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39650,11 +39650,11 @@
       "id": "lane_cable_d_master_gradient_extension_batch_20260519",
       "name": "Cable D master-gradient extension batch (D2+D3+D4)",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/master_gradient_consumers.py +8 consumers (7-14) ~810 LOC; tools/master_gradient_xray.py NEW ~430 LOC with 5 canonical plot types; tools/extract_master_gradient.py +list-analytical-surfaces subcommand + canonical schema master_gradient_analytical_surface_manifest_v1; 61 new tests across 3 files all passing; 193 total master_gradient tests passing"
         },
         "real_archive_empirical": {
           "status": false,
@@ -39677,8 +39677,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/cable_d_master_gradient_extension_batch_landed_20260519T055121Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39691,11 +39691,11 @@
       "id": "lane_cathedral_auto_ingest_paradigm_shift_20260519",
       "name": "Cathedral auto-ingest paradigm shift (convention over configuration)",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/cathedral/consumer_contract.py + src/tac/cathedral_consumers/_example_consumer/__init__.py + tools/cathedral_autopilot_autonomous_loop.py::discover_and_register_consumers; 61/61 tests pass"
         },
         "real_archive_empirical": {
           "status": false,
@@ -39710,16 +39710,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #335 check_cathedral_consumer_directory_package_exposes_canonical_contract WARN-ONLY wired in preflight_all (live count: 0 across 8 packages); strict-flip atomic with first non-compliant landing attempt"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_cathedral_auto_ingest_paradigm_shift_landed_20260519.md + .omx/research/cathedral_auto_ingest_paradigm_shift_landed_20260519T060000Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39768,6 +39768,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_hardening_bundle_2_f1_f2_paradigm_disambiguator_20260519",
+      "name": "Hardening bundle 2: OSS release prep + stale memory + paradigm disambiguator",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/oss_v0_2_0_rc1_release_announcement_20260519T055711Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -39777,5 +39818,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T05:49:58Z"
+  "updated_at": "2026-05-19T05:58:16Z"
 }
