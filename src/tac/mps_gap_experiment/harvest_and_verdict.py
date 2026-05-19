@@ -178,18 +178,27 @@ def _eval_on_device(
             upstream_dir=upstream_dir, device=device_obj
         )
 
-        # SegNet expects (B, T, 3, H, W) -> takes x[:, -1]; the scorer's
-        # canonical preprocess is handled inside the helper but we go direct
-        # here for the diagnostic surface.
+        # Catalog #164: route through scorer.preprocess_input BEFORE the
+        # forward. Both scorers' forward methods expect the
+        # already-preprocessed tensor (SegNet wants (B, 3, 384, 512) after
+        # last-frame select + bilinear interp; PoseNet wants (B, 12, 192, 256)
+        # after YUV6 conversion + bilinear interp). Calling segnet(reconstruction[:,-1])
+        # ONLY accidentally satisfies SegNet because it pre-handled the
+        # last-frame slice; PoseNet has no such shortcut and the raw 5-D
+        # reconstruction caused the predecessor's NaN (Phase B Option B fix
+        # per .omx/research/mps_phase_b_re_fire_split_device_verdict_20260519T060500Z.md
+        # op-routable #2).
         with torch.no_grad():
             try:
-                seg_out = segnet(reconstruction[:, -1, ...])
+                seg_in = segnet.preprocess_input(reconstruction)
+                seg_out = segnet(seg_in)
                 seg_value = float(seg_out.float().mean().item())
             except Exception:
                 seg_value = float("nan")
             try:
-                pose_out = posenet(reconstruction)
-                pose_value = float(pose_out.float().mean().item())
+                pose_in = posenet.preprocess_input(reconstruction)
+                pose_out = posenet(pose_in)
+                pose_value = float(pose_out["pose"].float().mean().item())
             except Exception:
                 pose_value = float("nan")
         components["segnet_mean_output"] = seg_value
