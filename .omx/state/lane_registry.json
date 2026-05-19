@@ -39937,6 +39937,47 @@
       "id": "lane_master_gradient_consumer_cathedral_wire_in_20260519",
       "name": "Master-gradient consumer cathedral wire-in (8 consumers via paradigm shift)",
       "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "8 wrapper packages under src/tac/cathedral_consumers/; 77 tests pass; Catalog #335 LIVE_COUNT=0; cumulative cathedral_consumers count=21"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/master_gradient_consumer_cathedral_wire_in_landed_20260519T061105Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_mps_phase_b_options_b_plus_c_completion_20260519",
+      "name": "MPS Phase B Options B + C completion (PoseNet fix + SegMap extension)",
+      "phase": 5.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -39982,5 +40023,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T06:11:47Z"
+  "updated_at": "2026-05-19T06:13:44Z"
 }
