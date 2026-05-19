@@ -41700,11 +41700,11 @@
       "id": "lane_phantom_api_backfill_wave_2_20260519",
       "name": "Phantom API backfill Wave 2 drain",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_phantom_api_backfill_wave_2_strict_flip_20260519T174434Z_codex.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -41719,8 +41719,8 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_phantom_api_backfill_wave_2_strict_flip_20260519T174434Z_codex.md"
         },
         "three_clean_review": {
           "status": false,
@@ -41818,6 +41818,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_t3_grand_council_upstream_contest_compliance_conformance_symposium_20260519",
+      "name": "T3 grand council symposium on 1:1 upstream contest compliance + conformance per operator NON-NEGOTIABLE 2026-05-19; resume from ac63c43bff8dfaa3d crash; verdict=PROCEED_WITH_REVISIONS; 5 binding revisions for Slot F D5; PR submission COMPETITIVE per Yousfi 2026-05-11 gate (0.19205 [contest-CPU] beats top PR #102 0.19538)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/grand_council_t3_upstream_contest_compliance_conformance_symposium_20260519T180611Z.md; PROCEED_WITH_REVISIONS; 20-attendee 14INNER+6GRAND; 8 op-routables; council anchor appended via tac.council_continual_learning.append_council_anchor"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_t3_grand_council_upstream_contest_compliance_symposium_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -41827,5 +41868,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T18:08:44Z"
+  "updated_at": "2026-05-19T18:15:20Z"
 }
