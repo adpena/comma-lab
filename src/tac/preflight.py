@@ -46312,6 +46312,21 @@ _CHECK_204_TRAINER_PATH = (
     "experiments/train_substrate_pr101_lc_v2_clone_enhanced_curriculum.py"
 )
 _CHECK_204_MODAL_DISPATCHER_PATH = "experiments/modal_train_lane.py"
+_CHECK_204_SUBSTRATE_DRIVER_GLOB = "scripts/remote_lane_substrate_*.sh"
+# Canonical 3-branch shape: an elif MODAL_RUNTIME=="1" block whose body
+# assigns OUTPUT_DIR to /modal_results/<job>/output. Allows optional
+# `&& [ -d "/modal_results" ]` clause and whitespace/comments between the
+# elif and the OUTPUT_DIR assignment.
+_CHECK_204_CROSS_DRIVER_THREE_BRANCH_RE = re.compile(
+    r'elif\s*\[\s*"\$\{MODAL_RUNTIME:-0\}"\s*=\s*"1"\s*\]'
+    r'(?:\s*&&\s*\[\s*-d\s*"/modal_results"\s*\])?'
+    r'\s*;\s*then[\s\S]{0,400}?OUTPUT_DIR\s*=\s*"?/modal_results/',
+    re.MULTILINE,
+)
+# Same-line waiver for the rare deliberate non-Modal driver or scaffold.
+_CHECK_204_CROSS_DRIVER_WAIVER_RE = re.compile(
+    r"#\s*CATALOG_204_CROSS_DRIVER_WAIVED:\s*(\S.{2,})"
+)
 
 
 def check_pr95plus_modal_smoke_uses_durable_provider_output(
@@ -46326,6 +46341,22 @@ def check_pr95plus_modal_smoke_uses_durable_provider_output(
     ``contest_auth_eval.py`` and failed closed because the score JSON was under
     ``/tmp/pact``. The correct fix is durable provider output, not the
     diagnostic ``--allow-temp-work-dir`` bypass.
+
+    Cross-driver expansion (2026-05-19): per the Catalog #244 NVML wave
+    precedent, the gate ALSO refuses any ``scripts/remote_lane_substrate_*.sh``
+    driver that fails to route OUTPUT_DIR through the canonical 3-branch
+    Modal-aware resolution. Sister anchors: ``stack_of_stacks`` (commit
+    ``956ad2e76`` 2026-05-19) + ``stc_v2`` 2026-05-14 hit the same bug class
+    that the PR95++ anchor surfaces. Cross-driver scope-extension extincts
+    the class structurally across all 50 substrate drivers.
+
+    Acceptance per driver:
+      (a) Driver matches the canonical 3-branch shape
+          ``elif [ "${MODAL_RUNTIME:-0}" = "1" ] ... ; then\\n    OUTPUT_DIR="/modal_results/..."``.
+      (b) Driver has no ``OUTPUT_DIR=`` assignment at all (the rare scaffold
+          that never writes archive/runtime/auth-eval evidence).
+      (c) Same-line ``# CATALOG_204_CROSS_DRIVER_WAIVED:<rationale>`` waiver
+          on any ``OUTPUT_DIR=`` line; rationale must be non-trivial.
     """
 
     root = (repo_root or Path.cwd()).resolve()
@@ -46376,6 +46407,43 @@ def check_pr95plus_modal_smoke_uses_durable_provider_output(
                 "are returned by modal_recover_lane.py"
             )
 
+    # Cross-driver expansion: every substrate driver must use the canonical
+    # 3-branch OUTPUT_DIR resolution (or carry a same-line waiver).
+    scripts_dir = root / "scripts"
+    if scripts_dir.is_dir():
+        for driver_path in sorted(
+            scripts_dir.glob("remote_lane_substrate_*.sh")
+        ):
+            try:
+                driver_text = driver_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            if "OUTPUT_DIR=" not in driver_text:
+                # Acceptance (b): scaffold driver with no OUTPUT_DIR — out of scope.
+                continue
+            if _CHECK_204_CROSS_DRIVER_THREE_BRANCH_RE.search(driver_text):
+                continue
+            # Acceptance (c): same-line waiver on any OUTPUT_DIR= line.
+            waiver_present = False
+            for line in driver_text.splitlines():
+                if "OUTPUT_DIR=" in line and not line.lstrip().startswith("#"):
+                    m = _CHECK_204_CROSS_DRIVER_WAIVER_RE.search(line)
+                    if m and m.group(1).strip() not in {
+                        "<rationale>", "<reason>", "",
+                    }:
+                        waiver_present = True
+                        break
+            if waiver_present:
+                continue
+            rel = driver_path.relative_to(root).as_posix()
+            violations.append(
+                f"{rel}: substrate driver missing canonical 3-branch "
+                "OUTPUT_DIR Modal-aware resolution (Catalog #204 cross-driver "
+                "expansion). Apply pattern from "
+                "scripts/remote_lane_substrate_pr101_lc_v2_clone_enhanced_curriculum.sh "
+                "lines 50-59 or add # CATALOG_204_CROSS_DRIVER_WAIVED:<rationale>"
+            )
+
     if verbose:
         if violations:
             print(f"  [pr95plus-durable-modal-output] {len(violations)} violation(s):")
@@ -46384,15 +46452,17 @@ def check_pr95plus_modal_smoke_uses_durable_provider_output(
         else:
             print(
                 "  [pr95plus-durable-modal-output] OK "
-                "(PR95++ Modal smoke writes auth-eval custody under /modal_results)"
+                "(PR95++ Modal smoke writes auth-eval custody under /modal_results; "
+                "all substrate drivers route to durable provider output)"
             )
 
     if violations and strict:
         raise PreflightError(
             "check_pr95plus_modal_smoke_uses_durable_provider_output found "
-            f"{len(violations)} contract violation(s). PR95++ Modal smoke must "
-            "write archive/runtime/auth-eval evidence under durable provider "
-            "storage and recover that path, not bypass temp-output custody:\n  "
+            f"{len(violations)} contract violation(s). PR95++ Modal smoke + "
+            "all substrate drivers must write archive/runtime/auth-eval "
+            "evidence under durable provider storage and recover that path, "
+            "not bypass temp-output custody:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
