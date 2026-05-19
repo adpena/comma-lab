@@ -62091,77 +62091,364 @@ _CHECK_287_EXCLUDED_PATH_MARKERS: tuple[str, ...] = (
 )
 
 
-def check_no_docstring_overstatement_without_evidence_tag(
-    *,
-    repo_root: Path | None = None,
-    strict: bool = False,
-    verbose: bool = False,
-) -> list[str]:
-    """Catalog #287 - GAP-4a docstring-overstatement evidence-tag gate.
+# ============================================================================
+# Catalog #287-B SCOPE-EXTENSION 2026-05-18 — phantom-API in research memos
+#
+# META-PHANTOM-API-STRUCTURAL-EXTINCTION per operator decision E.1 2026-05-18
+# + grand council T3 finding #5 PROCEED (commit `6606376eb`). 17 cumulative
+# META-audit instances of phantom-API citations in `.omx/research/*.md`
+# memos despite per-instance correction proved the bug class is structural.
+# Catalog #287's scope is extended to scan `.omx/research/**/*.md` body text
+# for `tac.X[.Y...]` citations and refuse any whose 2-component prefix
+# `tac.X` is not importable per `importlib.util.find_spec()`.
+#
+# Detection: regex matches dotted Python identifier paths starting with
+# `tac.`. For each match, extract 2-component prefix `tac.X` and verify
+# importability. Function-inside-module citations like
+# `tac.atom.ledger.append_atom` are LEGITIMATE because `tac.atom.ledger`
+# IS importable; we only validate the MODULE-NAME claim (2-component
+# prefix), not function existence inside it.
+#
+# Acceptance: (a) `tac.X` is importable; (b) same-line waiver
+# `# PHANTOM_NAME_INTENTIONAL_OK:<rationale>`; (c) same-line waiver
+# `# DESIGN_PROPOSAL_NOT_YET_IMPLEMENTED:<rationale>` (for proposals);
+# (d) file-level waiver `# PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE:<rationale>`
+# in first 30 lines. Placeholder `<rationale>` / `<reason>` literals rejected.
+#
+# Exempt: code-fenced blocks (between triple-backticks), HTML comments,
+# `.omx/research/MEMORY_CLUSTER_*`, `_archive/`, `_drafts/`, design memo
+# itself + 15th-instance source memo, the test file with verbatim violation
+# samples. Memory files (`feedback_*.md`) excluded by default (OSS-hermetic
+# per Catalog #290/#291/#292 sister design); enable via internal kwarg.
+#
+# Initial wire-in: WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because existing memos carry ~50-200 phantom citations pending backfill.
+#
+# Design memo: `.omx/research/catalog_287_scope_extension_to_research_md_
+# phantom_api_design_<utc>.md`. Lane:
+# `lane_meta_phantom_api_structural_extinction_catalog_287_scope_extend_20260518`.
+# ============================================================================
 
-    Scans ``src/tac/**/*.py`` (Python sources only - report scope is the
-    operationally-most-impactful surface for measurement claims) for
-    percentage / multiplier overstatement patterns without an adjacent
-    ``[empirical:<artifact>]`` / ``[contest-CUDA]`` / ``[prediction]`` /
-    ``[advisory only]`` axis tag within ±5 lines.
+_CHECK_287B_TAC_MODULE_NAME_RE = re.compile(
+    r"\btac\.[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*\b"
+)
+_CHECK_287B_INLINE_WAIVER_PHANTOM_RE = re.compile(
+    r"#\s*PHANTOM_NAME_INTENTIONAL_OK\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_287B_INLINE_WAIVER_PROPOSAL_RE = re.compile(
+    r"#\s*DESIGN_PROPOSAL_NOT_YET_IMPLEMENTED\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_287B_FILE_WAIVER_RE = re.compile(
+    r"#\s*PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_287B_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+_CHECK_287B_EXCLUDED_PATH_MARKERS: tuple[str, ...] = (
+    "MEMORY_CLUSTER_",
+    "/_archive/",
+    "/_drafts/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+)
+# Files that contain verbatim phantom-API samples for legitimate reasons.
+# These are paired by exact relpath suffix; the design memo + 15th-instance
+# memo + the test fixture file all contain verbatim phantom citations to
+# document the bug class.
+_CHECK_287B_SELF_EXEMPT_SUFFIXES: tuple[str, ...] = (
+    "src/tac/preflight.py",
+    "src/tac/tests/test_check_287_phantom_api_research_md_extension.py",
+    ".omx/research/meta_audit_addendum_15th_instance_phantom_canonical_helper_module_names_in_synthesis_memo_20260518.md",
+)
 
-    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag (the
-    docstring-overstatement trap)" forbidden pattern + OMNIBUS GAP-4a.
 
-    Same-line waiver: ``# DOCSTRING_PERCENT_CLAIM_OK:<rationale>`` (placeholder
-    ``<rationale>`` / ``<reason>`` literals rejected). Self-exempt:
-    ``src/tac/preflight.py`` (carries the regex literals + this docstring).
+def _check_287b_strip_code_fences_and_html_comments(text: str) -> str:
+    """Return text with triple-backtick fences and HTML comments masked.
 
-    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule".
-    Strict-flip pending bulk docstring audit + waiver backfill.
-
-    Memory: ``feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_20260515.md``.
-    Lane: ``lane_phase_2_land_5_gap_gates_20260515``.
+    The masking replaces the content with newlines so line numbers and
+    offset arithmetic remain stable; only the in-prose `tac.X` citations
+    are scanned.
     """
-    root = Path(repo_root or REPO_ROOT)
-    src_dir = root / "src" / "tac"
-    if not src_dir.is_dir():
-        return []
-    self_exempt = {root / "src" / "tac" / "preflight.py"}
-    violations: list[str] = []
-    for path in src_dir.rglob("*.py"):
-        if path in self_exempt:
+    out: list[str] = []
+    in_fence = False
+    in_html = False
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        # HTML comment opens / closes can span multiple lines
+        if not in_fence:
+            if not in_html and "<!--" in line:
+                idx = line.index("<!--")
+                head = line[:idx]
+                rest = line[idx + 4:]
+                if "-->" in rest:
+                    # single-line HTML comment
+                    end_idx = rest.index("-->")
+                    tail = rest[end_idx + 3:]
+                    line = head + " " * (4 + end_idx + 3) + tail
+                else:
+                    in_html = True
+                    line = head + " " * (len(line) - idx)
+            elif in_html:
+                if "-->" in line:
+                    end_idx = line.index("-->")
+                    line = " " * (end_idx + 3) + line[end_idx + 3:]
+                    in_html = False
+                else:
+                    line = " " * len(line)
+        # Triple-backtick fence open/close
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            out.append(" " * len(line))
             continue
-        rel = path.relative_to(root).as_posix()
-        if any(marker in rel for marker in _CHECK_287_EXCLUDED_PATH_MARKERS):
+        if in_fence:
+            out.append(" " * len(line))
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
+def _check_287b_extract_two_component_prefix(dotted: str) -> str | None:
+    """Return ``tac.X`` for any ``tac.X[.Y...]`` dotted path; else None."""
+    parts = dotted.split(".")
+    if len(parts) < 2 or parts[0] != "tac":
+        return None
+    return f"{parts[0]}.{parts[1]}"
+
+
+def _check_287b_module_is_importable(name: str) -> bool:
+    """Return True iff ``importlib.util.find_spec(name)`` returns a spec."""
+    import importlib.util as _iu
+    try:
+        spec = _iu.find_spec(name)
+    except (ModuleNotFoundError, ImportError, ValueError, AttributeError):
+        return False
+    return spec is not None
+
+
+def _check_287b_file_waived(text: str) -> bool:
+    """File-level waiver `PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE` in first 30 lines."""
+    head_lines = text.splitlines()[:30]
+    for line in head_lines:
+        m = _CHECK_287B_FILE_WAIVER_RE.search(line)
+        if m:
+            rationale = m.group(1).strip()
+            if not _is_placeholder_gate_waiver_rationale(
+                rationale,
+                _CHECK_287B_WAIVER_PLACEHOLDERS,
+            ):
+                return True
+    return False
+
+
+def _check_287b_line_waived(line: str) -> bool:
+    """Same-line waiver via either PHANTOM_NAME_INTENTIONAL_OK or
+    DESIGN_PROPOSAL_NOT_YET_IMPLEMENTED. Placeholder rationale rejected.
+    """
+    for regex in (
+        _CHECK_287B_INLINE_WAIVER_PHANTOM_RE,
+        _CHECK_287B_INLINE_WAIVER_PROPOSAL_RE,
+    ):
+        m = regex.search(line)
+        if m:
+            rationale = m.group(1).strip()
+            if not _is_placeholder_gate_waiver_rationale(
+                rationale,
+                _CHECK_287B_WAIVER_PLACEHOLDERS,
+            ):
+                return True
+    return False
+
+
+def _check_287b_scan_research_memos(
+    root: Path,
+    *,
+    scan_memory: bool = False,
+) -> list[str]:
+    """Sub-scope B implementation — scan `.omx/research/*.md` for phantom
+    `tac.X` citations. Returns list of violation strings.
+
+    Memory files (`~/.claude/projects/-Users-adpena-Projects-pact/memory/
+    feedback_*.md`) excluded by default per OSS-hermeticity. Opt-in via
+    `scan_memory=True` for operator-side audits.
+    """
+    violations: list[str] = []
+    research_dir = root / ".omx" / "research"
+    targets: list[Path] = []
+    if research_dir.is_dir():
+        targets.extend(research_dir.rglob("*.md"))
+    if scan_memory:
+        memory_dir = Path.home() / ".claude" / "projects" / "-Users-adpena-Projects-pact" / "memory"
+        if memory_dir.is_dir():
+            targets.extend(memory_dir.glob("feedback_*.md"))
+    # Cache module-importability decisions across the whole scan for speed.
+    importable_cache: dict[str, bool] = {}
+    for path in targets:
+        try:
+            rel = path.relative_to(root).as_posix()
+        except ValueError:
+            # path is outside repo root (e.g., memory file in $HOME)
+            rel = str(path)
+        # Self-exempt: design memos + test fixtures contain verbatim
+        # phantom citations.
+        if any(rel.endswith(suffix) for suffix in _CHECK_287B_SELF_EXEMPT_SUFFIXES):
+            continue
+        # Design memos describing this scope-extension itself.
+        if "catalog_287_scope_extension_to_research_md_phantom_api_design" in rel:
+            continue
+        if any(marker in rel for marker in _CHECK_287B_EXCLUDED_PATH_MARKERS):
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        lines = text.splitlines()
-        for i, line in enumerate(lines):
-            for pat in _CHECK_287_OVERSTATEMENT_PATTERNS:
-                if pat.search(line):
-                    # Same-line waiver?
-                    waiver_match = _CHECK_287_WAIVER_RE.search(line)
-                    if waiver_match:
-                        rationale = waiver_match.group(1).strip()
-                        if not _is_placeholder_gate_waiver_rationale(
-                            rationale,
-                            _CHECK_287_WAIVER_PLACEHOLDERS,
-                        ):
-                            continue
-                    # Adjacent evidence tag (±5 lines)?
-                    lo = max(0, i - 5)
-                    hi = min(len(lines), i + 6)
-                    window = "\n".join(lines[lo:hi])
-                    if any(tag in window for tag in _CHECK_287_EVIDENCE_TAG_PATTERNS):
-                        continue
-                    violations.append(
-                        f"{path.relative_to(root)}:{i + 1}: empirical claim "
-                        f"`{line.strip()[:120]}` lacks adjacent evidence tag "
-                        "([empirical:<path>] / [contest-CUDA] / [prediction] "
-                        "/ [advisory only]) per CLAUDE.md 'Forbidden empirical-"
-                        "claim-without-evidence-tag' + Catalog #287. Same-line "
-                        "waiver: `# DOCSTRING_PERCENT_CLAIM_OK:<rationale>`."
+        # File-level waiver short-circuits
+        if _check_287b_file_waived(text):
+            continue
+        masked = _check_287b_strip_code_fences_and_html_comments(text)
+        for i, line in enumerate(masked.splitlines()):
+            # Per-line waiver short-circuit
+            if _check_287b_line_waived(line):
+                continue
+            for match in _CHECK_287B_TAC_MODULE_NAME_RE.finditer(line):
+                dotted = match.group(0)
+                prefix = _check_287b_extract_two_component_prefix(dotted)
+                if prefix is None:
+                    continue
+                if prefix not in importable_cache:
+                    importable_cache[prefix] = (
+                        _check_287b_module_is_importable(prefix)
                     )
-                    break  # one violation per line is enough
+                if importable_cache[prefix]:
+                    continue
+                violations.append(
+                    f"{rel}:{i + 1}: phantom `tac.X` citation `{dotted}` "
+                    f"— 2-component prefix `{prefix}` is not importable. "
+                    "Per CLAUDE.md 'Bugs must be permanently fixed AND "
+                    "self-protected against' + Catalog #287 scope-"
+                    "extension (META-PHANTOM-API-STRUCTURAL-EXTINCTION). "
+                    "Acceptance: (a) cite the actual importable canonical "
+                    "name; (b) same-line waiver `# PHANTOM_NAME_"
+                    "INTENTIONAL_OK:<rationale>`; (c) same-line waiver "
+                    "`# DESIGN_PROPOSAL_NOT_YET_IMPLEMENTED:<rationale>` "
+                    "for proposals; (d) file-level waiver `# PHANTOM_NAME"
+                    "_DESIGN_PROPOSAL_OK_FILE:<rationale>` in first 30 "
+                    "lines for whole-file proposal memos."
+                )
+                # one violation per (line, dotted) is enough; keep scanning
+                # other dotted citations on the same line for completeness
+    return violations
+
+
+def check_no_docstring_overstatement_without_evidence_tag(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+    scan_research_memos: bool = True,
+    scan_memory_files: bool = False,
+) -> list[str]:
+    """Catalog #287 - GAP-4a docstring-overstatement evidence-tag gate
+    + Catalog #287-B SCOPE-EXTENSION 2026-05-18 phantom-API in research
+    memos.
+
+    **Sub-scope A** (original): scans ``src/tac/**/*.py`` for percentage /
+    multiplier overstatement patterns without an adjacent
+    ``[empirical:<artifact>]`` / ``[contest-CUDA]`` / ``[prediction]`` /
+    ``[advisory only]`` axis tag within ±5 lines. Per CLAUDE.md "Forbidden
+    empirical-claim-without-evidence-tag (the docstring-overstatement
+    trap)" forbidden pattern + OMNIBUS GAP-4a.
+
+    Same-line waiver (sub-scope A): ``# DOCSTRING_PERCENT_CLAIM_OK:
+    <rationale>`` (placeholder ``<rationale>`` / ``<reason>`` literals
+    rejected).
+
+    **Sub-scope B** (2026-05-18 scope-extension): scans
+    ``.omx/research/**/*.md`` for ``tac.X[.Y...]`` module-name citations
+    and refuses any whose 2-component prefix ``tac.X`` is not importable
+    via ``importlib.util.find_spec()``. Acceptance: (a) cite the actual
+    importable name; (b) same-line waiver ``# PHANTOM_NAME_INTENTIONAL_OK:
+    <rationale>``; (c) same-line waiver
+    ``# DESIGN_PROPOSAL_NOT_YET_IMPLEMENTED:<rationale>`` for proposed
+    helpers; (d) file-level waiver ``# PHANTOM_NAME_DESIGN_PROPOSAL_OK_
+    FILE:<rationale>`` in first 30 lines for whole-file proposal memos.
+    Placeholder rationales rejected. Memory files opt-in via
+    ``scan_memory_files=True`` (default OFF for OSS hermeticity per
+    Catalog #290/#291/#292 sister design).
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" non-negotiable + operator decision E.1 2026-05-18 +
+    grand council T3 finding #5 PROCEED. 17 cumulative META-audit
+    instances of phantom-API citations established the bug class is
+    structural.
+
+    Self-exempt: ``src/tac/preflight.py`` (regex literals + this
+    docstring), ``src/tac/tests/test_check_287_phantom_api_research_md_
+    extension.py`` (verbatim violation samples), the 15th-instance source
+    memo, and design memos matching
+    ``catalog_287_scope_extension_to_research_md_phantom_api_design*``.
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+    rule". Sub-scope A strict-flip pending bulk docstring audit; sub-
+    scope B strict-flip pending phantom-API backfill sweep across ~50-
+    200 existing violations in ``.omx/research/``.
+
+    Memory: ``feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_
+    20260515.md`` (original) + ``feedback_catalog_287_scope_extended_to_
+    research_md_phantom_api_landed_20260518.md`` (scope-extension).
+    Lane: ``lane_meta_phantom_api_structural_extinction_catalog_287_
+    scope_extend_20260518``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    # Sub-scope A — original src/tac/**/*.py docstring scan
+    src_dir = root / "src" / "tac"
+    if src_dir.is_dir():
+        self_exempt = {root / "src" / "tac" / "preflight.py"}
+        for path in src_dir.rglob("*.py"):
+            if path in self_exempt:
+                continue
+            rel = path.relative_to(root).as_posix()
+            if any(marker in rel for marker in _CHECK_287_EXCLUDED_PATH_MARKERS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            lines = text.splitlines()
+            for i, line in enumerate(lines):
+                for pat in _CHECK_287_OVERSTATEMENT_PATTERNS:
+                    if pat.search(line):
+                        # Same-line waiver?
+                        waiver_match = _CHECK_287_WAIVER_RE.search(line)
+                        if waiver_match:
+                            rationale = waiver_match.group(1).strip()
+                            if not _is_placeholder_gate_waiver_rationale(
+                                rationale,
+                                _CHECK_287_WAIVER_PLACEHOLDERS,
+                            ):
+                                continue
+                        # Adjacent evidence tag (±5 lines)?
+                        lo = max(0, i - 5)
+                        hi = min(len(lines), i + 6)
+                        window = "\n".join(lines[lo:hi])
+                        if any(tag in window for tag in _CHECK_287_EVIDENCE_TAG_PATTERNS):
+                            continue
+                        violations.append(
+                            f"{path.relative_to(root)}:{i + 1}: empirical claim "
+                            f"`{line.strip()[:120]}` lacks adjacent evidence tag "
+                            "([empirical:<path>] / [contest-CUDA] / [prediction] "
+                            "/ [advisory only]) per CLAUDE.md 'Forbidden empirical-"
+                            "claim-without-evidence-tag' + Catalog #287. Same-line "
+                            "waiver: `# DOCSTRING_PERCENT_CLAIM_OK:<rationale>`."
+                        )
+                        break  # one violation per line is enough
+
+    # Sub-scope B — 2026-05-18 scope-extension: research memo phantom-API scan
+    if scan_research_memos:
+        violations.extend(
+            _check_287b_scan_research_memos(root, scan_memory=scan_memory_files)
+        )
+
     if verbose:
         if violations:
             print(
@@ -62177,8 +62464,11 @@ def check_no_docstring_overstatement_without_evidence_tag(
             "check_no_docstring_overstatement_without_evidence_tag found "
             f"{len(violations)} violation(s). Per CLAUDE.md 'Forbidden "
             "empirical-claim-without-evidence-tag' forbidden pattern + "
-            "Catalog #287 (OMNIBUS GAP-4a). Every percentage / multiplier "
-            "claim MUST carry an adjacent evidence tag.\n  "
+            "Catalog #287 (OMNIBUS GAP-4a) + Catalog #287-B scope-extension "
+            "(META-PHANTOM-API-STRUCTURAL-EXTINCTION 2026-05-18). Every "
+            "percentage / multiplier claim MUST carry an adjacent evidence "
+            "tag; every `tac.X` citation in `.omx/research/*.md` MUST be "
+            "an importable module OR carry the canonical waiver.\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

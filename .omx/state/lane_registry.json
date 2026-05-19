@@ -39117,6 +39117,47 @@
       "id": "lane_meta_phantom_api_structural_extinction_catalog_287_scope_extend_20260518",
       "name": "META phantom-API structural extinction Catalog #287 scope-extend",
       "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Catalog #287 sub-scope B extension landed in preflight.py near line 62094 (function check_no_docstring_overstatement_without_evidence_tag); 44 dedicated tests pass; live count 418 warn-only baseline"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #287 wired warn-only at preflight_all line 2289 with new kwargs scan_research_memos=True default-active; scope-extension active"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_catalog_287_scope_extended_to_research_md_phantom_api_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_3_smoke_paid_gpu_reactivation_wave_20260518",
+      "name": "3-smoke paid-GPU reactivation wave (K-sweep + SGLD + Z7)",
+      "phase": 5.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -39162,5 +39203,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T04:17:53Z"
+  "updated_at": "2026-05-19T04:23:12Z"
 }
