@@ -49,6 +49,17 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict] = {
         "required_input_file": False,
     },
 }
+
+# Per CLAUDE.md "Substrate MUST be at OPTIMAL FORM" + Catalog #152 WAVE-1 APPARATUS
+# HARDENING extension 2026-05-16: required-input files under experiments/results/**
+# are Modal-IGNORED by default (DEFAULT_RESULTS_IGNORE=("results/**",)); the trainer
+# MUST declare them in TIER_1_EXTRA_MOUNT_PATHS so the canonical mount manifest
+# stages them on the Modal worker. Without this, Catalog #152 fires the
+# REQUIRED_INPUT_MODAL_STAGED_OK violation and refuses dispatch.
+TIER_1_EXTRA_MOUNT_PATHS: tuple[str, ...] = (
+    "experiments/results/mps_gap_experiment_local/checkpoint_ema.pt",
+    "experiments/results/mps_gap_experiment_local/frame_cache.pt",
+)
 """
 
 from __future__ import annotations

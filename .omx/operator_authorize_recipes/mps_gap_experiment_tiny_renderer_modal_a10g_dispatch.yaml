@@ -152,8 +152,12 @@ env_overrides:
   MPS_GAP_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   MPS_GAP_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
   MPS_GAP_OUTPUT_DIR: /workspace/pact/mps_gap_results
-  MPS_GAP_CHECKPOINT_INPUT: /workspace/pact/local_mps_checkpoint/checkpoint_ema.pt
-  MPS_GAP_FRAME_CACHE_INPUT: /workspace/pact/local_mps_checkpoint/frame_cache.pt
+  # 2026-05-19 Catalog #152 WAVE-2 driver-path fix: Modal mounts experiments/ under /workspace/pact;
+  # the local MPS checkpoint lives at experiments/results/mps_gap_experiment_local/ so the canonical
+  # Modal mount path is /workspace/pact/experiments/results/mps_gap_experiment_local/...
+  # Predecessor env_overrides pointed at /workspace/pact/local_mps_checkpoint/ which is NOT mounted.
+  MPS_GAP_CHECKPOINT_INPUT: /workspace/pact/experiments/results/mps_gap_experiment_local/checkpoint_ema.pt
+  MPS_GAP_FRAME_CACHE_INPUT: /workspace/pact/experiments/results/mps_gap_experiment_local/frame_cache.pt
   MPS_GAP_INCLUDE_SCORER: "1"
   LOCAL_CUDA_WORKER: "0"
 
