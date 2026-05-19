@@ -973,6 +973,385 @@ def make_action_from_track_callables(
     )
 
 
+# ── Cross-pollination wire-ins (Phase 2 of lane_unified_action_cross_pollination_wirein_20260518) ──
+#
+# Per the synthesis memo amendment (commit 7b231f4fa)
+# `.omx/research/magic_codec_plus_water_filling_plus_lagrangian_redirection_unified_synthesis_cross_pollination_20260518.md`
+# §"CANONICAL UNIFIED-LAGRANGIAN SURFACE ALREADY EXISTS": the canonical
+# unified-Lagrangian surface ALREADY EXISTS at this module (`tac.unified_action`).
+# The next-step is to wire `evaluate_with_water_filling` /
+# `evaluate_with_admm` / `evaluate_with_magic_codec` / `choose_solver` as
+# Action term-evaluators that route to the EXISTING canonical helpers
+# (`tac.water_filling_codec` / `tac.joint_admm_coordinator` /
+# `tac.codec_magic_registry` / `tac.meta_lagrangian_allocator`).
+#
+# These functions are THIN ROUTERS — the actual math lives in the canonical
+# helper modules. They never claim a score, never write to shared mutable
+# state, and never authorize dispatch. They emit deterministic in-memory
+# results that the caller (autopilot ranker / trainer / planner) consumes
+# and routes further per the 6-hook wire-in non-negotiable per CLAUDE.md
+# "Subagent coherence-by-default".
+
+
+@dataclass(frozen=True)
+class SolverChoice:
+    """The verdict returned by :func:`choose_solver`.
+
+    Carries the chosen solver name plus a JSON-safe rationale string for
+    operator-facing logs. Planning-only; never carries score or dispatch
+    authority.
+    """
+
+    solver: str
+    """One of ``"water_filling"`` / ``"admm"`` / ``"magic_codec"`` or sister
+    legal values from the caller-provided ``available`` tuple."""
+
+    rationale: str
+    """Human-readable explanation of why this solver was selected."""
+
+    history_anchor_id: str | None = None
+    """If the choice was history-informed, the canonical
+    `CouncilDeliberationRecord.deliberation_id` cited; ``None`` for
+    cold-start ε-greedy choices that had no relevant prior anchor."""
+
+    evidence_grade: str = "[predicted; unified-action; solver-selection]"
+
+
+def evaluate_with_water_filling(
+    action: "Action",
+    *,
+    hessians: Mapping[str, "torch.Tensor"],
+    variances: Mapping[str, "torch.Tensor"],
+    channel_element_counts: Mapping[str, Sequence[int]],
+    total_bit_budget: int,
+    sensitivity_map: Mapping[str, float] | None = None,
+    bisect_iters: int = 80,
+    budget_tol_frac: float = 0.01,
+) -> tuple[Mapping[str, list[int]], "DualVariables"]:
+    """Route the action's rate term through `tac.water_filling_codec`.
+
+    Catalog #125 hook 4 (cathedral autopilot dispatch): ACTIVE — autopilot
+    consumes the per-tensor qint_max mapping as an admissible operating
+    point for a follow-on dispatch candidate.
+
+    Calls `tac.water_filling_codec.water_fill_bit_budget` (Shannon's
+    closed-form reverse-water-filling KKT solver from Cover & Thomas
+    10.4.2). When ``sensitivity_map`` is provided, the per-tensor variances
+    are multiplied by the sensitivity weight before water-filling so the
+    allocator favours bytes the planner considers more score-relevant; when
+    absent, uniform weighting (the canonical default) is used.
+
+    Args:
+        action: The unified Action whose ``L_rate`` term is being solved.
+          Must have a non-degenerate ``duals.lambda_rate``; raises
+          ``ValueError`` otherwise.
+        hessians: ``{<conv>.weight: Tensor[O]}`` per-channel curvature
+          from ``estimate_per_channel_hessian``.
+        variances: ``{<conv>.weight: Tensor[O]}`` per-channel σ² from
+          ``estimate_per_channel_variance``.
+        channel_element_counts: ``{<conv>.weight: [n_0, n_1, ...]}`` where
+          ``n_c = I * kH * kW`` for channel ``c``.
+        total_bit_budget: Total signed-integer bit budget B.
+        sensitivity_map: Optional ``{<conv>.weight: weight}`` per-tensor
+          utility multiplier (e.g. from
+          ``tac.sensitivity_map.axis_weights.default_axis_weights``).
+          Values must be positive.
+        bisect_iters: λ-bisection iterations forwarded to the canonical
+          solver.
+        budget_tol_frac: Budget slack fraction forwarded to the canonical
+          solver.
+
+    Returns:
+        Tuple ``(per_tensor_qint_max, duals)`` where ``per_tensor_qint_max``
+        is ``{<conv>.weight: [Q_0, Q_1, ...]}`` (one int per channel from
+        ``QINT_LEVELS``) and ``duals`` is the (unchanged) ``DualVariables``
+        from the action — the per-tensor bit budgets are the structural
+        analogue of the per-stream dual variables in the ADMM router.
+    """
+    if action.L_rate is None:
+        raise ValueError(
+            "evaluate_with_water_filling: action.L_rate is None; cannot "
+            "route a missing rate term through water-filling."
+        )
+    if action.duals.lambda_rate <= 0.0:
+        raise ValueError(
+            "evaluate_with_water_filling: action.duals.lambda_rate must be "
+            f">0; got {action.duals.lambda_rate}. Refusing to allocate "
+            "bits against an inactive rate term."
+        )
+    if total_bit_budget <= 0:
+        raise ValueError(
+            f"evaluate_with_water_filling: total_bit_budget must be >0; got "
+            f"{total_bit_budget}"
+        )
+    keys = set(hessians.keys())
+    if set(variances.keys()) != keys or set(channel_element_counts.keys()) != keys:
+        raise ValueError(
+            "evaluate_with_water_filling: hessians / variances / "
+            "channel_element_counts must cover the same tensor keys"
+        )
+    if sensitivity_map is not None:
+        if not all(float(w) > 0.0 for w in sensitivity_map.values()):
+            raise ValueError(
+                "evaluate_with_water_filling: sensitivity_map weights must "
+                "all be positive (zero/negative weights would zero out a "
+                "channel from water-filling)"
+            )
+
+    from tac.water_filling_codec import water_fill_bit_budget
+
+    if sensitivity_map is not None:
+        weighted_variances: dict[str, "torch.Tensor"] = {}
+        for key, var in variances.items():
+            weight = float(sensitivity_map.get(key, 1.0))
+            weighted_variances[key] = var * weight
+        active_variances = weighted_variances
+    else:
+        active_variances = dict(variances)
+
+    counts_as_lists: dict[str, list[int]] = {
+        key: list(value) for key, value in channel_element_counts.items()
+    }
+    qint_max_by_tensor = water_fill_bit_budget(
+        hessians=dict(hessians),
+        variances=active_variances,
+        channel_element_counts=counts_as_lists,
+        total_bits=int(total_bit_budget),
+        bisect_iters=int(bisect_iters),
+        budget_tol_frac=float(budget_tol_frac),
+    )
+    return qint_max_by_tensor, action.duals
+
+
+def evaluate_with_admm(
+    action: "Action",
+    *,
+    streams: Sequence[Any],
+    config: Any = None,
+) -> Any:
+    """Route the action through `tac.joint_admm_coordinator.run_admm`.
+
+    Catalog #125 hook 4 (cathedral autopilot dispatch): ACTIVE — the
+    returned ``AdmmResult`` exposes the per-stream dual variables that
+    encode the canonical operating point the cathedral autopilot ranker
+    consumes when comparing ADMM vs water-filling vs magic-codec
+    treatments.
+
+    Catalog #125 hook 1 (sensitivity-map): ACTIVE — the per-stream
+    ``final_marginal_per_stream`` is the canonical local
+    ``dScore/dByte`` sensitivity estimate consumable by
+    ``tac.sensitivity_map``.
+
+    Args:
+        action: The unified Action whose track decomposition is being
+          jointly optimised across blocks. At least one of
+          ``L_seg`` / ``L_pose`` / ``L_rate`` must be wired.
+        streams: A sequence of ``StreamProximalCodec`` objects (per the
+          Protocol in ``tac.joint_admm_coordinator``). Each stream owns
+          its own ``proximal_step`` solver; the coordinator never
+          inspects internal state.
+        config: An optional ``JointADMMConfig``. When ``None``, the
+          default constructor is used.
+
+    Returns:
+        The ``AdmmResult`` from the canonical helper — a structured record
+        of per-stream final byte allocation, score, marginal, KKT residual,
+        and iteration history. The caller decides whether to consume the
+        result for dispatch ranking or for sensitivity-map contribution.
+    """
+    if (
+        action.L_seg is None
+        and action.L_pose is None
+        and action.L_rate is None
+    ):
+        raise ValueError(
+            "evaluate_with_admm: action has no baseline track wired "
+            "(L_seg, L_pose, L_rate all None); ADMM requires at least one "
+            "baseline term to coordinate across."
+        )
+    if len(list(streams)) == 0:
+        raise ValueError(
+            "evaluate_with_admm: streams must be a non-empty sequence of "
+            "StreamProximalCodec objects."
+        )
+
+    from tac.joint_admm_coordinator import JointADMMConfig, run_admm
+
+    cfg = config if config is not None else JointADMMConfig()
+    return run_admm(streams=list(streams), cfg=cfg)
+
+
+def evaluate_with_magic_codec(
+    action: "Action",
+    *,
+    tensor_bytes_by_name: Mapping[str, bytes],
+) -> Mapping[str, Any]:
+    """Route per-tensor codec selection through `tac.codec_magic_registry`.
+
+    Catalog #125 hook 4 (cathedral autopilot dispatch): ACTIVE — the
+    returned per-tensor codec-entry map encodes the canonical decode
+    routing the autopilot ranker uses when comparing candidate archive
+    grammars.
+
+    For each ``(name, blob)`` pair, sniffs the 4-byte magic prefix via
+    ``tac.codec_magic_registry.sniff_codec`` and returns the matching
+    ``CodecMagicEntry`` (or ``None`` when the blob carries an
+    unregistered prefix — caller decides how to handle the legacy /
+    unknown case).
+
+    Args:
+        action: The unified Action whose archive grammar is being
+          inspected. The action's own state is not modified.
+        tensor_bytes_by_name: Mapping of tensor name → raw codec blob
+          (the bytes that would land in the archive ZIP member for that
+          tensor). Each blob must be ≥4 bytes.
+
+    Returns:
+        ``{name: CodecMagicEntry | None}`` — the per-tensor canonical
+        codec choice. Unknown-magic blobs map to ``None``.
+    """
+    from tac.codec_magic_registry import sniff_codec
+
+    out: dict[str, Any] = {}
+    for name, blob in tensor_bytes_by_name.items():
+        if not isinstance(blob, (bytes, bytearray, memoryview)):
+            raise TypeError(
+                f"evaluate_with_magic_codec: tensor '{name}' has non-bytes "
+                f"payload of type {type(blob).__name__}; expected bytes-like."
+            )
+        out[name] = sniff_codec(blob)
+    return out
+
+
+def choose_solver(
+    problem_kind: "SurfaceKind",
+    history_path: "Any | None" = None,
+    *,
+    available: Sequence[str] = ("water_filling", "admm", "magic_codec"),
+    epsilon: float = 0.1,
+    rng_seed: int | None = None,
+) -> "SolverChoice":
+    """Bandit-driven solver selection across the cross-pollination wire-ins.
+
+    Catalog #125 hook 4 (cathedral autopilot dispatch): ACTIVE — this is
+    the canonical solver-selection surface the autopilot ranker calls when
+    deciding which of the 3 wired solvers to invoke for a given problem.
+    Catalog #125 hook 5 (continual-learning posterior): ACTIVE — when
+    ``history_path`` is provided, prior council deliberations on the same
+    ``problem_kind`` are queried via
+    ``tac.council_continual_learning.query_anchors_by_topic`` so the
+    bandit's exploit-arm exploits actual posterior evidence.
+
+    Cold-start (no history): pure ε-greedy over ``available`` (random
+    exploration with probability ``epsilon``; argmax over alphabetic
+    sort as a deterministic tiebreaker otherwise). With history:
+    ε-greedy where the exploit arm is the solver with the most recent
+    PROCEED verdict on a council anchor whose ``topic`` mentions
+    ``problem_kind`` plus the solver name.
+
+    Args:
+        problem_kind: The ``SurfaceKind`` (e.g.
+          ``SurfaceKind.MASTER_GRADIENT_BOUNDARY``) the solver will
+          consume. Used as the topic key for the history query.
+        history_path: Optional path to the council deliberation posterior
+          JSONL (defaults to None = cold-start). Pass
+          ``tac.council_continual_learning.DEFAULT_COUNCIL_POSTERIOR_PATH``
+          to enable history-informed selection.
+        available: Sequence of solver names this selector may return.
+          Default ``("water_filling", "admm", "magic_codec")`` matches
+          the 3 cross-pollination wire-ins above.
+        epsilon: Exploration probability for the ε-greedy bandit. Default
+          0.1. Must be in ``[0.0, 1.0]``.
+        rng_seed: Optional deterministic seed for reproducible
+          exploration. When ``None``, the default ``random.Random()``
+          state is used.
+
+    Returns:
+        A :class:`SolverChoice` carrying the chosen solver name, a
+        human-readable rationale, and (when history-informed) the cited
+        council anchor id.
+    """
+    if not (0.0 <= float(epsilon) <= 1.0):
+        raise ValueError(f"choose_solver: epsilon must be in [0,1]; got {epsilon}")
+    if len(list(available)) == 0:
+        raise ValueError("choose_solver: available must be non-empty")
+    available_sorted = tuple(sorted(set(available)))
+
+    import random
+
+    rng = random.Random(rng_seed) if rng_seed is not None else random.Random()
+
+    # History-informed exploit arm.
+    history_anchor_id: str | None = None
+    exploit_solver: str | None = None
+    if history_path is not None:
+        try:
+            from tac.council_continual_learning import (
+                load_council_anchors,
+                query_anchors_by_topic,
+            )
+
+            anchors = load_council_anchors(path=history_path)
+            topic_substring = str(problem_kind.value) if isinstance(problem_kind, Enum) else str(problem_kind)
+            matching = query_anchors_by_topic(anchors, topic_substring=topic_substring)
+            # Most-recent PROCEED anchor whose topic mentions one of the
+            # available solver names wins the exploit arm.
+            sorted_recent = sorted(
+                matching,
+                key=lambda rec: getattr(rec, "written_at_utc", "") or "",
+                reverse=True,
+            )
+            for rec in sorted_recent:
+                verdict = getattr(rec, "council_verdict", "")
+                if verdict != "PROCEED":
+                    continue
+                topic = (getattr(rec, "topic", "") or "").lower()
+                for cand in available_sorted:
+                    if cand.lower() in topic:
+                        exploit_solver = cand
+                        history_anchor_id = getattr(rec, "deliberation_id", None)
+                        break
+                if exploit_solver is not None:
+                    break
+        except Exception:  # pragma: no cover — fail-OPEN to cold-start  # noqa: BLE001
+            exploit_solver = None
+            history_anchor_id = None
+
+    # ε-greedy: explore with probability epsilon; exploit otherwise.
+    if rng.random() < float(epsilon):
+        choice = rng.choice(available_sorted)
+        return SolverChoice(
+            solver=choice,
+            rationale=(
+                f"epsilon-greedy explore (epsilon={epsilon}, kind={problem_kind!r}): "
+                f"random pick from {list(available_sorted)}"
+            ),
+            history_anchor_id=None,
+        )
+
+    if exploit_solver is not None:
+        return SolverChoice(
+            solver=exploit_solver,
+            rationale=(
+                f"history-informed exploit (kind={problem_kind!r}): most-recent "
+                f"PROCEED council anchor on this topic cites solver "
+                f"{exploit_solver!r}"
+            ),
+            history_anchor_id=history_anchor_id,
+        )
+
+    # Cold-start exploit: deterministic alphabetic argmax (lowest name).
+    choice = available_sorted[0]
+    return SolverChoice(
+        solver=choice,
+        rationale=(
+            f"cold-start exploit (kind={problem_kind!r}): no relevant prior "
+            f"anchor; deterministic alphabetic argmax over {list(available_sorted)}"
+        ),
+        history_anchor_id=None,
+    )
+
+
 __all__ = [
     "ACTION_EVIDENCE_GRADE",
     "ACTION_SCHEMA_VERSION",
@@ -982,9 +1361,14 @@ __all__ = [
     "DualVariables",
     "MasterGradientBoundarySummary",
     "OptimizerAnalyticalBoundaries",
+    "SolverChoice",
     "SurfaceKind",
     "TrackKind",
     "build_optimizer_analytical_boundaries",
+    "choose_solver",
+    "evaluate_with_admm",
+    "evaluate_with_magic_codec",
+    "evaluate_with_water_filling",
     "make_action_from_track_callables",
     "summarize_master_gradient_boundaries",
 ]

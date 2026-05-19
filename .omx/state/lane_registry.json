@@ -38459,11 +38459,11 @@
       "id": "lane_unified_action_cross_pollination_wirein_20260518",
       "name": "Unified-Action Cross-Pollination Wire-In + Utility Curves",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/unified_action.py +313 LOC (4 wire-in routers + SolverChoice dataclass; public surface 26->31); src/tac/utility_curves/ NEW subpackage with 3 utility callables; 87 tests pass (24 wire-in + 8 cross-domain + 24 utility-curves + 31 pre-existing)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -38486,8 +38486,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_unified_action_cross_pollination_wirein_landed_20260518.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -38545,5 +38545,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T02:00:45Z"
+  "updated_at": "2026-05-19T02:03:25Z"
 }
