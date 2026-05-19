@@ -4,7 +4,7 @@ Hosted at: `<HOSTED_URL_PLACEHOLDER>` (GitHub Release URL on `adpena/comma_video
 
 - SHA-256: `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`
 - Size: 178,517 bytes
-- ZIP members: `inflate.py`, `inflate.sh`, `src/codec.py`, `src/frame_selector.py`, `src/model.py`, `0.bin` (renderer state-dict + latent + selector sidecar; 162,164 bytes per the canonical archive grammar).
+- Submission layout: `archive.zip` (single-member compressed payload, `x`, 178,417 bytes — the rate-term-charged bytes per `upstream/evaluate.py` L63) plus the alongside runtime tree `inflate.sh`, `inflate.py`, `src/codec.py`, `src/frame_selector.py`, `src/model.py`. `src/codec.py` parses the renderer state-dict + latent sidecar + selector sections out of the `x` blob at inflate time.
 
 # report.txt
 
@@ -36,7 +36,7 @@ The CPU and CUDA values are reported as separate observations on 1:1 contest-com
 
 ## Reproducibility
 
-Archive `archive.zip` is byte-stable at SHA-256 `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf` and 178,517 bytes. The ZIP carries `inflate.py`, `inflate.sh`, `src/codec.py`, `src/frame_selector.py`, `src/model.py`, and `0.bin`. Dependency closure is `torch` + `brotli`. The entry-point contract is the canonical `inflate.sh <archive_dir> <output_dir> <file_list>`. The rate term `25 * 178517 / 37545489 ≈ 0.118867` is fully accounted for by `archive.zip` bytes; no out-of-archive sidecars and no scorer weights are loaded at inflate time, per the strict scorer rule.
+Archive `archive.zip` is byte-stable at SHA-256 `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf` and 178,517 bytes. The zip contains a single member `x` (178,417 bytes, stored uncompressed) that packs the renderer state-dict at FP11 + the latent sidecar + the entropy-coded FEC6 selector indices; `src/codec.py` parses the sections from `x` at inflate time. The runtime tree (`inflate.sh`, `inflate.py`, `src/codec.py`, `src/frame_selector.py`, `src/model.py`) lives alongside `archive.zip` in the submission directory per the upstream contract. Dependency closure is `torch` + `brotli`. The entry-point contract is the canonical `inflate.sh <archive_dir> <output_dir> <file_list>`. The rate term `25 * 178517 / 37545489 ≈ 0.118867` is fully accounted for by `archive.zip` bytes; no out-of-archive sidecars and no scorer weights are loaded at inflate time, per the strict scorer rule.
 
 Selector and codec source are mirrored at commit `462f84cdd` of [adpena/comma-lab](https://github.com/adpena/comma-lab/tree/462f84cdd/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir):
 
