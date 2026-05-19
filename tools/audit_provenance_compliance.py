@@ -43,6 +43,8 @@ Per-artifact verdict taxonomy:
 
 Per-violation classifier:
   * MISSING_PROVENANCE — no 'provenance' sub-object
+  * MISSING_CONTEST_COMPLIANCE_RATIONALE — Wyner-Ziv DeliverabilityProof-style
+    score-savings artifact lacks a contest-compliance rationale or citation chain
   * BYTE_IDENTITY_ARTIFACT — composed_from parts share sha256 (Catalog #823)
   * RESEARCH_SIDECAR_SCORE_CLAIMED — Catalog #321 anchor
   * AXIS_HARDWARE_MISMATCH — measurement_axis ≠ hardware_substrate canonical pairing
@@ -59,9 +61,9 @@ import json
 import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # Defer tac import so the tool can be run from a fresh checkout w/o setup
 REPO_ROOT_DEFAULT = Path(__file__).resolve().parent.parent
@@ -132,6 +134,29 @@ SCORE_CLAIM_KEYS: tuple[str, ...] = (
 )
 
 
+DELIVERABILITY_PROOF_MARKER_KEYS: tuple[str, ...] = (
+    "deliverable_score_savings_estimate",
+    "contest_compliance_verdict",
+    "contest_compliance_rationale",
+    "contest_compliance_citation_chain",
+    "candidate_shared_prior_byte_count",
+    "tier_1_byte_count",
+    "tier_2_byte_count",
+    "tier_3_byte_count",
+    "tier_4_byte_count",
+)
+
+
+LEGAL_CONTEST_COMPLIANCE_CITATION_ANCHORS: frozenset[str] = frozenset(
+    {
+        "archive.zip seed inclusion",
+        "weight-derived codebook from shipped archive bytes",
+        "null-space in-archive byte reduction",
+        "reviewability-only no-score-impact",
+    }
+)
+
+
 # Path patterns to scan (relative to scan root)
 SCAN_PATTERNS: tuple[str, ...] = (
     ".omx/state/**/*.json",
@@ -166,6 +191,64 @@ def _is_excluded(path: Path) -> bool:
     return any(marker in s for marker in EXCLUDE_MARKERS)
 
 
+def _looks_like_deliverability_proof(payload: dict[str, Any]) -> bool:
+    """Return True for persisted Wyner-Ziv DeliverabilityProof-style payloads."""
+    marker_count = sum(1 for key in DELIVERABILITY_PROOF_MARKER_KEYS if key in payload)
+    has_wz_score_key = "deliverable_score_savings_estimate" in payload
+    has_tier_shape = (
+        "candidate_shared_prior_byte_count" in payload
+        and any(f"tier_{tier}_byte_count" in payload for tier in range(1, 5))
+    )
+    has_compliance_shape = any(
+        key in payload
+        for key in (
+            "contest_compliance_verdict",
+            "contest_compliance_rationale",
+            "contest_compliance_citation_chain",
+        )
+    )
+    return has_wz_score_key or (has_tier_shape and has_compliance_shape) or marker_count >= 3
+
+
+def _contest_compliance_blockers(payload: dict[str, Any]) -> list[str]:
+    """Audit persisted DeliverabilityProof rationale fields without importing tac."""
+    if not _looks_like_deliverability_proof(payload):
+        return []
+
+    blockers: list[str] = []
+    rationale = payload.get("contest_compliance_rationale")
+    if not isinstance(rationale, str) or not rationale.strip():
+        blockers.append(
+            "DeliverabilityProof-style score-savings artifact is missing "
+            "non-empty contest_compliance_rationale"
+        )
+
+    citation_chain = payload.get("contest_compliance_citation_chain")
+    if not isinstance(citation_chain, (list, tuple)):
+        blockers.append(
+            "DeliverabilityProof-style score-savings artifact is missing "
+            "contest_compliance_citation_chain list/tuple"
+        )
+        return blockers
+
+    normalized = tuple(
+        str(citation).strip() for citation in citation_chain if str(citation).strip()
+    )
+    if not normalized:
+        blockers.append(
+            "DeliverabilityProof-style score-savings artifact has empty "
+            "contest_compliance_citation_chain"
+        )
+    elif not (set(normalized) & LEGAL_CONTEST_COMPLIANCE_CITATION_ANCHORS):
+        blockers.append(
+            "contest_compliance_citation_chain must cite a contest-compliant route: "
+            "archive.zip seed inclusion, weight-derived codebook from shipped "
+            "archive bytes, null-space in-archive byte reduction, or "
+            "reviewability-only no-score-impact"
+        )
+    return blockers
+
+
 def _classify_payload(
     payload: dict[str, Any],
 ) -> tuple[str, list[str], list[str]]:
@@ -181,13 +264,18 @@ def _classify_payload(
     classifiers: list[str] = []
     blockers: list[str] = []
 
+    compliance_blockers = _contest_compliance_blockers(payload)
+    if compliance_blockers:
+        classifiers.append("MISSING_CONTEST_COMPLIANCE_RATIONALE")
+        blockers.extend(compliance_blockers)
+
     # Score keys present → require provenance
     if "provenance" not in payload:
         classifiers.append("MISSING_PROVENANCE")
         blockers.append(
             f"score-claim keys {score_keys_present!r} but no 'provenance' field"
         )
-        return "VIOLATION", classifiers, blockers
+        return "VIOLATION", list(dict.fromkeys(classifiers)), blockers
 
     prov_dict = payload["provenance"]
     if not isinstance(prov_dict, dict):
@@ -195,7 +283,7 @@ def _classify_payload(
         blockers.append(
             f"'provenance' field is not a dict (type={type(prov_dict).__name__})"
         )
-        return "VIOLATION", classifiers, blockers
+        return "VIOLATION", list(dict.fromkeys(classifiers)), blockers
 
     # Reconstruct + validate
     try:
@@ -218,11 +306,14 @@ def _classify_payload(
                     classifiers.append("AXIS_HARDWARE_MISMATCH")
                 if "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD" in b:
                     classifiers.append("FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD")
-            return "VIOLATION", list(set(classifiers)), blockers
+            return "VIOLATION", sorted(set(classifiers)), blockers
     except Exception as exc:
         classifiers.append("INVALID_PROVENANCE_SHAPE")
         blockers.append(f"audit failed with exception: {exc}")
-        return "VIOLATION", classifiers, blockers
+        return "VIOLATION", list(dict.fromkeys(classifiers)), blockers
+
+    if compliance_blockers:
+        return "VIOLATION", list(dict.fromkeys(classifiers)), blockers
 
     return "CLEAN", [], []
 
@@ -244,7 +335,7 @@ def _audit_file(path: Path) -> ArtifactVerdict:
     # Detect JSONL vs JSON by extension
     if path.suffix == ".jsonl":
         rows = []
-        for line_no, line in enumerate(raw.splitlines(), 1):
+        for _line_no, line in enumerate(raw.splitlines(), 1):
             line = line.strip()
             if not line:
                 continue
@@ -339,7 +430,7 @@ def build_audit_report(scan_root: Path) -> ProvenanceAuditReport:
     """Walk patterns and aggregate verdicts."""
     report = ProvenanceAuditReport(
         scan_root=str(scan_root),
-        scanned_at_utc=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        scanned_at_utc=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
 
     seen: set[Path] = set()
@@ -370,7 +461,7 @@ def build_audit_report(scan_root: Path) -> ProvenanceAuditReport:
 def render_summary(report: ProvenanceAuditReport) -> str:
     """Human-readable summary."""
     lines = []
-    lines.append(f"=== Provenance Audit Compliance ===")
+    lines.append("=== Provenance Audit Compliance ===")
     lines.append(f"scan root: {report.scan_root}")
     lines.append(f"scanned at: {report.scanned_at_utc}")
     lines.append(f"total artifacts: {report.total_artifacts_scanned}")
@@ -392,7 +483,7 @@ def render_summary(report: ProvenanceAuditReport) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scan-root",

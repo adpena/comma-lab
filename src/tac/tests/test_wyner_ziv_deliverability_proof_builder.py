@@ -40,14 +40,12 @@ import pytest
 from tac.master_gradient_consumers import WynerZivSideInfoClassification
 from tac.wyner_ziv_deliverability import (
     DELIVERABILITY_PROOF_SCHEMA_VERSION,
-    WYNER_ZIV_DELIVERABILITY_PROOFS_DIR,
     DeliverabilityProof,
     DeliverabilityTier,
     build_deliverability_proof_from_wyner_ziv_classification,
     load_deliverability_proof_for_archive,
     verify_deliverability_proof_contest_compliance,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -441,6 +439,32 @@ def test_t18_load_returns_none_when_no_proof_exists(tmp_path: Path) -> None:
     assert result is None
 
 
+def test_t18b_load_refuses_legacy_proof_missing_compliance_authority(
+    tmp_path: Path,
+) -> None:
+    legacy_payload = {
+        "archive_sha256": _SHA_FIXTURE,
+        "candidate_shared_prior_byte_count": 0,
+        "tier_1_byte_count": 0,
+        "tier_2_byte_count": 0,
+        "tier_3_byte_count": 0,
+        "tier_4_byte_count": 0,
+        "deliverable_score_savings_estimate": 0.0,
+        "canonical_helper_invocation": "tac.wyner_ziv_deliverability",
+        "contest_compliance_verdict": "pending",
+        # Intentionally omit contest_compliance_rationale and
+        # contest_compliance_citation_chain. Loader authority must not
+        # silently backfill these from dataclass defaults.
+    }
+    (tmp_path / f"proof_{_SHA_FIXTURE[:12]}_legacy.json").write_text(
+        json.dumps(legacy_payload),
+        encoding="utf-8",
+    )
+
+    loaded = load_deliverability_proof_for_archive(_SHA_FIXTURE, proofs_dir=tmp_path)
+    assert loaded is None
+
+
 # ---------------------------------------------------------------------------
 # Test 19: schema version pinned
 # ---------------------------------------------------------------------------
@@ -705,7 +729,7 @@ def test_t24_unknown_helper_marks_non_compliant(tmp_path: Path) -> None:
 
 
 def test_t25_catalog_319_gate_exists_in_preflight() -> None:
-    from tac.preflight import check_substrate_wyner_ziv_reweight_has_deliverability_proof  # noqa: F401
+    from tac.preflight import check_substrate_wyner_ziv_reweight_has_deliverability_proof
 
     violations = check_substrate_wyner_ziv_reweight_has_deliverability_proof()
     assert isinstance(violations, list)

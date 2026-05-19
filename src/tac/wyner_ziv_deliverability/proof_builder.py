@@ -78,11 +78,12 @@ import os
 import socket
 import time
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # avoid runtime import cycle
     from tac.master_gradient_consumers import WynerZivSideInfoClassification
@@ -116,7 +117,7 @@ _LOCK_FILE_NAME = "_proofs.lock"
 # ---------------------------------------------------------------------------
 
 
-class DeliverabilityTier(str, Enum):
+class DeliverabilityTier(StrEnum):
     """Per-byte deliverability classification per T3 symposium Component 2.
 
     The four tiers are exhaustive + mutually exclusive. Each byte index in
@@ -476,7 +477,7 @@ def _proofs_lock(lock_path: Path | None = None) -> Iterator[None]:
                     raise TimeoutError(
                         f"Timed out acquiring deliverability-proof lock "
                         f"after {_LOCK_TIMEOUT_SEC}s at {path}"
-                    )
+                    ) from exc
                 time.sleep(0.05)
         yield
     finally:
@@ -574,8 +575,8 @@ def _classify_byte_indices_into_tiers(
             f"{sorted(_LEGAL_COMPRESSION_CODECS)}; got {compression_codec!r}"
         )
 
-    candidate_set = set(int(i) for i in candidate_indices)
-    pose_seg_set = set(int(i) for i in pose_seg_dominant_byte_indices)
+    candidate_set = {int(i) for i in candidate_indices}
+    pose_seg_set = {int(i) for i in pose_seg_dominant_byte_indices}
     remaining = candidate_set.copy()
 
     tier_4: list[int] = sorted(remaining & pose_seg_set)
@@ -607,7 +608,7 @@ def _classify_byte_indices_into_tiers(
             if isinstance(helper, str) and helper:
                 prober_per_byte_helper[idx] = helper
 
-    tier_4_from_prober = sorted((remaining & prober_tier_4))
+    tier_4_from_prober = sorted(remaining & prober_tier_4)
     if tier_4_from_prober:
         tier_4 = sorted(set(tier_4) | set(tier_4_from_prober))
         remaining -= set(tier_4_from_prober)
@@ -742,7 +743,7 @@ def _tier_2_rationale_missing_required_anchors(rationale: str) -> list[str]:
 
 def build_deliverability_proof_from_wyner_ziv_classification(
     *,
-    wyner_ziv_result: "WynerZivSideInfoClassification",
+    wyner_ziv_result: WynerZivSideInfoClassification,
     archive_sha256: str,
     archive_bytes: bytes | None = None,
     deliverability_prober_result: dict | None = None,
@@ -949,7 +950,7 @@ def build_deliverability_proof_from_wyner_ziv_classification(
         "catalog_319_gate_status": "pending",
     }
     proof_sha = _compute_proof_sha256(intermediate)
-    written_at = _dt.datetime.now(tz=_dt.timezone.utc).isoformat()
+    written_at = _dt.datetime.now(tz=_dt.UTC).isoformat()
 
     proof = DeliverabilityProof(
         archive_sha256=archive_sha256,
@@ -988,7 +989,7 @@ def build_deliverability_proof_from_wyner_ziv_classification(
     if persist:
         out_dir = proofs_dir or WYNER_ZIV_DELIVERABILITY_PROOFS_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
-        stamp = _dt.datetime.now(tz=_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        stamp = _dt.datetime.now(tz=_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
         out_path = out_dir / f"proof_{archive_sha256[:12]}_{stamp}.json"
         payload = proof.as_dict()
         payload["written_pid"] = os.getpid()
@@ -1033,6 +1034,15 @@ def load_deliverability_proof_for_archive(
         try:
             payload = json.loads(candidate.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            continue
+        # ITEM_1 authority rule: persisted proofs must carry explicit
+        # contest-compliance evidence. Dataclass defaults are allowed for
+        # in-memory construction, but loader promotion/reward authority must
+        # not silently backfill legacy JSON that predates the rationale fields.
+        if (
+            "contest_compliance_rationale" not in payload
+            or "contest_compliance_citation_chain" not in payload
+        ):
             continue
         # Filter to canonical dataclass fields
         valid_fields = {f.name for f in dataclasses.fields(DeliverabilityProof)}
@@ -1126,12 +1136,12 @@ def verify_deliverability_proof_contest_compliance(
     )
     if mentions_comma2k19 and not cites_canonical_cache:
         blockers.append(
-            f"Catalog #213 violated: canonical_helper_invocation mentions "
-            f"Comma2k19 but does not cite Comma2k19LocalCache / "
-            f"local_chunk_cache / fetch_chunk. Raw URL or sister "
-            f"non-canonical helper rejected; route through "
-            f"tac.substrates.pretrained_driving_prior.local_chunk_cache."
-            f"Comma2k19LocalCache."
+            "Catalog #213 violated: canonical_helper_invocation mentions "
+            "Comma2k19 but does not cite Comma2k19LocalCache / "
+            "local_chunk_cache / fetch_chunk. Raw URL or sister "
+            "non-canonical helper rejected; route through "
+            "tac.substrates.pretrained_driving_prior.local_chunk_cache."
+            "Comma2k19LocalCache."
         )
 
     if proof.inflate_py_loc_estimate > 200:

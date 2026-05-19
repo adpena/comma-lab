@@ -354,3 +354,72 @@ def test_audit_tool_common_auth_eval_score_synonyms_without_provenance_flagged(
         "score_recomputed.json",
         "score_recomputed_from_components.json",
     }
+
+
+def test_audit_tool_flags_wz_deliverability_missing_compliance_rationale(
+    tmp_path: Path,
+):
+    """Persisted WZ score-savings proofs need explicit compliance authority."""
+    from tools.audit_provenance_compliance import build_audit_report
+
+    state_dir = tmp_path / ".omx" / "state"
+    state_dir.mkdir(parents=True)
+    (state_dir / "wz_legacy_proof.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": "a" * 64,
+                "candidate_shared_prior_byte_count": 1,
+                "tier_1_byte_count": 1,
+                "tier_2_byte_count": 0,
+                "tier_3_byte_count": 0,
+                "tier_4_byte_count": 0,
+                "deliverable_score_savings_estimate": 0.0001,
+                "contest_compliance_verdict": "pending",
+            }
+        )
+    )
+
+    report = build_audit_report(tmp_path)
+    verdict = next(
+        v
+        for v in report.artifact_verdicts
+        if Path(v.path).name == "wz_legacy_proof.json"
+    )
+    assert verdict.verdict == "VIOLATION"
+    assert "MISSING_CONTEST_COMPLIANCE_RATIONALE" in verdict.violation_classifiers
+    assert "MISSING_PROVENANCE" in verdict.violation_classifiers
+
+
+def test_audit_tool_flags_wz_deliverability_empty_compliance_citation_chain(
+    tmp_path: Path,
+):
+    """Blank citation chains are not authority, even with rationale prose."""
+    from tools.audit_provenance_compliance import build_audit_report
+
+    state_dir = tmp_path / ".omx" / "state"
+    state_dir.mkdir(parents=True)
+    (state_dir / "wz_blank_chain.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": "a" * 64,
+                "candidate_shared_prior_byte_count": 1,
+                "tier_1_byte_count": 1,
+                "tier_2_byte_count": 0,
+                "tier_3_byte_count": 0,
+                "tier_4_byte_count": 0,
+                "deliverable_score_savings_estimate": 0.0001,
+                "contest_compliance_verdict": "pending",
+                "contest_compliance_rationale": "planning evidence only",
+                "contest_compliance_citation_chain": [],
+            }
+        )
+    )
+
+    report = build_audit_report(tmp_path)
+    verdict = next(
+        v
+        for v in report.artifact_verdicts
+        if Path(v.path).name == "wz_blank_chain.json"
+    )
+    assert verdict.verdict == "VIOLATION"
+    assert "MISSING_CONTEST_COMPLIANCE_RATIONALE" in verdict.violation_classifiers
