@@ -31,6 +31,11 @@ MANIFEST_SCHEMA = "tac_pr101_pose_axis_decoder_recompression_candidate_v1"
 SUPPORTED_SOURCE_SECTIONS: frozenset[str] = frozenset({"decoder", "decoder_blob"})
 PR101_PACKET_SECTION_NAME = "decoder_blob"
 SUPPORTED_MUTATION_OPERATOR = "decoder_codec_coordinate_response"
+MUTATION_MODE_RAW_EQUIVALENT = "raw_equivalent"
+MUTATION_MODE_RAW_BYTE_DELTA = "raw_byte_delta"
+SUPPORTED_MUTATION_MODES: frozenset[str] = frozenset(
+    {MUTATION_MODE_RAW_EQUIVALENT, MUTATION_MODE_RAW_BYTE_DELTA}
+)
 RATE_DENOMINATOR_BYTES = 37_545_489
 
 
@@ -71,6 +76,10 @@ class SameLengthBrotliCandidate:
     lgwin: int
     compressed_bytes: int
     compressed_sha256: str
+    raw_bytes: int
+    raw_sha256: str
+    raw_equivalent_to_source: bool
+    raw_mutation: dict[str, object]
     payload: bytes
 
     def to_manifest(self) -> dict[str, object]:
@@ -79,6 +88,10 @@ class SameLengthBrotliCandidate:
             "lgwin": self.lgwin,
             "compressed_bytes": self.compressed_bytes,
             "compressed_sha256": self.compressed_sha256,
+            "raw_bytes": self.raw_bytes,
+            "raw_sha256": self.raw_sha256,
+            "raw_equivalent_to_source": self.raw_equivalent_to_source,
+            "raw_mutation": self.raw_mutation,
         }
 
 
@@ -89,6 +102,9 @@ def build_pr101_pose_axis_decoder_recompression_candidate(
     output_dir: Path,
     candidate_id: str,
     candidate_rank: int = 1,
+    mutation_mode: str = MUTATION_MODE_RAW_EQUIVALENT,
+    raw_byte_offset: int | None = None,
+    raw_byte_delta: int = -1,
     operator_manifest_path: Path | None = None,
     qualities: tuple[int, ...] = tuple(range(12)),
     lgwin_values: tuple[int, ...] = tuple(range(10, 25)),
@@ -108,6 +124,11 @@ def build_pr101_pose_axis_decoder_recompression_candidate(
         raise MasterGradientPR101OperatorError("candidate_id is required")
     if candidate_rank < 1:
         raise MasterGradientPR101OperatorError("candidate_rank must be >= 1")
+    if mutation_mode not in SUPPORTED_MUTATION_MODES:
+        raise MasterGradientPR101OperatorError(
+            f"unsupported mutation_mode {mutation_mode!r}; expected one of "
+            f"{sorted(SUPPORTED_MUTATION_MODES)}"
+        )
     qualities = _normalize_int_tuple(qualities, name="qualities", lower=0, upper=11)
     lgwin_values = _normalize_int_tuple(lgwin_values, name="lgwin_values", lower=10, upper=24)
 
@@ -155,11 +176,30 @@ def build_pr101_pose_axis_decoder_recompression_candidate(
         )
     streams = _split_concatenated_brotli(source_decoder)
     stream = _stream_for_relative_offset(streams, relative_offset)
-    replacement_stream = _select_same_length_recompression(
-        stream,
-        qualities=qualities,
-        lgwin_values=lgwin_values,
-    )
+    if mutation_mode == MUTATION_MODE_RAW_EQUIVALENT:
+        replacement_stream = _select_same_length_recompression(
+            stream,
+            qualities=qualities,
+            lgwin_values=lgwin_values,
+        )
+    else:
+        raw_offset = _resolve_raw_stream_offset(
+            stream,
+            diagnostic_relative_offset=relative_offset,
+            raw_byte_offset=raw_byte_offset,
+        )
+        mutated_raw, raw_mutation = _mutate_raw_stream_byte(
+            stream.raw_payload,
+            raw_offset=raw_offset,
+            raw_byte_delta=raw_byte_delta,
+        )
+        replacement_stream = _select_same_length_recompression_for_raw_payload(
+            stream,
+            raw_payload=mutated_raw,
+            raw_mutation=raw_mutation,
+            qualities=qualities,
+            lgwin_values=lgwin_values,
+        )
     candidate_decoder = (
         source_decoder[: stream.compressed_start]
         + replacement_stream.payload
@@ -173,8 +213,11 @@ def build_pr101_pose_axis_decoder_recompression_candidate(
 
     candidate_streams = _split_concatenated_brotli(candidate_decoder)
     raw_equivalence = _raw_stream_equivalence(streams, candidate_streams)
-    if not raw_equivalence["all_stream_raw_sha256_match"]:
+    raw_equivalent = bool(raw_equivalence["all_stream_raw_sha256_match"])
+    if mutation_mode == MUTATION_MODE_RAW_EQUIVALENT and not raw_equivalent:
         raise MasterGradientPR101OperatorError("candidate decoder stream raw bytes changed")
+    if mutation_mode == MUTATION_MODE_RAW_BYTE_DELTA and raw_equivalent:
+        raise MasterGradientPR101OperatorError("raw_byte_delta mutation did not change decoder raw bytes")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     replacement_path = (
@@ -211,28 +254,63 @@ def build_pr101_pose_axis_decoder_recompression_candidate(
     operator_manifest_sha = (
         sha256_file(operator_manifest_path) if operator_manifest_path is not None else None
     )
-    dispatch_blockers = tuple(
-        dict.fromkeys(
-            [
-                *packet_manifest["dispatch_blockers"],
-                "inflate_success_proof_missing",
-                "runtime_byte_consumption_noop_detector_missing",
-                "score_response_matrix_missing",
-                "exact_eval_missing",
-                "semantic_runtime_output_noop_expected_until_full_inflate_proof",
-            ]
-        )
+    dispatch_blockers = list(packet_manifest["dispatch_blockers"])
+    dispatch_blockers.extend(
+        [
+            "inflate_success_proof_missing",
+            "runtime_byte_consumption_noop_detector_missing",
+            "score_response_matrix_missing",
+            "exact_eval_missing",
+        ]
     )
+    if mutation_mode == MUTATION_MODE_RAW_EQUIVALENT:
+        dispatch_blockers.append("semantic_runtime_output_noop_expected_until_full_inflate_proof")
+    else:
+        dispatch_blockers.append("component_moving_candidate_requires_score_response_matrix")
+    dispatch_blockers = list(dict.fromkeys(dispatch_blockers))
+
+    score_response_probe_ready_blockers = [
+        blocker
+        for blocker in dispatch_blockers
+        if blocker
+        not in {
+            "runtime_consumption_proof_missing",
+            "active_lane_claim_missing",
+            "inflate_success_proof_missing",
+            "runtime_byte_consumption_noop_detector_missing",
+        }
+    ]
+    ready_for_score_response_probe = (
+        mutation_mode == MUTATION_MODE_RAW_BYTE_DELTA
+        and not score_response_probe_ready_blockers
+    )
+
+    notes = [
+        "This materializes one OP-7 PR101 pose-axis grammar coordinate as a byte-closed packet candidate.",
+        "Runtime inflate, byte-consumption no-op detection, score response, and exact CUDA auth eval remain mandatory blockers.",
+    ]
+    if mutation_mode == MUTATION_MODE_RAW_EQUIVALENT:
+        notes.append(
+            "The changed decoder stream is Brotli raw-equivalent and same-length, so this is packet-mechanics proof, not score movement."
+        )
+    else:
+        notes.append(
+            "The changed decoder stream is raw-byte-different and same-length; this is a component-moving candidate, not score authority."
+        )
     manifest = {
         "schema": MANIFEST_SCHEMA,
         "candidate_id": candidate_id,
         "mutation_grain": "grammar_aware_operator",
         "mutation_operator": SUPPORTED_MUTATION_OPERATOR,
+        "mutation_mode": mutation_mode,
+        "component_moving_candidate": mutation_mode == MUTATION_MODE_RAW_BYTE_DELTA,
+        "semantic_equivalence_expected": mutation_mode == MUTATION_MODE_RAW_EQUIVALENT,
         "target_section": PR101_PACKET_SECTION_NAME,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_operator_probe": False,
+        "ready_for_score_response_probe": ready_for_score_response_probe,
         "ready_for_provider_dispatch": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
@@ -279,18 +357,16 @@ def build_pr101_pose_axis_decoder_recompression_candidate(
             "parser_reparse_success": closure["parser_reparse_success"],
             "structural_non_noop_section_changed": closure["target_section_sha256_bound"],
             "decoder_brotli_stream_reparse_success": closure["split_brotli_stream_reparse_success"],
-            "decoder_brotli_roundtrip_raw_equivalent": raw_equivalence["all_stream_raw_sha256_match"],
+            "decoder_brotli_roundtrip_raw_equivalent": raw_equivalent,
+            "decoder_brotli_raw_changed": not raw_equivalent,
+            "component_moving_operator": mutation_mode == MUTATION_MODE_RAW_BYTE_DELTA,
             "inflate_success_proof": False,
             "runtime_byte_consumption_noop_detector": False,
             "score_response_matrix": False,
         },
         "dispatch_blockers": dispatch_blockers,
         "promotion_blockers": packet_manifest["promotion_blockers"],
-        "notes": (
-            "This materializes one OP-7 PR101 pose-axis grammar coordinate as a byte-closed packet candidate.",
-            "The changed decoder stream is Brotli raw-equivalent and same-length, so this is packet-mechanics proof, not score movement.",
-            "Runtime inflate, byte-consumption no-op detection, score response, and exact CUDA auth eval remain mandatory blockers.",
-        ),
+        "notes": tuple(notes),
     }
     write_json(output_dir / "operator_manifest.json", manifest)
     return manifest
@@ -443,12 +519,35 @@ def _select_same_length_recompression(
     qualities: tuple[int, ...],
     lgwin_values: tuple[int, ...],
 ) -> SameLengthBrotliCandidate:
+    return _select_same_length_recompression_for_raw_payload(
+        stream,
+        raw_payload=stream.raw_payload,
+        raw_mutation={
+            "mutation_kind": "none",
+            "source_raw_sha256": stream.raw_sha256,
+            "candidate_raw_sha256": stream.raw_sha256,
+        },
+        qualities=qualities,
+        lgwin_values=lgwin_values,
+    )
+
+
+def _select_same_length_recompression_for_raw_payload(
+    stream: BrotliStreamSpan,
+    *,
+    raw_payload: bytes,
+    raw_mutation: dict[str, object],
+    qualities: tuple[int, ...],
+    lgwin_values: tuple[int, ...],
+) -> SameLengthBrotliCandidate:
     candidates: list[SameLengthBrotliCandidate] = []
     source_sha = stream.compressed_sha256
+    raw_sha = sha256_bytes(raw_payload)
+    raw_equivalent = raw_payload == stream.raw_payload
     for quality in qualities:
         for lgwin in lgwin_values:
             try:
-                payload = brotli.compress(stream.raw_payload, quality=quality, lgwin=lgwin)
+                payload = brotli.compress(raw_payload, quality=quality, lgwin=lgwin)
             except brotli.error:
                 continue
             payload_sha = sha256_bytes(payload)
@@ -458,7 +557,7 @@ def _select_same_length_recompression(
                 raw = brotli.decompress(payload)
             except brotli.error:
                 continue
-            if raw != stream.raw_payload:
+            if raw != raw_payload:
                 continue
             candidates.append(
                 SameLengthBrotliCandidate(
@@ -466,6 +565,10 @@ def _select_same_length_recompression(
                     lgwin=lgwin,
                     compressed_bytes=len(payload),
                     compressed_sha256=payload_sha,
+                    raw_bytes=len(raw_payload),
+                    raw_sha256=raw_sha,
+                    raw_equivalent_to_source=raw_equivalent,
+                    raw_mutation=raw_mutation,
                     payload=payload,
                 )
             )
@@ -474,6 +577,57 @@ def _select_same_length_recompression(
             "no same-length byte-different Brotli recompression found for selected stream"
         )
     return min(candidates, key=lambda row: (row.quality, row.lgwin, row.compressed_sha256))
+
+
+def _resolve_raw_stream_offset(
+    stream: BrotliStreamSpan,
+    *,
+    diagnostic_relative_offset: int,
+    raw_byte_offset: int | None,
+) -> int:
+    if stream.raw_bytes <= 0:
+        raise MasterGradientPR101OperatorError("selected stream has no raw bytes")
+    if raw_byte_offset is not None:
+        offset = int(raw_byte_offset)
+        if offset < 0 or offset >= stream.raw_bytes:
+            raise MasterGradientPR101OperatorError(
+                f"raw_byte_offset outside selected stream raw payload: {offset}"
+            )
+        return offset
+    compressed_offset = diagnostic_relative_offset - stream.compressed_start
+    return compressed_offset % stream.raw_bytes
+
+
+def _mutate_raw_stream_byte(
+    raw_payload: bytes,
+    *,
+    raw_offset: int,
+    raw_byte_delta: int,
+) -> tuple[bytes, dict[str, object]]:
+    if not raw_payload:
+        raise MasterGradientPR101OperatorError("cannot mutate empty raw payload")
+    if raw_offset < 0 or raw_offset >= len(raw_payload):
+        raise MasterGradientPR101OperatorError(
+            f"raw_offset outside raw payload: {raw_offset}"
+        )
+    if raw_byte_delta == 0:
+        raise MasterGradientPR101OperatorError("raw_byte_delta must be non-zero")
+    source_value = raw_payload[raw_offset]
+    candidate_value = (source_value + int(raw_byte_delta)) % 256
+    if candidate_value == source_value:
+        raise MasterGradientPR101OperatorError("raw byte mutation is a no-op")
+    mutated = bytearray(raw_payload)
+    mutated[raw_offset] = candidate_value
+    candidate = bytes(mutated)
+    return candidate, {
+        "mutation_kind": "single_raw_byte_delta",
+        "raw_byte_offset": raw_offset,
+        "raw_byte_delta": int(raw_byte_delta),
+        "source_value": source_value,
+        "candidate_value": candidate_value,
+        "source_raw_sha256": sha256_bytes(raw_payload),
+        "candidate_raw_sha256": sha256_bytes(candidate),
+    }
 
 
 def _raw_stream_equivalence(
@@ -585,6 +739,8 @@ def _normalize_int_tuple(
 
 __all__ = [
     "MANIFEST_SCHEMA",
+    "MUTATION_MODE_RAW_BYTE_DELTA",
+    "MUTATION_MODE_RAW_EQUIVALENT",
     "MasterGradientPR101OperatorError",
     "build_pr101_pose_axis_decoder_recompression_candidate",
 ]

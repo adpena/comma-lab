@@ -17,6 +17,8 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.master_gradient_pr101_operator_candidate import (  # noqa: E402
+    MUTATION_MODE_RAW_BYTE_DELTA,
+    MUTATION_MODE_RAW_EQUIVALENT,
     MasterGradientPR101OperatorError,
     build_pr101_pose_axis_decoder_recompression_candidate,
 )
@@ -29,6 +31,26 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--candidate-rank", type=int, default=1)
+    parser.add_argument(
+        "--mutation-mode",
+        choices=(MUTATION_MODE_RAW_EQUIVALENT, MUTATION_MODE_RAW_BYTE_DELTA),
+        default=MUTATION_MODE_RAW_EQUIVALENT,
+        help=(
+            "raw_equivalent proves packet mechanics; raw_byte_delta mutates one "
+            "decompressed decoder-stream byte before same-length recompression."
+        ),
+    )
+    parser.add_argument(
+        "--raw-byte-offset",
+        type=int,
+        help="Raw selected-stream byte offset for --mutation-mode raw_byte_delta.",
+    )
+    parser.add_argument(
+        "--raw-byte-delta",
+        type=int,
+        default=-1,
+        help="Signed byte delta modulo 256 for --mutation-mode raw_byte_delta.",
+    )
     parser.add_argument(
         "--quality",
         type=int,
@@ -56,6 +78,9 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             candidate_id=args.candidate_id,
             candidate_rank=args.candidate_rank,
+            mutation_mode=args.mutation_mode,
+            raw_byte_offset=args.raw_byte_offset,
+            raw_byte_delta=args.raw_byte_delta,
             operator_manifest_path=args.operator_manifest,
             qualities=tuple(args.qualities) if args.qualities else tuple(range(12)),
             lgwin_values=tuple(args.lgwins) if args.lgwins else tuple(range(10, 25)),
@@ -79,6 +104,10 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "score_claim=false promotion_eligible=false "
         f"ready_for_exact_eval_dispatch={manifest['ready_for_exact_eval_dispatch']}"
+    )
+    print(
+        f"mutation_mode={manifest['mutation_mode']} "
+        f"component_moving_candidate={manifest['component_moving_candidate']}"
     )
     print(f"operator_manifest={args.output_dir / 'operator_manifest.json'}")
     return 0
