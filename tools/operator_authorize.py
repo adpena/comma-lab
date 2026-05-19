@@ -82,6 +82,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -1681,6 +1682,57 @@ def _modal_output_indicates_spawned_call(output: str) -> bool:
     return bool(spawn_fn(output))
 
 
+# Catalog #339 (SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION 2026-05-19) sister
+# mitigation helpers — extract the call_id from the modal_train_lane.py
+# stdout banner and poll the canonical ledger for its appearance. If
+# `.spawn()` happened (stdout marker present) but the ledger has no row
+# within ~10s, the harvester is blind. _dispatch_modal raises SystemExit
+# in that case.
+_MODAL_CALL_ID_PATTERN = re.compile(r"\bcall_id=(fc-[A-Z0-9]+)\b")
+
+
+def _extract_modal_call_id_from_output(output: str) -> str | None:
+    """Extract the first ``call_id=fc-...`` literal from Modal stdout/stderr.
+
+    Used by :func:`_dispatch_modal` Catalog #339 sister mitigation to verify
+    the canonical ledger has a row for the dispatched call_id within the
+    10-second polling window after a successful `.spawn()`.
+    """
+
+    match = _MODAL_CALL_ID_PATTERN.search(output)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _poll_ledger_for_dispatched_call(
+    call_id: str, *, timeout_seconds: float = 10.0
+) -> bool:
+    """Poll the canonical Modal call_id ledger for ``call_id`` presence.
+
+    Catalog #339 sister mitigation. Returns ``True`` once a row with
+    ``call_id`` is observed (any event_type); ``False`` if the polling
+    window elapses.
+
+    Lazy-imports the canonical helper so missing-helper does NOT crash
+    the dispatcher (the wrapper-side fail-closed path at Catalog #339
+    Layer 2 is the authoritative protection — this is defense in depth).
+    """
+
+    src_dir = str(REPO_ROOT / "src")
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+    try:
+        from tac.deploy.modal.call_id_ledger import poll_ledger_for_call_id
+    except Exception:
+        # If the canonical helper is missing or broken, defer to the
+        # wrapper's Catalog #339 Layer 2 protection (which exits non-zero
+        # on registration failure). Return True to avoid a false-positive
+        # SystemExit when the protection is already broken-but-noisy.
+        return True
+    return bool(poll_ledger_for_call_id(call_id, timeout_seconds=timeout_seconds))
+
+
 def _dispatch_modal(
     recipe: Recipe,
     instance_job_id: str,
@@ -1778,6 +1830,32 @@ def _dispatch_modal(
         spawned_call = _modal_output_indicates_spawned_call(combined_output)
         if proc.returncode == 0:
             if spawned_call:
+                # Catalog #339 (SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION
+                # 2026-05-19) — sister mitigation. The stdout-marker check
+                # confirms `.spawn()` happened but does NOT prove the
+                # canonical ledger row was written. Today's 3 silent-no-spawn
+                # incidents would have leaked PAST this check if the wrapper
+                # had silently swallowed `register_dispatched_call_id`
+                # failure. Poll the canonical ledger for the call_id within
+                # 10s. If the row never appears, the harvester is blind —
+                # raise SystemExit citing Catalog #339 so the operator gets
+                # an actionable diagnostic instead of silent success.
+                call_id = _extract_modal_call_id_from_output(combined_output)
+                if call_id is not None and not _poll_ledger_for_dispatched_call(
+                    call_id, timeout_seconds=10.0
+                ):
+                    raise SystemExit(
+                        f"[operator-authorize] FATAL [Catalog #339]: Modal "
+                        f"dispatcher exited rc=0 AND printed spawned-call "
+                        f"marker AND call_id={call_id} but the canonical "
+                        f"ledger at .omx/state/modal_call_id_ledger.jsonl "
+                        f"has no matching row after 10s of polling. The "
+                        f"harvester is BLIND to this dispatch per CLAUDE.md "
+                        f"'Modal .spawn() HARVEST OR LOSE' non-negotiable. "
+                        f"Check .omx/state/modal_call_id_ledger_recovery_tmp/ "
+                        f"for last-resort dumps and run "
+                        f"`tools/harvest_modal_calls.py --recover-from-tmp`."
+                    )
                 return 0
             print(
                 "[operator-authorize] FATAL: Modal dispatcher exited rc=0 "

@@ -1310,6 +1310,202 @@ def latest_status_by_call_id(
     return out
 
 
+# ---------------------------------------------------------------------------
+# Catalog #339 — SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION (2026-05-19)
+# ---------------------------------------------------------------------------
+# Bug class anchor: today's 3 consecutive incidents (Z6 Wave 2 4c / STC v2 /
+# STC sister) all exhibited the silent-no-spawn pattern — `.spawn()` returned
+# successfully but the existing `try/except Exception: print WARNING + continue`
+# at `experiments/modal_train_lane.py:1921-1960` silently swallowed any
+# `register_dispatched_call_id` failure. The Modal dispatch already happened
+# (paid GPU meter started), but the ledger had no row → harvester invisible
+# → operator effort wasted.
+#
+# Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable + "Bugs
+# must be permanently fixed AND self-protected against": every dispatch MUST
+# be followed by a scheduled harvest within 24h. The harvester reads the
+# canonical ledger. No ledger row = no harvest = invisible orphan dispatch.
+#
+# Fix: `register_dispatched_call_id_fail_closed` REFUSES to swallow ANY
+# failure. On exception, it (a) prints a fail-closed diagnostic referencing
+# Catalog #339, (b) attempts a last-resort tmp-file dump so the harvester
+# can recover via `tools/harvest_modal_calls.py --recover-from-tmp`, and
+# (c) re-raises so the caller's `sys.exit` path becomes non-zero.
+# ---------------------------------------------------------------------------
+
+
+class LedgerRegistrationFailedError(RuntimeError):
+    """Raised when ``register_dispatched_call_id_fail_closed`` cannot
+    persist a dispatched-event row to the canonical ledger.
+
+    Catalog #339 (SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION 2026-05-19). The
+    canonical helper used to ``try/except Exception: print WARNING`` so any
+    fcntl-lock contention / corrupt-state / disk-full / sister-subagent
+    edit silently broke the harvester invariant per CLAUDE.md
+    "Modal `.spawn()` HARVEST OR LOSE" non-negotiable.
+
+    Callers (e.g. ``experiments/modal_train_lane.py::main``) MUST either
+    let this propagate (so ``sys.exit`` becomes non-zero) OR wrap it AND
+    invoke ``_write_last_resort_tmp_ledger_dump`` so the harvester can
+    recover via ``tools/harvest_modal_calls.py --recover-from-tmp``.
+
+    Sister of ``CallIdLedgerCorruptError`` (Catalog #138 strict-load
+    discipline) and ``LightningStateLostUpdateError`` (Catalog #131/#138
+    sister fcntl-locked state class).
+    """
+
+
+_LAST_RESORT_TMP_DUMP_DIR = REPO_ROOT / ".omx" / "state" / "modal_call_id_ledger_recovery_tmp"
+
+
+def _write_last_resort_tmp_ledger_dump(record: dict[str, Any]) -> Path:
+    """Atomically dump a dispatched-event record to a recovery directory.
+
+    Used by ``register_dispatched_call_id_fail_closed`` when the canonical
+    fcntl-locked append fails. The harvester scans this directory and
+    re-attempts the canonical append for each surviving row.
+
+    Returns the path of the written tmp file. Best-effort: if THIS write
+    also fails, ``LedgerRegistrationFailedError`` is still raised by the
+    caller so the operator sees the dispatch failed structurally.
+    """
+
+    _LAST_RESORT_TMP_DUMP_DIR.mkdir(parents=True, exist_ok=True)
+    tmp_name = f"recover_{record.get('call_id', 'unknown')}_{uuid.uuid4().hex[:12]}.json"
+    tmp_path = _LAST_RESORT_TMP_DUMP_DIR / tmp_name
+    payload = json.dumps(record, sort_keys=True) + "\n"
+    # Atomic write per Catalog #131 atomic-replace discipline so the harvester
+    # never reads a half-written row.
+    staging = tmp_path.with_suffix(tmp_path.suffix + f".tmp.{uuid.uuid4().hex[:8]}")
+    staging.write_text(payload, encoding="utf-8")
+    os.replace(staging, tmp_path)
+    return tmp_path
+
+
+def register_dispatched_call_id_fail_closed(
+    *,
+    call_id: str,
+    lane_id: str,
+    label: str,
+    write_last_resort_dump: bool = True,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Fail-closed wrapper for :func:`register_dispatched_call_id`.
+
+    Catalog #339 — SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION (2026-05-19).
+
+    Unlike the legacy pattern in ``experiments/modal_train_lane.py``
+    (``try: register_dispatched_call_id(...) except Exception: print``),
+    this wrapper REFUSES to swallow failures. On exception it:
+
+    1. Constructs the dispatched-event record using the SAME schema as
+       the canonical helper (so the recovery surface matches).
+    2. Best-effort dumps the record to
+       ``.omx/state/modal_call_id_ledger_recovery_tmp/<call_id>.json``
+       so ``tools/harvest_modal_calls.py --recover-from-tmp`` can re-attempt
+       the canonical append later (preserving the harvester invariant
+       per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE").
+    3. Raises ``LedgerRegistrationFailedError`` so the caller's exit path
+       becomes non-zero, surfacing the failure to the operator instead of
+       silently producing an invisible orphan Modal dispatch.
+
+    Returns the appended record on success (identical to the canonical
+    helper).
+    """
+
+    try:
+        return register_dispatched_call_id(
+            call_id=call_id,
+            lane_id=lane_id,
+            label=label,
+            **kwargs,
+        )
+    except Exception as exc:
+        last_resort_path: Path | None = None
+        if write_last_resort_dump:
+            record = {
+                "schema_version": SCHEMA_VERSION,
+                "event_type": EVENT_DISPATCHED,
+                "call_id": call_id,
+                "lane_id": lane_id,
+                "label": label,
+                "status": STATUS_DISPATCHED,
+                "dispatched_at_utc": kwargs.get("dispatched_at_utc") or _now_iso(),
+                "platform": kwargs.get("platform", "modal"),
+                "gpu": kwargs.get("gpu", "T4"),
+                "max_seconds": kwargs.get("max_seconds"),
+                "mounted_code_git_head": kwargs.get("mounted_code_git_head"),
+                "agent": kwargs.get("agent", "claude"),
+                "upstream_snapshot_sha256": kwargs.get("upstream_snapshot_sha256"),
+                "_recovery_reason": (
+                    f"canonical_append_failed:{type(exc).__name__}:{str(exc)[:200]}"
+                ),
+            }
+            try:
+                last_resort_path = _write_last_resort_tmp_ledger_dump(record)
+            except Exception:  # pragma: no cover -- truly catastrophic
+                last_resort_path = None
+        msg = (
+            f"Catalog #339 — register_dispatched_call_id failed for "
+            f"call_id={call_id!r} lane={lane_id!r}: "
+            f"{type(exc).__name__}: {exc}. "
+        )
+        if last_resort_path is not None:
+            msg += (
+                f"Last-resort dump written to {last_resort_path}; "
+                "harvester recovery via "
+                "`tools/harvest_modal_calls.py --recover-from-tmp`."
+            )
+        else:
+            msg += (
+                "Last-resort dump ALSO failed; the Modal dispatch is "
+                "INVISIBLE to the harvester per CLAUDE.md "
+                "'Modal .spawn() HARVEST OR LOSE' non-negotiable. "
+                "Operator must manually look up the call_id via the "
+                "Modal dashboard."
+            )
+        raise LedgerRegistrationFailedError(msg) from exc
+
+
+def poll_ledger_for_call_id(
+    call_id: str,
+    *,
+    timeout_seconds: float = 10.0,
+    poll_interval_seconds: float = 0.5,
+    path: Path | None = None,
+) -> bool:
+    """Poll the canonical ledger for ``call_id`` presence within ``timeout``.
+
+    Catalog #339 sister mitigation for the operator-authorize caller.
+    Returns ``True`` once a row with ``call_id`` appears in the canonical
+    ledger (any event_type); ``False`` if the timeout elapses.
+
+    Used by ``tools/operator_authorize.py::_dispatch_modal`` AFTER
+    ``modal_output_indicates_spawned_call(...)`` confirms ``.spawn()``
+    happened, to verify the ledger row actually landed BEFORE returning
+    rc=0 to the operator. If the spawn happened but the ledger row never
+    appeared, the harvester is blind — caller must raise SystemExit
+    instead of silently reporting success.
+    """
+
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            rows = load_call_ids(path)
+        except Exception:
+            # Lenient-load failures here are NOT fatal — the harvester
+            # uses the strict-load path which raises CallIdLedgerCorruptError;
+            # we just want presence, not strict correctness, so retry.
+            rows = []
+        for row in rows:
+            if row.get("call_id") == call_id:
+                return True
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(poll_interval_seconds)
+    return False
+
+
 __all__ = [
     "EVENT_DISPATCHED",
     "EVENT_FAILED",
@@ -1330,9 +1526,11 @@ __all__ = [
     "VALID_EVENT_TYPES",
     "VALID_STATUSES",
     "CallIdLedgerCorruptError",
+    "LedgerRegistrationFailedError",
     "latest_status_by_call_id",
     "load_call_ids",
     "load_call_ids_strict",
+    "poll_ledger_for_call_id",
     "query_all_post_utc",
     "query_by_call_id",
     "query_by_call_id_indexed",
@@ -1341,5 +1539,6 @@ __all__ = [
     "query_unharvested",
     "rebuild_sidecar_index",
     "register_dispatched_call_id",
+    "register_dispatched_call_id_fail_closed",
     "update_call_id_outcome",
 ]

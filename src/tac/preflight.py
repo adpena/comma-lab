@@ -74388,7 +74388,7 @@ def _check_339_waiver_present(source: str) -> bool:
 
 
 def _check_339_call_is_in_swallowing_try(
-    tree: Any, call_node: Any
+    tree: object, call_node: object
 ) -> tuple[bool, str | None]:
     """Determine whether ``call_node`` is wrapped in a silent-swallow try.
 
@@ -74402,13 +74402,14 @@ def _check_339_call_is_in_swallowing_try(
 
     import ast
 
-    # Find the enclosing Try node by walking parents.
-    parent_map: dict[int, Any] = {}
+    # Find the enclosing Try node by walking parents. Use ``object`` rather
+    # than ``Any`` so ruff --isolated does not need the `typing` import.
+    parent_map: dict[int, object] = {}
     for parent in ast.walk(tree):
         for child in ast.iter_child_nodes(parent):
             parent_map[id(child)] = parent
 
-    current: Any = call_node
+    current: object = call_node
     while current is not None:
         parent = parent_map.get(id(current))
         if parent is None:
@@ -74536,7 +74537,7 @@ def check_modal_dispatcher_registers_call_id_before_successful_exit(
         return violations
 
     # Find every Call node whose function is one of the registration helpers.
-    register_calls: list[tuple[Any, str]] = []
+    register_calls: list[tuple[object, str]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue

@@ -1918,22 +1918,41 @@ def main(
     # the harvester + dashboards have a SINGLE QUERYABLE source-of-truth that
     # does not depend on per-dispatch sentinel-file discovery (which is
     # fragile to concurrent crashes / sister-subagent edits).
+    #
+    # Catalog #339 (SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION 2026-05-19): the
+    # legacy `try/except Exception: print WARNING + continue` pattern was
+    # the structural root cause of today's 3 consecutive silent-no-spawn
+    # incidents (Z6 Wave 2 4c / STC v2 / STC sister). `.spawn()` happens →
+    # paid GPU meter starts → registration helper fails (fcntl contention,
+    # disk full, sister edit, corruption) → silent swallow → harvester
+    # blind → invisible orphan dispatch.
+    #
+    # Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable: the
+    # canonical ledger is the harvester's single source-of-truth. Replace
+    # silent swallow with `register_dispatched_call_id_fail_closed` which
+    # (a) attempts the canonical append, (b) on failure dumps a recovery
+    # tmp-file for `tools/harvest_modal_calls.py --recover-from-tmp`, AND
+    # (c) raises so the wrapper exits non-zero with diagnostic instead
+    # of silently reporting success.
+    from tac.deploy.modal.call_id_ledger import (
+        LedgerRegistrationFailedError,
+        register_dispatched_call_id_fail_closed,
+    )
+
+    # 12-month premortem item #2 (2026-05-16): stamp the upstream/
+    # snapshot SHA at dispatch time so a later upstream rotation cannot
+    # silently invalidate this anchor. Best-effort: the helper itself
+    # is wrapped in its own try/except per the original design.
+    upstream_sha: str | None
     try:
-        from tac.deploy.modal.call_id_ledger import register_dispatched_call_id
+        from tac.contest_compliance import compute_upstream_snapshot_sha256
 
-        # 12-month premortem item #2 (2026-05-16): stamp the upstream/
-        # snapshot SHA at dispatch time so a later upstream rotation cannot
-        # silently invalidate this anchor. Best-effort: never fail the
-        # dispatch on the helper's absence.
-        upstream_sha: str | None
-        try:
-            from tac.contest_compliance import compute_upstream_snapshot_sha256
+        upstream_sha = compute_upstream_snapshot_sha256()
+    except Exception:  # pragma: no cover — best-effort
+        upstream_sha = None
 
-            upstream_sha = compute_upstream_snapshot_sha256()
-        except Exception:  # pragma: no cover — best-effort
-            upstream_sha = None
-
-        register_dispatched_call_id(
+    try:
+        register_dispatched_call_id_fail_closed(
             call_id=call_id,
             lane_id=resolved_lane_id,
             label=label,
@@ -1947,15 +1966,23 @@ def main(
         )
         print(
             "  ledger appended: .omx/state/modal_call_id_ledger.jsonl "
-            "(Catalog #245 canonical Modal call_id ledger)"
+            "(Catalog #245 canonical Modal call_id ledger; Catalog #339 fail-closed)"
         )
-    except Exception as exc:  # pragma: no cover — best-effort wire-in
-        # The per-dispatch sentinel files are still the authoritative
-        # source until the ledger wire-in becomes STRICT (Catalog #245
-        # initial wire-in is WARN-ONLY per "Strict-flip atomicity rule").
-        # Surface but do not abort the dispatch.
+    except LedgerRegistrationFailedError as exc:
+        # Modal `.spawn()` already happened — paid GPU meter is running.
+        # The fail-closed helper already wrote a last-resort tmp dump
+        # AND emitted a diagnostic. Exit non-zero with rc=13 so the
+        # operator-authorize caller surfaces the failure instead of
+        # silently treating the wrapper as a success.
         print(
-            f"  WARNING: failed to register call_id in canonical ledger: {exc}",
+            f"FATAL [Catalog #339]: {exc}",
             file=sys.stderr,
         )
+        print(
+            f"  Modal call_id={call_id} HAS dispatched (paid). Run "
+            f"`tools/harvest_modal_calls.py --recover-from-tmp` to "
+            f"replay the dispatch event into the canonical ledger.",
+            file=sys.stderr,
+        )
+        sys.exit(13)
     print("\n  Use experiments/modal_recover_lane.py to fetch artifacts when complete.")
