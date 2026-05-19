@@ -127,6 +127,36 @@ def test_scan_submission_inflate_py_loc_budget_classifies_size_drivers(
     assert finding.shared_runtime_helper_adopted is False
 
 
+def test_scan_submission_inflate_py_loc_budget_ignores_docstring_helper_mentions(
+    tmp_path: Path,
+) -> None:
+    target = _write_inflate(tmp_path, "docstring_only", 210)
+    target.write_text(
+        '"""Mentions tac.substrates._shared.inflate_runtime but never imports it."""\n'
+        + "\n".join(f"# filler {idx}" for idx in range(209)),
+        encoding="utf-8",
+    )
+
+    finding = scan_submission_inflate_py_loc_budget(tmp_path, max_lines=200)[0]
+
+    assert finding.shared_runtime_helper_adopted is False
+
+
+def test_scan_submission_inflate_py_loc_budget_detects_real_shared_import(
+    tmp_path: Path,
+) -> None:
+    target = _write_inflate(tmp_path, "shared_import", 210)
+    target.write_text(
+        "from tac.substrates._shared.inflate_runtime import select_inflate_device\n"
+        + "\n".join(f"# filler {idx}" for idx in range(209)),
+        encoding="utf-8",
+    )
+
+    finding = scan_submission_inflate_py_loc_budget(tmp_path, max_lines=200)[0]
+
+    assert finding.shared_runtime_helper_adopted is True
+
+
 def test_check_328_strict_raises_on_synthetic_violation(tmp_path: Path) -> None:
     _write_inflate(tmp_path, "large", 201)
 

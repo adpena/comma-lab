@@ -1,0 +1,22 @@
+{
+  "batch_pairs": 1,
+  "byte_identical": true,
+  "camera_hw_for_synthetic_proof": [
+    4,
+    5
+  ],
+  "new_frames": 4,
+  "new_helper_file_after_load": "/Users/adpena/Projects/pact/submissions/pr106_latent_sidecar_r2/src/tac/substrates/_shared/inflate_runtime.py",
+  "new_raw_bytes": 240,
+  "new_raw_sha256": "d08aaeab9fc7913c5b0d88ce310643667dd441eee99af385cf6276aa4d6624ce",
+  "new_source": "submissions/pr106_latent_sidecar_r2/inflate.py",
+  "new_tac_file_after_load": "/Users/adpena/Projects/pact/submissions/pr106_latent_sidecar_r2/src/tac/__init__.py",
+  "notes": "Synthetic proof keeps decoder/parser mocked and shrinks CAMERA_H/W to avoid multi-GB raw output; it exercises parse_sidecar_archive, select_inflate_device, batch loop, interpolate, round, and raw write path in old and new inflate modules.",
+  "old_frames": 4,
+  "old_raw_bytes": 240,
+  "old_raw_sha256": "d08aaeab9fc7913c5b0d88ce310643667dd441eee99af385cf6276aa4d6624ce",
+  "old_source": "git show HEAD:submissions/pr106_latent_sidecar_r2/inflate.py",
+  "old_tac_file_after_load": null,
+  "schema": "pr106_latent_sidecar_r2_runtime_migration_parity_v1",
+  "synthetic_archive_sha256": "8b66cce8f24aaafd8715b79eb3bc400177503579421edb5bccba7c2b0624b544"
+}

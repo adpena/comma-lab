@@ -10,6 +10,7 @@ minifying Python source that the scorer never charges.
 
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -119,12 +120,37 @@ def _classify_technique_applicability(text: str) -> tuple[str, ...]:
 
 
 def _uses_shared_runtime_helper(text: str) -> bool:
-    return (
-        "tac.substrates._shared.inflate_runtime" in text
-        or "tac.substrates._shared.inflate_runtime_extensions" in text
-        or "raw_output_path(" in text
-        or "write_rgb_pair_to_raw(" in text
-    )
+    """Return true only for real shared-helper imports, not prose mentions."""
+
+    modules = {
+        "tac.substrates._shared.inflate_runtime",
+        "tac.substrates._shared.inflate_runtime_extensions",
+    }
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return _uses_shared_runtime_helper_line_scan(text, modules)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module in modules:
+            return True
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name in modules:
+                    return True
+    return False
+
+
+def _uses_shared_runtime_helper_line_scan(text: str, modules: set[str]) -> bool:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if any(
+            stripped.startswith(f"from {module} import") or stripped.startswith(f"import {module}")
+            for module in modules
+        ):
+            return True
+    return False
 
 
 def iter_submission_inflate_py_files(repo_root: Path | str) -> list[Path]:

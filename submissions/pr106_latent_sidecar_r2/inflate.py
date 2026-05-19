@@ -36,6 +36,7 @@ sys.path.insert(0, str(SRC_DIR))
 
 from codec import parse_packed_archive  # type: ignore[import-not-found]
 from model import HNeRVDecoder  # type: ignore[import-not-found]
+from tac.substrates._shared.inflate_runtime import select_inflate_device as _select_inflate_device_name
 
 
 CAMERA_H, CAMERA_W = 874, 1164
@@ -104,31 +105,8 @@ def apply_sidecar_corrections(
 
 
 def select_inflate_device() -> torch.device:
-    """Select an auth-eval-safe inflate device.
-
-    CUDA is preferred when present. CPU fallback is required for the
-    contest-CPU axis; MPS is intentionally not selected because it is not a
-    contest auth-eval target and can hide device-axis mistakes.
-    """
-    policy = os.environ.get("PACT_INFLATE_DEVICE", "auto").strip().lower()
-    if policy in {"mps", "metal"}:
-        raise RuntimeError(
-            "PACT_INFLATE_DEVICE=mps is forbidden for auth-eval inflate; use cpu or cuda"
-        )
-    if policy not in {"auto", "cpu", "cuda"}:
-        raise RuntimeError(
-            "PACT_INFLATE_DEVICE must be one of auto, cpu, cuda "
-            f"(got {policy!r})"
-        )
-    if policy == "cpu":
-        return torch.device("cpu")
-    if policy == "cuda":
-        if not torch.cuda.is_available():
-            raise RuntimeError("PACT_INFLATE_DEVICE=cuda requested but CUDA is unavailable")
-        return torch.device("cuda")
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    return torch.device("cpu")
+    """Select an auth-eval-safe inflate device via the vendored shared helper."""
+    return torch.device(_select_inflate_device_name())
 
 
 def select_batch_pairs() -> int:
@@ -210,5 +188,5 @@ def inflate(src_bin: str, dst_raw: str) -> int:
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        sys.exit("Usage: python -m submissions.pr106_latent_sidecar.inflate <src.bin> <dst.raw>")
+        sys.exit("Usage: python -m submissions.pr106_latent_sidecar_r2.inflate <src.bin> <dst.raw>")
     inflate(sys.argv[1], sys.argv[2])

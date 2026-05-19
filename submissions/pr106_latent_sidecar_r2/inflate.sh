@@ -5,7 +5,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_BIN="${PYTHON_BIN:-python}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 DATA_DIR="$1"
 OUTPUT_DIR="$2"
@@ -14,7 +14,11 @@ FILE_LIST="$3"
 mkdir -p "$OUTPUT_DIR"
 
 if [ -f "$HERE/inflate.py" ] && [ -d "$HERE/src" ]; then
-  export PYTHONPATH="$HERE/src:$HERE:${PYTHONPATH:-}"
+  if [ -n "${PYTHONPATH:-}" ]; then
+    export PYTHONPATH="$HERE/src:$HERE:$PYTHONPATH"
+  else
+    export PYTHONPATH="$HERE/src:$HERE"
+  fi
   RUNNER=("$PYTHON_BIN" "$HERE/inflate.py")
 else
   ROOT="$(cd "$HERE/../.." && pwd)"
