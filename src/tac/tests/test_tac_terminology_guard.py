@@ -11,7 +11,10 @@ ALL_LANES = REPO / "tools" / "all_lanes_preflight.py"
 
 MINIMAL_CANONICAL_TEXTS = {
     "README.md": (
+        "# comma-lab\n"
         "`tac` means **Task-Aware Compression**\n"
+        "The local checkout may still be named `pact`\n"
+        "This is an active research and engineering repo.\n"
         "src/tac/README.md\n"
         "src/comma_lab/README.md\n"
         "docs/terminology_and_boundaries.md\n"
@@ -21,6 +24,7 @@ MINIMAL_CANONICAL_TEXTS = {
         "`tac` means Task-Aware Compression\n"
         "Use `codec` only for concrete encoders\n"
         "`comma_lab` owns lab operations\n"
+        "src/tac/ src/comma_lab/\n"
         "docs/terminology_and_boundaries.md\n"
         "docs/contest_compliance_authority.md\n"
     ),
@@ -50,6 +54,14 @@ MINIMAL_CANONICAL_TEXTS = {
         "#35 tensor_inversion\n"
         "#68 loophole_v2\n"
         "#78 qzs3_script_payload_r147\n"
+        "Task-Aware Compression (`tac`) design path\n"
+    ),
+    "docs/README.md": (
+        "# Documentation Index\n"
+        "Start with the files that describe the current public repository contract\n"
+        "Historical And Internal Plans\n"
+        "docs/superpowers/\n"
+        "tools/check_tac_terminology.py --strict\n"
     ),
     "docs/terminology_and_boundaries.md": (
         "This document is the canonical naming and package-boundary reference\n"
@@ -89,6 +101,7 @@ MINIMAL_CANONICAL_TEXTS = {
         'description = "Task-Aware Compression:\n'
         '"task-aware-compression"\n'
         '"video-coding-for-machines"\n'
+        'comma_lab = ["py.typed"]\n'
     ),
 }
 
@@ -159,6 +172,19 @@ def test_init_files_have_positive_terminology_requirements(tmp_path: Path) -> No
     rendered = "\n".join(finding.render() for finding in findings)
     assert "src/tac/__init__.py" in rendered
     assert "src/comma_lab/__init__.py" in rendered
+
+
+def test_bare_tac_doc_heading_is_rejected(tmp_path: Path) -> None:
+    module = _load_tool()
+    _write_canonical_texts(tmp_path)
+    historical = tmp_path / "docs" / "superpowers" / "plans" / "stale.md"
+    historical.parent.mkdir(parents=True, exist_ok=True)
+    historical.write_text("# TAC Lossless Implementation Plan\n", encoding="utf-8")
+
+    findings = module.check_repo(tmp_path)
+
+    rendered = "\n".join(finding.render() for finding in findings)
+    assert "TAC headings must expand to Task-Aware Compression" in rendered
 
 
 def test_cli_strict_passes_live_docs() -> None:

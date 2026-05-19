@@ -42,11 +42,11 @@ uv pip install -e ".[dev,runtime]"
 .venv/bin/pytest src/tac/tests/ tests/
 
 # Lint and format
-.venv/bin/ruff check src/tac/
-.venv/bin/ruff format src/tac/
+.venv/bin/ruff check src/tac/ src/comma_lab/
+.venv/bin/ruff format src/tac/ src/comma_lab/
 
 # Type-check
-.venv/bin/mypy src/tac/
+.venv/bin/mypy src/tac/ src/comma_lab/
 ```
 
 ## Pull request expectations

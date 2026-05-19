@@ -16,6 +16,7 @@ CANONICAL_FILES = (
     "HANDOFF.md",
     "PROGRAM.md",
     "SYSTEM_MAP.md",
+    "docs/README.md",
     "docs/contest_compliance_authority.md",
     "docs/terminology_and_boundaries.md",
     "src/tac/README.md",
@@ -30,6 +31,7 @@ FORBIDDEN_TAC_DEFINITION_RE = re.compile(
     r"(?:\*\*)?Task[- ]Aware Codec(?:\*\*)?",
     re.IGNORECASE,
 )
+AMBIGUOUS_TAC_HEADING_RE = re.compile(r"^#{1,6}\s+.*\bTAC\b")
 
 
 @dataclass(frozen=True)
@@ -80,6 +82,25 @@ def _forbidden_definition_findings(relpath: str, text: str) -> list[Finding]:
     return findings
 
 
+def _ambiguous_tac_heading_findings(root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    for path in sorted((root / "docs").rglob("*.md")):
+        relpath = path.relative_to(root).as_posix()
+        if relpath == "docs/terminology_and_boundaries.md":
+            continue
+        text = path.read_text(encoding="utf-8")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if AMBIGUOUS_TAC_HEADING_RE.match(line) and "Task-Aware Compression" not in line:
+                findings.append(
+                    Finding(
+                        relpath,
+                        "TAC headings must expand to Task-Aware Compression (`tac`) or be rewritten",
+                        lineno,
+                    )
+                )
+    return findings
+
+
 def check_repo(root: Path) -> list[Finding]:
     """Return terminology findings for a repository root."""
 
@@ -88,14 +109,36 @@ def check_repo(root: Path) -> list[Finding]:
     texts = {relpath: _read_required(root, relpath, findings) for relpath in CANONICAL_FILES}
     for relpath, text in texts.items():
         findings.extend(_forbidden_definition_findings(relpath, text))
+    findings.extend(_ambiguous_tac_heading_findings(root))
 
     root_readme = texts["README.md"]
     _require_contains(
         findings,
         relpath="README.md",
         text=root_readme,
+        needle="# comma-lab",
+        rationale="canonical public repository title",
+    )
+    _require_contains(
+        findings,
+        relpath="README.md",
+        text=root_readme,
         needle="`tac` means **Task-Aware Compression**",
         rationale="canonical TAC expansion",
+    )
+    _require_contains(
+        findings,
+        relpath="README.md",
+        text=root_readme,
+        needle="The local checkout may still be named `pact`",
+        rationale="pact alias containment",
+    )
+    _require_contains(
+        findings,
+        relpath="README.md",
+        text=root_readme,
+        needle="This is an active research and engineering repo.",
+        rationale="active-repo status",
     )
     for needle in (
         "src/tac/README.md",
@@ -116,6 +159,7 @@ def check_repo(root: Path) -> list[Finding]:
         ("`tac` means Task-Aware Compression", "contributing TAC expansion"),
         ("Use `codec` only for concrete encoders", "contributing codec/compression distinction"),
         ("`comma_lab` owns lab operations", "contributing comma_lab boundary"),
+        ("src/tac/ src/comma_lab/", "contributing quality checks include both packages"),
         ("docs/terminology_and_boundaries.md", "contributing terminology pointer"),
         ("docs/contest_compliance_authority.md", "contributing contest authority pointer"),
     ):
@@ -123,6 +167,22 @@ def check_repo(root: Path) -> list[Finding]:
             findings,
             relpath="CONTRIBUTING.md",
             text=contributing,
+            needle=needle,
+            rationale=rationale,
+        )
+
+    docs_readme = texts["docs/README.md"]
+    for needle, rationale in (
+        ("# Documentation Index", "docs index title"),
+        ("Start with the files that describe the current public repository contract", "current docs routing"),
+        ("Historical And Internal Plans", "historical docs routing"),
+        ("docs/superpowers/", "historical superpowers routing"),
+        ("tools/check_tac_terminology.py --strict", "terminology guard command"),
+    ):
+        _require_contains(
+            findings,
+            relpath="docs/README.md",
+            text=docs_readme,
             needle=needle,
             rationale=rationale,
         )
@@ -278,6 +338,7 @@ def check_repo(root: Path) -> list[Finding]:
         ("#35 tensor_inversion", "scorer inflate precedent"),
         ("#68 loophole_v2", "script-payload loophole precedent"),
         ("#78 qzs3_script_payload_r147", "withdrawn payload-relocation precedent"),
+        ("Task-Aware Compression (`tac`) design path", "expanded procedural generation TAC phrasing"),
     ):
         _require_contains(
             findings,
@@ -292,6 +353,7 @@ def check_repo(root: Path) -> list[Finding]:
         ('description = "Task-Aware Compression:', "project description"),
         ('"task-aware-compression"', "PyPI keyword"),
         ('"video-coding-for-machines"', "VCM PyPI keyword"),
+        ('comma_lab = ["py.typed"]', "comma_lab typed package marker"),
     ):
         _require_contains(
             findings,

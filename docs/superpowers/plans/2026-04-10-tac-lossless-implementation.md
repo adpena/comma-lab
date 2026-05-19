@@ -1,4 +1,9 @@
-# TAC Lossless Implementation Plan
+# Historical: Task-Aware Compression (`tac`) Lossless Implementation Plan
+
+> Historical implementation plan. Several tasks below have since landed or
+> changed shape, and some named entry points are no longer live. Treat this as
+> provenance for the lossless subsystem, not as the current queue. Prefer
+> `README.md`, `docs/README.md`, and `src/tac/README.md` for current commands.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

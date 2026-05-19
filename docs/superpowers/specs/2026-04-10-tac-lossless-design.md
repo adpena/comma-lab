@@ -1,4 +1,9 @@
-# TAC Lossless Design
+# Historical: Task-Aware Compression (`tac`) Lossless Design
+
+> Historical planning note. This document predates the current public
+> `comma-lab` / `tac` documentation contract. Treat it as design provenance,
+> not as the live implementation checklist. Prefer `README.md`, `docs/README.md`,
+> and `src/tac/README.md` for current operator-facing entry points.
 
 ## Goal
 

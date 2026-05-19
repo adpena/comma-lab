@@ -195,6 +195,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 tac = ["py.typed"]
+comma_lab = ["py.typed"]
 
 [tool.ruff]
 target-version = "py311"

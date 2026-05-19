@@ -1,4 +1,4 @@
-# comma-lab / pact
+# comma-lab
 
 Task-Aware Compression research and artifact tooling for the
 [comma.ai video compression challenge](https://github.com/commaai/comma_video_compression_challenge).
@@ -6,6 +6,11 @@ This repository is maintained as a community and historical-record workspace:
 public-archive intake, exact replay custody, writeup drafts, and OSS tooling.
 It is not a live leaderboard page and it does not make an arXiv or preprint
 commitment.
+
+The local checkout may still be named `pact` because that was the original
+internal workspace alias. Public docs, package metadata, and release surfaces
+should use `comma-lab` for the repository and `tac` for the reusable
+Task-Aware Compression library.
 
 In this repository, `tac` means **Task-Aware Compression**: compression
 optimized for a downstream task/scorer. A **codec** is a narrower concrete
@@ -119,17 +124,20 @@ Methodology long-form: [`docs/writeup/cuda_cpu_drift_methodology.md`](docs/write
 git clone https://github.com/adpena/comma-lab.git && cd comma-lab
 uv venv && uv pip install -e ".[dev]"
 
-# Compress a video
-PYTHONPATH=src:upstream python experiments/pipeline.py compress \
-    --video upstream/videos/0.mkv \
-    --checkpoint path/to/checkpoint.pt \
-    --device cuda --output-dir results/run_01
+# Inspect the canonical package CLI
+.venv/bin/python -m tac.cli --help
+.venv/bin/python -m tac.cli lossless profiles
 
-# Evaluate an archive
-PYTHONPATH=src:upstream python experiments/pipeline.py eval \
-    --archive results/run_01/archive.zip \
-    --checkpoint results/run_01/iter_01/renderer.bin \
-    --video upstream/videos/0.mkv --device cuda
+# Run the public terminology / docs boundary guard
+.venv/bin/python tools/check_tac_terminology.py --strict
+```
+
+The research pipeline remains available for historical lossy renderer
+experiments:
+
+```bash
+PYTHONPATH=src:upstream .venv/bin/python experiments/pipeline.py compress --help
+PYTHONPATH=src:upstream .venv/bin/python experiments/pipeline.py eval --help
 ```
 
 ## Training Profiles
@@ -166,7 +174,7 @@ Profiles are defined in `src/tac/profiles.py` with full provenance for every hyp
 src/tac/                    Task-Aware Compression library and reusable algorithms
 src/comma_lab/              Lab operations, state projection, preflight adapters
 experiments/                Training scripts, pipeline, analysis tools
-experiments/pipeline.py     Canonical compress + eval pipeline
+experiments/pipeline.py     Historical/research lossy compress + eval pipeline
 docs/paper/                 Technical paper (in progress)
 submissions/                Submission packaging
 upstream/                   Pinned upstream challenge snapshot (read-only)

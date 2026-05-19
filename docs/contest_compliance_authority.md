@@ -55,8 +55,9 @@ Local consequence:
 
 ## Procedural Generation Rule
 
-Procedural generation is contest-relevant and should remain a first-class TAC
-design path. The compliant question is where the information lives.
+Procedural generation is contest-relevant and should remain a first-class
+Task-Aware Compression (`tac`) design path. The compliant question is where
+the information lives.
 
 Use two explicit modes:
 
