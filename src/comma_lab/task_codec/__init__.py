@@ -1,4 +1,4 @@
-"""Minimal task-aware codec foundation for scorer, architecture, and artifact records.
+"""Legacy comma_lab.task_codec compatibility foundation for early post-filter records.
 
 This package keeps the interfaces intentionally small:
 
@@ -15,9 +15,9 @@ from .architectures import (
     register_default_architectures,
 )
 from .quantization import QuantizationMetadata
-from .state import FinalMetadata, ResumeState
 from .records import EvaluationRecord, ProxyEvaluationRecord
 from .scorers import RegisteredScorer, ScorerRegistry, ScorerSpec
+from .state import FinalMetadata, ResumeState
 
 __all__ = [
     "ArchitectureConfig",
@@ -27,8 +27,8 @@ __all__ = [
     "FinalMetadata",
     "ProxyEvaluationRecord",
     "QuantizationMetadata",
-    "ResumeState",
     "RegisteredScorer",
+    "ResumeState",
     "ScorerRegistry",
     "ScorerSpec",
     "register_default_architectures",

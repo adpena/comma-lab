@@ -1,8 +1,73 @@
-# tac -- Task-Aware Codec
+# tac - Task-Aware Compression
 
-Neural video compression optimized for downstream perception models.
+`tac` is the reusable Task-Aware Compression library for this repository. It
+contains the algorithmic compression stack: scorer-aware losses, renderers,
+archive grammars, packet compilers, quantizers, exact-eval helpers, sensitivity
+maps, and planning primitives that optimize compressed bytes for downstream
+machine perception rather than generic human-facing fidelity.
 
-tac trains tiny CNN post-filters that correct decoded video frames by backpropagating through frozen perception networks. The filter learns corrections that minimize the scorer's distortion metric, not generic pixel quality.
+Use **compression** for the project and research program. Use **codec** only for
+a concrete encoder/decoder, archive grammar, entropy coder, or wire-format
+component such as `tac.packet_compiler`, `tac.mask_codec`, or a substrate-local
+`archive.py` / `inflate.py` pair.
+
+## Terminology
+
+Academic and industry-adjacent work uses several overlapping names for this
+space:
+
+- **Video coding for machines (VCM)** and **coding for machines**: standard
+  terminology for compression optimized for machine analysis tasks. MPEG lists
+  VCM under MPEG-AI and frames it around bitstreams that preserve machine-task
+  performance after decoding.
+- **Feature coding for machines (FCM)**: related terminology when compressed
+  representations are machine features rather than reconstructed pixels. MPEG
+  WG 4 describes current scope that includes feature maps, tensors, neural
+  aspects of video, and intelligent machine consumption.
+- **Task-aware compression** and **task-oriented compression**: research terms
+  for rate-distortion objectives conditioned on downstream task loss.
+- **Neural compression** and **learned compression**: broad implementation
+  families that may or may not be task-aware.
+
+`tac` deliberately uses the broader **Task-Aware Compression** name because this
+package now includes more than codecs: deterministic packet compilation,
+procedural byte derivation, scorer geometry, Venn/sensitivity maps, Pareto
+planning, archive custody, and exact scorer contracts.
+
+References:
+
+- MPEG-AI Part 2, [Video coding for machines](https://www.mpeg.org/standards/MPEG-AI/2/)
+- MPEG WG 4, [Video Coding Working Group](https://www.mpeg.org/structure/video-coding/)
+- CVPR 2023, [AccelIR: Task-aware Image Compression for Accelerating Neural Restoration](https://openaccess.thecvf.com/content/CVPR2023/papers/Ye_AccelIR_Task-Aware_Image_Compression_for_Accelerating_Neural_Restoration_CVPR_2023_paper.pdf)
+
+## Scope
+
+`tac` owns reusable, contest-relevant compression implementation:
+
+- representation substrates and renderers;
+- score-aware training losses and gradient/sensitivity tools;
+- quantization, entropy coding, packet compilation, and archive grammars;
+- exact score formula helpers and scorer/runtime custody contracts;
+- byte-level analyzers, master-gradient consumers, and optimization planners;
+- deterministic inflate/runtime components that can be vendored into a
+  self-contained submission packet.
+
+`tac` should not own operator state, provider transcripts, hosted dashboards, or
+research-council bookkeeping. Those belong in `comma_lab`, `tools/`, `docs/`,
+or dated `.omx/research/` ledgers.
+
+## Core Surfaces
+
+| Surface | Role |
+|---|---|
+| `tac.packet_compiler` | Byte grammars, entropy-coder primitives, and deterministic packet compilation |
+| `tac.substrates` | Reusable representation families, renderer substrates, and substrate contracts |
+| `tac.master_gradient` | Canonical master-gradient anchors, custody checks, and axis authority |
+| `tac.master_gradient_consumers` | Venn maps, per-pair atlases, Wyner-Ziv covariance, and treatment plans |
+| `tac.scorer` | Contest score formula, scorer loading, and score-axis helpers |
+| `tac.optimizer` | Exact-readiness, dispatch authority, proxy-candidate contracts, and planning gates |
+| `tac.procedural_codebook_generator` | Archive-seeded and weight-derived deterministic codebook generation |
+| `tac.preflight` | Reusable contest/runtime/package validity checks |
 
 ## Installation
 
@@ -10,84 +75,63 @@ tac trains tiny CNN post-filters that correct decoded video frames by backpropag
 pip install tac
 ```
 
+For this repository checkout, the preferred development install is:
+
+```bash
+uv venv
+uv pip install -e ".[dev]"
+```
+
 Optional extras:
 
 ```bash
-pip install tac[mlx]        # Apple Silicon acceleration
-pip install tac[viz]         # Plotly visualization
-pip install tac[notebooks]   # Marimo notebook support
+pip install tac[runtime]      # scorer/runtime closure for GPU eval/training
+pip install tac[analysis]     # planning/profiling table tooling
+pip install tac[viz]          # plotting and image IO helpers
+pip install tac[notebooks]    # marimo notebooks
+pip install tac[pr86_replay]  # opt-in LGPL PPMd dependency for public PR replay
 ```
 
-## Quick start
+## Minimal Usage
 
 ```python
-from tac import Trainer, TrainConfig, build_postfilter
+from tac.master_gradient import OperatingPoint, compute_marginal_coefficients
 
-# Build a 3-layer residual CNN post-filter
-model = build_postfilter("standard", hidden=64)
-
-# Configure training with QAT, EMA, and best-checkpoint selection
-config = TrainConfig(hidden=64, epochs=1000, alpha=20, tag="my_run")
-
-# Train against frozen PoseNet + SegNet scorers
-trainer = Trainer(model, config, device="mps")
-trainer.fit(comp_pairs, gt_pairs, posenet, segnet, sal_weights)
+op = OperatingPoint(
+    d_seg=0.0005,
+    d_pose=0.00003,
+    rate=178_517 / 37_545_489,
+    score=0.192,
+)
+seg_marginal, pose_marginal, rate_marginal = compute_marginal_coefficients(op)
 ```
 
-## What it does
+```python
+from tac.packet_compiler import RankedSidecarSchema, encode_ranked_no_op_sidecar
 
-Video compression codecs (H.264, AV1) optimize for human perception -- PSNR, SSIM, perceptual quality. But many downstream consumers are neural networks, not humans. A self-driving car's perception stack does not care about perceptual quality; it cares about whether PoseNet and SegNet produce correct outputs from the decoded frames.
-
-tac bridges this gap:
-
-1. **Compress** video with a standard codec (H.265, AV1)
-2. **Post-filter** decoded frames through a tiny learned CNN
-3. **Score** using the actual downstream perception models
-4. **Backpropagate** through the frozen scorers to train the filter
-
-The post-filter learns artifact corrections that specifically help the downstream models, even if those corrections look invisible (or worse) to human eyes.
-
-## Architecture
-
-tac provides two processing lanes:
-
-- **CPU lane**: Standard codec + learned post-filter. The post-filter is a 3-layer residual CNN (~390KB int8) that runs in real-time on CPU.
-- **GPU lane**: Mask extraction + neural rendering. SegNet masks are compressed at extreme ratios, then a neural renderer reconstructs RGB frames from masks alone.
-
-### Key modules
-
-| Module | Purpose |
-|---|---|
-| `tac.architectures` | 8 post-filter architectures (Standard, Dilated, PixelShuffle, PSD, ...) |
-| `tac.training` | Trainer with QAT, EMA, SWA, best-checkpoint selection |
-| `tac.losses` | Scorer-aware losses (standard, feature matching, STE) |
-| `tac.quantization` | Int8 quantization (per-channel, FakeQuant STE, LSQ) |
-| `tac.fp4_quantize` | Extreme 4-bit quantization with codebook |
-| `tac.mask_codec` | Mask extraction, AV1/VVC encoding, entropy coding |
-| `tac.renderer` | Neural mask-to-RGB renderer (GPU lane) |
-| `tac.tto` | Test-time optimization at inflation |
-| `tac.scorer` | Scoring formula, sensitivity analysis |
-| `tac.evaluate` | Proxy evaluation, checkpoint averaging |
-| `tac.profiles` | Named training profiles (proven_baseline, smoke, ...) |
-
-## CLI
-
-```bash
-# Train a post-filter
-tac lossy train --profile proven_baseline --precomputed data/precomputed
-
-# Evaluate a checkpoint
-tac lossy eval --checkpoint best_int8.pt --archive test.zip
-
-# Lossless compression tools
-tac lossless compress input.bin -o output.tac
-tac lossless decompress output.tac -o recovered.bin
+schema = RankedSidecarSchema(n_pairs=600, n_dims=28)
+payload = encode_ranked_no_op_sidecar(dims, delta_indices, schema=schema)
 ```
 
-## Links
+## Development Contract
 
-- [Repository](https://github.com/adpena/pact)
-- [comma.ai video compression challenge](https://github.com/commaai/comma-video-compression-challenge)
+- Keep APIs typed and deterministic.
+- Preserve scorer-axis labels: `[contest-CPU]`, `[contest-CUDA]`, and advisory
+  local/proxy axes are separate evidence spaces.
+- Do not load contest scorers in inflate paths unless a specific sanctioned
+  packet/compiler mode proves compliance.
+- Emit archive bytes, SHA-256s, runtime custody, and exact-eval provenance for
+  score-bearing artifacts.
+- Keep new reusable algorithms in `tac`; keep operator orchestration in
+  `comma_lab`, `tools/`, or `experiments/`.
+
+## Package Boundary
+
+`tac` is the compression engine. `comma_lab` is the lab and operations layer.
+If a module manipulates archives, tensors, codecs, scorer contracts, or
+optimization math, it likely belongs in `tac`. If it manages run state,
+provider dispatch, ledgers, public-frontier intake, reports, or release hygiene,
+it likely belongs in `comma_lab` or a thin CLI that delegates to `tac`.
 
 ## License
 

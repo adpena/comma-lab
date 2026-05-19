@@ -1,6 +1,10 @@
-# Expert Council: Task-Aware Codec Production Readiness and Applications
+# Expert Council: Task-Aware Compression Production Readiness and Applications
 
 ## Context
+
+> Historical note: this document preserves an early post-filter council pass.
+> Its "current results" section is stale unless a row is backed by a current
+> exact-eval artifact and evidence grade elsewhere in the repository.
 
 **The technique:** A tiny residual CNN post-filter (3-layer, h=64, ~45KB int8) is trained by backpropagating through frozen perception networks (PoseNet for ego-motion, SegNet for semantic segmentation). The filter sits after standard AV1 decode + bicubic upscale and corrects decoded frames to minimize what the downstream perception system actually cares about, not generic pixel quality. Deployed as a quantized int8 model running in <30s on CPU for 1200 frames.
 
@@ -180,10 +184,10 @@ The standardization path:
 2. **Medium-term (3-5 years):** Propose as a supplemental enhancement layer in codec standards (AV2, VVC extensions). The codec could signal "this bitstream was encoded for task X" and decoders could apply the corresponding post-filter.
 3. **Long-term (5+ years):** Learned post-filters become a standard part of codec pipelines, with weight sets published alongside codec profiles.
 
-### General-Purpose Task-Aware Codec Library Design
+### General-Purpose Task-Aware Compression Library Design
 
 ```python
-import tac  # Task-Aware Codec
+import tac  # Task-Aware Compression
 
 # Define the task (frozen perception model)
 scorer = tac.Scorer.from_onnx("supercombo.onnx")

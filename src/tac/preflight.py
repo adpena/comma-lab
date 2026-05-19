@@ -70715,6 +70715,11 @@ def check_master_gradient_contest_axis_requires_authoritative_custody(
             "latest_rejected_contest_axis_anchor_for_archive"
         ),
     }
+    autopilot_rank_contract_tokens = {
+        "require_score_weighted_custody=True",
+        "_sidecar_has_full_pair_gradient_custody",
+        "top_k_score_weighted_with_axis_breakdown",
+    }
     for rel_path, required_token in source_contracts.items():
         path = root / rel_path
         if not path.exists():
@@ -70733,6 +70738,18 @@ def check_master_gradient_contest_axis_requires_authoritative_custody(
                 "time, and guarded inflate-time planning without becoming false "
                 "contest-CPU/contest-CUDA authority."
             )
+        if rel_path == "tools/cathedral_autopilot_autonomous_loop.py":
+            missing_rank_tokens = sorted(
+                token for token in autopilot_rank_contract_tokens if token not in source
+            )
+            if missing_rank_tokens:
+                violations.append(
+                    f"{rel_path} missing canonical Cathedral master-gradient "
+                    f"ranking custody token(s): {missing_rank_tokens}. Catalog #327 "
+                    "requires Venn/atlas ranking influence to flow only through "
+                    "score-weighted counts, full 600-pair per-byte gradient custody, "
+                    "and active-panel contest-axis matching."
+                )
 
     ledger = root / MASTER_GRADIENT_LEDGER_PATH
     if not ledger.exists():

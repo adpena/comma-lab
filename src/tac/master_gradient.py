@@ -80,6 +80,7 @@ __all__ = [
     "predict_delta_s",
     "predict_delta_s_per_pair",
     "query_anchors_by_archive",
+    "score_axis_dominance_summary",
     "unresolved_contest_axis_authority_violations",
     "update_from_anchor",
 ]
@@ -96,6 +97,7 @@ LEGAL_GRADIENT_TENSOR_KINDS = frozenset(
     {AGGREGATE_GRADIENT_TENSOR_KIND, PER_PAIR_GRADIENT_TENSOR_KIND}
 )
 AUTHORITATIVE_CONTEST_AXES = frozenset({"[contest-CPU]", "[contest-CUDA]"})
+SCORE_AXIS_LABELS = ("seg", "pose", "rate")
 
 
 def _is_contest_axis_label(axis: object) -> bool:
@@ -156,6 +158,116 @@ def compute_marginal_coefficients(op: OperatingPoint) -> tuple[float, float, flo
     return seg_marginal, pose_marginal, rate_marginal_per_byte
 
 
+def score_axis_dominance_summary(
+    gradient_tensor,
+    operating_point: OperatingPoint,
+    *,
+    axis_dominance_threshold: float = 0.7,
+    max_chunk_entries: int = 1_000_000,
+) -> dict[str, object]:
+    """Summarize which score axis dominates a master-gradient tensor.
+
+    This is producer-side metadata for downstream planning tools. It records
+    score-axis dominance derived from the gradient tensor and the contest-score
+    marginal coefficients, without granting raw byte-mutation authority.
+    Large per-pair tensors are processed in chunks to avoid allocating an
+    additional full-size fp64 tensor during extraction.
+    """
+    if np is None:
+        raise RuntimeError("numpy required to summarize master-gradient dominance")
+    if not (0.0 <= axis_dominance_threshold <= 1.0):
+        raise ValueError("axis_dominance_threshold must be in [0, 1]")
+    if max_chunk_entries <= 0:
+        raise ValueError("max_chunk_entries must be > 0")
+
+    arr = np.asarray(gradient_tensor)
+    if arr.ndim not in (2, 3) or arr.shape[-1] != 3:
+        raise ValueError(
+            "gradient_tensor must have shape (N_bytes, 3) or "
+            f"(N_bytes, N_pairs, 3); got {arr.shape}"
+        )
+
+    coeffs = np.asarray(compute_marginal_coefficients(operating_point), dtype=np.float64)
+    entries_per_byte = int(arr.shape[1]) if arr.ndim == 3 else 1
+    bytes_per_chunk = max(1, int(max_chunk_entries) // max(1, entries_per_byte))
+    entry_count = int(np.prod(arr.shape[:-1], dtype=np.int64))
+    zero_contribution_count = 0
+    dominant_counts_arr = np.zeros(3, dtype=np.int64)
+    threshold_counts_arr = np.zeros(3, dtype=np.int64)
+    total_abs_score_contribution_l1_arr = np.zeros(3, dtype=np.float64)
+    sum_axis_share_arr = np.zeros(3, dtype=np.float64)
+
+    for start in range(0, int(arr.shape[0]), bytes_per_chunk):
+        chunk = np.asarray(arr[start : start + bytes_per_chunk], dtype=np.float64)
+        flat = (np.abs(chunk) * coeffs).reshape(-1, 3)
+        denom = flat.sum(axis=1)
+        shares = np.zeros_like(flat)
+        np.divide(flat, denom[:, None], out=shares, where=denom[:, None] > 0)
+        nonzero = denom > 0
+        zero_contribution_count += int((~nonzero).sum())
+        dominant = shares.argmax(axis=1)
+        for axis_idx in range(3):
+            dominant_counts_arr[axis_idx] += int(((dominant == axis_idx) & nonzero).sum())
+            threshold_counts_arr[axis_idx] += int(
+                ((shares[:, axis_idx] >= axis_dominance_threshold) & nonzero).sum()
+            )
+            total_abs_score_contribution_l1_arr[axis_idx] += float(flat[:, axis_idx].sum())
+            sum_axis_share_arr[axis_idx] += float(shares[:, axis_idx].sum())
+
+    dominant_counts = {
+        label: int(dominant_counts_arr[axis_idx])
+        for axis_idx, label in enumerate(SCORE_AXIS_LABELS)
+    }
+    threshold_counts = {
+        label: int(threshold_counts_arr[axis_idx])
+        for axis_idx, label in enumerate(SCORE_AXIS_LABELS)
+    }
+    total_abs_score_contribution_l1 = {
+        label: float(total_abs_score_contribution_l1_arr[axis_idx])
+        for axis_idx, label in enumerate(SCORE_AXIS_LABELS)
+    }
+    mean_axis_share = {
+        label: float(sum_axis_share_arr[axis_idx] / entry_count) if entry_count else 0.0
+        for axis_idx, label in enumerate(SCORE_AXIS_LABELS)
+    }
+
+    payload: dict[str, object] = {
+        "schema": "master_gradient_score_axis_dominance_v1",
+        "formula": (
+            "abs(gradient_axis) * contest_score_marginal / "
+            "sum_axes(abs(gradient_axis) * contest_score_marginal)"
+        ),
+        "axis_labels": list(SCORE_AXIS_LABELS),
+        "marginal_coefficients": {
+            label: float(coeffs[axis_idx])
+            for axis_idx, label in enumerate(SCORE_AXIS_LABELS)
+        },
+        "axis_dominance_threshold": float(axis_dominance_threshold),
+        "tensor_shape": [int(dim) for dim in arr.shape],
+        "entry_count": entry_count,
+        "zero_contribution_count": int(zero_contribution_count),
+        "dominant_axis_counts": dominant_counts,
+        "threshold_dominant_axis_counts": threshold_counts,
+        "mean_axis_share": mean_axis_share,
+        "total_abs_score_contribution_l1": total_abs_score_contribution_l1,
+        "promotion_authority": False,
+        "raw_archive_byte_authority": False,
+        "authority_boundary": (
+            "diagnostic score-axis dominance metadata; packet-valid mutation "
+            "still requires grammar-aware CandidateModificationSpec rows, "
+            "packet proofs, and exact eval"
+        ),
+    }
+    if arr.ndim == 2:
+        payload["n_bytes"] = int(arr.shape[0])
+        payload["pose_axis_dominant_byte_count"] = int(threshold_counts["pose"])
+    else:
+        payload["n_bytes"] = int(arr.shape[0])
+        payload["n_pairs"] = int(arr.shape[1])
+        payload["pose_axis_dominant_pair_entry_count"] = int(threshold_counts["pose"])
+    return payload
+
+
 @dataclass(frozen=True)
 class MasterGradient:
     """Diagnostic score-response tensor measured at a specific operating point.
@@ -194,6 +306,7 @@ class MasterGradient:
     gradient_byte_domain: str = "scored_archive_bytes"
     n_pairs_used: int | None = None
     n_pairs_total: int | None = None
+    score_axis_dominance: Mapping[str, object] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.archive_sha256, str) or len(self.archive_sha256) < 16:
@@ -253,6 +366,10 @@ class MasterGradient:
             raise ValueError("n_pairs_used cannot exceed n_pairs_total")
         if self.gradient_subject_bytes is not None and self.gradient_subject_bytes != self.n_bytes:
             raise ValueError("gradient_subject_bytes must equal n_bytes for the sidecar tensor")
+        if self.score_axis_dominance is not None and not isinstance(
+            self.score_axis_dominance, Mapping
+        ):
+            raise ValueError("score_axis_dominance must be a mapping when set")
 
     def load_gradient(self):
         """Load the (N_bytes, 3) float32 array; requires numpy."""
@@ -683,6 +800,11 @@ def update_from_anchor(anchor: dict, *, path: Path | None = None) -> None:
         n_pairs_total=(
             int(anchor["n_pairs_total"])
             if anchor.get("n_pairs_total") is not None
+            else None
+        ),
+        score_axis_dominance=(
+            anchor["score_axis_dominance"]
+            if isinstance(anchor.get("score_axis_dominance"), Mapping)
             else None
         ),
     )

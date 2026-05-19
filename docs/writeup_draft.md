@@ -614,7 +614,7 @@ This work is a specific instance of task-aware video compression, an area gainin
 
 For the multi-task gradient conflict that arises when jointly optimizing PoseNet and SegNet, we draw on PCGrad (Yu et al., NeurIPS 2020) and CAGrad (Liu et al., NeurIPS 2021). The Pareto frontier analysis follows multi-objective optimization frameworks from Sener and Koltun (NeurIPS 2018).
 
-Our contribution is training a CNN post-filter by directly backpropagating through frozen scorer networks to minimize a competition-specific scoring formula. This produces a task-aware codec that preserves precisely the visual information downstream perception models consume, rather than optimizing generic quality metrics.
+Our contribution is training a CNN post-filter by directly backpropagating through frozen scorer networks to minimize a competition-specific scoring formula. This produces a task-aware compression system that preserves precisely the visual information downstream perception models consume, rather than optimizing generic quality metrics.
 
 <!-- Section 7: Results and Ablations -->
 ## Results and Ablations

@@ -46,6 +46,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 TOOLS_DIR = Path(__file__).resolve().parents[3] / "tools"
@@ -70,6 +71,16 @@ def _cleanup_repo_local_test_journals():
 
 def _sha(seed: str) -> str:
     return (seed * 64)[:64]
+
+
+def _write_per_pair_gradient_npy(
+    path: Path,
+    *,
+    n_bytes: int = 2,
+    n_pairs: int = 600,
+) -> str:
+    np.save(path, np.ones((n_bytes, n_pairs, 3), dtype=np.float32))
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _write_exact_ready_archive(path: Path) -> tuple[int, str]:
@@ -2588,18 +2599,115 @@ def test_per_pair_sister_817_sidecar_rewards_make_negative_delta_more_negative(
     assert [cand.candidate_id for cand in ranked] == ["rewarded", "plain"]
 
 
+def test_apply_z1_ignores_raw_venn_sidecar_without_score_weighted_custody(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+    sha = "b" * 64
+    (root / f"venn_classification_{sha[:12]}_20260518T191403.json").write_text(
+        json.dumps(
+            {
+                "schema": "master_gradient_consumer_venn_classification_v1",
+                "consumer_id": "classify_bytes_by_pair_variance",
+                "archive_sha256": sha,
+                "class_counts": {
+                    "PAIR_SPECIFIC": 4000,
+                    "PAIR_INVARIANT": 100,
+                    "PAIR_NEUTRAL": 100,
+                    "DEAD": 0,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(loop, "_VENN_CLASSIFICATION_SIDECAR_ROOT", root)
+    cand = _cand("raw_venn", predicted_delta=-0.01, archive_sha256=sha)
+
+    assert loop.apply_z1_empirical_revision_to_candidate_delta(cand) == pytest.approx(-0.01)
+
+
+def test_apply_z1_consumes_score_weighted_venn_with_full_pair_custody(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+    sha = "c" * 64
+    gradient_path = tmp_path / "venn_per_pair_gradient.npy"
+    gradient_sha = _write_per_pair_gradient_npy(gradient_path)
+    (root / f"venn_classification_{sha[:12]}_20260518T191403.json").write_text(
+        json.dumps(
+            {
+                "schema": "master_gradient_consumer_venn_classification_v1",
+                "consumer_id": "classify_bytes_by_pair_variance",
+                "archive_sha256": sha,
+                "scored_archive_sha256": sha,
+                "scored_archive_bytes": 12345,
+                "gradient_array_sha256": gradient_sha,
+                "gradient_array_path": str(gradient_path),
+                "gradient_tensor_kind": "per_pair_per_byte_v1",
+                "measurement_axis": "[contest-CPU]",
+                "measurement_hardware": "linux_x86_64_modal_cpu",
+                "measurement_method": "autograd_full_pairs",
+                "measurement_call_id": "modal-call-venn",
+                "n_pairs": 600,
+                "n_pairs_used": 600,
+                "n_pairs_total": 600,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "class_counts": {
+                    "PAIR_SPECIFIC": 0,
+                    "PAIR_INVARIANT": 0,
+                    "PAIR_NEUTRAL": 1,
+                    "DEAD": 0,
+                },
+                "score_weighted_class_counts": {
+                    "PAIR_SPECIFIC": 3500.0,
+                    "PAIR_INVARIANT": 1000.0,
+                    "PAIR_NEUTRAL": 500.0,
+                    "DEAD": 0.0,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(loop, "_VENN_CLASSIFICATION_SIDECAR_ROOT", root)
+    cand = _cand("strict_venn", predicted_delta=-0.01, archive_sha256=sha)
+
+    assert loop.apply_z1_empirical_revision_to_candidate_delta(cand) == pytest.approx(-0.01 * 0.85)
+
+
 def test_per_pair_difficulty_atlas_sidecar_rewards_pose_hard_signal(tmp_path, monkeypatch):
     root = tmp_path / "master_gradient_consumers"
     root.mkdir()
     sha = "4" * 64
+    gradient_path = tmp_path / "per_pair_gradient.npy"
+    gradient_sha = _write_per_pair_gradient_npy(gradient_path)
     payload = {
         "archive_sha256": sha,
         "schema": "master_gradient_consumer_per_pair_difficulty_v1",
         "consumer_id": "per_pair_difficulty_atlas",
+        "scored_archive_sha256": sha,
+        "scored_archive_bytes": 12345,
+        "gradient_array_sha256": gradient_sha,
+        "gradient_array_path": str(gradient_path),
+        "gradient_tensor_kind": "per_pair_per_byte_v1",
+        "measurement_axis": "[contest-CPU]",
+        "measurement_hardware": "linux_x86_64_modal_cpu",
+        "measurement_method": "autograd_full_pairs",
+        "measurement_call_id": "modal-call-123",
+        "n_pairs": 600,
+        "n_pairs_used": 600,
+        "n_pairs_total": 600,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "aggregate_gradient_norm_l2": 12.0,
+        "score_axis_weighting": {
+            "available": True,
+            "axis_coefficients": {"seg": 100.0, "pose": 5.0, "rate": 1e-6},
+        },
         "top_k_hardest_with_axis_breakdown": [
             {
                 "pair_index": 7,
@@ -2607,6 +2715,15 @@ def test_per_pair_difficulty_atlas_sidecar_rewards_pose_hard_signal(tmp_path, mo
                 "seg_axis_l1": 1.0,
                 "pose_axis_l1": 5.0,
                 "rate_axis_l1": 0.1,
+                "seg_axis_score_l1": 1.0,
+                "pose_axis_score_l1": 5.0,
+                "rate_axis_score_l1": 0.1,
+            }
+        ],
+        "top_k_score_weighted_with_axis_breakdown": [
+            {
+                "pair_index": 7,
+                "gradient_norm_l2": 8.0,
                 "seg_axis_score_l1": 1.0,
                 "pose_axis_score_l1": 5.0,
                 "rate_axis_score_l1": 0.1,
@@ -2623,7 +2740,66 @@ def test_per_pair_difficulty_atlas_sidecar_rewards_pose_hard_signal(tmp_path, mo
     assert adjusted == pytest.approx(-0.01 * 1.06)
 
 
-def test_per_pair_difficulty_atlas_raw_axis_only_gets_generic_reward(
+def test_per_pair_difficulty_atlas_reward_scales_by_score_mass(tmp_path, monkeypatch):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+
+    def write_payload(sha: str, *, seg: float, pose: float, rate: float) -> None:
+        gradient_path = tmp_path / f"{sha[:4]}_per_pair_gradient.npy"
+        gradient_sha = _write_per_pair_gradient_npy(gradient_path)
+        (root / f"per_pair_difficulty_atlas_{sha[:12]}_20260518T191403.json").write_text(
+            json.dumps(
+                {
+                    "archive_sha256": sha,
+                    "schema": "master_gradient_consumer_per_pair_difficulty_v1",
+                    "consumer_id": "per_pair_difficulty_atlas",
+                    "scored_archive_sha256": sha,
+                    "scored_archive_bytes": 12345,
+                    "gradient_array_sha256": gradient_sha,
+                    "gradient_array_path": str(gradient_path),
+                    "gradient_tensor_kind": "per_pair_per_byte_v1",
+                    "measurement_axis": "[contest-CPU]",
+                    "measurement_hardware": "linux_x86_64_modal_cpu",
+                    "measurement_method": "autograd_full_pairs",
+                    "measurement_call_id": f"modal-call-{sha[:4]}",
+                    "n_pairs": 600,
+                    "n_pairs_used": 600,
+                    "n_pairs_total": 600,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "aggregate_gradient_norm_l2": 12.0,
+                    "score_axis_weighting": {
+                        "available": True,
+                        "axis_coefficients": {"seg": 100.0, "pose": 5.0, "rate": 1e-6},
+                    },
+                    "top_k_score_weighted_with_axis_breakdown": [
+                        {
+                            "seg_axis_score_l1": seg,
+                            "pose_axis_score_l1": pose,
+                            "rate_axis_score_l1": rate,
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    weak_sha = "d" * 64
+    strong_sha = "e" * 64
+    write_payload(weak_sha, seg=1.0, pose=1.1, rate=0.1)
+    write_payload(strong_sha, seg=1.0, pose=5.0, rate=0.1)
+    monkeypatch.setattr(loop, "_PER_PAIR_SIDECAR_SCAN_ROOT", root)
+
+    weak = loop.adjust_predicted_delta_for_per_pair_difficulty_atlas(-0.01, weak_sha)
+    strong = loop.adjust_predicted_delta_for_per_pair_difficulty_atlas(-0.01, strong_sha)
+
+    assert weak < -0.01
+    assert weak > strong
+    assert strong == pytest.approx(-0.01 * 1.06)
+
+
+def test_per_pair_difficulty_atlas_raw_axis_only_passthrough(
     tmp_path, monkeypatch
 ):
     root = tmp_path / "master_gradient_consumers"
@@ -2648,9 +2824,192 @@ def test_per_pair_difficulty_atlas_raw_axis_only_gets_generic_reward(
     )
     monkeypatch.setattr(loop, "_PER_PAIR_SIDECAR_SCAN_ROOT", root)
 
-    assert loop.adjust_predicted_delta_for_per_pair_difficulty_atlas(-0.01, sha) == pytest.approx(
-        -0.01 * 1.04
+    assert loop.adjust_predicted_delta_for_per_pair_difficulty_atlas(-0.01, sha) == pytest.approx(-0.01)
+
+
+def test_per_pair_difficulty_atlas_score_weighted_missing_custody_passthrough(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+    sha = "2" * 64
+    (root / f"per_pair_difficulty_atlas_{sha[:12]}_20260518T191403.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": sha,
+                "schema": "master_gradient_consumer_per_pair_difficulty_v1",
+                "consumer_id": "per_pair_difficulty_atlas",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "aggregate_gradient_norm_l2": 12.0,
+                "score_axis_weighting": {
+                    "available": True,
+                    "axis_coefficients": {"seg": 100.0, "pose": 5.0, "rate": 1e-6},
+                },
+                "top_k_hardest_with_axis_breakdown": [
+                    {
+                        "seg_axis_score_l1": 1.0,
+                        "pose_axis_score_l1": 5.0,
+                        "rate_axis_score_l1": 0.1,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
     )
+    monkeypatch.setattr(loop, "_PER_PAIR_SIDECAR_SCAN_ROOT", root)
+
+    assert loop.adjust_predicted_delta_for_per_pair_difficulty_atlas(-0.01, sha) == pytest.approx(-0.01)
+
+
+def test_per_pair_difficulty_atlas_advisory_contest_axis_passthrough(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+    sha = "6" * 64
+    (root / f"per_pair_difficulty_atlas_{sha[:12]}_20260518T191403.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": sha,
+                "schema": "master_gradient_consumer_per_pair_difficulty_v1",
+                "consumer_id": "per_pair_difficulty_atlas",
+                "scored_archive_sha256": sha,
+                "scored_archive_bytes": 12345,
+                "gradient_array_sha256": "c" * 64,
+                "gradient_tensor_kind": "per_pair_per_byte_v1",
+                "measurement_axis": "[contest-CPU]",
+                "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+                "measurement_method": "autograd_full_pairs",
+                "measurement_call_id": "local-call-123",
+                "n_pairs": 600,
+                "n_pairs_used": 600,
+                "n_pairs_total": 600,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "aggregate_gradient_norm_l2": 12.0,
+                "score_axis_weighting": {
+                    "available": True,
+                    "axis_coefficients": {"seg": 100.0, "pose": 5.0, "rate": 1e-6},
+                },
+                "top_k_hardest_with_axis_breakdown": [
+                    {
+                        "seg_axis_score_l1": 1.0,
+                        "pose_axis_score_l1": 5.0,
+                        "rate_axis_score_l1": 0.1,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(loop, "_PER_PAIR_SIDECAR_SCAN_ROOT", root)
+
+    assert loop.adjust_predicted_delta_for_per_pair_difficulty_atlas(-0.01, sha) == pytest.approx(-0.01)
+
+
+def test_per_pair_difficulty_atlas_panel_axis_mismatch_passthrough(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+    sha = "7" * 64
+    gradient_path = tmp_path / "per_pair_gradient.npy"
+    gradient_sha = _write_per_pair_gradient_npy(gradient_path)
+    (root / f"per_pair_difficulty_atlas_{sha[:12]}_20260518T191403.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": sha,
+                "schema": "master_gradient_consumer_per_pair_difficulty_v1",
+                "consumer_id": "per_pair_difficulty_atlas",
+                "scored_archive_sha256": sha,
+                "scored_archive_bytes": 12345,
+                "gradient_array_sha256": gradient_sha,
+                "gradient_array_path": str(gradient_path),
+                "gradient_tensor_kind": "per_pair_per_byte_v1",
+                "measurement_axis": "[contest-CPU]",
+                "measurement_hardware": "linux_x86_64_modal_cpu",
+                "measurement_method": "autograd_full_pairs",
+                "measurement_call_id": "modal-call-123",
+                "n_pairs": 600,
+                "n_pairs_used": 600,
+                "n_pairs_total": 600,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "aggregate_gradient_norm_l2": 12.0,
+                "score_axis_weighting": {
+                    "available": True,
+                    "axis_coefficients": {"seg": 100.0, "pose": 5.0, "rate": 1e-6},
+                },
+                "top_k_score_weighted_with_axis_breakdown": [
+                    {
+                        "seg_axis_score_l1": 1.0,
+                        "pose_axis_score_l1": 5.0,
+                        "rate_axis_score_l1": 0.1,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(loop, "_PER_PAIR_SIDECAR_SCAN_ROOT", root)
+
+    assert loop.adjust_predicted_delta_for_per_pair_difficulty_atlas(
+        -0.01,
+        sha,
+        panel_axis="contest_cuda",
+    ) == pytest.approx(-0.01)
+
+
+def test_per_pair_difficulty_atlas_subset_shape_passthrough(tmp_path, monkeypatch):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+    sha = "3" * 64
+    gradient_path = tmp_path / "per_pair_gradient_subset.npy"
+    gradient_sha = _write_per_pair_gradient_npy(gradient_path, n_pairs=8)
+    (root / f"per_pair_difficulty_atlas_{sha[:12]}_20260518T191403.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": sha,
+                "schema": "master_gradient_consumer_per_pair_difficulty_v1",
+                "consumer_id": "per_pair_difficulty_atlas",
+                "scored_archive_sha256": sha,
+                "scored_archive_bytes": 12345,
+                "gradient_array_sha256": gradient_sha,
+                "gradient_array_path": str(gradient_path),
+                "gradient_tensor_kind": "per_pair_per_byte_v1",
+                "measurement_axis": "[contest-CPU]",
+                "measurement_hardware": "linux_x86_64_modal_cpu",
+                "measurement_method": "autograd_subset_pairs",
+                "measurement_call_id": "modal-call-subset",
+                "n_pairs": 8,
+                "n_pairs_used": 8,
+                "n_pairs_total": 8,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "aggregate_gradient_norm_l2": 12.0,
+                "score_axis_weighting": {
+                    "available": True,
+                    "axis_coefficients": {"seg": 100.0, "pose": 5.0, "rate": 1e-6},
+                },
+                "top_k_score_weighted_with_axis_breakdown": [
+                    {
+                        "seg_axis_score_l1": 1.0,
+                        "pose_axis_score_l1": 5.0,
+                        "rate_axis_score_l1": 0.1,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(loop, "_PER_PAIR_SIDECAR_SCAN_ROOT", root)
+
+    assert loop.adjust_predicted_delta_for_per_pair_difficulty_atlas(-0.01, sha) == pytest.approx(-0.01)
 
 
 def test_per_pair_difficulty_atlas_malformed_or_authority_bearing_passthrough(
@@ -2717,18 +3076,53 @@ def test_score_adjusted_for_all_signal_consumes_difficulty_atlas_after_existing_
     root = tmp_path / "master_gradient_consumers"
     root.mkdir()
     sha = "6" * 64
+    gradient_path = tmp_path / "per_pair_gradient.npy"
+    gradient_sha = _write_per_pair_gradient_npy(gradient_path)
     (root / f"per_pair_difficulty_atlas_{sha[:12]}_20260518T191403.json").write_text(
         json.dumps(
             {
                 "archive_sha256": sha,
                 "schema": "master_gradient_consumer_per_pair_difficulty_v1",
                 "consumer_id": "per_pair_difficulty_atlas",
+                "scored_archive_sha256": sha,
+                "scored_archive_bytes": 12345,
+                "gradient_array_sha256": gradient_sha,
+                "gradient_array_path": str(gradient_path),
+                "gradient_tensor_kind": "per_pair_per_byte_v1",
+                "measurement_axis": "[contest-CPU]",
+                "measurement_hardware": "linux_x86_64_modal_cpu",
+                "measurement_method": "autograd_full_pairs",
+                "measurement_call_id": "modal-call-123",
+                "n_pairs": 600,
+                "n_pairs_used": 600,
+                "n_pairs_total": 600,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
                 "aggregate_gradient_norm_l2": 10.0,
+                "score_axis_weighting": {
+                    "available": True,
+                    "axis_coefficients": {"seg": 100.0, "pose": 5.0, "rate": 1e-6},
+                },
                 "top_k_hardest_with_axis_breakdown": [
-                    {"seg_axis_l1": 5.0, "pose_axis_l1": 1.0, "rate_axis_l1": 0.1}
+                    {
+                        "seg_axis_l1": 1.0,
+                        "pose_axis_l1": 5.0,
+                        "rate_axis_l1": 0.1,
+                        "seg_axis_score_l1": 1.0,
+                        "pose_axis_score_l1": 5.0,
+                        "rate_axis_score_l1": 0.1,
+                    }
+                ],
+                "top_k_score_weighted_with_axis_breakdown": [
+                    {
+                        "seg_axis_l1": 1.0,
+                        "pose_axis_l1": 5.0,
+                        "rate_axis_l1": 0.1,
+                        "seg_axis_score_l1": 1.0,
+                        "pose_axis_score_l1": 5.0,
+                        "rate_axis_score_l1": 0.1,
+                    }
                 ],
             }
         ),
@@ -2737,7 +3131,7 @@ def test_score_adjusted_for_all_signal_consumes_difficulty_atlas_after_existing_
     monkeypatch.setattr(loop, "_PER_PAIR_SIDECAR_SCAN_ROOT", root)
     cand = _cand("difficulty_atlas", predicted_delta=-0.01, archive_sha256=sha)
 
-    assert loop.apply_z1_empirical_revision_to_candidate_delta(cand) == pytest.approx(-0.01 * 1.04)
+    assert loop.apply_z1_empirical_revision_to_candidate_delta(cand) == pytest.approx(-0.01 * 1.06)
 
 
 def test_report_only_appends_master_gradient_optimal_plan_rows(tmp_path, capsys):

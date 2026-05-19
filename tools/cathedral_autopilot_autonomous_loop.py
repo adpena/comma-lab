@@ -90,6 +90,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import datetime as dt
+import hashlib
 import json
 import math
 import re
@@ -141,6 +142,7 @@ except Exception:  # pragma: no cover - tests can stub these
     predict_cost_band = None  # type: ignore[assignment]
     _POSTERIOR_IMPORTS_OK = False
 
+from tac.master_gradient import contest_axis_authority_violation_reason  # noqa: E402
 from tac.optimization.literature_source_scope import (  # noqa: E402
     literature_source_scope_blockers,
 )
@@ -172,11 +174,104 @@ AUTOPILOT_CLAIM_AGENT = "cathedral_autopilot_autonomous_loop"
 AUTOPILOT_CLAIM_TTL_HOURS = 24.0
 EXACT_READY_QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+CONTEST_PAIR_COUNT = 600
+
+
+def _contest_axis_tag_for_panel(panel_axis: str) -> str:
+    """Return the exact master-gradient measurement_axis tag for a panel."""
+    if panel_axis == "contest_cpu":
+        return "[contest-CPU]"
+    if panel_axis == "contest_cuda":
+        return "[contest-CUDA]"
+    raise ValueError(
+        "unsupported score panel axis "
+        f"{panel_axis!r}; expected 'contest_cpu' or 'contest_cuda'"
+    )
 
 
 def _is_sha256_hex(value: object) -> bool:
     """Return True only for concrete 64-hex SHA-256 strings."""
     return bool(_SHA256_HEX_RE.fullmatch(str(value or "").strip()))
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _npy_shape(path: Path) -> tuple[int, ...] | None:
+    try:
+        import numpy as np
+
+        arr = np.load(path, mmap_mode="r")
+    except (ImportError, OSError, ValueError):
+        return None
+    return tuple(int(dim) for dim in arr.shape)
+
+
+def _sidecar_has_full_pair_gradient_custody(
+    payload: dict[str, Any],
+    archive_sha256: str,
+    *,
+    axis_tag: str,
+) -> bool:
+    """Fail-closed custody check for sidecars that drive Cathedral ranking."""
+    if payload.get("measurement_axis") != axis_tag:
+        return False
+    if contest_axis_authority_violation_reason(payload) is not None:
+        return False
+    if not _is_sha256_hex(payload.get("scored_archive_sha256")):
+        return False
+    if str(payload.get("scored_archive_sha256")).lower() != archive_sha256.lower():
+        return False
+    scored_archive_bytes = payload.get("scored_archive_bytes")
+    if (
+        isinstance(scored_archive_bytes, bool)
+        or not isinstance(scored_archive_bytes, int)
+        or scored_archive_bytes <= 0
+    ):
+        return False
+    if not _is_sha256_hex(payload.get("gradient_array_sha256")):
+        return False
+    if payload.get("gradient_tensor_kind") != "per_pair_per_byte_v1":
+        return False
+    gradient_array_path_raw = payload.get("gradient_array_path")
+    if not isinstance(gradient_array_path_raw, str) or not gradient_array_path_raw.strip():
+        return False
+    gradient_array_path = Path(gradient_array_path_raw)
+    if not gradient_array_path.is_absolute():
+        gradient_array_path = REPO_ROOT / gradient_array_path
+    if not gradient_array_path.is_file():
+        return False
+    try:
+        if _sha256_file(gradient_array_path).lower() != str(payload.get("gradient_array_sha256")).lower():
+            return False
+    except OSError:
+        return False
+
+    n_pairs = payload.get("n_pairs")
+    n_pairs_used = payload.get("n_pairs_used")
+    n_pairs_total = payload.get("n_pairs_total")
+    if (
+        isinstance(n_pairs, bool)
+        or isinstance(n_pairs_used, bool)
+        or isinstance(n_pairs_total, bool)
+        or not isinstance(n_pairs, int)
+        or not isinstance(n_pairs_used, int)
+        or not isinstance(n_pairs_total, int)
+        or n_pairs != CONTEST_PAIR_COUNT
+        or n_pairs_used != CONTEST_PAIR_COUNT
+        or n_pairs_total != CONTEST_PAIR_COUNT
+    ):
+        return False
+
+    shape = _npy_shape(gradient_array_path)
+    if shape is None:
+        return False
+    return len(shape) == 3 and shape[0] > 0 and shape[1:] == (CONTEST_PAIR_COUNT, 3)
 
 
 def _path_is_relative_to(path: Path, root: Path) -> bool:
@@ -910,7 +1005,11 @@ def adjust_predicted_delta_for_class_shift(
     return base_delta - bonus
 
 
-def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
+def apply_z1_empirical_revision_to_candidate_delta(
+    c: CandidateRow,
+    *,
+    score_panel_axis: str = "contest_cpu",
+) -> float:
     """Return the rank-key predicted_score_delta after Z1 empirical revision
     adjustments. This is the canonical composition: first apply MDL-density
     penalty (Tier A), then Tier C density penalty/reward (Catalog #227),
@@ -981,7 +1080,12 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     # The reweighting is applied AFTER the SLIM dispatch_risk because Venn
     # classification is structural-orthogonal to preflight risk: a high-Venn
     # candidate may still have high SLIM risk for unrelated reasons.
-    d = adjust_predicted_delta_for_venn_classification(d, c.archive_sha256)
+    d = adjust_predicted_delta_for_venn_classification_v2(
+        d,
+        c.archive_sha256,
+        panel_axis=score_panel_axis,
+        require_score_weighted_custody=True,
+    )
     # LOW gap closure widened wave 2026-05-17 — BUCKET C: per-pair master
     # gradient sister-#817 consumption. AFTER the v2 venn cascade (which has
     # REPLACE semantics for the OptimalPerPairTreatmentPlan path) so the
@@ -1001,7 +1105,9 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     # a valid atlas says the archive has pair/axis difficulty structure that
     # Cathedral should prioritize for follow-up, not that any score was proved.
     d = adjust_predicted_delta_for_per_pair_difficulty_atlas(
-        d, c.archive_sha256
+        d,
+        c.archive_sha256,
+        panel_axis=score_panel_axis,
     )
     return d
 
@@ -1046,8 +1152,14 @@ def _latest_venn_sidecar_for_archive(archive_sha256: str) -> Path | None:
     return candidates[-1] if candidates else None
 
 
-def _read_venn_class_counts(sidecar_path: Path) -> dict[str, int] | None:
-    """Read and validate the class_counts payload from a Venn sidecar.
+def _read_venn_class_counts(
+    sidecar_path: Path,
+    archive_sha256: str | None = None,
+    *,
+    panel_axis: str = "contest_cpu",
+    require_score_weighted_custody: bool = False,
+) -> dict[str, float] | None:
+    """Read and validate class-count payload from a Venn sidecar.
 
     Returns None on any parse error (the caller treats missing/invalid as
     "no Venn signal available", same as no sidecar at all).
@@ -1056,14 +1168,42 @@ def _read_venn_class_counts(sidecar_path: Path) -> dict[str, int] | None:
         payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
-    counts = payload.get("class_counts")
+    if require_score_weighted_custody:
+        if not archive_sha256:
+            return None
+        if payload.get("schema") != "master_gradient_consumer_venn_classification_v1":
+            return None
+        if payload.get("consumer_id") != "classify_bytes_by_pair_variance":
+            return None
+        payload_archive_sha = payload.get("archive_sha256")
+        if (
+            not isinstance(payload_archive_sha, str)
+            or payload_archive_sha.lower() != archive_sha256.lower()
+        ):
+            return None
+        axis_tag = _contest_axis_tag_for_panel(panel_axis)
+        if not _sidecar_has_full_pair_gradient_custody(
+            payload,
+            archive_sha256,
+            axis_tag=axis_tag,
+        ):
+            return None
+    counts_key = "score_weighted_class_counts" if require_score_weighted_custody else "class_counts"
+    counts = payload.get(counts_key)
     if not isinstance(counts, dict):
         return None
     # Validate the 4 canonical class names per PerByteVennClass.ALL
     for required in ("PAIR_SPECIFIC", "PAIR_INVARIANT", "PAIR_NEUTRAL", "DEAD"):
         if required not in counts:
             return None
-    return {k: int(v) for k, v in counts.items() if k in {"PAIR_SPECIFIC", "PAIR_INVARIANT", "PAIR_NEUTRAL", "DEAD"}}
+    result: dict[str, float] = {}
+    for k, v in counts.items():
+        if k not in {"PAIR_SPECIFIC", "PAIR_INVARIANT", "PAIR_NEUTRAL", "DEAD"}:
+            continue
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            return None
+        result[k] = float(v)
+    return result
 
 
 def _venn_deliverability_reward_factor_for_archive(archive_sha256: str) -> float:
@@ -1161,6 +1301,9 @@ def adjust_predicted_delta_for_venn_classification_v2(
     predicted_delta: float,
     archive_sha256: str,
     optimal_plan_path: Path | None = None,
+    *,
+    panel_axis: str = "contest_cpu",
+    require_score_weighted_custody: bool = False,
 ) -> float:
     """Lagrangian-derived autopilot reweight v2 (canonical).
 
@@ -1252,7 +1395,12 @@ def adjust_predicted_delta_for_venn_classification_v2(
     sidecar = _latest_venn_sidecar_for_archive(archive_sha256)
     if sidecar is None:
         return predicted_delta
-    counts = _read_venn_class_counts(sidecar)
+    counts = _read_venn_class_counts(
+        sidecar,
+        archive_sha256,
+        panel_axis=panel_axis,
+        require_score_weighted_custody=require_score_weighted_custody,
+    )
     if counts is None:
         return predicted_delta
     total = sum(counts.values())
@@ -1436,6 +1584,8 @@ def _per_pair_fisher_importance_sidecar_reward_factor(
 
 def _per_pair_difficulty_atlas_sidecar_reward_factor(
     archive_sha256: str,
+    *,
+    panel_axis: str = "contest_cpu",
 ) -> float:
     """Read latest per_pair_difficulty_atlas sidecar; return multiplicative factor.
 
@@ -1445,9 +1595,8 @@ def _per_pair_difficulty_atlas_sidecar_reward_factor(
     probe OP-7/OP-2 family. Missing, malformed, zero-norm, authority-bearing,
     or raw-axis-only sidecars never receive the pose-hard reward.
     """
-    sidecar = _latest_per_pair_difficulty_atlas_sidecar_for_archive(
-        archive_sha256
-    )
+    axis_tag = _contest_axis_tag_for_panel(panel_axis)
+    sidecar = _latest_per_pair_difficulty_atlas_sidecar_for_archive(archive_sha256)
     if sidecar is None:
         return 1.0
     try:
@@ -1475,9 +1624,25 @@ def _per_pair_difficulty_atlas_sidecar_reward_factor(
     aggregate_norm = payload.get("aggregate_gradient_norm_l2", 0.0)
     if not isinstance(aggregate_norm, (int, float)) or aggregate_norm <= 0:
         return 1.0
-    entries = payload.get("top_k_hardest_with_axis_breakdown")
+    weighting = payload.get("score_axis_weighting")
+    if not isinstance(weighting, dict) or weighting.get("available") is not True:
+        return 1.0
+    coeffs = weighting.get("axis_coefficients")
+    if not isinstance(coeffs, dict) or not all(
+        isinstance(coeffs.get(axis), (int, float)) for axis in ("seg", "pose", "rate")
+    ):
+        return 1.0
+    if not _sidecar_has_full_pair_gradient_custody(
+        payload,
+        archive_sha256,
+        axis_tag=axis_tag,
+    ):
+        return 1.0
+    entries = payload.get("top_k_score_weighted_with_axis_breakdown")
     if not isinstance(entries, list) or not entries:
         return 1.0
+    dominance_mass = 0.0
+    total_mass = 0.0
     for entry in entries:
         if not isinstance(entry, dict):
             continue
@@ -1492,8 +1657,13 @@ def _per_pair_difficulty_atlas_sidecar_reward_factor(
             and pose >= seg
             and pose >= rate
         ):
-            return _PER_PAIR_DIFFICULTY_ATLAS_POSE_HARD_REWARD_PRESENT
-    return _PER_PAIR_DIFFICULTY_ATLAS_SIDECAR_REWARD_PRESENT
+            dominance_mass += max(0.0, float(pose) - max(float(seg), float(rate)))
+            total_mass += max(0.0, float(pose) + float(seg) + float(rate))
+    if dominance_mass <= 0.0 or total_mass <= 0.0:
+        return 1.0
+    reward_cap = _PER_PAIR_DIFFICULTY_ATLAS_POSE_HARD_REWARD_PRESENT - 1.0
+    signal_strength = min(1.0, 2.0 * dominance_mass / total_mass)
+    return 1.0 + reward_cap * signal_strength
 
 
 def adjust_predicted_delta_for_per_pair_sister_817_sidecars(
@@ -1535,13 +1705,17 @@ def adjust_predicted_delta_for_per_pair_sister_817_sidecars(
 
 
 def adjust_predicted_delta_for_per_pair_difficulty_atlas(
-    predicted_delta: float, archive_sha256: str
+    predicted_delta: float,
+    archive_sha256: str,
+    *,
+    panel_axis: str = "contest_cpu",
 ) -> float:
     """Apply per_pair_difficulty_atlas sidecar consumption to predicted_delta."""
     if not archive_sha256:
         return predicted_delta
     return predicted_delta * _per_pair_difficulty_atlas_sidecar_reward_factor(
-        archive_sha256
+        archive_sha256,
+        panel_axis=panel_axis,
     )
 
 
@@ -1891,6 +2065,7 @@ def rank_candidates(
     rank_axis: str = "eig_per_dollar",
     continual_posterior: Any | None = None,
     apply_z1_empirical_revision: bool = True,
+    score_panel_axis: str = "contest_cpu",
 ) -> list[CandidateRow]:
     """Rank candidates by the chosen axis (descending best-first).
 
@@ -1918,12 +2093,16 @@ def rank_candidates(
     """
     for candidate in candidates:
         _require_candidate_planning_cost(candidate)
+    _contest_axis_tag_for_panel(score_panel_axis)
 
     def _effective_delta(c: CandidateRow) -> float:
         if _candidate_prediction_band_rank_reward_suppressed(c):
             return 0.0
         if apply_z1_empirical_revision:
-            return apply_z1_empirical_revision_to_candidate_delta(c)
+            return apply_z1_empirical_revision_to_candidate_delta(
+                c,
+                score_panel_axis=score_panel_axis,
+            )
         return c.predicted_score_delta
 
     def _effective_eig_per_dollar(c: CandidateRow) -> float:
@@ -1960,7 +2139,10 @@ def rank_candidates(
         # prior by the same non-Tier-A score-delta adjustment chain used by the
         # explicit predicted-score axis: Tier C, class-shift literature, and
         # composition alpha.
-        full_delta = apply_z1_empirical_revision_to_candidate_delta(c)
+        full_delta = apply_z1_empirical_revision_to_candidate_delta(
+            c,
+            score_panel_axis=score_panel_axis,
+        )
         tier_a_gain = max(0.0, -tier_a_delta)
         full_gain = max(0.0, -full_delta)
         if tier_a_gain > 0.0:
@@ -2570,6 +2752,7 @@ def run_one_loop_iteration(
     continual_posterior: Any | None = None,
     continual_posterior_path: Path | None = None,
     auto_load_continual_posterior: bool = False,
+    score_panel_axis: str = "contest_cpu",
 ) -> LoopIterationReport:
     """Run one cycle: rank → dispatch-claim check → halt-event emission.
 
@@ -2594,6 +2777,7 @@ def run_one_loop_iteration(
     validate_authorized_mode_config(auth_mode, repo_root=REPO_ROOT)
     for candidate in candidates:
         _require_candidate_planning_cost(candidate)
+    _contest_axis_tag_for_panel(score_panel_axis)
 
     # W/I/A I-1: optionally auto-load continual-learning posterior so the
     # loop's rank step applies empirical-anchor reweighting. Tests inject
@@ -2626,6 +2810,7 @@ def run_one_loop_iteration(
                 if _candidate_has_effective_negative_delta_for_race_mode(
                     c,
                     continual_posterior=continual_posterior,
+                    score_panel_axis=score_panel_axis,
                 )
             ],
             key=lambda c: c.estimated_dispatch_cost_usd,
@@ -2637,6 +2822,7 @@ def run_one_loop_iteration(
             candidates,
             rank_axis=rank_axis,
             continual_posterior=continual_posterior,
+            score_panel_axis=score_panel_axis,
         )
         if candidates else []
     )
@@ -2720,6 +2906,7 @@ def run_continuous_loop(
     continual_posterior: Any | None = None,
     continual_posterior_path: Path | None = None,
     auto_load_continual_posterior: bool = False,
+    score_panel_axis: str = "contest_cpu",
 ) -> list[LoopIterationReport]:
     """Run the continuous loop for ``iterations`` cycles.
 
@@ -2762,6 +2949,7 @@ def run_continuous_loop(
             continual_posterior=iter_posterior,
             continual_posterior_path=continual_posterior_path,
             auto_load_continual_posterior=iter_auto_load,
+            score_panel_axis=score_panel_axis,
         )
         # Operator-decision injection — DEFER when no callback supplied.
         for event in report.halt_events:
@@ -3032,12 +3220,16 @@ def _candidate_has_effective_negative_delta_for_race_mode(
     candidate: CandidateRow,
     *,
     continual_posterior: Any | None = None,
+    score_panel_axis: str = "contest_cpu",
 ) -> bool:
     """Return true only for candidates with a post-gate negative prediction."""
 
     if _candidate_prediction_band_rank_reward_suppressed(candidate):
         return False
-    delta = apply_z1_empirical_revision_to_candidate_delta(candidate)
+    delta = apply_z1_empirical_revision_to_candidate_delta(
+        candidate,
+        score_panel_axis=score_panel_axis,
+    )
     if continual_posterior is not None:
         factor, _, _ = _posterior_correction_factor(candidate, continual_posterior)
         delta *= factor
@@ -5593,6 +5785,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rank-axis",
                         choices=["eig_per_dollar", "predicted_score_delta"],
                         default="eig_per_dollar")
+    parser.add_argument(
+        "--score-panel-axis",
+        choices=["contest_cpu", "contest_cuda"],
+        default="contest_cpu",
+        help=(
+            "Contest score axis for axis-specific sidecar ranking rewards "
+            "(default contest_cpu, the public leaderboard axis)."
+        ),
+    )
     parser.add_argument("--require-operator-approval-on", action="append",
                         default=[], help="event classes to gate (default: dispatch)")
     parser.add_argument("--claims-path", type=Path, default=None)
@@ -5946,6 +6147,7 @@ def main(argv: list[str] | None = None) -> int:
                 rank_axis=args.rank_axis,
                 continual_posterior=posterior,
                 apply_z1_empirical_revision=True,
+                score_panel_axis=args.score_panel_axis,
             )
         except (ValueError, FileNotFoundError) as exc:
             print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
@@ -5969,7 +6171,10 @@ def main(argv: list[str] | None = None) -> int:
         for rank_i, c in enumerate(top, start=1):
             cid = c.candidate_id[:48] if len(c.candidate_id) > 48 else c.candidate_id
             raw_delta = c.predicted_score_delta
-            eff_delta = apply_z1_empirical_revision_to_candidate_delta(c)
+            eff_delta = apply_z1_empirical_revision_to_candidate_delta(
+                c,
+                score_panel_axis=args.score_panel_axis,
+            )
             cost = c.estimated_dispatch_cost_usd
             eig = c.eig_per_dollar() if cost > 0 else float("nan")
             blockers_str = ",".join(c.blockers[:3]) if c.blockers else "-"
@@ -6006,7 +6211,10 @@ def main(argv: list[str] | None = None) -> int:
                     "rank": rank_i,
                     "candidate_id": c.candidate_id,
                     "predicted_score_delta_raw": c.predicted_score_delta,
-                    "predicted_score_delta_z1_adjusted": apply_z1_empirical_revision_to_candidate_delta(c),
+                    "predicted_score_delta_z1_adjusted": apply_z1_empirical_revision_to_candidate_delta(
+                        c,
+                        score_panel_axis=args.score_panel_axis,
+                    ),
                     "estimated_dispatch_cost_usd": c.estimated_dispatch_cost_usd,
                     "eig_per_dollar": (
                         c.eig_per_dollar() if c.estimated_dispatch_cost_usd > 0 else None
@@ -6037,6 +6245,7 @@ def main(argv: list[str] | None = None) -> int:
             _source,
             iterations=args.iterations,
             rank_axis=args.rank_axis,
+            score_panel_axis=args.score_panel_axis,
             requires_approval_on=approval_set,
             claims_path=args.claims_path,
             race_mode=args.race_mode,

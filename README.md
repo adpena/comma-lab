@@ -1,11 +1,16 @@
 # pact
 
-Task-aware video compression research and artifact tooling for the
+Task-Aware Compression research and artifact tooling for the
 [comma.ai video compression challenge](https://github.com/commaai/comma_video_compression_challenge).
 This repository is maintained as a community and historical-record workspace:
 public-archive intake, exact replay custody, writeup drafts, and OSS tooling.
 It is not a live leaderboard page and it does not make an arXiv or preprint
 commitment.
+
+In this repository, `tac` means **Task-Aware Compression**: compression
+optimized for a downstream task/scorer. A **codec** is a narrower concrete
+encoder/decoder or wire format inside that stack. The `comma_lab` package is the
+lab and operations layer around `tac`, not a second compression engine.
 
 Score-bearing claims must be read through the repository evidence grades. The
 ranked public rows live in `docs/paper/04_results.md`; roadmap and planning
@@ -104,7 +109,8 @@ Profiles are defined in `src/tac/profiles.py` with full provenance for every hyp
 ## Project structure
 
 ```
-src/tac/                    Core library: renderer, losses, quantization, forensics
+src/tac/                    Task-Aware Compression library and reusable algorithms
+src/comma_lab/              Lab operations, state projection, preflight adapters
 experiments/                Training scripts, pipeline, analysis tools
 experiments/pipeline.py     Canonical compress + eval pipeline
 docs/paper/                 Technical paper (in progress)

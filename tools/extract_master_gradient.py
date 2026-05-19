@@ -114,6 +114,7 @@ from tac.master_gradient import (  # noqa: E402
     OperatingPoint,
     append_anchor_locked,
     compute_marginal_coefficients,
+    score_axis_dominance_summary,
 )
 from tac.scorer import load_differentiable_scorers  # noqa: E402
 from tac.substrates.pretrained_driving_prior.archive import (  # noqa: E402
@@ -1979,6 +1980,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 gradient_byte_domain=gradient_byte_domain,
                 n_pairs_used=args.n_pairs_used,
                 n_pairs_total=args.n_pairs_total,
+                score_axis_dominance=score_axis_dominance_summary(G_to_save, op),
             )
             append_anchor_locked(grad)
             print(f"[master-gradient] appended anchor to {grad.gradient_array_path} (axis={args.axis})")
@@ -2097,6 +2099,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     gradient_byte_domain=gradient_byte_domain,
                     n_pairs_used=args.n_pairs_used,
                     n_pairs_total=args.n_pairs_total,
+                    score_axis_dominance=score_axis_dominance_summary(G_pp_to_save, op),
                 )
                 append_anchor_locked(grad_pp)
                 print(

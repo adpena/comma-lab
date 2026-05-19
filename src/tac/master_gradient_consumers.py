@@ -667,6 +667,7 @@ class PerByteVennClassification:
     archive_sha256: str
     measurement_axis: str
     measurement_hardware: str
+    score_weighted_class_counts: dict[str, float] | None = None
 
 
 def classify_bytes_by_pair_variance(
@@ -675,6 +676,16 @@ def classify_bytes_by_pair_variance(
     archive_sha256: str,
     measurement_axis: str,
     measurement_hardware: str,
+    operating_point: OperatingPoint | None = None,
+    measurement_method: str | None = None,
+    measurement_call_id: str | None = None,
+    scored_archive_sha256: str | None = None,
+    scored_archive_bytes: int | None = None,
+    gradient_array_sha256: str | None = None,
+    gradient_array_path: str | None = None,
+    gradient_tensor_kind: str | None = None,
+    n_pairs_used: int | None = None,
+    n_pairs_total: int | None = None,
     variance_threshold_relative: float = VENN_VARIANCE_THRESHOLD_RELATIVE,
     aggregate_floor_relative: float = VENN_AGGREGATE_FLOOR_RELATIVE,
     write_sidecar: bool = True,
@@ -755,6 +766,18 @@ def classify_bytes_by_pair_variance(
         classes[i] = best_class
 
     class_counts = {c: int((classes == c).sum()) for c in PerByteVennClass.ALL}
+    score_axis_coefficients: np.ndarray | None = None
+    score_weighted_class_counts: dict[str, float] | None = None
+    if operating_point is not None:
+        score_axis_coefficients = np.asarray(
+            compute_marginal_coefficients(operating_point),
+            dtype=np.float64,
+        )
+        per_byte_score_mass = per_byte_aggregate_abs_mean @ score_axis_coefficients
+        score_weighted_class_counts = {
+            c: float(per_byte_score_mass[classes == c].sum())
+            for c in PerByteVennClass.ALL
+        }
 
     result = PerByteVennClassification(
         classes=classes,
@@ -768,23 +791,58 @@ def classify_bytes_by_pair_variance(
         archive_sha256=archive_sha256,
         measurement_axis=measurement_axis,
         measurement_hardware=measurement_hardware,
+        score_weighted_class_counts=score_weighted_class_counts,
     )
 
     if write_sidecar:
         path = consumer_output_path("venn_classification", archive_sha256=archive_sha256)
+        score_axis_weighting = {"available": score_axis_coefficients is not None}
+        if score_axis_coefficients is not None:
+            score_axis_weighting = {
+                "available": True,
+                "axis_coefficients": {
+                    "seg": float(score_axis_coefficients[0]),
+                    "pose": float(score_axis_coefficients[1]),
+                    "rate": float(score_axis_coefficients[2]),
+                },
+            }
         payload = {
             "schema": "master_gradient_consumer_venn_classification_v1",
             "consumer_id": "classify_bytes_by_pair_variance",
             "archive_sha256": archive_sha256,
+            "scored_archive_sha256": scored_archive_sha256,
+            "scored_archive_bytes": scored_archive_bytes,
+            "gradient_array_sha256": gradient_array_sha256,
+            "gradient_array_path": gradient_array_path,
+            "gradient_tensor_kind": gradient_tensor_kind,
+            "measurement_method": measurement_method,
+            "measurement_call_id": measurement_call_id,
             "measurement_axis": measurement_axis,
             "measurement_hardware": measurement_hardware,
             "n_bytes": n_bytes,
             "n_pairs": n_pairs,
+            "n_pairs_used": n_pairs_used,
+            "n_pairs_total": n_pairs_total,
+            "source_custody": {
+                "scored_archive_sha256": scored_archive_sha256,
+                "scored_archive_bytes": scored_archive_bytes,
+                "gradient_array_sha256": gradient_array_sha256,
+                "gradient_array_path": gradient_array_path,
+                "gradient_tensor_kind": gradient_tensor_kind,
+                "measurement_method": measurement_method,
+                "measurement_call_id": measurement_call_id,
+                "n_pairs": n_pairs,
+                "n_pairs_used": n_pairs_used,
+                "n_pairs_total": n_pairs_total,
+                "custody_required_for_cathedral_reward": True,
+            },
             "thresholds": {
                 "variance_threshold_relative": variance_threshold_relative,
                 "aggregate_floor_relative": aggregate_floor_relative,
             },
             "class_counts": class_counts,
+            "score_weighted_class_counts": score_weighted_class_counts,
+            "score_axis_weighting": score_axis_weighting,
             "interpretation": {
                 "PAIR_INVARIANT": "candidate shared prior / Wyner-Ziv side-info hoisting",
                 "PAIR_SPECIFIC": "candidate per-pair sidecar / per-pair allocation",
@@ -1287,9 +1345,18 @@ def per_pair_difficulty_atlas(
     archive_sha256: str,
     measurement_axis: str,
     measurement_hardware: str,
+    measurement_method: str | None = None,
+    measurement_call_id: str | None = None,
     top_k: int = 50,
     bottom_k: int = 50,
     operating_point: OperatingPoint | None = None,
+    scored_archive_sha256: str | None = None,
+    scored_archive_bytes: int | None = None,
+    gradient_array_sha256: str | None = None,
+    gradient_array_path: str | None = None,
+    gradient_tensor_kind: str | None = None,
+    n_pairs_used: int | None = None,
+    n_pairs_total: int | None = None,
     write_sidecar: bool = True,
 ) -> PerPairDifficultyAtlas:
     """Compute per-pair difficulty atlas from per-pair gradient L2 norms.
@@ -1330,6 +1397,16 @@ def per_pair_difficulty_atlas(
 
     top_k_indices = tuple(int(i) for i in sorted_by_difficulty_desc[:top_k])
     bottom_k_indices = tuple(int(i) for i in sorted_by_difficulty_desc[-bottom_k:][::-1])
+    score_weighted_pair_l1: np.ndarray | None = None
+    top_k_score_weighted_indices: tuple[int, ...] = ()
+    if score_axis_coefficients is not None:
+        score_weighted_pair_l1 = (
+            per_pair_seg_l1 * float(score_axis_coefficients[0])
+            + per_pair_pose_l1 * float(score_axis_coefficients[1])
+            + per_pair_rate_l1 * float(score_axis_coefficients[2])
+        )
+        sorted_by_score_desc = np.argsort(-score_weighted_pair_l1)
+        top_k_score_weighted_indices = tuple(int(i) for i in sorted_by_score_desc[:top_k])
 
     aggregate_l2 = float(np.sqrt((per_pair_gradient ** 2).sum()))
 
@@ -1363,8 +1440,9 @@ def per_pair_difficulty_atlas(
                 "pose": float(score_axis_coefficients[1]),
                 "rate": float(score_axis_coefficients[2]),
             }
-        top_entries: list[dict[str, object]] = []
-        for e in entries[:top_k]:
+        entries_by_pair = {e.pair_index: e for e in entries}
+
+        def _entry_payload(e: PerPairDifficultyEntry) -> dict[str, object]:
             entry: dict[str, object] = {
                 "pair_index": e.pair_index,
                 "gradient_norm_l2": e.gradient_norm_l2,
@@ -1383,22 +1461,54 @@ def per_pair_difficulty_atlas(
                     "rate_axis_score_l1": rate_score,
                     "pose_score_axis_share": pose_score / denom if denom > 0 else 0.0,
                 })
-            top_entries.append(entry)
+            return entry
+
+        top_entries: list[dict[str, object]] = []
+        for e in entries[:top_k]:
+            top_entries.append(_entry_payload(e))
+        top_score_entries: list[dict[str, object]] = []
+        if score_weighted_pair_l1 is not None:
+            for pair_idx in top_k_score_weighted_indices:
+                top_score_entries.append(_entry_payload(entries_by_pair[int(pair_idx)]))
         payload = {
             "schema": "master_gradient_consumer_per_pair_difficulty_v1",
             "consumer_id": "per_pair_difficulty_atlas",
             "archive_sha256": archive_sha256,
+            "scored_archive_sha256": scored_archive_sha256,
+            "scored_archive_bytes": scored_archive_bytes,
+            "gradient_array_sha256": gradient_array_sha256,
+            "gradient_array_path": gradient_array_path,
+            "gradient_tensor_kind": gradient_tensor_kind,
+            "measurement_method": measurement_method,
+            "measurement_call_id": measurement_call_id,
+            "n_pairs": int(per_pair_gradient.shape[1]),
+            "n_pairs_used": n_pairs_used,
+            "n_pairs_total": n_pairs_total,
+            "source_custody": {
+                "scored_archive_sha256": scored_archive_sha256,
+                "scored_archive_bytes": scored_archive_bytes,
+                "gradient_array_sha256": gradient_array_sha256,
+                "gradient_array_path": gradient_array_path,
+                "gradient_tensor_kind": gradient_tensor_kind,
+                "measurement_method": measurement_method,
+                "measurement_call_id": measurement_call_id,
+                "n_pairs": int(per_pair_gradient.shape[1]),
+                "n_pairs_used": n_pairs_used,
+                "n_pairs_total": n_pairs_total,
+                "custody_required_for_cathedral_reward": True,
+            },
             "measurement_axis": measurement_axis,
             "measurement_hardware": measurement_hardware,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
-            "n_pairs": n_pairs,
             "aggregate_gradient_norm_l2": aggregate_l2,
             "top_k_hardest_pair_indices": list(top_k_indices),
             "bottom_k_easiest_pair_indices": list(bottom_k_indices),
             "score_axis_weighting": score_axis_weighting,
             "top_k_hardest_with_axis_breakdown": top_entries,
+            "top_k_score_weighted_pair_indices": list(top_k_score_weighted_indices),
+            "top_k_score_weighted_with_axis_breakdown": top_score_entries,
             "interpretation_notes": interpretation,
         }
         write_consumer_sidecar_json(path, payload)

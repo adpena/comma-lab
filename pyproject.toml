@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tac"
 version = "0.2.0rc1"
-description = "Task-Aware Codec: Neural video compression optimized for downstream perception models"
+description = "Task-Aware Compression: neural video compression optimized for downstream perception models"
 readme = "src/tac/README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -17,7 +17,8 @@ maintainers = [
 ]
 keywords = [
     "video-compression",
-    "task-aware-codec",
+    "task-aware-compression",
+    "video-coding-for-machines",
     "neural-compression",
     "comma-ai",
     "openpilot",

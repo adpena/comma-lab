@@ -1,9 +1,10 @@
-"""Scorer metadata and registry helpers for task-aware codec experiments."""
+"""Scorer metadata for legacy task-codec compatibility records."""
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping
+from typing import Any
 
 
 @dataclass(frozen=True)

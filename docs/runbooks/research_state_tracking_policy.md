@@ -2,8 +2,9 @@
 
 This repo has two layers:
 
-- `tac`: clean reusable task-aware codec library, contest/runtime code,
-  canonical contest/runtime preflight, and reusable Python implementation.
+- `tac`: clean reusable Task-Aware Compression library: codec primitives,
+  archive/runtime contracts, scorer/eval/preflight, byte profilers, planners,
+  visualization primitives, and reusable Python implementation.
 - `comma_lab`: research operations, custody, hosted supplements, dashboards,
   provider state, and experiment/replay orchestration.
 

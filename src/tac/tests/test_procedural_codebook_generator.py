@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from tac.procedural_codebook_generator import (
+    classify_procedural_seed_authority,
     derive_codebook_from_archive_bytes,
     emit_seed,
     expand_seed_to_codebook,
@@ -188,3 +189,101 @@ def test_verify_no_new_bytes_added_rejects_duplicate_members(tmp_path):
             zf.writestr("renderer.bin", b"A")
 
     assert not verify_no_new_bytes_added(before, after)
+
+
+def test_archive_member_seed_is_canonical_but_proof_gated():
+    authority = classify_procedural_seed_authority(
+        "archive_member_seed",
+        runtime_consumption_proof=True,
+        self_contained_archive_proof=True,
+        scorer_free_inflate_proof=True,
+        no_external_state_proof=True,
+        packet_compiler_target_declared=True,
+        exact_eval_validated=False,
+    )
+
+    assert authority["compliance_class"] == "canonical_archive_charged_seed"
+    assert authority["default_for_promotion"] is True
+    assert authority["ready_for_exact_eval_dispatch"] is True
+    assert authority["promotion_eligible"] is False
+    assert "seed_member_inside_archive_zip" in authority["required_proofs"]
+    assert "scorer_free_inflate_proof" in authority["proof_status"]
+
+
+def test_archive_member_seed_requires_self_contained_scorer_free_proofs():
+    authority = classify_procedural_seed_authority(
+        "archive_member_seed",
+        runtime_consumption_proof=True,
+    )
+
+    assert authority["ready_for_exact_eval_dispatch"] is False
+    assert authority["promotion_eligible"] is False
+    assert authority["proof_status"]["runtime_consumption_proof"] is True
+    assert authority["proof_status"]["self_contained_archive_proof"] is False
+    assert "no_untracked_inflate_time_side_input" in authority["required_proofs"]
+
+
+def test_weight_derived_seed_is_canonical_when_source_member_is_charged():
+    authority = classify_procedural_seed_authority(
+        "archive_member_weight_derived",
+        runtime_consumption_proof=True,
+        self_contained_archive_proof=True,
+        scorer_free_inflate_proof=True,
+        no_external_state_proof=True,
+        packet_compiler_target_declared=True,
+        exact_eval_validated=True,
+    )
+
+    assert authority["compliance_class"] == "canonical_weight_derived_from_charged_member"
+    assert authority["default_for_promotion"] is True
+    assert authority["promotion_eligible"] is True
+    assert "no_new_members_or_bytes_proof" in authority["required_proofs"]
+
+
+def test_score_affecting_inflate_py_literal_seed_is_probe_only():
+    authority = classify_procedural_seed_authority("inflate_py_literal_seed")
+
+    assert authority["compliance_class"] == "organizer_risk_script_side_payload"
+    assert authority["default_for_promotion"] is False
+    assert authority["ready_for_exact_eval_dispatch"] is False
+    assert authority["promotion_eligible"] is False
+    assert authority["research_only"] is True
+    assert "explicit_operator_or_organizer_compliance_ruling" in authority["required_proofs"]
+
+
+def test_non_score_affecting_inflate_py_constant_has_separate_authority():
+    authority = classify_procedural_seed_authority(
+        "inflate_py_literal_seed",
+        literal_payload_kind="generic_decoder_constant",
+        score_affecting=False,
+        runtime_consumption_proof=True,
+        self_contained_archive_proof=True,
+        scorer_free_inflate_proof=True,
+        no_external_state_proof=True,
+        packet_compiler_target_declared=True,
+        exact_eval_validated=True,
+    )
+
+    assert authority["compliance_class"] == "ordinary_decoder_code_constant"
+    assert authority["promotion_eligible"] is True
+    assert "constant_is_generic_decoder_code_not_per_video_payload" in authority["required_proofs"]
+
+
+def test_score_affecting_generic_inflate_py_decoder_constant_can_be_gated():
+    authority = classify_procedural_seed_authority(
+        "inflate_py_literal_seed",
+        literal_payload_kind="generic_decoder_constant",
+        score_affecting=True,
+        runtime_consumption_proof=True,
+        self_contained_archive_proof=True,
+        scorer_free_inflate_proof=True,
+        no_external_state_proof=True,
+        packet_compiler_target_declared=True,
+        exact_eval_validated=False,
+    )
+
+    assert authority["compliance_class"] == "ordinary_decoder_code_constant"
+    assert authority["score_affecting"] is True
+    assert authority["ready_for_exact_eval_dispatch"] is True
+    assert authority["promotion_eligible"] is False
+    assert authority["research_only"] is True

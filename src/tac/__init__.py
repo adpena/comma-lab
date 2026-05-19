@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
-"""task-aware-codec (tac) — Learned post-filters for task-aware video compression.
+"""Task-Aware Compression (tac) - scorer-aware compression primitives.
 
-Train tiny CNN post-filters that correct decoded video frames by backpropagating
-through frozen perception networks (scorers). The filter learns corrections that
-minimize the scorer's distortion metric, not generic pixel quality.
+`tac` is the reusable algorithmic layer for compression optimized against
+downstream machine-perception tasks. It includes codecs, renderers, packet
+compilers, quantizers, scorer contracts, sensitivity maps, and optimization
+helpers. In this codebase, "codec" names a concrete encoder/decoder or wire
+format; "Task-Aware Compression" names the broader package and research stack.
 
 Modules:
   - tac.architectures: 8 architectures (PostFilter, Dilated, PixelShuffle, PSD,
@@ -66,17 +68,13 @@ def __dir__() -> list[str]:
 
 
 __all__ = [
-    "__version__",
-    # Training
-    "Trainer",
-    "TrainConfig",
-    # Architectures
-    "build_postfilter",
-    # Renderer
-    "build_renderer",
-    # Data models
-    "ScoreResult",
-    "CheckpointMeta",
     "AveragedCheckpoint",
+    "CheckpointMeta",
+    "ScoreResult",
     "SensitivityResult",
+    "TrainConfig",
+    "Trainer",
+    "__version__",
+    "build_postfilter",
+    "build_renderer",
 ]

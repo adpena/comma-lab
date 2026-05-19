@@ -43,6 +43,7 @@ from tac.master_gradient import (  # noqa: E402
     OperatingPoint,
     compute_marginal_coefficients,
     load_anchors_lenient,
+    score_axis_dominance_summary,
     update_from_anchor,
 )
 
@@ -384,6 +385,7 @@ def test_append_anchor_locked_roundtrip(tmp_path):
         measurement_hardware="linux_x86_64_modal_cpu",
         measurement_call_id=None,
         measurement_utc="2026-05-17T12:00:00+00:00",
+        score_axis_dominance={"schema": "fixture_dominance_v1", "pose_axis_dominant_byte_count": 2},
     )
 
     ledger = tmp_path / "anchors.jsonl"
@@ -398,6 +400,48 @@ def test_append_anchor_locked_roundtrip(tmp_path):
     assert row["operating_point"]["d_seg"] == 0.05
     assert row["schema_version"] == "master_gradient_anchor_v1"
     assert row["gradient_tensor_kind"] == AGGREGATE_GRADIENT_TENSOR_KIND
+    assert row["score_axis_dominance"]["schema"] == "fixture_dominance_v1"
+    assert row["score_axis_dominance"]["pose_axis_dominant_byte_count"] == 2
+
+
+def test_score_axis_dominance_summary_aggregate_and_per_pair():
+    op = OperatingPoint(d_seg=0.05, d_pose=0.1, rate=0.001, score=0.3)
+    aggregate = np.array(
+        [
+            [10.0, 0.01, 0.0],
+            [0.01, 10.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
+
+    summary = score_axis_dominance_summary(aggregate, op, axis_dominance_threshold=0.7)
+
+    assert summary["schema"] == "master_gradient_score_axis_dominance_v1"
+    assert summary["axis_labels"] == ["seg", "pose", "rate"]
+    assert summary["tensor_shape"] == [4, 3]
+    assert summary["dominant_axis_counts"]["seg"] == 1
+    assert summary["dominant_axis_counts"]["pose"] == 1
+    assert summary["dominant_axis_counts"]["rate"] == 1
+    assert summary["zero_contribution_count"] == 1
+    assert summary["pose_axis_dominant_byte_count"] == 1
+    assert summary["promotion_authority"] is False
+    assert summary["raw_archive_byte_authority"] is False
+    permissive_summary = score_axis_dominance_summary(
+        aggregate,
+        op,
+        axis_dominance_threshold=0.0,
+    )
+    assert permissive_summary["threshold_dominant_axis_counts"]["seg"] == 3
+    assert permissive_summary["threshold_dominant_axis_counts"]["pose"] == 3
+    assert permissive_summary["threshold_dominant_axis_counts"]["rate"] == 3
+
+    per_pair = np.stack([aggregate, aggregate], axis=1)
+    per_pair_summary = score_axis_dominance_summary(per_pair, op, max_chunk_entries=3)
+    assert per_pair_summary["tensor_shape"] == [4, 2, 3]
+    assert per_pair_summary["n_pairs"] == 2
+    assert per_pair_summary["pose_axis_dominant_pair_entry_count"] == 2
 
 
 def test_master_gradient_records_scored_archive_and_subject_custody(tmp_path):
@@ -553,6 +597,10 @@ def test_update_from_anchor_preserves_archive_custody_metadata(tmp_path):
             "gradient_byte_domain": "zip_inner_member_payload",
             "n_pairs_used": 8,
             "n_pairs_total": 600,
+            "score_axis_dominance": {
+                "schema": "master_gradient_score_axis_dominance_v1",
+                "pose_axis_dominant_byte_count": 3,
+            },
             "operating_point": {
                 "d_seg": 0.05,
                 "d_pose": 1e-5,
@@ -576,6 +624,8 @@ def test_update_from_anchor_preserves_archive_custody_metadata(tmp_path):
     assert row["gradient_byte_domain"] == "zip_inner_member_payload"
     assert row["n_pairs_used"] == 8
     assert row["n_pairs_total"] == 600
+    assert row["score_axis_dominance"]["schema"] == "master_gradient_score_axis_dominance_v1"
+    assert row["score_axis_dominance"]["pose_axis_dominant_byte_count"] == 3
 
 
 # ─────────────────────────────────────────────────────────────────────────── #

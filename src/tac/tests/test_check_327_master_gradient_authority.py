@@ -147,6 +147,26 @@ def test_check_327_requires_consumer_authority_filter_token(tmp_path: Path) -> N
         )
 
 
+def test_check_327_requires_cathedral_rank_custody_tokens(tmp_path: Path) -> None:
+    target = tmp_path / "tools" / "cathedral_autopilot_autonomous_loop.py"
+    target.parent.mkdir(parents=True)
+    target.write_text(
+        "def latest_rejected_contest_axis_anchor_for_archive():\n"
+        "    return None\n",
+        encoding="utf-8",
+    )
+
+    violations = check_master_gradient_contest_axis_requires_authoritative_custody(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+
+    assert violations
+    assert "score-weighted counts" in violations[0]
+    assert "require_score_weighted_custody=True" in violations[0]
+
+
 def test_check_327_is_wired_into_preflight_all_strict() -> None:
     source = inspect.getsource(preflight_module.preflight_all)
     idx = source.find("check_master_gradient_contest_axis_requires_authoritative_custody")

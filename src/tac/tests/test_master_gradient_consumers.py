@@ -113,6 +113,43 @@ def test_venn_classification_sidecar_carries_compliance_tags(
     assert payload["measurement_hardware"] == "linux_x86_64_cpu"
 
 
+def test_venn_classification_sidecar_can_emit_score_weighted_custody(
+    per_pair_grad, archive_sha256, tmp_root
+):
+    """Canonical Cathedral path consumes score-weighted counts only with custody."""
+    gradient_path = tmp_root / "venn_gradient.npy"
+    result = mgc.classify_bytes_by_pair_variance(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        measurement_axis="[contest-CPU]",
+        measurement_hardware="linux_x86_64_modal_cpu",
+        operating_point=mgc.OperatingPoint(d_seg=0.1, d_pose=0.1, rate=0.1, score=0.1),
+        measurement_method="autograd_full_pairs",
+        measurement_call_id="modal-call-venn",
+        scored_archive_sha256=archive_sha256,
+        scored_archive_bytes=12345,
+        gradient_array_sha256="b" * 64,
+        gradient_array_path=str(gradient_path),
+        gradient_tensor_kind="per_pair_per_byte_v1",
+        n_pairs_used=10,
+        n_pairs_total=10,
+        write_sidecar=True,
+    )
+
+    sidecars = list((tmp_root / "master_gradient_consumers").glob("venn_classification_*.json"))
+    assert len(sidecars) == 1
+    payload = json.loads(sidecars[0].read_text())
+    assert result.score_weighted_class_counts is not None
+    assert payload["score_weighted_class_counts"] == result.score_weighted_class_counts
+    assert payload["score_axis_weighting"]["available"] is True
+    assert payload["scored_archive_sha256"] == archive_sha256
+    assert payload["gradient_array_sha256"] == "b" * 64
+    assert payload["source_custody"]["custody_required_for_cathedral_reward"] is True
+    assert payload["n_pairs"] == per_pair_grad.shape[1]
+    assert payload["n_pairs_used"] == 10
+    assert payload["n_pairs_total"] == 10
+
+
 # ──────────────────────────────────────────────────────────────────────────── #
 # Consumer 2 — fec6 selector marginal matrix (3 tests)                          #
 # ──────────────────────────────────────────────────────────────────────────── #
@@ -344,12 +381,22 @@ def test_per_pair_difficulty_atlas_sidecar_emits_axis_breakdown(
     per_pair_grad, archive_sha256, axis_meta, tmp_root
 ):
     """Sidecar: per-pair raw + score-weighted axis contributions emitted."""
+    gradient_path = tmp_root / "per_pair_gradient.npy"
     mgc.per_pair_difficulty_atlas(
         per_pair_grad,
         archive_sha256=archive_sha256,
         top_k=5,
         bottom_k=5,
         operating_point=mgc.OperatingPoint(d_seg=0.1, d_pose=0.1, rate=0.1, score=0.1),
+        measurement_method="autograd_full_pairs",
+        measurement_call_id="modal-call-123",
+        scored_archive_sha256=archive_sha256,
+        scored_archive_bytes=12345,
+        gradient_array_sha256="a" * 64,
+        gradient_array_path=str(gradient_path),
+        gradient_tensor_kind="per_pair_per_byte_v1",
+        n_pairs_used=10,
+        n_pairs_total=10,
         write_sidecar=True,
         **axis_meta,
     )
@@ -360,8 +407,22 @@ def test_per_pair_difficulty_atlas_sidecar_emits_axis_breakdown(
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["scored_archive_sha256"] == archive_sha256
+    assert payload["scored_archive_bytes"] == 12345
+    assert payload["gradient_array_sha256"] == "a" * 64
+    assert payload["gradient_array_path"] == str(gradient_path)
+    assert payload["gradient_tensor_kind"] == "per_pair_per_byte_v1"
+    assert payload["measurement_method"] == "autograd_full_pairs"
+    assert payload["measurement_call_id"] == "modal-call-123"
+    assert payload["n_pairs"] == per_pair_grad.shape[1]
+    assert payload["n_pairs_used"] == 10
+    assert payload["n_pairs_total"] == 10
+    assert payload["source_custody"]["n_pairs"] == per_pair_grad.shape[1]
+    assert payload["source_custody"]["custody_required_for_cathedral_reward"] is True
     assert payload["score_axis_weighting"]["available"] is True
     assert len(payload["top_k_hardest_with_axis_breakdown"]) == 5
+    assert len(payload["top_k_score_weighted_pair_indices"]) == 5
+    assert len(payload["top_k_score_weighted_with_axis_breakdown"]) == 5
     for entry in payload["top_k_hardest_with_axis_breakdown"]:
         # Per-axis L1 contributions present
         for key in (
@@ -375,6 +436,9 @@ def test_per_pair_difficulty_atlas_sidecar_emits_axis_breakdown(
         ):
             assert key in entry
             assert isinstance(entry[key], (int, float))
+    for entry in payload["top_k_score_weighted_with_axis_breakdown"]:
+        assert "pose_score_axis_share" in entry
+        assert isinstance(entry["pose_score_axis_share"], (int, float))
 
 
 # ──────────────────────────────────────────────────────────────────────────── #
