@@ -77,12 +77,134 @@ class Z7Mamba2PredictiveCodingScoreAwareLoss(torch.nn.Module):
         self.pose_scorer = pose_scorer
         self.weights = weights
 
-    def train(self, mode: bool = True) -> "Z7Mamba2PredictiveCodingScoreAwareLoss":
+    def train(self, mode: bool = True) -> Z7Mamba2PredictiveCodingScoreAwareLoss:
         """Toggle loss-mode while keeping frozen contest scorers in eval mode."""
         super().train(mode)
         self.seg_scorer.eval()
         self.pose_scorer.eval()
         return self
+
+    @staticmethod
+    def _normalize_scorer_chunk_size(
+        scorer_chunk_size: int | None,
+        *,
+        batch_size: int,
+    ) -> int:
+        if scorer_chunk_size is None:
+            return int(batch_size)
+        chunk_size = int(scorer_chunk_size)
+        if chunk_size <= 0:
+            return int(batch_size)
+        return min(chunk_size, int(batch_size))
+
+    def score_terms(
+        self,
+        *,
+        reconstructed_rgb_0: torch.Tensor,
+        reconstructed_rgb_1: torch.Tensor,
+        gt_rgb_0: torch.Tensor | None = None,
+        gt_rgb_1: torch.Tensor | None = None,
+        gt_pose_batch: torch.Tensor | None = None,
+        gt_seg_batch: torch.Tensor | None = None,
+        gt_seg_already_probs: bool | None = None,
+        apply_eval_roundtrip: bool = True,
+        noise_std: float = 0.0,
+        scorer_chunk_size: int | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return weighted ``(seg_term, pose_term)`` with optional scorer chunking.
+
+        The chunked path is mathematically equivalent to the unchunked batch path
+        for the canonical mean reductions used by the contest-shaped scorer
+        proxies, but bounds peak scorer activation memory for 600-pair runs.
+        """
+        if not apply_eval_roundtrip:
+            raise ValueError(
+                "apply_eval_roundtrip=False is forbidden for Z7-Mamba-2 score-aware "
+                "loss per CLAUDE.md eval_roundtrip non-negotiable"
+            )
+        if noise_std < 0.0:
+            raise ValueError(f"noise_std must be >= 0; got {noise_std}")
+
+        cache_provided = (
+            gt_pose_batch is not None
+            and gt_seg_batch is not None
+            and gt_seg_already_probs is not None
+        )
+        cache_partially = (
+            gt_pose_batch is not None
+            or gt_seg_batch is not None
+            or gt_seg_already_probs is not None
+        )
+        if cache_partially and not cache_provided:
+            raise ValueError(
+                "score_terms received partial GT cache kwargs; supply "
+                "gt_pose_batch, gt_seg_batch, and gt_seg_already_probs together"
+            )
+        if not cache_provided and (gt_rgb_0 is None or gt_rgb_1 is None):
+            raise ValueError(
+                "score_terms requires either raw GT RGB tensors or a complete "
+                "GT scorer cache batch"
+            )
+
+        for name, tensor in (
+            ("reconstructed_rgb_0", reconstructed_rgb_0),
+            ("reconstructed_rgb_1", reconstructed_rgb_1),
+        ):
+            _validate_rgb_255_domain(name, tensor)
+        if gt_rgb_0 is not None:
+            _validate_rgb_255_domain("gt_rgb_0", gt_rgb_0)
+        if gt_rgb_1 is not None:
+            _validate_rgb_255_domain("gt_rgb_1", gt_rgb_1)
+        if reconstructed_rgb_0.shape != reconstructed_rgb_1.shape:
+            raise ValueError("reconstructed_rgb_0 and reconstructed_rgb_1 shapes differ")
+        if gt_rgb_0 is not None and gt_rgb_1 is not None:
+            if gt_rgb_0.shape != gt_rgb_1.shape:
+                raise ValueError("gt_rgb_0 and gt_rgb_1 shapes differ")
+            if reconstructed_rgb_0.shape[0] != gt_rgb_0.shape[0]:
+                raise ValueError("reconstructed and GT batch sizes differ")
+        if cache_provided:
+            assert gt_pose_batch is not None
+            assert gt_seg_batch is not None
+            if reconstructed_rgb_0.shape[0] != gt_pose_batch.shape[0]:
+                raise ValueError("reconstructed and cached GT pose batch sizes differ")
+            if reconstructed_rgb_0.shape[0] != gt_seg_batch.shape[0]:
+                raise ValueError("reconstructed and cached GT seg batch sizes differ")
+
+        from tac.differentiable_eval_roundtrip import (
+            apply_eval_roundtrip_during_training,
+        )
+
+        batch_size = int(reconstructed_rgb_0.shape[0])
+        chunk_size = self._normalize_scorer_chunk_size(
+            scorer_chunk_size,
+            batch_size=batch_size,
+        )
+        seg_acc = reconstructed_rgb_0.new_tensor(0.0)
+        pose_acc = reconstructed_rgb_0.new_tensor(0.0)
+        for start in range(0, batch_size, chunk_size):
+            end = min(batch_size, start + chunk_size)
+            rgb_0 = reconstructed_rgb_0[start:end]
+            rgb_1 = reconstructed_rgb_1[start:end]
+            if self.training and noise_std > 0.0:
+                rgb_0 = rgb_0 + (torch.rand_like(rgb_0) - 0.5) * (2.0 * noise_std)
+                rgb_1 = rgb_1 + (torch.rand_like(rgb_1) - 0.5) * (2.0 * noise_std)
+            rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
+            rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
+            seg_chunk, pose_chunk = score_pair_components_dispatch(
+                seg_scorer=self.seg_scorer,
+                pose_scorer=self.pose_scorer,
+                rgb_0_rt=rgb_0_rt,
+                rgb_1_rt=rgb_1_rt,
+                gt_rgb_0=None if gt_rgb_0 is None else gt_rgb_0[start:end],
+                gt_rgb_1=None if gt_rgb_1 is None else gt_rgb_1[start:end],
+                gt_pose_batch=None if gt_pose_batch is None else gt_pose_batch[start:end],
+                gt_seg_batch=None if gt_seg_batch is None else gt_seg_batch[start:end],
+                gt_seg_already_probs=gt_seg_already_probs,
+            )
+            weight = float(end - start) / float(batch_size)
+            seg_acc = seg_acc + seg_chunk * weight
+            pose_acc = pose_acc + pose_chunk * weight
+        return seg_acc, pose_acc
 
     def forward(
         self,
@@ -96,14 +218,8 @@ class Z7Mamba2PredictiveCodingScoreAwareLoss(torch.nn.Module):
         latents: torch.Tensor,
         apply_eval_roundtrip: bool = True,
         noise_std: float = 0.0,
+        scorer_chunk_size: int | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        if not apply_eval_roundtrip:
-            raise ValueError(
-                "apply_eval_roundtrip=False is forbidden for Z7-Mamba-2 score-aware "
-                "loss per CLAUDE.md eval_roundtrip non-negotiable"
-            )
-        if noise_std < 0.0:
-            raise ValueError(f"noise_std must be >= 0; got {noise_std}")
         if residuals.dim() != 2:
             raise ValueError(
                 f"residuals must be 2-D (num_pairs, latent_dim); got "
@@ -115,33 +231,14 @@ class Z7Mamba2PredictiveCodingScoreAwareLoss(torch.nn.Module):
                 f"{tuple(latents.shape)}"
             )
 
-        for name, tensor in (
-            ("reconstructed_rgb_0", reconstructed_rgb_0),
-            ("reconstructed_rgb_1", reconstructed_rgb_1),
-            ("gt_rgb_0", gt_rgb_0),
-            ("gt_rgb_1", gt_rgb_1),
-        ):
-            _validate_rgb_255_domain(name, tensor)
-
-        from tac.differentiable_eval_roundtrip import (
-            apply_eval_roundtrip_during_training,
-        )
-
-        rgb_0 = reconstructed_rgb_0
-        rgb_1 = reconstructed_rgb_1
-        if self.training and noise_std > 0.0:
-            rgb_0 = rgb_0 + (torch.rand_like(rgb_0) - 0.5) * (2.0 * noise_std)
-            rgb_1 = rgb_1 + (torch.rand_like(rgb_1) - 0.5) * (2.0 * noise_std)
-
-        rgb_0_rt = apply_eval_roundtrip_during_training(rgb_0)
-        rgb_1_rt = apply_eval_roundtrip_during_training(rgb_1)
-        seg_term, pose_term = score_pair_components_dispatch(
-            seg_scorer=self.seg_scorer,
-            pose_scorer=self.pose_scorer,
-            rgb_0_rt=rgb_0_rt,
-            rgb_1_rt=rgb_1_rt,
+        seg_term, pose_term = self.score_terms(
+            reconstructed_rgb_0=reconstructed_rgb_0,
+            reconstructed_rgb_1=reconstructed_rgb_1,
             gt_rgb_0=gt_rgb_0,
             gt_rgb_1=gt_rgb_1,
+            apply_eval_roundtrip=apply_eval_roundtrip,
+            noise_std=noise_std,
+            scorer_chunk_size=scorer_chunk_size,
         )
 
         rate_term = (
@@ -179,6 +276,6 @@ class Z7Mamba2PredictiveCodingScoreAwareLoss(torch.nn.Module):
 
 
 __all__ = [
-    "Z7Mamba2PredictiveCodingScoreAwareLoss",
     "Z7Mamba2PredictiveCodingLossWeights",
+    "Z7Mamba2PredictiveCodingScoreAwareLoss",
 ]

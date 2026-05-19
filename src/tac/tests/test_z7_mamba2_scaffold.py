@@ -597,9 +597,14 @@ def test_full_trainer_authority_guard_helpers_fail_closed():
     with pytest.raises(ValueError, match="not implemented"):
         mod._normalize_ego_source("scorer_logit_compressed")
 
-    mod._require_batch_size_actuated(batch_size=2, num_pairs=2)
-    with pytest.raises(RuntimeError, match="batch-size is not yet actuated"):
-        mod._require_batch_size_actuated(batch_size=1, num_pairs=2)
+    assert mod._resolve_pair_chunk_size(batch_size=2, num_pairs=2) == 2
+    assert mod._resolve_pair_chunk_size(batch_size=1, num_pairs=2) == 1
+    assert mod._resolve_pair_chunk_size(batch_size=8, num_pairs=2) == 2
+    with pytest.raises(RuntimeError, match="batch-size must be positive"):
+        mod._resolve_pair_chunk_size(batch_size=0, num_pairs=2)
+    assert mod._inflate_verify_device(torch.device("cpu")) == "cpu"
+    assert mod._inflate_verify_device(torch.device("cuda")) == "cuda"
+    assert mod._inflate_verify_device(torch.device("mps")) == "cpu"
 
     with pytest.raises(argparse.ArgumentTypeError, match="expected boolean"):
         mod._boolish("sometimes")

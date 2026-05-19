@@ -358,6 +358,9 @@ def build_packet(
         blockers.append("z7_exact_handoff_loss_mode_not_score_aware")
     if stats.get("score_aware_scorer_loss_used") is not True:
         blockers.append("z7_exact_handoff_score_aware_scorer_loss_not_used")
+    inflate_verify = stats.get("inflate_verify")
+    if isinstance(inflate_verify, Mapping) and inflate_verify.get("verify_failed"):
+        blockers.append("z7_exact_handoff_inflate_verify_failed")
 
     recurrent = _archive_status(
         repo_root=repo_root,
@@ -380,10 +383,23 @@ def build_packet(
         blockers.append("z7_exact_handoff_recurrent_static_archive_byte_count_mismatch")
     if static.get("same_archive_zip_bytes_as_recurrent") is not True:
         blockers.append("z7_exact_handoff_static_control_same_archive_bytes_flag_not_true")
-    if static.get("runtime_output_changed_vs_recurrent") is not True:
-        blockers.append("z7_exact_handoff_static_control_runtime_output_not_changed")
+    runtime_output_changed = static.get("runtime_output_changed_vs_recurrent")
     byte_diff = static.get("runtime_output_byte_differences_vs_recurrent")
-    if not isinstance(byte_diff, int) or byte_diff <= 0:
+    missing_static_output_evidence = (
+        runtime_output_changed is None and byte_diff is None
+    )
+    if missing_static_output_evidence:
+        blockers.append(
+            "z7_exact_handoff_static_control_inflate_output_evidence_missing"
+        )
+    elif runtime_output_changed is not True:
+        blockers.append("z7_exact_handoff_static_control_runtime_output_not_changed")
+    if isinstance(byte_diff, int):
+        if byte_diff <= 0:
+            blockers.append(
+                "z7_exact_handoff_static_control_byte_differences_not_positive"
+            )
+    elif not missing_static_output_evidence:
         blockers.append("z7_exact_handoff_static_control_byte_differences_not_positive")
 
     num_pairs = config.get("num_pairs")

@@ -114,8 +114,6 @@ def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
 
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     """Deserialize state_dict from zlib-compressed fp16 byte stream."""
-    import numpy as np
-
     raw = zlib.decompress(blob)
     sd: dict[str, torch.Tensor] = {}
     pos = 0
@@ -140,8 +138,10 @@ def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
         nbytes = numel * 2
         if pos + nbytes > len(raw):
             raise ValueError(f"state_dict blob truncated reading tensor {key!r}")
-        arr = np.frombuffer(raw[pos : pos + nbytes], dtype=np.float16)
-        sd[key] = torch.from_numpy(arr.reshape(shape).astype(np.float16, copy=True))
+        sd[key] = torch.frombuffer(
+            bytearray(raw[pos : pos + nbytes]),
+            dtype=torch.float16,
+        ).clone().reshape(shape)
         pos += nbytes
     return sd
 
@@ -493,17 +493,18 @@ def parse_archive(blob: bytes) -> Z7Mamba2PredictiveCodingArchive:
     scale_e = float(meta.pop("_ego_motion_scale"))
     zp_e = float(meta.pop("_ego_motion_zp"))
 
-    import numpy as np
-
-    latent_q = torch.from_numpy(
-        np.frombuffer(latent_init_blob, dtype=np.int8).copy()
-    ).view(int(latent_dim))
-    residuals_q = torch.from_numpy(
-        np.frombuffer(residuals_blob, dtype=np.int8).copy()
-    ).view(int(num_pairs), int(latent_dim))
-    ego_q = torch.from_numpy(
-        np.frombuffer(ego_blob, dtype=np.int8).copy()
-    ).view(int(num_pairs), int(ego_dim))
+    latent_q = torch.frombuffer(
+        bytearray(latent_init_blob),
+        dtype=torch.int8,
+    ).clone().view(int(latent_dim))
+    residuals_q = torch.frombuffer(
+        bytearray(residuals_blob),
+        dtype=torch.int8,
+    ).clone().view(int(num_pairs), int(latent_dim))
+    ego_q = torch.frombuffer(
+        bytearray(ego_blob),
+        dtype=torch.int8,
+    ).clone().view(int(num_pairs), int(ego_dim))
 
     raw_decoder_channels = meta.get("decoder_channels", (32, 24, 16, 12))
     if isinstance(raw_decoder_channels, str):

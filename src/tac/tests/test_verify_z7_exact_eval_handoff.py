@@ -131,6 +131,36 @@ def test_z7_handoff_ready_for_ratified_full_pair_packet(tmp_path: Path) -> None:
         assert "--skip-axis-if-promotable-anchor-exists" in command
 
 
+def test_z7_handoff_surfaces_failed_inflate_verify(tmp_path: Path) -> None:
+    repo = _fixture_repo(tmp_path, num_pairs=600)
+    stats_path = repo / "runs/z7/stats.json"
+    stats = json.loads(stats_path.read_text(encoding="utf-8"))
+    stats["inflate_verify"] = {
+        "verify_failed": "unsupported PACT_INFLATE_DEVICE='mps'; expected auto/cpu/cuda"
+    }
+    static = stats["static_capacity_control"]
+    static.pop("runtime_output_changed_vs_recurrent")
+    static.pop("runtime_output_byte_differences_vs_recurrent")
+    stats_path.write_text(json.dumps(stats), encoding="utf-8")
+
+    payload = handoff.build_packet(repo_root=repo, stats_json=Path("runs/z7/stats.json"))
+
+    assert payload["ready_for_exact_eval_handoff"] is False
+    assert "z7_exact_handoff_inflate_verify_failed" in payload["result_review_blockers"]
+    assert (
+        "z7_exact_handoff_static_control_inflate_output_evidence_missing"
+        in payload["result_review_blockers"]
+    )
+    assert (
+        "z7_exact_handoff_static_control_runtime_output_not_changed"
+        not in payload["result_review_blockers"]
+    )
+    assert (
+        "z7_exact_handoff_static_control_byte_differences_not_positive"
+        not in payload["result_review_blockers"]
+    )
+
+
 def test_z7_handoff_derives_mamba_identity_from_stats(tmp_path: Path) -> None:
     repo = _fixture_repo(
         tmp_path,

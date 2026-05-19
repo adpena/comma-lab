@@ -95,6 +95,10 @@ SUBSTRATE_ID = "time_traveler_l5_z7_mamba2"
 LANE_ID = "lane_z7_as_mamba_2_full_landing_20260518"
 
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
+DEFAULT_PAIR_CHUNK_SIZE = 8
+SCORE_AWARE_BACKWARD_MODE = (
+    "two_pass_streamed_chunks_global_pose_sqrt_exact_first_order"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -129,11 +133,12 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     "--batch-size": {
         "env": "Z7_MAMBA2_BATCH_SIZE",
         "rationale": (
-            "Per-step pair count. The current trainer replays the full "
-            "sequence in one graph; values smaller than --max-pairs fail "
-            "closed until chunked autoregressive training lands."
+            "Pair chunk size for decoder/scorer loss. The recurrent latent "
+            "sequence is replayed in order, then decoded/scored in bounded "
+            "pair chunks so 600-pair score-aware runs do not require one "
+            "giant scorer graph."
         ),
-        "default": "4",
+        "default": str(DEFAULT_PAIR_CHUNK_SIZE),
     },
     "--lr": {
         "env": "Z7_MAMBA2_LR",
@@ -705,14 +710,14 @@ def _normalize_ego_source(value: object) -> str:
     return source
 
 
-def _require_batch_size_actuated(*, batch_size: int, num_pairs: int) -> None:
-    if int(batch_size) != int(num_pairs):
+def _resolve_pair_chunk_size(*, batch_size: int, num_pairs: int) -> int:
+    if int(batch_size) <= 0:
         raise RuntimeError(
-            "Z7-Mamba-2 --batch-size is not yet actuated by the training loop: "
-            f"batch_size={batch_size} num_pairs={num_pairs}. Set --batch-size "
-            "equal to --max-pairs for this whole-sequence trainer, or implement "
-            "chunked autoregressive training before dispatch."
+            f"Z7-Mamba-2 --batch-size must be positive; got {batch_size}"
         )
+    if int(num_pairs) <= 0:
+        raise RuntimeError(f"Z7-Mamba-2 --max-pairs must be positive; got {num_pairs}")
+    return min(int(batch_size), int(num_pairs))
 
 
 def _ego_motion_from_pairs(pairs: torch.Tensor, ego_motion_dim: int) -> torch.Tensor:
@@ -826,6 +831,55 @@ def _require_finite_loss(loss: torch.Tensor, *, epoch: int) -> None:
         raise FloatingPointError(
             f"Z7-Mamba-2 non-finite loss at epoch {epoch}; refusing backward/export"
         )
+
+
+def _reset_peak_memory_stats(device: torch.device) -> None:
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
+
+
+def _memory_telemetry(device: torch.device) -> dict[str, int | str]:
+    if device.type == "cuda":
+        return {
+            "axis": "[local-cuda-memory advisory]",
+            "cuda_memory_allocated_bytes": int(torch.cuda.memory_allocated(device)),
+            "cuda_max_memory_allocated_bytes": int(torch.cuda.max_memory_allocated(device)),
+            "cuda_memory_reserved_bytes": int(torch.cuda.memory_reserved(device)),
+            "cuda_max_memory_reserved_bytes": int(torch.cuda.max_memory_reserved(device)),
+        }
+    if device.type == "mps" and hasattr(torch, "mps"):
+        telemetry: dict[str, int | str] = {"axis": "[local-mps-memory advisory]"}
+        for name in ("current_allocated_memory", "driver_allocated_memory"):
+            fn = getattr(torch.mps, name, None)
+            if callable(fn):
+                try:
+                    telemetry[f"mps_{name}_bytes"] = int(fn())
+                except RuntimeError:
+                    pass
+        return telemetry
+    return {"axis": "[local-cpu-memory advisory]"}
+
+
+def _inflate_verify_device(training_device: torch.device) -> str:
+    """Map a training device to a contest-runtime-supported inflate device.
+
+    MPS is a local training proxy only; the scorer-free inflate runtime's
+    canonical device selector intentionally supports auto/cpu/cuda, not mps.
+    Verify MPS-trained packets on CPU so the local handoff check exercises the
+    same self-contained Python/Torch runtime without inventing an MPS authority.
+    """
+    if training_device.type == "cuda":
+        return "cuda"
+    if training_device.type == "cpu":
+        return "cpu"
+    return "cpu"
+
+
+def _iter_pair_slices(num_pairs: int, pair_chunk_size: int) -> list[tuple[int, int]]:
+    return [
+        (start, min(num_pairs, start + pair_chunk_size))
+        for start in range(0, num_pairs, pair_chunk_size)
+    ]
 
 
 def _static_control_archive_pair(
@@ -1208,7 +1262,7 @@ def _full_main(args: argparse.Namespace) -> int:
     device = _select_device(args.device)
     loss_mode = _normalize_loss_mode(args.loss_mode)
     ego_source = _normalize_ego_source(args.ego_source)
-    _require_batch_size_actuated(
+    pair_chunk_size = _resolve_pair_chunk_size(
         batch_size=int(args.batch_size),
         num_pairs=cfg.num_pairs,
     )
@@ -1218,6 +1272,7 @@ def _full_main(args: argparse.Namespace) -> int:
     print(f"[z7_mamba2_full] device={device} loss_mode={loss_mode}")
     print(f"[z7_mamba2_full] ego_source={ego_source}")
     print(f"[z7_mamba2_full] num_pairs={cfg.num_pairs} epochs={args.epochs}")
+    print(f"[z7_mamba2_full] pair_chunk_size={pair_chunk_size}")
     print(f"[z7_mamba2_full] mamba2 d_model={cfg.d_model} d_state={cfg.d_state} expand={cfg.expand}")
 
     # Stage 1: decode real contest pairs
@@ -1229,16 +1284,21 @@ def _full_main(args: argparse.Namespace) -> int:
         substrate_tag=SUBSTRATE_ID,
         repo_root=REPO_ROOT,
     )
-    pairs_unit = real_pairs.to(device=device, dtype=torch.float32) / 255.0
-    if tuple(pairs_unit.shape[-2:]) != (cfg.output_height, cfg.output_width):
-        flat = pairs_unit.reshape(-1, 3, pairs_unit.shape[-2], pairs_unit.shape[-1])
+    pairs_unit_cpu = real_pairs.to(dtype=torch.float32) / 255.0
+    if tuple(pairs_unit_cpu.shape[-2:]) != (cfg.output_height, cfg.output_width):
+        flat = pairs_unit_cpu.reshape(
+            -1,
+            3,
+            pairs_unit_cpu.shape[-2],
+            pairs_unit_cpu.shape[-1],
+        )
         resized = F.interpolate(
             flat,
             size=(cfg.output_height, cfg.output_width),
             mode="bilinear",
             align_corners=False,
         )
-        pairs_unit = resized.reshape(
+        pairs_unit_cpu = resized.reshape(
             cfg.num_pairs,
             2,
             3,
@@ -1253,7 +1313,7 @@ def _full_main(args: argparse.Namespace) -> int:
     model = Z7Mamba2PredictiveCodingSubstrate(cfg).to(device)
     with torch.no_grad():
         model.ego_motion_buffer.copy_(
-            _ego_motion_from_pairs(pairs_unit.detach().cpu(), cfg.ego_motion_dim).to(
+            _ego_motion_from_pairs(pairs_unit_cpu, cfg.ego_motion_dim).to(
                 device=device,
                 dtype=model.ego_motion_buffer.dtype,
             )
@@ -1270,7 +1330,13 @@ def _full_main(args: argparse.Namespace) -> int:
         device=device,
     )
     score_aware_loss: torch.nn.Module | None = None
+    gt_scorer_cache: Any | None = None
     if loss_mode == "score_aware":
+        if float(args.noise_std) != 0.0:
+            raise RuntimeError(
+                "Z7-Mamba-2 streamed score-aware chunking currently requires "
+                "--noise-std 0.0 so the value pass and backward pass are identical."
+            )
         stage_started_at = time.perf_counter()
         score_aware_loss = _build_score_aware_loss(args=args, device=device)
         stage_wall_seconds["score_aware_scorer_load_seconds"] = (
@@ -1278,8 +1344,25 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         score_aware_loss.train()
         print(f"[z7_mamba2_full] score_aware scorers loaded in {stage_wall_seconds['score_aware_scorer_load_seconds']:.2f}s")
+        stage_started_at = time.perf_counter()
+        from tac.training_optimization import build_gt_scorer_cache
+
+        gt_scorer_cache = build_gt_scorer_cache(
+            target_pixels=(pairs_unit_cpu * 255.0).contiguous(),
+            posenet=score_aware_loss.pose_scorer,
+            segnet=score_aware_loss.seg_scorer,
+            device=device,
+            cache_chunk_size=pair_chunk_size,
+            pin_for_cuda=device.type == "cuda",
+        )
+        stage_wall_seconds["gt_scorer_cache_seconds"] = (
+            time.perf_counter() - stage_started_at
+        )
+        print(gt_scorer_cache.summary_line())
+        print(f"[z7_mamba2_full] GT scorer cache built in {stage_wall_seconds['gt_scorer_cache_seconds']:.2f}s")
     else:
         stage_wall_seconds["score_aware_scorer_load_seconds"] = 0.0
+        stage_wall_seconds["gt_scorer_cache_seconds"] = 0.0
 
     # Stage 4: training loop
     epochs = max(1, int(args.epochs))
@@ -1287,9 +1370,12 @@ def _full_main(args: argparse.Namespace) -> int:
     lr_warmup_steps = max(0, int(args.lr_warmup_steps))
     grad_clip_norm = float(args.grad_clip_norm)
     optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr)
-    losses: list[dict[str, float | int]] = []
-    target0 = pairs_unit[:, 0]
-    target1 = pairs_unit[:, 1]
+    losses: list[dict[str, float | int | str]] = []
+    target0_cpu = pairs_unit_cpu[:, 0].contiguous()
+    target1_cpu = pairs_unit_cpu[:, 1].contiguous()
+    pair_slices = _iter_pair_slices(cfg.num_pairs, pair_chunk_size)
+    pair_chunk_count = len(pair_slices)
+    _reset_peak_memory_stats(device)
     train_started_at = time.perf_counter()
     for epoch in range(epochs):
         epoch_started_at = time.perf_counter()
@@ -1302,7 +1388,8 @@ def _full_main(args: argparse.Namespace) -> int:
             for group in optimizer.param_groups:
                 group["lr"] = current_lr
         optimizer.zero_grad(set_to_none=True)
-        rgb_0, rgb_1, latents = model.reconstruct_all_pairs()
+        latents, contexts = model.replay_latents_and_contexts()
+        decoder_latents = model.condition_latents(latents, contexts)
         residual_loss = model.residuals.pow(2).mean()
         latent_smoothness = (
             (latents[1:] - latents[:-1]).pow(2).mean()
@@ -1310,39 +1397,125 @@ def _full_main(args: argparse.Namespace) -> int:
             else latents.new_tensor(0.0)
         )
         if score_aware_loss is not None:
-            loss, parts = score_aware_loss(
-                reconstructed_rgb_0=rgb_0 * 255.0,
-                reconstructed_rgb_1=rgb_1 * 255.0,
-                gt_rgb_0=target0 * 255.0,
-                gt_rgb_1=target1 * 255.0,
-                archive_bytes_proxy=archive_bytes_proxy_tensor,
-                residuals=model.residuals,
-                latents=latents,
-                apply_eval_roundtrip=True,
-                noise_std=float(args.noise_std),
+            assert gt_scorer_cache is not None
+            seg_term_value = latents.new_tensor(0.0)
+            pose_term_value = latents.new_tensor(0.0)
+            with torch.no_grad():
+                decoder_latents_value = decoder_latents.detach()
+                for start, end in pair_slices:
+                    rgb_0_value, rgb_1_value = model.decoder(
+                        decoder_latents_value[start:end]
+                    )
+                    idx = torch.arange(start, end, dtype=torch.long)
+                    gt_pose_batch, gt_seg_batch = gt_scorer_cache.lookup(
+                        idx,
+                        device=device,
+                    )
+                    seg_chunk, pose_chunk = score_aware_loss.score_terms(
+                        reconstructed_rgb_0=rgb_0_value * 255.0,
+                        reconstructed_rgb_1=rgb_1_value * 255.0,
+                        gt_pose_batch=gt_pose_batch,
+                        gt_seg_batch=gt_seg_batch,
+                        gt_seg_already_probs=gt_scorer_cache.seg_already_probs,
+                        apply_eval_roundtrip=True,
+                        noise_std=0.0,
+                        scorer_chunk_size=pair_chunk_size,
+                    )
+                    weight = float(end - start) / float(cfg.num_pairs)
+                    seg_term_value = seg_term_value + seg_chunk * weight
+                    pose_term_value = pose_term_value + pose_chunk * weight
+            rate_term = (
+                score_aware_loss.weights.alpha_rate
+                * archive_bytes_proxy_tensor
+                / score_aware_loss.weights.contest_normalizer
             )
-            loss_record: dict[str, float | int] = {
-                "epoch": epoch,
-                "loss": float(loss.item()),
-            }
-            for key, value in parts.items():
-                loss_record[key] = float(value.detach().cpu())
-        else:
-            recon_loss = (rgb_0 - target0).pow(2).mean() + (
-                rgb_1 - target1
-            ).pow(2).mean()
-            loss = recon_loss + float(args.beta_ib) * 1e-3 * (
+            pose_sqrt = torch.sqrt(pose_term_value.clamp(min=1e-12))
+            ib_term = score_aware_loss.weights.beta_ib * score_aware_loss.weights.ib_scale * (
                 residual_loss + latent_smoothness
             )
+            loss = (
+                rate_term
+                + score_aware_loss.weights.beta_seg * seg_term_value
+                + score_aware_loss.weights.gamma_pose * pose_sqrt
+                + ib_term.detach()
+            )
+            loss_record: dict[str, float | int | str] = {
+                "epoch": epoch,
+                "loss": float(loss.item()),
+                "pair_chunk_size": int(pair_chunk_size),
+                "pair_chunk_count": int(pair_chunk_count),
+                "score_aware_backward_mode": SCORE_AWARE_BACKWARD_MODE,
+                "rate_term": float(rate_term.detach().cpu()),
+                "seg_term": float(seg_term_value.detach().cpu()),
+                "pose_term": float(pose_term_value.detach().cpu()),
+                "pose_sqrt": float(pose_sqrt.detach().cpu()),
+                "residual_norm": float(residual_loss.detach().cpu()),
+                "latent_smoothness": float(latent_smoothness.detach().cpu()),
+                "ib_term": float(ib_term.detach().cpu()),
+            }
+            _require_finite_loss(loss, epoch=epoch)
+            pose_value = float(pose_term_value.detach().cpu())
+            pose_grad_coeff = (
+                latents.new_tensor(0.0)
+                if pose_value < 1e-12
+                else latents.new_tensor(
+                    score_aware_loss.weights.gamma_pose * 0.5 / (pose_value ** 0.5)
+                )
+            )
+            for start, end in pair_slices:
+                rgb_0_chunk, rgb_1_chunk = model.decoder(decoder_latents[start:end])
+                idx = torch.arange(start, end, dtype=torch.long)
+                gt_pose_batch, gt_seg_batch = gt_scorer_cache.lookup(
+                    idx,
+                    device=device,
+                )
+                seg_chunk, pose_chunk = score_aware_loss.score_terms(
+                    reconstructed_rgb_0=rgb_0_chunk * 255.0,
+                    reconstructed_rgb_1=rgb_1_chunk * 255.0,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_scorer_cache.seg_already_probs,
+                    apply_eval_roundtrip=True,
+                    noise_std=0.0,
+                    scorer_chunk_size=pair_chunk_size,
+                )
+                weight = float(end - start) / float(cfg.num_pairs)
+                chunk_loss = weight * (
+                    score_aware_loss.weights.beta_seg * seg_chunk
+                    + pose_grad_coeff * pose_chunk
+                )
+                chunk_loss.backward(retain_graph=True)
+            ib_term.backward()
+        else:
+            recon_loss_value = latents.new_tensor(0.0)
+            for start, end in pair_slices:
+                rgb_0_chunk, rgb_1_chunk = model.decoder(decoder_latents[start:end])
+                chunk_loss = F.mse_loss(
+                    rgb_0_chunk,
+                    target0_cpu[start:end].to(device=device, dtype=rgb_0_chunk.dtype),
+                    reduction="sum",
+                ) / target0_cpu.numel() + F.mse_loss(
+                    rgb_1_chunk,
+                    target1_cpu[start:end].to(device=device, dtype=rgb_1_chunk.dtype),
+                    reduction="sum",
+                ) / target1_cpu.numel()
+                recon_loss_value = recon_loss_value + chunk_loss.detach()
+                chunk_loss.backward(retain_graph=True)
+            regularizer = float(args.beta_ib) * 1e-3 * (
+                residual_loss + latent_smoothness
+            )
+            loss = recon_loss_value + regularizer.detach()
             loss_record = {
                 "epoch": epoch,
                 "loss": float(loss.item()),
-                "recon": float(recon_loss.item()),
+                "recon": float(recon_loss_value.item()),
                 "residual": float(residual_loss.item()),
                 "latent_smoothness": float(latent_smoothness.item()),
+                "pair_chunk_size": int(pair_chunk_size),
+                "pair_chunk_count": int(pair_chunk_count),
             }
-        _require_finite_loss(loss, epoch=epoch)
-        loss.backward()
+            _require_finite_loss(loss, epoch=epoch)
+            regularizer.backward()
         grad_norm = None
         if grad_clip_norm > 0:
             grad_norm = torch.nn.utils.clip_grad_norm_(
@@ -1359,6 +1532,7 @@ def _full_main(args: argparse.Namespace) -> int:
             print(f"[z7_mamba2_full] epoch {epoch}: loss={loss.item():.6f} wall={loss_record['wall_seconds']:.2f}s")
     train_total_seconds = time.perf_counter() - train_started_at
     stage_wall_seconds["train_total_seconds"] = train_total_seconds
+    memory_telemetry = _memory_telemetry(device)
 
     # Stage 5: pack Z7MCM2 archive
     stage_started_at = time.perf_counter()
@@ -1371,7 +1545,9 @@ def _full_main(args: argparse.Namespace) -> int:
         "target_pairs": cfg.num_pairs,
         "epochs": epochs,
         "batch_size_flag": int(args.batch_size),
-        "batch_size_actuation_status": "whole_sequence_only_batch_size_must_equal_num_pairs",
+        "pair_chunk_size": int(pair_chunk_size),
+        "pair_chunk_count": pair_chunk_count,
+        "batch_size_actuation_status": "actuated_as_pair_chunked_decoder_and_scorer_loss",
         "lr": base_lr,
         "lr_warmup_steps": lr_warmup_steps,
         "grad_clip_norm": grad_clip_norm,
@@ -1447,8 +1623,14 @@ def _full_main(args: argparse.Namespace) -> int:
     if _boolish(args.inflate_verify):
         verify_raw = output_dir / "inflate_verify" / "0.raw"
         try:
-            frames = inflate_one_video(archive_bytes, verify_raw, device=str(device))
+            verify_device = _inflate_verify_device(device)
+            frames = inflate_one_video(
+                archive_bytes,
+                verify_raw,
+                device=verify_device,
+            )
             inflate_verify = {
+                "device": verify_device,
                 "raw_path": str(verify_raw),
                 "frames_written": int(frames),
                 "raw_bytes": verify_raw.stat().st_size,
@@ -1459,7 +1641,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 control_frames = inflate_one_video(
                     static_control_bytes,
                     control_raw,
-                    device=str(device),
+                    device=verify_device,
                 )
                 control_raw_bytes = control_raw.read_bytes()
                 control_sha = _sha256_bytes(control_raw_bytes)
@@ -1497,6 +1679,8 @@ def _full_main(args: argparse.Namespace) -> int:
         "loss_mode": loss_mode,
         "epochs": epochs,
         "num_pairs": cfg.num_pairs,
+        "pair_chunk_size": int(pair_chunk_size),
+        "pair_chunk_count": int(pair_chunk_count),
         "stage_wall_seconds": {
             key: float(value) for key, value in stage_wall_seconds.items()
         },
@@ -1528,6 +1712,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "identity_predictor": cfg.identity_predictor,
             "beta_ib": cfg.beta_ib,
             "num_pairs": cfg.num_pairs,
+            "pair_chunk_size": int(pair_chunk_size),
+            "pair_chunk_count": pair_chunk_count,
             "lr_warmup_steps": lr_warmup_steps,
             "grad_clip_norm": grad_clip_norm,
             **model.decoder_metadata(),
@@ -1551,6 +1737,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "submission_runtime_dir": str(submission_dir),
         "inflate_verify": inflate_verify,
         "timing_smoke": timing_smoke,
+        "memory_telemetry": memory_telemetry,
         # Authority flags — non-promotable by construction per CLAUDE.md
         "evidence_grade": "z7_mamba2_full_train_packet_not_promotable_pending_council_per_catalog_325",
         "score_claim": False,

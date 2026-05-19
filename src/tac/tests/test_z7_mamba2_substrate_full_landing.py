@@ -398,7 +398,7 @@ def test_score_aware_loss_construction_canonical_helper_routing():
     from tac.substrates.time_traveler_l5_z7_mamba2 import (
         Z7Mamba2PredictiveCodingScoreAwareLoss,
     )
-    source = inspect.getsource(Z7Mamba2PredictiveCodingScoreAwareLoss.forward)
+    source = inspect.getsource(Z7Mamba2PredictiveCodingScoreAwareLoss.score_terms)
     assert "score_pair_components_dispatch" in source, (
         "Score-aware loss MUST route through canonical helper per Catalog #164"
     )
@@ -471,6 +471,94 @@ def test_score_aware_loss_refuses_eval_roundtrip_false():
             latents=fake_latents,
             apply_eval_roundtrip=False,
         )
+
+
+def test_score_aware_loss_chunking_and_gt_cache_are_objective_equivalent(monkeypatch):
+    """Chunked scorer loss and F3 GT cache must preserve the same objective."""
+    import tac.differentiable_eval_roundtrip as roundtrip
+    from tac.substrates.time_traveler_l5_z7_mamba2 import (
+        Z7Mamba2PredictiveCodingLossWeights,
+        Z7Mamba2PredictiveCodingScoreAwareLoss,
+    )
+    from tac.training_optimization import build_gt_scorer_cache
+
+    class PoseScorer(torch.nn.Module):
+        def preprocess_input(self, pair: torch.Tensor) -> torch.Tensor:
+            return pair / 255.0
+
+        def forward(self, pair: torch.Tensor) -> dict[str, torch.Tensor]:
+            pose = pair.mean(dim=(1, 2, 3, 4), keepdim=False).unsqueeze(1)
+            return {"pose": pose.repeat(1, 12)}
+
+    class SegScorer(torch.nn.Module):
+        def preprocess_input(self, pair: torch.Tensor) -> torch.Tensor:
+            return pair / 255.0
+
+        def forward(self, pair: torch.Tensor) -> torch.Tensor:
+            base = pair.mean(dim=1)
+            return torch.stack(
+                (
+                    base[:, 0],
+                    base[:, 1],
+                    base[:, 2],
+                    base[:, 0] - base[:, 1],
+                    base[:, 1] - base[:, 2],
+                ),
+                dim=1,
+            )
+
+    monkeypatch.setattr(
+        roundtrip,
+        "apply_eval_roundtrip_during_training",
+        lambda x: x,
+    )
+    torch.manual_seed(7)
+    rgb_0 = torch.rand(5, 3, 4, 4) * 254.0 + 0.5
+    rgb_1 = torch.rand(5, 3, 4, 4) * 254.0 + 0.5
+    gt_0 = torch.rand(5, 3, 4, 4) * 254.0 + 0.5
+    gt_1 = torch.rand(5, 3, 4, 4) * 254.0 + 0.5
+    loss = Z7Mamba2PredictiveCodingScoreAwareLoss(
+        seg_scorer=SegScorer(),
+        pose_scorer=PoseScorer(),
+        weights=Z7Mamba2PredictiveCodingLossWeights(),
+    )
+    raw_seg, raw_pose = loss.score_terms(
+        reconstructed_rgb_0=rgb_0,
+        reconstructed_rgb_1=rgb_1,
+        gt_rgb_0=gt_0,
+        gt_rgb_1=gt_1,
+    )
+    chunk_seg, chunk_pose = loss.score_terms(
+        reconstructed_rgb_0=rgb_0,
+        reconstructed_rgb_1=rgb_1,
+        gt_rgb_0=gt_0,
+        gt_rgb_1=gt_1,
+        scorer_chunk_size=2,
+    )
+    assert torch.allclose(chunk_seg, raw_seg, atol=1e-7)
+    assert torch.allclose(chunk_pose, raw_pose, atol=1e-7)
+
+    cache = build_gt_scorer_cache(
+        target_pixels=torch.stack((gt_0, gt_1), dim=1),
+        posenet=loss.pose_scorer,
+        segnet=loss.seg_scorer,
+        device=torch.device("cpu"),
+        cache_chunk_size=2,
+    )
+    gt_pose_batch, gt_seg_batch = cache.lookup(
+        torch.arange(5, dtype=torch.long),
+        device=torch.device("cpu"),
+    )
+    cache_seg, cache_pose = loss.score_terms(
+        reconstructed_rgb_0=rgb_0,
+        reconstructed_rgb_1=rgb_1,
+        gt_pose_batch=gt_pose_batch,
+        gt_seg_batch=gt_seg_batch,
+        gt_seg_already_probs=cache.seg_already_probs,
+        scorer_chunk_size=2,
+    )
+    assert torch.allclose(cache_seg, raw_seg, atol=1e-7)
+    assert torch.allclose(cache_pose, raw_pose, atol=1e-7)
 
 
 def test_identity_predictor_substrate_yields_predictor_zero_params(tiny_config):
