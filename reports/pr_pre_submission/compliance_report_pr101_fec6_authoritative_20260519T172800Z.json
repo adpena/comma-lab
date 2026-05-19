@@ -1,0 +1,735 @@
+{
+  "archive": {
+    "bytes": 178517,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 178417,
+        "crc": 3299285626,
+        "file_size": 178417,
+        "local_header": {
+          "compress_size": 178417,
+          "compress_type": 0,
+          "crc32": 3299285626,
+          "extra_len": 0,
+          "file_size": 178417,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "x",
+          "version_needed": 20
+        },
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive_manifest.json"
+  },
+  "auth_eval": {
+    "anchor_proof": {
+      "archive": {
+        "bytes": 178517,
+        "members": [
+          {
+            "compress_size": 178417,
+            "crc": 3299285626,
+            "file_size": 178417,
+            "local_header": {
+              "compress_size": 178417,
+              "compress_type": 0,
+              "crc32": 3299285626,
+              "extra_len": 0,
+              "file_size": 178417,
+              "flag_bits": 0,
+              "mod_date": 33,
+              "mod_time": 0,
+              "name": "x",
+              "version_needed": 20
+            },
+            "local_header_name": "x",
+            "name": "x",
+            "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+            "unsafe_reason": null
+          }
+        ],
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+        "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+      },
+      "auth_eval": {
+        "contest_auth_eval_elapsed_seconds": 302.249739922,
+        "cuda_version": null,
+        "device": "cpu",
+        "eval_command_sanitized": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "archive.zip",
+          "--inflate-sh",
+          "submission_dir/inflate.sh",
+          "--upstream-dir",
+          "upstream",
+          "--device",
+          "cpu"
+        ],
+        "evaluate_elapsed_seconds": 225.79089852299998,
+        "evidence_grade": "contest-CPU",
+        "gpu_driver": "<error:FileNotFoundError(2, 'No such file or directory')>",
+        "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+        "gpu_t4_match": false,
+        "inflate_elapsed_seconds": 72.886611123,
+        "samples": 600,
+        "tool": "experiments/contest_auth_eval.py",
+        "torch_version": "2.5.1+cpu",
+        "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "auth_eval_local_custody_ignored_by_git": true,
+      "auth_eval_local_custody_path": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+      "record_score_source": "tools.auth_eval_records.parse_auth_eval_payload",
+      "runtime": {
+        "runtime_file_count": 5,
+        "runtime_files": [
+          {
+            "bytes": 16331,
+            "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.py",
+            "sha256": "31b9915a1071833591a8fbd9761077bb607e09b7410450dfa211499d92ae4505"
+          },
+          {
+            "bytes": 818,
+            "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+            "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+          },
+          {
+            "bytes": 16734,
+            "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/codec.py",
+            "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+          },
+          {
+            "bytes": 7558,
+            "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/frame_selector.py",
+            "sha256": "8bde9a1c9926b0758d341aed0e86d66f4ac460d4a18e5464a92ff04d9792e50f"
+          },
+          {
+            "bytes": 2197,
+            "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "runtime_tree_sha256": "f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166",
+        "runtime_tree_sha256_candidates": {
+          "provenance.inflate_runtime_manifest.runtime_tree_sha256": "f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166"
+        }
+      },
+      "schema": "pre_submission_compliance_anchor_proof_v1",
+      "score_basis": {
+        "archive_bytes": 178517,
+        "archive_rate_unscaled": 0.004754685709380427,
+        "avg_posenet_dist": 2.943e-05,
+        "avg_segnet_dist": 0.00056029,
+        "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+        "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+        "report_reconstructed_score": 0.1920513168811056,
+        "score": 0.1920513168811056,
+        "score_delta_vs_report_reconstruction": 0.0
+      }
+    },
+    "exists": true,
+    "path": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+    "record": {
+      "archive_bytes": 178517,
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "avg_posenet_dist": 2.943e-05,
+      "avg_segnet_dist": 0.00056029,
+      "cpu_leaderboard_reproduction_eligible": true,
+      "device": "cpu",
+      "evidence_grade": "contest-CPU",
+      "gpu_t4_match": false,
+      "hardware_compliance_blocker": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_unscaled": 0.004754685709380427,
+      "samples": 600,
+      "score": 0.1920513168811056,
+      "score_axis": "contest_cpu",
+      "score_claim_valid": false
+    },
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166"
+    },
+    "runtime_tree_pruned_candidates": {
+      "provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files": "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df",
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files": "f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166"
+    },
+    "strict_formula": {
+      "archive_bytes": 178517,
+      "archive_rate_unscaled": 0.004754685709380427,
+      "avg_posenet_dist": 2.943e-05,
+      "avg_segnet_dist": 0.00056029,
+      "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+      "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+      "report_reconstructed_score": 0.1920513168811056,
+      "score": 0.1920513168811056,
+      "score_delta_vs_report_reconstruction": 0.0
+    }
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_local_header_metadata_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_payload_readable:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=178517 actual=178517",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+      "name": "auth_eval_present_or_optional",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+      "name": "auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "auth_eval_score_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178517 actual=178517",
+      "name": "auth_eval_archive_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical score/components/formula consistent",
+      "name": "auth_eval_schema_metric_consistency",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "auth_eval_has_components",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "record=0.1920513168811056 recomputed=0.1920513168811056",
+      "name": "auth_eval_score_recomputes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "strict=0.1920513168811056 record=0.1920513168811056 delta=0.0",
+      "name": "auth_eval_strict_formula_score_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cpu record_axis=contest_cpu",
+      "name": "auth_eval_selected_axis_matches_submission_gate",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cpu score=0.1920513168811056 source=strict_formula threshold=0.192",
+      "name": "auth_eval_score_at_or_below_submission_threshold",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cpu samples=600 gpu_t4_match=False",
+      "name": "auth_eval_t4_equivalent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cpu samples=600 gpu_t4_match=False claim=False exact_cuda_eval_complete=False",
+      "name": "auth_eval_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires explicit exact_cuda_eval_complete=true, score_claim_valid=true, lane_tag=[contest-CUDA], score_axis=contest_cuda in the auth-eval JSON; promotion eligibility is decided by this compliance gate, not raw contest_auth_eval.py",
+      "name": "auth_eval_explicit_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166'}",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+      "name": "contest_cpu_auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+      "name": "contest_cpu_auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "contest_cpu_auth_eval_score_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "contest_cpu_auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178517 actual=178517",
+      "name": "contest_cpu_auth_eval_archive_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical score/components/formula consistent",
+      "name": "contest_cpu_auth_eval_schema_metric_consistency",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "samples=600",
+      "name": "contest_cpu_auth_eval_full_600_samples",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "platform_system=Linux platform_machine=x86_64",
+      "name": "contest_cpu_auth_eval_linux_x86_64_provenance",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cpu samples=600 axis=contest_cpu cpu_repro=True blocker=None",
+      "name": "contest_cpu_auth_eval_contest_cpu_axis",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "score_claim=False promotion_eligible=False score_claim_valid=False rank_or_kill_eligible=False",
+      "name": "contest_cpu_auth_eval_explicit_score_claim_non_promotional",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "score_axis=contest_cpu lane_tag=[contest-CPU] evidence_grade=contest-CPU cpu_leaderboard_reproduction_eligible=True",
+      "name": "contest_cpu_auth_eval_explicit_contest_cpu_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cpu record_axis=contest_cpu",
+      "name": "contest_cpu_auth_eval_selected_axis_matches_submission_gate",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cpu score=0.1920513168811056 source=strict_formula threshold=0.192",
+      "name": "contest_cpu_auth_eval_score_at_or_below_submission_threshold",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df'} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df'} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_matches_cuda",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=22f5fdb66091a1ee78e0b57b2833d3d82c7de57c620747430896aaafa805a913",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['22f5fdb66091a1ee78e0b57b2833d3d82c7de57c620747430896aaafa805a913', '6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df'] auth_eval_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': '6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df'}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178517 actual=178517",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=0 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=0 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "name": "report_exists",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "not required for this non-final packet",
+      "name": "post_deadline_policy_statement_optional",
+      "passed": true,
+      "severity": "info"
+    },
+    {
+      "details": "not required for this non-final packet",
+      "name": "public_source_reproducibility_optional",
+      "passed": true,
+      "severity": "info"
+    },
+    {
+      "details": "not required for this non-final packet",
+      "name": "public_evidence_axis_labels_optional",
+      "passed": true,
+      "severity": "info"
+    },
+    {
+      "details": "axis=contest_cpu candidate=0.192051 canonical_best=0.192051 canonical_archive=6bae0201fb08 same_archive=True",
+      "name": "frontier_no_regression_on_submitted_axis",
+      "passed": true,
+      "severity": "warning"
+    }
+  ],
+  "contest_cpu_auth_eval": {
+    "exists": true,
+    "path": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+    "record": {
+      "archive_bytes": 178517,
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "avg_posenet_dist": 2.943e-05,
+      "avg_segnet_dist": 0.00056029,
+      "cpu_leaderboard_reproduction_eligible": true,
+      "device": "cpu",
+      "evidence_grade": "contest-CPU",
+      "gpu_t4_match": false,
+      "hardware_compliance_blocker": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_unscaled": 0.004754685709380427,
+      "samples": 600,
+      "score": 0.1920513168811056,
+      "score_axis": "contest_cpu",
+      "score_claim_valid": false
+    },
+    "required": true,
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166"
+    },
+    "runtime_tree_pruned_candidates": {
+      "provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files": "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df",
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files": "f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166"
+    },
+    "strict_formula": {
+      "archive_bytes": 178517,
+      "archive_rate_unscaled": 0.004754685709380427,
+      "avg_posenet_dist": 2.943e-05,
+      "avg_segnet_dist": 0.00056029,
+      "basis": "contest_cpu_auth_eval_components_plus_exact_archive_bytes",
+      "report_reconstructed_score": 0.1920513168811056,
+      "score": 0.1920513168811056,
+      "score_delta_vs_report_reconstruction": 0.0
+    }
+  },
+  "dispatch_claims": {
+    "required": false
+  },
+  "frontier_baseline": {
+    "candidate": {
+      "axis": "contest_cpu",
+      "score": 0.1920513168811056,
+      "score_source": "explicit_cli"
+    },
+    "canonical_best": {
+      "contest_cpu": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "hardware_substrate": "linux_x86_64_cpu",
+        "lane_id": null,
+        "score": 0.1920513168811056
+      },
+      "contest_cuda": {
+        "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+        "hardware_substrate": "linux_x86_64_t4",
+        "lane_id": null,
+        "score": 0.20533002902019143
+      }
+    },
+    "schema": "pact_frontier_check_v1"
+  },
+  "passed": false,
+  "post_deadline_submission_policy": {
+    "chars": 0,
+    "has_frontier_context": false,
+    "names_mode": false,
+    "negation_reason": null,
+    "required": false,
+    "source": null,
+    "statement_preview": "",
+    "template_reason": null
+  },
+  "public_evidence_axis_labels": {
+    "labels": {
+      "[contest-CPU]": false,
+      "[contest-CUDA]": false
+    },
+    "required": false,
+    "sources": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md"
+    ]
+  },
+  "public_source_reproducibility": {
+    "archive_runtime_sha_bindings": [],
+    "has_reproduce_command": false,
+    "has_reproduce_command_or_sha_binding": false,
+    "has_reproducibility_context": false,
+    "pinned_source_refs": [],
+    "repo_links": [],
+    "required": false,
+    "sources": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md"
+    ]
+  },
+  "report": {
+    "exists": false,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+    "required_files": {
+      "archive.zip": {
+        "exists": false,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh"
+      },
+      "report.txt": {
+        "exists": false,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "contest_auth_eval_cpu.json",
+      "contest_cpu_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 16331,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py",
+        "sha256": "31b9915a1071833591a8fbd9761077bb607e09b7410450dfa211499d92ae4505"
+      },
+      {
+        "bytes": 818,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+        "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+      },
+      {
+        "bytes": 16734,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py",
+        "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+      },
+      {
+        "bytes": 7558,
+        "relative_path": "src/frame_selector.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py",
+        "sha256": "8bde9a1c9926b0758d341aed0e86d66f4ac460d4a18e5464a92ff04d9792e50f"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ],
+    "portable_runtime_tree_sha256_without_custody_files": "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 5,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+    "runtime_tree_sha256": "22f5fdb66091a1ee78e0b57b2833d3d82c7de57c620747430896aaafa805a913",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}
