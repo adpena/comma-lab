@@ -145,6 +145,7 @@ sentinel_files:
   - src/tac/mps_gap_experiment/tiny_renderer.py
   - src/tac/mps_gap_experiment/train_on_mps.py
   - src/tac/mps_gap_experiment/harvest_and_verdict.py
+  - src/tac/mps_gap_experiment/harvest_and_verdict_cli.py
   - experiments/mps_gap_experiment_a10g_dispatch.py
   - scripts/remote_mps_gap_experiment_a10g.sh
 

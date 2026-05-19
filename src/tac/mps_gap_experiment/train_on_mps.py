@@ -281,6 +281,51 @@ def train_on_mps_real_frames(
     ema_snapshot = _capture_ema_snapshot(model, ema)
     torch.save(ema_snapshot, output_dir / "checkpoint_ema.pt")
 
+    # SPLIT-DEVICE REFERENCE CAPTURE (Catalog #324/#192 + predecessor verdict
+    # `mps_phase_b_gap_experiment_verdict_20260519T053530Z`):
+    #
+    # The original single-device `compute_gap_components` cannot answer the
+    # MPS-vs-CUDA gap question because Modal A10G workers have NO MPS device.
+    # The fix is split-device: capture LOCAL MPS forward outputs + per-component
+    # values HERE on the actual Mac MPS hardware (using the EMA shadow + the
+    # exact `frame_cache.pt` the Modal dispatch will replay) so the remote
+    # Modal CUDA dispatch can produce its own per-component values and the
+    # local harvest can diff them apples-to-apples.
+    #
+    # `compute_local_mps_reference_components` runs the EMA-restored model
+    # forward on `device` (typically "mps") using the cached frame batch +
+    # synthetic pose vector that match what the Modal dispatch will replay.
+    # It writes `local_mps_components.json` (per-component values + axis tag)
+    # and `local_mps_forward_outputs.pt` (per-pair reconstruction tensors so a
+    # consumer can compute per-pixel diff post-hoc if desired).
+    #
+    # Skipped when `device == "cuda"` or `device == "cpu"` because then the
+    # reference-vs-target gap is trivially 0 (same device); the split-device
+    # mission applies only to MPS.
+    if device == "mps":
+        try:
+            from tac.mps_gap_experiment.harvest_and_verdict import (
+                compute_local_mps_reference_components,
+            )
+
+            compute_local_mps_reference_components(
+                checkpoint_path=output_dir / "checkpoint_ema.pt",
+                frame_cache_path=output_dir / "frame_cache.pt",
+                output_dir=output_dir,
+                device=device,
+                include_scorer_components=include_scorer_loss,
+                upstream_dir=upstream_dir,
+            )
+        except Exception as exc:  # pragma: no cover - best-effort reference capture
+            # Defensive: if the reference capture fails the training metrics
+            # + checkpoint are still durable; the operator can re-run the
+            # reference capture standalone via the CLI.
+            print(
+                f"[mps_gap_experiment] WARN: local MPS reference capture failed "
+                f"({type(exc).__name__}: {exc}); harvest will need a standalone "
+                f"reference run before split-device diff."
+            )
+
     metrics = TrainingMetrics(
         total_epochs=epochs,
         total_pairs=num_pairs,

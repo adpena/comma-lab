@@ -124,64 +124,39 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    output_json = args.output_dir / "gap_results.json"
 
+    # Per predecessor verdict mps_phase_b_gap_experiment_verdict_20260519T053530Z
+    # Option A reactivation: the canonical split-device contract requires this
+    # Modal-side dispatch to emit ONLY the target CUDA components (paired with
+    # the local MPS reference captured during training). The local harvest
+    # step diffs the two and emits the canonical gap_results.json.
+    #
     # Import inside main so test-time imports don't pull torch + scorer.
-    from tac.mps_gap_experiment.harvest_and_verdict import compute_gap_components
+    from tac.mps_gap_experiment.harvest_and_verdict import (
+        compute_target_cuda_components,
+    )
 
-    # On Modal A10G we need an MPS reference, but Modal workers do not have
-    # MPS. For the Modal dispatch the MPS reference comes from the
-    # uploaded `mps_reference_components.json` produced by the local training
-    # step; if the file is present, use it. Otherwise we fall back to CPU
-    # self-comparison (the gap is trivially 0; the operator will see the
-    # verdict as VIABLE but the manifest carries notes flagging the missing
-    # MPS reference).
-    mps_ref_path = args.checkpoint_input.parent / "mps_reference_components.json"
-    if mps_ref_path.exists():
-        # The Modal worker simply re-runs forward on its target device and
-        # the harvest step (local) does the actual comparison against the
-        # MPS reference. Here we just emit the target-device components.
-        from tac.mps_gap_experiment.harvest_and_verdict import _eval_on_device
-        _, target_components = _eval_on_device(
-            checkpoint_path=args.checkpoint_input,
-            frame_cache_path=args.frame_cache_input,
-            device=args.target_device,
-            include_scorer_components=args.include_scorer,
-            upstream_dir=args.upstream_dir,
-        )
-        manifest = {
-            "schema_version": "mps_gap_target_components_v1_20260518",
-            "evidence_grade": "diagnostic-CUDA Modal A10G",
-            "axis_tag": "[diagnostic-CUDA Modal A10G]",
-            "score_claim": False,
-            "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
-            "target_device": args.target_device,
-            "components": target_components,
-            "notes": (
-                "Modal A10G target-device forward components only. The MPS "
-                "reference + final gap comparison happen in the local harvest "
-                "step at tac.mps_gap_experiment.harvest_and_verdict."
-            ),
-        }
-        output_json.write_text(json.dumps(manifest, indent=2, sort_keys=True))
-        print(
-            f"[mps_gap_experiment] wrote target components to {output_json} "
-            f"[diagnostic-CUDA Modal A10G]"
-        )
-        return 0
-    # Local dry-run path: do the full self-comparison locally.
-    compute_gap_components(
+    modal_call_id = None
+    # If the Modal runtime exposes the call id via env (per Catalog #245),
+    # surface it into the manifest so the local harvest can cite the dispatch
+    # provenance directly without a separate ledger lookup.
+    import os
+
+    modal_call_id = os.environ.get("MODAL_FUNCTION_CALL_ID") or os.environ.get(
+        "DISPATCH_INSTANCE_JOB_ID"
+    )
+
+    components_path = compute_target_cuda_components(
         checkpoint_path=args.checkpoint_input,
         frame_cache_path=args.frame_cache_input,
-        output_path=output_json,
-        target_device=args.target_device,
-        mps_reference_device=args.target_device,
+        output_dir=args.output_dir,
+        device=args.target_device,
         include_scorer_components=args.include_scorer,
         upstream_dir=args.upstream_dir,
+        modal_call_id=modal_call_id,
     )
     print(
-        f"[mps_gap_experiment] wrote dry-run self-comparison to {output_json} "
+        f"[mps_gap_experiment] wrote target CUDA components to {components_path} "
         f"[diagnostic-CUDA Modal A10G]"
     )
     return 0

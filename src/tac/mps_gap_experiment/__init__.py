@@ -51,9 +51,13 @@ from .train_on_mps import (
     train_on_mps_real_frames,
 )
 from .harvest_and_verdict import (
+    ComponentGap,
     GapManifest,
     classify_verdict,
     compute_gap_components,
+    compute_local_mps_reference_components,
+    compute_target_cuda_components,
+    diff_components_and_classify_verdict,
 )
 
 __all__ = (
@@ -62,7 +66,11 @@ __all__ = (
     "count_params",
     "TrainingMetrics",
     "train_on_mps_real_frames",
+    "ComponentGap",
     "GapManifest",
     "classify_verdict",
     "compute_gap_components",
+    "compute_local_mps_reference_components",
+    "compute_target_cuda_components",
+    "diff_components_and_classify_verdict",
 )
