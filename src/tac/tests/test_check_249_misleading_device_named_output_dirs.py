@@ -25,6 +25,7 @@ from tac.preflight import (
     PreflightError,
     check_no_misleading_device_named_output_directories,
 )
+from tac.source_index import source_index_context
 from tac.substrates._shared.smoke_auth_eval_gate import (
     _redirect_output_json_to_match_device,
 )
@@ -139,6 +140,38 @@ def test_check_249_flags_hardcoded_cuda_json_literal_in_substrate(
     assert len(violations) == 1
     assert "_cuda" in violations[0]
     assert "contest_auth_eval_cuda.json" in violations[0]
+
+
+def test_check_249_source_index_prefilter_matches_plain_scan(
+    tmp_path: Path,
+) -> None:
+    """Indexed prefiltering narrows the candidate set without changing truth."""
+
+    src = tmp_path / "experiments"
+    src.mkdir()
+    violation = src / "train_substrate_demo.py"
+    violation.write_text(
+        "from pathlib import Path\n"
+        "result_json_path = Path('/tmp/contest_auth_eval_cuda.json')\n"
+    )
+    (src / "device_only_decoy.py").write_text("p = '/tmp/not_auth_cuda.json'\n")
+    (src / "context_only_decoy.py").write_text("p = '/tmp/contest_auth_eval.json'\n")
+
+    plain = check_no_misleading_device_named_output_directories(
+        repo_root=tmp_path
+    )
+    with source_index_context(tmp_path) as index:
+        indexed = check_no_misleading_device_named_output_directories(
+            repo_root=tmp_path
+        )
+        stats = index.stats()
+
+    assert indexed == plain
+    assert len(indexed) == 1
+    assert "train_substrate_demo.py" in indexed[0]
+    assert "device_only_decoy.py" not in "\n".join(indexed)
+    assert "context_only_decoy.py" not in "\n".join(indexed)
+    assert stats["substring_index_entries"] >= 2
 
 
 def test_check_249_accepts_same_line_waiver_with_rationale(

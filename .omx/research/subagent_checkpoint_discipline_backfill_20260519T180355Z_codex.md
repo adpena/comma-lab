@@ -55,3 +55,14 @@ rule, so this addendum records checkpoint backfill evidence consumed by
 
 - commit eac8a3a7f9b97242e6f62a5dd4881fc76ffa4c03 — # CHECKPOINT_DISCIPLINE_BACKFILLED:post-landing serializer audit confirmed transaction landed; subagent_progress trace/state preserved; no commit-body rewrite performed
 - commit 595475a1c0d5ca6c670b6cb48a1dab361f41e936 — # CHECKPOINT_DISCIPLINE_BACKFILLED:post-landing serializer audit confirmed transaction landed; subagent_progress trace/state preserved; no commit-body rewrite performed
+
+## Addendum — 2026-05-19T18:55Z
+
+One later post-cutoff serializer commit landed while Codex was continuing the
+preflight performance pass. The commit body records "#206 checkpoints
+(3 emitted)" but omits the literal checkpoint token that the strict regex
+requires. Rewriting it would violate no-destructive-git discipline, so this
+append-only addendum records the checkpoint evidence consumed by
+`check_subagent_dispatches_use_checkpoint_discipline`.
+
+- commit bfa4b59b047c9d29330898145e4b8fb44dad5f83 — # CHECKPOINT_DISCIPLINE_BACKFILLED:post-landing serializer audit confirmed transaction landed; commit body records "#206 checkpoints (3 emitted)"; subagent_progress trace/state preserved; no commit-body rewrite performed

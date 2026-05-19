@@ -14455,6 +14455,37 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
         return [f"{path}: SyntaxError (cannot parse)"]
 
     violations: list[str] = []
+    text_byte_lines = text.encode("utf-8").splitlines(keepends=True)
+
+    def _source_segment(node: ast.AST) -> str:
+        lineno = getattr(node, "lineno", None)
+        end_lineno = getattr(node, "end_lineno", None)
+        col = getattr(node, "col_offset", None)
+        end_col = getattr(node, "end_col_offset", None)
+        if (
+            isinstance(lineno, int)
+            and isinstance(end_lineno, int)
+            and isinstance(col, int)
+            and isinstance(end_col, int)
+            and 1 <= lineno <= end_lineno <= len(text_byte_lines)
+        ):
+            segment_lines = text_byte_lines[lineno - 1:end_lineno]
+            if segment_lines:
+                if lineno == end_lineno:
+                    raw = segment_lines[0][col:end_col]
+                else:
+                    segment_lines = list(segment_lines)
+                    segment_lines[0] = segment_lines[0][col:]
+                    segment_lines[-1] = segment_lines[-1][:end_col]
+                    raw = b"".join(segment_lines)
+                try:
+                    return raw.decode("utf-8")
+                except UnicodeDecodeError:
+                    pass
+        return ast.unparse(node) if hasattr(ast, "unparse") else ""
+
+    def _source_calls_name(source: str, name: str) -> bool:
+        return bool(re.search(rf"\b{re.escape(name)}\s*\(", source))
 
     # --- Pattern 1: any function whose name matches a known loader-shape
     # MUST content-detect the format (or delegate to a safe loader). Original
@@ -14539,14 +14570,15 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
             continue
         if not _is_loader_name(node.name):
             continue
-        body_src = ast.unparse(node) if hasattr(ast, "unparse") else ""
+        body_src = _source_segment(node)
         if not body_src:
             continue
         # Safe iff (a) the body mentions a known magic token, OR (b) the body
         # delegates to one of the canonical safe loaders.
         has_magic = any(tok in body_src for tok in SAFE_MAGIC_TOKENS)
         delegates = any(
-            f"{nm}(" in body_src for nm in _SAFE_LOADER_QUALNAMES
+            _source_calls_name(body_src, nm)
+            for nm in _SAFE_LOADER_QUALNAMES
             if nm != node.name  # don't credit self-recursion
         )
         # Also consider it safe if it explicitly content-checks via a magic
@@ -14570,7 +14602,7 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
         for sub in ast.walk(node):
             if not isinstance(sub, ast.Call):
                 continue
-            fn_str = ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
+            fn_str = _source_segment(sub.func)
             if fn_str not in ("torch.load", "torch.frombuffer"):
                 continue
             # Check weights_only=False (the DEN-V2 failure mode).
@@ -14632,7 +14664,7 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
-        fn_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
+        fn_str = _source_segment(node.func)
         if fn_str != "torch.load":
             continue
         if not node.args:
@@ -14663,7 +14695,7 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
             if first.value.endswith(".bin"):
                 looks_renderer = True
         elif isinstance(first, ast.Call):
-            sub_str = ast.unparse(first) if hasattr(ast, "unparse") else ""
+            sub_str = _source_segment(first)
             if "renderer" in sub_str.lower():
                 looks_renderer = True
         if not looks_renderer:
@@ -14673,10 +14705,10 @@ def _scan_python_for_unsafe_renderer_loader(path: Path, source_index=None) -> li
         # Pattern 1's safe-classification logic), let Pattern 1 own it.
         enc = _enclosing_fn(node)
         if enc is not None:
-            enc_src = ast.unparse(enc) if hasattr(ast, "unparse") else ""
+            enc_src = _source_segment(enc)
             if any(tok in enc_src for tok in SAFE_MAGIC_TOKENS):
                 continue
-            if any(f"{nm}(" in enc_src for nm in _SAFE_LOADER_QUALNAMES):
+            if any(_source_calls_name(enc_src, nm) for nm in _SAFE_LOADER_QUALNAMES):
                 continue
 
         # Test files are allowed to construct intentionally-wrong inputs.
@@ -14739,13 +14771,13 @@ def preflight_loader_format_safety(
             require_all=False,
         )
     else:
-        fallback_py_paths: list[Path] = []
-        for d in scan_dirs:
-            d_path = root / d
-            if not d_path.exists():
-                continue
-            fallback_py_paths.extend(d_path.rglob("*.py"))
-        py_paths = tuple(fallback_py_paths)
+        py_paths = _rg_python_files_matching_regex(
+            root,
+            scan_dirs,
+            r"torch\.load|torch\.frombuffer",
+        )
+        if py_paths is None:
+            py_paths = tuple(_iter_python_files(root, scan_dirs))
     for py_path in py_paths:
         # R14-1: skip OSS-export staging mirror via centralized helper.
         if _is_oss_export_mirror_path(py_path):
@@ -58403,6 +58435,10 @@ def _check_249_collect_violations_in_file(
         source = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return violations
+    if not any(ctx in source for ctx in _CHECK_249_AUTH_EVAL_CONTEXT_TOKENS):
+        return violations
+    if not any(f"_{token}" in source for token in _CHECK_249_DEVICE_TOKENS):
+        return violations
     try:
         tree = ast.parse(source)
     except SyntaxError:
@@ -58438,7 +58474,42 @@ def _check_249_collect_violations_in_file(
 def _check_249_iter_in_scope_files(repo_root: Path):
     """Iterate over .py files in scope for Catalog #249."""
 
-    for sub in ("src/tac", "tools", "experiments", "scripts"):
+    scan_dirs = ("src/tac", "tools", "experiments", "scripts")
+    source_index = _current_source_index(repo_root)
+    if source_index is not None:
+        context_paths = set(
+            source_index.files_containing_substrings(
+                scan_dirs,
+                pattern="*.py",
+                substrings=_CHECK_249_AUTH_EVAL_CONTEXT_TOKENS,
+                require_all=False,
+            )
+        )
+        device_paths = set(
+            source_index.files_containing_substrings(
+                scan_dirs,
+                pattern="*.py",
+                substrings=tuple(f"_{token}" for token in _CHECK_249_DEVICE_TOKENS),
+                require_all=False,
+            )
+        )
+        for path in sorted(context_paths.intersection(device_paths)):
+            if _check_249_path_in_scope(path, repo_root):
+                yield path
+        return
+
+    rg_paths = _rg_python_files_matching_regex(
+        repo_root,
+        scan_dirs,
+        r"contest_auth_eval|auth_eval_result|auth_eval_json|auth_eval_path",
+    )
+    if rg_paths is not None:
+        for path in rg_paths:
+            if _check_249_path_in_scope(path, repo_root):
+                yield path
+        return
+
+    for sub in scan_dirs:
         sub_root = repo_root / sub
         if not sub_root.exists():
             continue

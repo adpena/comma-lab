@@ -308,6 +308,33 @@ def test_preflight_catches_unsafe_consumer_call_site() -> None:
         assert "torch.load" in "\n".join(violations)
 
 
+def test_preflight_loader_source_segment_handles_non_ascii_before_call() -> None:
+    """AST source offsets are byte offsets; non-ASCII before a call must not
+    hide the unsafe `torch.load` callee from the scanner."""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "experiments").mkdir()
+        (root / "experiments" / "bad_non_ascii_consumer.py").write_text(
+            textwrap.dedent('''
+                """Unsafe consumer with non-ASCII before the call."""
+                import torch
+
+                def main(renderer_path):
+                    note = "é"; state = torch.load(renderer_path, weights_only=False)
+                    return note, state
+            ''').lstrip(),
+            encoding="utf-8",
+        )
+
+        violations = _scan(root)
+        assert violations, (
+            "Expected loader-format-safety violation with non-ASCII before "
+            "the torch.load call; source segment extraction regressed."
+        )
+        assert "torch.load" in "\n".join(violations)
+
+
 def test_preflight_loader_format_cache_invalidates_changed_file() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -316,9 +343,13 @@ def test_preflight_loader_format_cache_invalidates_changed_file() -> None:
         target = experiments / "cached_loader.py"
         target.write_text(textwrap.dedent('''
             import torch
+            from pathlib import Path
 
-            def helper():
-                return 1
+            def load_renderer(renderer_path):
+                magic = Path(renderer_path).read_bytes()[:4]
+                if magic == b"FP4A":
+                    return None
+                return torch.load(renderer_path, weights_only=True)
         ''').lstrip())
         assert _scan(root) == []
         assert (root / ".omx" / "cache" / "loader_format_safety_clean.json").exists()
@@ -432,6 +463,24 @@ def test_preflight_skips_test_files() -> None:
         violations = _scan(root)
         # No violation — file matches the test_/tests/ exemption.
         assert not violations
+
+
+def test_preflight_loader_fallback_skips_experiments_results() -> None:
+    """The fallback file walker must not scan generated experiment outputs."""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        generated = root / "experiments" / "results" / "old_run"
+        generated.mkdir(parents=True)
+        (generated / "bad_generated_loader.py").write_text(textwrap.dedent('''
+            import torch
+
+            def load_renderer(renderer_path):
+                return torch.load(renderer_path, weights_only=False)
+        ''').lstrip())
+
+        violations = _scan(root)
+        assert violations == []
 
 
 def test_preflight_real_repo_passes() -> None:
