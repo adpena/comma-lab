@@ -7,16 +7,17 @@
 # assignments (closer to one-hot, less robust to AV1 quant noise); larger
 # σ -> smoother class transitions (more robust but possibly fuzzier
 # decision regions). Bake-off:
-#   sigma ∈ {8, 12, 15, 18, 22, 25, 30}
+#   sigma in {0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0}
 #
 # Same Lane A renderer.bin + same poses + same grayscale.mkv encoding
 # (CRF=50). Only the inflate-time LUT sigma changes per run via the
 # LANE_MM_SIGMA env var (read by inflate_renderer_grayscale.py at decode
-# time). 7 runs × ~5 min each = ~35 min total wall clock.
+# time). 8 runs x ~5 min each = ~40 min total wall clock.
 #
-# Cost cap: $0.50 (no training; encode once + 7 fast auth evals on shared
-# archive). Predicted band [0.65, 0.85] [contest-CUDA] for the BEST sigma
-# (default 15 lands at ~0.76; the sweep should find a sub-0.70 alternative).
+# Cost cap: $0.60 (no training; encode once + 8 fast auth evals on shared
+# archive). Current design memo predicts only delta-S [-0.002, -0.0003].
+# Older absolute-score claims for this script are superseded; do not promote
+# any result without normal exact-eval axis custody.
 #
 # Anchor: experiments/results/lane_a_landed/archive_lane_a.zip (1.15 verified).
 # Tarball-only parity (Check 66/67/68/69) — NEVER git pull / git reset --hard.
@@ -51,16 +52,18 @@ prov = {
     'cuda_available': torch.cuda.is_available(),
     'lane_script': 'scripts/remote_lane_fr_mm_sigma_sweep.sh',
     'output_dir': '$LOG_DIR',
-    'sigma_sweep': [8, 12, 15, 18, 22, 25, 30],
-    'predicted_band': [0.65, 0.85],
+    'sigma_sweep': [0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0],
+    'predicted_band': None,
+    'predicted_delta_s_band': [-0.002, -0.0003],
+    'notes': 'Absolute-score prediction superseded by sigma_15_grayscale_lut_reframe_premise_correction_20260519T042500Z.',
     'anchor_archive': 'experiments/results/lane_a_landed/archive_lane_a.zip',
     'anchor_score_baseline': 1.15,
     'controlled_baseline': 'lane_a_landed (1.15 contest-CUDA)',
     'paradigm': 'lane_mm_sigma_sweep',
     'inflate_path': 'PYTHON_INFLATE=renderer_grayscale + LANE_MM_SIGMA env var',
-    'cost_estimate_usd': 0.30,
-    'cost_cap_usd': 0.50,
-    'wall_clock_estimate_hours': 0.6,
+    'cost_estimate_usd': 0.40,
+    'cost_cap_usd': 0.60,
+    'wall_clock_estimate_hours': 0.75,
     'wall_clock_cap_hours': 1.5,
 }
 with open('$PROVENANCE', 'w') as f:
@@ -100,7 +103,7 @@ set +e
     --anchor-archive "$ANCHOR_ARCHIVE" \
     --output "$ARCHIVE" \
     --crf 50 \
-    --sigma 15 2>&1 | tee "$LOG_DIR/build.log" | tail -10
+    --sigma 15.0 2>&1 | tee "$LOG_DIR/build.log" | tail -10
 PIPE_RC=("${PIPESTATUS[@]}")
 set -e
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
@@ -115,8 +118,8 @@ if [ -z "${ARCHIVE_BYTES:-}" ] || [ "$ARCHIVE_BYTES" -le 0 ]; then
 fi
 log "  archive bytes: $ARCHIVE_BYTES"
 
-# Sweep loop: 7 sigma values, each with its own config.env + auth eval.
-SIGMAS=(8 12 15 18 22 25 30)
+# Sweep loop: 8 sigma values, each with its own config.env + auth eval.
+SIGMAS=(0.5 1.0 2.0 5.0 10.0 15.0 20.0 30.0)
 SWEEP_RESULTS_JSON="$LOG_DIR/sigma_sweep_summary.json"
 "$PYBIN" -c "import json; open('$SWEEP_RESULTS_JSON', 'w').write(json.dumps({'sigmas': []}, indent=2))"
 
@@ -155,7 +158,7 @@ from pathlib import Path
 
 d = json.load(open('$SWEEP_RESULTS_JSON'))
 entry = {
-    'sigma': $SIGMA,
+    'sigma': float('$SIGMA'),
     'archive_bytes': os.path.getsize('$ARCHIVE'),
     'eval_rc': $EVAL_RC,
 }
@@ -182,7 +185,7 @@ d['best'] = scored[0] if scored else None
 json.dump(d, open('$SWEEP_RESULTS_JSON', 'w'), indent=2)
 print('=== sigma sweep summary ===')
 for s in sigmas:
-    print(f\"  sigma={s['sigma']:>3d}  score={s.get('score', 'FAIL')}\")
+    print(f\"  sigma={s['sigma']:>5g}  score={s.get('score', 'FAIL')}\")
 print('=== best sigma:', d.get('best'))
 "
 
