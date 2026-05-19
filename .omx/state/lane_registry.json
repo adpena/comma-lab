@@ -39035,15 +39035,15 @@
       "id": "lane_mps_conv2d_wrap_fix_plus_real_frame_gap_experiment_20260518",
       "name": "MPS Conv2d wrap fix + real-frame gap experiment",
       "phase": 5.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/mps_diagnostic/targeted_fix.py + src/tac/tests/test_mps_diagnostic_targeted_fix.py (25/25 tests pass)"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[empirical:.omx/state/mps_targeted_fix_validation.json] [macOS-MPS vs macOS-CPU] cliff layer L_inf 2.205e-3 unchanged by wrapper; final segmentation_head L_inf 7.606e-5 (<<1e-3)"
         },
         "contest_cuda": {
           "status": false,
@@ -39062,8 +39062,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_mps_conv2d_wrap_fix_plus_real_frame_gap_experiment_landed_20260518.md + .omx/research/mps_conv2d_wrap_fix_empirical_finding_20260518.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39162,5 +39162,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T04:15:50Z"
+  "updated_at": "2026-05-19T04:17:53Z"
 }
