@@ -12,8 +12,9 @@ against the live repo after 30 days; re-run
 ## 1. Top-level directory map
 
 ```
-pact/
-├── src/tac/                        # The canonical reusable codec library.
+pact/                               # Historical/internal checkout alias.
+├── src/tac/                        # The canonical Task-Aware Compression
+│                                   # library and compression engine.
 │   ├── preflight.py                # ~63K LOC. ~295 STRICT gates. The
 │   │                               # single source-of-truth for repo-wide
 │   │                               # bug-class extinction.

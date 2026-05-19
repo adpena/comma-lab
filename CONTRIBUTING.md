@@ -1,4 +1,4 @@
-# Contributing to pact / tac
+# Contributing to comma-lab / tac
 
 Thank you for considering a contribution. This document follows the
 [comma.ai openpilot](https://github.com/commaai/openpilot/blob/master/docs/CONTRIBUTING.md)
@@ -21,8 +21,8 @@ state) are not welcome.
 
 ```bash
 # Clone
-git clone https://github.com/adpena/pact.git
-cd pact
+git clone https://github.com/adpena/comma-lab.git
+cd comma-lab
 
 # Install (dev extras include linter, type checker, test runner)
 uv venv
@@ -67,7 +67,7 @@ uv pip install -e ".[dev,runtime]"
 
 ## Release process
 
-`pact` / `tac` follows semver (`MAJOR.MINOR.PATCH-PRERELEASE`):
+`comma-lab` / `tac` follows semver (`MAJOR.MINOR.PATCH-PRERELEASE`):
 
 - `0.x.y-rcN` — pre-1.0 release candidates. v0.2.0-rc1 is the current OSS
   posture-alignment milestone.

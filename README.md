@@ -14,6 +14,13 @@ lab and operations layer around `tac`, not a second compression engine.
 The package-level boundary docs are [src/tac/README.md](src/tac/README.md) and
 [src/comma_lab/README.md](src/comma_lab/README.md).
 
+| Name | Canonical role |
+|---|---|
+| `comma-lab` | Public repository and lab workspace for the challenge research system |
+| `tac` | Python package: Task-Aware Compression library and algorithmic engine |
+| `comma_lab` | Python package: lab operations, custody, state projection, and reporting |
+| `pact` | Internal workspace alias retained in historical docs and local paths |
+
 Score-bearing claims must be read through the repository evidence grades. The
 ranked public rows live in `docs/paper/04_results.md`; roadmap and planning
 rows are not score claims until exact CUDA auth eval lands on exact archive
@@ -87,6 +94,7 @@ PYTHONPATH=src:upstream python experiments/pipeline.py compress \
 # Evaluate an archive
 PYTHONPATH=src:upstream python experiments/pipeline.py eval \
     --archive results/run_01/archive.zip \
+    --checkpoint results/run_01/iter_01/renderer.bin \
     --video upstream/videos/0.mkv --device cuda
 ```
 
@@ -103,7 +111,10 @@ Three experiment profiles encode different training philosophies. All share the 
 ```bash
 # Train with a named profile
 PYTHONPATH=src:upstream python experiments/pipeline.py compress \
-    --profile wilde --device cuda --output-dir results/wilde
+    --profile wilde \
+    --video upstream/videos/0.mkv \
+    --checkpoint path/to/checkpoint.pt \
+    --device cuda --output-dir results/wilde
 ```
 
 Profiles are defined in `src/tac/profiles.py` with full provenance for every hyperparameter choice.

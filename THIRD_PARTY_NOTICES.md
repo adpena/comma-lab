@@ -1,9 +1,9 @@
 # Third-Party Notices
 
-This file lists external dependencies that `tac` (the Task-Aware Codec library
-distributed in this repository) interoperates with, links against, or vendors,
-along with their respective licenses. This document is maintained in the spirit
-of the comma.ai openpilot project's third-party notices conventions.
+This file lists external dependencies that `tac` (the Task-Aware Compression
+library distributed in this repository) interoperates with, links against, or
+vendors, along with their respective licenses. This document is maintained in
+the spirit of the comma.ai openpilot project's third-party notices conventions.
 
 The `tac` source code in this repository is licensed under the MIT License (see
 `LICENSE`). The licenses below apply to the corresponding upstream projects as
