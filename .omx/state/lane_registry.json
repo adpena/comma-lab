@@ -38666,11 +38666,11 @@
       "id": "lane_arbitrariness_extinction_top1_top4_batched_wave_20260518",
       "name": "Arbitrariness extinction TOP-1 + TOP-4 (lambda multipliers + EMA decay formula)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/score_lagrangian.py (canonical Lagrangian-multiplier helper; 28 tests) + tac.training.EMA.decay_from_total_steps additive extension (17 tests) + tools/empirical_validate_top1_top4_extinctions.py (PR106 ratio 2.71 + Quantizr decay 0.997 anchors recovered; experiments/results/empirical_validate_top1_top4_extinctions_20260518/validation_report.json)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -38693,8 +38693,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_arbitrariness_extinction_top1_top4_lambda_multipliers_plus_ema_formula_landed_20260518.md (full Catalog #229 PV block + #125 6-hook wire-in declaration)"
         },
         "deploy_runbook": {
           "status": false,
@@ -38711,5 +38711,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T02:30:48Z"
+  "updated_at": "2026-05-19T02:38:07Z"
 }

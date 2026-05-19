@@ -526,6 +526,126 @@ class EMA:
     def state_dict(self) -> dict[str, torch.Tensor]:
         return {k: v.clone() for k, v in self.shadow.items()}
 
+    @classmethod
+    def decay_from_total_steps(
+        cls,
+        total_steps: int,
+        *,
+        target_window_fraction: float = 0.2,
+    ) -> float:
+        """Compute canonical EMA decay matching window to total training steps.
+
+        Derivation (Polyak averaging theory): EMA effective time constant
+        ``tau_eff = 1 / (1 - decay)`` steps. To maintain a window that is
+        ``target_window_fraction`` of total training:
+
+            target_window = target_window_fraction * total_steps
+            decay = 1 - 1 / target_window
+
+        The default ``target_window_fraction=0.2`` (Polyak's canonical
+        "last 20 percent of iterates" averaging window) recovers the
+        Quantizr PR101 empirical anchor ``decay=0.997`` at
+        ``total_steps=1666``, which is the Quantizr PR101 effective
+        training-step count after EMA-window-vs-total-step matching.
+
+        Bug class extincted (per ARBITRARINESS-EXTINCTION audit
+        2026-05-18 commit ``2d042f7e6`` TOP-4, value_id
+        ``ema_decay_0.997_hardcoded_all_substrate_trainers``,
+        ``rank_score_per_dollar=5.0``, ``predicted_ev_delta_s=[-0.005,
+        -0.001]``, ``cost_envelope_usd=0.0``, ``resolution_path=PATH 3
+        formula``): ``decay=0.997`` was hardcoded across all substrate
+        trainers (matches Quantizr PR101 empirical anchor per CLAUDE.md
+        "EMA -- NON-NEGOTIABLE, HIGHEST EMPHASIS"). Problem:
+        ``0.997 -> tau_eff = 333 steps = 0.028 percent`` of a typical
+        1.2M-step training. The EMA window is FAR too narrow for long
+        runs (drifts too fast off the converged manifold) and FAR too
+        wide for short runs (lags too much behind the optimization
+        trajectory). This closed-form helper matches the EMA window to
+        the actual total training length without per-trainer
+        hand-tuning.
+
+        Parameters
+        ----------
+        total_steps
+            Total number of optimizer steps over the training run. Must
+            be strictly positive.
+        target_window_fraction
+            Fraction of total training over which the EMA averages.
+            Polyak's canonical "last 20 percent" gives 0.2; this is the
+            default. Must lie in (0, 1].
+
+        Returns
+        -------
+        float
+            EMA decay coefficient, clamped to the canonical
+            ``[0.99, 0.9999]`` range. Values outside this range are
+            silently clamped: small ``total_steps`` would yield
+            decay < 0.99 (which is unstable per Quantizr's empirical
+            anchor); huge ``total_steps`` would yield decay > 0.9999
+            (which is indistinguishable from the EMA-disabled limit).
+
+        Raises
+        ------
+        ValueError
+            If ``total_steps <= 0`` or ``target_window_fraction`` is
+            outside ``(0, 1]``.
+
+        Notes
+        -----
+        Citations:
+
+        * Polyak, B. T. & Juditsky, A. B. (1992). "Acceleration of
+          stochastic approximation by averaging." *SIAM Journal on
+          Control and Optimization*, 30(4), 838-855. (Canonical Polyak
+          averaging.)
+        * Tarvainen, A. & Valpola, H. (2017). "Mean teachers are better
+          role models: Weight-averaged consistency targets improve
+          semi-supervised deep learning results." arXiv:1703.01780
+          (Modern EMA derivation; the canonical reference for
+          ``decay = 1 - 1/N`` window matching.)
+        * CLAUDE.md "EMA -- NON-NEGOTIABLE, HIGHEST EMPHASIS" (Quantizr
+          PR101 empirical anchor: ``decay=0.997`` at the effective
+          training-step count).
+        * ARBITRARINESS-EXTINCTION audit 2026-05-18 commit
+          ``2d042f7e6`` TOP-4.
+
+        Catalog #125 hook 5 (continual-learning posterior update):
+        ACTIVE -- per-substrate optimal decay can be tracked in
+        continual-learning posterior; this canonical helper provides
+        the closed-form prior derived from total_steps.
+
+        Examples
+        --------
+        >>> from tac.training import EMA
+        >>> # Quantizr PR101 effective config recovery:
+        >>> decay = EMA.decay_from_total_steps(1666)
+        >>> round(decay, 4)
+        0.997
+        >>> # Long 12000-step Modal A100 training:
+        >>> decay = EMA.decay_from_total_steps(12000)
+        >>> round(decay, 5)
+        0.99958
+        """
+        if total_steps <= 0:
+            raise ValueError(
+                f"total_steps must be positive (got {total_steps!r})"
+            )
+        if not (0.0 < target_window_fraction <= 1.0):
+            raise ValueError(
+                f"target_window_fraction must lie in (0, 1] "
+                f"(got {target_window_fraction!r})"
+            )
+        target_window = max(1.0, float(target_window_fraction) * float(total_steps))
+        decay = 1.0 - 1.0 / target_window
+        # Clamp to canonical [0.99, 0.9999] range per CLAUDE.md "EMA --
+        # NON-NEGOTIABLE" Quantizr empirical bounds. Below 0.99 is
+        # unstable; above 0.9999 is indistinguishable from EMA-disabled.
+        if decay < 0.99:
+            decay = 0.99
+        elif decay > 0.9999:
+            decay = 0.9999
+        return decay
+
 
 class SWA:
     """Stochastic Weight Averaging — averages EMA shadow snapshots over time.
