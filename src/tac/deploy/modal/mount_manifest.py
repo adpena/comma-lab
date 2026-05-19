@@ -605,12 +605,27 @@ def _import_trainer_module(trainer_module_path: str | Path) -> Any:
                 f"could not build importlib spec for trainer module {file_path}"
             )
         module = importlib.util.module_from_spec(spec)
+        # Register module in sys.modules BEFORE exec so @dataclass's _is_type
+        # lookup (which calls sys.modules.get(cls.__module__).__dict__) works
+        # for trainers that define module-level dataclasses. Without this,
+        # @dataclass on any module-level class raises AttributeError because
+        # sys.modules.get(...) returns None. Cleanup after exec so we don't
+        # pollute sys.modules with the synthetic introspect name.
+        synthetic_name = spec.name
+        import sys as _sys  # noqa: PLC0415 - local-scope to keep helper hermetic
+        _sys.modules[synthetic_name] = module
         try:
             spec.loader.exec_module(module)
         except Exception as exc:  # pragma: no cover - surfaced at build time only
+            _sys.modules.pop(synthetic_name, None)
             raise MountManifestError(
                 f"trainer module {file_path} raised at import time: {type(exc).__name__}: {exc}"
             ) from exc
+        finally:
+            # Defensive cleanup: only remove if we still own the slot (no nested
+            # spec.loader.exec_module may have replaced it via a sister import).
+            if _sys.modules.get(synthetic_name) is module:
+                _sys.modules.pop(synthetic_name, None)
         return module
     try:
         return importlib.import_module(path_str)

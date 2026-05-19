@@ -1,6 +1,6 @@
 schema_version: 1
 name: substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch
-lane_id: lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518
+lane_id: lane_cable_b1_e7_e8_combined_dispatch_20260519
 summary: |
   E.8 SGLD convergence-diagnostic smoke (Modal T4). Sweeps Langevin
   posterior-sampling t_final-CAP (temperature schedule upper bound) across
