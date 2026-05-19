@@ -12,6 +12,9 @@ from pathlib import Path
 
 CANONICAL_FILES = (
     "README.md",
+    "HANDOFF.md",
+    "PROGRAM.md",
+    "SYSTEM_MAP.md",
     "docs/contest_compliance_authority.md",
     "docs/terminology_and_boundaries.md",
     "src/tac/README.md",
@@ -105,6 +108,52 @@ def check_repo(root: Path) -> list[Finding]:
             text=root_readme,
             needle=needle,
             rationale="public docs pointer",
+        )
+
+    handoff = texts["HANDOFF.md"]
+    for needle, rationale in (
+        ("`tac` means Task-Aware Compression", "operator handoff TAC expansion"),
+        ("`comma_lab` is the lab\noperations", "operator handoff comma_lab boundary"),
+        ("docs/terminology_and_boundaries.md", "operator handoff terminology pointer"),
+        (
+            "100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * archive_bytes /\n37,545,489",
+            "official score formula",
+        ),
+    ):
+        _require_contains(
+            findings,
+            relpath="HANDOFF.md",
+            text=handoff,
+            needle=needle,
+            rationale=rationale,
+        )
+
+    program = texts["PROGRAM.md"]
+    for needle, rationale in (
+        ("`tac` means Task-Aware Compression", "program TAC expansion"),
+        ("A codec is a concrete encoder/decoder or wire format", "program codec/compression distinction"),
+        ("`comma_lab` owns lab operations", "program comma_lab boundary"),
+        ("docs/terminology_and_boundaries.md", "program terminology pointer"),
+    ):
+        _require_contains(
+            findings,
+            relpath="PROGRAM.md",
+            text=program,
+            needle=needle,
+            rationale=rationale,
+        )
+
+    system_map = texts["SYSTEM_MAP.md"]
+    for needle, rationale in (
+        ("# The canonical Task-Aware Compression", "system-map TAC expansion"),
+        ("# library and compression engine", "system-map compression engine boundary"),
+    ):
+        _require_contains(
+            findings,
+            relpath="SYSTEM_MAP.md",
+            text=system_map,
+            needle=needle,
+            rationale=rationale,
         )
 
     tac_readme = texts["src/tac/README.md"]

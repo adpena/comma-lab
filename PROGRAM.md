@@ -12,6 +12,12 @@ The "Architecture" / "Experiment profiles" sections below describe the
 A1 at `0.1928 [contest-CPU]`, NOT the renderer-only path described
 below. See `HANDOFF.md` §2 for current frontier state.
 
+Nomenclature: `tac` means Task-Aware Compression, the reusable library and
+algorithmic engine. A codec is a concrete encoder/decoder or wire format inside
+that broader compression stack. `comma_lab` owns lab operations, state
+projection, custody, and reporting. See `README.md` and
+`docs/terminology_and_boundaries.md` for the canonical public wording.
+
 ---
 
 Mission: minimize the official challenge score on a pinned upstream snapshot using a task-aware neural renderer, trained end-to-end against the frozen scorers.

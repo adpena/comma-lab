@@ -8,6 +8,12 @@ material progress on this project within 30 days. This file is the
 **Last refreshed:** 2026-05-16 (premortem consolidation wave). Re-run
 `tools/regenerate_handoff_brief.py` if more than 30 days stale.
 
+**Naming:** `tac` means Task-Aware Compression: the reusable Python
+compression library and algorithmic engine. A codec is a concrete
+encoder/decoder or wire format inside that stack. `comma_lab` is the lab
+operations, custody, reporting, and state-projection layer. The repository-wide
+authority is `docs/terminology_and_boundaries.md`.
+
 ---
 
 ## 1. Project mission and contest context (1 paragraph)
@@ -20,8 +26,8 @@ task-aware neural renderer + segmentation + pose chain end-to-end against
 the frozen `SegNet` + `PoseNet` scorers, then compressing the trained
 artifacts into a `submissions/<name>/archive.zip` + `inflate.sh` runtime
 tree that the contest grader can replay. The contest scoring formula is
-`25 * archive_bytes / 37,545,489 + seg_distortion + sqrt(10 *
-pose_distortion)`. The official leaderboard ranks by `contest-CPU`
+`100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * archive_bytes /
+37,545,489`. The official leaderboard ranks by `contest-CPU`
 (GitHub Actions Linux x86_64). The CUDA axis is informational. Today's
 public frontier is **PR101 gold at 0.193 [contest-CPU]**.
 
