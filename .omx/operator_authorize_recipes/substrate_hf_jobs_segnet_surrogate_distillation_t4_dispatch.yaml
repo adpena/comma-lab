@@ -102,16 +102,23 @@ required_input_files:
 council_symposium_memo: .omx/research/council_t1_hf_jobs_segnet_surrogate_distillation_symposium_20260519.md
 council_symposium_verdict: PROCEED_WITH_REVISIONS
 
-# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
-# the trainer's main() is complete (no NotImplementedError) but the first
-# dispatch is research_only until operator review of post-smoke metrics +
-# Tier-C density per Catalog #324.
-research_only: true
-dispatch_enabled: false
-dispatch_blockers:
-  - operator_review_of_council_symposium_required_before_first_paid_dispatch
-  - phase_2_per_pixel_miou_sister_lane_pending_for_full_distillation_faithfulness
-  - hub_dataset_must_exist_before_dispatch_fires_run_build_comma_video_segnet_image_level_600pairs_hf_dataset_py_upload_first
+# Per operator approval 2026-05-19 verbatim "all operator routable items approved"
+# (HF-DATASET-UPLOAD-AND-RECIPE-ENABLE subagent ratification 20260519T070000Z):
+# T1 symposium PROCEED_WITH_REVISIONS verdict integrated; recipe enabled for paid
+# dispatch under Catalog #324 post-training Tier-C validation discipline.
+# All 3 prior dispatch_blockers are now CLEARED:
+#  - operator review of council symposium: ratified per
+#    .omx/research/operator_authorizations/hf_jobs_segnet_surrogate_distillation_operator_approval_20260519T070000Z.md
+#  - per-pixel mIoU sister lane: deferred to slot 12 (operator-routable item 3 of 5)
+#  - hub dataset existence: confirmed live at
+#    https://huggingface.co/datasets/adpena/comma-video-segnet-image-level-600pairs
+#    (commit_sha 52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a, 600 pairs, 310MB train.parquet)
+research_only: false
+dispatch_enabled: true
+
+# Operator-approval capture per Catalog #300 Mission alignment Consequence 1
+operator_approval_rationale: "All operator routable items approved (2026-05-19 verbatim) covering Catalog #325 6-step contract; T1 symposium PROCEED_WITH_REVISIONS verdict integrated; 12 revisions integrated per Operator-approval ratification section of the symposium memo."
+operator_approval_memo: .omx/research/operator_authorizations/hf_jobs_segnet_surrogate_distillation_operator_approval_20260519T070000Z.md
 
 # 6-hook wire-in per Catalog #125 (verbatim from symposium memo Section 7)
 solver_wire_in_hooks:

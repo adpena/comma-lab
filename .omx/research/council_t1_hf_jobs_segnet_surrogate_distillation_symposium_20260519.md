@@ -284,3 +284,87 @@ trainer's archive sha after 100ep+ training."
 - Canonical ledger: `src/tac/deploy/hf_jobs/job_id_ledger.py`
 - Recipe: `.omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch.yaml`
 - huggingface-skills plugin: `huggingface-skills:hugging-face-vision-trainer` v1.0.1
+
+---
+
+## Operator-approval ratification
+
+**UTC:** 2026-05-19T07:00:00Z
+**Operator quote (verbatim):** *"all operator routable items approved"*
+**Operator-approval capture memo:** `.omx/research/operator_authorizations/hf_jobs_segnet_surrogate_distillation_operator_approval_20260519T070000Z.md`
+**Source operator-routable inventory:** slot 7 landing memo `~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_hf_dataset_plus_hf_jobs_implementation_surface_landed_20260519.md`
+
+### Recipe state transition
+
+| Field | Pre-ratification | Post-ratification |
+|-------|------------------|-------------------|
+| `research_only` | `true` | `false` |
+| `dispatch_enabled` | `false` | `true` |
+| `predicted_band_validation_status` | (already present) | `pending_post_training` per Catalog #324 |
+| `predicted_band_reactivation_criteria` | (already present) | Tier-C density re-measurement |
+| `operator_approval_rationale` | (absent) | verbatim operator quote |
+| `operator_approval_memo` | (absent) | reference to canonical capture memo |
+| 3 prior `dispatch_blockers` | active | CLEARED |
+
+Recipe file: `.omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch.yaml`
+
+### Revisions integration manifest (12 revisions from action-item queue)
+
+| Revision | Author | Type | Integration disposition |
+|----------|--------|------|-------------------------|
+| R1 (per-pixel mIoU sister metric) | Yousfi | DEFERRED-TO-SISTER-LANE | slot 12 `lane_hf_jobs_per_pixel_miou_sister_lane_20260519` |
+| R2 (pixel-level reweighting) | Yousfi | DEFERRED-PHASE-2 | post-first-dispatch decision |
+| R3 (`--scale-1ep-cost` stamping) | Yousfi | RECIPE-COMMENT-DOCUMENTED | env_overrides override |
+| R4 (Tier-C density validator integration) | Yousfi | DEFERRED-POST-TRAINING | first 30ep run trigger via `tools/mdl_scorer_conditional_ablation.py --tier c` |
+| R5 (post-training BPP validation) | Selfcomp | DEFERRED-POST-TRAINING | triggered by Tier-C re-measurement |
+| R6 (cheap-canary $0.25 5-epoch reality check) | Contrarian | OPERATOR-OVERRIDE-PATTERN | flip `--num-epochs 200` to 5 + `--max-samples 20` at first dispatch |
+| R7 (timm fallback `mobilenetv3_large_100.miil_in21k_ft_in1k_lamb`) | Contrarian | OPERATOR-OVERRIDE-PATTERN | override `--model-name` if `mobilenetv3_small_100` fails first dispatch |
+| R8 (`--max-samples 20` smoke pattern) | Contrarian | OPERATOR-OVERRIDE-PATTERN | dispatcher CLI flag threading |
+| R9 (image-level DPI design discussion) | Tao | ALREADY-DOCUMENTED | §1 #6 cargo-cult-audit table |
+| R10 (CARGO-CULTED status of image-level reduction) | Assumption-Adversary | DEFERRED-TO-SISTER-LANE | slot 12 + reactivation criterion #1 |
+| R11 (5-epoch reality check) | Assumption-Adversary | OPERATOR-OVERRIDE-PATTERN | first-dispatch operator decision |
+| R12 (re-test image-level granularity post-first-dispatch) | Assumption-Adversary | REACTIVATION-CRITERION | criterion #1 in `predicted_band_reactivation_criteria` |
+
+**Recipe `dispatch_enabled: true` flip is structurally compatible** because: (a) 7 RECIPE-COMMENT-DOCUMENTED / OPERATOR-OVERRIDE-PATTERN revisions (R3, R6, R7, R8, R9, R11, R12) are first-dispatch-decision triggers requiring NO code changes; (b) 2 DEFERRED-PHASE-2 / DEFERRED-POST-TRAINING revisions (R2, R4, R5) are reactivation-criteria triggers; (c) 2 DEFERRED-TO-SISTER-LANE revisions (R1, R10) are parallel-dispatched on slot 12.
+
+### Catalog #325 6-step contract compliance
+
+| Step | Status | Memo section |
+|------|--------|--------------|
+| 1. Cargo-cult audit per #303 | ✓ COMPLETE | §1 (10 assumptions classified) |
+| 2. 9-dim checklist evidence per #294 | ✓ COMPLETE | §2 |
+| 3. Observability surface per #305 | ✓ COMPLETE | §3 (all 6 facets) |
+| 4. Sextet pact deliberation | ✓ COMPLETE | §4 (Shannon LEAD / Dykstra CO-LEAD / Yousfi / Fridrich / Contrarian / Assumption-Adversary all participated) |
+| 5. Per-substrate reactivation criteria | ✓ COMPLETE | §5 (4 reactivation paths) |
+| 6. Catalog #324 post-training Tier-C validation discipline | ✓ COMPLETE | recipe declares `predicted_band_validation_status: pending_post_training` + Section 6 |
+
+### Council Deliberation v2 frontmatter (per Catalog #300)
+
+The operator-approval ratification deliberation captured at `.omx/research/operator_authorizations/hf_jobs_segnet_surrogate_distillation_operator_approval_20260519T070000Z.md` carries Catalog #300 v2 frontmatter (`council_tier: T1`, `council_verdict: PROCEED`, `council_predicted_mission_contribution: frontier_breaking`, `council_override_invoked: true`, `council_override_rationale: "all operator routable items approved"`). A canonical posterior anchor is written via `tac.council_continual_learning.append_council_anchor` so cite-chain queries reach it via `query_anchors_by_topic` / `query_dissent_history` / `query_assumption_classification_history`.
+
+### Sister-coordination disjoint-scope manifest per Catalog #230
+
+This subagent's edit scope (Items 1+2 only):
+- Recipe state flip (`.omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_t4_dispatch.yaml`)
+- This `## Operator-approval ratification` section append (`.omx/research/council_t1_hf_jobs_segnet_surrogate_distillation_symposium_20260519.md`)
+- NEW operator-approval capture memo (`.omx/research/operator_authorizations/hf_jobs_segnet_surrogate_distillation_operator_approval_20260519T070000Z.md`)
+- Lane registry gate marks (`.omx/state/lane_registry.json`)
+- Canonical posterior anchor (`.omx/state/council_deliberation_posterior.jsonl`)
+- Landing memo + MEMORY.md prepend (Claude memory location)
+
+NO touches to:
+- `tools/operator_authorize.py` (slot 13 owns)
+- `src/tac/preflight.py` (slot 13 owns)
+- `CLAUDE.md` (slot 13 owns)
+- Per-pixel mIoU sister lane recipe / trainer files (slot 12 owns)
+
+### 6-hook wire-in declaration per Catalog #125
+
+- Hook #1 sensitivity-map: N/A (recipe-state flip; no signal contribution)
+- Hook #2 Pareto constraint: N/A
+- Hook #3 bit-allocator: N/A
+- **Hook #4 cathedral autopilot dispatch: ACTIVE** (HF Jobs now becomes a routing target candidate via Catalog #335 auto-discovery; deeper `tac.cathedral_consumers/*` entry deferred to Phase 2 composition)
+- **Hook #5 continual-learning posterior update: ACTIVE** (canonical anchor written via `tac.council_continual_learning.append_council_anchor`; cite-chain queryable across sessions per Catalog #300)
+- Hook #6 probe-disambiguator: N/A (cheap-canary `--max-samples 20` / 5-epoch reality-check pattern documented as operator-override-at-first-dispatch)
+
+**End of Operator-approval ratification section.**
