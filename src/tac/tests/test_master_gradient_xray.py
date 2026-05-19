@@ -187,15 +187,24 @@ def test_cli_rejects_tmp_output(xray_module):
 
 
 def test_canonical_plots_constant_pinned(xray_module):
-    """Per Catalog #229 — pin the canonical 5-plot taxonomy."""
+    """Per Catalog #229 — pin the canonical 5-plot taxonomy + optional drift plot."""
     assert "per_pair_distribution" in xray_module.CANONICAL_PLOTS
     assert "per_byte_heatmap" in xray_module.CANONICAL_PLOTS
     assert "cumulative_by_rank" in xray_module.CANONICAL_PLOTS
     assert "cross_substrate_correlation" in xray_module.CANONICAL_PLOTS
     assert "wyner_ziv_flow" in xray_module.CANONICAL_PLOTS
+    assert "drift_vs_sensitivity_scatter" in xray_module.CANONICAL_PLOTS
     assert "all" in xray_module.CANONICAL_PLOTS
-    # Exactly 5 distinct plot types + "all" sentinel
-    assert len(xray_module.CANONICAL_PLOTS) == 6
+    # 5 canonical + 1 optional drift + "all" sentinel
+    assert len(xray_module.CANONICAL_PLOTS) == 7
+    # CANONICAL_OUTPUT_DIR_PLOTS is the canonical 5 (no drift, no all)
+    assert xray_module.CANONICAL_OUTPUT_DIR_PLOTS == (
+        "per_pair_distribution",
+        "per_byte_heatmap",
+        "cumulative_by_rank",
+        "cross_substrate_correlation",
+        "wyner_ziv_flow",
+    )
 
 
 def test_axis_labels_pinned(xray_module):
@@ -204,8 +213,294 @@ def test_axis_labels_pinned(xray_module):
 
 
 def test_cli_missing_output_raises(xray_module):
-    with pytest.raises(SystemExit, match="--output is required"):
+    with pytest.raises(
+        SystemExit, match=r"--output \(single plot file\) OR --output-dir"
+    ):
         xray_module.main(["--archive-sha", "abc"])
+
+
+def test_cli_output_and_output_dir_mutually_exclusive(xray_module, tmp_path):
+    with pytest.raises(SystemExit, match="mutually exclusive"):
+        xray_module.main(
+            [
+                "--archive-sha",
+                "abc",
+                "--output",
+                str(tmp_path / "plot.png"),
+                "--output-dir",
+                str(tmp_path / "dir"),
+            ]
+        )
+
+
+def test_cli_rejects_tmp_output_dir(xray_module):
+    with pytest.raises(SystemExit, match="FORBIDDEN"):
+        xray_module.main(
+            ["--archive-sha", "abc", "--output-dir", "/tmp/should_fail/"]
+        )
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# New: Plot 6 — drift_vs_sensitivity_scatter                                   #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+@pytest.fixture
+def mps_drift_data():
+    """Synthetic MPS drift JSON payload mirroring the canonical schema."""
+    return {
+        "schema_version": "mps_drift_granular_v1_test",
+        "axis_tag": "[macOS-MPS-PyTorch-vs-CUDA-diagnostic]",
+        "evidence_grade": "MPS-research-signal",
+        "n_pairs": 8,
+        "per_pair": [
+            {"pair_index": i, "aggregate": 0.1 + i * 0.01} for i in range(8)
+        ],
+        "per_frame": [
+            {"pair_index": i, "frame_index": 0, "aggregate": 0.3 + i * 0.005}
+            for i in range(8)
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
+def test_plot_drift_vs_sensitivity_scatter_with_per_pair(
+    xray_module, synthetic_per_pair, synthetic_aggregate, anchor_basic,
+    mps_drift_data, tmp_path,
+):
+    out = tmp_path / "drift_scatter.png"
+    xray_module.plot_drift_vs_sensitivity_scatter(
+        synthetic_per_pair, synthetic_aggregate, anchor_basic, mps_drift_data, out
+    )
+    assert out.exists()
+    assert out.stat().st_size > 1000
+
+
+def test_plot_drift_vs_sensitivity_scatter_per_frame_fallback(
+    xray_module, synthetic_aggregate, anchor_basic, mps_drift_data, tmp_path,
+):
+    """When per-pair gradient is None, plot falls back to per-frame drift."""
+    out = tmp_path / "drift_scatter_per_frame.png"
+    xray_module.plot_drift_vs_sensitivity_scatter(
+        None, synthetic_aggregate, anchor_basic, mps_drift_data, out
+    )
+    assert out.exists()
+
+
+def test_plot_drift_vs_sensitivity_scatter_empty_drift_renders_placeholder(
+    xray_module, synthetic_aggregate, anchor_basic, tmp_path,
+):
+    """Empty drift JSON should render a placeholder PNG, not crash."""
+    out = tmp_path / "drift_empty.png"
+    xray_module.plot_drift_vs_sensitivity_scatter(
+        None,
+        synthetic_aggregate,
+        anchor_basic,
+        {"per_pair": [], "per_frame": []},
+        out,
+    )
+    assert out.exists()
+
+
+def test_load_mps_drift_json_missing_file_raises(xray_module, tmp_path):
+    with pytest.raises(SystemExit, match="does not exist"):
+        xray_module._load_mps_drift_json(tmp_path / "missing.json")
+
+
+def test_load_mps_drift_json_malformed_raises(xray_module, tmp_path):
+    bad = tmp_path / "bad.json"
+    bad.write_text("not json {")
+    with pytest.raises(SystemExit, match="failed to parse"):
+        xray_module._load_mps_drift_json(bad)
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# New: sister JSON sidecar emission + canonical Provenance per Catalog #323    #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_summary_stats_for_aggregate_pinned_schema(xray_module, synthetic_aggregate):
+    summary = xray_module._summary_stats_for_aggregate(synthetic_aggregate)
+    required_keys = {
+        "n_bytes",
+        "n_axes",
+        "per_axis_l1_total",
+        "per_axis_max",
+        "per_byte_l1_max",
+        "per_byte_l1_median",
+        "per_byte_l1_total",
+        "top_1pct_leverage_fraction",
+        "top_10pct_leverage_fraction",
+        "top_10_byte_indices",
+    }
+    assert required_keys.issubset(summary.keys())
+    assert summary["n_bytes"] == 128
+    assert summary["n_axes"] == 3
+    assert len(summary["top_10_byte_indices"]) == 10
+
+
+def test_summary_stats_for_per_pair_pinned_schema(xray_module, synthetic_per_pair):
+    summary = xray_module._summary_stats_for_per_pair(synthetic_per_pair)
+    required_keys = {
+        "n_bytes",
+        "n_pairs",
+        "n_axes",
+        "per_pair_l1_mean",
+        "per_pair_l1_median",
+        "per_pair_l1_max",
+        "per_pair_per_axis_max",
+        "top_10_pair_indices_by_l1",
+    }
+    assert required_keys.issubset(summary.keys())
+    assert summary["n_pairs"] == 12
+    assert len(summary["top_10_pair_indices_by_l1"]) == 10
+
+
+def test_emit_sidecar_json_carries_canonical_provenance(
+    xray_module, anchor_basic, synthetic_aggregate, tmp_path,
+):
+    """Per Catalog #323: sister JSON MUST carry canonical Provenance sub-object."""
+    sidecar = tmp_path / "test_plot.json"
+    summary = xray_module._summary_stats_for_aggregate(synthetic_aggregate)
+    xray_module._emit_sidecar_json(
+        sidecar,
+        plot_id="test_plot",
+        anchor=anchor_basic,
+        summary=summary,
+        extra={"unit_test": True},
+    )
+    assert sidecar.exists()
+    import json
+
+    payload = json.loads(sidecar.read_text())
+    # Canonical Provenance sub-object per Catalog #323
+    assert "provenance" in payload
+    prov = payload["provenance"]
+    assert prov["artifact_kind"] == "predicted_from_model"
+    assert prov["evidence_grade"] == "predicted"
+    assert prov["promotion_eligible"] is False
+    assert prov["score_claim_valid"] is False
+    assert prov["measurement_axis"] == "[predicted]"
+    assert (
+        prov["canonical_helper_invocation"]
+        == "tac.provenance.builders.build_provenance_for_predicted"
+    )
+    # Catalog #287 + #323: top-level fail-closed defaults
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    # Schema pinned
+    assert payload["schema_version"] == xray_module.PLOT_SIDECAR_SCHEMA_VERSION
+    assert payload["plot_id"] == "test_plot"
+    assert payload["extra"] == {"unit_test": True}
+    # Anchor fields preserved for downstream consumers
+    anchor_dump = payload["anchor"]
+    assert anchor_dump["archive_sha256"] == anchor_basic["archive_sha256"]
+    assert anchor_dump["measurement_axis"] == anchor_basic["measurement_axis"]
+
+
+def test_sha256_anchor_fingerprint_is_deterministic(xray_module, anchor_basic):
+    fp1 = xray_module._sha256_anchor_fingerprint(anchor_basic)
+    fp2 = xray_module._sha256_anchor_fingerprint(anchor_basic)
+    assert fp1 == fp2
+    assert len(fp1) == 64  # sha256 hex
+
+
+def test_sha256_anchor_fingerprint_differs_when_inputs_differ(
+    xray_module, anchor_basic, anchor_with_sections,
+):
+    fp_basic = xray_module._sha256_anchor_fingerprint(anchor_basic)
+    fp_sections = xray_module._sha256_anchor_fingerprint(anchor_with_sections)
+    assert fp_basic != fp_sections
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# New: index.html schema + structure                                            #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_emit_index_html_landing_page_structure(
+    xray_module, anchor_basic, anchor_with_sections, tmp_path,
+):
+    """Index HTML carries the canonical observability banner + plot grid."""
+    out_dir = tmp_path / "xray_run"
+    out_dir.mkdir()
+    archive_shas = [anchor_basic["archive_sha256"], anchor_with_sections["archive_sha256"]]
+    anchors = [anchor_basic, anchor_with_sections]
+    plots = [
+        {
+            "plot_id": "per_byte_heatmap",
+            "png_relative": "per_byte_heatmap.png",
+            "sidecar_relative": "per_byte_heatmap.json",
+        },
+        {
+            "plot_id": "cumulative_by_rank",
+            "png_relative": "cumulative_by_rank.png",
+            "sidecar_relative": "cumulative_by_rank.json",
+        },
+    ]
+    xray_module._emit_index_html(
+        out_dir, archive_shas, anchors, plots, mps_drift_json_path=None
+    )
+    index = out_dir / "index.html"
+    assert index.exists()
+    html = index.read_text(encoding="utf-8")
+    # Banner per Catalog #305 + #323
+    assert "Observability surface" in html
+    assert "score_claim=false" in html.lower() or "score_claim=False" in html
+    assert "evidence_grade=[predicted]" in html
+    # Plot cards present
+    assert "per_byte_heatmap.png" in html
+    assert "per_byte_heatmap.json" in html
+    # Archive table present
+    assert "<table>" in html
+    assert "n_bytes" in html
+    # Schema version pinned
+    assert xray_module.INDEX_HTML_SCHEMA_VERSION in html
+    # Cross-references include canonical helpers
+    assert "tac.master_gradient_consumers" in html
+    assert "Catalog #305" in html
+    assert "Catalog #323" in html
+
+
+def test_emit_index_html_with_mps_drift_path(
+    xray_module, anchor_basic, tmp_path,
+):
+    """When mps_drift_json_path is set, cross-ref list mentions it."""
+    out_dir = tmp_path / "xray_drift_run"
+    out_dir.mkdir()
+    drift_file = tmp_path / "synthetic_drift.json"
+    drift_file.write_text("{}")
+    xray_module._emit_index_html(
+        out_dir,
+        [anchor_basic["archive_sha256"]],
+        [anchor_basic],
+        [],
+        mps_drift_json_path=drift_file,
+    )
+    html = (out_dir / "index.html").read_text(encoding="utf-8")
+    assert "MPS drift cross-reference" in html
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# CLI: --list-plots includes new plot                                          #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_cli_list_plots_includes_drift_and_schema_versions(
+    xray_module, capsys,
+):
+    rc = xray_module.main(["--list-plots"])
+    assert rc == 0
+    captured = capsys.readouterr().out
+    import json as _json
+
+    payload = _json.loads(captured)
+    assert "drift_vs_sensitivity_scatter" in payload["canonical_plots"]
+    assert "sidecar_schema_version" in payload
+    assert "index_html_schema_version" in payload
+    assert payload["sidecar_schema_version"].startswith("master_gradient_xray_plot_sidecar_v1")
 
 
 def test_cli_missing_archive_sha_raises(xray_module, tmp_path):

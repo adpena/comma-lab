@@ -1988,6 +1988,27 @@ XRAY_TOOLKIT = [
             "  --label candidate"
         ),
     },
+    {
+        "tool": "tools/master_gradient_xray.py",
+        "purpose": (
+            "Master-gradient anchor visualization — 5 canonical plot types "
+            "(per-pair distribution, per-byte heatmap, cumulative-by-rank, "
+            "cross-substrate correlation, Wyner-Ziv layer flow) + optional "
+            "drift-vs-sensitivity scatter when --mps-drift-json is provided. "
+            "Per Catalog #305 observability + Catalog #323 canonical "
+            "Provenance: emits sister JSON sidecars + index.html landing "
+            "page. Use to decide which downstream master-gradient consumer "
+            "route to invoke for which archive. Lane "
+            "lane_master_gradient_xray_viz_tool_20260519. Operator usage: "
+            "docs/master_gradient_xray_usage.md."
+        ),
+        "example": (
+            ".venv/bin/python tools/master_gradient_xray.py \\\n"
+            "  --archive-sha 87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5 \\\n"
+            "  --mps-drift-json .omx/state/mps_drift_granular_20260519T122700Z.json \\\n"
+            "  --output-dir reports/master_gradient_xray/a1_baseline/"
+        ),
+    },
 ]
 
 
