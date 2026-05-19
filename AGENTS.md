@@ -68,6 +68,17 @@ Claude → Codex direction (Claude designs / hypothesizes / spawns research):
 - Codex finds a bug in Claude's design → writes `codex_findings_*_codex.md` memo → Claude reads in next session and amends design (NEVER silently works around)
 - Codex's TIER-0 summary per session feeds Claude's next deliberation cycle
 
+### Canonical Task-Status Mirror (Claude TaskCreate → Shared Ledger)
+
+Claude's `TaskCreate` / `TaskUpdate` surface is not shared process state. Any
+Claude-created task that should be visible to Codex, autopilot, or operator
+dashboards MUST be mirrored into `.omx/state/canonical_task_status.jsonl` via
+`tac.canonical_task_status.register_task(...)` / `update_status(...)` in the
+same session that creates or materially updates the task. The design memo is
+the immutable WHAT; `canonical_task_status.jsonl` is the shared WHERE-IS-IT.
+If a TaskCreate item is not mirrored, Codex must treat it as advisory prose
+until it is registered or explicitly relayed through the inbox.
+
 ### Non-Negotiable Boundaries (both agents; per CLAUDE.md non-negotiables)
 
 NEVER: edit pinned upstream snapshot / REVIEW_GATE_OVERRIDE=1 on `.py` files / destructive git ops (`--force`, `reset --hard`, `--no-verify`, `branch -D`) without explicit operator approval / skip Catalog # claim via canonical serializer / bulk-commit sister-subagent in-flight files (Catalog #314 absorption-pattern extinction) / promote substrate without full canonical promotion-gate compliance per current CLAUDE.md (Catalog #325 6-step + #233 4-gate canonical, etc.) / report score without axis tag + 1:1 contest-compliant hardware substrate / silently coerce missing custody metadata (Catalog #127 fail-closed).
