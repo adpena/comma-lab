@@ -1,0 +1,36 @@
+# Pre-commit hooks for comma-lab / tac
+# https://pre-commit.com
+#
+# Local install:
+#   uv pip install pre-commit
+#   pre-commit install
+#
+# Run on all files:
+#   pre-commit run --all-files
+#
+# These hooks mirror what `.github/workflows/ci.yml` runs in CI, so a clean
+# pre-commit pass is a good proxy for a green CI build.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.13
+    hooks:
+      - id: ruff
+        name: ruff check
+        args: [--force-exclude]
+      - id: ruff-format
+        name: ruff format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'  # markdown trailing whitespace is sometimes meaningful (line breaks)
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]

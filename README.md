@@ -1,5 +1,10 @@
 # comma-lab
 
+[![CI](https://github.com/adpena/comma-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/adpena/comma-lab/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 Task-Aware Compression research and artifact tooling for the
 [comma.ai video compression challenge](https://github.com/commaai/comma_video_compression_challenge).
 This repository is maintained as a community and historical-record workspace:
