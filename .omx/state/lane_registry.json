@@ -40998,6 +40998,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_canonical_equations_and_models_registry_formalization_framework_20260519",
+      "name": "Canonical equations + models registry + initial population + operationalization (anti-tribal-knowledge)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_t3_grand_council_findings_lagrangian_and_pp_integration_symposium_20260519",
+      "name": "T3 grand council symposium: findings Lagrangian + PP integration design + formulation choices",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_slot_6_and_slot_10_grain_awareness_update_20260519",
+      "name": "Slot 6 consumer routing + slot 10 xray grain filter \u2014 grain-aware producer\u2192consumer loop closure",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/master_gradient_per_byte_consumer.py + src/tac/cathedral_consumers/per_byte_sensitivity_consumer/__init__.py + tools/master_gradient_xray.py grain-aware routing; 47 new tests + 5 sister updates = 171 pass; commits d154a1014 + 40c8c8abf + 558230385"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_slot_6_and_slot_10_grain_aware_landed_20260519.md + .omx/research/master_gradient_xray_grain_compare_sample_20260519/FINDINGS.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -41007,5 +41130,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T13:26:40Z"
+  "updated_at": "2026-05-19T13:43:45Z"
 }

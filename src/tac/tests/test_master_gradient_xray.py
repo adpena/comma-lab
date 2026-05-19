@@ -194,9 +194,11 @@ def test_canonical_plots_constant_pinned(xray_module):
     assert "cross_substrate_correlation" in xray_module.CANONICAL_PLOTS
     assert "wyner_ziv_flow" in xray_module.CANONICAL_PLOTS
     assert "drift_vs_sensitivity_scatter" in xray_module.CANONICAL_PLOTS
+    # Slot 10 grain-awareness wave 2026-05-19: 7th plot type
+    assert "cascade_smearing_comparison" in xray_module.CANONICAL_PLOTS
     assert "all" in xray_module.CANONICAL_PLOTS
-    # 5 canonical + 1 optional drift + "all" sentinel
-    assert len(xray_module.CANONICAL_PLOTS) == 7
+    # 5 canonical + 1 optional drift + 1 optional cascade + "all" sentinel = 8
+    assert len(xray_module.CANONICAL_PLOTS) == 8
     # CANONICAL_OUTPUT_DIR_PLOTS is the canonical 5 (no drift, no all)
     assert xray_module.CANONICAL_OUTPUT_DIR_PLOTS == (
         "per_pair_distribution",
@@ -500,7 +502,8 @@ def test_cli_list_plots_includes_drift_and_schema_versions(
     assert "drift_vs_sensitivity_scatter" in payload["canonical_plots"]
     assert "sidecar_schema_version" in payload
     assert "index_html_schema_version" in payload
-    assert payload["sidecar_schema_version"].startswith("master_gradient_xray_plot_sidecar_v1")
+    # Schema bumped to v2 by slot 10 grain-awareness wave 2026-05-19.
+    assert payload["sidecar_schema_version"].startswith("master_gradient_xray_plot_sidecar_v2")
 
 
 def test_cli_missing_archive_sha_raises(xray_module, tmp_path):

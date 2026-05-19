@@ -50,21 +50,28 @@ def test_consumer_name_canonical() -> None:
 
 
 def test_consumer_version_present() -> None:
-    assert consumer.CONSUMER_VERSION == "1.0"
+    # 1.1: grain-aware routing landed 2026-05-19 (slot 6 + slot 10 wave;
+    # see feedback_slot_6_and_slot_10_grain_aware_landed_20260519.md).
+    assert consumer.CONSUMER_VERSION == "1.1"
 
 
 def test_consumer_hook_numbers_canonical() -> None:
-    """Per Catalog #125: hooks 1+3+4 ACTIVE (sensitivity / bit-allocator / dispatch)."""
+    """Per Catalog #125: hooks 1+3+4 ACTIVE (sensitivity / bit-allocator / dispatch).
+
+    v1.1 (2026-05-19): hook #6 PROBE_DISAMBIGUATOR newly ACTIVE — grain
+    selection (post_decompress vs raw_byte) IS the disambiguator between
+    entropy-cascade-smeared and locality-correct signals per Catalog #318.
+    """
     assert HookNumber.SENSITIVITY_MAP in consumer.CONSUMER_HOOK_NUMBERS
     assert HookNumber.BIT_ALLOCATOR in consumer.CONSUMER_HOOK_NUMBERS
     assert HookNumber.CATHEDRAL_AUTOPILOT_DISPATCH in consumer.CONSUMER_HOOK_NUMBERS
+    assert HookNumber.PROBE_DISAMBIGUATOR in consumer.CONSUMER_HOOK_NUMBERS
 
 
 def test_consumer_hook_numbers_do_not_include_inactive_hooks() -> None:
-    """Hooks 2 / 5 / 6 are N/A per the landing memo declaration."""
+    """Hooks 2 / 5 are N/A per the v1.1 landing memo declaration."""
     assert HookNumber.PARETO_CONSTRAINT not in consumer.CONSUMER_HOOK_NUMBERS
     assert HookNumber.CONTINUAL_LEARNING_POSTERIOR not in consumer.CONSUMER_HOOK_NUMBERS
-    assert HookNumber.PROBE_DISAMBIGUATOR not in consumer.CONSUMER_HOOK_NUMBERS
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -325,7 +332,11 @@ def test_auto_discovery_modules_includes_per_byte_consumer(
 def test_per_byte_consumer_has_correct_hooks_in_discovery(
     autopilot_loop_module,
 ) -> None:
-    """The discovered consumer carries hooks 1+3+4 per the landing memo."""
+    """The discovered consumer carries hooks 1+3+4+6 per the v1.1 landing memo.
+
+    v1.1 (2026-05-19 slot 6 + slot 10 wave): hook #6 PROBE_DISAMBIGUATOR
+    newly ACTIVE per grain-aware routing per Catalog #318.
+    """
     regs = autopilot_loop_module.discover_and_register_consumers()
     pbs = next(
         r for r in regs if r["consumer_name"] == "per_byte_sensitivity_consumer"
@@ -334,10 +345,10 @@ def test_per_byte_consumer_has_correct_hooks_in_discovery(
     assert 1 in hook_ints  # SENSITIVITY_MAP
     assert 3 in hook_ints  # BIT_ALLOCATOR
     assert 4 in hook_ints  # CATHEDRAL_AUTOPILOT_DISPATCH
+    assert 6 in hook_ints  # PROBE_DISAMBIGUATOR (v1.1)
     # NOT included
     assert 2 not in hook_ints  # PARETO_CONSTRAINT
     assert 5 not in hook_ints  # CONTINUAL_LEARNING_POSTERIOR
-    assert 6 not in hook_ints  # PROBE_DISAMBIGUATOR
 
 
 # ─────────────────────────────────────────────────────────────────────────

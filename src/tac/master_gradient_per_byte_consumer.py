@@ -176,8 +176,11 @@ class PerByteSensitivityPayload:
     top_k_sensitivity_indices: tuple[int, ...] = field(default_factory=tuple)
     aggregate_l1_importance_sum: float = 0.0
     n_bytes_above_zero: int = 0
+    # Defaults pair the legacy GRAIN_RAW_ARCHIVE_BYTE grain with the
+    # cascade_smearing_risk=True invariant it implies. Backward-compatible
+    # with pre-grain-aware constructor calls that omit both fields.
     gradient_byte_domain: str = GRAIN_RAW_ARCHIVE_BYTE
-    cascade_smearing_risk: bool = False
+    cascade_smearing_risk: bool = True
 
     def __post_init__(self) -> None:
         if not self.archive_sha256:

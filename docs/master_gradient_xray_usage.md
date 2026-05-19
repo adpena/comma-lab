@@ -98,7 +98,73 @@ Quadrant interpretation:
 Useful for downstream tools that need to enumerate the plot taxonomy or
 pin the sister JSON schema version.
 
-## 5 canonical plot types
+### 6. Grain-aware routing + cascade-smearing comparison (slot 10 wave, 2026-05-19)
+
+Per Catalog #318 + codex op7 finding 2026-05-19 the per-byte master-gradient
+ledger now distinguishes two grain classes:
+
+* **raw_byte** (`scored_archive_bytes` / `zip_inner_member_payload`) —
+  entropy-cascade-smeared per Catalog #318 (one raw-byte flip invalidates
+  the entire downstream entropy stream). NOT a local sensitivity for
+  entropy-coded archives.
+* **post_decompress** (`post_brotli_decompress_decoder_weight_bytes` /
+  `post_arithmetic_decompress_decoder_weight_bytes` /
+  `post_decompress_decoder_weight_bytes`) — CORRECT locality basis. One
+  decompressed-byte flip changes ONE downstream weight byte.
+
+The `--grain` CLI flag controls which grain the plots filter to:
+
+```bash
+# Default (no --grain): latest-by-utc across grains (pre-grain behavior).
+.venv/bin/python tools/master_gradient_xray.py \
+    --archive-sha 87ec7ca5... \
+    --output-dir reports/master_gradient_xray/a1/
+
+# Filter to post-decompress grain only (canonical analysis).
+.venv/bin/python tools/master_gradient_xray.py \
+    --archive-sha 87ec7ca5... \
+    --grain post_decompress \
+    --output-dir reports/master_gradient_xray/a1_post_decompress/
+
+# Filter to raw-byte grain only (legacy / back-compat analysis).
+.venv/bin/python tools/master_gradient_xray.py \
+    --archive-sha 87ec7ca5... \
+    --grain raw_byte \
+    --output-dir reports/master_gradient_xray/a1_raw_byte/
+
+# Compare both grains side-by-side (emits 7th cascade_smearing_comparison
+# plot per archive with BOTH grains).
+.venv/bin/python tools/master_gradient_xray.py \
+    --archive-sha 87ec7ca5... \
+    --archive-sha 6bae0201... \
+    --archive-sha 9cb989ce... \
+    --grain compare_both \
+    --output-dir reports/master_gradient_xray/grain_compare/
+```
+
+The `cascade_smearing_comparison` plot (7th) shows the raw-byte heatmap
+(LEFT) next to the post-decompress heatmap (RIGHT) with annotated metrics:
+
+* **top-K Jaccard** — overlap of top-K byte indices ranked by
+  L1-sum-of-abs sensitivity. 1.0 = identical top-K; 0.0 = disjoint.
+* **cascade_smearing_factor** = 1.0 - Jaccard. HIGH ≥ 0.7 / MEDIUM 0.3-0.7 /
+  LOW < 0.3.
+* **Spearman rank correlation** on min-truncated arrays as a coarse
+  proxy for global rank-order similarity.
+
+Operator action band:
+
+* **HIGH cascade smearing** → the raw-byte gradient is meaningfully
+  misleading; route mutation campaigns through post-decompress anchors
+  ONLY. Cathedral consumer Hook #6 PROBE_DISAMBIGUATOR fires here.
+* **MEDIUM** → raw-byte gradient is partially aligned with
+  post-decompress; either grain provides a usable signal but
+  post-decompress is preferred.
+* **LOW** → grains agree closely (e.g. an archive with minimal entropy
+  compression OR a uniform-pressure decoder); raw-byte gradient is
+  approximately correct.
+
+## 7 canonical plot types
 
 | plot_id | requires | output |
 |---|---|---|
@@ -108,6 +174,7 @@ pin the sister JSON schema version.
 | `cross_substrate_correlation` | 2+ aggregate anchors | cosine-similarity matrix (Wyner-Ziv complementary signal) |
 | `wyner_ziv_flow` | aggregate gradient + section manifest | per-section stacked bar (seg/pose/rate fraction per section) |
 | `drift_vs_sensitivity_scatter` | aggregate gradient + `--mps-drift-json` | quadrant scatter with linear-fit overlay |
+| `cascade_smearing_comparison` | BOTH raw-byte AND post-decompress anchors | side-by-side heatmap (raw LEFT, post RIGHT) + Jaccard + cascade_smearing_factor + HIGH/MEDIUM/LOW verdict |
 
 ## Sister JSON sidecar contract (per Catalog #323 + #305)
 
