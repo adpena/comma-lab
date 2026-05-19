@@ -13,6 +13,13 @@ from tac.master_gradient_pr101_score_response_matrix import (
 from tac.repo_io import sha256_file
 
 
+def _flag_value(command: list[str], flag: str) -> str:
+    for index, value in enumerate(command[:-1]):
+        if value == flag:
+            return command[index + 1]
+    return ""
+
+
 def _runtime_manifest() -> dict:
     return {
         "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
@@ -161,8 +168,25 @@ def test_pr101_pose_axis_score_response_matrix_pairs_contest_axes(tmp_path: Path
         "modal_contest_cuda_t4_auto",
     }
     cuda = pairs["modal_contest_cuda_t4_auto"]
+    cpu = pairs["modal_contest_cpu_linux_x86_auto"]
     assert cuda["score_axis"] == "contest_cuda"
     assert cuda["contest_compliant"] is True
+    assert (
+        _flag_value(cuda["baseline_command"], "--pair-group-id")
+        == "pair_unit_op7_lane_baseline_unit-op7_baseline"
+    )
+    assert (
+        _flag_value(cuda["candidate_command"], "--pair-group-id")
+        == "pair_unit_op7_lane_candidate_unit-op7_candidate"
+    )
+    assert (
+        _flag_value(cpu["baseline_command"], "--pair-group-id")
+        == _flag_value(cuda["baseline_command"], "--pair-group-id")
+    )
+    assert (
+        _flag_value(cpu["candidate_command"], "--pair-group-id")
+        == _flag_value(cuda["candidate_command"], "--pair-group-id")
+    )
     assert "--axis" in cuda["score_response_probe_command"]
     assert "contest_cuda" in cuda["score_response_probe_command"]
     assert "modal_contest_cuda_t4_auto_baseline_exact_eval_json_missing" in matrix[

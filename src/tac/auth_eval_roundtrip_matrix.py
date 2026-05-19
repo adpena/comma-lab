@@ -16,7 +16,6 @@ from typing import Any
 
 from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
 
-
 SCHEMA_VERSION = "auth_eval_roundtrip_matrix_v1"
 RESULTS_SCHEMA_VERSION = "auth_eval_roundtrip_results_v1"
 
@@ -52,6 +51,15 @@ def _command_value_after(command: list[str], flag: str) -> str | None:
         if value == flag and index + 1 < len(command):
             return command[index + 1]
     return None
+
+
+def _safe_command_token(value: str) -> str:
+    text = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in str(value))
+    return text.strip("._-") or "auth_eval"
+
+
+def _pair_group_id(candidate: AuthEvalRoundtripInput) -> str:
+    return f"pair_{_safe_command_token(candidate.lane_id)}_{_safe_command_token(candidate.label)}"
 
 
 def _local_command(
@@ -95,6 +103,8 @@ def _modal_cuda_command(
     gpu: str = "T4",
     scorer_device: str = "cuda",
     inflate_device: str = "auto",
+    pair_group_id: str = "",
+    single_axis_waiver_reason: str = "",
 ) -> list[str]:
     lane_id = f"{candidate.lane_id}_{target_id}"
     cmd = [
@@ -127,6 +137,10 @@ def _modal_cuda_command(
         "--claim-agent",
         "codex:gpt-5.5",
     ]
+    if pair_group_id:
+        cmd.extend(["--pair-group-id", pair_group_id])
+    if single_axis_waiver_reason:
+        cmd.extend(["--single-axis-waiver-reason", single_axis_waiver_reason])
     return cmd
 
 
@@ -137,9 +151,11 @@ def _modal_cpu_command(
     output_dir: str,
     expected_runtime_tree_sha256: str,
     target_id: str,
+    pair_group_id: str = "",
+    single_axis_waiver_reason: str = "",
 ) -> list[str]:
     lane_id = f"{candidate.lane_id}_{target_id}"
-    return [
+    cmd = [
         ".venv/bin/modal",
         "run",
         "--detach",
@@ -163,6 +179,11 @@ def _modal_cpu_command(
         "--claim-agent",
         "codex:gpt-5.5",
     ]
+    if pair_group_id:
+        cmd.extend(["--pair-group-id", pair_group_id])
+    if single_axis_waiver_reason:
+        cmd.extend(["--single-axis-waiver-reason", single_axis_waiver_reason])
+    return cmd
 
 
 def _row(
@@ -225,6 +246,7 @@ def build_auth_eval_roundtrip_matrix(
     )
     base_output = f"{candidate.output_root}/{candidate.label}"
     contest_cpu_like = _host_is_contest_cpu_like(host_system, host_machine)
+    pair_group_id = _pair_group_id(candidate)
 
     rows = [
         _row(
@@ -239,6 +261,7 @@ def build_auth_eval_roundtrip_matrix(
                 gpu="T4",
                 scorer_device="cuda",
                 inflate_device="auto",
+                pair_group_id=pair_group_id,
             ),
             score_axis="contest_cuda",
             evidence_grade="contest-CUDA",
@@ -260,6 +283,7 @@ def build_auth_eval_roundtrip_matrix(
                 output_dir=f"{base_output}/modal_contest_cpu_linux_x86_auto",
                 expected_runtime_tree_sha256=str(modal_cpu_runtime["runtime_tree_sha256"]),
                 target_id="modal_contest_cpu_linux_x86_auto",
+                pair_group_id=pair_group_id,
             ),
             score_axis="contest_cpu",
             evidence_grade="contest-CPU",
@@ -332,6 +356,9 @@ def build_auth_eval_roundtrip_matrix(
                         target_id="modal_cuda_scorer_force_inflate_cpu_diagnostic",
                         scorer_device="cuda",
                         inflate_device="cpu",
+                        single_axis_waiver_reason=(
+                            "diagnostic_non_promotional_roundtrip_axis"
+                        ),
                     ),
                     score_axis="diagnostic_cuda",
                     evidence_grade="diagnostic-CUDA",
@@ -357,6 +384,9 @@ def build_auth_eval_roundtrip_matrix(
                         target_id="modal_cuda_scorer_force_inflate_cuda_diagnostic",
                         scorer_device="cuda",
                         inflate_device="cuda",
+                        single_axis_waiver_reason=(
+                            "diagnostic_non_promotional_roundtrip_axis"
+                        ),
                     ),
                     score_axis="diagnostic_cuda",
                     evidence_grade="diagnostic-CUDA",
@@ -382,6 +412,9 @@ def build_auth_eval_roundtrip_matrix(
                         target_id="modal_gpu_host_cpu_scorer_force_inflate_cpu_diagnostic",
                         scorer_device="cpu",
                         inflate_device="cpu",
+                        single_axis_waiver_reason=(
+                            "diagnostic_non_promotional_roundtrip_axis"
+                        ),
                     ),
                     score_axis="diagnostic_cpu",
                     evidence_grade="diagnostic-CPU",
@@ -410,6 +443,7 @@ def build_auth_eval_roundtrip_matrix(
             "inflate_sh": candidate.inflate_sh,
             "label": candidate.label,
             "lane_id": candidate.lane_id,
+            "modal_pair_group_id": pair_group_id,
         },
         "host": {"system": host_system, "machine": host_machine},
         "runtime_hashes": {
@@ -574,9 +608,9 @@ def collect_auth_eval_roundtrip_results(
 
 
 __all__ = [
-    "AuthEvalRoundtripInput",
     "RESULTS_SCHEMA_VERSION",
     "SCHEMA_VERSION",
+    "AuthEvalRoundtripInput",
     "build_auth_eval_roundtrip_matrix",
     "collect_auth_eval_roundtrip_results",
 ]

@@ -12,8 +12,14 @@ from tac.auth_eval_roundtrip_matrix import (
     collect_auth_eval_roundtrip_results,
 )
 
-
 REPO = Path(__file__).resolve().parents[3]
+
+
+def _flag_value(command: list[str], flag: str) -> str:
+    for index, value in enumerate(command[:-1]):
+        if value == flag:
+            return command[index + 1]
+    return ""
 
 
 def _runtime_manifest() -> dict:
@@ -74,6 +80,19 @@ def test_roundtrip_matrix_separates_contest_axes_from_diagnostics() -> None:
     assert "local_host_not_linux_x86_64" in targets["local_cpu_current_host_auto"]["diagnostic_blockers"]
     assert targets["modal_cuda_scorer_force_inflate_cpu_diagnostic"]["contest_compliant"] is False
     assert "--inflate-device" in targets["modal_cuda_scorer_force_inflate_cpu_diagnostic"]["command"]
+    cuda_pair = _flag_value(targets["modal_contest_cuda_t4_auto"]["command"], "--pair-group-id")
+    cpu_pair = _flag_value(
+        targets["modal_contest_cpu_linux_x86_auto"]["command"],
+        "--pair-group-id",
+    )
+    assert cuda_pair == "pair_fixture_lane_fixture"
+    assert cpu_pair == cuda_pair
+    diagnostic = targets["modal_cuda_scorer_force_inflate_cpu_diagnostic"]["command"]
+    assert "--pair-group-id" not in diagnostic
+    assert (
+        _flag_value(diagnostic, "--single-axis-waiver-reason")
+        == "diagnostic_non_promotional_roundtrip_axis"
+    )
     assert set(matrix["contest_compliant_target_ids"]) == {
         "modal_contest_cuda_t4_auto",
         "modal_contest_cpu_linux_x86_auto",
