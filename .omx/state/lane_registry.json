@@ -40333,8 +40333,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_per_byte_sensitivity_consumer_cathedral_wire_in_landed_20260519.md + MEMORY.md prepend"
         },
         "deploy_runbook": {
           "status": false,
@@ -40374,8 +40374,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Memory: feedback_silent_no_spawn_structural_extinction_landed_20260519.md documents 3-anchor bug class + diagnosis + 4-layer fix (canonical helper extension + wrapper fail-closed + sister mitigation + STRICT preflight gate Catalog #339) + 35 tests + sister-gate cross-refs + reactivation criteria + 6-hook wire-in declaration."
         },
         "deploy_runbook": {
           "status": false,
@@ -40424,6 +40424,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_master_gradient_parser_extension_a1_pr101_pr106_pr107_20260519",
+      "name": "Master-gradient parser extension to A1+PR101_lc_v2+PR106_format0d+PR107_apogee frontier archives",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/extract_master_gradient.py canonical extractor + tac.master_gradient.append_anchor_locked canonical helper already exist; this wave EMITTED parser_extension_wave_20260519 anchors for A1+PR101_lc_v2+PR106_format0d+PR107_apogee (4 anchors @ 8 pairs @ [macOS-CPU advisory]); ledger at .omx/state/master_gradient_anchors.jsonl"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "4 frontier archives extracted on 2026-05-19: A1 sha=87ec7ca5 (n_bytes=178162); PR101_lc_v2_fec6 sha=6bae0201 (n_bytes=178417); PR106_format0d sha=9cb989ce (n_bytes=186776); PR107_apogee sha=7ecb0df1 (n_bytes=178284); per-archive nz_byte fraction ~91%; sum-of-squares 4.08e-7 to 4.38e-7 [empirical:.omx/state/master_gradient_*_8pair_20260519.npy]"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_master_gradient_parser_extension_a1_pr101_pr106_pr107_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_314_prevention_enhancement_20260519",
+      "name": "Catalog #314 Prevention Enhancement (STAGING-surface PREVENT)",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/commit_safety/__init__.py + src/tac/commit_safety/sister_checkpoint_guard.py + tools/subagent_commit_serializer.py wire-in + tools/check_sister_checkpoint_before_git_add.py pre-commit hook helper + src/tac/preflight.py Catalog #340 STRICT gate"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #340 check_subagent_commit_serializer_invokes_sister_checkpoint_guard STRICT-from-byte-one in preflight_all (live count: 0 at landing)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_catalog_314_prevention_enhancement_landed_20260519.md (~/.claude/projects/-Users-adpena-Projects-pact/memory/)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_mps_drift_granular_analysis_corrective_engineering_20260519",
+      "name": "MPS drift granular analysis + corrective engineering",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/mps_diagnostic/granular_drift.py + tools/analyze_mps_drift_granular.py + 52 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:.omx/state/mps_drift_granular_20260519T122700Z.json] per-pair CV=2.6% UNIFORM"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_mps_drift_granular_analysis_corrective_engineering_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -40433,5 +40556,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T12:26:45Z"
+  "updated_at": "2026-05-19T12:34:53Z"
 }
