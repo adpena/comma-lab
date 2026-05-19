@@ -2520,6 +2520,26 @@ def preflight_all(
         check_local_research_signal_dispatches_stamp_evidence_grade(
             strict=True, verbose=verbose,
         )
+        # 2026-05-19 Catalog #341 — CATHEDRAL-CONSUMER MPS-PRESCREEN ROUTING
+        # CARRIES CANONICAL MARKERS. SCOPE-NARROWING SISTER OF Catalog #317:
+        # #317 covers direct ``_dispatch_local_mps`` / ``_dispatch_local_cpu``
+        # surface in tools/operator_authorize.py; #341 covers the new
+        # cathedral-consumer-recommended routing surface (operationalized by
+        # commit ``a753b70d5`` landing the mps_viable_prescreen_consumer).
+        # Refuses any cathedral_consumers/* package that exposes a routing
+        # recommendation without all 3 canonical non-promotable markers
+        # (predicted_delta_adjustment=0.0 / promotable=False /
+        # axis_tag="[predicted]") per CathedralConsumerContract + CLAUDE.md
+        # "MPS auth eval is NOISE" non-negotiable. Same-line waiver:
+        # `# CATHEDRAL_CONSUMER_MPS_ROUTING_OK:<rationale>` (placeholder
+        # rejected). STRICT-from-byte-one per CLAUDE.md "Strict-flip
+        # atomicity rule" — live count at landing: 0 (the existing
+        # mps_viable_prescreen_consumer carries all 3 markers in all 4
+        # routing-cascade branches per its own 21 tests).
+        # Memory: feedback_catalog_317_scope_narrowing_plus_consumer_routing_sister_gate_landed_20260519.md.
+        check_cathedral_consumer_mps_prescreen_routing_carries_canonical_markers(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-17 Catalog #318 — MASTER-GRADIENT RAW BYTE AUTHORITY.
         # Per the May 17 L5/Rule #6 rebaseline, raw archive-byte / bit finite
         # differences over ZIP + entropy-coded packets are not local score
@@ -2686,6 +2706,24 @@ def preflight_all(
         check_substrate_driver_consumes_trainer_mode_env_var(
             strict=False, verbose=verbose,
         )
+        # 2026-05-19 Catalog #339 - SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION.
+        # Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable +
+        # "Bugs must be permanently fixed AND self-protected against".
+        # Refuses any source-text regression of the silent-swallow pattern
+        # around `register_dispatched_call_id(...)` in
+        # experiments/modal_train_lane.py. Bug class anchor: 3 consecutive
+        # silent-no-spawn incidents today (Z6 Wave 2 4c / STC v2 / STC sister)
+        # — `.spawn()` succeeded → paid GPU meter started → registration
+        # failed → silent `try/except Exception: print` swallow → ledger
+        # empty → harvester invisible. STRICT-from-byte-one per "Strict-flip
+        # atomicity rule" (live count: 0 at landing — fix replaced silent
+        # swallow with `register_dispatched_call_id_fail_closed` + sys.exit(13)).
+        # Sister of Catalog #245 (canonical ledger) + #131/#138 (locked-write
+        # discipline) + #143 (paid-job register-before-submit). Memory:
+        # feedback_silent_no_spawn_structural_extinction_landed_20260519.md.
+        check_modal_dispatcher_registers_call_id_before_successful_exit(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -2776,6 +2814,19 @@ def preflight_all(
         # feedback_commit_swap_absorption_pattern_investigation_landed_20260516.md.
         check_no_subagent_files_touched_absorption_in_bare_commits(
             strict=False, verbose=verbose,
+        )
+        # 2026-05-19 Catalog #340 - CATALOG-314-PREVENTION-ENHANCEMENT
+        # serializer-source META gate. Refuses any state of
+        # tools/subagent_commit_serializer.py that drops the canonical
+        # sister-checkpoint guard wire-in. STRICT-from-byte-one per
+        # CLAUDE.md "Strict-flip atomicity rule" (live count: 0; canonical
+        # wire-in lands in same commit batch). Sister of Catalog #117 +
+        # #157 + #174 + #216 + #230 + #248 + #289 + #302 + #314 — together
+        # they extinct the multi-subagent edit/commit collision class at
+        # EIGHT surfaces. Memory:
+        # feedback_catalog_314_prevention_enhancement_landed_20260519.md.
+        check_subagent_commit_serializer_invokes_sister_checkpoint_guard(
+            strict=True, verbose=verbose,
         )
         # 2026-05-16 Catalog #304 - SUBSTRATE CODEC NO CLOSED-FORM CDF
         # WITHOUT EMPIRICAL BIT-SPEND PROOF. Per CLAUDE.md "Bit-level
@@ -71365,6 +71416,150 @@ def check_no_subagent_files_touched_absorption_in_bare_commits(
 
 
 # ============================================================================
+# Catalog #340 — check_subagent_commit_serializer_invokes_sister_checkpoint_guard
+#
+# CATALOG-314-PREVENTION-ENHANCEMENT self-protection 2026-05-19. META-meta
+# sister of Catalog #314 (POST-COMMIT detect) at the SERIALIZER-SOURCE
+# surface. Where #314 detects bare-commit absorption AFTER it lands,
+# Catalog #340 prevents the bug class structurally by enforcing that the
+# canonical serializer ALWAYS routes through the
+# tac.commit_safety.check_files_against_sister_checkpoints guard BEFORE
+# acquiring the fcntl lock. A future refactor that drops the guard call
+# silently re-introduces the absorption-at-staging surface.
+#
+# Bug class anchor (2026-05-19): slot 5 commit ``c8d51ebb5`` absorbed
+# slot 2's preflight.py + CLAUDE.md edits BEFORE slot 2's canonical
+# serializer call ran. Catalog #157 ``--expected-content-sha256`` caught
+# the secondary effect (file shas mismatched) but the absorption was
+# downstream of the bare ``git add`` that the ``/commit`` slash command
+# does directly (NOT through this wrapper). The PREVENT layer for this
+# class is the sister-checkpoint guard in the serializer + pre-commit
+# hook — this gate enforces the guard is wired.
+#
+# STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule":
+# the canonical wire-in lands in tools/subagent_commit_serializer.py
+# in the same commit batch (live count: 0).
+# ============================================================================
+_CHECK_340_TARGET_REL = "tools/subagent_commit_serializer.py"
+_CHECK_340_REQUIRED_TOKENS = (
+    "from tac.commit_safety import",
+    "check_files_against_sister_checkpoints",
+)
+_CHECK_340_WAIVER_TOKEN = "# CHECK_340_SERIALIZER_NO_GUARD_OK:"
+_CHECK_340_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+
+
+def _check_340_file_has_waiver(text: str) -> bool:
+    """Detect file-level waiver in serializer source first 80 lines."""
+    if _CHECK_340_WAIVER_TOKEN not in text:
+        return False
+    head = "\n".join(text.splitlines()[:80])
+    if _CHECK_340_WAIVER_TOKEN not in head:
+        return False
+    # Extract rationale after the token.
+    idx = head.find(_CHECK_340_WAIVER_TOKEN)
+    tail = head[idx + len(_CHECK_340_WAIVER_TOKEN):]
+    # Rationale is everything up to end of line.
+    eol = tail.find("\n")
+    rationale = tail[: eol if eol != -1 else None].strip()
+    if not rationale:
+        return False
+    for placeholder in _CHECK_340_WAIVER_PLACEHOLDERS:
+        if rationale.startswith(placeholder):
+            return False
+    return len(rationale) >= 4
+
+
+def check_subagent_commit_serializer_invokes_sister_checkpoint_guard(
+    *,
+    repo_root=None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #340 — refuse any state of tools/subagent_commit_serializer.py
+    that drops the canonical sister-checkpoint guard wire-in.
+
+    Scans the serializer source via AST + text-substring check for:
+      1. ``from tac.commit_safety import`` (the canonical helper import).
+      2. ``check_files_against_sister_checkpoints`` (the helper invocation).
+
+    Both tokens must be present unless the file carries a file-level
+    ``# CHECK_340_SERIALIZER_NO_GUARD_OK:<rationale>`` waiver in the first
+    80 lines with a non-placeholder rationale (≥4 chars).
+
+    Sister of Catalog #117 (last-50-commit serializer-usage gate), Catalog
+    #314 (POST-COMMIT detect), Catalog #157 / #174 / #216 / #289 (commit-swap
+    family). Together they extinct the multi-subagent edit/commit collision
+    class at EIGHT surfaces.
+
+    Memory: ``feedback_catalog_314_prevention_enhancement_landed_20260519.md``.
+    Lane: ``lane_catalog_314_prevention_enhancement_20260519``.
+    """
+    repo_root = Path(repo_root or REPO_ROOT)
+    target = repo_root / _CHECK_340_TARGET_REL
+
+    violations: list[str] = []
+    if not target.is_file():
+        violations.append(
+            f"Catalog #340: canonical serializer not found at "
+            f"{_CHECK_340_TARGET_REL!r}. The serializer MUST exist as the "
+            f"canonical commit-machinery anchor per Catalog #117 + #157 + "
+            f"#174 + #216 + #289."
+        )
+    else:
+        try:
+            text = target.read_text(encoding="utf-8")
+        except OSError as exc:
+            violations.append(
+                f"Catalog #340: could not read {_CHECK_340_TARGET_REL!r}: "
+                f"{exc!s}"
+            )
+            text = ""
+        if text and not _check_340_file_has_waiver(text):
+            missing = []
+            for tok in _CHECK_340_REQUIRED_TOKENS:
+                if tok not in text:
+                    missing.append(tok)
+            if missing:
+                violations.append(
+                    f"Catalog #340: {_CHECK_340_TARGET_REL!r} is MISSING "
+                    f"the canonical sister-checkpoint guard wire-in. "
+                    f"Required tokens NOT found: {missing!r}. Per CLAUDE.md "
+                    f"\"Bugs must be permanently fixed AND self-protected "
+                    f"against\" + CATALOG-314-PREVENTION-ENHANCEMENT "
+                    f"2026-05-19. Either (a) re-wire the canonical helper "
+                    f"per the canonical pattern: ``from tac.commit_safety "
+                    f"import check_files_against_sister_checkpoints`` + "
+                    f"invoke it BEFORE the fcntl lock acquisition, OR "
+                    f"(b) add a file-level "
+                    f"``{_CHECK_340_WAIVER_TOKEN}<rationale>`` waiver in "
+                    f"the first 80 lines (placeholder rationales rejected)."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_subagent_commit_serializer_invokes_sister_checkpoint_guard] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_subagent_commit_serializer_invokes_sister_checkpoint_guard] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_subagent_commit_serializer_invokes_sister_checkpoint_guard "
+            f"found {len(violations)} violation(s). Per CLAUDE.md Catalog "
+            "#340 CATALOG-314-PREVENTION-ENHANCEMENT 2026-05-19 + the "
+            "8-surface multi-subagent edit/commit collision extinction "
+            "(sister of #117 / #157 / #174 / #216 / #230 / #248 / #289 / "
+            "#302 / #314).\n  "
+            + "\n  ".join(v[:500] for v in violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
 # Catalog #316 — check_reports_latest_md_not_stale_vs_canonical_frontier
 #
 # PERMANENT-FIX-FRONTIER-SIGNAL-LOSS self-protection 2026-05-17 per operator
@@ -71754,6 +71949,251 @@ def check_local_research_signal_dispatches_stamp_evidence_grade(
         raise PreflightError(
             "check_local_research_signal_dispatches_stamp_evidence_grade "
             f"found {len(violations)} violation(s) per Catalog #317.\n  "
+            + "\n  ".join(v[:500] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #341 - check_cathedral_consumer_mps_prescreen_routing_carries_canonical_markers
+# 2026-05-19 lane_catalog_317_scope_narrowing_plus_consumer_routing_sister_gate_20260519.
+#
+# SCOPE-NARROWING SISTER OF CATALOG #317: per operator's earlier paradigm-shift
+# directive + today's empirical MPS-VIABLE landing (3-component aggregate gap
+# 0.072% per feedback_mps_phase_b_options_b_plus_c_completion_landed_20260519.md)
+# + the new MPS-prescreen cathedral consumer landed today (commit ``a753b70d5``
+# per feedback_mps_prescreen_cathedral_consumer_wire_in_landed_20260519.md).
+#
+# CATALOG #317 SCOPE: Direct ``_dispatch_local_mps`` / ``_dispatch_local_cpu``
+# surface in ``tools/operator_authorize.py`` (unchanged).
+# CATALOG #341 SCOPE: Cathedral-consumer-recommended routing surface — refuses
+# any ``src/tac/cathedral_consumers/*`` package that exposes a routing
+# recommendation (``recommended_route`` field or ``ROUTE_LOCAL_MPS_PRESCREEN``
+# / ``ROUTE_PAID_CUDA_AUTHORITATIVE`` constants) WITHOUT carrying the 3
+# canonical non-promotable markers in every routing-branch return value:
+# ``predicted_delta_adjustment=0.0`` (routing is NOT a score signal per
+# CathedralConsumerContract) + ``promotable=False`` (per Catalog #127/#192/#317
+# non-promotable-by-construction) + ``axis_tag="[predicted]"`` (per
+# Catalog #287/#323 canonical Provenance).
+#
+# Routing-cascade tokens establish in-scope (file is a routing consumer, not a
+# pure diagnostic): ``recommended_route`` OR ``ROUTE_LOCAL_MPS_PRESCREEN`` OR
+# ``ROUTE_PAID_CUDA_AUTHORITATIVE``. Sister diagnostic consumers
+# (``mps_diagnostic_consumer`` / ``mps_gap_experiment_consumer``) have no
+# routing recommendation field and are out-of-scope by construction.
+#
+# Sister of Catalog #317 (direct dispatch surface; #341 is the consumer-
+# recommended routing surface) + Catalog #335 (canonical Protocol contract;
+# #341 is the canonical-routing-markers surface) + Catalog #287 (placeholder-
+# rationale rejection) + Catalog #125 (6-hook wire-in non-negotiable) +
+# Catalog #192 (per-artifact promotion guard) + Catalog #176 / #185 (META-meta).
+#
+# Together with sister gates, extincts the orphan-signal-at-cathedral-consumer-
+# routing bug class STRUCTURALLY at FOUR surfaces: contract (#335) +
+# auto-discovery (#335) + invocation (#336/#337) + canonical-routing-markers
+# (THIS GATE).
+
+_CHECK_341_CONSUMER_DIR_RELPATH = "src/tac/cathedral_consumers"
+_CHECK_341_EXEMPT_SUBDIRS: frozenset[str] = frozenset({"__pycache__", "tests"})
+
+# Routing-cascade tokens; presence of ANY one establishes the consumer as a
+# routing recommender (in-scope for #341). Pure diagnostic consumers without
+# routing recommendations are out-of-scope by construction.
+_CHECK_341_ROUTING_TOKENS: tuple[str, ...] = (
+    "recommended_route",
+    "ROUTE_LOCAL_MPS_PRESCREEN",
+    "ROUTE_PAID_CUDA_AUTHORITATIVE",
+)
+
+# Required canonical markers (substring match in __init__.py body).
+# `predicted_delta_adjustment=0.0` — routing is NOT a score signal per
+#   CathedralConsumerContract (allows minor whitespace variations).
+# `promotable=False` — Catalog #127/#192/#317 non-promotable-by-construction
+#   (handled as positional key:value match; whitespace tolerant).
+# `axis_tag="[predicted]"` — canonical Provenance per Catalog #287/#323.
+_CHECK_341_REQUIRED_CANONICAL_MARKERS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    # (label, alternative substring forms accepted)
+    (
+        "predicted_delta_adjustment=0.0",
+        (
+            "\"predicted_delta_adjustment\": 0.0",
+            "'predicted_delta_adjustment': 0.0",
+            "predicted_delta_adjustment=0.0",
+        ),
+    ),
+    (
+        "promotable=False",
+        (
+            "\"promotable\": False",
+            "'promotable': False",
+            "promotable=False",
+        ),
+    ),
+    (
+        "axis_tag=[predicted]",
+        (
+            "\"axis_tag\": \"[predicted]\"",
+            "'axis_tag': '[predicted]'",
+            "axis_tag=\"[predicted]\"",
+            "axis_tag='[predicted]'",
+        ),
+    ),
+)
+
+_CHECK_341_WAIVER_PATTERN = re.compile(
+    r"# CATHEDRAL_CONSUMER_MPS_ROUTING_OK:(.+?)(?:$|#)", re.MULTILINE
+)
+
+
+def _check_341_file_has_routing_tokens(body: str) -> bool:
+    """Return True if body contains any routing-cascade token (in-scope)."""
+    return any(tok in body for tok in _CHECK_341_ROUTING_TOKENS)
+
+
+def _check_341_extract_waiver_rationale(body: str) -> str | None:
+    """Return the non-placeholder waiver rationale if present, else None."""
+    m = _CHECK_341_WAIVER_PATTERN.search(body)
+    if not m:
+        return None
+    rationale = m.group(1).strip().rstrip(":").strip()
+    low = rationale.lower()
+    if low in ("<rationale>", "<reason>", ""):
+        return None
+    if len(rationale) < 4:
+        return None
+    return rationale
+
+
+def _check_341_find_missing_markers(body: str) -> list[str]:
+    """Return list of marker labels missing from body."""
+    missing: list[str] = []
+    for label, accepted_forms in _CHECK_341_REQUIRED_CANONICAL_MARKERS:
+        if not any(form in body for form in accepted_forms):
+            missing.append(label)
+    return missing
+
+
+def check_cathedral_consumer_mps_prescreen_routing_carries_canonical_markers(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Catalog #341 — cathedral_consumers/* routing recommenders carry canonical
+    non-promotable markers in every return value.
+
+    Sister of Catalog #317 (direct dispatch surface; #341 is the consumer-
+    recommended routing surface). Per operator's CATALOG-317-SCOPE-NARROWING-
+    MPS-OPT-IN directive 2026-05-19 + empirical MPS-VIABLE landing (3-component
+    aggregate gap 0.072% per feedback_mps_phase_b_options_b_plus_c_completion).
+
+    SCOPE: scans every Python package under ``src/tac/cathedral_consumers/``
+    whose ``__init__.py`` contains a routing-cascade token (``recommended_route``
+    OR ``ROUTE_LOCAL_MPS_PRESCREEN`` OR ``ROUTE_PAID_CUDA_AUTHORITATIVE``).
+    Pure diagnostic consumers without routing recommendations are out-of-scope.
+
+    ACCEPTANCE: in-scope consumer body contains all 3 canonical markers
+    (substring match, whitespace tolerant across dict / kwarg forms):
+    (1) ``predicted_delta_adjustment=0.0`` — routing is NOT a score signal
+    per CathedralConsumerContract;
+    (2) ``promotable=False`` — Catalog #127/#192/#317 non-promotable-by-
+    construction;
+    (3) ``axis_tag="[predicted]"`` — canonical Provenance per Catalog #287/#323.
+
+    WAIVER: same-line ``# CATHEDRAL_CONSUMER_MPS_ROUTING_OK:<rationale>``
+    anywhere in ``__init__.py`` (placeholder ``<rationale>`` / ``<reason>`` /
+    rationales <4 chars rejected per Catalog #287 sister discipline so the
+    gate's own docstring cannot self-waive).
+
+    Bug class: a routing recommender that omits the canonical markers can
+    silently bias the cathedral autopilot ranker to promote a routing
+    recommendation to a score signal OR to dispatch a routed candidate
+    through a contest-axis surface without paired Linux x86_64 + NVIDIA
+    evidence (Catalog #192 violation). Per CLAUDE.md "MPS auth eval is
+    NOISE" + "Submission auth eval — BOTH CPU AND CUDA" non-negotiables:
+    the markers are STRUCTURAL protection that the routing recommendation
+    cannot leak into promotion.
+
+    STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+    self-protected against" + "Strict-flip atomicity rule" — live count at
+    landing: 0 (the existing ``mps_viable_prescreen_consumer`` at commit
+    ``a753b70d5`` carries all 3 markers in all 4 routing-cascade branches
+    per the consumer's own 21 tests).
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    consumer_dir = root / _CHECK_341_CONSUMER_DIR_RELPATH
+    violations: list[str] = []
+
+    if not consumer_dir.is_dir():
+        if verbose:
+            print(
+                f"  [cathedral-consumer-mps-routing] {_CHECK_341_CONSUMER_DIR_RELPATH} "
+                "not present, skipping"
+            )
+        return violations
+
+    for sub in sorted(consumer_dir.iterdir()):
+        if not sub.is_dir():
+            continue
+        if sub.name in _CHECK_341_EXEMPT_SUBDIRS:
+            continue
+        if sub.name.startswith("_"):
+            # Reference packages (e.g. _example_consumer) exempt.
+            continue
+        init_path = sub / "__init__.py"
+        if not init_path.exists():
+            continue
+
+        try:
+            body = init_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            if verbose:
+                print(
+                    f"  [cathedral-consumer-mps-routing] SKIP {sub.name} "
+                    f"(read failed: {exc})"
+                )
+            continue
+
+        # In-scope check: must have routing-cascade tokens.
+        if not _check_341_file_has_routing_tokens(body):
+            continue
+
+        # Waiver check (waiver short-circuits validation).
+        if _check_341_extract_waiver_rationale(body) is not None:
+            continue
+
+        # Canonical-markers check.
+        missing = _check_341_find_missing_markers(body)
+        if missing:
+            rel = str(init_path.relative_to(root))
+            violations.append(
+                f"{rel}: routing-recommender package missing canonical "
+                f"non-promotable markers: {missing}. Per Catalog #341 "
+                "(SCOPE-NARROWING SISTER OF #317) every cathedral_consumers/* "
+                "routing recommender MUST include all 3 markers "
+                "(predicted_delta_adjustment=0.0 / promotable=False / "
+                "axis_tag=\"[predicted]\") in every routing-branch return "
+                "value per CathedralConsumerContract + CLAUDE.md "
+                '"MPS auth eval is NOISE" non-negotiable. Add the missing '
+                "marker(s) OR add `# CATHEDRAL_CONSUMER_MPS_ROUTING_OK:"
+                "<rationale>` waiver in __init__.py (placeholder rationale "
+                "rejected; rationale ≥4 chars required)."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [cathedral-consumer-mps-routing] {len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [cathedral-consumer-mps-routing] OK (all routing recommenders "
+                "carry canonical non-promotable markers)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_cathedral_consumer_mps_prescreen_routing_carries_canonical_markers "
+            f"found {len(violations)} violation(s) per Catalog #341 "
+            "(SCOPE-NARROWING SISTER OF #317).\n  "
             + "\n  ".join(v[:500] for v in violations[:5])
         )
     return violations
@@ -73863,5 +74303,299 @@ def check_substrate_driver_consumes_trainer_mode_env_var(
             "check_substrate_driver_consumes_trainer_mode_env_var found "
             f"{len(violations)} violation(s) per Catalog #326.\n  "
             + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #339 — SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION (2026-05-19)
+# ============================================================================
+# Bug class anchor: today's 3 consecutive silent-no-spawn incidents (Z6 Wave
+# 2 4c / STC v2 / STC sister) all exhibited the same pattern in
+# experiments/modal_train_lane.py: `.spawn()` succeeded → paid GPU meter
+# started → `register_dispatched_call_id` failed (fcntl lock contention,
+# disk full, sister-subagent edit, corruption) → silent
+# `try/except Exception: print WARNING + continue` at lines 1921-1960
+# swallowed the failure → wrapper exited rc=0 → ledger had no row →
+# harvester invisible → operator effort wasted.
+#
+# Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable + "Bugs
+# must be permanently fixed AND self-protected against" non-negotiable.
+#
+# This gate is the STRUCTURAL protection at the source-text surface that
+# refuses any future regression of the silent-swallow pattern around the
+# canonical ledger registration call in experiments/modal_train_lane.py.
+#
+# Gate semantics: AST-scan experiments/modal_train_lane.py for the
+# `register_dispatched_call_id_fail_closed(...)` (or
+# `register_dispatched_call_id(...)`) call. Refuse if any of:
+#   (a) the call appears inside a `try:` body whose handler contains
+#       `print(` AND lacks `sys.exit` / `raise SystemExit` / re-raise;
+#   (b) the call site uses the legacy non-fail-closed helper
+#       `register_dispatched_call_id` directly without an explicit fail-closed
+#       handler.
+#
+# Same-line waiver: `# SILENT_NO_SPAWN_LEDGER_SWALLOW_OK:<rationale>` on
+# the function `def main` line OR on the relevant `try:` line. Placeholder
+# `<rationale>` / `<reason>` literals rejected per Catalog #287 sister
+# discipline.
+#
+# Sister of Catalog #245 (canonical Modal call_id ledger), Catalog #131
+# (fcntl-locked bare-write discipline), Catalog #138 (strict-load), and
+# Catalog #143 (paid-job register-before-submit) — together they extinct
+# the orphan-paid-Modal-dispatch bug class at FOUR surfaces:
+#   (#143) register pending row BEFORE submit
+#   (#245) canonical ledger as single source of truth
+#   (#131/#138) fcntl-locked / strict-load discipline
+#   (#339) fail-closed registration AFTER spawn — THIS gate
+# ----------------------------------------------------------------------------
+
+
+_CHECK_339_TARGET_RELPATH = "experiments/modal_train_lane.py"
+
+_CHECK_339_FAIL_CLOSED_HELPER_NAMES = frozenset(
+    {
+        "register_dispatched_call_id_fail_closed",
+    }
+)
+
+_CHECK_339_LEGACY_HELPER_NAMES = frozenset(
+    {
+        "register_dispatched_call_id",
+    }
+)
+
+_CHECK_339_WAIVER_RE = re.compile(
+    r"#\s*SILENT_NO_SPAWN_LEDGER_SWALLOW_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_339_WAIVER_PLACEHOLDERS = frozenset({"<rationale>", "<reason>", ""})
+
+
+def _check_339_waiver_present(source: str) -> bool:
+    """Return True if any line in ``source`` has a valid Catalog #339 waiver."""
+
+    for line in source.splitlines():
+        match = _CHECK_339_WAIVER_RE.search(line)
+        if not match:
+            continue
+        rationale = match.group("rationale").strip()
+        if rationale in _CHECK_339_WAIVER_PLACEHOLDERS:
+            continue
+        if len(rationale) < 4:
+            continue
+        return True
+    return False
+
+
+def _check_339_call_is_in_swallowing_try(
+    tree: Any, call_node: Any
+) -> tuple[bool, str | None]:
+    """Determine whether ``call_node`` is wrapped in a silent-swallow try.
+
+    Returns ``(is_swallowing, handler_description)`` — handler_description
+    is a short string for diagnostic messages (or None).
+
+    A handler is considered "silent-swallowing" when it catches a broad
+    exception class (BaseException / Exception / bare except) AND its body
+    does NOT contain ``raise`` / ``sys.exit`` / ``SystemExit`` / a re-raise.
+    """
+
+    import ast
+
+    # Find the enclosing Try node by walking parents.
+    parent_map: dict[int, Any] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parent_map[id(child)] = parent
+
+    current: Any = call_node
+    while current is not None:
+        parent = parent_map.get(id(current))
+        if parent is None:
+            return False, None
+        if isinstance(parent, ast.Try):
+            # Check if current is in parent.body (vs handlers / finalbody)
+            if any(current is stmt for stmt in parent.body):
+                # Inspect handlers — is any of them a silent swallow?
+                for handler in parent.handlers:
+                    # Broad exception scope: bare except / Exception /
+                    # BaseException.
+                    is_broad = False
+                    if handler.type is None:
+                        is_broad = True
+                    elif isinstance(handler.type, ast.Name) and handler.type.id in (
+                        "Exception",
+                        "BaseException",
+                    ):
+                        is_broad = True
+                    if not is_broad:
+                        continue
+                    # Does the handler re-raise / sys.exit?
+                    has_exit_path = False
+                    for node in ast.walk(handler):
+                        if isinstance(node, ast.Raise):
+                            has_exit_path = True
+                            break
+                        if isinstance(node, ast.Call):
+                            func = node.func
+                            if (
+                                isinstance(func, ast.Attribute)
+                                and isinstance(func.value, ast.Name)
+                                and func.value.id == "sys"
+                                and func.attr == "exit"
+                            ):
+                                has_exit_path = True
+                                break
+                            if (
+                                isinstance(func, ast.Name)
+                                and func.id in ("exit", "quit")
+                            ):
+                                has_exit_path = True
+                                break
+                    if not has_exit_path:
+                        return True, (
+                            f"broad-except handler at line {handler.lineno} "
+                            "lacks raise/sys.exit"
+                        )
+        current = parent
+
+    return False, None
+
+
+def check_modal_dispatcher_registers_call_id_before_successful_exit(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #339 — refuse silent-no-spawn pattern in modal_train_lane.py.
+
+    Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" + "Bugs must be
+    permanently fixed AND self-protected against" non-negotiables.
+
+    The gate AST-scans ``experiments/modal_train_lane.py`` and refuses any
+    state where the post-spawn canonical-ledger registration call sits
+    inside a silent-swallow ``try/except Exception: print`` handler that
+    lacks ``raise`` / ``sys.exit``. The fix is to use
+    ``register_dispatched_call_id_fail_closed`` (which raises
+    ``LedgerRegistrationFailedError`` on failure) and either let it
+    propagate OR catch it explicitly and ``sys.exit(13)`` per the
+    Catalog #339 Layer 2 fix.
+
+    Same-line waiver: ``# SILENT_NO_SPAWN_LEDGER_SWALLOW_OK:<rationale>``
+    on the ``def main`` line OR on the relevant ``try:`` line (rationale
+    >= 4 chars; placeholder ``<rationale>`` / ``<reason>`` rejected so
+    the gate's docstring example cannot self-waive).
+
+    Sister of Catalog #245 (canonical Modal call_id ledger), #131
+    (fcntl-locked bare-write discipline), #138 (strict-load), #143
+    (paid-job register-before-submit).
+    """
+
+    import ast
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / _CHECK_339_TARGET_RELPATH
+    violations: list[str] = []
+
+    if not target.is_file():
+        if verbose:
+            print(f"  [catalog-339] OK ({_CHECK_339_TARGET_RELPATH} not present)")
+        return violations
+
+    try:
+        source = target.read_text(encoding="utf-8")
+    except Exception as exc:
+        violations.append(
+            f"[Catalog #339] cannot read {_CHECK_339_TARGET_RELPATH}: {exc}"
+        )
+        if strict:
+            raise PreflightError(violations[0])
+        return violations
+
+    # File-level waiver bypasses gate (rare; for the deliberate operator-approved
+    # case where the swallow is intentional + documented).
+    if _check_339_waiver_present(source):
+        if verbose:
+            print(
+                f"  [catalog-339] OK ({_CHECK_339_TARGET_RELPATH} carries "
+                "SILENT_NO_SPAWN_LEDGER_SWALLOW_OK waiver)"
+            )
+        return violations
+
+    try:
+        tree = ast.parse(source, filename=str(target))
+    except SyntaxError as exc:
+        violations.append(
+            f"[Catalog #339] {_CHECK_339_TARGET_RELPATH} SyntaxError: {exc}"
+        )
+        if strict:
+            raise PreflightError(violations[0])
+        return violations
+
+    # Find every Call node whose function is one of the registration helpers.
+    register_calls: list[tuple[Any, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name: str | None = None
+        if isinstance(func, ast.Name):
+            name = func.id
+        elif isinstance(func, ast.Attribute):
+            name = func.attr
+        if name is None:
+            continue
+        if (
+            name in _CHECK_339_FAIL_CLOSED_HELPER_NAMES
+            or name in _CHECK_339_LEGACY_HELPER_NAMES
+        ):
+            register_calls.append((node, name))
+
+    if not register_calls:
+        # No registration call found at all — that's a different bug class
+        # (the wrapper is not registering AT ALL). Flag it.
+        violations.append(
+            f"[Catalog #339] {_CHECK_339_TARGET_RELPATH}: no "
+            f"register_dispatched_call_id_fail_closed(...) or "
+            f"register_dispatched_call_id(...) call found in source. "
+            f"Modal dispatcher MUST register the call_id in the canonical "
+            f"ledger per CLAUDE.md 'Modal .spawn() HARVEST OR LOSE'."
+        )
+
+    for call_node, name in register_calls:
+        is_swallowing, handler_desc = _check_339_call_is_in_swallowing_try(
+            tree, call_node
+        )
+        if is_swallowing:
+            violations.append(
+                f"[Catalog #339] {_CHECK_339_TARGET_RELPATH}:{call_node.lineno}: "
+                f"{name}(...) is wrapped in a silent-swallow try ({handler_desc}). "
+                f"Use register_dispatched_call_id_fail_closed and let "
+                f"LedgerRegistrationFailedError propagate OR catch + "
+                f"sys.exit(non-zero). See Catalog #339 fix anchor; today's "
+                f"3 silent-no-spawn incidents (Z6 Wave 2 4c / STC v2 / "
+                f"STC sister) were caused by this exact pattern. Add "
+                f"`# SILENT_NO_SPAWN_LEDGER_SWALLOW_OK:<rationale>` waiver "
+                f"only with operator review."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-339] WARN: {len(violations)} silent-no-spawn "
+                f"violation(s) in {_CHECK_339_TARGET_RELPATH} (strict={strict})"
+            )
+        else:
+            print(f"  [catalog-339] OK ({_CHECK_339_TARGET_RELPATH} scanned)")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_dispatcher_registers_call_id_before_successful_exit: "
+            f"{len(violations)} silent-no-spawn violation(s) (Catalog #339 — "
+            "SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION; 2026-05-19 anchor); "
+            "first 3:\n  " + "\n  ".join(violations[:3])
         )
     return violations
