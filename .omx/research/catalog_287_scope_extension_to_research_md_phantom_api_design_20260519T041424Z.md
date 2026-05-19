@@ -131,3 +131,6 @@ Strict-flip planned after live count = 0.
 - ASSUMPTION 2: "Scope-extension preferred over new gate per Catalog #299" — HARD-EARNED (operator directive + 15th-instance memo recommendation + catalog quota brake)
 - ASSUMPTION 3: "Default to OFF for memory file scan to preserve OSS hermeticity" — HARD-EARNED (sister Catalog #290/#291/#292 pattern; clean clones + CI should not depend on operator's private `~/.claude/projects/` directory)
 
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

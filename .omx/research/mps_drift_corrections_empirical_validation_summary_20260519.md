@@ -63,3 +63,6 @@ corrected use identical inputs.
 - Slot 9 formalization: `feedback_mps_drift_mathematical_and_engineering_formalization_landed_20260519.md`
 - Landing memo: `feedback_mps_engineering_corrections_3_landed_20260519.md`
 - Operator-state JSON (gitignored): `.omx/state/mps_drift_corrections_empirical_validation_20260519.json`
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

@@ -212,3 +212,6 @@ find .omx/research -maxdepth 1 -name '*.md' -print | wc -l
 .venv/bin/python tools/extract_canonical_tasks_from_directive.py --json --directive .omx/research/codex_routing_directive_session_20260519_paid_dispatch_batch_C6_plus_204_followon_20260519T071500Z.md
 rg -n "bit_allocator_per_pair_consumer|per_pair_difficulty_atlas_consumer|hf_jobs_dispatcher_consumer|predicted_delta_uncertainty|findings_lagrangian" src/tac tools .omx/research
 ```
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

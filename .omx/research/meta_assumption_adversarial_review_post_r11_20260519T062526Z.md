@@ -177,3 +177,6 @@ THIS review extincts the violation. Catalog #291 enforces the recurring cadence 
 - counter_state: n/a (META-ASSUMPTION review is not part of the 3-clean-pass adversarial counter; that's a separate cycle)
 - next_review_due_by: 2026-05-26 OR after 50 subagent landings, whichever first
 - catalog_291_cadence_anchor: this_memo_resets_the_clock
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

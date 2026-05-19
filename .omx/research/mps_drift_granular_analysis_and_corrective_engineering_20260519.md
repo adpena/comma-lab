@@ -404,3 +404,6 @@ The single operator-routable to close the cos(g, d) distribution
 verdict (currently NO_MASTER_GRADIENT_ANCHOR) is extracting a master-
 gradient anchor for the MPS Phase B archive sha. The analyzer is ready
 to consume that anchor the moment it lands.
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

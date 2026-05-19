@@ -105,3 +105,6 @@ control path. The remaining blockers are evidence gates:
 
 These gates should stay fail-closed until exact same-runtime packet evidence
 lands. This pass does not authorize paid dispatch or promotion.
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

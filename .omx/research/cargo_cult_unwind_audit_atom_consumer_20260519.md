@@ -111,3 +111,6 @@ Ranked by `|predicted ΔS-signal-contribution| / cost`:
 ## Verdict
 
 `atom_consumer` is a Catalog #335 contract-compliant template-clone. Two CARGO-CULTED assumptions identified (#1 candidate discard, #2 hook #5 declared without implementation). Both are unwindable at ~$0 cost. Per CLAUDE.md "Forbidden premature KILL without research exhaustion" the lane is DEFER + REQUEST-REINVESTIGATION-OF-ALTERNATIVES per Catalog #308 (3 reactivation criteria documented above).
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

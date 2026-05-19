@@ -292,3 +292,6 @@ unconstrained (it operates on archive layout, not score directly). Dykstra
 feasibility N/A.
 
 [verified-against:.omx/research/post_decompress_multi_archive_layouts_20260519/SUMMARY.json]
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

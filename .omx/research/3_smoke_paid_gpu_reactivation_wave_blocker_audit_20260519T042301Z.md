@@ -138,3 +138,6 @@ Atom: `build_council_deliberation_atom(atom_id="audit_3_smoke_paid_gpu_reactivat
 - **E.7 reactivation**: VQ-VAE trainer gets `--codebook-size` flag + per-substrate symposium memo + Catalog #324 field + variant recipe lands → dispatch via canonical operator-authorize at $1-3 envelope
 - **E.8 reactivation**: stack_of_stacks recipe flipped + per-substrate symposium memo + probe outcome ratified → dispatch via canonical operator-authorize at $0.50-1.50 envelope
 - **E.10 reactivation**: Z7-GRU Wave 2 disambiguator outcome lands + C6 IBPS Phase 2 β-anchor lands + Wave N+1 council PROCEED-unconditional + recipe `dispatch_enabled: true` flip + `mamba_ssm` pre-flight smoke passes → dispatch at $2-5 envelope (multi-week timeline)
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

@@ -241,3 +241,6 @@ Level 1 (impl_complete + memory_entry).
 - CLAUDE.md "Forbidden device-selection defaults (the MPS-fallback trap)" — Catalog #1's source forbidden pattern
 - CLAUDE.md "Forbidden premature KILL without research exhaustion" — the discipline that defaults to RETAIN when bug class still poses realistic risk
 - Catalog #299 (`check_catalog_quota_under_400`) — gate consolidation discipline that this audit serves
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

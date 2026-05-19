@@ -193,3 +193,6 @@ finding_canonical_path: per_substrate_symposium_draft
 - Predecessor blocker audit: `.omx/research/3_smoke_paid_gpu_reactivation_wave_blocker_audit_20260519T042301Z.md`
 - Wave 2A analytical Pareto solve: `.omx/state/8b987215a` rows #2+#3
 - CLAUDE.md non-negotiables: Catalog #313 / #324 / #325 / #270 / #167 / #294 / #303 / #305 / #296 / #229 / #220 / #272 / #292 / #300
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

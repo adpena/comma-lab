@@ -150,3 +150,6 @@ Two atoms queued (both pending DRAFT ratification before persistence):
 - VQ-VAE trainer: `experiments/train_substrate_vq_vae.py` (`--codebook-size` line 310; default=512)
 - SGLD trainer: `experiments/train_substrate_stack_of_stacks.py` (`--langevin-t-init` line 278 default=0.3; `--langevin-t-final` line 280 default=1e-4)
 - CLAUDE.md non-negotiables: Catalog #313 / #324 / #325 / #270 / #167 / #294 / #303 / #305 / #296 / #229 / #220 / #272 / #292 / #300 / #240 / #190 / #244
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

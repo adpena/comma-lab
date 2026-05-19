@@ -136,3 +136,6 @@ Per Catalog #303:
 - Tier 1 resurrection design memo 2026-05-16: `.omx/research/tier_1_resurrection_5_pr106_lanes_05_06_reformulated_uniward_grayscale_lut_full_stack_design_20260516.md`
 - CLAUDE.md "Forbidden premature KILL" + "Forbidden artifact-lifecycle violations" non-negotiables
 - Catalog #185 (META-meta-meta drift detection); Catalog #307 (paradigm-vs-implementation classification); Catalog #308 (alternative probe methodologies); Catalog #324 (predicted-band post-training validation)
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

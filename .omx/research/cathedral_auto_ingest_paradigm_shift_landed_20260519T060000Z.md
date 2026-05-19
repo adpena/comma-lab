@@ -165,3 +165,6 @@ solvers_consumer / unified_action_consumer / utility_curves_consumer
 **Per CLAUDE.md Apples-to-apples evidence discipline:** the claim "Catalog #335 live count: 0" remains EMPIRICALLY VERIFIED at this updated count (re-confirmed via canonical helper post-correction). What drifted was the package count, not the gate verdict.
 
 **Cross-reference to R11 finding H1-3:** classified MEDIUM (cosmetic numerical drift from concurrent sister landings during memo write); resolved via this append-only correction per HISTORICAL_PROVENANCE discipline. Future memos that quote package counts SHOULD cite the audit timestamp + the `ls src/tac/cathedral_consumers/` output to avoid the drift class.
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

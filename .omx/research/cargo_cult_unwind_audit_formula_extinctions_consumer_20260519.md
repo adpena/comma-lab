@@ -99,3 +99,6 @@ Ranked by `|predicted ΔS-signal-contribution| / cost`:
 ## Verdict
 
 `formula_extinctions_consumer` has the HEALTHIEST hook-declaration discipline of all 12 Wave 2C consumers (drops hook #5 honestly). Its CARGO-CULTED issue (#1) is the highest-value unwind candidate in the Wave 2C set because `tac.formula_extinctions` exposes axis-keyed helpers that genuinely vary per-candidate. Per CLAUDE.md "Forbidden premature KILL" the lane is DEFER + REQUEST-REINVESTIGATION; reactivation criteria documented above.
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

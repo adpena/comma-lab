@@ -97,3 +97,6 @@ Since Z6 4c dispatch DID NOT execute, the gating signal for Z7/Z8/TT5L V2 cascad
 - Lane registry: `lane_cheap_signal_first_dispatch_wave_20260519` L1
 - CLAUDE.md "Forbidden premature KILL" + "Modal `.spawn()` HARVEST OR LOSE" + "Race-mode rigor inversion" non-negotiables
 - Catalog #245 (Modal call_id ledger); Catalog #313 (probe-outcomes ledger); Catalog #300 (council deliberation v2 frontmatter); Catalog #325 (per-substrate symposium evidence)
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

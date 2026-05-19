@@ -184,3 +184,6 @@ Level 2 (impl_complete + memory_entry + deploy_runbook + real_archive_empirical=
 - `.omx/state/probe_outcomes.jsonl` (probe outcome SUPERSEDE row `mps_phase_b_re_fire_split_device_verdict_20260519T060500Z` planned)
 - `.omx/state/modal_call_id_ledger.jsonl` (call_id `fc-01KRZD8662BV697P8JVNR4WGCC`)
 - CLAUDE.md "MPS auth eval is NOISE" + "Forbidden premature KILL without research exhaustion" + "Substrate retirement discipline" + Catalog #1 + #192 + #199 + #202 + #243 + #270 + #313 + #325
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->

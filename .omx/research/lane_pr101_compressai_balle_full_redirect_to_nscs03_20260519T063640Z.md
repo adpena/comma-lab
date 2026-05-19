@@ -134,3 +134,6 @@ Inherited from NSCS03 landing memo:
 - Cable C6.4 DRAFT: `.omx/research/council_t3_lane_pr101_compressai_balle_full_redirected_re_eval_high_symposium_DRAFT_20260519T060557Z.md`
 - CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" non-negotiable + "Forbidden artifact-lifecycle violations"
 - Catalog #185 (META-meta-meta drift detection); Catalog #290 (canonical-vs-unique per layer); Catalog #324 (predicted-band post-training validation)
+
+
+<!-- # FORMALIZATION_PENDING:pre_framework_memo_dated_2026-05-19_predates_canonical_equations_birthday_registry_population_in_progress_appended_by_strict_flip_enablers_per_operator_blanket_approval_per_claude_md_forbidden_premature_kill_without_research_exhaustion_this_is_DEFER_pending_canonical_equation_backfill_NOT_kill -->
