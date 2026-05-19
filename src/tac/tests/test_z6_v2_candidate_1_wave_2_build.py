@@ -246,8 +246,8 @@ def test_candidate_4c_archive_meta_contains_effective_width_fields(tmp_path: Pat
     from tac.substrates.time_traveler_l5_z6 import (
         Z6PredictiveCodingConfig,
         Z6PredictiveCodingSubstrate,
-        parse_archive,
         pack_archive,
+        parse_archive,
     )
 
     cfg = Z6PredictiveCodingConfig(
@@ -511,6 +511,19 @@ def test_recipe_yaml_env_overrides_thread_all_tier1_required_flags() -> None:
         assert required_env in env, f"env_overrides missing {required_env}"
     # The canonical Wave 2 architecture is multi_layer_film_depth_3_300k
     assert env["Z6_PREDICTOR_ARCHITECTURE"] == "multi_layer_film_depth_3_300k"
+
+
+def test_candidate_1_recipe_declares_full_mode_for_z6_driver() -> None:
+    """Catalog #326: dispatchable Candidate 1 must not silently default to smoke."""
+    import yaml
+
+    recipe = yaml.safe_load(RECIPE_PATH.read_text(encoding="utf-8"))
+    env = recipe["env_overrides"]
+
+    assert recipe["dispatch_enabled"] is True
+    assert recipe["research_only"] is False
+    assert env["Z6_TRAINER_MODE"] == "full"
+    assert env["SMOKE_ONLY"] == "0"
 
 
 def test_recipe_yaml_dispatch_blockers_cleared_after_operator_approval() -> None:

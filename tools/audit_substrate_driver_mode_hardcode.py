@@ -48,7 +48,7 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -86,6 +86,11 @@ _MODE_ENV_TOKENS = (
     "SMOKE_MODE",
     "FULL_MODE",
     "MODE_FULL",
+)
+_MODE_ENV_TOKEN_RE = re.compile(
+    r"\b([A-Z0-9_]*(?:"
+    + "|".join(re.escape(token) for token in _MODE_ENV_TOKENS)
+    + r")[A-Z0-9_]*)\b"
 )
 # Recipe-side opt-out markers (driver hardcoded --smoke is acceptable IF
 # the recipe explicitly opts out of full-mode dispatch)
@@ -226,10 +231,22 @@ def _driver_consumes_env_mode(driver_text: str) -> tuple[bool, str | None]:
     - ``VAR="${VAR:-...}"`` parameter expansion of mode token, OR
     - ``if [ "$VAR" = "1" ]; then SMOKE_FLAG_ARGS+=(--smoke); fi`` conditional pattern.
     """
-    for token in _MODE_ENV_TOKENS:
-        if token in driver_text:
-            return True, token
-    return False, None
+    env_vars = _driver_mode_env_vars(driver_text)
+    return bool(env_vars), env_vars[0] if env_vars else None
+
+
+def _driver_mode_env_vars(driver_text: str) -> tuple[str, ...]:
+    """Return concrete shell env var names used for smoke/full mode routing."""
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for match in _MODE_ENV_TOKEN_RE.finditer(driver_text):
+        var = match.group(1)
+        if var in seen:
+            continue
+        seen.add(var)
+        ordered.append(var)
+    return tuple(ordered)
 
 
 def _driver_env_default_value(driver_text: str, env_var: str) -> str | None:
@@ -241,7 +258,32 @@ def _driver_env_default_value(driver_text: str, env_var: str) -> str | None:
     )
     match = pattern.search(driver_text)
     if match:
-        return match.group(1).strip().strip('"').strip("'")
+        value = match.group(1).strip().strip('"').strip("'")
+        if value:
+            return value
+    branch_default = _driver_env_empty_branch_default_value(driver_text, env_var)
+    if branch_default is not None:
+        return branch_default
+    return None
+
+
+def _driver_env_empty_branch_default_value(driver_text: str, env_var: str) -> str | None:
+    """Detect shell branches like ``elif [ -z "$VAR" ]; then VAR="1"``."""
+
+    lines = driver_text.splitlines()
+    empty_test = re.compile(
+        rf"\[\s+-z\s+[\"']?\${re.escape(env_var)}[\"']?\s+\]"
+    )
+    assignment = re.compile(
+        rf"^\s*{re.escape(env_var)}\s*=\s*[\"']?([^\"'\n#]+)[\"']?\s*(?:#.*)?$"
+    )
+    for idx, line in enumerate(lines):
+        if not empty_test.search(line):
+            continue
+        for follow in lines[idx + 1 : min(len(lines), idx + 8)]:
+            match = assignment.match(follow)
+            if match:
+                return match.group(1).strip()
     return None
 
 
@@ -279,6 +321,37 @@ def _recipe_sets_env_var(recipe_path: Path, env_var: str) -> str | None:
     return None
 
 
+def _mode_env_value_forces_full(env_var: str, value: str | None) -> bool:
+    if value is None:
+        return False
+    low = value.strip().strip('"').strip("'").lower()
+    if not low:
+        return False
+    if "smoke" in env_var.lower():
+        return low in ("0", "false", "no", "off", "full")
+    return low in ("full", "0", "false", "no", "off")
+
+
+def _mode_env_value_forces_smoke(env_var: str, value: str | None) -> bool:
+    if value is None:
+        return False
+    low = value.strip().strip('"').strip("'").lower()
+    if not low:
+        return False
+    if "smoke" in env_var.lower():
+        return low in ("1", "true", "yes", "on", "smoke")
+    return low in ("smoke", "1", "true", "yes", "on")
+
+
+def _recipe_mode_env_values(recipe_path: Path, env_vars: tuple[str, ...]) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for env_var in env_vars:
+        value = _recipe_sets_env_var(recipe_path, env_var)
+        if value is not None:
+            values[env_var] = value
+    return values
+
+
 def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
     text = _read(driver_path)
     substrate_id = _substrate_id_from_driver(driver_path)
@@ -298,6 +371,7 @@ def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
         p.search(text) for p in _SMOKE_CONDITIONAL_PATTERNS
     )
     consumes_env, env_var = _driver_consumes_env_mode(text)
+    env_vars = _driver_mode_env_vars(text)
 
     if not has_hardcoded and not consumes_env and not has_conditional_smoke:
         verdict = "NO_SMOKE_FLAG"
@@ -338,44 +412,53 @@ def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
         # consumes_env AND (has_hardcoded OR has_conditional_smoke) — most
         # likely Z6 pattern with SMOKE_FLAG_ARGS+=(--smoke) inside
         # `if [ "$SMOKE_ONLY" = "1" ]`
-        default_value = _driver_env_default_value(text, env_var) if env_var else None
+        default_values = {
+            var: value
+            for var in env_vars
+            if (value := _driver_env_default_value(text, var)) is not None
+        }
+        default_value = default_values.get(env_var) if env_var else None
         # Check per-recipe: does each individual recipe opt out OR override env?
         recipe_status: list[dict[str, Any]] = []
+        driver_default_is_full = any(
+            _mode_env_value_forces_full(var, value)
+            for var, value in default_values.items()
+        )
+        driver_default_is_smoke = any(
+            _mode_env_value_forces_smoke(var, value)
+            for var, value in default_values.items()
+        )
         for rp in recipes:
             rp_rel = _rel(rp)
             rp_opted_out = _recipe_opted_out_of_full_mode(rp)
-            rp_env_value = _recipe_sets_env_var(rp, env_var) if env_var else None
-            rp_env_full = (
-                rp_env_value is not None
-                and rp_env_value.strip().lower() in ("0", "false", "no", "off", "full")
+            rp_env_values = _recipe_mode_env_values(rp, env_vars)
+            rp_env_full = any(
+                _mode_env_value_forces_full(var, value)
+                for var, value in rp_env_values.items()
             )
             # A recipe is "safe" if (a) opted out, (b) sets env to full, or
             # (c) driver default is already full.
-            driver_default_is_full = (
-                default_value is not None
-                and default_value.strip().lower() in ("0", "false", "no", "off", "full")
-            )
             safe = rp_opted_out or rp_env_full or driver_default_is_full
             recipe_status.append({
                 "recipe": rp_rel,
                 "opted_out_of_full_mode": rp_opted_out,
-                "env_var_value_in_recipe": rp_env_value,
+                "env_var_values_in_recipe": rp_env_values,
                 "env_var_forces_full": rp_env_full,
                 "safe_for_driver_smoke_default": safe,
             })
-        if default_value and default_value.strip().lower() in ("0", "false", "no", "off", "full"):
+        if driver_default_is_full and not driver_default_is_smoke:
             verdict = "CONSUMES_ENV_DEFAULTS_FULL"
             explanation = (
-                f"Driver consumes env var {env_var} with default '{default_value}' "
+                f"Driver consumes env vars {list(env_vars)} with full-mode defaults "
                 f"(full-mode); recipes can opt into smoke explicitly."
             )
-        elif default_value and default_value.strip().lower() in ("1", "true", "yes", "on", "smoke"):
+        elif driver_default_is_smoke:
             # Bug class fires if ANY recipe is neither opted-out nor overrides env to full
             unsafe_recipes = [r["recipe"] for r in recipe_status if not r["safe_for_driver_smoke_default"]]
             if unsafe_recipes:
                 verdict = "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS"
                 explanation = (
-                    f"Driver consumes env var {env_var} with default '{default_value}' "
+                    f"Driver consumes env vars {list(env_vars)} with defaults {default_values} "
                     f"(smoke-mode) AND at least one matching recipe does NOT override "
                     f"the env var to full AND does NOT opt out of full-mode. "
                     f"Z6-v2 Wave 2 BUG CLASS — unsafe recipes: {unsafe_recipes}"
@@ -383,14 +466,14 @@ def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
             elif recipes:
                 verdict = "CONSUMES_ENV_DEFAULTS_SMOKE_RECIPE_OK"
                 explanation = (
-                    f"Driver consumes env var {env_var} with default '{default_value}' "
+                    f"Driver consumes env vars {list(env_vars)} with defaults {default_values} "
                     f"(smoke-mode); ALL matching recipes either explicitly set full OR "
                     f"opt out of full-mode entirely. Acceptable."
                 )
             else:
                 verdict = "CONSUMES_ENV_DEFAULTS_SMOKE_NO_RECIPE"
                 explanation = (
-                    f"Driver consumes env var {env_var} with default '{default_value}' "
+                    f"Driver consumes env vars {list(env_vars)} with defaults {default_values} "
                     f"(smoke-mode) but no matching recipe was found. Out of scope."
                 )
         else:
@@ -402,14 +485,14 @@ def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
             if all_recipes_safe and recipes:
                 verdict = "CONSUMES_ENV_MULTI_KEY_DEFAULT_RECIPE_OK"
                 explanation = (
-                    f"Driver consumes env var {env_var} via multi-key mode resolution "
+                    f"Driver consumes env vars {list(env_vars)} via multi-key mode resolution "
                     f"(no single statically-determinable default); all matching recipes "
                     f"are safe (either opt out OR explicitly override env to full)."
                 )
             else:
-                verdict = "CONSUMES_ENV_UNKNOWN_DEFAULT"
+                verdict = "CONSUMES_ENV_UNKNOWN_DEFAULT_BUG_CLASS"
                 explanation = (
-                    f"Driver consumes env var {env_var} but default value could not be "
+                    f"Driver consumes env vars {list(env_vars)} but default value could not be "
                     f"determined statically AND at least one matching recipe does NOT "
                     f"override the env var to full AND does NOT opt out of full-mode."
                 )
@@ -422,9 +505,9 @@ def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
             "explanation": explanation,
             "any_recipe_opted_out_of_full_mode": any_recipe_opted_out,
             "consumes_env_var": env_var,
-            "env_var_default_in_driver": (
-                _driver_env_default_value(text, env_var) if (consumes_env and env_var) else None
-            ),
+            "consumes_env_vars": list(env_vars),
+            "env_var_default_in_driver": default_value,
+            "env_var_defaults_in_driver": default_values,
             "per_recipe_safety": recipe_status,
         }
     return {
@@ -435,6 +518,7 @@ def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
         "explanation": explanation,
         "any_recipe_opted_out_of_full_mode": any_recipe_opted_out,
         "consumes_env_var": env_var,
+        "consumes_env_vars": list(env_vars),
         "env_var_default_in_driver": (
             _driver_env_default_value(text, env_var) if (consumes_env and env_var) else None
         ),
@@ -455,11 +539,12 @@ def audit_all_drivers(repo_root: Path | None = None) -> dict[str, Any]:
         if row["verdict"] in (
             "HARDCODES_SMOKE_NO_RECIPE_OPT_OUT",
             "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS",
+            "CONSUMES_ENV_UNKNOWN_DEFAULT_BUG_CLASS",
         )
     ]
     return {
         "schema_version": 1,
-        "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "audit_tool": "tools/audit_substrate_driver_mode_hardcode.py",
         "catalog_reference": "Catalog #326 (NEW) + DRIVER-FIX wave 2026-05-18 anchor",
         "empirical_anchor_z6_v2_wave_2_defer": {
@@ -524,7 +609,7 @@ def main() -> int:
                 print(f"  - {sid}")
 
     if args.apply:
-        utc_stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        utc_stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         out_path = args.repo_root / ".omx/state" / f"substrate_driver_mode_hardcode_audit_{utc_stamp}.json"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")

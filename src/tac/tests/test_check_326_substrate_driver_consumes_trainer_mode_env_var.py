@@ -15,10 +15,7 @@ Coverage:
 
 from __future__ import annotations
 
-import importlib
-import importlib.util
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -30,10 +27,10 @@ import pytest
 import tac.preflight as preflight_mod
 from tac.preflight import (
     PreflightError,
-    check_substrate_driver_consumes_trainer_mode_env_var,
     _check_326_driver_has_file_waiver,
     _check_326_driver_has_line_waiver,
     _check_326_rationale_is_placeholder,
+    check_substrate_driver_consumes_trainer_mode_env_var,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -468,6 +465,94 @@ def test_gate_accepts_smoke_default_when_env_override_is_in_env_overrides(
     assert result == []
 
 
+def test_gate_flags_multi_key_smoke_default_when_recipe_declares_no_mode(
+    tmp_path: Path,
+) -> None:
+    """Z6-style TRAINER_MODE > SMOKE_ONLY drivers still need a recipe override."""
+    repo = _isolated_repo(tmp_path)
+    driver = repo / "scripts" / "remote_lane_substrate_z6ish.sh"
+    driver.write_text(textwrap.dedent("""\
+        #!/bin/bash
+        set -euo pipefail
+        Z6_TRAINER_MODE="${Z6_TRAINER_MODE:-}"
+        SMOKE_ONLY="${SMOKE_ONLY:-}"
+        if [ -n "$Z6_TRAINER_MODE" ]; then
+            case "$Z6_TRAINER_MODE" in
+                smoke) SMOKE_ONLY="1" ;;
+                full) SMOKE_ONLY="0" ;;
+            esac
+        elif [ -z "$SMOKE_ONLY" ]; then
+            SMOKE_ONLY="1"
+        fi
+        SMOKE_FLAG_ARGS=()
+        if [ "$SMOKE_ONLY" = "1" ]; then
+            SMOKE_FLAG_ARGS+=(--smoke)
+        fi
+        python trainer.py ${SMOKE_FLAG_ARGS[@]+"${SMOKE_FLAG_ARGS[@]}"}
+    """))
+    recipe = repo / ".omx" / "operator_authorize_recipes" / "substrate_z6ish_modal_t4_dispatch.yaml"
+    recipe.write_text(textwrap.dedent("""\
+        schema_version: 1
+        name: substrate_z6ish_modal_t4_dispatch
+        research_only: false
+        dispatch_enabled: true
+        remote_driver: scripts/remote_lane_substrate_z6ish.sh
+        env_overrides:
+          OTHER_ENV: "value"
+    """))
+
+    result = check_substrate_driver_consumes_trainer_mode_env_var(
+        repo_root=repo, strict=False, verbose=False
+    )
+
+    assert len(result) == 1
+    assert "z6ish" in result[0]
+    assert "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS" in result[0]
+
+
+def test_gate_accepts_multi_key_driver_when_recipe_sets_trainer_mode_full(
+    tmp_path: Path,
+) -> None:
+    """A canonical TRAINER_MODE=full declaration is enough; SMOKE_ONLY is legacy."""
+    repo = _isolated_repo(tmp_path)
+    driver = repo / "scripts" / "remote_lane_substrate_z6modeok.sh"
+    driver.write_text(textwrap.dedent("""\
+        #!/bin/bash
+        set -euo pipefail
+        Z6_TRAINER_MODE="${Z6_TRAINER_MODE:-}"
+        SMOKE_ONLY="${SMOKE_ONLY:-}"
+        if [ -n "$Z6_TRAINER_MODE" ]; then
+            case "$Z6_TRAINER_MODE" in
+                smoke) SMOKE_ONLY="1" ;;
+                full) SMOKE_ONLY="0" ;;
+            esac
+        elif [ -z "$SMOKE_ONLY" ]; then
+            SMOKE_ONLY="1"
+        fi
+        SMOKE_FLAG_ARGS=()
+        if [ "$SMOKE_ONLY" = "1" ]; then
+            SMOKE_FLAG_ARGS+=(--smoke)
+        fi
+        python trainer.py ${SMOKE_FLAG_ARGS[@]+"${SMOKE_FLAG_ARGS[@]}"}
+    """))
+    recipe = repo / ".omx" / "operator_authorize_recipes" / "substrate_z6modeok_modal_t4_dispatch.yaml"
+    recipe.write_text(textwrap.dedent("""\
+        schema_version: 1
+        name: substrate_z6modeok_modal_t4_dispatch
+        research_only: false
+        dispatch_enabled: true
+        remote_driver: scripts/remote_lane_substrate_z6modeok.sh
+        env_overrides:
+          Z6_TRAINER_MODE: "full"
+    """))
+
+    result = check_substrate_driver_consumes_trainer_mode_env_var(
+        repo_root=repo, strict=False, verbose=False
+    )
+
+    assert result == []
+
+
 def test_gate_rejects_placeholder_line_waiver(tmp_path: Path) -> None:
     repo = _isolated_repo(tmp_path)
     driver = repo / "scripts" / "remote_lane_substrate_phold.sh"
@@ -524,7 +609,7 @@ def test_gate_aggregates_multiple_violations(tmp_path: Path) -> None:
     repo = _isolated_repo(tmp_path)
     for name in ("multi_a", "multi_b", "multi_c"):
         driver = repo / "scripts" / f"remote_lane_substrate_{name}.sh"
-        driver.write_text(textwrap.dedent(f"""\
+        driver.write_text(textwrap.dedent("""\
             #!/bin/bash
             set -euo pipefail
             python trainer.py --smoke
