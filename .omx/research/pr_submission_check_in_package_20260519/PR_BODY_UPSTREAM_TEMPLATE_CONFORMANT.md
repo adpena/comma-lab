@@ -38,10 +38,46 @@ The CPU and CUDA values are reported as separate observations on 1:1 contest-com
 
 Archive `archive.zip` is byte-stable at SHA-256 `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf` and 178,517 bytes. The ZIP carries `inflate.py`, `inflate.sh`, `src/codec.py`, `src/frame_selector.py`, `src/model.py`, and `0.bin`. Dependency closure is `torch` + `brotli`. The entry-point contract is the canonical `inflate.sh <archive_dir> <output_dir> <file_list>`. The rate term `25 * 178517 / 37545489 ≈ 0.118865` is fully accounted for by `archive.zip` bytes; no out-of-archive sidecars and no scorer weights are loaded at inflate time, per the strict scorer rule.
 
-Selector and codec source are mirrored at:
+Selector and codec source are mirrored at commit `922aeeae6` of [adpena/comma-lab](https://github.com/adpena/comma-lab/tree/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir):
 
-- [github.com/adpena/tac](https://github.com/adpena/tac) — the task-aware compression library used during training (MIT, CI-green).
-- [github.com/adpena/comma-lab](https://github.com/adpena/comma-lab) — the lab notebook for this submission, including FEC6 sources and the archive-build harness used at lockdown.
+- [`inflate.sh`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh) — 3-arg upstream-contract wrapper.
+- [`inflate.py`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py) — orchestrator + FEC6 selector decoder + INNOVATION 1/2/3 sites.
+- [`src/codec.py`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py) — HNeRV state-dict + latent sidecar parser.
+- [`src/frame_selector.py`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py) — selector grammar + 31-mode transform table.
+- [`src/model.py`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/model.py) — HNeRVDecoder, byte-identical to @SajayR's reference.
+
+[adpena/tac](https://github.com/adpena/tac) — the task-aware compression library used during training (MIT, CI-green).
+
+### Innovation grep convention
+
+The 3 novel contributions are tagged inline with `# INNOVATION:` comments so a reviewer can locate them with one grep:
+
+```bash
+grep -rn "^# INNOVATION" submission_dir/
+```
+
+Direct permalinks at commit `922aeeae6`:
+
+1. K=16 frame-conditional mode palette → [`inflate.py#L40-L43`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py#L40-L43)
+2. Fixed-Huffman codebook on selector indices → [`inflate.py#L61-L66`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py#L61-L66) + [decode side `#L240-L242`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py#L240-L242)
+3. Offline per-pair selector decision (no on-device search at inflate) → [`inflate.py#L330-L333`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py#L330-L333)
+- Sister: 31-mode palette superset → [`src/frame_selector.py#L13-L16`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py#L13-L16)
+
+### Easy reproduction (60-second smoke, CPU)
+
+The fastest way to verify `inflate.sh` produces the canonical byte-stable output (no upstream repo or contest videos required):
+
+```bash
+git clone https://github.com/adpena/comma-lab.git && cd comma-lab && git checkout 922aeeae6 && \
+  cd experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir && \
+  python -m venv .venv && .venv/bin/pip install --quiet torch brotli && \
+  mkdir -p /tmp/data /tmp/out && unzip -oq archive.zip -d /tmp/data && echo "0.mkv" > /tmp/list.txt && \
+  PACT_PYTHON_BIN=.venv/bin/python bash inflate.sh /tmp/data /tmp/out /tmp/list.txt && \
+  shasum -a 256 /tmp/out/0.raw
+# expect: d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c  /tmp/out/0.raw
+```
+
+Full score-verification (with upstream `evaluate.py`, contest videos, and paired CUDA host) is documented in [`submission_dir/README.md`](https://github.com/adpena/comma-lab/blob/922aeeae6/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md).
 
 ## Limitations
 
