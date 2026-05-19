@@ -252,6 +252,29 @@ def _mode_blockers_by_mode(modes: Mapping[str, Any]) -> dict[str, tuple[str, ...
             "literal_payload_kind"
         ) == "per_video_payload":
             blockers.append(f"{normalized}:script_side_per_video_payload_probe_only")
+        if record.get("seed_carrier") == "archive_member_seed":
+            proofs = record.get("proofs")
+            seed_smoke = (
+                proofs.get("seed_mutation_smoke") if isinstance(proofs, Mapping) else None
+            )
+            if (
+                not isinstance(seed_smoke, Mapping)
+                or seed_smoke.get("passed") is not True
+            ):
+                blockers.append(f"{normalized}:seed_mutation_smoke_missing_or_failed")
+        if record.get("seed_carrier") == "archive_member_weight_derived":
+            source_sha = record.get("source_member_sha256")
+            if not isinstance(source_sha, str) or len(source_sha) != 64:
+                blockers.append(f"{normalized}:source_member_sha256_missing")
+            proofs = record.get("proofs")
+            no_new_bytes = (
+                proofs.get("no_new_bytes_added") if isinstance(proofs, Mapping) else None
+            )
+            if (
+                not isinstance(no_new_bytes, Mapping)
+                or no_new_bytes.get("passed") is not True
+            ):
+                blockers.append(f"{normalized}:no_new_bytes_proof_missing_or_failed")
         if record.get("ready_for_exact_eval_dispatch") is not True:
             blockers.append(f"{normalized}:not_ready_for_exact_eval")
         if record.get("score_claim") is True:

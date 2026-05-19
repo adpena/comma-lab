@@ -13,6 +13,7 @@ from .authority import (
     build_procedural_seed_authority_packet,
     classify_procedural_seed_authority,
 )
+from .candidate_authority import build_procedural_codebook_candidate_authority
 from .hash_seed_codebook_generator import (
     emit_seed,
     expand_seed_to_codebook,
@@ -28,6 +29,7 @@ __all__ = [
     "AuthorityMode",
     "LiteralPayloadKind",
     "SeedCarrier",
+    "build_procedural_codebook_candidate_authority",
     "build_procedural_seed_authority_packet",
     "classify_procedural_seed_authority",
     "derive_codebook_from_archive_bytes",

@@ -261,8 +261,11 @@ def test_procedural_codebook_consumer_surfaces_archive_seed_authority_packet() -
     assert row["procedural_authority_detected"] is True
     authority = row["procedural_authority"]
     assert authority["preferred_promotion_mode"] == "archive_seeded"
-    assert authority["ready_for_exact_eval_modes"] == ("archive_seeded",)
+    assert authority["ready_for_exact_eval_modes"] == ()
     assert authority["promotion_eligible_modes"] == ()
+    assert "archive_seeded:seed_mutation_smoke_missing_or_failed" in authority[
+        "authority_blockers"
+    ]
     assert "runtime_constant:script_side_per_video_payload_probe_only" in authority[
         "authority_blockers"
     ]
