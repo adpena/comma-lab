@@ -10,9 +10,16 @@ lane_id: lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518
 # source with compress-time scorer-logit features.
 
 research_only: false
-dispatch_enabled: false
-dispatch_blockers:
-  - candidate4c_modal_training_recipe_is_diagnostic_only_exact_cuda_handoff_required
+# OPERATOR_FRONTIER_OVERRIDE 2026-05-19 per cable_c + cable_c6 syntheses +
+# cheap-signal-first wave. Z6 Wave 2 4c $3 cheap signal gates 3 of 5 Cable C
+# substrates (Z7-LSTM / Z8 / TT5L V2). The recipe remains smoke_only=true (the
+# Modal training surface is a pair-capped archive-producing diagnostic smoke
+# only per design); exact-CUDA authority is a post-harvest handoff via
+# experiments/modal_auth_eval.py. Operator quote: "All operator fates and
+# decisions approved" (2026-05-19 cumulative envelope). Sister Cable C
+# synthesis commit `ef077819e`; sister Cable C6 synthesis commit `4c056724c`.
+dispatch_enabled: true
+dispatch_blockers: []
 smoke_only: true
 smoke_validation_contract: training_artifact_v1
 
