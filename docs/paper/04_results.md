@@ -322,6 +322,57 @@ PR #107's true CPU-axis score was effectively medal-cluster adjacent, about
 `0.0013` above PR102's `0.19538` CPU row, rather than the apparent `0.229`
 CUDA-only position.
 
+### 4.8.1 Ongoing work — CUDA-optimal engineering is a separate track (2026-05-19)
+
+The per-archive CPU-vs-CUDA divergence documented above (the +0.033 score
+penalty PR102/103/105 incur when scored on `--device cuda` versus `--device cpu`
+on the *same* archive bytes) is real and is a measurement-drift phenomenon
+whose mechanism is per-kernel numerical: DALI/NVDEC vs PyAV decode producing
+different RGB uint8 bytes, the FastViT-T12 conv-stack FP32 noise floor
+(`σ²_cuda ≈ K·L·ε²`), and the Hydra-head MLP regression-vs-classification
+precision asymmetry. Targeted mitigations exist (Kahan summation, pinned
+softmax, fp32 matmul accumulation override) and they apply to closing the
+per-archive cross-device drift.
+
+A separate question, raised by the operator on 2026-05-19, distinguishes
+*closing the per-archive drift* from *engineering the CUDA-axis frontier*.
+These are not the same target. The canonical frontier pointer records TWO
+DIFFERENT archives as our per-axis frontiers:
+
+- **CPU-axis frontier**: archive `6bae0201fb08` (lane
+  `pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean`, pr101 fec6
+  family). This archive was engineered for the CPU axis; its incidental
+  CUDA-axis score is what it is.
+- **CUDA-axis frontier**: archive `9cb989cef519` (lane
+  `pr106_format0d_latent_score_table`, pr106 family). This archive was
+  engineered for the CUDA axis with a different scoring objective in mind.
+
+These are different engineering solutions, not the same archive at two
+viewpoints. The CPU-optimal engineering space may require techniques X, Y, Z
+(per-pair byte selection, fixed-Huffman quantization, score-conditional packet
+layout); the CUDA-optimal engineering space may require additional or different
+techniques A, B, C (TF32-tolerant pose-head numerics, DALI-friendly kernel
+layouts, cuDNN-canonical convolutions, training-time forward-path numerics
+matched to CUDA-eval numerics). We have not yet fully characterized the
+CUDA-optimal engineering space or its frontier.
+
+The contest leaderboard ranks on the CPU axis, so CPU-axis lowering remains
+the primary score-lowering target. CUDA-axis optimization remains valuable
+for: (a) full Pareto-frontier coverage in the paper; (b) production /
+openpilot relevance, since CUDA is canonical for several edge deployment
+classes; (c) cathedral autopilot routing, since some substrates may be
+CUDA-axis-superior in ways that inform dispatch decisions; (d) defensive
+coverage, since the contest could change its ranking axis in a future round.
+
+Ongoing work on this front is tracked via canonical-equations entries for
+per-device-class optimization (`tac.canonical_equations`), the cross-stack
+findings synthesis that decomposes per-archive drift from per-axis frontier
+selection, and a pending operator-routed analysis pass on the joint
+(CPU-score, CUDA-score) Pareto frontier across all our archives. The honest
+characterization is that the CUDA-axis frontier is less explored than the
+CPU-axis frontier, and the relationship between the two engineering targets
+is itself a research question, not a settled mapping.
+
 ## 4.9 Postmortem: Why The Gap Remained
 
 The uncomfortable but useful lesson is that we were not mainly short on

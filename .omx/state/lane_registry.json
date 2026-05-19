@@ -41285,6 +41285,375 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_findings_lagrangian_parallel_dual_track_build_20260519",
+      "name": "Findings Lagrangian PARALLEL DUAL-TRACK build (TRACK A hand-rolled + TRACK B PP per operator override)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_paid_gpu_dispatch_wave_20260519",
+      "name": "Paid GPU dispatch wave: HF Jobs T4 SegNet surrogate distillation (operator blanket approval; 5 sister items DEFERRED per recipe-level dispatch_blockers)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "PV phase complete for all 6 dispatches; 5 structurally blocked by recipe-level dispatch_enabled=false+dispatch_blockers; 1 (HF Jobs T4) blocked by hf_jobs not in LEGAL_NATIVE_PLATFORMS per src/tac/deploy/dispatch_protocol.py:73-75. $0 actual spend. See ~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_paid_gpu_dispatch_wave_landed_20260519.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_paid_gpu_dispatch_wave_landed_20260519.md in Claude memory dir documenting per-dispatch PV verdicts + structural blocker analysis + operator-routable handoffs for each item"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_orphan_canonical_helpers_landing_wave_score_lagrangian_plus_top_2_3_4_g1_20260519",
+      "name": "Orphan canonical helpers landing wave per slot 22 codex findings review (TOP-1 + TOP-2/3/4/G1)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 canonical helpers: tac.score_lagrangian (sister-landed) + tools/cpu_axis_optimal_archive_selector.py (sister-landed) + tac.early_stopping (NEW) + tac.uncertainty_weighted_loss (NEW) + tac.training.EMA.decay_from_total_steps (pre-existing); 5 cathedral consumers per Catalog #335; 5 canonical_equations registered in slot 19 registry"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #335 strict gate passes 0 violations across 27 cathedral_consumers packages post-landing (22 pre-existing + 5 new wave consumers)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_roster_maintenance_v2_daubechies_inner_council_plus_4_co_lead_structure_20260519",
+      "name": "Roster maintenance v2: Daubechies INNER_COUNCIL addition + 4-co-lead structure",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/canonical_council_roster.py + 56/56 tests pass in test_canonical_council_roster.py + INNER=14 GRAND=22 CO-LEADS=[Shannon,Dykstra,Rudin,Daubechies]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_roster_maintenance_v2_daubechies_inner_council_plus_4_co_lead_structure_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_operator_administrative_bundle_pr_submission_plus_q6_resolution_plus_time_traveler_protege_identity_20260519",
+      "name": "Operator-administrative bundle: PR submission DEFERRED + Q6 resolution + TimeTravelerProtege canonical identity (operator blanket approval)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Phase 2 Q6 council anchor + Phase 3 TimeTravelerProtege resolution to Rudin + Phase 4 CLAUDE.md APPEND-ONLY amendments + PR submission DEFER report; phases 2/3/4 complete; phase 1 PR submission DEFERRED-to-operator per CLAUDE.md 'Executing actions with care' + 'Submission auth eval \u2014 BOTH CPU AND CUDA' (missing hosted archive URL + report.txt + auth-eval JSON)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_operator_administrative_bundle_landed_20260519.md (landing memo) + canonical council anchor q6_continual_learning_pp_integration_resolved_via_operator_frontier_override_track_b_20260519 in .omx/state/council_deliberation_posterior.jsonl"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr_submission_pre_submission_canonicalization_plus_recursive_review_plus_auth_eval_duplication_20260519",
+      "name": "PR pre-submission canonicalization + 3-clean-pass review + auth eval duplication + operator check-in package (operator-correction-requires-check-in-before-submission)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr95_local_mps_source_faithful_training_probe_20260519",
+      "name": "PR95 local MPS source-faithful training portability probe",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_writeup_amendment_cpu_vs_cuda_discrepancy_plus_cuda_frontier_exploration_20260519",
+      "name": "Writeup amendment per operator 2026-05-19: CPU-vs-CUDA discrepancy + CUDA-optimal as separate engineering track",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "docs/paper/04_results.md \u00a74.8.1 Ongoing work \u2014 CUDA-optimal engineering is a separate track (2026-05-19), 51 lines appended per Catalog #110 APPEND-ONLY HISTORICAL_PROVENANCE"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_writeup_amendment_cpu_vs_cuda_discrepancy_plus_cuda_frontier_exploration_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_signal_loss_recovery_from_rate_limit_kill_wave_20260519",
+      "name": "Signal-loss recovery from rate-limit kill wave (9 killed subagents)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -41294,5 +41663,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T14:08:31Z"
+  "updated_at": "2026-05-19T17:11:20Z"
 }
