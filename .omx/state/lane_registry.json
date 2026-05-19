@@ -41695,6 +41695,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_phantom_api_backfill_wave_2_20260519",
+      "name": "Phantom API backfill Wave 2 drain",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_findings_lagrangian_phase_1_a_tests_landed_20260519",
+      "name": "Phase 1.A canonical tests for findings_lagrangian dual-track scaffold per Carmack ULTRA-MVP Q9 AMEND (15 TRACK A + 4 TRACK B = 19 tests)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "19 tests pass (15 TRACK A canonical Phase 1.A + 4 TRACK B smoke) at src/tac/findings_lagrangian/tests/test_phase_1_a_canonical_gaussian_posterior.py + src/tac/findings_lagrangian_pp/tests/test_smoke.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_findings_lagrangian_phase_1_a_tests_landed_20260519T174942Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -41704,5 +41786,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T17:37:08Z"
+  "updated_at": "2026-05-19T17:51:17Z"
 }
