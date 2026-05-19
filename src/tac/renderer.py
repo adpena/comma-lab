@@ -569,6 +569,7 @@ def _manual_grid_sample(image: torch.Tensor, grid: torch.Tensor) -> torch.Tensor
     torch.floor, torch.gather, torch.clamp, basic arithmetic.
 
     Benchmarked: 11.3x faster than CPU fallback on M5 Max (185ms vs 2091ms per iter).
+    [MPS-research-signal]
     Max output diff vs F.grid_sample: 3.6e-7. Max gradient diff: 3.1e-5.
 
     Args:

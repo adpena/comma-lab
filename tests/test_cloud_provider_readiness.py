@@ -188,6 +188,7 @@ class CloudProviderReadinessTests(unittest.TestCase):
              mock.patch.object(mod, "probe_kaggle", return_value=fake_provider("kaggle")), \
              mock.patch.object(mod, "probe_lightning", return_value=fake_provider("lightning")), \
              mock.patch.object(mod, "probe_vastai", return_value=fake_provider("vastai")), \
+             mock.patch.object(mod, "probe_hf_jobs", return_value=fake_provider("hf_jobs")), \
              mock.patch.object(mod, "probe_aws", return_value=fake_provider("aws")), \
              mock.patch.object(mod, "probe_azure", return_value=fake_provider("azure")), \
              mock.patch.object(mod, "probe_gcp", return_value=fake_provider("gcp")):

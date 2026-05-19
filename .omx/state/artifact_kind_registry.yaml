@@ -75,6 +75,16 @@
   rationale: "lane claims ledger, terminal rows append at top per CLAUDE.md"
   append_fields: [claims, rows]
 
+- pattern: ".omx/state/canonical_task_status.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "canonical Claude/Codex task-status mirror; fcntl-locked append-only JSONL source of truth"
+  append_fields: []
+
+- pattern: ".omx/state/catalog_287_phantom_api_waivers.jsonl"
+  kind: HISTORICAL_PROVENANCE
+  rationale: "append-only exact waiver ledger for historical research-memo phantom API citations; preserves dated memo bodies"
+  append_fields: []
+
 - pattern: ".ralph/run_log.md"
   kind: HISTORICAL_PROVENANCE
   rationale: "research timeline log; append entries, never mutate prior"

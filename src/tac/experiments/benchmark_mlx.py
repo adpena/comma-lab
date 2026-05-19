@@ -671,7 +671,7 @@ def main():
     print("SUMMARY — Implementation Recommendations")
     print("=" * 70)
     print("""
-  IMPLEMENTED:
+  IMPLEMENTED: [MPS-research-signal]
     1. Batch size 2: ~1.07x throughput (3.6 vs 3.4 pairs/sec)
        -> Default in train_renderer_mlx.py --batch-size 2
     2. Faster upsample: reshape+broadcast replaces mx.repeat (2x faster op)
@@ -694,7 +694,7 @@ def main():
     4. Multi-stream: GPU-bound workload, no overlap benefit.
     5. CPU training: 15.4x slower than GPU. Never use.
 
-  BOTTLENECKS (per-op profile):
+  BOTTLENECKS (per-op profile): [MPS-research-signal]
     - Full-res ResBlock: 16ms (CLADE norm + 2 convs at 384x512)
     - Bilinear upsample: 18ms (now 2x faster with reshape)
     - Half-res ResBlock: 7ms

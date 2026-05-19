@@ -905,7 +905,7 @@ def contrarian_failure_modes() -> dict[str, dict[str, Any]]:
                 "enforces this bound."
             ),
             "evidence": (
-                "trust_region_sweep.py confirmed the knee at ~0.01 pixels. "
+                "[advisory only] trust_region_sweep.py confirmed the knee at ~0.01 pixels. "
                 "The Jacobian optimal experiment showed 89% reduction is "
                 "achievable but only with very small corrections."
             ),

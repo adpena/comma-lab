@@ -162,6 +162,7 @@ def _quantize_latents_to_int8(
     latents: torch.Tensor,
 ) -> tuple[torch.Tensor, float, float]:
     """Quantize latents to int8 (saves 50% vs int16; total ~24 B/pair × 600 = 14.4 KB max).
+    [prediction]
 
     Returns (q_int8, scale, zero_point) so dequant is: ``f = (q + 127) * scale + zero_point``.
 

@@ -30,6 +30,7 @@ For K=64 (4× smaller codebook):
     indices:  600 × 6 / 8 = 450 bytes
     total: 4,034 bytes (74% reduction vs PR101 15,387 bytes)
 
+[prediction]
 [verified-against:VQ-VAE paper (van den Oord 2017) + WaveNet
 quantization + PR101 ``latent_blob`` layout]
 """

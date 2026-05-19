@@ -21,14 +21,21 @@ Lane: lane_meta_phantom_api_structural_extinction_catalog_287_scope_extend_20260
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from tac.preflight import (
     PreflightError,
     _check_287b_extract_two_component_prefix,
+    _check_287b_authority_claim_line,
+    _check_287b_authority_dotted_reference_ok,
     _check_287b_file_waived,
+    _check_287b_line_sha256,
     _check_287b_line_waived,
+    _check_287b_load_waiver_manifest,
     _check_287b_module_is_importable,
+    _check_287b_module_has_attr,
     _check_287b_strip_code_fences_and_html_comments,
     check_no_docstring_overstatement_without_evidence_tag,
 )
@@ -72,6 +79,18 @@ class TestModuleIsImportable:
     def test_tac_atom_ledger_importable(self):
         # Function-inside-module case: tac.atom.ledger IS importable
         assert _check_287b_module_is_importable("tac.atom.ledger") is True
+
+
+class TestModuleHasAttr:
+    def test_real_module_attribute_is_ok(self):
+        assert _check_287b_module_has_attr(
+            "tac.council_continual_learning",
+            "append_council_anchor",
+            {},
+        )
+
+    def test_importable_parent_missing_attribute_is_not_ok(self):
+        assert not _check_287b_module_has_attr("tac.unified_action", "S_total", {})
 
 
 class TestStripCodeFencesAndHtmlComments:
@@ -129,6 +148,37 @@ class TestFileWaived:
         assert _check_287b_file_waived(text) is False
 
 
+class TestAuthorityClaimLine:
+    def test_detects_active_wire_in_language(self):
+        assert _check_287b_authority_claim_line("ACTIVE wire-in: `tac.fake.module`")
+
+    def test_ignores_plain_proposal_language(self):
+        assert not _check_287b_authority_claim_line("Proposed helper: `tac.fake.module`")
+
+
+class TestAuthorityDottedReferenceOk:
+    def test_importable_full_module_is_ok(self):
+        assert _check_287b_authority_dotted_reference_ok("tac.unified_action", {})
+
+    def test_callable_inside_importable_module_is_ok(self):
+        assert _check_287b_authority_dotted_reference_ok(
+            "tac.council_continual_learning.append_council_anchor",
+            {},
+        )
+
+    def test_namespace_like_child_of_importable_parent_is_not_ok(self):
+        assert not _check_287b_authority_dotted_reference_ok("tac.optimization.pareto", {})
+
+    def test_callable_shaped_terminal_must_exist_on_parent(self):
+        assert not _check_287b_authority_dotted_reference_ok(
+            "tac.master_gradient_consumers.adjust_predicted_delta_for_venn_classification_v2",
+            {},
+        )
+
+    def test_class_shaped_terminal_must_exist_on_parent(self):
+        assert not _check_287b_authority_dotted_reference_ok("tac.unified_action.S_total", {})
+
+
 class TestLineWaived:
     def test_phantom_intentional_ok_with_rationale_accepted(self):
         line = "tac.foo  # PHANTOM_NAME_INTENTIONAL_OK: documenting the bug"
@@ -149,6 +199,60 @@ class TestLineWaived:
     def test_no_waiver_marker_returns_false(self):
         line = "tac.foo just a citation"
         assert _check_287b_line_waived(line) is False
+
+
+class TestWaiverManifest:
+    def test_manifest_exact_line_sha_accepted(self, synthetic_repo_with_phantom):
+        memo = synthetic_repo_with_phantom / ".omx" / "research" / "manifest_waiver.md"
+        line = "ACTIVE wire-in: `tac.definitely_not_real.surface` remains historical prose."
+        memo.write_text("# Memo\n" + line + "\n")
+        manifest = synthetic_repo_with_phantom / ".omx" / "state" / "catalog_287_phantom_api_waivers.jsonl"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(
+            json.dumps(
+                {
+                    "schema_version": "catalog_287_phantom_api_waiver_v1",
+                    "relpath": ".omx/research/manifest_waiver.md",
+                    "line": 2,
+                    "dotted": "tac.definitely_not_real.surface",
+                    "line_sha256": _check_287b_line_sha256(line),
+                    "rationale": "historical proposal prose, not executable authority",
+                }
+            )
+            + "\n"
+        )
+        assert _check_287b_load_waiver_manifest(synthetic_repo_with_phantom)
+        violations = check_no_docstring_overstatement_without_evidence_tag(
+            repo_root=synthetic_repo_with_phantom,
+            strict=False,
+            scan_research_memos=True,
+        )
+        assert not any("tac.definitely_not_real.surface" in v for v in violations)
+
+    def test_manifest_stale_line_sha_rejected(self, synthetic_repo_with_phantom):
+        memo = synthetic_repo_with_phantom / ".omx" / "research" / "manifest_stale.md"
+        memo.write_text("# Memo\nACTIVE wire-in: `tac.definitely_not_real.surface`.\n")
+        manifest = synthetic_repo_with_phantom / ".omx" / "state" / "catalog_287_phantom_api_waivers.jsonl"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(
+            json.dumps(
+                {
+                    "schema_version": "catalog_287_phantom_api_waiver_v1",
+                    "relpath": ".omx/research/manifest_stale.md",
+                    "line": 2,
+                    "dotted": "tac.definitely_not_real.surface",
+                    "line_sha256": "0" * 64,
+                    "rationale": "historical proposal prose, not executable authority",
+                }
+            )
+            + "\n"
+        )
+        violations = check_no_docstring_overstatement_without_evidence_tag(
+            repo_root=synthetic_repo_with_phantom,
+            strict=False,
+            scan_research_memos=True,
+        )
+        assert any("tac.definitely_not_real.surface" in v for v in violations)
 
 
 # =============================================================================
@@ -284,6 +388,21 @@ class TestSubScopeBEndToEnd:
             scan_research_memos=True,
         )
         assert not any("tac.foo_new" in v or "tac.bar_new" in v for v in violations)
+
+    def test_file_level_waiver_does_not_mask_active_authority_claim(self, synthetic_repo_with_phantom):
+        memo = synthetic_repo_with_phantom / ".omx" / "research" / "file_waiver_active_20260518.md"
+        memo.write_text(
+            "# Landed memo\n"
+            "# PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE: this memo mostly proposes helper names\n"
+            "\n"
+            "ACTIVE wire-in: `tac.definitely_not_a_real_module.subsurface` is live.\n"
+        )
+        violations = check_no_docstring_overstatement_without_evidence_tag(
+            repo_root=synthetic_repo_with_phantom,
+            strict=False,
+            scan_research_memos=True,
+        )
+        assert any("file-level proposal waiver cannot mask active authority claim" in v for v in violations)
 
     def test_file_level_waiver_outside_first_30_lines_not_accepted(self, synthetic_repo_with_phantom):
         memo = synthetic_repo_with_phantom / ".omx" / "research" / "late_waiver_test_20260518.md"

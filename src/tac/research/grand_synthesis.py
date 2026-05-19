@@ -175,7 +175,7 @@ KILLED: list[KilledTechnique] = [
         reason="Auth 1.49 vs dilated 1.33. Council verdict: stay with dilated.",
         evidence="Auth eval 2026-04-11",
         hours_wasted=6.0,
-        lesson="Architecture changes need >10% improvement to justify switch cost.",
+        lesson="Architecture changes need >10% improvement to justify switch cost. [advisory only]",
     ),
     KilledTechnique(
         name="AllNorm invariance exploitation",

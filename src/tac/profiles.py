@@ -2993,7 +2993,7 @@ H_V3_JOINT_HALFFRAME = {
 # the JBL master scalar so the wiring is byte-identical to Lane G v3 except
 # for the loss family.
 #
-# Predicted band [0.92, 1.02] per Jack §S1 (lowest cost, highest confidence
+# Predicted band [0.92, 1.02] per Jack §S1 [prediction] (lowest cost, highest confidence
 # SegNet attack). At anchor 1.05, the conservative case is +20% reduction in
 # SegNet distortion (0.004 -> 0.0032 -> -0.08 score = 0.97).
 #

@@ -19,7 +19,16 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def test_provider_contract_registry_covers_required_providers() -> None:
     contracts = provider_contracts()
     assert tuple(contracts) == PROVIDER_NAMES
-    assert set(contracts) == {"modal", "kaggle", "lightning", "vastai", "aws", "azure", "gcp"}
+    assert set(contracts) == {
+        "modal",
+        "kaggle",
+        "lightning",
+        "vastai",
+        "hf_jobs",
+        "aws",
+        "azure",
+        "gcp",
+    }
 
 
 def test_provider_contracts_preserve_custody_and_proxy_rules() -> None:
@@ -42,6 +51,17 @@ def test_only_implemented_cuda_surfaces_advertise_exact_eval_support() -> None:
     for name in ("aws", "azure", "gcp"):
         assert contracts[name].scaffold_only is True
         assert contracts[name].exact_cuda_eval_supported is False
+
+
+def test_hf_jobs_is_training_capacity_not_score_authority() -> None:
+    hf_jobs = provider_contracts()["hf_jobs"]
+    assert hf_jobs.implemented is True
+    assert hf_jobs.plan_only_default is True
+    assert hf_jobs.execution_flag is not None
+    assert hf_jobs.exact_cuda_eval_supported is False
+    assert hf_jobs.proxy_score_claim_allowed is False
+    assert hf_jobs.provider_proxy_promotes_score is False
+    assert any("prepaid balance" in blocker for blocker in hf_jobs.setup_blockers)
 
 
 def test_azure_stays_scaffold_until_claim_and_custody_contracts_land() -> None:

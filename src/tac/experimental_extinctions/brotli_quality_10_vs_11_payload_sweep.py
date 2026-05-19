@@ -128,6 +128,7 @@ def brotli_quality_10_vs_11_payload_sweep(
     Falls back to a synthetic estimator if the ``brotli`` module is unavailable
     (so this helper is callable in clean checkouts / CI without brotli wheel).
     The synthetic estimator uses the standard observed ratio q11/q10 ~= 0.97
+    [prediction]
     (quality=11 typically saves 3% bytes vs quality=10) and 3x slower encode.
 
     Parameters

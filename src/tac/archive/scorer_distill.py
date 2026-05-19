@@ -12,7 +12,7 @@ the scorer output within 1-2% on in-distribution data.
 
 Benefits:
     1. Size: distilled heads are <200KB vs 25MB for full scorers.
-    2. Speed: ~50x faster inference (3-layer MLP vs ResNet).
+    2. Speed: ~50x faster inference (3-layer MLP vs ResNet). [prediction]
     3. Deployability: can be included in archive.zip for TTO at inflate time.
     4. Differentiability: always differentiable (no frozen model quirks).
 

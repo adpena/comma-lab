@@ -86,7 +86,7 @@ def pinned_softmax(
     AND the MPS path is the only known offender), falls back to the
     standard ``F.softmax`` path.
 
-    Per slot 9 §4.2: predicted ~50% reduction in SegNet 5-class argmax
+    Per slot 9 §4.2: predicted ~50% reduction in SegNet 5-class argmax [prediction]
     boundary flip rate vs naive F.softmax on MPS. The reduction is
     SYMMETRIC across Metal and cuDNN because fp64 stabilization is below
     both backends' epsilon-rounding floors.

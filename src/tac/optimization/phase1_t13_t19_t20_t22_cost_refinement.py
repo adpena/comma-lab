@@ -125,7 +125,7 @@ REFERENCE_MODAL_T4 = ReferenceBaseline(
 REFERENCE_VAST_4090 = ReferenceBaseline(
     provider="vastai",
     hardware="rtx_4090",
-    wall_clock_minutes=12.0,  # ~4.2x faster than T4 per CLAUDE.md GPU table
+    wall_clock_minutes=12.0,  # ~4.2x faster than T4 per CLAUDE.md GPU table [prediction]
     rate_per_hour_usd=0.25,
 )
 

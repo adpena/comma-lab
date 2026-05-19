@@ -45,7 +45,7 @@ EVAL_HW: tuple[int, int] = (384, 512)
 NUM_PAIRS: int = 600
 """Contest pair count (1200 frames / 2 frames per pair)."""
 
-# Archive byte targets — ATW canonical mode predicts a 30-50% reduction vs A1
+# Archive byte targets — ATW canonical mode predicts a 30-50% reduction vs A1 [prediction]
 # in the latent_blob; total archive byte band conservatively narrower than Z4.
 TOTAL_ARCHIVE_TARGET_BYTES_MIN: int = 40_000
 """Predicted minimum: A1 baseline -50% latent + ATW1 magic + tiny WZ head."""

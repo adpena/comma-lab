@@ -21,7 +21,7 @@ A/B baseline. Defaults follow the recommended ``pr95_enhanced`` stack.
 
 E1. **Muon at every stage** (not just Stage 8). Per Keller Jordan synthesis
     memo (commit ``d64b17cf``): Newton-Schulz orthogonalised momentum
-    converges 2-4x faster than AdamW on hidden-layer 2-D weights. PR95
+    converges 2-4x faster than AdamW on hidden-layer 2-D weights. [prediction] PR95
     used Muon only at Stage 8; promoting it to every stage is the cheapest
     structural win on the 29,650-epoch budget. Backed by
     :class:`tac.optimization.muon.MuonOptimizer`.

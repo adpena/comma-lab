@@ -16,6 +16,7 @@ PROVIDER_NAMES: tuple[str, ...] = (
     "kaggle",
     "lightning",
     "vastai",
+    "hf_jobs",
     "aws",
     "azure",
     "gcp",
@@ -159,6 +160,31 @@ PROVIDER_CONTRACTS: dict[str, ProviderDeployContract] = {
         exact_cuda_eval_supported=True,
         setup_blockers=("vastai API key", "offer availability", "NVDEC/CUDA probe", "SSH heartbeat"),
         notes="Vast.ai can host claimed CUDA remote lanes; heartbeat/artifact custody gates promotion.",
+    ),
+    "hf_jobs": ProviderDeployContract(
+        provider="hf_jobs",
+        module="tac.deploy.hf_jobs.job_id_ledger",
+        canonical_entrypoints=(
+            "tools/dispatch_hf_jobs_vision_training.py",
+            "src/tac/deploy/hf_jobs/job_id_ledger.py",
+        ),
+        status="implemented",
+        plan_only_default=True,
+        execution_flag="drop --dry-run through tools/operator_authorize.py",
+        requires_lane_claim_before_dispatch=True,
+        terminal_claim_required=True,
+        custody_manifest_required=True,
+        exact_cuda_eval_supported=False,
+        setup_blockers=(
+            "HF_TOKEN",
+            "Hugging Face prepaid balance",
+            "Hub dataset/model repo provenance",
+            "HF Jobs hardware availability",
+        ),
+        notes=(
+            "HF Jobs is implemented for paid GPU training/research surrogates "
+            "with ledger custody; it is not an exact CUDA score-authority path."
+        ),
     ),
     "aws": ProviderDeployContract(
         provider="aws",

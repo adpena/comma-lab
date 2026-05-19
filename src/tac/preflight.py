@@ -34,6 +34,7 @@ import fnmatch
 import functools
 import hashlib
 import inspect
+import importlib
 import importlib.util
 import io
 import json
@@ -2284,10 +2285,10 @@ def preflight_all(
         check_catalog_text_references_existing_gate_callable(
             strict=True, verbose=verbose,
         )
-        # GAP-4a (#287): docstring overstatement evidence-tag gate; warn-only
-        # initially - legacy docstrings need bulk audit + waiver backfill.
+        # GAP-4a (#287): docstring overstatement evidence-tag gate; strict
+        # after 2026-05-19 bulk evidence-tag + phantom-API waiver backfill.
         check_no_docstring_overstatement_without_evidence_tag(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # GAP-4b (#288): uv torch driver-version pin gate; STRICT-from-byte-one
         # because the canonical wrapper scripts/remote_archive_only_eval.sh
@@ -63332,7 +63333,10 @@ _CHECK_287_EXCLUDED_PATH_MARKERS: tuple[str, ...] = (
 # `# PHANTOM_NAME_INTENTIONAL_OK:<rationale>`; (c) same-line waiver
 # `# DESIGN_PROPOSAL_NOT_YET_IMPLEMENTED:<rationale>` (for proposals);
 # (d) file-level waiver `# PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE:<rationale>`
-# in first 30 lines. Placeholder `<rationale>` / `<reason>` literals rejected.
+# in first 30 lines for whole-file proposal memos. File-level waivers do NOT
+# suppress active authority lines; landed/wired/grep-verified claims must cite
+# an actually importable dotted path or carry a same-line waiver. Placeholder
+# `<rationale>` / `<reason>` literals rejected.
 #
 # Exempt: code-fenced blocks (between triple-backticks), HTML comments,
 # `.omx/research/MEMORY_CLUSTER_*`, `_archive/`, `_drafts/`, design memo
@@ -63361,6 +63365,27 @@ _CHECK_287B_FILE_WAIVER_RE = re.compile(
     r"#\s*PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE\s*:\s*([^\s][^\n#]{0,200})"
 )
 _CHECK_287B_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+_CHECK_287B_AUTHORITY_CLAIM_RE = re.compile(
+    r"\b("
+    r"ACTIVE|active|landed|landing|wired|wire[- ]?in|implemented|"
+    r"grep[- ]verified|production|consumer|autopilot|preflight|strict|"
+    r"now invokes|importable|exists|validated|verification"
+    r")\b",
+    re.IGNORECASE,
+)
+_CHECK_287B_CALLABLE_TERMINAL_RE = re.compile(
+    r"^(?:"
+    r"append|register|query|load|poll|update|check|build|run|compute|make|"
+    r"create|write|read|rank|adjust|preflight|compile|estimate|predict|"
+    r"validate|audit|score|extract|dispatch|harvest|plan|select|emit|"
+    r"decode|encode|train|evaluate|profile|plot|render|allocate|apply|"
+    r"normalize|summarize|persist|save|open|close|add|remove|list|find|"
+    r"lookup|generate|fit|transform|ingest|recover|refresh|bootstrap|"
+    r"launch|submit|verify"
+    r")(?:_|$)"
+)
+_CHECK_287B_WAIVER_MANIFEST_REL = ".omx/state/catalog_287_phantom_api_waivers.jsonl"
+_CHECK_287B_WAIVER_SCHEMA = "catalog_287_phantom_api_waiver_v1"
 _CHECK_287B_EXCLUDED_PATH_MARKERS: tuple[str, ...] = (
     "MEMORY_CLUSTER_",
     "/_archive/",
@@ -63443,6 +63468,135 @@ def _check_287b_module_is_importable(name: str) -> bool:
     return spec is not None
 
 
+def _check_287b_module_has_attr(
+    module_name: str,
+    attr_name: str,
+    attr_cache: dict[tuple[str, str], bool] | None = None,
+) -> bool:
+    """Return True iff ``module_name`` imports and exposes ``attr_name``."""
+    key = (module_name, attr_name)
+    if attr_cache is not None and key in attr_cache:
+        return attr_cache[key]
+    try:
+        module = importlib.import_module(module_name)
+    except Exception:
+        result = False
+    else:
+        result = hasattr(module, attr_name)
+    if attr_cache is not None:
+        attr_cache[key] = result
+    return result
+
+
+def _check_287b_authority_claim_line(line: str) -> bool:
+    """Return True for active authority language that file waivers must not hide."""
+    return bool(_CHECK_287B_AUTHORITY_CLAIM_RE.search(line))
+
+
+def _check_287b_authority_dotted_reference_ok(
+    dotted: str,
+    importable_cache: dict[str, bool],
+    attr_cache: dict[tuple[str, str], bool] | None = None,
+) -> bool:
+    """Return True when an authority-line dotted citation has importable backing.
+
+    Whole-file proposal waivers are intentionally weak evidence. If such a
+    file also uses active authority language, the citation must either name an
+    importable module path directly or name a real attribute on an importable
+    parent module. This preserves legitimate references such as
+    ``tac.council_continual_learning.append_council_anchor`` while refusing
+    parent-module-only false authority such as ``tac.unified_action.S_total``.
+    """
+    if dotted not in importable_cache:
+        importable_cache[dotted] = _check_287b_module_is_importable(dotted)
+    if importable_cache[dotted]:
+        return True
+    parts = dotted.split(".")
+    if len(parts) <= 2:
+        return False
+    parent = ".".join(parts[:-1])
+    if parent not in importable_cache:
+        importable_cache[parent] = _check_287b_module_is_importable(parent)
+    if not importable_cache[parent]:
+        return False
+    terminal = parts[-1]
+    if not terminal[:1].isupper() and not _CHECK_287B_CALLABLE_TERMINAL_RE.match(terminal):
+        return False
+    return _check_287b_module_has_attr(parent, terminal, attr_cache)
+
+
+def _check_287b_line_sha256(line: str) -> str:
+    """Return an exact content fingerprint for a waiver-manifest line."""
+    return hashlib.sha256(line.encode("utf-8")).hexdigest()
+
+
+def _check_287b_load_waiver_manifest(
+    root: Path,
+) -> dict[tuple[str, int, str], str | None]:
+    """Load exact append-only waiver entries for historical research prose.
+
+    The ledger lets Catalog #287-v2 respect `.omx/research` historical
+    provenance: old dated memos stay byte-preserved, while waiver authority
+    lives in a tracked append-only state file. Each waiver is exact to
+    `(relpath, line, dotted)` and, when present, the line SHA-256.
+    """
+    path = root / _CHECK_287B_WAIVER_MANIFEST_REL
+    waivers: dict[tuple[str, int, str], str | None] = {}
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return waivers
+    for raw in lines:
+        if not raw.strip():
+            continue
+        try:
+            row = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        if row.get("schema_version") != _CHECK_287B_WAIVER_SCHEMA:
+            continue
+        relpath = row.get("relpath")
+        line = row.get("line")
+        dotted = row.get("dotted")
+        rationale = str(row.get("rationale", "")).strip()
+        if not isinstance(relpath, str) or not isinstance(dotted, str):
+            continue
+        if not isinstance(line, int) or line <= 0:
+            continue
+        if _is_placeholder_gate_waiver_rationale(
+            rationale,
+            _CHECK_287B_WAIVER_PLACEHOLDERS,
+        ):
+            continue
+        line_sha = row.get("line_sha256")
+        if line_sha is not None and not (
+            isinstance(line_sha, str)
+            and len(line_sha) == 64
+            and all(c in "0123456789abcdef" for c in line_sha.lower())
+        ):
+            continue
+        waivers[(relpath, line, dotted)] = line_sha
+    return waivers
+
+
+def _check_287b_manifest_waives(
+    waivers: Mapping[tuple[str, int, str], str | None],
+    relpath: str,
+    line_no: int,
+    dotted: str,
+    line_text: str,
+) -> bool:
+    """Return True for an exact manifest waiver whose optional line hash matches."""
+    line_sha = waivers.get((relpath, line_no, dotted))
+    if (relpath, line_no, dotted) not in waivers:
+        return False
+    if line_sha is None:
+        return True
+    return _check_287b_line_sha256(line_text) == line_sha
+
+
 def _check_287b_file_waived(text: str) -> bool:
     """File-level waiver `PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE` in first 30 lines."""
     head_lines = text.splitlines()[:30]
@@ -63500,6 +63654,8 @@ def _check_287b_scan_research_memos(
             targets.extend(memory_dir.glob("feedback_*.md"))
     # Cache module-importability decisions across the whole scan for speed.
     importable_cache: dict[str, bool] = {}
+    attr_cache: dict[tuple[str, str], bool] = {}
+    manifest_waivers = _check_287b_load_waiver_manifest(root)
     for path in targets:
         try:
             rel = path.relative_to(root).as_posix()
@@ -63519,16 +63675,42 @@ def _check_287b_scan_research_memos(
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        # File-level waiver short-circuits
-        if _check_287b_file_waived(text):
-            continue
+        file_waived = _check_287b_file_waived(text)
         masked = _check_287b_strip_code_fences_and_html_comments(text)
         for i, line in enumerate(masked.splitlines()):
             # Per-line waiver short-circuit
             if _check_287b_line_waived(line):
                 continue
+            file_waiver_allows_line = file_waived and not _check_287b_authority_claim_line(line)
+            if file_waiver_allows_line:
+                continue
             for match in _CHECK_287B_TAC_MODULE_NAME_RE.finditer(line):
                 dotted = match.group(0)
+                if _check_287b_manifest_waives(
+                    manifest_waivers,
+                    rel,
+                    i + 1,
+                    dotted,
+                    line,
+                ):
+                    continue
+                if file_waived:
+                    if _check_287b_authority_dotted_reference_ok(
+                        dotted,
+                        importable_cache,
+                        attr_cache,
+                    ):
+                        continue
+                    violations.append(
+                        f"{rel}:{i + 1}: file-level proposal waiver cannot "
+                        f"mask active authority claim `{dotted}` — full "
+                        "dotted path is not importable. Cite the actual "
+                        "importable canonical name or add a same-line "
+                        "`# DESIGN_PROPOSAL_NOT_YET_IMPLEMENTED:<rationale>` "
+                        "/ `# PHANTOM_NAME_INTENTIONAL_OK:<rationale>` waiver "
+                        "if the line is historical/proposal prose."
+                    )
+                    continue
                 prefix = _check_287b_extract_two_component_prefix(dotted)
                 if prefix is None:
                     continue
@@ -63589,9 +63771,11 @@ def check_no_docstring_overstatement_without_evidence_tag(
     ``# DESIGN_PROPOSAL_NOT_YET_IMPLEMENTED:<rationale>`` for proposed
     helpers; (d) file-level waiver ``# PHANTOM_NAME_DESIGN_PROPOSAL_OK_
     FILE:<rationale>`` in first 30 lines for whole-file proposal memos.
-    Placeholder rationales rejected. Memory files opt-in via
-    ``scan_memory_files=True`` (default OFF for OSS hermeticity per
-    Catalog #290/#291/#292 sister design).
+    File-level waivers do not suppress active authority lines such as
+    landed/wired/grep-verified claims; those lines must cite an actually
+    importable dotted path or carry a same-line waiver. Placeholder rationales
+    rejected. Memory files opt-in via ``scan_memory_files=True`` (default OFF
+    for OSS hermeticity per Catalog #290/#291/#292 sister design).
 
     Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
     against" non-negotiable + operator decision E.1 2026-05-18 +
@@ -63605,10 +63789,9 @@ def check_no_docstring_overstatement_without_evidence_tag(
     memo, and design memos matching
     ``catalog_287_scope_extension_to_research_md_phantom_api_design*``.
 
-    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
-    rule". Sub-scope A strict-flip pending bulk docstring audit; sub-
-    scope B strict-flip pending phantom-API backfill sweep across ~50-
-    200 existing violations in ``.omx/research/``.
+    Strict-flipped 2026-05-19 after source evidence-tag backfill,
+    canonical-name correction, proposal-waiver backfill, and file-level
+    waiver hardening for active authority lines.
 
     Memory: ``feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_
     20260515.md`` (original) + ``feedback_catalog_287_scope_extended_to_
@@ -73607,7 +73790,7 @@ def check_no_score_claim_without_canonical_provenance(
     return violations
 
 
-if __name__ == "__main__":
+def _preflight_cli_main() -> None:
     import argparse
     parser = argparse.ArgumentParser(
         description=(
@@ -75280,3 +75463,7 @@ def check_council_dispatch_roster_complete_per_canonical_helper(
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
+
+
+if __name__ == "__main__":
+    _preflight_cli_main()

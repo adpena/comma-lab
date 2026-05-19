@@ -6,6 +6,7 @@ information at the decoder*: when the decoder has access to a correlated
 sequence Y (frame_0 in our case), the rate to encode X (frame_1) is reduced
 to H(X|Y), not H(X). For natural-video pairs with low motion, H(frame_1|
 frame_0) is FAR smaller than H(frame_1) — typically 30-50% reduction at full
+[prediction]
 resolution and >70% reduction in the wavelet domain (residual coefficients
 are sparse around zero).
 

@@ -183,6 +183,7 @@ src/tac.egg-info/
 !.omx/state/canonical_task_status.jsonl
 !.omx/state/codex_persistent_session_state.jsonl
 !.omx/state/codex_to_claude_inbox.jsonl
+!.omx/state/catalog_287_phantom_api_waivers.jsonl
 !.omx/state/probe_outcomes.jsonl
 # Catalog #344 — canonical equations + models registry (HISTORICAL_PROVENANCE per
 # operator NON-NEGOTIABLE 2026-05-19; extincts tribal-knowledge bug class).

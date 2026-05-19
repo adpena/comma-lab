@@ -382,6 +382,43 @@ def probe_vastai(*, runner: Runner = run_command, timeout_s: int = 30) -> Provid
     )
 
 
+def probe_hf_jobs(*, runner: Runner = run_command, timeout_s: int = 15) -> ProviderReadiness:
+    command = find_cli_command("hf", uv_package="huggingface_hub") or find_cli_command(
+        "huggingface-cli",
+        uv_package="huggingface_hub",
+    )
+    if command is None:
+        return _provider(
+            provider="hf_jobs",
+            status="blocked_cli_missing",
+            role="paid_gpu_training_surrogate_not_score_authority",
+            exact_cuda=False,
+            proxy_only=False,
+            blockers=["hf_cli_missing", "hf_token_not_checked", "prepaid_balance_not_checked"],
+            next_actions=[
+                "Install the Hugging Face CLI or make `hf` available on PATH.",
+                "Use tools/operator_authorize.py so lane claims and HF Jobs ledger custody wrap dispatch.",
+            ],
+        )
+
+    result = runner([*command, "--help"], timeout_s)
+    ok = result.returncode == 0
+    return _provider(
+        provider="hf_jobs",
+        status="ready_cli_check_balance_next" if ok else "blocked_cli_error",
+        role="paid_gpu_training_surrogate_not_score_authority",
+        exact_cuda=False,
+        proxy_only=False,
+        result=result,
+        blockers=["hf_token_not_checked", "prepaid_balance_not_checked"] if ok else ["hf_cli_error"],
+        next_actions=[
+            "Verify HF_TOKEN and prepaid balance before paid HF Jobs dispatch.",
+            "Keep HF Jobs outputs as surrogate/training evidence until byte-closed exact CUDA auth eval.",
+            "Use claim_lane_dispatch.py and tac.deploy.hf_jobs.job_id_ledger for dispatch custody.",
+        ] if ok else ["Fix Hugging Face CLI installation or authentication."],
+    )
+
+
 def probe_aws(*, runner: Runner = run_command, timeout_s: int = 20) -> ProviderReadiness:
     command = find_cli_command("aws")
     if command is None:
@@ -549,6 +586,7 @@ def collect_readiness(*, kaggle_kernel: str, timeout_s: int) -> dict[str, object
         "kaggle": probe_kaggle(kernel_ref=kaggle_kernel, timeout_s=timeout_s),
         "lightning": probe_lightning(timeout_s=timeout_s),
         "vastai": probe_vastai(timeout_s=timeout_s),
+        "hf_jobs": probe_hf_jobs(timeout_s=timeout_s),
         "aws": probe_aws(timeout_s=timeout_s),
         "azure": probe_azure(timeout_s=timeout_s),
         "gcp": probe_gcp(timeout_s=timeout_s),

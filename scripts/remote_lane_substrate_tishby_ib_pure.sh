@@ -92,7 +92,7 @@ if [ -f "$WORKSPACE/scripts/remote_archive_only_eval.sh" ]; then
     fi
 fi
 
-# Stage 2: research-only refusal (per recipe dispatch_enabled=false + trainer
+# Stage 2 SKIPPED: research-only refusal (per recipe dispatch_enabled=false + trainer
 # _full_main NotImplementedError per Catalog #240 cascade).
 log "L1 SCAFFOLD landing: dispatch refused at script level per recipe"
 log "  research_only=true + dispatch_enabled=false"

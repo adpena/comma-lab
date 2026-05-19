@@ -2,6 +2,7 @@
 """MLX port of MaskRenderer for Phase 1 pre-training on Apple Silicon.
 
 Benchmarks show MLX is 4.7x faster than PyTorch MPS for forward+backward
+[MPS-research-signal]
 (14ms vs 65ms for 2-conv 64ch 384x512). Phase 1 uses only L1 + edge loss
 (no scorer models), so the entire Phase 1 can run in MLX.
 

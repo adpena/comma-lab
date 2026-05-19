@@ -164,6 +164,7 @@ class FP4PerChannelCodewords:
         ceil(1008 / 2) = 504 bytes (codewords) + 36 * 2 = 72 bytes (scales)
         = 576 bytes total
     vs the int8 baseline of 1008 bytes (43% reduction) — the
+    [prediction]
     Quantizr ratio.
     """
 

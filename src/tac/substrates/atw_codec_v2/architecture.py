@@ -53,7 +53,7 @@ EVAL_HW: tuple[int, int] = (384, 512)
 NUM_PAIRS: int = 600
 """Contest pair count (1200 frames / 2 frames per pair)."""
 
-# Archive byte targets per design memo §7: predicted 80-120KB total vs A1's 179KB
+# Archive byte targets per design memo §7: predicted 80-120KB total vs A1's 179KB [prediction]
 # (40-55% reduction; consistent with V1 design memo's 30-50% latent savings
 # estimate per CC-3 reactivation criterion).
 TOTAL_ARCHIVE_TARGET_BYTES_MIN: int = 60_000
