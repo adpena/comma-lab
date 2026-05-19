@@ -66,5 +66,6 @@ Register-ScheduledTask -TaskName "WSL2-SSH-Setup" -Action $action1,$action2 -Tri
 Write-Host "  Startup task created"
 
 Write-Host "`n=== Setup Complete ==="
-Write-Host "From Mac: ssh adpena@100.120.99.124 -p 2222"
+Write-Host "From Mac: ssh `$env:BAT00_USER@`$env:BAT00_IP -p 2222"
+Write-Host "(set BAT00_USER and BAT00_IP env vars to your Tailscale credentials)"
 Write-Host "This drops you directly into WSL2 Linux with CUDA access."

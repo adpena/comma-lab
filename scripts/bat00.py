@@ -35,10 +35,10 @@ import sys
 from pathlib import Path
 
 # R41 fix: allow env override (BAT00_IP / BAT00_USER) so the script works on
-# fresh tailnets / new operators without editing source. Defaults match the
-# current tailnet allocation documented in CLAUDE.md.
-BAT00_IP = os.environ.get("BAT00_IP", "100.120.99.124")
-BAT00_USER = os.environ.get("BAT00_USER", "adpena")
+# fresh tailnets / new operators without editing source. For local operator use,
+# set BAT00_IP to the bat00 host Tailscale IP and BAT00_USER to the SSH user.
+BAT00_IP = os.environ.get("BAT00_IP", "")
+BAT00_USER = os.environ.get("BAT00_USER", "")
 # Port 22 = Windows OpenSSH (PowerShell) — fragile, rate-limited
 # Port 2222 = WSL2 sshd (Linux bash) — reliable, preferred
 WIN_PORT = 22
@@ -57,6 +57,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def ssh_target() -> str:
+    if not BAT00_IP or not BAT00_USER:
+        raise SystemExit(
+            "ERROR: BAT00_IP and BAT00_USER environment variables are required.\n"
+            "  export BAT00_IP=<bat00 tailscale ip>\n"
+            "  export BAT00_USER=<ssh username>\n"
+            "Operators can store these in ~/.bashrc or a local .env file."
+        )
     return f"{BAT00_USER}@{BAT00_IP}"
 
 
