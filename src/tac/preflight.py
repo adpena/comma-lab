@@ -3269,13 +3269,16 @@ def preflight_all(
         # "Council hierarchy: 4-tier protocol": every T2+ council deliberation
         # MUST dispatch the canonical mandatory roster per
         # tac.canonical_council_roster.validate_council_dispatch_roster.
-        # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
-        # rule" - live count at landing: 2 (slot 20 + slot 20-supplemental are
-        # the bug-class anchors). Strict-flip planned after sister waiver
-        # backfill OR Round 4 deliberation drives count to 0.
-        # Memory: feedback_t3_second_supplemental_missing_voices_plus_canonical_roster_helper_landed_20260519.md
+        # STRICT-FLIPPED 2026-05-19 by STRICT-FLIP-ENABLERS subagent per
+        # operator blanket approval ("all operator decisions and approval
+        # granted and provided fuly and completely"). The 2 bug-class anchors
+        # (slot 20 + slot 20-supplemental) backfilled in same commit batch
+        # with canonical # COUNCIL_ROSTER_INCOMPLETE_OK:slot_20_under_rostering_acknowledged_via_round_3_supplemental_landed_20260519
+        # waivers per Catalog #110/#113 HISTORICAL_PROVENANCE non-negotiable.
+        # Memory: feedback_t3_second_supplemental_missing_voices_plus_canonical_roster_helper_landed_20260519
+        # + feedback_strict_flip_enablers_catalog_343_plus_346_plus_344_progress_landed_20260519.md
         check_council_dispatch_roster_complete_per_canonical_helper(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-09 proactive META-class custody+concurrency audit (#130):
         # extends catalog #127 (`AUTHORITATIVE_TAGS` membership) to also catch
@@ -5175,14 +5178,20 @@ def preflight_all(
         )
 
         # Catalog #344: canonical equations registry — refuse new empirical-
-        # finding memos missing canonical equation reference. WARN-ONLY at
-        # landing 2026-05-19 per CLAUDE.md "Strict-flip atomicity rule"
-        # because today's pre-framework memos predate this gate; strict-flip
-        # planned after the initial 6 equations populate + the first wave
-        # of memo backfills complete.
-        # Memory: feedback_canonical_equations_and_models_registry_formalization_landed_20260519.
+        # finding memos missing canonical equation reference.
+        # STRICT-FLIPPED 2026-05-19 by STRICT-FLIP-ENABLERS subagent per
+        # operator blanket approval ("all operator decisions and approval
+        # granted and provided fuly and completely"). All 52 pre-framework
+        # memos backfilled with `# FORMALIZATION_PENDING:` waivers per
+        # Catalog #110/#113 HISTORICAL_PROVENANCE non-negotiable +
+        # CLAUDE.md "Forbidden premature KILL" (DEFER-pending-equation-
+        # backfill, NOT kill). Future memos MUST cite tac.canonical_equations
+        # via import or equation_id citation OR carry FORMALIZATION_PENDING
+        # waiver with substantive rationale.
+        # Memory: feedback_canonical_equations_and_models_registry_formalization_landed_20260519
+        # + feedback_strict_flip_enablers_catalog_343_plus_346_plus_344_progress_landed_20260519.
         check_empirical_finding_memo_references_canonical_equation(
-            strict=False, verbose=verbose
+            strict=True, verbose=verbose
         )
 
         # Catalog #338: procedural codebook generator canonical-use guard.
@@ -5200,14 +5209,16 @@ def preflight_all(
         # (added 2026-05-19): operator-facing surfaces MUST cite the
         # canonical pointer file at .omx/state/canonical_frontier_pointer.json
         # rather than embedding hardcoded score literals that drift over time.
-        # WARN-ONLY at landing 2026-05-19 per CLAUDE.md "Strict-flip atomicity
-        # rule" because legacy CLAUDE.md has dozens of historical anchors
-        # (PR102 / PR103 / PR101 / NSCS06 / etc.) that need backfill OR
-        # HISTORICAL_SCORE_LITERAL_OK waivers. Strict-flip planned after
-        # the backfill + waiver sweep.
-        # Memory: feedback_frontier_pointer_model_plus_de_hardcode_landed_20260519.
+        # STRICT-FLIPPED 2026-05-19 by STRICT-FLIP-ENABLERS subagent per
+        # operator blanket approval ("all operator decisions and approval
+        # granted and provided fuly and completely"). All 10 historical
+        # anchors (PR102 0.19538 / Z3 v2 0.19869 / 0.1928 cluster / A1
+        # 0.19285 / fec6 0.19205 / pr106 0.20533) backfilled with
+        # HISTORICAL_SCORE_LITERAL_OK waivers in same commit batch.
+        # Memory: feedback_frontier_pointer_model_plus_de_hardcode_landed_20260519
+        # + feedback_strict_flip_enablers_catalog_343_plus_346_plus_344_progress_landed_20260519.
         check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded(
-            strict=False, verbose=verbose
+            strict=True, verbose=verbose
         )
 
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
