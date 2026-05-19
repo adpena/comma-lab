@@ -13,8 +13,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+DEFAULT_REVIEW_TARGET_INFLATE_PY_LINES = 100
 DEFAULT_MAX_INFLATE_PY_LINES = 200
-INFLATE_PY_LOC_BUDGET_WAIVER = "INFLATE_PY_LOC_BUDGET_OK:"
+INFLATE_PY_LOC_DEFAULT_BUDGET_WAIVER = "INFLATE_LOC_DEFAULT_BUDGET_WAIVED:"
+INFLATE_PY_LOC_HARD_WAIVER = "INFLATE_LOC_WAIVER:"
+INFLATE_PY_LOC_BUDGET_WAIVER = "INFLATE_PY_LOC_BUDGET_OK:"  # legacy Catalog #328 token
 _WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
 
 
@@ -25,15 +28,30 @@ class InflatePyLocBudgetFinding:
     rel_path: str
     line_count: int
     max_lines: int
+    review_target_lines: int = DEFAULT_REVIEW_TARGET_INFLATE_PY_LINES
+    budget_tier: str = "hard_budget"
+    severity: str = "violation"
+    size_driver_categories: tuple[str, ...] = ()
+    technique_applicability: tuple[str, ...] = ()
+    shared_runtime_helper_adopted: bool = False
 
     def format(self) -> str:
+        if self.budget_tier == "default_budget":
+            waiver_text = f"`# {INFLATE_PY_LOC_DEFAULT_BUDGET_WAIVER}<rationale>`"
+            limit_text = f"default review target={self.review_target_lines}"
+        else:
+            waiver_text = (
+                f"`# {INFLATE_PY_LOC_HARD_WAIVER}<rationale>` or legacy "
+                f"`# {INFLATE_PY_LOC_BUDGET_WAIVER}<rationale>`"
+            )
+            limit_text = f"max_lines={self.max_lines}"
         return (
             f"{self.rel_path}: {self.line_count} physical lines exceeds "
-            f"max_lines={self.max_lines}. This is not score evidence because "
+            f"{limit_text}. This is not score evidence because "
             "the contest rate term charges archive.zip bytes, not inflate.py "
             "source bytes. Extract reusable helpers or add "
-            f"`# {INFLATE_PY_LOC_BUDGET_WAIVER}<rationale>` in the first "
-            "40 lines for an intentional source-faithful/runtime-closure "
+            f"{waiver_text} in the first 40 lines for an intentional "
+            "source-faithful/runtime-closure "
             "exception."
         )
 
@@ -44,11 +62,17 @@ def _physical_line_count(text: str) -> int:
     return len(text.splitlines())
 
 
-def _has_valid_loc_budget_waiver(text: str, *, first_n_lines: int = 40) -> bool:
+def _has_valid_loc_budget_waiver(
+    text: str,
+    *,
+    tokens: tuple[str, ...],
+    first_n_lines: int = 40,
+) -> bool:
     for line in text.splitlines()[:first_n_lines]:
-        if INFLATE_PY_LOC_BUDGET_WAIVER not in line:
+        token = next((candidate for candidate in tokens if candidate in line), None)
+        if token is None:
             continue
-        tail = line.split(INFLATE_PY_LOC_BUDGET_WAIVER, 1)[1].strip()
+        tail = line.split(token, 1)[1].strip()
         if not tail:
             continue
         lowered = tail.lower()
@@ -56,6 +80,51 @@ def _has_valid_loc_budget_waiver(text: str, *, first_n_lines: int = 40) -> bool:
             continue
         return True
     return False
+
+
+def _classify_size_driver(text: str) -> tuple[str, ...]:
+    lowered = text.lower()
+    categories: list[str] = []
+    if "torch.load" in lowered or "state_dict" in lowered:
+        categories.append("state_dict_loader")
+    if "for " in lowered and "file_list" in lowered:
+        categories.append("per_video_inflate_loop")
+    if "sys.path" in lowered or "from tac." in lowered or "import tac." in lowered:
+        categories.append("runtime_dependency_closure")
+    if any(token in lowered for token in ("brotli", "lzma", "zstd", "gzip", "zipfile")):
+        categories.append("compressed_payload_decode")
+    if "torch" in lowered:
+        categories.append("torch_renderer")
+    if "numpy" in lowered or "np." in lowered:
+        categories.append("numpy_decoder")
+    if len(text.splitlines()) >= 500:
+        categories.append("monolithic_runtime")
+    return tuple(categories) or ("unclassified_runtime_source",)
+
+
+def _classify_technique_applicability(text: str) -> tuple[str, ...]:
+    lowered = text.lower()
+    suggestions = ["shared_per_video_loop"]
+    if "torch.load" in lowered or "state_dict" in lowered:
+        suggestions.append("shared_state_dict_loader_with_sha256")
+    if "select_inflate_device" not in lowered and "torch" in lowered:
+        suggestions.append("canonical_select_inflate_device")
+    if "raw_output_path" not in lowered and "file_list" in lowered:
+        suggestions.append("shared_safe_raw_output_path")
+    if "sys.path" in lowered or "from tac." in lowered:
+        suggestions.append("empty_pythonpath_runtime_closure_review")
+    if len(text.splitlines()) >= 500:
+        suggestions.append("split_parser_renderer_writer_sections")
+    return tuple(dict.fromkeys(suggestions))
+
+
+def _uses_shared_runtime_helper(text: str) -> bool:
+    return (
+        "tac.substrates._shared.inflate_runtime" in text
+        or "tac.substrates._shared.inflate_runtime_extensions" in text
+        or "raw_output_path(" in text
+        or "write_rgb_pair_to_raw(" in text
+    )
 
 
 def iter_submission_inflate_py_files(repo_root: Path | str) -> list[Path]:
@@ -85,6 +154,7 @@ def scan_submission_inflate_py_loc_budget(
     repo_root: Path | str,
     *,
     max_lines: int = DEFAULT_MAX_INFLATE_PY_LINES,
+    review_target_lines: int = DEFAULT_REVIEW_TARGET_INFLATE_PY_LINES,
 ) -> list[InflatePyLocBudgetFinding]:
     """Find submission ``inflate.py`` files above ``max_lines``.
 
@@ -95,6 +165,7 @@ def scan_submission_inflate_py_loc_budget(
     """
 
     root = Path(repo_root).resolve()
+    review_target = min(review_target_lines, max_lines)
     findings: list[InflatePyLocBudgetFinding] = []
     for path in iter_submission_inflate_py_files(root):
         try:
@@ -102,16 +173,41 @@ def scan_submission_inflate_py_loc_budget(
         except (OSError, UnicodeDecodeError):
             continue
         line_count = _physical_line_count(text)
-        if line_count <= max_lines:
+        if line_count <= review_target:
             continue
-        if _has_valid_loc_budget_waiver(text):
-            continue
+        over_hard_budget = line_count > max_lines
+        if over_hard_budget:
+            if _has_valid_loc_budget_waiver(
+                text,
+                tokens=(INFLATE_PY_LOC_HARD_WAIVER, INFLATE_PY_LOC_BUDGET_WAIVER),
+            ):
+                continue
+            budget_tier = "hard_budget"
+            severity = "violation"
+        else:
+            if _has_valid_loc_budget_waiver(
+                text,
+                tokens=(
+                    INFLATE_PY_LOC_DEFAULT_BUDGET_WAIVER,
+                    INFLATE_PY_LOC_HARD_WAIVER,
+                    INFLATE_PY_LOC_BUDGET_WAIVER,
+                ),
+            ):
+                continue
+            budget_tier = "default_budget"
+            severity = "warn"
         rel_path = str(path.relative_to(root))
         findings.append(
             InflatePyLocBudgetFinding(
                 rel_path=rel_path,
                 line_count=line_count,
                 max_lines=max_lines,
+                review_target_lines=review_target,
+                budget_tier=budget_tier,
+                severity=severity,
+                size_driver_categories=_classify_size_driver(text),
+                technique_applicability=_classify_technique_applicability(text),
+                shared_runtime_helper_adopted=_uses_shared_runtime_helper(text),
             )
         )
     return findings

@@ -64477,13 +64477,16 @@ def check_submission_inflate_py_under_loc_budget(
         max_lines=max_lines,
     )
     violations = [finding.format() for finding in findings]
+    hard_count = sum(1 for finding in findings if finding.budget_tier == "hard_budget")
+    default_count = sum(1 for finding in findings if finding.budget_tier == "default_budget")
 
     if verbose:
         if violations:
             print(
                 f"  [check_submission_inflate_py_under_loc_budget] "
-                f"{len(violations)} violation(s) over {max_lines} physical "
-                "lines (warn-only until cleanup):"
+                f"{len(violations)} finding(s): {hard_count} over hard "
+                f"{max_lines}-line budget, {default_count} over default "
+                "100-line review target (warn-only until cleanup):"
             )
             for violation in violations[:10]:
                 print(f"    - {violation[:280]}")
