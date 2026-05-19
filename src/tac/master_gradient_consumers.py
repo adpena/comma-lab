@@ -115,6 +115,7 @@ from tac.master_gradient import (
     PER_PAIR_GRADIENT_TENSOR_KIND,
     OperatingPoint,
     compute_marginal_coefficients,
+    effective_anchor_sort_key,
     is_authoritative_axis_anchor,
     load_anchors_lenient,
 )
@@ -284,7 +285,7 @@ def _latest_per_pair_anchor(
         candidates = [a for a in candidates if a.get("archive_sha256") == archive_sha256]
     if not candidates:
         return None
-    return max(candidates, key=lambda a: a.get("measurement_utc", ""))
+    return max(candidates, key=effective_anchor_sort_key)
 
 
 def load_per_pair_gradient_from_anchor(
@@ -349,7 +350,7 @@ def load_aggregate_gradient_from_anchor(
             "no aggregate master gradient anchor found in ledger"
             + (f" for archive {archive_sha256[:16]}..." if archive_sha256 else "")
         )
-    anchor = max(candidates, key=lambda a: a.get("measurement_utc", ""))
+    anchor = max(candidates, key=effective_anchor_sort_key)
     gradient_path = Path(anchor["gradient_array_path"])
     if not gradient_path.is_absolute():
         gradient_path = Path.cwd() / gradient_path
@@ -1994,10 +1995,8 @@ def per_pair_pareto_envelope(
             continue
         ordered = nonzero_rate_indices[np.argsort(-rate_grad[nonzero_rate_indices])]
         sweep_depth = min(top_k, ordered.size)
-        cum_bytes = 0
         cum_distortion = 0.0
-        for step_idx, byte_idx in enumerate(ordered[:sweep_depth], start=1):
-            cum_bytes += 1  # one-byte-per-step canonical sweep grain
+        for cum_bytes, byte_idx in enumerate(ordered[:sweep_depth], start=1):
             cum_distortion += float(distortion_grad[byte_idx])
             points.append(
                 PerPairParetoEnvelopePoint(
@@ -2563,11 +2562,11 @@ def per_pair_coding_budget_allocation(
     pose_norms = np.abs(per_pair_gradient[:, :, 1]).sum(axis=0)  # (N_pairs,)
     total_budget = n_pairs * baseline_bytes_per_pair
     total_norm = float(pose_norms.sum())
-    if total_norm <= 0:
-        # Degenerate: no pose gradient; allocate baseline uniformly
-        relative_shares = np.full(n_pairs, 1.0 / n_pairs, dtype=np.float64)
-    else:
-        relative_shares = pose_norms / total_norm
+    relative_shares = (
+        np.full(n_pairs, 1.0 / n_pairs, dtype=np.float64)
+        if total_norm <= 0
+        else pose_norms / total_norm
+    )
     raw_allocations = relative_shares * total_budget
     allocated = np.floor(raw_allocations).astype(np.int64)
     # Distribute residual bytes (from floor rounding) to highest-fractional pairs
@@ -3353,7 +3352,7 @@ def gradient_informed_decoder_pruning(
             "per_pair_variance_floor": per_pair_variance_floor,
             "total_dead_bytes": total_dead,
             "total_dead_bytes_fraction": dead_fraction,
-            "dead_byte_indices_first_200": list(int(i) for i in dead_indices[:200]),
+            "dead_byte_indices_first_200": [int(i) for i in dead_indices[:200]],
             "interpretation_notes": (
                 "Decoder pruning candidates from joint criterion: bytes whose "
                 "aggregate L1 magnitude AND per-pair variance are BOTH below "

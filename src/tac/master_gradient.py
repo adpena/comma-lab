@@ -41,6 +41,7 @@ sample count, hardware substrate, and an authoritative axis label.
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
 import math
 import os
@@ -68,8 +69,11 @@ __all__ = [
     "MasterGradientLedgerCorruptError",
     "OperatingPoint",
     "append_anchor_locked",
+    "append_score_axis_dominance_backfill",
+    "build_score_axis_dominance_backfill_anchor",
     "compute_marginal_coefficients",
     "contest_axis_authority_violation_reason",
+    "effective_anchor_sort_key",
     "is_authoritative_axis_anchor",
     "is_authoritative_contest_axis_anchor",
     "is_usable_planning_anchor",
@@ -469,6 +473,30 @@ def _utc_now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _canonical_json_sha256(payload: Mapping[str, object]) -> str:
+    encoded = json.dumps(
+        dict(payload),
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def effective_anchor_sort_key(row: Mapping[str, object]) -> tuple[str, str]:
+    """Sort key for append-only anchor corrections.
+
+    Measurement time identifies the empirical tensor. ``written_at_utc`` breaks
+    ties so later append-only metadata corrections for the same tensor become
+    the effective row without falsifying the original measurement timestamp.
+    """
+
+    return (
+        str(row.get("measurement_utc") or ""),
+        str(row.get("written_at_utc") or ""),
+    )
+
+
 def _ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -715,7 +743,7 @@ def latest_anchor_for_archive(
         rows = [r for r in rows if is_authoritative_axis_anchor(r)]
     if not rows:
         return None
-    return max(rows, key=lambda r: r.get("measurement_utc", ""))
+    return max(rows, key=effective_anchor_sort_key)
 
 
 def latest_rejected_contest_axis_anchor_for_archive(
@@ -742,23 +770,93 @@ def latest_rejected_contest_axis_anchor_for_archive(
     return max(rejected, key=lambda item: item[0].get("measurement_utc", ""))
 
 
-def update_from_anchor(anchor: dict, *, path: Path | None = None) -> None:
-    """Catalog #265 canonical-contract alias.
-
-    Accepts a dict-shape anchor (e.g. from continual-learning sister); persists
-    via the canonical helper."""
+def _operating_point_from_anchor(anchor: Mapping[str, object]) -> OperatingPoint:
     op = anchor["operating_point"]
     if isinstance(op, dict):
-        op_obj = OperatingPoint(
+        return OperatingPoint(
             d_seg=float(op["d_seg"]),
             d_pose=float(op["d_pose"]),
             rate=float(op.get("rate", op.get("R", 0.0))),
             score=float(op["score"]),
         )
-    elif isinstance(op, OperatingPoint):
-        op_obj = op
-    else:
-        raise TypeError(f"operating_point must be dict or OperatingPoint, got {type(op).__name__}")
+    if isinstance(op, OperatingPoint):
+        return op
+    raise TypeError(f"operating_point must be dict or OperatingPoint, got {type(op).__name__}")
+
+
+def build_score_axis_dominance_backfill_anchor(
+    anchor: Mapping[str, object],
+    *,
+    axis_dominance_threshold: float = 0.7,
+) -> dict[str, object]:
+    """Return an append-only anchor correction with producer-side dominance metadata."""
+
+    if np is None:
+        raise RuntimeError("numpy required to backfill score-axis dominance")
+    if not isinstance(anchor, Mapping):
+        raise TypeError("anchor must be a mapping")
+    gradient_path_value = anchor.get("gradient_array_path")
+    if not isinstance(gradient_path_value, str) or not gradient_path_value:
+        raise ValueError("anchor gradient_array_path missing")
+    gradient_path = Path(gradient_path_value)
+    if not gradient_path.is_absolute():
+        gradient_path = Path.cwd() / gradient_path
+    if not gradient_path.is_file():
+        raise FileNotFoundError(f"gradient array not found: {gradient_path}")
+
+    op_obj = _operating_point_from_anchor(anchor)
+    tensor = np.load(gradient_path)
+    summary = score_axis_dominance_summary(
+        tensor,
+        op_obj,
+        axis_dominance_threshold=axis_dominance_threshold,
+    )
+    summary.update(
+        {
+            "backfill_schema": "master_gradient_score_axis_dominance_backfill_v1",
+            "backfill_reason": "producer_side_score_axis_dominance_metadata_closure",
+            "derived_by": "tac.master_gradient.build_score_axis_dominance_backfill_anchor",
+            "source_anchor_row_canonical_json_sha256": _canonical_json_sha256(anchor),
+        }
+    )
+    corrected = dict(anchor)
+    corrected["score_axis_dominance"] = summary
+    return corrected
+
+
+def append_score_axis_dominance_backfill(
+    anchor: Mapping[str, object],
+    *,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+    axis_dominance_threshold: float = 0.7,
+) -> dict[str, object]:
+    """Append a locked metadata-correction anchor with score-axis dominance.
+
+    This intentionally appends a new row instead of editing historical JSONL
+    state. The corrected row keeps the original ``measurement_utc``; readers use
+    ``written_at_utc`` as the tie-breaker via :func:`effective_anchor_sort_key`.
+    """
+
+    corrected = build_score_axis_dominance_backfill_anchor(
+        anchor,
+        axis_dominance_threshold=axis_dominance_threshold,
+    )
+    update_from_anchor(corrected, path=path, lock_path=lock_path)
+    return corrected
+
+
+def update_from_anchor(
+    anchor: dict,
+    *,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+) -> None:
+    """Catalog #265 canonical-contract alias.
+
+    Accepts a dict-shape anchor (e.g. from continual-learning sister); persists
+    via the canonical helper."""
+    op_obj = _operating_point_from_anchor(anchor)
     grad = MasterGradient(
         archive_sha256=anchor["archive_sha256"],
         operating_point=op_obj,
@@ -808,4 +906,4 @@ def update_from_anchor(anchor: dict, *, path: Path | None = None) -> None:
             else None
         ),
     )
-    append_anchor_locked(grad, path=path)
+    append_anchor_locked(grad, path=path, lock_path=lock_path)

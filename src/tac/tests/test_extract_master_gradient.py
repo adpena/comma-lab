@@ -47,7 +47,9 @@ from tac.master_gradient import (  # noqa: E402
     PER_PAIR_GRADIENT_TENSOR_KIND,
     MasterGradient,
     OperatingPoint,
+    append_score_axis_dominance_backfill,
     compute_marginal_coefficients,
+    latest_anchor_for_archive,
     load_anchors_lenient,
     score_axis_dominance_summary,
     update_from_anchor,
@@ -481,6 +483,58 @@ def test_score_axis_dominance_summary_aggregate_and_per_pair():
     assert per_pair_summary["tensor_shape"] == [4, 2, 3]
     assert per_pair_summary["n_pairs"] == 2
     assert per_pair_summary["pose_axis_dominant_pair_entry_count"] == 2
+
+
+def test_score_axis_dominance_backfill_appends_effective_correction(tmp_path):
+    sidecar = tmp_path / "grad.npy"
+    np.save(
+        sidecar,
+        np.array(
+            [
+                [10.0, 0.01, 0.0],
+                [0.01, 10.0, 0.0],
+            ],
+            dtype=np.float64,
+        ),
+    )
+    ledger = tmp_path / "anchors.jsonl"
+    lock = tmp_path / ".lock"
+    archive = "d" * 64
+    anchor = {
+        "archive_sha256": archive,
+        "scored_archive_sha256": archive,
+        "scored_archive_bytes": 12345,
+        "gradient_array_path": str(sidecar),
+        "gradient_subject_sha256": "e" * 64,
+        "gradient_subject_bytes": 2,
+        "gradient_byte_domain": "zip_inner_member_payload",
+        "gradient_tensor_kind": AGGREGATE_GRADIENT_TENSOR_KIND,
+        "operating_point": {"d_pose": 0.1, "d_seg": 0.1, "rate": 0.1, "score": 0.1},
+        "n_bytes": 2,
+        "n_pairs_used": 8,
+        "n_pairs_total": 600,
+        "measurement_method": "aggregate_projection",
+        "measurement_axis": "[diagnostic-CPU]",
+        "measurement_hardware": "linux_x86_64_cpu",
+        "measurement_call_id": "fixture-call",
+        "measurement_utc": "2026-05-18T01:00:00Z",
+    }
+    update_from_anchor(anchor, path=ledger, lock_path=lock)
+    original = load_anchors_lenient(ledger)[0]
+
+    append_score_axis_dominance_backfill(original, path=ledger, lock_path=lock)
+
+    rows = load_anchors_lenient(ledger)
+    assert len(rows) == 2
+    assert rows[0]["measurement_utc"] == rows[1]["measurement_utc"]
+    latest = latest_anchor_for_archive(archive, path=ledger)
+    assert latest is not None
+    assert latest["score_axis_dominance"]["schema"] == "master_gradient_score_axis_dominance_v1"
+    assert latest["score_axis_dominance"]["backfill_schema"] == (
+        "master_gradient_score_axis_dominance_backfill_v1"
+    )
+    assert latest["score_axis_dominance"]["pose_axis_dominant_byte_count"] == 1
+    assert len(latest["score_axis_dominance"]["source_anchor_row_canonical_json_sha256"]) == 64
 
 
 def test_master_gradient_records_scored_archive_and_subject_custody(tmp_path):

@@ -1,0 +1,79 @@
+{
+  "anchor_path": ".omx/state/master_gradient_anchors.jsonl",
+  "anchor_sha256_after": "eb706145fabf95587b666efcfc24238389c337748a2ff6c631d51bd1b06e348a",
+  "anchor_sha256_before": "d3d6ea54d6b8ee46199ddbf7be50d42350c8702ce6fbbe21f566e99a7e9d3667",
+  "append_attempted": true,
+  "append_performed": true,
+  "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+  "axis_dominance_threshold": 0.7,
+  "corrected_score_axis_dominance": {
+    "authority_boundary": "diagnostic score-axis dominance metadata; packet-valid mutation still requires grammar-aware CandidateModificationSpec rows, packet proofs, and exact eval",
+    "axis_dominance_threshold": 0.7,
+    "axis_labels": [
+      "seg",
+      "pose",
+      "rate"
+    ],
+    "backfill_reason": "producer_side_score_axis_dominance_metadata_closure",
+    "backfill_schema": "master_gradient_score_axis_dominance_backfill_v1",
+    "derived_by": "tac.master_gradient.build_score_axis_dominance_backfill_anchor",
+    "dominant_axis_counts": {
+      "pose": 346,
+      "rate": 0,
+      "seg": 161779
+    },
+    "entry_count": 178158,
+    "formula": "abs(gradient_axis) * contest_score_marginal / sum_axes(abs(gradient_axis) * contest_score_marginal)",
+    "marginal_coefficients": {
+      "pose": 37.75402143980275,
+      "rate": 6.658589531221714e-07,
+      "seg": 100.0
+    },
+    "mean_axis_share": {
+      "pose": 0.20204654581862289,
+      "rate": 0.0,
+      "seg": 0.7079603020355291
+    },
+    "n_bytes": 178158,
+    "pose_axis_dominant_byte_count": 346,
+    "promotion_authority": false,
+    "raw_archive_byte_authority": false,
+    "schema": "master_gradient_score_axis_dominance_v1",
+    "source_anchor_row_canonical_json_sha256": "90ecee15b114b3956bd12c15d8834571b05f5b03fcee8220143e266e4fdebe65",
+    "tensor_shape": [
+      178158,
+      3
+    ],
+    "threshold_dominant_axis_counts": {
+      "pose": 346,
+      "rate": 0,
+      "seg": 161779
+    },
+    "total_abs_score_contribution_l1": {
+      "pose": 4.262631563106353,
+      "rate": 0.0,
+      "seg": 15.837974216731254
+    },
+    "zero_contribution_count": 16033
+  },
+  "manifest_path": ".omx/research/master_gradient_score_axis_backfill_pr101_lc_v2_20260519T114258Z_codex.json",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "master_gradient_score_axis_dominance_backfill_manifest_v1",
+  "score_claim": false,
+  "selected_anchor": {
+    "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "gradient_array_path": "/Users/adpena/Projects/pact/experiments/results/master_gradient_per_archive_fp64_extraction_wave_20260519T012404Z/master_gradient_pr101_lc_v2_macos_cpu_advisory_8pair_fp64_20260518.npy",
+    "gradient_tensor_kind": "aggregate_per_byte_v1",
+    "measurement_axis": "[macOS-CPU advisory]",
+    "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "measurement_method": "autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+    "measurement_utc": "2026-05-19T01:32:04.044754+00:00",
+    "score_axis_dominance_already_present": false,
+    "scored_archive_bytes": 178258,
+    "scored_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "written_at_utc": "2026-05-19T01:32:04.045037+00:00"
+  },
+  "skip_reason": null,
+  "tensor_kind": "aggregate_per_byte_v1"
+}

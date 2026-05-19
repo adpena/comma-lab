@@ -635,6 +635,43 @@ def test_load_aggregate_gradient_uses_axis_correction_instead_of_stale_contest_r
     assert loaded_anchor["measurement_axis"] == "[macOS-CPU advisory]"
 
 
+def test_load_aggregate_gradient_prefers_later_append_correction_for_same_measurement(
+    tmp_path: Path,
+):
+    """Append-only metadata fixes with same measurement time must become effective."""
+    archive = "b" * 64
+    arr = np.ones((4, 3), dtype=np.float32)
+    npy_path = tmp_path / "aggregate.npy"
+    np.save(npy_path, arr)
+    base = {
+        "archive_sha256": archive,
+        "gradient_array_path": str(npy_path),
+        "gradient_tensor_kind": "aggregate_per_byte_v1",
+        "measurement_axis": "[diagnostic-CPU]",
+        "measurement_hardware": "linux_x86_64_cpu",
+        "measurement_method": "aggregate_projection",
+        "measurement_utc": "2026-05-18T01:00:00Z",
+        "n_bytes": 4,
+        "operating_point": {"d_pose": 0.1, "d_seg": 0.1, "rate": 0.1, "score": 0.1},
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    stale = {**base, "written_at_utc": "2026-05-18T01:00:01Z"}
+    corrected = {
+        **base,
+        "written_at_utc": "2026-05-18T01:00:02Z",
+        "score_axis_dominance": {"schema": "master_gradient_score_axis_dominance_v1"},
+    }
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    ledger.write_text(json.dumps(stale) + "\n" + json.dumps(corrected) + "\n")
+
+    _loaded, loaded_anchor = mgc.load_aggregate_gradient_from_anchor(
+        archive_sha256=archive,
+        anchor_path=ledger,
+    )
+
+    assert loaded_anchor["score_axis_dominance"]["schema"] == "master_gradient_score_axis_dominance_v1"
+
+
 def test_load_aggregate_gradient_uses_tensor_kind_over_per_pair_method_text(
     tmp_path: Path,
 ):

@@ -1,0 +1,997 @@
+{
+  "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+  "authority_boundary": {
+    "candidate_specs_are_dispatchable": false,
+    "planning_only": true,
+    "raw_archive_byte_authority": false,
+    "reason": "diagnostic gradient-subject coordinates require scored archive custody, grammar resolution, packet proofs, and exact eval before promotion",
+    "score_axis_authority": false,
+    "source_archive_custody_available": true
+  },
+  "blockers": [
+    "packet_proofs_missing",
+    "archive_not_repacked_after_mutation",
+    "zip_headers_not_rebuilt",
+    "zip_crc_not_rebuilt",
+    "inflate_success_not_proven"
+  ],
+  "candidate_modification_specs": [
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0001",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=35773",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000586842",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0001"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0002",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=35774",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000586842",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0002"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0003",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113376",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0003"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0004",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113377",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0004"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0005",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113378",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0005"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0006",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113379",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0006"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0007",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113380",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0007"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0008",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113381",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0008"
+    }
+  ],
+  "dispatch_attempted": false,
+  "evidence_grade": "[diagnostic; master-gradient planning manifest]",
+  "grammar_aware_layout_manifest_path": ".omx/research/pose_axis_operator_pr101_layout_contract_20260519T074500Z.json",
+  "grammar_aware_layout_manifest_sha256": "9bc604ee05c7150be1011826099b21ffc498529b7afa81800e5a31521362528e",
+  "grammar_aware_operator_candidate_resolution": {
+    "blockers": [
+      "archive_not_repacked_after_mutation",
+      "zip_headers_not_rebuilt",
+      "zip_crc_not_rebuilt",
+      "inflate_success_not_proven",
+      "packet_proofs_missing"
+    ],
+    "candidate_modification_spec_count": 8,
+    "candidate_modification_specs": [
+      {
+        "axis_label": "pose",
+        "blockers": [
+          "archive_not_repacked_after_mutation",
+          "zip_headers_not_rebuilt",
+          "zip_crc_not_rebuilt",
+          "inflate_success_not_proven",
+          "packet_proofs_missing"
+        ],
+        "coordinate_system": "grammar_aware_operator_response",
+        "dispatch_attempted": false,
+        "mutation_grain": "grammar_aware_operator",
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "operator_id": "decoder::decoder_codec_coordinate_response::pose_axis_rank_0001",
+        "packet_proofs_available": false,
+        "packet_proofs_required": [
+          "repacked_archive",
+          "updated_zip_headers",
+          "updated_zip_crc",
+          "inflate_success_proof",
+          "byte_consumption_noop_detector"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rationale": [
+          "resolved diagnostic pose-axis byte into parser-proven logical section",
+          "diagnostic_gradient_subject_byte_index=35773",
+          "section_relative_offset=35773",
+          "pose_axis_share=1.0",
+          "pose_axis_abs_score_contribution=0.0005868423717763435",
+          "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+          "decoder-like sections can move scorer components and rate; probe as codec coordinates",
+          "operator-grain responses are discrete score-response measurements, not raw byte derivatives",
+          "the measured object should be an N_operator x 3 response matrix over valid packet mutations"
+        ],
+        "raw_archive_byte_coordinates_allowed": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_operator_probe": false,
+        "ready_for_provider_dispatch": false,
+        "response_matrix_columns": [
+          "seg_dist_delta",
+          "pose_dist_delta",
+          "rate_bytes_delta"
+        ],
+        "score_claim": false,
+        "section_name": "decoder",
+        "section_role": "brotli_streams_int8",
+        "source_archive_bytes": 178258,
+        "source_archive_path": null,
+        "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0001::decoder"
+      },
+      {
+        "axis_label": "pose",
+        "blockers": [
+          "archive_not_repacked_after_mutation",
+          "zip_headers_not_rebuilt",
+          "zip_crc_not_rebuilt",
+          "inflate_success_not_proven",
+          "packet_proofs_missing"
+        ],
+        "coordinate_system": "grammar_aware_operator_response",
+        "dispatch_attempted": false,
+        "mutation_grain": "grammar_aware_operator",
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "operator_id": "decoder::decoder_codec_coordinate_response::pose_axis_rank_0002",
+        "packet_proofs_available": false,
+        "packet_proofs_required": [
+          "repacked_archive",
+          "updated_zip_headers",
+          "updated_zip_crc",
+          "inflate_success_proof",
+          "byte_consumption_noop_detector"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rationale": [
+          "resolved diagnostic pose-axis byte into parser-proven logical section",
+          "diagnostic_gradient_subject_byte_index=35774",
+          "section_relative_offset=35774",
+          "pose_axis_share=1.0",
+          "pose_axis_abs_score_contribution=0.0005868423717763435",
+          "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+          "decoder-like sections can move scorer components and rate; probe as codec coordinates",
+          "operator-grain responses are discrete score-response measurements, not raw byte derivatives",
+          "the measured object should be an N_operator x 3 response matrix over valid packet mutations"
+        ],
+        "raw_archive_byte_coordinates_allowed": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_operator_probe": false,
+        "ready_for_provider_dispatch": false,
+        "response_matrix_columns": [
+          "seg_dist_delta",
+          "pose_dist_delta",
+          "rate_bytes_delta"
+        ],
+        "score_claim": false,
+        "section_name": "decoder",
+        "section_role": "brotli_streams_int8",
+        "source_archive_bytes": 178258,
+        "source_archive_path": null,
+        "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0002::decoder"
+      },
+      {
+        "axis_label": "pose",
+        "blockers": [
+          "archive_not_repacked_after_mutation",
+          "zip_headers_not_rebuilt",
+          "zip_crc_not_rebuilt",
+          "inflate_success_not_proven",
+          "packet_proofs_missing"
+        ],
+        "coordinate_system": "grammar_aware_operator_response",
+        "dispatch_attempted": false,
+        "mutation_grain": "grammar_aware_operator",
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "operator_id": "decoder::decoder_codec_coordinate_response::pose_axis_rank_0003",
+        "packet_proofs_available": false,
+        "packet_proofs_required": [
+          "repacked_archive",
+          "updated_zip_headers",
+          "updated_zip_crc",
+          "inflate_success_proof",
+          "byte_consumption_noop_detector"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rationale": [
+          "resolved diagnostic pose-axis byte into parser-proven logical section",
+          "diagnostic_gradient_subject_byte_index=113376",
+          "section_relative_offset=113376",
+          "pose_axis_share=1.0",
+          "pose_axis_abs_score_contribution=0.0002538225292599054",
+          "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+          "decoder-like sections can move scorer components and rate; probe as codec coordinates",
+          "operator-grain responses are discrete score-response measurements, not raw byte derivatives",
+          "the measured object should be an N_operator x 3 response matrix over valid packet mutations"
+        ],
+        "raw_archive_byte_coordinates_allowed": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_operator_probe": false,
+        "ready_for_provider_dispatch": false,
+        "response_matrix_columns": [
+          "seg_dist_delta",
+          "pose_dist_delta",
+          "rate_bytes_delta"
+        ],
+        "score_claim": false,
+        "section_name": "decoder",
+        "section_role": "brotli_streams_int8",
+        "source_archive_bytes": 178258,
+        "source_archive_path": null,
+        "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0003::decoder"
+      },
+      {
+        "axis_label": "pose",
+        "blockers": [
+          "archive_not_repacked_after_mutation",
+          "zip_headers_not_rebuilt",
+          "zip_crc_not_rebuilt",
+          "inflate_success_not_proven",
+          "packet_proofs_missing"
+        ],
+        "coordinate_system": "grammar_aware_operator_response",
+        "dispatch_attempted": false,
+        "mutation_grain": "grammar_aware_operator",
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "operator_id": "decoder::decoder_codec_coordinate_response::pose_axis_rank_0004",
+        "packet_proofs_available": false,
+        "packet_proofs_required": [
+          "repacked_archive",
+          "updated_zip_headers",
+          "updated_zip_crc",
+          "inflate_success_proof",
+          "byte_consumption_noop_detector"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rationale": [
+          "resolved diagnostic pose-axis byte into parser-proven logical section",
+          "diagnostic_gradient_subject_byte_index=113377",
+          "section_relative_offset=113377",
+          "pose_axis_share=1.0",
+          "pose_axis_abs_score_contribution=0.0002538225292599054",
+          "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+          "decoder-like sections can move scorer components and rate; probe as codec coordinates",
+          "operator-grain responses are discrete score-response measurements, not raw byte derivatives",
+          "the measured object should be an N_operator x 3 response matrix over valid packet mutations"
+        ],
+        "raw_archive_byte_coordinates_allowed": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_operator_probe": false,
+        "ready_for_provider_dispatch": false,
+        "response_matrix_columns": [
+          "seg_dist_delta",
+          "pose_dist_delta",
+          "rate_bytes_delta"
+        ],
+        "score_claim": false,
+        "section_name": "decoder",
+        "section_role": "brotli_streams_int8",
+        "source_archive_bytes": 178258,
+        "source_archive_path": null,
+        "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0004::decoder"
+      },
+      {
+        "axis_label": "pose",
+        "blockers": [
+          "archive_not_repacked_after_mutation",
+          "zip_headers_not_rebuilt",
+          "zip_crc_not_rebuilt",
+          "inflate_success_not_proven",
+          "packet_proofs_missing"
+        ],
+        "coordinate_system": "grammar_aware_operator_response",
+        "dispatch_attempted": false,
+        "mutation_grain": "grammar_aware_operator",
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "operator_id": "decoder::decoder_codec_coordinate_response::pose_axis_rank_0005",
+        "packet_proofs_available": false,
+        "packet_proofs_required": [
+          "repacked_archive",
+          "updated_zip_headers",
+          "updated_zip_crc",
+          "inflate_success_proof",
+          "byte_consumption_noop_detector"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rationale": [
+          "resolved diagnostic pose-axis byte into parser-proven logical section",
+          "diagnostic_gradient_subject_byte_index=113378",
+          "section_relative_offset=113378",
+          "pose_axis_share=1.0",
+          "pose_axis_abs_score_contribution=0.0002538225292599054",
+          "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+          "decoder-like sections can move scorer components and rate; probe as codec coordinates",
+          "operator-grain responses are discrete score-response measurements, not raw byte derivatives",
+          "the measured object should be an N_operator x 3 response matrix over valid packet mutations"
+        ],
+        "raw_archive_byte_coordinates_allowed": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_operator_probe": false,
+        "ready_for_provider_dispatch": false,
+        "response_matrix_columns": [
+          "seg_dist_delta",
+          "pose_dist_delta",
+          "rate_bytes_delta"
+        ],
+        "score_claim": false,
+        "section_name": "decoder",
+        "section_role": "brotli_streams_int8",
+        "source_archive_bytes": 178258,
+        "source_archive_path": null,
+        "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0005::decoder"
+      },
+      {
+        "axis_label": "pose",
+        "blockers": [
+          "archive_not_repacked_after_mutation",
+          "zip_headers_not_rebuilt",
+          "zip_crc_not_rebuilt",
+          "inflate_success_not_proven",
+          "packet_proofs_missing"
+        ],
+        "coordinate_system": "grammar_aware_operator_response",
+        "dispatch_attempted": false,
+        "mutation_grain": "grammar_aware_operator",
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "operator_id": "decoder::decoder_codec_coordinate_response::pose_axis_rank_0006",
+        "packet_proofs_available": false,
+        "packet_proofs_required": [
+          "repacked_archive",
+          "updated_zip_headers",
+          "updated_zip_crc",
+          "inflate_success_proof",
+          "byte_consumption_noop_detector"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rationale": [
+          "resolved diagnostic pose-axis byte into parser-proven logical section",
+          "diagnostic_gradient_subject_byte_index=113379",
+          "section_relative_offset=113379",
+          "pose_axis_share=1.0",
+          "pose_axis_abs_score_contribution=0.0002538225292599054",
+          "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+          "decoder-like sections can move scorer components and rate; probe as codec coordinates",
+          "operator-grain responses are discrete score-response measurements, not raw byte derivatives",
+          "the measured object should be an N_operator x 3 response matrix over valid packet mutations"
+        ],
+        "raw_archive_byte_coordinates_allowed": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_operator_probe": false,
+        "ready_for_provider_dispatch": false,
+        "response_matrix_columns": [
+          "seg_dist_delta",
+          "pose_dist_delta",
+          "rate_bytes_delta"
+        ],
+        "score_claim": false,
+        "section_name": "decoder",
+        "section_role": "brotli_streams_int8",
+        "source_archive_bytes": 178258,
+        "source_archive_path": null,
+        "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0006::decoder"
+      },
+      {
+        "axis_label": "pose",
+        "blockers": [
+          "archive_not_repacked_after_mutation",
+          "zip_headers_not_rebuilt",
+          "zip_crc_not_rebuilt",
+          "inflate_success_not_proven",
+          "packet_proofs_missing"
+        ],
+        "coordinate_system": "grammar_aware_operator_response",
+        "dispatch_attempted": false,
+        "mutation_grain": "grammar_aware_operator",
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "operator_id": "decoder::decoder_codec_coordinate_response::pose_axis_rank_0007",
+        "packet_proofs_available": false,
+        "packet_proofs_required": [
+          "repacked_archive",
+          "updated_zip_headers",
+          "updated_zip_crc",
+          "inflate_success_proof",
+          "byte_consumption_noop_detector"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rationale": [
+          "resolved diagnostic pose-axis byte into parser-proven logical section",
+          "diagnostic_gradient_subject_byte_index=113380",
+          "section_relative_offset=113380",
+          "pose_axis_share=1.0",
+          "pose_axis_abs_score_contribution=0.0002538225292599054",
+          "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+          "decoder-like sections can move scorer components and rate; probe as codec coordinates",
+          "operator-grain responses are discrete score-response measurements, not raw byte derivatives",
+          "the measured object should be an N_operator x 3 response matrix over valid packet mutations"
+        ],
+        "raw_archive_byte_coordinates_allowed": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_operator_probe": false,
+        "ready_for_provider_dispatch": false,
+        "response_matrix_columns": [
+          "seg_dist_delta",
+          "pose_dist_delta",
+          "rate_bytes_delta"
+        ],
+        "score_claim": false,
+        "section_name": "decoder",
+        "section_role": "brotli_streams_int8",
+        "source_archive_bytes": 178258,
+        "source_archive_path": null,
+        "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0007::decoder"
+      },
+      {
+        "axis_label": "pose",
+        "blockers": [
+          "archive_not_repacked_after_mutation",
+          "zip_headers_not_rebuilt",
+          "zip_crc_not_rebuilt",
+          "inflate_success_not_proven",
+          "packet_proofs_missing"
+        ],
+        "coordinate_system": "grammar_aware_operator_response",
+        "dispatch_attempted": false,
+        "mutation_grain": "grammar_aware_operator",
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "operator_id": "decoder::decoder_codec_coordinate_response::pose_axis_rank_0008",
+        "packet_proofs_available": false,
+        "packet_proofs_required": [
+          "repacked_archive",
+          "updated_zip_headers",
+          "updated_zip_crc",
+          "inflate_success_proof",
+          "byte_consumption_noop_detector"
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rationale": [
+          "resolved diagnostic pose-axis byte into parser-proven logical section",
+          "diagnostic_gradient_subject_byte_index=113381",
+          "section_relative_offset=113381",
+          "pose_axis_share=1.0",
+          "pose_axis_abs_score_contribution=0.0002538225292599054",
+          "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+          "decoder-like sections can move scorer components and rate; probe as codec coordinates",
+          "operator-grain responses are discrete score-response measurements, not raw byte derivatives",
+          "the measured object should be an N_operator x 3 response matrix over valid packet mutations"
+        ],
+        "raw_archive_byte_coordinates_allowed": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_operator_probe": false,
+        "ready_for_provider_dispatch": false,
+        "response_matrix_columns": [
+          "seg_dist_delta",
+          "pose_dist_delta",
+          "rate_bytes_delta"
+        ],
+        "score_claim": false,
+        "section_name": "decoder",
+        "section_role": "brotli_streams_int8",
+        "source_archive_bytes": 178258,
+        "source_archive_path": null,
+        "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0008::decoder"
+      }
+    ],
+    "coordinate_system": "grammar_aware_operator_response",
+    "dispatch_attempted": false,
+    "logical_grammar": "pr101_lc_v2",
+    "next_step": "run a grammar-specific mutation builder for one resolved spec and prove repack, ZIP metadata, CRC, inflate success, and byte-consumption closure before operator probe or provider dispatch",
+    "packet_proofs_available": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "raw_archive_byte_coordinates_allowed": false,
+    "raw_archive_byte_rows_emitted": 0,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_provider_dispatch": false,
+    "resolved_count": 8,
+    "resolved_pose_axis_candidates": [
+      {
+        "diagnostic_gradient_subject_byte_index": 35773,
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "rank": 1,
+        "ready_for_operator_probe": false,
+        "section_len": 162164,
+        "section_name": "decoder",
+        "section_offset": 0,
+        "section_relative_offset": 35773,
+        "section_role": "brotli_streams_int8",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0001::decoder"
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 35774,
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "rank": 2,
+        "ready_for_operator_probe": false,
+        "section_len": 162164,
+        "section_name": "decoder",
+        "section_offset": 0,
+        "section_relative_offset": 35774,
+        "section_role": "brotli_streams_int8",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0002::decoder"
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113376,
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "rank": 3,
+        "ready_for_operator_probe": false,
+        "section_len": 162164,
+        "section_name": "decoder",
+        "section_offset": 0,
+        "section_relative_offset": 113376,
+        "section_role": "brotli_streams_int8",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0003::decoder"
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113377,
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "rank": 4,
+        "ready_for_operator_probe": false,
+        "section_len": 162164,
+        "section_name": "decoder",
+        "section_offset": 0,
+        "section_relative_offset": 113377,
+        "section_role": "brotli_streams_int8",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0004::decoder"
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113378,
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "rank": 5,
+        "ready_for_operator_probe": false,
+        "section_len": 162164,
+        "section_name": "decoder",
+        "section_offset": 0,
+        "section_relative_offset": 113378,
+        "section_role": "brotli_streams_int8",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0005::decoder"
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113379,
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "rank": 6,
+        "ready_for_operator_probe": false,
+        "section_len": 162164,
+        "section_name": "decoder",
+        "section_offset": 0,
+        "section_relative_offset": 113379,
+        "section_role": "brotli_streams_int8",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0006::decoder"
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113380,
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "rank": 7,
+        "ready_for_operator_probe": false,
+        "section_len": 162164,
+        "section_name": "decoder",
+        "section_offset": 0,
+        "section_relative_offset": 113380,
+        "section_role": "brotli_streams_int8",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0007::decoder"
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113381,
+        "mutation_operator": "decoder_codec_coordinate_response",
+        "rank": 8,
+        "ready_for_operator_probe": false,
+        "section_len": 162164,
+        "section_name": "decoder",
+        "section_offset": 0,
+        "section_relative_offset": 113381,
+        "section_role": "brotli_streams_int8",
+        "spec_id": "pose_axis_candidate::b83bf3488625::0008::decoder"
+      }
+    ],
+    "schema": "tac_pose_axis_master_gradient_operator_candidates_v1",
+    "score_claim": false,
+    "selected_count": 8,
+    "source_archive_bytes": 178258,
+    "source_archive_path": null,
+    "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "source_layout_schema": null,
+    "source_selector_schema": "master_gradient_consumer_pose_axis_dominant_bytes_v1",
+    "unresolved_count": 0,
+    "unresolved_pose_axis_entries": []
+  },
+  "grammar_aware_operator_candidate_resolution_error": null,
+  "manifest_path": ".omx/research/pose_axis_operator_pr101_manifest_20260519T114316Z_score_axis_backfilled_codex.json",
+  "next_step": "Build a grammar-aware pose-axis mutation builder for the highest-EV selected spec, then prove repack, CRC, inflate success, and byte consumption before any operator probe or provider dispatch.",
+  "packet_proofs": {
+    "byte_consumption_noop_detector": false,
+    "inflate_success_proof": false,
+    "repacked_archive": false,
+    "updated_zip_crc": false,
+    "updated_zip_headers": false
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_operator_probe": false,
+  "ready_for_provider_dispatch": false,
+  "schema": "pose_byte_hoist_op7_manifest_v1",
+  "score_claim": false,
+  "selection": {
+    "axis_dominance_threshold": 0.7,
+    "axis_label": "pose",
+    "coordinate_system": "grammar_aware_operator_response",
+    "raw_archive_byte_coordinates_allowed": false,
+    "selected_count": 8,
+    "selector": "tac.master_gradient_consumers.select_pose_axis_dominant_bytes",
+    "top_k": 8
+  },
+  "selector_sidecar_path": ".omx/research/pose_axis_operator_pr101_artifacts_20260519T114316Z_score_axis_backfilled/master_gradient_consumers/pose_axis_dominant_bytes_b83bf3488625_op7_manifest_v1.json",
+  "selector_sidecar_sha256": "cfda4fca31f154fcd767c4a717209b0535b0b0cc92d3aebfc03035456a7e20fa",
+  "smoke": {
+    "attempted": false,
+    "reason": "OP-7 resolved at least one diagnostic gradient-subject byte through a grammar layout; mutation remains blocked until repack/CRC/inflate/no-op proof.",
+    "status": "blocked_missing_packet_proofs"
+  },
+  "source_anchor": {
+    "anchor_ledger_path": ".omx/state/master_gradient_anchors.jsonl",
+    "anchor_ledger_sha256": "eb706145fabf95587b666efcfc24238389c337748a2ff6c631d51bd1b06e348a",
+    "anchor_row_canonical_json_sha256": "4c8047178738358adff9facee1e557d7fd2a028cad64ed92b5e0a93cdf3d4613",
+    "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "contest_axis_authority_violation_reason": null,
+    "gradient_array_path": "/Users/adpena/Projects/pact/experiments/results/master_gradient_per_archive_fp64_extraction_wave_20260519T012404Z/master_gradient_pr101_lc_v2_macos_cpu_advisory_8pair_fp64_20260518.npy",
+    "gradient_array_sha256": "31088a20b302424f550d97a25925eb3cd5298bbb0300e1c064ee297db44f6938",
+    "gradient_byte_domain": "zip_inner_member_payload",
+    "gradient_tensor_kind": "aggregate_per_byte_v1",
+    "measurement_axis": "[macOS-CPU advisory]",
+    "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "measurement_method": "autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+    "measurement_utc": "2026-05-19T01:32:04.044754+00:00",
+    "n_bytes": 178158,
+    "n_pairs_total": 600,
+    "n_pairs_used": 8,
+    "score_axis_dominance_available": true,
+    "score_axis_dominance_source": "anchor_field",
+    "scored_archive_bytes": 178258,
+    "scored_archive_custody_available": true,
+    "scored_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e"
+  },
+  "tool": "tools/hoist_pose_bytes_from_master_gradient.py"
+}
