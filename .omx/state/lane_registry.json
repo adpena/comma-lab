@@ -38816,8 +38816,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_arbitrariness_extinction_wave_2b_path3_formula_batch_landed_20260518.md with PV/sister-coord/12-anchor-recovery/6-hook-wire-in/composition-map/follow-on-symposium-list"
         },
         "deploy_runbook": {
           "status": false,
@@ -38830,6 +38830,47 @@
       "id": "lane_arbitrariness_extinction_wave_2c_path1_experimental_zero_batch_20260518",
       "name": "Wave 2C path1 experimental zero batch: 8 empirical-sweep extinctions at local-CPU advisory",
       "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/experimental_extinctions/ subpackage with 9 files (8 helpers + __init__) + 46 tests; tools/empirical_validate_experimental_wave_2c_extinctions.py emits 8 canonical [macOS-CPU advisory] manifest rows; empirical anchors: T3 cadence 6.3/wk vs 3/wk hardcoded (2.1x over); 9 of 11 memory categories diverge from 60d default"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_arbitrariness_extinction_wave_2c_path1_experimental_zero_batch_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_grand_council_findings_deliberation_wave_20260518",
+      "name": "Grand Council Findings Deliberation Wave",
+      "phase": 4.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -38875,5 +38916,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T03:11:29Z"
+  "updated_at": "2026-05-19T03:27:51Z"
 }
