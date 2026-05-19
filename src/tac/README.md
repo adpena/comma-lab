@@ -96,6 +96,8 @@ For naming, keep the hierarchy strict:
 
 The repository-wide terminology authority is
 [`docs/terminology_and_boundaries.md`](../../docs/terminology_and_boundaries.md).
+Contest rule and public-PR precedent authority is
+[`docs/contest_compliance_authority.md`](../../docs/contest_compliance_authority.md).
 
 ## Installation
 

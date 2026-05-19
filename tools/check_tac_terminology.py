@@ -12,6 +12,7 @@ from pathlib import Path
 
 CANONICAL_FILES = (
     "README.md",
+    "docs/contest_compliance_authority.md",
     "docs/terminology_and_boundaries.md",
     "src/tac/README.md",
     "src/comma_lab/README.md",
@@ -96,6 +97,7 @@ def check_repo(root: Path) -> list[Finding]:
         "src/tac/README.md",
         "src/comma_lab/README.md",
         "docs/terminology_and_boundaries.md",
+        "docs/contest_compliance_authority.md",
     ):
         _require_contains(
             findings,
@@ -112,6 +114,7 @@ def check_repo(root: Path) -> list[Finding]:
         ("Feature coding for machines", "FCM terminology"),
         ("Use **compression** for the project and research program", "codec/compression distinction"),
         ("procedural generation from archive-contained seeds or weights", "procedural generation boundary"),
+        ("docs/contest_compliance_authority.md", "contest authority pointer"),
     ):
         _require_contains(
             findings,
@@ -139,7 +142,9 @@ def check_repo(root: Path) -> list[Finding]:
     for needle, rationale in (
         ("It is intentionally not the compression engine.", "comma_lab boundary"),
         ("`tac`: Task-Aware Compression library", "related package pointer"),
+        ("`comma_lab.task_codec`", "legacy task_codec boundary"),
         ("Never create score authority from `comma_lab` alone", "authority boundary"),
+        ("docs/contest_compliance_authority.md", "contest authority pointer"),
     ):
         _require_contains(
             findings,
@@ -167,6 +172,7 @@ def check_repo(root: Path) -> list[Finding]:
     for needle, rationale in (
         ("This document is the canonical naming and package-boundary reference", "authority declaration"),
         ('Never expand TAC as "Task-Aware Codec."', "negative expansion rule"),
+        ("`comma_lab.task_codec` is a legacy compatibility namespace", "legacy task_codec boundary"),
         ("Contest Compliance Boundary", "contest compliance section"),
     ):
         _require_contains(
@@ -180,6 +186,7 @@ def check_repo(root: Path) -> list[Finding]:
         "Procedural generation from an archive-contained seed",
         "Constants in `inflate.py` may describe how to decode a charged payload",
         "Package Ownership",
+        "docs/contest_compliance_authority.md",
     ):
         _require_contains(
             findings,
@@ -187,6 +194,26 @@ def check_repo(root: Path) -> list[Finding]:
             text=terminology,
             needle=needle,
             rationale="terminology source-of-truth content",
+        )
+
+    compliance = texts["docs/contest_compliance_authority.md"]
+    for needle, rationale in (
+        ("# Contest Compliance Authority", "compliance authority title"),
+        ("Authority Ladder", "source hierarchy"),
+        ("Public PR Precedents", "public precedent section"),
+        ("archive_seeded", "procedural archive-seeded mode"),
+        ("runtime_constant", "procedural runtime-constant mode"),
+        ("score-bearing information must be charged through `archive.zip`", "payload relocation guard"),
+        ("#35 tensor_inversion", "scorer inflate precedent"),
+        ("#68 loophole_v2", "script-payload loophole precedent"),
+        ("#78 qzs3_script_payload_r147", "withdrawn payload-relocation precedent"),
+    ):
+        _require_contains(
+            findings,
+            relpath="docs/contest_compliance_authority.md",
+            text=compliance,
+            needle=needle,
+            rationale=rationale,
         )
 
     pyproject = texts["pyproject.toml"]

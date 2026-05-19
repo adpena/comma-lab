@@ -14,7 +14,9 @@ lab and operations layer around `tac`, not a second compression engine.
 The package-level boundary docs are [src/tac/README.md](src/tac/README.md) and
 [src/comma_lab/README.md](src/comma_lab/README.md). The canonical terminology
 and contest-compliance boundary is
-[docs/terminology_and_boundaries.md](docs/terminology_and_boundaries.md).
+[docs/terminology_and_boundaries.md](docs/terminology_and_boundaries.md), with
+the upstream rule and public-PR precedent ladder in
+[docs/contest_compliance_authority.md](docs/contest_compliance_authority.md).
 
 | Name | Canonical role |
 |---|---|
@@ -41,6 +43,43 @@ Scoring formula: `S = 100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * r
 | `external` | Community/historical context | Public PR text, leaderboard metadata, or outside papers before local exact replay |
 | `invalid` | Compliance lesson | Proxy, CPU/MPS, stale, sidecar, exploit, malformed, or otherwise non-ranking evidence |
 
+## Current Workflows
+
+This is an active research and engineering repo. The high-traffic surfaces are:
+
+- public-frontier intake, archive byte anatomy, and exact replay custody;
+- Task-Aware Compression primitives in `src/tac/`: packet compilers, entropy
+  coders, scorer-aware losses, renderers, quantizers, sensitivity maps,
+  master-gradient consumers, and deterministic/procedural byte derivation;
+- lab-control tooling in `src/comma_lab/`: state projection, strict preflight
+  adapters, public-intake hygiene, release hygiene, and operator reports;
+- exact `[contest-CPU]` and `[contest-CUDA]` auth-eval separation;
+- procedural generation from archive-contained seeds or weights, with
+  compliance mode recorded before score-bearing use;
+- release/paper/OSS hygiene for the reusable `tac` package and the surrounding
+  `comma-lab` lab workspace.
+
+## Authority And Gates
+
+Score authority is byte-closed. A row is not ranked because a memo, local smoke
+test, or proxy run looks good; it becomes ranked only when the exact archive and
+runtime pair pass the required custody checks.
+
+Useful gates:
+
+```bash
+.venv/bin/python tools/check_tac_terminology.py --strict
+.venv/bin/python tools/all_lanes_preflight.py
+.venv/bin/python scripts/pre_submission_compliance_check.py --contest-final --strict ...
+```
+
+Compliance authority for procedural generation, scorer-aware inflate designs,
+and deterministic packet compilation is summarized in
+[docs/contest_compliance_authority.md](docs/contest_compliance_authority.md).
+The short rule: decoder code may be clever, but score-bearing information must
+be charged through `archive.zip` unless a documented tiny-runtime contract
+proves it is decoder logic rather than payload relocation.
+
 ## CUDA vs CPU auth eval split (2026-05-08)
 
 The contest scorer at `upstream/evaluate.py` produces two distinct authoritative
@@ -60,25 +99,18 @@ Apple Silicon CPU eval is `[macOS-CPU advisory only]`, never `[contest-CPU]`.
 Full write-up: [`docs/findings/cuda_cpu_auth_eval_split_20260508.md`](docs/findings/cuda_cpu_auth_eval_split_20260508.md).
 Methodology long-form: [`docs/writeup/cuda_cpu_drift_methodology.md`](docs/writeup/cuda_cpu_drift_methodology.md).
 
-## Architecture
+## Package Map
 
-The renderer is an asymmetric warp pair generator built on CLADE-conditioned U-Net blocks ([arxiv 2012.04644](https://arxiv.org/abs/2012.04644)):
-
-```
-frame2 = renderer(mask2)                        # Direct render from segmentation mask
-flow, gate, residual = motion(mask1, mask2)     # Motion prediction from both masks
-frame1 = warp(frame2, flow) + gate * residual   # Geometric warp + gated correction
-```
-
-Frame2 is rendered directly. Frame1 is derived by warping frame2 with learned optical flow and a gated residual, making temporal coherence architectural rather than learned through loss alone. PoseNet sees geometric ego-motion between frames, which is what real driving video produces.
-
-Key components:
-
-- **CLADENorm**: GroupNorm with per-class affine modulation from the 5-class segmentation mask. Spatially-varying conditioning at ~10 parameters per layer.
-- **Radial zoom warp** (`src/tac/radial_zoom.py`): The PoseNet Jacobian has effective rank 1.008 (verified empirically). Only one degree of freedom matters: a scalar radial zoom from the Focus of Expansion. Replaces a 50K-param motion predictor with 600 learned scalars (1.2 KB at FP16).
-- **Int4+LZMA2 export** (`src/tac/mixed_precision_export.py`): Per-tensor symmetric int4 quantization followed by LZMA2 compression. Achieves ~2.2 bits/weight vs 4.4 bits/weight for FP4 codebook approaches.
-- **Fridrich inverse steganalysis losses** (`src/tac/fridrich.py`, `src/tac/fridrich_losses.py`): The challenge scorers are forensic detectors. Training losses derived from Fridrich's steganalysis framework push errors into the scorers' null space: UNIWARD texture masking, L-infinity spreading (square root law), and Markov transition statistics.
-- **Forensic analysis tools** (`src/tac/forensics.py`): Boundary artifact detection, SegNet class-boundary error analysis, PoseNet per-pixel Jacobian sensitivity maps, and eval roundtrip distortion maps.
+| Surface | Role |
+|---|---|
+| `src/tac/` | Reusable Task-Aware Compression library: archive grammars, packet compilers, scorer contracts, codecs, substrates, sensitivity maps, and optimization primitives. |
+| `src/comma_lab/` | Lab operations package: state projection, strict preflight adapters, public-frontier hygiene, scheduler/reporting support, release hygiene. |
+| `tools/`, `scripts/`, `experiments/` | Thin operator entry points. Durable logic should delegate to `tac` or `comma_lab`. |
+| `docs/` | Public methodology, runbooks, compliance readings, writeups, and release notes. |
+| `.omx/research/` | Dated research ledgers, negative results, directives, and adversarial reviews. |
+| `reverse_engineering/` | Clean public-submission deconstruction runbooks and manifests. |
+| `submissions/` | Candidate and historical contest runtime packets. |
+| `upstream/` | Pinned upstream challenge snapshot. Treat scorer files as read-only. |
 
 ## Quick start
 
@@ -100,9 +132,16 @@ PYTHONPATH=src:upstream python experiments/pipeline.py eval \
     --video upstream/videos/0.mkv --device cuda
 ```
 
-## Training profiles
+## Training Profiles
 
-Three experiment profiles encode different training philosophies. All share the same architecture for fair comparison.
+Early renderer/post-filter profiles are retained for reproducibility and
+historical comparison. They are not the whole current system; newer lanes may
+use HNeRV-family replay, packet compilation, procedural codebooks, Wyner-Ziv
+side information, entropy-coder repacks, or scorer-aware deterministic
+transducers.
+
+Three baseline profiles encode different training philosophies. All share the
+same historical architecture for fair comparison.
 
 | Profile | Strategy | Key idea |
 |---------|----------|----------|
@@ -150,11 +189,17 @@ table unless the row has an `A++`/`A` evidence tag and a cited
 
 ## Methodology
 
-Design decisions are made by a 15-member skunkworks council with domain expertise in steganalysis, neural compression, and adversarial ML. The challenge creator (Yousfi) was Fridrich's PhD student at Binghamton; the SegNet scorer is a steganalysis detector. We frame the problem as inverse steganalysis and apply Fridrich's framework directly.
+The repository treats compression as a small compiler for contest archives:
+representations lower into quantized payloads, entropy-coded packets, runtime
+decoders, custody manifests, and exact auth eval artifacts. Positive results,
+negative results, harness bugs, and compliance blockers are all preserved as
+research signal.
 
-All training code passes a recursive adversarial review protocol: 3 consecutive clean passes from 5 independent reviewers before deployment. The review gate is enforced by pre-commit hooks.
-
-Research state is maintained in durable files (`.omx/state/`, `.ralph/run_log.md`, `reports/`) so work can resume across sessions without relying on chat context.
+Research state is maintained in durable files (`.omx/research/`, selected
+`.omx/state/` ledgers, `docs/`, and `reports/`) so work can resume across
+sessions without relying on chat context. Raw provider logs, large artifacts,
+and rebuildable experiment outputs stay ignored unless curated into a manifest
+or compact ledger.
 
 ## Paper
 

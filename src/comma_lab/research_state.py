@@ -7,9 +7,9 @@ The contest lab has three different kinds of useful state:
   committed manifest;
 * private provider/operator state that should stay local but be summarized.
 
-This module owns that boundary for the lab layer. The reusable ``tac`` codec
-library should not need to know about Claude, OMX, provider logs, or release
-custody policy.
+This module owns that boundary for the lab layer. The reusable ``tac``
+Task-Aware Compression library should not need to know about Claude, OMX,
+provider logs, or release custody policy.
 """
 
 from __future__ import annotations
@@ -18,10 +18,9 @@ import argparse
 import json
 import subprocess
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
-
 
 TEXT_SUFFIXES = {".md", ".txt", ".json", ".jsonl", ".yaml", ".yml", ".csv", ".tsv"}
 SMALL_TEXT_LIMIT_BYTES = 1_000_000
@@ -52,8 +51,7 @@ def _run_git(root: Path, args: list[str], *, stdin: str | None = None) -> str:
         cwd=root,
         input=stdin,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
     )
     if proc.returncode not in {0, 1}:

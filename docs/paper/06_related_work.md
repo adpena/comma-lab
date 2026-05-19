@@ -32,7 +32,11 @@ Neural Radiance Fields [Mildenhall et al. 2020] and 3D Gaussian Splatting [Kerbl
 
 ## 6.3 Video coding for machines
 
-The MPEG Video Coding for Machines (VCM) initiative [Duan et al. 2020] standardized as ISO/IEC 23888, addresses compression optimized for downstream analysis tasks rather than human viewing. The VCM framework includes pre-processing and post-processing modules around a standard codec, with task-specific optimization.
+The MPEG Video Coding for Machines (VCM) / MPEG-AI standardization effort [Duan
+et al. 2020] addresses compression optimized for downstream analysis tasks
+rather than human viewing. The VCM framework includes pre-processing and
+post-processing modules around a standard codec, with task-specific
+optimization.
 
 Neural Wrapping [Khan et al. 2025] adds learned pre- and post-processing around a standard codec, optimized for downstream task performance. Sandwiched Compression [Du et al. 2023] proposes a similar neural pre+post processor concept. Both target human perceptual metrics alongside task metrics; we optimize exclusively for the task.
 

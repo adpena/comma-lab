@@ -56,14 +56,28 @@ def test_init_files_have_positive_terminology_requirements(tmp_path: Path) -> No
             "src/tac/README.md\n"
             "src/comma_lab/README.md\n"
             "docs/terminology_and_boundaries.md\n"
+            "docs/contest_compliance_authority.md\n"
+        ),
+        "docs/contest_compliance_authority.md": (
+            "# Contest Compliance Authority\n"
+            "Authority Ladder\n"
+            "Public PR Precedents\n"
+            "archive_seeded\n"
+            "runtime_constant\n"
+            "score-bearing information must be charged through `archive.zip`\n"
+            "#35 tensor_inversion\n"
+            "#68 loophole_v2\n"
+            "#78 qzs3_script_payload_r147\n"
         ),
         "docs/terminology_and_boundaries.md": (
             "This document is the canonical naming and package-boundary reference\n"
             'Never expand TAC as "Task-Aware Codec."\n'
+            "`comma_lab.task_codec` is a legacy compatibility namespace\n"
             "Contest Compliance Boundary\n"
             "Procedural generation from an archive-contained seed\n"
             "Constants in `inflate.py` may describe how to decode a charged payload\n"
             "Package Ownership\n"
+            "docs/contest_compliance_authority.md\n"
         ),
         "src/tac/README.md": (
             "# tac - Task-Aware Compression\n"
@@ -71,11 +85,14 @@ def test_init_files_have_positive_terminology_requirements(tmp_path: Path) -> No
             "Feature coding for machines\n"
             "Use **compression** for the project and research program\n"
             "procedural generation from archive-contained seeds or weights\n"
+            "docs/contest_compliance_authority.md\n"
         ),
         "src/comma_lab/README.md": (
             "It is intentionally not the compression engine.\n"
             "`tac`: Task-Aware Compression library\n"
+            "`comma_lab.task_codec`\n"
             "Never create score authority from `comma_lab` alone\n"
+            "docs/contest_compliance_authority.md\n"
         ),
         "src/tac/__init__.py": "Task-Aware Compression (tac)\n",
         "src/comma_lab/__init__.py": "repository operations only\n",

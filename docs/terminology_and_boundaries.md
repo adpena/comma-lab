@@ -4,6 +4,9 @@ This document is the canonical naming and package-boundary reference for the
 repository. It exists to keep public README text, package metadata, and operator
 docs aligned while the research system is changing quickly.
 
+Compliance authority for archive/runtime design is tracked in
+[`docs/contest_compliance_authority.md`](contest_compliance_authority.md).
+
 ## Canonical Names
 
 | Term | Canonical meaning | Use for |
@@ -18,6 +21,8 @@ Never expand TAC as "Task-Aware Codec." That phrasing is too narrow: the package
 contains codecs, but it also contains scorer contracts, master-gradient and
 sensitivity-map consumers, deterministic packet compilation, procedural
 generation, byte profilers, custody validators, and optimization planners.
+`comma_lab.task_codec` is a legacy compatibility namespace for early records;
+it is not the TAC expansion and should not be used for new compression code.
 
 ## Academic And Industry Jargon
 
@@ -59,6 +64,12 @@ Repo policy is stricter than the permissive edge of that rule:
 - Constants in `inflate.py` may describe how to decode a charged payload, but
   they must not hide a large uncharged model, lookup table, sidecar payload, or
   scorer-derived artifact.
+- Procedural generators should declare either `archive_seeded` or
+  `runtime_constant` mode per
+  [`docs/contest_compliance_authority.md`](contest_compliance_authority.md).
+  Score-bearing seeds, weights, tables, generated code, or distilled
+  transducers belong in `archive.zip` unless a compliance memo proves they are
+  merely decoder logic.
 - Generated code, tiny transducers, and fixed tables are valid design tools
   when they remain self-contained, documented, and cheaper than shipping the
   equivalent bytes directly.
@@ -96,6 +107,8 @@ agree on these points:
 4. Score authority comes from byte-closed exact evaluation, not prose.
 5. Procedural generation is contest-eligible only when self-contained and
    charged through archive bytes or a clearly sanctioned tiny runtime contract.
+6. Contest-compliance authority flows through
+   `docs/contest_compliance_authority.md`.
 
 Run the terminology guard before public-facing documentation commits:
 
@@ -105,8 +118,16 @@ Run the terminology guard before public-facing documentation commits:
 
 ## References
 
-- Upstream contest rules: `upstream/README.md`
-- MPEG-AI Part 2: Video coding for machines
-- MPEG-AI Part 4: Feature coding for machines
-- MPEG WG 4: Video Coding Working Group
-- CVPR 2023 AccelIR: Task-aware Image Compression for Accelerating Neural Restoration
+- Upstream contest rules: `upstream/README.md` and
+  <https://github.com/commaai/comma_video_compression_challenge#submission-format-and-rules>
+- Contest compliance authority:
+  [`docs/contest_compliance_authority.md`](contest_compliance_authority.md)
+- MPEG-AI Part 2, Video coding for machines:
+  <https://www.mpeg.org/standards/MPEG-AI/2/>
+- MPEG-AI Part 4, Feature coding for machines:
+  <https://www.mpeg.org/standards/MPEG-AI/4/>
+- MPEG WG 4, Video Coding Working Group:
+  <https://www.mpeg.org/structure/video-coding/>
+- CVPR 2023 AccelIR, Task-aware Image Compression for Accelerating Neural
+  Restoration:
+  <https://openaccess.thecvf.com/content/CVPR2023/html/Ye_AccelIR_Task-Aware_Image_Compression_for_Accelerating_Neural_Restoration_CVPR_2023_paper.html>

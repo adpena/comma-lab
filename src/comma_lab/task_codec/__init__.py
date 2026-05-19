@@ -1,5 +1,9 @@
 """Legacy comma_lab.task_codec compatibility foundation for early post-filter records.
 
+This is not a new-code namespace and it is not the expansion of TAC. New
+compression primitives belong in the Task-Aware Compression library under
+``src/tac``.
+
 This package keeps the interfaces intentionally small:
 
 - scorer registration wraps callables with serializable metadata

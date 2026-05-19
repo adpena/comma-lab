@@ -44,6 +44,7 @@ control plane that keeps those artifacts auditable and production-ready.
 | `comma_lab.state_models` | Promoted-result and custody state models |
 | `comma_lab.state_sync` | Deterministic state projection and doctor/sync flows |
 | `comma_lab.snapshot` | Repository snapshot helpers |
+| `comma_lab.task_codec` | Legacy compatibility records for early post-filter state only; not a new-code namespace |
 
 ## Active Workflows
 
@@ -95,3 +96,5 @@ This keeps `tac` publishable as Task-Aware Compression software while
 
 The repository-wide terminology authority is
 [`docs/terminology_and_boundaries.md`](../../docs/terminology_and_boundaries.md).
+Contest rule and public-PR precedent authority is
+[`docs/contest_compliance_authority.md`](../../docs/contest_compliance_authority.md).

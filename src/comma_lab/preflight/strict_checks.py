@@ -2,9 +2,9 @@
 
 The canonical contest/runtime preflight implementation lives in
 ``tac.preflight``. That is intentional: submission compliance, archive safety,
-CUDA-score custody, and runtime-package guards are part of the codec package's
-public contract. This module is an adapter for comma-lab reports, ARA catalogs,
-hosted supplements, and research dashboards.
+CUDA-score custody, and runtime-package guards are part of the ``tac``
+compression/runtime package's public contract. This module is an adapter for
+comma-lab reports, ARA catalogs, hosted supplements, and research dashboards.
 """
 
 from __future__ import annotations
