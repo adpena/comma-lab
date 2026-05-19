@@ -5106,6 +5106,16 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #338: procedural codebook generator canonical-use guard.
+        # WARN-ONLY at landing per the 2026-05-18 ITEM 5 directive: surfaces
+        # that ship pre-baked codebook constants must route through
+        # tac.procedural_codebook_generator authority packets or carry an
+        # explicit waiver. This keeps hash-seed/weight-derived generation
+        # contest-compliance auditable without blocking current partner WIP.
+        check_procedural_codebook_generator_canonical_use(
+            strict=False, verbose=verbose
+        )
+
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
         # scorer-rule in CLAUDE.md). Any reference to it inside
@@ -28423,6 +28433,252 @@ def check_rerank_candidates_via_master_gradient_invokes_consumers(
             "the missing structural protection (same META-class as Catalog "
             "#336):\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #338 — procedural_codebook_generator canonical-use guard
+# ────────────────────────────────────────────────────────────────────────────
+#
+# Codex routing directive v2 ITEM 5 requires a WARN-ONLY gate named
+# check_procedural_codebook_generator_canonical_use. The protected bug class is
+# subtle: procedural generation is contest-compliant when the seed/weights are
+# charged archive bytes and the candidate carries an authority packet, but a
+# hand-written static "procedural" codebook can smuggle score-bearing constants
+# back into source/inflate.py without a rate/accounting boundary.
+
+_CHECK_338_SCAN_DIRS = ["experiments", "scripts", "tools", "submissions"]
+_CHECK_338_EXEMPT_PREFIXES: tuple[str, ...] = ()
+_CHECK_338_WAIVER_TOKEN = "PROCEDURAL_CODEBOOK_PREBAKED_OK"
+_CHECK_338_AUTHORITY_TOKEN = "build_procedural_seed_authority_packet"
+_CHECK_338_SUSPICIOUS_NAME_TOKENS = (
+    "prebaked_codebook",
+    "pre_baked_codebook",
+    "baked_codebook",
+    "static_codebook",
+    "literal_codebook",
+    "embedded_codebook",
+    "runtime_constant_codebook",
+    "inflate_py_codebook",
+    "lookup_table",
+    "precomputed_table",
+    "static_table",
+    "chroma_palette",
+    "chroma_lut",
+    "chroma_lookup_table",
+)
+
+
+def _check_338_has_valid_waiver(text: str) -> bool:
+    for line in text.splitlines():
+        if _CHECK_338_WAIVER_TOKEN + ":" not in line:
+            continue
+        rationale = line.split(_CHECK_338_WAIVER_TOKEN + ":", 1)[1].strip()
+        rationale = rationale.rstrip("'\"`*")
+        if rationale and len(rationale) >= 4 and rationale.lower() not in {
+            "<rationale>",
+            "<reason>",
+            "rationale",
+            "reason",
+        }:
+            return True
+    return False
+
+
+def _check_338_is_candidate_surface(rel: str) -> bool:
+    path = Path(rel)
+    name = path.name
+    if rel.startswith("experiments/"):
+        return name.startswith("train_substrate_") and name.endswith(".py")
+    if rel.startswith("tools/"):
+        marked_builder = (
+            name.startswith("build_") or name.startswith("materialize_")
+        ) and ("packet" in name or "archive" in name)
+        return marked_builder and name.endswith(".py")
+    if rel.startswith("submissions/"):
+        return name.startswith("inflate") and name.endswith(".py")
+    if rel.startswith("scripts/"):
+        return (
+            (name.startswith("build_") or name.startswith("materialize_"))
+            and ("packet" in name or "archive" in name)
+            and name.endswith(".py")
+        )
+    return False
+
+
+def _check_338_has_authority_call(text: str) -> bool:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id == _CHECK_338_AUTHORITY_TOKEN:
+            return True
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == _CHECK_338_AUTHORITY_TOKEN
+        ):
+            return True
+    return False
+
+
+def _check_338_target_names(target: ast.AST) -> tuple[str, ...]:
+    names: list[str] = []
+    if isinstance(target, ast.Name):
+        names.append(target.id)
+    elif isinstance(target, (ast.Tuple, ast.List)):
+        for elt in target.elts:
+            names.extend(_check_338_target_names(elt))
+    return tuple(names)
+
+
+def _check_338_suspicious_target(target: ast.AST) -> str | None:
+    for name in _check_338_target_names(target):
+        lowered = name.lower()
+        if "codebook" in lowered and any(
+            qualifier in lowered
+            for qualifier in (
+                "prebaked",
+                "pre_baked",
+                "baked",
+                "static",
+                "literal",
+                "embedded",
+                "runtime_constant",
+                "inflate_py",
+                "chroma",
+            )
+        ):
+            return name
+        if any(token in lowered for token in _CHECK_338_SUSPICIOUS_NAME_TOKENS):
+            return name
+    return None
+
+
+def _check_338_literal_size(node: ast.AST) -> int:
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return len(node.elts)
+    if isinstance(node, ast.Dict):
+        return len(node.keys)
+    if isinstance(node, ast.Constant) and isinstance(node.value, bytes):
+        return len(node.value)
+    if isinstance(node, ast.Call) and node.args:
+        func = node.func
+        func_name = ""
+        if isinstance(func, ast.Name):
+            func_name = func.id
+        elif isinstance(func, ast.Attribute):
+            func_name = func.attr
+        if func_name in {"array", "asarray", "tensor", "Tensor"}:
+            return _check_338_literal_size(node.args[0])
+    return 0
+
+
+def _check_338_scan_file(path: Path, root: Path) -> list[str]:
+    rel = path.relative_to(root).as_posix()
+    if not _check_338_is_candidate_surface(rel):
+        return []
+    if any(rel.startswith(prefix) for prefix in _CHECK_338_EXEMPT_PREFIXES):
+        return []
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    lowered = text.lower()
+    if (
+        "codebook" not in lowered
+        and "chroma_" not in lowered
+        and "inflate_py_literal_seed" not in lowered
+    ):
+        return []
+    if _check_338_has_valid_waiver(text):
+        return []
+    if _check_338_has_authority_call(text):
+        return []
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except SyntaxError:
+        return []
+
+    violations: list[str] = []
+    if "inflate_py_literal_seed" in lowered:
+        violations.append(
+            f"{rel}: inflate_py_literal_seed appears in a candidate-emitting "
+            f"surface without an AST-proof call to `{_CHECK_338_AUTHORITY_TOKEN}`. "
+            "Route runtime literal seed variants through the procedural authority "
+            f"packet or add `# {_CHECK_338_WAIVER_TOKEN}:<rationale>`."
+        )
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        value = node.value
+        if value is None:
+            continue
+        literal_size = _check_338_literal_size(value)
+        if literal_size < 8:
+            continue
+        for target in targets:
+            name = _check_338_suspicious_target(target)
+            if name is None:
+                continue
+            violations.append(
+                f"{rel}:{node.lineno}: static procedural-codebook-like constant "
+                f"{name!r} has {literal_size} literal entries/bytes without "
+                f"`{_CHECK_338_AUTHORITY_TOKEN}`. Route through "
+                "`tac.procedural_codebook_generator` authority packets or add "
+                f"`# {_CHECK_338_WAIVER_TOKEN}:<rationale>` for reviewed "
+                "non-score-bearing constants."
+            )
+    return violations
+
+
+def check_procedural_codebook_generator_canonical_use(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #338 — route pre-baked procedural codebooks through authority.
+
+    Warns/refuses candidate surfaces that define large static codebook/palette
+    constants without also carrying the canonical
+    ``build_procedural_seed_authority_packet`` path. This is intentionally
+    narrower than "all constants" so learned decoder weights and unrelated LUTs
+    are not trampled; the target class is the procedural-generation ambiguity
+    from the 2026-05-18 ITEM 5 directive.
+
+    Initial wire-in is WARN-ONLY: the gate creates discoverability and gives
+    active substrates a migration path without silently changing contest
+    semantics. Strict mode is available for focused tests and future promotion.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for py in _iter_python_files(root, _CHECK_338_SCAN_DIRS):
+        violations.extend(_check_338_scan_file(py, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [procedural-codebook-canonical-use] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print("  [procedural-codebook-canonical-use] OK")
+    if violations and strict:
+        raise PreflightError(
+            "check_procedural_codebook_generator_canonical_use found "
+            f"{len(violations)} violation(s). Catalog #338 requires pre-baked "
+            "procedural codebook constants to route through "
+            "`tac.procedural_codebook_generator.build_procedural_seed_authority_packet` "
+            "or carry a reviewed waiver:\n  "
+            + "\n  ".join(v[:400] for v in violations[:10])
         )
     return violations
 
