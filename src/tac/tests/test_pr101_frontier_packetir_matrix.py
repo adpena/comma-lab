@@ -76,11 +76,194 @@ def _exact_eval_payload(
     }
 
 
+def _valid_candidate_queue_payload(
+    *,
+    archive_sha: str,
+    archive_bytes: int,
+    runtime_consumption_proven: bool = True,
+) -> dict[str, object]:
+    """Build a queue fixture using the v2 schema.
+
+    Per codex adversarial review 2026-05-19 F1: ``runtime_consumption_proven``
+    defaults True for the legacy-equivalent fixture (callers that want to
+    exercise the runtime-unproven branch flip the kwarg to False).
+    """
+
+    return {
+        "schema": "pr101_fec6_packetir_candidate_queue_v2",
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "expected_archive_sha256_matches": True,
+        "candidate_count": 1,
+        "operator_candidate_count": 0,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_operator_probe": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "byte_accounting": {
+            "schema": "pr101_fec6_packetir_byte_accounting_v2",
+            "member_payload_bytes": 11,
+            "accounted_primary_payload_bytes": 11,
+            "all_payload_bytes_accounted": True,
+            "parser_byte_accounting_passed": True,
+            "runtime_consumption_proven": runtime_consumption_proven,
+            "runtime_consumed_byte_accounting_passed": runtime_consumption_proven,
+            "parser_runtime_candidate_surfaces": ["inflate.py::parse"],
+            "runtime_consumer_surfaces": ["inflate.py::parse"],
+            "queue_consumer_surfaces": [
+                "tac.cathedral_consumers.packetir_candidate_queue_consumer"
+            ],
+            "sections": [
+                {
+                    "name": "source_pr101_payload",
+                    "offset": 0,
+                    "length": 11,
+                    "primary_payload_section": True,
+                    "parser_section_runtime_candidate": True,
+                    "runtime_consumption_proven": runtime_consumption_proven,
+                    "runtime_consumed": runtime_consumption_proven,
+                    "parser_runtime_candidate_surfaces": ["inflate.py::parse"],
+                }
+            ],
+            "byte_accounting_blockers": (
+                []
+                if runtime_consumption_proven
+                else ["runtime_byte_consumption_noop_detector_missing"]
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "consumer_surfaces": [
+            "tac.cathedral_consumers.packetir_candidate_queue_consumer"
+        ],
+        "candidates": [
+            {
+                "candidate_id": "identity",
+                "candidate_kind": "identity_reference",
+                "consumer_surfaces": [
+                    "tac.cathedral_consumers.packetir_candidate_queue_consumer"
+                ],
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "ready_for_operator_probe": False,
+                "ready_for_provider_dispatch": False,
+                "dispatch_attempted": False,
+            }
+        ],
+    }
+
+
+def _valid_parser_section_manifest(
+    *,
+    archive_sha: str,
+) -> dict[str, object]:
+    """Canonical parser_section_manifest with one populated section."""
+
+    return {
+        "schema_version": "deterministic_parser_section_manifest.v1",
+        "section_count": 1,
+        "section_names": ["x"],
+        "lengths": [11],
+        "section_sha256s": [archive_sha],
+        "offsets": [0],
+        "compress_types": [0],
+        "entropy_estimates": "per-member entropy deferred",
+        "old_new_section_boundaries": "ZIP central directory",
+    }
+
+
+def _valid_golden_vectors(
+    *,
+    archive_sha: str,
+    runtime_tree_sha: str,
+) -> dict[str, object]:
+    """Canonical golden_vectors with one populated member_vector."""
+
+    return {
+        "schema_version": "deterministic_golden_vectors.v1",
+        "tool_name": "deterministic_packet_compiler",
+        "tool_schema_version": "deterministic_packet_compiler.v1",
+        "mode": "identity",
+        "target_profile": "contest_one_video_replay",
+        "archive_sha256": archive_sha,
+        "runtime_tree_sha256": runtime_tree_sha,
+        "member_vectors": [
+            {
+                "name": "x",
+                "payload_sha256": archive_sha,
+                "compressed_payload_sha256": archive_sha,
+                "compress_type": 0,
+                "uncompressed_bytes": 11,
+                "compressed_bytes": 11,
+                "data_offset": 0,
+            }
+        ],
+    }
+
+
+def _valid_compiler_manifest_payload(
+    *,
+    archive_sha: str,
+    archive_bytes: int,
+    parser_section_manifest: dict[str, object] | None = None,
+    golden_vectors: dict[str, object] | None = None,
+    runtime_tree_sha: str = "1" * 64,
+) -> dict[str, object]:
+    """Canonical compiler manifest fixture per codex F2 schema validation.
+
+    Defaults populate parser_section_manifest + golden_vectors with valid
+    schema-conformant data.  Tests that need to exercise the F2 blocker
+    branches override either kwarg with `{}` or a malformed mapping.
+    """
+
+    if parser_section_manifest is None:
+        parser_section_manifest = _valid_parser_section_manifest(
+            archive_sha=archive_sha
+        )
+    if golden_vectors is None:
+        golden_vectors = _valid_golden_vectors(
+            archive_sha=archive_sha,
+            runtime_tree_sha=runtime_tree_sha,
+        )
+    return {
+        "schema_version": "deterministic_packet_compiler.v1",
+        "mode": "identity",
+        "target_profile": "contest_one_video_replay",
+        "archive_sha256": archive_sha,
+        "archive_size_bytes": archive_bytes,
+        "runtime_tree_sha256": runtime_tree_sha,
+        "parser_section_manifest": parser_section_manifest,
+        "golden_vectors": golden_vectors,
+        "no_op_proof": {
+            "schema_version": "deterministic_no_op_proof.v1",
+            "mode": "identity",
+            "new_archive_sha256": archive_sha,
+            "new_archive_size_bytes": archive_bytes,
+            "baseline_archive_sha256": archive_sha,
+            "baseline_archive_size_bytes": None,
+            "no_op_detector_passed": True,
+        },
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _fixture_spec(
     tmp_path: Path,
     *,
     include_identity: bool = True,
     include_queue: bool = False,
+    include_compiler: bool = False,
 ) -> PR101FEC6FrontierMatrixSpec:
     archive_bytes = b"fec6 archive bytes"
     archive_sha = _sha(archive_bytes)
@@ -161,12 +344,20 @@ def _fixture_spec(
     if include_queue:
         _write_json(
             queue_path,
-            {
-                "schema": "pr101_fec6_packetir_candidate_queue_v1",
-                "score_claim": False,
-                "promotion_eligible": False,
-                "ready_for_exact_eval_dispatch": False,
-            },
+            _valid_candidate_queue_payload(
+                archive_sha=archive_sha,
+                archive_bytes=len(archive_bytes),
+            ),
+        )
+
+    compiler_path = tmp_path / "fec6" / "deterministic_packet_compiler_manifest.json"
+    if include_compiler:
+        _write_json(
+            compiler_path,
+            _valid_compiler_manifest_payload(
+                archive_sha=archive_sha,
+                archive_bytes=len(archive_bytes),
+            ),
         )
 
     return PR101FEC6FrontierMatrixSpec(
@@ -175,7 +366,7 @@ def _fixture_spec(
         packet_manifest_path=str(tmp_path / "fec6" / "packet_manifest.json"),
         packetir_identity_proof_path=str(identity_path),
         deterministic_compiler_manifest_path=str(
-            tmp_path / "fec6" / "deterministic_packet_compiler_manifest.json"
+            compiler_path
         ),
         candidate_queue_path=str(queue_path),
         exact_eval_paths={
@@ -207,6 +398,7 @@ def test_pr101_fec6_matrix_answers_authority_without_candidate_queue(
     assert summary["fec6_has_packetir_identity_evidence"] is True
     assert summary["fec6_has_deterministic_compiler_identity_evidence"] is False
     assert summary["fec6_has_pr106_style_packetir_candidate_queue"] is False
+    assert summary["fec6_has_candidate_byte_accounting_evidence"] is False
     assert (
         matrix["status"]
         == "parser_profile_no_compiler_identity_no_packetir_candidate_queue"
@@ -238,7 +430,9 @@ def test_pr101_fec6_matrix_records_candidate_queue_when_present(tmp_path: Path) 
 
     summary = matrix["authority_summary"]
     assert summary["fec6_has_pr106_style_packetir_candidate_queue"] is True
+    assert summary["fec6_has_candidate_byte_accounting_evidence"] is True
     assert matrix["candidate_queue"]["exists"] is True
+    assert matrix["candidate_queue"]["candidate_byte_accounting_present"] is True
     assert matrix["candidate_queue"]["score_claim"] is False
     assert (
         matrix["status"]
@@ -248,7 +442,69 @@ def test_pr101_fec6_matrix_records_candidate_queue_when_present(tmp_path: Path) 
     assert "pr106_style_packetir_candidate_queue_missing" not in matrix["blockers"]
     assert matrix["next_actions"][0]["status"] == "pending"
     assert matrix["next_actions"][1]["status"] == "done"
-    assert matrix["next_actions"][2]["status"] == "pending"
+    assert matrix["next_actions"][2]["status"] == "done"
+
+
+def test_pr101_fec6_matrix_records_compiler_and_queue_when_valid(
+    tmp_path: Path,
+) -> None:
+    spec = _fixture_spec(tmp_path, include_queue=True, include_compiler=True)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    summary = matrix["authority_summary"]
+    assert summary["fec6_has_deterministic_compiler_identity_evidence"] is True
+    assert summary["fec6_has_pr106_style_packetir_candidate_queue"] is True
+    assert summary["fec6_has_candidate_byte_accounting_evidence"] is True
+    assert (
+        summary["current_authority"]
+        == "packetir_identity_deterministic_compiler_identity_and_candidate_queue_validated_no_score_claim"
+    )
+    assert matrix["status"] == "packetir_compiler_identity_and_candidate_queue_validated"
+    assert "deterministic_compiler_identity_manifest_missing" not in matrix["blockers"]
+    assert "pr106_style_packetir_candidate_queue_missing" not in matrix["blockers"]
+    assert matrix["next_actions"][0]["status"] == "done"
+    assert matrix["next_actions"][1]["status"] == "done"
+    assert matrix["next_actions"][2]["status"] == "done"
+
+
+def test_pr101_fec6_matrix_blocks_overclaiming_candidate_queue(
+    tmp_path: Path,
+) -> None:
+    spec = _fixture_spec(tmp_path, include_queue=True)
+    queue_path = Path(spec.candidate_queue_path)
+    payload = json.loads(queue_path.read_text(encoding="utf-8"))
+    payload["candidates"][0]["ready_for_exact_eval_dispatch"] = True
+    _write_json(queue_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    assert matrix["authority_summary"]["fec6_has_pr106_style_packetir_candidate_queue"] is False
+    assert "pr106_style_packetir_candidate_queue_missing" in matrix["blockers"]
+    assert any(
+        "ready_for_exact_eval_dispatch_overclaimed" in blocker
+        for blocker in matrix["candidate_queue"]["blockers"]
+    )
+
+
+def test_pr101_fec6_matrix_blocks_bad_compiler_manifest(tmp_path: Path) -> None:
+    spec = _fixture_spec(tmp_path, include_compiler=True)
+    manifest_path = Path(spec.deterministic_compiler_manifest_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["no_op_proof"]["no_op_detector_passed"] = False
+    _write_json(manifest_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    assert (
+        matrix["authority_summary"]["fec6_has_deterministic_compiler_identity_evidence"]
+        is False
+    )
+    assert "deterministic_compiler_identity_manifest_missing" in matrix["blockers"]
+    assert (
+        "deterministic_compiler_no_op_detector_not_passed"
+        in matrix["deterministic_compiler_manifest"]["blockers"]
+    )
 
 
 def test_pr101_fec6_matrix_blocks_mismatched_exact_eval_archive(
@@ -406,3 +662,150 @@ def test_pr101_fec6_matrix_markdown_is_non_dispatching(tmp_path: Path) -> None:
     assert "dispatch commands are emitted" in markdown
     assert "contest_cpu" in markdown
     assert "contest_cuda" in markdown
+
+
+# --- Codex adversarial review 2026-05-19 F2 regression tests ---
+
+
+def test_pr101_fec6_matrix_blocks_empty_parser_section_manifest(
+    tmp_path: Path,
+) -> None:
+    """Empty `{}` parser_section_manifest must add a blocker (F2 regression).
+
+    Pre-fix the v1 isinstance(_, Mapping) check accepted `{}` as valid.
+    """
+
+    spec = _fixture_spec(tmp_path, include_compiler=True)
+    manifest_path = Path(spec.deterministic_compiler_manifest_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["parser_section_manifest"] = {}
+    _write_json(manifest_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    compiler_blockers = matrix["deterministic_compiler_manifest"]["blockers"]
+    assert "deterministic_compiler_parser_manifest_schema_mismatch" in compiler_blockers
+    assert (
+        matrix["authority_summary"]["fec6_has_deterministic_compiler_identity_evidence"]
+        is False
+    )
+
+
+def test_pr101_fec6_matrix_blocks_empty_golden_vectors(
+    tmp_path: Path,
+) -> None:
+    """Empty `{}` golden_vectors must add a blocker (F2 regression)."""
+
+    spec = _fixture_spec(tmp_path, include_compiler=True)
+    manifest_path = Path(spec.deterministic_compiler_manifest_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["golden_vectors"] = {}
+    _write_json(manifest_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    compiler_blockers = matrix["deterministic_compiler_manifest"]["blockers"]
+    assert (
+        "deterministic_compiler_golden_vectors_schema_mismatch" in compiler_blockers
+    )
+    assert (
+        matrix["authority_summary"]["fec6_has_deterministic_compiler_identity_evidence"]
+        is False
+    )
+
+
+def test_pr101_fec6_matrix_blocks_golden_vectors_empty_member_list(
+    tmp_path: Path,
+) -> None:
+    """golden_vectors with empty member_vectors list must add a blocker."""
+
+    spec = _fixture_spec(tmp_path, include_compiler=True)
+    manifest_path = Path(spec.deterministic_compiler_manifest_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["golden_vectors"]["member_vectors"] = []
+    _write_json(manifest_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    compiler_blockers = matrix["deterministic_compiler_manifest"]["blockers"]
+    assert (
+        "deterministic_compiler_golden_vectors_member_vectors_empty"
+        in compiler_blockers
+    )
+
+
+def test_pr101_fec6_matrix_blocks_golden_vectors_archive_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    """golden_vectors archive_sha256 must equal top-level archive_sha256."""
+
+    spec = _fixture_spec(tmp_path, include_compiler=True)
+    manifest_path = Path(spec.deterministic_compiler_manifest_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["golden_vectors"]["archive_sha256"] = "9" * 64
+    _write_json(manifest_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    compiler_blockers = matrix["deterministic_compiler_manifest"]["blockers"]
+    assert (
+        "deterministic_compiler_golden_vectors_archive_sha_mismatch"
+        in compiler_blockers
+    )
+
+
+def test_pr101_fec6_matrix_blocks_golden_vectors_runtime_tree_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    """golden_vectors runtime_tree_sha256 must equal top-level value."""
+
+    spec = _fixture_spec(tmp_path, include_compiler=True)
+    manifest_path = Path(spec.deterministic_compiler_manifest_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["golden_vectors"]["runtime_tree_sha256"] = "a" * 64
+    _write_json(manifest_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    compiler_blockers = matrix["deterministic_compiler_manifest"]["blockers"]
+    assert (
+        "deterministic_compiler_golden_vectors_runtime_tree_sha_mismatch"
+        in compiler_blockers
+    )
+
+
+def test_pr101_fec6_matrix_blocks_parser_manifest_section_count_invalid(
+    tmp_path: Path,
+) -> None:
+    """parser_section_manifest must declare section_count >= 1."""
+
+    spec = _fixture_spec(tmp_path, include_compiler=True)
+    manifest_path = Path(spec.deterministic_compiler_manifest_path)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["parser_section_manifest"]["section_count"] = 0
+    _write_json(manifest_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    compiler_blockers = matrix["deterministic_compiler_manifest"]["blockers"]
+    assert (
+        "deterministic_compiler_parser_manifest_section_count_invalid"
+        in compiler_blockers
+    )
+
+
+def test_pr101_fec6_matrix_accepts_canonical_compiler_manifest(
+    tmp_path: Path,
+) -> None:
+    """Sanity: canonical fixture data still PASSES (no regression)."""
+
+    spec = _fixture_spec(
+        tmp_path,
+        include_queue=True,
+        include_compiler=True,
+    )
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+    assert (
+        matrix["authority_summary"]["fec6_has_deterministic_compiler_identity_evidence"]
+        is True
+    )

@@ -13,7 +13,196 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from tac.packet_compiler.deterministic_compiler import SCHEMA_VERSION as DETERMINISTIC_COMPILER_SCHEMA
+from tac.packet_compiler.pr101_fec6_candidate_queue import (
+    PR101_FEC6_BYTE_ACCOUNTING_SCHEMA,
+    PR101_FEC6_CANDIDATE_QUEUE_SCHEMA,
+)
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json
+
+# Canonical golden_vectors schema per
+# tac.packet_compiler.deterministic_compiler._golden_vectors and
+# tac.packet_compiler.deterministic_compiler._parser_section_manifest.  Per
+# codex adversarial review 2026-05-19 F2: the v1 manifest-row only checked
+# `isinstance(_, Mapping)` so empty `{}` passed as valid identity evidence.
+# v2 enforces the canonical schema fields.
+_GOLDEN_VECTORS_SCHEMA_VERSION = "deterministic_golden_vectors.v1"
+_PARSER_SECTION_MANIFEST_SCHEMA_VERSION = (
+    "deterministic_parser_section_manifest.v1"
+)
+_GOLDEN_VECTOR_MEMBER_REQUIRED_KEYS: tuple[str, ...] = (
+    "name",
+    "payload_sha256",
+    "compressed_payload_sha256",
+    "compress_type",
+    "uncompressed_bytes",
+    "compressed_bytes",
+    "data_offset",
+)
+_PARSER_SECTION_MANIFEST_LIST_KEYS: tuple[str, ...] = (
+    "section_names",
+    "lengths",
+    "section_sha256s",
+    "offsets",
+    "compress_types",
+)
+
+
+def _is_sha256_hex(value: Any) -> bool:
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    return all(c in "0123456789abcdefABCDEF" for c in value)
+
+
+def _validate_parser_section_manifest(
+    manifest: Any,
+) -> list[str]:
+    """Return per-blocker list for the canonical parser_section_manifest.
+
+    Refuses any state that the v1 isinstance(Mapping) check let through:
+    ``{}`` empty dict, missing schema_version, section_count <= 0, list
+    lengths that disagree with section_count, non-string section names,
+    non-hex section_sha256s, negative lengths/offsets.
+    """
+
+    blockers: list[str] = []
+    if not isinstance(manifest, Mapping):
+        return ["deterministic_compiler_parser_manifest_missing"]
+    if manifest.get("schema_version") != _PARSER_SECTION_MANIFEST_SCHEMA_VERSION:
+        blockers.append("deterministic_compiler_parser_manifest_schema_mismatch")
+    section_count = manifest.get("section_count")
+    if not isinstance(section_count, int) or section_count < 1:
+        blockers.append("deterministic_compiler_parser_manifest_section_count_invalid")
+        section_count = None
+    for key in _PARSER_SECTION_MANIFEST_LIST_KEYS:
+        value = manifest.get(key)
+        if not isinstance(value, list):
+            blockers.append(
+                f"deterministic_compiler_parser_manifest_{key}_not_list"
+            )
+            continue
+        if not value:
+            blockers.append(
+                f"deterministic_compiler_parser_manifest_{key}_empty"
+            )
+            continue
+        if section_count is not None and len(value) != section_count:
+            blockers.append(
+                f"deterministic_compiler_parser_manifest_{key}_length_mismatch"
+            )
+    names = manifest.get("section_names")
+    if isinstance(names, list) and names:
+        for name in names:
+            if not isinstance(name, str) or not name:
+                blockers.append(
+                    "deterministic_compiler_parser_manifest_section_name_invalid"
+                )
+                break
+    section_shas = manifest.get("section_sha256s")
+    if isinstance(section_shas, list) and section_shas:
+        for sha in section_shas:
+            if not _is_sha256_hex(sha):
+                blockers.append(
+                    "deterministic_compiler_parser_manifest_section_sha_invalid"
+                )
+                break
+    lengths = manifest.get("lengths")
+    if isinstance(lengths, list) and lengths:
+        for length in lengths:
+            if not isinstance(length, int) or length < 0:
+                blockers.append(
+                    "deterministic_compiler_parser_manifest_length_negative_or_nonint"
+                )
+                break
+    offsets = manifest.get("offsets")
+    if isinstance(offsets, list) and offsets:
+        for offset in offsets:
+            if not isinstance(offset, int) or offset < 0:
+                blockers.append(
+                    "deterministic_compiler_parser_manifest_offset_negative_or_nonint"
+                )
+                break
+    return blockers
+
+
+def _validate_golden_vectors(
+    vectors: Any,
+    *,
+    expected_archive_sha256: str,
+    expected_runtime_tree_sha256: str | None = None,
+) -> list[str]:
+    """Return per-blocker list for the canonical golden_vectors manifest.
+
+    Refuses any state that the v1 isinstance(Mapping) check let through:
+    ``{}`` empty dict, missing schema_version, empty member_vectors list,
+    archive_sha256/runtime_tree_sha256 mismatch vs the top-level manifest
+    they accompany, member_vectors entries lacking required keys, member
+    payload_sha256/compressed_payload_sha256 not valid hex.
+    """
+
+    blockers: list[str] = []
+    if not isinstance(vectors, Mapping):
+        return ["deterministic_compiler_golden_vectors_missing"]
+    if vectors.get("schema_version") != _GOLDEN_VECTORS_SCHEMA_VERSION:
+        blockers.append("deterministic_compiler_golden_vectors_schema_mismatch")
+    if vectors.get("mode") not in ("identity", "canonicalize", "optimize"):
+        blockers.append("deterministic_compiler_golden_vectors_mode_invalid")
+    archive_sha = str(vectors.get("archive_sha256") or "").strip().lower()
+    if not _is_sha256_hex(archive_sha):
+        blockers.append("deterministic_compiler_golden_vectors_archive_sha_invalid")
+    elif expected_archive_sha256 and archive_sha != expected_archive_sha256.lower():
+        blockers.append(
+            "deterministic_compiler_golden_vectors_archive_sha_mismatch"
+        )
+    runtime_tree_sha = str(vectors.get("runtime_tree_sha256") or "").strip().lower()
+    if not _is_sha256_hex(runtime_tree_sha):
+        blockers.append(
+            "deterministic_compiler_golden_vectors_runtime_tree_sha_invalid"
+        )
+    elif (
+        expected_runtime_tree_sha256
+        and runtime_tree_sha != expected_runtime_tree_sha256.lower()
+    ):
+        blockers.append(
+            "deterministic_compiler_golden_vectors_runtime_tree_sha_mismatch"
+        )
+    members = vectors.get("member_vectors")
+    if not isinstance(members, list):
+        blockers.append(
+            "deterministic_compiler_golden_vectors_member_vectors_not_list"
+        )
+    elif not members:
+        blockers.append(
+            "deterministic_compiler_golden_vectors_member_vectors_empty"
+        )
+    else:
+        for member in members:
+            if not isinstance(member, Mapping):
+                blockers.append(
+                    "deterministic_compiler_golden_vectors_member_entry_not_object"
+                )
+                break
+            missing_keys = [
+                key
+                for key in _GOLDEN_VECTOR_MEMBER_REQUIRED_KEYS
+                if key not in member
+            ]
+            if missing_keys:
+                blockers.append(
+                    "deterministic_compiler_golden_vectors_member_missing_keys"
+                )
+                break
+            if not _is_sha256_hex(member.get("payload_sha256")):
+                blockers.append(
+                    "deterministic_compiler_golden_vectors_member_payload_sha_invalid"
+                )
+                break
+            if not _is_sha256_hex(member.get("compressed_payload_sha256")):
+                blockers.append(
+                    "deterministic_compiler_golden_vectors_member_compressed_payload_sha_invalid"
+                )
+                break
+    return blockers
 
 PR101_FRONTIER_PACKETIR_MATRIX_SCHEMA = "pr101_fec6_frontier_packetir_matrix_v1"
 PR101_FRONTIER_PACKETIR_MATRIX_DEFAULT_JSON = (
@@ -341,20 +530,135 @@ def _packetir_primitives(repo_root: Path) -> list[dict[str, Any]]:
     return rows
 
 
+_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+    "ready_for_operator_probe",
+    "ready_for_provider_dispatch",
+    "dispatch_attempted",
+)
+
+
+def _false_authority_blockers(
+    payload: Mapping[str, Any],
+    *,
+    prefix: str,
+    fields: Iterable[str] = _FALSE_AUTHORITY_FIELDS,
+) -> list[str]:
+    return [
+        f"{prefix}_{field}_overclaimed"
+        for field in fields
+        if payload.get(field) is True
+    ]
+
+
 def _candidate_queue_row(
     path_text: str,
     *,
     repo_root: Path,
+    expected_archive_sha256: str,
+    expected_archive_bytes: int | None,
 ) -> dict[str, Any]:
-    row = _artifact_row(
+    row, payload = _json_artifact_row(
         path_text,
         repo_root=repo_root,
         artifact_kind="pr101_fec6_packetir_candidate_queue",
     )
-    row["pr106_style_packetir_candidate_queue"] = row["exists"] is True
+    blockers: list[str] = []
+    if row["exists"] is not True or not payload:
+        blockers.append("candidate_queue_missing_or_invalid_json")
+    else:
+        if payload.get("schema") != PR101_FEC6_CANDIDATE_QUEUE_SCHEMA:
+            blockers.append("candidate_queue_schema_mismatch")
+        archive_sha256 = str(payload.get("archive_sha256") or "").strip().lower()
+        if expected_archive_sha256 and archive_sha256 != expected_archive_sha256:
+            blockers.append("candidate_queue_archive_sha256_mismatch")
+        archive_size = payload.get("archive_size_bytes")
+        if (
+            isinstance(expected_archive_bytes, int)
+            and archive_size != expected_archive_bytes
+        ):
+            blockers.append("candidate_queue_archive_size_mismatch")
+        if payload.get("expected_archive_sha256_matches") is False:
+            blockers.append("candidate_queue_expected_archive_sha256_mismatch")
+        queue_blockers = payload.get("blockers")
+        if queue_blockers:
+            blockers.append("candidate_queue_top_level_blockers_present")
+        blockers.extend(_false_authority_blockers(payload, prefix="candidate_queue"))
+
+        byte_accounting = payload.get("byte_accounting")
+        if not isinstance(byte_accounting, Mapping):
+            blockers.append("candidate_queue_byte_accounting_missing")
+        else:
+            if byte_accounting.get("schema") != PR101_FEC6_BYTE_ACCOUNTING_SCHEMA:
+                blockers.append("candidate_queue_byte_accounting_schema_mismatch")
+            if byte_accounting.get("all_payload_bytes_accounted") is not True:
+                blockers.append("candidate_queue_payload_bytes_not_accounted")
+            if (
+                byte_accounting.get("runtime_consumed_byte_accounting_passed")
+                is not True
+            ):
+                blockers.append("candidate_queue_runtime_consumption_accounting_failed")
+            sections = byte_accounting.get("sections")
+            if not isinstance(sections, list) or not sections:
+                blockers.append("candidate_queue_byte_accounting_sections_missing")
+            runtime_surfaces = byte_accounting.get("runtime_consumer_surfaces")
+            queue_surfaces = byte_accounting.get("queue_consumer_surfaces")
+            if not isinstance(runtime_surfaces, list) or not runtime_surfaces:
+                blockers.append("candidate_queue_runtime_consumer_surfaces_missing")
+            if not isinstance(queue_surfaces, list) or not queue_surfaces:
+                blockers.append("candidate_queue_queue_consumer_surfaces_missing")
+            blockers.extend(
+                _false_authority_blockers(
+                    byte_accounting,
+                    prefix="candidate_queue_byte_accounting",
+                    fields=(
+                        "score_claim",
+                        "promotion_eligible",
+                        "ready_for_exact_eval_dispatch",
+                    ),
+                )
+            )
+
+        candidates = payload.get("candidates")
+        if not isinstance(candidates, list) or not candidates:
+            blockers.append("candidate_queue_candidates_missing")
+        else:
+            if payload.get("candidate_count") != len(candidates):
+                blockers.append("candidate_queue_candidate_count_mismatch")
+            for index, candidate in enumerate(candidates):
+                if not isinstance(candidate, Mapping):
+                    blockers.append(f"candidate_queue_candidate_{index}_not_object")
+                    continue
+                candidate_id = str(candidate.get("candidate_id") or index)
+                blockers.extend(
+                    _false_authority_blockers(
+                        candidate,
+                        prefix=f"candidate_queue_candidate_{candidate_id}",
+                    )
+                )
+                surfaces = candidate.get("consumer_surfaces")
+                if not isinstance(surfaces, list) or not surfaces:
+                    blockers.append(
+                        f"candidate_queue_candidate_{candidate_id}_consumer_surfaces_missing"
+                    )
+    row["pr106_style_packetir_candidate_queue"] = (
+        row["exists"] is True and not blockers
+    )
+    row["candidate_byte_accounting_present"] = (
+        row["pr106_style_packetir_candidate_queue"] is True
+    )
+    row["blockers"] = blockers
     row["score_claim"] = False
     row["promotion_eligible"] = False
     row["ready_for_exact_eval_dispatch"] = False
+    if payload:
+        row["archive_sha256"] = str(payload.get("archive_sha256") or "").strip().lower()
+        row["archive_size_bytes"] = payload.get("archive_size_bytes")
+        row["candidate_count"] = payload.get("candidate_count")
+        row["operator_candidate_count"] = payload.get("operator_candidate_count")
     return row
 
 
@@ -362,16 +666,93 @@ def _deterministic_compiler_manifest_row(
     path_text: str,
     *,
     repo_root: Path,
+    expected_archive_sha256: str,
+    expected_archive_bytes: int | None,
 ) -> dict[str, Any]:
-    row = _artifact_row(
+    row, payload = _json_artifact_row(
         path_text,
         repo_root=repo_root,
         artifact_kind="deterministic_compiler_identity_manifest",
     )
-    row["deterministic_compiler_identity"] = row["exists"] is True
+    blockers: list[str] = []
+    if row["exists"] is not True or not payload:
+        blockers.append("deterministic_compiler_manifest_missing_or_invalid_json")
+    else:
+        if payload.get("schema_version") != DETERMINISTIC_COMPILER_SCHEMA:
+            blockers.append("deterministic_compiler_schema_mismatch")
+        if payload.get("mode") != "identity":
+            blockers.append("deterministic_compiler_mode_not_identity")
+        if payload.get("target_profile") != "contest_one_video_replay":
+            blockers.append("deterministic_compiler_target_profile_mismatch")
+        archive_sha256 = str(payload.get("archive_sha256") or "").strip().lower()
+        if expected_archive_sha256 and archive_sha256 != expected_archive_sha256:
+            blockers.append("deterministic_compiler_archive_sha256_mismatch")
+        archive_size = payload.get("archive_size_bytes")
+        if (
+            isinstance(expected_archive_bytes, int)
+            and archive_size != expected_archive_bytes
+        ):
+            blockers.append("deterministic_compiler_archive_size_mismatch")
+        if payload.get("blockers"):
+            blockers.append("deterministic_compiler_blockers_present")
+        blockers.extend(
+            _false_authority_blockers(
+                payload,
+                prefix="deterministic_compiler",
+                fields=(
+                    "score_claim",
+                    "promotion_eligible",
+                    "ready_for_exact_eval_dispatch",
+                ),
+            )
+        )
+        no_op_proof = payload.get("no_op_proof")
+        if not isinstance(no_op_proof, Mapping):
+            blockers.append("deterministic_compiler_no_op_proof_missing")
+        else:
+            if no_op_proof.get("schema_version") != "deterministic_no_op_proof.v1":
+                blockers.append("deterministic_compiler_no_op_schema_mismatch")
+            if no_op_proof.get("mode") != "identity":
+                blockers.append("deterministic_compiler_no_op_mode_not_identity")
+            if no_op_proof.get("new_archive_sha256") != expected_archive_sha256:
+                blockers.append("deterministic_compiler_no_op_archive_sha_mismatch")
+            if no_op_proof.get("no_op_detector_passed") is not True:
+                blockers.append("deterministic_compiler_no_op_detector_not_passed")
+        # Per codex adversarial review 2026-05-19 F2: the v1 check
+        # `isinstance(_, Mapping)` accepted `{}` as valid identity evidence.
+        # v2 validates the full schema and binds archive_sha256 / runtime_tree_sha256
+        # to the top-level manifest so a truncated or hand-authored manifest
+        # cannot clear deterministic_compiler_identity.
+        parser_manifest = payload.get("parser_section_manifest")
+        parser_blockers = _validate_parser_section_manifest(parser_manifest)
+        for blocker in parser_blockers:
+            if blocker not in blockers:
+                blockers.append(blocker)
+        runtime_tree_sha = str(payload.get("runtime_tree_sha256") or "").strip().lower()
+        golden_vectors = payload.get("golden_vectors")
+        vector_blockers = _validate_golden_vectors(
+            golden_vectors,
+            expected_archive_sha256=str(
+                payload.get("archive_sha256") or ""
+            ).strip().lower(),
+            expected_runtime_tree_sha256=(runtime_tree_sha or None),
+        )
+        for blocker in vector_blockers:
+            if blocker not in blockers:
+                blockers.append(blocker)
+    row["deterministic_compiler_identity"] = row["exists"] is True and not blockers
+    row["blockers"] = blockers
     row["score_claim"] = False
     row["promotion_eligible"] = False
     row["ready_for_exact_eval_dispatch"] = False
+    if payload:
+        row["mode"] = payload.get("mode")
+        row["target_profile"] = payload.get("target_profile")
+        row["archive_sha256"] = str(payload.get("archive_sha256") or "").strip().lower()
+        row["archive_size_bytes"] = payload.get("archive_size_bytes")
+        no_op_proof = payload.get("no_op_proof")
+        if isinstance(no_op_proof, Mapping):
+            row["no_op_detector_passed"] = no_op_proof.get("no_op_detector_passed")
     return row
 
 
@@ -562,8 +943,19 @@ def build_pr101_frontier_packetir_matrix(
     deterministic_compiler_manifest = _deterministic_compiler_manifest_row(
         spec.deterministic_compiler_manifest_path,
         repo_root=root,
+        expected_archive_sha256=expected_archive_sha,
+        expected_archive_bytes=archive.get("bytes")
+        if isinstance(archive.get("bytes"), int)
+        else None,
     )
-    candidate_queue = _candidate_queue_row(spec.candidate_queue_path, repo_root=root)
+    candidate_queue = _candidate_queue_row(
+        spec.candidate_queue_path,
+        repo_root=root,
+        expected_archive_sha256=expected_archive_sha,
+        expected_archive_bytes=archive.get("bytes")
+        if isinstance(archive.get("bytes"), int)
+        else None,
+    )
     has_cpu = exact_eval_artifacts["contest_cpu"].get("valid_axis_evidence") is True
     has_cuda = exact_eval_artifacts["contest_cuda"].get("valid_axis_evidence") is True
     packetir_identity_present = (
@@ -574,6 +966,9 @@ def build_pr101_frontier_packetir_matrix(
     )
     candidate_queue_present = (
         candidate_queue.get("pr106_style_packetir_candidate_queue") is True
+    )
+    candidate_byte_accounting_present = (
+        candidate_queue.get("candidate_byte_accounting_present") is True
     )
     blockers: list[str] = []
     if archive.get("exists") is not True:
@@ -592,6 +987,36 @@ def build_pr101_frontier_packetir_matrix(
         blockers.append("deterministic_compiler_identity_manifest_missing")
     if not candidate_queue_present:
         blockers.append("pr106_style_packetir_candidate_queue_missing")
+
+    if (
+        deterministic_compiler_identity_present
+        and candidate_queue_present
+        and candidate_byte_accounting_present
+    ):
+        current_authority = (
+            "packetir_identity_deterministic_compiler_identity_and_candidate_queue_validated_no_score_claim"
+        )
+        status = "packetir_compiler_identity_and_candidate_queue_validated"
+    elif deterministic_compiler_identity_present and candidate_queue_present:
+        current_authority = (
+            "packetir_identity_and_candidate_queue_present_needs_byte_accounting_review"
+        )
+        status = "packetir_candidate_queue_present_needs_review"
+    elif deterministic_compiler_identity_present:
+        current_authority = (
+            "parser_profile_exact_eval_and_compiler_identity_no_packetir_candidate_queue"
+        )
+        status = "parser_profile_no_packetir_candidate_queue"
+    elif candidate_queue_present:
+        current_authority = (
+            "parser_profile_exact_eval_and_candidate_queue_no_compiler_identity"
+        )
+        status = "parser_profile_no_compiler_identity_candidate_queue_present_needs_review"
+    else:
+        current_authority = (
+            "parser_profile_and_exact_eval_evidence_only_no_compiler_identity_no_packetir_candidate_queue"
+        )
+        status = "parser_profile_no_compiler_identity_no_packetir_candidate_queue"
 
     return {
         "schema": PR101_FRONTIER_PACKETIR_MATRIX_SCHEMA,
@@ -613,20 +1038,12 @@ def build_pr101_frontier_packetir_matrix(
                 deterministic_compiler_identity_present
             ),
             "fec6_has_pr106_style_packetir_candidate_queue": candidate_queue_present,
-            "current_authority": (
-                "parser_profile_and_exact_eval_evidence_only_no_compiler_identity_no_packetir_candidate_queue"
+            "fec6_has_candidate_byte_accounting_evidence": (
+                candidate_byte_accounting_present
             ),
+            "current_authority": current_authority,
         },
-        "status": (
-            "parser_profile_no_compiler_identity_no_packetir_candidate_queue"
-            if not deterministic_compiler_identity_present
-            and not candidate_queue_present
-            else "parser_profile_no_compiler_identity_candidate_queue_present_needs_review"
-            if not deterministic_compiler_identity_present
-            else "parser_profile_no_packetir_candidate_queue"
-            if not candidate_queue_present
-            else "packetir_candidate_queue_present_needs_review"
-        ),
+        "status": status,
         "blockers": blockers,
         "archive": archive,
         "exact_eval_artifacts": exact_eval_artifacts,
@@ -638,7 +1055,7 @@ def build_pr101_frontier_packetir_matrix(
         "candidate_queue": candidate_queue,
         "next_actions": _next_actions(
             candidate_queue_present=candidate_queue_present,
-            candidate_byte_accounting_present=False,
+            candidate_byte_accounting_present=candidate_byte_accounting_present,
             deterministic_compiler_identity_present=(
                 deterministic_compiler_identity_present
             ),
@@ -684,6 +1101,7 @@ def render_pr101_frontier_packetir_matrix_markdown(
         f"- PacketIR identity evidence: `{summary_map.get('fec6_has_packetir_identity_evidence')}`",
         f"- deterministic compiler identity evidence: `{summary_map.get('fec6_has_deterministic_compiler_identity_evidence')}`",
         f"- PR106-style PacketIR candidate queue: `{summary_map.get('fec6_has_pr106_style_packetir_candidate_queue')}`",
+        f"- candidate byte accounting evidence: `{summary_map.get('fec6_has_candidate_byte_accounting_evidence')}`",
         "",
         "## Archive",
         "",
