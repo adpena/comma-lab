@@ -75,7 +75,7 @@ import struct
 import sys
 import time
 import zipfile
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -115,6 +115,11 @@ from tac.master_gradient import (  # noqa: E402
     append_anchor_locked,
     compute_marginal_coefficients,
     score_axis_dominance_summary,
+)
+from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
+    parse_pr106_sidecar_packet,
+    pr106_sidecar_consumed_byte_proof,
 )
 from tac.scorer import load_differentiable_scorers  # noqa: E402
 from tac.substrates.pretrained_driving_prior.archive import (  # noqa: E402
@@ -187,6 +192,7 @@ class ArchiveSection:
     codec: str
     sha256: str
     notes: str = ""
+    score_affecting: bool = True
 
     @property
     def end_offset(self) -> int:
@@ -201,6 +207,7 @@ class ArchiveSection:
             "codec": self.codec,
             "sha256": self.sha256,
             "notes": self.notes,
+            "score_affecting": self.score_affecting,
         }
 
 
@@ -257,8 +264,8 @@ _DETECTION_ONLY_PROJECTORS: dict[str, tuple[str, str]] = {
         "DP1 has canonical section offsets, but renderer/codebook/residual projection is not wired into this master-gradient extractor.",
     ),
     "pr106_format0d": (
-        "pr106_format0d_primary_payload_projector",
-        "Format0d boundaries are exact, but the primary PR106 payload and ranked/no-op sidecar do not share the PR101 fixed-section Jacobian.",
+        "pr106_format0d_packet_ir_two_pass_jacobian_projector",
+        "Format0d PacketIR section boundaries are exact, but the primary PR106 payload plus base/extra ranked-no-op sidecars need a two-pass Jacobian projector before anchor emission.",
     ),
     "pr106_ff_packed_hnerv": (
         "pr106_packed_brotli_schema_projector",
@@ -435,7 +442,16 @@ def _extract_gradient_subject_from_archive_bytes(archive_bytes: bytes) -> _Archi
         )
 
 
-def _section(name: str, offset: int, length: int, codec: str, payload: bytes, notes: str = "") -> ArchiveSection:
+def _section(
+    name: str,
+    offset: int,
+    length: int,
+    codec: str,
+    payload: bytes,
+    notes: str = "",
+    *,
+    score_affecting: bool = True,
+) -> ArchiveSection:
     if offset < 0 or length < 0 or offset + length > len(payload):
         raise ValueError(
             f"bad section {name!r}: offset={offset}, length={length}, payload_bytes={len(payload)}"
@@ -447,7 +463,35 @@ def _section(name: str, offset: int, length: int, codec: str, payload: bytes, no
         codec=codec,
         sha256=_sha256_bytes(payload[offset : offset + length]),
         notes=notes,
+        score_affecting=score_affecting,
     )
+
+
+def _packet_ir_section(
+    row: dict[str, object],
+    *,
+    payload: bytes,
+    codec_by_name: Mapping[str, str],
+    notes_by_name: Mapping[str, str],
+) -> ArchiveSection:
+    """Convert a PacketIR consumed-byte proof row into an archive section."""
+
+    name = str(row["name"])
+    section = _section(
+        name,
+        int(row["offset"]),
+        int(row["bytes"]),
+        codec_by_name.get(name, f"packet_ir_{name}"),
+        payload,
+        notes_by_name.get(name, "PR106 PacketIR consumed-byte proof section."),
+        score_affecting=bool(row["score_affecting"]),
+    )
+    row_sha = str(row["sha256"])
+    if section.sha256 != row_sha:
+        raise ValueError(
+            f"PacketIR proof sha mismatch for {name}: section={section.sha256}, proof={row_sha}"
+        )
+    return section
 
 
 def _validate_contiguous_sections(sections: Sequence[ArchiveSection], payload_len: int, grammar_name: str) -> None:
@@ -622,30 +666,64 @@ def parse_pr106_format0d_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
     payload = extracted.payload
     if extracted.member_name not in (None, "x"):
         raise ValueError(f"PR106 format0d expected raw payload or member 'x', got {extracted.member_name!r}")
-    if len(payload) < 8 or payload[:2] != b"\xfe\x0d":
-        raise ValueError("not a PR106 format0d payload")
-    pr106_len = struct.unpack_from("<I", payload, 2)[0]
-    pr106_offset = 6
-    base_sidecar_offset = pr106_offset + pr106_len
-    base_sidecar_len = 511
-    extra_len_offset = base_sidecar_offset + base_sidecar_len
-    if extra_len_offset + 2 > len(payload):
-        raise ValueError("PR106 format0d payload truncated before extra length")
-    extra_len = struct.unpack_from("<H", payload, extra_len_offset)[0]
-    extra_offset = extra_len_offset + 2
-    framing_offset = extra_offset + extra_len
-    framing_len = len(payload) - framing_offset
-    if framing_len != 6:
-        raise ValueError(f"PR106 format0d expected 6B framing meta, got {framing_len}")
-    sections = (
-        _section("format_magic", 0, 1, "raw_magic_byte", payload, "PR106 magic byte 0xfe."),
-        _section("format_id", 1, 1, "raw_format_id", payload, "PR106 format id 0x0d."),
-        _section("pr106_len_le_u32", 2, 4, "raw_uint32_le", payload, "Length of the primary PR106 payload."),
-        _section("pr106_payload", pr106_offset, pr106_len, "pr106_primary_payload", payload, "Primary PR106 format0d payload."),
-        _section("base_format0c_sidecar_payload", base_sidecar_offset, base_sidecar_len, "format0c_sidecar_payload", payload, "Base format0c sidecar payload retained by format0d."),
-        _section("extra_payload_len_le_u16", extra_len_offset, 2, "raw_uint16_le", payload, "Length of extra ranked no-op payload."),
-        _section("extra_pr101_ranked_no_op_payload", extra_offset, extra_len, "ranked_no_op_payload", payload, "Extra PR101 ranked no-op payload."),
-        _section("extra_framing_meta", framing_offset, framing_len, "raw_framing_meta", payload, "Format0d trailing framing metadata."),
+    try:
+        packet = parse_pr106_sidecar_packet(payload)
+    except ValueError as exc:
+        raise ValueError(f"not a PR106 format0d payload: {exc}") from exc
+    if packet.format_id != PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        raise ValueError(f"not a PR106 format0d payload: format_id=0x{packet.format_id:02x}")
+    proof = pr106_sidecar_consumed_byte_proof(packet)
+    if proof["emitted_payload_sha256"] != _sha256_bytes(payload):
+        raise ValueError("PR106 format0d PacketIR re-emit is not byte-identical to the input payload")
+    if proof["all_payload_bytes_accounted"] is not True:
+        raise ValueError("PR106 format0d PacketIR proof did not account for all payload bytes")
+    expected_section_names = (
+        "magic",
+        "format_id",
+        "pr106_len_le_u32",
+        "pr106_payload",
+        "base_format0c_sidecar_payload",
+        "extra_payload_len_le_u16",
+        "extra_pr101_ranked_no_op_payload",
+        "extra_framing_meta",
+    )
+    proof_sections = proof["sections"]
+    if not isinstance(proof_sections, list):
+        raise ValueError("PR106 format0d PacketIR proof sections payload is malformed")
+    observed_section_names = tuple(str(row["name"]) for row in proof_sections)
+    if observed_section_names != expected_section_names:
+        raise ValueError(
+            "PR106 format0d PacketIR proof section order mismatch: "
+            f"observed={observed_section_names}"
+        )
+    codec_by_name = {
+        "magic": "raw_magic_byte",
+        "format_id": "raw_format_id",
+        "pr106_len_le_u32": "raw_uint32_le",
+        "pr106_payload": "pr106_primary_payload",
+        "base_format0c_sidecar_payload": "format0c_sidecar_payload",
+        "extra_payload_len_le_u16": "raw_uint16_le",
+        "extra_pr101_ranked_no_op_payload": "ranked_no_op_payload",
+        "extra_framing_meta": "raw_framing_meta",
+    }
+    notes_by_name = {
+        "magic": "PR106 PacketIR wrapper magic byte 0xfe.",
+        "format_id": "PR106 PacketIR format id 0x0d.",
+        "pr106_len_le_u32": "Length of the primary PR106 payload.",
+        "pr106_payload": "Primary PR106 payload consumed by runtime before sidecar corrections.",
+        "base_format0c_sidecar_payload": "Base format0c exact-radix ranked/no-op sidecar payload retained by format0d.",
+        "extra_payload_len_le_u16": "Length of the extra ranked/no-op correction payload.",
+        "extra_pr101_ranked_no_op_payload": "Second PR101 ranked/no-op correction stream applied after the base format0c pass.",
+        "extra_framing_meta": "Six-byte PR101 ranked/no-op framing metadata for the extra correction stream.",
+    }
+    sections = tuple(
+        _packet_ir_section(
+            row,
+            payload=payload,
+            codec_by_name=codec_by_name,
+            notes_by_name=notes_by_name,
+        )
+        for row in proof_sections
     )
     return _make_archive_layout(
         grammar_name="pr106_format0d",
@@ -654,7 +732,8 @@ def parse_pr106_format0d_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
         sections=sections,
         gradient_projection_supported=False,
         parser_notes=(
-            "PR106 format0d boundary detection is exact for the materialized sidecar archive, but gradient projection is not yet wired.",
+            "PR106 format0d boundary detection is PacketIR-backed and byte-identity checked via pr106_sidecar_consumed_byte_proof.",
+            "Master-gradient anchor emission remains fail-closed until the primary-payload plus base/extra sidecar two-pass Jacobian projector exists.",
         ),
     )
 

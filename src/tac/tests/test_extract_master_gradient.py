@@ -26,6 +26,11 @@ import torch.nn as nn
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 SRC_DIR = REPO_ROOT / "src"
 TOOLS_DIR = REPO_ROOT / "tools"
+LIVE_PR106_FORMAT0D_ARCHIVE = (
+    REPO_ROOT
+    / "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex"
+    / "sidecar_archive.zip"
+)
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 if str(TOOLS_DIR) not in sys.path:
@@ -75,18 +80,41 @@ def _pr101_payload() -> bytes:
 
 
 def _pr106_payload() -> bytes:
-    primary = b"P" * 5
-    base_sidecar = b"B" * 511
-    extra = b"EE"
-    return (
-        b"\xfe\x0d"
-        + len(primary).to_bytes(4, "little")
-        + primary
-        + base_sidecar
-        + len(extra).to_bytes(2, "little")
-        + extra
-        + b"FRAME!"
+    from tac.packet_compiler.pr106_sidecar_packet import (
+        PR106_LATENT_N_DIMS,
+        PR106_LATENT_N_PAIRS,
+        PR106_NO_OP_DIM,
+        PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
+        PR106SidecarPacket,
+        emit_pr106_sidecar_packet,
+        encode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload,
+        encode_pr106_format0d_sidecar_payload,
     )
+
+    primary = b"P" * 5
+    base_dims = (np.arange(PR106_LATENT_N_PAIRS) % PR106_LATENT_N_DIMS).astype(
+        np.uint8
+    )
+    base_deltas = np.ones(PR106_LATENT_N_PAIRS, dtype=np.int8)
+    base_sidecar = encode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+        base_dims,
+        base_deltas,
+    )
+    extra_dims = np.full(PR106_LATENT_N_PAIRS, PR106_NO_OP_DIM, dtype=np.uint8)
+    extra_deltas = np.zeros(PR106_LATENT_N_PAIRS, dtype=np.int8)
+    _combined, extra_payload, extra_meta = encode_pr106_format0d_sidecar_payload(
+        base_sidecar,
+        extra_dims,
+        extra_deltas,
+    )
+    packet = PR106SidecarPacket(
+        format_id=PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
+        pr106_bytes=primary,
+        sidecar_payload=base_sidecar,
+        extra_sidecar_payload=extra_payload,
+        extra_framing_meta=extra_meta,
+    )
+    return emit_pr106_sidecar_packet(packet)
 
 
 def _dp1_payload() -> bytes:
@@ -760,7 +788,7 @@ def test_validate_measurement_authority_refuses_advisory_contest_axis():
             _zip_payload(_pr106_payload()),
             "pr106_format0d",
             [
-                "format_magic",
+                "magic",
                 "format_id",
                 "pr106_len_le_u32",
                 "pr106_payload",
@@ -891,7 +919,15 @@ def test_detect_archive_grammar_only_cli_prints_json(tmp_path, capsys):
     assert parsed["gradient_projection_supported"] is False
     assert parsed["projection_contract"]["authority"] == "fail_closed_detection_only"
     assert parsed["projection_contract"]["anchor_emission_allowed"] is False
-    assert parsed["projection_contract"]["required_projector"] == "pr106_format0d_primary_payload_projector"
+    assert (
+        parsed["projection_contract"]["required_projector"]
+        == "pr106_format0d_packet_ir_two_pass_jacobian_projector"
+    )
+    sections = {row["name"]: row for row in parsed["sections"]}
+    assert sections["magic"]["score_affecting"] is False
+    assert sections["pr106_payload"]["score_affecting"] is True
+    assert sections["base_format0c_sidecar_payload"]["score_affecting"] is True
+    assert sections["extra_pr101_ranked_no_op_payload"]["score_affecting"] is True
 
 
 def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
@@ -922,11 +958,65 @@ def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
                 "cpu",
             ]
         )
+    assert not (tmp_path / "grad.npy").exists()
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
     assert contract["grammar_name"] == "pr106_format0d"
     assert contract["projection_contract"]["authority"] == "fail_closed_detection_only"
     assert contract["projection_contract"]["anchor_emission_allowed"] is False
-    assert contract["projection_contract"]["required_projector"] == "pr106_format0d_primary_payload_projector"
+    assert (
+        contract["projection_contract"]["required_projector"]
+        == "pr106_format0d_packet_ir_two_pass_jacobian_projector"
+    )
+
+
+@pytest.mark.parametrize(
+    ("archive_bytes", "match"),
+    [
+        (_zip_payload(_pr106_payload(), member_name="0.bin"), "expected raw payload or member 'x'"),
+        (_zip_payload(b"\x00" + _pr106_payload()[1:]), "not a PR106 format0d payload"),
+        (_zip_payload(_pr106_payload()[:-1]), "not a PR106 format0d payload"),
+    ],
+)
+def test_pr106_format0d_parser_fails_closed_on_malformed_packetir(archive_bytes, match):
+    with pytest.raises(ValueError, match=match):
+        emg.parse_pr106_format0d_archive_layout(archive_bytes)
+
+
+@pytest.mark.skipif(
+    not LIVE_PR106_FORMAT0D_ARCHIVE.exists(),
+    reason="canonical PR106 format0d archive missing from disk",
+)
+def test_pr106_format0d_live_archive_packetir_sections_are_pinned():
+    grammar, layout = emg.detect_archive_grammar_and_parse(
+        LIVE_PR106_FORMAT0D_ARCHIVE.read_bytes()
+    )
+
+    assert grammar == "pr106_format0d"
+    assert layout.archive_sha256 == (
+        "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4"
+    )
+    assert layout.gradient_subject_sha256 == (
+        "15a5dccba352838df7a8dd190a8782e51afa53b475bcf07921f05ce88c10785e"
+    )
+    assert layout.gradient_subject_bytes == 186_776
+    assert layout.gradient_projection_supported is False
+    by_name = {section.name: section for section in layout.sections}
+    expected = {
+        "magic": (0, 1, False, "aa687b58b0e73e2e383f8c500d75b591e188efe0168b3ffbcd3771caaa6dd4c7"),
+        "format_id": (1, 1, False, "9d1e0e2d9459d06523ad13e28a4093c2316baafe7aec5b25f30eba2e113599c4"),
+        "pr106_len_le_u32": (2, 4, False, "6318d1e3d7a427f4379ac112ae6582ee9042ea4faff7dd52a2a17110facda00c"),
+        "pr106_payload": (6, 185_728, True, "0510e4ac73c04395fad9bd9c90790c6946c770f5dc0c62bdacd1fe7b48c558be"),
+        "base_format0c_sidecar_payload": (185_734, 511, True, "e27d0e341f6a35243a8bc6b61ca9ceb5ebf0c0a22b7804c96a3ef29c2613494a"),
+        "extra_payload_len_le_u16": (186_245, 2, False, "e8546cc76760ca144478fd5ab662cfee7dda5e320c6964e8151279feb3382166"),
+        "extra_pr101_ranked_no_op_payload": (186_247, 523, True, "aa0de5cd3533575e612015d0c7ef0f9b5171f317bf71887f191986939dec236c"),
+        "extra_framing_meta": (186_770, 6, True, "bc1fcdc6a45474e23d5ee1735aba74b2ecf395227146a20edf6240dcd020da89"),
+    }
+    for name, (offset, length, score_affecting, sha256) in expected.items():
+        section = by_name[name]
+        assert section.offset == offset
+        assert section.length == length
+        assert section.score_affecting is score_affecting
+        assert section.sha256 == sha256
 
 
 def test_extract_all_cli_writes_batch_manifest_without_anchor_emission(tmp_path):
