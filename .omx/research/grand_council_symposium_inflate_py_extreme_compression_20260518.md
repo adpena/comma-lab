@@ -26,6 +26,8 @@ council_attendees:
   - Hotz
 council_quorum_met: true
 council_verdict: PROCEED_WITH_REVISIONS
+council_predicted_mission_contribution: apparatus_maintenance
+council_override_invoked: false
 council_dissent:
   - member: Assumption-Adversary
     verbatim: "The deliberation as framed by the operator's question is operating WITHIN a CARGO-CULTED shared assumption: that compressing inflate.py source bytes lowers contest score. The empirical anchor is upstream/evaluate.py line 63: `compressed_size = (args.submission_dir / 'archive.zip').stat().st_size`. inflate.py is in submission_dir BUT NOT inside archive.zip — its bytes are NEVER charged. Demoscene/IOCCC/LZMA-self-extract aesthetics applied directly to inflate.py source produce ZERO ΔS. The deliberation MUST be re-framed: either (a) the techniques are repointed at archive.zip member compression (where they ALREADY live as brotli/zstd/lzma/constriction/Huffman per current codec stack), OR (b) the techniques HOIST archive.zip bytes into inflate.py source constants per the Wyner-Ziv sister symposium 2026-05-17 4-tier classification (the ONLY framing where 'compressing inflate.py' actually reduces score). Refuse the naive framing; preserve the techniques as canonical helpers IFF they are repointed to one of these two valid surfaces."

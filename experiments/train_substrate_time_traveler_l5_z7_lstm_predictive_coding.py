@@ -16,6 +16,7 @@ false-authority prebuild surface:
 
 No score claim, promotion claim, or paid dispatch authority is created here.
 """
+# AUTOCAST_FP16_WAIVED:research-only-prebuild-scaffold-not-on-paid-dispatch-path-recipe-research_only-true-dispatch_enabled-false-canonical-autocast-backport-pending-Z6-4c-paired-exact-eval-and-Wave-N-plus-1-council
 
 from __future__ import annotations
 

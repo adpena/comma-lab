@@ -1,3 +1,42 @@
+---
+schema: council_deliberation_v2
+deliberation_id: grand_council_findings_deliberation_wave_aggregate_dispatch_plan_20260518
+topic: "Grand council findings deliberation wave — aggregate per-finding verdict matrix + critical-path identification for 15 findings (T1 + T2 + T3 tier routing per cadence audit)"
+council_tier: T3
+council_attendees:
+  - Shannon
+  - Dykstra
+  - Yousfi
+  - Fridrich
+  - Contrarian
+  - Assumption-Adversary
+  - Carmack
+  - Hotz
+  - MacKay_memorial
+  - Selfcomp
+  - Quantizr
+  - Hinton
+  - Hassabis
+  - Boyd
+  - Tao
+council_quorum_met: true
+council_verdict: PROCEED_WITH_REVISIONS
+council_dissent:
+  - member: Contrarian
+    verbatim: "T3 OVER_CADENCE 22/13 in 30d window triggers explicit STOP-AND-CONSOLIDATE per CLAUDE.md 'Council hierarchy: 4-tier protocol'. The proceed-as-routed verdicts are accepted ONLY because 8 findings re-routed from T3 to T2 per cadence-discipline reduction; without that re-routing this is a rigor-overhead burst."
+council_assumption_adversary_verdict:
+  - assumption: "15 findings can all be triaged in single deliberation without per-finding council quorum"
+    classification: HARD-EARNED
+    rationale: "T1 ratifications (#13/#14/#15) are apparatus-maintenance no-followup; T2 routed bounded-scope findings; T3 retained 5 cross-cutting findings — the per-finding-quorum protection is preserved by tier-routing per Catalog #300"
+council_predicted_mission_contribution: rigor_overhead
+council_override_invoked: false
+council_decisions_recorded:
+  - "T1 (3): 3 PROCEED-as-RATIFY (#13/#14/#15)"
+  - "T2 (7): 2 PROCEED + 3 PROCEED_WITH_REVISIONS + 2 DEFER_PENDING_EVIDENCE"
+  - "T3 (5): 2 PROCEED + 2 PROCEED_WITH_REVISIONS + 1 DEFER_PENDING_EVIDENCE"
+  - "critical-path: T1 findings #5/#6/#7/#8/#12 ship immediately ($0 editor); $1-3 envelope T2/T3 dispatches batched 2nd-3rd"
+---
+
 # Grand Council Findings Deliberation Wave — Aggregate Dispatch Plan
 
 **Date**: 2026-05-18

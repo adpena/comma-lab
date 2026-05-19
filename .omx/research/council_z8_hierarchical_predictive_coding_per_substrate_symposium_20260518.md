@@ -39,6 +39,8 @@ deferred_substrate_id: time_traveler_l5_z8_hierarchical_predictive_coding
 deferred_substrate_retrospective_due_utc: "2026-06-17T17:00:00Z"
 predicted_band_validation_status: pending_post_training
 predicted_dispatch_risk: 7
+council_predicted_mission_contribution: frontier_breaking
+council_override_invoked: false
 canonical_frontier_anchor:
   contest_cpu: "0.19205 [contest-CPU] (lane pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean; archive sha 6bae0201; per Catalog #316 + scan_best_anchor_per_axis.py 2026-05-18T16:18Z)"
   contest_cuda: "0.20533 [contest-CUDA] (lane pr106_format0d_latent_score_table; archive sha 9cb989cef519; per Catalog #316)"

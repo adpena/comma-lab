@@ -1,3 +1,34 @@
+---
+schema: council_deliberation_v2
+deliberation_id: codex_findings_t3_grand_council_synthesis_20260518T145900Z_codex
+topic: "Codex xhigh adversarial review of T3 grand council synthesis memo — contest-axis authority hardening for master-gradient + Provenance discipline"
+council_tier: T3
+council_attendees:
+  - Cicero
+  - Contrarian
+  - Assumption-Adversary
+  - Shannon
+  - Yousfi
+  - Fridrich
+  - MacKay_memorial
+council_quorum_met: true
+council_verdict: PROCEED_WITH_REVISIONS
+council_dissent:
+  - member: Cicero
+    verbatim: "P1: stale master-gradient contest-axis authority — live state carried measurement_axis=[contest-CPU] on a macOS advisory 8-pair subset row; consumers filtering by axis could accidentally treat a diagnostic local row as contest-CPU authority. P1: dead posterior CLI syntax in memo. P2: composition #3 language outruns evidence. P2: sensitivity_mask_aware_quantizr_v1 is a next-action candidate not a landing result. P2: HF Jobs / Trackio publication should stay private/operator-approved. P3: evidence labels should remain inline near frontier/medal-band/submission-ready/auto-promote/score-gap language."
+council_assumption_adversary_verdict:
+  - assumption: "measurement_axis label alone is sufficient to establish contest authority"
+    classification: CARGO-CULTED
+    rationale: "contest authority requires JOINT (axis, hardware, pair_count, scored_archive_sha, runtime_custody) verification; label without underlying custody is a phantom-score class instance per CLAUDE.md FORBIDDEN_PATTERNS"
+council_predicted_mission_contribution: frontier_protecting
+council_override_invoked: false
+council_decisions_recorded:
+  - "added tac.master_gradient.contest_axis_authority_violation_reason / is_authoritative_axis_anchor / latest_rejected_contest_axis_anchor_for_archive / unresolved_contest_axis_authority_violations"
+  - "tightened authority filter: contest-CUDA requires CUDA/GPU hardware; contest-CPU requires Linux CPU hardware"
+  - "append-only correction row re-labels fec6 local subset to advisory grade"
+council_decisions_landed_via_catalog: ["Catalog #327"]
+---
+
 # Codex Findings: T3 Grand Council Synthesis Adversarial Review - 2026-05-18T14:59:00Z
 
 ## Scope

@@ -33,6 +33,16 @@ min_vram_gb: 16
 target_modes:
   - research_substrate
 
+# Per Catalog #171 FS-read-contention discipline.
+video_input_strategy: per_dispatch_local_copy
+
+# Per Catalog #173 canary-first ordering discipline.
+canary_status: post_canary_dependent
+canary_dependency: time_traveler_l5_z7_mamba2
+
+# Per Catalog #181 pyav decode-strategy discipline.
+pyav_decode_strategy: cpu_thread_async_upload
+
 horizon_class: asymptotic_pursuit
 active_dispatch_contract: z7_prebuild_research_gate
 dispatch_contracts:
