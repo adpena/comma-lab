@@ -406,8 +406,10 @@ def check_repo(root: Path) -> list[Finding]:
     tac_readme = texts["src/tac/README.md"]
     for needle, rationale in (
         ("# tac - Task-Aware Compression", "package title"),
+        ("`TAC` is a repository/package acronym", "repository-local acronym boundary"),
         ("Video coding for machines", "VCM terminology"),
         ("Feature coding for machines", "FCM terminology"),
+        ("Semantic communication", "adjacent semantic/goal-oriented communication framing"),
         ("Use **compression** for the project and research program", "codec/compression distinction"),
         ("procedural generation from archive-contained seeds or weights", "procedural generation boundary"),
         ("procedural-seed authority packets", "procedural authority packet boundary"),
@@ -469,6 +471,8 @@ def check_repo(root: Path) -> list[Finding]:
     for needle, rationale in (
         ("This document is the canonical naming and package-boundary reference", "authority declaration"),
         ('Never expand TAC as "Task-Aware Codec."', "negative expansion rule"),
+        ("Authority Model", "terminology authority model"),
+        ("`TAC` itself is a repository-local acronym", "repository-local acronym rule"),
         ("`comma_lab.task_codec` is a legacy compatibility namespace", "legacy task_codec boundary"),
         ("Contest Compliance Boundary", "contest compliance section"),
         ("build_procedural_seed_authority_packet", "procedural authority packet helper"),

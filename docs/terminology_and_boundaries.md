@@ -24,6 +24,22 @@ generation, byte profilers, custody validators, and optimization planners.
 `comma_lab.task_codec` is a legacy compatibility namespace for early records;
 it is not the TAC expansion and should not be used for new compression code.
 
+## Authority Model
+
+Authority for the public naming contract comes from three layers:
+
+| Layer | Authority | Local consequence |
+|---|---|---|
+| Upstream contest | README rules, `evaluate.py`, and maintainer PR comments | Compliance language must be archive-centered and fail closed on payload relocation. |
+| Standards / industry | MPEG VCM/FCM and coding-for-machines terminology | Use VCM/FCM when describing the machine-analysis compression setting to external readers. |
+| Research literature | Task-aware, task-oriented, task-driven, and task-aware source-coding papers | Use Task-Aware Compression as the package expansion because the objective is downstream task loss under rate constraints. |
+
+`TAC` itself is a repository-local acronym. The rigorous public phrase is
+Task-Aware Compression. A codec is only a concrete encoder, decoder, entropy
+coder, packet grammar, or wire format. If a module is a scorer contract,
+sensitivity map, procedural generator, authority packet, optimizer, or custody
+validator, calling the whole surface a codec hides the actual abstraction.
+
 ## Academic And Industry Jargon
 
 The most faithful field-level phrase for this repository is **task-aware
@@ -38,6 +54,7 @@ Adjacent terms should be used precisely:
 | Task-oriented compression | Synonym in papers; useful when citing rate-distortion objectives conditioned on a task. |
 | Video coding for machines (VCM) | Standards/industry framing for video bitstreams optimized for machine analysis. |
 | Feature coding for machines (FCM) | Standards/industry framing when the compressed object is a machine feature, tensor, or neural representation rather than reconstructed RGB frames. |
+| Semantic / goal-oriented communication | Adjacent information-theory framing; use only when receiver utility or channel modeling is explicit. |
 | Neural compression / learned compression | Implementation family. It may be task-aware, but not all neural compression is task-aware. |
 | Codec | Concrete implementation artifact inside the compression stack. |
 

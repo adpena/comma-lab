@@ -16,6 +16,8 @@ component such as `tac.packet_compiler`, `tac.mask_codec`, or a substrate-local
 Academic and industry-adjacent work uses several overlapping names for this
 space:
 
+- **Task-aware compression** and **task-oriented compression**: research terms
+  for rate-distortion objectives conditioned on downstream task loss.
 - **Video coding for machines (VCM)** and **coding for machines**: standard
   terminology for compression optimized for machine analysis tasks. MPEG lists
   VCM under MPEG-AI and frames it around bitstreams that preserve machine-task
@@ -24,8 +26,10 @@ space:
   representations are machine features rather than reconstructed pixels. MPEG
   WG 4 describes current scope that includes feature maps, tensors, neural
   aspects of video, and intelligent machine consumption.
-- **Task-aware compression** and **task-oriented compression**: research terms
-  for rate-distortion objectives conditioned on downstream task loss.
+- **Semantic communication** and **goal-oriented communication**: adjacent
+  communications-theory framing when the receiver's task utility, not generic
+  reconstruction fidelity, defines useful information. Use these as analogies
+  unless a design actually models a channel/receiver protocol.
 - **Neural compression** and **learned compression**: broad implementation
   families that may or may not be task-aware.
 
@@ -33,6 +37,13 @@ space:
 package now includes more than codecs: deterministic packet compilation,
 procedural byte derivation, scorer geometry, Venn/sensitivity maps, Pareto
 planning, archive custody, and exact scorer contracts.
+
+`TAC` is a repository/package acronym, not a standards-body initialism. When
+writing for standards or industry audiences, map `tac` to VCM/FCM/coding for
+machines. When writing for ML, information theory, or learned-compression
+audiences, map it to task-aware or task-oriented compression. Do not expand it
+as "Task-Aware Codec"; codec is an implementation artifact inside the
+compression stack, not the full research program.
 
 References:
 

@@ -16,6 +16,10 @@ In this repository, `tac` means **Task-Aware Compression**: compression
 optimized for a downstream task/scorer. A **codec** is a narrower concrete
 encoder/decoder or wire format inside that stack. The `comma_lab` package is the
 lab and operations layer around `tac`, not a second compression engine.
+`TAC` is a repository/package acronym, not a standards-body initialism; public
+docs should expand it on first use and map the work to the field terms
+task-aware compression, task-oriented compression, coding for machines, video
+coding for machines, and feature coding for machines.
 The package-level boundary docs are [src/tac/README.md](src/tac/README.md) and
 [src/comma_lab/README.md](src/comma_lab/README.md). The canonical terminology
 and contest-compliance boundary is
