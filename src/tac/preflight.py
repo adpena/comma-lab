@@ -5074,6 +5074,15 @@ def preflight_all(
         check_codex_inbox_open_questions_have_response_or_default_within_deadline(
             strict=False, verbose=verbose
         )
+        # Catalog #335: cathedral consumer directory canonical contract.
+        # Sister of Catalog #265 at the cathedral_consumers/* surface.
+        # WARN-ONLY at landing 2026-05-19 per CLAUDE.md "Strict-flip
+        # atomicity rule"; strict-flip atomic with first NEW non-reference
+        # consumer landing in the canonical directory.
+        # Memory: feedback_cathedral_auto_ingest_paradigm_shift_landed_20260519.
+        check_cathedral_consumer_directory_package_exposes_canonical_contract(
+            strict=False, verbose=verbose
+        )
 
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
@@ -27850,6 +27859,151 @@ def check_codex_inbox_open_questions_have_response_or_default_within_deadline(
             + "\n".join(f"  - {v}" for v in violations[:5])
             + "\n\nFix: append a Claude answer, withdraw the question, or run "
             "`tools/codex_to_claude_inbox.py operator-default-invoked`."
+        )
+    return violations
+
+
+# ── Catalog #335: cathedral consumer directory canonical contract ────────────
+#
+# Per CATHEDRAL-AUTO-INGEST-PARADIGM-SHIFT 2026-05-19 (operator NON-NEGOTIABLE
+# verbatim "fix permanently and self protect against" the orphan-signal class).
+# Sister of Catalog #265 `check_symposium_impls_canonical_contract` (same
+# canonical contract pattern at a different surface — symposium_impls/* vs
+# cathedral_consumers/*).
+#
+# THE PARADIGM SHIFT: convention-over-configuration. Packages in
+# src/tac/cathedral_consumers/ MUST satisfy
+# tac.cathedral.consumer_contract.CathedralConsumerContract OR carry
+# `# CATHEDRAL_CONSUMER_DEFERRED_OK:<rationale>` waiver in __init__.py first
+# 30 lines. The auto-discovery loop at
+# tools/cathedral_autopilot_autonomous_loop.discover_and_register_consumers
+# ingests every compliant consumer WITHOUT manual ranker-cascade edits.
+
+_CHECK_335_CONSUMER_DIR_RELPATH = "src/tac/cathedral_consumers"
+_CHECK_335_EXEMPT_SUBDIRS: frozenset[str] = frozenset({"__pycache__", "tests"})
+
+
+def check_cathedral_consumer_directory_package_exposes_canonical_contract(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #335 — cathedral_consumers/* exposes canonical contract.
+
+    Per operator directive 2026-05-19 + CLAUDE.md "Bugs must be permanently
+    fixed AND self-protected against" non-negotiable. Sister of Catalog
+    #265 (symposium_impls canonical contract).
+
+    Refuses any subdirectory under ``src/tac/cathedral_consumers/`` that
+    is a Python package (contains ``__init__.py``) but does NOT satisfy
+    :class:`tac.cathedral.consumer_contract.CathedralConsumerContract`.
+
+    Acceptance: (a) package implements the canonical contract (validated
+    via :func:`tac.cathedral.consumer_contract.validate_consumer_module`);
+    (b) package carries same-line waiver
+    ``# CATHEDRAL_CONSUMER_DEFERRED_OK:<rationale>`` in ``__init__.py``
+    first 30 lines with non-placeholder rationale (≥4 chars; ``<rationale>``
+    / ``<reason>`` placeholders rejected per Catalog #287 sister discipline).
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    — live count at landing: 0 (the reference ``_example_consumer`` is
+    contract-compliant and serves as the permanent positive fixture).
+    Strict-flip atomic with the first NEW consumer landing (which by
+    construction will be contract-compliant since the gate fires
+    structurally before commit).
+
+    Sister of Catalog #265 (symposium_impls 5-token contract) + Catalog
+    #287 (placeholder-rationale rejection) + Catalog #125 (6-hook wire-in
+    non-negotiable) + Catalog #176 (META-meta: STRICT callsites have
+    CLAUDE.md row) + Catalog #185 (META-meta: Live count: 0 verified
+    empirically).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    consumer_dir = root / _CHECK_335_CONSUMER_DIR_RELPATH
+    if not consumer_dir.is_dir():
+        if verbose:
+            print(
+                f"  [cathedral-consumer-contract] {_CHECK_335_CONSUMER_DIR_RELPATH} "
+                "not present, skipping"
+            )
+        return []
+
+    # Late import: the contract lives in tac.cathedral; avoid circular import
+    # at preflight module load time.
+    try:
+        from tac.cathedral.consumer_contract import (
+            discover_waiver_in_init,
+            validate_consumer_module,
+        )
+    except ImportError as exc:
+        # If the contract module is missing entirely, that IS a violation:
+        # the canonical contract surface MUST be present alongside the
+        # consumer directory.
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_consumer_directory_package_exposes_canonical_contract: "
+                f"tac.cathedral.consumer_contract import failed: {exc}; Catalog #335 "
+                "REQUIRES the canonical contract surface present alongside the "
+                "consumer directory"
+            )
+        return [f"tac.cathedral.consumer_contract import failed: {exc}"]
+
+    violations: list[str] = []
+    import importlib
+
+    for sub in sorted(consumer_dir.iterdir()):
+        if not sub.is_dir():
+            continue
+        if sub.name in _CHECK_335_EXEMPT_SUBDIRS:
+            continue
+        init_path = sub / "__init__.py"
+        if not init_path.exists():
+            # Not a Python package; not a contract claim.
+            continue
+
+        module_dotted = f"tac.cathedral_consumers.{sub.name}"
+        rel = str(sub.relative_to(root))
+
+        # Check waiver FIRST (waiver shortcircuits contract validation).
+        rationale, waiver_active = discover_waiver_in_init(init_path)
+        if waiver_active:
+            # Explicit operator-approved deferral; respect it.
+            continue
+
+        # Try contract validation.
+        try:
+            mod = importlib.import_module(module_dotted)
+        except ImportError as exc:
+            violations.append(
+                f"{rel}: import failed ({type(exc).__name__}: {exc}); "
+                "Catalog #335 requires every cathedral_consumers/* package to "
+                "import cleanly + satisfy CathedralConsumerContract OR carry "
+                "# CATHEDRAL_CONSUMER_DEFERRED_OK:<rationale> waiver in first 30 lines"
+            )
+            continue
+
+        reg = validate_consumer_module(mod, module_path=module_dotted)
+        if not reg.contract_compliant:
+            error_summary = "; ".join(reg.validation_errors[:5])
+            violations.append(
+                f"{rel}: contract violation(s) [{error_summary}]; "
+                "Catalog #335 requires CathedralConsumerContract OR same-line "
+                "# CATHEDRAL_CONSUMER_DEFERRED_OK:<rationale> waiver in first 30 lines"
+            )
+
+    if verbose:
+        print(f"  [cathedral-consumer-contract] {len(violations)} violation(s)")
+    if violations and strict:
+        raise PreflightError(
+            "check_cathedral_consumer_directory_package_exposes_canonical_contract "
+            f"found {len(violations)} violation(s). Catalog #335 enforces the "
+            "canonical CathedralConsumerContract on src/tac/cathedral_consumers/* "
+            "per CLAUDE.md 'Bugs must be permanently fixed AND self-protected "
+            "against' non-negotiable (sister of Catalog #265):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
 

@@ -5915,6 +5915,200 @@ def refuse_candidates_via_recursive_review_unsealed(
 # ─────────────────────────────────────────────────────────────────────────
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# CATHEDRAL-AUTO-INGEST-PARADIGM-SHIFT auto-discovery loop (2026-05-19)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Per operator directive 2026-05-19 verbatim:
+#   "What if we change the paradigm by making cathedral autopilot ingest by
+#   default if within a certain directory and exposing/respecting a certain
+#   contract or schema. Fix permanently and self protect against"
+#
+# Convention-over-configuration: packages in src/tac/cathedral_consumers/
+# that satisfy tac.cathedral.consumer_contract.CathedralConsumerContract are
+# auto-discovered + auto-registered. NO manual import-by-import wiring of
+# the 12 NEW tac.* namespaces that landed orphaned per the
+# wiring+integration audit (commit 3821cfb6b 2026-05-19).
+#
+# Catalog #335 self-protection: STRICT preflight gate refuses non-compliant
+# packages from landing in the canonical directory.
+
+
+def discover_and_register_consumers(
+    consumer_dir_relpath: str = "src/tac/cathedral_consumers",
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    include_underscore_packages: bool = True,
+) -> list[dict[str, Any]]:
+    """Auto-discover all cathedral consumer packages in the canonical directory.
+
+    Per :class:`tac.cathedral.consumer_contract.CathedralConsumerContract`.
+
+    Iterates ``src/tac/cathedral_consumers/``, imports each subdirectory as
+    a Python package, verifies the canonical contract, returns the list of
+    serialized ``ConsumerRegistration`` records.
+
+    THE PERMANENT FIX for the orphan-signal-at-cathedral bug class. Future
+    consumers land in the canonical directory + expose the contract +
+    auto-discovery loop ingests them without manual ranker-cascade edits.
+
+    Parameters
+    ----------
+    consumer_dir_relpath
+        Path relative to ``repo_root`` (default ``src/tac/cathedral_consumers``).
+    repo_root
+        Repository root (default: cwd).
+    strict
+        If True, raises on non-compliant consumers lacking a waiver. Default
+        False (warn-only — caller decides ranker integration policy).
+    include_underscore_packages
+        If True, includes reference packages whose name starts with ``_``
+        (e.g. ``_example_consumer``). Default True so the gate has a
+        permanent positive fixture.
+
+    Returns
+    -------
+    List of dict serializations of :class:`ConsumerRegistration` (sorted by
+    consumer_name for determinism).
+    """
+    from tac.cathedral.consumer_contract import (
+        CathedralConsumerContractError,
+        ConsumerRegistration,
+        discover_waiver_in_init,
+        validate_consumer_module,
+    )
+
+    root = Path(repo_root) if repo_root else Path.cwd()
+    consumer_dir = root / consumer_dir_relpath
+    if not consumer_dir.exists():
+        return []
+
+    registrations: list[ConsumerRegistration] = []
+    seen_names: set[str] = set()
+
+    for sub in sorted(consumer_dir.iterdir()):
+        if not sub.is_dir():
+            continue
+        if sub.name in {"__pycache__", "tests"}:
+            continue
+        if sub.name.startswith("_") and not include_underscore_packages:
+            continue
+
+        init_path = sub / "__init__.py"
+        if not init_path.exists():
+            # Not a package; skip silently (no contract claim made).
+            continue
+
+        module_dotted = f"tac.cathedral_consumers.{sub.name}"
+        rationale, waiver_active = discover_waiver_in_init(init_path)
+
+        try:
+            # Lazy import; the consumer's __init__ is responsible for any
+            # heavy lifting it may declare.
+            import importlib
+            mod = importlib.import_module(module_dotted)
+            reg = validate_consumer_module(mod, module_path=module_dotted)
+        except (ImportError, CathedralConsumerContractError) as exc:
+            reg = ConsumerRegistration(
+                consumer_name=sub.name,
+                consumer_version="unknown",
+                consumer_hook_numbers=(),
+                consumer_module_path=module_dotted,
+                contract_compliant=False,
+                waiver_rationale=rationale,
+                waiver_active=waiver_active,
+                validation_errors=(f"import_error: {type(exc).__name__}: {exc}",),
+            )
+
+        # Apply waiver if the package opted out via the canonical token.
+        if not reg.contract_compliant and waiver_active:
+            reg = ConsumerRegistration(
+                consumer_name=reg.consumer_name,
+                consumer_version=reg.consumer_version,
+                consumer_hook_numbers=reg.consumer_hook_numbers,
+                consumer_module_path=reg.consumer_module_path,
+                contract_compliant=False,
+                waiver_rationale=rationale,
+                waiver_active=True,
+                validation_errors=reg.validation_errors,
+            )
+
+        if reg.consumer_name in seen_names:
+            # Deterministic dedup; first registration wins.
+            continue
+        seen_names.add(reg.consumer_name)
+        registrations.append(reg)
+
+        if strict and not reg.contract_compliant and not reg.waiver_active:
+            raise RuntimeError(
+                f"[cathedral-auto-discovery] STRICT refuse: "
+                f"package {module_dotted!r} fails canonical contract; "
+                f"errors={list(reg.validation_errors)}; "
+                f"add # CATHEDRAL_CONSUMER_DEFERRED_OK:<rationale> waiver "
+                f"OR implement tac.cathedral.consumer_contract.CathedralConsumerContract"
+            )
+
+    return [dataclasses.asdict(r) for r in registrations]
+
+
+def discover_compliant_consumer_modules(
+    consumer_dir_relpath: str = "src/tac/cathedral_consumers",
+    *,
+    repo_root: Path | str | None = None,
+) -> list[Any]:
+    """Return the live module objects for every contract-compliant consumer.
+
+    Sister of :func:`discover_and_register_consumers` for the callsite that
+    needs to actually CALL ``consume_candidate`` / ``update_from_anchor`` on
+    each consumer. Returns import-resolved modules (not just registration
+    metadata).
+
+    Underscore-prefixed reference packages (e.g. ``_example_consumer``) are
+    SKIPPED in this listing because they are reference fixtures, not
+    production ranker contributions. The canonical contract validation
+    (via :func:`discover_and_register_consumers`) still includes them so
+    the gate has a permanent positive fixture; this function is the
+    runtime hook that filters them out.
+    """
+    from tac.cathedral.consumer_contract import (
+        validate_consumer_module,
+    )
+
+    root = Path(repo_root) if repo_root else Path.cwd()
+    consumer_dir = root / consumer_dir_relpath
+    if not consumer_dir.exists():
+        return []
+
+    modules: list[Any] = []
+    for sub in sorted(consumer_dir.iterdir()):
+        if not sub.is_dir():
+            continue
+        if sub.name in {"__pycache__", "tests"}:
+            continue
+        if sub.name.startswith("_"):
+            # Skip reference / example packages.
+            continue
+        init_path = sub / "__init__.py"
+        if not init_path.exists():
+            continue
+        module_dotted = f"tac.cathedral_consumers.{sub.name}"
+        try:
+            import importlib
+            mod = importlib.import_module(module_dotted)
+        except ImportError:
+            continue
+        reg = validate_consumer_module(mod, module_path=module_dotted)
+        if reg.contract_compliant:
+            modules.append(mod)
+    return modules
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# End of CATHEDRAL-AUTO-INGEST-PARADIGM-SHIFT (2026-05-19, Catalog #335)
+# ─────────────────────────────────────────────────────────────────────────
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
