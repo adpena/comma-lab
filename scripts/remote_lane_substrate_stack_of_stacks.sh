@@ -67,6 +67,8 @@ STACK_OF_STACKS_EPOCHS="${STACK_OF_STACKS_EPOCHS:-0}"
 STACK_OF_STACKS_MIDDLE_ARM_SUBSTRATE_IDS="${STACK_OF_STACKS_MIDDLE_ARM_SUBSTRATE_IDS:-a1}"
 STACK_OF_STACKS_OUTER_K="${STACK_OF_STACKS_OUTER_K:-1}"
 STACK_OF_STACKS_MAX_TOTAL_ARCHIVE_BYTES="${STACK_OF_STACKS_MAX_TOTAL_ARCHIVE_BYTES:-250000}"
+STACK_OF_STACKS_LANGEVIN_T_INIT_CAP="${STACK_OF_STACKS_LANGEVIN_T_INIT_CAP:-1.0}"
+STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS="${STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS:-100}"
 
 log() { echo "[lane-stack-of-stacks] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
@@ -118,6 +120,8 @@ payload = {
     "middle_arm_substrate_ids": os.environ.get("STACK_OF_STACKS_MIDDLE_ARM_SUBSTRATE_IDS", ""),
     "outer_stack_k": os.environ.get("STACK_OF_STACKS_OUTER_K", ""),
     "max_total_archive_bytes": os.environ.get("STACK_OF_STACKS_MAX_TOTAL_ARCHIVE_BYTES", ""),
+    "langevin_t_init_cap": os.environ.get("STACK_OF_STACKS_LANGEVIN_T_INIT_CAP", ""),
+    "langevin_polish_epochs": os.environ.get("STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS", ""),
     "predicted_band": [0.190, 0.210],
     "predicted_band_basis": "single-arm A1 passthrough stack-of-stacks canary; score-neutral or slight rate penalty before multi-arm selector work",
     "git_head": os.environ.get("STACK_OF_STACKS_GIT_HEAD", ""),
@@ -279,6 +283,9 @@ set +e
     --middle-arm-substrate-ids "$STACK_OF_STACKS_MIDDLE_ARM_SUBSTRATE_IDS" \
     --outer-stack-k "$STACK_OF_STACKS_OUTER_K" \
     --max-total-archive-bytes "$STACK_OF_STACKS_MAX_TOTAL_ARCHIVE_BYTES" \
+    --langevin-t-init "$STACK_OF_STACKS_LANGEVIN_T_INIT_CAP" \
+    --langevin-polish-epochs "$STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS" \
+    --lane-id "$LANE_ID" \
     --dispatch-instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
     --dispatch-platform "$DISPATCH_PLATFORM" \
     2>&1 | tee -a "$LOG_DIR/run.log"
@@ -310,6 +317,9 @@ export CONTROLLED_BASELINE="A1 single-arm passthrough canary; no score claim bef
 export LOG_DIR="$LOG_DIR/auth_eval"
 export AUTH_EVAL_LOG_DIR="$LOG_DIR"
 export KEEP_EVAL_WORK="${KEEP_EVAL_WORK:-1}"
+if [ "${STACK_OF_STACKS_AUTH_EVAL_REQUIRE_CONTEST_CUDA:-0}" = "1" ]; then
+    unset MODAL_AUTH_EVAL_ADVISORY_ONLY
+fi
 set +e
 bash "$WORKSPACE/scripts/remote_archive_only_eval.sh"
 AUTH_RC=$?

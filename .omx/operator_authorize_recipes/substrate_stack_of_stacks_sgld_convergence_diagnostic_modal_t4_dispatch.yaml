@@ -139,7 +139,10 @@ env_overrides:
   STACK_OF_STACKS_BASE_ARCHIVE: /workspace/pact/submissions/a1/archive.zip
   STACK_OF_STACKS_BASE_RUNTIME_DIR: /workspace/pact/submissions/a1
   STACK_OF_STACKS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
-  STACK_OF_STACKS_OUTPUT_DIR: /workspace/pact/lane_stack_of_stacks_sgld_convergence_results/output
+  # Leave unset by default so the Catalog #204 Modal branch in the driver
+  # routes outputs to /modal_results/${INSTANCE_JOB_ID}/output. Callers may
+  # still override this for non-Modal or explicitly durable custom paths.
+  STACK_OF_STACKS_OUTPUT_DIR: "${STACK_OF_STACKS_OUTPUT_DIR:-}"
   STACK_OF_STACKS_EPOCHS: "100"
   STACK_OF_STACKS_UPSTREAM_DIR: /workspace/pact/upstream
   STACK_OF_STACKS_DEVICE: cuda
@@ -147,6 +150,7 @@ env_overrides:
   STACK_OF_STACKS_OUTER_K: "1"
   STACK_OF_STACKS_LANGEVIN_T_INIT_CAP: "${STACK_OF_STACKS_LANGEVIN_T_INIT_CAP:-1.0}"
   STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS: "100"
+  STACK_OF_STACKS_AUTH_EVAL_REQUIRE_CONTEST_CUDA: "1"
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:
