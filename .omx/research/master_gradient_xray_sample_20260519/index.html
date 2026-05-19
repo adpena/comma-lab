@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>master-gradient xray — 87ec7ca5f2f3, 6bae0201fb08, 9cb989cef519, b83bf3488625, 7ecb0df1c462, f174192aeadf</title>
+<style>
+body { font-family: -apple-system, system-ui, sans-serif; max-width: 1200px; margin: 1em auto; padding: 0 1em; color: #1f2937; }
+h1 { border-bottom: 2px solid #4b5563; padding-bottom: 0.25em; }
+h2 { border-bottom: 1px solid #d1d5db; padding-bottom: 0.15em; margin-top: 1.5em; }
+table { border-collapse: collapse; margin: 0.5em 0; }
+td, th { border: 1px solid #d1d5db; padding: 4px 8px; font-size: 0.9em; }
+th { background: #f3f4f6; text-align: left; }
+.plot-card { border: 1px solid #e5e7eb; padding: 12px; margin: 12px 0; border-radius: 6px; background: #fafafa; }
+.plot-card img { max-width: 100%; height: auto; border: 1px solid #d1d5db; }
+.plot-card h3 { margin-top: 0; color: #1d4ed8; }
+.banner { background: #fef3c7; border-left: 4px solid #d97706; padding: 8px 12px; margin: 12px 0; font-size: 0.9em; }
+code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
+ul { font-size: 0.9em; }
+</style>
+</head>
+<body>
+<h1>master-gradient xray visualization</h1>
+<p>Generated: <code>2026-05-19T12:46:08.386136+00:00</code> UTC</p>
+<p>Schema: <code>master_gradient_xray_index_v1_20260519</code></p>
+
+<div class="banner">
+<b>Observability surface, NOT score authority.</b> Every sidecar JSON carries
+<code>score_claim=false</code> + <code>promotion_eligible=false</code> +
+<code>evidence_grade=[predicted]</code> per Catalog #305 / #323 / #287. The
+underlying anchor's <code>measurement_axis</code> determines any score-axis
+claim — see the table below.
+</div>
+
+<h2>Operator question driving the analysis</h2>
+<p>Where is the score-relevant byte leverage concentrated in this archive,
+and how does it intersect with MPS-vs-CUDA drift? Inputs: the master-gradient
+anchor (per-archive sensitivity tensor) and (optionally) the granular MPS
+drift JSON. Outputs: 5 canonical plots that decompose leverage by byte, by
+pair, and (when drift is available) by quadrant.</p>
+
+<h2>Archives processed (6)</h2>
+<table>
+<tr><th>sha[:12]</th><th>axis</th><th>hardware</th><th>tensor_kind</th><th>n_bytes</th><th>evidence_grade</th></tr>
+<tr><td><code>87ec7ca5f2f3</code></td><td>[macOS-CPU advisory]</td><td>darwin_arm64_local_cpu_advisory</td><td>aggregate_per_byte_v1</td><td>178162</td><td>unset</td></tr><tr><td><code>6bae0201fb08</code></td><td>[macOS-CPU advisory]</td><td>darwin_arm64_local_cpu_advisory</td><td>aggregate_per_byte_v1</td><td>178417</td><td>unset</td></tr><tr><td><code>9cb989cef519</code></td><td>[macOS-CPU advisory]</td><td>darwin_arm64_local_cpu_advisory</td><td>aggregate_per_byte_v1</td><td>186776</td><td>unset</td></tr><tr><td><code>b83bf3488625</code></td><td>[macOS-CPU advisory]</td><td>darwin_arm64_m5_max_macos_cpu_advisory</td><td>aggregate_per_byte_v1</td><td>178158</td><td>unset</td></tr><tr><td><code>7ecb0df1c462</code></td><td>[macOS-CPU advisory]</td><td>darwin_arm64_local_cpu_advisory</td><td>aggregate_per_byte_v1</td><td>178284</td><td>unset</td></tr><tr><td><code>f174192aeadf</code></td><td>[macOS-CPU advisory]</td><td>darwin_arm64_m5_max_macos_cpu_advisory</td><td>aggregate_per_byte_v1</td><td>178417</td><td>unset</td></tr>
+</table>
+
+<h2>Plots (5)</h2>
+<div class="plot-card"><h3>per_byte_heatmap</h3><a href="per_byte_heatmap.png"><img src="per_byte_heatmap.png" alt="per_byte_heatmap" /></a><p>Sister JSON: <a href="per_byte_heatmap.json"><code>per_byte_heatmap.json</code></a></p></div><div class="plot-card"><h3>cumulative_by_rank</h3><a href="cumulative_by_rank.png"><img src="cumulative_by_rank.png" alt="cumulative_by_rank" /></a><p>Sister JSON: <a href="cumulative_by_rank.json"><code>cumulative_by_rank.json</code></a></p></div><div class="plot-card"><h3>cross_substrate_correlation</h3><a href="cross_substrate_correlation.png"><img src="cross_substrate_correlation.png" alt="cross_substrate_correlation" /></a><p>Sister JSON: <a href="cross_substrate_correlation.json"><code>cross_substrate_correlation.json</code></a></p></div><div class="plot-card"><h3>wyner_ziv_flow</h3><a href="wyner_ziv_flow.png"><img src="wyner_ziv_flow.png" alt="wyner_ziv_flow" /></a><p>Sister JSON: <a href="wyner_ziv_flow.json"><code>wyner_ziv_flow.json</code></a></p></div><div class="plot-card"><h3>drift_vs_sensitivity_scatter</h3><a href="drift_vs_sensitivity_scatter.png"><img src="drift_vs_sensitivity_scatter.png" alt="drift_vs_sensitivity_scatter" /></a><p>Sister JSON: <a href="drift_vs_sensitivity_scatter.json"><code>drift_vs_sensitivity_scatter.json</code></a></p></div>
+
+<h2>Cross-references</h2>
+<ul>
+<li>MPS drift cross-reference: <code>/Users/adpena/Projects/pact/.omx/state/mps_drift_granular_20260519T122700Z.json</code></li><li>Canonical producer: <code>tools/extract_master_gradient.py</code></li><li>Canonical consumer catalog: <code>tac.master_gradient_consumers</code></li><li>Catalog #305 observability surface (this tool IS the operator-facing visualization surface)</li><li>Catalog #323 canonical Provenance (sister JSON sidecars carry the contract)</li><li>Catalog #318 master-gradient raw-byte-authority self-protection</li><li>Catalog #327 master-gradient contest-axis authority custody</li>
+</ul>
+
+<hr>
+<p style="color: #6b7280; font-size: 0.85em;">
+Generated by <code>tools/master_gradient_xray.py</code> on lane
+<code>lane_master_gradient_xray_viz_tool_20260519</code>. Per the operator
+standing directive: this tool IS the observability surface — operator routing
+decisions consume the plots but the score authority remains with the
+underlying contest-axis anchor.
+</p>
+</body>
+</html>
