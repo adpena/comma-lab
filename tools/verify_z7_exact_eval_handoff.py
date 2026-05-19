@@ -13,15 +13,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import shlex
 import stat
 import zipfile
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_STATS_JSON = (
@@ -32,16 +30,22 @@ DEFAULT_OUTPUT_DIR = ".omx/state/z7_exact_eval_handoff"
 LANE_ID = "lane_per_substrate_symposium_z7_lstm_predictive_coding_20260517"
 SUBSTRATE_ID = "time_traveler_l5_z7_lstm_predictive_coding"
 PAIR_GROUP_ID = "z7_temporal_coherence_vs_static_capacity_same_bytes"
+KNOWN_SUBSTRATE_PAIR_GROUP_IDS = {
+    "time_traveler_l5_z7_lstm_predictive_coding": PAIR_GROUP_ID,
+    "time_traveler_l5_z7_mamba2": (
+        "z7_mamba2_temporal_coherence_vs_static_capacity_same_bytes"
+    ),
+}
 REQUIRED_PAIR_COUNT = 600
 HEX_DIGITS = set("0123456789abcdefABCDEF")
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _utc_now_compact() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _sha256(path: Path) -> str:
@@ -69,6 +73,34 @@ def _short_sha(value: str, *, label: str) -> str:
     if len(raw) >= 12 and all(char in HEX_DIGITS for char in raw[:12]):
         return raw[:12].lower()
     return f"<{label}_archive_sha256_prefix>"
+
+
+def _safe_token(value: str, *, fallback: str) -> str:
+    token = "".join(
+        char if char.isalnum() or char in ("_", "-") else "_"
+        for char in str(value or "").strip()
+    ).strip("_-")
+    return token or fallback
+
+
+def _stats_identity(stats: Mapping[str, Any]) -> dict[str, str]:
+    lane_id = str(stats.get("lane_id") or LANE_ID).strip() or LANE_ID
+    substrate_id = str(stats.get("substrate_id") or SUBSTRATE_ID).strip() or SUBSTRATE_ID
+    explicit_pair_group = (
+        stats.get("pair_group_id")
+        or stats.get("exact_eval_pair_group_id")
+        or stats.get("same_bytes_pair_group_id")
+    )
+    pair_group_id = str(
+        explicit_pair_group
+        or KNOWN_SUBSTRATE_PAIR_GROUP_IDS.get(substrate_id)
+        or PAIR_GROUP_ID
+    ).strip() or PAIR_GROUP_ID
+    return {
+        "lane_id": lane_id,
+        "substrate_id": substrate_id,
+        "pair_group_id": pair_group_id,
+    }
 
 
 def _zip_member_rows(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
@@ -192,11 +224,15 @@ def _paired_dispatch_command(
     archive_sha: str,
     mode: str,
     submission_dir: str,
+    lane_id: str,
+    substrate_id: str,
+    pair_group_id: str,
     execute: bool,
 ) -> str:
     short = _short_sha(archive_sha, label=mode)
     safe_mode = mode.replace("_", "-")
-    lane_base = f"lane_z7_lstm_predictive_coding_20260518_{safe_mode}"
+    lane_base = f"{_safe_token(lane_id, fallback='lane_z7')}_exact_eval_{safe_mode}"
+    label_prefix = _safe_token(substrate_id, fallback="z7")
     cmd = [
         ".venv/bin/python",
         "tools/dispatch_modal_paired_auth_eval.py",
@@ -209,11 +245,11 @@ def _paired_dispatch_command(
         "--inflate-sh",
         "inflate.sh",
         "--label",
-        f"z7_{safe_mode}",
+        f"{label_prefix}_{safe_mode}",
         "--run-id",
-        f"z7_{safe_mode}_{short}",
+        f"{label_prefix}_{safe_mode}_{short}",
         "--pair-group-id",
-        f"{PAIR_GROUP_ID}_{safe_mode}_{short}",
+        f"{pair_group_id}_{safe_mode}_{short}",
         "--lane-id-base",
         lane_base,
         "--output-root",
@@ -227,8 +263,9 @@ def _paired_dispatch_command(
         "--claim-notes",
         (
             "Z7 recurrent-vs-static paired exact-eval handoff; "
-            f"mode={mode}; archive_sha={archive_sha}; "
-            f"pair_group_id={PAIR_GROUP_ID}; score_claim=false"
+            f"mode={mode}; substrate_id={substrate_id}; "
+            f"source_lane_id={lane_id}; archive_sha={archive_sha}; "
+            f"pair_group_id={pair_group_id}; score_claim=false"
         ),
         "--expected-runtime-tree-sha256",
         "auto",
@@ -239,13 +276,22 @@ def _paired_dispatch_command(
     return shlex.join(cmd)
 
 
-def _command_templates(*, execute: bool) -> dict[str, str]:
+def _command_templates(
+    *,
+    lane_id: str,
+    substrate_id: str,
+    pair_group_id: str,
+    execute: bool,
+) -> dict[str, str]:
     return {
         "recurrent_paired_contest_cpu_cuda": _paired_dispatch_command(
             archive_zip="<ratified_z7_run_dir>/archive.zip",
             archive_sha="<recurrent_archive_zip_sha256>",
             mode="recurrent",
             submission_dir="<ratified_z7_run_dir>/submission_runtime",
+            lane_id=lane_id,
+            substrate_id=substrate_id,
+            pair_group_id=pair_group_id,
             execute=execute,
         ),
         "static_control_paired_contest_cpu_cuda": _paired_dispatch_command(
@@ -253,6 +299,9 @@ def _command_templates(*, execute: bool) -> dict[str, str]:
             archive_sha="<static_control_archive_zip_sha256>",
             mode="static_control",
             submission_dir="<ratified_z7_run_dir>/submission_runtime",
+            lane_id=lane_id,
+            substrate_id=substrate_id,
+            pair_group_id=pair_group_id,
             execute=execute,
         ),
     }
@@ -276,6 +325,10 @@ def build_packet(
     if not isinstance(stats, Mapping):
         stats = {}
         blockers.append("z7_exact_handoff_stats_json_not_object")
+    identity = _stats_identity(stats)
+    lane_id = identity["lane_id"]
+    substrate_id = identity["substrate_id"]
+    pair_group_id = identity["pair_group_id"]
 
     static = stats.get("static_capacity_control")
     if not isinstance(static, Mapping):
@@ -292,6 +345,14 @@ def build_packet(
             blockers.append(f"z7_exact_handoff_stats_{field}_not_false")
         if static and static.get(field) is not False:
             blockers.append(f"z7_exact_handoff_static_control_{field}_not_false")
+    if stats.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append(
+            "z7_exact_handoff_stats_ready_for_exact_eval_dispatch_not_false"
+        )
+    if static and static.get("ready_for_exact_eval_dispatch") not in (None, False):
+        blockers.append(
+            "z7_exact_handoff_static_control_ready_for_exact_eval_dispatch_not_false"
+        )
 
     if stats.get("loss_mode") != "score_aware":
         blockers.append("z7_exact_handoff_loss_mode_not_score_aware")
@@ -353,6 +414,9 @@ def build_packet(
                 archive_sha=str(stats.get("archive_zip_sha256") or ""),
                 mode="recurrent",
                 submission_dir=submission_dir,
+                lane_id=lane_id,
+                substrate_id=substrate_id,
+                pair_group_id=pair_group_id,
                 execute=False,
             ),
             "static_control_paired_contest_cpu_cuda": _paired_dispatch_command(
@@ -360,6 +424,9 @@ def build_packet(
                 archive_sha=str(static.get("archive_zip_sha256") or ""),
                 mode="static_control",
                 submission_dir=submission_dir,
+                lane_id=lane_id,
+                substrate_id=substrate_id,
+                pair_group_id=pair_group_id,
                 execute=False,
             ),
         }
@@ -372,8 +439,8 @@ def build_packet(
     return {
         "schema": "z7_exact_eval_handoff_v1",
         "generated_utc": _utc_now(),
-        "lane_id": LANE_ID,
-        "substrate_id": SUBSTRATE_ID,
+        "lane_id": lane_id,
+        "substrate_id": substrate_id,
         "stats_json": _safe_rel(repo_root, stats_path),
         "required_pair_count": int(required_pair_count),
         "current_pair_count": num_pairs if isinstance(num_pairs, int) else None,
@@ -385,7 +452,7 @@ def build_packet(
         "ready_for_paid_dispatch": False,
         "rank_or_kill_eligible": False,
         "evidence_grade": "z7_exact_eval_handoff_no_spend",
-        "pair_group_id": PAIR_GROUP_ID,
+        "pair_group_id": pair_group_id,
         "axis_plan": [
             {"axis": "contest-CUDA", "mode": "recurrent"},
             {"axis": "contest-CPU", "mode": "recurrent"},
@@ -402,6 +469,9 @@ def build_packet(
         "modal_plan_commands_for_current_packet": plan_commands,
         "modal_execute_commands_after_ratified_full_packet": execute_commands,
         "modal_command_templates_after_ratified_full_packet": _command_templates(
+            lane_id=lane_id,
+            substrate_id=substrate_id,
+            pair_group_id=pair_group_id,
             execute=True
         ),
         "result_review_blockers": [] if ready else blockers,

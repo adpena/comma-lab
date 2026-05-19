@@ -39,12 +39,10 @@ import torch
 
 from tac.optimization.mamba2_predictor import (
     MAMBA_SSM_AVAILABLE,
-    MAMBA_SSM_BACKEND,
     REFERENCE_TORCH_BACKEND,
     Mamba2Predictor,
     Mamba2PredictorConfig,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -106,9 +104,9 @@ def test_auto_backend_falls_back_to_reference_when_mamba_ssm_missing():
             predictor = Mamba2Predictor(cfg)
         assert predictor.backend_active == REFERENCE_TORCH_BACKEND
     else:
-        # On CUDA env: auto should pick mamba_ssm
-        predictor = Mamba2Predictor(cfg)
-        assert predictor.backend_active == MAMBA_SSM_BACKEND
+        # Fail closed until upstream mamba_ssm step/inference-state replay lands.
+        with pytest.raises(RuntimeError, match="stateful mamba_ssm single-step"):
+            Mamba2Predictor(cfg)
 
 
 def test_mamba_ssm_backend_raises_when_unavailable():
@@ -117,6 +115,16 @@ def test_mamba_ssm_backend_raises_when_unavailable():
         pytest.skip("mamba_ssm is available; cannot test ImportError path")
     cfg = Mamba2PredictorConfig(backend="mamba_ssm")
     with pytest.raises(ImportError, match="mamba_ssm backend requested"):
+        Mamba2Predictor(cfg)
+
+
+def test_stateful_mamba_ssm_backend_fails_closed_when_available(monkeypatch):
+    """Do not emit misleading stateful evidence through length-1 mamba_ssm forward."""
+    import tac.optimization.mamba2_predictor as mamba2_module
+
+    monkeypatch.setattr(mamba2_module, "MAMBA_SSM_AVAILABLE", True)
+    cfg = Mamba2PredictorConfig(backend="mamba_ssm", stateful=True)
+    with pytest.raises(RuntimeError, match="stateful mamba_ssm single-step"):
         Mamba2Predictor(cfg)
 
 
@@ -298,7 +306,7 @@ def test_stateful_mode_evolves_hidden_state_across_calls():
     z_seq = [torch.randn(1, 24) for _ in range(20)]
     e_seq = [torch.randn(1, 8) for _ in range(20)]
     outs = []
-    for z, e in zip(z_seq, e_seq):
+    for z, e in zip(z_seq, e_seq, strict=True):
         with torch.no_grad():
             outs.append(predictor(z, e).detach().clone())
 
@@ -643,6 +651,10 @@ def test_write_runtime_vendors_required_scorer_free_modules(tmp_path):
     }
     missing = [rel for rel in sorted(required_files) if not (submission_dir / rel).exists()]
     assert not missing, f"runtime vendor tree missing files: {missing}"
+    inflate_sh = (submission_dir / "inflate.sh").read_text(encoding="utf-8")
+    assert "exec python " not in inflate_sh
+    assert 'PYTHON_BIN="${PYTHON:-python3}"' in inflate_sh
+    assert 'exec "$PYTHON_BIN" "$HERE/inflate.py"' in inflate_sh
 
     probe = (
         "import json, sys; "
@@ -670,6 +682,8 @@ def test_trainer_tier_1_operator_required_flags_present():
         "--epochs",
         "--batch-size",
         "--lr",
+        "--lr-warmup-steps",
+        "--grad-clip-norm",
         "--mamba2-d-model",
         "--mamba2-d-state",
         "--mamba2-expand",
@@ -690,6 +704,8 @@ def test_trainer_tier_1_operator_required_flags_present():
         "Trainer/export backend must default to byte-faithful reference_torch; "
         "mamba_ssm remains opt-in until inflate replay is implemented."
     )
+    assert flags["--grad-clip-norm"]["default"] == "1.0"
+    assert flags["--lr-warmup-steps"]["env"] == "Z7_MAMBA2_LR_WARMUP_STEPS"
 
 
 def test_trainer_video_path_flag_is_required_input_file_per_catalog_152():
@@ -716,9 +732,14 @@ def test_trainer_smoke_mode_completes_successfully(tmp_path):
     import json
     stats = json.loads(stats_path.read_text())
     assert stats["substrate_id"] == "time_traveler_l5_z7_mamba2"
+    assert stats["lane_id"] == "lane_z7_as_mamba_2_full_landing_20260518"
+    assert stats["historical_scaffold_lane_id"] == (
+        "lane_top5_2_z7_mamba2_scaffold_design_20260518"
+    )
     assert stats["score_claim"] is False, "smoke must NOT claim score"
     assert stats["promotion_eligible"] is False
     assert stats["ready_for_exact_eval_dispatch"] is False
+    assert stats["ready_for_paid_dispatch"] is False
     # Evidence grade must mark this as non-promotable smoke-only signal.
     grade = stats["evidence_grade"]
     assert "smoke" in grade and ("NOT_promotable" in grade or "not_promotable" in grade), (
@@ -783,6 +804,30 @@ def test_recipe_remote_driver_path_exists():
     assert "Z7_MAMBA2_EGO_SOURCE: frame_delta_proxy" in content
 
 
+def test_recipe_points_at_mamba2_specific_disambiguator_probe():
+    """Z7-Mamba-2 must not inherit the older Z7-LSTM probe identity."""
+    recipe_path = (
+        REPO_ROOT / ".omx" / "operator_authorize_recipes"
+        / "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml"
+    )
+    content = recipe_path.read_text()
+    probe_rel = (
+        ".omx/research/"
+        "probe_z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator_20260519_codex.json"
+    )
+    assert f"identity_disambiguator_probe: {probe_rel}" in content
+    probe_path = REPO_ROOT / probe_rel
+    assert probe_path.is_file()
+    payload = json.loads(probe_path.read_text(encoding="utf-8"))
+    assert payload["probe_id"] == (
+        "z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator"
+    )
+    assert payload["substrate_id"] == "time_traveler_l5_z7_mamba2"
+    artifacts = "\n".join(payload["required_future_artifacts"])
+    assert "train_substrate_time_traveler_l5_z7_mamba2.py" in artifacts
+    assert "time_traveler_l5_z7_lstm_predictive_coding" not in artifacts
+
+
 def test_remote_driver_enforces_dispatch_claim_and_terminal_closure():
     """Paid remote driver must not run without an active lane claim."""
     script_path = REPO_ROOT / "scripts" / "remote_lane_substrate_time_traveler_l5_z7_mamba_2.sh"
@@ -792,12 +837,19 @@ def test_remote_driver_enforces_dispatch_claim_and_terminal_closure():
     assert "--live-only" in content
     assert "stage_0_dispatch_claim_verified" in content
     assert "append_terminal_claim" in content
+    assert "full mode refused because recipe is still research_only" in content
+    assert "dispatch_enabled is not true" in content
+    assert "Z7_MAMBA2_LR_WARMUP_STEPS" in content
+    assert "Z7_MAMBA2_GRAD_CLIP_NORM" in content
+    assert '"--lr-warmup-steps" "$Z7_MAMBA2_LR_WARMUP_STEPS"' in content
+    assert '"--grad-clip-norm" "$Z7_MAMBA2_GRAD_CLIP_NORM"' in content
     assert "failed_z7_mamba2_claim_verification_rc_" in content
     assert "completed_z7_mamba2_remote_driver_no_score_claim" in content
     assert "failed_z7_mamba2_remote_driver_rc_" in content
     assert "trap cleanup EXIT" in content
     assert content.index("trap cleanup EXIT") < content.index("stage_0_dispatch_claim_verified")
     assert "score_claim=false" in content
+    assert '"ready_for_paid_dispatch"' in content
     assert "expected stats missing" in content
     assert "set +e\n\"$PYBIN\" -u experiments/train_substrate_time_traveler_l5_z7_mamba2.py" in content
     assert "TRAINER_RC=\"${PIPESTATUS[0]}\"\nset -e" in content

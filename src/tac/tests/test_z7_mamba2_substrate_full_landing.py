@@ -45,20 +45,8 @@ def tiny_config():
 def test_substrate_package_imports_canonical_public_api():
     """All canonical public API names must be importable from package root."""
     from tac.substrates.time_traveler_l5_z7_mamba2 import (
-        Z7Mamba2PredictiveCodingConfig,
-        Z7Mamba2PredictiveCodingSubstrate,
-        Z7Mamba2PredictiveCodingArchive,
-        Z7Mamba2PredictiveCodingLossWeights,
-        Z7Mamba2PredictiveCodingScoreAwareLoss,
-        pack_archive,
-        parse_archive,
-        parse_z7mcm2_archive_bytes,
-        replay_latent_sequence,
-        replay_latent_sequence_with_context,
         Z7MCM2_MAGIC,
         Z7MCM2_SCHEMA_VERSION,
-        Z7MCM2_SECTION_ROLES,
-        MAMBA_SSM_AVAILABLE,
     )
     assert Z7MCM2_MAGIC == b"Z7M2"
     assert Z7MCM2_SCHEMA_VERSION == 1
@@ -160,6 +148,16 @@ def test_z7mcm2_pack_parse_roundtrip_preserves_config_and_tensors(tiny_config):
     assert archive.config.num_pairs == tiny_config.num_pairs
     assert archive.config.d_model == tiny_config.d_model
     assert archive.config.d_state == tiny_config.d_state
+    assert archive.config.decoder_embed_dim == tiny_config.decoder_embed_dim
+    assert archive.config.decoder_initial_grid_h == tiny_config.decoder_initial_grid_h
+    assert archive.config.decoder_initial_grid_w == tiny_config.decoder_initial_grid_w
+    assert archive.config.decoder_channels == tiny_config.decoder_channels
+    assert (
+        archive.config.decoder_num_upsample_blocks
+        == tiny_config.decoder_num_upsample_blocks
+    )
+    assert archive.config.output_height == tiny_config.output_height
+    assert archive.config.output_width == tiny_config.output_width
     # Inflate-time backend MUST be reference_torch per HNeRV parity L4 + L9
     assert archive.config.backend == "reference_torch"
     assert archive.latent_init.shape == (tiny_config.latent_dim,)
@@ -326,14 +324,80 @@ def test_substrate_distinguishing_feature_consumed_at_inflate(tiny_config):
         )
 
 
+def test_predictor_weight_stream_alone_changes_inflate_output(tiny_config):
+    """Mutating only predictor bytes must perturb inflate output.
+
+    This guards against false positives where residual/context changes prove
+    archive mutation but not Mamba-2 predictor replay consumption.
+    """
+    from tac.substrates.time_traveler_l5_z7_mamba2 import (
+        Z7Mamba2PredictiveCodingSubstrate,
+        pack_archive,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2.inflate import inflate_one_video
+
+    sub = Z7Mamba2PredictiveCodingSubstrate(tiny_config)
+    sub.eval()
+    meta = {**sub.decoder_metadata(), "loss_mode": "proxy"}
+    predictor_state = {
+        key: value.detach().cpu().clone()
+        for key, value in sub.predictor.state_dict().items()
+    }
+    mutated_predictor_state = {
+        key: value.clone() for key, value in predictor_state.items()
+    }
+    mutated = False
+    for _key, value in mutated_predictor_state.items():
+        if torch.is_floating_point(value) and value.numel() > 0:
+            flat = value.reshape(-1)
+            flat[0] = flat[0] + 1.0
+            mutated = True
+            break
+    assert mutated, "test fixture expected at least one floating predictor tensor"
+    common_args = (
+        {},
+        sub.decoder.state_dict(),
+        sub.latent_init.detach().cpu(),
+        sub.residuals.detach().cpu(),
+        sub.ego_motion_buffer.detach().cpu(),
+        meta,
+    )
+    blob = pack_archive(
+        common_args[0],
+        common_args[1],
+        predictor_state,
+        common_args[2],
+        common_args[3],
+        common_args[4],
+        common_args[5],
+        config=tiny_config,
+    )
+    mutated_blob = pack_archive(
+        common_args[0],
+        common_args[1],
+        mutated_predictor_state,
+        common_args[2],
+        common_args[3],
+        common_args[4],
+        common_args[5],
+        config=tiny_config,
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        out_path = Path(tmp) / "base.raw"
+        mutated_out_path = Path(tmp) / "mutated.raw"
+        inflate_one_video(blob, out_path)
+        inflate_one_video(mutated_blob, mutated_out_path)
+        assert out_path.read_bytes() != mutated_out_path.read_bytes()
+
+
 def test_score_aware_loss_construction_canonical_helper_routing():
     """Z7-Mamba-2 score-aware loss MUST route through canonical
     score_pair_components_dispatch per Catalog #164."""
+    import inspect
+
     from tac.substrates.time_traveler_l5_z7_mamba2 import (
-        Z7Mamba2PredictiveCodingLossWeights,
         Z7Mamba2PredictiveCodingScoreAwareLoss,
     )
-    import inspect
     source = inspect.getsource(Z7Mamba2PredictiveCodingScoreAwareLoss.forward)
     assert "score_pair_components_dispatch" in source, (
         "Score-aware loss MUST route through canonical helper per Catalog #164"
@@ -412,6 +476,7 @@ def test_score_aware_loss_refuses_eval_roundtrip_false():
 def test_identity_predictor_substrate_yields_predictor_zero_params(tiny_config):
     """identity_predictor=True must yield 0 predictor params per probe-disambiguator contract."""
     from dataclasses import replace
+
     from tac.substrates.time_traveler_l5_z7_mamba2 import (
         Z7Mamba2PredictiveCodingSubstrate,
     )

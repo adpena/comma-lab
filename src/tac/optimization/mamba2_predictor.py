@@ -95,11 +95,11 @@ from torch import nn
 
 # Public API
 __all__ = [
-    "Mamba2PredictorConfig",
-    "Mamba2Predictor",
     "MAMBA_SSM_AVAILABLE",
-    "REFERENCE_TORCH_BACKEND",
     "MAMBA_SSM_BACKEND",
+    "REFERENCE_TORCH_BACKEND",
+    "Mamba2Predictor",
+    "Mamba2PredictorConfig",
 ]
 
 
@@ -233,7 +233,6 @@ class _ReferenceMamba2Cell(nn.Module):
         Returns:
             ``(y_t :: (B, d_model), h_t :: (B, d_inner, d_state))``.
         """
-        batch = x_t.shape[0]
         # Input + gate projections
         xz = self.in_proj(x_t)  # (B, 2 * d_inner)
         x_inner, z_gate = xz.chunk(2, dim=-1)  # each (B, d_inner)
@@ -359,6 +358,15 @@ class Mamba2Predictor(nn.Module):
                 f"Unknown backend {config.backend!r}; expected one of "
                 "'auto', 'mamba_ssm', 'reference_torch'."
             )
+        if self.backend_active == MAMBA_SSM_BACKEND and self.stateful:
+            raise RuntimeError(
+                "Mamba2Predictor refuses stateful mamba_ssm single-step mode: "
+                "the current upstream Mamba2 forward path is length-1 and does "
+                "not preserve an incremental inference state. Use "
+                "backend='reference_torch' for byte-faithful recurrent evidence, "
+                "set stateful=False for a stateless ablation, or implement "
+                "mamba_ssm step/inference-state replay before handoff."
+            )
 
         # Input projection: (latent_dim + ego_motion_dim) -> d_model
         self.input_projection = nn.Linear(
@@ -371,7 +379,7 @@ class Mamba2Predictor(nn.Module):
             # We construct a single-cell wrapper since we operate one timestep
             # at a time (consistent with Z6 per-pair forward signature).
             try:
-                from mamba_ssm.modules.mamba2 import Mamba2  # noqa: F401
+                from mamba_ssm.modules.mamba2 import Mamba2
                 self.mamba_cell = Mamba2(
                     d_model=config.d_model,
                     d_state=config.d_state,

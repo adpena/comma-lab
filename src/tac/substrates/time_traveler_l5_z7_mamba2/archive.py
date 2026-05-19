@@ -42,6 +42,7 @@ from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.architecture impo
     normalize_context_conditioning_mode,
 )
 from tac.substrates.time_traveler_l5_z7_mamba2.architecture import (
+    EVAL_HW,
     Z7Mamba2PredictiveCodingConfig,
 )
 
@@ -504,6 +505,16 @@ def parse_archive(blob: bytes) -> Z7Mamba2PredictiveCodingArchive:
         np.frombuffer(ego_blob, dtype=np.int8).copy()
     ).view(int(num_pairs), int(ego_dim))
 
+    raw_decoder_channels = meta.get("decoder_channels", (32, 24, 16, 12))
+    if isinstance(raw_decoder_channels, str):
+        decoder_channels = tuple(
+            int(part.strip()) for part in raw_decoder_channels.split(",") if part.strip()
+        )
+    elif isinstance(raw_decoder_channels, (list, tuple)):
+        decoder_channels = tuple(int(part) for part in raw_decoder_channels)
+    else:
+        raise TypeError("z7mcm2 metadata decoder_channels must be list/tuple/string")
+
     config = Z7Mamba2PredictiveCodingConfig(
         latent_dim=int(latent_dim),
         ego_motion_dim=int(ego_dim),
@@ -519,6 +530,16 @@ def parse_archive(blob: bytes) -> Z7Mamba2PredictiveCodingArchive:
         stateful=bool(int(flags) & _FLAG_STATEFUL),
         identity_predictor=bool(int(flags) & _FLAG_IDENTITY),
         num_pairs=int(num_pairs),
+        decoder_embed_dim=int(meta.get("decoder_embed_dim", 32)),
+        decoder_initial_grid_h=int(meta.get("decoder_initial_grid_h", 24)),
+        decoder_initial_grid_w=int(meta.get("decoder_initial_grid_w", 32)),
+        decoder_channels=decoder_channels,
+        decoder_num_upsample_blocks=int(
+            meta.get("decoder_num_upsample_blocks", 4)
+        ),
+        output_height=int(meta.get("output_height", EVAL_HW[0])),
+        output_width=int(meta.get("output_width", EVAL_HW[1])),
+        latent_init_std=float(meta.get("latent_init_std", 0.02)),
         context_conditioning_mode=normalize_context_conditioning_mode(
             str(meta.get("context_conditioning_mode", "none"))
         ),

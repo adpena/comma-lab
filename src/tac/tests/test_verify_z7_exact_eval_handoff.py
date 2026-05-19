@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 import stat
 import sys
 import zipfile
@@ -32,7 +31,14 @@ def _write_zip(path: Path, payload: bytes) -> tuple[int, str]:
     return path.stat().st_size, _sha256(path)
 
 
-def _fixture_repo(tmp_path: Path, *, num_pairs: int = 600) -> Path:
+def _fixture_repo(
+    tmp_path: Path,
+    *,
+    num_pairs: int = 600,
+    lane_id: str | None = None,
+    substrate_id: str | None = None,
+    pair_group_id: str | None = None,
+) -> Path:
     recurrent_bytes, recurrent_sha = _write_zip(
         tmp_path / "runs/z7/archive.zip",
         b"recurrent-z7-payload",
@@ -52,9 +58,10 @@ def _fixture_repo(tmp_path: Path, *, num_pairs: int = 600) -> Path:
         "archive_zip_path": "runs/z7/archive.zip",
         "archive_zip_sha256": recurrent_sha,
         "config": {"num_pairs": num_pairs},
-        "lane_id": handoff.LANE_ID,
+        "lane_id": lane_id or handoff.LANE_ID,
         "loss_mode": "score_aware",
         "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
         "ready_for_paid_dispatch": False,
         "score_aware_scorer_loss_used": True,
         "score_claim": False,
@@ -63,6 +70,7 @@ def _fixture_repo(tmp_path: Path, *, num_pairs: int = 600) -> Path:
             "archive_zip_path": "runs/z7/static_capacity_control/archive.zip",
             "archive_zip_sha256": static_sha,
             "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
             "ready_for_paid_dispatch": False,
             "runtime_output_byte_differences_vs_recurrent": 7,
             "runtime_output_changed_vs_recurrent": True,
@@ -70,8 +78,10 @@ def _fixture_repo(tmp_path: Path, *, num_pairs: int = 600) -> Path:
             "score_claim": False,
         },
         "submission_runtime_dir": "runs/z7/submission_runtime",
-        "substrate_id": handoff.SUBSTRATE_ID,
+        "substrate_id": substrate_id or handoff.SUBSTRATE_ID,
     }
+    if pair_group_id is not None:
+        stats["pair_group_id"] = pair_group_id
     (tmp_path / "runs/z7/stats.json").write_text(
         json.dumps(stats),
         encoding="utf-8",
@@ -121,6 +131,32 @@ def test_z7_handoff_ready_for_ratified_full_pair_packet(tmp_path: Path) -> None:
         assert "--skip-axis-if-promotable-anchor-exists" in command
 
 
+def test_z7_handoff_derives_mamba_identity_from_stats(tmp_path: Path) -> None:
+    repo = _fixture_repo(
+        tmp_path,
+        num_pairs=600,
+        lane_id="lane_z7_as_mamba_2_full_landing_20260518",
+        substrate_id="time_traveler_l5_z7_mamba2",
+    )
+    payload = handoff.build_packet(repo_root=repo, stats_json=Path("runs/z7/stats.json"))
+
+    assert payload["ready_for_exact_eval_handoff"] is True
+    assert payload["lane_id"] == "lane_z7_as_mamba_2_full_landing_20260518"
+    assert payload["substrate_id"] == "time_traveler_l5_z7_mamba2"
+    assert (
+        payload["pair_group_id"]
+        == "z7_mamba2_temporal_coherence_vs_static_capacity_same_bytes"
+    )
+    commands = payload["modal_execute_commands_after_ratified_full_packet"]
+    assert commands
+    for command in commands.values():
+        assert "lane_z7_as_mamba_2_full_landing_20260518_exact_eval_" in command
+        assert "time_traveler_l5_z7_mamba2_" in command
+        assert "z7_mamba2_temporal_coherence_vs_static_capacity_same_bytes" in command
+        assert "lane_z7_lstm_predictive_coding_20260518" not in command
+        assert "time_traveler_l5_z7_lstm_predictive_coding_" not in command
+
+
 def test_z7_handoff_refuses_false_authority_stats_and_hides_plan_commands(
     tmp_path: Path,
 ) -> None:
@@ -134,6 +170,25 @@ def test_z7_handoff_refuses_false_authority_stats_and_hides_plan_commands(
 
     assert payload["ready_for_exact_eval_handoff"] is False
     assert "z7_exact_handoff_stats_score_claim_not_false" in payload[
+        "result_review_blockers"
+    ]
+    assert payload["modal_plan_commands_for_current_packet"] == {}
+    assert payload["modal_execute_commands_after_ratified_full_packet"] == {}
+
+
+def test_z7_handoff_refuses_ready_for_exact_eval_authority_stats(
+    tmp_path: Path,
+) -> None:
+    repo = _fixture_repo(tmp_path, num_pairs=600)
+    stats_path = repo / "runs/z7/stats.json"
+    stats = json.loads(stats_path.read_text(encoding="utf-8"))
+    stats["ready_for_exact_eval_dispatch"] = True
+    stats_path.write_text(json.dumps(stats), encoding="utf-8")
+
+    payload = handoff.build_packet(repo_root=repo, stats_json=Path("runs/z7/stats.json"))
+
+    assert payload["ready_for_exact_eval_handoff"] is False
+    assert "z7_exact_handoff_stats_ready_for_exact_eval_dispatch_not_false" in payload[
         "result_review_blockers"
     ]
     assert payload["modal_plan_commands_for_current_packet"] == {}

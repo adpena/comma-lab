@@ -162,6 +162,10 @@ sentinel_files:
   - .omx/research/z7_mamba2_substrate_design_memo_20260518.md
   - .omx/research/council_per_substrate_symposium_z7_lstm_predictive_coding_20260517.md
   - .omx/research/comprehensive_research_wave_20260518.md
+  - .omx/research/probe_z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator_20260519_codex.json
+
+identity_disambiguator_probe: .omx/research/probe_z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator_20260519_codex.json
+identity_disambiguator_probe_requires_runtime_output_changed: false
 
 dependencies:
   - .omx/research/z7_mamba2_substrate_design_memo_20260518.md
@@ -169,6 +173,7 @@ dependencies:
   - .omx/research/comprehensive_research_wave_20260518.md
   - .omx/research/z6_candidate4c_scorer_logit_trainer_readiness_20260518_codex.md
   - .omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md
+  - .omx/research/probe_z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator_20260519_codex.json
 
 # Per Catalog #182 target_modes contract.
 pyav_decode_strategy: cpu_thread_async_upload

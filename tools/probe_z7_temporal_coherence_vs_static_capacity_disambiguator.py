@@ -17,13 +17,32 @@ import argparse
 import hashlib
 import json
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 SCHEMA = "z7_temporal_coherence_vs_static_capacity_disambiguator_v1"
 PROBE_ID = "z7_temporal_coherence_vs_static_capacity_disambiguator"
 SUBSTRATE_ID = "time_traveler_l5_z7_lstm_predictive_coding"
+SUBSTRATE_PROBE_CONTRACTS = {
+    "time_traveler_l5_z7_lstm_predictive_coding": {
+        "probe_id": PROBE_ID,
+        "required_future_artifacts": [
+            "experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py",
+            "src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/",
+            ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_lstm_predictive_coding_modal_t4_dispatch.yaml",
+        ],
+    },
+    "time_traveler_l5_z7_mamba2": {
+        "probe_id": "z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator",
+        "required_future_artifacts": [
+            "experiments/train_substrate_time_traveler_l5_z7_mamba2.py",
+            "src/tac/substrates/time_traveler_l5_z7_mamba2/",
+            ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml",
+            "tools/verify_z7_exact_eval_handoff.py",
+        ],
+    },
+}
 MIN_WIN_DELTA = 0.005
 CONTEST_ARCHIVE_NORMALIZER_BYTES = 37_545_489.0
 FALSE_AUTHORITY_FLAGS = {
@@ -64,6 +83,24 @@ def _first_present(payload: dict[str, Any], *keys: str) -> Any:
     return None
 
 
+def _normalize_axis_label(axis: object) -> str | None:
+    if axis is None:
+        return None
+    normalized = (
+        str(axis)
+        .strip()
+        .strip("[]")
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+    if normalized in ("contest_cuda", "cuda", "contest_gpu"):
+        return "contest_cuda"
+    if normalized in ("contest_cpu", "cpu"):
+        return "contest_cpu"
+    return normalized or None
+
+
 def _score(seg: float, pose: float, archive_bytes: int) -> float:
     return (
         100.0 * seg
@@ -72,13 +109,32 @@ def _score(seg: float, pose: float, archive_bytes: int) -> float:
     )
 
 
+def _contract_for_substrate(substrate_id: str) -> dict[str, Any]:
+    substrate_id = str(substrate_id or SUBSTRATE_ID).strip() or SUBSTRATE_ID
+    contract = SUBSTRATE_PROBE_CONTRACTS.get(substrate_id)
+    if contract is not None:
+        return {
+            "substrate_id": substrate_id,
+            "probe_id": str(contract["probe_id"]),
+            "required_future_artifacts": list(contract["required_future_artifacts"]),
+        }
+    return {
+        "substrate_id": substrate_id,
+        "probe_id": PROBE_ID,
+        "required_future_artifacts": [
+            "substrate-specific trainer/runtime/recipe not registered in probe contract"
+        ],
+    }
+
+
 def _eval_row(path: Path, *, mode: str) -> dict[str, Any]:
     payload = _load_json(path)
     seg = _first_present(payload, "avg_segnet_dist", "seg_dist", "segnet_dist")
     pose = _first_present(payload, "avg_posenet_dist", "pose_dist", "posenet_dist")
     archive_bytes = _first_present(payload, "archive_size_bytes", "archive_bytes")
     n_samples = _first_present(payload, "n_samples", "sample_count", "num_samples")
-    axis = _first_present(payload, "score_axis", "axis", "evidence_axis")
+    axis_raw = _first_present(payload, "score_axis", "axis", "evidence_axis")
+    axis = _normalize_axis_label(axis_raw)
     archive_sha = _first_present(payload, "archive_sha256")
     if archive_sha is None:
         archive_sha = _nested_get(payload, "provenance", "archive_sha256")
@@ -133,6 +189,7 @@ def _eval_row(path: Path, *, mode: str) -> dict[str, Any]:
         "path": str(path),
         "json_sha256": _sha256(path),
         "score_axis": axis,
+        "score_axis_raw": axis_raw,
         "n_samples": n_samples_i,
         "archive_bytes": bytes_i if bytes_i > 0 else None,
         "archive_sha256": archive_sha,
@@ -145,13 +202,14 @@ def _eval_row(path: Path, *, mode: str) -> dict[str, Any]:
     }
 
 
-def build_plan_payload() -> dict[str, Any]:
+def build_plan_payload(*, substrate_id: str = SUBSTRATE_ID) -> dict[str, Any]:
     """Return the pre-build Z7 probe contract."""
 
+    contract = _contract_for_substrate(substrate_id)
     return {
         "schema": SCHEMA,
-        "probe_id": PROBE_ID,
-        "substrate_id": SUBSTRATE_ID,
+        "probe_id": contract["probe_id"],
+        "substrate_id": contract["substrate_id"],
         "verdict": "pending_paired_exact_eval_json",
         "decision_rule": {
             "preferred_mode": "z7_recurrent_temporal_coherence",
@@ -165,11 +223,7 @@ def build_plan_payload() -> dict[str, Any]:
             "z7_recurrent_exact_eval_json",
             "static_capacity_control_exact_eval_json",
         ],
-        "required_future_artifacts": [
-            "experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py",
-            "src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/",
-            ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_lstm_predictive_coding_modal_t4_dispatch.yaml",
-        ],
+        "required_future_artifacts": contract["required_future_artifacts"],
         "blockers": [
             "no_paired_exact_eval_json",
             "z7_full_main_proxy_export_smoke_not_score_authority",
@@ -184,7 +238,10 @@ def build_plan_payload() -> dict[str, Any]:
 def evaluate_exact_eval_pair(
     recurrent_eval_json: Path,
     static_control_eval_json: Path,
+    *,
+    substrate_id: str = SUBSTRATE_ID,
 ) -> dict[str, Any]:
+    contract = _contract_for_substrate(substrate_id)
     recurrent = _eval_row(recurrent_eval_json, mode="z7_recurrent_temporal_coherence")
     static = _eval_row(static_control_eval_json, mode="static_capacity_control")
 
@@ -227,9 +284,9 @@ def evaluate_exact_eval_pair(
 
     return {
         "schema": SCHEMA,
-        "probe_id": PROBE_ID,
-        "substrate_id": SUBSTRATE_ID,
-        "created_utc": datetime.now(timezone.utc)
+        "probe_id": contract["probe_id"],
+        "substrate_id": contract["substrate_id"],
+        "created_utc": datetime.now(UTC)
         .replace(microsecond=0)
         .isoformat()
         .replace("+00:00", "Z"),
@@ -276,15 +333,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--recurrent-eval-json", type=Path)
     parser.add_argument("--static-control-eval-json", type=Path)
     parser.add_argument("--output-json", type=Path)
+    parser.add_argument("--substrate-id", default=SUBSTRATE_ID)
     args = parser.parse_args(argv)
 
     if args.recurrent_eval_json and args.static_control_eval_json:
         payload = evaluate_exact_eval_pair(
             args.recurrent_eval_json,
             args.static_control_eval_json,
+            substrate_id=args.substrate_id,
         )
     else:
-        payload = build_plan_payload()
+        payload = build_plan_payload(substrate_id=args.substrate_id)
 
     if args.output_json:
         write_payload(payload, args.output_json)

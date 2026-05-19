@@ -61,13 +61,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
-import torch
-
 import hashlib
 import shutil
 import time
 import zipfile
 
+import torch
 import torch.nn.functional as F
 
 from tac.optimization.mamba2_predictor import (
@@ -77,9 +76,9 @@ from tac.optimization.mamba2_predictor import (
 )
 from tac.substrates.time_traveler_l5_z7_mamba2 import (
     Z7Mamba2PredictiveCodingConfig,
-    Z7Mamba2PredictiveCodingSubstrate,
     Z7Mamba2PredictiveCodingLossWeights,
     Z7Mamba2PredictiveCodingScoreAwareLoss,
+    Z7Mamba2PredictiveCodingSubstrate,
     pack_archive,
 )
 from tac.substrates.time_traveler_l5_z7_mamba2.inflate import inflate_one_video
@@ -140,6 +139,21 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "env": "Z7_MAMBA2_LR",
         "rationale": "AdamW base learning rate; default 5e-4 per Z6 sister",
         "default": "5e-4",
+    },
+    "--lr-warmup-steps": {
+        "env": "Z7_MAMBA2_LR_WARMUP_STEPS",
+        "rationale": (
+            "Linear LR warmup steps for Z7-Mamba-2 stability; 0 disables warmup."
+        ),
+        "default": "0",
+    },
+    "--grad-clip-norm": {
+        "env": "Z7_MAMBA2_GRAD_CLIP_NORM",
+        "rationale": (
+            "Gradient clipping max norm for canonical-scale Mamba stability; "
+            "values <=0 disable clipping."
+        ),
+        "default": "1.0",
     },
     "--mamba2-d-model": {
         "env": "Z7_MAMBA2_D_MODEL",
@@ -356,10 +370,11 @@ def _build_argparser() -> argparse.ArgumentParser:
     )
     for flag, meta in TIER_1_OPERATOR_REQUIRED_FLAGS.items():
         default_env = meta.get("env")
-        if default_env and default_env in os.environ:
-            default = os.environ[default_env]
-        else:
-            default = meta.get("default")
+        default = (
+            os.environ[default_env]
+            if default_env and default_env in os.environ
+            else meta.get("default")
+        )
         if flag in (
             "--smoke",
             "--identity-predictor",
@@ -449,7 +464,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
     out_id = predictor_id(z_prev, ego)
     assert torch.allclose(out_id, z_prev), "identity_predictor must return z_prev unchanged"
     assert predictor_id.num_parameters() == 0, "identity_predictor must have zero trainable params"
-    print(f"[z7_mamba2_scaffold] identity-predictor mode OK (0 params)")
+    print("[z7_mamba2_scaffold] identity-predictor mode OK (0 params)")
 
     # Sanity 3: per-pair master gradient compatibility (Catalog #810)
     z_grad = torch.randn(4, cfg.latent_dim, device=device, requires_grad=True)
@@ -462,12 +477,12 @@ def _smoke_main(args: argparse.Namespace) -> int:
     assert e_grad.grad is not None and e_grad.grad.abs().sum() > 0, (
         "ego_motion gradient must flow through Mamba-2 predictor (Catalog #810)"
     )
-    print(f"[z7_mamba2_scaffold] per-pair master gradient compatibility OK (Catalog #810)")
+    print("[z7_mamba2_scaffold] per-pair master gradient compatibility OK (Catalog #810)")
 
     # Sanity 4: 20-step autoregressive unroll (state-evolution sanity)
     predictor.reset_state(1, device=device)
     states = []
-    for t in range(20):
+    for _t in range(20):
         z = torch.randn(1, cfg.latent_dim, device=device)
         e = torch.randn(1, cfg.ego_motion_dim, device=device)
         with torch.no_grad():
@@ -484,7 +499,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "schema_version": 1,
         "name": "z7_mamba2_scaffold_smoke_stats",
         "substrate_id": "time_traveler_l5_z7_mamba2",
-        "lane_id": "lane_top5_2_z7_mamba2_scaffold_design_20260518",
+        "lane_id": LANE_ID,
+        "historical_scaffold_lane_id": "lane_top5_2_z7_mamba2_scaffold_design_20260518",
         "mamba_ssm_available": MAMBA_SSM_AVAILABLE,
         "backend_active": predictor.backend_active,
         "num_parameters": predictor.num_parameters(),
@@ -510,6 +526,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
         "result_review_blockers": [
             "scaffold_smoke_validates_canonical_signature_only_not_training",
             "full_main_built_but_non_promotable_without_post_training_tier_c",
@@ -1056,7 +1073,8 @@ DATA_DIR="$1"
 OUTPUT_DIR="$2"
 FILE_LIST="$3"
 mkdir -p "$OUTPUT_DIR"
-exec python "$HERE/inflate.py" "$DATA_DIR" "$OUTPUT_DIR" "$FILE_LIST"
+PYTHON_BIN="${PYTHON:-python3}"
+exec "$PYTHON_BIN" "$HERE/inflate.py" "$DATA_DIR" "$OUTPUT_DIR" "$FILE_LIST"
 """
     inflate_sh_path = submission_dir / "inflate.sh"
     inflate_sh_path.write_text(inflate_sh)
@@ -1267,13 +1285,24 @@ def _full_main(args: argparse.Namespace) -> int:
 
     # Stage 4: training loop
     epochs = max(1, int(args.epochs))
-    optimizer = torch.optim.AdamW(model.parameters(), lr=float(args.lr))
+    base_lr = float(args.lr)
+    lr_warmup_steps = max(0, int(args.lr_warmup_steps))
+    grad_clip_norm = float(args.grad_clip_norm)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr)
     losses: list[dict[str, float | int]] = []
     target0 = pairs_unit[:, 0]
     target1 = pairs_unit[:, 1]
     train_started_at = time.perf_counter()
     for epoch in range(epochs):
         epoch_started_at = time.perf_counter()
+        if lr_warmup_steps > 0 and epoch < lr_warmup_steps:
+            current_lr = base_lr * float(epoch + 1) / float(lr_warmup_steps)
+            for group in optimizer.param_groups:
+                group["lr"] = current_lr
+        else:
+            current_lr = base_lr
+            for group in optimizer.param_groups:
+                group["lr"] = current_lr
         optimizer.zero_grad(set_to_none=True)
         rgb_0, rgb_1, latents = model.reconstruct_all_pairs()
         residual_loss = model.residuals.pow(2).mean()
@@ -1316,9 +1345,17 @@ def _full_main(args: argparse.Namespace) -> int:
             }
         _require_finite_loss(loss, epoch=epoch)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        grad_norm = None
+        if grad_clip_norm > 0:
+            grad_norm = torch.nn.utils.clip_grad_norm_(
+                model.parameters(),
+                grad_clip_norm,
+            )
         optimizer.step()
         loss_record["wall_seconds"] = time.perf_counter() - epoch_started_at
+        loss_record["lr"] = float(current_lr)
+        if grad_norm is not None:
+            loss_record["grad_norm_before_clip"] = float(grad_norm.detach().cpu())
         losses.append(loss_record)
         if epoch < 3 or epoch % max(1, epochs // 10) == 0:
             print(f"[z7_mamba2_full] epoch {epoch}: loss={loss.item():.6f} wall={loss_record['wall_seconds']:.2f}s")
@@ -1337,7 +1374,9 @@ def _full_main(args: argparse.Namespace) -> int:
         "epochs": epochs,
         "batch_size_flag": int(args.batch_size),
         "batch_size_actuation_status": "whole_sequence_only_batch_size_must_equal_num_pairs",
-        "lr": float(args.lr),
+        "lr": base_lr,
+        "lr_warmup_steps": lr_warmup_steps,
+        "grad_clip_norm": grad_clip_norm,
         "loss_mode": loss_mode,
         "score_aware_scorer_loss_used": loss_mode == "score_aware",
         "ego_source": ego_source,
@@ -1428,7 +1467,12 @@ def _full_main(args: argparse.Namespace) -> int:
                 control_sha = _sha256_bytes(control_raw_bytes)
                 recurrent_raw_bytes = verify_raw.read_bytes()
                 byte_differences = sum(
-                    a != b for a, b in zip(recurrent_raw_bytes, control_raw_bytes)
+                    a != b
+                    for a, b in zip(
+                        recurrent_raw_bytes,
+                        control_raw_bytes,
+                        strict=False,
+                    )
                 ) + abs(len(recurrent_raw_bytes) - len(control_raw_bytes))
                 static_control.update({
                     "inflate_verify_raw_path": str(control_raw),
@@ -1486,6 +1530,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "identity_predictor": cfg.identity_predictor,
             "beta_ib": cfg.beta_ib,
             "num_pairs": cfg.num_pairs,
+            "lr_warmup_steps": lr_warmup_steps,
+            "grad_clip_norm": grad_clip_norm,
             **model.decoder_metadata(),
         },
         "param_breakdown": breakdown,
@@ -1530,7 +1576,7 @@ def _full_main(args: argparse.Namespace) -> int:
     print(f"[z7_mamba2_full] archive_bin_bytes={len(archive_bytes)} archive_zip_bytes={len(archive_zip_bytes)}")
     print(f"[z7_mamba2_full] archive_bin_sha256={_sha256_bytes(archive_bytes)[:16]}...")
     print(f"[z7_mamba2_full] total wall_seconds={total_wall_seconds:.2f}")
-    print(f"[z7_mamba2_full] DONE [no-auth-eval-pending-wave-N+1-council]")
+    print("[z7_mamba2_full] DONE [no-auth-eval-pending-wave-N+1-council]")
 
     return 0
 

@@ -1,0 +1,38 @@
+{
+  "blockers": [
+    "no_paired_exact_eval_json",
+    "z7_full_main_proxy_export_smoke_not_score_authority",
+    "z7_proxy_trained_packet_not_score_aware_or_auth_eval_validated",
+    "no_contest_cuda_pair",
+    "not_score_authority"
+  ],
+  "decision_rule": {
+    "control_mode": "static_capacity_control",
+    "minimum_score_delta": 0.005,
+    "preferred_mode": "z7_recurrent_temporal_coherence",
+    "required_axis": "contest_cuda",
+    "same_archive_bytes_required": true,
+    "same_axis_required": true
+  },
+  "paradigm_claim_allowed": false,
+  "probe_id": "z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "required_future_artifacts": [
+    "experiments/train_substrate_time_traveler_l5_z7_mamba2.py",
+    "src/tac/substrates/time_traveler_l5_z7_mamba2/",
+    ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml",
+    "tools/verify_z7_exact_eval_handoff.py"
+  ],
+  "required_inputs": [
+    "z7_recurrent_exact_eval_json",
+    "static_capacity_control_exact_eval_json"
+  ],
+  "research_only": true,
+  "schema": "z7_temporal_coherence_vs_static_capacity_disambiguator_v1",
+  "score_claim": false,
+  "substrate_id": "time_traveler_l5_z7_mamba2",
+  "verdict": "pending_paired_exact_eval_json"
+}

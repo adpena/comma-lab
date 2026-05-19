@@ -28,14 +28,20 @@ def _score(seg: float, pose: float, archive_bytes: int) -> float:
     return 100.0 * seg + (10.0 * pose) ** 0.5 + 25.0 * archive_bytes / 37_545_489.0
 
 
-def _eval_payload(seg: float, pose: float, archive_bytes: int) -> dict[str, object]:
+def _eval_payload(
+    seg: float,
+    pose: float,
+    archive_bytes: int,
+    *,
+    axis: str = "contest_cuda",
+) -> dict[str, object]:
     return {
         "avg_segnet_dist": seg,
         "avg_posenet_dist": pose,
         "archive_size_bytes": archive_bytes,
         "archive_sha256": "a" * 64,
         "n_samples": 600,
-        "score_axis": "contest_cuda",
+        "score_axis": axis,
         "score_recomputed_from_components": _score(seg, pose, archive_bytes),
         "score_claim_valid": True,
     }
@@ -59,6 +65,24 @@ def test_z7_disambiguator_plan_is_fail_closed() -> None:
         in payload["blockers"]
     )
     assert payload["decision_rule"]["same_archive_bytes_required"] is True
+
+
+def test_z7_disambiguator_plan_can_target_mamba2_without_lstm_artifacts() -> None:
+    tool = _load_tool()
+    payload = tool.build_plan_payload(substrate_id="time_traveler_l5_z7_mamba2")
+
+    assert payload["schema"] == tool.SCHEMA
+    assert (
+        payload["probe_id"]
+        == "z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator"
+    )
+    assert payload["substrate_id"] == "time_traveler_l5_z7_mamba2"
+    assert payload["verdict"] == "pending_paired_exact_eval_json"
+    assert payload["score_claim"] is False
+    artifacts = "\n".join(payload["required_future_artifacts"])
+    assert "train_substrate_time_traveler_l5_z7_mamba2.py" in artifacts
+    assert "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml" in artifacts
+    assert "time_traveler_l5_z7_lstm_predictive_coding" not in artifacts
 
 
 def test_z7_disambiguator_recurrent_win_requires_same_bytes_and_axis(
@@ -87,6 +111,61 @@ def test_z7_disambiguator_recurrent_win_requires_same_bytes_and_axis(
         "same_archive_bytes": True,
     }
     assert payload["score_claim"] is False
+    assert payload["blockers"] == []
+
+
+def test_z7_disambiguator_exact_eval_pair_preserves_mamba2_identity(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    recurrent_path = tmp_path / "recurrent.json"
+    static_path = tmp_path / "static.json"
+    recurrent_path.write_text(
+        json.dumps(_eval_payload(0.0010, 0.0010, 200_000)),
+        encoding="utf-8",
+    )
+    static_path.write_text(
+        json.dumps(_eval_payload(0.0011, 0.0010, 200_000)),
+        encoding="utf-8",
+    )
+
+    payload = tool.evaluate_exact_eval_pair(
+        recurrent_path,
+        static_path,
+        substrate_id="time_traveler_l5_z7_mamba2",
+    )
+
+    assert payload["verdict"] == "z7_recurrent_temporal_coherence_win"
+    assert (
+        payload["probe_id"]
+        == "z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator"
+    )
+    assert payload["substrate_id"] == "time_traveler_l5_z7_mamba2"
+    assert payload["blockers"] == []
+
+
+@pytest.mark.parametrize("axis", ["contest_cuda", "contest-CUDA", "[contest-CUDA]"])
+def test_z7_disambiguator_normalizes_cuda_axis_labels(
+    tmp_path: Path,
+    axis: str,
+) -> None:
+    tool = _load_tool()
+    recurrent_path = tmp_path / "recurrent.json"
+    static_path = tmp_path / "static.json"
+    recurrent_path.write_text(
+        json.dumps(_eval_payload(0.0010, 0.0010, 200_000, axis=axis)),
+        encoding="utf-8",
+    )
+    static_path.write_text(
+        json.dumps(_eval_payload(0.0011, 0.0010, 200_000, axis=axis)),
+        encoding="utf-8",
+    )
+
+    payload = tool.evaluate_exact_eval_pair(recurrent_path, static_path)
+
+    assert payload["verdict"] == "z7_recurrent_temporal_coherence_win"
+    assert payload["source_evals"][0]["score_axis"] == "contest_cuda"
+    assert payload["source_evals"][0]["score_axis_raw"] == axis
     assert payload["blockers"] == []
 
 

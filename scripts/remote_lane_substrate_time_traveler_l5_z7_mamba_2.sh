@@ -197,6 +197,22 @@ case "$Z7_MAMBA2_TRAINER_MODE" in
         ;;
 esac
 
+if [ "$Z7_MAMBA2_TRAINER_MODE" = "full" ]; then
+    RECIPE_ABS="$WORKSPACE/$RECIPE_PATH"
+    if [ ! -f "$RECIPE_ABS" ]; then
+        echo "[lane-z7-mamba2] FATAL: full mode requires checked-in recipe at $RECIPE_ABS" >&2
+        exit 31
+    fi
+    if ! grep -Eq '^[[:space:]]*research_only:[[:space:]]*false([[:space:]]*#.*)?$' "$RECIPE_ABS"; then
+        echo "[lane-z7-mamba2] FATAL: full mode refused because recipe is still research_only" >&2
+        exit 31
+    fi
+    if ! grep -Eq '^[[:space:]]*dispatch_enabled:[[:space:]]*true([[:space:]]*#.*)?$' "$RECIPE_ABS"; then
+        echo "[lane-z7-mamba2] FATAL: full mode refused because recipe dispatch_enabled is not true" >&2
+        exit 31
+    fi
+fi
+
 # Required-input file resolution per Catalog #152 (Wave 1+Wave 2 multi-candidate)
 # Search order: $WORKSPACE (Vast.ai) -> /workspace/pact (Modal mount) -> /tmp/pact (Modal writable)
 resolve_required_input_modal_aware() {
@@ -232,6 +248,8 @@ fi
 Z7_MAMBA2_EPOCHS="${Z7_MAMBA2_EPOCHS:-}"
 Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-}"
 Z7_MAMBA2_LR="${Z7_MAMBA2_LR:-}"
+Z7_MAMBA2_LR_WARMUP_STEPS="${Z7_MAMBA2_LR_WARMUP_STEPS:-}"
+Z7_MAMBA2_GRAD_CLIP_NORM="${Z7_MAMBA2_GRAD_CLIP_NORM:-}"
 Z7_MAMBA2_DEVICE="${Z7_MAMBA2_DEVICE:-cuda}"
 Z7_MAMBA2_LOSS_MODE="${Z7_MAMBA2_LOSS_MODE:-score_aware}"
 Z7_MAMBA2_LATENT_DIM="${Z7_MAMBA2_LATENT_DIM:-}"
@@ -254,6 +272,8 @@ if [ "$Z7_MAMBA2_TRAINER_MODE" = "smoke" ]; then
     Z7_MAMBA2_EPOCHS="${Z7_MAMBA2_EPOCHS:-1}"
     Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-600}"
     Z7_MAMBA2_LR="${Z7_MAMBA2_LR:-5e-4}"
+    Z7_MAMBA2_LR_WARMUP_STEPS="${Z7_MAMBA2_LR_WARMUP_STEPS:-0}"
+    Z7_MAMBA2_GRAD_CLIP_NORM="${Z7_MAMBA2_GRAD_CLIP_NORM:-1.0}"
     Z7_MAMBA2_LATENT_DIM="${Z7_MAMBA2_LATENT_DIM:-24}"
     Z7_MAMBA2_EGO_MOTION_DIM="${Z7_MAMBA2_EGO_MOTION_DIM:-8}"
     Z7_MAMBA2_D_MODEL="${Z7_MAMBA2_D_MODEL:-64}"
@@ -273,6 +293,8 @@ elif [ "$Z7_MAMBA2_TRAINER_MODE" = "full" ]; then
     Z7_MAMBA2_EPOCHS="${Z7_MAMBA2_EPOCHS:-100}"
     Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-600}"
     Z7_MAMBA2_LR="${Z7_MAMBA2_LR:-5e-4}"
+    Z7_MAMBA2_LR_WARMUP_STEPS="${Z7_MAMBA2_LR_WARMUP_STEPS:-10}"
+    Z7_MAMBA2_GRAD_CLIP_NORM="${Z7_MAMBA2_GRAD_CLIP_NORM:-1.0}"
     Z7_MAMBA2_LATENT_DIM="${Z7_MAMBA2_LATENT_DIM:-24}"
     Z7_MAMBA2_EGO_MOTION_DIM="${Z7_MAMBA2_EGO_MOTION_DIM:-8}"
     Z7_MAMBA2_D_MODEL="${Z7_MAMBA2_D_MODEL:-64}"
@@ -291,6 +313,8 @@ else
     Z7_MAMBA2_EPOCHS="${Z7_MAMBA2_EPOCHS:-1}"
     Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-2}"
     Z7_MAMBA2_LR="${Z7_MAMBA2_LR:-1e-3}"
+    Z7_MAMBA2_LR_WARMUP_STEPS="${Z7_MAMBA2_LR_WARMUP_STEPS:-0}"
+    Z7_MAMBA2_GRAD_CLIP_NORM="${Z7_MAMBA2_GRAD_CLIP_NORM:-1.0}"
     Z7_MAMBA2_LATENT_DIM="${Z7_MAMBA2_LATENT_DIM:-8}"
     Z7_MAMBA2_EGO_MOTION_DIM="${Z7_MAMBA2_EGO_MOTION_DIM:-4}"
     Z7_MAMBA2_D_MODEL="${Z7_MAMBA2_D_MODEL:-16}"
@@ -329,6 +353,8 @@ cat > "$PROVENANCE" <<EOF
   "device": "$Z7_MAMBA2_DEVICE",
   "epochs": "$Z7_MAMBA2_EPOCHS",
   "batch_size": "$Z7_MAMBA2_BATCH_SIZE",
+  "lr_warmup_steps": "$Z7_MAMBA2_LR_WARMUP_STEPS",
+  "grad_clip_norm": "$Z7_MAMBA2_GRAD_CLIP_NORM",
   "max_pairs": "$Z7_MAMBA2_MAX_PAIRS",
   "latent_dim": "$Z7_MAMBA2_LATENT_DIM",
   "ego_motion_dim": "$Z7_MAMBA2_EGO_MOTION_DIM",
@@ -384,6 +410,8 @@ else
         "--epochs" "$Z7_MAMBA2_EPOCHS"
         "--batch-size" "$Z7_MAMBA2_BATCH_SIZE"
         "--lr" "$Z7_MAMBA2_LR"
+        "--lr-warmup-steps" "$Z7_MAMBA2_LR_WARMUP_STEPS"
+        "--grad-clip-norm" "$Z7_MAMBA2_GRAD_CLIP_NORM"
         "--latent-dim" "$Z7_MAMBA2_LATENT_DIM"
         "--ego-motion-dim" "$Z7_MAMBA2_EGO_MOTION_DIM"
         "--mamba2-d-model" "$Z7_MAMBA2_D_MODEL"
@@ -450,7 +478,7 @@ stats_path = sys.argv[1]
 with open(stats_path, encoding="utf-8") as fh:
     stats = json.load(fh)
 bad = []
-for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch", "ready_for_paid_dispatch"):
     if stats.get(key) is not False:
         bad.append(f"{key}={stats.get(key)!r}")
 if bad:
