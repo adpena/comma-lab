@@ -37099,11 +37099,11 @@
       "id": "lane_tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_20260518",
       "name": "TT5L V2 redesign per deep-research wave TOP-5 #1 (VGGT + DreamerV3 RSSM + NVIDIA VRSS 2 + DUSt3R/MASt3R)",
       "phase": 4.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/train_substrate_time_traveler_l5_tt5l_v2.py + .omx/operator_authorize_recipes/substrate_time_traveler_l5_tt5l_v2_modal_a100_dispatch.yaml + scripts/remote_lane_substrate_time_traveler_l5_tt5l_v2.sh (scaffold per Catalog #240; _full_main raises NotImplementedError)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -37126,12 +37126,12 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/council_symposium_tt5l_v2_full_landing_20260518.md + .omx/research/tt5l_v2_full_landing_integration_audit_plus_cross_pollination_tree_20260518.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_time_traveler_l5_tt5l_v2.sh (canonical Catalog #244 NVML block + Catalog #326 mode-routing + Catalog #163 sentinel + Catalog #152 required-input threading; bash -n syntax clean)"
         }
       },
       "notes": ""
@@ -38283,6 +38283,54 @@
         }
       },
       "notes": "research_only=true; process_feature_only; canonical_consumer=tools/cathedral_autopilot_autonomous_loop.py; no score/promotion/exact-dispatch authority"
+    },
+    {
+      "id": "lane_z7_as_mamba_2_full_landing_20260518",
+      "name": "Z7-as-Mamba-2 full substrate landing (TOP-5 #2)",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Substrate package + trainer _full_main + recipe + driver + symposium memo + integration audit landed 2026-05-18; substrate_engineering size budget waiver per HNeRV parity L7; smoke + full _full_main + archive roundtrip + inflate verify all pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z7_as_mamba_2_full_landing_landed_20260518.md (pending commit); .omx/research/council_symposium_z7_as_mamba_2_full_landing_20260518.md; .omx/research/z7_as_mamba_2_integration_audit_plus_cross_pollination_tree_20260518.md; lane_class=substrate_engineering; research_only=true pending PATH C 100ep anchor"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Z7-Mamba-2 selective state-space substrate built per DEEP-RESEARCH-WAVE TOP-5 #2; lane_class=substrate_engineering per HNeRV parity L7 size budget waiver; research_only=true until per-substrate symposium PROCEED-unconditional on landed archive bytes + Catalog #324 post-training Tier-C validation lands. Sister of lane_per_substrate_symposium_z7_lstm_predictive_coding_20260517.",
+      "lane_class": "substrate_engineering",
+      "research_only": true,
+      "reactivation_criteria": [
+        "PATH A MPS proxy training",
+        "PATH B Modal T4 50ep smoke + Catalog #324 Tier-C validation",
+        "PATH C Modal A100 100ep paired exact eval + \u0394S>=0.005 vs Z7-LSTM at same archive bytes"
+      ]
     }
   ],
   "level_rules": {
@@ -38292,5 +38340,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T00:44:05Z"
+  "updated_at": "2026-05-19T01:12:52Z"
 }

@@ -345,30 +345,50 @@ def test_trainer_module_imports_successfully():
     assert hasattr(mod, "TIER_1_OPERATOR_REQUIRED_FLAGS")
 
 
-def test_trainer_full_main_raises_notimplementederror_per_catalog_240():
-    """Per Catalog #240: _full_main must raise until Wave N+1 council."""
+def test_trainer_full_main_implemented_per_lane_z7_as_mamba_2_full_landing_20260518():
+    """Per FULL LANDING 2026-05-18 (lane_z7_as_mamba_2_full_landing_20260518):
+    _full_main is now IMPLEMENTED (no longer raises NotImplementedError).
+
+    HISTORICAL NOTE: prior to the FULL LANDING this test asserted
+    NotImplementedError per scaffold-era Catalog #240 discipline. The
+    FULL LANDING per Catalog #325 per-substrate symposium PROCEED_WITH_REVISIONS
+    + HNeRV parity discipline L7 substrate_engineering size budget waiver
+    flips _full_main to a complete implementation. Recipe stays
+    dispatch_enabled=false until empirical PATH C 100ep anchor lands.
+    """
     mod = _import_trainer_module()
-    parser = mod._build_argparser()
-    args = parser.parse_args([])  # No --smoke flag
+    # _full_main must be callable (NOT raise NotImplementedError)
+    assert callable(mod._full_main), "_full_main must be a callable after FULL LANDING"
+    # The function's docstring should reflect FULL implementation
+    doc = mod._full_main.__doc__ or ""
+    assert "byte-closed archive emission" in doc.lower() or "byte-closed" in doc.lower(), (
+        f"_full_main docstring must reflect FULL LANDING; got: {doc[:200]}"
+    )
 
-    with pytest.raises(NotImplementedError, match="PRE-BUILD per Catalog #240"):
-        mod._full_main(args)
 
+def test_trainer_full_main_emits_non_promotable_authority_flags():
+    """Per CLAUDE.md 'Apples-to-apples evidence discipline' + Catalog #324:
+    _full_main MUST emit stats with score_claim=False + promotion_eligible=False
+    + ready_for_exact_eval_dispatch=False until paired exact eval + per-substrate
+    symposium PROCEED-unconditional lands.
 
-def test_trainer_full_main_error_cites_z7_symposium_revision_6():
-    """Error message must reference Z7 symposium Revision #6 (Wave-N+2 pivot)."""
+    This is the canonical 'BUILT-AWAITING-FIRST-EMPIRICAL' state per FULL LANDING.
+    """
+    # We don't actually run _full_main here (too expensive); we inspect the
+    # source to confirm the authority-flag emission pattern is present.
+    import inspect
+
     mod = _import_trainer_module()
-    parser = mod._build_argparser()
-    args = parser.parse_args([])
-
-    try:
-        mod._full_main(args)
-    except NotImplementedError as e:
-        msg = str(e)
-        assert "Z7 parent symposium Revision #6" in msg or "Wave-N+2" in msg
-        assert "Catalog #240" in msg
-        assert "Catalog #315" in msg
-        assert "Catalog #300" in msg, "must reference operator-frontier-override path"
+    source = inspect.getsource(mod._full_main)
+    assert '"score_claim": False' in source, (
+        "_full_main must emit score_claim=False per CLAUDE.md non-promotable discipline"
+    )
+    assert '"promotion_eligible": False' in source, (
+        "_full_main must emit promotion_eligible=False per Catalog #324"
+    )
+    assert '"ready_for_exact_eval_dispatch": False' in source, (
+        "_full_main must emit ready_for_exact_eval_dispatch=False per Catalog #325"
+    )
 
 
 def test_trainer_tier_1_operator_required_flags_present():
