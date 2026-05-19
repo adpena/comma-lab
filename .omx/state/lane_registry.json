@@ -40752,6 +40752,170 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_hf_dataset_upload_and_recipe_enable_20260519",
+      "name": "HF dataset upload + T1 symposium revisions integration + recipe dispatch_enabled flip (Items 1+2)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_hf_jobs_operator_authorize_wire_in_and_preflight_ledger_path_20260519",
+      "name": "HF Jobs operator_authorize wire-in + preflight ledger-path extension (Items 4+5)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Slot 8 wire-in 2026-05-19: dispatch helper + ledger fail-closed extension + Catalog #131 surfaces + cost_band rates; 21 dedicated tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #131 LIVE_COUNT=0 verified empirically post-extension; 21 dedicated tests pass (test_operator_authorize_hf_jobs_dispatch.py 14 + test_check_131_hf_jobs_ledger_path.py 7); 39 sister regression tests pass (test_dispatch_hf_jobs_vision_training.py 19 + test_check_339_silent_no_spawn_extinction.py 20); 95 cost_band tests pass"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_hf_jobs_operator_authorize_wire_in_plus_preflight_ledger_path_landed_20260519.md (landing memo) + MEMORY.md prepend"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_codex_op7_iteration_items_3_4_post_brotli_grain_plus_mps_axis_20260519",
+      "name": "Codex op7 iteration: post-brotli-decompress master-gradient grain + MPS-axis cross-device probe + multiple-passes-per-byte-deterministic framework",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_mps_engineering_corrections_kahan_softmax_fp32_matmul_20260519",
+      "name": "MPS engineering corrections: Kahan Conv2d + pinned softmax + fp32 matmul override",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -40761,5 +40925,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T12:59:00Z"
+  "updated_at": "2026-05-19T13:06:21Z"
 }

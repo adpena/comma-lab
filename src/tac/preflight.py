@@ -5167,6 +5167,21 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #343: CLAUDE.md frontier scores must cite canonical pointer.
+        # Per CLAUDE.md "Frontier scores are pointer-only - NON-NEGOTIABLE"
+        # (added 2026-05-19): operator-facing surfaces MUST cite the
+        # canonical pointer file at .omx/state/canonical_frontier_pointer.json
+        # rather than embedding hardcoded score literals that drift over time.
+        # WARN-ONLY at landing 2026-05-19 per CLAUDE.md "Strict-flip atomicity
+        # rule" because legacy CLAUDE.md has dozens of historical anchors
+        # (PR102 / PR103 / PR101 / NSCS06 / etc.) that need backfill OR
+        # HISTORICAL_SCORE_LITERAL_OK waivers. Strict-flip planned after
+        # the backfill + waiver sweep.
+        # Memory: feedback_frontier_pointer_model_plus_de_hardcode_landed_20260519.
+        check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded(
+            strict=False, verbose=verbose
+        )
+
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
         # scorer-rule in CLAUDE.md). Any reference to it inside
@@ -27946,6 +27961,159 @@ def check_codex_inbox_open_questions_have_response_or_default_within_deadline(
     return violations
 
 
+# ── Catalog #343: CLAUDE.md frontier scores use canonical pointer ────────────
+#
+# Per CLAUDE.md "Frontier scores are pointer-only - NON-NEGOTIABLE" (added
+# 2026-05-19): operator-facing surfaces MUST cite the canonical pointer file
+# at ``.omx/state/canonical_frontier_pointer.json`` rather than embedding
+# hardcoded score literals that drift over time.
+#
+# Bug class anchor: 2026-05-19 operator correction verbatim "your math and
+# recollection is wrong regarding the leaderboard and frontier; we have a
+# 0.19205 or something close to that but we havne't submitted a PR for it
+# yet beause we thought we might be able to beat it". I had conflated
+# ``0.19285`` (PR101 GOLD UPSTREAM baseline) with ``0.19205`` (our actual
+# local frontier).
+#
+# The gate refuses NEW hardcoded score literals in CLAUDE.md that look like
+# our-frontier / current-frontier / current-public-leaderboard scores.
+# HISTORICAL-CONTEXT score literals (catalog row docstrings; postmortems;
+# falsification verdicts; historical PR refs) are accepted via same-line
+# ``# HISTORICAL_SCORE_LITERAL_OK:<rationale>`` waiver OR by an adjacent
+# canonical pointer reference (see ``.omx/state/canonical_frontier_pointer
+# .json`` OR per ``tools/refresh_canonical_frontier.py``) within ±5 lines.
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because CLAUDE.md carries dozens of historical anchors (PR102 / PR103 /
+# PR101 / NSCS06 / etc.) that need backfill OR HISTORICAL-CONTEXT waivers;
+# strict-flip planned after the backfill + waiver sweep.
+
+_CHECK_343_FRONTIER_SCORE_RE = re.compile(
+    r"\b0\.(?:19[0-9]{2,5}|20[0-9]{2,5})\b"
+)
+_CHECK_343_POINTER_REFERENCE_TOKENS: tuple[str, ...] = (
+    "canonical_frontier_pointer.json",
+    "tools/refresh_canonical_frontier.py",
+    "tac.canonical_frontier_pointer",
+    "CANONICAL_FRONTIER_POINTER_PATH",
+)
+_CHECK_343_LINE_WAIVER_MARKER = "FRONTIER_POINTER_LITERAL_OK"
+_CHECK_343_HISTORICAL_WAIVER_MARKER = "HISTORICAL_SCORE_LITERAL_OK"
+_CHECK_343_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({"<rationale>", "<reason>"})
+
+
+def _check_343_waiver_has_real_rationale(line: str, marker: str) -> bool:
+    """Return True if the line carries ``# <marker>:<rationale>`` with a real rationale.
+
+    Placeholder ``<rationale>`` / ``<reason>`` literals are rejected so the
+    gate's own docstring example cannot self-waive. Empty rationales after
+    the colon are rejected too. Per Catalog #287 / #323 sister discipline.
+    """
+
+    marker_idx = line.find(marker + ":")
+    if marker_idx < 0:
+        return False
+    after = line[marker_idx + len(marker) + 1 :].strip()
+    if not after:
+        return False
+    # Strip trailing punctuation that might appear after a rationale.
+    rationale = after.rstrip(" .,;-*/").strip()
+    if not rationale or len(rationale) < 4:
+        return False
+    return rationale not in _CHECK_343_PLACEHOLDER_RATIONALES
+
+
+def _check_343_pointer_reference_in_window(lines: list[str], index: int, window: int = 5) -> bool:
+    """Return True if any pointer reference token appears within ±window lines."""
+
+    start = max(0, index - window)
+    end = min(len(lines), index + window + 1)
+    for line in lines[start:end]:
+        for token in _CHECK_343_POINTER_REFERENCE_TOKENS:
+            if token in line:
+                return True
+    return False
+
+
+def check_claude_md_frontier_score_uses_canonical_pointer_not_hardcoded(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #343 - CLAUDE.md must cite canonical pointer for frontier scores.
+
+    Scans the repo's CLAUDE.md for score literals in the range our-frontier /
+    current-public-leaderboard (``0.19xxx`` / ``0.20xxx``). Each literal must
+    EITHER carry a same-line waiver (``# FRONTIER_POINTER_LITERAL_OK:<rationale>``
+    or ``# HISTORICAL_SCORE_LITERAL_OK:<rationale>``) OR have a canonical
+    pointer reference within ±5 lines.
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    because legacy CLAUDE.md has dozens of historical score literals that
+    need backfill (PR102 0.193 / PR103 0.195 / etc.).
+    """
+
+    root = Path(repo_root) if repo_root is not None else Path(".")
+    claude_md = root / "CLAUDE.md"
+    if not claude_md.is_file():
+        if verbose:
+            print("  [check-343] OK: CLAUDE.md absent")
+        return []
+
+    try:
+        text = claude_md.read_text(encoding="utf-8")
+    except OSError as exc:
+        if verbose:
+            print(f"  [check-343] WARN: read failure: {exc}")
+        return []
+
+    lines = text.splitlines()
+    violations: list[str] = []
+    for index, line in enumerate(lines):
+        matches = list(_CHECK_343_FRONTIER_SCORE_RE.finditer(line))
+        if not matches:
+            continue
+        # Acceptance cascade: same-line waiver?
+        if _check_343_waiver_has_real_rationale(line, _CHECK_343_LINE_WAIVER_MARKER):
+            continue
+        if _check_343_waiver_has_real_rationale(line, _CHECK_343_HISTORICAL_WAIVER_MARKER):
+            continue
+        # Or: pointer reference within ±5 lines.
+        if _check_343_pointer_reference_in_window(lines, index, window=5):
+            continue
+        # Otherwise: flag every score literal on this line.
+        for match in matches:
+            score = match.group(0)
+            violations.append(
+                f"[Check 343] CLAUDE.md:{index + 1}: hardcoded frontier score "
+                f"{score!r} without canonical pointer reference or "
+                "HISTORICAL_SCORE_LITERAL_OK waiver"
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check-343] {len(violations)} hardcoded frontier score literal(s) "
+                "(warn-only at landing per Strict-flip atomicity rule)"
+            )
+            for violation in violations[:5]:
+                print(f"    - {violation[:240]}")
+        else:
+            print("  [check-343] OK: no hardcoded frontier score literals without pointer")
+
+    if violations and strict:
+        raise PreflightError(
+            "Catalog #343: CLAUDE.md hardcoded frontier score literals lack "
+            "canonical pointer reference or HISTORICAL_SCORE_LITERAL_OK waiver.\n"
+            + "\n".join(f"  - {v}" for v in violations[:5])
+            + "\n\nFix: cite `.omx/state/canonical_frontier_pointer.json` adjacent "
+            "(within +/-5 lines) OR add same-line waiver "
+            "`# HISTORICAL_SCORE_LITERAL_OK:<rationale>` for historical context."
+        )
+    return violations
+
+
 # ── Catalog #335: cathedral consumer directory canonical contract ────────────
 #
 # Per CATHEDRAL-AUTO-INGEST-PARADIGM-SHIFT 2026-05-19 (operator NON-NEGOTIABLE
@@ -38862,6 +39030,20 @@ _SHARED_STATE_PATH_MARKERS: tuple[str, ...] = (
     # Catalog #333 — canonical Codex to Claude inbox ledger.
     "codex_to_claude_inbox",
     "INBOX_PATH",
+    # Catalog #342 — canonical HF Jobs call_id ledger (sister of #245).
+    # Slot 7 (commit e588d9f65) landed the canonical helper at
+    # ``tac.deploy.hf_jobs.job_id_ledger``; slot 8 (this wire-in 2026-05-19)
+    # extends the bare-write discipline surface so direct writes outside the
+    # canonical helper are refused.
+    "hf_jobs_call_id_ledger",
+    "HF_JOBS_CALL_ID_LEDGER_PATH",
+    # Catalog #343 — canonical frontier pointer (operator-facing SoT for
+    # OUR LOCAL FRONTIER + PUBLIC LEADERBOARD scores; replaces hardcoded
+    # score literals in CLAUDE.md / MEMORY.md per the operator's 2026-05-19
+    # directive). Direct writes outside ``tac.canonical_frontier_pointer.
+    # write_canonical_frontier_pointer_locked`` are refused.
+    "canonical_frontier_pointer",
+    "CANONICAL_FRONTIER_POINTER_PATH",
 )
 
 _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
@@ -38924,6 +39106,23 @@ _BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS: tuple[str, ...] = (
     "append_inbox_ack",
     "append_inbox_withdraw",
     "load_inbox_strict",
+    # Catalog #342 — canonical HF Jobs call_id ledger helpers (sister of #245).
+    # Slot 7 canonical helper + slot 8 operator-authorize wire-in 2026-05-19.
+    "register_dispatched_hf_jobs_id",
+    "register_dispatched_hf_jobs_id_fail_closed",
+    "update_hf_jobs_outcome",
+    "load_hf_jobs_strict",
+    "poll_ledger_for_hf_jobs_id",
+    # Catalog #343 — canonical frontier pointer helpers (operator-facing SoT
+    # for our local frontier + upstream public leaderboard scores; landed
+    # 2026-05-19 to extinct hardcoded score literal drift in CLAUDE.md /
+    # MEMORY.md / memory files).
+    "write_canonical_frontier_pointer_locked",
+    "load_canonical_frontier_pointer_strict",
+    "load_canonical_frontier_pointer_lenient",
+    "refresh_canonical_frontier_from_local_state",
+    "refresh_canonical_frontier_from_upstream_leaderboard",
+    "auto_refresh_canonical_frontier_after_dispatch_outcome",
 )
 
 # Files that legitimately implement canonical fcntl-locked helpers OR are
@@ -38944,8 +39143,10 @@ _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/deploy/lightning/active_jobs_state.py",  # canonical (this lane)
     "src/tac/deploy/azure/active_vms_state.py",  # canonical (codex round 4 #133)
     "src/tac/deploy/modal/call_id_ledger.py",  # canonical (Catalog #245)
+    "src/tac/deploy/hf_jobs/job_id_ledger.py",  # canonical (Catalog #342 sister)
     "src/tac/probe_outcomes_ledger.py",  # canonical (Catalog #313)
     "src/tac/codex_to_claude_inbox.py",  # canonical (Catalog #333)
+    "src/tac/canonical_frontier_pointer.py",  # canonical (Catalog #343)
     "src/tac/deploy/vastai/client.py",  # routes through register_instance (vastai_tracker)
     "src/tac/preflight.py",  # this gate's own scanning code
     "src/tac/preflight_fs_cache.py",  # threading.Lock (in-process cache only)

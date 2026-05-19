@@ -118,6 +118,21 @@ PLATFORM_RATES_USD_PER_HOUR: dict[str, dict[str, float]] = {
     "github": {
         "CPU": 0.0,  # public-repo GHA minutes used for contest-CPU harvests
     },
+    # HF Jobs published pricing (canonical flavor table per the canonical
+    # ``tools/dispatch_hf_jobs_vision_training.py::HF_JOBS_FLAVOR_COSTS_USD_PER_HOUR``;
+    # subject to change — verify via ``hf jobs price-list`` before paid
+    # dispatch). Catalog #342 sister of Catalog #245 + slot 7 operator-
+    # routable item 4 wire-in (2026-05-19).
+    "hf_jobs": {
+        "t4-small": 0.50,
+        "t4-medium": 1.00,
+        "a10g-small": 1.25,
+        "a10g-large": 2.50,
+        "a100-large": 4.00,
+        "h100-small": 8.00,
+        "cpu-basic": 0.05,
+        "cpu-upgrade": 0.10,
+    },
 }
 
 # Confidence-tag thresholds (per Council probe-disambiguator pattern).
@@ -622,13 +637,19 @@ def normalize_gpu(platform: str, gpu: str) -> str:
     - ``modal``: ``A100*`` → ``A100`` unless an exact variant exists; ``H100*``
       similarly. ``A10G`` and ``T4`` are returned as-is.
     - ``vastai``: ``RTX_4090`` collapses to ``4090``.
+    - ``hf_jobs``: lowercase flavor passthrough (the canonical HF Jobs
+      flavor table uses lowercase names like ``t4-small`` / ``a10g-large``;
+      do NOT upper-case per slot 8 wire-in 2026-05-19 Catalog #342 sister).
     - other platforms: case-folded passthrough.
     """
 
+    platform_norm = platform.lower()
+    if platform_norm == "hf_jobs":
+        value = str(gpu or "").strip().lower()
+        return value
     value = str(gpu or "").strip().upper()
     if not value:
         return value
-    platform_norm = platform.lower()
     table = PLATFORM_RATES_USD_PER_HOUR.get(platform_norm, {})
     if platform_norm == "modal":
         if value == "A10G":

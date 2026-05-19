@@ -2296,6 +2296,206 @@ def _dispatch_local_cpu(
     return rc
 
 
+def _poll_ledger_for_dispatched_hf_jobs_id(
+    hf_jobs_id: str, *, timeout_seconds: float = 10.0
+) -> bool:
+    """Poll the canonical HF Jobs ledger for ``hf_jobs_id`` presence.
+
+    Catalog #339 sister mitigation for HF Jobs (sister of
+    :func:`_poll_ledger_for_dispatched_call` for Modal). Returns ``True``
+    once a row with ``hf_jobs_id`` is observed (any event_type); ``False``
+    if the polling window elapses.
+
+    Lazy-imports the canonical helper so missing-helper does NOT crash the
+    dispatcher (the wrapper-side fail-closed path at
+    :func:`tac.deploy.hf_jobs.job_id_ledger.register_dispatched_hf_jobs_id_fail_closed`
+    is the authoritative protection — this is defense in depth).
+    """
+
+    src_dir = str(REPO_ROOT / "src")
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+    try:
+        from tac.deploy.hf_jobs.job_id_ledger import poll_ledger_for_hf_jobs_id
+    except Exception:
+        # If the canonical helper is missing or broken, defer to the
+        # wrapper's Catalog #339 sister protection (which exits non-zero
+        # on registration failure). Return True to avoid a false-positive
+        # SystemExit when the protection is already broken-but-noisy.
+        return True
+    return bool(poll_ledger_for_hf_jobs_id(hf_jobs_id, timeout_seconds=timeout_seconds))
+
+
+def _dispatch_hf_jobs(
+    recipe: Recipe,
+    instance_job_id: str,
+    env_overrides: str,
+    *,
+    timeout_hours_override: float | None = None,
+    cost_band_epochs_override: int | None = None,
+) -> int:
+    """Invoke ``tools/dispatch_hf_jobs_vision_training.py`` for HF Jobs.
+
+    Slot 8 wire-in (2026-05-19; per operator approval verbatim *"all operator
+    routable items approved"*). Sister of :func:`_dispatch_modal` for the
+    Hugging Face Jobs platform per Catalog #342 (HF-DATASET-JOBS-IMPL-WAVE
+    landing 2026-05-19 commit ``e588d9f65``).
+
+    Contract:
+
+    1. **Pre-dispatch harness** (Catalog #243 + #271 + #313): runs via the
+       canonical insertion points BEFORE this function fires; this dispatcher
+       inherits the same protections every paid platform gets.
+    2. **Resolved arguments**: the recipe must declare ``hf_jobs.script`` +
+       ``hf_jobs.hub_dataset_repo`` + ``hf_jobs.hub_model_repo`` so the
+       canonical dispatcher CLI is invocable without operator-side guesswork.
+    3. **Ledger-poll fail-closed** (Catalog #339 sister): after the
+       subprocess returns rc=0, poll
+       ``.omx/state/hf_jobs_call_id_ledger.jsonl`` for the canonical
+       ``register_dispatched_hf_jobs_id`` row. If the ledger row never
+       appears within 10s, raise SystemExit citing Catalog #339 — the
+       harvester is BLIND to this dispatch per CLAUDE.md "Modal `.spawn()`
+       HARVEST OR LOSE" applied to HF Jobs.
+    4. **Paired-env operator bypass** (Catalog #199): the canonical operator
+       bypass via ``OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1``
+       + ``OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=<USD>`` is honored upstream
+       in ``_confirm()``; this dispatcher does NOT re-validate.
+    """
+
+    hf_cfg = recipe.raw.get("hf_jobs", {}) or {}
+    script = hf_cfg.get("script")
+    if not script:
+        raise SystemExit(
+            "[operator-authorize] FATAL: hf_jobs recipe missing 'hf_jobs.script' "
+            "(path to the canonical HF Jobs training script)"
+        )
+    if not (REPO_ROOT / str(script)).exists():
+        raise SystemExit(
+            "[operator-authorize] FATAL: HF Jobs training script missing at "
+            f"{script}"
+        )
+    hub_dataset_repo = hf_cfg.get("hub_dataset_repo")
+    hub_model_repo = hf_cfg.get("hub_model_repo")
+    if not hub_dataset_repo or not hub_model_repo:
+        raise SystemExit(
+            "[operator-authorize] FATAL: hf_jobs recipe missing "
+            "'hf_jobs.hub_dataset_repo' and/or 'hf_jobs.hub_model_repo'"
+        )
+    flavor = hf_cfg.get("flavor", "t4-small")
+    model = hf_cfg.get("model")
+    num_epochs = cost_band_epochs_override or hf_cfg.get("num_epochs", 200)
+    learning_rate = hf_cfg.get("learning_rate")
+    train_batch_size = hf_cfg.get("train_batch_size")
+    eval_batch_size = hf_cfg.get("eval_batch_size")
+    timeout_seconds_default = hf_cfg.get("timeout_seconds", 14400)
+    if timeout_hours_override is not None:
+        timeout_seconds = int(round(float(timeout_hours_override) * 3600.0))
+    else:
+        timeout_seconds = int(timeout_seconds_default)
+    hub_dataset_sha = hf_cfg.get("hub_dataset_sha")
+    expected_axis = hf_cfg.get("expected_axis", "cuda")
+    upstream_snapshot_sha256 = hf_cfg.get("upstream_snapshot_sha256")
+
+    cmd: list[str] = [
+        _python_bin(),
+        "tools/dispatch_hf_jobs_vision_training.py",
+        "--script",
+        str(script),
+        "--hub-dataset-repo",
+        str(hub_dataset_repo),
+        "--hub-model-repo",
+        str(hub_model_repo),
+        "--flavor",
+        str(flavor),
+        "--num-epochs",
+        str(num_epochs),
+        "--timeout-seconds",
+        str(timeout_seconds),
+        "--lane-id",
+        recipe.lane_id,
+        "--label",
+        instance_job_id,
+        "--expected-axis",
+        str(expected_axis),
+    ]
+    if model:
+        cmd.extend(["--model", str(model)])
+    if learning_rate is not None:
+        cmd.extend(["--learning-rate", str(learning_rate)])
+    if train_batch_size is not None:
+        cmd.extend(["--train-batch-size", str(train_batch_size)])
+    if eval_batch_size is not None:
+        cmd.extend(["--eval-batch-size", str(eval_batch_size)])
+    if hub_dataset_sha:
+        cmd.extend(["--hub-dataset-sha", str(hub_dataset_sha)])
+    if upstream_snapshot_sha256:
+        cmd.extend(["--upstream-snapshot-sha256", str(upstream_snapshot_sha256)])
+    recipe_path = recipe.raw.get("_recipe_path")
+    if recipe_path:
+        cmd.extend(["--recipe", str(recipe_path)])
+    extra_script_args = hf_cfg.get("extra_script_args") or []
+    for arg in extra_script_args:
+        cmd.extend(["--extra-script-arg", str(arg)])
+
+    print(f"[operator-authorize] dispatching hf_jobs: {' '.join(cmd)}")
+
+    # Build env dict from comma-separated overrides (same shape as
+    # ``_dispatch_local`` so the wrapper inherits operator-style env passthrough).
+    env = dict(os.environ)
+    if env_overrides:
+        for pair in env_overrides.split(","):
+            if "=" in pair:
+                k, v = pair.split("=", 1)
+                env[k.strip()] = v.strip()
+
+    proc = subprocess.run(
+        cmd,
+        cwd=str(REPO_ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    if proc.stdout:
+        print(proc.stdout)
+    if proc.stderr:
+        print(proc.stderr, file=sys.stderr)
+
+    if proc.returncode != 0:
+        return proc.returncode
+
+    # Catalog #339 sister (HF Jobs) — extract the hf_jobs_id from the
+    # canonical dispatcher's stdout payload (JSON object on success) and
+    # poll the canonical ledger for the row. If the dispatch happened but
+    # the ledger row never appeared, the harvester is blind — raise
+    # SystemExit citing Catalog #339 so the operator gets an actionable
+    # diagnostic instead of silent success.
+    hf_jobs_id: str | None = None
+    try:
+        payload = json.loads(proc.stdout.strip().splitlines()[-1])
+        if isinstance(payload, dict):
+            hf_jobs_id = payload.get("hf_jobs_id")
+    except (json.JSONDecodeError, IndexError, AttributeError):
+        hf_jobs_id = None
+
+    if hf_jobs_id and not _poll_ledger_for_dispatched_hf_jobs_id(
+        hf_jobs_id, timeout_seconds=10.0
+    ):
+        raise SystemExit(
+            f"[operator-authorize] FATAL [Catalog #339 sister]: HF Jobs "
+            f"dispatcher exited rc=0 AND emitted hf_jobs_id={hf_jobs_id} "
+            f"but the canonical ledger at "
+            f".omx/state/hf_jobs_call_id_ledger.jsonl has no matching row "
+            f"after 10s of polling. The harvester is BLIND to this dispatch "
+            f"per CLAUDE.md 'Modal .spawn() HARVEST OR LOSE' applied to HF "
+            f"Jobs. Check "
+            f".omx/state/hf_jobs_call_id_ledger_recovery_tmp/ for last-resort "
+            f"dumps; a future `tools/harvest_hf_jobs_calls.py "
+            f"--recover-from-tmp` sister CLI will re-attempt the canonical "
+            f"append."
+        )
+    return 0
+
+
 def _dispatch_noop(recipe: Recipe, instance_job_id: str, env_overrides: str) -> int:
     """No-op dispatcher for recipes that handle their own action (e.g. git push).
 
@@ -2371,6 +2571,30 @@ def _native_dispatch_preflight(recipe: Recipe) -> None:
                 "[operator-authorize] FATAL: local research-signal "
                 "remote_driver missing before claim: "
                 f"{lane_script} (platform={platform})"
+            )
+    elif platform == "hf_jobs":
+        # Slot 8 wire-in (Catalog #342 sister of #245). The dispatcher
+        # function handles hub-token + script-existence + canonical-helper
+        # gating at dispatch time. Here we only validate the canonical
+        # dispatcher CLI is present + the recipe declares hf_jobs.script.
+        hf_cfg = recipe.raw.get("hf_jobs", {}) or {}
+        script = hf_cfg.get("script")
+        if not script:
+            raise SystemExit(
+                "[operator-authorize] FATAL: hf_jobs recipe missing "
+                "'hf_jobs.script' before claim"
+            )
+        if not (REPO_ROOT / str(script)).exists():
+            raise SystemExit(
+                "[operator-authorize] FATAL: HF Jobs training script missing "
+                f"at {script} (platform=hf_jobs)"
+            )
+        dispatcher = REPO_ROOT / "tools" / "dispatch_hf_jobs_vision_training.py"
+        if not dispatcher.exists():
+            raise SystemExit(
+                "[operator-authorize] FATAL: canonical HF Jobs dispatcher "
+                f"missing at {dispatcher} (Catalog #342 sister; slot 7 "
+                "should have landed this at commit e588d9f65)"
             )
 
 
@@ -2500,6 +2724,15 @@ def _run_dispatch(
         return _dispatch_local_mps(recipe, instance_job_id, env_overrides)
     if platform == "local_cpu":
         return _dispatch_local_cpu(recipe, instance_job_id, env_overrides)
+    if platform == "hf_jobs":
+        # Slot 8 wire-in (2026-05-19; Catalog #342 sister of #245).
+        return _dispatch_hf_jobs(
+            recipe,
+            instance_job_id,
+            env_overrides,
+            timeout_hours_override=timeout_hours_override,
+            cost_band_epochs_override=cost_band_epochs_override,
+        )
     if platform in {"none", "kaggle", "gha", "lightning", "azure"}:
         # These platforms have bespoke dispatch flows (gh release create,
         # kaggle kernels push, etc.) - for now, the legacy .sh shim handles
@@ -2514,7 +2747,15 @@ def _run_dispatch(
 def _platform_has_native_dispatch(platform: str) -> bool:
     """Return True when this tool will actually start provider/local work."""
 
-    return platform in {"modal", "vastai", "vast", "local", "local_mps", "local_cpu"}
+    return platform in {
+        "modal",
+        "vastai",
+        "vast",
+        "local",
+        "local_mps",
+        "local_cpu",
+        "hf_jobs",
+    }
 
 
 def _sanitize_terminal_status(status: str) -> str:
@@ -2606,6 +2847,8 @@ def main(argv: list[str] | None = None) -> int:
             "local",
             "local-mps",
             "local-cpu",
+            "hf_jobs",
+            "hf-jobs",
             "kaggle",
             "gha",
             "azure",
@@ -2617,6 +2860,8 @@ def main(argv: list[str] | None = None) -> int:
             "`local-mps` and `local-cpu` route through the canonical "
             "MPS-research-signal / macOS-CPU-advisory manifests "
             "(NON-AUTHORITATIVE per CLAUDE.md 'MPS auth eval is NOISE'). "
+            "`hf_jobs` / `hf-jobs` route through the canonical HF Jobs "
+            "dispatcher (Catalog #342 sister; slot 8 wire-in 2026-05-19). "
             "Per operator directive 2026-05-17: *'Deploying to local MPS "
             "versus modal should be super easy to configure, like one arg "
             "in a func'*."
@@ -2639,6 +2884,7 @@ def main(argv: list[str] | None = None) -> int:
         target_to_platform = {
             "local-mps": "local_mps",
             "local-cpu": "local_cpu",
+            "hf-jobs": "hf_jobs",
         }
         new_platform = target_to_platform.get(args.target, args.target)
         original_platform = recipe.raw.get("platform")
