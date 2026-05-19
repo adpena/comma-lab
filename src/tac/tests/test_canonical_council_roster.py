@@ -78,9 +78,11 @@ class TestCouncilSeat:
 
 
 class TestInnerCouncilRoster:
-    def test_inner_council_has_12_seats(self) -> None:
-        # 6 sextet pact + 5 additional + PR95Author (2026-05-19) = 12 mandatory
-        assert len(INNER_COUNCIL) == 12
+    def test_inner_council_has_14_seats(self) -> None:
+        # 6 sextet pact + 5 additional + PR95Author (2026-05-19) + Rudin +
+        # Daubechies (2026-05-19 ROSTER-MAINTENANCE-V2 4-co-lead structure)
+        # = 14 mandatory.
+        assert len(INNER_COUNCIL) == 14
 
     def test_sextet_pact_complete(self) -> None:
         sextet_names = frozenset(
@@ -98,10 +100,12 @@ class TestInnerCouncilRoster:
             if s.role == "inner_council"
         )
         # Per CLAUDE.md "Experiment design — non-negotiable" + operator 2026-05-19
-        # PR95Author addition: Quantizr / Hotz / Selfcomp / MacKay / Balle /
-        # PR95Author are mandatory inner-council.
+        # PR95Author addition + 2026-05-19 ROSTER-MAINTENANCE-V2 (Rudin +
+        # Daubechies co-leads): Quantizr / Hotz / Selfcomp / MacKay / Balle /
+        # PR95Author / Rudin / Daubechies are mandatory inner-council.
         assert additional == frozenset(
-            ["Quantizr", "Hotz", "Selfcomp", "MacKay", "Balle", "PR95Author"]
+            ["Quantizr", "Hotz", "Selfcomp", "MacKay", "Balle", "PR95Author",
+             "Rudin", "Daubechies"]
         )
 
     def test_pr95_author_present(self) -> None:
@@ -127,14 +131,97 @@ class TestInnerCouncilRoster:
         names = [s.name for s in INNER_COUNCIL]
         assert len(names) == len(frozenset(names))
 
+    def test_rudin_present_as_inner_co_lead(self) -> None:
+        # Per operator 2026-05-19 verbatim "rudin and debauchies should still
+        # be on the inner council, they co-lead with shannon and dykstra now"
+        names = frozenset(s.name for s in INNER_COUNCIL)
+        assert "Rudin" in names
+        rudin = next(s for s in INNER_COUNCIL if s.name == "Rudin")
+        assert rudin.is_co_lead is True
+
+    def test_daubechies_present_as_inner_co_lead(self) -> None:
+        # Per operator 2026-05-19 verbatim "rudin and debauchies should still
+        # be on the inner council, they co-lead with shannon and dykstra now"
+        names = frozenset(s.name for s in INNER_COUNCIL)
+        assert "Daubechies" in names
+        daubechies = next(s for s in INNER_COUNCIL if s.name == "Daubechies")
+        assert daubechies.is_co_lead is True
+
+
+class TestFourCoLeadStructure:
+    """Per CLAUDE.md 'Council conduct' 2026-05-19 amendment: Shannon LEAD +
+    Dykstra CO-LEAD + Rudin CO-LEAD + Daubechies CO-LEAD form the inner
+    council shared-leadership core. ALL 4 are required at every T2+ deliberation.
+    """
+
+    def test_exactly_four_co_leads(self) -> None:
+        co_leads = [s for s in INNER_COUNCIL if s.is_co_lead]
+        assert len(co_leads) == 4
+
+    def test_co_leads_are_shannon_dykstra_rudin_daubechies(self) -> None:
+        co_lead_names = frozenset(
+            s.name for s in INNER_COUNCIL if s.is_co_lead
+        )
+        assert co_lead_names == frozenset(
+            ["Shannon", "Dykstra", "Rudin", "Daubechies"]
+        )
+
+    def test_sister_inner_members_not_co_leads(self) -> None:
+        # All non-co-lead inner-council members provide domain-specific
+        # perspectives, not shared-leadership-core decisions.
+        non_co_lead_names = frozenset(
+            s.name for s in INNER_COUNCIL if not s.is_co_lead
+        )
+        # Sister members: 10 voices (6 sextet minus Shannon+Dykstra = 4) +
+        # (8 additional minus Rudin+Daubechies = 6) = 10 sister members.
+        assert non_co_lead_names == frozenset([
+            "Yousfi", "Fridrich", "Contrarian", "Assumption-Adversary",
+            "Quantizr", "Hotz", "Selfcomp", "MacKay", "Balle", "PR95Author",
+        ])
+
+    def test_co_lead_field_default_false(self) -> None:
+        # Backward-compat: CouncilSeat constructed without is_co_lead defaults
+        # to False (not a co-lead).
+        seat = CouncilSeat(
+            name="X", role="inner_council",
+            canonical_position_summary="test",
+            relevance_tokens=("any",),
+            canonical_reference_path="CLAUDE.md",
+        )
+        assert seat.is_co_lead is False
+
+    def test_grand_council_seat_cannot_be_co_lead(self) -> None:
+        # Per __post_init__: co-leads MUST be inner-council seats.
+        with pytest.raises(ValueError, match="is_co_lead=True requires inner_council"):
+            CouncilSeat(
+                name="X", role="grand_council",
+                is_co_lead=True,
+                canonical_position_summary="test",
+                relevance_tokens=("any",),
+                canonical_reference_path="CLAUDE.md",
+            )
+
+    def test_is_co_lead_must_be_bool(self) -> None:
+        with pytest.raises(ValueError, match="is_co_lead must be bool"):
+            CouncilSeat(
+                name="X", role="inner_council",
+                is_co_lead="yes",  # type: ignore[arg-type]
+                canonical_position_summary="test",
+                relevance_tokens=("any",),
+                canonical_reference_path="CLAUDE.md",
+            )
+
 
 class TestGrandCouncilRoster:
-    def test_grand_council_has_20_seats(self) -> None:
+    def test_grand_council_has_22_seats(self) -> None:
         # 11 existing (since 2026-04-29; Schmidhuber listed once) +
         # 8 new (2026-05-15 expansion: Atick/Redlich/Rao/Ballard/Tishby/
         # Zaslavsky/Wyner/TimeTravelerProtege) +
-        # 1 operator-initiated 2026-05-19 (TimeTraveler mentor reframe) = 20
-        assert len(GRAND_COUNCIL) == 20
+        # 1 operator-initiated 2026-05-19 (TimeTraveler mentor reframe) +
+        # 2 operator-initiated 2026-05-19 ROSTER-MAINTENANCE-V2 sister seats
+        # (Rudin_Grand + Daubechies_Grand per Catalog #110 APPEND-ONLY
+        # coexistence with inner-council co-leads) = 22.
+        assert len(GRAND_COUNCIL) == 22
 
     def test_existing_11_seats_present(self) -> None:
         names = frozenset(s.name for s in GRAND_COUNCIL)
@@ -162,6 +249,19 @@ class TestGrandCouncilRoster:
     def test_grand_seat_unique_names(self) -> None:
         names = [s.name for s in GRAND_COUNCIL]
         assert len(names) == len(frozenset(names))
+
+    def test_rudin_grand_sister_seat_present(self) -> None:
+        # Per Catalog #110 APPEND-ONLY: Rudin INNER_COUNCIL co-lead seat coexists
+        # with Rudin_Grand sister seat (different name to avoid duplicate-name
+        # collision; same canonical attendee in two rosters).
+        names = frozenset(s.name for s in GRAND_COUNCIL)
+        assert "Rudin_Grand" in names
+
+    def test_daubechies_grand_sister_seat_present(self) -> None:
+        # Per Catalog #110 APPEND-ONLY: Daubechies INNER_COUNCIL co-lead seat
+        # coexists with Daubechies_Grand sister seat.
+        names = frozenset(s.name for s in GRAND_COUNCIL)
+        assert "Daubechies_Grand" in names
 
 
 class TestRequiredAttendeesForTopic:
@@ -239,8 +339,13 @@ class TestValidateCouncilDispatchRoster:
         assert "Hotz" in verdict.missing_inner_council
 
     def test_slot_20_bug_class_anchor(self) -> None:
-        """Empirical anchor: slot 20 dispatched 18/29 (missing 11)."""
-        # Slot 20 had: 6 sextet + 12 grand council = 18 (missing 4 inner + 7 grand)
+        """Empirical anchor: slot 20 dispatched 18/29 (missing 11).
+
+        Updated for ROSTER-MAINTENANCE-V2 (2026-05-19): slot 20 also omitted
+        the 2 new co-leads (Rudin + Daubechies) which are now mandatory at T2+.
+        """
+        # Slot 20 had: 6 sextet + 12 grand council = 18 (missing 4 inner + 7 grand
+        # + 2 co-leads under new 4-co-lead structure)
         slot_20_attendees = [
             # 6 sextet
             "Shannon", "Dykstra", "Yousfi", "Fridrich", "Contrarian",
@@ -258,12 +363,67 @@ class TestValidateCouncilDispatchRoster:
             ["pp_integration", "info_gain", "partition_discovery"],
             "T3",
         )
-        # Inner-council omissions: Quantizr, Hotz, Selfcomp, Balle
+        # Inner-council omissions: Quantizr, Hotz, Selfcomp, Balle, PR95Author,
+        # Rudin, Daubechies. Plus 2 co-lead omissions (Rudin, Daubechies).
         assert verdict.complete is False
         assert "Quantizr" in verdict.missing_inner_council
         assert "Hotz" in verdict.missing_inner_council
         assert "Selfcomp" in verdict.missing_inner_council
         assert "Balle" in verdict.missing_inner_council
+        # Co-lead omissions are STRUCTURALLY DISTINCT per 2026-05-19 amendment.
+        assert "Rudin" in verdict.missing_co_leads
+        assert "Daubechies" in verdict.missing_co_leads
+
+    def test_missing_co_lead_blocks_t2_dispatch(self) -> None:
+        """Per CLAUDE.md 'Council conduct' 2026-05-19 amendment: ALL 4 co-leads
+        MUST be present at every T2+ deliberation. Missing ANY co-lead is
+        structurally incomplete."""
+        # Dispatch ALL inner-council EXCEPT Rudin (drop one co-lead)
+        attendees = [
+            s.name for s in INNER_COUNCIL if s.name != "Rudin"
+        ]
+        verdict = validate_council_dispatch_roster(
+            attendees, ["pp_integration"], "T2",
+        )
+        assert verdict.complete is False
+        assert "Rudin" in verdict.missing_co_leads
+        assert "Rudin" in verdict.missing_inner_council
+
+    def test_missing_daubechies_blocks_t2_dispatch(self) -> None:
+        """Daubechies is the 4th co-lead per 2026-05-19 amendment."""
+        attendees = [
+            s.name for s in INNER_COUNCIL if s.name != "Daubechies"
+        ]
+        verdict = validate_council_dispatch_roster(
+            attendees, ["pp_integration"], "T2",
+        )
+        assert verdict.complete is False
+        assert "Daubechies" in verdict.missing_co_leads
+
+    def test_all_four_co_leads_present_passes_t2(self) -> None:
+        """Verify the 4-co-lead structure is satisfied when all 4 are present."""
+        attendees = [s.name for s in INNER_COUNCIL]
+        verdict = validate_council_dispatch_roster(
+            attendees, ["pp_integration"], "T2",
+        )
+        assert verdict.complete is True
+        assert verdict.missing_co_leads == ()
+
+    def test_co_leads_missing_surfaced_in_render(self) -> None:
+        """Verdict.render() surfaces missing co-leads as a distinct alert."""
+        attendees = [
+            s.name for s in INNER_COUNCIL
+            if s.name not in ("Rudin", "Daubechies")
+        ]
+        verdict = validate_council_dispatch_roster(
+            attendees, ["pp_integration"], "T2",
+        )
+        rendered = verdict.render()
+        assert "MISSING_CO_LEADS" in rendered
+        assert "Rudin" in rendered
+        assert "Daubechies" in rendered
+        # The render should also cite the 4-co-lead structure rationale
+        assert "4-co-lead" in rendered or "Shannon" in rendered
 
     def test_slot_21_complete_t3_passes(self) -> None:
         """After this second supplemental: complete roster passes."""
@@ -345,6 +505,32 @@ class TestRosterValidationVerdictDataclass:
         )
         with pytest.raises((AttributeError, Exception)):
             v.complete = False  # type: ignore[misc]
+
+    def test_missing_co_leads_field_default_empty(self) -> None:
+        """Per 2026-05-19 amendment: missing_co_leads field default is ()."""
+        v = RosterValidationVerdict(
+            complete=True,
+            missing_inner_council=(),
+            missing_relevant_grand_council=(),
+            unknown_attendees=(),
+            topic_tokens=("any",),
+            council_tier="T2",
+        )
+        assert v.missing_co_leads == ()
+
+    def test_missing_co_leads_field_settable(self) -> None:
+        """Verify the new missing_co_leads field is queryable."""
+        v = RosterValidationVerdict(
+            complete=False,
+            missing_inner_council=("Rudin", "Daubechies"),
+            missing_co_leads=("Rudin", "Daubechies"),
+            missing_relevant_grand_council=(),
+            unknown_attendees=(),
+            topic_tokens=("pp_integration",),
+            council_tier="T2",
+        )
+        assert v.missing_co_leads == ("Rudin", "Daubechies")
+        assert v.complete is False
 
 
 class TestEdgeCases:

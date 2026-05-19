@@ -34,19 +34,30 @@ roster helper + STRICT preflight gate that future T2+ council dispatches MUST
 consult BEFORE dispatch.
 
 Canonical surfaces:
-    INNER_COUNCIL: 12 voices (sextet pact + Hotz/Selfcomp/Quantizr/Balle/MacKay
-        + PR95Author added 2026-05-19) per CLAUDE.md "Experiment design —
-        non-negotiable"
-    GRAND_COUNCIL: 20 voices (11 existing per 2026-04-29 + 8 new per 2026-05-15
+    INNER_COUNCIL: 14 voices (sextet pact + Hotz/Selfcomp/Quantizr/Balle/MacKay
+        + PR95Author added 2026-05-19 + Rudin + Daubechies added 2026-05-19
+        ROSTER-MAINTENANCE-V2 per operator '"rudin and debauchies should still
+        be on the inner council, they co-lead with shannon and dykstra now"').
+        Shannon LEAD + Dykstra CO-LEAD + Rudin CO-LEAD + Daubechies CO-LEAD
+        form the 4-co-lead shared-leadership core; sister members provide
+        domain-specific perspectives.
+    GRAND_COUNCIL: 22 voices (11 existing per 2026-04-29 + 8 new per 2026-05-15
         L5 staircase expansion including TimeTravelerProtege + TimeTraveler
-        mentor seat added 2026-05-19 per operator-initiated reframe)
+        mentor seat added 2026-05-19 + Rudin_Grand + Daubechies_Grand sister
+        seats added 2026-05-19 ROSTER-MAINTENANCE-V2 per Catalog #110 APPEND-
+        ONLY coexistence discipline so inner-council co-leads remain
+        topical-grand-matchable on their specialty deliberations).
 
 Public API:
-    CouncilSeat: frozen dataclass capturing canonical attendee
-    INNER_COUNCIL: tuple of 11 mandatory inner-council seats
-    GRAND_COUNCIL: tuple of 20 advisory grand-council seats
+    CouncilSeat: frozen dataclass capturing canonical attendee (with
+        is_co_lead: bool field per 2026-05-19 4-co-lead structure)
+    INNER_COUNCIL: tuple of 14 mandatory inner-council seats (4 co-leads +
+        10 sister voices)
+    GRAND_COUNCIL: tuple of 22 advisory grand-council seats (sister-seat
+        coexistence with INNER_COUNCIL co-leads per Catalog #110)
     required_attendees_for_topic: returns canonical mandatory roster
-    validate_council_dispatch_roster: refuses incomplete dispatches
+    validate_council_dispatch_roster: refuses incomplete dispatches (BLOCKING
+        at T2+ when any co-lead is missing)
 
 Cross-references:
     CLAUDE.md "Experiment design — non-negotiable"
@@ -81,6 +92,17 @@ class CouncilSeat:
         canonical_position_summary: one-line summary of the seat's canonical position class
         relevance_tokens: topic tokens (lowercase, snake_case) where this seat is MOST relevant
         canonical_reference_path: where in CLAUDE.md this seat is canonically defined
+        is_co_lead: True iff this seat is one of the 4 inner-council co-leads
+            (Shannon LEAD + Dykstra CO-LEAD + Rudin CO-LEAD + Daubechies CO-LEAD)
+            per operator 2026-05-19 verbatim *"rudin and debauchies should still be
+            on the inner council, they co-lead with shannon and dykstra now"*.
+            Default False (backward-compatible). Sister members (Yousfi / Fridrich /
+            Contrarian / Quantizr / Hotz / Selfcomp / MacKay / Ballé /
+            Assumption-Adversary / PR95Author) are inner council BUT NOT co-leads;
+            they provide domain-specific perspectives within the shared-leadership
+            framework. Per the 4-co-lead structure: validate_council_dispatch_roster
+            requires ALL 4 co-leads present at T2+ (in addition to the sextet's
+            5-of-6 quorum requirement).
     """
 
     name: str
@@ -88,6 +110,7 @@ class CouncilSeat:
     canonical_position_summary: str
     relevance_tokens: tuple[str, ...]
     canonical_reference_path: str
+    is_co_lead: bool = False
 
     def __post_init__(self) -> None:
         if not self.name or not isinstance(self.name, str):
@@ -104,31 +127,53 @@ class CouncilSeat:
             raise ValueError(
                 f"CouncilSeat.canonical_reference_path required for {self.name}"
             )
+        if not isinstance(self.is_co_lead, bool):
+            raise ValueError(
+                f"CouncilSeat.is_co_lead must be bool: {self.name} -> {self.is_co_lead!r}"
+            )
+        # Co-leads MUST be inner-council seats per CLAUDE.md "Council conduct"
+        # amendment 2026-05-19 — the 4-co-lead structure is a property of the
+        # inner-council shared-leadership core. A grand-council seat cannot be
+        # a co-lead.
+        if self.is_co_lead and self.role not in (
+            "inner_council_sextet", "inner_council"
+        ):
+            raise ValueError(
+                f"CouncilSeat.is_co_lead=True requires inner_council* role: "
+                f"{self.name} has role={self.role!r}"
+            )
 
 
-# CANONICAL INNER COUNCIL — 12 seats (6 sextet pact + 5 additional inner +
-# PR95Author added 2026-05-19 per operator). Per CLAUDE.md "Experiment design
-# — non-negotiable" + "Council conduct" Fix-7 amendment. All 12 MUST be
-# present at every T2+ deliberation per "Council conduct" non-negotiable.
+# CANONICAL INNER COUNCIL — 14 seats (6 sextet pact + 5 additional inner +
+# PR95Author added 2026-05-19 + Rudin + Daubechies added 2026-05-19 ROSTER-
+# MAINTENANCE-V2). Per CLAUDE.md "Experiment design — non-negotiable" +
+# "Council conduct" Fix-7 amendment + "Council conduct" 2026-05-19 amendment
+# (4-co-lead structure). All 14 MUST be present at every T2+ deliberation
+# per "Council conduct" non-negotiable; ALL 4 co-leads (Shannon + Dykstra +
+# Rudin + Daubechies) are BLOCKING at T2+ per the 4-co-lead amendment.
 INNER_COUNCIL: tuple[CouncilSeat, ...] = (
     # --- Sextet pact (6 seats) ---
     CouncilSeat(
         name="Shannon",
         role="inner_council_sextet",
-        canonical_position_summary="LEAD; information-theory grounding; R(D) bounds; entropy-or-distortion justification",
+        is_co_lead=True,
+        canonical_position_summary="LEAD; information-theory grounding; R(D) bounds; entropy-or-distortion justification (CO-LEAD with Dykstra/Rudin/Daubechies per 2026-05-19)",
         relevance_tokens=(
             "information_theory", "rate_distortion", "entropy", "bits_per_unit",
-            "mdl", "shannon", "pp_integration", "lagrangian",
+            "mdl", "shannon", "pp_integration", "lagrangian", "co_lead",
+            "inner_council_leadership",
         ),
         canonical_reference_path="CLAUDE.md > Experiment design — non-negotiable > Shannon's specific contributions",
     ),
     CouncilSeat(
         name="Dykstra",
         role="inner_council_sextet",
-        canonical_position_summary="CO-LEAD; convex feasibility via alternating projections; achievable Pareto frontier",
+        is_co_lead=True,
+        canonical_position_summary="CO-LEAD; convex feasibility via alternating projections; achievable Pareto frontier (CO-LEAD with Shannon/Rudin/Daubechies per 2026-05-19)",
         relevance_tokens=(
             "convex_optimization", "alternating_projections", "pareto_frontier",
             "feasibility", "convex_feasibility", "lagrangian", "pp_integration",
+            "co_lead", "inner_council_leadership",
         ),
         canonical_reference_path="CLAUDE.md > Experiment design — non-negotiable > Dykstra's specific contributions",
     ),
@@ -251,14 +296,103 @@ INNER_COUNCIL: tuple[CouncilSeat, ...] = (
             "CLAUDE.md > Race-mode rigor inversion + parallel-dispatch first"
         ),
     ),
+    # --- Operator-initiated 2026-05-19 ROSTER-MAINTENANCE-V2 additions (4-co-lead structure) ---
+    # Per operator verbatim 2026-05-19: *"rudin and debauchies should still be on
+    # the inner council, they co-lead with shannon and dykstra now"*. Rudin +
+    # Daubechies become the 3rd + 4th co-leads of the inner council; Shannon
+    # remains LEAD; Dykstra remains CO-LEAD. The 4 co-leads share decision-making
+    # authority on inner council deliberations; Yousfi/Fridrich/Contrarian/
+    # Quantizr/Hotz/Selfcomp/MacKay/Ballé/Assumption-Adversary/PR95Author provide
+    # domain-specific perspectives.
+    #
+    # Rudin's inner-council seat is canonical per Catalog #273-#278 (Rudin-
+    # Daubechies preflight composite); she is the interpretable-ML co-lead voice
+    # (falling-rule lists; GOSDT; SLIM; Wang-Rudin 2015 + Lin-Zhong-Hu-Hu-Rudin-
+    # Seltzer 2020). Daubechies retains her GRAND_COUNCIL seat per Catalog #110
+    # APPEND-ONLY (sister seats coexist); her inner-council seat is canonical
+    # per Catalog #277 (preflight_wavelet_multi_scale_contract). Together with
+    # Shannon (information theory) + Dykstra (optimization feasibility), the
+    # 4-co-lead structure covers the 4 axes that the meta-Lagrangian/Pareto
+    # solver + findings Lagrangian + canonical equations registry depend on:
+    # information-theory grounding (Shannon) + optimization feasibility (Dykstra)
+    # + interpretable ML (Rudin) + multi-scale wavelet partition prior
+    # (Daubechies).
+    CouncilSeat(
+        name="Rudin",
+        role="inner_council",
+        is_co_lead=True,
+        canonical_position_summary=(
+            "Cynthia Rudin — Duke University; interpretable ML pioneer; falling-rule "
+            "lists + GOSDT + SLIM canonical formulations (Ustun-Rudin 2016; Wang-Rudin "
+            "2015; Lin-Zhong-Hu-Hu-Rudin-Seltzer 2020). Per operator 2026-05-19 "
+            "verbatim 'rudin and debauchies should still be on the inner council, they "
+            "co-lead with shannon and dykstra now'. CO-LEAD on the inner council with "
+            "Shannon (information-theory) + Dykstra (optimization-feasibility) + "
+            "Daubechies (wavelets). Canonical position: interpretable models > black-box "
+            "neural networks; the autopilot ranker and preflight gate stack are direct "
+            "operationalizations of her interpretable-ML discipline; observability + "
+            "auditability + cite-chain are first-class engineering constraints; "
+            "explanations are CONTRACTS not optional. Sister of Daubechies (her PhD "
+            "mentor)."
+        ),
+        relevance_tokens=(
+            "rudin", "interpretable_ml", "falling_rule_lists", "gosdt", "slim",
+            "rashomon_ensemble", "decision_path", "explainability",
+            "cathedral_autopilot", "ranker", "preflight_composite", "pp_integration",
+            "co_lead", "inner_council_leadership",
+        ),
+        canonical_reference_path=(
+            "CLAUDE.md > Council conduct (2026-05-19 amendment); "
+            "Catalog #273-#278 (Rudin-Daubechies preflight composite); "
+            "Catalog #250-#255 (Rudin-Daubechies autopilot composite); "
+            "operator 2026-05-19 verbatim 'rudin and debauchies should still be on "
+            "the inner council, they co-lead with shannon and dykstra now'"
+        ),
+    ),
+    CouncilSeat(
+        name="Daubechies",
+        role="inner_council",
+        is_co_lead=True,
+        canonical_position_summary=(
+            "Ingrid Daubechies — Duke University; canonical wavelet theory + "
+            "compressive sensing (Daubechies 1988 hierarchical-planning + Daubechies-"
+            "DeVore-Fornasier-Gunturk 2010 compressive sensing). Per operator "
+            "2026-05-19 verbatim 'rudin and debauchies should still be on the inner "
+            "council, they co-lead with shannon and dykstra now'. CO-LEAD on the "
+            "inner council with Shannon (information-theory) + Dykstra (optimization-"
+            "feasibility) + Rudin (interpretable ML; her former PhD student). "
+            "Canonical position: wavelet-multi-scale prior on partition discovery + "
+            "closed-form for Gaussian regime + sister GRAND_COUNCIL entry preserved "
+            "per Catalog #110 APPEND-ONLY (inner_council and grand_council roles "
+            "coexist)."
+        ),
+        relevance_tokens=(
+            "daubechies", "wavelet", "wavelet_multi_scale_prior", "compressive_sensing",
+            "partition_discovery", "partition_discovery_hierarchy", "hierarchical_prior",
+            "multi_scale", "co_lead", "inner_council_leadership", "pp_integration",
+        ),
+        canonical_reference_path=(
+            "CLAUDE.md > Council conduct (2026-05-19 amendment); "
+            "Catalog #277 (preflight_wavelet_multi_scale_contract); "
+            "Catalog #254 (wavelet_multi_scale_ranker); "
+            "CLAUDE.md > Grand Council (advisory) (sister GRAND_COUNCIL seat preserved); "
+            "operator 2026-05-19 verbatim 'rudin and debauchies should still be on "
+            "the inner council, they co-lead with shannon and dykstra now'"
+        ),
+    ),
 )
 
 
-# CANONICAL GRAND COUNCIL — 20 seats per CLAUDE.md "Grand Council (advisory)":
+# CANONICAL GRAND COUNCIL — 22 seats per CLAUDE.md "Grand Council (advisory)":
 # 11 existing seats (since 2026-04-29) + 8 new seats (2026-05-15 expansion
 # including TimeTravelerProtege pending-identification) + TimeTraveler mentor
 # seat added 2026-05-19 per operator-initiated reframe (mysterious figure from
-# the future / alien-tech-influenced ego-motion theoretical-floor).
+# the future / alien-tech-influenced ego-motion theoretical-floor) + 2 sister
+# seats added 2026-05-19 ROSTER-MAINTENANCE-V2 (Rudin_Grand + Daubechies_Grand)
+# per Catalog #110 APPEND-ONLY coexistence discipline (inner-council co-leads
+# coexist as grand-council seats so topical-grand matching still surfaces them
+# on their specialty deliberations even when the deliberation is T3+ topic-
+# specific rather than T2+ all-inner).
 # Consulted on demand when their specialty is touched; not all decisions require
 # their sign-off but T3+ deliberations on relevant topics MUST include them.
 GRAND_COUNCIL: tuple[CouncilSeat, ...] = (
@@ -447,12 +581,26 @@ GRAND_COUNCIL: tuple[CouncilSeat, ...] = (
     CouncilSeat(
         name="TimeTravelerProtege",
         role="grand_council",
-        canonical_position_summary="Reserved seat for Time-Traveler protege; canonical identity pending operator decision",
+        canonical_position_summary=(
+            "Time-Traveler protege canonical identity RESOLVED to Rudin per "
+            "operator blanket approval 2026-05-19 verbatim *'all operator "
+            "decisions and approval granted and provided fuly and completely'* "
+            "+ convergence subagent's Daubechies → Rudin chain recommendation "
+            "per feedback_grand_council_convergence_l5_staircase_comprehensive_plan_plus_roster_expansion_landed_20260515.md "
+            "(the bold-but-internally-consistent chain). Sister entry "
+            "(see Rudin INNER_COUNCIL seat) IS the same canonical person; "
+            "this grand-council seat preserves the historical reservation per "
+            "Catalog #110 APPEND-ONLY HISTORICAL_PROVENANCE discipline. "
+            "Relevance lens: interpretable-ML / falling-rule-lists / SLIM / "
+            "Rashomon ensembles / GOSDT decision-paths (Rudin canonical works)."
+        ),
         relevance_tokens=(
             "time_traveler", "time_traveler_protege", "l5", "wavelet",
-            "rudin_lineage",
+            "rudin_lineage", "interpretable_ml", "falling_rule_lists",
+            "slim", "rashomon_ensemble", "gosdt", "rudin",
+            "canonical_identity_resolved_to_rudin_20260519",
         ),
-        canonical_reference_path="CLAUDE.md > Grand Council (advisory) > 8 new seats > Time-Traveler protégé",
+        canonical_reference_path="CLAUDE.md > Grand Council (advisory) > 8 new seats > Time-Traveler protégé (resolved to Rudin 2026-05-19)",
     ),
     # --- Operator-initiated 2026-05-19 addition (Time-Traveler mentor reframe) ---
     CouncilSeat(
@@ -485,6 +633,55 @@ GRAND_COUNCIL: tuple[CouncilSeat, ...] = (
             "(sister seat; this Time-Traveler seat is the mentor reframed per operator)"
         ),
     ),
+    # --- Operator-initiated 2026-05-19 ROSTER-MAINTENANCE-V2 additions (sister GRAND seats for INNER co-leads) ---
+    # Per Catalog #110 APPEND-ONLY + operator 2026-05-19 amendment, Rudin and
+    # Daubechies are 3rd + 4th INNER_COUNCIL co-leads (Shannon LEAD + Dykstra
+    # CO-LEAD + Rudin CO-LEAD + Daubechies CO-LEAD). Sister GRAND_COUNCIL seats
+    # preserved here because the docstring above + canonical_reference_path on
+    # the INNER seats both reference these as coexisting per the APPEND-ONLY
+    # discipline. The inner_council role does not displace the grand_council
+    # role; the seat coexists in both rosters so T3+ topical-grand matching can
+    # also surface them as relevant specialists.
+    CouncilSeat(
+        name="Rudin_Grand",
+        role="grand_council",
+        canonical_position_summary=(
+            "Cynthia Rudin (Duke) — Grand Council sister seat. Inner-council seat at "
+            "'Rudin' is the CO-LEAD seat per 2026-05-19 amendment; this GRAND seat "
+            "exists for topical-grand matching on interpretable-ML deliberations per "
+            "Catalog #110 APPEND-ONLY coexistence discipline."
+        ),
+        relevance_tokens=(
+            "rudin", "interpretable_ml", "falling_rule_lists", "gosdt", "slim",
+            "rashomon_ensemble", "decision_path", "explainability",
+            "cathedral_autopilot", "ranker", "preflight_composite",
+        ),
+        canonical_reference_path=(
+            "CLAUDE.md > Grand Council (advisory) (Rudin sister seat); "
+            "Catalog #273-#278 + #250-#255 (Rudin-Daubechies composites); "
+            "INNER_COUNCIL seat 'Rudin' is the canonical co-lead voice"
+        ),
+    ),
+    CouncilSeat(
+        name="Daubechies_Grand",
+        role="grand_council",
+        canonical_position_summary=(
+            "Ingrid Daubechies (Duke) — Grand Council sister seat. Inner-council seat "
+            "at 'Daubechies' is the CO-LEAD seat per 2026-05-19 amendment; this GRAND "
+            "seat exists for topical-grand matching on wavelet/multi-scale partition "
+            "deliberations per Catalog #110 APPEND-ONLY coexistence discipline."
+        ),
+        relevance_tokens=(
+            "daubechies", "wavelet", "wavelet_multi_scale_prior", "compressive_sensing",
+            "partition_discovery", "partition_discovery_hierarchy", "hierarchical_prior",
+            "multi_scale",
+        ),
+        canonical_reference_path=(
+            "CLAUDE.md > Grand Council (advisory) (Daubechies sister seat); "
+            "Catalog #277 + #254 (Daubechies wavelet composites); "
+            "INNER_COUNCIL seat 'Daubechies' is the canonical co-lead voice"
+        ),
+    ),
 )
 
 
@@ -504,6 +701,10 @@ class RosterValidationVerdict:
         complete: True iff dispatched roster satisfies tier+topic requirements
         missing_inner_council: names of inner-council seats not dispatched
             (BLOCKING per CLAUDE.md "Experiment design — non-negotiable" for T2+)
+        missing_co_leads: names of co-lead inner-council seats not dispatched
+            (BLOCKING at T2+ per CLAUDE.md "Council conduct" 2026-05-19 amendment;
+            ALL 4 co-leads — Shannon LEAD + Dykstra CO-LEAD + Rudin CO-LEAD +
+            Daubechies CO-LEAD — MUST be present at every T2+ deliberation)
         missing_relevant_grand_council: names of grand-council seats topically
             relevant but not dispatched (RECOMMENDED for T3+, BLOCKING when
             5+ relevant seats omitted on T3+ per "Grand Council (advisory)")
@@ -518,6 +719,7 @@ class RosterValidationVerdict:
     unknown_attendees: tuple[str, ...]
     topic_tokens: tuple[str, ...]
     council_tier: str
+    missing_co_leads: tuple[str, ...] = ()
 
     def render(self) -> str:
         """Operator-readable summary."""
@@ -525,6 +727,12 @@ class RosterValidationVerdict:
             f"RosterValidationVerdict(tier={self.council_tier}, complete={self.complete})",
             f"  topic_tokens: {list(self.topic_tokens)}",
         ]
+        if self.missing_co_leads:
+            lines.append(
+                f"  MISSING_CO_LEADS (blocking T2+): {list(self.missing_co_leads)} "
+                f"-- 4-co-lead structure (Shannon/Dykstra/Rudin/Daubechies) "
+                f"requires ALL 4 per CLAUDE.md 'Council conduct' 2026-05-19 amendment"
+            )
         if self.missing_inner_council:
             lines.append(
                 f"  MISSING_INNER_COUNCIL (blocking): {list(self.missing_inner_council)}"
@@ -592,12 +800,22 @@ def validate_council_dispatch_roster(
     conduct" non-negotiable: inner council MUST be present at every major
     deliberation.
 
-    Returns RosterValidationVerdict with `complete=False` iff any inner-council
-    seat is missing (T2+) OR 5+ topically-relevant grand-council seats are
-    missing (T3+). Per "Grand Council (advisory)": grand council members are
-    CONSULTED on demand; missing 1-4 may be acceptable depending on the
-    specialty match, but missing 5+ on a T3+ deliberation is a structural
-    under-rostering bug class instance.
+    Per CLAUDE.md "Council conduct" 2026-05-19 amendment (4-co-lead structure):
+    ALL 4 co-leads (Shannon LEAD + Dykstra CO-LEAD + Rudin CO-LEAD + Daubechies
+    CO-LEAD) MUST be present at every T2+ deliberation in addition to the
+    sextet's 5-of-6 quorum requirement. A T2+ deliberation missing ANY co-lead
+    is structurally incomplete because the shared-leadership core cannot reach
+    a binding decision without all 4 voices.
+
+    Returns RosterValidationVerdict with `complete=False` iff:
+      - any inner-council seat is missing (T2+; BLOCKING)
+      - any co-lead is missing (T2+; BLOCKING per 2026-05-19 amendment)
+      - 5+ topically-relevant grand-council seats are missing (T3+; structural
+        under-rostering bug class)
+
+    Per "Grand Council (advisory)": grand council members are CONSULTED on
+    demand; missing 1-4 may be acceptable depending on the specialty match,
+    but missing 5+ on a T3+ deliberation is structural under-rostering.
     """
     if council_tier not in ("T1", "T2", "T3", "T4"):
         raise ValueError(
@@ -619,24 +837,37 @@ def validate_council_dispatch_roster(
     missing_grand = tuple(
         seat.name for seat in required_grand if seat.name not in attendees
     )
+    # Per CLAUDE.md "Council conduct" 2026-05-19 amendment: compute the 4-co-lead
+    # subset of missing inner seats so the operator-facing verdict surfaces them
+    # distinctly. The shared-leadership core (Shannon LEAD + Dykstra CO-LEAD +
+    # Rudin CO-LEAD + Daubechies CO-LEAD) is BLOCKING at T2+; sister members
+    # are also blocking per the existing inner-council discipline but the
+    # co-lead omission is a structurally distinct alert.
+    missing_co_leads = tuple(
+        seat.name for seat in required_inner
+        if seat.is_co_lead and seat.name not in attendees
+    )
     unknown = tuple(
         name for name in sorted(attendees)
         if name not in _ALL_SEATS_BY_NAME
     )
-    # Complete: no inner missing (T2+ always blocking); grand missing OK up to
-    # 4 on T3 (advisory rule per "Grand Council (advisory)"); 5+ missing on T3+
-    # is structural under-rostering.
+    # Complete: no inner missing (T2+ always blocking; includes co-leads which
+    # are a subset); no co-leads missing (T2+ BLOCKING per 2026-05-19 amendment);
+    # grand missing OK up to 4 on T3 (advisory rule per "Grand Council
+    # (advisory)"); 5+ missing on T3+ is structural under-rostering.
     inner_complete = len(missing_inner) == 0
+    co_leads_complete = len(missing_co_leads) == 0
     grand_complete = True
     if council_tier in ("T3", "T4") and len(missing_grand) >= 5:
         grand_complete = False
     if council_tier == "T4" and len(missing_grand) > 0:
         # T4 symposium requires ALL grand-council seats.
         grand_complete = False
-    complete = inner_complete and grand_complete
+    complete = inner_complete and co_leads_complete and grand_complete
     return RosterValidationVerdict(
         complete=complete,
         missing_inner_council=missing_inner,
+        missing_co_leads=missing_co_leads,
         missing_relevant_grand_council=missing_grand,
         unknown_attendees=unknown,
         topic_tokens=tokens,
