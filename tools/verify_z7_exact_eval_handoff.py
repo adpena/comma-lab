@@ -15,6 +15,7 @@ import hashlib
 import json
 import shlex
 import stat
+import struct
 import zipfile
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -38,6 +39,15 @@ KNOWN_SUBSTRATE_PAIR_GROUP_IDS = {
 }
 REQUIRED_PAIR_COUNT = 600
 HEX_DIGITS = set("0123456789abcdefABCDEF")
+Z7_MAMBA2_SUBSTRATE_ID = "time_traveler_l5_z7_mamba2"
+Z7MCM2_MAGIC = b"Z7M2"
+Z7MCM2_SCHEMA_VERSION = 1
+Z7MCM2_HEADER_FMT = "<4sBHHHHBBBBIIIIIII"
+Z7MCM2_HEADER_SIZE = struct.calcsize(Z7MCM2_HEADER_FMT)
+CAMERA_HW = (874, 1164)
+RUNTIME_GEOMETRY_POSITIVE_CONTROL_SCHEMA = (
+    "z7_mamba2_runtime_geometry_positive_control_v1"
+)
 
 
 def _utc_now() -> str:
@@ -125,6 +135,70 @@ def _zip_member_rows(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     return rows, blockers
 
 
+def _parse_z7mcm2_header_meta(archive_bytes: bytes) -> dict[str, int]:
+    """Parse geometry fields from a raw Z7MCM2 ``0.bin`` member."""
+    if len(archive_bytes) < Z7MCM2_HEADER_SIZE:
+        raise ValueError(
+            f"z7mcm2 archive too short: {len(archive_bytes)} < {Z7MCM2_HEADER_SIZE}"
+        )
+    header = struct.unpack(Z7MCM2_HEADER_FMT, archive_bytes[:Z7MCM2_HEADER_SIZE])
+    magic = header[0]
+    version = int(header[1])
+    latent_dim = int(header[2])
+    ego_dim = int(header[3])
+    num_pairs = int(header[4])
+    (
+        encoder_len,
+        decoder_len,
+        predictor_len,
+        latent_init_len,
+        residuals_len,
+        ego_len,
+        meta_len,
+    ) = (int(value) for value in header[10:17])
+    if magic != Z7MCM2_MAGIC:
+        raise ValueError(f"z7mcm2 bad magic: {magic!r}")
+    if version != Z7MCM2_SCHEMA_VERSION:
+        raise ValueError(f"z7mcm2 unsupported schema version: {version}")
+    if latent_init_len != latent_dim:
+        raise ValueError("z7mcm2 latent_init_len != latent_dim")
+    if residuals_len != num_pairs * latent_dim:
+        raise ValueError("z7mcm2 residuals_len != num_pairs*latent_dim")
+    if ego_len != num_pairs * ego_dim:
+        raise ValueError("z7mcm2 ego_motion_len != num_pairs*ego_motion_dim")
+    meta_start = (
+        Z7MCM2_HEADER_SIZE
+        + encoder_len
+        + decoder_len
+        + predictor_len
+        + latent_init_len
+        + residuals_len
+        + ego_len
+    )
+    meta_end = meta_start + meta_len
+    if meta_end != len(archive_bytes):
+        raise ValueError(
+            f"z7mcm2 archive size {len(archive_bytes)} != expected {meta_end}"
+        )
+    meta = json.loads(archive_bytes[meta_start:meta_end].decode("utf-8"))
+    return {
+        "num_pairs": num_pairs,
+        "output_height": int(meta["output_height"]),
+        "output_width": int(meta["output_width"]),
+    }
+
+
+def _read_single_z7mcm2_header_from_zip(path: Path) -> dict[str, int]:
+    """Read and parse the single ``0.bin`` Z7MCM2 member from an archive zip."""
+    with zipfile.ZipFile(path) as zf:
+        members = [info for info in zf.infolist() if not info.is_dir()]
+        if len(members) != 1:
+            raise ValueError(f"expected one zip member, got {len(members)}")
+        if members[0].filename != "0.bin":
+            raise ValueError(f"expected 0.bin zip member, got {members[0].filename!r}")
+        return _parse_z7mcm2_header_meta(zf.read(members[0].filename))
+
+
 def _archive_status(
     *,
     repo_root: Path,
@@ -132,6 +206,7 @@ def _archive_status(
     path_value: str,
     expected_bytes: Any,
     expected_sha256: Any,
+    parse_z7mcm2_header: bool = False,
 ) -> dict[str, Any]:
     path = _resolve_repo_path(repo_root, path_value)
     blockers: list[str] = []
@@ -139,6 +214,7 @@ def _archive_status(
     zip_rows: list[dict[str, Any]] = []
     actual_bytes: int | None = None
     actual_sha: str | None = None
+    z7mcm2_header: dict[str, int] | None = None
     if not exists:
         blockers.append(f"z7_exact_handoff_{mode}_archive_zip_missing")
     else:
@@ -154,6 +230,14 @@ def _archive_status(
             blockers.append(f"z7_exact_handoff_{mode}_archive_bytes_mismatch")
         if expected_sha256 and str(expected_sha256).lower() != str(actual_sha).lower():
             blockers.append(f"z7_exact_handoff_{mode}_archive_sha256_mismatch")
+        if parse_z7mcm2_header:
+            try:
+                z7mcm2_header = _read_single_z7mcm2_header_from_zip(path)
+            except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+                blockers.append(
+                    "z7_exact_handoff_"
+                    f"{mode}_z7mcm2_header_meta_invalid:{type(exc).__name__}"
+                )
     return {
         "mode": mode,
         "zip_path": path_value,
@@ -163,6 +247,7 @@ def _archive_status(
         "expected_zip_bytes": expected_bytes,
         "expected_zip_sha256": expected_sha256,
         "zip_member_rows": zip_rows,
+        "z7mcm2_header": z7mcm2_header,
         "blockers": blockers,
     }
 
@@ -216,6 +301,176 @@ def _runtime_custody(repo_root: Path, runtime_dir_value: str) -> dict[str, Any]:
         "records": records,
         "blockers": blockers,
     }
+
+
+def _is_z7_mamba2_stats(stats: Mapping[str, Any], substrate_id: str) -> bool:
+    return (
+        substrate_id == Z7_MAMBA2_SUBSTRATE_ID
+        or stats.get("name") == "z7_mamba2_full_main_export_stats"
+    )
+
+
+def _int_pair(value: Any) -> list[int] | None:
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return None
+    if not all(isinstance(item, int) for item in value):
+        return None
+    return [int(value[0]), int(value[1])]
+
+
+def _is_hex_sha256(value: Any) -> bool:
+    raw = str(value or "")
+    return len(raw) == 64 and all(char in HEX_DIGITS for char in raw)
+
+
+def _runtime_geometry_positive_control_blockers(
+    *,
+    stats: Mapping[str, Any],
+    static: Mapping[str, Any],
+    config: Mapping[str, Any],
+    inflate_verify: Any,
+    recurrent: Mapping[str, Any],
+    static_row: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Validate Z7-Mamba2 geometry positive-control against real archive headers."""
+    blockers: list[str] = []
+    block = stats.get("runtime_geometry_positive_control")
+    if not isinstance(block, Mapping):
+        return None, ["z7_exact_handoff_runtime_geometry_positive_control_missing"]
+
+    normalized_block = dict(block)
+    if block.get("schema") != RUNTIME_GEOMETRY_POSITIVE_CONTROL_SCHEMA:
+        blockers.append("z7_exact_handoff_runtime_geometry_positive_control_bad_schema")
+
+    recurrent_header = recurrent.get("z7mcm2_header")
+    static_header = static_row.get("z7mcm2_header")
+    if not isinstance(recurrent_header, Mapping):
+        blockers.append("z7_exact_handoff_recurrent_z7mcm2_header_missing")
+    if not isinstance(static_header, Mapping):
+        blockers.append("z7_exact_handoff_static_control_z7mcm2_header_missing")
+    if (
+        isinstance(recurrent_header, Mapping)
+        and isinstance(static_header, Mapping)
+        and dict(recurrent_header) != dict(static_header)
+    ):
+        blockers.append(
+            "z7_exact_handoff_recurrent_static_z7mcm2_header_mismatch"
+        )
+
+    archive_header = block.get("archive_header")
+    if not isinstance(archive_header, Mapping):
+        blockers.append(
+            "z7_exact_handoff_runtime_geometry_archive_header_missing"
+        )
+        archive_header = {}
+    if isinstance(recurrent_header, Mapping):
+        for key in ("num_pairs", "output_height", "output_width"):
+            if archive_header.get(key) != recurrent_header.get(key):
+                blockers.append(
+                    "z7_exact_handoff_runtime_geometry_"
+                    f"archive_header_{key}_mismatch"
+                )
+
+    num_pairs = block.get("num_pairs")
+    if not isinstance(num_pairs, int) or num_pairs <= 0:
+        blockers.append("z7_exact_handoff_runtime_geometry_num_pairs_invalid")
+        num_pairs = recurrent_header.get("num_pairs") if isinstance(
+            recurrent_header, Mapping
+        ) else config.get("num_pairs")
+    if isinstance(num_pairs, int):
+        if config.get("num_pairs") != num_pairs:
+            blockers.append(
+                "z7_exact_handoff_runtime_geometry_config_num_pairs_mismatch"
+            )
+        if isinstance(recurrent_header, Mapping) and recurrent_header.get(
+            "num_pairs"
+        ) != num_pairs:
+            blockers.append(
+                "z7_exact_handoff_runtime_geometry_header_num_pairs_mismatch"
+            )
+
+    render_hw = _int_pair(block.get("render_hw"))
+    if render_hw is None:
+        blockers.append("z7_exact_handoff_runtime_geometry_render_hw_invalid")
+    elif isinstance(recurrent_header, Mapping) and render_hw != [
+        recurrent_header.get("output_height"),
+        recurrent_header.get("output_width"),
+    ]:
+        blockers.append("z7_exact_handoff_runtime_geometry_render_hw_mismatch")
+
+    camera_hw = _int_pair(block.get("camera_hw"))
+    if camera_hw is None:
+        blockers.append("z7_exact_handoff_runtime_geometry_camera_hw_invalid")
+        camera_hw = [CAMERA_HW[0], CAMERA_HW[1]]
+    elif camera_hw != [CAMERA_HW[0], CAMERA_HW[1]]:
+        blockers.append("z7_exact_handoff_runtime_geometry_camera_hw_mismatch")
+
+    if isinstance(num_pairs, int) and camera_hw is not None:
+        expected_frames = int(num_pairs) * 2
+        expected_raw_bytes = (
+            expected_frames * 3 * int(camera_hw[0]) * int(camera_hw[1])
+        )
+        if block.get("expected_frames_written") != expected_frames:
+            blockers.append(
+                "z7_exact_handoff_runtime_geometry_expected_frames_mismatch"
+            )
+        if block.get("expected_raw_bytes") != expected_raw_bytes:
+            blockers.append(
+                "z7_exact_handoff_runtime_geometry_expected_raw_bytes_mismatch"
+            )
+        if isinstance(inflate_verify, Mapping) and not inflate_verify.get(
+            "verify_failed"
+        ):
+            if inflate_verify.get("frames_written") != expected_frames:
+                blockers.append(
+                    "z7_exact_handoff_runtime_geometry_recurrent_frames_mismatch"
+                )
+            if inflate_verify.get("raw_bytes") != expected_raw_bytes:
+                blockers.append(
+                    "z7_exact_handoff_runtime_geometry_recurrent_raw_bytes_mismatch"
+                )
+        if static.get("inflate_verify_frames_written") != expected_frames:
+            blockers.append(
+                "z7_exact_handoff_runtime_geometry_static_frames_mismatch"
+            )
+        if static.get("inflate_verify_raw_bytes") != expected_raw_bytes:
+            blockers.append(
+                "z7_exact_handoff_runtime_geometry_static_raw_bytes_mismatch"
+            )
+
+        sample_pair_indices = block.get("sample_pair_indices")
+        if not isinstance(sample_pair_indices, list) or not sample_pair_indices or any(
+            not isinstance(idx, int) or idx < 0 or idx >= int(num_pairs)
+            for idx in sample_pair_indices
+        ):
+            blockers.append(
+                "z7_exact_handoff_runtime_geometry_sample_pair_indices_invalid"
+            )
+
+    recurrent_sample_sha = block.get("recurrent_sampled_raw_sha256")
+    static_sample_sha = block.get("static_sampled_raw_sha256")
+    if not _is_hex_sha256(recurrent_sample_sha):
+        blockers.append(
+            "z7_exact_handoff_runtime_geometry_recurrent_sample_sha_invalid"
+        )
+    if not _is_hex_sha256(static_sample_sha):
+        blockers.append(
+            "z7_exact_handoff_runtime_geometry_static_sample_sha_invalid"
+        )
+    if block.get("recurrent_static_sample_changed") is not True:
+        blockers.append(
+            "z7_exact_handoff_runtime_geometry_recurrent_static_sample_not_changed"
+        )
+    if (
+        _is_hex_sha256(recurrent_sample_sha)
+        and _is_hex_sha256(static_sample_sha)
+        and str(recurrent_sample_sha).lower() == str(static_sample_sha).lower()
+    ):
+        blockers.append(
+            "z7_exact_handoff_runtime_geometry_recurrent_static_sample_sha_equal"
+        )
+
+    return normalized_block, blockers
 
 
 def _paired_dispatch_command(
@@ -329,6 +584,7 @@ def build_packet(
     lane_id = identity["lane_id"]
     substrate_id = identity["substrate_id"]
     pair_group_id = identity["pair_group_id"]
+    requires_z7mcm2_geometry = _is_z7_mamba2_stats(stats, substrate_id)
 
     static = stats.get("static_capacity_control")
     if not isinstance(static, Mapping):
@@ -386,6 +642,7 @@ def build_packet(
         path_value=str(stats.get("archive_zip_path") or ""),
         expected_bytes=stats.get("archive_zip_bytes"),
         expected_sha256=stats.get("archive_zip_sha256"),
+        parse_z7mcm2_header=requires_z7mcm2_geometry,
     )
     static_row = _archive_status(
         repo_root=repo_root,
@@ -393,9 +650,25 @@ def build_packet(
         path_value=str(static.get("archive_zip_path") or ""),
         expected_bytes=static.get("archive_zip_bytes"),
         expected_sha256=static.get("archive_zip_sha256"),
+        parse_z7mcm2_header=requires_z7mcm2_geometry,
     )
     for row in (recurrent, static_row):
         blockers.extend(row.get("blockers") or [])
+
+    runtime_geometry_positive_control: dict[str, Any] | None = None
+    if requires_z7mcm2_geometry:
+        (
+            runtime_geometry_positive_control,
+            runtime_geometry_blockers,
+        ) = _runtime_geometry_positive_control_blockers(
+            stats=stats,
+            static=static,
+            config=config,
+            inflate_verify=inflate_verify,
+            recurrent=recurrent,
+            static_row=static_row,
+        )
+        blockers.extend(runtime_geometry_blockers)
 
     if recurrent.get("zip_bytes") != static_row.get("zip_bytes"):
         blockers.append("z7_exact_handoff_recurrent_static_archive_byte_count_mismatch")
@@ -527,6 +800,7 @@ def build_packet(
             "runtime_output_changed_vs_recurrent"
         ),
         "runtime_output_byte_differences_vs_recurrent": byte_diff,
+        "runtime_geometry_positive_control": runtime_geometry_positive_control,
         "runtime_custody": runtime,
         "modal_plan_commands_for_current_packet": plan_commands,
         "modal_execute_commands_after_ratified_full_packet": execute_commands,

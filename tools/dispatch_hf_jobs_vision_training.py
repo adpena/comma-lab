@@ -176,6 +176,7 @@ def plan_dispatch(
     lane_id: str = "lane_hf_jobs_segnet_surrogate_distillation_20260519",
     label: str = "hf_jobs_segnet_surrogate_distillation_first_smoke",
     recipe_path: Path | None = None,
+    dataset_revision: str | None = None,
     extra_script_args: list[str] | None = None,
 ) -> HFJobsDispatchPlan:
     """Resolve a complete HF Jobs dispatch plan.
@@ -225,6 +226,8 @@ def plan_dispatch(
         "--logging_steps", "10",
         "--seed", "42",
     ]
+    if dataset_revision:
+        script_args.extend(["--dataset_revision", dataset_revision])
     if extra_script_args:
         script_args.extend(extra_script_args)
 
@@ -412,6 +415,7 @@ def main(argv: list[str] | None = None) -> int:
         lane_id=args.lane_id,
         label=args.label,
         recipe_path=args.recipe,
+        dataset_revision=args.hub_dataset_sha,
         extra_script_args=args.extra_script_arg,
     )
 

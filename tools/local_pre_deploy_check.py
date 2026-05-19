@@ -125,7 +125,15 @@ def _is_tool_dispatch_for_harness(
                 kind = m.group(1).strip().lower()
                 if kind == "tool":
                     return True
-                if kind == "substrate":
+                if kind == "hf_jobs_research_surrogate":
+                    return bool(
+                        re.search(
+                            r"^\s*platform\s*:\s*['\"]?hf_jobs\b",
+                            recipe_text,
+                            re.M,
+                        )
+                    )
+                if kind in {"substrate", "local_research_signal"}:
                     return False
     try:
         rel = trainer.resolve().relative_to(REPO_ROOT.resolve())
@@ -147,6 +155,40 @@ def _is_tool_dispatch_for_harness(
 _LOCAL_RESEARCH_SIGNAL_PLATFORMS = frozenset({"local_mps", "local_cpu"})
 
 
+def _recipe_text_for_harness(recipe: str | None) -> str:
+    """Load an operator-authorize recipe body for harness-only classification."""
+
+    if recipe is None:
+        return ""
+    candidate_recipe_paths = [
+        REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}.yaml",
+        REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}",
+    ]
+    recipe_path = next((p for p in candidate_recipe_paths if p.is_file()), None)
+    if recipe_path is None:
+        return ""
+    try:
+        return recipe_path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _is_hf_jobs_research_surrogate_dispatch_for_harness(recipe: str | None) -> bool:
+    """Return True for the explicit HF Jobs advisory-surrogate dispatch kind."""
+
+    recipe_text = _recipe_text_for_harness(recipe)
+    if not recipe_text:
+        return False
+    return bool(
+        re.search(
+            r"^\s*dispatch_kind\s*:\s*['\"]?hf_jobs_research_surrogate\b",
+            recipe_text,
+            re.M,
+        )
+        and re.search(r"^\s*platform\s*:\s*['\"]?hf_jobs\b", recipe_text, re.M)
+    )
+
+
 def _is_local_research_signal_dispatch_for_harness(
     trainer: Path, recipe: str | None
 ) -> bool:
@@ -158,16 +200,8 @@ def _is_local_research_signal_dispatch_for_harness(
     """
     if recipe is None:
         return False
-    candidate_recipe_paths = [
-        REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}.yaml",
-        REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}",
-    ]
-    recipe_path = next((p for p in candidate_recipe_paths if p.is_file()), None)
-    if recipe_path is None:
-        return False
-    try:
-        recipe_text = recipe_path.read_text(encoding="utf-8")
-    except OSError:
+    recipe_text = _recipe_text_for_harness(recipe)
+    if not recipe_text:
         return False
     m_kind = re.search(
         r"^\s*dispatch_kind\s*:\s*['\"]?(\w+)", recipe_text, re.M
@@ -855,11 +889,16 @@ def main() -> int:
 
     label = args.recipe or trainer.name
     is_tool = _is_tool_dispatch_for_harness(trainer, args.recipe)
+    is_hf_jobs_research_surrogate = _is_hf_jobs_research_surrogate_dispatch_for_harness(
+        args.recipe
+    )
     is_local_research_signal = _is_local_research_signal_dispatch_for_harness(
         trainer, args.recipe
     )
     if is_local_research_signal:
         kind_banner = "local_research_signal"
+    elif is_hf_jobs_research_surrogate:
+        kind_banner = "hf_jobs_research_surrogate"
     elif is_tool:
         kind_banner = "tool"
     else:
@@ -878,6 +917,14 @@ def main() -> int:
             "non-authoritative per CLAUDE.md 'MPS auth eval is NOISE' + "
             "Catalog #1 + #192 non-negotiables."
         )
+    elif is_hf_jobs_research_surrogate:
+        print(
+            "[local-pre-deploy] HF Jobs research-surrogate dispatch detected; "
+            "substrate-only contest-archive checks "
+            f"{sorted(_TOOL_DISPATCH_SKIPPED_CHECKS)} will be skipped, while "
+            "the explicit non-promotional surrogate contract is enforced by "
+            "the dispatch protocol and recipe provenance gates."
+        )
     elif is_tool:
         print(
             "[local-pre-deploy] tool dispatch detected (Catalog #270 scope "
@@ -893,6 +940,14 @@ def main() -> int:
                 "only check; not applicable to local research-signal "
                 "dispatches per lane_one_arg_local_mps_vs_modal_dispatch_"
                 "switch_20260517 (2026-05-17)."
+            )
+            continue
+        if is_hf_jobs_research_surrogate and name in _TOOL_DISPATCH_SKIPPED_CHECKS:
+            print(
+                f"  ⊘ [{name}] SKIPPED-FOR-HF-JOBS-RESEARCH-SURROGATE: "
+                "contest-archive-only check; not applicable to advisory "
+                "HF Jobs surrogate training. Non-promotional authority is "
+                "enforced by recipe provenance gates."
             )
             continue
         if is_tool and name in _TOOL_DISPATCH_SKIPPED_CHECKS:

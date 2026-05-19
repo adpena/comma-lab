@@ -125,6 +125,36 @@ def test_is_tool_dispatch_returns_true_when_dispatch_kind_tool_explicit(
     )
 
 
+def test_is_tool_dispatch_returns_true_for_hf_jobs_research_surrogate_kind(
+    tmp_path: Path,
+) -> None:
+    trainer = tmp_path / "experiments" / "hf_jobs_surrogate.py"
+    _write_minimal_tool(trainer)
+    assert (
+        is_tool_dispatch(
+            {"dispatch_kind": "hf_jobs_research_surrogate", "platform": "hf_jobs"},
+            trainer_path=trainer,
+            repo_root=tmp_path,
+        )
+        is True
+    )
+
+
+def test_is_tool_dispatch_rejects_hf_jobs_surrogate_kind_on_wrong_platform(
+    tmp_path: Path,
+) -> None:
+    trainer = tmp_path / "experiments" / "hf_jobs_surrogate.py"
+    _write_minimal_tool(trainer)
+    assert (
+        is_tool_dispatch(
+            {"dispatch_kind": "hf_jobs_research_surrogate", "platform": "modal"},
+            trainer_path=trainer,
+            repo_root=tmp_path,
+        )
+        is False
+    )
+
+
 def test_is_tool_dispatch_returns_false_when_dispatch_kind_substrate_explicit(
     tmp_path: Path,
 ) -> None:
@@ -161,7 +191,17 @@ def test_is_tool_dispatch_returns_false_for_path_outside_repo(
 
 
 def test_legal_dispatch_kinds_pinned() -> None:
-    assert frozenset({"substrate", "tool", "local_research_signal"}) == LEGAL_DISPATCH_KINDS
+    assert (
+        frozenset(
+            {
+                "substrate",
+                "tool",
+                "local_research_signal",
+                "hf_jobs_research_surrogate",
+            }
+        )
+        == LEGAL_DISPATCH_KINDS
+    )
 
 
 def test_tool_dispatch_legal_gpu_tokens_pinned() -> None:

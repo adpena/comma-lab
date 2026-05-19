@@ -63,6 +63,7 @@ if str(REPO_ROOT / "src") not in sys.path:
 
 import hashlib
 import shutil
+import struct
 import time
 import zipfile
 
@@ -74,12 +75,18 @@ from tac.optimization.mamba2_predictor import (
     Mamba2Predictor,
     Mamba2PredictorConfig,
 )
+from tac.substrates._shared.inflate_runtime import CAMERA_HW
 from tac.substrates.time_traveler_l5_z7_mamba2 import (
+    Z7MCM2_HEADER_FMT,
+    Z7MCM2_HEADER_SIZE,
+    Z7MCM2_MAGIC,
+    Z7MCM2_SCHEMA_VERSION,
     Z7Mamba2PredictiveCodingConfig,
     Z7Mamba2PredictiveCodingLossWeights,
     Z7Mamba2PredictiveCodingScoreAwareLoss,
     Z7Mamba2PredictiveCodingSubstrate,
     pack_archive,
+    parse_z7mcm2_archive_bytes,
 )
 from tac.substrates.time_traveler_l5_z7_mamba2.inflate import inflate_one_video
 
@@ -920,6 +927,116 @@ def _iter_pair_slices(num_pairs: int, pair_chunk_size: int) -> list[tuple[int, i
     ]
 
 
+def _z7mcm2_archive_header_summary(archive_bytes: bytes) -> dict[str, int]:
+    """Return geometry-bearing header/meta fields from actual Z7MCM2 bytes."""
+    if len(archive_bytes) < Z7MCM2_HEADER_SIZE:
+        raise ValueError(
+            f"Z7MCM2 archive too short for header: {len(archive_bytes)} bytes"
+        )
+    header = struct.unpack(
+        Z7MCM2_HEADER_FMT,
+        archive_bytes[:Z7MCM2_HEADER_SIZE],
+    )
+    magic = header[0]
+    version = int(header[1])
+    num_pairs = int(header[4])
+    if magic != Z7MCM2_MAGIC:
+        raise ValueError(f"Z7MCM2 bad magic in runtime geometry block: {magic!r}")
+    if version != Z7MCM2_SCHEMA_VERSION:
+        raise ValueError(
+            "Z7MCM2 unsupported schema version in runtime geometry block: "
+            f"{version}"
+        )
+    sections = parse_z7mcm2_archive_bytes(archive_bytes)
+    meta_start, meta_len = sections["meta_blob"]
+    meta = json.loads(
+        archive_bytes[meta_start : meta_start + meta_len].decode("utf-8")
+    )
+    return {
+        "num_pairs": num_pairs,
+        "output_height": int(meta["output_height"]),
+        "output_width": int(meta["output_width"]),
+    }
+
+
+def _runtime_geometry_sample_pair_indices(num_pairs: int) -> list[int]:
+    """Choose deterministic pair-level raw-output samples across the sequence."""
+    if int(num_pairs) <= 0:
+        raise ValueError(f"num_pairs must be positive; got {num_pairs}")
+    return sorted({0, int(num_pairs) // 2, int(num_pairs) - 1})
+
+
+def _sampled_raw_sha256(
+    raw_bytes: bytes,
+    *,
+    sample_pair_indices: list[int],
+    num_pairs: int,
+    camera_hw: tuple[int, int],
+) -> str:
+    """Hash selected pair-sized raw byte windows without changing evidence axis."""
+    camera_h, camera_w = int(camera_hw[0]), int(camera_hw[1])
+    frame_bytes = 3 * camera_h * camera_w
+    pair_bytes = 2 * frame_bytes
+    expected_raw_bytes = int(num_pairs) * pair_bytes
+    if len(raw_bytes) != expected_raw_bytes:
+        raise ValueError(
+            "runtime geometry positive-control raw byte length mismatch: "
+            f"got {len(raw_bytes)} expected {expected_raw_bytes}"
+        )
+    digest = hashlib.sha256()
+    for pair_idx in sample_pair_indices:
+        if int(pair_idx) < 0 or int(pair_idx) >= int(num_pairs):
+            raise ValueError(
+                "runtime geometry sample_pair_indices out of range: "
+                f"{pair_idx} for num_pairs={num_pairs}"
+            )
+        start = int(pair_idx) * pair_bytes
+        digest.update(raw_bytes[start : start + pair_bytes])
+    return digest.hexdigest()
+
+
+def _build_runtime_geometry_positive_control(
+    *,
+    archive_bytes: bytes,
+    recurrent_raw_bytes: bytes,
+    static_raw_bytes: bytes,
+    num_pairs: int,
+    render_hw: tuple[int, int],
+    camera_hw: tuple[int, int] = CAMERA_HW,
+) -> dict[str, object]:
+    """Build the Z7-Mamba-2 runtime geometry positive-control stats block."""
+    sample_pair_indices = _runtime_geometry_sample_pair_indices(num_pairs)
+    expected_frames_written = int(num_pairs) * 2
+    expected_raw_bytes = (
+        expected_frames_written * 3 * int(camera_hw[0]) * int(camera_hw[1])
+    )
+    recurrent_sample_sha = _sampled_raw_sha256(
+        recurrent_raw_bytes,
+        sample_pair_indices=sample_pair_indices,
+        num_pairs=num_pairs,
+        camera_hw=camera_hw,
+    )
+    static_sample_sha = _sampled_raw_sha256(
+        static_raw_bytes,
+        sample_pair_indices=sample_pair_indices,
+        num_pairs=num_pairs,
+        camera_hw=camera_hw,
+    )
+    return {
+        "schema": "z7_mamba2_runtime_geometry_positive_control_v1",
+        "num_pairs": int(num_pairs),
+        "render_hw": [int(render_hw[0]), int(render_hw[1])],
+        "camera_hw": [int(camera_hw[0]), int(camera_hw[1])],
+        "expected_frames_written": expected_frames_written,
+        "expected_raw_bytes": expected_raw_bytes,
+        "sample_pair_indices": sample_pair_indices,
+        "recurrent_sampled_raw_sha256": recurrent_sample_sha,
+        "static_sampled_raw_sha256": static_sample_sha,
+        "recurrent_static_sample_changed": recurrent_sample_sha != static_sample_sha,
+        "archive_header": _z7mcm2_archive_header_summary(archive_bytes),
+    }
+
+
 def _static_control_archive_pair(
     *,
     model: Z7Mamba2PredictiveCodingSubstrate,
@@ -1663,6 +1780,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
     # Stage 7: optional inflate verify
     inflate_verify: dict[str, object] | None = None
+    runtime_geometry_positive_control: dict[str, object] | None = None
     stage_started_at = time.perf_counter()
     if _boolish(args.inflate_verify):
         verify_raw = output_dir / "inflate_verify" / "0.raw"
@@ -1673,12 +1791,13 @@ def _full_main(args: argparse.Namespace) -> int:
                 verify_raw,
                 device=verify_device,
             )
+            recurrent_raw_bytes = verify_raw.read_bytes()
             inflate_verify = {
                 "device": verify_device,
                 "raw_path": str(verify_raw),
                 "frames_written": int(frames),
                 "raw_bytes": verify_raw.stat().st_size,
-                "raw_sha256": _sha256_bytes(verify_raw.read_bytes()),
+                "raw_sha256": _sha256_bytes(recurrent_raw_bytes),
             }
             if static_control_bytes is not None and isinstance(static_control, dict):
                 control_raw = output_dir / "inflate_verify" / "static_control.raw"
@@ -1689,7 +1808,6 @@ def _full_main(args: argparse.Namespace) -> int:
                 )
                 control_raw_bytes = control_raw.read_bytes()
                 control_sha = _sha256_bytes(control_raw_bytes)
-                recurrent_raw_bytes = verify_raw.read_bytes()
                 byte_differences = sum(
                     a != b
                     for a, b in zip(
@@ -1708,6 +1826,15 @@ def _full_main(args: argparse.Namespace) -> int:
                     ),
                     "runtime_output_byte_differences_vs_recurrent": int(byte_differences),
                 })
+                runtime_geometry_positive_control = (
+                    _build_runtime_geometry_positive_control(
+                        archive_bytes=archive_bytes,
+                        recurrent_raw_bytes=recurrent_raw_bytes,
+                        static_raw_bytes=control_raw_bytes,
+                        num_pairs=cfg.num_pairs,
+                        render_hw=(cfg.output_height, cfg.output_width),
+                    )
+                )
         except Exception as e:  # pragma: no cover - defensive
             inflate_verify = {"verify_failed": str(e)}
     stage_wall_seconds["inflate_verify_seconds"] = time.perf_counter() - stage_started_at
@@ -1782,6 +1909,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "static_capacity_control": static_control,
         "submission_runtime_dir": str(submission_dir),
         "inflate_verify": inflate_verify,
+        "runtime_geometry_positive_control": runtime_geometry_positive_control,
         "timing_smoke": timing_smoke,
         "memory_telemetry": memory_telemetry,
         "device_runtime_contract": device_contract,

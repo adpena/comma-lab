@@ -109,7 +109,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # universal eval-memory-hygiene check. Sister of
 # ``src/tac/deploy/dispatch_protocol.py::is_tool_dispatch`` (same detection
 # rule applied at the operator-authorize layer).
-LEGAL_DISPATCH_KINDS = frozenset({"substrate", "tool", "local_research_signal"})
+LEGAL_DISPATCH_KINDS = frozenset(
+    {"substrate", "tool", "local_research_signal", "hf_jobs_research_surrogate"}
+)
 TOOL_DISPATCH_LEGAL_GPU_TOKENS = frozenset({"cpu", "CPU", "Cpu"})
 LOCAL_RESEARCH_SIGNAL_PLATFORMS = frozenset({"local_mps", "local_cpu"})
 
@@ -131,7 +133,15 @@ def _is_tool_dispatch(trainer_path: Path, *, recipe_text: str = "") -> bool:
             value = m.group(1).strip().lower()
             if value == "tool":
                 return True
-            if value == "substrate":
+            if value == "hf_jobs_research_surrogate":
+                return bool(
+                    re.search(
+                        r"^\s*platform\s*:\s*['\"]?hf_jobs\b",
+                        recipe_text,
+                        re.M,
+                    )
+                )
+            if value in {"substrate", "local_research_signal"}:
                 return False
     try:
         rel = trainer_path.resolve().relative_to(REPO_ROOT.resolve())

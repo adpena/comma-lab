@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import shlex
 import stat
+import struct
 import sys
 import zipfile
 from pathlib import Path
@@ -13,6 +15,8 @@ if str(REPO_ROOT / "tools") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 import verify_z7_exact_eval_handoff as handoff  # noqa: E402
+
+Z7_MAMBA2_SUBSTRATE_ID = "time_traveler_l5_z7_mamba2"
 
 
 def _sha256(path: Path) -> str:
@@ -32,6 +36,106 @@ def _write_zip(path: Path, payload: bytes) -> tuple[int, str]:
     return path.stat().st_size, _sha256(path)
 
 
+def _z7mcm2_payload(
+    *,
+    num_pairs: int,
+    output_height: int = 16,
+    output_width: int = 16,
+    tag: str = "R",
+    identity_predictor: bool = False,
+) -> bytes:
+    latent_dim = 2
+    ego_dim = 1
+    d_model = 4
+    d_state = 1
+    expand = 1
+    d_conv = 1
+    flags = 2 if identity_predictor else 0
+    encoder_blob = b""
+    decoder_blob = b""
+    predictor_blob = b"P"
+    latent_init_blob = bytes([1] * latent_dim)
+    residuals_blob = bytes([2] * (num_pairs * latent_dim))
+    ego_blob = bytes([3] * (num_pairs * ego_dim))
+    meta_blob = json.dumps(
+        {
+            "output_height": output_height,
+            "output_width": output_width,
+            "fixture_tag": tag,
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    header = struct.pack(
+        handoff.Z7MCM2_HEADER_FMT,
+        handoff.Z7MCM2_MAGIC,
+        handoff.Z7MCM2_SCHEMA_VERSION,
+        latent_dim,
+        ego_dim,
+        num_pairs,
+        d_model,
+        d_state,
+        expand,
+        d_conv,
+        flags,
+        len(encoder_blob),
+        len(decoder_blob),
+        len(predictor_blob),
+        len(latent_init_blob),
+        len(residuals_blob),
+        len(ego_blob),
+        len(meta_blob),
+    )
+    return (
+        header
+        + encoder_blob
+        + decoder_blob
+        + predictor_blob
+        + latent_init_blob
+        + residuals_blob
+        + ego_blob
+        + meta_blob
+    )
+
+
+def _runtime_geometry_positive_control(
+    *,
+    num_pairs: int,
+    output_height: int = 16,
+    output_width: int = 16,
+    expected_raw_bytes_delta: int = 0,
+) -> dict[str, object]:
+    expected_frames = num_pairs * 2
+    expected_raw_bytes = (
+        expected_frames
+        * 3
+        * handoff.CAMERA_HW[0]
+        * handoff.CAMERA_HW[1]
+        + expected_raw_bytes_delta
+    )
+    return {
+        "schema": handoff.RUNTIME_GEOMETRY_POSITIVE_CONTROL_SCHEMA,
+        "num_pairs": num_pairs,
+        "render_hw": [output_height, output_width],
+        "camera_hw": list(handoff.CAMERA_HW),
+        "expected_frames_written": expected_frames,
+        "expected_raw_bytes": expected_raw_bytes,
+        "sample_pair_indices": sorted({0, num_pairs // 2, num_pairs - 1}),
+        "recurrent_sampled_raw_sha256": hashlib.sha256(
+            b"recurrent-sample"
+        ).hexdigest(),
+        "static_sampled_raw_sha256": hashlib.sha256(
+            b"static-sample"
+        ).hexdigest(),
+        "recurrent_static_sample_changed": True,
+        "archive_header": {
+            "num_pairs": num_pairs,
+            "output_height": output_height,
+            "output_width": output_width,
+        },
+    }
+
+
 def _fixture_repo(
     tmp_path: Path,
     *,
@@ -39,14 +143,32 @@ def _fixture_repo(
     lane_id: str | None = None,
     substrate_id: str | None = None,
     pair_group_id: str | None = None,
+    include_runtime_geometry_positive_control: bool | None = None,
+    runtime_geometry_expected_raw_bytes_delta: int = 0,
 ) -> Path:
+    effective_substrate_id = substrate_id or handoff.SUBSTRATE_ID
+    is_mamba2 = effective_substrate_id == Z7_MAMBA2_SUBSTRATE_ID
+    recurrent_payload = (
+        _z7mcm2_payload(num_pairs=num_pairs, tag="R")
+        if is_mamba2
+        else b"recurrent-z7-payload"
+    )
+    static_payload = (
+        _z7mcm2_payload(num_pairs=num_pairs, tag="S", identity_predictor=True)
+        if is_mamba2
+        else b"staticctrl-z7payload"
+    )
     recurrent_bytes, recurrent_sha = _write_zip(
         tmp_path / "runs/z7/archive.zip",
-        b"recurrent-z7-payload",
+        recurrent_payload,
     )
     static_bytes, static_sha = _write_zip(
         tmp_path / "runs/z7/static_capacity_control/archive.zip",
-        b"staticctrl-z7payload",
+        static_payload,
+    )
+    expected_frames = num_pairs * 2
+    expected_raw_bytes = (
+        expected_frames * 3 * handoff.CAMERA_HW[0] * handoff.CAMERA_HW[1]
     )
     runtime_dir = tmp_path / "runs/z7/submission_runtime"
     runtime_dir.mkdir(parents=True, exist_ok=True)
@@ -73,8 +195,8 @@ def _fixture_repo(
         },
         "inflate_verify": {
             "device": "cpu",
-            "frames_written": 1200,
-            "raw_bytes": 1,
+            "frames_written": expected_frames if is_mamba2 else 1200,
+            "raw_bytes": expected_raw_bytes if is_mamba2 else 1,
             "raw_sha256": "0" * 64,
         },
         "promotion_eligible": False,
@@ -91,14 +213,30 @@ def _fixture_repo(
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "ready_for_paid_dispatch": False,
+            "inflate_verify_frames_written": (
+                expected_frames if is_mamba2 else None
+            ),
+            "inflate_verify_raw_bytes": expected_raw_bytes if is_mamba2 else None,
             "runtime_output_byte_differences_vs_recurrent": 7,
             "runtime_output_changed_vs_recurrent": True,
             "same_archive_zip_bytes_as_recurrent": recurrent_bytes == static_bytes,
             "score_claim": False,
         },
         "submission_runtime_dir": "runs/z7/submission_runtime",
-        "substrate_id": substrate_id or handoff.SUBSTRATE_ID,
+        "substrate_id": effective_substrate_id,
     }
+    should_include_runtime_geometry = (
+        is_mamba2
+        if include_runtime_geometry_positive_control is None
+        else include_runtime_geometry_positive_control
+    )
+    if should_include_runtime_geometry:
+        stats["runtime_geometry_positive_control"] = (
+            _runtime_geometry_positive_control(
+                num_pairs=num_pairs,
+                expected_raw_bytes_delta=runtime_geometry_expected_raw_bytes_delta,
+            )
+        )
     if pair_group_id is not None:
         stats["pair_group_id"] = pair_group_id
     (tmp_path / "runs/z7/stats.json").write_text(
@@ -207,13 +345,21 @@ def test_z7_handoff_derives_mamba_identity_from_stats(tmp_path: Path) -> None:
         tmp_path,
         num_pairs=600,
         lane_id="lane_z7_as_mamba_2_full_landing_20260518",
-        substrate_id="time_traveler_l5_z7_mamba2",
+        substrate_id=Z7_MAMBA2_SUBSTRATE_ID,
     )
     payload = handoff.build_packet(repo_root=repo, stats_json=Path("runs/z7/stats.json"))
 
     assert payload["ready_for_exact_eval_handoff"] is True
     assert payload["lane_id"] == "lane_z7_as_mamba_2_full_landing_20260518"
-    assert payload["substrate_id"] == "time_traveler_l5_z7_mamba2"
+    assert payload["substrate_id"] == Z7_MAMBA2_SUBSTRATE_ID
+    assert payload["runtime_geometry_positive_control"]["schema"] == (
+        handoff.RUNTIME_GEOMETRY_POSITIVE_CONTROL_SCHEMA
+    )
+    assert payload["source_archive_rows"][0]["z7mcm2_header"] == {
+        "num_pairs": 600,
+        "output_height": 16,
+        "output_width": 16,
+    }
     assert (
         payload["pair_group_id"]
         == "z7_mamba2_temporal_coherence_vs_static_capacity_same_bytes"
@@ -231,6 +377,68 @@ def test_z7_handoff_derives_mamba_identity_from_stats(tmp_path: Path) -> None:
         assert pair_group == "z7_mamba2_temporal_coherence_vs_static_capacity_same_bytes"
         assert "_recurrent_" not in pair_group
         assert "_static-control_" not in pair_group
+
+
+def test_z7_mamba2_handoff_refuses_missing_runtime_geometry_positive_control(
+    tmp_path: Path,
+) -> None:
+    repo = _fixture_repo(
+        tmp_path,
+        num_pairs=600,
+        substrate_id=Z7_MAMBA2_SUBSTRATE_ID,
+        include_runtime_geometry_positive_control=False,
+    )
+
+    payload = handoff.build_packet(repo_root=repo, stats_json=Path("runs/z7/stats.json"))
+
+    assert payload["ready_for_exact_eval_handoff"] is False
+    assert payload["runtime_geometry_positive_control"] is None
+    assert "z7_exact_handoff_runtime_geometry_positive_control_missing" in payload[
+        "result_review_blockers"
+    ]
+
+
+def test_z7_mamba2_handoff_refuses_runtime_geometry_mismatch(tmp_path: Path) -> None:
+    repo = _fixture_repo(
+        tmp_path,
+        num_pairs=600,
+        substrate_id=Z7_MAMBA2_SUBSTRATE_ID,
+        runtime_geometry_expected_raw_bytes_delta=1,
+    )
+
+    payload = handoff.build_packet(repo_root=repo, stats_json=Path("runs/z7/stats.json"))
+
+    assert payload["ready_for_exact_eval_handoff"] is False
+    assert (
+        "z7_exact_handoff_runtime_geometry_expected_raw_bytes_mismatch"
+        in payload["result_review_blockers"]
+    )
+    assert (
+        "z7_exact_handoff_runtime_geometry_recurrent_raw_bytes_mismatch"
+        not in payload["result_review_blockers"]
+    )
+
+
+def test_z7_mamba2_handoff_refuses_archive_header_geometry_mismatch(
+    tmp_path: Path,
+) -> None:
+    repo = _fixture_repo(
+        tmp_path,
+        num_pairs=600,
+        substrate_id=Z7_MAMBA2_SUBSTRATE_ID,
+    )
+    stats_path = repo / "runs/z7/stats.json"
+    stats = json.loads(stats_path.read_text(encoding="utf-8"))
+    stats["runtime_geometry_positive_control"]["archive_header"]["output_width"] = 17
+    stats_path.write_text(json.dumps(stats), encoding="utf-8")
+
+    payload = handoff.build_packet(repo_root=repo, stats_json=Path("runs/z7/stats.json"))
+
+    assert payload["ready_for_exact_eval_handoff"] is False
+    assert (
+        "z7_exact_handoff_runtime_geometry_archive_header_output_width_mismatch"
+        in payload["result_review_blockers"]
+    )
 
 
 def test_z7_handoff_refuses_false_authority_stats_and_hides_plan_commands(

@@ -95,6 +95,20 @@ def test_plan_dispatch_required_flags_present(dispatcher_module, tmp_path):
     assert "--dataset_name adpena/test-dataset" in flags
 
 
+def test_plan_dispatch_pins_dataset_revision_when_sha_declared(
+    dispatcher_module,
+    tmp_path,
+):
+    plan = dispatcher_module.plan_dispatch(
+        script=tmp_path / "fake_script.py",
+        hub_dataset_repo="adpena/test-dataset",
+        hub_model_repo="adpena/test-model",
+        dataset_revision="52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a",
+    )
+    flags = " ".join(plan.script_args)
+    assert "--dataset_revision 52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a" in flags
+
+
 def test_plan_dispatch_rejects_invalid_flavor(dispatcher_module, tmp_path):
     with pytest.raises(ValueError, match="flavor"):
         dispatcher_module.plan_dispatch(
