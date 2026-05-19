@@ -40629,6 +40629,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mps_drift_mathematical_and_engineering_formalization_20260519",
+      "name": "MPS-vs-CUDA per-pair drift mathematical + engineering formalization",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/mps_diagnostic/drift_predictor.py ~520 LOC + 31 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:.omx/state/mps_drift_granular_20260519T122700Z.json] Phase B archive sha; per-pair CV=2.6% uniform across 10 pairs; SegNet/PoseNet ratio 16.6x observed vs 8.5x predicted"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_mps_drift_mathematical_and_engineering_formalization_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_master_gradient_xray_viz_tool_20260519",
+      "name": "Master-gradient xray visualization tool extension (sister JSON sidecars + Provenance + MPS drift + index HTML)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/master_gradient_xray.py extended +615 LOC (5 sister JSON sidecars + canonical Provenance per Catalog #323 + index.html + --output-dir/--mps-drift-json CLI + drift_vs_sensitivity_scatter plot 6); 31 tests pass; sample run at .omx/research/master_gradient_xray_sample_20260519/ processed 6 ledger archives"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_master_gradient_xray_viz_tool_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -40638,5 +40720,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T12:36:29Z"
+  "updated_at": "2026-05-19T12:49:22Z"
 }
