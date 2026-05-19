@@ -23,7 +23,7 @@
     {
       "code": "code_dangling",
       "message": "C4 code pointer does not resolve",
-      "pointer": "src/comma_lab/task_codec/training.py",
+      "pointer": "src/tac/training.py",
       "severity": "warn"
     },
     {

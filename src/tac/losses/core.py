@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Loss functions for task-aware codec training.
+"""Loss functions for task-aware compression training.
 
 All losses operate on frame pairs in (1, 2, H, W, 3) HWC format and
 handle the BTCHW conversion internally before passing to the scorers.
@@ -26,7 +26,7 @@ DEFAULT_SEGNET_NUM_CLASSES = 5
 DEFAULT_SINKHORN_BLUR = 0.05
 DEFAULT_SINKHORN_ITERS = 20
 SINKHORN_MIN_BLUR = 0.01  # below this, low-blur Sinkhorn needs too many iterations
-SINKHORN_MAX_BLUR = 1.0   # above this, surrogate is too blurred to be useful
+SINKHORN_MAX_BLUR = 1.0  # above this, surrogate is too blurred to be useful
 DEFAULT_SINKHORN_MAX_POSITIONS_PER_CHUNK = 65_536
 
 
@@ -126,25 +126,16 @@ def _validate_segmentation_surrogate(surrogate: str) -> str:
 def _validate_sinkhorn_blur(blur: float) -> float:
     """Validate Sinkhorn entropic-regularization scale (`blur` in geomloss naming)."""
     if isinstance(blur, bool):
-        raise ValueError(
-            f"sinkhorn_blur must be a finite number in "
-            f"[{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]"
-        )
+        raise ValueError(f"sinkhorn_blur must be a finite number in [{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]")
     try:
         value = float(blur)
     except (TypeError, ValueError) as exc:
         raise ValueError(
-            f"sinkhorn_blur must be a finite number in "
-            f"[{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]"
+            f"sinkhorn_blur must be a finite number in [{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]"
         ) from exc
-    if (
-        not math.isfinite(value)
-        or value < SINKHORN_MIN_BLUR
-        or value > SINKHORN_MAX_BLUR
-    ):
+    if not math.isfinite(value) or value < SINKHORN_MIN_BLUR or value > SINKHORN_MAX_BLUR:
         raise ValueError(
-            f"sinkhorn_blur must be a finite number in "
-            f"[{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]; got {blur!r}"
+            f"sinkhorn_blur must be a finite number in [{SINKHORN_MIN_BLUR}, {SINKHORN_MAX_BLUR}]; got {blur!r}"
         )
     return value
 
@@ -158,9 +149,7 @@ def _validate_sinkhorn_iters(n_iters: int) -> int:
     except (TypeError, ValueError) as exc:
         raise ValueError("sinkhorn_n_iters must be a positive int in [1, 1000]") from exc
     if value < 1 or value > 1000:
-        raise ValueError(
-            f"sinkhorn_n_iters must be a positive int in [1, 1000]; got {n_iters!r}"
-        )
+        raise ValueError(f"sinkhorn_n_iters must be a positive int in [1, 1000]; got {n_iters!r}")
     return value
 
 
@@ -187,7 +176,7 @@ def _effective_sinkhorn_iters(blur: float, requested_iters: int) -> int:
     that recovers the expected ~0.6 default-cost transport in fp32. Larger
     blur values keep the caller-requested/default count.
     """
-    calibrated_floor = int(math.ceil(0.4 / blur))
+    calibrated_floor = math.ceil(0.4 / blur)
     return min(1000, max(requested_iters, DEFAULT_SINKHORN_ITERS, calibrated_floor))
 
 
@@ -226,25 +215,25 @@ def _sinkhorn_w2_rows(
     p = p / p.sum(dim=1, keepdim=True).clamp_min(1e-12)
     q = q / q.sum(dim=1, keepdim=True).clamp_min(1e-12)
 
-    log_p = torch.log(p.clamp_min(1e-30))         # (N, C)
-    log_q = torch.log(q.clamp_min(1e-30))         # (N, C)
-    cost_eps = cost / eps                         # (C, C)
+    log_p = torch.log(p.clamp_min(1e-30))  # (N, C)
+    log_q = torch.log(q.clamp_min(1e-30))  # (N, C)
+    cost_eps = cost / eps  # (C, C)
 
-    f = torch.zeros_like(log_p)                   # (N, C)
-    g = torch.zeros_like(log_q)                   # (N, C)
+    f = torch.zeros_like(log_p)  # (N, C)
+    g = torch.zeros_like(log_q)  # (N, C)
 
     for _ in range(n_iters):
-        m = (g.unsqueeze(1) / eps) - cost_eps     # (N, C, C); axis 1 = i, axis 2 = j
-        lse_j = torch.logsumexp(m, dim=2)          # (N, C)
-        f = eps * (log_p - lse_j)                  # (N, C)
+        m = (g.unsqueeze(1) / eps) - cost_eps  # (N, C, C); axis 1 = i, axis 2 = j
+        lse_j = torch.logsumexp(m, dim=2)  # (N, C)
+        f = eps * (log_p - lse_j)  # (N, C)
 
-        m = (f.unsqueeze(2) / eps) - cost_eps     # (N, C, C); axis 1 = i, axis 2 = j
-        lse_i = torch.logsumexp(m, dim=1)          # (N, C)
-        g = eps * (log_q - lse_i)                  # (N, C)
+        m = (f.unsqueeze(2) / eps) - cost_eps  # (N, C, C); axis 1 = i, axis 2 = j
+        lse_i = torch.logsumexp(m, dim=1)  # (N, C)
+        g = eps * (log_q - lse_i)  # (N, C)
 
     log_plan = (f.unsqueeze(2) + g.unsqueeze(1) - cost) / eps  # (N, C, C)
-    plan = torch.exp(log_plan)                                 # (N, C, C)
-    return (plan * cost).sum(dim=(1, 2))                        # (N,)
+    plan = torch.exp(log_plan)  # (N, C, C)
+    return (plan * cost).sum(dim=(1, 2))  # (N,)
 
 
 def segnet_fisher_rao_per_pixel(
@@ -268,19 +257,12 @@ def segnet_fisher_rao_per_pixel(
     eps_value = _validate_fisher_rao_eps(eps)
     if pred_probs.shape != gt_probs.shape:
         raise ValueError(
-            f"pred_probs shape {tuple(pred_probs.shape)} does not match "
-            f"gt_probs shape {tuple(gt_probs.shape)}"
+            f"pred_probs shape {tuple(pred_probs.shape)} does not match gt_probs shape {tuple(gt_probs.shape)}"
         )
     if pred_probs.ndim != 4:
-        raise ValueError(
-            "SegNet Fisher-Rao expects BCHW probability tensors; "
-            f"got shape {tuple(pred_probs.shape)}"
-        )
+        raise ValueError(f"SegNet Fisher-Rao expects BCHW probability tensors; got shape {tuple(pred_probs.shape)}")
     if pred_probs.shape[1] != num_classes:
-        raise ValueError(
-            f"SegNet Fisher-Rao expects {num_classes} classes, "
-            f"got {pred_probs.shape[1]}"
-        )
+        raise ValueError(f"SegNet Fisher-Rao expects {num_classes} classes, got {pred_probs.shape[1]}")
     bc = torch.sqrt((pred_probs * gt_probs).clamp_min(eps_value * eps_value)).sum(dim=1)
     bc = bc.clamp(min=0.0, max=1.0)
     bc_safe = bc.clamp(max=1.0 - eps_value)
@@ -368,19 +350,12 @@ def sinkhorn_w2_mask_distortion_per_pixel(
 
     if pred_probs.shape != gt_probs.shape:
         raise ValueError(
-            f"pred_probs shape {tuple(pred_probs.shape)} does not match "
-            f"gt_probs shape {tuple(gt_probs.shape)}"
+            f"pred_probs shape {tuple(pred_probs.shape)} does not match gt_probs shape {tuple(gt_probs.shape)}"
         )
     if pred_probs.ndim != 4:
-        raise ValueError(
-            "Sinkhorn-W2 expects BCHW probability tensors; "
-            f"got shape {tuple(pred_probs.shape)}"
-        )
+        raise ValueError(f"Sinkhorn-W2 expects BCHW probability tensors; got shape {tuple(pred_probs.shape)}")
     if pred_probs.shape[1] != num_classes:
-        raise ValueError(
-            f"Sinkhorn-W2 expects {num_classes} classes, "
-            f"got {pred_probs.shape[1]}"
-        )
+        raise ValueError(f"Sinkhorn-W2 expects {num_classes} classes, got {pred_probs.shape[1]}")
 
     if cost_matrix is None:
         cost = _default_categorical_cost_matrix(
@@ -391,10 +366,7 @@ def sinkhorn_w2_mask_distortion_per_pixel(
     else:
         cost = cost_matrix.to(pred_probs.device, dtype=pred_probs.dtype)
         if cost.shape != (num_classes, num_classes):
-            raise ValueError(
-                f"cost_matrix shape {tuple(cost.shape)} does not match "
-                f"({num_classes}, {num_classes})"
-            )
+            raise ValueError(f"cost_matrix shape {tuple(cost.shape)} does not match ({num_classes}, {num_classes})")
         # Symmetric + non-negative + zero-diagonal: required for Sinkhorn
         # to compute a valid Wasserstein-class quantity. (Otherwise the
         # algorithm returns a transport-cost surrogate, not a metric.)
@@ -414,7 +386,7 @@ def sinkhorn_w2_mask_distortion_per_pixel(
     # corresponding GT row.
     b, c, h, w = pred_probs.shape
     p = pred_probs.permute(0, 2, 3, 1).reshape(-1, c)  # (N, C)
-    q = gt_probs.permute(0, 2, 3, 1).reshape(-1, c)    # (N, C)
+    q = gt_probs.permute(0, 2, 3, 1).reshape(-1, c)  # (N, C)
 
     # Log-domain Sinkhorn iterations.
     #
@@ -436,8 +408,8 @@ def sinkhorn_w2_mask_distortion_per_pixel(
     else:
         chunks = [
             _sinkhorn_w2_rows(
-                p[start:start + max_rows],
-                q[start:start + max_rows],
+                p[start : start + max_rows],
+                q[start : start + max_rows],
                 cost,
                 eps=eps,
                 n_iters=iters_value,
@@ -476,15 +448,9 @@ def segnet_surrogate_per_pixel(
     mode = _validate_segmentation_surrogate(surrogate)
     temp = _validate_kl_temperature(temperature, field="segmentation_temperature")
     if gt_already_probs and temp != 1.0:
-        raise ValueError(
-            "cached SegNet probabilities only support segmentation_temperature=1.0"
-        )
+        raise ValueError("cached SegNet probabilities only support segmentation_temperature=1.0")
     pred_probs = F.softmax(pred_logits / temp, dim=1)
-    gt_probs = (
-        gt_logits_or_probs
-        if gt_already_probs
-        else F.softmax(gt_logits_or_probs / temp, dim=1)
-    )
+    gt_probs = gt_logits_or_probs if gt_already_probs else F.softmax(gt_logits_or_probs / temp, dim=1)
     if mode == SEGMENTATION_SURROGATE_FISHER_RAO:
         return segnet_fisher_rao_per_pixel(
             pred_probs,
@@ -504,13 +470,11 @@ def segnet_surrogate_per_pixel(
         )
     if pred_probs.shape != gt_probs.shape:
         raise ValueError(
-            f"pred_probs shape {tuple(pred_probs.shape)} does not match "
-            f"gt_probs shape {tuple(gt_probs.shape)}"
+            f"pred_probs shape {tuple(pred_probs.shape)} does not match gt_probs shape {tuple(gt_probs.shape)}"
         )
     if pred_probs.ndim != 4 or pred_probs.shape[1] != num_classes:
         raise ValueError(
-            f"SegNet soft-cosine expects BCHW with {num_classes} classes, "
-            f"got shape {tuple(pred_probs.shape)}"
+            f"SegNet soft-cosine expects BCHW with {num_classes} classes, got shape {tuple(pred_probs.shape)}"
         )
     return 1.0 - (pred_probs * gt_probs).sum(dim=1)
 
@@ -548,8 +512,7 @@ def _apply_class_weights(
         cw = class_weights.to(seg_per_pixel.device, dtype=seg_per_pixel.dtype)
         if cw.ndim != 1 or cw.shape[0] != gt_logits_or_probs.shape[1]:
             raise ValueError(
-                f"class_weights shape {tuple(cw.shape)} does not match "
-                f"SegNet num_classes {gt_logits_or_probs.shape[1]}"
+                f"class_weights shape {tuple(cw.shape)} does not match SegNet num_classes {gt_logits_or_probs.shape[1]}"
             )
         cw = cw / cw.mean().clamp(min=1e-8)
         gt_argmax = gt_logits_or_probs.argmax(dim=1)  # (B, H, W)
@@ -590,8 +553,7 @@ def per_class_seg_distortion(
     with torch.no_grad():
         if gt_logits_or_probs.shape[1] != num_classes:
             raise ValueError(
-                f"gt_logits_or_probs channel dim {gt_logits_or_probs.shape[1]} "
-                f"!= num_classes {num_classes}"
+                f"gt_logits_or_probs channel dim {gt_logits_or_probs.shape[1]} != num_classes {num_classes}"
             )
         gt_argmax = gt_logits_or_probs.argmax(dim=1)  # (B, H, W)
         if gt_argmax.shape != seg_per_pixel.shape:
@@ -635,25 +597,15 @@ def parse_class_weights_csv(
         return None
     parts = [p.strip() for p in s.split(",") if p.strip()]
     if len(parts) != num_classes:
-        raise ValueError(
-            f"--segnet-class-weights expected {num_classes} CSV values, "
-            f"got {len(parts)}: {parts!r}"
-        )
+        raise ValueError(f"--segnet-class-weights expected {num_classes} CSV values, got {len(parts)}: {parts!r}")
     try:
         vals = [float(p) for p in parts]
     except ValueError as exc:  # pragma: no cover — covered via parametric test
-        raise ValueError(
-            f"--segnet-class-weights could not parse {parts!r} as floats: {exc}"
-        ) from exc
+        raise ValueError(f"--segnet-class-weights could not parse {parts!r} as floats: {exc}") from exc
     if any(v < 0 for v in vals):
-        raise ValueError(
-            f"--segnet-class-weights must be non-negative, got {vals!r}"
-        )
+        raise ValueError(f"--segnet-class-weights must be non-negative, got {vals!r}")
     if all(v == 0 for v in vals):
-        raise ValueError(
-            "--segnet-class-weights cannot be all zeros (would zero out "
-            "the entire SegNet loss)"
-        )
+        raise ValueError("--segnet-class-weights cannot be all zeros (would zero out the entire SegNet loss)")
     return torch.tensor(vals, dtype=torch.float32)
 
 
@@ -871,7 +823,10 @@ def scorer_loss_cached(
         # Cached path: use the cached softmax as the GT-argmax source.
         # Equivalent to argmax(logits) since softmax is monotone.
         seg_per_pixel = _apply_class_weights(
-            seg_per_pixel, gt_seg_soft, class_weights, gt_already_probs=True,
+            seg_per_pixel,
+            gt_seg_soft,
+            class_weights,
+            gt_already_probs=True,
         )
     seg_dist = seg_per_pixel.mean()
 
@@ -970,7 +925,10 @@ def scorer_loss_cached_with_aux(
     per_class_d = per_class_seg_distortion(seg_per_pixel, gt_seg_soft, num_classes)
     if class_weights is not None:
         seg_per_pixel = _apply_class_weights(
-            seg_per_pixel, gt_seg_soft, class_weights, gt_already_probs=True,
+            seg_per_pixel,
+            gt_seg_soft,
+            class_weights,
+            gt_already_probs=True,
         )
     seg_dist = seg_per_pixel.mean()
 
@@ -1639,6 +1597,7 @@ def segnet_uncertainty_weighted_loss(
     Returns:
         Scalar loss = inverse_entropy_weight-weighted L1 reconstruction.
     """
+
     def _frame_to_bchw(x: torch.Tensor, name: str) -> torch.Tensor:
         if x.ndim != 4:
             raise ValueError(f"{name} must be 4D BCHW or BHWC; got {tuple(x.shape)}")
@@ -1659,8 +1618,10 @@ def segnet_uncertainty_weighted_loss(
         H_r, W_r = rx.shape[-2:]
         if entropy.shape[-2:] != (H_r, W_r):
             entropy = F.interpolate(
-                entropy.unsqueeze(1).float(), size=(H_r, W_r),
-                mode="bilinear", align_corners=False,
+                entropy.unsqueeze(1).float(),
+                size=(H_r, W_r),
+                mode="bilinear",
+                align_corners=False,
             ).squeeze(1)
         # Inverse-entropy weight, bounded below by weight_floor (so
         # high-entropy pixels still produce gradient).
@@ -1902,8 +1863,10 @@ def segnet_kl_divergence_loss(
     # Critical Lessons. Switched to per-pixel-per-class mean to match
     # `kl_distill_scorer_loss` line 622+646 + `kl_distill_segnet_only`.
     kl_per_pixel = F.kl_div(
-        filtered_log_probs, gt_log_probs_dev,
-        reduction="none", log_target=True,
+        filtered_log_probs,
+        gt_log_probs_dev,
+        reduction="none",
+        log_target=True,
     ).sum(dim=1)  # (B, H_seg, W_seg) — sum over class dim
     seg_kl = kl_per_pixel.mean()
 
@@ -2005,6 +1968,7 @@ def posenet_embedding_loss(
     def _hook_fn(storage):
         def hook(module, input, output):
             storage.append(output)
+
         return hook
 
     # Forward filtered frames (with gradients)
@@ -2302,20 +2266,20 @@ class ScorerProxyDiscriminator(torch.nn.Module):
         ch = base_channels
 
         def _disc_block(in_c, out_c, stride=2, norm=True):
-            layers = [torch.nn.utils.spectral_norm(
-                torch.nn.Conv2d(in_c, out_c, 4, stride=stride, padding=1, bias=not norm)
-            )]
+            layers = [
+                torch.nn.utils.spectral_norm(torch.nn.Conv2d(in_c, out_c, 4, stride=stride, padding=1, bias=not norm))
+            ]
             if norm:
                 layers.append(torch.nn.InstanceNorm2d(out_c))
             layers.append(torch.nn.LeakyReLU(0.2, inplace=True))
             return torch.nn.Sequential(*layers)
 
         self.layers = torch.nn.Sequential(
-            _disc_block(input_channels, ch, norm=False),     # /2
-            _disc_block(ch, ch * 2),                          # /4
-            _disc_block(ch * 2, ch * 4),                      # /8
-            _disc_block(ch * 4, ch * 4, stride=1),            # /8 (same)
-            torch.nn.Conv2d(ch * 4, 1, 4, padding=1),        # regression head
+            _disc_block(input_channels, ch, norm=False),  # /2
+            _disc_block(ch, ch * 2),  # /4
+            _disc_block(ch * 2, ch * 4),  # /8
+            _disc_block(ch * 4, ch * 4, stride=1),  # /8 (same)
+            torch.nn.Conv2d(ch * 4, 1, 4, padding=1),  # regression head
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

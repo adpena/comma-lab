@@ -1485,12 +1485,13 @@ before the paid GPU meter starts.
 
 ## `tac` stays clean; comma-lab owns research state
 
-`tac` is the reusable codec/runtime library. Put real reusable Python
-implementation there: codec primitives, archive grammars, payload parsers,
-scorer/eval contracts, byte profilers, planning primitives, visualization
-primitives, and contest-relevant algorithms. Thin CLIs may live in
-`experiments/`, `scripts/`, or `tools/`, but they should delegate to `tac`
-modules instead of burying implementation in ad hoc entry points.
+`tac` is the reusable Task-Aware Compression library and runtime-contract
+surface. Put real reusable Python implementation there: codec primitives,
+archive grammars, payload parsers, scorer/eval contracts, byte profilers,
+planning primitives, visualization primitives, and contest-relevant algorithms.
+Thin CLIs may live in `experiments/`, `scripts/`, or `tools/`, but they should
+delegate to `tac` modules instead of burying implementation in ad hoc entry
+points.
 
 Do not add Claude/OMX/provider/recovery policy to `tac` unless it is truly
 reusable codec, contest-runtime, or contest-preflight logic. Checks that protect

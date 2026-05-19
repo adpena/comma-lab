@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Quantization utilities for task-aware codec post-filters.
+"""Quantization utilities for task-aware compression post-filters.
 
 Supports:
   - Per-tensor symmetric int8 (legacy, backward compatible)
@@ -115,7 +115,7 @@ def assert_quantization_hardware_supported(
         "int8": "INT8 tensor-core deployment requires Turing-class CUDA hardware (CC >= 7.5).",
         "fp16": "FP16 requires a detectable CUDA device in this gate.",
         "bf16": "BF16 requires Ampere-class CUDA hardware (CC >= 8.0). "
-                "T4 (CC 7.5) and P100 (CC 6.0) do NOT support hardware BF16.",
+        "T4 (CC 7.5) and P100 (CC 6.0) do NOT support hardware BF16.",
     }
     message = (
         f"Quantization mode {mode!r} normalized to {normalized!r} is not "
@@ -130,11 +130,11 @@ def assert_quantization_hardware_supported(
         "WARNING: QUANTIZATION SIMULATION ENABLED\n"
         f"{message}\n"
         "This run is NOT hardware-backed for that mode; do not compare it as "
-        "a hardware QAT result.\n"
-        + "!" * 78
+        "a hardware QAT result.\n" + "!" * 78
     )
     print(banner, file=sys.stderr)
     warnings.warn(banner, RuntimeWarning, stacklevel=2)
+
 
 # ── Fake Quantization (for training) ─────────────────────────────────────
 
@@ -472,8 +472,6 @@ def load_int8(
 
     model.load_state_dict(float_state)
     return model.eval().to(device)
-
-
 
 
 def save_int8_from_state_dict(
@@ -860,9 +858,7 @@ def noise_shaped_round(
         Values are exact integers suitable for direct uint8 cast.
     """
     # Ensure inputs match
-    assert x.shape == scorer_gradient.shape, (
-        f"Shape mismatch: x={x.shape}, gradient={scorer_gradient.shape}"
-    )
+    assert x.shape == scorer_gradient.shape, f"Shape mismatch: x={x.shape}, gradient={scorer_gradient.shape}"
 
     x_clamped = x.detach().clamp(0.0, 255.0)
 
@@ -905,7 +901,9 @@ def noise_shaped_round(
                         correction = err[i, j] * (7.0 / 16.0)
                         pixel = out[i, j + 1] + correction
                         g = grad[i, j + 1]
-                        out[i, j + 1] = torch.where(g < 0, pixel.ceil(), torch.where(g > 0, pixel.floor(), pixel.round())).clamp(0, 255)
+                        out[i, j + 1] = torch.where(
+                            g < 0, pixel.ceil(), torch.where(g > 0, pixel.floor(), pixel.round())
+                        ).clamp(0, 255)
                         err[i, j + 1] = pixel - out[i, j + 1]
                     if i + 1 < H:
                         if j > 0:
@@ -928,7 +926,9 @@ def noise_shaped_round(
                             correction = err[i, j] * (7.0 / 16.0)
                             pixel = out[i, j + 1] + correction
                             g = grad[i, j + 1]
-                            out[i, j + 1] = torch.where(g < 0, pixel.ceil(), torch.where(g > 0, pixel.floor(), pixel.round())).clamp(0, 255)
+                            out[i, j + 1] = torch.where(
+                                g < 0, pixel.ceil(), torch.where(g > 0, pixel.floor(), pixel.round())
+                            ).clamp(0, 255)
                             err[i, j + 1] = pixel - out[i, j + 1]
                         if i + 1 < H:
                             if j > 0:
@@ -1012,7 +1012,7 @@ def load_postfilter_int8(
     state = torch.load(path, map_location=device, weights_only=True)
     float_state: dict[str, torch.Tensor] = {}
     seen: set[str] = set()
-    for raw_key in state.keys():
+    for raw_key in state:
         if raw_key == "__meta__" or raw_key == "__entropy_info__":
             continue
         if raw_key.endswith((".q", ".s", ".log_scale")):

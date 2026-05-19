@@ -57,7 +57,7 @@ Format: each claim is one block. `id` is stable across compilations.
 - **status**: empirically supported within the tested range; extrapolation
   beyond h=64 is not claimed.
 - **evidence**: `evidence/era1/width_scaling/summary.csv`
-- **code**: `src/comma_lab/task_codec/training.py`
+- **code**: `src/tac/training.py`
 - **public_safe**: yes.
 
 ## C5 — Best-checkpoint int8 selection closes the train-to-deploy gap
@@ -69,7 +69,7 @@ Format: each claim is one block. `id` is stable across compilations.
   best-checkpoint runs.
 - **status**: empirically supported.
 - **evidence**: `evidence/era1/qat_ema_best_checkpoint/gap_summary.json`
-- **code**: `src/comma_lab/task_codec/quantization.py`
+- **code**: `src/tac/quantization.py`
 - **public_safe**: yes (the technique is publishable).
 
 ## C6 — MPS scorer measurements are NOT contest-equivalent

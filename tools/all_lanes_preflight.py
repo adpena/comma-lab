@@ -92,6 +92,9 @@ Currently runs:
   Gate #30: HLM1 non-promotional frontier prose guard
            (control ledgers must not call HLM1 the active floor/frontier
             without the non-promotional qualifier)
+  Gate #32: tools/check_tac_terminology.py --strict
+           (TAC means Task-Aware Compression; codec/compression and
+            tac/comma_lab boundaries stay canonical)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -204,6 +207,7 @@ from tac.source_index import SourceIndex  # noqa: E402
 TOOLS = REPO / "tools"
 SHELL_HAZARDS = TOOLS / "check_dispatch_cli_shell_hazards.py"
 CANONICAL_TASK_STATUS_AUDIT = TOOLS / "check_canonical_task_status_no_dangling_transitions.py"
+TAC_TERMINOLOGY_AUDIT = TOOLS / "check_tac_terminology.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -3686,6 +3690,7 @@ def main(argv: list[str] | None = None) -> int:
         LOCAL_CUSTODY_RELEASE_MANIFEST,
         OPERATOR_BRIEFING,
         CANONICAL_TASK_STATUS_AUDIT,
+        TAC_TERMINOLOGY_AUDIT,
         *[lane["tool"] for lane in lanes],
     ]:
         if not tool.is_file():
@@ -3969,6 +3974,18 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "  ✓ Gate #31: canonical task-status state machine — PASSED",
             "  ✗ Gate #31: canonical task-status state machine — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            32,
+            "TAC terminology canonicalization",
+            lambda: _run_gate(
+                "TAC terminology canonicalization",
+                TAC_TERMINOLOGY_AUDIT,
+                ["--strict"],
+            ),
+            "  ✓ Gate #32: TAC terminology canonicalization — PASSED",
+            "  ✗ Gate #32: TAC terminology canonicalization — FAILED",
         ),
     ]
     lane_steps = [

@@ -21,8 +21,8 @@ from the repository root with the standard `.venv/bin/python` interpreter.
 | C2    | `experiments/jacobian_optimal.py`                | Moore-Penrose single-step (failed)                   |
 | C3    | `experiments/karpathy_cnn_residual_analysis.py`  | residual pixel-density + DCT signature               |
 | C4    | `experiments/pipeline.py`                        | width-sweep entry point (--profile width_sweep)      |
-| C4    | `src/comma_lab/task_codec/training.py`           | post-filter trainer with QAT + EMA                   |
-| C5    | `src/comma_lab/task_codec/quantization.py`       | best-checkpoint int8 selection                       |
+| C4    | `src/tac/training.py`                            | post-filter trainer with QAT + EMA                   |
+| C5    | `src/tac/quantization.py`                        | best-checkpoint int8 selection                       |
 | C6    | `src/comma_lab/preflight/strict_checks.py`       | check_no_mps_fallback_default (#1)                   |
 | C7    | `src/tac/optimize_poses.py`                      | per-pair pose TTO with rank-1 warm-start             |
 | C8    | `src/tac/training.py`                            | KL distill loss term (T=2.0, weight=0.002)           |

@@ -417,14 +417,14 @@ provider contract.
 ## TAC / comma-lab Boundary And Research State Tracking
 
 Keep `tac` clean, but put real reusable Python implementation in `tac`.
-`tac` is the reusable codec/runtime library, and checks that protect archive
-validity, inflate/runtime compliance, CUDA-score custody, and package safety are
-part of that public contract. Codec primitives, archive grammars, payload
-parsers, scorer/eval contracts, byte profilers, planning primitives,
-visualization primitives, and contest-relevant algorithms belong in `tac` when
-they are reusable. Thin CLIs may live in `experiments/`, `scripts/`, or
-`tools/`, but they should delegate to `tac` modules instead of burying
-implementation in ad hoc entry points.
+`tac` is the reusable Task-Aware Compression library and runtime-contract
+surface, and checks that protect archive validity, inflate/runtime compliance,
+CUDA-score custody, and package safety are part of that public contract. Codec
+primitives, archive grammars, payload parsers, scorer/eval contracts, byte
+profilers, planning primitives, visualization primitives, and contest-relevant
+algorithms belong in `tac` when they are reusable. Thin CLIs may live in
+`experiments/`, `scripts/`, or `tools/`, but they should delegate to `tac`
+modules instead of burying implementation in ad hoc entry points.
 
 Claude/OMX/provider/recovery policy should not enter `tac` unless the logic is
 genuinely reusable codec, contest-runtime, or contest-preflight functionality.

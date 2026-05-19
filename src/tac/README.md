@@ -94,6 +94,9 @@ For naming, keep the hierarchy strict:
 - `comma_lab`: the lab control plane that records, audits, and publishes
   `tac` outputs.
 
+The repository-wide terminology authority is
+[`docs/terminology_and_boundaries.md`](../../docs/terminology_and_boundaries.md).
+
 ## Installation
 
 ```bash
@@ -152,7 +155,8 @@ payload = encode_ranked_no_op_sidecar(dims, delta_indices, schema=schema)
 
 ## Package Boundary
 
-`tac` is the compression engine. `comma_lab` is the lab and operations layer.
+`tac` is the Task-Aware Compression library/engine. `comma_lab` is the lab and
+operations layer.
 If a module manipulates archives, tensors, codecs, scorer contracts, or
 optimization math, it likely belongs in `tac`. If it manages run state,
 provider dispatch, ledgers, public-frontier intake, reports, or release hygiene,

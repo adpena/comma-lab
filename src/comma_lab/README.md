@@ -1,9 +1,11 @@
 # comma-lab
 
-`comma_lab` is the repository operations layer for Pact. It turns `tac`
-compression primitives into reproducible lab workflows: state projection,
+`comma_lab` is the comma-lab operations layer around `tac`. It turns Task-Aware
+Compression primitives into reproducible lab workflows: state projection,
 preflight orchestration, public-frontier intake, reverse-engineering hygiene,
-provider dispatch support, artifact custody, and operator-facing reports.
+provider dispatch support, artifact custody, and operator-facing reports. `pact`
+is retained only as a historical/internal workspace alias in older docs and
+local paths.
 
 It is intentionally not the compression engine. Reusable compression math,
 archive grammars, scorer contracts, byte profilers, packet compilers, and
@@ -90,3 +92,6 @@ This keeps `tac` publishable as Task-Aware Compression software while
 - `tac`: Task-Aware Compression library and reusable algorithmic engine.
 - `tools/`: thin operator CLIs, launchers, validators, and recovery scripts.
 - `.omx/research/`: dated scientific, adversarial, and progress ledgers.
+
+The repository-wide terminology authority is
+[`docs/terminology_and_boundaries.md`](../../docs/terminology_and_boundaries.md).

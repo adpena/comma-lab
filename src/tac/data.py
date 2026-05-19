@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Data loading utilities for task-aware codec training.
+"""Data loading utilities for task-aware compression training.
 
 Handles video decoding, frame pair construction, and saliency weight loading
 with BT.601 limited-range YUV420->RGB matching the scorer's frame_utils.py.

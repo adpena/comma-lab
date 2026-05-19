@@ -12,7 +12,9 @@ optimized for a downstream task/scorer. A **codec** is a narrower concrete
 encoder/decoder or wire format inside that stack. The `comma_lab` package is the
 lab and operations layer around `tac`, not a second compression engine.
 The package-level boundary docs are [src/tac/README.md](src/tac/README.md) and
-[src/comma_lab/README.md](src/comma_lab/README.md).
+[src/comma_lab/README.md](src/comma_lab/README.md). The canonical terminology
+and contest-compliance boundary is
+[docs/terminology_and_boundaries.md](docs/terminology_and_boundaries.md).
 
 | Name | Canonical role |
 |---|---|

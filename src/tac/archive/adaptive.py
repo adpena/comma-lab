@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Adaptive hyperparameter system for task-aware codec training.
+"""Adaptive hyperparameter system for task-aware compression training.
 
 Derives optimal training weights from the current operating point instead of
 using static hyperparameters. Based on mathematical analysis of the competition
@@ -448,7 +448,7 @@ def print_operating_table() -> None:
     print("-" * 70)
     epochs = [0, 250, 500, 1000, 1500, 2000, 2500]
     t_start, t_end = 5.0, 0.5
-    for i, ep in enumerate(epochs):
+    for ep in epochs:
         frac = ep / 2500
         # Exponential temperature decay
         temp = t_start * (t_end / t_start) ** frac

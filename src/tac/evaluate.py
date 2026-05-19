@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Canonical evaluation for task-aware codec post-filters.
+"""Canonical evaluation for task-aware compression post-filters.
 
 ONE evaluation path. Matches the official scorer exactly.
 No hardcoded paths. No ambiguity. Fully portable.
@@ -28,7 +28,7 @@ from pathlib import Path
 
 import torch
 
-from .models import ScoreResult  # noqa: TC001 — runtime, not just type hints
+from .models import ScoreResult
 
 
 def canonical_score(

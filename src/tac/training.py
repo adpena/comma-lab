@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Training loop for task-aware codec post-filters.
+"""Training loop for task-aware compression post-filters.
 
 Provides a class-based Trainer that composes:
   - QAT (Quantization-Aware Training) via FakeQuant STE
@@ -45,7 +45,6 @@ from .losses import (
     kl_distill_scorer_loss,
     posenet_embedding_loss,
     saliency_reconstruction_loss,
-
     scorer_forward_pair,
     scorer_loss,
     scorer_loss_cached,
@@ -91,8 +90,14 @@ class TrainConfig(BaseModel):
 
     # SegNet headroom unlocking
     loss_mode: Literal[
-        "standard", "temperature", "focal_ste", "kl_distill", "pcgrad",
-        "feature_match", "segnet_kl", "posenet_embedding",
+        "standard",
+        "temperature",
+        "focal_ste",
+        "kl_distill",
+        "pcgrad",
+        "feature_match",
+        "segnet_kl",
+        "posenet_embedding",
     ] = "standard"
     kl_distill_scope: Literal["none", "segnet_aux", "primary_scorer"] = Field(
         "none",
@@ -240,15 +245,19 @@ class TrainConfig(BaseModel):
         "gradient weight. Pixels far from VP (sky corners) get lower weight.",
     )
     vp_saliency_sigma: float = Field(
-        40.0, gt=0.0,
+        40.0,
+        gt=0.0,
         description="Gaussian spread for VP saliency map in scorer-resolution pixels.",
     )
     vp_saliency_min_weight: float = Field(
-        0.3, ge=0.0, le=1.0,
+        0.3,
+        ge=0.0,
+        le=1.0,
         description="Minimum weight for pixels far from the vanishing point.",
     )
     vp_saliency_horizon_boost: float = Field(
-        2.0, ge=1.0,
+        2.0,
+        ge=1.0,
         description="Multiplicative boost for the horizon band (sky/road boundary).",
     )
     decor_lambda: float = Field(0.0, ge=0.0, description="Output decorrelation loss weight for counterpoint ensemble")
@@ -257,7 +266,8 @@ class TrainConfig(BaseModel):
         description="PoseNet layer for embedding loss: 'summary' (512-d) or 'stages.2' (256-d)",
     )
     posenet_embedding_weight: float = Field(
-        0.5, ge=0.0,
+        0.5,
+        ge=0.0,
         description="Weight for PoseNet embedding loss when loss_mode='posenet_embedding'",
     )
 
@@ -298,8 +308,7 @@ class TrainConfig(BaseModel):
     )
     focal_length: tuple[float, float] | None = Field(
         None,
-        description="Camera focal length (fx, fy) in pixels. "
-        "None = use defaults from tac.camera.COMMA_INTRINSICS.",
+        description="Camera focal length (fx, fy) in pixels. None = use defaults from tac.camera.COMMA_INTRINSICS.",
     )
     principal_point: tuple[float, float] | None = Field(
         None,
@@ -308,8 +317,7 @@ class TrainConfig(BaseModel):
     )
     camera_height: float | None = Field(
         None,
-        description="Camera height above road in meters. "
-        "None = use default from tac.camera.COMMA_EXTRINSICS.",
+        description="Camera height above road in meters. None = use default from tac.camera.COMMA_EXTRINSICS.",
     )
 
     # Resumption
@@ -627,14 +635,9 @@ class EMA:
         0.99958
         """
         if total_steps <= 0:
-            raise ValueError(
-                f"total_steps must be positive (got {total_steps!r})"
-            )
+            raise ValueError(f"total_steps must be positive (got {total_steps!r})")
         if not (0.0 < target_window_fraction <= 1.0):
-            raise ValueError(
-                f"target_window_fraction must lie in (0, 1] "
-                f"(got {target_window_fraction!r})"
-            )
+            raise ValueError(f"target_window_fraction must lie in (0, 1] (got {target_window_fraction!r})")
         target_window = max(1.0, float(target_window_fraction) * float(total_steps))
         decay = 1.0 - 1.0 / target_window
         # Clamp to canonical [0.99, 0.9999] range per CLAUDE.md "EMA --
@@ -716,7 +719,7 @@ class KalmanWeightFilter:
         # Shadow state (the filtered estimate)
         self.state = {k: v.detach().clone() for k, v in model.state_dict().items()}
         # Per-tensor scalar sigma^2 (cheaper than per-element, empirically sufficient)
-        self.sigma2: dict[str, float] = {k: 1.0 for k in self.state.keys()}
+        self.sigma2: dict[str, float] = dict.fromkeys(self.state, 1.0)
 
     @torch.no_grad()
     def update(self, model: nn.Module):
@@ -787,10 +790,7 @@ class Trainer:
             renderer = getattr(self.model, "renderer", self.model)
             bottleneck = getattr(renderer, "bottleneck", None)
             if bottleneck is None:
-                raise ValueError(
-                    "use_entropy_bottleneck=True requires a model with a "
-                    "bottleneck module"
-                )
+                raise ValueError("use_entropy_bottleneck=True requires a model with a bottleneck module")
             self.entropy_bottleneck = EntropyBottleneck(
                 num_channels=config.eb_num_channels,
             ).to(device)
@@ -802,8 +802,7 @@ class Trainer:
 
             self._entropy_bottleneck_handle = bottleneck.register_forward_hook(_eb_hook)
             print(
-                f"[trainer] Entropy bottleneck enabled "
-                f"(channels={config.eb_num_channels}, lambda={config.eb_lambda})"
+                f"[trainer] Entropy bottleneck enabled (channels={config.eb_num_channels}, lambda={config.eb_lambda})"
             )
 
         # EMA constructed AFTER entropy bottleneck is installed so its shadow
@@ -905,7 +904,7 @@ class Trainer:
         # VP saliency prior: pre-compute the spatial weight map once
         self._vp_saliency_map: torch.Tensor | None = None
         if config.use_vp_saliency:
-            from .camera import vanishing_point_saliency, FRAME_H, FRAME_W
+            from .camera import FRAME_H, FRAME_W, vanishing_point_saliency
 
             self._vp_saliency_map = vanishing_point_saliency(
                 H=FRAME_H,
@@ -1051,6 +1050,7 @@ class Trainer:
             # Try to add cost estimate from cost_tracker
             try:
                 from .cost_tracker import CostRecord
+
                 cost = CostRecord.from_run(platform_name, gpu_name, elapsed)
                 training_cost["cost"] = cost.to_dict()
             except ImportError:
@@ -1293,9 +1293,9 @@ class Trainer:
         # int8 archives so that a deployment loader doesn't see phantom
         # entries (and so the int8 archive size doesn't include them).
         ema_state = {
-            k: v for k, v in self.ema.state_dict().items()
-            if not k.startswith("entropy_bottleneck.")
-            and "entropy_bottleneck." not in k
+            k: v
+            for k, v in self.ema.state_dict().items()
+            if not k.startswith("entropy_bottleneck.") and "entropy_bottleneck." not in k
         }
 
         # Save EMA fp32 (atomic)
@@ -1505,8 +1505,10 @@ class Trainer:
                     vp_map = self._vp_saliency_map
                     if vp_map.shape[-2:] != sal_w_pair.shape[-2:]:
                         vp_map = nn.functional.interpolate(
-                            vp_map, size=sal_w_pair.shape[-2:],
-                            mode="bilinear", align_corners=False,
+                            vp_map,
+                            size=sal_w_pair.shape[-2:],
+                            mode="bilinear",
+                            align_corners=False,
                         )
                     sal_w_pair = sal_w_pair * vp_map
                 sal_recon = saliency_reconstruction_loss(filtered_bchw, comp_bchw, sal_w_pair)
@@ -1584,7 +1586,6 @@ class Trainer:
 
             # Wall-clock timeout: save and exit cleanly before platform kills us
             if self._wall_clock_exceeded():
-                remaining = self._wall_clock_remaining()
                 elapsed = _time_module.monotonic() - self._start_wall_time
                 print(
                     f"\n[trainer] WALL-CLOCK TIMEOUT at epoch {epoch} "
@@ -1702,8 +1703,10 @@ class Trainer:
         )
         print(f"[trainer-lazy] P0: Cached {len(gt_scorer_cache)} GT scorer outputs ({cache_bytes / 1e6:.1f}MB)")
         if cfg.eval_roundtrip:
-            print(f"[trainer-lazy] eval_roundtrip=True (noise_std={cfg.roundtrip_noise_std}) — "
-                  "GT cache BYPASSED, roundtrip active on both pred+GT")
+            print(
+                f"[trainer-lazy] eval_roundtrip=True (noise_std={cfg.roundtrip_noise_std}) — "
+                "GT cache BYPASSED, roundtrip active on both pred+GT"
+            )
         else:
             print("[trainer-lazy] eval_roundtrip=False — WARNING: proxy-auth gap 2-6x on PoseNet")
 
@@ -1881,13 +1884,16 @@ class Trainer:
 
                 # Apply eval-matched roundtrip (simulate contest eval resize chain)
                 if cfg.eval_roundtrip:
-                    from tac.renderer import simulate_eval_roundtrip
                     from tac.camera import CAMERA_H, CAMERA_W
+                    from tac.renderer import simulate_eval_roundtrip
+
                     # filtered is (B, 2, H, W, 3) HWC — convert to CHW for roundtrip
                     B_f, T_f, H_f, W_f, C_f = filtered.shape
                     flat_chw = filtered.reshape(B_f * T_f, H_f, W_f, C_f).permute(0, 3, 1, 2).contiguous()
                     flat_chw = simulate_eval_roundtrip(
-                        flat_chw, target_h=CAMERA_H, target_w=CAMERA_W,
+                        flat_chw,
+                        target_h=CAMERA_H,
+                        target_w=CAMERA_W,
                         noise_std=cfg.roundtrip_noise_std,
                     )
                     # Back to HWC: (B*T, C, H, W) → (B*T, H, W, C) → (B, T, H, W, C)
@@ -1897,7 +1903,9 @@ class Trainer:
                     with torch.no_grad():
                         gt_chw = gt_pair.reshape(B_f * T_f, H_f, W_f, C_f).permute(0, 3, 1, 2).contiguous()
                         gt_chw = simulate_eval_roundtrip(
-                            gt_chw, target_h=CAMERA_H, target_w=CAMERA_W,
+                            gt_chw,
+                            target_h=CAMERA_H,
+                            target_w=CAMERA_W,
                             noise_std=0.0,
                         )
                         gt_pair = gt_chw.permute(0, 2, 3, 1).contiguous().reshape(B_f, T_f, H_f, W_f, C_f)
@@ -1964,10 +1972,12 @@ class Trainer:
                     # Use cached adaptive weights (computed once per epoch, not per step)
                     sw = getattr(self, "_cached_sw", cfg.segnet_loss_weight)
                     bw = getattr(self, "_cached_bw", self._effective_boundary_weight)
-                    if not self._adaptive:
-                        # Static boundary anneal for non-adaptive mode
-                        if cfg.boundary_anneal and temp > 0:
-                            bw = self._effective_boundary_weight * min(3.0, cfg.temperature_start / max(temp, cfg.temperature_end))
+                    # Static boundary anneal for non-adaptive mode
+                    if not self._adaptive and cfg.boundary_anneal and temp > 0:
+                        bw = self._effective_boundary_weight * min(
+                            3.0,
+                            cfg.temperature_start / max(temp, cfg.temperature_end),
+                        )
 
                     loss, pd, sd = kl_distill_scorer_loss(
                         filtered,
@@ -2023,12 +2033,18 @@ class Trainer:
                     sw = getattr(self, "_cached_sw", cfg.segnet_loss_weight)
                     if _gt_pose_6 is not None:
                         loss, pd, sd = scorer_loss_cached(
-                            filtered, _gt_pose_6, _gt_seg_soft,
-                            posenet, segnet,
+                            filtered,
+                            _gt_pose_6,
+                            _gt_seg_soft,
+                            posenet,
+                            segnet,
                         )
                     else:
                         loss, pd, sd = scorer_loss(
-                            filtered, gt_pair, posenet, segnet,
+                            filtered,
+                            gt_pair,
+                            posenet,
+                            segnet,
                         )
                     # Compute GT SegNet log-probs for KL loss
                     # gt_pair is (B,T,H,W,C) but segnet.preprocess_input expects (B,T,C,H,W)
@@ -2037,22 +2053,32 @@ class Trainer:
                         _gt_seg_logits = segnet(_gt_seg_input)
                         _gt_log_probs = torch.nn.functional.log_softmax(_gt_seg_logits, dim=1)
                     kl_loss, _kl_val, _kl_disagree = segnet_kl_divergence_loss(
-                        _gt_log_probs, filtered, segnet,
+                        _gt_log_probs,
+                        filtered,
+                        segnet,
                     )
                     loss = loss + sw * kl_loss
                 elif cfg.loss_mode == "posenet_embedding":
                     # PoseNet embedding: perceptual loss on internal features
                     if _gt_pose_6 is not None:
                         loss, pd, sd = scorer_loss_cached(
-                            filtered, _gt_pose_6, _gt_seg_soft,
-                            posenet, segnet,
+                            filtered,
+                            _gt_pose_6,
+                            _gt_seg_soft,
+                            posenet,
+                            segnet,
                         )
                     else:
                         loss, pd, sd = scorer_loss(
-                            filtered, gt_pair, posenet, segnet,
+                            filtered,
+                            gt_pair,
+                            posenet,
+                            segnet,
                         )
                     emb_term = posenet_embedding_loss(
-                        gt_pair, filtered, posenet,
+                        gt_pair,
+                        filtered,
+                        posenet,
                         layer=cfg.posenet_embedding_layer,
                     )
                     loss = loss + cfg.posenet_embedding_weight * emb_term
@@ -2091,8 +2117,10 @@ class Trainer:
                     vp_map = self._vp_saliency_map
                     if vp_map.shape[-2:] != sal_w_frame.shape[-2:]:
                         vp_map = nn.functional.interpolate(
-                            vp_map, size=sal_w_frame.shape[-2:],
-                            mode="bilinear", align_corners=False,
+                            vp_map,
+                            size=sal_w_frame.shape[-2:],
+                            mode="bilinear",
+                            align_corners=False,
                         )
                     sal_w_frame = sal_w_frame * vp_map
 

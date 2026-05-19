@@ -1,6 +1,6 @@
 {
   "_pending_provenance": {
-    "status": "pending — to be populated by `src/comma_lab/task_codec/quantization.py` evaluation harness",
+    "status": "pending — to be populated by `src/tac/quantization.py` evaluation harness",
     "compiler": "tools/ara_compile.py",
     "claim_id": "C5",
     "expected_schema": {

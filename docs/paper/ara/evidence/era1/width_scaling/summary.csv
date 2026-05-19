@@ -5,7 +5,7 @@ h,score,fit_score,residual,source
 48,1.770,1.770,0.000,era1 width sweep
 64,1.730,1.722,0.008,era1 width sweep [contest-CUDA verified at h=64]
 # fit: score = -0.159 * ln(h) + 2.382, R^2 > 0.97
-# pending: regenerate with src/comma_lab/task_codec/training.py + auth eval each row on CUDA
+# pending: regenerate with src/tac/training.py + auth eval each row on CUDA
 # ara_version: 0.1
 # compiled_at: 2026-04-29
 # claim_id: C4

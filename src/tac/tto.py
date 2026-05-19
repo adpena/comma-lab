@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Test-Time Optimization (TTO) for task-aware codec post-filters.
+"""Test-Time Optimization (TTO) for task-aware compression post-filters.
 
 Adapts a pre-trained postfilter model to specific test video content at
 inflation time by running a few gradient steps before producing output.
@@ -448,15 +448,14 @@ def test_time_optimize(
     model.eval()
 
     # Quality check: ensure adaptation didn't degrade
-    if quality_check and len(losses) >= 2:
+    if quality_check and len(losses) >= 2 and losses[-1] > losses[0] * 1.5:
         # If final loss is worse than initial, roll back
-        if losses[-1] > losses[0] * 1.5:
-            if verbose:
-                print(
-                    f"TTO: quality check FAILED (loss {losses[0]:.6f} -> {losses[-1]:.6f}), restoring original weights",
-                    file=sys.stderr,
-                )
-            model.load_state_dict(original_state)
+        if verbose:
+            print(
+                f"TTO: quality check FAILED (loss {losses[0]:.6f} -> {losses[-1]:.6f}), restoring original weights",
+                file=sys.stderr,
+            )
+        model.load_state_dict(original_state)
 
     elapsed = time.monotonic() - t0
     if verbose:
@@ -609,16 +608,15 @@ def supervised_tto(
     model.eval()
 
     # Quality check: ensure adaptation didn't degrade
-    if quality_check and len(losses) >= 2:
-        if losses[-1] > losses[0] * 1.5:
-            if verbose:
-                print(
-                    f"Supervised TTO: quality check FAILED "
-                    f"(loss {losses[0]:.8f} -> {losses[-1]:.8f}), "
-                    f"restoring original weights",
-                    file=sys.stderr,
-                )
-            model.load_state_dict(original_state)
+    if quality_check and len(losses) >= 2 and losses[-1] > losses[0] * 1.5:
+        if verbose:
+            print(
+                f"Supervised TTO: quality check FAILED "
+                f"(loss {losses[0]:.8f} -> {losses[-1]:.8f}), "
+                f"restoring original weights",
+                file=sys.stderr,
+            )
+        model.load_state_dict(original_state)
 
     elapsed = time.monotonic() - t0
     if verbose:
