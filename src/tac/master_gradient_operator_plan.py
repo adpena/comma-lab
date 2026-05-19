@@ -9,7 +9,7 @@ the packet proofs required before the row can become a probe.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 from tac.master_gradient_feasibility import AxisLabel, audit_master_gradient_probe_plan
@@ -282,6 +282,171 @@ def build_master_gradient_operator_plan_payload(
     }
 
 
+def build_pose_axis_operator_candidates(
+    selector_payload: dict[str, Any],
+    layout_manifest: dict[str, Any],
+    *,
+    packet_proofs_available: bool = False,
+) -> dict[str, Any]:
+    """Resolve pose-axis diagnostic byte ranks into grammar-aware operator specs.
+
+    ``select_pose_axis_dominant_bytes`` intentionally emits diagnostic
+    gradient-subject byte indices, not archive-byte mutation authority. This
+    helper is the next lowering pass: it maps each diagnostic index through a
+    parser-proven logical layout section and returns typed
+    ``CandidateModificationSpec`` rows. The rows remain non-dispatchable until
+    packet proofs are available.
+    """
+
+    selected = _selected_pose_axis_entries(selector_payload)
+    sections = _layout_sections(layout_manifest)
+    archive_sha = str(
+        layout_manifest.get("archive_sha256")
+        or selector_payload.get("archive_sha256")
+        or ""
+    )
+    archive_short = archive_sha[:12] if archive_sha else "unknown"
+    resolved: list[dict[str, object]] = []
+    unresolved: list[dict[str, object]] = []
+    specs: list[CandidateModificationSpec] = []
+    blockers: list[str] = []
+
+    if not selected:
+        blockers.append("pose_axis_selector_entries_missing")
+    if not sections:
+        blockers.append("logical_layout_sections_missing")
+
+    for entry in selected:
+        rank = _optional_int(entry.get("rank")) or len(resolved) + len(unresolved) + 1
+        index = _optional_int(entry.get("diagnostic_gradient_subject_byte_index"))
+        if index is None or index < 0:
+            unresolved.append(
+                {
+                    "rank": rank,
+                    "diagnostic_gradient_subject_byte_index": index,
+                    "reason": "diagnostic_index_missing_or_invalid",
+                }
+            )
+            blockers.append("diagnostic_index_missing_or_invalid")
+            continue
+
+        section = _find_section_for_index(sections, index)
+        if section is None:
+            unresolved.append(
+                {
+                    "rank": rank,
+                    "diagnostic_gradient_subject_byte_index": index,
+                    "reason": "diagnostic_index_outside_layout_sections",
+                }
+            )
+            blockers.append("diagnostic_index_outside_layout_sections")
+            continue
+
+        section_name = str(section.get("name", "unknown_section"))
+        section_role = _section_role(section)
+        if _should_skip_section(section_name, section_role):
+            unresolved.append(
+                {
+                    "rank": rank,
+                    "diagnostic_gradient_subject_byte_index": index,
+                    "section_name": section_name,
+                    "section_role": section_role,
+                    "reason": "diagnostic_index_hits_non_mutation_header_section",
+                }
+            )
+            blockers.append("diagnostic_index_hits_non_mutation_header_section")
+            continue
+
+        section_offset, section_len = _section_span(section)
+        row = _build_row(
+            {
+                "name": section_name,
+                "role": section_role,
+                "offset": section_offset,
+                "len": section_len,
+                "sha256": section.get("sha256"),
+            },
+            axis_label="diagnostic",
+            packet_proofs_available=packet_proofs_available,
+        )
+        base_spec = _candidate_spec_from_row(
+            row,
+            layout_manifest=layout_manifest,
+            packet_proofs_available=packet_proofs_available,
+        )
+        spec_blockers = base_spec.blockers
+        if not packet_proofs_available:
+            spec_blockers = _unique((*spec_blockers, "packet_proofs_missing"))
+        relative_offset = index - int(section_offset or 0)
+        spec = replace(
+            base_spec,
+            spec_id=(
+                f"pose_axis_candidate::{archive_short}::{rank:04d}::"
+                f"{_slug(section_name)}"
+            ),
+            operator_id=f"{row.operator_id}::pose_axis_rank_{rank:04d}",
+            axis_label="pose",
+            blockers=spec_blockers,
+            rationale=(
+                "resolved diagnostic pose-axis byte into parser-proven logical section",
+                f"diagnostic_gradient_subject_byte_index={index}",
+                f"section_relative_offset={relative_offset}",
+                f"pose_axis_share={entry.get('pose_axis_share')}",
+                f"pose_axis_abs_score_contribution={entry.get('pose_axis_abs_score_contribution')}",
+                *base_spec.rationale,
+            ),
+        )
+        specs.append(spec)
+        resolved.append(
+            {
+                "rank": rank,
+                "diagnostic_gradient_subject_byte_index": index,
+                "section_name": section_name,
+                "section_role": section_role,
+                "section_offset": section_offset,
+                "section_len": section_len,
+                "section_relative_offset": relative_offset,
+                "mutation_operator": row.mutation_operator,
+                "spec_id": spec.spec_id,
+                "ready_for_operator_probe": spec.ready_for_operator_probe,
+            }
+        )
+        blockers.extend(spec.blockers)
+
+    return {
+        "schema": "tac_pose_axis_master_gradient_operator_candidates_v1",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "packet_proofs_available": bool(packet_proofs_available),
+        "raw_archive_byte_rows_emitted": 0,
+        "raw_archive_byte_coordinates_allowed": False,
+        "coordinate_system": "grammar_aware_operator_response",
+        "source_selector_schema": selector_payload.get("schema"),
+        "source_layout_schema": layout_manifest.get("schema"),
+        "source_archive_path": layout_manifest.get("archive_path"),
+        "source_archive_sha256": layout_manifest.get("archive_sha256") or selector_payload.get("archive_sha256"),
+        "source_archive_bytes": layout_manifest.get("archive_bytes"),
+        "logical_grammar": _layout_grammar(layout_manifest),
+        "selected_count": len(selected),
+        "resolved_count": len(resolved),
+        "unresolved_count": len(unresolved),
+        "resolved_pose_axis_candidates": resolved,
+        "unresolved_pose_axis_entries": unresolved,
+        "candidate_modification_spec_count": len(specs),
+        "candidate_modification_specs": [spec.to_manifest() for spec in specs],
+        "blockers": _unique(blockers),
+        "next_step": (
+            "run a grammar-specific mutation builder for one resolved spec and "
+            "prove repack, ZIP metadata, CRC, inflate success, and byte-consumption "
+            "closure before operator probe or provider dispatch"
+        ),
+    }
+
+
 def _build_row(
     section: dict[str, Any],
     *,
@@ -385,6 +550,70 @@ def _candidate_spec_from_row(
     )
 
 
+def _selected_pose_axis_entries(selector_payload: dict[str, Any]) -> list[dict[str, Any]]:
+    dominance = selector_payload.get("score_axis_dominance")
+    if not isinstance(dominance, dict):
+        return []
+    selected = dominance.get("selected")
+    if not isinstance(selected, list):
+        return []
+    return [entry for entry in selected if isinstance(entry, dict)]
+
+
+def _layout_sections(layout_manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    logical = layout_manifest.get("logical_layout")
+    if isinstance(logical, dict):
+        sections = logical.get("sections")
+        if isinstance(sections, list):
+            return [section for section in sections if isinstance(section, dict)]
+    sections = layout_manifest.get("sections")
+    if isinstance(sections, list):
+        return [section for section in sections if isinstance(section, dict)]
+    return []
+
+
+def _layout_grammar(layout_manifest: dict[str, Any]) -> object:
+    logical = layout_manifest.get("logical_layout")
+    if isinstance(logical, dict):
+        return logical.get("grammar")
+    return layout_manifest.get("grammar_name")
+
+
+def _section_role(section: dict[str, Any]) -> str:
+    role = section.get("role")
+    if role is not None:
+        return str(role)
+    codec = section.get("codec")
+    if codec is not None:
+        return str(codec)
+    return "unknown_role"
+
+
+def _section_span(section: dict[str, Any]) -> tuple[int | None, int | None]:
+    offset = _optional_int(section.get("offset"))
+    length = _optional_int(section.get("len"))
+    if length is None:
+        length = _optional_int(section.get("length"))
+    if length is None and offset is not None:
+        end = _optional_int(section.get("end_offset"))
+        if end is not None:
+            length = max(0, end - offset)
+    return offset, length
+
+
+def _find_section_for_index(
+    sections: list[dict[str, Any]],
+    index: int,
+) -> dict[str, Any] | None:
+    for section in sections:
+        offset, length = _section_span(section)
+        if offset is None or length is None:
+            continue
+        if offset <= index < offset + length:
+            return section
+    return None
+
+
 def _operator_rationale(section_name: str, section_role: str) -> tuple[str, ...]:
     operator = _mutation_operator(section_name, section_role)
     if operator == "decoder_codec_coordinate_response":
@@ -403,7 +632,14 @@ def _operator_rationale(section_name: str, section_role: str) -> tuple[str, ...]
 def _should_skip_section(section_name: str, section_role: str) -> bool:
     role = section_role.lower()
     name = section_name.lower()
-    return role in _SKIP_ROLES or name.endswith("_magic") or name.endswith("_u32le")
+    return (
+        role in _SKIP_ROLES
+        or role.startswith("raw_")
+        or name.endswith("_magic")
+        or name.endswith("_u32le")
+        or "_len_le_" in name
+        or name in {"format_magic", "format_id", "extra_framing_meta"}
+    )
 
 
 def _optional_int(value: object) -> int | None:
@@ -434,4 +670,5 @@ __all__ = [
     "MasterGradientOperatorRow",
     "build_master_gradient_operator_plan",
     "build_master_gradient_operator_plan_payload",
+    "build_pose_axis_operator_candidates",
 ]

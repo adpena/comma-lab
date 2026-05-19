@@ -1,0 +1,469 @@
+{
+  "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+  "axis_dominance_threshold": 0.7,
+  "axis_labels": [
+    "seg",
+    "pose",
+    "rate"
+  ],
+  "blockers": [
+    "grammar_aware_pose_axis_mutation_builder_missing",
+    "packet_proofs_missing"
+  ],
+  "candidate_modification_specs": [
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0001",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=35773",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000586842",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0001"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0002",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=35774",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000586842",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0002"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0003",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113376",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0003"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0004",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113377",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0004"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0005",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113378",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0005"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0006",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113379",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0006"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0007",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113380",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0007"
+    },
+    {
+      "axis_label": "pose",
+      "blockers": [
+        "grammar_aware_pose_axis_mutation_builder_missing",
+        "packet_proofs_missing"
+      ],
+      "coordinate_system": "grammar_aware_operator_response",
+      "dispatch_attempted": false,
+      "mutation_grain": "grammar_aware_operator",
+      "mutation_operator": "pose_axis_response_probe",
+      "operator_id": "pose_axis_dominant_gradient_subject_rank_0008",
+      "packet_proofs_available": false,
+      "packet_proofs_required": [
+        "repacked_archive",
+        "updated_zip_headers",
+        "updated_zip_crc",
+        "inflate_success_proof",
+        "byte_consumption_noop_detector"
+      ],
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rationale": [
+        "selected by diagnostic score-axis dominance; not a raw archive-byte mutation",
+        "diagnostic_gradient_subject_byte_index=113381",
+        "pose_axis_share=1",
+        "pose_axis_abs_score_contribution=0.000253823",
+        "source archive custody available for grammar resolution",
+        "operator must resolve the diagnostic index through archive grammar before probing"
+      ],
+      "raw_archive_byte_coordinates_allowed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_probe": false,
+      "ready_for_provider_dispatch": false,
+      "response_matrix_columns": [
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "rate_bytes_delta"
+      ],
+      "score_claim": false,
+      "section_name": "zip_inner_member_payload",
+      "section_role": "diagnostic_master_gradient_pose_axis_dominant_byte",
+      "source_archive_bytes": 178258,
+      "source_archive_path": null,
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "spec_id": "pose_axis_dominant::b83bf3488625::0008"
+    }
+  ],
+  "consumer_id": "select_pose_axis_dominant_bytes",
+  "emitted_section_name": "zip_inner_member_payload",
+  "evidence_grade": "[diagnostic; master-gradient consumer]",
+  "gradient_byte_domain": "zip_inner_member_payload",
+  "gradient_tensor_kind": "aggregate_per_byte_v1",
+  "measurement_axis": "[macOS-CPU advisory]",
+  "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "master_gradient_consumer_pose_axis_dominant_bytes_v1",
+  "score_axis_dominance": {
+    "formula": "abs(gradient_axis) * contest_score_marginal / sum_axes(abs(gradient_axis) * marginal)",
+    "pose_axis_index": 1,
+    "selected": [
+      {
+        "diagnostic_gradient_subject_byte_index": 35773,
+        "pose_axis_abs_score_contribution": 0.0005868423717763435,
+        "pose_axis_share": 1.0,
+        "rank": 1,
+        "rate_axis_abs_score_contribution": 0.0,
+        "seg_axis_abs_score_contribution": 0.0
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 35774,
+        "pose_axis_abs_score_contribution": 0.0005868423717763435,
+        "pose_axis_share": 1.0,
+        "rank": 2,
+        "rate_axis_abs_score_contribution": 0.0,
+        "seg_axis_abs_score_contribution": 0.0
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113376,
+        "pose_axis_abs_score_contribution": 0.0002538225292599054,
+        "pose_axis_share": 1.0,
+        "rank": 3,
+        "rate_axis_abs_score_contribution": 0.0,
+        "seg_axis_abs_score_contribution": 0.0
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113377,
+        "pose_axis_abs_score_contribution": 0.0002538225292599054,
+        "pose_axis_share": 1.0,
+        "rank": 4,
+        "rate_axis_abs_score_contribution": 0.0,
+        "seg_axis_abs_score_contribution": 0.0
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113378,
+        "pose_axis_abs_score_contribution": 0.0002538225292599054,
+        "pose_axis_share": 1.0,
+        "rank": 5,
+        "rate_axis_abs_score_contribution": 0.0,
+        "seg_axis_abs_score_contribution": 0.0
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113379,
+        "pose_axis_abs_score_contribution": 0.0002538225292599054,
+        "pose_axis_share": 1.0,
+        "rank": 6,
+        "rate_axis_abs_score_contribution": 0.0,
+        "seg_axis_abs_score_contribution": 0.0
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113380,
+        "pose_axis_abs_score_contribution": 0.0002538225292599054,
+        "pose_axis_share": 1.0,
+        "rank": 7,
+        "rate_axis_abs_score_contribution": 0.0,
+        "seg_axis_abs_score_contribution": 0.0
+      },
+      {
+        "diagnostic_gradient_subject_byte_index": 113381,
+        "pose_axis_abs_score_contribution": 0.0002538225292599054,
+        "pose_axis_share": 1.0,
+        "rank": 8,
+        "rate_axis_abs_score_contribution": 0.0,
+        "seg_axis_abs_score_contribution": 0.0
+      }
+    ],
+    "selected_count": 8
+  },
+  "score_claim": false,
+  "scored_archive_bytes": 178258,
+  "scored_archive_custody_available": true,
+  "scored_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+  "top_k": 8
+}

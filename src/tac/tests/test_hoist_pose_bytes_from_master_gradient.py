@@ -138,6 +138,66 @@ def test_build_pose_byte_hoist_manifest_records_persisted_dominance(tmp_path: Pa
     assert "anchor_score_axis_dominance_not_persisted" not in manifest["blockers"]
 
 
+def test_build_pose_byte_hoist_manifest_resolves_layout_candidates(tmp_path: Path):
+    tool = _load_tool()
+    archive, ledger = _write_anchor(tmp_path)
+    layout = {
+        "schema": "tac_frontier_archive_layout_v1",
+        "archive_path": str(tmp_path / "archive.zip"),
+        "archive_sha256": archive,
+        "archive_bytes": 12345,
+        "logical_layout": {
+            "grammar": "fixture_pose_axis_layout",
+            "sections": [
+                {
+                    "name": "header_u32le",
+                    "role": "internal_length_header",
+                    "offset": 0,
+                    "len": 1,
+                    "sha256": "1" * 64,
+                },
+                {
+                    "name": "decoder_blob",
+                    "role": "renderer_decoder_weights",
+                    "offset": 1,
+                    "len": 2,
+                    "sha256": "2" * 64,
+                },
+                {
+                    "name": "latent_blob",
+                    "role": "latent_motion_or_frame_conditioning",
+                    "offset": 3,
+                    "len": 1,
+                    "sha256": "3" * 64,
+                },
+            ],
+        },
+    }
+    layout_path = tmp_path / "layout.json"
+    layout_path.write_text(json.dumps(layout), encoding="utf-8")
+
+    manifest = tool.build_pose_byte_hoist_manifest(
+        archive_sha256=archive,
+        top_k=1,
+        axis_dominance_threshold=0.7,
+        anchor_path=ledger,
+        layout_manifest_path=layout_path,
+        output_dir=tmp_path / "out",
+    )
+
+    assert manifest["grammar_aware_layout_manifest_path"] == layout_path.as_posix()
+    assert len(manifest["grammar_aware_layout_manifest_sha256"]) == 64
+    resolution = manifest["grammar_aware_operator_candidate_resolution"]
+    assert resolution["schema"] == "tac_pose_axis_master_gradient_operator_candidates_v1"
+    assert resolution["resolved_count"] == 1
+    assert resolution["resolved_pose_axis_candidates"][0]["section_name"] == "decoder_blob"
+    assert resolution["candidate_modification_specs"][0]["score_claim"] is False
+    assert resolution["candidate_modification_specs"][0]["raw_archive_byte_coordinates_allowed"] is False
+    assert manifest["smoke"]["status"] == "blocked_missing_packet_proofs"
+    assert "packet_proofs_missing" in manifest["blockers"]
+    assert "grammar_aware_pose_axis_mutation_builder_missing" not in manifest["blockers"]
+
+
 def test_cli_writes_manifest_json(tmp_path: Path):
     tool = _load_tool()
     archive, ledger = _write_anchor(tmp_path)

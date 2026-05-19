@@ -5,6 +5,7 @@ from tac.master_gradient_operator_plan import (
     CandidateModificationSpec,
     build_master_gradient_operator_plan,
     build_master_gradient_operator_plan_payload,
+    build_pose_axis_operator_candidates,
 )
 
 
@@ -205,3 +206,99 @@ def test_candidate_modification_spec_is_the_typed_non_raw_byte_contract() -> Non
     assert "byte_idx" not in payload
     assert payload["score_claim"] is False
     assert payload["ready_for_provider_dispatch"] is False
+
+
+def _pose_selector_payload() -> dict[str, object]:
+    return {
+        "schema": "master_gradient_consumer_pose_axis_dominant_bytes_v1",
+        "archive_sha256": "a" * 64,
+        "score_axis_dominance": {
+            "selected": [
+                {
+                    "rank": 1,
+                    "diagnostic_gradient_subject_byte_index": 10,
+                    "pose_axis_share": 0.99,
+                    "pose_axis_abs_score_contribution": 123.0,
+                },
+                {
+                    "rank": 2,
+                    "diagnostic_gradient_subject_byte_index": 162_200,
+                    "pose_axis_share": 0.88,
+                    "pose_axis_abs_score_contribution": 12.0,
+                },
+            ]
+        },
+    }
+
+
+def test_pose_axis_operator_candidates_resolve_to_logical_sections() -> None:
+    payload = build_pose_axis_operator_candidates(
+        _pose_selector_payload(),
+        _layout_manifest(),
+    )
+
+    assert payload["schema"] == "tac_pose_axis_master_gradient_operator_candidates_v1"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_provider_dispatch"] is False
+    assert payload["raw_archive_byte_rows_emitted"] == 0
+    assert payload["raw_archive_byte_coordinates_allowed"] is False
+    assert payload["logical_grammar"] == "a1_prefixed_hnerv_microcodec"
+    assert payload["selected_count"] == 2
+    assert payload["resolved_count"] == 2
+    assert payload["unresolved_count"] == 0
+    assert payload["candidate_modification_spec_count"] == 2
+    first = payload["resolved_pose_axis_candidates"][0]
+    assert first["section_name"] == "decoder_blob"
+    assert first["section_relative_offset"] == 6
+    second = payload["resolved_pose_axis_candidates"][1]
+    assert second["section_name"] == "latent_blob"
+    assert "packet_proofs_missing" in payload["blockers"]
+    spec = payload["candidate_modification_specs"][0]
+    assert spec["coordinate_system"] == "grammar_aware_operator_response"
+    assert spec["raw_archive_byte_coordinates_allowed"] is False
+    assert "diagnostic_gradient_subject_byte_index=10" in spec["rationale"]
+    assert "section_relative_offset=6" in spec["rationale"]
+
+
+def test_pose_axis_operator_candidates_keep_header_hits_unresolved() -> None:
+    selector = {
+        "schema": "master_gradient_consumer_pose_axis_dominant_bytes_v1",
+        "archive_sha256": "a" * 64,
+        "score_axis_dominance": {
+            "selected": [
+                {"rank": 1, "diagnostic_gradient_subject_byte_index": 1},
+                {"rank": 2, "diagnostic_gradient_subject_byte_index": 999_999},
+            ]
+        },
+    }
+
+    payload = build_pose_axis_operator_candidates(selector, _layout_manifest())
+
+    assert payload["resolved_count"] == 0
+    assert payload["unresolved_count"] == 2
+    assert payload["candidate_modification_specs"] == []
+    reasons = {entry["reason"] for entry in payload["unresolved_pose_axis_entries"]}
+    assert reasons == {
+        "diagnostic_index_hits_non_mutation_header_section",
+        "diagnostic_index_outside_layout_sections",
+    }
+
+
+def test_pose_axis_operator_candidates_can_be_probe_ready_after_packet_proofs() -> None:
+    payload = build_pose_axis_operator_candidates(
+        _pose_selector_payload(),
+        _layout_manifest(),
+        packet_proofs_available=True,
+    )
+
+    assert payload["blockers"] == ()
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["ready_for_provider_dispatch"] is False
+    assert all(
+        spec["packet_proofs_available"] is True
+        and spec["ready_for_operator_probe"] is True
+        and spec["score_claim"] is False
+        for spec in payload["candidate_modification_specs"]
+    )

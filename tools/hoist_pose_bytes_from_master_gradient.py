@@ -90,6 +90,7 @@ def build_pose_byte_hoist_manifest(
     top_k: int = 128,
     axis_dominance_threshold: float = 0.7,
     anchor_path: Path | None = None,
+    layout_manifest_path: Path | None = None,
     output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> dict[str, Any]:
     """Build the OP-7 planning manifest and companion selector sidecar."""
@@ -99,6 +100,7 @@ def build_pose_byte_hoist_manifest(
         load_aggregate_gradient_from_anchor,
         select_pose_axis_dominant_bytes,
     )
+    from tac.master_gradient_operator_plan import build_pose_axis_operator_candidates
 
     output_dir = output_dir.resolve()
     sidecar_root = output_dir / "master_gradient_consumers"
@@ -125,10 +127,41 @@ def build_pose_byte_hoist_manifest(
         blockers.append("no_pose_axis_dominant_bytes_selected")
     if not isinstance(anchor.get("score_axis_dominance"), dict):
         blockers.append("anchor_score_axis_dominance_not_persisted")
-    blockers.extend([
-        "grammar_aware_pose_axis_mutation_builder_missing",
-        "packet_proofs_missing",
-    ])
+
+    resolved_layout_manifest_path = None
+    operator_candidate_resolution: dict[str, Any] | None = None
+    operator_candidate_resolution_error: str | None = None
+    if layout_manifest_path is None:
+        blockers.extend([
+            "grammar_aware_layout_manifest_missing",
+            "grammar_aware_pose_axis_mutation_builder_missing",
+        ])
+    else:
+        resolved_layout_manifest_path = (
+            layout_manifest_path
+            if layout_manifest_path.is_absolute()
+            else REPO_ROOT / layout_manifest_path
+        )
+        try:
+            layout_payload = json.loads(resolved_layout_manifest_path.read_text(encoding="utf-8"))
+            selector_payload = json.loads(selector_sidecar_path.read_text(encoding="utf-8"))
+            operator_candidate_resolution = build_pose_axis_operator_candidates(
+                selector_payload,
+                layout_payload,
+                packet_proofs_available=False,
+            )
+            blockers.extend(str(blocker) for blocker in operator_candidate_resolution["blockers"])
+            if operator_candidate_resolution.get("resolved_count"):
+                blockers = [
+                    blocker for blocker in blockers
+                    if blocker != "grammar_aware_pose_axis_mutation_builder_missing"
+                ]
+            if not operator_candidate_resolution.get("resolved_count"):
+                blockers.append("grammar_aware_pose_axis_candidates_unresolved")
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            operator_candidate_resolution_error = f"{type(exc).__name__}: {exc}"
+            blockers.append("grammar_aware_layout_manifest_unreadable")
+    blockers.append("packet_proofs_missing")
 
     anchor_violation = contest_axis_authority_violation_reason(anchor)
     anchor_ledger_path = (anchor_path or MASTER_GRADIENT_LEDGER_PATH).resolve()
@@ -201,6 +234,14 @@ def build_pose_byte_hoist_manifest(
         },
         "selector_sidecar_path": _repo_rel(selector_sidecar_path),
         "selector_sidecar_sha256": _sha256_file(selector_sidecar_path),
+        "grammar_aware_layout_manifest_path": (
+            _repo_rel(resolved_layout_manifest_path)
+            if resolved_layout_manifest_path is not None
+            else None
+        ),
+        "grammar_aware_layout_manifest_sha256": _sha256_file(resolved_layout_manifest_path),
+        "grammar_aware_operator_candidate_resolution": operator_candidate_resolution,
+        "grammar_aware_operator_candidate_resolution_error": operator_candidate_resolution_error,
         "candidate_modification_specs": spec_manifests,
         "packet_proofs": {
             "repacked_archive": False,
@@ -211,11 +252,23 @@ def build_pose_byte_hoist_manifest(
         },
         "smoke": {
             "attempted": False,
-            "status": "blocked_missing_grammar_aware_pose_axis_mutation_builder",
+            "status": (
+                "blocked_missing_packet_proofs"
+                if operator_candidate_resolution is not None
+                and operator_candidate_resolution.get("resolved_count")
+                else "blocked_missing_grammar_aware_pose_axis_mutation_builder"
+            ),
             "reason": (
-                "OP-7 selected diagnostic gradient-subject byte indices only; "
-                "no raw archive-byte mutation is packet-valid without grammar "
-                "resolution plus repack/CRC/inflate/no-op proof."
+                "OP-7 resolved at least one diagnostic gradient-subject byte "
+                "through a grammar layout; mutation remains blocked until "
+                "repack/CRC/inflate/no-op proof."
+                if operator_candidate_resolution is not None
+                and operator_candidate_resolution.get("resolved_count")
+                else (
+                    "OP-7 selected diagnostic gradient-subject byte indices only; "
+                    "no raw archive-byte mutation is packet-valid without grammar "
+                    "resolution plus repack/CRC/inflate/no-op proof."
+                )
             ),
         },
         "blockers": _unique(blockers),
@@ -244,6 +297,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--top-k", type=int, default=128)
     parser.add_argument("--axis-dominance-threshold", type=float, default=0.7)
     parser.add_argument("--anchor-path", type=Path, default=None)
+    parser.add_argument("--layout-manifest", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--manifest-path", type=Path, default=DEFAULT_MANIFEST_PATH)
     return parser
@@ -257,6 +311,7 @@ def main(argv: list[str] | None = None) -> int:
         top_k=args.top_k,
         axis_dominance_threshold=args.axis_dominance_threshold,
         anchor_path=args.anchor_path,
+        layout_manifest_path=args.layout_manifest,
         output_dir=output_dir,
     )
     path = write_manifest(manifest, args.manifest_path)

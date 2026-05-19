@@ -1,0 +1,57 @@
+{
+  "archive_bytes": 178258,
+  "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+  "gradient_byte_domain": "zip_inner_member_payload",
+  "gradient_projection_supported": true,
+  "gradient_subject_bytes": 178158,
+  "gradient_subject_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+  "grammar_name": "pr101_lc_v2",
+  "member_bytes": 178158,
+  "member_name": "x",
+  "member_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+  "parser_notes": [
+    "Existing fec6/PR101 fixed-section path can project decoder/latent bytes when paired with the matching codec module."
+  ],
+  "projection_contract": {
+    "anchor_emission_allowed": true,
+    "authority": "gradient_projector_supported",
+    "candidate_modification_spec_required": true,
+    "grammar_name": "pr101_lc_v2",
+    "promotion_eligible": false,
+    "reason": "PR101 fixed decoder/latent/sidecar offsets match the existing split-Brotli Jacobian path.",
+    "required_projector": "fec6_pr101_fixed_section_int8_fp16_jacobian",
+    "score_claim_allowed": false
+  },
+  "sections": [
+    {
+      "codec": "brotli_streams_int8",
+      "end_offset": 162164,
+      "length": 162164,
+      "name": "decoder",
+      "notes": "Concatenated decoder tensor Brotli streams.",
+      "offset": 0,
+      "score_affecting": true,
+      "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+    },
+    {
+      "codec": "lzma_temporal_delta",
+      "end_offset": 177551,
+      "length": 15387,
+      "name": "latent",
+      "notes": "Temporal-delta latent payload.",
+      "offset": 162164,
+      "score_affecting": true,
+      "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe"
+    },
+    {
+      "codec": "brotli_per_pair_corrections",
+      "end_offset": 178158,
+      "length": 607,
+      "name": "sidecar",
+      "notes": "Per-pair correction sidecar tail.",
+      "offset": 177551,
+      "score_affecting": true,
+      "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+    }
+  ]
+}
