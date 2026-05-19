@@ -1,0 +1,430 @@
+{
+  "archive": {
+    "bytes": 178517,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 178417,
+        "crc": 3299285626,
+        "file_size": 178417,
+        "local_header": {
+          "compress_size": 178417,
+          "compress_type": 0,
+          "crc32": 3299285626,
+          "extra_len": 0,
+          "file_size": 178417,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "x",
+          "version_needed": 20
+        },
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+  },
+  "archive_manifest": {
+    "exists": false,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_local_header_metadata_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_payload_readable:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=178517 actual=178517",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/contest_cpu_auth_eval.json",
+      "name": "contest_cpu_auth_eval_exists",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=22f5fdb66091a1ee78e0b57b2833d3d82c7de57c620747430896aaafa805a913",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['22f5fdb66091a1ee78e0b57b2833d3d82c7de57c620747430896aaafa805a913', '6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df'] auth_eval_candidates={}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "6bae0201fb082457",
+      "name": "report_mentions_archive_sha256",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "178517",
+      "name": "report_mentions_archive_size_bytes",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packets must include the PR-template `competitive or innovative` answer",
+      "name": "post_deadline_policy_statement_present",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "statement must affirm competitive and/or innovative status",
+      "name": "post_deadline_policy_statement_names_mode",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "non-template rationale",
+      "name": "post_deadline_policy_statement_not_template",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "affirmative rationale",
+      "name": "post_deadline_policy_statement_not_negated",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "statement must explain score/leaderboard competitiveness or novelty",
+      "name": "post_deadline_policy_statement_has_frontier_context",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "statement length=0 chars; minimum 80",
+      "name": "post_deadline_policy_statement_substantive",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must link public source repo(s)",
+      "name": "public_source_repo_link_present",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must include a pinned commit/tag URL or 40-char git SHA",
+      "name": "public_source_pinned_revision_present",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must mention OSS/open-source, deterministic reproducibility, source code, commit, archive SHA, or runtime tree",
+      "name": "public_source_reproducibility_context_present",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must include a reproduce command or an archive/runtime SHA binding",
+      "name": "public_source_reproduce_command_or_sha_binding_present",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final public text must label CUDA evidence as [contest-CUDA]",
+      "name": "public_evidence_contest_cuda_label_present",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final public text must label CPU evidence as [contest-CPU]",
+      "name": "public_evidence_contest_cpu_label_present",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-lane-id",
+      "name": "contest_final_expected_lane_id_supplied",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-job-id",
+      "name": "contest_final_expected_job_id_supplied",
+      "passed": false,
+      "severity": "error"
+    }
+  ],
+  "contest_cpu_auth_eval": {
+    "exists": false,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/contest_cpu_auth_eval.json",
+    "required": true
+  },
+  "dispatch_claims": {
+    "required": false
+  },
+  "frontier_baseline": {
+    "candidate": {
+      "axis": "contest_cuda",
+      "score": null,
+      "score_source": "missing"
+    },
+    "canonical_best": {
+      "contest_cpu": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "hardware_substrate": "linux_x86_64_cpu",
+        "lane_id": null,
+        "score": 0.1920513168811056
+      },
+      "contest_cuda": {
+        "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+        "hardware_substrate": "linux_x86_64_t4",
+        "lane_id": null,
+        "score": 0.20533002902019143
+      }
+    },
+    "schema": "pact_frontier_check_v1"
+  },
+  "passed": false,
+  "post_deadline_submission_policy": {
+    "chars": 0,
+    "has_frontier_context": false,
+    "names_mode": false,
+    "negation_reason": null,
+    "required": true,
+    "source": null,
+    "statement_preview": "",
+    "template_reason": null
+  },
+  "public_evidence_axis_labels": {
+    "labels": {
+      "[contest-CPU]": false,
+      "[contest-CUDA]": false
+    },
+    "required": true,
+    "sources": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt"
+    ]
+  },
+  "public_source_reproducibility": {
+    "archive_runtime_sha_bindings": [],
+    "has_reproduce_command": false,
+    "has_reproduce_command_or_sha_binding": false,
+    "has_reproducibility_context": false,
+    "pinned_source_refs": [],
+    "repo_links": [],
+    "required": true,
+    "sources": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "contest_auth_eval_cpu.json",
+      "contest_cpu_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 16331,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py",
+        "sha256": "31b9915a1071833591a8fbd9761077bb607e09b7410450dfa211499d92ae4505"
+      },
+      {
+        "bytes": 818,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+        "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+      },
+      {
+        "bytes": 16734,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py",
+        "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+      },
+      {
+        "bytes": 7558,
+        "relative_path": "src/frame_selector.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py",
+        "sha256": "8bde9a1c9926b0758d341aed0e86d66f4ac460d4a18e5464a92ff04d9792e50f"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ],
+    "portable_runtime_tree_sha256_without_custody_files": "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 5,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+    "runtime_tree_sha256": "22f5fdb66091a1ee78e0b57b2833d3d82c7de57c620747430896aaafa805a913",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}
