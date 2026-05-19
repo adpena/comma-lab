@@ -15,6 +15,17 @@ from pathlib import Path
 
 from tac.canonical_duckdb.schema import CANONICAL_TABLES, connect
 
+EXTENSION_TABLE_SOURCES: dict[str, str] = {
+    "multi_granularity_sensitivity": (
+        "per_pair master_gradient anchor + explicit class source sidecar"
+    ),
+    "multi_granularity_sensitivity_runs": (
+        "per_pair master_gradient anchor + explicit class source sidecar"
+    ),
+    "per_byte_sensitivity": "master_gradient_anchors.jsonl + .npy sidecars",
+}
+"""Additive DuckDB extension tables that remain derived read-models."""
+
 CANONICAL_QUERY_SCRIPTS: dict[str, str] = {
     "research_memos_by_lane": """
         SELECT lane_id, COUNT(*) AS memo_count, SUM(bytes) AS total_bytes
@@ -109,7 +120,7 @@ def audit_table_provenance(
     db_path: str | Path,
 ) -> dict:
     """Return a lightweight provenance audit for one derived table."""
-    if table not in CANONICAL_TABLES:
+    if table not in CANONICAL_TABLES and table not in EXTENSION_TABLE_SOURCES:
         raise ValueError(f"unknown canonical DuckDB table: {table}")
     con = connect(db_path, read_only=True)
     try:
@@ -121,13 +132,14 @@ def audit_table_provenance(
         "table": table,
         "row_count": int(row_count),
         "columns": list(columns),
-        "source_of_truth": "json_jsonl_markdown",
+        "source_of_truth": EXTENSION_TABLE_SOURCES.get(table, "json_jsonl_markdown"),
         "duckdb_is_source_of_truth": False,
     }
 
 
 __all__ = [
     "CANONICAL_QUERY_SCRIPTS",
+    "EXTENSION_TABLE_SOURCES",
     "audit_table_provenance",
     "run_canonical_query",
 ]

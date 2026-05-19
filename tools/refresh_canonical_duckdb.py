@@ -58,7 +58,38 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "that writes parquet + manifest and fires no network upload."
         ),
     )
+    parser.add_argument(
+        "--multi-granularity-archive-sha256",
+        help="Optional archive SHA filter for bounded multi_granularity_sensitivity refresh.",
+    )
+    parser.add_argument(
+        "--multi-granularity-class-source",
+        type=Path,
+        help="Class-weight/source JSON required to materialize per-class ITEM_8 rows.",
+    )
+    parser.add_argument(
+        "--multi-granularity-byte-offsets",
+        help="Comma-separated byte offsets for bounded ITEM_8 materialization.",
+    )
+    parser.add_argument(
+        "--multi-granularity-top-k-bytes",
+        type=int,
+        help="Materialize only the top-K bytes by per-pair absolute sensitivity.",
+    )
+    parser.add_argument(
+        "--multi-granularity-max-rows",
+        type=int,
+        default=1_000_000,
+        help="Fail closed if ITEM_8 materialization would emit more rows.",
+    )
     return parser.parse_args(argv)
+
+
+def _parse_int_csv(value: str | None) -> list[int] | None:
+    if value is None:
+        return None
+    parts = [part.strip() for part in value.split(",") if part.strip()]
+    return [int(part) for part in parts]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -69,6 +100,26 @@ def main(argv: list[str] | None = None) -> int:
         refresh_all_tables,
         refresh_table,
     )
+    from tac.canonical_duckdb.per_byte_sensitivity_ext import (
+        refresh_multi_granularity_sensitivity_table,
+        refresh_per_byte_sensitivity_table,
+    )
+
+    multi_granularity_options = {
+        "archive_sha256": args.multi_granularity_archive_sha256,
+        "class_source_path": args.multi_granularity_class_source,
+        "byte_offsets": _parse_int_csv(args.multi_granularity_byte_offsets),
+        "top_k_bytes": args.multi_granularity_top_k_bytes,
+        "max_rows": args.multi_granularity_max_rows,
+    }
+    extension_refreshers = {
+        "multi_granularity_sensitivity": lambda root, *, db_path: refresh_multi_granularity_sensitivity_table(
+            root,
+            db_path=db_path,
+            **multi_granularity_options,
+        ),
+        "per_byte_sensitivity": refresh_per_byte_sensitivity_table,
+    }
 
     repo_root = args.repo_root.resolve()
     db_path = args.db_path
@@ -79,12 +130,21 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.tables == ["all"]:
         result = refresh_all_tables(repo_root, db_path=db_path)
+        result.update(
+            {
+                table: refresher(repo_root, db_path=db_path)
+                for table, refresher in extension_refreshers.items()
+            }
+        )
     else:
-        unknown = sorted(set(args.tables) - set(CANONICAL_TABLES))
+        known_tables = set(CANONICAL_TABLES) | set(extension_refreshers)
+        unknown = sorted(set(args.tables) - known_tables)
         if unknown:
             raise SystemExit(f"unknown canonical DuckDB tables: {', '.join(unknown)}")
         result = {
-            table: refresh_table(table, repo_root, db_path=db_path)
+            table: extension_refreshers[table](repo_root, db_path=db_path)
+            if table in extension_refreshers
+            else refresh_table(table, repo_root, db_path=db_path)
             for table in args.tables
         }
     if args.push_hf_canonical_task_status:
