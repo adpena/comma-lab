@@ -97,7 +97,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum, StrEnum
 from pathlib import Path
@@ -6109,6 +6109,193 @@ def discover_compliant_consumer_modules(
 # ─────────────────────────────────────────────────────────────────────────
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# R11-H1-1-PLUS-H1-6-FIX-WAVE: invoker callsites (Catalog #336 + #337)
+# ─────────────────────────────────────────────────────────────────────────
+# Cable H1 R11 adversarial review (commit 725699560 2026-05-19) caught:
+#
+#  H1-1: discover_and_register_consumers + discover_compliant_consumer_modules
+#        DEFINED but NEVER CALLED from main(). 21 consumer packages +
+#        canonical contract + auto-discovery loop = ZERO actual cathedral
+#        influence at runtime.
+#
+#  H1-6: rerank_candidates_via_master_gradient "only annotates anchor
+#        availability" — never invoked from main() either.
+#
+# Both are the SAME meta-class: auto-discovery / canonical-helper machinery
+# is necessary but NOT SUFFICIENT to extinct the orphan-signal class. The
+# INVOKER CALLSITE in main() is the missing structural protection.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+# this fix lands the INVOKER CALLSITE here + two STRICT preflight gates
+# (#336 / #337) at src/tac/preflight.py to prevent the regression class.
+#
+# The contribution is OBSERVABILITY-ONLY at landing per Catalog #287/#323:
+# every consumer's consume_candidate must already declare
+# `promotable=False` + `axis_tag=[predicted]` (validated by the canonical
+# contract). The invocation surfaces the contributions in output JSON for
+# operator audit; it does NOT mutate predicted_score_delta on the candidate
+# rows (that would couple the autopilot loop to consumer logic in a way
+# that breaks the canonical rank pipeline).
+#
+# The canonical wire-in: `invoke_cathedral_consumers_on_candidates()` is
+# called once from main() after candidates are loaded (in both --report-only
+# and the normal run_continuous_loop path), and its output is attached
+# to the emitted JSON payload under `cathedral_consumer_invocations` and
+# `master_gradient_anchor_annotations`.
+
+CATHEDRAL_CONSUMER_INVOCATION_SCHEMA = "cathedral_consumer_invocation_v1_20260519"
+"""Canonical schema id for the consumer invocation output payload.
+
+Versioned per the canonical helper pattern (Catalog #245 ledger / #300
+council deliberation v2 / sister discipline). Bump when the output shape
+changes meaningfully.
+"""
+
+
+def _invoke_consumer_safely(
+    module: Any, candidate: CandidateRow
+) -> dict[str, Any]:
+    """Call ``module.consume_candidate(candidate_dict)`` with error trapping.
+
+    Each consumer is a user-authored module; an exception in one consumer
+    must NOT crash the cathedral loop. Errors are surfaced as a row with
+    `error` field so the operator can audit which consumer failed.
+
+    Per Catalog #287 the contribution is observability-only (the autopilot
+    ranker pipeline is unchanged); errors do not affect dispatch decisions.
+    """
+    try:
+        candidate_payload = {
+            "candidate_id": candidate.candidate_id,
+            "archive_sha256": candidate.archive_sha256,
+            "predicted_score_delta": candidate.predicted_score_delta,
+            "estimated_dispatch_cost_usd": candidate.estimated_dispatch_cost_usd,
+            "blockers": list(candidate.blockers),
+        }
+        contribution = module.consume_candidate(candidate_payload)
+        if not isinstance(contribution, Mapping):
+            return {
+                "consumer_module": getattr(module, "__name__", "<unknown>"),
+                "candidate_id": candidate.candidate_id,
+                "error": (
+                    f"consume_candidate returned {type(contribution).__name__}, "
+                    "expected Mapping per CathedralConsumerContract"
+                ),
+            }
+        return {
+            "consumer_module": getattr(module, "__name__", "<unknown>"),
+            "consumer_name": getattr(module, "CONSUMER_NAME", "<unknown>"),
+            "consumer_version": getattr(module, "CONSUMER_VERSION", "unknown"),
+            "candidate_id": candidate.candidate_id,
+            "predicted_delta_adjustment": float(
+                contribution.get("predicted_delta_adjustment", 0.0)
+            ),
+            "rationale": str(contribution.get("rationale", ""))[:512],
+            "axis_tag": str(contribution.get("axis_tag", "[predicted]")),
+            "promotable": bool(contribution.get("promotable", False)),
+            "confidence": float(contribution.get("confidence", 0.0)),
+        }
+    except Exception as exc:  # noqa: BLE001  defensive at consumer boundary
+        return {
+            "consumer_module": getattr(module, "__name__", "<unknown>"),
+            "candidate_id": candidate.candidate_id,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
+def invoke_cathedral_consumers_on_candidates(
+    candidates: list[CandidateRow],
+    *,
+    top_n: int | None = None,
+    repo_root: Path | str | None = None,
+    panel_axis: str = "contest_cpu",
+    include_master_gradient_rerank: bool = True,
+) -> dict[str, Any]:
+    """Canonical invoker for auto-discovered cathedral consumers + master-gradient rerank.
+
+    THE H1-1 + H1-6 FIX. Calls
+    :func:`discover_compliant_consumer_modules` to ingest every contract-
+    compliant package under ``src/tac/cathedral_consumers/`` and invokes
+    each one's ``consume_candidate`` on the top-N candidates. Also calls
+    :func:`rerank_candidates_via_master_gradient` to surface
+    master-gradient anchor annotations.
+
+    Returns a dict with:
+    - ``schema``: pinned schema version
+    - ``consumer_count``: number of discovered consumers
+    - ``consumer_names``: sorted list of consumer module names
+    - ``invocations``: per-(consumer × candidate) contribution rows
+    - ``master_gradient_annotations``: per-candidate annotation rows
+    - ``score_claim``: False (per Catalog #323 contribution is observability-only)
+    - ``promotion_eligible``: False
+    - ``ready_for_exact_eval_dispatch``: False
+    - ``evidence_grade``: "[predicted, cathedral consumer invocation]"
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #287/#323
+    the invocation does NOT mutate predicted_score_delta on the candidate
+    rows; contributions are surfaced for operator audit only.
+
+    Per CLAUDE.md "Forbidden score claims" the rationale text is bounded
+    (≤512 chars per contribution) so a misbehaving consumer cannot pollute
+    the output payload.
+    """
+    root = Path(repo_root) if repo_root else Path.cwd()
+    modules = discover_compliant_consumer_modules(repo_root=root)
+    # Determinism: sort by name so multi-machine runs produce equivalent output.
+    modules_sorted = sorted(modules, key=lambda m: getattr(m, "__name__", ""))
+    consumer_names = [getattr(m, "__name__", "<unknown>") for m in modules_sorted]
+
+    # Bounded candidate set: cap at top_n if requested.
+    target_candidates = list(candidates)
+    if top_n is not None and top_n > 0:
+        target_candidates = target_candidates[:top_n]
+
+    invocations: list[dict[str, Any]] = []
+    for module in modules_sorted:
+        for candidate in target_candidates:
+            invocations.append(_invoke_consumer_safely(module, candidate))
+
+    master_gradient_annotations: list[dict[str, Any]] = []
+    if include_master_gradient_rerank:
+        try:
+            mg_results = rerank_candidates_via_master_gradient(
+                target_candidates, panel_axis=panel_axis,
+            )
+            for candidate, predicted_delta, explanation in mg_results:
+                master_gradient_annotations.append({
+                    "candidate_id": candidate.candidate_id,
+                    "archive_sha256": candidate.archive_sha256,
+                    "predicted_delta_passthrough": float(predicted_delta),
+                    "explanation": str(explanation)[:512],
+                })
+        except Exception as exc:  # noqa: BLE001  defensive
+            master_gradient_annotations.append({
+                "error": f"{type(exc).__name__}: {exc}",
+            })
+
+    return {
+        "schema": CATHEDRAL_CONSUMER_INVOCATION_SCHEMA,
+        "evidence_grade": "[predicted, cathedral consumer invocation]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "panel_axis": panel_axis,
+        "top_n": top_n,
+        "consumer_count": len(modules_sorted),
+        "consumer_names": consumer_names,
+        "candidates_invoked": len(target_candidates),
+        "invocations": invocations,
+        "master_gradient_annotations": master_gradient_annotations,
+        "master_gradient_rerank_invoked": bool(include_master_gradient_rerank),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# End of R11-H1-1-PLUS-H1-6-FIX-WAVE invoker callsites
+# ─────────────────────────────────────────────────────────────────────────
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -6567,6 +6754,16 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
 
+        # R11-H1-1+H1-6 FIX-WAVE: invoke auto-discovered cathedral consumers
+        # + master-gradient rerank on the ranked top-N. THE PARADIGM SHIFT
+        # IS NOW RUNTIME-ACTIVE. Per Catalog #336/#337 + #335 + #287/#323,
+        # contributions are observability-only (no score mutation).
+        consumer_invocations = invoke_cathedral_consumers_on_candidates(
+            ranked,
+            top_n=top_n,
+            panel_axis=args.score_panel_axis,
+        )
+
         # Emit minimal JSON on stdout (machine-readable consumer surface).
         # NEVER includes promotion / score-claim / dispatch-authority fields per
         # CLAUDE.md "Apples-to-apples evidence discipline".
@@ -6581,7 +6778,9 @@ def main(argv: list[str] | None = None) -> int:
                 "no_score_claim_only_predicted_band",
                 "no_kill_verdict",
                 "anti_duplication_reuses_rank_candidates",
+                "cathedral_consumer_invocation_active_catalog_336_337",
             ],
+            "cathedral_consumer_invocations": consumer_invocations,
             "rank_axis": args.rank_axis,
             "z1_empirical_revision_applied": True,
             "continual_posterior_loaded": args.load_continual_posterior,
@@ -6639,6 +6838,39 @@ def main(argv: list[str] | None = None) -> int:
         print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
         return 2
 
+    # R11-H1-1+H1-6 FIX-WAVE: invoke auto-discovered cathedral consumers
+    # + master-gradient rerank on a fresh load of the candidate pool. Even
+    # if run_continuous_loop already ranked + halted, surfacing the
+    # consumer contributions in the output payload is the operator-facing
+    # canonical observation surface per CLAUDE.md "Max observability —
+    # non-negotiable". Per Catalog #287/#323 contribution is
+    # observability-only (no score mutation, no promotion authority).
+    try:
+        post_loop_candidates = _source()
+        ranked_post_loop = rank_candidates(
+            post_loop_candidates,
+            rank_axis=args.rank_axis,
+            apply_z1_empirical_revision=True,
+            score_panel_axis=args.score_panel_axis,
+        )
+        consumer_invocations_post_loop = invoke_cathedral_consumers_on_candidates(
+            ranked_post_loop,
+            top_n=min(args.max_dispatch_recommendations or 10, 10),
+            panel_axis=args.score_panel_axis,
+        )
+    except Exception as exc:  # noqa: BLE001  defensive: never crash the loop
+        consumer_invocations_post_loop = {
+            "schema": CATHEDRAL_CONSUMER_INVOCATION_SCHEMA,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "consumer_count": 0,
+            "consumer_names": [],
+            "invocations": [],
+            "master_gradient_annotations": [],
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
     if args.use_substrate_composition_matrix_ranking is not None:
         source_tag = "substrate_composition_matrix_constraints_enforced"
     elif args.probe_disambiguator_json is not None:
@@ -6660,7 +6892,9 @@ def main(argv: list[str] | None = None) -> int:
             "compressive_sensing_lattice_diagnostic_visible"
             if args.use_compressive_sensing_lattice
             else "compressive_sensing_lattice_diagnostic_not_requested",
+            "cathedral_consumer_invocation_active_catalog_336_337",
         ],
+        "cathedral_consumer_invocations": consumer_invocations_post_loop,
         "iterations_run": len(reports),
         "race_mode": args.race_mode,
         "operator_authorized_mode": {
