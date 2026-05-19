@@ -9,7 +9,8 @@ per-class CHROMA palette + per-cell CLASS-LABEL stream so the inflate runtime
 can synthesize RGB from grayscale+class instead of Y=R=G=B replication.::  # SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:docstring-references-the-cargo-cult-that-was-already-unwound-by-v7-path-A-per-class-RGB-anchors-and-v8-DB4-DWT-decorrelation-per-symposium-commit-4292c8ce2
 
     MAGIC(4)             b"CH06"   Carmack-Hotz strip-everything substrate v06
-    VERSION(1)           u8        schema version (2 = Path A chroma+optical-flow)
+    VERSION(1)           u8        schema version (2 = Path A chroma+optical-flow;
+                                    3 = v2 plus seeded chroma palette)
     NUM_PAIRS(2)         u16       number of (frame_0, frame_1) pairs
     PALETTE_SIZE(1)      u8        grayscale palette size (default 16)
     GRAYSCALE_H(2)       u16       low-res grayscale field height (e.g. H/4)
@@ -22,6 +23,7 @@ can synthesize RGB from grayscale+class instead of Y=R=G=B replication.::  # SIG
     POSE_LEN(4)          u32       per-pair pose-delta stream length (uint8 * 6 * NUM_PAIRS)
     META_LEN(2)          u16       utf-8 json meta length
     CHROMA_LEN(2)        u16       NUM_SEGNET_CLASSES * 3 bytes  (v2; per-class RGB anchors)
+                                    or 8 bytes (v3; archived chroma seed)
     CLS_LEN(4)           u32       arith-coded per-cell class-label stream length (v2)
     PALETTE              ...       PALETTE_SIZE bytes (uint8 grayscale levels)
     CDF                  ...       class-conditional CDF table (uint16 row-major)
@@ -29,6 +31,7 @@ can synthesize RGB from grayscale+class instead of Y=R=G=B replication.::  # SIG
     POSE_STREAM          ...       per-pair pose deltas (uint8 quantized; 6 dims per pair)
     META_BLOB            ...       json: {grayscale_downsample, pose_quant_scale, ...}
     CHROMA_BLOB          ...       NUM_SEGNET_CLASSES*3 uint8 RGB anchors (v2)
+                                    or 8-byte seed expanded at inflate (v3)
     CLS_STREAM           ...       arith-coded uniform-CDF class labels per cell (v2)
 
 Total header v2: 30 + 2 + 4 = 36 bytes.
@@ -57,6 +60,7 @@ CLAUDE.md compliance:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import struct
 from dataclasses import dataclass
@@ -79,6 +83,9 @@ CH06_SCHEMA_VERSION: int = 2
 labels stream so the inflate runtime can synthesize per-pixel RGB instead of
 Y=R=G=B replication. Symposium commit 4292c8ce2 ratifies the bump."""  # SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:docstring-references-the-cargo-cult-that-was-already-unwound-by-v7-path-A-per-class-RGB-anchors-and-v8-DB4-DWT-decorrelation-per-symposium-commit-4292c8ce2
 
+CH06_SCHEMA_VERSION_SEEDED_CHROMA: int = 3
+"""Schema v3 stores an 8-byte seed and expands the per-class chroma palette."""
+
 # Header layout per docstring above. v2 format string:
 #   < 4s B H B H H H H H H I I H H I  ->  4+1+2+1+2+2+2+2+2+2+4+4+2+2+4 = 36 bytes
 CH06_HEADER_FMT: str = "<4sBHBHHHHHHIIHHI"
@@ -96,6 +103,49 @@ ALL 6 dims are consumed by the inflate runtime's affine warp per Path A
 
 CHROMA_BYTES_PER_CLASS: int = 3
 """Per-SegNet-class RGB anchor stored as uint8 R/G/B (3 bytes per class)."""
+
+CHROMA_SEED_BYTES: int = 8
+"""Archive-charged bytes for procedural per-class chroma palette generation."""
+
+_CHROMA_SEED_DOMAIN = b"tac.procedural_codebook_generator.seed.v1\0"
+
+
+def emit_chroma_palette_seed() -> bytes:
+    """Emit the canonical archive-member seed for CH06 v3 chroma palettes."""
+    descriptor = json.dumps(
+        {
+            "distribution": "uniform_int8",
+            "shape": (NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(_CHROMA_SEED_DOMAIN + descriptor).digest()[
+        :CHROMA_SEED_BYTES
+    ]
+
+
+def expand_chroma_seed_to_palette(seed: bytes) -> np.ndarray:
+    """Expand an archive-charged seed into a deterministic uint8 chroma palette."""
+    seed_bytes = _validate_chroma_seed(seed)
+    rng = np.random.Generator(
+        np.random.PCG64(int.from_bytes(seed_bytes, byteorder="big"))
+    )
+    return rng.integers(
+        0,
+        256,
+        size=(NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS),
+        dtype=np.uint8,
+    )
+
+
+def _validate_chroma_seed(seed: bytes | None) -> bytes:
+    if seed is None:
+        raise ValueError("chroma_seed is required for CH06 seeded-chroma archives")
+    seed_bytes = bytes(seed)
+    if len(seed_bytes) != CHROMA_SEED_BYTES:
+        raise ValueError(f"chroma_seed must be exactly {CHROMA_SEED_BYTES} bytes")
+    return seed_bytes
 
 
 @dataclass(frozen=True)
@@ -121,6 +171,9 @@ class CarmackHotzArchive:
     output_height: int
     output_width: int
     chroma_rgb: np.ndarray  # (NUM_SEGNET_CLASSES, 3) uint8 per-class RGB anchors (v2)
+    chroma_seed: bytes | None
+    """Archive-charged seed for v3 procedural chroma palettes."""
+
     cls_arith_bytes: bytes  # arith-coded per-cell class labels stream (v2)
 
     @property
@@ -155,13 +208,24 @@ def pack_archive(
     chroma_rgb: np.ndarray,
     cls_arith_bytes: bytes,
     schema_version: int = CH06_SCHEMA_VERSION,
+    chroma_seed: bytes | None = None,
 ) -> bytes:
     """Serialize CH06 v2 archive into monolithic 0.bin bytes.
 
     Path A redesign 2026-05-16: `chroma_rgb` (NUM_SEGNET_CLASSES, 3) uint8 +
     `cls_arith_bytes` (arith-coded per-cell class labels) are now REQUIRED.
+    If `chroma_seed` is supplied, CH06 v3 stores that seed instead of the raw
+    15-byte palette and requires `chroma_rgb` to be exactly seed-derived.
     """
-    if schema_version != CH06_SCHEMA_VERSION:
+    effective_schema_version = (
+        CH06_SCHEMA_VERSION_SEEDED_CHROMA
+        if chroma_seed is not None and schema_version == CH06_SCHEMA_VERSION
+        else schema_version
+    )
+    if effective_schema_version not in (
+        CH06_SCHEMA_VERSION,
+        CH06_SCHEMA_VERSION_SEEDED_CHROMA,
+    ):
         raise ValueError(f"unsupported schema version: {schema_version}")
     if palette.size != cdf.palette_size:
         raise ValueError(
@@ -194,7 +258,17 @@ def pack_archive(
     palette_bytes = bytes(palette.levels.tobytes())
     cdf_bytes = bytes(cdf.cdf.tobytes())
     meta_bytes = json.dumps(meta, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    chroma_bytes = bytes(chroma_rgb.tobytes())
+    if effective_schema_version == CH06_SCHEMA_VERSION_SEEDED_CHROMA:
+        seed = _validate_chroma_seed(chroma_seed)
+        generated_chroma = expand_chroma_seed_to_palette(seed)
+        if not np.array_equal(chroma_rgb, generated_chroma):
+            raise ValueError(
+                "seeded chroma archive requires chroma_rgb to equal "
+                "expand_chroma_seed_to_palette(chroma_seed)"
+            )
+        chroma_bytes = seed
+    else:
+        chroma_bytes = bytes(chroma_rgb.tobytes())
 
     if len(palette_bytes) > 0xFFFF:
         raise ValueError(f"palette too large: {len(palette_bytes)} > {0xFFFF}")
@@ -214,7 +288,7 @@ def pack_archive(
     header = struct.pack(
         CH06_HEADER_FMT,
         CH06_MAGIC,
-        schema_version,
+        effective_schema_version,
         num_pairs,
         palette.size,
         grayscale_h,
@@ -266,7 +340,7 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
     ) = struct.unpack(CH06_HEADER_FMT, blob[:CH06_HEADER_SIZE])
     if magic != CH06_MAGIC:
         raise ValueError(f"bad magic: {magic!r} (expected {CH06_MAGIC!r})")
-    if version != CH06_SCHEMA_VERSION:
+    if version not in (CH06_SCHEMA_VERSION, CH06_SCHEMA_VERSION_SEEDED_CHROMA):
         raise ValueError(f"unsupported schema version: {version}")
     expected_palette = palette_size * 1
     if palette_len != expected_palette:
@@ -279,7 +353,11 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
     expected_pose = num_pairs * POSE_DIMS
     if pose_len != expected_pose:
         raise ValueError(f"pose_len {pose_len} != expected {expected_pose}")
-    expected_chroma = NUM_SEGNET_CLASSES * CHROMA_BYTES_PER_CLASS
+    expected_chroma = (
+        NUM_SEGNET_CLASSES * CHROMA_BYTES_PER_CLASS
+        if version == CH06_SCHEMA_VERSION
+        else CHROMA_SEED_BYTES
+    )
     if chroma_len != expected_chroma:
         raise ValueError(f"chroma_len {chroma_len} != expected {expected_chroma}")
 
@@ -318,11 +396,16 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
     cdf = ClassConditionalCDF(cdf=cdf_arr.astype(np.uint16))
 
     meta = json.loads(meta_blob.decode("utf-8"))
-    chroma_rgb = (
-        np.frombuffer(chroma_blob, dtype=np.uint8)
-        .copy()
-        .reshape(NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS)
-    )
+    if version == CH06_SCHEMA_VERSION_SEEDED_CHROMA:
+        chroma_seed = bytes(chroma_blob)
+        chroma_rgb = expand_chroma_seed_to_palette(chroma_seed)
+    else:
+        chroma_seed = None
+        chroma_rgb = (
+            np.frombuffer(chroma_blob, dtype=np.uint8)
+            .copy()
+            .reshape(NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS)
+        )
     return CarmackHotzArchive(
         palette=palette,
         cdf=cdf,
@@ -336,6 +419,7 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
         output_height=int(output_height),
         output_width=int(output_width),
         chroma_rgb=chroma_rgb,
+        chroma_seed=chroma_seed,
         cls_arith_bytes=bytes(cls_arith_bytes),
     )
 

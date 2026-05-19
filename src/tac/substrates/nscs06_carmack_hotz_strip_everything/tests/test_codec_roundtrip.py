@@ -14,10 +14,17 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tac.procedural_codebook_generator.hash_seed_codebook_generator import (
+    emit_seed as emit_canonical_seed,
+)
+from tac.procedural_codebook_generator.hash_seed_codebook_generator import (
+    expand_seed_to_codebook as expand_canonical_seed_to_codebook,
+)
 from tac.substrates.nscs06_carmack_hotz_strip_everything import (
     CH06_HEADER_SIZE,
     CH06_MAGIC,
     CH06_SCHEMA_VERSION,
+    CH06_SCHEMA_VERSION_SEEDED_CHROMA,
     ArithmeticCoder,
     ClassConditionalCDF,
     GrayscalePalette,
@@ -29,12 +36,15 @@ from tac.substrates.nscs06_carmack_hotz_strip_everything import (
 )
 from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
     CHROMA_BYTES_PER_CLASS,
+    CHROMA_SEED_BYTES,
     POSE_DIMS,
     build_chroma_palette,
     decode_class_label_stream,
     dequantize_pose_deltas,
+    emit_chroma_palette_seed,
     encode_class_label_stream,
     encode_grayscale_stream,
+    expand_chroma_seed_to_palette,
     quantize_pose_deltas,
 )
 from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import (
@@ -75,6 +85,28 @@ def _build_synthetic_archive(
         chroma_rgb=chroma_rgb, cls_arith_bytes=cls_arith_bytes,
     )
     return blob, palette, cdf, palette_indices, cls
+
+
+def _chroma_blob_offset(blob: bytes) -> int:
+    fields = struct.unpack("<4sBHBHHHHHHIIHHI", blob[:CH06_HEADER_SIZE])
+    (
+        _magic,
+        _version,
+        _num_pairs,
+        _palette_size,
+        _grayscale_h,
+        _grayscale_w,
+        _output_height,
+        _output_width,
+        palette_len,
+        cdf_len,
+        grayscale_len,
+        pose_len,
+        meta_len,
+        _chroma_len,
+        _cls_len,
+    ) = fields
+    return CH06_HEADER_SIZE + palette_len + cdf_len + grayscale_len + pose_len + meta_len
 
 
 # ---------------------------------------------------------------------------
@@ -255,6 +287,108 @@ class TestCh06ArchiveRoundtrip:
         blob, _, _, _, _ = _build_synthetic_archive(seed=0)
         with pytest.raises(ValueError):
             parse_archive(blob + b"extra")
+
+    def test_seeded_chroma_schema_v3_replaces_palette_bytes(self) -> None:
+        _, palette, cdf, palette_indices, cls = _build_synthetic_archive(seed=3)
+        seed = emit_chroma_palette_seed()
+        chroma_rgb = expand_chroma_seed_to_palette(seed)
+        pose = np.zeros((4, POSE_DIMS), dtype=np.float32)
+        pose_bytes, zero = quantize_pose_deltas(pose, scale=10.0)
+        common_kwargs = {
+            "palette": palette,
+            "cdf": cdf,
+            "grayscale_arith_bytes": encode_grayscale_stream(
+                palette_indices=palette_indices,
+                class_labels=cls,
+                cdf=cdf,
+            ),
+            "pose_bytes": pose_bytes,
+            "meta": {"grayscale_downsample": 4, "pose_quant_scale": 10.0, "pose_quant_zero": zero},
+            "num_pairs": 4,
+            "grayscale_h": 6,
+            "grayscale_w": 8,
+            "output_height": 24,
+            "output_width": 32,
+            "chroma_rgb": chroma_rgb,
+            "cls_arith_bytes": encode_class_label_stream(cls),
+        }
+        blob_v2 = pack_archive(**common_kwargs)
+        blob_v3 = pack_archive(
+            **common_kwargs,
+            chroma_seed=seed,
+        )
+        assert blob_v3[4] == CH06_SCHEMA_VERSION_SEEDED_CHROMA
+        assert len(seed) == CHROMA_SEED_BYTES
+        assert len(blob_v3) == len(blob_v2) - (
+            NUM_SEGNET_CLASSES * CHROMA_BYTES_PER_CLASS - CHROMA_SEED_BYTES
+        )
+        arc = parse_archive(blob_v3)
+        assert arc.chroma_seed == seed
+        assert np.array_equal(arc.chroma_rgb, chroma_rgb)
+
+    def test_seeded_chroma_matches_canonical_hash_seed_helper(self) -> None:
+        shape = (NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS)
+        seed = emit_chroma_palette_seed()
+        canonical_seed = emit_canonical_seed(shape)
+        assert seed == canonical_seed
+        canonical_palette = expand_canonical_seed_to_codebook(seed, shape).view(np.uint8)
+        assert np.array_equal(expand_chroma_seed_to_palette(seed), canonical_palette)
+
+    def test_seeded_chroma_requires_matching_generated_palette(self) -> None:
+        blob, palette, cdf, palette_indices, cls = _build_synthetic_archive(seed=4)
+        arc = parse_archive(blob)
+        seed = emit_chroma_palette_seed()
+        with pytest.raises(ValueError, match="expand_chroma_seed_to_palette"):
+            pack_archive(
+                palette=palette,
+                cdf=cdf,
+                grayscale_arith_bytes=encode_grayscale_stream(
+                    palette_indices=palette_indices,
+                    class_labels=cls,
+                    cdf=cdf,
+                ),
+                pose_bytes=arc.pose_bytes,
+                meta=arc.meta,
+                num_pairs=arc.num_pairs,
+                grayscale_h=arc.grayscale_h,
+                grayscale_w=arc.grayscale_w,
+                output_height=arc.output_height,
+                output_width=arc.output_width,
+                chroma_rgb=arc.chroma_rgb,
+                cls_arith_bytes=arc.cls_arith_bytes,
+                chroma_seed=seed,
+            )
+
+    def test_seeded_chroma_seed_mutation_changes_palette(self) -> None:
+        _, palette, cdf, palette_indices, cls = _build_synthetic_archive(seed=5)
+        seed = emit_chroma_palette_seed()
+        pose = np.zeros((4, POSE_DIMS), dtype=np.float32)
+        pose_bytes, zero = quantize_pose_deltas(pose, scale=10.0)
+        blob = pack_archive(
+            palette=palette,
+            cdf=cdf,
+            grayscale_arith_bytes=encode_grayscale_stream(
+                palette_indices=palette_indices,
+                class_labels=cls,
+                cdf=cdf,
+            ),
+            pose_bytes=pose_bytes,
+            meta={"grayscale_downsample": 4, "pose_quant_scale": 10.0, "pose_quant_zero": zero},
+            num_pairs=4,
+            grayscale_h=6,
+            grayscale_w=8,
+            output_height=24,
+            output_width=32,
+            chroma_rgb=expand_chroma_seed_to_palette(seed),
+            cls_arith_bytes=encode_class_label_stream(cls),
+            chroma_seed=seed,
+        )
+        mutated = bytearray(blob)
+        mutated[_chroma_blob_offset(blob)] ^= 0xFF
+        baseline = parse_archive(blob)
+        candidate = parse_archive(bytes(mutated))
+        assert baseline.chroma_seed != candidate.chroma_seed
+        assert not np.array_equal(baseline.chroma_rgb, candidate.chroma_rgb)
 
 
 class TestPoseQuantization:
@@ -462,6 +596,56 @@ class TestPathAChromaReconstruction:
         assert right_g > right_r, (
             f"chroma unwinding failed: right half R={right_r} G={right_g}; "
             f"v6 Y=R=G=B regression detected"
+        )
+
+    def test_seeded_chroma_seed_mutation_changes_inflate_output(
+        self, tmp_path: Path
+    ) -> None:
+        rng = np.random.default_rng(34)
+        h_g, w_g, n_pairs = 8, 12, 2
+        samples = rng.integers(0, 256, size=(n_pairs, h_g, w_g), dtype=np.uint8)
+        palette = build_grayscale_palette(samples, palette_size=8)
+        palette_indices = palette.quantize(samples)
+        cls = np.zeros((n_pairs, h_g, w_g), dtype=np.uint8)
+        cls[:, :, w_g // 2 :] = 1
+        cdf = build_class_conditional_cdf(palette_indices, cls, palette_size=8)
+        pose = np.zeros((n_pairs, POSE_DIMS), dtype=np.float32)
+        pose_bytes, zero = quantize_pose_deltas(pose, scale=10.0)
+        seed = emit_chroma_palette_seed()
+        blob = pack_archive(
+            palette=palette,
+            cdf=cdf,
+            grayscale_arith_bytes=encode_grayscale_stream(
+                palette_indices=palette_indices,
+                class_labels=cls,
+                cdf=cdf,
+            ),
+            pose_bytes=pose_bytes,
+            meta={
+                "grayscale_downsample": 4,
+                "pose_quant_scale": 10.0,
+                "pose_quant_zero": zero,
+            },
+            num_pairs=n_pairs,
+            grayscale_h=h_g,
+            grayscale_w=w_g,
+            output_height=16,
+            output_width=24,
+            chroma_rgb=expand_chroma_seed_to_palette(seed),
+            cls_arith_bytes=encode_class_label_stream(cls),
+            chroma_seed=seed,
+        )
+        mutated = bytearray(blob)
+        mutated[_chroma_blob_offset(blob)] ^= 0xFF
+
+        raw_baseline = inflate_one_video(blob, tmp_path / "seed_base" / "0").read_bytes()
+        raw_candidate = inflate_one_video(
+            bytes(mutated),
+            tmp_path / "seed_mutated" / "0",
+        ).read_bytes()
+        assert raw_baseline != raw_candidate, (
+            "seeded chroma no-op regression: mutating the archived seed did not "
+            "change inflated RGB output"
         )
 
 

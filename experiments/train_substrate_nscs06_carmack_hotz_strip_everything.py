@@ -212,6 +212,16 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--grayscale-downsample", type=int, default=4)
     p.add_argument("--max-pairs", type=int, default=N_PAIRS_FULL)
     p.add_argument("--pose-quant-scale", type=float, default=10.0)
+    p.add_argument(
+        "--chroma-seed-mode",
+        choices=("raw", "hash-seed"),
+        default="raw",
+        help=(
+            "Opt-in CH06 v3 mode: store an 8-byte archive-charged seed and "
+            "procedurally expand the per-class chroma palette. Default raw "
+            "preserves the GT-derived CH06 v2 palette."
+        ),
+    )
     # OOM fix per Catalog #218 sister pattern (D4 mini-batch reconstruct).
     # NSCS06 100ep Modal T4 smoke fc-01KRQDTA70GEXSZ2CEEYGWQNSR crashed at
     # SegNet conv_pw with 10.55 GiB activation alloc when scoring all 600
@@ -457,10 +467,16 @@ def _smoke_main(args: argparse.Namespace) -> int:
         parse_archive,
     )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
+        CH06_SCHEMA_VERSION,
+        CH06_SCHEMA_VERSION_SEEDED_CHROMA,
+        CHROMA_BYTES_PER_CLASS,
+        CHROMA_SEED_BYTES,
         POSE_DIMS,
         build_chroma_palette,
+        emit_chroma_palette_seed,
         encode_class_label_stream,
         encode_grayscale_stream,
+        expand_chroma_seed_to_palette,
         quantize_pose_deltas,
     )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import (
@@ -494,10 +510,15 @@ def _smoke_main(args: argparse.Namespace) -> int:
         palette_indices=palette_indices, class_labels=cls, cdf=cdf
     )
     cls_arith_bytes = encode_class_label_stream(cls)
-    # Path A: synthetic chroma palette built from a synthetic RGB stand-in.
-    # The smoke path validates roundtrip; full path uses real GT video pixels.
-    synth_rgb = rng.integers(0, 256, size=(n_pairs, 3, h_g, w_g), dtype=np.uint8)
-    chroma_rgb = build_chroma_palette(synth_rgb, cls)
+    chroma_seed: bytes | None = None
+    if args.chroma_seed_mode == "hash-seed":
+        chroma_seed = emit_chroma_palette_seed()
+        chroma_rgb = expand_chroma_seed_to_palette(chroma_seed)
+    else:
+        # Path A: synthetic chroma palette built from a synthetic RGB stand-in.
+        # The smoke path validates roundtrip; full path uses real GT video pixels.
+        synth_rgb = rng.integers(0, 256, size=(n_pairs, 3, h_g, w_g), dtype=np.uint8)
+        chroma_rgb = build_chroma_palette(synth_rgb, cls)
     pose = rng.standard_normal((n_pairs, POSE_DIMS)).astype(np.float32) * 0.01
     pose_bytes, zero = quantize_pose_deltas(pose, scale=args.pose_quant_scale)
     meta = {
@@ -518,12 +539,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
         output_width=32,
         chroma_rgb=chroma_rgb,
         cls_arith_bytes=cls_arith_bytes,
+        chroma_seed=chroma_seed,
     )
     (args.output_dir / "0.bin").write_bytes(bin_bytes)
     arc = parse_archive(bin_bytes)
     print(
         f"[smoke] CH06 archive bytes: {len(bin_bytes)} (palette={palette.size} "
-        f"pairs={n_pairs} {h_g}x{w_g})"
+        f"pairs={n_pairs} {h_g}x{w_g} chroma_seed_mode={args.chroma_seed_mode})"
     )
     # Run the inflate path end-to-end to verify roundtrip
     raw_path = inflate_one_video(bin_bytes, args.output_dir / "inflate_smoke" / "0")
@@ -534,6 +556,15 @@ def _smoke_main(args: argparse.Namespace) -> int:
         print("[smoke] FAIL: raw byte-count mismatch", file=sys.stderr)
         return 1
     assert arc.num_pairs == n_pairs
+    assert arc.schema_version == (
+        CH06_SCHEMA_VERSION_SEEDED_CHROMA
+        if args.chroma_seed_mode == "hash-seed"
+        else CH06_SCHEMA_VERSION
+    )
+    if args.chroma_seed_mode == "hash-seed":
+        assert arc.chroma_seed is not None
+        assert len(arc.chroma_seed) == CHROMA_SEED_BYTES
+        assert arc.chroma_rgb.shape == (NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS)
     return 0
 
 
@@ -553,13 +584,20 @@ def _full_main(args: argparse.Namespace) -> int:
         pack_archive,
     )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
+        CH06_SCHEMA_VERSION,
+        CH06_SCHEMA_VERSION_SEEDED_CHROMA,
+        CHROMA_BYTES_PER_CLASS,
+        CHROMA_SEED_BYTES,
         POSE_DIMS,
         build_chroma_palette,
+        emit_chroma_palette_seed,
         encode_class_label_stream,
         encode_grayscale_stream,
+        expand_chroma_seed_to_palette,
         quantize_pose_deltas,
     )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import (
+        NUM_SEGNET_CLASSES,
         build_class_conditional_cdf,
         build_grayscale_palette,
     )
@@ -698,8 +736,26 @@ def _full_main(args: argparse.Namespace) -> int:
             .clip(0, 255)
             .astype(np.uint8)
         )
-        chroma_rgb = build_chroma_palette(odd_lowres, cls_lowres)
-        _stage(f"chroma_palette_built_{chroma_rgb.shape}")
+        chroma_seed: bytes | None = None
+        chroma_source = "gt_median_per_class_rgb"
+        if args.chroma_seed_mode == "hash-seed":
+            chroma_seed = emit_chroma_palette_seed()
+            chroma_rgb = expand_chroma_seed_to_palette(chroma_seed)
+            chroma_source = "archive_member_seed"
+            _stage(f"chroma_palette_seeded_{len(chroma_seed)}_bytes")
+        else:
+            chroma_rgb = build_chroma_palette(odd_lowres, cls_lowres)
+            _stage(f"chroma_palette_built_{chroma_rgb.shape}")
+        ch06_schema_version = (
+            CH06_SCHEMA_VERSION_SEEDED_CHROMA
+            if chroma_seed is not None
+            else CH06_SCHEMA_VERSION
+        )
+        chroma_palette_sha = _sha256_bytes(chroma_rgb.tobytes())
+        raw_chroma_payload_bytes = NUM_SEGNET_CLASSES * CHROMA_BYTES_PER_CLASS
+        chroma_payload_bytes = (
+            len(chroma_seed) if chroma_seed is not None else raw_chroma_payload_bytes
+        )
 
         # 8. PoseNet at compress-side -> per-pair 6-dim deltas
         # OOM FIX (Catalog #218 sister): mirror the SegNet chunked pattern
@@ -758,6 +814,7 @@ def _full_main(args: argparse.Namespace) -> int:
             output_width=CONTEST_RAW_HW[1],
             chroma_rgb=chroma_rgb,
             cls_arith_bytes=cls_arith_bytes,
+            chroma_seed=chroma_seed,
         )
         (args.output_dir / "0.bin").write_bytes(bin_bytes)
         payload_0bin_sha = _sha256_bytes(bin_bytes)
@@ -918,6 +975,17 @@ def _full_main(args: argparse.Namespace) -> int:
             "archive_zip_path": str(archive_zip_path) if archive_zip_path.is_file() else None,
             "payload_0bin_sha256": payload_0bin_sha,
             "payload_0bin_bytes": payload_0bin_bytes,
+            "ch06_schema_version": ch06_schema_version,
+            "chroma_seed_mode": args.chroma_seed_mode,
+            "chroma_carrier": chroma_source,
+            "chroma_seed_hex": chroma_seed.hex() if chroma_seed is not None else None,
+            "chroma_palette_sha256": chroma_palette_sha,
+            "chroma_payload_bytes": chroma_payload_bytes,
+            "chroma_seed_bytes": CHROMA_SEED_BYTES,
+            "chroma_raw_palette_bytes": raw_chroma_payload_bytes,
+            "chroma_byte_delta_vs_raw_palette": (
+                chroma_payload_bytes - raw_chroma_payload_bytes
+            ),
             "auth_eval_cuda_score": contest_cuda_score,
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None
@@ -957,22 +1025,24 @@ CARMACK_HOTZ_SUBSTRATE_CONTRACT = SubstrateContract(
     ),
     # 2.2 Architecture & runtime (Catalog #124)
     archive_grammar=(
-        "CH06 v2 monolithic single-file 0.bin: header (magic=CH06, version=2) + "
+        "CH06 v2/v3 monolithic single-file 0.bin: header (magic=CH06, "
+        "version=2 raw chroma or version=3 seeded chroma) + "
         "grayscale palette (uint8) + class-conditional CDF table (uint16) + "
         "arith-coded grayscale palette indices + per-pair pose deltas (uint8) + "
-        "utf-8 json meta + per-class chroma anchors (5x3 uint8 RGB) + arith-coded "
-        "per-cell class labels (uniform CDF). Path A redesign 2026-05-16 "
+        "utf-8 json meta + per-class chroma anchors (5x3 uint8 RGB) or "
+        "archive-contained 8-byte chroma seed + arith-coded per-cell class labels "
+        "(uniform CDF). Path A redesign 2026-05-16 "
         "(symposium commit 4292c8ce2): chroma + class-labels stream enables "
         "per-pixel RGB synthesis at inflate. NO neural weights. NO PyTorch at inflate."
     ),
     parser_section_manifest={
-        "header": "CH06_v2_magic_and_version",
+        "header": "CH06_v2_or_v3_magic_and_version",
         "palette": "uint8_grayscale_levels",
         "cdf": "uint16_class_conditional_cdf",
         "grayscale_stream": "arith_coded_palette_indices",
         "pose_stream": "uint8_quantized_pose_deltas",
         "meta": "utf8_json",
-        "chroma_blob": "uint8_per_class_rgb_anchors",
+        "chroma_blob": "uint8_per_class_rgb_anchors_or_8_byte_archive_seed",
         "cls_stream": "arith_coded_per_cell_class_labels",
     },
     inflate_runtime_loc_budget=200,  # Path A bumped; substrate_engineering exception
@@ -985,7 +1055,10 @@ CARMACK_HOTZ_SUBSTRATE_CONTRACT = SubstrateContract(
     archive_bytes_added=(
         "Path A v2: ~30-60 KB total (palette ~16 B; CDF ~170 B; arith-coded "
         "grayscale ~3-10 KB; pose ~3.6 KB; chroma ~15 B; cls_stream ~25-45 KB "
-        "uniform-CDF; future Path B wavelet+Wyner-Ziv will reduce by 5-10x)"
+        "uniform-CDF). Optional v3 hash-seed chroma replaces the 15 B current "
+        "palette with an 8 B archive-contained seed (-7 B current CH06 delta; "
+        "mechanism scales to larger palette/codebook surfaces). Future Path B "
+        "wavelet+Wyner-Ziv will reduce by 5-10x)"
     ),
     score_improvement_mechanism_status="OPERATIONAL",
     runtime_overlay_consumed=True,

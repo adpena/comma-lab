@@ -65,6 +65,13 @@ def test_scorer_chunk_size_flag_declared() -> None:
     )
 
 
+def test_chroma_seed_mode_flag_is_explicit_opt_in() -> None:
+    src = _read_trainer_source()
+    assert "--chroma-seed-mode" in src
+    assert 'choices=("raw", "hash-seed")' in src
+    assert 'default="raw"' in src
+
+
 def test_scorer_chunk_size_default_is_conservative_for_t4() -> None:
     """Default must be small enough to fit comfortably under T4 14.56 GiB."""
     tree = _trainer_ast()
@@ -273,3 +280,14 @@ def test_provenance_archive_fields_bind_scored_archive_zip_not_0bin_payload() ->
     assert "archive_sha = _sha256_bytes(bin_bytes)" not in src
     assert '"archive_sha256": archive_sha' not in src
     assert '"archive_bytes": archive_bytes_len' not in src
+
+
+def test_chroma_seed_mode_threads_through_pack_and_provenance() -> None:
+    src = _read_trainer_source()
+    assert "chroma_seed = emit_chroma_palette_seed()" in src
+    assert "chroma_rgb = expand_chroma_seed_to_palette(chroma_seed)" in src
+    assert "chroma_seed=chroma_seed" in src
+    assert '"ch06_schema_version": ch06_schema_version' in src
+    assert '"chroma_carrier": chroma_source' in src
+    assert '"chroma_seed_hex": chroma_seed.hex()' in src
+    assert '"chroma_byte_delta_vs_raw_palette":' in src
