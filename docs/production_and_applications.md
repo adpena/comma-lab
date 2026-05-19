@@ -2,13 +2,14 @@
 
 ## Context
 
-> Historical note: this document preserves an early post-filter council pass.
-> Its "current results" section is stale unless a row is backed by a current
-> exact-eval artifact and evidence grade elsewhere in the repository.
+> Historical council memo, not a public claim: this document preserves an early
+> post-filter production-readiness pass. Numeric result rows here are stale
+> unless backed by a current exact-eval artifact and evidence grade elsewhere in
+> the repository.
 
 **The technique:** A tiny residual CNN post-filter (3-layer, h=64, ~45KB int8) is trained by backpropagating through frozen perception networks (PoseNet for ego-motion, SegNet for semantic segmentation). The filter sits after standard AV1 decode + bicubic upscale and corrects decoded frames to minimize what the downstream perception system actually cares about, not generic pixel quality. Deployed as a quantized int8 model running in <30s on CPU for 1200 frames.
 
-**Current results:** Score 1.73 vs. leaderboard first place at 1.89. The scoring formula is `100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * rate`. The filter reduced PoseNet distortion to 0.033 and SegNet distortion to 0.006 without increasing bitrate.
+**Historical early result, stale:** Score 1.73 vs. leaderboard first place at 1.89. The scoring formula is `100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * rate`. The filter reduced PoseNet distortion to 0.033 and SegNet distortion to 0.006 without increasing bitrate. Do not use this row as current score authority without an evidence-grade exact-eval artifact.
 
 **Key technical details:**
 - Residual connection: `output = input + learned_correction`, zero-initialized output layer (starts as identity)

@@ -100,7 +100,10 @@ MINIMAL_CANONICAL_TEXTS = {
     "pyproject.toml": (
         'description = "Task-Aware Compression:\n'
         '"task-aware-compression"\n'
+        '"task-oriented-compression"\n'
+        '"coding-for-machines"\n'
         '"video-coding-for-machines"\n'
+        '"feature-coding-for-machines"\n'
         'comma_lab = ["py.typed"]\n'
     ),
 }
@@ -157,6 +160,24 @@ def test_forbidden_tac_codec_definition_is_rejected(tmp_path: Path) -> None:
     assert "Task-Aware Compression, not Task-Aware Codec" in rendered
 
 
+def test_forbidden_tac_codec_expansion_is_rejected_in_public_docs(tmp_path: Path) -> None:
+    module = _load_tool()
+    _write_canonical_texts(tmp_path)
+    public_doc = tmp_path / "docs" / "release" / "bad_public_note.md"
+    public_doc.parent.mkdir(parents=True, exist_ok=True)
+    public_doc.write_text(
+        "# Release note\n\n"
+        "This incorrectly introduces Task-Aware Codec (TAC) as the package name.\n",
+        encoding="utf-8",
+    )
+
+    findings = module.check_repo(tmp_path)
+
+    rendered = "\n".join(finding.render() for finding in findings)
+    assert "docs/release/bad_public_note.md" in rendered
+    assert "Task-Aware Compression, not Task-Aware Codec" in rendered
+
+
 def test_init_files_have_positive_terminology_requirements(tmp_path: Path) -> None:
     module = _load_tool()
     _write_canonical_texts(
@@ -202,6 +223,12 @@ def test_stale_public_tac_and_frontier_phrases_are_rejected(tmp_path: Path) -> N
         + "The frontier today is A1 at 0.1928.\n",
         encoding="utf-8",
     )
+    production_doc = tmp_path / "docs" / "site" / "production.md"
+    production_doc.parent.mkdir(parents=True, exist_ok=True)
+    production_doc.write_text(
+        "The current leader is X. The architecture maps directly to comma's production data pipeline.\n",
+        encoding="utf-8",
+    )
 
     findings = module.check_repo(tmp_path)
 
@@ -209,6 +236,8 @@ def test_stale_public_tac_and_frontier_phrases_are_rejected(tmp_path: Path) -> N
     assert "Task-Aware Compression library" in rendered
     assert "runtime-contract library" in rendered
     assert "reports/latest.md" in rendered
+    assert "live-leader claims" in rendered
+    assert "contest-to-production transfer" in rendered
 
 
 def test_cli_strict_passes_live_docs() -> None:

@@ -18,7 +18,10 @@ maintainers = [
 keywords = [
     "video-compression",
     "task-aware-compression",
+    "task-oriented-compression",
+    "coding-for-machines",
     "video-coding-for-machines",
+    "feature-coding-for-machines",
     "neural-compression",
     "comma-ai",
     "openpilot",

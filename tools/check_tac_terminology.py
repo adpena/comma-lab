@@ -31,6 +31,11 @@ FORBIDDEN_TAC_DEFINITION_RE = re.compile(
     r"(?:\*\*)?Task[- ]Aware Codec(?:\*\*)?",
     re.IGNORECASE,
 )
+FORBIDDEN_TAC_PARENTHETICAL_RE = re.compile(
+    r"(?:Task[- ]Aware Codec\s*\(\s*(?:TAC|tac)\s*\)|"
+    r"\(\s*(?:TAC|tac)\s*\)\s*Task[- ]Aware Codec)",
+    re.IGNORECASE,
+)
 AMBIGUOUS_TAC_HEADING_RE = re.compile(r"^#{1,6}\s+.*\bTAC\b")
 
 STALE_PUBLIC_PHRASES: tuple[tuple[str, str], ...] = (
@@ -53,6 +58,26 @@ STALE_PUBLIC_PHRASES: tuple[tuple[str, str], ...] = (
     (
         "current frontier state",
         "durable docs must say frontier snapshot or point to reports/latest.md",
+    ),
+    (
+        "The current leader",
+        "public docs must avoid hard-coded live-leader claims; point to reports/latest.md or mark as historical",
+    ),
+    (
+        "**Current results:**",
+        "public docs must mark result rows as historical or evidence-grade, not current by prose",
+    ),
+    (
+        "current submitted Apogee",
+        "paper docs must mark Apogee packet notes as historical or evidence-grade",
+    ),
+    (
+        "architecture maps directly to comma's production data pipeline",
+        "public docs must frame contest-to-production transfer as a hypothesis unless evidence-grade production validation exists",
+    ),
+    (
+        "ArXiv writeup track",
+        "public docs must avoid venue commitments; use paper/writeup draft language",
     ),
 )
 
@@ -94,7 +119,7 @@ def _require_contains(
 def _forbidden_definition_findings(relpath: str, text: str) -> list[Finding]:
     findings: list[Finding] = []
     for lineno, line in enumerate(text.splitlines(), start=1):
-        if FORBIDDEN_TAC_DEFINITION_RE.search(line):
+        if FORBIDDEN_TAC_DEFINITION_RE.search(line) or FORBIDDEN_TAC_PARENTHETICAL_RE.search(line):
             findings.append(
                 Finding(
                     relpath,
@@ -103,6 +128,37 @@ def _forbidden_definition_findings(relpath: str, text: str) -> list[Finding]:
                 )
             )
     return findings
+
+
+def _public_terminology_scan_paths(root: Path) -> list[Path]:
+    """Return public docs/package paths where stale TAC expansion must not hide."""
+
+    paths: set[Path] = set()
+    for relpath in (
+        "README.md",
+        "CONTRIBUTING.md",
+        "HANDOFF.md",
+        "PROGRAM.md",
+        "SYSTEM_MAP.md",
+        "CHANGELOG.md",
+        "THIRD_PARTY_NOTICES.md",
+        "pyproject.toml",
+        "src/tac/README.md",
+        "src/tac/__init__.py",
+        "src/comma_lab/README.md",
+        "src/comma_lab/__init__.py",
+    ):
+        path = root / relpath
+        if path.is_file():
+            paths.add(path)
+    docs = root / "docs"
+    if docs.is_dir():
+        for path in docs.rglob("*.md"):
+            relpath = path.relative_to(root).as_posix()
+            if relpath.startswith("docs/superpowers/"):
+                continue
+            paths.add(path)
+    return sorted(paths)
 
 
 def _ambiguous_tac_heading_findings(root: Path) -> list[Finding]:
@@ -168,7 +224,11 @@ def check_repo(root: Path) -> list[Finding]:
     root = root.resolve()
     findings: list[Finding] = []
     texts = {relpath: _read_required(root, relpath, findings) for relpath in CANONICAL_FILES}
-    for relpath, text in texts.items():
+    public_texts = dict(texts)
+    for path in _public_terminology_scan_paths(root):
+        relpath = path.relative_to(root).as_posix()
+        public_texts.setdefault(relpath, path.read_text(encoding="utf-8"))
+    for relpath, text in public_texts.items():
         findings.extend(_forbidden_definition_findings(relpath, text))
     findings.extend(_ambiguous_tac_heading_findings(root))
     findings.extend(_stale_public_phrase_findings(root))
@@ -414,7 +474,10 @@ def check_repo(root: Path) -> list[Finding]:
     for needle, rationale in (
         ('description = "Task-Aware Compression:', "project description"),
         ('"task-aware-compression"', "PyPI keyword"),
+        ('"task-oriented-compression"', "task-oriented compression PyPI keyword"),
+        ('"coding-for-machines"', "coding for machines PyPI keyword"),
         ('"video-coding-for-machines"', "VCM PyPI keyword"),
+        ('"feature-coding-for-machines"', "FCM PyPI keyword"),
         ('comma_lab = ["py.typed"]', "comma_lab typed package marker"),
     ):
         _require_contains(

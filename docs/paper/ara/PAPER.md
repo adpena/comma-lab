@@ -38,6 +38,13 @@ layer_index:
 
 # PAPER.md — Ara root manifest
 
+> Historical draft artifact, not a current public disclosure surface. The
+> frontmatter preserves the 2026-04-30 Ara packaging intent, including
+> private-disclosure policy fields and stale score floors. Do not publish,
+> cite, or compile this manifest into public docs until it has been refreshed
+> and redacted against the current `README.md`,
+> `docs/terminology_and_boundaries.md`, and evidence-grade score tables.
+
 This is the agent-native research artifact for the comma.ai video compression
 challenge entry produced by the `comma-lab` workspace. The local checkout was
 historically named `pact`; use `comma-lab` for public/release references. It follows the Ara paradigm

@@ -1,11 +1,15 @@
 # 5. Production Deployment
 
-## Current Apogee Deployment Note
+## Historical Apogee Deployment Note
 
-The current submitted Apogee packet is not the older mask-renderer/TTO system
-described in the historical sections below. It is a route-specialized HNeRV/Muon
-archive with a single charged payload member, a deterministic adapter runtime,
-and exact Tesla T4 custody:
+This note is a historical orientation snapshot, not a live leaderboard or
+production-readiness claim. For current authority, prefer the root README,
+`reports/latest.md`, and evidence-grade rows with exact archive bytes, runtime
+custody, component distances, and explicit `[contest-CPU]` / `[contest-CUDA]`
+axis labels. The Apogee packet referenced here is not the older
+mask-renderer/TTO system described in the historical sections below. It is a
+route-specialized HNeRV/Muon archive with a single charged payload member, a
+deterministic adapter runtime, and exact Tesla T4 custody:
 
 - exact score: `0.22826947142244708` `[A++]`
 - archive bytes/SHA-256:

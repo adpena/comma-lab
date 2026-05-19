@@ -19,7 +19,7 @@ authority is `docs/terminology_and_boundaries.md`.
 ## 1. Project mission and contest context (1 paragraph)
 
 `pact` is the operator-and-Claude lab for the comma.ai
-[Video Compression Challenge](https://github.com/commaai/comma2k19) (the
+[Video Compression Challenge](https://github.com/commaai/comma_video_compression_challenge) (the
 "contest"). The mission is to minimize the contest's official
 `evaluate.py` score on the pinned `upstream/` snapshot by training a
 task-aware neural renderer + segmentation + pose chain end-to-end against

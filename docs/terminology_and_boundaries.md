@@ -43,7 +43,9 @@ Adjacent terms should be used precisely:
 
 Current public package metadata should therefore say "Task-Aware Compression"
 and can carry keywords such as `task-aware-compression`,
-`video-coding-for-machines`, `neural-compression`, and `perception`.
+`task-oriented-compression`, `coding-for-machines`,
+`video-coding-for-machines`, `feature-coding-for-machines`,
+`neural-compression`, and `perception`.
 
 ## Contest Compliance Boundary
 

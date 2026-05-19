@@ -145,7 +145,7 @@ pact/                               # Historical/internal checkout alias.
 │   │                               # sanitized per "Public Disclosure
 │   │                               # Hygiene"; no local absolute paths
 │   │                               # per Catalog #208).
-│   └── paper/                      # ArXiv writeup track.
+│   └── paper/                      # Paper/writeup draft; no venue commitment.
 ├── reports/                        # Per-cycle reports.
 │   ├── latest.md                   # The session-warm summary (often
 │   │                               # stale; premortem Category N).

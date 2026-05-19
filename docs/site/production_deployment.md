@@ -2,7 +2,15 @@
 
 ## From contest to fleet
 
-The comma.ai video compression challenge models a real engineering problem: compressing dashcam video while preserving what the driving stack actually needs. Our system --- a 287K-parameter renderer that generates frames from semantic masks, trained end-to-end against comma's SegNet and PoseNet scorers --- achieves a score of 0.37 with test-time optimization [unlimited-compute] and 0.61 [contest-compliant] with distillation. The current leader (Quantizr) scores 0.33. The architecture maps directly to comma's production data pipeline.
+This is a historical production-deployment sketch for early renderer and
+post-filter experiments. The comma.ai video compression challenge models a real
+engineering problem: compressing dashcam video while preserving what the driving
+stack actually needs. The numeric examples below are not current public score
+claims unless a current evidence-grade row elsewhere in the repository cites
+exact archive bytes, runtime custody, component distances, and `[contest-CPU]`
+or `[contest-CUDA]` artifacts. Treat the production mapping as a hypothesis for
+Task-Aware Compression transfer, not as a claim that a contest packet is ready
+for comma's fleet pipeline.
 
 ## Where it fits
 
