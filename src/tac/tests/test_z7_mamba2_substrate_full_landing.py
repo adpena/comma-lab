@@ -164,6 +164,59 @@ def test_z7mcm2_pack_parse_roundtrip_preserves_config_and_tensors(tiny_config):
     assert archive.residuals.shape == (tiny_config.num_pairs, tiny_config.latent_dim)
 
 
+def test_runtime_geometry_positive_control_uses_actual_archive_header(tiny_config):
+    """Stats positive-control must bind sampled raw hashes to Z7MCM2 geometry."""
+    from experiments.train_substrate_time_traveler_l5_z7_mamba2 import (
+        _build_runtime_geometry_positive_control,
+    )
+    from tac.substrates.time_traveler_l5_z7_mamba2 import (
+        Z7Mamba2PredictiveCodingSubstrate,
+        pack_archive,
+    )
+
+    sub = Z7Mamba2PredictiveCodingSubstrate(tiny_config)
+    sub.eval()
+    meta = {**sub.decoder_metadata(), "loss_mode": "proxy"}
+    blob = pack_archive(
+        {},
+        sub.decoder.state_dict(),
+        sub.predictor.state_dict(),
+        sub.latent_init.detach().cpu(),
+        sub.residuals.detach().cpu(),
+        sub.ego_motion_buffer.detach().cpu(),
+        meta,
+        config=tiny_config,
+    )
+    camera_hw = (2, 3)
+    expected_raw_bytes = tiny_config.num_pairs * 2 * 3 * camera_hw[0] * camera_hw[1]
+    recurrent_raw = bytes(i % 251 for i in range(expected_raw_bytes))
+    static_raw = bytes((i + 7) % 251 for i in range(expected_raw_bytes))
+
+    block = _build_runtime_geometry_positive_control(
+        archive_bytes=blob,
+        recurrent_raw_bytes=recurrent_raw,
+        static_raw_bytes=static_raw,
+        num_pairs=tiny_config.num_pairs,
+        render_hw=(tiny_config.output_height, tiny_config.output_width),
+        camera_hw=camera_hw,
+    )
+
+    assert block["schema"] == "z7_mamba2_runtime_geometry_positive_control_v1"
+    assert block["num_pairs"] == tiny_config.num_pairs
+    assert block["render_hw"] == [tiny_config.output_height, tiny_config.output_width]
+    assert block["camera_hw"] == [2, 3]
+    assert block["expected_frames_written"] == tiny_config.num_pairs * 2
+    assert block["expected_raw_bytes"] == expected_raw_bytes
+    assert block["sample_pair_indices"] == [0, 2, 3]
+    assert block["recurrent_sampled_raw_sha256"] != block["static_sampled_raw_sha256"]
+    assert block["recurrent_static_sample_changed"] is True
+    assert block["archive_header"] == {
+        "num_pairs": tiny_config.num_pairs,
+        "output_height": tiny_config.output_height,
+        "output_width": tiny_config.output_width,
+    }
+
+
 def test_z7mcm2_archive_carries_non_promotable_authority_flags(tiny_config):
     """Z7MCM2 meta MUST stamp non-promotable authority blockers per CLAUDE.md."""
     from tac.substrates.time_traveler_l5_z7_mamba2 import (
