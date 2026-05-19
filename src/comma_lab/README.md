@@ -10,7 +10,8 @@ local paths.
 It is intentionally not the compression engine. Reusable compression math,
 archive grammars, scorer contracts, byte profilers, packet compilers, and
 runtime-safe algorithmic code belong in `tac`. `comma_lab` owns the surrounding
-control plane that keeps those artifacts auditable and production-ready.
+control plane that keeps those artifacts auditable, release-ready, and
+score-authority-safe.
 
 ## Scope
 

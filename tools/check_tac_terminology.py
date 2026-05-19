@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -158,7 +159,54 @@ def _public_terminology_scan_paths(root: Path) -> list[Path]:
             if relpath.startswith("docs/superpowers/"):
                 continue
             paths.add(path)
+    for path in _public_readme_paths(root):
+        paths.add(path)
     return sorted(paths)
+
+
+def _public_readme_paths(root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for current, dirs, files in os.walk(root):
+        current_path = Path(current)
+        try:
+            rel_dir = current_path.relative_to(root).as_posix()
+        except ValueError:
+            continue
+        dirs[:] = [
+            dirname
+            for dirname in dirs
+            if not _skip_public_readme_scan(
+                f"{dirname}/" if rel_dir == "." else f"{rel_dir}/{dirname}/"
+            )
+        ]
+        if "README.md" not in files:
+            continue
+        path = current_path / "README.md"
+        relpath = path.relative_to(root).as_posix()
+        if not _skip_public_readme_scan(relpath):
+            paths.append(path)
+    return paths
+
+
+def _skip_public_readme_scan(relpath: str) -> bool:
+    return relpath.startswith(
+        (
+            ".git/",
+            ".mypy_cache/",
+            ".omx/",
+            ".pytest_cache/",
+            ".ruff_cache/",
+            ".venv/",
+            "build/",
+            "data/",
+            "docs/superpowers/",
+            "experiments/results/",
+            "htmlcov/",
+            "reports/raw/",
+            "upstream/",
+            "vendored/",
+        )
+    )
 
 
 def _ambiguous_tac_heading_findings(root: Path) -> list[Finding]:

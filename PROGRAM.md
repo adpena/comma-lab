@@ -20,16 +20,24 @@ projection, custody, and reporting. See `README.md` and
 
 ---
 
-Mission: minimize the official challenge score on a pinned upstream snapshot using a task-aware neural renderer, trained end-to-end against the frozen scorers.
+Mission: minimize the official challenge score on a pinned upstream snapshot
+using task-aware compression against the frozen scorers.
 
-## Primary objectives
+## Historical 2026-04 Renderer Context
+
+The WILDE / SHIRAZ / GREEN renderer notes below are retained for
+reproducibility and paper history. They are not the live substrate canvas; for
+current work, read `reports/latest.md`, `SYSTEM_MAP.md`, and the active
+`.omx/research/*_directive_*` files.
+
+### Historical primary objectives
 
 1. Train the asymmetric warp renderer (WILDE/SHIRAZ/GREEN profiles) to minimize the combined scoring formula.
 2. Compress the trained renderer + masks + poses into a submission archive that achieves the lowest possible score.
 3. Maintain contest compliance: no scorers loaded at inflate time, single forward pass, under 30 minutes on T4.
 4. Collect clean evidence for the writeup track from day one.
 
-## Architecture
+### Historical architecture
 
 The renderer is a CLADE-conditioned U-Net (`AsymmetricPairGenerator` in `src/tac/renderer.py`):
 - Frame2 rendered directly from segmentation mask via spatially-adaptive normalization.
@@ -37,7 +45,7 @@ The renderer is a CLADE-conditioned U-Net (`AsymmetricPairGenerator` in `src/tac
 - Trained against frozen SegNet and PoseNet scorers with Fridrich inverse steganalysis losses.
 - Quantized to int4+LZMA2 or FP4 for archive compression.
 
-## Experiment profiles
+### Historical experiment profiles
 
 | Profile | Philosophy | Status |
 |---------|-----------|--------|
@@ -79,14 +87,22 @@ The agent may **not** edit without explicit human approval:
 - Prefer the official evaluator over proxies.
 - Use proxy evaluation only to rank cheap candidates before promotion.
 - Record config, command, artifact size, and score breakdown for each promoted run.
-- Label every score as `[contest-compliant]` or `[unlimited-compute]`.
+- Label every score with its exact evidence axis: `[contest-CPU]`,
+  `[contest-CUDA]`, `[macOS-CPU advisory]`, diagnostic/proxy, or historical
+  unlimited-compute context. Never promote a proxy or advisory axis into a
+  public leaderboard claim.
 
-## Scoring lanes
+## Evidence Axes And Historical Lanes
 
-- **Contest-compliant**: inflate.sh -> inflate_renderer.py -> evaluate.py within 30 min on T4. No scorers at inflate time.
-- **Unlimited-compute**: TTO at compress time, unlimited steps. For the paper only.
+- **Contest auth eval**: `archive.zip` + `inflate.sh` evaluated by the pinned
+  upstream scorer, with `[contest-CPU]` and `[contest-CUDA]` kept separate.
+- **Diagnostic/proxy**: local, MPS, macOS CPU advisory, smoke, and component
+  probes. These guide work but do not rank or kill submissions.
+- **Historical unlimited-compute**: TTO or other compress-time-only studies.
+  These are paper/methodology context unless converted into byte-closed
+  archives and exact auth-eval artifacts.
 
-Never conflate the two.
+Never conflate these axes.
 
 ## Pipeline
 

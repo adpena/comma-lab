@@ -178,6 +178,24 @@ def test_forbidden_tac_codec_expansion_is_rejected_in_public_docs(tmp_path: Path
     assert "Task-Aware Compression, not Task-Aware Codec" in rendered
 
 
+def test_forbidden_tac_codec_expansion_is_rejected_in_nested_readmes(tmp_path: Path) -> None:
+    module = _load_tool()
+    _write_canonical_texts(tmp_path)
+    public_readme = tmp_path / "runtime-rs" / "crates" / "tac-packet-compiler" / "README.md"
+    public_readme.parent.mkdir(parents=True, exist_ok=True)
+    public_readme.write_text("TAC means Task-Aware Codec in this packet compiler.\n", encoding="utf-8")
+    ignored_readme = tmp_path / "data" / "runs" / "old" / "README.md"
+    ignored_readme.parent.mkdir(parents=True, exist_ok=True)
+    ignored_readme.write_text("TAC means Task-Aware Codec in historical raw data.\n", encoding="utf-8")
+
+    findings = module.check_repo(tmp_path)
+
+    rendered = "\n".join(finding.render() for finding in findings)
+    assert "runtime-rs/crates/tac-packet-compiler/README.md" in rendered
+    assert "data/runs/old/README.md" not in rendered
+    assert "Task-Aware Compression, not Task-Aware Codec" in rendered
+
+
 def test_init_files_have_positive_terminology_requirements(tmp_path: Path) -> None:
     module = _load_tool()
     _write_canonical_texts(

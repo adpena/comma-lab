@@ -140,13 +140,16 @@ PYTHONPATH=src:upstream .venv/bin/python experiments/pipeline.py compress --help
 PYTHONPATH=src:upstream .venv/bin/python experiments/pipeline.py eval --help
 ```
 
-## Training Profiles
+## Historical Training Profiles
 
 Early renderer/post-filter profiles are retained for reproducibility and
 historical comparison. They are not the whole current system; newer lanes may
 use HNeRV-family replay, packet compilation, procedural codebooks, Wyner-Ziv
 side information, entropy-coder repacks, or scorer-aware deterministic
 transducers.
+Active readers should start with `reports/latest.md`, `SYSTEM_MAP.md`, and the
+current `.omx/research/*_directive_*` files before treating a profile as live
+work.
 
 Three baseline profiles encode different training philosophies. All share the
 same historical architecture for fair comparison.
