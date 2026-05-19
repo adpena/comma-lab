@@ -393,13 +393,29 @@ def _resolve_predecessor_probe(
         rows = [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
     except Exception:
         return False, None, None
-    # Look up by substrate or recipe
+    def _row_matches_candidate(row: dict[str, Any]) -> bool:
+        sub = str(row.get("substrate") or "").lower().strip()
+        recipe_path = str(row.get("recipe_path") or "")
+        recipe_stem = Path(recipe_path).stem if recipe_path else ""
+
+        if recipe_basename and recipe_stem == recipe_basename:
+            return True
+
+        # Avoid prefix bleed between canonical siblings such as
+        # atw_codec_v2 and atw_codec_v2_1_faiss_ivf_pq.
+        other_candidates = tuple(
+            sid.lower() for sid in CANONICAL_CANDIDATES if sid != substrate_id
+        )
+        if any(sub == other or sub.startswith(f"{other}_") for other in other_candidates):
+            return False
+
+        return any(sub == term or sub.startswith(f"{term}_") for term in terms)
+
+    # Look up by exact substrate-family or recipe basename, not loose substring.
     terms = tuple(term.lower() for term in _substrate_lookup_terms(substrate_id))
     matching: list[dict[str, Any]] = []
     for r in rows:
-        sub = (r.get("substrate") or "").lower()
-        rp = r.get("recipe_path") or ""
-        if any(term in sub for term in terms) or (recipe_basename and recipe_basename in rp):
+        if _row_matches_candidate(r):
             if r.get("blocker_status") == "blocking":
                 matching.append(r)
     if not matching:
@@ -1099,14 +1115,19 @@ def assess_candidate(
     # Prefer explicit recipe metadata over loose design-memo regex extraction.
     # Several memos carry both score bands and delta-S bands; recipe
     # `predicted_band_kind` is the axis label that prevents false authority.
-    recipe_has_explicit_predicted_band = (
+    recipe_has_predicted_band = (
         isinstance(recipe.get("predicted_band"), (list, tuple))
         and len(recipe.get("predicted_band", [])) == 2
-        and recipe.get("predicted_band_kind") not in (None, "")
     )
-    if recipe_has_explicit_predicted_band:
+    if recipe_has_predicted_band:
         predicted_low, predicted_high, predicted_source = (
             _extract_predicted_band_from_recipe(recipe, recipe_basename)
+        )
+    elif recipe.get("predicted_score_target", "__missing__") is None:
+        predicted_low, predicted_high, predicted_source = (
+            None,
+            None,
+            f"{recipe_basename}.yaml:predicted_score_target_null",
         )
     else:
         predicted_low, predicted_high, predicted_source = _extract_predicted_band_from_design_memo(
@@ -1131,7 +1152,18 @@ def assess_candidate(
     estimated_cost, estimated_wall = _estimate_dispatch_cost(gpu, epochs)
 
     # Horizon class
-    horizon_class = _classify_horizon_class(predicted_low, predicted_high)
+    predicted_source_is_recipe = predicted_source.startswith(f"{recipe_basename}.yaml:")
+    computed_horizon_class = (
+        _classify_horizon_class(predicted_low, predicted_high)
+        if predicted_band_kind == "predicted_score_band" or predicted_source_is_recipe
+        else "unknown"
+    )
+    recipe_horizon_class = str(recipe.get("horizon_class") or "").strip() or None
+    horizon_class = (
+        computed_horizon_class
+        if computed_horizon_class != "unknown"
+        else recipe_horizon_class or "unknown"
+    )
 
     # Blocking issues + readiness verdict
     blocking_issues = _compute_blocking_issues(
@@ -1147,8 +1179,8 @@ def assess_candidate(
         trainer_path=trainer_path if trainer_path.exists() else None,
         lane_registered=lane is not None,
         contest_exact_eval_targeted=contest_exact_eval_targeted,
-        recipe_horizon_class=recipe.get("horizon_class"),
-        computed_horizon_class=horizon_class,
+        recipe_horizon_class=recipe_horizon_class,
+        computed_horizon_class=computed_horizon_class,
     )
     if local_probe_blockers:
         blocking_issues = (

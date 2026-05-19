@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
-"""Z7-Mamba-2 substrate trainer SCAFFOLD — pre-build per Catalog #240.
+"""Z7-Mamba-2 substrate trainer — built research-only per Catalog #240.
 
 Per the Z7-Mamba-2 design memo
 (``.omx/research/z7_mamba2_substrate_design_memo_20260518.md``):
-this is the TOP-5 #2 SCAFFOLD landing per the deep-research wave
+this started as the TOP-5 #2 scaffold landing per the deep-research wave
 (``.omx/research/comprehensive_research_wave_20260518.md`` §0 + §2.2 + §3.6).
 
 Z7-Mamba-2 is the **canonical Catalog #308 N>=3 alternative-probe-methodology**
@@ -12,29 +12,25 @@ substrate class. Mamba-2 (Dao-Gu 2024, arxiv 2405.21060) is a selective
 state-space sequence model proven to match Transformer quality at O(N)
 compute on long-context language and video tasks.
 
-**This trainer is PRE-BUILD per Catalog #240** — ``_full_main`` raises
-``NotImplementedError`` until Wave N+1 council convenes PROCEED-unconditional
-per Z7 parent symposium Revision #6 cascade (sequenced AFTER Z7-GRU Wave 2
-disambiguator outcome OR operator explicit-frontier-override per Catalog
-#300 with verbatim quote in ``council_override_rationale``).
+**This trainer is BUILT but non-promotable per Catalog #240/Catalog #324** —
+``_full_main`` emits a byte-closed research packet while the operator recipe
+stays ``research_only: true`` and ``dispatch_enabled: false`` until Wave N+1
+council, identity-disambiguator, mamba_ssm preflight, and paired exact-eval
+custody unblock it.
 
 The recipe (``.omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml``)
 declares ``research_only: true`` + ``dispatch_enabled: false`` so this
-scaffold satisfies Catalog #240 substrate-engineering discipline without
-risking phantom-score dispatch.
+research-only substrate satisfies Catalog #240 substrate-engineering discipline
+without risking phantom-score dispatch.
 
-Scope at THIS scaffold landing:
+Scope at THIS landing:
 
 - ``_smoke_main`` builds a tiny ``Mamba2PredictorConfig`` + instantiates
   ``Mamba2Predictor`` + forward-pass sanity check on synthetic 600-pair
   sequence. Validates canonical signature compatibility with Z6 sister
   per design memo §6 layer #2.
-- ``_full_main`` raises ``NotImplementedError`` with explicit message
-  citing Z7 parent symposium Revision #6 + Wave N+1 council requirement.
-
-Phase 2 build (deferred to Wave N+1 PROCEED-unconditional council):
-
-- Full Z7-Mamba-2 substrate (Z6 encoder + Mamba2Predictor + Z6 decoder +
+- ``_full_main`` implements the full Z7-Mamba-2 substrate (Z6 encoder +
+  Mamba2Predictor + Z6 decoder +
   Z7MCM2 archive grammar + Z6 score-aware loss pattern).
 - ``_full_main`` decodes real pairs via canonical
   ``tac.substrates._shared.trainer_skeleton.decode_real_pairs``, derives
@@ -227,9 +223,9 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "env": "Z7_MAMBA2_SMOKE",
         "rationale": (
             "When set, runs _smoke_main: tiny Mamba2Predictor instantiation "
-            "+ forward-pass sanity check on synthetic data. _full_main "
-            "(non-smoke) raises NotImplementedError until Wave N+1 council "
-            "PROCEED-unconditional per Z7 symposium Revision #6"
+            "+ forward-pass sanity check on synthetic data. Non-smoke "
+            "_full_main is implemented but remains recipe-gated until Wave "
+            "N+1 council, identity disambiguator, and paired exact eval."
         ),
         "default": "false",
     },
@@ -338,8 +334,8 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
 
 # ---------------------------------------------------------------------------
 # Catalog #244 NVML/CUDA env exports — declared at module level so audit
-# tools see the canonical compliance even though the trainer scaffold
-# itself does NOT dispatch to GPU; sister to driver script wire-in.
+# tools see the canonical compliance even though the trainer itself remains
+# recipe-gated; sister to driver script wire-in.
 # ---------------------------------------------------------------------------
 # DALI_DISABLE_NVML=1
 # CUBLAS_WORKSPACE_CONFIG=:4096:8
@@ -349,9 +345,9 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
 def _build_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Z7-Mamba-2 substrate trainer SCAFFOLD (pre-build per Catalog #240). "
-            "Smoke mode validates canonical signature; full mode raises "
-            "NotImplementedError until Wave N+1 council."
+            "Z7-Mamba-2 substrate trainer (built research-only per Catalog #240). "
+            "Smoke mode validates canonical signature; full mode emits a "
+            "non-promotable research packet while the recipe remains gated."
         )
     )
     for flag, meta in TIER_1_OPERATOR_REQUIRED_FLAGS.items():
@@ -500,13 +496,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "per_pair_master_gradient_compatible_catalog_810",
             "20_step_autoregressive_state_evolution",
         ],
-        "evidence_grade": "smoke_scaffold_only_NOT_promotable",
+        "evidence_grade": "smoke_signature_only_NOT_promotable",
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "result_review_blockers": [
             "scaffold_smoke_validates_canonical_signature_only_not_training",
-            "full_main_raises_NotImplementedError_per_catalog_240",
+            "full_main_built_but_non_promotable_without_post_training_tier_c",
             "wave_n_plus_1_council_required_per_z7_symposium_revision_6",
             "z7_gru_wave_2_disambiguator_outcome_required_per_revision_1",
         ],

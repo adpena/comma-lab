@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Tests for Z7-Mamba-2 substrate scaffold (TOP-5 #2 SCAFFOLD).
+"""Tests for Z7-Mamba-2 substrate helper and built research-only trainer.
 
 Verifies:
 1. Mamba2PredictorConfig defaults match design memo §7.
@@ -13,7 +13,7 @@ Verifies:
    through both z_prev and ego_motion inputs.
 6. Canonical signatures match Z6 sister
    (FilmConditionedNextFramePredictor + MultiLayerFilmPredictor).
-7. NotImplementedError raised from _full_main per Catalog #240.
+7. _full_main is implemented but remains recipe-gated per Catalog #240/#324.
 8. _smoke_main exits 0 with non-None backend_active.
 
 Per parent design memo (.omx/research/z7_mamba2_substrate_design_memo_20260518.md)
@@ -321,12 +321,12 @@ def test_reset_state_no_op_in_identity_mode():
 
 
 # ---------------------------------------------------------------------------
-# Trainer scaffold integration tests
+# Trainer integration tests
 # ---------------------------------------------------------------------------
 
 
 def _import_trainer_module():
-    """Helper to import the trainer scaffold for testing."""
+    """Helper to import the trainer for testing."""
     trainer_path = REPO_ROOT / "experiments" / "train_substrate_time_traveler_l5_z7_mamba2.py"
     spec = importlib.util.spec_from_file_location(
         "train_substrate_time_traveler_l5_z7_mamba2", trainer_path
@@ -337,7 +337,7 @@ def _import_trainer_module():
 
 
 def test_trainer_module_imports_successfully():
-    """Trainer scaffold must import without errors."""
+    """Trainer must import without errors."""
     mod = _import_trainer_module()
     assert hasattr(mod, "_smoke_main")
     assert hasattr(mod, "_full_main")
@@ -443,13 +443,13 @@ def test_trainer_smoke_mode_completes_successfully(tmp_path):
     import json
     stats = json.loads(stats_path.read_text())
     assert stats["substrate_id"] == "time_traveler_l5_z7_mamba2"
-    assert stats["score_claim"] is False, "scaffold smoke must NOT claim score"
+    assert stats["score_claim"] is False, "smoke must NOT claim score"
     assert stats["promotion_eligible"] is False
     assert stats["ready_for_exact_eval_dispatch"] is False
-    # Evidence grade must mark this as non-promotable scaffold-only signal.
+    # Evidence grade must mark this as non-promotable smoke-only signal.
     grade = stats["evidence_grade"]
-    assert "scaffold" in grade and ("NOT_promotable" in grade or "not_promotable" in grade), (
-        f"evidence_grade {grade!r} must mark scaffold smoke as non-promotable"
+    assert "smoke" in grade and ("NOT_promotable" in grade or "not_promotable" in grade), (
+        f"evidence_grade {grade!r} must mark smoke output as non-promotable"
     )
 
 
@@ -459,9 +459,7 @@ def test_trainer_smoke_mode_completes_successfully(tmp_path):
 
 
 def test_recipe_declares_research_only_per_catalog_240():
-    """Per Catalog #240: recipe must NOT carry dispatch_enabled: true while
-    _full_main raises NotImplementedError.
-    """
+    """Per Catalog #240: built trainer stays gated until exact authority lands."""
     recipe_path = (
         REPO_ROOT / ".omx" / "operator_authorize_recipes"
         / "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml"
@@ -469,10 +467,10 @@ def test_recipe_declares_research_only_per_catalog_240():
     assert recipe_path.exists(), f"recipe must exist at {recipe_path}"
     content = recipe_path.read_text()
     assert "research_only: true" in content, (
-        "Per Catalog #240: scaffold recipe must declare research_only: true"
+        "Per Catalog #240: research recipe must declare research_only: true"
     )
     assert "dispatch_enabled: false" in content, (
-        "Per Catalog #240: scaffold recipe must declare dispatch_enabled: false"
+        "Per Catalog #240: research recipe must declare dispatch_enabled: false"
     )
 
 
@@ -483,8 +481,7 @@ def test_recipe_declares_predicted_band_validation_status_pending_per_catalog_32
         / "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml"
     )
     content = recipe_path.read_text()
-    # Must declare validation_status (pending_post_training OR
-    # research_prior_prebuild OR phantom_random_init etc.)
+    # Must declare validation_status (pending_post_training OR equivalent).
     assert "predicted_band_validation_status" in content, (
         "Per Catalog #324: recipe must declare predicted_band_validation_status"
     )

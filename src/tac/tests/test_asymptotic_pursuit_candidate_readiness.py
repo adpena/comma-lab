@@ -584,16 +584,17 @@ def test_assess_candidate_z7_is_visible_but_prebuild_gated():
 
 
 def test_assess_candidate_z7_mamba2_scaffold_is_visible_with_score_band_axis():
-    """Z7-Mamba-2 WIP must join the queue without delta-band axis confusion."""
+    """Z7-Mamba-2 must stay gated without stale full-main blockers."""
     c = assess_candidate("time_traveler_l5_z7_mamba2")
     assert c.recipe_basename == "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch"
     assert c.recipe_path is not None
     assert c.trainer_path is not None
     assert c.trainer_path.name == "train_substrate_time_traveler_l5_z7_mamba2.py"
-    assert c.lane_maturity == "L0"
-    assert c.impl_complete is False
-    assert c.full_main_implemented is False
-    assert c.full_main_blocker == "RAISES_NotImplementedError"
+    assert c.lane_maturity == "L1"
+    assert c.impl_complete is True
+    assert c.full_main_implemented is True
+    assert c.full_main_blocker is None
+    assert c.latest_council_verdict == "DEFER_PENDING_EVIDENCE"
     assert c.research_only is True
     assert c.dispatch_enabled is False
     assert c.readiness_verdict == "DEFER"
@@ -601,13 +602,17 @@ def test_assess_candidate_z7_mamba2_scaffold_is_visible_with_score_band_axis():
     assert c.predicted_delta_s_band_high == pytest.approx(0.184)
     assert c.predicted_band_kind == "predicted_score_band"
     assert c.predicted_band_axis == "contest-CPU"
-    assert c.predicted_band_validation_status == "research_prior_prebuild"
+    assert c.predicted_band_validation_status == "pending_post_training"
     assert c.as_dict()["predicted_score_band"] == pytest.approx([0.167, 0.184])
     assert c.horizon_class == "frontier_pursuit"
-    assert "CATALOG_240_FULL_MAIN_BLOCKED:RAISES_NotImplementedError" in c.blocking_issues
+    assert "CATALOG_240_FULL_MAIN_BLOCKED:RAISES_NotImplementedError" not in c.blocking_issues
     assert (
         "z7_mamba2_trainer_full_main_raises_NotImplementedError_per_catalog_240"
-        in c.dispatch_blockers
+        not in c.dispatch_blockers
+    )
+    assert (
+        "z7_mamba2_substrate_module_absent_pre_build_per_z7_symposium_revision_6"
+        not in c.dispatch_blockers
     )
     assert (
         "z7_mamba2_mamba_ssm_pypi_install_must_succeed_in_modal_a100_image_pre_dispatch"

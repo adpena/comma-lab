@@ -1,8 +1,8 @@
 schema_version: 1
 name: substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch
-lane_id: lane_top5_2_z7_mamba2_scaffold_design_20260518
+lane_id: lane_z7_as_mamba_2_full_landing_20260518
 
-# Z7-Mamba-2 PRE-BUILD readiness surface per Catalog #240. This recipe
+# Z7-Mamba-2 built research-only readiness surface per Catalog #240. This recipe
 # exists so the canonical readiness/queue tooling (e.g.
 # tools/asymptotic_pursuit_candidate_readiness_assessment.py) can surface
 # Z7-Mamba-2 as an explicit DEFER candidate with exact blockers.
@@ -17,8 +17,6 @@ lane_id: lane_top5_2_z7_mamba2_scaffold_design_20260518
 research_only: true
 dispatch_enabled: false
 dispatch_blockers:
-  - z7_mamba2_trainer_full_main_raises_NotImplementedError_per_catalog_240
-  - z7_mamba2_substrate_module_absent_pre_build_per_z7_symposium_revision_6
   - z7_mamba2_dispatch_requires_z7_gru_wave_2_disambiguator_outcome_per_revision_1
   - z7_mamba2_dispatch_requires_wave_n_plus_1_council_after_z7_gru_outcome
   - z7_mamba2_beta_ib_parameter_requires_c6_ibps_phase_2_empirical_beta_anchor_per_revision_5
@@ -30,8 +28,8 @@ summary: |
   Z7-Mamba-2 is the canonical Catalog #308 N>=3 alternative-probe-methodology
   to Z7-GRU (Hafner Revision #3 binding) within the predictive-coding-recurrent
   substrate class. Mamba-2 (Dao-Gu 2024, arxiv 2405.21060) is a selective
-  state-space sequence model. The 2026-05-18 design memo is DESIGN_MEMO_ONLY
-  pending Wave N+1 council; paid dispatch is explicitly deferred until
+  state-space sequence model. The Z7MCM2 trainer/runtime is built as an L1
+  research-only substrate; paid dispatch is explicitly deferred until
   (a) Z7-GRU Wave 2 disambiguator outcome lands AND ratifies via Wave N+1
   council OR (b) operator explicit-frontier-override per Catalog #300
   with verbatim quote in council_override_rationale.
@@ -44,13 +42,13 @@ target_modes:
   - research_substrate
 
 horizon_class: asymptotic_pursuit
-active_dispatch_contract: z7_mamba2_prebuild_research_gate
+active_dispatch_contract: z7_mamba2_built_research_gate
 dispatch_contracts:
-  - id: z7_mamba2_prebuild_research_gate
+  - id: z7_mamba2_built_research_gate
     archive_role: planned_z7mcm2_monolithic_payload
     builder_surface: experiments/train_substrate_time_traveler_l5_z7_mamba2.py
-    status: pre_build_research_only
-    exact_eval_path: blocked_pending_trainer_full_main_and_wave_n_plus_1_council
+    status: post_build_research_only
+    exact_eval_path: blocked_pending_wave_n_plus_1_council_identity_disambiguator_and_mamba_ssm_preflight
     blocker_basis: .omx/research/z7_mamba2_substrate_design_memo_20260518.md
 
 cost_band:
@@ -64,15 +62,15 @@ predicted_score_target: null
 predicted_band: [0.167, 0.184]
 predicted_band_kind: predicted_score_band
 predicted_band_axis: contest-CPU
-predicted_band_validation_status: research_prior_prebuild
+predicted_band_validation_status: pending_post_training
 predicted_band_reactivation_criteria: |
   Z7-Mamba-2's [0.167, 0.184] score band is a research prior from the
   Z7-Mamba-2 design memo + deep-research wave TOP-5 #2, not empirical
   evidence. It may rank Wave-N+1 planning only while research_only=true
   and dispatch_enabled=false. Spend/promotion requires: (1) Z7-GRU Wave 2
   paired exact-eval lands; (2) C6 IBPS Phase 2 empirical beta-IB anchor
-  lands; (3) Z7-Mamba-2 trainer _full_main implemented per Wave N+1 council
-  PROCEED-unconditional; (4) same-bytes identity-disambiguator paired
+  lands; (3) Wave N+1 council PROCEED-unconditional on the built Z7MCM2
+  archive path; (4) same-bytes identity-disambiguator paired
   exact-eval confirms Z7-Mamba-2-WIN at ΔS >= 0.005 on contest-CUDA;
   (5) post-training paired exact-eval evidence harvested under lane claim
   custody per Catalog #226 + #245 modal_call_id_ledger.
@@ -118,14 +116,13 @@ source_supports: |
   from C6 Phase 2 per Revision #5.
 
 pact_must_prove: |
-  Before paid full dispatch, Z7-Mamba-2 must prove at least: (1) trainer
-  _full_main implemented per Wave N+1 council PROCEED-unconditional;
-  (2) Z7MCM2 archive grammar emits byte-closed archive bytes; (3) inflate
-  runtime consumes Mamba-2 recurrent predictor bytes and changes output
-  (Catalog #220 + #272 byte-mutation smoke); (4) identity/static-capacity
+  Before paid full dispatch, Z7-Mamba-2 must prove at least: (1) Z7MCM2
+  archive grammar emits byte-closed archive bytes; (2) inflate runtime
+  consumes Mamba-2 recurrent predictor bytes and changes output
+  (Catalog #220 + #272 byte-mutation smoke); (3) identity/static-capacity
   disambiguator at same archive bytes shows Z7-Mamba-2-WIN at score
-  delta >= 0.005 on contest-CUDA; (5) paired CPU/CUDA exact eval is
-  harvested under lane claim custody per Catalog #226 + #245; (6) mamba_ssm
+  delta >= 0.005 on contest-CUDA; (4) paired CPU/CUDA exact eval is
+  harvested under lane claim custody per Catalog #226 + #245; (5) mamba_ssm
   PyPI package installs successfully in Modal A100 image per Catalog #244
   NVML env block + Catalog #270 Tier 1/2/3 protocol.
 
@@ -163,6 +160,9 @@ dependencies:
 
 # Per Catalog #182 target_modes contract.
 pyav_decode_strategy: cpu_thread_async_upload
+
+# Per Catalog #171 FS-read-contention discipline.
+video_input_strategy: per_dispatch_local_copy
 
 # Per Catalog #173 canary discipline.
 canary_status: post_canary_dependent
