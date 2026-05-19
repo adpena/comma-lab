@@ -42110,11 +42110,11 @@
       "id": "lane_comma_lab_sanitization_sweep_for_public_readiness_20260519",
       "name": "comma-lab sanitization sweep per operator 'iterate on cleaning and OSS' 2026-05-19",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "3 commits e663ac8ea+2d7164b7a+6a39d5cdc; pushed origin/main; verification report .omx/research/comma_lab_sanitization_sweep_20260519T194221Z.md; visibility STILL PRIVATE pending operator"
         },
         "real_archive_empirical": {
           "status": false,
@@ -42137,8 +42137,49 @@
           "evidence": ""
         },
         "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_comma_lab_sanitization_sweep_landed_20260519.md"
+        },
+        "deploy_runbook": {
           "status": false,
           "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tac_ci_fix_authoring_tests_20260519",
+      "name": "tac CI fix by authoring missing tests per operator 'adding the tests' 2026-05-19",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/tac_ci_fix_authoring_tests_20260519T193600Z.md (PR https://github.com/adpena/tac/pull/1 CI GREEN on Python 3.11+3.12 run 26120635237)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_tac_ci_fix_authoring_tests_landed_20260519T193600Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -42155,5 +42196,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T19:29:03Z"
+  "updated_at": "2026-05-19T19:44:54Z"
 }

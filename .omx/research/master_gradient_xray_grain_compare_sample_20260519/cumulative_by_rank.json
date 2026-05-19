@@ -1,0 +1,74 @@
+{
+  "schema_version": "master_gradient_xray_plot_sidecar_v2_20260519",
+  "plot_id": "cumulative_by_rank",
+  "anchor": {
+    "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "measurement_axis": "[macOS-CPU advisory]",
+    "measurement_hardware": "darwin_arm64_local_cpu_advisory",
+    "measurement_utc": "2026-05-19T12:28:07.419152+00:00",
+    "gradient_tensor_kind": "aggregate_per_byte_v1",
+    "evidence_grade": null,
+    "n_bytes": 178417,
+    "n_pairs_used": 8,
+    "operating_point": {
+      "d_pose": 0.0017329362453892827,
+      "d_seg": 0.000881195068359375,
+      "rate": 0.004754685709380427,
+      "score": 0.3386276859302886
+    }
+  },
+  "summary_statistics": {
+    "n_bytes": 178417,
+    "n_axes": 3,
+    "per_axis_l1_total": [
+      0.15842774510383606,
+      0.1123473048210144,
+      0.0
+    ],
+    "per_axis_max": [
+      3.614135493990034e-05,
+      1.5516126950387843e-05,
+      0.0
+    ],
+    "per_byte_l1_max": 4.751790766022168e-05,
+    "per_byte_l1_median": 1.3227862609710428e-06,
+    "per_byte_l1_total": 0.270963579416275,
+    "top_1pct_leverage_fraction": 0.06412707081114677,
+    "top_10pct_leverage_fraction": 0.29578120021394566,
+    "top_10_byte_indices": [
+      79944,
+      79945,
+      113188,
+      113215,
+      113214,
+      113213,
+      113212,
+      113211,
+      113210,
+      113209
+    ]
+  },
+  "extra": {
+    "grain_filter": "any"
+  },
+  "provenance": {
+    "artifact_kind": "predicted_from_model",
+    "source_path": "<predictor:master_gradient_xray.cumulative_by_rank.v1>",
+    "source_sha256": "4552411dd7ec4f35ba53f827cfe9865b069f143e8012283a70e441aa386c085b",
+    "measurement_axis": "[predicted]",
+    "hardware_substrate": "visualization_derived_view",
+    "evidence_grade": "predicted",
+    "promotion_eligible": false,
+    "score_claim_valid": false,
+    "captured_at_utc": "2026-05-19T13:40:33.203916+00:00",
+    "canonical_helper_invocation": "tac.provenance.builders.build_provenance_for_predicted",
+    "contest_archive_zip_path": "",
+    "contest_archive_member_name": "",
+    "composed_from": [],
+    "rejection_reason": ""
+  },
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "notes": "Derived visualization sidecar per Catalog #305 observability + Catalog #323 canonical Provenance. score_claim=False, promotion_eligible=False, evidence_grade=[predicted] by construction; visualization is a derived view, NOT a primary measurement. Use the underlying anchor's measurement_axis for any score-axis claim. Per CLAUDE.md 'Apples-to-apples evidence discipline' the plot is observability infrastructure only."
+}
