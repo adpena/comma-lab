@@ -39814,11 +39814,11 @@
       "id": "lane_cable_h1_recursive_review_r11_20260519",
       "name": "Cable H1 R11 adversarial bug-hunter pass",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/cable_h1_recursive_review_r11_findings_20260519T060942Z.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -39841,8 +39841,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_cable_h1_recursive_review_r11_landed_20260519.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39982,5 +39982,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T06:08:47Z"
+  "updated_at": "2026-05-19T06:11:47Z"
 }
