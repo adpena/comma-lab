@@ -154,6 +154,110 @@ class AlternativeReducerVerdict:
     notes: str
 
 
+MASTER_GRADIENT_WYNER_ZIV_DIAGNOSTIC_SCHEMA = (
+    "alternative_reducer_master_gradient_wyner_ziv_diagnostic_v1"
+)
+
+
+def build_master_gradient_wyner_ziv_diagnostic(
+    *,
+    requested: bool,
+    archive_sha256: str | None = None,
+    master_gradient_anchor_path: Path | None = None,
+    write_sidecar: bool = False,
+) -> dict[str, object]:
+    """Build optional diagnostic master-gradient Wyner-Ziv covariance evidence.
+
+    This is intentionally diagnostic-only. It never changes score/promotion
+    eligibility, never marks dispatch readiness, and reports unavailable evidence
+    as a stable JSON blocker instead of turning the alternative-reducer probe
+    into a hard dependency on master-gradient materialization.
+    """
+    payload: dict[str, object] = {
+        "schema": MASTER_GRADIENT_WYNER_ZIV_DIAGNOSTIC_SCHEMA,
+        "requested": bool(requested),
+        "available": False,
+        "unavailable_blocker": None,
+        "archive_sha256": archive_sha256,
+        "master_gradient_anchor_path": str(master_gradient_anchor_path)
+        if master_gradient_anchor_path is not None
+        else None,
+        "consumer_id": "wyner_ziv_side_info_covariance",
+        "evidence_grade": "diagnostic_master_gradient",
+        "axis_label": "[diagnostic-master-gradient; no score claim]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "write_sidecar_requested": bool(write_sidecar),
+    }
+    if not requested:
+        payload["unavailable_blocker"] = "not_requested"
+        return payload
+    if not archive_sha256:
+        payload["unavailable_blocker"] = (
+            "archive_sha256_required_when_master_gradient_requested"
+        )
+        return payload
+
+    try:
+        from tac.master_gradient_consumers import (
+            load_per_pair_gradient_from_anchor,
+            wyner_ziv_side_info_covariance,
+        )
+
+        per_pair_gradient, anchor = load_per_pair_gradient_from_anchor(
+            archive_sha256=archive_sha256,
+            anchor_path=master_gradient_anchor_path,
+        )
+        covariance = wyner_ziv_side_info_covariance(
+            per_pair_gradient,
+            archive_sha256=archive_sha256,
+            measurement_axis=str(anchor.get("measurement_axis") or "unknown"),
+            measurement_hardware=str(anchor.get("measurement_hardware") or "unknown"),
+            write_sidecar=write_sidecar,
+        )
+    except Exception as exc:
+        payload["unavailable_blocker"] = f"{type(exc).__name__}: {exc}"
+        return payload
+
+    payload.update(
+        {
+            "available": True,
+            "unavailable_blocker": None,
+            "measurement_axis": str(anchor.get("measurement_axis") or "unknown"),
+            "measurement_hardware": str(
+                anchor.get("measurement_hardware") or "unknown"
+            ),
+            "measurement_call_id": anchor.get("measurement_call_id"),
+            "gradient_tensor_kind": anchor.get("gradient_tensor_kind"),
+            "n_bytes": covariance.n_bytes,
+            "n_pairs": covariance.n_pairs,
+            "sample_axis": 1,
+            "sample_axis_name": "pose",
+            "n_candidate_shared_prior_bytes": len(
+                covariance.candidate_shared_prior_byte_indices
+            ),
+            "n_pair_specific_bytes": len(covariance.pair_specific_byte_indices),
+            "n_mixed_bytes": len(covariance.mixed_byte_indices),
+            "aggregate_byte_pair_correlation_mean": (
+                covariance.aggregate_byte_pair_correlation_mean
+            ),
+            "estimated_wyner_ziv_gain_bytes": (
+                covariance.estimated_wyner_ziv_gain_bytes
+            ),
+            "correlation_threshold_high": covariance.correlation_threshold_high,
+            "correlation_threshold_low": covariance.correlation_threshold_low,
+            "diagnostic_only_rationale": (
+                "Wyner-Ziv covariance is auxiliary master-gradient evidence for "
+                "alternative-reducer interpretation only; it is not a score, "
+                "promotion, rank/kill, or dispatch-readiness claim."
+            ),
+        }
+    )
+    return payload
+
+
 # --- Reducer 1: per-pixel histogram ---
 
 
@@ -522,12 +626,30 @@ def write_run_manifest(
     substrate_id: str,
     verdicts: Iterable[AlternativeReducerVerdict],
     provenance: dict,
+    master_gradient_requested: bool = False,
+    master_gradient_archive_sha256: str | None = None,
+    master_gradient_anchor_path: Path | None = None,
+    master_gradient_write_sidecar: bool = False,
 ) -> Path:
     """Persist a single per-substrate run manifest aggregating 4 reducer verdicts.
 
     The manifest is the operator-facing summary; per-reducer verdict JSONs are
     the per-result evidence.
     """
+    verdict_list = list(verdicts)
+    master_gradient_request_active = (
+        master_gradient_requested
+        or master_gradient_archive_sha256 is not None
+        or master_gradient_anchor_path is not None
+    )
+    master_gradient_wyner_ziv_covariance = (
+        build_master_gradient_wyner_ziv_diagnostic(
+            requested=master_gradient_request_active,
+            archive_sha256=master_gradient_archive_sha256,
+            master_gradient_anchor_path=master_gradient_anchor_path,
+            write_sidecar=master_gradient_write_sidecar,
+        )
+    )
     summary = {
         "substrate_id": substrate_id,
         "axis_label": "[diagnostic-CPU; alternative-reducer probe wave per T2 council Q1.4]",
@@ -550,19 +672,20 @@ def write_run_manifest(
                 "num_unique_reduced_classes": v.num_unique_reduced_classes,
                 "reducer_specific_parameters": v.reducer_specific_parameters,
             }
-            for v in verdicts
+            for v in verdict_list
         ],
+        "master_gradient_wyner_ziv_covariance": master_gradient_wyner_ziv_covariance,
         "any_reducer_meaningful": any(
-            v.verdict == "MEANINGFUL_CONDITIONING" for v in verdicts
+            v.verdict == "MEANINGFUL_CONDITIONING" for v in verdict_list
         ),
         "any_reducer_weak": any(
-            v.verdict == "WEAK_CONDITIONING" for v in verdicts
+            v.verdict == "WEAK_CONDITIONING" for v in verdict_list
         ),
         "all_reducers_independent": all(
-            v.verdict == "INDEPENDENT" for v in verdicts
+            v.verdict == "INDEPENDENT" for v in verdict_list
         ),
         "recommended_phase_2_council_action": _recommend_action_for_verdicts(
-            verdicts
+            verdict_list
         ),
         "provenance": provenance,
         "observed_at_utc": datetime.datetime.now(datetime.UTC).isoformat(
@@ -617,12 +740,14 @@ def sha256_file(path: Path) -> str:
 # Public surface
 __all__ = [
     "CLASS_2_INDEX_DEFAULT",
+    "MASTER_GRADIENT_WYNER_ZIV_DIAGNOSTIC_SCHEMA",
     "NUM_SEGNET_CLASSES_DEFAULT",
     "PER_PAIR_CLASS_2_FRACTION_BUCKETS_DEFAULT",
     "PER_PIXEL_HISTOGRAM_BIN_QUANT_DEFAULT",
     "PER_REGION_HISTOGRAM_BIN_QUANT_DEFAULT",
     "REDUCER_MEANINGFUL_THRESHOLD_BITS",
     "AlternativeReducerVerdict",
+    "build_master_gradient_wyner_ziv_diagnostic",
     "compute_alternative_reducer_verdict",
     "make_timestamped_output_dir",
     "reduce_per_frame_argmax",

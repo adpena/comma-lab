@@ -78,8 +78,8 @@ from __future__ import annotations
 import hashlib
 import io
 import struct
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -568,7 +568,7 @@ class FiLMPortabilityGuard:
             raise ValueError(f"atol must be positive, got {atol}")
         self.atol = atol
 
-    def check(self, master: "TokenRendererV62") -> None:
+    def check(self, master: TokenRendererV62) -> None:
         """Raise ``RuntimeError`` if the baked table disagrees with a fresh CPU compute."""
         if not master._film_table_baked:
             raise RuntimeError(
@@ -603,7 +603,7 @@ def encode_hpac_weights_ppmd(state_dict: dict, *, max_order: int = 4,
     Per PR95 inflate.py:302-303 / 384-391 — the canonical archive layout
     is ``state_dict → torch.save → bytes → pyppmd.compress(...)``.
     """
-    import pyppmd
+    import pyppmd  # PYPPMD_LGPL_OK:legacy-HPACMini-wire-format-encoder-compatibility
     if max_order < 2 or max_order > 16:
         raise ValueError(f"max_order must be in [2, 16], got {max_order}")
     if mem_size_mb < 1 or mem_size_mb > 4096:
@@ -618,7 +618,7 @@ def decode_hpac_weights_ppmd(payload: bytes, *, max_order: int = 4,
                               mem_size_mb: int = 16,
                               map_location: str | torch.device = "cpu") -> dict:
     """Decode PPMd-compressed HPACMini state_dict bytes."""
-    import pyppmd
+    import pyppmd  # PYPPMD_LGPL_OK:legacy-HPACMini-wire-format-decoder-compatibility
     if not isinstance(payload, (bytes, bytearray, memoryview)):
         raise TypeError(f"payload must be bytes-like, got {type(payload).__name__}")
     raw = pyppmd.decompress(
@@ -901,17 +901,17 @@ __all__ = [
     "ANR_FORMAT_ID",
     "ANR_FORMAT_VERSION",
     "ANR_MAGIC",
-    "ANRTokenRendererConfig",
     "ARCHIVE_GRAMMAR",
     "CAMERA_H",
     "CAMERA_W",
     "FEAT_H",
     "FEAT_W",
-    "FiLMPortabilityGuard",
-    "HPACMini",
     "NUM_CLASSES",
     "SEGNET_IN_H",
     "SEGNET_IN_W",
+    "ANRTokenRendererConfig",
+    "FiLMPortabilityGuard",
+    "HPACMini",
     "ShrinkSingleNeRV",
     "TokenRendererV62",
     "decode_hpac_weights_ppmd",

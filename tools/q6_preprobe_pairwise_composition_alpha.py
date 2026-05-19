@@ -121,16 +121,14 @@ from __future__ import annotations
 import argparse
 import datetime
 import fcntl
-import hashlib
 import json
 import lzma
 import os
 import sys
 import tempfile
-import uuid
 import zlib
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from itertools import combinations
 from pathlib import Path
 from typing import Any
@@ -169,7 +167,9 @@ STAGE_2_CANDIDATES: tuple[str, ...] = (
 # Source ranking: `.omx/state/wyner_ziv_deliverability/pre_entropy_candidate_substrates_20260517T210723.json`
 # (per `feedback_pre_entropy_substrate_pivot_prober_landed_20260517.md` Table 1).
 # C(10,2) = 45 pair combinations per the briefing math.
-# Excluded: `distilled_segnet` (rank 11, deliverable savings 0.00295 — drop to fit C(10,2)).
+# Excluded: `siren_renderer` until a successful run produces real weights.
+# The 2026-05-17 mechanism investigation showed the live path was byte-identical
+# to `lane_g_v3_renderer`, so keeping it here reintroduced false authority.
 STAGE_2_CANDIDATES_EXTENDED: tuple[str, ...] = (
     # Original 3 (preserved for deterministic regression)
     "pr101_state_dict",
@@ -181,8 +181,8 @@ STAGE_2_CANDIDATES_EXTENDED: tuple[str, ...] = (
     "sabor_margin_frame_001",   # 0.1326 (scorer_margin_float32, 787 KB)
     "pr106_latents",            # 0.0237 (raw_float_latents, 69 KB)
     "lane_g_v3_renderer",       # 0.0233 (raw_float_weights, 297 KB)
-    "siren_renderer",           # 0.0233 (raw_float_weights, 297 KB)
     "distilled_posenet",        # 0.00438 (raw_float_weights, 81 KB)
+    "distilled_segnet",         # 0.00295 (raw_float_weights, 680 KB)
 )
 
 # Map candidate id → (file path, substrate class) — mirrors sister prober's
@@ -224,12 +224,12 @@ CANDIDATE_PATHS: dict[str, tuple[str, str]] = {
         "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
         "raw_float_weights",
     ),
-    "siren_renderer": (
-        "experiments/results/lane_substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep_modal/submissions/robust_current/renderer.bin",
-        "raw_float_weights",
-    ),
     "distilled_posenet": (
         "experiments/results/lane_cpu_trained_tiny_hinton_surrogate_bootstrap_20260512T034310Z_long/distilled_posenet_ema_shadow.pt",
+        "raw_float_weights",
+    ),
+    "distilled_segnet": (
+        "experiments/results/lane_cpu_trained_tiny_hinton_surrogate_bootstrap_20260512T034310Z_long/distilled_segnet_ema_shadow.pt",
         "raw_float_weights",
     ),
 }
@@ -365,14 +365,8 @@ def compute_pairwise_alpha(
 
     # α computation — two equivalent forms per OP-3 council spec
     # Guard against zero-division when sum_marginal == 0 (degenerate)
-    if sum_marginal > 0:
-        alpha_op3 = 1.0 - (compressed_concat / sum_marginal)
-    else:
-        alpha_op3 = 0.0
-    if sum_savings > 0:
-        alpha_savings = savings_concat / sum_savings
-    else:
-        alpha_savings = 0.0
+    alpha_op3 = 1.0 - (compressed_concat / sum_marginal) if sum_marginal > 0 else 0.0
+    alpha_savings = savings_concat / sum_savings if sum_savings > 0 else 0.0
 
     # Per Catalog #227 + council OP-2: stage 2 gate clause #2 uses the
     # savings-ratio form (more intuitive interpretation per Catalog #227's
@@ -486,7 +480,7 @@ def build_output_payload(
         extended: when True, emit ``schema_version_extended`` so consumers can
             differentiate 3-pair canonical from 45-pair extended sweep output.
     """
-    written_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    written_at = datetime.datetime.now(datetime.UTC).isoformat()
     return {
         "schema_version": (
             SCHEMA_VERSION_EXTENDED if extended else SCHEMA_VERSION
@@ -567,7 +561,7 @@ def _default_output_path(*, extended: bool = False) -> Path:
     For extended sweeps emit ``pairwise_alpha_extended_<utc>.json`` to
     distinguish from canonical 3-pair sweeps.
     """
-    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    now = datetime.datetime.now(datetime.UTC).strftime("%Y%m%dT%H%M%SZ")
     if extended:
         return OUTPUT_DIR_DEFAULT / f"pairwise_alpha_extended_{now}.json"
     return OUTPUT_DIR_DEFAULT / f"pairwise_alpha_{now}.json"
@@ -576,7 +570,7 @@ def _default_output_path(*, extended: bool = False) -> Path:
 def _resolve_repo_root() -> Path:
     """Walk up from this file to find the repo root (contains .omx/state/)."""
     here = Path(__file__).resolve()
-    for parent in [here] + list(here.parents):
+    for parent in [here, *list(here.parents)]:
         if (parent / ".omx").is_dir() and (parent / "tools").is_dir():
             return parent
     return Path.cwd()

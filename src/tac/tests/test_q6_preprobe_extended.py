@@ -20,12 +20,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 Q6_TOOL_PATH = REPO_ROOT / "tools" / "q6_preprobe_pairwise_composition_alpha.py"
@@ -53,6 +52,17 @@ def test_extended_candidate_set_has_ten_members():
     mod = _load_q6_module()
     assert hasattr(mod, "STAGE_2_CANDIDATES_EXTENDED")
     assert len(mod.STAGE_2_CANDIDATES_EXTENDED) == 10
+
+
+def test_extended_candidate_set_excludes_siren_placeholder():
+    """Regression: `siren_renderer` was a byte-identical placeholder for
+    `lane_g_v3_renderer`, so it cannot contribute a canonical pairwise-alpha
+    row until a trained SIREN payload exists.
+    """
+    mod = _load_q6_module()
+    assert "siren_renderer" not in mod.STAGE_2_CANDIDATES_EXTENDED
+    assert "siren_renderer" not in mod.CANDIDATE_PATHS
+    assert "distilled_segnet" in mod.STAGE_2_CANDIDATES_EXTENDED
 
 
 def test_extended_candidate_set_includes_canonical_3():

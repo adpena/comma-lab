@@ -162,6 +162,18 @@ def test_309_horizon_class_plateau_adjacent_accepted(tmp_path: Path) -> None:
     assert v == []
 
 
+def test_309_horizon_class_markdown_bold_field_accepted(tmp_path: Path) -> None:
+    _write(
+        _research_dir(tmp_path),
+        "x_design_20260516.md",
+        "## Predicted ΔS band\n\n[0.18, 0.20]\n\n**horizon_class:** plateau_adjacent\n",
+    )
+    v = check_substrate_design_memo_declares_horizon_class(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert v == []
+
+
 def test_309_horizon_class_frontier_pursuit_accepted(tmp_path: Path) -> None:
     _write(
         _research_dir(tmp_path),

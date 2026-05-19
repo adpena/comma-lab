@@ -21,6 +21,7 @@ from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     build_pr106_sidecar_recode_candidate_packet,
     decode_pr106_sidecar_packet_dim_delta,
     dumps_runtime_consumption_manifest,
@@ -58,6 +59,11 @@ PR106_FORMAT0D_ARCHIVE = (
     / "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/sidecar_archive.zip"
 )
 PR106_FORMAT0D_SHA = "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4"
+PR106_FORMAT04_ARCHIVE = (
+    REPO_ROOT
+    / "experiments/results/pr106_r2_rank_elided_format04_candidate_20260514_codex/"
+    / "pr106_sidecar_rank_elided_format04_candidate.zip"
+)
 RUNTIME_CONSUMPTION_TOOL = REPO_ROOT / "tools" / "prove_pr106_sidecar_runtime_consumption.py"
 
 
@@ -390,6 +396,33 @@ def test_pr106_pr101_runtime_accepts_legacy_brotli_format_for_same_runtime_pairi
     assert digest["corrected_latents_sha256"] == grammar_digest[
         "corrected_latents_sha256"
     ]
+
+
+def test_pr106_runtime_consumption_fails_closed_for_format04_runtime_gap() -> None:
+    """Regression: PacketIR format 0x04 parsed/emitted correctly but could
+    not be mutation-probed, so runtime-consumption proof regeneration halted
+    before rebuilding the PR106 candidate matrix. The current PR101 runtime
+    does not consume 0x04, so this must return a blocker manifest instead of
+    raising and aborting the whole regeneration.
+    """
+    if not PR106_FORMAT04_ARCHIVE.is_file():
+        pytest.skip(f"live format 0x04 archive missing: {PR106_FORMAT04_ARCHIVE}")
+
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=PR106_FORMAT04_ARCHIVE,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+    )
+
+    assert manifest["format_id"] == "0x04"
+    assert manifest["packet_ir_consumed_byte_accounting_passed"] is True
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is False
+    assert manifest["runtime_sidecar_apply_consumption_claim"] is False
+    assert manifest["runtime_all_score_affecting_sections_consumed"] is False
+    mutation = manifest["mutation"]
+    assert mutation["format_id"] == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED
+    assert mutation["section_name"] == "sidecar_payload"
+    assert manifest["blockers"] == ["runtime_sidecar_decode_exception:ValueError"]
+    assert manifest["score_claim"] is False
 
 
 def _fixed_meta_rank_elided_member_payload() -> bytes:

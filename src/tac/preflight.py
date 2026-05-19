@@ -3004,6 +3004,14 @@ def preflight_all(
             ),
             strict=False,
         )
+        _parallel.run(
+            "check_substrate_trainers_use_canonical_optimization_helpers",
+            "[trainer-optimization-helpers]",
+            lambda: check_substrate_trainers_use_canonical_optimization_helpers(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
         # 2026-05-14 Catalog #229 - subagent landing premise-verification
         # evidence gate. Per `feedback_prompt_premise_verification_before_
         # edit_pattern_20260514.md`. Refuses post-2026-05-14 landing memos
@@ -3600,6 +3608,9 @@ def preflight_all(
         # Live count at landing: 0. STRICT @ 0 per CLAUDE.md
         # "Bugs must be permanently fixed AND self-protected against".
         check_modal_training_image_includes_hard_runtime_deps(
+            strict=True, verbose=verbose,
+        )
+        check_no_unwaived_pyppmd_imports(  # CLAUDE_MD_ENTRY_OK: OMX-sweep import-license guard
             strict=True, verbose=verbose,
         )
         # Catalog #204 - check_pr95plus_modal_smoke_uses_durable_provider_output
@@ -46897,6 +46908,83 @@ def check_modal_training_image_includes_hard_runtime_deps(
 
 
 # ----------------------------------------------------------------------------
+# check_no_unwaived_pyppmd_imports
+#
+# The pyppmd package is LGPL-2.1-or-later. It is permitted only for narrow,
+# explicitly reviewed public-archive replay / legacy wire-format paths. New
+# imports must either use the canonical constriction/Brotli paths or carry a
+# same-line waiver that states why PPMd compatibility is unavoidable.
+# ----------------------------------------------------------------------------
+
+_CHECK_PYPPMD_IMPORT_RE = re.compile(
+    r"^\s*(?:from\s+pyppmd\b|import\s+pyppmd\b)"
+)
+_CHECK_PYPPMD_WAIVER_TOKEN = "PYPPMD_LGPL_OK:"
+
+
+def check_no_unwaived_pyppmd_imports(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Refuse package-runtime ``pyppmd`` imports without an explicit waiver.
+
+    The scan is intentionally scoped to ``src/tac`` package code and skips
+    tests. Tests may exercise optional replay paths; package imports are the
+    OSS/compliance-sensitive surface.
+    """
+
+    root = (repo_root or Path.cwd()).resolve()
+    source_root = root / "src" / "tac"
+    if not source_root.is_dir():
+        return []
+
+    violations: list[str] = []
+    for path in sorted(source_root.rglob("*.py")):
+        rel = path.relative_to(root).as_posix()
+        if "/tests/" in f"/{rel}/":
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        for line_no, line in enumerate(lines, start=1):
+            if not _CHECK_PYPPMD_IMPORT_RE.match(line):
+                continue
+            if _CHECK_PYPPMD_WAIVER_TOKEN in line:
+                continue
+            violations.append(
+                f"{rel}:{line_no}: unwaived pyppmd import. pyppmd is "
+                "LGPL-2.1-or-later; use a permissive codec path or add a "
+                "same-line `PYPPMD_LGPL_OK:<rationale>` waiver for a narrow "
+                "public-archive replay compatibility path."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [pyppmd-import-license] {len(violations)} violation(s):")
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [pyppmd-import-license] OK "
+                "(all package pyppmd imports are explicitly waived)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_unwaived_pyppmd_imports found "
+            f"{len(violations)} unwaived package import(s). pyppmd may only "
+            "remain in explicitly waived public-archive replay compatibility "
+            "paths:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
 # Catalog #204 - check_pr95plus_modal_smoke_uses_durable_provider_output
 # ----------------------------------------------------------------------------
 
@@ -58783,6 +58871,68 @@ def check_substrate_trainer_consumes_f3_cache_when_flag_declared(
 
 
 # ----------------------------------------------------------------------------
+# check_substrate_trainers_use_canonical_optimization_helpers
+#
+# General sibling of Catalog #228. #228 protects the F3 GTScorerCache
+# consumption path after a trainer has declared that specific flag. This gate
+# catches the broader orphan from the 2026-05-14 optimization-helper directive:
+# substrate trainers should either build the canonical
+# ``build_optimized_training_context`` bundle, use a direct
+# ``tac.training_optimization`` helper, or carry an explicit comment waiver.
+# Initial wire-in is WARN-ONLY because the live count is nonzero; the gate is
+# the canonical source of truth for the backfill list.
+# ----------------------------------------------------------------------------
+
+
+def check_substrate_trainers_use_canonical_optimization_helpers(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Report trainers missing canonical optimization-helper consumption.
+
+    Acceptance is AST-based and comment-waiver based; docstrings and copied
+    examples do not satisfy the contract.
+    """
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    try:
+        from tac.trainer_optimization_helper_audit import (
+            audit_trainer_optimization_helpers,
+        )
+    except Exception as exc:  # pragma: no cover - defensive import guard
+        violations = [f"could not import trainer optimization helper audit: {exc!s}"]
+    else:
+        audit = audit_trainer_optimization_helpers(root)
+        violations = list(audit.violations)
+        if verbose:
+            print(
+                "  [trainer-optimization-helpers] "
+                f"scanned={audit.scanned_trainers} "
+                f"accepted={audit.accepted_trainers} "
+                f"missing={audit.missing_trainers} "
+                f"waived={audit.waived_trainers}"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_trainers_use_canonical_optimization_helpers "
+            f"found {len(violations)} trainer(s) missing canonical "
+            "optimization-helper usage or an explicit waiver. Backfill "
+            "`build_optimized_training_context`, a direct "
+            "`tac.training_optimization` helper call, or add "
+            "`# OPTIMIZATION_HELPERS_WAIVED:<reason>`:\n  "
+            + "\n  ".join(v[:300] for v in violations[:8])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
 # Catalog #229 — check_subagent_landing_includes_premise_verification_evidence
 #
 # Premise-verification-before-edit pattern self-protection (2026-05-14).
@@ -70189,6 +70339,10 @@ _CHECK_309_HORIZON_CLASS_TOKENS = (
     "horizon-class: frontier_pursuit",
     "horizon-class: asymptotic_pursuit",
 )
+_CHECK_309_HORIZON_CLASS_FIELD_RE = re.compile(
+    r"(?:\*\*)?horizon[_-]class:\s*(?:\*\*)?"
+    r"\s*(plateau[_-]adjacent|frontier[_-]pursuit|asymptotic[_-]pursuit)"
+)
 
 
 def _check_309_in_scope(filename: str) -> int | None:
@@ -70215,7 +70369,7 @@ def _check_309_body_has_horizon_class(body_lower: str) -> bool:
     for tok in _CHECK_309_HORIZON_CLASS_TOKENS:
         if tok in body_lower:
             return True
-    return False
+    return bool(_CHECK_309_HORIZON_CLASS_FIELD_RE.search(body_lower))
 
 
 def _check_309_waiver_present(body: str) -> bool:

@@ -2823,6 +2823,7 @@ def mutate_pr106_sidecar_semantic_correction(
 
     if packet.format_id in (
         PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+        PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
@@ -2878,8 +2879,15 @@ def mutate_pr106_sidecar_semantic_correction(
                     )
                 )
         else:
-            ranked_payload = packet.sidecar_payload
-            ranked_meta = packet.framing_meta
+            if packet.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+                ranked_payload, ranked_meta = reexpand_pr101_rank_elided_sidecar_payload(
+                    packet.sidecar_payload,
+                    packet.framing_meta,
+                    schema=schema,
+                )
+            else:
+                ranked_payload = packet.sidecar_payload
+                ranked_meta = packet.framing_meta
         dims, delta_indices = _decode_pr101_ranked_sidecar_payload(
             ranked_payload,
             ranked_meta,
@@ -2905,6 +2913,28 @@ def mutate_pr106_sidecar_semantic_correction(
         )
         mutated_sidecar_payload = mutated_payload
         mutated_framing_meta = packet.framing_meta
+        if packet.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
+            noop_count, dim_bytes, rank_bytes, noop_rank_bytes = struct.unpack(
+                "<HHBB", ranked_meta
+            )
+            if int(rank_bytes) != 1:
+                raise ValueError(
+                    f"format_id=0x04 rank-elision expects one rank byte; got {rank_bytes}"
+                )
+            mutated_sidecar_payload = (
+                mutated_payload[:dim_bytes] + mutated_payload[dim_bytes + rank_bytes :]
+            )
+            mutated_framing_meta = struct.pack(
+                "<HHB",
+                int(noop_count),
+                int(dim_bytes),
+                int(noop_rank_bytes),
+            )
+            reexpand_pr101_rank_elided_sidecar_payload(
+                mutated_sidecar_payload,
+                mutated_framing_meta,
+                schema=schema,
+            )
         if packet.format_id in (
             PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,

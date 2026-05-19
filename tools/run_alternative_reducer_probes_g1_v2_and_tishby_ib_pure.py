@@ -509,6 +509,10 @@ def _run_substrate_probes(
     substrate_id: str,
     out_dir: Path,
     max_pairs: int = 600,
+    master_gradient_requested: bool = False,
+    master_gradient_archive_sha256: str | None = None,
+    master_gradient_anchor_path: Path | None = None,
+    master_gradient_write_sidecar: bool = False,
 ) -> dict:
     """Run all 4 alternative-reducer probes on one substrate; return summary dict."""
     print(f"\n=== {substrate_id}: alternative-reducer probe wave ===\n", flush=True)
@@ -587,7 +591,14 @@ def _run_substrate_probes(
         "observed_at_utc": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
     }
     manifest_path = write_run_manifest(
-        out_dir, substrate_id=substrate_id, verdicts=verdicts, provenance=provenance
+        out_dir,
+        substrate_id=substrate_id,
+        verdicts=verdicts,
+        provenance=provenance,
+        master_gradient_requested=master_gradient_requested,
+        master_gradient_archive_sha256=master_gradient_archive_sha256,
+        master_gradient_anchor_path=master_gradient_anchor_path,
+        master_gradient_write_sidecar=master_gradient_write_sidecar,
     )
     print(f"\n[{substrate_id}] run manifest -> {manifest_path}\n", flush=True)
 
@@ -643,6 +654,29 @@ def main(argv: list[str] | None = None) -> int:
         help="max pairs to render+probe (default 600 matches the canonical "
         "contest video; reduce for smoke tests)",
     )
+    parser.add_argument(
+        "--master-gradient-diagnostic",
+        action="store_true",
+        help="Request diagnostic-only master-gradient Wyner-Ziv covariance "
+        "evidence in each run manifest.",
+    )
+    parser.add_argument(
+        "--master-gradient-archive-sha256",
+        help="Archive SHA-256 whose master-gradient anchor should be loaded "
+        "when --master-gradient-diagnostic is requested.",
+    )
+    parser.add_argument(
+        "--master-gradient-anchor-path",
+        type=Path,
+        help="Optional master_gradient_anchors.jsonl path for the diagnostic "
+        "Wyner-Ziv covariance helper.",
+    )
+    parser.add_argument(
+        "--master-gradient-write-sidecar",
+        action="store_true",
+        help="Allow the canonical master-gradient consumer to write its "
+        "diagnostic sidecar. Defaults to manifest-only evidence.",
+    )
     args = parser.parse_args(argv)
 
     out_dir = make_timestamped_output_dir(REPO_ROOT)
@@ -655,6 +689,10 @@ def main(argv: list[str] | None = None) -> int:
                 substrate_id="wunderkind_g1_v2",
                 out_dir=out_dir,
                 max_pairs=args.max_pairs,
+                master_gradient_requested=args.master_gradient_diagnostic,
+                master_gradient_archive_sha256=args.master_gradient_archive_sha256,
+                master_gradient_anchor_path=args.master_gradient_anchor_path,
+                master_gradient_write_sidecar=args.master_gradient_write_sidecar,
             )
         )
     if args.substrate in ("tishby_ib_pure", "both"):
@@ -663,6 +701,10 @@ def main(argv: list[str] | None = None) -> int:
                 substrate_id="tishby_ib_pure",
                 out_dir=out_dir,
                 max_pairs=args.max_pairs,
+                master_gradient_requested=args.master_gradient_diagnostic,
+                master_gradient_archive_sha256=args.master_gradient_archive_sha256,
+                master_gradient_anchor_path=args.master_gradient_anchor_path,
+                master_gradient_write_sidecar=args.master_gradient_write_sidecar,
             )
         )
 
@@ -683,6 +725,17 @@ def main(argv: list[str] | None = None) -> int:
             "tishby_ib_pure_design_memo": ".omx/research/tishby_ib_pure_substrate_asymptotic_pursuit_scoping_design_20260516.md",
         },
         "summaries": summaries,
+        "master_gradient_diagnostic": {
+            "requested": bool(args.master_gradient_diagnostic),
+            "archive_sha256": args.master_gradient_archive_sha256,
+            "anchor_path": str(args.master_gradient_anchor_path)
+            if args.master_gradient_anchor_path is not None
+            else None,
+            "write_sidecar": bool(args.master_gradient_write_sidecar),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "observed_at_utc": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
     }
     combined_path = out_dir / "combined_run_summary.json"

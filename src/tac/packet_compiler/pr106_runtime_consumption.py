@@ -956,25 +956,78 @@ def prove_pr106_sidecar_runtime_decode_consumption(
     mutated_member = replace(member, payload=mutated_payload)
     mutated_archive_bytes = emit_single_stored_member_archive(mutated_member)
     mutated_proof = pr106_sidecar_consumed_byte_proof(mutated_packet)
-
-    runtime = load_pr106_sidecar_runtime(runtime_dir)
-    source_digest = runtime_sidecar_correction_digest(runtime, member.payload)
-    section_probes = runtime_sidecar_section_consumption_probes(
-        runtime,
-        member.payload,
-        source_digest,
+    packet_accounting_passed = (
+        source_proof.get("all_payload_bytes_accounted") is True
+        and mutated_proof.get("all_payload_bytes_accounted") is True
     )
-    mutated_digest = runtime_sidecar_correction_digest(runtime, mutated_payload)
+    mutation_manifest = pr106_sidecar_mutation_manifest(
+        source_packet,
+        mutated_packet,
+        mutation,
+        source_archive_sha256=archive_sha,
+        mutated_archive_sha256=sha256_hex(mutated_archive_bytes),
+    )
+
+    try:
+        runtime = load_pr106_sidecar_runtime(runtime_dir)
+        source_digest = runtime_sidecar_correction_digest(runtime, member.payload)
+        section_probes = runtime_sidecar_section_consumption_probes(
+            runtime,
+            member.payload,
+            source_digest,
+        )
+        mutated_digest = runtime_sidecar_correction_digest(runtime, mutated_payload)
+    except Exception as exc:
+        blockers.append(f"runtime_sidecar_decode_exception:{type(exc).__name__}")
+        mutation_manifest.update(
+            {
+                "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",
+                "proof_scope": (
+                    "actual_submission_inflate_py_sidecar_decode_and_apply_not_full_frame"
+                ),
+                "archive": archive_manifest,
+                "runtime_dir": runtime_dir.as_posix(),
+                "runtime_source_manifest": runtime_manifest,
+                "runtime_inflate_py_sha256": sha256_hex(
+                    (runtime_dir / "inflate.py").read_bytes()
+                )
+                if (runtime_dir / "inflate.py").is_file()
+                else "",
+                "archive_member_name": member.name,
+                "blockers": blockers,
+                "runtime_exception_type": type(exc).__name__,
+                "runtime_exception_message": str(exc),
+                "source_packet_ir_consumed_byte_proof": source_proof,
+                "mutated_packet_ir_consumed_byte_proof": mutated_proof,
+                "packet_ir_consumed_byte_accounting_passed": packet_accounting_passed,
+                "runtime_sidecar_decode_consumption_claim": False,
+                "runtime_sidecar_apply_consumption_claim": False,
+                "runtime_semantic_digest_changed": False,
+                "runtime_corrected_latents_digest_changed": False,
+                "runtime_all_score_affecting_sections_consumed": False,
+                "runtime_consumed_score_affecting_sections": {},
+                "runtime_consumed_score_affecting_section_identities": [],
+                "full_frame_inflate_output_parity_claim": False,
+                "contest_axis_claim": False,
+                "score_claim": False,
+                "proof_not_score": True,
+                "evidence_axis": "runtime-sidecar-decode-local-no-score",
+                "device_axis_label": "local-runtime-decode-no-full-frame",
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "required_next_proof": (
+                    "update the selected submission runtime decoder or retire this "
+                    "PacketIR format before paired exact eval"
+                ),
+            }
+        )
+        return mutation_manifest
     semantic_changed = (
         source_digest["combined_sha256"] != mutated_digest["combined_sha256"]
     )
     corrected_latents_changed = (
         source_digest["corrected_latents_sha256"]
         != mutated_digest["corrected_latents_sha256"]
-    )
-    packet_accounting_passed = (
-        source_proof.get("all_payload_bytes_accounted") is True
-        and mutated_proof.get("all_payload_bytes_accounted") is True
     )
     if not packet_accounting_passed:
         blockers.append("packet_ir_consumed_byte_accounting_failed")
@@ -1056,13 +1109,7 @@ def prove_pr106_sidecar_runtime_decode_consumption(
             or framing_meta_claim is True
         )
     )
-    manifest = pr106_sidecar_mutation_manifest(
-        source_packet,
-        mutated_packet,
-        mutation,
-        source_archive_sha256=archive_sha,
-        mutated_archive_sha256=sha256_hex(mutated_archive_bytes),
-    )
+    manifest = mutation_manifest
     manifest.update(
         {
             "schema": "pr106_sidecar_runtime_decode_consumption_proof_v1",

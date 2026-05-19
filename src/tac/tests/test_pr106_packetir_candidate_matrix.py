@@ -34,8 +34,12 @@ def test_pr106_packetir_candidate_matrix_covers_active_candidates() -> None:
 
     assert matrix["schema"] == PR106_PACKETIR_CANDIDATE_MATRIX_SCHEMA
     assert matrix["candidate_count"] >= 15
-    assert matrix["status_counts"] == {"runtime_consumption_blocked": 16}
-    assert matrix["next_exact_eval_target_count"] == 0
+    assert sum(matrix["status_counts"].values()) == matrix["candidate_count"]
+    assert matrix["status_counts"]["runtime_consumption_blocked"] == 1
+    assert matrix["status_counts"]["single_axis_exact_measured_needs_pair"] >= 1
+    assert matrix["status_counts"]["runtime_consumed_needs_paired_exact_eval"] >= 1
+    assert matrix["next_exact_eval_target_count"] == len(matrix["next_exact_eval_targets"])
+    assert matrix["next_exact_eval_target_count"] >= 1
     assert matrix["score_claim"] is False
     assert matrix["promotion_eligible"] is False
     assert matrix["ready_for_exact_eval_dispatch"] is False
@@ -58,31 +62,15 @@ def test_pr106_packetir_candidate_matrix_covers_active_candidates() -> None:
 
     format_0c = _row_by_id(matrix, "format_0x0c_exact_radix")
     assert format_0c["format_id"] == "0x0C"
-    assert format_0c["status"] == "runtime_consumption_blocked"
-    assert format_0c["status_blockers"] == []
-    assert (
-        format_0c["runtime_consumption"]["runtime_content_tree_sha256_source"]
-        == "derived_from_matching_paired_exact_eval"
-    )
-    assert (
-        format_0c["runtime_consumption"][
-            "runtime_content_tree_sha256_derived_not_direct_manifested"
-        ]
-        is True
-    )
-    assert (
-        format_0c["runtime_consumption"]["runtime_content_tree_sha256_backfill_required"]
-        is True
-    )
-    assert (
-        "runtime_dir_current_content_tree_sha_mismatch"
-        in format_0c["runtime_consumption"]["blockers"]
-    )
+    assert format_0c["status"] == "single_axis_exact_measured_needs_pair"
+    assert format_0c["status_blockers"] == ["paired_exact_eval_missing:contest_cpu"]
+    assert format_0c["runtime_consumption"]["valid"] is True
+    assert format_0c["runtime_consumption"]["blockers"] == []
     assert (
         format_0c["runtime_consumption"][
             "runtime_content_tree_sha256_matches_current_runtime_dir"
         ]
-        is False
+        is True
     )
     assert (
         format_0c["source_artifact_warnings"]
@@ -91,41 +79,35 @@ def test_pr106_packetir_candidate_matrix_covers_active_candidates() -> None:
     exact_0c = format_0c["exact_axis_evidence"]
     assert isinstance(exact_0c, dict)
     assert set(exact_0c) == {"contest_cpu", "contest_cuda"}
-    assert exact_0c["contest_cpu"]["valid"] is True
+    assert exact_0c["contest_cpu"]["valid"] is False
+    assert "exact_eval_hardware_not_contest_cpu" in exact_0c["contest_cpu"]["blockers"]
     assert exact_0c["contest_cuda"]["valid"] is True
 
     format_0d = _row_by_id(matrix, "format_0x0d_latent_score_table")
     assert format_0d["format_id"] == "0x0D"
     assert format_0d["packet_ir_identity"]["passed"] is True
-    assert format_0d["runtime_consumption"]["valid"] is False
-    assert format_0d["status"] == "runtime_consumption_blocked"
-    assert "runtime_dir_current_content_tree_sha_mismatch" in format_0d[
-        "runtime_consumption"
-    ]["blockers"]
-    assert (
-        "paired_exact_eval_runtime_content_tree_sha_mismatch_with_consumption"
-        in format_0d["status_blockers"]
-    )
+    assert format_0d["runtime_consumption"]["valid"] is True
+    assert format_0d["status"] == "single_axis_exact_measured_needs_pair"
+    assert format_0d["status_blockers"] == ["paired_exact_eval_missing:contest_cpu"]
 
     prefix_1 = _row_by_id(matrix, "prefix_top_1_pr101grammar")
-    assert prefix_1["status"] == "runtime_consumption_blocked"
+    assert prefix_1["status"] == "runtime_consumed_needs_paired_exact_eval"
     assert prefix_1["status_blockers"] == [
         "paired_exact_eval_missing:contest_cpu,contest_cuda"
     ]
 
     r2 = _row_by_id(matrix, "format_0x01_r2_release")
-    assert r2["status"] == "runtime_consumption_blocked"
+    assert r2["status"] == "single_axis_exact_measured_needs_pair"
     exact_r2 = r2["exact_axis_evidence"]
     assert isinstance(exact_r2, dict)
-    assert exact_r2["contest_cpu"]["valid"] is True
+    assert exact_r2["contest_cpu"]["valid"] is False
     assert exact_r2["contest_cuda"]["valid"] is True
+    assert "exact_eval_hardware_not_contest_cpu" in exact_r2["contest_cpu"]["blockers"]
     assert "exact_eval_score_formula_mismatch" not in exact_r2["contest_cpu"]["blockers"]
     assert "legacy_rounded_component_score_mismatch_tolerated" in exact_r2[
         "contest_cpu"
     ]["annotations"]
-    assert "paired_exact_eval_runtime_content_tree_sha_mismatch" in r2[
-        "status_blockers"
-    ]
+    assert r2["status_blockers"] == ["paired_exact_eval_missing:contest_cpu"]
 
 
 def _targets_for_id(
@@ -144,8 +126,16 @@ def _targets_for_id(
 def test_pr106_packetir_candidate_matrix_emits_fail_fast_exact_eval_targets() -> None:
     matrix = build_pr106_packetir_candidate_matrix()
 
-    assert matrix["next_exact_eval_targets"] == []
-    assert _targets_for_id(matrix, "format_0x01_r2_release") == []
+    assert matrix["next_exact_eval_targets"] != []
+    r2_targets = _targets_for_id(matrix, "format_0x01_r2_release")
+    assert len(r2_targets) == 1
+    assert r2_targets[0]["missing_axes"] == ["contest_cpu"]
+    assert "contest_cpu:exact_eval_hardware_not_contest_cpu" in r2_targets[0][
+        "axis_blockers"
+    ]
+    assert r2_targets[0]["score_claim"] is False
+    assert r2_targets[0]["promotion_eligible"] is False
+    assert r2_targets[0]["ready_for_exact_eval_dispatch"] is False
     assert _targets_for_id(matrix, "format_0x04_rank_elided") == []
 
 
@@ -373,11 +363,10 @@ def test_pr106_packetir_candidate_matrix_markdown_is_nonpromotional() -> None:
     assert "contest_cuda" in markdown
     assert "source warnings" in markdown
     assert "contest_cuda:source_artifact_score_claim_true" in markdown
-    assert "Paired exact evidence custody" in markdown
+    assert "Paired exact evidence custody" not in markdown
     assert "format_0x0c_exact_radix" in markdown
-    assert "contest_auth_eval.stdout.log" in markdown
-    assert "Runtime content SHA derivation notes" in markdown
-    assert "derived_from_matching_paired_exact_eval" in markdown
-    assert "runtime_consumption_format0c.json" in markdown
+    assert "Runtime content SHA derivation notes" not in markdown
+    assert "Next exact eval targets" in markdown
+    assert "requires_claim_lane_dispatch_before_provider_launch" in markdown
     assert "paired_exact_eval_missing:contest_cpu,contest_cuda" in markdown
-    assert "Next exact eval targets" not in markdown
+    assert "contest_cpu:exact_eval_hardware_not_contest_cpu" in markdown

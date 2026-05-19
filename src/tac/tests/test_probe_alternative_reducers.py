@@ -13,18 +13,66 @@ contribute decode + SegNet wall-clock, not algorithmic correctness.
 
 from __future__ import annotations
 
+import json
 import math
+from pathlib import Path
 
+import numpy as np
 import pytest
 
+from tools.audit_master_gradient_wire_in_coverage import _compute_surface_coverage
 from tools.probe_alternative_reducers_latent_class_conditioning import (
     REDUCER_MEANINGFUL_THRESHOLD_BITS,
+    build_master_gradient_wyner_ziv_diagnostic,
     compute_alternative_reducer_verdict,
     reduce_per_frame_argmax,
     reduce_per_pair_class_2_fraction,
     reduce_per_pixel_histogram,
     reduce_per_region_histogram,
+    write_run_manifest,
 )
+
+SYNTHETIC_ARCHIVE_SHA = "a" * 64
+
+
+def _synthetic_verdict():
+    return compute_alternative_reducer_verdict(
+        substrate_id="synthetic_manifest",
+        reducer_name="per_pair_class_2_fraction",
+        latent_stream=b"abcdefgh",
+        per_pair_reduced_class=[0, 1],
+        symbols_per_pair=4,
+    )
+
+
+def _write_synthetic_per_pair_anchor(tmp_path, archive_sha256: str = SYNTHETIC_ARCHIVE_SHA):
+    gradient_path = tmp_path / "synthetic_per_pair_gradient.npy"
+    gradient = np.asarray(
+        [
+            [[0.0, 0.1, 0.0], [0.0, 0.2, 0.0], [0.0, 0.3, 0.0]],
+            [[0.0, 0.3, 0.0], [0.0, 0.2, 0.0], [0.0, 0.1, 0.0]],
+            [[0.0, 0.2, 0.0], [0.0, 0.2, 0.0], [0.0, 0.2, 0.0]],
+            [[0.0, 0.7, 0.0], [0.0, 0.1, 0.0], [0.0, 0.4, 0.0]],
+        ],
+        dtype=np.float64,
+    )
+    np.save(gradient_path, gradient)
+    anchor = {
+        "archive_sha256": archive_sha256,
+        "gradient_array_path": str(gradient_path),
+        "gradient_tensor_kind": "per_pair_per_byte_v1",
+        "measurement_axis": "[diagnostic-CPU]",
+        "measurement_call_id": "synthetic_per_pair_unit_test",
+        "measurement_hardware": "synthetic_unit_test",
+        "measurement_method": "synthetic_per_pair_unit_test",
+        "measurement_utc": "2026-05-19T00:00:00+00:00",
+        "n_bytes": 4,
+        "n_pairs": 3,
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    anchor_path = tmp_path / "master_gradient_anchors.jsonl"
+    anchor_path.write_text(json.dumps(anchor, sort_keys=True) + "\n")
+    return anchor_path
 
 # --- Reducer 1: per-pixel histogram ---
 
@@ -291,6 +339,95 @@ def test_verdict_carries_canonical_evidence_grade_and_score_claim():
     assert v.score_claim is False
     assert "[diagnostic-CPU" in v.axis_label
     assert "alternative-reducer" in v.axis_label
+
+
+# --- Optional master-gradient Wyner-Ziv diagnostic wire-in ---
+
+
+def test_run_manifest_marks_master_gradient_wyner_ziv_not_requested(tmp_path):
+    path = write_run_manifest(
+        tmp_path,
+        substrate_id="synthetic_manifest",
+        verdicts=[_synthetic_verdict()],
+        provenance={"source": "unit_test"},
+    )
+
+    manifest = json.loads(path.read_text())
+    diagnostic = manifest["master_gradient_wyner_ziv_covariance"]
+    assert diagnostic["requested"] is False
+    assert diagnostic["available"] is False
+    assert diagnostic["unavailable_blocker"] == "not_requested"
+    assert diagnostic["score_claim"] is False
+    assert diagnostic["promotion_eligible"] is False
+    assert diagnostic["ready_for_exact_eval_dispatch"] is False
+
+
+def test_run_manifest_reports_exact_blocker_when_master_gradient_archive_sha_missing(tmp_path):
+    path = write_run_manifest(
+        tmp_path,
+        substrate_id="synthetic_manifest",
+        verdicts=[_synthetic_verdict()],
+        provenance={"source": "unit_test"},
+        master_gradient_requested=True,
+    )
+
+    manifest = json.loads(path.read_text())
+    diagnostic = manifest["master_gradient_wyner_ziv_covariance"]
+    assert diagnostic["requested"] is True
+    assert diagnostic["available"] is False
+    assert (
+        diagnostic["unavailable_blocker"]
+        == "archive_sha256_required_when_master_gradient_requested"
+    )
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_master_gradient_wyner_ziv_diagnostic_calls_canonical_consumer(tmp_path):
+    anchor_path = _write_synthetic_per_pair_anchor(tmp_path)
+
+    diagnostic = build_master_gradient_wyner_ziv_diagnostic(
+        requested=True,
+        archive_sha256=SYNTHETIC_ARCHIVE_SHA,
+        master_gradient_anchor_path=anchor_path,
+    )
+
+    assert diagnostic["requested"] is True
+    assert diagnostic["available"] is True
+    assert diagnostic["unavailable_blocker"] is None
+    assert diagnostic["consumer_id"] == "wyner_ziv_side_info_covariance"
+    assert diagnostic["n_bytes"] == 4
+    assert diagnostic["n_pairs"] == 3
+    assert diagnostic["sample_axis_name"] == "pose"
+    assert diagnostic["score_claim"] is False
+    assert diagnostic["promotion_eligible"] is False
+    assert diagnostic["ready_for_exact_eval_dispatch"] is False
+
+
+def test_master_gradient_wire_audit_marks_alternative_reducer_diagnostic_wired():
+    coverage = _compute_surface_coverage()
+    entries = {
+        row["surface_module"]: row
+        for row in coverage["per_surface"]
+    }
+
+    target = entries["tools.probe_alternative_reducers_latent_class_conditioning"]
+    assert target["wire_in_status"] == "WIRED_DIAGNOSTIC"
+    assert "wyner_ziv_side_info_covariance" in target["evidence"]
+    assert coverage["unwired_surfaces"] == 0
+
+
+def test_alternative_reducer_driver_exposes_master_gradient_diagnostic_cli():
+    repo_root = Path(__file__).resolve().parents[3]
+    text = (
+        repo_root / "tools/run_alternative_reducer_probes_g1_v2_and_tishby_ib_pure.py"
+    ).read_text(encoding="utf-8")
+
+    assert "--master-gradient-diagnostic" in text
+    assert "--master-gradient-archive-sha256" in text
+    assert "--master-gradient-anchor-path" in text
+    assert "master_gradient_archive_sha256=args.master_gradient_archive_sha256" in text
 
 
 # --- Canonical thresholds pinned per T2 council Q1.4 ---

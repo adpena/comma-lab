@@ -37,6 +37,7 @@ def test_extracts_current_directive_heading_dialects(tmp_path: Path) -> None:
                 "### Wire-in #3: per-pair difficulty atlas",
                 "predicted_cost_usd: 0.0",
                 "### Build #2: Z6-v2 Wave 2",
+                "### OP-7 FIRST: Direct master-gradient pose-byte hoist",
                 "#### Item 1: titlecase paid dispatch",
                 "## CLUSTER B - META event-driven retroactive sweep gate",
                 "## CLUSTER F - parent bundle should not become a task",
@@ -52,6 +53,7 @@ def test_extracts_current_directive_heading_dialects(tmp_path: Path) -> None:
     assert _item_ids(tasks) == [
         "WIRE_IN_3",
         "BUILD_2",
+        "OP_7",
         "ITEM_1",
         "CLUSTER_B",
         "CLUSTER_F1",
@@ -109,3 +111,27 @@ def test_extracts_bcef_clusters_and_subclusters_live_directive() -> None:
         "CLUSTER_F2",
     ]
     assert tasks[3]["predicted_delta_s_band"] == (-0.002, -0.0003)
+
+
+def test_extracts_op_headings_from_live_canonical_package_directive() -> None:
+    directive = (
+        REPO
+        / ".omx/research/codex_routing_directive_canonical_phase_1_fisher_precondition_package_20260518.md"
+    )
+
+    tasks = _load_tool().extract_tasks_from_directive(directive)
+
+    assert _item_ids(tasks) == ["OP_1", "OP_2", "OP_3", "OP_4", "OP_5", "OP_6", "OP_7"]
+    assert tasks[0]["title"] == "Layer 1 — canonical helper module"
+
+
+def test_extracts_op_first_heading_from_live_pose_axis_directive() -> None:
+    directive = (
+        REPO
+        / ".omx/research/codex_routing_directive_cheap_probe_wave_pose_axis_op1_op2_op6_op7_op10_20260518.md"
+    )
+
+    tasks = _load_tool().extract_tasks_from_directive(directive)
+
+    assert _item_ids(tasks) == ["OP_7", "OP_2", "OP_10", "OP_1", "OP_6"]
+    assert tasks[0]["title"] == "Direct master-gradient pose-byte hoist"

@@ -21,7 +21,6 @@ Covers:
 from __future__ import annotations
 
 import json
-import os
 import struct
 import sys
 import zipfile
@@ -34,6 +33,20 @@ TOOLS_DIR = REPO_ROOT / "tools"
 sys.path.insert(0, str(TOOLS_DIR))
 
 import pre_entropy_substrate_pivot_prober as pivot  # noqa: E402
+
+# ──────────────────────────────────────────────────────────────────────── #
+# Test: default candidate map excludes known placeholder substrate           #
+# ──────────────────────────────────────────────────────────────────────── #
+
+
+def test_default_candidates_exclude_siren_placeholder_false_authority() -> None:
+    """Regression: the 2026-05-17 mechanism memo proved the default
+    `siren_renderer` path was byte-identical to `lane_g_v3_renderer`.
+    It must stay out of canonical default sweeps until a live trained SIREN
+    payload replaces the placeholder.
+    """
+    assert "siren_renderer" not in pivot.CANONICAL_CANDIDATE_SUBSTRATES
+    assert "lane_g_v3_renderer" in pivot.CANONICAL_CANDIDATE_SUBSTRATES
 
 
 # ──────────────────────────────────────────────────────────────────────── #

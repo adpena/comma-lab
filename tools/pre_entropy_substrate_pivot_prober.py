@@ -118,7 +118,7 @@ import uuid
 import zipfile
 import zlib
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -184,10 +184,6 @@ CANONICAL_CANDIDATE_SUBSTRATES: dict[str, tuple[str, str]] = {
     ),
     "lane_g_v3_renderer": (
         "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
-        "raw_float_weights",
-    ),
-    "siren_renderer": (
-        "experiments/results/lane_substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep_modal/submissions/robust_current/renderer.bin",
         "raw_float_weights",
     ),
     # P2: fp16 latent streams (PRE-entropy)
@@ -554,11 +550,10 @@ def _validate_substrate_bytes_ship_in_contest_archive(
         candidate_bytes_path_str,
         repo_root=root,
     )
-    if not path.exists():
-        # Pending-dispatch is neither validated nor rejected; the existing
-        # pending_dispatch status branch handles this case.
-        if not path_for_io.exists():
-            return False, "candidate path does not exist (pending_dispatch)"
+    # Pending-dispatch is neither validated nor rejected; the existing
+    # pending_dispatch status branch handles this case.
+    if not path.exists() and not path_for_io.exists():
+        return False, "candidate path does not exist (pending_dispatch)"
 
     # Rule 2 (early-out): research sidecar extensions are NEVER themselves
     # archive members. They COULD theoretically be repackaged into an
@@ -639,7 +634,6 @@ def probe_substrate(
     purposes). Real-archive probes MUST keep validation active so the
     autopilot pipeline cannot silently consume a phantom estimate.
     """
-    archive_path = Path(archive_path_str)
     archive_path_for_io = _resolve_candidate_path_for_io(archive_path_str)
 
     # Validation gate per Catalog #321 (Option C self-protect)
@@ -777,10 +771,7 @@ def probe_substrate(
             best_codec = "lzma"  # default canonical codec
 
         # Weighted-average compression ratio across pre-entropy members
-        if weighted_ratio_denom > 0:
-            best_ratio = weighted_ratio_numer / weighted_ratio_denom
-        else:
-            best_ratio = 1.0  # no pre-entropy bytes -> no compression
+        best_ratio = weighted_ratio_numer / weighted_ratio_denom if weighted_ratio_denom > 0 else 1.0
 
         score_delta = estimate_deliverable_score_savings(
             pre_entropy_bytes=pre_entropy_bytes,
@@ -809,7 +800,7 @@ def probe_substrate(
             validation_reason=validation_reason,
             evidence_grade_per_row=evidence_grade_per_row,
         )
-    except Exception as exc:  # noqa: BLE001 -- broad-except is intentional
+    except Exception as exc:
         return SubstrateProbeResult(
             substrate_name=substrate_name,
             substrate_class=substrate_class,
@@ -874,7 +865,6 @@ def probe_substrate_archive_member(
         VALIDATED_CONTEST_MEMBER`` (or REJECTED_RESEARCH_SIDECAR if the
         archive_zip_path itself fails contest-member validation).
     """
-    archive_path = Path(archive_zip_path)
     archive_path_for_io = _resolve_candidate_path_for_io(archive_zip_path)
 
     # Reuse the same validator on the WRAPPING archive.zip.
@@ -1031,7 +1021,7 @@ def probe_substrate_archive_member(
             validation_reason=None,
             evidence_grade_per_row="predicted",
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return SubstrateProbeResult(
             substrate_name=substrate_name,
             substrate_class=substrate_class,
@@ -1107,7 +1097,7 @@ def build_manifest_payload(
     """Build the canonical output manifest payload from per-substrate
     results. Implements the schema declared in the prober's CONTEXT
     docstring."""
-    utc = datetime.datetime.now(datetime.timezone.utc)
+    utc = datetime.datetime.now(datetime.UTC)
 
     per_substrate: dict[str, Any] = {}
     pre_entropy_substrates: list[str] = []
@@ -1306,7 +1296,7 @@ def run_pivot_probe(
     persisted = None
     if persist:
         if output_path is None:
-            utc = datetime.datetime.now(datetime.timezone.utc)
+            utc = datetime.datetime.now(datetime.UTC)
             safe_utc = utc.strftime("%Y%m%dT%H%M%S")
             output_path = OUTPUT_DIR_DEFAULT / f"pre_entropy_candidate_substrates_{safe_utc}.json"
         persisted = persist_manifest(
@@ -1436,7 +1426,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         if not r.archive_exists:
             classification = "PENDING_DISPATCH"
-        ratio_str = f"{r.best_compression_ratio:.3f}" if r.best_compression_ratio < 1.0 else f"{r.best_compression_ratio:.3f}"
+        ratio_str = f"{r.best_compression_ratio:.3f}"
         print(
             f"{r.substrate_name:<35}{r.substrate_class:<28}{r.archive_bytes_total:>10}"
             f"{ratio_str:>8}{classification:>16}{r.deliverable_score_savings_estimate:>15.6f}"
@@ -1452,7 +1442,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  best_compression_codec: {top.best_compression_codec}")
         print(f"  best_compression_ratio: {top.best_compression_ratio:.3f}")
         print(f"  deliverable_score_savings_estimate: {top.deliverable_score_savings_estimate:.6f}")
-        print(f"  REPLACES fec6 as Q4 target (fec6 deliverable = 0.000000 per sister prober).")
+        print("  REPLACES fec6 as Q4 target (fec6 deliverable = 0.000000 per sister prober).")
     else:
         print("\nNo pre-entropy substrates found among probed candidates.")
 

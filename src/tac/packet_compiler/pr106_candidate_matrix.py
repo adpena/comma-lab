@@ -27,6 +27,7 @@ from tac.exact_eval_custody import (
     extract_runtime_tree_sha256,
     validate_exact_eval_evidence,
 )
+from tac.packet_compiler.pr106_runtime_consumption import pr106_runtime_source_manifest
 from tac.packet_compiler.pr106_sidecar_packet import (
     prove_pr106_sidecar_packet_ir_identity,
 )
@@ -815,6 +816,7 @@ def _current_modal_uploaded_runtime_manifest(
             "blockers": ["runtime_dir_current_inflate_sh_missing"],
         }
     try:
+        direct_runtime_manifest = pr106_runtime_source_manifest(runtime_path)
         if str(repo_root) not in sys.path:
             sys.path.insert(0, str(repo_root))
         from experiments.contest_auth_eval import _runtime_dependency_manifest
@@ -837,6 +839,12 @@ def _current_modal_uploaded_runtime_manifest(
     return {
         "exists": True,
         "runtime_dir": repo_relative(runtime_path, repo_root),
+        "direct_runtime_source_tree_sha256": str(
+            direct_runtime_manifest.get("runtime_source_tree_sha256") or ""
+        ),
+        "direct_runtime_content_tree_sha256": str(
+            direct_runtime_manifest.get("runtime_content_tree_sha256") or ""
+        ),
         "runtime_tree_sha256": str(projected.get("runtime_tree_sha256") or ""),
         "runtime_content_tree_sha256": str(
             projected.get("runtime_content_tree_sha256") or ""
@@ -856,16 +864,40 @@ def _runtime_with_current_runtime_custody(
     current = _current_modal_uploaded_runtime_manifest(out, repo_root=repo_root)
     out["current_modal_uploaded_runtime"] = current
     blockers.extend(str(item) for item in current.get("blockers", []) if str(item))
+    expected_source = str(out.get("runtime_source_tree_sha256") or "").strip().lower()
+    current_source = str(current.get("direct_runtime_source_tree_sha256") or "").strip().lower()
     expected_content = str(out.get("runtime_content_tree_sha256") or "").strip().lower()
-    current_content = str(current.get("runtime_content_tree_sha256") or "").strip().lower()
+    current_content = str(
+        current.get("direct_runtime_content_tree_sha256") or ""
+    ).strip().lower()
+    out["runtime_source_tree_sha256_matches_current_runtime_dir"] = (
+        bool(expected_source)
+        and bool(current_source)
+        and expected_source == current_source
+    )
     out["runtime_content_tree_sha256_matches_current_runtime_dir"] = (
         bool(expected_content)
         and bool(current_content)
         and expected_content == current_content
     )
-    if current.get("exists") is True and expected_content and current_content:
-        if expected_content != current_content:
-            blockers.append("runtime_dir_current_content_tree_sha_mismatch")
+    out["exact_eval_runtime_tree_sha256"] = str(current.get("runtime_tree_sha256") or "")
+    out["exact_eval_runtime_content_tree_sha256"] = str(
+        current.get("runtime_content_tree_sha256") or ""
+    )
+    if (
+        current.get("exists") is True
+        and expected_source
+        and current_source
+        and expected_source != current_source
+    ):
+        blockers.append("runtime_dir_current_source_tree_sha_mismatch")
+    if (
+        current.get("exists") is True
+        and expected_content
+        and current_content
+        and expected_content != current_content
+    ):
+        blockers.append("runtime_dir_current_content_tree_sha_mismatch")
     elif current.get("exists") is True and not expected_content:
         blockers.append("runtime_consumption_runtime_content_tree_sha_missing")
     out["blockers"] = list(dict.fromkeys(blockers))
@@ -938,7 +970,9 @@ def _paired_exact_status_blockers(
         if len(runtime_content_shas) != 1 or len(next(iter(runtime_content_shas))) != 64:
             blockers.append("paired_exact_eval_runtime_content_tree_sha_mismatch")
         runtime_consumption_content_sha = str(
-            runtime.get("runtime_content_tree_sha256") or ""
+            runtime.get("exact_eval_runtime_content_tree_sha256")
+            or runtime.get("runtime_content_tree_sha256")
+            or ""
         )
         if len(runtime_consumption_content_sha) != 64:
             blockers.append(
@@ -1065,6 +1099,9 @@ def _next_exact_eval_targets(rows: Iterable[Mapping[str, Any]]) -> list[dict[str
                     "runtime_source_tree_sha256"
                 ),
                 "runtime_content_tree_sha256": runtime.get(
+                    "exact_eval_runtime_content_tree_sha256"
+                ),
+                "runtime_local_content_tree_sha256": runtime.get(
                     "runtime_content_tree_sha256"
                 ),
                 "runtime_inflate_py_sha256": runtime.get(

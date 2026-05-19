@@ -298,7 +298,7 @@ def _parse_hpm1_payload(payload: bytes) -> dict[str, Any]:
         "tail_bytes": len(payload) - hpac_end,
     }
     try:
-        import pyppmd
+        import pyppmd  # PYPPMD_LGPL_OK:public-HPM1-archive-runtime-consumption-decode-only
         import torch
 
         raw_state = pyppmd.decompress(

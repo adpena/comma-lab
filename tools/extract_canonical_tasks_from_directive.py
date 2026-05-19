@@ -25,6 +25,10 @@ WIRE_IN_HEADER_RE = re.compile(
     re.I,
 )
 BUILD_HEADER_RE = re.compile(r"^#{2,6}\s+BUILD\s+#?(\d+)\s*(?:[-—:]\s*)?(.*)$", re.I)
+OP_HEADER_RE = re.compile(
+    r"^#{2,6}\s+OP[-\s]?(\d+)(?:\s+FIRST)?\s*(?:[-—:]\s*)?(.*)$",
+    re.I,
+)
 CLUSTER_HEADER_RE = re.compile(
     r"^#{2,6}\s+CLUSTER\s+([A-Z](?:\.\d+|\d*)?)\s*(?:[-—:]\s*)?(.*)$",
     re.I,
@@ -124,6 +128,16 @@ def _match_directive_header(line: str, idx: int) -> _DirectiveHeader | None:
             item_id,
             _clean_title(match.group(2), f"Build #{item_num}"),
             "build",
+        )
+    match = OP_HEADER_RE.match(stripped)
+    if match:
+        item_num = int(match.group(1))
+        item_id = f"OP_{item_num}"
+        return _DirectiveHeader(
+            idx,
+            item_id,
+            _clean_title(match.group(2), f"OP-{item_num}"),
+            "op",
         )
     match = CLUSTER_HEADER_RE.match(stripped)
     if match:

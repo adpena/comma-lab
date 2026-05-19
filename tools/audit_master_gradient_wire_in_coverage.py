@@ -185,12 +185,11 @@ SURFACE_WIRE_IN_STATUS: tuple[tuple[str, str, str, str], ...] = (
         "xray primitive #11; compute() can derive the Fisher term from load_per_pair_gradient_from_anchor for Wasserstein × Fisher × tropical action",
         "src/tac/xray/unified_action_principle.py",
     ),
-    # Surface still UNWIRED per the inventory's §2.3 wire-in audit table.
     (
         "tools.probe_alternative_reducers_latent_class_conditioning",
-        "UNWIRED",
-        "Catalog #308 sister; per inventory needs wyner_ziv_side_info_covariance call for per-class reducer evidence",
-        "tools/probe_alternative_reducers_latent_class_conditioning.py (per inventory; may not yet exist)",
+        "WIRED_DIAGNOSTIC",
+        "optional manifest diagnostic calls tac.master_gradient_consumers.wyner_ziv_side_info_covariance when requested; stable JSON preserves requested/available/blocker and keeps score_claim=false/promotion_eligible=false/ready_for_exact_eval_dispatch=false",
+        "tools/probe_alternative_reducers_latent_class_conditioning.py",
     ),
 )
 
@@ -210,6 +209,7 @@ def _compute_surface_coverage() -> dict[str, object]:
         by_status.get("ACTIVE_PRIMARY", 0)
         + by_status.get("ACTIVE", 0)
         + by_status.get("WIRED_VIA_HELPER", 0)
+        + by_status.get("WIRED_DIAGNOSTIC", 0)
     )
     unwired = by_status.get("UNWIRED", 0)
     coverage_pct = (active / total * 100.0) if total else 0.0
@@ -390,6 +390,7 @@ def _render_summary(report: dict[str, object]) -> str:
             "ACTIVE_PRIMARY": "✓",
             "ACTIVE": "✓",
             "WIRED_VIA_HELPER": "+",
+            "WIRED_DIAGNOSTIC": "+",
             "UNWIRED": "✗",
         }.get(entry["wire_in_status"], "?")
         lines.append(
