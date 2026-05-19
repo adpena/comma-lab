@@ -339,6 +339,16 @@ Z7_MAMBA2_ALPHA_RATE="${Z7_MAMBA2_ALPHA_RATE:-25.0}"
 Z7_MAMBA2_BETA_SEG="${Z7_MAMBA2_BETA_SEG:-100.0}"
 Z7_MAMBA2_INFLATE_VERIFY="${Z7_MAMBA2_INFLATE_VERIFY:-true}"
 Z7_MAMBA2_EMIT_STATIC_CONTROL="${Z7_MAMBA2_EMIT_STATIC_CONTROL:-true}"
+DEVICE_TYPE="$Z7_MAMBA2_DEVICE"
+MPS_RESEARCH_SIGNAL_ONLY=false
+CONTEST_AUTHORITY_TRAINING_DEVICE=false
+INFLATE_VERIFY_DEVICE="$Z7_MAMBA2_DEVICE"
+if [ "$Z7_MAMBA2_DEVICE" = "mps" ]; then
+    MPS_RESEARCH_SIGNAL_ONLY=true
+    INFLATE_VERIFY_DEVICE=cpu
+elif [ "$Z7_MAMBA2_DEVICE" = "cuda" ]; then
+    CONTEST_AUTHORITY_TRAINING_DEVICE=true
+fi
 
 # Provenance manifest per Catalog L "remote scripts write provenance"
 cat > "$PROVENANCE" <<EOF
@@ -351,6 +361,20 @@ cat > "$PROVENANCE" <<EOF
   "trainer_mode": "$Z7_MAMBA2_TRAINER_MODE",
   "smoke_only": "$SMOKE_ONLY",
   "device": "$Z7_MAMBA2_DEVICE",
+  "evidence_tag": "[z7-mamba2-remote-driver-no-score-claim]",
+  "device_runtime_contract": {
+    "training_device": "$Z7_MAMBA2_DEVICE",
+    "device_type": "$DEVICE_TYPE",
+    "mps_research_signal_only": $MPS_RESEARCH_SIGNAL_ONLY,
+    "contest_authority_training_device": $CONTEST_AUTHORITY_TRAINING_DEVICE,
+    "inflate_verify_device": "$INFLATE_VERIFY_DEVICE",
+    "pytorch_enable_mps_fallback": "${PYTORCH_ENABLE_MPS_FALLBACK:-<unset>}",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_paid_dispatch": false,
+    "rank_or_kill_eligible": false
+  },
   "epochs": "$Z7_MAMBA2_EPOCHS",
   "batch_size": "$Z7_MAMBA2_BATCH_SIZE",
   "lr_warmup_steps": "$Z7_MAMBA2_LR_WARMUP_STEPS",
@@ -381,7 +405,9 @@ cat > "$PROVENANCE" <<EOF
   "started_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "score_claim": false,
   "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
   "ready_for_paid_dispatch": false,
+  "rank_or_kill_eligible": false,
   "result_review_blockers": [
     "z7_mamba2_full_train_packet_not_paired_exact_eval_validated",
     "wave_n_plus_1_council_required_per_z7_mamba2_symposium",
@@ -478,9 +504,38 @@ stats_path = sys.argv[1]
 with open(stats_path, encoding="utf-8") as fh:
     stats = json.load(fh)
 bad = []
-for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch", "ready_for_paid_dispatch"):
+for key in (
+    "score_claim",
+    "promotion_eligible",
+    "ready_for_exact_eval_dispatch",
+    "ready_for_paid_dispatch",
+    "rank_or_kill_eligible",
+):
     if stats.get(key) is not False:
         bad.append(f"{key}={stats.get(key)!r}")
+contract = stats.get("device_runtime_contract")
+if not isinstance(contract, dict):
+    bad.append("device_runtime_contract missing")
+else:
+    for key in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_paid_dispatch",
+        "rank_or_kill_eligible",
+    ):
+        if contract.get(key) is not False:
+            bad.append(f"device_runtime_contract.{key}={contract.get(key)!r}")
+static = stats.get("static_capacity_control")
+if isinstance(static, dict):
+    for key in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_paid_dispatch",
+    ):
+        if static.get(key) not in (None, False):
+            bad.append(f"static_capacity_control.{key}={static.get(key)!r}")
 if bad:
     print(
         f"Z7-Mamba-2 stats authority flags must stay false: {', '.join(bad)}",

@@ -195,6 +195,8 @@ def main(out_path: str) -> int:
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
+        "rank_or_kill_eligible": False,
         "ranking_only": True,
         "mlx_device": str(mx.default_device()),
         "n_params": fp32_params,

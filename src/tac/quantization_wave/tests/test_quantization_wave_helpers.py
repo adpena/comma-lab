@@ -12,17 +12,32 @@ from __future__ import annotations
 import pytest
 import torch
 
+from tac.quantization_wave.apple_neural_engine_export import (
+    can_export_to_ane,
+    coreml_export_metadata,
+)
+from tac.quantization_wave.awq_activation_aware_quantization import (
+    activation_aware_channel_scaling,
+)
+from tac.quantization_wave.balle_hyperprior_bolton import (
+    BalleHyperpriorBolton,
+    decode_balle_hyperprior_archive,
+    encode_balle_hyperprior_archive,
+)
+from tac.quantization_wave.entropy_coding_archive_primitives import (
+    EntropyCoderTournament,
+    HuffmanSidecarCoder,
+    arithmetic_decode,
+    arithmetic_encode,
+    brotli_compress_with_window,
+    decode_pr101_style_per_tensor_byte_map,
+    encode_pr101_style_per_tensor_byte_map,
+)
 from tac.quantization_wave.fp8_quantization_wave import (
+    E4M3_MAX,
     FP8E4M3FakeQuantWave,
     decode_fp8_per_channel,
     encode_fp8_per_channel,
-    E4M3_MAX,
-)
-from tac.quantization_wave.int4_int8_mixed_bit import (
-    NF4_LEVELS,
-    decode_int4_groupwise,
-    encode_int4_groupwise,
-    sensitivity_aware_mixed_bit_assignment,
 )
 from tac.quantization_wave.gguf_style_per_tensor_mixed_bit import (
     GGUF_QUANT_TYPES,
@@ -34,42 +49,24 @@ from tac.quantization_wave.gptq_post_training_quantization import (
     GPTQStyleQuantizer,
     hessian_aware_quantize_layer,
 )
-from tac.quantization_wave.awq_activation_aware_quantization import (
-    AWQStyleQuantizer,
-    activation_aware_channel_scaling,
+from tac.quantization_wave.int4_int8_mixed_bit import (
+    NF4_LEVELS,
+    decode_int4_groupwise,
+    encode_int4_groupwise,
+    sensitivity_aware_mixed_bit_assignment,
+)
+from tac.quantization_wave.mlx_inference_path import (
+    mlx_inflate_inference_path_metadata,
 )
 from tac.quantization_wave.sparse_weights_with_quant import (
     SparseQuantComposition,
     magnitude_prune_then_quantize,
-)
-from tac.quantization_wave.entropy_coding_archive_primitives import (
-    EntropyCoderTournament,
-    HuffmanSidecarCoder,
-    arithmetic_decode,
-    arithmetic_encode,
-    brotli_compress_with_window,
-    decode_pr101_style_per_tensor_byte_map,
-    encode_pr101_style_per_tensor_byte_map,
 )
 from tac.quantization_wave.vq_codebook_quantization import (
     VQCodebookQuantizer,
     decode_vq_codebook_latent,
     encode_vq_codebook_latent,
 )
-from tac.quantization_wave.balle_hyperprior_bolton import (
-    BalleHyperpriorBolton,
-    decode_balle_hyperprior_archive,
-    encode_balle_hyperprior_archive,
-)
-from tac.quantization_wave.mlx_inference_path import (
-    MLX_AVAILABLE,
-    mlx_inflate_inference_path_metadata,
-)
-from tac.quantization_wave.apple_neural_engine_export import (
-    can_export_to_ane,
-    coreml_export_metadata,
-)
-
 
 # ─────────────────────────── FP8 ─────────────────────────────
 
@@ -385,6 +382,11 @@ def test_mlx_metadata_is_well_formed():
     assert "is_apple_silicon" in md
     assert "promotion_eligible" in md
     assert md["promotion_eligible"] is False  # NEVER True per CLAUDE.md MPS rule
+    assert md["score_claim"] is False
+    assert md["ready_for_exact_eval_dispatch"] is False
+    assert md["ready_for_paid_dispatch"] is False
+    assert md["rank_or_kill_eligible"] is False
+    assert md["device_runtime_contract"]["authority"] == "advisory_only"
     assert "axis" in md
     assert md["axis"] == "macos_mlx_advisory"
 

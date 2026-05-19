@@ -249,7 +249,7 @@ def _paired_dispatch_command(
         "--run-id",
         f"{label_prefix}_{safe_mode}_{short}",
         "--pair-group-id",
-        f"{pair_group_id}_{safe_mode}_{short}",
+        pair_group_id,
         "--lane-id-base",
         lane_base,
         "--output-root",
@@ -340,10 +340,15 @@ def build_packet(
         config = {}
         blockers.append("z7_exact_handoff_config_missing")
 
-    for field in ("score_claim", "promotion_eligible", "ready_for_paid_dispatch"):
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_paid_dispatch",
+        "rank_or_kill_eligible",
+    ):
         if stats.get(field) is not False:
             blockers.append(f"z7_exact_handoff_stats_{field}_not_false")
-        if static and static.get(field) is not False:
+        if static and static.get(field) not in (None, False):
             blockers.append(f"z7_exact_handoff_static_control_{field}_not_false")
     if stats.get("ready_for_exact_eval_dispatch") is not False:
         blockers.append(
@@ -361,6 +366,19 @@ def build_packet(
     inflate_verify = stats.get("inflate_verify")
     if isinstance(inflate_verify, Mapping) and inflate_verify.get("verify_failed"):
         blockers.append("z7_exact_handoff_inflate_verify_failed")
+    elif isinstance(inflate_verify, Mapping):
+        verify_device = str(inflate_verify.get("device") or "").strip().lower()
+        if verify_device not in {"cpu", "cuda"}:
+            blockers.append("z7_exact_handoff_inflate_verify_device_not_cpu_or_cuda")
+        device_contract = stats.get("device_runtime_contract")
+        if (
+            isinstance(device_contract, Mapping)
+            and device_contract.get("device_type") == "mps"
+            and verify_device != "cpu"
+        ):
+            blockers.append("z7_exact_handoff_mps_training_must_cpu_inflate_verify")
+    else:
+        blockers.append("z7_exact_handoff_inflate_verify_missing")
 
     recurrent = _archive_status(
         repo_root=repo_root,
@@ -470,10 +488,38 @@ def build_packet(
         "evidence_grade": "z7_exact_eval_handoff_no_spend",
         "pair_group_id": pair_group_id,
         "axis_plan": [
-            {"axis": "contest-CUDA", "mode": "recurrent"},
-            {"axis": "contest-CPU", "mode": "recurrent"},
-            {"axis": "contest-CUDA", "mode": "static_control"},
-            {"axis": "contest-CPU", "mode": "static_control"},
+            {
+                "axis": "[contest-CUDA]",
+                "mode": "recurrent",
+                "inflate_device_policy": "auto",
+                "evaluate_device": "cuda",
+                "required_hardware": "linux_x86_64_t4",
+                "authority_precondition": "modal_paired_auth_eval_cuda_harvested",
+            },
+            {
+                "axis": "[contest-CPU]",
+                "mode": "recurrent",
+                "inflate_device_policy": "auto",
+                "evaluate_device": "cpu",
+                "required_hardware": "linux_x86_64_cpu",
+                "authority_precondition": "modal_paired_auth_eval_cpu_harvested",
+            },
+            {
+                "axis": "[contest-CUDA]",
+                "mode": "static_control",
+                "inflate_device_policy": "auto",
+                "evaluate_device": "cuda",
+                "required_hardware": "linux_x86_64_t4",
+                "authority_precondition": "modal_paired_auth_eval_cuda_harvested",
+            },
+            {
+                "axis": "[contest-CPU]",
+                "mode": "static_control",
+                "inflate_device_policy": "auto",
+                "evaluate_device": "cpu",
+                "required_hardware": "linux_x86_64_cpu",
+                "authority_precondition": "modal_paired_auth_eval_cpu_harvested",
+            },
         ],
         "source_archive_rows": [recurrent, static_row],
         "same_archive_zip_bytes": recurrent.get("zip_bytes") == static_row.get("zip_bytes"),

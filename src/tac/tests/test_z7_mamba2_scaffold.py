@@ -25,6 +25,7 @@ Lane: lane_top5_2_z7_mamba2_scaffold_design_20260518.
 from __future__ import annotations
 
 import argparse
+import builtins
 import importlib
 import inspect
 import json
@@ -37,6 +38,7 @@ from pathlib import Path
 import pytest
 import torch
 
+import tac.optimization.mamba2_predictor as mamba2_predictor_module
 from tac.optimization.mamba2_predictor import (
     MAMBA_SSM_AVAILABLE,
     REFERENCE_TORCH_BACKEND,
@@ -116,6 +118,25 @@ def test_mamba_ssm_backend_raises_when_unavailable():
     cfg = Mamba2PredictorConfig(backend="mamba_ssm")
     with pytest.raises(ImportError, match="mamba_ssm backend requested"):
         Mamba2Predictor(cfg)
+
+
+def test_mamba_ssm_probe_refuses_non_linux_or_non_cuda_even_if_importable(monkeypatch):
+    """Auto backend must not choose CUDA-only mamba_ssm on MPS/CPU hosts."""
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "mamba_ssm":
+            return object()
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    monkeypatch.setattr(mamba2_predictor_module.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(mamba2_predictor_module.torch.cuda, "is_available", lambda: True)
+    assert mamba2_predictor_module._probe_mamba_ssm_available() is False
+
+    monkeypatch.setattr(mamba2_predictor_module.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(mamba2_predictor_module.torch.cuda, "is_available", lambda: False)
+    assert mamba2_predictor_module._probe_mamba_ssm_available() is False
 
 
 def test_stateful_mamba_ssm_backend_fails_closed_when_available(monkeypatch):
@@ -322,6 +343,23 @@ def test_reset_state_zeros_hidden_state():
     assert predictor._h is not None
     assert predictor._h.shape == (2, cfg.d_inner, cfg.d_state)
     assert predictor._h.abs().sum().item() == 0
+
+
+def test_state_resets_when_hidden_dtype_drift_would_cross_arch_fail():
+    """Hidden-state cache must not keep stale dtype/device across configs."""
+    cfg = Mamba2PredictorConfig(backend="reference_torch", stateful=True)
+    predictor = Mamba2Predictor(cfg)
+    predictor.reset_state(batch_size=2, device="cpu")
+    assert predictor._h is not None
+    predictor._h = predictor._h.to(dtype=torch.float64)
+
+    z_prev = torch.randn(2, cfg.latent_dim, dtype=torch.float32)
+    ego = torch.randn(2, cfg.ego_motion_dim, dtype=torch.float32)
+    out = predictor(z_prev, ego)
+
+    assert out.dtype == torch.float32
+    assert predictor._h is not None
+    assert predictor._h.dtype == torch.float32
 
 
 def test_reset_state_no_op_in_identity_mode():
@@ -587,9 +625,10 @@ def test_trainer_bool_flags_still_support_const_form():
     assert args.smoke is True
 
 
-def test_full_trainer_authority_guard_helpers_fail_closed():
+def test_full_trainer_authority_guard_helpers_fail_closed(monkeypatch):
     """False-authority guards must reject unimplemented or non-actuated modes."""
     mod = _import_trainer_module()
+    monkeypatch.delenv("PYTORCH_ENABLE_MPS_FALLBACK", raising=False)
     assert mod._normalize_ego_source("frame_delta_proxy") == "frame_delta_proxy"
     assert mod._normalize_ego_source("real_video_pair_delta_proxy") == "frame_delta_proxy"
     with pytest.raises(ValueError, match="not implemented"):
@@ -605,9 +644,38 @@ def test_full_trainer_authority_guard_helpers_fail_closed():
     assert mod._inflate_verify_device(torch.device("cpu")) == "cpu"
     assert mod._inflate_verify_device(torch.device("cuda")) == "cuda"
     assert mod._inflate_verify_device(torch.device("mps")) == "cpu"
+    mps_contract = mod._device_runtime_contract(torch.device("mps"))
+    assert mps_contract["mps_research_signal_only"] is True
+    assert mps_contract["contest_authority_training_device"] is False
+    assert mps_contract["inflate_verify_device"] == "cpu"
 
     with pytest.raises(argparse.ArgumentTypeError, match="expected boolean"):
         mod._boolish("sometimes")
+
+
+def test_device_runtime_contract_refuses_mps_cpu_fallback(monkeypatch):
+    """MPS proxy timing must fail if unsupported kernels can fall back to CPU."""
+    mod = _import_trainer_module()
+    monkeypatch.setenv("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+    with pytest.raises(RuntimeError, match="PYTORCH_ENABLE_MPS_FALLBACK"):
+        mod._device_runtime_contract(torch.device("mps"))
+
+
+def test_smoke_mode_uses_fail_closed_device_selector(monkeypatch, tmp_path):
+    """Smoke must not silently rewrite requested CUDA/MPS into CPU evidence."""
+    mod = _import_trainer_module()
+    monkeypatch.setattr(mod.torch.cuda, "is_available", lambda: False)
+    args = mod._build_argparser().parse_args([
+        "--smoke",
+        "true",
+        "--device",
+        "cuda",
+        "--output-dir",
+        str(tmp_path / "smoke"),
+    ])
+
+    with pytest.raises(RuntimeError, match="--device cuda requested"):
+        mod._smoke_main(args)
 
 
 def test_export_replay_backend_guard_refuses_non_reference_backend():
@@ -816,11 +884,15 @@ def test_recipe_points_at_mamba2_specific_disambiguator_probe():
         / "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml"
     )
     content = recipe_path.read_text()
-    probe_rel = (
-        ".omx/research/"
-        "probe_z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator_20260519_codex.json"
+    probe_line = next(
+        line for line in content.splitlines()
+        if line.startswith("identity_disambiguator_probe:")
     )
-    assert f"identity_disambiguator_probe: {probe_rel}" in content
+    probe_rel = probe_line.split(":", 1)[1].strip()
+    assert probe_rel.startswith(
+        ".omx/research/probe_z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator_"
+    )
+    assert probe_rel.endswith("_codex.json")
     probe_path = REPO_ROOT / probe_rel
     assert probe_path.is_file()
     payload = json.loads(probe_path.read_text(encoding="utf-8"))
@@ -828,9 +900,26 @@ def test_recipe_points_at_mamba2_specific_disambiguator_probe():
         "z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator"
     )
     assert payload["substrate_id"] == "time_traveler_l5_z7_mamba2"
-    artifacts = "\n".join(payload["required_future_artifacts"])
-    assert "train_substrate_time_traveler_l5_z7_mamba2.py" in artifacts
-    assert "time_traveler_l5_z7_lstm_predictive_coding" not in artifacts
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["rank_or_kill_eligible"] is False
+    assert payload["verdict"] != "pending_paired_exact_eval_json"
+    assert payload["comparability"]["same_archive_bytes"] is True
+    if "required_future_artifacts" in payload:
+        artifacts = "\n".join(payload["required_future_artifacts"])
+        assert "train_substrate_time_traveler_l5_z7_mamba2.py" in artifacts
+        assert "time_traveler_l5_z7_lstm_predictive_coding" not in artifacts
+
+
+def test_recipe_requires_static_control_runtime_output_change():
+    """Same-byte static-control fairness must require an actual output change."""
+    recipe_path = (
+        REPO_ROOT / ".omx" / "operator_authorize_recipes"
+        / "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml"
+    )
+    content = recipe_path.read_text()
+    assert "identity_disambiguator_probe_requires_runtime_output_changed: true" in content
+    assert "identity_disambiguator_probe_requires_runtime_output_changed: false" not in content
 
 
 def test_remote_driver_enforces_dispatch_claim_and_terminal_closure():

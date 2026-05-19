@@ -450,8 +450,11 @@ def _smoke_main(args: argparse.Namespace) -> int:
     print(f"[z7_mamba2_scaffold] predictor={predictor.to_z6_compatible_signature()}")
     print(f"[z7_mamba2_scaffold] num_parameters={predictor.num_parameters()}")
 
-    # Sanity 1: forward-pass shape
-    device = torch.device(args.device if args.device != "cuda" or torch.cuda.is_available() else "cpu")
+    # Sanity 1: forward-pass shape. Smoke mode uses the same explicit
+    # selector as full mode so local MPS/CPU/CUDA checks cannot silently
+    # drift into another architecture.
+    device = _select_device(args.device)
+    device_contract = _device_runtime_contract(device)
     predictor = predictor.to(device)
     z_prev = torch.randn(4, cfg.latent_dim, device=device)
     ego = torch.randn(4, cfg.ego_motion_dim, device=device)
@@ -532,6 +535,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "ready_for_paid_dispatch": False,
+        "rank_or_kill_eligible": False,
         "result_review_blockers": [
             "scaffold_smoke_validates_canonical_signature_only_not_training",
             "full_main_built_but_non_promotable_without_post_training_tier_c",
@@ -539,6 +543,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "z7_gru_wave_2_disambiguator_outcome_required_per_revision_1",
         ],
         "device": str(device),
+        "device_runtime_contract": device_contract,
         "utc_now": datetime.now(UTC).isoformat(),
     }
     stats_path.write_text(json.dumps(stats, indent=2, sort_keys=True))
@@ -687,6 +692,39 @@ def _select_device(device: str) -> torch.device:
     if device == "cpu":
         return torch.device("cpu")
     raise ValueError(f"unknown device {device!r}; expected one of cuda|mps|cpu")
+
+
+def _device_runtime_contract(device: torch.device) -> dict[str, object]:
+    """Return fail-closed device metadata for all local trainer modes."""
+    fallback_env = os.environ.get("PYTORCH_ENABLE_MPS_FALLBACK")
+    fallback_enabled = str(fallback_env or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    }
+    if device.type == "mps" and fallback_enabled:
+        raise RuntimeError(
+            "Z7-Mamba-2 refuses --device mps while PYTORCH_ENABLE_MPS_FALLBACK "
+            "enables CPU fallback. CPU fallback hides unsupported Metal kernels "
+            "and corrupts MPS research-signal timing/device attribution; rerun "
+            "with PYTORCH_ENABLE_MPS_FALLBACK=0 or unset."
+        )
+    return {
+        "training_device": str(device),
+        "device_type": device.type,
+        "mps_research_signal_only": device.type == "mps",
+        "contest_authority_training_device": device.type == "cuda",
+        "inflate_verify_device": _inflate_verify_device(device),
+        "pytorch_enable_mps_fallback": fallback_env if fallback_env is not None else "<unset>",
+        "mps_cpu_fallback_enabled": fallback_enabled,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
+        "rank_or_kill_eligible": False,
+    }
 
 
 def _normalize_loss_mode(value: str) -> str:
@@ -1005,6 +1043,8 @@ def _static_control_archive_pair(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "ready_for_paid_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "device_runtime_contract": base_control_meta.get("device_runtime_contract"),
         "archive_bin_bytes": len(control_bytes),
         "archive_zip_bytes": len(control_zip_bytes),
         "target_archive_zip_bytes": int(target_archive_zip_bytes),
@@ -1260,6 +1300,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
     cfg = _resolve_full_config(args)
     device = _select_device(args.device)
+    device_contract = _device_runtime_contract(device)
     loss_mode = _normalize_loss_mode(args.loss_mode)
     ego_source = _normalize_ego_source(args.ego_source)
     pair_chunk_size = _resolve_pair_chunk_size(
@@ -1555,6 +1596,9 @@ def _full_main(args: argparse.Namespace) -> int:
         "score_aware_scorer_loss_used": loss_mode == "score_aware",
         "ego_source": ego_source,
         "ego_motion_source": "real_video_pair_delta_proxy_no_scorer_load",
+        "training_device": str(device),
+        "device_runtime_contract": device_contract,
+        "rank_or_kill_eligible": False,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -1676,6 +1720,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "schema": "z7_mamba2_timing_smoke_v1",
         "axis": "[local-trainer-timing advisory]",
         "device": str(device),
+        "device_runtime_contract": device_contract,
         "loss_mode": loss_mode,
         "epochs": epochs,
         "num_pairs": cfg.num_pairs,
@@ -1694,6 +1739,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "promotion_eligible": False,
         "score_claim": False,
         "ready_for_paid_dispatch": False,
+        "rank_or_kill_eligible": False,
     }
     stats = {
         "schema_version": 1,
@@ -1738,12 +1784,14 @@ def _full_main(args: argparse.Namespace) -> int:
         "inflate_verify": inflate_verify,
         "timing_smoke": timing_smoke,
         "memory_telemetry": memory_telemetry,
+        "device_runtime_contract": device_contract,
         # Authority flags — non-promotable by construction per CLAUDE.md
         "evidence_grade": "z7_mamba2_full_train_packet_not_promotable_pending_council_per_catalog_325",
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "ready_for_paid_dispatch": False,
+        "rank_or_kill_eligible": False,
         "auth_eval_score_axis": "diagnostic_only_no_authority",
         "auth_eval_score_claim_valid": False,
         "result_review_blockers": [

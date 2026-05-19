@@ -1,0 +1,84 @@
+{
+  "blockers": [],
+  "comparability": {
+    "same_archive_bytes": true,
+    "same_n_samples": true,
+    "same_score_axis": true
+  },
+  "decision_rule": {
+    "control_mode": "static_capacity_control",
+    "lower_score_wins": true,
+    "minimum_score_delta": 0.005,
+    "preferred_mode": "z7_recurrent_temporal_coherence",
+    "required_axis": "contest_cuda",
+    "same_archive_bytes_required": true,
+    "same_axis_required": true
+  },
+  "deltas": {
+    "contest_cpu_recurrent_minus_static": -0.23819032938269,
+    "contest_cpu_static_minus_recurrent": 0.23819032938269,
+    "contest_cuda_recurrent_minus_static": -0.33761692200969,
+    "contest_cuda_static_minus_recurrent": 0.33761692200969,
+    "pose_cpu_static_minus_recurrent": 1.86947632,
+    "pose_cuda_static_minus_recurrent": 2.65339661,
+    "seg_cpu_static_minus_recurrent": 0.0,
+    "seg_cuda_static_minus_recurrent": 0.0
+  },
+  "paradigm_claim_allowed": false,
+  "pair_group_id": "z7_mamba2_temporal_coherence_vs_static_capacity_same_bytes",
+  "probe_id": "z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "research_only": true,
+  "schema": "z7_temporal_coherence_vs_static_capacity_disambiguator_v1",
+  "score_claim": false,
+  "source_evals": [
+    {
+      "archive_bytes": 1376716,
+      "archive_sha256": "7b0b85d7943f8948403d2880c6db01917b18d409ab14415ded8b60f9784c8ed2",
+      "avg_posenet_dist": 153.09344482,
+      "avg_segnet_dist": 0.50482631,
+      "json_sha256": "507c0ed4de7ac956ae7d4f5f7abb314ade03c215474a7b88fdb9bd6a6cc3ad24",
+      "mode": "recurrent",
+      "n_samples": 600,
+      "path": "experiments/results/modal_auth_eval/time_traveler_l5_z7_mamba2_recurrent_7b0b85d7943f_cuda/modal_cuda_auth_eval_result.json",
+      "score_axis": "contest_cuda",
+      "score_recomputed_from_components": 90.52648710000834
+    },
+    {
+      "archive_bytes": 1376716,
+      "archive_sha256": "760a13444248d02f8f963206565407c94fe608fedb5d9a9e26a37f8413de67a8",
+      "avg_posenet_dist": 155.74684143,
+      "avg_segnet_dist": 0.50482631,
+      "json_sha256": "df43da74d10de94b0aa8b2bdb512593dfbd2cb2b33efb1f6d7e7737752b52f64",
+      "mode": "static_control",
+      "n_samples": 600,
+      "path": "experiments/results/modal_auth_eval/time_traveler_l5_z7_mamba2_static-control_760a13444248_cuda/modal_cuda_auth_eval_result.json",
+      "score_axis": "contest_cuda",
+      "score_recomputed_from_components": 90.86410402201803
+    }
+  ],
+  "supplemental_cpu_pair": {
+    "axis": "contest_cpu",
+    "recurrent": {
+      "archive_sha256": "7b0b85d7943f8948403d2880c6db01917b18d409ab14415ded8b60f9784c8ed2",
+      "avg_posenet_dist": 153.0705719,
+      "avg_segnet_dist": 0.5048244,
+      "json_sha256": "8aae75b144e53c291ce747c0c9c64c529d20affc3f8a43049ec28eb7abfed603",
+      "path": "experiments/results/modal_auth_eval_cpu/time_traveler_l5_z7_mamba2_recurrent_7b0b85d7943f_cpu/modal_cpu_auth_eval_result.json",
+      "score_recomputed_from_components": 90.52337309513132
+    },
+    "static_control": {
+      "archive_sha256": "760a13444248d02f8f963206565407c94fe608fedb5d9a9e26a37f8413de67a8",
+      "avg_posenet_dist": 154.94004822,
+      "avg_segnet_dist": 0.5048244,
+      "json_sha256": "4d032854a42d1f31e835c8ac1dfd60c0ad776bd1490836c0cc19d1445ef5d19f",
+      "path": "experiments/results/modal_auth_eval_cpu/time_traveler_l5_z7_mamba2_static-control_760a13444248_cpu/modal_cpu_auth_eval_result.json",
+      "score_recomputed_from_components": 90.76156342451401
+    }
+  },
+  "substrate_id": "time_traveler_l5_z7_mamba2",
+  "verdict": "recurrent_wins_same_bytes_contest_cuda_pair_but_packet_not_frontier"
+}

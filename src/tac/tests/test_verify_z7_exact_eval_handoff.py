@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import stat
 import sys
 import zipfile
@@ -60,7 +61,24 @@ def _fixture_repo(
         "config": {"num_pairs": num_pairs},
         "lane_id": lane_id or handoff.LANE_ID,
         "loss_mode": "score_aware",
+        "device_runtime_contract": {
+            "device_type": "mps",
+            "inflate_verify_device": "cpu",
+            "mps_research_signal_only": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "ready_for_paid_dispatch": False,
+            "rank_or_kill_eligible": False,
+        },
+        "inflate_verify": {
+            "device": "cpu",
+            "frames_written": 1200,
+            "raw_bytes": 1,
+            "raw_sha256": "0" * 64,
+        },
         "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "ready_for_paid_dispatch": False,
         "score_aware_scorer_loss_used": True,
@@ -70,6 +88,7 @@ def _fixture_repo(
             "archive_zip_path": "runs/z7/static_capacity_control/archive.zip",
             "archive_zip_sha256": static_sha,
             "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "ready_for_paid_dispatch": False,
             "runtime_output_byte_differences_vs_recurrent": 7,
@@ -89,7 +108,7 @@ def _fixture_repo(
     return tmp_path
 
 
-def test_z7_handoff_blocks_current_one_pair_packet_but_keeps_plan_commands() -> None:
+def test_z7_handoff_blocks_current_one_pair_packet_and_plan_commands() -> None:
     payload = handoff.build_packet(repo_root=REPO_ROOT)
 
     assert payload["current_pair_count"] == 1
@@ -99,18 +118,13 @@ def test_z7_handoff_blocks_current_one_pair_packet_but_keeps_plan_commands() -> 
     assert payload["promotion_eligible"] is False
     assert payload["provider_dispatch_attempted"] is False
     assert payload["lane_claim_opened"] is False
-    assert payload["result_review_blockers"] == [
-        "z7_exact_handoff_current_packet_not_600_pairs"
-    ]
+    assert set(payload["result_review_blockers"]) == {
+        "z7_exact_handoff_current_packet_not_600_pairs",
+        "z7_exact_handoff_inflate_verify_device_not_cpu_or_cuda",
+    }
     assert payload["same_archive_zip_bytes"] is True
     assert payload["runtime_output_changed_vs_recurrent"] is True
-    assert set(payload["modal_plan_commands_for_current_packet"]) == {
-        "recurrent_paired_contest_cpu_cuda",
-        "static_control_paired_contest_cpu_cuda",
-    }
-    for command in payload["modal_plan_commands_for_current_packet"].values():
-        assert "tools/dispatch_modal_paired_auth_eval.py" in command
-        assert "--execute" not in command
+    assert payload["modal_plan_commands_for_current_packet"] == {}
 
 
 def test_z7_handoff_ready_for_ratified_full_pair_packet(tmp_path: Path) -> None:
@@ -121,6 +135,15 @@ def test_z7_handoff_ready_for_ratified_full_pair_packet(tmp_path: Path) -> None:
     assert payload["result_review_blockers"] == []
     assert payload["current_pair_count"] == 600
     assert payload["runtime_custody"]["inflate_sh_executable"] is True
+    assert {row["axis"] for row in payload["axis_plan"]} == {
+        "[contest-CUDA]",
+        "[contest-CPU]",
+    }
+    for row in payload["axis_plan"]:
+        assert row["inflate_device_policy"] == "auto"
+        assert row["evaluate_device"] in {"cpu", "cuda"}
+        assert row["required_hardware"] in {"linux_x86_64_cpu", "linux_x86_64_t4"}
+        assert row["authority_precondition"].startswith("modal_paired_auth_eval_")
     assert set(payload["modal_execute_commands_after_ratified_full_packet"]) == {
         "recurrent_paired_contest_cpu_cuda",
         "static_control_paired_contest_cpu_cuda",
@@ -161,6 +184,24 @@ def test_z7_handoff_surfaces_failed_inflate_verify(tmp_path: Path) -> None:
     )
 
 
+def test_z7_handoff_refuses_mps_inflate_verify_device(tmp_path: Path) -> None:
+    repo = _fixture_repo(tmp_path, num_pairs=600)
+    stats_path = repo / "runs/z7/stats.json"
+    stats = json.loads(stats_path.read_text(encoding="utf-8"))
+    stats["inflate_verify"]["device"] = "mps"
+    stats_path.write_text(json.dumps(stats), encoding="utf-8")
+
+    payload = handoff.build_packet(repo_root=repo, stats_json=Path("runs/z7/stats.json"))
+
+    assert payload["ready_for_exact_eval_handoff"] is False
+    assert "z7_exact_handoff_inflate_verify_device_not_cpu_or_cuda" in payload[
+        "result_review_blockers"
+    ]
+    assert "z7_exact_handoff_mps_training_must_cpu_inflate_verify" in payload[
+        "result_review_blockers"
+    ]
+
+
 def test_z7_handoff_derives_mamba_identity_from_stats(tmp_path: Path) -> None:
     repo = _fixture_repo(
         tmp_path,
@@ -185,6 +226,11 @@ def test_z7_handoff_derives_mamba_identity_from_stats(tmp_path: Path) -> None:
         assert "z7_mamba2_temporal_coherence_vs_static_capacity_same_bytes" in command
         assert "lane_z7_lstm_predictive_coding_20260518" not in command
         assert "time_traveler_l5_z7_lstm_predictive_coding_" not in command
+        parts = shlex.split(command)
+        pair_group = parts[parts.index("--pair-group-id") + 1]
+        assert pair_group == "z7_mamba2_temporal_coherence_vs_static_capacity_same_bytes"
+        assert "_recurrent_" not in pair_group
+        assert "_static-control_" not in pair_group
 
 
 def test_z7_handoff_refuses_false_authority_stats_and_hides_plan_commands(

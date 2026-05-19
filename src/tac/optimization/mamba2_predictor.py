@@ -86,6 +86,7 @@ has no prior probe outcome.
 
 from __future__ import annotations
 
+import platform
 import warnings
 from dataclasses import dataclass
 from typing import Literal
@@ -117,6 +118,8 @@ def _probe_mamba_ssm_available() -> bool:
     is installed. Returns False on macOS / MPS / CPU-only environments
     per CC-4 HARD-EARNED-PARTIAL classification.
     """
+    if platform.system() != "Linux" or not torch.cuda.is_available():
+        return False
     try:
         import mamba_ssm  # noqa: F401
     except ImportError:
@@ -428,12 +431,16 @@ class Mamba2Predictor(nn.Module):
         """
         if self.identity_predictor:
             return
+        try:
+            dtype = next(self.parameters()).dtype
+        except StopIteration:  # pragma: no cover - identity mode returns above
+            dtype = torch.float32
         self._h = torch.zeros(
             batch_size,
             self.config.d_inner,
             self.config.d_state,
             device=device,
-            dtype=torch.float32,
+            dtype=dtype,
         )
 
     def forward(
@@ -464,7 +471,12 @@ class Mamba2Predictor(nn.Module):
 
         batch = z_prev.shape[0]
         # Initialize state if not yet set (or stateful=False)
-        if self._h is None or not self.stateful:
+        if (
+            self._h is None
+            or not self.stateful
+            or self._h.device != z_prev.device
+            or self._h.dtype != z_prev.dtype
+        ):
             self.reset_state(batch, device=z_prev.device)
         elif self._h.shape[0] != batch:
             # Batch size changed mid-sequence (shouldn't happen in

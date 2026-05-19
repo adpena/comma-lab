@@ -117,7 +117,21 @@ def mlx_inflate_inference_path_metadata() -> dict[str, Any]:
         "mlx_version": None,
         "is_apple_silicon": is_apple_silicon,
         "tag_recommendation": "[unavailable]",
+        "evidence_grade": "macOS-MLX-advisory",
+        "evidence_tag": "[macOS-MLX-advisory]",
+        "score_claim": False,
         "promotion_eligible": False,  # NEVER True per CLAUDE.md MPS rule
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "device_runtime_contract": {
+            "device_family": "mlx-metal",
+            "authority": "advisory_only",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+        },
         "axis": "macos_mlx_advisory",
     }
     if distribution_present:
