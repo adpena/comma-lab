@@ -39568,11 +39568,11 @@
       "id": "lane_cable_c_substrate_symposium_draft_batch_20260519",
       "name": "Cable C substrate symposium DRAFT batch",
       "phase": 5.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/council_t3_z7_lstm_predictive_coding_per_substrate_symposium_DRAFT_20260519T053356Z.md + 4 sister DRAFTs + synthesis (5 substrate symposium DRAFTs per Catalog #325 6-step contract)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -39595,8 +39595,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_cable_c_substrate_symposium_draft_batch_landed_20260519.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -39686,6 +39686,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_cathedral_auto_ingest_paradigm_shift_20260519",
+      "name": "Cathedral auto-ingest paradigm shift (convention over configuration)",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_mps_phase_b_re_fire_split_device_20260519",
+      "name": "MPS Phase B re-fire split-device architecture",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -39695,5 +39777,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T05:38:28Z"
+  "updated_at": "2026-05-19T05:49:58Z"
 }
