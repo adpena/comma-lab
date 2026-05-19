@@ -40,7 +40,6 @@ CLAUDE.md compliance tags
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -88,6 +87,8 @@ class PerPairScoreBreakdown:
     top_k_pair_indices: tuple[int, ...]
     top_k_cumulative_fraction: tuple[float, ...]
     per_pair_priority: tuple[float, ...]
+    master_gradient_pair_norm: tuple[float, ...] = ()
+    master_gradient_reweighted_priority: tuple[float, ...] = ()
 
     def __post_init__(self) -> None:
         if self.n_pairs < 0:
@@ -122,6 +123,8 @@ class PerPairScoreDecomposition:
         *,
         target_pose: torch.Tensor | None = None,
         top_k: int = 10,
+        master_gradient_archive_sha256: str | None = None,
+        master_gradient_anchor_path: Path | None = None,
         **_kwargs: Any,
     ) -> XRayPrimitiveResult:
         """Decompose total distortion into per-pair contributions.
@@ -186,10 +189,68 @@ class PerPairScoreDecomposition:
             cum_frac = tuple(0.0 for _ in range(top_k))
 
         # Priority vector = c_i / mean. Clip pathological 0-mean.
-        if mean > 0:
-            priority = tuple((per_pair / mean).tolist())
-        else:
-            priority = tuple(0.0 for _ in range(n_pairs))
+        priority_tensor = (
+            per_pair / mean
+            if mean > 0
+            else torch.zeros((n_pairs,), dtype=per_pair.dtype)
+        )
+        priority = tuple(float(v) for v in priority_tensor.tolist())
+
+        master_gradient_pair_norm: tuple[float, ...] = ()
+        master_gradient_reweighted_priority: tuple[float, ...] = ()
+        master_gradient_metadata: dict[str, Any] = {
+            "master_gradient_consumed": False,
+        }
+        if master_gradient_archive_sha256 is not None:
+            from tac.master_gradient_consumers import (
+                load_per_pair_gradient_from_anchor,
+            )
+
+            gradient, anchor = load_per_pair_gradient_from_anchor(
+                archive_sha256=master_gradient_archive_sha256,
+                anchor_path=master_gradient_anchor_path,
+            )
+            gradient_tensor = torch.as_tensor(
+                gradient,
+                dtype=per_pair.dtype,
+                device=priority_tensor.device,
+            )
+            if gradient_tensor.ndim != 3 or gradient_tensor.shape[1] != n_pairs:
+                raise ValueError(
+                    "per-pair master gradient must have shape "
+                    f"(N_bytes, {n_pairs}, 3); got {tuple(gradient_tensor.shape)}"
+                )
+            pair_norm = torch.sqrt(
+                torch.sum(gradient_tensor * gradient_tensor, dim=(0, 2))
+            )
+            norm_mean = float(pair_norm.mean().item()) if n_pairs > 0 else 0.0
+            if norm_mean > 0.0:
+                gradient_priority = pair_norm / norm_mean
+                fused = priority_tensor * gradient_priority
+                fused_mean = float(fused.mean().item())
+                if fused_mean > 0.0:
+                    fused = fused / fused_mean
+            else:
+                gradient_priority = torch.zeros_like(pair_norm)
+                fused = torch.zeros_like(pair_norm)
+            master_gradient_pair_norm = tuple(
+                float(v) for v in pair_norm.tolist()
+            )
+            master_gradient_reweighted_priority = tuple(
+                float(v) for v in fused.tolist()
+            )
+            master_gradient_metadata = {
+                "master_gradient_consumed": True,
+                "master_gradient_archive_sha256": master_gradient_archive_sha256,
+                "master_gradient_measurement_axis": anchor.get("measurement_axis"),
+                "master_gradient_measurement_hardware": anchor.get(
+                    "measurement_hardware"
+                ),
+                "master_gradient_pair_norm_mean": norm_mean,
+                "master_gradient_pair_norm_max": (
+                    float(pair_norm.max().item()) if n_pairs > 0 else 0.0
+                ),
+            }
 
         breakdown = PerPairScoreBreakdown(
             n_pairs=n_pairs,
@@ -199,6 +260,8 @@ class PerPairScoreDecomposition:
             top_k_pair_indices=top_indices,
             top_k_cumulative_fraction=cum_frac,
             per_pair_priority=priority,
+            master_gradient_pair_norm=master_gradient_pair_norm,
+            master_gradient_reweighted_priority=master_gradient_reweighted_priority,
         )
 
         return XRayPrimitiveResult(
@@ -217,6 +280,7 @@ class PerPairScoreDecomposition:
                 "top_k": top_k,
                 "seg_coeff": SEG_COEFF,
                 "pose_sqrt_coeff": POSE_SQRT_COEFF,
+                **master_gradient_metadata,
             },
         )
 
@@ -253,7 +317,7 @@ class PerPairScoreDecomposition:
 
 __all__ = [
     "POSE_SQRT_COEFF",
+    "SEG_COEFF",
     "PerPairScoreBreakdown",
     "PerPairScoreDecomposition",
-    "SEG_COEFF",
 ]

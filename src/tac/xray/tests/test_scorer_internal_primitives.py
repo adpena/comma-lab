@@ -3,28 +3,50 @@
 
 from __future__ import annotations
 
+import json
 import math
 
+import numpy as np
 import pytest
 import torch
 
 from tac.xray.base import XRayPrimitive
 from tac.xray.per_pair_score_decomposition import (
     POSE_SQRT_COEFF,
-    PerPairScoreBreakdown,
-    PerPairScoreDecomposition,
     SEG_COEFF,
+    PerPairScoreDecomposition,
 )
 from tac.xray.posenet_se3_lie_algebra import (
     POSENET_OUTPUT_DIMS_USED,
     PoseNetSE3LieAlgebra,
-    PoseSE3Report,
 )
 from tac.xray.segnet_margin_polytope import (
     SEGNET_N_CLASSES,
     SegNetLogitMarginPolytope,
-    SegNetMarginReport,
 )
+
+
+def _write_per_pair_master_gradient_anchor(
+    tmp_path,
+    gradient: np.ndarray,
+    *,
+    archive_sha256: str = "a" * 64,
+):
+    npy_path = tmp_path / "per_pair_gradient.npy"
+    np.save(npy_path, gradient)
+    ledger_path = tmp_path / "master_gradient_anchors.jsonl"
+    row = {
+        "schema_version": "master_gradient_anchor_v1",
+        "archive_sha256": archive_sha256,
+        "gradient_tensor_kind": "per_pair_per_byte_v1",
+        "gradient_array_path": str(npy_path),
+        "measurement_axis": "[macOS-CPU advisory]",
+        "measurement_hardware": "macos_arm64_cpu",
+        "measurement_method": "per_pair_master_gradient_test_fixture",
+        "measurement_utc": "2026-05-19T00:00:00.000000Z",
+    }
+    ledger_path.write_text(json.dumps(row, sort_keys=True) + "\n", encoding="utf-8")
+    return archive_sha256, ledger_path
 
 
 # ── F7 SegNetLogitMarginPolytope ────────────────────────────────────────
@@ -376,6 +398,52 @@ def test_pair_priority_vector_normalized():
     )
     priority = torch.tensor(result.primitive_value.per_pair_priority)
     assert priority.mean().item() == pytest.approx(1.0, abs=1e-5)
+
+
+def test_pair_compute_consumes_per_pair_master_gradient_anchor(tmp_path):
+    seg = torch.tensor([0.10, 0.10, 0.10])
+    pose = torch.tensor([0.01, 0.01, 0.01])
+    gradient = np.zeros((4, 3, 3), dtype=np.float64)
+    gradient[:, 0, :] = 0.5
+    gradient[:, 1, :] = 2.0
+    gradient[:, 2, :] = 1.0
+    archive_sha, ledger = _write_per_pair_master_gradient_anchor(tmp_path, gradient)
+
+    result = PerPairScoreDecomposition().compute(
+        target=seg,
+        target_pose=pose,
+        top_k=3,
+        master_gradient_archive_sha256=archive_sha,
+        master_gradient_anchor_path=ledger,
+    )
+
+    breakdown = result.primitive_value
+    assert len(breakdown.master_gradient_pair_norm) == 3
+    assert breakdown.master_gradient_pair_norm[1] > breakdown.master_gradient_pair_norm[2]
+    fused = torch.tensor(breakdown.master_gradient_reweighted_priority)
+    assert fused.mean().item() == pytest.approx(1.0, abs=1e-5)
+    assert fused[1] > fused[2] > fused[0]
+    assert result.metadata["master_gradient_consumed"] is True
+    assert result.metadata["master_gradient_measurement_axis"] == "[macOS-CPU advisory]"
+
+
+def test_pair_master_gradient_reweighted_priority_preserves_input_device(tmp_path):
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    seg = torch.tensor([0.10, 0.10, 0.10], device=device)
+    pose = torch.tensor([0.01, 0.01, 0.01], device=device)
+    gradient = np.ones((2, 3, 3), dtype=np.float64)
+    archive_sha, ledger = _write_per_pair_master_gradient_anchor(tmp_path, gradient)
+
+    result = PerPairScoreDecomposition().compute(
+        target=seg,
+        target_pose=pose,
+        top_k=3,
+        master_gradient_archive_sha256=archive_sha,
+        master_gradient_anchor_path=ledger,
+    )
+
+    assert len(result.primitive_value.master_gradient_reweighted_priority) == 3
+    assert result.metadata["master_gradient_consumed"] is True
 
 
 def test_pair_identify_high_score_pairs_returns_top_percentile():

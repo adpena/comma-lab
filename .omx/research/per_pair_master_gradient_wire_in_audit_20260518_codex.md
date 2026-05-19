@@ -27,7 +27,7 @@ end-to-end optimizer for every granularity surface.
 | Inflate time post-processing | DESIGN-ONLY | `inflate_time_post_processing` namespace is legal in `src/tac/optimization/per_pair_namespace_wire_in.py` | Build a concrete, scorer-free inflate-time adapter before any runtime path consumes this signal. |
 | Hook 3 bit allocation | ACTIVE under modern namespace, DORMANT under literal old name | `src/tac/optimization/bit_allocator_end_to_end.py::allocate_per_pair_bits` | Do not resurrect `tac.bit_allocator.allocate_per_pair`; route callers through the canonical namespace adapter. |
 | Field equation planner | DORMANT for per-pair fp64 master-gradient payloads | `src/tac/optimization/field_equation_planner.py::field_row` | Add optional optimal-plan/per-pair summary fields and KKT readiness annotations without changing action score authority. |
-| Xray primitives | ACTIVE generally, DORMANT for direct master-gradient primitive | `src/tac/xray/registry.py`, `src/tac/xray/wire_in.py` | Add a typed `master_gradient_per_pair_difficulty` xray primitive if xray consumers need direct per-pair gradient access. |
+| Xray primitives | ACTIVE for direct opt-in master-gradient consumption | `src/tac/xray/per_pair_score_decomposition.py`, `src/tac/xray/unified_action_principle.py` | Remaining xray work is validation breadth, not a missing direct-consumer hook. |
 | Continual learning posterior | DORMANT for per-pair keyed updates | `src/tac/continual_learning.py::posterior_update_locked` | Add a canonical per-pair anchor adapter or sister ledger; do not mutate posterior JSONL directly. |
 | Rashomon ensemble | ACTIVE | `RashomonEnsembleRanker.update_all_from_master_gradient` | Keep disagreement queue diagnostic/planning-only unless exact eval closes a candidate. |
 
@@ -68,11 +68,32 @@ decode, runtime budget, and no hidden side-channel dependence.
 3. A per-pair continual-learning adapter that records empirical anchors by
    pair/category/region/label without direct posterior mutation.
 4. A concrete inflate-time adapter only after a runtime-safe target exists.
+5. The final audit-tool surface still lists
+   `tools.probe_alternative_reducers_latent_class_conditioning` as unwired;
+   keep that as a bounded follow-on rather than treating xray as the blocker.
 
 ## Verification
 
 - `[empirical:PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q src/tac/tests/test_extract_master_gradient.py src/tac/tests/test_master_gradient_consumers.py src/tac/tests/test_master_gradient_consumers_rashomon.py src/tac/tests/test_cathedral_autopilot_autonomous_loop.py]`
   - Result: `251 passed in 1.39s`
+- `[empirical:PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q src/tac/xray/tests/test_scorer_internal_primitives.py src/tac/xray/tests/test_unified_and_codec_primitives.py src/tac/xray/tests/test_wire_in.py]`
+  - Result: `114 passed in 0.50s`
+- `[empirical:PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q src/tac/xray/tests/test_scorer_internal_primitives.py::test_pair_compute_consumes_per_pair_master_gradient_anchor src/tac/xray/tests/test_scorer_internal_primitives.py::test_pair_master_gradient_reweighted_priority_preserves_input_device src/tac/xray/tests/test_unified_and_codec_primitives.py::test_unified_can_derive_fisher_from_per_pair_master_gradient]`
+  - Result: `3 passed in 1.00s`
+  - Note: added after adversarial review caught the CPU tensor vs caller-device
+    mismatch risk in the opt-in xray master-gradient path.
+- `[empirical:PYTHONPATH=src PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q src/tac/tests/test_bit_allocator_per_pair_consumption.py src/tac/tests/test_field_equation_planner_lagrangian_consumption.py src/tac/xray/tests/test_scorer_internal_primitives.py src/tac/tests/test_master_gradient_consumers_rashomon.py src/tac/tests/test_cathedral_autopilot_autonomous_loop.py src/tac/tests/test_low_gap_closure_widened_bucket_c_autopilot_sister_817_consumption.py src/tac/tests/test_continual_learning.py]`
+  - Result: `345 passed in 1.89s`
+  - Note: this also aligned the stale Cathedral sister #817 test contract with
+    the live reward convention: negative predicted deltas improve when
+    multiplied by factors greater than `1.0`.
+- `[empirical:PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m ruff check src/tac/xray/per_pair_score_decomposition.py src/tac/xray/unified_action_principle.py src/tac/xray/tests/test_scorer_internal_primitives.py src/tac/xray/tests/test_unified_and_codec_primitives.py tools/audit_master_gradient_wire_in_coverage.py]`
+  - Result: `All checks passed!`
+- `[empirical:.venv/bin/python tools/audit_master_gradient_wire_in_coverage.py --summary]`
+  - Result: surface coverage moved from `10/13 active, 3 unwired, 76.9%` to
+    `12/13 active, 1 unwired, 92.3%`. Per-archive anchor coverage remains
+    `2/8` with `0` authoritative anchors, so this is structural wire-in only,
+    not a score or promotion claim.
 
 ## Non-Claim
 

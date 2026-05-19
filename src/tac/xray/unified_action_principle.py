@@ -84,6 +84,11 @@ class UnifiedActionValue:
         policy is **product** per the deep_math memo's geometric-mean form.
     delta_s_dtheta_norm : float | None
         Norm of d(S_total) / d(theta), if computed.
+    master_gradient_pair_norm_mean : float | None
+        Mean per-pair master-gradient norm when the Fisher term was derived
+        from the canonical per-pair anchor.
+    master_gradient_pair_norm_max : float | None
+        Max per-pair master-gradient norm when available.
     """
 
     wasserstein_term: float
@@ -91,6 +96,8 @@ class UnifiedActionValue:
     tropical_rate_term: float
     s_total: float
     delta_s_dtheta_norm: float | None
+    master_gradient_pair_norm_mean: float | None = None
+    master_gradient_pair_norm_max: float | None = None
 
     def __post_init__(self) -> None:
         if self.wasserstein_term < 0.0:
@@ -132,6 +139,8 @@ class UnifiedActionPrinciple:
         wasserstein_proxy: float | None = None,
         fisher_diagonal: torch.Tensor | float | None = None,
         score_gradient_norm: float | None = None,
+        master_gradient_archive_sha256: str | None = None,
+        master_gradient_anchor_path: Path | None = None,
         archive_bytes: int | None = None,
         composition_policy: str = "product",
         **_kwargs: Any,
@@ -173,10 +182,16 @@ class UnifiedActionPrinciple:
             )
 
         # Resolve Fisher term.
+        master_gradient_pair_norm_mean: float | None = None
+        master_gradient_pair_norm_max: float | None = None
+        master_gradient_measurement_axis: str | None = None
+        master_gradient_measurement_hardware: str | None = None
+        fisher_source = "default_unit"
         if score_gradient_norm is not None:
             if score_gradient_norm < 0.0:
                 raise ValueError("score_gradient_norm must be non-negative")
             fisher_term = score_gradient_norm
+            fisher_source = "score_gradient_norm"
         elif fisher_diagonal is not None:
             if isinstance(fisher_diagonal, torch.Tensor):
                 fisher_term = float(fisher_diagonal.abs().sum().item())
@@ -184,6 +199,35 @@ class UnifiedActionPrinciple:
                 fisher_term = float(fisher_diagonal)
             if fisher_term < 0.0:
                 raise ValueError("fisher_diagonal must be non-negative")
+            fisher_source = "fisher_diagonal"
+        elif master_gradient_archive_sha256 is not None:
+            from tac.master_gradient_consumers import (
+                load_per_pair_gradient_from_anchor,
+            )
+
+            gradient, anchor = load_per_pair_gradient_from_anchor(
+                archive_sha256=master_gradient_archive_sha256,
+                anchor_path=master_gradient_anchor_path,
+            )
+            gradient_tensor = torch.as_tensor(gradient, dtype=torch.float32)
+            if gradient_tensor.ndim != 3 or gradient_tensor.shape[-1] != 3:
+                raise ValueError(
+                    "per-pair master gradient must have shape "
+                    f"(N_bytes, N_pairs, 3); got {tuple(gradient_tensor.shape)}"
+                )
+            pair_norm = torch.sqrt(
+                torch.sum(gradient_tensor * gradient_tensor, dim=(0, 2))
+            )
+            fisher_term = float(torch.sum(pair_norm * pair_norm).item())
+            master_gradient_pair_norm_mean = (
+                float(pair_norm.mean().item()) if pair_norm.numel() else 0.0
+            )
+            master_gradient_pair_norm_max = (
+                float(pair_norm.max().item()) if pair_norm.numel() else 0.0
+            )
+            master_gradient_measurement_axis = anchor.get("measurement_axis")
+            master_gradient_measurement_hardware = anchor.get("measurement_hardware")
+            fisher_source = "per_pair_master_gradient_anchor"
         else:
             # Default to 1.0 (no sensitivity weighting); caller can override.
             fisher_term = 1.0
@@ -242,6 +286,8 @@ class UnifiedActionPrinciple:
             tropical_rate_term=tropical_term,
             s_total=s_total,
             delta_s_dtheta_norm=None,
+            master_gradient_pair_norm_mean=master_gradient_pair_norm_mean,
+            master_gradient_pair_norm_max=master_gradient_pair_norm_max,
         )
 
         return XRayPrimitiveResult(
@@ -256,6 +302,14 @@ class UnifiedActionPrinciple:
             metadata={
                 "composition_policy": composition_policy,
                 "archive_bytes": archive_bytes,
+                "fisher_source": fisher_source,
+                "master_gradient_archive_sha256": master_gradient_archive_sha256,
+                "master_gradient_measurement_axis": master_gradient_measurement_axis,
+                "master_gradient_measurement_hardware": (
+                    master_gradient_measurement_hardware
+                ),
+                "master_gradient_pair_norm_mean": master_gradient_pair_norm_mean,
+                "master_gradient_pair_norm_max": master_gradient_pair_norm_max,
             },
         )
 

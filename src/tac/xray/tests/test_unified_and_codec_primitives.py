@@ -3,24 +3,43 @@
 
 from __future__ import annotations
 
+import json
 import math
 
+import numpy as np
 import pytest
 import torch
 
 from tac.xray.base import XRayPrimitive
-from tac.xray.foveation_ego_motion import (
-    FoveationEgoMotionAnalyzer,
-    FoveationReport,
-)
-from tac.xray.predictive_coding_hierarchy import (
-    PredictiveCodingHierarchy,
-    PredictiveCodingReport,
-)
+from tac.xray.foveation_ego_motion import FoveationEgoMotionAnalyzer
+from tac.xray.predictive_coding_hierarchy import PredictiveCodingHierarchy
 from tac.xray.unified_action_principle import (
     UnifiedActionPrinciple,
     UnifiedActionValue,
 )
+
+
+def _write_per_pair_master_gradient_anchor(
+    tmp_path,
+    gradient: np.ndarray,
+    *,
+    archive_sha256: str = "b" * 64,
+):
+    npy_path = tmp_path / "per_pair_gradient.npy"
+    np.save(npy_path, gradient)
+    ledger_path = tmp_path / "master_gradient_anchors.jsonl"
+    row = {
+        "schema_version": "master_gradient_anchor_v1",
+        "archive_sha256": archive_sha256,
+        "gradient_tensor_kind": "per_pair_per_byte_v1",
+        "gradient_array_path": str(npy_path),
+        "measurement_axis": "[macOS-CPU advisory]",
+        "measurement_hardware": "macos_arm64_cpu",
+        "measurement_method": "per_pair_master_gradient_test_fixture",
+        "measurement_utc": "2026-05-19T00:00:00.000000Z",
+    }
+    ledger_path.write_text(json.dumps(row, sort_keys=True) + "\n", encoding="utf-8")
+    return archive_sha256, ledger_path
 
 
 # ── F11 UnifiedActionPrinciple ──────────────────────────────────────────
@@ -147,6 +166,25 @@ def test_unified_fisher_default_is_one():
         archive_bytes=100,
     )
     assert result.primitive_value.fisher_term == 1.0
+
+
+def test_unified_can_derive_fisher_from_per_pair_master_gradient(tmp_path):
+    gradient = np.ones((2, 3, 3), dtype=np.float32)
+    archive_sha, ledger = _write_per_pair_master_gradient_anchor(tmp_path, gradient)
+
+    result = UnifiedActionPrinciple().compute(
+        target=None,
+        wasserstein_proxy=0.5,
+        archive_bytes=100,
+        master_gradient_archive_sha256=archive_sha,
+        master_gradient_anchor_path=ledger,
+    )
+
+    value = result.primitive_value
+    assert value.fisher_term == pytest.approx(18.0)
+    assert value.master_gradient_pair_norm_mean == pytest.approx(math.sqrt(6.0))
+    assert result.metadata["fisher_source"] == "per_pair_master_gradient_anchor"
+    assert result.metadata["master_gradient_archive_sha256"] == archive_sha
 
 
 def test_unified_refuses_missing_archive_bytes():

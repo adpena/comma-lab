@@ -1636,7 +1636,7 @@ def _per_pair_fisher_importance_sidecar_reward_factor(
 ) -> float:
     """Read latest per_pair_fisher_importance sidecar; return multiplicative factor.
 
-    Returns 0.97 if sidecar exists AND aggregate_fisher_l1 > 0; 1.0 otherwise.
+    Returns 1.03 if sidecar exists AND aggregate_fisher_l1 > 0; 1.0 otherwise.
     """
     sidecar = _latest_per_pair_fisher_importance_sidecar_for_archive(
         archive_sha256

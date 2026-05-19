@@ -172,21 +172,20 @@ SURFACE_WIRE_IN_STATUS: tuple[tuple[str, str, str, str], ...] = (
         "register_dispatched_call_id_with_master_gradient_anchor wrapper available; threads via canonical extra channel",
         "src/tac/master_gradient_wire_in.py",
     ),
-    # Surfaces remaining UNWIRED per the inventory's §2.3 wire-in audit table:
-    # (these are out of scope for this $0 wave because they require deeper
-    # consumer-side integration not bounded by this subagent envelope)
+    # Direct xray consumers closed by the ITEM_7 xray wire-in patch.
     (
         "src.tac.xray.per_pair_score_decomposition",
-        "UNWIRED",
-        "xray primitive #9; per inventory needs call_per_pair_gradient_from_anchor in primitive's compute method",
-        "src/tac/xray/per_pair_score_decomposition.py (per inventory; may not yet exist)",
+        "ACTIVE",
+        "xray primitive #9; compute() accepts master_gradient_archive_sha256 and fuses per-pair score contribution with per-pair master-gradient norm",
+        "src/tac/xray/per_pair_score_decomposition.py",
     ),
     (
         "src.tac.xray.unified_action_principle",
-        "UNWIRED",
-        "xray primitive #11; per inventory needs per-pair contribution to Wasserstein × Fisher × tropical",
-        "src/tac/xray/unified_action_principle.py (per inventory; may not yet exist)",
+        "ACTIVE",
+        "xray primitive #11; compute() can derive the Fisher term from load_per_pair_gradient_from_anchor for Wasserstein × Fisher × tropical action",
+        "src/tac/xray/unified_action_principle.py",
     ),
+    # Surface still UNWIRED per the inventory's §2.3 wire-in audit table.
     (
         "tools.probe_alternative_reducers_latent_class_conditioning",
         "UNWIRED",

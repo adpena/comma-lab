@@ -19,9 +19,6 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -127,17 +124,17 @@ def test_sister_817_empty_sha_returns_passthrough():
 
 
 def test_sister_817_optimal_plan_sidecar_reward_factor(tmp_path, monkeypatch):
-    """per_pair_bit_allocation cascade=optimal_plan → 0.95× reward."""
+    """per_pair_bit_allocation cascade=optimal_plan → 1.05× reward."""
     mod = _load_autopilot_module()
     monkeypatch.setattr(mod, "_PER_PAIR_SIDECAR_SCAN_ROOT", tmp_path)
     sha = "deadbeef1234567890abcdef"
     _write_per_pair_bit_allocation_sidecar(tmp_path, sha, cascade="optimal_plan")
     factor = mod._per_pair_bit_allocation_sidecar_reward_factor(sha)
-    assert factor == 0.95
+    assert factor == 1.05
 
 
 def test_sister_817_wyner_ziv_sidecar_reward_factor(tmp_path, monkeypatch):
-    """per_pair_bit_allocation cascade=wyner_ziv_composition → 0.98× reward."""
+    """per_pair_bit_allocation cascade=wyner_ziv_composition → 1.02× reward."""
     mod = _load_autopilot_module()
     monkeypatch.setattr(mod, "_PER_PAIR_SIDECAR_SCAN_ROOT", tmp_path)
     sha = "deadbeef1234567890abcdef"
@@ -145,7 +142,7 @@ def test_sister_817_wyner_ziv_sidecar_reward_factor(tmp_path, monkeypatch):
         tmp_path, sha, cascade="wyner_ziv_composition"
     )
     factor = mod._per_pair_bit_allocation_sidecar_reward_factor(sha)
-    assert factor == 0.98
+    assert factor == 1.02
 
 
 def test_sister_817_aggregate_fallback_sidecar_reward_factor(tmp_path, monkeypatch):
@@ -161,7 +158,7 @@ def test_sister_817_aggregate_fallback_sidecar_reward_factor(tmp_path, monkeypat
 
 
 def test_sister_817_fisher_sidecar_reward_factor_present(tmp_path, monkeypatch):
-    """per_pair_fisher_importance sidecar present + agg_l1>0 → 0.97× reward."""
+    """per_pair_fisher_importance sidecar present + agg_l1>0 → 1.03× reward."""
     mod = _load_autopilot_module()
     monkeypatch.setattr(mod, "_PER_PAIR_SIDECAR_SCAN_ROOT", tmp_path)
     sha = "deadbeef1234567890abcdef"
@@ -169,7 +166,7 @@ def test_sister_817_fisher_sidecar_reward_factor_present(tmp_path, monkeypatch):
         tmp_path, sha, aggregate_fisher_l1=1.5
     )
     factor = mod._per_pair_fisher_importance_sidecar_reward_factor(sha)
-    assert factor == 0.97
+    assert factor == 1.03
 
 
 def test_sister_817_fisher_sidecar_zero_aggregate_no_reward(tmp_path, monkeypatch):
@@ -197,8 +194,8 @@ def test_sister_817_combined_optimal_plan_plus_fisher(tmp_path, monkeypatch):
     out = mod.adjust_predicted_delta_for_per_pair_sister_817_sidecars(
         base_delta, sha
     )
-    # Expected: -0.05 × 0.95 × 0.97 = -0.046075
-    expected = -0.05 * 0.95 * 0.97
+    # Expected: -0.05 × 1.05 × 1.03 = -0.054075
+    expected = -0.05 * 1.05 * 1.03
     assert abs(out - expected) < 1e-12
 
 
@@ -219,10 +216,10 @@ def test_sister_817_malformed_sidecar_returns_passthrough(tmp_path, monkeypatch)
 def test_sister_817_constants_pinned():
     """Reward constants are pinned at the documented values."""
     mod = _load_autopilot_module()
-    assert mod._PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_OPTIMAL_PLAN == 0.95
-    assert mod._PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_WYNER_ZIV == 0.98
+    assert mod._PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_OPTIMAL_PLAN == 1.05
+    assert mod._PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_WYNER_ZIV == 1.02
     assert mod._PER_PAIR_BIT_ALLOCATION_SIDECAR_REWARD_AGGREGATE_FALLBACK == 1.0
-    assert mod._PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_PRESENT == 0.97
+    assert mod._PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_PRESENT == 1.03
     assert mod._PER_PAIR_FISHER_IMPORTANCE_SIDECAR_REWARD_ABSENT == 1.0
 
 
@@ -234,11 +231,11 @@ def test_apply_z1_empirical_revision_composes_sister_817_factor(
 ):
     """The BUCKET C wire-in is composed multiplicatively at the END of the
     chain (after venn_v2). Verify by staging an optimal_plan sidecar and
-    checking that apply_z1_empirical_revision applies the 0.95× factor."""
+    checking that apply_z1_empirical_revision applies the 1.05× factor."""
     mod = _load_autopilot_module()
     monkeypatch.setattr(mod, "_PER_PAIR_SIDECAR_SCAN_ROOT", tmp_path)
     # Also disable venn classification sidecar so v2 cascade falls through to
-    # passthrough (1.0×). The new BUCKET C wire-in then applies its 0.95×.
+    # passthrough (1.0×). The new BUCKET C wire-in then applies its 1.05×.
     monkeypatch.setattr(
         mod, "_VENN_CLASSIFICATION_SIDECAR_ROOT", tmp_path / "venn_no_op"
     )
@@ -269,8 +266,8 @@ def test_apply_z1_empirical_revision_composes_sister_817_factor(
     d = mod.apply_z1_empirical_revision_to_candidate_delta(c)
     # Expected: -0.10 (base) → -0.10 (no mdl) → -0.10 (no tier C) → -0.10
     # (no class shift) → -0.10 (no composition alpha) → -0.10 (no risk) →
-    # -0.10 (venn passthrough; no sidecar) → -0.10 × 0.95 = -0.095
-    expected = -0.10 * 0.95
+    # -0.10 (venn passthrough; no sidecar) → -0.10 × 1.05 = -0.105
+    expected = -0.10 * 1.05
     assert abs(d - expected) < 1e-9
 
 
@@ -322,6 +319,6 @@ def test_apply_z1_empirical_revision_preserves_v2_replace_semantics(
     )
     d = mod.apply_z1_empirical_revision_to_candidate_delta(c)
     # Expected: v2 REPLACES base -0.10 with -0.07 (planner-derived); then
-    # BUCKET C applies 0.95× → -0.07 × 0.95 = -0.0665
-    expected = -0.07 * 0.95
+    # BUCKET C applies 1.05× → -0.07 × 1.05 = -0.0735
+    expected = -0.07 * 1.05
     assert abs(d - expected) < 1e-9
