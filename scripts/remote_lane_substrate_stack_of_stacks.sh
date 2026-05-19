@@ -26,7 +26,7 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-}"
-LANE_ID="lane_stack_of_stacks_composition_implementation_20260513"
+LANE_ID="${LANE_ID:-lane_stack_of_stacks_composition_implementation_20260513}"
 TAG="${TAG:-substrate_stack_of_stacks_canary}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_stack_of_stacks_results}"
 OUTPUT_DIR="${STACK_OF_STACKS_OUTPUT_DIR:-$LOG_DIR/output}"

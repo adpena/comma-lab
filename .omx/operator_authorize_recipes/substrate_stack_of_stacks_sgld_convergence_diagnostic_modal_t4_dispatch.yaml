@@ -129,6 +129,12 @@ required_input_files_trainer: experiments/train_substrate_stack_of_stacks.py
 # dispatch fires 6 separate dispatches (one per t_final-CAP value) by varying
 # this env var, OR a sister harness wraps multi-t_final iteration.
 env_overrides:
+  # LANE_ID override: this recipe uses the Cable B1 combined-dispatch lane
+  # (lane_cable_b1_e7_e8_combined_dispatch_20260519); the driver's hardcoded
+  # default (lane_stack_of_stacks_composition_implementation_20260513) is now
+  # env-overridable per Catalog #314 absorption-avoidance + Catalog #126
+  # lane pre-registration.
+  LANE_ID: lane_cable_b1_e7_e8_combined_dispatch_20260519
   STACK_OF_STACKS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   STACK_OF_STACKS_BASE_ARCHIVE: /workspace/pact/submissions/a1/archive.zip
   STACK_OF_STACKS_BASE_RUNTIME_DIR: /workspace/pact/submissions/a1
