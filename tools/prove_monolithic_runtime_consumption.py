@@ -33,9 +33,16 @@ ensure_repo_imports(REPO_ROOT)
 SCHEMA = "tac_runtime_consumption_proof_v1"
 PROOF_KIND = "tac_monolithic_runtime_consumption_probe_v1"
 MONOLITHIC_MANIFEST_SCHEMA = "tac_monolithic_packet_candidate_v1"
-SUPPORTED_GRAMMAR = "pr106_ff_packed_hnerv"
+SUPPORTED_GRAMMARS = frozenset(
+    {
+        "pr106_ff_packed_hnerv",
+        "pr101_fixed_offset_hnerv_microcodec",
+    }
+)
 PR106_HEADER_LEN = 4
 PR106_HEADER_MAGIC = 0xFF
+PR101_DECODER_BLOB_LEN = 162_164
+PR101_LATENT_BLOB_LEN = 15_387
 ZIP_LOCAL_HEADER = struct.Struct("<IHHHHHIIIHH")
 ZIP_LOCAL_HEADER_SIGNATURE = 0x04034B50
 EXPECTED_ZIP_DATE_TIME = (1980, 1, 1, 0, 0, 0)
@@ -83,7 +90,7 @@ def build_monolithic_runtime_consumption_proof(
     expected_member_name = layout.get("member_name")
     expected_member_sha = _optional_sha(layout.get("new_member_sha256"))
     grammar = layout.get("grammar") if isinstance(layout.get("grammar"), str) else ""
-    if grammar != SUPPORTED_GRAMMAR:
+    if grammar not in SUPPORTED_GRAMMARS:
         blockers.append(f"unsupported_monolithic_runtime_grammar:{grammar or '<missing>'}")
 
     archive_bytes = archive_path.read_bytes()
@@ -122,10 +129,17 @@ def build_monolithic_runtime_consumption_proof(
         blockers.append("rebuilt_member_sha256_mismatch")
 
     parsed_sections: list[dict[str, Any]] = []
-    if member_bytes and grammar == SUPPORTED_GRAMMAR:
+    if member_bytes and grammar == "pr106_ff_packed_hnerv":
         try:
             parsed_sections = _standalone_runtime_parse_pr106(member_bytes)
             transcript.append("standalone_runtime_parse=pr106_ff_packed_hnerv")
+        except MonolithicRuntimeConsumptionProofError as exc:
+            blockers.append(f"standalone_runtime_parse_failed:{exc}")
+            transcript.append(f"standalone_runtime_parse_failed={exc}")
+    elif member_bytes and grammar == "pr101_fixed_offset_hnerv_microcodec":
+        try:
+            parsed_sections = _standalone_runtime_parse_pr101(member_bytes)
+            transcript.append("standalone_runtime_parse=pr101_fixed_offset_hnerv_microcodec")
         except MonolithicRuntimeConsumptionProofError as exc:
             blockers.append(f"standalone_runtime_parse_failed:{exc}")
             transcript.append(f"standalone_runtime_parse_failed={exc}")
@@ -415,6 +429,47 @@ def _standalone_runtime_parse_pr106(member: bytes) -> list[dict[str, Any]]:
     ]
 
 
+def _standalone_runtime_parse_pr101(member: bytes) -> list[dict[str, Any]]:
+    minimum = PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN
+    if len(member) < minimum:
+        raise MonolithicRuntimeConsumptionProofError(
+            f"PR101 member too short: {len(member)} < {minimum}"
+        )
+    decoder = member[:PR101_DECODER_BLOB_LEN]
+    latent_start = PR101_DECODER_BLOB_LEN
+    sidecar_start = PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN
+    latent = member[latent_start:sidecar_start]
+    sidecar = member[sidecar_start:]
+    if not sidecar:
+        raise MonolithicRuntimeConsumptionProofError("PR101 sidecar section is empty")
+    decoder_raw, stream_count = _decompress_concatenated_brotli(
+        decoder,
+        section_name="decoder_blob",
+    )
+    return [
+        _section_row(
+            "decoder_blob",
+            offset=0,
+            data=decoder,
+            role="renderer_decoder_weights",
+            decompressed=decoder_raw,
+            extra={"split_brotli_stream_count": stream_count},
+        ),
+        _section_row(
+            "latent_blob",
+            offset=latent_start,
+            data=latent,
+            role="latent_motion_or_frame_conditioning",
+        ),
+        _section_row(
+            "sidecar_blob",
+            offset=sidecar_start,
+            data=sidecar,
+            role="latent_sidecar_not_separate_pose_or_mask_member",
+        ),
+    ]
+
+
 def _brotli_decompress(data: bytes, *, section_name: str) -> bytes:
     try:
         return brotli.decompress(data)
@@ -424,6 +479,34 @@ def _brotli_decompress(data: bytes, *, section_name: str) -> bytes:
         ) from exc
 
 
+def _decompress_concatenated_brotli(data: bytes, *, section_name: str) -> tuple[bytes, int]:
+    cursor = 0
+    raw_parts: list[bytes] = []
+    stream_count = 0
+    while cursor < len(data):
+        decoder = brotli.Decompressor()
+        while cursor < len(data):
+            try:
+                raw_parts.append(decoder.process(data[cursor: cursor + 1]))
+            except brotli.error as exc:
+                raise MonolithicRuntimeConsumptionProofError(
+                    f"section {section_name} split-Brotli decode failed at byte {cursor}"
+                ) from exc
+            cursor += 1
+            if decoder.is_finished():
+                stream_count += 1
+                break
+        if not decoder.is_finished():
+            raise MonolithicRuntimeConsumptionProofError(
+                f"section {section_name} has an unterminated split-Brotli stream"
+            )
+    if stream_count == 0:
+        raise MonolithicRuntimeConsumptionProofError(
+            f"section {section_name} contains no split-Brotli streams"
+        )
+    return b"".join(raw_parts), stream_count
+
+
 def _section_row(
     name: str,
     *,
@@ -431,6 +514,7 @@ def _section_row(
     data: bytes,
     role: str,
     decompressed: bytes | None = None,
+    extra: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     row: dict[str, Any] = {
         "section_name": name,
@@ -451,6 +535,8 @@ def _section_row(
                 "decompressed_sha256": _sha256_bytes(decompressed),
             }
         )
+    if extra is not None:
+        row.update(dict(extra))
     return row
 
 

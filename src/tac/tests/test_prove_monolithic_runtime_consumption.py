@@ -10,12 +10,23 @@ from pathlib import Path
 from typing import Any
 
 import brotli
+import pytest
 
+from tac.master_gradient_pr101_operator_candidate import (
+    build_pr101_pose_axis_decoder_recompression_candidate,
+)
 from tac.monolithic_packet_closure_gate import build_monolithic_packet_closure_gate
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PROOF_TOOL = REPO_ROOT / "tools" / "prove_monolithic_runtime_consumption.py"
 CANONICAL_PROOF_BUILDER = REPO_ROOT / "tools" / "build_monolithic_runtime_consumption_proof.py"
+PR101_ARCHIVE = (
+    REPO_ROOT
+    / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip"
+)
+OP7_MANIFEST = (
+    REPO_ROOT / ".omx/research/pose_axis_operator_pr101_manifest_20260519T074500Z.json"
+)
 
 
 def _load_tool(path: Path, module_name: str) -> Any:
@@ -206,3 +217,55 @@ def test_pr106_runtime_probe_cli_writes_json_and_log(tmp_path: Path) -> None:
     assert rc == 0
     assert payload["ready_for_exact_eval_runtime"] is True
     assert payload["log_sha256"] == hashlib.sha256(log.read_bytes()).hexdigest()
+
+
+def test_pr101_runtime_probe_consumes_split_brotli_decoder_candidate(tmp_path: Path) -> None:
+    if not PR101_ARCHIVE.exists():
+        pytest.skip("public PR101 intake archive is an ignored local custody artifact")
+    if not OP7_MANIFEST.exists():
+        pytest.skip("OP-7 pose-axis operator manifest is unavailable")
+    proof_tool = _load_tool(PROOF_TOOL, "prove_monolithic_runtime_consumption_pr101")
+    operator_manifest = json.loads(OP7_MANIFEST.read_text(encoding="utf-8"))
+    candidate = build_pr101_pose_axis_decoder_recompression_candidate(
+        source_archive=PR101_ARCHIVE,
+        operator_manifest=operator_manifest,
+        output_dir=tmp_path / "candidate",
+        candidate_id="unit-pr101-runtime-consumption",
+        candidate_rank=1,
+        operator_manifest_path=OP7_MANIFEST,
+    )
+    candidate_manifest_path = Path(candidate["candidate_manifest_path"])
+    candidate_manifest = json.loads(candidate_manifest_path.read_text(encoding="utf-8"))
+    log_path = tmp_path / "runtime-pr101.log"
+
+    proof = proof_tool.build_monolithic_runtime_consumption_proof(
+        candidate_manifest_path=candidate_manifest_path,
+        runtime_log_out=log_path,
+        command_text="unit pr101 split-brotli runtime probe",
+    )
+    gate = build_monolithic_packet_closure_gate(
+        candidate_manifest,
+        runtime_proof=proof,
+        dry_run=True,
+        active_rate_only_floor_archive_bytes=None,
+    )
+
+    log_text = log_path.read_text(encoding="utf-8")
+    changed = proof["changed_sections"][0]
+    consumed = {
+        section["section_name"]: section
+        for section in proof["consumed_sections"]
+    }
+    assert proof["ready_for_exact_eval_runtime"] is True
+    assert proof["blockers"] == []
+    assert proof["runtime_grammar"] == "pr101_fixed_offset_hnerv_microcodec"
+    assert changed["section_name"] == "decoder_blob"
+    assert changed["runtime_consumed"] is True
+    assert changed["new_sha256"] == candidate["replacement_decoder_section"]["sha256"]
+    assert consumed["decoder_blob"]["split_brotli_stream_count"] == 7
+    assert candidate_manifest["candidate_archive"]["sha256"] in log_text
+    assert candidate_manifest["monolithic_layout"]["new_member_sha256"] in log_text
+    assert candidate_manifest["replacements"][0]["new_sha256"] in log_text
+    assert gate["runtime_blockers"] == []
+    assert gate["closure_gate_passed"] is True
+    assert gate["ready_for_exact_eval_dispatch"] is False

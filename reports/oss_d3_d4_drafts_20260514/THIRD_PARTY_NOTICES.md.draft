@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This file enumerates third-party software that the `tac` (Task-Aware Codec) project
+This file enumerates third-party software that the `tac` (Task-Aware Compression) project
 depends on at runtime, build time, or via reference. The project itself is licensed
 under the MIT License — see `LICENSE` at the repository root.
 
