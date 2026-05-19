@@ -10,6 +10,7 @@ from tac.master_gradient_pr101_score_response_matrix import (
     build_pr101_pose_axis_score_response_matrix,
     render_pr101_pose_axis_score_response_matrix_markdown,
 )
+from tac.repo_io import sha256_file
 
 
 def _runtime_manifest() -> dict:
@@ -39,12 +40,22 @@ def _inputs(tmp_path: Path) -> dict:
     submission_dir = tmp_path / "submission"
     submission_dir.mkdir()
     (submission_dir / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
-    source_sha = "4" * 64
-    candidate_sha = "5" * 64
-    from tac.repo_io import sha256_file
-
     source_sha = sha256_file(source_archive)
     candidate_sha = sha256_file(candidate_archive)
+    source_operator_payload = {
+        "schema": "pose_byte_hoist_op7_manifest_v1",
+        "blockers": ["packet_proofs_missing"],
+        "source_anchor": {
+            "score_axis_dominance_available": True,
+            "scored_archive_sha256": source_sha,
+            "scored_archive_bytes": source_archive.stat().st_size,
+        },
+    }
+    source_operator_manifest = tmp_path / "source_operator_manifest.json"
+    source_operator_manifest.write_text(
+        json.dumps(source_operator_payload, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     operator_manifest = {
         "schema": "tac_pr101_pose_axis_decoder_recompression_candidate_v1",
         "candidate_id": "unit-pr101-op7",
@@ -57,6 +68,11 @@ def _inputs(tmp_path: Path) -> dict:
             "path": source_archive.as_posix(),
             "bytes": source_archive.stat().st_size,
             "sha256": source_sha,
+        },
+        "source_operator_manifest": {
+            "path": source_operator_manifest.as_posix(),
+            "sha256": sha256_file(source_operator_manifest),
+            "schema": "pose_byte_hoist_op7_manifest_v1",
         },
         "candidate_archive": {
             "path": candidate_archive.as_posix(),
@@ -97,7 +113,17 @@ def _inputs(tmp_path: Path) -> dict:
         "operator_manifest": operator_manifest,
         "packet_manifest": packet_manifest,
         "runtime_proof": runtime_proof,
+        "source_operator_manifest": source_operator_manifest,
     }
+
+
+def _write_source_operator_manifest(
+    data: dict,
+    payload: dict,
+) -> None:
+    path = data["source_operator_manifest"]
+    path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    data["operator_manifest"]["source_operator_manifest"]["sha256"] = sha256_file(path)
 
 
 def test_pr101_pose_axis_score_response_matrix_pairs_contest_axes(tmp_path: Path) -> None:
@@ -172,6 +198,106 @@ def test_pr101_pose_axis_score_response_matrix_blocks_non_component_moving(
     )
 
     assert "operator_candidate_not_component_moving" in matrix["authority_blockers"]
+    assert matrix["ready_for_score_response_probe_after_exact_eval"] is False
+
+
+def test_pr101_pose_axis_score_response_matrix_blocks_missing_source_operator_manifest(
+    tmp_path: Path,
+) -> None:
+    data = _inputs(tmp_path)
+    del data["operator_manifest"]["source_operator_manifest"]
+
+    matrix = build_pr101_pose_axis_score_response_matrix(
+        source_archive=data["source_archive"],
+        source_submission_dir=data["submission_dir"],
+        operator_candidate_manifest=data["operator_manifest"],
+        packet_candidate_manifest=data["packet_manifest"],
+        runtime_consumption_proof=data["runtime_proof"],
+        runtime_manifest=_runtime_manifest(),
+        repo_root=Path.cwd(),
+        label="unit-op7",
+        lane_id="unit_op7_lane",
+        output_root="experiments/results/unit_score_response",
+        include_diagnostics=False,
+    )
+
+    assert "source_operator_manifest_missing" in matrix["authority_blockers"]
+    assert matrix["ready_for_score_response_probe_after_exact_eval"] is False
+
+
+def test_pr101_pose_axis_score_response_matrix_blocks_source_dominance_gaps(
+    tmp_path: Path,
+) -> None:
+    data = _inputs(tmp_path)
+    data["operator_manifest"]["source_operator_manifest"]["sha256"] = "0" * 64
+    _write_source_operator_manifest(
+        data,
+        {
+            "schema": "pose_byte_hoist_op7_manifest_v1",
+            "blockers": ["anchor_score_axis_dominance_not_persisted"],
+            "source_anchor": {
+                "score_axis_dominance_available": False,
+            },
+        },
+    )
+    data["operator_manifest"]["source_operator_manifest"]["sha256"] = "0" * 64
+
+    matrix = build_pr101_pose_axis_score_response_matrix(
+        source_archive=data["source_archive"],
+        source_submission_dir=data["submission_dir"],
+        operator_candidate_manifest=data["operator_manifest"],
+        packet_candidate_manifest=data["packet_manifest"],
+        runtime_consumption_proof=data["runtime_proof"],
+        runtime_manifest=_runtime_manifest(),
+        repo_root=Path.cwd(),
+        label="unit-op7",
+        lane_id="unit_op7_lane",
+        output_root="experiments/results/unit_score_response",
+        include_diagnostics=False,
+    )
+
+    blockers = matrix["authority_blockers"]
+    assert "source_operator_manifest_sha256_mismatch" in blockers
+    assert "anchor_score_axis_dominance_not_persisted" in blockers
+    assert "source_anchor_score_axis_dominance_available_not_true" in blockers
+    assert "source_anchor_scored_archive_sha256_missing" in blockers
+    assert "source_anchor_scored_archive_bytes_missing" in blockers
+    assert matrix["ready_for_score_response_probe_after_exact_eval"] is False
+
+
+def test_pr101_pose_axis_score_response_matrix_blocks_scored_archive_custody_mismatch(
+    tmp_path: Path,
+) -> None:
+    data = _inputs(tmp_path)
+    _write_source_operator_manifest(
+        data,
+        {
+            "schema": "pose_byte_hoist_op7_manifest_v1",
+            "blockers": [],
+            "source_anchor": {
+                "score_axis_dominance_available": True,
+                "scored_archive_sha256": "a" * 64,
+                "scored_archive_bytes": data["source_archive"].stat().st_size + 1,
+            },
+        },
+    )
+
+    matrix = build_pr101_pose_axis_score_response_matrix(
+        source_archive=data["source_archive"],
+        source_submission_dir=data["submission_dir"],
+        operator_candidate_manifest=data["operator_manifest"],
+        packet_candidate_manifest=data["packet_manifest"],
+        runtime_consumption_proof=data["runtime_proof"],
+        runtime_manifest=_runtime_manifest(),
+        repo_root=Path.cwd(),
+        label="unit-op7",
+        lane_id="unit_op7_lane",
+        output_root="experiments/results/unit_score_response",
+        include_diagnostics=False,
+    )
+
+    assert "source_anchor_scored_archive_sha256_mismatch" in matrix["authority_blockers"]
+    assert "source_anchor_scored_archive_bytes_mismatch" in matrix["authority_blockers"]
     assert matrix["ready_for_score_response_probe_after_exact_eval"] is False
 
 

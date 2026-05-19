@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ from tac.repo_io import repo_relative, sha256_file
 
 SCHEMA = "pr101_pose_axis_score_response_matrix_v1"
 OPERATOR_CANDIDATE_SCHEMA = "tac_pr101_pose_axis_decoder_recompression_candidate_v1"
+SOURCE_OPERATOR_SCHEMA = "pose_byte_hoist_op7_manifest_v1"
 PACKET_CANDIDATE_SCHEMA = "tac_monolithic_packet_candidate_v1"
 RUNTIME_PROOF_SCHEMA = "tac_runtime_consumption_proof_v1"
 CONTEST_TARGET_IDS = frozenset(
@@ -281,6 +283,13 @@ def _input_authority_blockers(
         blockers.append("runtime_consumption_proof_not_ready")
     if runtime_consumption_proof.get("blockers"):
         blockers.append("runtime_consumption_proof_blockers_present")
+    blockers.extend(
+        _source_operator_manifest_blockers(
+            source_archive=source_archive,
+            operator_candidate_manifest=operator_candidate_manifest,
+            repo_root=repo_root,
+        )
+    )
 
     source = operator_candidate_manifest.get("source_archive")
     if isinstance(source, Mapping):
@@ -317,6 +326,70 @@ def _input_authority_blockers(
     return _dedupe(blockers)
 
 
+def _source_operator_manifest_blockers(
+    *,
+    source_archive: Path,
+    operator_candidate_manifest: Mapping[str, Any],
+    repo_root: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    source_operator = operator_candidate_manifest.get("source_operator_manifest")
+    if not isinstance(source_operator, Mapping):
+        return ["source_operator_manifest_missing"]
+
+    path_value = source_operator.get("path")
+    if not isinstance(path_value, str) or not path_value:
+        return ["source_operator_manifest_path_missing"]
+    manifest_path = Path(path_value)
+    if not manifest_path.is_absolute():
+        manifest_path = repo_root / manifest_path
+    if not manifest_path.is_file():
+        return ["source_operator_manifest_file_missing"]
+
+    expected_sha = source_operator.get("sha256")
+    actual_sha = sha256_file(manifest_path)
+    if expected_sha != actual_sha:
+        blockers.append("source_operator_manifest_sha256_mismatch")
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        blockers.append("source_operator_manifest_unreadable")
+        return blockers
+    if not isinstance(payload, Mapping):
+        blockers.append("source_operator_manifest_not_object")
+        return blockers
+
+    if payload.get("schema") != SOURCE_OPERATOR_SCHEMA:
+        blockers.append("source_operator_manifest_schema_mismatch")
+    source_blockers = payload.get("blockers")
+    if isinstance(source_blockers, list) and any(
+        blocker == "anchor_score_axis_dominance_not_persisted"
+        for blocker in source_blockers
+    ):
+        blockers.append("anchor_score_axis_dominance_not_persisted")
+
+    source_anchor = payload.get("source_anchor")
+    if not isinstance(source_anchor, Mapping):
+        blockers.append("source_anchor_missing")
+        return blockers
+    if source_anchor.get("score_axis_dominance_available") is not True:
+        blockers.append("source_anchor_score_axis_dominance_available_not_true")
+
+    scored_sha = source_anchor.get("scored_archive_sha256")
+    scored_bytes = source_anchor.get("scored_archive_bytes")
+    if not isinstance(scored_sha, str) or not scored_sha:
+        blockers.append("source_anchor_scored_archive_sha256_missing")
+    elif scored_sha != sha256_file(source_archive):
+        blockers.append("source_anchor_scored_archive_sha256_mismatch")
+    if not isinstance(scored_bytes, int) or isinstance(scored_bytes, bool):
+        blockers.append("source_anchor_scored_archive_bytes_missing")
+    elif scored_bytes != source_archive.stat().st_size:
+        blockers.append("source_anchor_scored_archive_bytes_mismatch")
+
+    return blockers
+
+
 def _candidate_archive_path(
     operator_candidate_manifest: Mapping[str, Any],
     packet_candidate_manifest: Mapping[str, Any],
@@ -346,6 +419,7 @@ def _operator_summary(manifest: Mapping[str, Any]) -> dict[str, Any]:
         "ready_for_score_response_probe": manifest.get("ready_for_score_response_probe"),
         "selected_pose_axis_candidate": manifest.get("selected_pose_axis_candidate"),
         "replacement_stream": manifest.get("replacement_stream"),
+        "source_operator_manifest": manifest.get("source_operator_manifest"),
     }
 
 

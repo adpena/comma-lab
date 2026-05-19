@@ -251,8 +251,9 @@ def build_pr101_pose_axis_decoder_recompression_candidate(
         expected_section_sha256=candidate_decoder_sha,
         expected_stream_count=len(streams),
     )
-    operator_manifest_sha = (
-        sha256_file(operator_manifest_path) if operator_manifest_path is not None else None
+    source_operator_manifest = _source_operator_manifest_provenance(
+        operator_manifest,
+        operator_manifest_path=operator_manifest_path,
     )
     dispatch_blockers = list(packet_manifest["dispatch_blockers"])
     dispatch_blockers.extend(
@@ -314,11 +315,7 @@ def build_pr101_pose_axis_decoder_recompression_candidate(
         "ready_for_provider_dispatch": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
-        "source_operator_manifest": {
-            "path": str(operator_manifest_path) if operator_manifest_path is not None else None,
-            "sha256": operator_manifest_sha,
-            "schema": operator_manifest.get("schema"),
-        },
+        "source_operator_manifest": source_operator_manifest,
         "source_archive": {
             "path": str(source_archive),
             "bytes": source_bytes,
@@ -461,6 +458,37 @@ def _expected_source_bytes(
         if isinstance(value, int):
             return value
     return None
+
+
+def _source_operator_manifest_provenance(
+    operator_manifest: Mapping[str, Any],
+    *,
+    operator_manifest_path: Path | None,
+) -> dict[str, Any]:
+    blockers = operator_manifest.get("blockers")
+    source_anchor = operator_manifest.get("source_anchor")
+    provenance: dict[str, Any] = {
+        "path": str(operator_manifest_path) if operator_manifest_path is not None else None,
+        "sha256": sha256_file(operator_manifest_path) if operator_manifest_path is not None else None,
+        "schema": operator_manifest.get("schema"),
+        "blockers": list(blockers) if isinstance(blockers, list) else [],
+    }
+    if isinstance(source_anchor, Mapping):
+        provenance["source_anchor"] = {
+            "scored_archive_sha256": source_anchor.get("scored_archive_sha256"),
+            "scored_archive_bytes": source_anchor.get("scored_archive_bytes"),
+            "scored_archive_custody_available": source_anchor.get(
+                "scored_archive_custody_available"
+            ),
+            "score_axis_dominance_available": source_anchor.get(
+                "score_axis_dominance_available"
+            ),
+            "score_axis_dominance_source": source_anchor.get("score_axis_dominance_source"),
+            "anchor_row_canonical_json_sha256": source_anchor.get(
+                "anchor_row_canonical_json_sha256"
+            ),
+        }
+    return provenance
 
 
 def _split_concatenated_brotli(payload: bytes) -> list[BrotliStreamSpan]:

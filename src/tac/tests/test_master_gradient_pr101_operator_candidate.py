@@ -74,6 +74,12 @@ def test_pr101_pose_axis_builder_materializes_same_length_packet_candidate(
     assert "runtime_byte_consumption_noop_detector_missing" in manifest["dispatch_blockers"]
     assert "score_response_matrix_missing" in manifest["dispatch_blockers"]
     assert "contest_cuda_auth_eval_missing" in manifest["promotion_blockers"]
+    source_operator = manifest["source_operator_manifest"]
+    assert source_operator["schema"] == "pose_byte_hoist_op7_manifest_v1"
+    assert "anchor_score_axis_dominance_not_persisted" in source_operator["blockers"]
+    assert source_operator["source_anchor"]["scored_archive_sha256"] == manifest["source_archive"]["sha256"]
+    assert source_operator["source_anchor"]["scored_archive_bytes"] == manifest["source_archive"]["bytes"]
+    assert source_operator["source_anchor"]["score_axis_dominance_available"] is False
 
 
 def test_pr101_pose_axis_builder_materializes_component_moving_packet_candidate(
