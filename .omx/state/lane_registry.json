@@ -38702,6 +38702,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_contest_oracle_canonical_package_meta_meta_15_implications_20260518",
+      "name": "tac.contest_oracle canonical package + linguistic enrichment + cleanup-refactor (OSS hardening)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_arbitrariness_extinction_wave_2a_path2_analytical_solve_batch_20260518",
+      "name": "Arbitrariness Extinction Wave 2A \u2014 analytical_solve batch (path 2; 10 remaining rows)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analytical_solve_extinctions/ subpackage (11 files + 9 tests/ files; 46/46 tests pass; 9 canonical helpers covering all 10 analytical_solve rows; rows #2+#3 batched in rd_theoretic_vq_codebook_K) + tools/empirical_validate_analytical_solve_wave_2a_extinctions.py + experiments/results/empirical_validate_analytical_solve_wave_2a_20260518/wave_2a_advisory_manifest.jsonl (10 macOS-CPU-advisory rows with canonical Provenance)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_arbitrariness_extinction_wave_2a_path2_analytical_solve_batch_landed_20260518.md (8.6KB; 6-hook wire-in, Catalog #229 PV block, 9-dim checklist evidence, sister-coordination outcome, follow-on routables per Catalog #325)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_arbitrariness_extinction_wave_2b_path3_formula_batch_20260518",
+      "name": "Arbitrariness extinction Wave 2B (PATH 3 FORMULA) \u2014 11 formula extinctions",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -38711,5 +38834,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T02:38:07Z"
+  "updated_at": "2026-05-19T03:04:26Z"
 }
