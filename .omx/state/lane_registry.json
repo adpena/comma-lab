@@ -40757,15 +40757,15 @@
       "id": "lane_hf_dataset_upload_and_recipe_enable_20260519",
       "name": "HF dataset upload + T1 symposium revisions integration + recipe dispatch_enabled flip (Items 1+2)",
       "phase": 1.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "HF dataset uploaded to https://huggingface.co/datasets/adpena/comma-video-segnet-image-level-600pairs; 600 pairs 1200 frames at 512x384; train.parquet 310MB; Hub commit_sha 52ef7313ed2cb6f84e9635cd99bd9b51bc1ecd9a; manifest_sha b0ba07e71640d110df6f59badb6cd831cedd529d1fdda942d83f743e44df4034; scorer contest_cpu_authoritative; recipe state flip + operator-approval memo + canonical posterior anchor all landed"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[empirical:https://huggingface.co/datasets/adpena/comma-video-segnet-image-level-600pairs] dataset live + streaming load + first-row decode succeeded; frame_t PngImageFile (512,384) + mask_t (512,384) class-index PNG; evidence_grade=contest_cpu_authoritative; scorer_sha=68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
         },
         "contest_cuda": {
           "status": false,
@@ -40880,15 +40880,15 @@
       "id": "lane_mps_engineering_corrections_kahan_softmax_fp32_matmul_20260519",
       "name": "MPS engineering corrections: Kahan Conv2d + pinned softmax + fp32 matmul override",
       "phase": 1.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "3 canonical helpers + 50 passing tests; tac.mps_diagnostic.{kahan_conv2d,pinned_softmax,fp32_matmul_override}."
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/mps_drift_corrections_empirical_validation_summary_20260519.md"
         },
         "contest_cuda": {
           "status": false,
@@ -40907,8 +40907,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_mps_engineering_corrections_3_landed_20260519.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -40925,5 +40925,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T13:23:26Z"
+  "updated_at": "2026-05-19T13:24:21Z"
 }
