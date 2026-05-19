@@ -104,13 +104,16 @@ CANONICAL_PLOTS = (
     "cross_substrate_correlation",
     "wyner_ziv_flow",
     "drift_vs_sensitivity_scatter",
+    "cascade_smearing_comparison",
     "all",
 )
 
 # Canonical 5-plot taxonomy emitted by `--output-dir`/`--plot all` when no
 # `--mps-drift-json` is provided. drift_vs_sensitivity_scatter is the
 # optional 6th plot that only fires when the cross-reference JSON is
-# available.
+# available. cascade_smearing_comparison (7th) fires when --grain
+# compare_both AND an archive has BOTH raw-byte AND post-decompress
+# anchors (one cascade comparison plot per eligible archive).
 CANONICAL_OUTPUT_DIR_PLOTS = (
     "per_pair_distribution",
     "per_byte_heatmap",
@@ -119,12 +122,28 @@ CANONICAL_OUTPUT_DIR_PLOTS = (
     "wyner_ziv_flow",
 )
 
+# Canonical grain-filter values for the --grain CLI flag (slot 10
+# grain-awareness landing 2026-05-19; sister of slot 6 cathedral consumer
+# v1.1 + slot 15 PR101 post-decompress producer + slot 17 5-family
+# extension).
+GRAIN_FILTER_RAW_BYTE = "raw_byte"
+GRAIN_FILTER_POST_DECOMPRESS = "post_decompress"
+GRAIN_FILTER_COMPARE_BOTH = "compare_both"
+GRAIN_FILTER_ALL = "all"
+GRAIN_FILTER_CHOICES = (
+    GRAIN_FILTER_RAW_BYTE,
+    GRAIN_FILTER_POST_DECOMPRESS,
+    GRAIN_FILTER_COMPARE_BOTH,
+    GRAIN_FILTER_ALL,
+)
+
 AXIS_LABELS = ("seg", "pose", "rate")
 
-# Sister JSON schema for plot summary stats. Bumping invalidates downstream
-# observability consumers (autopilot dashboard, audit tools, etc.).
-PLOT_SIDECAR_SCHEMA_VERSION = "master_gradient_xray_plot_sidecar_v1_20260519"
-INDEX_HTML_SCHEMA_VERSION = "master_gradient_xray_index_v1_20260519"
+# Sister JSON schema for plot summary stats. Bumped to v2 for grain-aware
+# routing per slot 6 + slot 10 grain-awareness landing 2026-05-19
+# (cascade_smearing_comparison plot + per-grain anchor metadata).
+PLOT_SIDECAR_SCHEMA_VERSION = "master_gradient_xray_plot_sidecar_v2_20260519"
+INDEX_HTML_SCHEMA_VERSION = "master_gradient_xray_index_v2_20260519"
 
 
 def _utc_now_iso() -> str:
@@ -707,6 +726,177 @@ def plot_drift_vs_sensitivity_scatter(
 
 
 # ──────────────────────────────────────────────────────────────────────────── #
+# Plot 7 — Cascade-smearing comparison (raw-byte vs post-decompress)           #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def _compute_cascade_smearing_metrics(
+    raw_byte_aggregate: np.ndarray,
+    post_decompress_aggregate: np.ndarray,
+    top_k: int = 100,
+) -> dict[str, object]:
+    """Compute cascade-smearing comparison metrics between two grain anchors.
+
+    Returns a dict with:
+
+    * ``top_k_jaccard`` — Jaccard overlap of the top-K byte indices ranked
+      by L1-sum-of-abs sensitivity in each grain. 1.0 = identical top-K;
+      0.0 = disjoint. LOW Jaccard = HIGH cascade smearing (the raw-byte
+      gradient identifies completely different "important" bytes than the
+      post-decompress gradient, evidence the raw-byte signal is misleading
+      per Catalog #318).
+    * ``rank_correlation_spearman`` — Spearman rank correlation between
+      per-byte L1 magnitudes (over the SHORTER of the two arrays). 1.0 =
+      identical rank order; -1.0 = reversed.
+    * ``cascade_smearing_factor`` — derived classifier in [0, 1]:
+      ``1.0 - top_k_jaccard``. Bands per the analysis: HIGH >= 0.7,
+      MEDIUM 0.3-0.7, LOW < 0.3.
+    * ``verdict`` — categorical classification (HIGH / MEDIUM / LOW /
+      UNKNOWN_INSUFFICIENT_DATA).
+
+    Note: raw_byte_aggregate and post_decompress_aggregate generally have
+    DIFFERENT N_bytes (post-decompress is the inflated stream; raw-byte
+    is the compressed stream). The Jaccard is computed on top-K byte
+    indices treated as opaque labels (different indexings); rank
+    correlation is on min-truncated arrays as a coarse proxy.
+    """
+    abs_raw = np.abs(raw_byte_aggregate).sum(axis=1)
+    abs_post = np.abs(post_decompress_aggregate).sum(axis=1)
+
+    k_effective = min(top_k, abs_raw.shape[0], abs_post.shape[0])
+    if k_effective <= 0:
+        return {
+            "top_k_jaccard": 0.0,
+            "rank_correlation_spearman": 0.0,
+            "cascade_smearing_factor": 1.0,
+            "verdict": "UNKNOWN_INSUFFICIENT_DATA",
+            "top_k": 0,
+            "n_bytes_raw": int(abs_raw.shape[0]),
+            "n_bytes_post": int(abs_post.shape[0]),
+        }
+
+    top_raw = set(int(i) for i in np.argsort(-abs_raw)[:k_effective])
+    top_post = set(int(i) for i in np.argsort(-abs_post)[:k_effective])
+    intersection = len(top_raw & top_post)
+    union = len(top_raw | top_post)
+    jaccard = intersection / union if union > 0 else 0.0
+
+    # Spearman rank correlation on min-truncated arrays.
+    min_len = min(abs_raw.shape[0], abs_post.shape[0])
+    if min_len >= 2:
+        ranks_raw = np.argsort(np.argsort(abs_raw[:min_len])).astype(np.float64)
+        ranks_post = np.argsort(np.argsort(abs_post[:min_len])).astype(np.float64)
+        rm = ranks_raw - ranks_raw.mean()
+        pm = ranks_post - ranks_post.mean()
+        denom = float(np.sqrt((rm**2).sum() * (pm**2).sum()))
+        spearman = float((rm * pm).sum() / denom) if denom > 0 else 0.0
+    else:
+        spearman = 0.0
+
+    cascade_factor = 1.0 - jaccard
+    if cascade_factor >= 0.7:
+        verdict = "HIGH"
+    elif cascade_factor >= 0.3:
+        verdict = "MEDIUM"
+    else:
+        verdict = "LOW"
+
+    return {
+        "top_k_jaccard": float(jaccard),
+        "rank_correlation_spearman": spearman,
+        "cascade_smearing_factor": float(cascade_factor),
+        "verdict": verdict,
+        "top_k": int(k_effective),
+        "n_bytes_raw": int(abs_raw.shape[0]),
+        "n_bytes_post": int(abs_post.shape[0]),
+        "intersection_count": int(intersection),
+        "union_count": int(union),
+    }
+
+
+def plot_cascade_smearing_comparison(
+    raw_byte_aggregate: np.ndarray,
+    raw_byte_anchor: dict,
+    post_decompress_aggregate: np.ndarray,
+    post_decompress_anchor: dict,
+    output_path: Path,
+    top_k: int = 128,
+) -> dict[str, object]:
+    """Side-by-side cascade-smearing comparison plot (Catalog #318 anchor).
+
+    Emits a 2-panel heatmap (raw-byte LEFT, post-decompress RIGHT) of the
+    top-K bytes by L1-sum-of-abs sensitivity in each grain. Watermarks
+    annotate the per-archive verdict + top-K-overlap Jaccard +
+    cascade-smearing factor + categorical band (HIGH / MEDIUM / LOW).
+
+    Returns the metrics dict from `_compute_cascade_smearing_metrics` so
+    the caller can persist them in the sister JSON sidecar.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": the side-by-side
+    layout IS the empirical disambiguator — operators can see the
+    entropy-cascade-smeared raw-byte heatmap diverging from the
+    locality-correct post-decompress heatmap at a glance.
+    """
+    plt = _ensure_matplotlib()
+    metrics = _compute_cascade_smearing_metrics(
+        raw_byte_aggregate, post_decompress_aggregate, top_k=top_k
+    )
+
+    raw_sha = _short_sha(raw_byte_anchor.get("archive_sha256"))
+    post_sha = _short_sha(post_decompress_anchor.get("archive_sha256"))
+    raw_watermark = _watermark_for_anchor(raw_byte_anchor)
+    post_watermark = _watermark_for_anchor(post_decompress_anchor)
+    raw_grain = raw_byte_anchor.get("gradient_byte_domain", "unknown")
+    post_grain = post_decompress_anchor.get("gradient_byte_domain", "unknown")
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 11))
+
+    for ax, aggregate, watermark, grain_label, sha in (
+        (axes[0], raw_byte_aggregate, raw_watermark, raw_grain, raw_sha),
+        (
+            axes[1],
+            post_decompress_aggregate,
+            post_watermark,
+            post_grain,
+            post_sha,
+        ),
+    ):
+        n_bytes_local = aggregate.shape[0]
+        abs_grad = np.abs(aggregate)
+        per_byte_l1 = abs_grad.sum(axis=1)
+        top_k_local = min(top_k, n_bytes_local)
+        top_indices = np.argsort(-per_byte_l1)[:top_k_local]
+        heat = abs_grad[top_indices]
+        heat_norm = heat / np.maximum(heat.max(axis=0, keepdims=True), 1e-30)
+        im = ax.imshow(
+            heat_norm, aspect="auto", cmap="hot", interpolation="nearest"
+        )
+        ax.set_xticks(range(3))
+        ax.set_xticklabels(AXIS_LABELS)
+        ax.set_xlabel("score axis")
+        ax.set_ylabel(f"byte rank (top {top_k_local})")
+        ax.set_title(
+            f"{grain_label}\n{watermark}\narchive={sha}  n_bytes={n_bytes_local}",
+            fontsize=9,
+        )
+        fig.colorbar(im, ax=ax, label="normalized |gradient|", fraction=0.04)
+
+    verdict = metrics["verdict"]
+    fig.suptitle(
+        f"Cascade-smearing comparison — verdict={verdict}\n"
+        f"top-{metrics['top_k']} Jaccard={metrics['top_k_jaccard']:.3f}  "
+        f"cascade_smearing_factor={metrics['cascade_smearing_factor']:.3f}  "
+        f"rank_corr={metrics['rank_correlation_spearman']:.3f}",
+        fontsize=11,
+    )
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=120)
+    plt.close(fig)
+    return metrics
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
 # Sister JSON sidecar emission — per Catalog #305 observability +              #
 # Catalog #323 canonical Provenance                                            #
 # ──────────────────────────────────────────────────────────────────────────── #
@@ -815,6 +1005,8 @@ def _emit_index_html(
     anchors: list[dict],
     emitted_plots: list[dict[str, str]],
     mps_drift_json_path: Path | None,
+    grain: str | None = None,
+    cascade_comparison_eligible: list[str] | None = None,
 ) -> None:
     """Emit operator-friendly index.html landing page linking every plot.
 
@@ -831,29 +1023,72 @@ def _emit_index_html(
             .replace('"', "&quot;")
         )
 
+    # Grain-aware: surface the grain inventory per archive so the operator
+    # can see which archives have BOTH raw-byte + post-decompress anchors.
+    try:
+        from tac.master_gradient_per_byte_consumer import (
+            available_grains_for_archive,
+        )
+    except ImportError:
+        available_grains_for_archive = None  # type: ignore[assignment]
+
     archive_rows = []
+    cascade_eligible_set = set(cascade_comparison_eligible or [])
     for sha, anchor in zip(archive_shas, anchors):
+        grain_inv_str = "—"
+        if available_grains_for_archive is not None:
+            inv = available_grains_for_archive(sha)
+            parts = []
+            if inv["post_decompress"]:
+                parts.append(f"post×{len(inv['post_decompress'])}")
+            if inv["raw_byte"]:
+                parts.append(f"raw×{len(inv['raw_byte'])}")
+            if inv["other"]:
+                parts.append(f"other×{len(inv['other'])}")
+            grain_inv_str = " + ".join(parts) if parts else "—"
+        cascade_flag = "✓" if sha in cascade_eligible_set else ""
         archive_rows.append(
             f"<tr><td><code>{_h(_short_sha(sha))}</code></td>"
             f"<td>{_h(anchor.get('measurement_axis'))}</td>"
             f"<td>{_h(anchor.get('measurement_hardware'))}</td>"
             f"<td>{_h(anchor.get('gradient_tensor_kind'))}</td>"
+            f"<td>{_h(anchor.get('gradient_byte_domain') or 'unset')}</td>"
             f"<td>{_h(anchor.get('n_bytes'))}</td>"
-            f"<td>{_h(anchor.get('evidence_grade') or 'unset')}</td></tr>"
+            f"<td>{_h(anchor.get('evidence_grade') or 'unset')}</td>"
+            f"<td>{_h(grain_inv_str)}</td>"
+            f"<td>{cascade_flag}</td></tr>"
         )
 
-    plot_cards = []
+    # Group plot cards: cascade comparison plots get prominence at top.
+    plot_cards: list[str] = []
+    cascade_cards: list[str] = []
+    standard_cards: list[str] = []
     for entry in emitted_plots:
         plot_id = entry["plot_id"]
         png_rel = entry["png_relative"]
         sidecar_rel = entry["sidecar_relative"]
-        plot_cards.append(
-            f"<div class=\"plot-card\">"
-            f"<h3>{_h(plot_id)}</h3>"
-            f"<a href=\"{_h(png_rel)}\"><img src=\"{_h(png_rel)}\" alt=\"{_h(plot_id)}\" /></a>"
-            f"<p>Sister JSON: <a href=\"{_h(sidecar_rel)}\"><code>{_h(sidecar_rel)}</code></a></p>"
-            f"</div>"
-        )
+        if "cascade_smearing_comparison" in plot_id:
+            cascade_cards.append(
+                f"<div class=\"plot-card cascade-comparison\">"
+                f"<h3>{_h(plot_id)}</h3>"
+                f"<p class=\"cascade-note\"><b>Cascade-smearing comparison:</b> "
+                f"side-by-side per-byte sensitivity heatmaps. RAW-BYTE (LEFT) is "
+                f"entropy-cascade-smeared per Catalog #318 + codex op7 finding; "
+                f"POST-DECOMPRESS (RIGHT) is the locality-correct reference. "
+                f"Top-K Jaccard + cascade_smearing_factor in sister JSON.</p>"
+                f"<a href=\"{_h(png_rel)}\"><img src=\"{_h(png_rel)}\" alt=\"{_h(plot_id)}\" /></a>"
+                f"<p>Sister JSON: <a href=\"{_h(sidecar_rel)}\"><code>{_h(sidecar_rel)}</code></a></p>"
+                f"</div>"
+            )
+        else:
+            standard_cards.append(
+                f"<div class=\"plot-card\">"
+                f"<h3>{_h(plot_id)}</h3>"
+                f"<a href=\"{_h(png_rel)}\"><img src=\"{_h(png_rel)}\" alt=\"{_h(plot_id)}\" /></a>"
+                f"<p>Sister JSON: <a href=\"{_h(sidecar_rel)}\"><code>{_h(sidecar_rel)}</code></a></p>"
+                f"</div>"
+            )
+    plot_cards = cascade_cards + standard_cards
 
     cross_ref_lines = []
     if mps_drift_json_path is not None:
@@ -890,7 +1125,11 @@ th {{ background: #f3f4f6; text-align: left; }}
 .plot-card {{ border: 1px solid #e5e7eb; padding: 12px; margin: 12px 0; border-radius: 6px; background: #fafafa; }}
 .plot-card img {{ max-width: 100%; height: auto; border: 1px solid #d1d5db; }}
 .plot-card h3 {{ margin-top: 0; color: #1d4ed8; }}
+.plot-card.cascade-comparison {{ background: #fffbeb; border: 2px solid #d97706; }}
+.plot-card.cascade-comparison h3 {{ color: #b45309; }}
+.cascade-note {{ background: #fef3c7; padding: 6px 10px; border-radius: 4px; font-size: 0.88em; }}
 .banner {{ background: #fef3c7; border-left: 4px solid #d97706; padding: 8px 12px; margin: 12px 0; font-size: 0.9em; }}
+.grain-banner {{ background: #e0e7ff; border-left: 4px solid #4338ca; padding: 8px 12px; margin: 12px 0; font-size: 0.9em; }}
 code {{ background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }}
 ul {{ font-size: 0.9em; }}
 </style>
@@ -899,6 +1138,7 @@ ul {{ font-size: 0.9em; }}
 <h1>master-gradient xray visualization</h1>
 <p>Generated: <code>{_h(_utc_now_iso())}</code> UTC</p>
 <p>Schema: <code>{_h(INDEX_HTML_SCHEMA_VERSION)}</code></p>
+<p>Grain filter: <code>{_h(grain or "all (latest-by-utc; pre-grain behavior)")}</code></p>
 
 <div class=\"banner\">
 <b>Observability surface, NOT score authority.</b> Every sidecar JSON carries
@@ -908,16 +1148,32 @@ underlying anchor's <code>measurement_axis</code> determines any score-axis
 claim — see the table below.
 </div>
 
+<div class=\"grain-banner\">
+<b>Grain awareness (slot 6 + slot 10, 2026-05-19):</b> per-byte sensitivity
+is now ROUTED by grain. Raw-byte grains
+(<code>scored_archive_bytes</code> / <code>zip_inner_member_payload</code>)
+are entropy-cascade-smeared per Catalog #318 + codex op7 finding (one
+raw-byte flip invalidates the entire downstream entropy stream).
+Post-decompress grains
+(<code>post_brotli_decompress_decoder_weight_bytes</code> +
+<code>post_arithmetic_*</code> / <code>post_decompress_*</code>) are the
+CORRECT locality basis. Archives with BOTH grains get a
+<b>cascade_smearing_comparison</b> plot showing the divergence empirically.
+</div>
+
 <h2>Operator question driving the analysis</h2>
 <p>Where is the score-relevant byte leverage concentrated in this archive,
-and how does it intersect with MPS-vs-CUDA drift? Inputs: the master-gradient
-anchor (per-archive sensitivity tensor) and (optionally) the granular MPS
-drift JSON. Outputs: 5 canonical plots that decompose leverage by byte, by
-pair, and (when drift is available) by quadrant.</p>
+how does it intersect with MPS-vs-CUDA drift, and how much cascade smearing
+does the raw-byte gradient exhibit vs the post-decompress reference?
+Inputs: the master-gradient anchor (per-archive sensitivity tensor),
+optionally the granular MPS drift JSON, and (when available) BOTH the
+raw-byte AND post-decompress anchors. Outputs: 5 canonical plots that
+decompose leverage by byte/pair/quadrant + the 7th cascade-smearing
+comparison plot.</p>
 
 <h2>Archives processed ({_h(len(archive_shas))})</h2>
 <table>
-<tr><th>sha[:12]</th><th>axis</th><th>hardware</th><th>tensor_kind</th><th>n_bytes</th><th>evidence_grade</th></tr>
+<tr><th>sha[:12]</th><th>axis</th><th>hardware</th><th>tensor_kind</th><th>grain</th><th>n_bytes</th><th>evidence_grade</th><th>grain inventory</th><th>compare?</th></tr>
 {''.join(archive_rows)}
 </table>
 
@@ -955,12 +1211,18 @@ def _resolve_anchor_for_plot(
     *,
     require_per_pair: bool,
     soft: bool = False,
+    grain_filter: str | None = None,
 ) -> tuple[np.ndarray, dict] | None:
     """Resolve aggregate or per-pair gradient + anchor for one archive sha.
 
     When ``soft=True``, returns None on FileNotFoundError instead of raising.
     Used by ``--output-dir`` mode to keep emitting other plots when one
     underlying anchor type is unavailable.
+
+    When ``grain_filter`` is set (one of GRAIN_FILTER_RAW_BYTE /
+    GRAIN_FILTER_POST_DECOMPRESS), filters anchors by grain class via
+    :func:`_load_aggregate_by_grain`. The default (None) preserves the
+    pre-grain-aware behavior (latest-by-utc across all grains).
     """
     if require_per_pair:
         try:
@@ -972,6 +1234,20 @@ def _resolve_anchor_for_plot(
                 f"per-pair anchor required but missing for archive {archive_sha[:16]}; "
                 f"run `tools/extract_master_gradient.py --preserve-per-pair` first ({exc})"
             )
+    if grain_filter in (GRAIN_FILTER_RAW_BYTE, GRAIN_FILTER_POST_DECOMPRESS):
+        result = _load_aggregate_by_grain(archive_sha, grain_filter=grain_filter)
+        if result is None:
+            if soft:
+                return None
+            raise SystemExit(
+                f"aggregate anchor for grain={grain_filter} missing for archive "
+                f"{archive_sha[:16]}; consider extracting via "
+                "tools/extract_master_gradient.py (raw_byte) OR slot 15/17 "
+                "post-decompress extractors "
+                "(tac.master_gradient_post_brotli_decompress / "
+                "tac.master_gradient_post_decompress_multi_archive)"
+            )
+        return result
     try:
         return load_aggregate_gradient_from_anchor(archive_sha256=archive_sha)
     except FileNotFoundError as exc:
@@ -982,18 +1258,83 @@ def _resolve_anchor_for_plot(
         )
 
 
+def _load_aggregate_by_grain(
+    archive_sha: str, *, grain_filter: str
+) -> tuple[np.ndarray, dict] | None:
+    """Load an aggregate gradient for a specific grain class.
+
+    Routes through ``tac.master_gradient.query_anchors_by_archive``
+    filtering on ``gradient_byte_domain in POST_DECOMPRESS_GRAINS`` (for
+    ``grain_filter="post_decompress"``) or ``gradient_byte_domain in
+    RAW_BYTE_GRAINS`` (for ``grain_filter="raw_byte"``). Picks the most
+    recent matching anchor by ``measurement_utc`` and loads its .npy
+    array. Returns None when no matching anchor exists.
+
+    Sister of ``tac.master_gradient_per_byte_consumer.
+    load_per_byte_sensitivity_for_archive(prefer_grain=...)``.
+    """
+    from tac.master_gradient import query_anchors_by_archive
+    from tac.master_gradient_per_byte_consumer import (
+        POST_DECOMPRESS_GRAINS,
+        RAW_BYTE_GRAINS,
+    )
+
+    if grain_filter == GRAIN_FILTER_POST_DECOMPRESS:
+        allowed = POST_DECOMPRESS_GRAINS
+    elif grain_filter == GRAIN_FILTER_RAW_BYTE:
+        allowed = RAW_BYTE_GRAINS
+    else:
+        return None
+
+    rows = query_anchors_by_archive(archive_sha)
+    rows = [
+        r
+        for r in rows
+        if r.get("gradient_tensor_kind", "aggregate_per_byte_v1")
+        == "aggregate_per_byte_v1"
+        and r.get("gradient_array_path")
+        and str(
+            r.get("gradient_byte_domain") or "scored_archive_bytes"
+        ) in allowed
+    ]
+    if not rows:
+        return None
+    latest = max(rows, key=lambda r: str(r.get("measurement_utc", "")))
+    array_path = Path(str(latest.get("gradient_array_path") or ""))
+    if not array_path.is_absolute():
+        array_path = Path.cwd() / array_path
+    if not array_path.is_file():
+        return None
+    arr = np.load(array_path)
+    return arr, dict(latest)
+
+
 def _emit_plot(
     plot_name: str,
     archive_shas: list[str],
     output: Path,
     *,
     mps_drift_data: dict | None = None,
+    grain: str | None = None,
 ) -> dict[str, object] | None:
     """Dispatch the plot to the correct emitter; resolve required anchors.
 
     Returns a per-plot summary dict suitable for sister JSON emission, or
-    ``None`` when no sidecar is appropriate (e.g. cross-substrate placeholder).
+    ``None`` when no sidecar is appropriate (e.g. cross-substrate
+    placeholder).
+
+    ``grain`` is one of GRAIN_FILTER_RAW_BYTE / GRAIN_FILTER_POST_DECOMPRESS /
+    GRAIN_FILTER_ALL / None (latest-by-utc across all grains; pre-grain
+    behavior). For grain_filter in {raw_byte, post_decompress}, the anchor
+    resolver filters by ``gradient_byte_domain`` class. The
+    ``cascade_smearing_comparison`` plot ignores ``grain`` and ALWAYS
+    requires BOTH a raw-byte AND a post-decompress anchor.
     """
+    # Map grain values to the anchor-resolver's expected vocabulary.
+    if grain in (GRAIN_FILTER_RAW_BYTE, GRAIN_FILTER_POST_DECOMPRESS):
+        resolver_grain = grain
+    else:
+        resolver_grain = None
     if plot_name == "per_pair_distribution":
         sha = archive_shas[0]
         per_pair, anchor = _resolve_anchor_for_plot(sha, require_per_pair=True)
@@ -1005,26 +1346,32 @@ def _emit_plot(
         }
     elif plot_name == "per_byte_heatmap":
         sha = archive_shas[0]
-        aggregate, anchor = _resolve_anchor_for_plot(sha, require_per_pair=False)
+        aggregate, anchor = _resolve_anchor_for_plot(
+            sha, require_per_pair=False, grain_filter=resolver_grain
+        )
         plot_per_byte_heatmap(aggregate, anchor, output)
         return {
             "anchor": anchor,
             "summary": _summary_stats_for_aggregate(aggregate),
-            "extra": {"plot_top_k": 128},
+            "extra": {"plot_top_k": 128, "grain_filter": grain or "any"},
         }
     elif plot_name == "cumulative_by_rank":
         sha = archive_shas[0]
-        aggregate, anchor = _resolve_anchor_for_plot(sha, require_per_pair=False)
+        aggregate, anchor = _resolve_anchor_for_plot(
+            sha, require_per_pair=False, grain_filter=resolver_grain
+        )
         plot_cumulative_by_rank(aggregate, anchor, output)
         return {
             "anchor": anchor,
             "summary": _summary_stats_for_aggregate(aggregate),
-            "extra": {},
+            "extra": {"grain_filter": grain or "any"},
         }
     elif plot_name == "cross_substrate_correlation":
         substrate_anchors = []
         for sha in archive_shas:
-            aggregate, anchor = _resolve_anchor_for_plot(sha, require_per_pair=False)
+            aggregate, anchor = _resolve_anchor_for_plot(
+                sha, require_per_pair=False, grain_filter=resolver_grain
+            )
             label = anchor.get("substrate_id") or anchor.get("substrate") or sha[:8]
             substrate_anchors.append((str(label), aggregate, anchor))
         plot_cross_substrate_correlation(substrate_anchors, output)
@@ -1038,11 +1385,14 @@ def _emit_plot(
             },
             "extra": {
                 "substrate_labels": [label for label, _, _ in substrate_anchors],
+                "grain_filter": grain or "any",
             },
         }
     elif plot_name == "wyner_ziv_flow":
         sha = archive_shas[0]
-        aggregate, anchor = _resolve_anchor_for_plot(sha, require_per_pair=False)
+        aggregate, anchor = _resolve_anchor_for_plot(
+            sha, require_per_pair=False, grain_filter=resolver_grain
+        )
         plot_wyner_ziv_flow(aggregate, anchor, output)
         return {
             "anchor": anchor,
@@ -1052,6 +1402,7 @@ def _emit_plot(
                     isinstance(anchor.get("archive_layout"), dict)
                     and anchor["archive_layout"].get("sections")
                 ),
+                "grain_filter": grain or "any",
             },
         }
     elif plot_name == "drift_vs_sensitivity_scatter":
@@ -1060,7 +1411,9 @@ def _emit_plot(
                 f"plot {plot_name!r} requires --mps-drift-json"
             )
         sha = archive_shas[0]
-        aggregate, anchor = _resolve_anchor_for_plot(sha, require_per_pair=False)
+        aggregate, anchor = _resolve_anchor_for_plot(
+            sha, require_per_pair=False, grain_filter=resolver_grain
+        )
         per_pair_result = _resolve_anchor_for_plot(sha, require_per_pair=True, soft=True)
         per_pair = per_pair_result[0] if per_pair_result is not None else None
         plot_drift_vs_sensitivity_scatter(
@@ -1074,7 +1427,63 @@ def _emit_plot(
                 "mps_drift_n_pairs": mps_drift_data.get("n_pairs"),
                 "mps_drift_evidence_grade": mps_drift_data.get("evidence_grade"),
                 "has_per_pair_gradient": per_pair is not None,
+                "grain_filter": grain or "any",
             },
+        }
+    elif plot_name == "cascade_smearing_comparison":
+        sha = archive_shas[0]
+        # Hard requirement: BOTH grains must exist for this plot.
+        raw_result = _resolve_anchor_for_plot(
+            sha,
+            require_per_pair=False,
+            soft=True,
+            grain_filter=GRAIN_FILTER_RAW_BYTE,
+        )
+        post_result = _resolve_anchor_for_plot(
+            sha,
+            require_per_pair=False,
+            soft=True,
+            grain_filter=GRAIN_FILTER_POST_DECOMPRESS,
+        )
+        if raw_result is None or post_result is None:
+            raise SystemExit(
+                f"plot {plot_name!r} requires BOTH raw-byte and post-decompress "
+                f"anchors for archive {sha[:16]}; "
+                f"raw_byte_anchor={'present' if raw_result else 'MISSING'} "
+                f"post_decompress_anchor={'present' if post_result else 'MISSING'}. "
+                "Extract raw-byte via `tools/extract_master_gradient.py` and "
+                "post-decompress via slot 15/17 helpers "
+                "(tac.master_gradient_post_brotli_decompress / "
+                "tac.master_gradient_post_decompress_multi_archive)."
+            )
+        raw_arr, raw_anchor = raw_result
+        post_arr, post_anchor = post_result
+        metrics = plot_cascade_smearing_comparison(
+            raw_arr, raw_anchor, post_arr, post_anchor, output, top_k=128
+        )
+        # Sister JSON anchor = post_decompress (the CORRECT-locality reference)
+        return {
+            "anchor": post_anchor,
+            "summary": {
+                "raw_byte_anchor": {
+                    "archive_sha256": raw_anchor.get("archive_sha256"),
+                    "gradient_byte_domain": raw_anchor.get("gradient_byte_domain"),
+                    "n_bytes": raw_anchor.get("n_bytes"),
+                    "measurement_utc": raw_anchor.get("measurement_utc"),
+                    "measurement_axis": raw_anchor.get("measurement_axis"),
+                    "measurement_hardware": raw_anchor.get("measurement_hardware"),
+                },
+                "post_decompress_anchor": {
+                    "archive_sha256": post_anchor.get("archive_sha256"),
+                    "gradient_byte_domain": post_anchor.get("gradient_byte_domain"),
+                    "n_bytes": post_anchor.get("n_bytes"),
+                    "measurement_utc": post_anchor.get("measurement_utc"),
+                    "measurement_axis": post_anchor.get("measurement_axis"),
+                    "measurement_hardware": post_anchor.get("measurement_hardware"),
+                },
+                "cascade_smearing_metrics": metrics,
+            },
+            "extra": {"plot_top_k": 128, "grain_filter": "compare_both"},
         }
     else:
         raise SystemExit(f"unknown plot name: {plot_name!r}")
@@ -1097,13 +1506,25 @@ def _emit_output_dir_mode(
     archive_shas: list[str],
     mps_drift_data: dict | None,
     mps_drift_json_path: Path | None,
+    grain: str | None = None,
 ) -> tuple[list[dict[str, str]], list[dict]]:
     """Emit all canonical plots + sister JSONs + index.html.
 
     Per Catalog #305 observability + Catalog #323 Provenance: every plot
     gets a sister JSON; every sister JSON carries the canonical Provenance
-    sub-object built via build_provenance_for_predicted (visualization is a
-    derived view, NOT a primary measurement).
+    sub-object built via build_provenance_for_predicted (visualization is
+    a derived view, NOT a primary measurement).
+
+    ``grain`` (slot 6 + slot 10 grain awareness landing 2026-05-19):
+
+    * ``None`` or ``"all"`` — emit canonical 5 plots (latest-by-utc
+      across grains; pre-grain behavior) + optional drift scatter +
+      optional cascade comparison when BOTH grains exist per archive.
+    * ``"raw_byte"`` / ``"post_decompress"`` — emit canonical 5 plots
+      filtered to that grain only. Cascade comparison is skipped.
+    * ``"compare_both"`` — emit canonical 5 plots in latest-by-utc mode
+      PLUS one cascade_smearing_comparison plot per archive that has
+      BOTH raw-byte AND post-decompress anchors.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1111,16 +1532,43 @@ def _emit_output_dir_mode(
     if mps_drift_data is not None:
         plots_to_emit.append("drift_vs_sensitivity_scatter")
 
+    # Cascade-smearing comparison: one entry per archive that has BOTH
+    # raw-byte AND post-decompress anchors. Entry filename suffixed with
+    # short-sha so multiple archives in same output dir get distinct
+    # artifacts.
+    cascade_comparison_eligible: list[str] = []
+    if grain in (GRAIN_FILTER_COMPARE_BOTH, GRAIN_FILTER_ALL, None):
+        from tac.master_gradient_per_byte_consumer import (
+            available_grains_for_archive,
+        )
+
+        for sha in archive_shas:
+            inv = available_grains_for_archive(sha)
+            if inv["raw_byte"] and inv["post_decompress"]:
+                cascade_comparison_eligible.append(sha)
+
     emitted: list[dict[str, str]] = []
     anchors_seen: list[dict] = []
     archive_to_anchor: dict[str, dict] = {}
+
+    # Pass 1: canonical 5 plots (+ optional drift) — grain filter honored
+    # by the resolver. For raw_byte / post_decompress filters, only
+    # anchors of that grain are picked.
+    if grain in (GRAIN_FILTER_RAW_BYTE, GRAIN_FILTER_POST_DECOMPRESS):
+        grain_for_resolver: str | None = grain
+    else:
+        grain_for_resolver = None
 
     for plot_name in plots_to_emit:
         png_path = output_dir / f"{plot_name}.png"
         sidecar_path = output_dir / f"{plot_name}.json"
         try:
             result = _emit_plot(
-                plot_name, archive_shas, png_path, mps_drift_data=mps_drift_data
+                plot_name,
+                archive_shas,
+                png_path,
+                mps_drift_data=mps_drift_data,
+                grain=grain_for_resolver,
             )
         except SystemExit as exc:
             print(f"  SKIP {plot_name}: {exc}", file=sys.stderr)
@@ -1149,6 +1597,41 @@ def _emit_output_dir_mode(
         else:
             print(f"  wrote {png_path} (no sidecar)")
 
+    # Pass 2: cascade-smearing comparison (one per eligible archive).
+    for sha in cascade_comparison_eligible:
+        short = sha[:12]
+        plot_id = f"cascade_smearing_comparison_{short}"
+        png_path = output_dir / f"{plot_id}.png"
+        sidecar_path = output_dir / f"{plot_id}.json"
+        try:
+            result = _emit_plot(
+                "cascade_smearing_comparison",
+                [sha],
+                png_path,
+                mps_drift_data=None,
+                grain=GRAIN_FILTER_COMPARE_BOTH,
+            )
+        except SystemExit as exc:
+            print(f"  SKIP {plot_id}: {exc}", file=sys.stderr)
+            continue
+        if result is not None:
+            _emit_sidecar_json(
+                sidecar_path,
+                plot_id=plot_id,
+                anchor=result["anchor"],
+                summary=result["summary"],
+                extra=result["extra"],
+            )
+            emitted.append(
+                {
+                    "plot_id": plot_id,
+                    "png_relative": png_path.name,
+                    "sidecar_relative": sidecar_path.name,
+                }
+            )
+            print(f"  wrote {png_path}")
+            print(f"  wrote {sidecar_path}")
+
     # Anchors list keeps caller-supplied ordering
     for sha in archive_shas:
         anchor = archive_to_anchor.get(sha)
@@ -1164,6 +1647,8 @@ def _emit_output_dir_mode(
         anchors=anchors_seen,
         emitted_plots=emitted,
         mps_drift_json_path=mps_drift_json_path,
+        grain=grain,
+        cascade_comparison_eligible=cascade_comparison_eligible,
     )
     print(f"  wrote {output_dir / 'index.html'}")
     return emitted, anchors_seen
@@ -1236,6 +1721,23 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--grain",
+        choices=list(GRAIN_FILTER_CHOICES),
+        default=None,
+        help=(
+            "Per-byte grain filter (slot 6 + slot 10 grain awareness, "
+            "2026-05-19). Default: None (latest-by-utc across grains; "
+            "pre-grain behavior). raw_byte / post_decompress: filter to "
+            "ONE grain class only (per Catalog #318 + codex op7 finding: "
+            "post-decompress is the CORRECT locality; raw-byte is "
+            "entropy-cascade-smeared). compare_both: emit canonical plots "
+            "in latest-by-utc mode PLUS a side-by-side "
+            "cascade_smearing_comparison plot for every archive that has "
+            "BOTH raw-byte AND post-decompress anchors. all: emit "
+            "canonical plots in latest-by-utc mode (alias for default)."
+        ),
+    )
+    parser.add_argument(
         "--list-plots",
         action="store_true",
         help="List canonical plot names and exit.",
@@ -1295,6 +1797,7 @@ def main(argv: list[str] | None = None) -> int:
             args.archive_sha,
             mps_drift_data=mps_drift_data,
             mps_drift_json_path=mps_drift_json_path,
+            grain=args.grain,
         )
         return 0
 
@@ -1319,6 +1822,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.archive_sha,
                     target,
                     mps_drift_data=mps_drift_data,
+                    grain=args.grain,
                 )
                 print(f"  wrote {target}")
             except SystemExit as exc:
@@ -1332,6 +1836,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.archive_sha,
                     target,
                     mps_drift_data=mps_drift_data,
+                    grain=args.grain,
                 )
                 print(f"  wrote {target}")
             except SystemExit as exc:
@@ -1342,7 +1847,11 @@ def main(argv: list[str] | None = None) -> int:
         if output_path.is_dir():
             output_path = output_path / f"{plot_name}.png"
         _emit_plot(
-            plot_name, args.archive_sha, output_path, mps_drift_data=mps_drift_data
+            plot_name,
+            args.archive_sha,
+            output_path,
+            mps_drift_data=mps_drift_data,
+            grain=args.grain,
         )
         print(f"wrote {output_path}")
 
