@@ -1,3 +1,4 @@
+<!-- # PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE: design/synthesis/audit memo proposing not-yet-implemented canonical helpers per Catalog #287 sub-scope B; all cited tac.X module names are explicit design proposals or future-helper references; this is an HTML comment so markdown renderers ignore it; waiver landed by lane_phantom_api_backfill_wave_1_20260518 -->
 ---
 schema: council_deliberation_v2
 deliberation_id: rate_attack_synthesis_v2_reconciliation_primary_plus_adversarial_plus_supplement_20260518

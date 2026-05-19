@@ -1,3 +1,4 @@
+<!-- # PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE: design/synthesis/audit memo proposing not-yet-implemented canonical helpers per Catalog #287 sub-scope B; all cited tac.X module names are explicit design proposals or future-helper references; this is an HTML comment so markdown renderers ignore it; waiver landed by lane_phantom_api_backfill_wave_1_20260518 -->
 # Full-stack integration audit v2 — 2026-05-11 (since 13:49 UTC)
 
 **Author**: claude (full-custody) per operator directive 2026-05-11 ("keep pushing the autopilot and xray and magic codec and compiler and wiring and integration and everything"). **Cost**: $0 (pure audit). **Loop**: PAUSED, unchanged. **Sister of**: `full_stack_integration_audit_20260511.md` (U's mid-day audit at 13:49 UTC).

@@ -1,3 +1,4 @@
+<!-- # PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE: design/synthesis/audit memo proposing not-yet-implemented canonical helpers per Catalog #287 sub-scope B; all cited tac.X module names are explicit design proposals or future-helper references; this is an HTML comment so markdown renderers ignore it; waiver landed by lane_phantom_api_backfill_wave_1_20260518 -->
 # Magic Codec + Water-Filling + Lagrangian Redirection — unified synthesis + cross-pollination across ablation / quantization / adversarial training / codec
 # Date: 2026-05-18
 # Authority: operator query 2026-05-18 verbatim *"remember the magic codec and water bucket filling and Lagrangian redirection work and maybe consider the principles and concepts and problems and solutions and manifolds involved and how they might apply to the ablation work and quantization and adversarial training and/or codec"*

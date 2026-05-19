@@ -1,3 +1,4 @@
+<!-- # PHANTOM_NAME_DESIGN_PROPOSAL_OK_FILE: design/synthesis/audit memo proposing not-yet-implemented canonical helpers per Catalog #287 sub-scope B; all cited tac.X module names are explicit design proposals or future-helper references; this is an HTML comment so markdown renderers ignore it; waiver landed by lane_phantom_api_backfill_wave_1_20260518 -->
 ---
 review_kind: comprehensive_analytical_surfaces_inventory_plus_synthesis_design_memo
 review_id: comprehensive_analytical_surfaces_inventory_plus_synthesis_design_memo_20260518

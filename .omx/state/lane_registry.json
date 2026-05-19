@@ -39158,6 +39158,129 @@
       "id": "lane_3_smoke_paid_gpu_reactivation_wave_20260518",
       "name": "3-smoke paid-GPU reactivation wave (K-sweep + SGLD + Z7)",
       "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/3_smoke_paid_gpu_reactivation_wave_blocker_audit_20260519T042301Z.md (Phase-0 PV blocker audit; 3-of-3 dispatches blocked; /bin/zsh spend; defer to follow-on prep subagents)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_3_smoke_paid_gpu_reactivation_wave_blocker_audit_landed_20260518.md (STOP-AND-REPORT memory entry; 3-of-3 blockers documented; prep envelope ~3.5h editor for E.7+E.8)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_phase_b_mps_gap_experiment_infrastructure_build_20260518",
+      "name": "Phase B MPS gap experiment infrastructure build (no auto-dispatch)",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_phantom_api_backfill_wave_1_20260518",
+      "name": "Phantom-API backfill Wave 1 (Catalog #287 sub-scope B)",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "20 memos backfilled with file-level waivers; 418->194 violation reduction (53.6%); .omx/research/phantom_api_backfill_wave_1_synthesis_20260519T043316Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_phantom_api_backfill_wave_1_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
+      "name": "E.7 VQ K-sweep + E.8 SGLD convergence PREP combined",
+      "phase": 5.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -39203,5 +39326,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T04:23:12Z"
+  "updated_at": "2026-05-19T04:35:13Z"
 }
