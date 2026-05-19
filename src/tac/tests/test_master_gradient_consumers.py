@@ -855,7 +855,11 @@ def test_public_api_completeness():
         "consumer_output_path",
         "write_consumer_sidecar_json",
     }
-    assert set(mgc.__all__) == expected
+    # Cable D D3 v3 wave 2026-05-19 added consumers 7-14 to __all__; use
+    # superset semantics so the original v1+v15 contract is preserved while
+    # the v3 expansion is additive. The new consumer 7-14 names are exercised
+    # by their dedicated test file `test_master_gradient_consumers_7_to_14.py`.
+    assert expected.issubset(set(mgc.__all__))
     for name in expected:
         assert hasattr(mgc, name), f"missing public symbol {name}"
 

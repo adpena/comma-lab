@@ -60,8 +60,11 @@ CONSUMER CATALOG (15 surfaces; first 5 fully implemented in v1)
                                                   meta-Lagrangian base solver).
 
 v1 IMPLEMENTS: consumers 1, 2, 3, 4, 5, 6, 15 (the 5 highest-EV PR-grade uses + Rashomon disagreement + the operator-binding Lagrangian-dual planner).
-v2 SHOULD ADD: 7, 8 (Pareto + λ_R — the within-apparatus consumers).
-v3 SHOULD ADD: 9, 10, 11, 12, 13, 14.
+v2 ADDS: consumers 7, 8 (Pareto envelope + per-pair λ_R bisection).
+v3 ADDS: consumers 9, 10, 11, 12, 13, 14 (LoRA targets + coding budget +
+    engineered correction + KKT residuals + Volterra cross-terms + decoder
+    pruning). Landed 2026-05-19 via Cable D D3 batched wave per
+    `.omx/research/integrated_battle_plan_priority_queue_dag_cables_gates_20260519T052801Z.md`.
 
 DESIGN INVARIANTS (binding across all consumers)
 ================================================
@@ -147,6 +150,38 @@ __all__ = [
     "RashomonDisagreementEntry",
     "RashomonDisagreementQueue",
     "rashomon_disagreement_queue",
+    # Consumer 7 — per-pair Pareto envelope
+    "PerPairParetoEnvelopePoint",
+    "PerPairParetoEnvelope",
+    "per_pair_pareto_envelope",
+    # Consumer 8 — per-pair Lagrangian λ_R bisection
+    "PerPairLambdaEntry",
+    "PerPairLambdaBisection",
+    "per_pair_lagrangian_lambda_bisection",
+    # Consumer 9 — per-pair LoRA supervision signal
+    "PerPairLoraSupervisionTarget",
+    "PerPairLoraSupervisionSignal",
+    "per_pair_lora_supervision_signal",
+    # Consumer 10 — per-pair coding budget allocation
+    "PerPairCodingBudgetEntry",
+    "PerPairCodingBudgetAllocation",
+    "per_pair_coding_budget_allocation",
+    # Consumer 11 — engineered correction sidecar targeting
+    "EngineeredCorrectionTarget",
+    "EngineeredCorrectionTargeting",
+    "engineered_correction_targeting",
+    # Consumer 12 — per-pair KKT residual certificate
+    "PerPairKKTResidualEntry",
+    "PerPairKKTResiduals",
+    "per_pair_kkt_residuals",
+    # Consumer 13 — per-pair Volterra pair-pair cross terms
+    "PerPairVolterraEntry",
+    "PerPairVolterraCrossTerms",
+    "per_pair_volterra_cross_terms",
+    # Consumer 14 — gradient-informed decoder pruning
+    "DecoderPruningCandidate",
+    "GradientInformedDecoderPruning",
+    "gradient_informed_decoder_pruning",
     # Consumer 15 — operator-binding Lagrangian-dual per-pair treatment planner
     "Treatment",
     "TreatmentCatalog",
@@ -1816,6 +1851,1529 @@ def rashomon_disagreement_queue(
         write_consumer_sidecar_json(path, payload)
 
     return queue
+
+
+# ════════════════════════════════════════════════════════════════════════════ #
+# Consumers 7-14 — Cable D D3 builder wave 2026-05-19                           #
+# ════════════════════════════════════════════════════════════════════════════ #
+#
+# Per CLAUDE.md "PER-PAIR MASTER GRADIENT — wire-in coverage audit across ALL
+# consumers" operator standing directive (task #810). Per
+# `.omx/research/integrated_battle_plan_priority_queue_dag_cables_gates_20260519T052801Z.md`
+# Cable D D3 (task #799).
+#
+# Consumers 7-14 close the producer→consumer loop for the analytical surfaces
+# named in the catalog header at module-top. Each consumer:
+#
+#   - Accepts `per_pair_gradient: np.ndarray` of shape (N_bytes, N_pairs, 3)
+#     AND/OR an aggregate `aggregate_gradient: np.ndarray` of shape (N_bytes, 3).
+#   - Returns a typed frozen dataclass.
+#   - Optionally emits a sister .json artifact under
+#     `.omx/state/master_gradient_consumers/<consumer_id>_<archive_sha_short>_<utc>.json`
+#     via the canonical `consumer_output_path` + `write_consumer_sidecar_json`
+#     helpers (which automatically inject `score_claim=False` per CLAUDE.md
+#     "Apples-to-apples evidence discipline").
+#   - Is a pure function (deterministic given input + seed; no side effects
+#     beyond optional sidecar write).
+#   - Does NOT create a score claim; outputs are diagnostic per CLAUDE.md.
+#
+# Per Catalog #229 PV: every consumer is grep-verified against existing API
+# shapes (PerPairDifficultyAtlas / RashomonDisagreementQueue patterns).
+#
+# Per Catalog #287 phantom-API discipline: no consumer cites a non-existent
+# tac.X namespace. The wire-in hooks documented per consumer reference SISTER
+# subagent ownership (cable D sister 3 owns
+# `tools/cathedral_autopilot_autonomous_loop.py` consumer wiring; this
+# subagent produces the canonical signal sister 3 will consume).
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 7 — per_pair_pareto_envelope                                         #
+# ──────────────────────────────────────────────────────────────────────────── #
+#
+# Per the module-top catalog: "per-pair (rate, distortion) Pareto solve".
+#
+# For each pair, treat the per-pair gradient as defining a local (rate ↔
+# distortion) tradeoff. The per-pair Pareto envelope is the set of
+# (rate_byte_count_delta, distortion_delta) achievable by allocating
+# additional rate-bytes to bytes with the highest |rate-gradient| while
+# accepting the seg+pose distortion increase.
+#
+# Algorithm:
+#   - For each pair, sort bytes descending by per-pair rate axis magnitude
+#     |g_rate(byte, pair)|.
+#   - Cumulative bytes added vs cumulative distortion contribution defines
+#     the per-pair Pareto frontier (rate vs seg+pose).
+#   - The envelope is parameterized by a sweep over the top-K bytes (K = 32
+#     by default).
+
+DEFAULT_PARETO_ENVELOPE_TOP_K: int = 32
+
+
+@dataclass(frozen=True)
+class PerPairParetoEnvelopePoint:
+    """One point on a per-pair Pareto envelope.
+
+    Fields:
+      pair_index: pair this point belongs to
+      cumulative_bytes_added: byte-count added at this point on the sweep
+      cumulative_distortion_delta: |seg|+|pose| gradient sum reduced at this point
+      rate_gradient_magnitude: |g_rate| at the marginal byte added
+    """
+
+    pair_index: int
+    cumulative_bytes_added: int
+    cumulative_distortion_delta: float
+    rate_gradient_magnitude: float
+
+
+@dataclass(frozen=True)
+class PerPairParetoEnvelope:
+    """Per-pair Pareto envelope from per-pair master gradient.
+
+    Fields:
+      envelope_points: per-pair sweep points (length n_pairs * top_k)
+      per_pair_envelope_lengths: per-pair number of points produced (== top_k or
+          fewer if pair has no nonzero rate gradient bytes)
+      top_k: sweep depth (default DEFAULT_PARETO_ENVELOPE_TOP_K)
+      n_bytes: total bytes scanned
+      n_pairs: total pairs in source per-pair gradient
+      archive_sha256: archive SHA from source anchor
+      measurement_axis: canonical axis label
+      measurement_hardware: hardware substrate
+    """
+
+    envelope_points: tuple[PerPairParetoEnvelopePoint, ...]
+    per_pair_envelope_lengths: tuple[int, ...]
+    top_k: int
+    n_bytes: int
+    n_pairs: int
+    archive_sha256: str
+    measurement_axis: str
+    measurement_hardware: str
+
+
+def per_pair_pareto_envelope(
+    per_pair_gradient: np.ndarray,
+    *,
+    archive_sha256: str,
+    measurement_axis: str,
+    measurement_hardware: str,
+    top_k: int = DEFAULT_PARETO_ENVELOPE_TOP_K,
+    write_sidecar: bool = True,
+) -> PerPairParetoEnvelope:
+    """Per-pair (rate, distortion) Pareto envelope from per-pair master gradient.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" the output is
+    DIAGNOSTIC and carries score_claim=False via the canonical sidecar writer.
+
+    Per CLAUDE.md "Subagent coherence-by-default" hook #2 (Pareto constraint):
+    the envelope IS the per-pair Pareto-frontier signal that the canonical
+    Pareto solver consumes for per-pair-aware constraint emission.
+    """
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+    if top_k < 1:
+        raise ValueError(f"top_k must be >= 1; got {top_k}")
+
+    n_bytes, n_pairs, _ = per_pair_gradient.shape
+    points: list[PerPairParetoEnvelopePoint] = []
+    lengths: list[int] = []
+
+    for pair_idx in range(n_pairs):
+        rate_grad = np.abs(per_pair_gradient[:, pair_idx, 2])  # axis 2 = rate
+        distortion_grad = np.abs(per_pair_gradient[:, pair_idx, 0]) + np.abs(
+            per_pair_gradient[:, pair_idx, 1]
+        )
+        # Order bytes by descending rate gradient magnitude
+        nonzero_rate_indices = np.flatnonzero(rate_grad > 0.0)
+        if nonzero_rate_indices.size == 0:
+            lengths.append(0)
+            continue
+        ordered = nonzero_rate_indices[np.argsort(-rate_grad[nonzero_rate_indices])]
+        sweep_depth = min(top_k, ordered.size)
+        cum_bytes = 0
+        cum_distortion = 0.0
+        for step_idx, byte_idx in enumerate(ordered[:sweep_depth], start=1):
+            cum_bytes += 1  # one-byte-per-step canonical sweep grain
+            cum_distortion += float(distortion_grad[byte_idx])
+            points.append(
+                PerPairParetoEnvelopePoint(
+                    pair_index=int(pair_idx),
+                    cumulative_bytes_added=int(cum_bytes),
+                    cumulative_distortion_delta=float(cum_distortion),
+                    rate_gradient_magnitude=float(rate_grad[byte_idx]),
+                )
+            )
+        lengths.append(sweep_depth)
+
+    envelope = PerPairParetoEnvelope(
+        envelope_points=tuple(points),
+        per_pair_envelope_lengths=tuple(lengths),
+        top_k=top_k,
+        n_bytes=n_bytes,
+        n_pairs=n_pairs,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+    )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "per_pair_pareto_envelope", archive_sha256=archive_sha256
+        )
+        # Compact payload: for each pair, max-cumulative-distortion at final sweep depth
+        per_pair_summary = []
+        cursor = 0
+        for pair_idx, length in enumerate(lengths):
+            if length == 0:
+                per_pair_summary.append(
+                    {
+                        "pair_index": pair_idx,
+                        "sweep_depth": 0,
+                        "max_cumulative_distortion_delta": 0.0,
+                    }
+                )
+                continue
+            last_point = points[cursor + length - 1]
+            per_pair_summary.append(
+                {
+                    "pair_index": pair_idx,
+                    "sweep_depth": length,
+                    "max_cumulative_distortion_delta": float(
+                        last_point.cumulative_distortion_delta
+                    ),
+                    "marginal_rate_gradient_at_final_step": float(
+                        last_point.rate_gradient_magnitude
+                    ),
+                }
+            )
+            cursor += length
+        payload = {
+            "schema": "master_gradient_consumer_per_pair_pareto_envelope_v1",
+            "consumer_id": "per_pair_pareto_envelope",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "n_bytes": n_bytes,
+            "n_pairs": n_pairs,
+            "top_k": top_k,
+            "total_envelope_points": len(points),
+            "per_pair_summary": per_pair_summary,
+            "interpretation_notes": (
+                "Per-pair Pareto envelope sweeps bytes ordered by descending "
+                "rate-gradient magnitude; cumulative_distortion_delta is the "
+                "cumulative |seg|+|pose| gradient sum incurred. The envelope "
+                "feeds tac.optimization.pareto via per-pair constraint emission. "
+                "DIAGNOSTIC ONLY — NOT a score claim per CLAUDE.md "
+                "'Apples-to-apples evidence discipline'."
+            ),
+            "wire_in_hooks": {
+                "hook_2_pareto_constraint": (
+                    "feeds per-pair Pareto-frontier signal into "
+                    "tac.optimization.pareto (sister subagent owns wiring)"
+                ),
+            },
+        }
+        write_consumer_sidecar_json(path, payload)
+
+    return envelope
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 8 — per_pair_lagrangian_lambda_bisection                             #
+# ──────────────────────────────────────────────────────────────────────────── #
+#
+# Per the module-top catalog: "per-pair λ_R from per-pair dD/dR slope".
+#
+# At the operating point, the canonical Lagrangian is L = D + λ_R · R. The
+# stationarity condition dL/dθ = 0 implies λ_R = -dD/dR. We estimate the
+# per-pair slope dD/dR by ordinary-least-squares regression of cumulative
+# distortion onto cumulative bytes added in the Pareto envelope sweep
+# (consumer 7).
+#
+# λ_R values cluster around the OPERATOR's canonical λ_R per Ballé 2018 (the
+# linear coefficient on the rate term in the joint codec loss). Per-pair λ_R
+# divergence from the operator's canonical λ_R is the canonical
+# disambiguator: pairs with λ_R << operator value need MORE rate, pairs with
+# λ_R >> operator value need LESS rate.
+
+DEFAULT_LAMBDA_BISECTION_MIN_POINTS: int = 4
+
+
+@dataclass(frozen=True)
+class PerPairLambdaEntry:
+    """One pair's λ_R estimate.
+
+    Fields:
+      pair_index: which pair
+      lambda_r_estimate: per-pair |dD/dR| from least-squares regression
+      regression_r2: R² goodness-of-fit (1 = perfect linear; 0 = no fit)
+      n_envelope_points: how many envelope points the regression used
+    """
+
+    pair_index: int
+    lambda_r_estimate: float
+    regression_r2: float
+    n_envelope_points: int
+
+
+@dataclass(frozen=True)
+class PerPairLambdaBisection:
+    """Per-pair λ_R atlas from per-pair Pareto envelope.
+
+    Fields:
+      entries: per-pair λ_R estimates (length n_pairs)
+      operator_lambda_r: reference operator λ_R (if provided)
+      n_pairs: total pairs in source per-pair gradient
+      archive_sha256: archive SHA from source anchor
+      measurement_axis: canonical axis label
+      measurement_hardware: hardware substrate
+      median_lambda_r: median across all pairs with valid estimates
+      pairs_needing_more_rate: indices where λ_R << operator value
+      pairs_needing_less_rate: indices where λ_R >> operator value
+    """
+
+    entries: tuple[PerPairLambdaEntry, ...]
+    operator_lambda_r: float | None
+    n_pairs: int
+    archive_sha256: str
+    measurement_axis: str
+    measurement_hardware: str
+    median_lambda_r: float
+    pairs_needing_more_rate: tuple[int, ...]
+    pairs_needing_less_rate: tuple[int, ...]
+
+
+def per_pair_lagrangian_lambda_bisection(
+    per_pair_gradient: np.ndarray,
+    *,
+    archive_sha256: str,
+    measurement_axis: str,
+    measurement_hardware: str,
+    top_k: int = DEFAULT_PARETO_ENVELOPE_TOP_K,
+    operator_lambda_r: float | None = None,
+    min_points_for_regression: int = DEFAULT_LAMBDA_BISECTION_MIN_POINTS,
+    write_sidecar: bool = True,
+) -> PerPairLambdaBisection:
+    """Per-pair λ_R from per-pair dD/dR slope.
+
+    Sister consumer of `per_pair_pareto_envelope`; consumes the envelope's
+    cumulative_bytes vs cumulative_distortion sweep to fit per-pair slopes via
+    OLS. Pairs with too few envelope points (< min_points_for_regression)
+    receive lambda_r_estimate = 0.0 and regression_r2 = 0.0.
+
+    Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable: the per-pair
+    λ_R IS the canonical disambiguator for per-pair rate allocation. Feeds
+    `tac.optimization.pareto` via per-pair lambda emission.
+    """
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+
+    envelope = per_pair_pareto_envelope(
+        per_pair_gradient,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+        top_k=top_k,
+        write_sidecar=False,  # sister sidecar: omit duplicate
+    )
+
+    n_pairs = envelope.n_pairs
+    # Reconstruct per-pair point sweeps
+    per_pair_points: dict[int, list[PerPairParetoEnvelopePoint]] = {
+        pair_idx: [] for pair_idx in range(n_pairs)
+    }
+    for point in envelope.envelope_points:
+        per_pair_points[point.pair_index].append(point)
+
+    entries: list[PerPairLambdaEntry] = []
+    lambdas_valid: list[float] = []
+    for pair_idx in range(n_pairs):
+        pts = per_pair_points[pair_idx]
+        if len(pts) < min_points_for_regression:
+            entries.append(
+                PerPairLambdaEntry(
+                    pair_index=pair_idx,
+                    lambda_r_estimate=0.0,
+                    regression_r2=0.0,
+                    n_envelope_points=len(pts),
+                )
+            )
+            continue
+        xs = np.asarray([p.cumulative_bytes_added for p in pts], dtype=np.float64)
+        ys = np.asarray([p.cumulative_distortion_delta for p in pts], dtype=np.float64)
+        x_mean = xs.mean()
+        y_mean = ys.mean()
+        xs_c = xs - x_mean
+        ys_c = ys - y_mean
+        denom = float((xs_c * xs_c).sum())
+        if denom <= 0:
+            entries.append(
+                PerPairLambdaEntry(
+                    pair_index=pair_idx,
+                    lambda_r_estimate=0.0,
+                    regression_r2=0.0,
+                    n_envelope_points=len(pts),
+                )
+            )
+            continue
+        slope = float((xs_c * ys_c).sum() / denom)
+        # |dD/dR|; absolute value since both D and R deltas are nonneg
+        lambda_r = abs(slope)
+        # R² from regression
+        y_pred = y_mean + slope * xs_c
+        ss_res = float(((ys - y_pred) ** 2).sum())
+        ss_tot = float((ys_c * ys_c).sum())
+        r2 = 1.0 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+        r2 = max(0.0, min(1.0, r2))
+        entries.append(
+            PerPairLambdaEntry(
+                pair_index=pair_idx,
+                lambda_r_estimate=lambda_r,
+                regression_r2=r2,
+                n_envelope_points=len(pts),
+            )
+        )
+        lambdas_valid.append(lambda_r)
+
+    median_lambda = float(np.median(lambdas_valid)) if lambdas_valid else 0.0
+    reference = (
+        operator_lambda_r if operator_lambda_r is not None else median_lambda
+    )
+    # Pairs needing more rate: λ_R << reference (i.e. slope is shallow; cheap to add rate)
+    pairs_more_rate = tuple(
+        e.pair_index
+        for e in entries
+        if e.lambda_r_estimate > 0 and e.lambda_r_estimate < 0.5 * reference
+    )
+    pairs_less_rate = tuple(
+        e.pair_index
+        for e in entries
+        if e.lambda_r_estimate > 0 and e.lambda_r_estimate > 2.0 * reference
+    )
+
+    result = PerPairLambdaBisection(
+        entries=tuple(entries),
+        operator_lambda_r=operator_lambda_r,
+        n_pairs=n_pairs,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+        median_lambda_r=median_lambda,
+        pairs_needing_more_rate=pairs_more_rate,
+        pairs_needing_less_rate=pairs_less_rate,
+    )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "per_pair_lagrangian_lambda_bisection", archive_sha256=archive_sha256
+        )
+        payload = {
+            "schema": "master_gradient_consumer_per_pair_lambda_bisection_v1",
+            "consumer_id": "per_pair_lagrangian_lambda_bisection",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "n_pairs": n_pairs,
+            "operator_lambda_r": operator_lambda_r,
+            "median_lambda_r": median_lambda,
+            "pairs_needing_more_rate_count": len(pairs_more_rate),
+            "pairs_needing_less_rate_count": len(pairs_less_rate),
+            "pairs_needing_more_rate_top_20": list(pairs_more_rate[:20]),
+            "pairs_needing_less_rate_top_20": list(pairs_less_rate[:20]),
+            "min_points_for_regression": min_points_for_regression,
+            "interpretation_notes": (
+                "Per-pair λ_R estimated as |dD/dR| via OLS regression of "
+                "cumulative envelope distortion onto cumulative bytes added. "
+                "Pairs with λ_R << operator reference can absorb additional "
+                "rate (cheap distortion savings); pairs with λ_R >> reference "
+                "are at diminishing returns. Feeds tac.optimization.pareto "
+                "via per-pair lambda emission per CLAUDE.md 'Meta-Lagrangian/"
+                "Pareto solver' non-negotiable. DIAGNOSTIC ONLY — NOT a "
+                "score claim per CLAUDE.md 'Apples-to-apples evidence "
+                "discipline'."
+            ),
+            "wire_in_hooks": {
+                "hook_2_pareto_constraint": (
+                    "feeds per-pair λ_R into tac.optimization.pareto "
+                    "(sister subagent owns wiring)"
+                ),
+            },
+        }
+        write_consumer_sidecar_json(path, payload)
+
+    return result
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 9 — per_pair_lora_supervision_signal                                 #
+# ──────────────────────────────────────────────────────────────────────────── #
+#
+# Per the module-top catalog: "per-pair gradient → LoRA adapter targets".
+#
+# A LoRA adapter perturbs a base decoder W by W + B·A (low-rank). Per-pair
+# LoRA supervision treats the per-pair seg+pose gradient as the target
+# direction for the per-pair LoRA adapter to absorb. Bytes with HIGH per-pair
+# seg+pose gradient AND HIGH per-pair variance are LoRA's high-EV supervision
+# targets (LoRA can capture pair-specific behavior the base decoder cannot).
+
+DEFAULT_LORA_SUPERVISION_TOP_K: int = 100
+DEFAULT_LORA_PAIR_VARIANCE_FLOOR: float = 1e-6
+
+
+@dataclass(frozen=True)
+class PerPairLoraSupervisionTarget:
+    """One byte's LoRA supervision target.
+
+    Fields:
+      byte_index: index in (N_bytes, N_pairs, 3) tensor
+      per_pair_distortion_mean: mean across pairs of |g_seg| + |g_pose|
+      per_pair_distortion_std: std across pairs (LoRA's pair-specificity signal)
+      lora_supervision_score: mean × std (combined HIGH+HIGH leverage signal)
+    """
+
+    byte_index: int
+    per_pair_distortion_mean: float
+    per_pair_distortion_std: float
+    lora_supervision_score: float
+
+
+@dataclass(frozen=True)
+class PerPairLoraSupervisionSignal:
+    """Per-pair LoRA adapter supervision signal from per-pair master gradient.
+
+    Fields:
+      top_targets: top-K LoRA targets sorted by descending supervision_score
+      n_bytes: total bytes scanned
+      n_pairs: total pairs in source per-pair gradient
+      top_k: depth of top_targets
+      pair_variance_floor: floor below which std is treated as zero
+      archive_sha256: archive SHA
+      measurement_axis: canonical axis label
+      measurement_hardware: hardware substrate
+    """
+
+    top_targets: tuple[PerPairLoraSupervisionTarget, ...]
+    n_bytes: int
+    n_pairs: int
+    top_k: int
+    pair_variance_floor: float
+    archive_sha256: str
+    measurement_axis: str
+    measurement_hardware: str
+
+
+def per_pair_lora_supervision_signal(
+    per_pair_gradient: np.ndarray,
+    *,
+    archive_sha256: str,
+    measurement_axis: str,
+    measurement_hardware: str,
+    top_k: int = DEFAULT_LORA_SUPERVISION_TOP_K,
+    pair_variance_floor: float = DEFAULT_LORA_PAIR_VARIANCE_FLOOR,
+    write_sidecar: bool = True,
+) -> PerPairLoraSupervisionSignal:
+    """Per-pair LoRA adapter supervision signal from per-pair master gradient.
+
+    Bytes ranked by (per_pair_distortion_mean × per_pair_distortion_std) —
+    HIGH mean = byte matters for distortion; HIGH std = matters DIFFERENTLY
+    per pair (LoRA's per-pair adapter is the canonical absorber).
+
+    Feeds `tac.optimization.bit_allocator` per CLAUDE.md "Subagent
+    coherence-by-default" hook #3 via per-pair LoRA target injection.
+    """
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+    if top_k < 1:
+        raise ValueError(f"top_k must be >= 1; got {top_k}")
+
+    n_bytes, n_pairs, _ = per_pair_gradient.shape
+    # Per-pair distortion = |g_seg| + |g_pose|: shape (N_bytes, N_pairs)
+    distortion = (
+        np.abs(per_pair_gradient[:, :, 0]) + np.abs(per_pair_gradient[:, :, 1])
+    )
+    mean_per_byte = distortion.mean(axis=1)  # (N_bytes,)
+    std_per_byte = distortion.std(axis=1, ddof=1 if n_pairs >= 2 else 0)
+    # Floor low-variance bytes (LoRA cannot help if behavior is pair-invariant)
+    std_per_byte = np.where(std_per_byte >= pair_variance_floor, std_per_byte, 0.0)
+    supervision_score = mean_per_byte * std_per_byte  # (N_bytes,)
+
+    # Top-K by descending supervision_score
+    sorted_by_score_desc = np.argsort(-supervision_score)
+    top_k_clamped = min(top_k, n_bytes)
+    top_indices = sorted_by_score_desc[:top_k_clamped]
+    top_targets = tuple(
+        PerPairLoraSupervisionTarget(
+            byte_index=int(i),
+            per_pair_distortion_mean=float(mean_per_byte[i]),
+            per_pair_distortion_std=float(std_per_byte[i]),
+            lora_supervision_score=float(supervision_score[i]),
+        )
+        for i in top_indices
+    )
+
+    result = PerPairLoraSupervisionSignal(
+        top_targets=top_targets,
+        n_bytes=n_bytes,
+        n_pairs=n_pairs,
+        top_k=top_k_clamped,
+        pair_variance_floor=pair_variance_floor,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+    )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "per_pair_lora_supervision_signal", archive_sha256=archive_sha256
+        )
+        payload = {
+            "schema": "master_gradient_consumer_per_pair_lora_supervision_v1",
+            "consumer_id": "per_pair_lora_supervision_signal",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "n_bytes": n_bytes,
+            "n_pairs": n_pairs,
+            "top_k": top_k_clamped,
+            "pair_variance_floor": pair_variance_floor,
+            "top_targets": [
+                {
+                    "byte_index": t.byte_index,
+                    "per_pair_distortion_mean": t.per_pair_distortion_mean,
+                    "per_pair_distortion_std": t.per_pair_distortion_std,
+                    "lora_supervision_score": t.lora_supervision_score,
+                }
+                for t in top_targets
+            ],
+            "interpretation_notes": (
+                "Per-pair LoRA adapter supervision targets ranked by "
+                "mean(|g_seg|+|g_pose|) × std(|g_seg|+|g_pose|). HIGH score = "
+                "byte matters for distortion AND varies per pair = LoRA's "
+                "canonical absorber surface. Feeds tac.optimization.bit_allocator "
+                "per CLAUDE.md hook #3. DIAGNOSTIC ONLY — NOT a score claim."
+            ),
+            "wire_in_hooks": {
+                "hook_3_bit_allocator": (
+                    "feeds per-pair LoRA target rank into "
+                    "tac.optimization.bit_allocator (sister subagent owns)"
+                ),
+            },
+        }
+        write_consumer_sidecar_json(path, payload)
+
+    return result
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 10 — per_pair_coding_budget_allocation                               #
+# ──────────────────────────────────────────────────────────────────────────── #
+#
+# Per the module-top catalog: "per-pair latent-byte budget from per-pair
+# pose sensitivity".
+#
+# Pose-sensitivity-driven byte budget per pair: pairs with HIGH per-pair pose
+# gradient norm need MORE latent bytes; pairs with LOW pose gradient norm can
+# get FEWER latent bytes. Total budget = N_pairs × baseline_bytes_per_pair;
+# allocated proportional to per-pair pose-gradient-L1.
+
+DEFAULT_BASELINE_BYTES_PER_PAIR: int = 32
+
+
+@dataclass(frozen=True)
+class PerPairCodingBudgetEntry:
+    """One pair's allocated coding budget.
+
+    Fields:
+      pair_index: pair this allocation belongs to
+      pose_gradient_norm: per-pair |g_pose| L1 norm across all bytes
+      allocated_bytes: allocated bytes from canonical proportional sweep
+      relative_share: allocated / total_budget (sums to 1.0 across pairs)
+    """
+
+    pair_index: int
+    pose_gradient_norm: float
+    allocated_bytes: int
+    relative_share: float
+
+
+@dataclass(frozen=True)
+class PerPairCodingBudgetAllocation:
+    """Per-pair latent-byte coding budget allocation.
+
+    Fields:
+      entries: per-pair allocations (length n_pairs; preserves pair order)
+      total_budget_bytes: sum of all allocated bytes
+      baseline_bytes_per_pair: per-pair baseline (canonical = 32)
+      n_pairs: total pairs in source per-pair gradient
+      archive_sha256: archive SHA
+      measurement_axis: canonical axis label
+      measurement_hardware: hardware substrate
+    """
+
+    entries: tuple[PerPairCodingBudgetEntry, ...]
+    total_budget_bytes: int
+    baseline_bytes_per_pair: int
+    n_pairs: int
+    archive_sha256: str
+    measurement_axis: str
+    measurement_hardware: str
+
+
+def per_pair_coding_budget_allocation(
+    per_pair_gradient: np.ndarray,
+    *,
+    archive_sha256: str,
+    measurement_axis: str,
+    measurement_hardware: str,
+    baseline_bytes_per_pair: int = DEFAULT_BASELINE_BYTES_PER_PAIR,
+    write_sidecar: bool = True,
+) -> PerPairCodingBudgetAllocation:
+    """Per-pair latent-byte budget allocation from per-pair pose gradient norm.
+
+    Algorithm:
+      1. For each pair, compute pose_gradient_norm = L1 norm of |g_pose|
+         across all bytes.
+      2. Total budget = N_pairs × baseline_bytes_per_pair.
+      3. Each pair's relative_share = pose_norm / sum_of_pose_norms.
+      4. Each pair's allocated_bytes = round(total_budget × relative_share).
+
+    Feeds `tac.optimization.bit_allocator` per CLAUDE.md hook #3.
+    """
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+    if baseline_bytes_per_pair < 1:
+        raise ValueError(
+            f"baseline_bytes_per_pair must be >= 1; got {baseline_bytes_per_pair}"
+        )
+
+    _, n_pairs, _ = per_pair_gradient.shape
+    pose_norms = np.abs(per_pair_gradient[:, :, 1]).sum(axis=0)  # (N_pairs,)
+    total_budget = n_pairs * baseline_bytes_per_pair
+    total_norm = float(pose_norms.sum())
+    if total_norm <= 0:
+        # Degenerate: no pose gradient; allocate baseline uniformly
+        relative_shares = np.full(n_pairs, 1.0 / n_pairs, dtype=np.float64)
+    else:
+        relative_shares = pose_norms / total_norm
+    raw_allocations = relative_shares * total_budget
+    allocated = np.floor(raw_allocations).astype(np.int64)
+    # Distribute residual bytes (from floor rounding) to highest-fractional pairs
+    residual = total_budget - int(allocated.sum())
+    if residual > 0:
+        residual_priority = np.argsort(-(raw_allocations - allocated))
+        for i in residual_priority[:residual]:
+            allocated[i] += 1
+
+    entries = tuple(
+        PerPairCodingBudgetEntry(
+            pair_index=int(i),
+            pose_gradient_norm=float(pose_norms[i]),
+            allocated_bytes=int(allocated[i]),
+            relative_share=float(relative_shares[i]),
+        )
+        for i in range(n_pairs)
+    )
+
+    result = PerPairCodingBudgetAllocation(
+        entries=entries,
+        total_budget_bytes=total_budget,
+        baseline_bytes_per_pair=baseline_bytes_per_pair,
+        n_pairs=n_pairs,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+    )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "per_pair_coding_budget_allocation", archive_sha256=archive_sha256
+        )
+        # Top-20 allocations + bottom-20 (most-allocated and least-allocated)
+        sorted_by_alloc = sorted(entries, key=lambda e: -e.allocated_bytes)
+        payload = {
+            "schema": "master_gradient_consumer_per_pair_coding_budget_v1",
+            "consumer_id": "per_pair_coding_budget_allocation",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "n_pairs": n_pairs,
+            "baseline_bytes_per_pair": baseline_bytes_per_pair,
+            "total_budget_bytes": total_budget,
+            "top_20_allocations": [
+                {
+                    "pair_index": e.pair_index,
+                    "pose_gradient_norm": e.pose_gradient_norm,
+                    "allocated_bytes": e.allocated_bytes,
+                    "relative_share": e.relative_share,
+                }
+                for e in sorted_by_alloc[:20]
+            ],
+            "bottom_20_allocations": [
+                {
+                    "pair_index": e.pair_index,
+                    "pose_gradient_norm": e.pose_gradient_norm,
+                    "allocated_bytes": e.allocated_bytes,
+                    "relative_share": e.relative_share,
+                }
+                for e in sorted_by_alloc[-20:]
+            ],
+            "interpretation_notes": (
+                "Per-pair latent-byte budget allocated proportionally to per-"
+                "pair |g_pose| L1 norm. Pairs with HIGH pose gradient norm "
+                "need MORE bytes (pose-difficult pairs); pairs with LOW pose "
+                "gradient norm can absorb FEWER bytes. Feeds tac.optimization."
+                "bit_allocator per CLAUDE.md hook #3. DIAGNOSTIC ONLY."
+            ),
+            "wire_in_hooks": {
+                "hook_3_bit_allocator": (
+                    "feeds per-pair byte allocation into "
+                    "tac.optimization.bit_allocator (sister subagent owns)"
+                ),
+            },
+        }
+        write_consumer_sidecar_json(path, payload)
+
+    return result
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 11 — engineered_correction_targeting                                 #
+# ──────────────────────────────────────────────────────────────────────────── #
+#
+# Per the module-top catalog: "per-pair byte-leverage points for per-pair
+# engineered sidecars".
+#
+# For each pair, identify the bytes that are PAIR_SPECIFIC (high per-pair
+# variance) with HIGH per-pair gradient magnitude. These are the leverage
+# points for per-pair engineered sidecars (e.g. UNIWARD-delta target bytes).
+#
+# Sister of consumer 1 (Venn classification) at the per-pair-targeted surface:
+# Venn identifies the byte CLASS (PAIR_SPECIFIC); this consumer identifies
+# WHICH bytes per WHICH pair are the highest-leverage engineered-correction
+# targets.
+
+DEFAULT_ENGINEERED_CORRECTION_TARGETS_PER_PAIR: int = 8
+
+
+@dataclass(frozen=True)
+class EngineeredCorrectionTarget:
+    """One per-pair byte leverage point.
+
+    Fields:
+      pair_index: which pair
+      byte_index: which byte
+      per_pair_distortion_magnitude: |g_seg(byte,pair)| + |g_pose(byte,pair)|
+      per_pair_variance_rank: rank of this byte by descending per-pair variance
+      target_priority: rank of this (pair, byte) pair by descending leverage
+    """
+
+    pair_index: int
+    byte_index: int
+    per_pair_distortion_magnitude: float
+    per_pair_variance_rank: int
+    target_priority: int
+
+
+@dataclass(frozen=True)
+class EngineeredCorrectionTargeting:
+    """Per-pair engineered-correction sidecar targeting.
+
+    Fields:
+      targets: per-pair-per-byte targets ordered by descending target_priority
+      targets_per_pair: how many targets per pair (canonical default = 8)
+      n_bytes: total bytes scanned
+      n_pairs: total pairs in source per-pair gradient
+      archive_sha256: archive SHA
+      measurement_axis: canonical axis label
+      measurement_hardware: hardware substrate
+    """
+
+    targets: tuple[EngineeredCorrectionTarget, ...]
+    targets_per_pair: int
+    n_bytes: int
+    n_pairs: int
+    archive_sha256: str
+    measurement_axis: str
+    measurement_hardware: str
+
+
+def engineered_correction_targeting(
+    per_pair_gradient: np.ndarray,
+    *,
+    archive_sha256: str,
+    measurement_axis: str,
+    measurement_hardware: str,
+    targets_per_pair: int = DEFAULT_ENGINEERED_CORRECTION_TARGETS_PER_PAIR,
+    write_sidecar: bool = True,
+) -> EngineeredCorrectionTargeting:
+    """Per-pair engineered-correction byte leverage targeting.
+
+    For each pair, select the top-K bytes by per-pair distortion magnitude
+    AND high per-pair variance (HIGH = PAIR_SPECIFIC class per consumer 1).
+
+    Feeds `tac.optimization.bit_allocator` per CLAUDE.md hook #3 via
+    per-pair-per-byte engineered-correction sidecar injection.
+    """
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+    if targets_per_pair < 1:
+        raise ValueError(
+            f"targets_per_pair must be >= 1; got {targets_per_pair}"
+        )
+
+    n_bytes, n_pairs, _ = per_pair_gradient.shape
+    # Per-byte per-pair distortion magnitude: (N_bytes, N_pairs)
+    distortion = (
+        np.abs(per_pair_gradient[:, :, 0]) + np.abs(per_pair_gradient[:, :, 1])
+    )
+    # Per-byte per-pair variance signal (deviation from across-pair mean)
+    per_byte_mean = distortion.mean(axis=1, keepdims=True)  # (N_bytes, 1)
+    per_byte_variance_indicator = np.abs(distortion - per_byte_mean)  # (N_bytes, N_pairs)
+
+    targets: list[EngineeredCorrectionTarget] = []
+    targets_per_pair_clamped = min(targets_per_pair, n_bytes)
+    for pair_idx in range(n_pairs):
+        # Combine magnitude and variance into a leverage score
+        leverage = distortion[:, pair_idx] * per_byte_variance_indicator[:, pair_idx]
+        # Order bytes by descending leverage
+        ordered_byte_indices = np.argsort(-leverage)[:targets_per_pair_clamped]
+        # Per-pair variance rank (for the leverage-ranked byte's variance position)
+        variance_order = np.argsort(-per_byte_variance_indicator[:, pair_idx])
+        variance_rank_lookup = {int(byte_idx): r for r, byte_idx in enumerate(variance_order)}
+        for priority, byte_idx in enumerate(ordered_byte_indices):
+            byte_idx_int = int(byte_idx)
+            targets.append(
+                EngineeredCorrectionTarget(
+                    pair_index=int(pair_idx),
+                    byte_index=byte_idx_int,
+                    per_pair_distortion_magnitude=float(distortion[byte_idx, pair_idx]),
+                    per_pair_variance_rank=int(variance_rank_lookup.get(byte_idx_int, n_bytes - 1)),
+                    target_priority=int(priority),
+                )
+            )
+
+    result = EngineeredCorrectionTargeting(
+        targets=tuple(targets),
+        targets_per_pair=targets_per_pair_clamped,
+        n_bytes=n_bytes,
+        n_pairs=n_pairs,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+    )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "engineered_correction_targeting", archive_sha256=archive_sha256
+        )
+        payload = {
+            "schema": "master_gradient_consumer_engineered_correction_targeting_v1",
+            "consumer_id": "engineered_correction_targeting",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "n_bytes": n_bytes,
+            "n_pairs": n_pairs,
+            "targets_per_pair": targets_per_pair_clamped,
+            "total_targets": len(targets),
+            # Compact: emit only top-K target_priority=0 (best per-pair target) for sidecar
+            "top_per_pair_targets": [
+                {
+                    "pair_index": t.pair_index,
+                    "byte_index": t.byte_index,
+                    "per_pair_distortion_magnitude": t.per_pair_distortion_magnitude,
+                    "per_pair_variance_rank": t.per_pair_variance_rank,
+                }
+                for t in targets
+                if t.target_priority == 0
+            ],
+            "interpretation_notes": (
+                "Per-pair engineered-correction sidecar byte leverage points. "
+                "For each pair, top-K bytes selected by per-pair distortion "
+                "magnitude × per-pair variance from across-pair mean. HIGH = "
+                "PAIR_SPECIFIC byte class (per consumer 1) with HIGH per-pair "
+                "leverage = canonical UNIWARD-delta sidecar target. Feeds "
+                "tac.optimization.bit_allocator per CLAUDE.md hook #3. "
+                "DIAGNOSTIC ONLY — NOT a score claim."
+            ),
+            "wire_in_hooks": {
+                "hook_3_bit_allocator": (
+                    "feeds per-pair engineered-correction sidecar targets into "
+                    "tac.optimization.bit_allocator (sister subagent owns)"
+                ),
+            },
+        }
+        write_consumer_sidecar_json(path, payload)
+
+    return result
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 12 — per_pair_kkt_residuals                                          #
+# ──────────────────────────────────────────────────────────────────────────── #
+#
+# Per the module-top catalog: "per-pair Lagrangian × constraint = per-pair
+# KKT certificate".
+#
+# The KKT (Karush-Kuhn-Tucker) certificate for a per-pair Lagrangian
+# L(θ_i) = D(θ_i) + λ_R · R(θ_i) (consumer 8 per-pair λ_R) is:
+#
+#   dL/dθ_i = dD/dθ_i + λ_R · dR/dθ_i = 0  (stationarity)
+#
+# The per-pair KKT residual is the L2 norm of (dD/dθ_i + λ_R · dR/dθ_i),
+# evaluated at the per-pair gradient. Pairs with HIGH KKT residual indicate
+# the per-pair λ_R chosen (consumer 8) does NOT achieve stationarity for
+# that pair — the joint codec is failing to balance distortion vs rate at
+# that pair.
+
+
+@dataclass(frozen=True)
+class PerPairKKTResidualEntry:
+    """One pair's KKT residual.
+
+    Fields:
+      pair_index: which pair
+      lambda_r_used: λ_R used for this pair's residual computation
+      kkt_residual_l2: L2 norm of (dD/dθ + λ_R · dR/dθ) per byte
+      distortion_norm: L2 norm of dD/dθ per byte
+      rate_norm: L2 norm of dR/dθ per byte
+    """
+
+    pair_index: int
+    lambda_r_used: float
+    kkt_residual_l2: float
+    distortion_norm: float
+    rate_norm: float
+
+
+@dataclass(frozen=True)
+class PerPairKKTResiduals:
+    """Per-pair KKT residual certificate.
+
+    Fields:
+      entries: per-pair KKT residuals (length n_pairs)
+      operator_lambda_r: reference λ_R (canonical = median of per-pair λ_R per
+          consumer 8)
+      median_kkt_residual: median across all pairs
+      pairs_above_2x_median: indices of pairs with residual > 2× median
+      n_pairs: total pairs in source per-pair gradient
+      archive_sha256: archive SHA
+      measurement_axis: canonical axis label
+      measurement_hardware: hardware substrate
+    """
+
+    entries: tuple[PerPairKKTResidualEntry, ...]
+    operator_lambda_r: float
+    median_kkt_residual: float
+    pairs_above_2x_median: tuple[int, ...]
+    n_pairs: int
+    archive_sha256: str
+    measurement_axis: str
+    measurement_hardware: str
+
+
+def per_pair_kkt_residuals(
+    per_pair_gradient: np.ndarray,
+    *,
+    archive_sha256: str,
+    measurement_axis: str,
+    measurement_hardware: str,
+    operator_lambda_r: float | None = None,
+    write_sidecar: bool = True,
+) -> PerPairKKTResiduals:
+    """Per-pair Lagrangian KKT residual certificate.
+
+    For each pair, compute the KKT residual ||dD/dθ + λ_R · dR/dθ||_2 where
+    dD/dθ = (|g_seg| + |g_pose|) and dR/dθ = |g_rate|. If operator_lambda_r
+    is None, the canonical reference is computed via
+    `per_pair_lagrangian_lambda_bisection` (median across all valid pairs).
+
+    Pairs with HIGH KKT residual relative to median indicate the chosen
+    λ_R does NOT achieve per-pair stationarity = joint codec failing to
+    balance distortion vs rate at that pair.
+    """
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+
+    n_bytes, n_pairs, _ = per_pair_gradient.shape
+
+    # Determine reference λ_R via consumer 8 if not provided
+    if operator_lambda_r is None:
+        lambda_bisection = per_pair_lagrangian_lambda_bisection(
+            per_pair_gradient,
+            archive_sha256=archive_sha256,
+            measurement_axis=measurement_axis,
+            measurement_hardware=measurement_hardware,
+            write_sidecar=False,
+        )
+        ref_lambda = lambda_bisection.median_lambda_r if lambda_bisection.median_lambda_r > 0 else 1.0
+    else:
+        ref_lambda = float(operator_lambda_r)
+
+    entries: list[PerPairKKTResidualEntry] = []
+    residuals: list[float] = []
+    for pair_idx in range(n_pairs):
+        d_distortion = (
+            np.abs(per_pair_gradient[:, pair_idx, 0])
+            + np.abs(per_pair_gradient[:, pair_idx, 1])
+        )
+        d_rate = np.abs(per_pair_gradient[:, pair_idx, 2])
+        kkt = d_distortion + ref_lambda * d_rate
+        kkt_l2 = float(np.linalg.norm(kkt))
+        distortion_norm = float(np.linalg.norm(d_distortion))
+        rate_norm = float(np.linalg.norm(d_rate))
+        entries.append(
+            PerPairKKTResidualEntry(
+                pair_index=int(pair_idx),
+                lambda_r_used=ref_lambda,
+                kkt_residual_l2=kkt_l2,
+                distortion_norm=distortion_norm,
+                rate_norm=rate_norm,
+            )
+        )
+        residuals.append(kkt_l2)
+
+    median_residual = float(np.median(residuals)) if residuals else 0.0
+    pairs_above_2x = tuple(
+        e.pair_index for e in entries if e.kkt_residual_l2 > 2.0 * median_residual
+    )
+
+    result = PerPairKKTResiduals(
+        entries=tuple(entries),
+        operator_lambda_r=ref_lambda,
+        median_kkt_residual=median_residual,
+        pairs_above_2x_median=pairs_above_2x,
+        n_pairs=n_pairs,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+    )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "per_pair_kkt_residuals", archive_sha256=archive_sha256
+        )
+        payload = {
+            "schema": "master_gradient_consumer_per_pair_kkt_residuals_v1",
+            "consumer_id": "per_pair_kkt_residuals",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "n_pairs": n_pairs,
+            "operator_lambda_r": ref_lambda,
+            "median_kkt_residual_l2": median_residual,
+            "pairs_above_2x_median_count": len(pairs_above_2x),
+            "pairs_above_2x_median_top_20": list(pairs_above_2x[:20]),
+            "interpretation_notes": (
+                "Per-pair KKT residual = ||dD/dθ + λ_R · dR/dθ||_2. HIGH "
+                "residual = chosen λ_R does NOT achieve per-pair stationarity. "
+                "Pairs above 2× median residual are the joint-codec failure "
+                "modes per pair. Feeds tac.optimization.pareto per CLAUDE.md "
+                "hook #2. DIAGNOSTIC ONLY — NOT a score claim."
+            ),
+            "wire_in_hooks": {
+                "hook_2_pareto_constraint": (
+                    "feeds per-pair KKT certificate into "
+                    "tac.optimization.pareto (sister subagent owns)"
+                ),
+            },
+        }
+        write_consumer_sidecar_json(path, payload)
+
+    return result
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 13 — per_pair_volterra_cross_terms                                   #
+# ──────────────────────────────────────────────────────────────────────────── #
+#
+# Per the module-top catalog: "per-pair grad × per-pair grad outer product =
+# pair-pair coupling matrix".
+#
+# The Volterra second-order kernel captures pair-pair interactions. Compute
+# the N_pairs × N_pairs coupling matrix where C[i,j] = mean across bytes of
+# (g(byte,pair_i) · g(byte,pair_j)). HIGH coupling = pair i and pair j share
+# the same byte-leverage; they will respond similarly to byte mutations.
+#
+# Operator value: identifies CLUSTERS of pair-pair coupling, which informs
+# whether per-pair LoRA adapters can share rank-1 capacity across clusters
+# (consumer 9's LoRA targets) vs. needing rank-K diversity.
+
+DEFAULT_VOLTERRA_TOP_K_PAIRS: int = 64
+DEFAULT_VOLTERRA_DOWNSAMPLE_BYTES: int = 4096
+
+
+@dataclass(frozen=True)
+class PerPairVolterraEntry:
+    """One pair-pair coupling entry.
+
+    Fields:
+      pair_i: first pair
+      pair_j: second pair
+      coupling_score: normalized cosine-style cross-product score
+    """
+
+    pair_i: int
+    pair_j: int
+    coupling_score: float
+
+
+@dataclass(frozen=True)
+class PerPairVolterraCrossTerms:
+    """Pair-pair Volterra coupling matrix from per-pair master gradient.
+
+    Fields:
+      top_k_couplings: top-K pair-pair entries by descending coupling score
+      top_k: requested top-K (clamped to N_pairs × (N_pairs-1) / 2)
+      downsample_bytes: how many bytes used in coupling computation
+          (canonical default = 4096 to keep N_bytes^2 tractable)
+      n_pairs: total pairs in source per-pair gradient
+      archive_sha256: archive SHA
+      measurement_axis: canonical axis label
+      measurement_hardware: hardware substrate
+    """
+
+    top_k_couplings: tuple[PerPairVolterraEntry, ...]
+    top_k: int
+    downsample_bytes: int
+    n_pairs: int
+    archive_sha256: str
+    measurement_axis: str
+    measurement_hardware: str
+
+
+def per_pair_volterra_cross_terms(
+    per_pair_gradient: np.ndarray,
+    *,
+    archive_sha256: str,
+    measurement_axis: str,
+    measurement_hardware: str,
+    top_k: int = DEFAULT_VOLTERRA_TOP_K_PAIRS,
+    downsample_bytes: int = DEFAULT_VOLTERRA_DOWNSAMPLE_BYTES,
+    random_seed: int = 42,
+    write_sidecar: bool = True,
+) -> PerPairVolterraCrossTerms:
+    """Per-pair Volterra second-order cross terms.
+
+    For each pair-pair (i, j), compute the cosine-style coupling score over
+    the per-pair distortion gradient profiles:
+
+        coupling[i, j] = sum_bytes (|g_distortion(byte,i)| · |g_distortion(byte,j)|) /
+                         (||g_distortion(.,i)|| · ||g_distortion(.,j)||)
+
+    where g_distortion = |g_seg| + |g_pose|. Score in [0, 1]; 1 = identical
+    byte-leverage profile (high coupling); 0 = orthogonal byte-leverage.
+
+    Bytes are downsampled to `downsample_bytes` indices (deterministic via
+    random_seed) to keep N_pairs² × downsample_bytes tractable on the
+    canonical (N_bytes ≈ 178000, N_pairs ≈ 600) shape.
+
+    Feeds `tac.optimization.pareto` per CLAUDE.md hook #2 via interaction
+    term enumeration.
+    """
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+    if top_k < 1:
+        raise ValueError(f"top_k must be >= 1; got {top_k}")
+    if downsample_bytes < 1:
+        raise ValueError(f"downsample_bytes must be >= 1; got {downsample_bytes}")
+
+    n_bytes, n_pairs, _ = per_pair_gradient.shape
+
+    # Downsample bytes deterministically
+    if n_bytes > downsample_bytes:
+        rng = np.random.default_rng(random_seed)
+        byte_subsample = rng.choice(n_bytes, size=downsample_bytes, replace=False)
+        distortion_subset = (
+            np.abs(per_pair_gradient[byte_subsample, :, 0])
+            + np.abs(per_pair_gradient[byte_subsample, :, 1])
+        )  # (downsample_bytes, n_pairs)
+        bytes_used = downsample_bytes
+    else:
+        distortion_subset = (
+            np.abs(per_pair_gradient[:, :, 0]) + np.abs(per_pair_gradient[:, :, 1])
+        )
+        bytes_used = n_bytes
+
+    # Normalize per-pair vectors to unit L2 norm
+    per_pair_norms = np.linalg.norm(distortion_subset, axis=0)  # (n_pairs,)
+    safe_norms = np.where(per_pair_norms > 0, per_pair_norms, 1.0)
+    normalized = distortion_subset / safe_norms[np.newaxis, :]  # (bytes_used, n_pairs)
+
+    # Coupling matrix: (n_pairs, n_pairs) via cosine = column · column
+    coupling = normalized.T @ normalized  # (n_pairs, n_pairs)
+    # Zero degenerate (zero-norm) pairs
+    zero_mask = per_pair_norms <= 0
+    coupling[zero_mask, :] = 0.0
+    coupling[:, zero_mask] = 0.0
+
+    # Extract upper triangle (i < j) entries
+    iu = np.triu_indices(n_pairs, k=1)
+    triu_values = coupling[iu]
+    triu_pairs_i = iu[0]
+    triu_pairs_j = iu[1]
+
+    # Top-K by descending coupling score
+    max_pairs = triu_values.size
+    top_k_clamped = min(top_k, max_pairs)
+    top_sorted = np.argsort(-triu_values)[:top_k_clamped]
+    top_entries = tuple(
+        PerPairVolterraEntry(
+            pair_i=int(triu_pairs_i[idx]),
+            pair_j=int(triu_pairs_j[idx]),
+            coupling_score=float(triu_values[idx]),
+        )
+        for idx in top_sorted
+    )
+
+    result = PerPairVolterraCrossTerms(
+        top_k_couplings=top_entries,
+        top_k=top_k_clamped,
+        downsample_bytes=bytes_used,
+        n_pairs=n_pairs,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+    )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "per_pair_volterra_cross_terms", archive_sha256=archive_sha256
+        )
+        payload = {
+            "schema": "master_gradient_consumer_per_pair_volterra_v1",
+            "consumer_id": "per_pair_volterra_cross_terms",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "n_pairs": n_pairs,
+            "top_k": top_k_clamped,
+            "downsample_bytes": bytes_used,
+            "random_seed": random_seed,
+            "top_k_couplings": [
+                {
+                    "pair_i": e.pair_i,
+                    "pair_j": e.pair_j,
+                    "coupling_score": e.coupling_score,
+                }
+                for e in top_entries
+            ],
+            "interpretation_notes": (
+                "Pair-pair Volterra coupling matrix via cosine similarity on "
+                "per-pair distortion gradient profiles. HIGH coupling = pairs "
+                "share byte-leverage profile (canonical Volterra second-order "
+                "kernel). Informs whether per-pair LoRA adapters can share "
+                "rank-1 capacity (high coupling) or need rank-K diversity "
+                "(low coupling). Feeds tac.optimization.pareto per CLAUDE.md "
+                "hook #2. DIAGNOSTIC ONLY — NOT a score claim."
+            ),
+            "wire_in_hooks": {
+                "hook_2_pareto_constraint": (
+                    "feeds pair-pair interaction enumeration into "
+                    "tac.optimization.pareto (sister subagent owns)"
+                ),
+            },
+        }
+        write_consumer_sidecar_json(path, payload)
+
+    return result
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 14 — gradient_informed_decoder_pruning                               #
+# ──────────────────────────────────────────────────────────────────────────── #
+#
+# Per the module-top catalog: "channels with low per-pair-AND-aggregate
+# gradient norm = dead capacity → prune".
+#
+# Dead-byte identification combining BOTH the aggregate gradient (low
+# magnitude → byte doesn't matter in mean) AND the per-pair gradient (low
+# variance → byte doesn't matter per pair either). Joint-low bytes are dead
+# capacity and pruning them frees rate budget for the engineered-correction
+# targets (consumer 11) and LoRA targets (consumer 9).
+
+DEFAULT_PRUNING_AGGREGATE_FLOOR_RELATIVE: float = 0.01
+DEFAULT_PRUNING_PER_PAIR_VARIANCE_FLOOR: float = 1e-8
+
+
+@dataclass(frozen=True)
+class DecoderPruningCandidate:
+    """One byte's pruning candidate entry.
+
+    Fields:
+      byte_index: index in (N_bytes,)
+      aggregate_magnitude_l1: |g_seg|+|g_pose|+|g_rate| of the aggregate
+          gradient for this byte
+      per_pair_variance_l1: mean across pairs of (per-byte per-pair |g| L1)
+      is_dead: True if aggregate AND per_pair both below their floors
+    """
+
+    byte_index: int
+    aggregate_magnitude_l1: float
+    per_pair_variance_l1: float
+    is_dead: bool
+
+
+@dataclass(frozen=True)
+class GradientInformedDecoderPruning:
+    """Decoder pruning candidates from per-pair AND aggregate master gradient.
+
+    Fields:
+      dead_byte_indices: indices of bytes classified DEAD by joint criterion
+      total_dead_bytes: count of dead bytes
+      total_dead_bytes_fraction: dead_bytes / N_bytes
+      n_bytes: total bytes scanned
+      n_pairs: total pairs in source per-pair gradient
+      aggregate_floor_relative: relative floor for aggregate magnitude
+      per_pair_variance_floor: floor for per-pair variance L1
+      archive_sha256: archive SHA
+      measurement_axis: canonical axis label
+      measurement_hardware: hardware substrate
+    """
+
+    dead_byte_indices: tuple[int, ...]
+    total_dead_bytes: int
+    total_dead_bytes_fraction: float
+    n_bytes: int
+    n_pairs: int
+    aggregate_floor_relative: float
+    per_pair_variance_floor: float
+    archive_sha256: str
+    measurement_axis: str
+    measurement_hardware: str
+
+
+def gradient_informed_decoder_pruning(
+    per_pair_gradient: np.ndarray,
+    aggregate_gradient: np.ndarray,
+    *,
+    archive_sha256: str,
+    measurement_axis: str,
+    measurement_hardware: str,
+    aggregate_floor_relative: float = DEFAULT_PRUNING_AGGREGATE_FLOOR_RELATIVE,
+    per_pair_variance_floor: float = DEFAULT_PRUNING_PER_PAIR_VARIANCE_FLOOR,
+    write_sidecar: bool = True,
+) -> GradientInformedDecoderPruning:
+    """Decoder pruning candidates from joint per-pair AND aggregate gradient.
+
+    A byte is DEAD when BOTH:
+      - aggregate L1 magnitude < aggregate_floor_relative × max_aggregate_L1
+      - per-pair L1 variance < per_pair_variance_floor
+
+    Joint-criterion is stricter than aggregate-alone: bytes with low aggregate
+    mean but HIGH per-pair variance are KEPT (they have per-pair leverage even
+    if they cancel in the mean).
+    """
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+    if aggregate_gradient.ndim != 2 or aggregate_gradient.shape[-1] != 3:
+        raise ValueError(
+            f"aggregate_gradient must have shape (N_bytes, 3); "
+            f"got {aggregate_gradient.shape}"
+        )
+    if aggregate_gradient.shape[0] != per_pair_gradient.shape[0]:
+        raise ValueError(
+            f"N_bytes mismatch: aggregate {aggregate_gradient.shape[0]} "
+            f"vs per-pair {per_pair_gradient.shape[0]}"
+        )
+    if not (0.0 < aggregate_floor_relative < 1.0):
+        raise ValueError(
+            f"aggregate_floor_relative must be in (0, 1); "
+            f"got {aggregate_floor_relative}"
+        )
+
+    n_bytes, n_pairs, _ = per_pair_gradient.shape
+    aggregate_l1 = np.abs(aggregate_gradient).sum(axis=1)  # (N_bytes,)
+    max_aggregate_l1 = float(aggregate_l1.max()) if aggregate_l1.size > 0 else 0.0
+    aggregate_floor_abs = aggregate_floor_relative * max_aggregate_l1
+
+    # Per-pair variance L1 = std across pairs of (per-byte per-pair L1)
+    per_pair_l1 = np.abs(per_pair_gradient).sum(axis=2)  # (N_bytes, N_pairs)
+    per_pair_std = per_pair_l1.std(axis=1, ddof=1 if n_pairs >= 2 else 0)
+
+    dead_mask = (aggregate_l1 < aggregate_floor_abs) & (
+        per_pair_std < per_pair_variance_floor
+    )
+    dead_indices = np.flatnonzero(dead_mask)
+
+    total_dead = int(dead_indices.size)
+    dead_fraction = float(total_dead / n_bytes) if n_bytes > 0 else 0.0
+
+    result = GradientInformedDecoderPruning(
+        dead_byte_indices=tuple(int(i) for i in dead_indices),
+        total_dead_bytes=total_dead,
+        total_dead_bytes_fraction=dead_fraction,
+        n_bytes=n_bytes,
+        n_pairs=n_pairs,
+        aggregate_floor_relative=aggregate_floor_relative,
+        per_pair_variance_floor=per_pair_variance_floor,
+        archive_sha256=archive_sha256,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+    )
+
+    if write_sidecar:
+        path = consumer_output_path(
+            "gradient_informed_decoder_pruning", archive_sha256=archive_sha256
+        )
+        payload = {
+            "schema": "master_gradient_consumer_decoder_pruning_v1",
+            "consumer_id": "gradient_informed_decoder_pruning",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "n_bytes": n_bytes,
+            "n_pairs": n_pairs,
+            "aggregate_floor_relative": aggregate_floor_relative,
+            "per_pair_variance_floor": per_pair_variance_floor,
+            "total_dead_bytes": total_dead,
+            "total_dead_bytes_fraction": dead_fraction,
+            "dead_byte_indices_first_200": list(int(i) for i in dead_indices[:200]),
+            "interpretation_notes": (
+                "Decoder pruning candidates from joint criterion: bytes whose "
+                "aggregate L1 magnitude AND per-pair variance are BOTH below "
+                "their floors are DEAD CAPACITY. Pruning these bytes frees "
+                "rate budget for engineered-correction targets (consumer 11) "
+                "and LoRA targets (consumer 9). Stricter than aggregate-alone "
+                "Venn DEAD class (consumer 1) which considers only aggregate "
+                "magnitude. Feeds tac.optimization.bit_allocator per CLAUDE.md "
+                "hook #3. DIAGNOSTIC ONLY — NOT a score claim."
+            ),
+            "wire_in_hooks": {
+                "hook_3_bit_allocator": (
+                    "feeds dead-byte exclusion mask into "
+                    "tac.optimization.bit_allocator (sister subagent owns)"
+                ),
+            },
+        }
+        write_consumer_sidecar_json(path, payload)
+
+    return result
 
 
 # ──────────────────────────────────────────────────────────────────────────── #

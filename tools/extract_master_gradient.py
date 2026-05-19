@@ -343,6 +343,206 @@ def list_archive_grammar_contracts() -> dict[str, object]:
     }
 
 
+# Cable D D2 (task #887/#890) — analytical surface manifest
+#
+# Per `.omx/research/integrated_battle_plan_priority_queue_dag_cables_gates_20260519T052801Z.md`
+# Cable D D2 + task #890 prior memo: master-gradient wire-in to ALL analytical
+# surfaces is partial. This manifest enumerates the analytical surfaces that
+# consume master-gradient tensors and their per-surface coverage status so
+# the operator (and the cathedral autopilot ranker) can see the gap at-a-
+# glance and prioritize sister wire-ins.
+#
+# Per CLAUDE.md "Subagent coherence-by-default" + "PER-PAIR MASTER GRADIENT —
+# wire-in coverage audit across ALL consumers" operator standing directive
+# (task #810): every consumer/surface MUST close the producer→consumer loop.
+# This manifest is the structural record of which surfaces have which
+# coverage state.
+#
+# Coverage states:
+#   - "active" — surface explicitly imports + calls tac.master_gradient APIs
+#   - "indirect" — surface consumes via tac.master_gradient_consumers
+#   - "pending" — declared as wire-in target; not yet implemented
+#   - "decorator" — surface uses a canonical decorator pattern that wraps
+#     master_gradient (boosting / compress_time_optimization patterns)
+
+_ANALYTICAL_SURFACES: tuple[dict[str, str], ...] = (
+    {
+        "surface_id": "tac.sensitivity_map",
+        "module_path": "src/tac/sensitivity_map/",
+        "coverage": "active",
+        "wire_in_hook": "wyner_ziv_reweight.py imports master_gradient",
+        "notes": (
+            "Cable D sister wiring; per-pair gradient feeds axis-level "
+            "reweight via consumer 4 (Wyner-Ziv covariance)."
+        ),
+    },
+    {
+        "surface_id": "tac.master_gradient_consumers",
+        "module_path": "src/tac/master_gradient_consumers.py",
+        "coverage": "active",
+        "wire_in_hook": "consumers 1-15 (15 = Lagrangian-dual planner)",
+        "notes": (
+            "v3 wave 2026-05-19 added consumers 7-14 (Pareto envelope, "
+            "λ_R bisection, LoRA targets, coding budget, engineered "
+            "correction, KKT residuals, Volterra cross-terms, decoder "
+            "pruning). All 15 consumers now landed."
+        ),
+    },
+    {
+        "surface_id": "tac.unified_action",
+        "module_path": "src/tac/unified_action.py",
+        "coverage": "active",
+        "wire_in_hook": "imports master_gradient for action-principle composition",
+        "notes": "Per CLAUDE.md unified-Lagrangian action S_total(theta, archive_bytes, hardware).",
+    },
+    {
+        "surface_id": "tac.utility_curves.per_byte_master_gradient",
+        "module_path": "src/tac/utility_curves/per_byte_master_gradient.py",
+        "coverage": "active",
+        "wire_in_hook": "per-byte utility curves derived from master gradient",
+        "notes": "Decorator-style; consumes via consumer wrappers.",
+    },
+    {
+        "surface_id": "tac.canonical_duckdb.per_byte_sensitivity_ext",
+        "module_path": "src/tac/canonical_duckdb/per_byte_sensitivity_ext.py",
+        "coverage": "active",
+        "wire_in_hook": "DuckDB per-byte sensitivity table backfill from master_gradient anchors",
+        "notes": "Canonical DuckDB sensitivity backfill consumer.",
+    },
+    {
+        "surface_id": "tac.wyner_ziv_deliverability.proof_builder",
+        "module_path": "src/tac/wyner_ziv_deliverability/proof_builder.py",
+        "coverage": "active",
+        "wire_in_hook": "DeliverabilityProof consumes master_gradient for byte classification",
+        "notes": "Per Catalog #319 — feeds autopilot reweight v2.",
+    },
+    {
+        "surface_id": "tac.codec.wyner_ziv_layer",
+        "module_path": "src/tac/codec/wyner_ziv_layer.py",
+        "coverage": "active",
+        "wire_in_hook": "Wyner-Ziv layer consumes master_gradient via side-info covariance",
+        "notes": "Consumer 4 sister surface.",
+    },
+    {
+        "surface_id": "tac.autopilot_rudin_daubechies.rashomon_ensemble",
+        "module_path": "src/tac/autopilot_rudin_daubechies/rashomon_ensemble.py",
+        "coverage": "active",
+        "wire_in_hook": "RashomonEnsembleRanker.update_all_from_master_gradient",
+        "notes": "Per Catalog #252 + consumer 6 (Rashomon disagreement queue).",
+    },
+    {
+        "surface_id": "tac.optimization.bit_allocator_end_to_end",
+        "module_path": "src/tac/optimization/bit_allocator_end_to_end.py",
+        "coverage": "active",
+        "wire_in_hook": "imports master_gradient for per-pair bit allocation",
+        "notes": (
+            "Cable D D3 v3 consumers 9-11 + 14 produce the canonical signals "
+            "this surface consumes (LoRA targets / coding budget / engineered "
+            "correction / dead-byte pruning)."
+        ),
+    },
+    {
+        "surface_id": "tac.optimization.jacobian_fisher_importance_allocator",
+        "module_path": "src/tac/optimization/jacobian_fisher_importance_allocator.py",
+        "coverage": "active",
+        "wire_in_hook": "imports master_gradient for Fisher importance allocation",
+        "notes": "Sister to bit_allocator; consumes per-byte sensitivity directly.",
+    },
+    {
+        "surface_id": "tac.optimization.per_pair_namespace_wire_in",
+        "module_path": "src/tac/optimization/per_pair_namespace_wire_in.py",
+        "coverage": "active",
+        "wire_in_hook": "per-pair namespace wire-in helper",
+        "notes": "Per Catalog #810 namespace wave.",
+    },
+    {
+        "surface_id": "tac.analytical_solve_extinctions",
+        "module_path": "src/tac/analytical_solve_extinctions/",
+        "coverage": "active",
+        "wire_in_hook": "coupling_threshold_statistical_derivation consumes master_gradient",
+        "notes": "Cable D D3 v3 consumer 13 (Volterra cross-terms) produces the pair-pair coupling signal.",
+    },
+    {
+        "surface_id": "tac.boosting",
+        "module_path": "src/tac/boosting/",
+        "coverage": "decorator",
+        "wire_in_hook": "@boosting_decorator wraps master_gradient consumers",
+        "notes": "Pipeline + residual_cascade consume via decorator pattern.",
+    },
+    {
+        "surface_id": "tac.compress_time_optimization",
+        "module_path": "src/tac/compress_time_optimization/",
+        "coverage": "decorator",
+        "wire_in_hook": "TTO harness consumes master_gradient for per-pair coordinate search",
+        "notes": "generic_tto_harness / multipass_refinement / per_pair_coordinate_search / simulated_annealing all consume.",
+    },
+    {
+        "surface_id": "tools/cathedral_autopilot_autonomous_loop.py",
+        "module_path": "tools/cathedral_autopilot_autonomous_loop.py",
+        "coverage": "active",
+        "wire_in_hook": "consumes via consumer 15 (OptimalPerPairTreatmentPlan) + DeliverabilityProof",
+        "notes": "Hook #4 cathedral autopilot dispatch. Sister D-cable subagent owns extending to consumers 7-14.",
+    },
+    {
+        "surface_id": "tac.optimization.pareto",
+        "module_path": "src/tac/optimization/ (pareto solver)",
+        "coverage": "pending",
+        "wire_in_hook": "per-pair Pareto constraint emission from consumer 7 + 8 + 12",
+        "notes": (
+            "Cable D D3 v3 consumers 7 (Pareto envelope) + 8 (λ_R bisection) "
+            "+ 12 (KKT residuals) produce the canonical signals. Sister "
+            "subagent owns the wire-in implementation in tac.optimization.pareto."
+        ),
+    },
+)
+
+
+def list_analytical_surfaces() -> dict[str, object]:
+    """Return the operator-facing analytical-surface coverage manifest.
+
+    Per Cable D D2 (task #887/#890) + CLAUDE.md "PER-PAIR MASTER GRADIENT —
+    wire-in coverage audit across ALL consumers" operator standing directive
+    (task #810).
+
+    Coverage state taxonomy:
+      - "active": surface explicitly imports + calls tac.master_gradient
+      - "indirect": consumes via tac.master_gradient_consumers
+      - "decorator": uses canonical decorator pattern that wraps master_gradient
+      - "pending": declared as wire-in target; sister subagent owns landing
+    """
+    coverage_counts: dict[str, int] = {}
+    for entry in _ANALYTICAL_SURFACES:
+        coverage_counts[entry["coverage"]] = coverage_counts.get(entry["coverage"], 0) + 1
+    total = len(_ANALYTICAL_SURFACES)
+    active = coverage_counts.get("active", 0)
+    decorator = coverage_counts.get("decorator", 0)
+    pending = coverage_counts.get("pending", 0)
+    indirect = coverage_counts.get("indirect", 0)
+    return {
+        "schema": "master_gradient_analytical_surface_manifest_v1",
+        "score_claim_allowed": False,
+        "promotion_eligible": False,
+        "evidence_grade": "[diagnostic; master-gradient coverage manifest]",
+        "total_surfaces": total,
+        "coverage_counts": coverage_counts,
+        "coverage_fraction_active": (active + decorator + indirect) / total if total > 0 else 0.0,
+        "coverage_fraction_pending": pending / total if total > 0 else 0.0,
+        "surfaces": [dict(s) for s in _ANALYTICAL_SURFACES],
+        "interpretation_notes": (
+            "Per Cable D D2 + task #890 master-gradient wire-in coverage audit. "
+            "'active' = surface directly imports tac.master_gradient. "
+            "'indirect' = surface consumes via tac.master_gradient_consumers. "
+            "'decorator' = surface uses canonical decorator pattern. "
+            "'pending' = sister subagent owns wire-in. "
+            "Cable D D3 v3 consumers 7-14 (2026-05-19) close the producer→"
+            "consumer loop for the analytical surfaces named here; SISTER 3 "
+            "in Cable D subagent batch owns the wire-in of those new "
+            "consumers into tools/cathedral_autopilot_autonomous_loop.py + "
+            "tac.optimization.pareto + tac.optimization.bit_allocator."
+        ),
+    }
+
+
 @dataclass(frozen=True)
 class ArchiveLayout:
     """Detected scored-archive grammar without claiming score authority.
@@ -1727,6 +1927,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _main_extract_all(argv_list[1:])
     if argv_list and argv_list[0] == "list-grammars":
         argv_list = ["--list-grammars", *argv_list[1:]]
+    if argv_list and argv_list[0] == "list-analytical-surfaces":
+        # Cable D D2 (task #887/#890) — emit the analytical-surface coverage
+        # manifest and exit. JSON-formatted so cathedral autopilot ranker
+        # can consume.
+        print(json.dumps(list_analytical_surfaces(), indent=2, sort_keys=True))
+        return 0
 
     parser = argparse.ArgumentParser(
         description="Extract master gradient (per-byte score sensitivity) for an archive at its operating point."
