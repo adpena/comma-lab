@@ -41618,11 +41618,11 @@
       "id": "lane_signal_loss_recovery_from_rate_limit_kill_wave_20260519",
       "name": "Signal-loss recovery from rate-limit kill wave (9 killed subagents)",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "10 recovery commits (77a2d0f38 + 26e5cf41e + 11049f5f4 + 1b594c1bb + 65ad84998 + 5de1a96f1 + 1ecfa022b + 1965dffed + 502e5960b + 8f9698b6e + 1a411b92f) recovering 9 killed subagents (slot 23/24/25/27/28/29/30/31 + sister codex Z7+HF Jobs); slot 32 deferred-to-slot-B per Catalog #314"
         },
         "real_archive_empirical": {
           "status": false,
@@ -41645,8 +41645,49 @@
           "evidence": ""
         },
         "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/signal_loss_recovery_from_rate_limit_kill_wave_landed_20260519T171113Z.md + MEMORY.md prepend"
+        },
+        "deploy_runbook": {
           "status": false,
           "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr_pre_submission_canonicalization_check_in_package_20260519",
+      "name": "PR pre-submission canonicalization + check-in package (re-dispatch from rate-limit-killed slot 29)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/pr_pre_submission_check_in_package_20260519T173326Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_pr_pre_submission_canonicalization_landed_20260519T173326Z.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -41663,5 +41704,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T17:11:20Z"
+  "updated_at": "2026-05-19T17:37:08Z"
 }
