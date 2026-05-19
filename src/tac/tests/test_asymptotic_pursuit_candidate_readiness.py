@@ -616,6 +616,10 @@ def test_assess_candidate_z7_mamba2_scaffold_is_visible_with_score_band_axis():
     )
     assert (
         "z7_mamba2_mamba_ssm_pypi_install_must_succeed_in_modal_a100_image_pre_dispatch"
+        not in c.dispatch_blockers
+    )
+    assert (
+        "z7_mamba2_reference_torch_runtime_exact_handoff_must_validate_before_paid_dispatch"
         in c.dispatch_blockers
     )
     assert c.score_claim is False

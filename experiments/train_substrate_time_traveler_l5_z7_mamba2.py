@@ -49,6 +49,7 @@ Scope at THIS landing:
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import sys
@@ -129,8 +130,9 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     "--batch-size": {
         "env": "Z7_MAMBA2_BATCH_SIZE",
         "rationale": (
-            "Per-step pair count; A100 handles 4-8 at 384x512 with "
-            "autoregressive Mamba-2 unroll across 600 pairs"
+            "Per-step pair count. The current trainer replays the full "
+            "sequence in one graph; values smaller than --max-pairs fail "
+            "closed until chunked autoregressive training lands."
         ),
         "default": "4",
     },
@@ -165,21 +167,23 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     "--mamba2-backend": {
         "env": "Z7_MAMBA2_BACKEND",
         "rationale": (
-            "Mamba-2 backend selection: 'auto' (default; mamba_ssm fallback "
-            "to reference_torch), 'mamba_ssm' (CUDA only), 'reference_torch' "
-            "(MPS/CPU compatible per design memo §13 local proxy training)"
+            "Mamba-2 backend selection. Default is 'reference_torch' because "
+            "the Z7MCM2 inflate runtime replays byte-closed packets through "
+            "the scorer-free reference implementation. 'mamba_ssm' is "
+            "training-only research until its state/export replay contract "
+            "is implemented."
         ),
-        "default": "auto",
+        "default": "reference_torch",
     },
     "--ego-source": {
         "env": "Z7_MAMBA2_EGO_SOURCE",
         "rationale": (
-            "Runtime-configurable ego-source per Z7 parent symposium Revision "
-            "#4: 'posenet_projection' (Z6-v1 baseline 8-dim) OR "
-            "'scorer_logit_compressed' (Z6 Wave 2 4c winning channel if "
-            "full-FiLM-WIN)"
+            "Implemented scorer-free ego source. The trainer currently "
+            "accepts only 'frame_delta_proxy'; planned scorer-derived "
+            "sources fail closed until their extraction path is actually "
+            "implemented and contest-compliance reviewed."
         ),
-        "default": "posenet_projection",
+        "default": "frame_delta_proxy",
     },
     "--ego-motion-dim": {
         "env": "Z7_MAMBA2_EGO_MOTION_DIM",
@@ -356,11 +360,19 @@ def _build_argparser() -> argparse.ArgumentParser:
             default = os.environ[default_env]
         else:
             default = meta.get("default")
-        if flag in ("--smoke", "--identity-predictor", "--stateful"):
-            # Bool flags
+        if flag in (
+            "--smoke",
+            "--identity-predictor",
+            "--stateful",
+            "--inflate-verify",
+            "--emit-static-control",
+        ):
             parser.add_argument(
                 flag,
-                action="store_true" if default in (None, "false", "False", False) else "store_false",
+                nargs="?",
+                const=True,
+                default=_boolish(default),
+                type=_boolish,
                 help=meta.get("rationale", ""),
             )
         else:
@@ -382,10 +394,8 @@ def _resolve_smoke_config(args: argparse.Namespace) -> Mamba2PredictorConfig:
         expand=int(args.mamba2_expand),
         d_conv=4,
         backend=str(args.mamba2_backend),
-        stateful=bool(args.stateful) if isinstance(args.stateful, bool)
-                 else str(args.stateful).lower() in ("true", "1", "yes"),
-        identity_predictor=bool(args.identity_predictor) if isinstance(args.identity_predictor, bool)
-                           else str(args.identity_predictor).lower() in ("true", "1", "yes"),
+        stateful=_boolish(args.stateful),
+        identity_predictor=_boolish(args.identity_predictor),
     )
 
 
@@ -519,8 +529,39 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _build_archive_zip(zip_path: Path, *, bin_bytes: bytes, comment: bytes = b"") -> bytes:
-    """Build deterministic archive.zip with 0.bin as single member.
+def _deterministic_comment(length: int) -> bytes:
+    """Return deterministic ASCII ZIP-comment padding of exactly ``length``."""
+    if length < 0 or length > 0xFFFF:
+        raise ValueError(f"ZIP comment length {length} outside u16 range")
+    return _deterministic_padding_bytes(
+        length,
+        label="z7-mamba2-static-control-zip-comment",
+    )
+
+
+def _deterministic_padding_bytes(length: int, *, label: str) -> bytes:
+    """Return deterministic ASCII padding bytes of exactly ``length``."""
+    if length < 0:
+        raise ValueError(f"padding length must be non-negative; got {length}")
+    chunks: list[bytes] = []
+    counter = 0
+    while sum(len(chunk) for chunk in chunks) < length:
+        chunks.append(
+            hashlib.sha256(
+                f"{label}:{counter}".encode()
+            ).hexdigest().encode("ascii")
+        )
+        counter += 1
+    return b"".join(chunks)[:length]
+
+
+def _deterministic_padding_text(length: int, *, label: str) -> str:
+    """Return deterministic ASCII metadata padding text of exactly ``length``."""
+    return _deterministic_padding_bytes(length, label=label).decode("ascii")
+
+
+def _archive_zip_bytes(*, bin_bytes: bytes, comment: bytes = b"") -> bytes:
+    """Build deterministic archive.zip bytes with 0.bin as single member.
 
     Per Catalog #5 `check_archive_builders_use_deterministic_zip`: use
     ZipInfo + writestr with fixed timestamp + no compression for
@@ -530,11 +571,49 @@ def _build_archive_zip(zip_path: Path, *, bin_bytes: bytes, comment: bytes = b""
     info.compress_type = zipfile.ZIP_STORED
     info.external_attr = 0o644 << 16
     info.create_system = 3
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_STORED) as zf:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr(info, bin_bytes)
         if comment:
             zf.comment = comment
-    return zip_path.read_bytes()
+    return buffer.getvalue()
+
+
+def _archive_zip_bytes_matching_size(*, bin_bytes: bytes, target_size: int) -> bytes:
+    """Build deterministic archive.zip bytes padded to an exact byte length.
+
+    The static-capacity disambiguator requires same archive-byte cost as the
+    recurrent packet. ZIP comments are counted in archive bytes but are not
+    extracted as archive members, so they are the least invasive deterministic
+    padding channel. If the base control ZIP is already larger than the target
+    or needs more than ZIP's 65,535-byte comment, fail closed.
+    """
+    target_size = int(target_size)
+    base = _archive_zip_bytes(bin_bytes=bin_bytes)
+    delta = target_size - len(base)
+    if delta < 0:
+        raise ValueError(
+            "static-control archive cannot match recurrent archive size: "
+            f"control_base_zip_bytes={len(base)} target_archive_zip_bytes={target_size}"
+        )
+    if delta > 0xFFFF:
+        raise ValueError(
+            "static-control archive needs ZIP comment padding larger than 65535 "
+            f"bytes: required_padding={delta}"
+        )
+    if delta == 0:
+        return base
+    return _archive_zip_bytes(
+        bin_bytes=bin_bytes,
+        comment=_deterministic_comment(delta),
+    )
+
+
+def _build_archive_zip(zip_path: Path, *, bin_bytes: bytes, comment: bytes = b"") -> bytes:
+    """Write deterministic archive.zip with 0.bin as single member."""
+    zip_bytes = _archive_zip_bytes(bin_bytes=bin_bytes, comment=comment)
+    zip_path.write_bytes(zip_bytes)
+    return zip_bytes
 
 
 def _resolve_full_config(args: argparse.Namespace) -> Z7Mamba2PredictiveCodingConfig:
@@ -548,10 +627,8 @@ def _resolve_full_config(args: argparse.Namespace) -> Z7Mamba2PredictiveCodingCo
         expand=int(args.mamba2_expand),
         d_conv=4,
         backend=str(args.mamba2_backend),
-        stateful=bool(args.stateful) if isinstance(args.stateful, bool)
-                 else str(args.stateful).lower() in ("true", "1", "yes"),
-        identity_predictor=bool(args.identity_predictor) if isinstance(args.identity_predictor, bool)
-                           else str(args.identity_predictor).lower() in ("true", "1", "yes"),
+        stateful=_boolish(args.stateful),
+        identity_predictor=_boolish(args.identity_predictor),
         beta_ib=float(args.beta_ib),
         num_pairs=int(args.max_pairs),
         decoder_embed_dim=int(args.decoder_embed_dim),
@@ -595,6 +672,30 @@ def _normalize_loss_mode(value: str) -> str:
     if mode not in ("proxy", "score_aware"):
         raise ValueError(f"unknown loss_mode {mode!r}; expected proxy|score_aware")
     return mode
+
+
+def _normalize_ego_source(value: object) -> str:
+    source = str(value).strip().lower().replace("-", "_")
+    if source == "real_video_pair_delta_proxy":
+        source = "frame_delta_proxy"
+    if source != "frame_delta_proxy":
+        raise ValueError(
+            "Z7-Mamba-2 ego_source currently supports only scorer-free "
+            "'frame_delta_proxy'. Planned sources "
+            "'posenet_projection'/'scorer_logit_compressed' are not implemented "
+            "and must not be recorded as active evidence."
+        )
+    return source
+
+
+def _require_batch_size_actuated(*, batch_size: int, num_pairs: int) -> None:
+    if int(batch_size) != int(num_pairs):
+        raise RuntimeError(
+            "Z7-Mamba-2 --batch-size is not yet actuated by the training loop: "
+            f"batch_size={batch_size} num_pairs={num_pairs}. Set --batch-size "
+            "equal to --max-pairs for this whole-sequence trainer, or implement "
+            "chunked autoregressive training before dispatch."
+        )
 
 
 def _ego_motion_from_pairs(pairs: torch.Tensor, ego_motion_dim: int) -> torch.Tensor:
@@ -692,6 +793,26 @@ def _context_conditioner_state_dict(
     return model.context_conditioner.state_dict()
 
 
+def _require_export_replay_backend(model: Z7Mamba2PredictiveCodingSubstrate) -> None:
+    backend_active = str(model.predictor.backend_active)
+    if backend_active not in ("reference_torch", "identity"):
+        raise RuntimeError(
+            "Z7-Mamba-2 export is fail-closed because the archive parser "
+            "replays with reference_torch at inflate time, but training used "
+            f"backend_active={backend_active!r}. Use --mamba2-backend "
+            "reference_torch, or implement byte-faithful mamba_ssm state export "
+            "and replay before dispatch."
+        )
+
+
+def _require_finite_loss(loss: torch.Tensor, *, epoch: int) -> None:
+    detached = loss.detach()
+    if not torch.isfinite(detached).all():
+        raise FloatingPointError(
+            f"Z7-Mamba-2 non-finite loss at epoch {epoch}; refusing backward/export"
+        )
+
+
 def _static_control_archive_pair(
     *,
     model: Z7Mamba2PredictiveCodingSubstrate,
@@ -736,26 +857,94 @@ def _static_control_archive_pair(
         strict=False,
     )
     control_sub.eval()
-    control_meta = dict(meta)
-    control_meta["z7_mamba2_control_kind"] = "identity_predictor_static_capacity"
-    control_meta.update(control_sub.decoder_metadata())
-    control_bytes = pack_archive(
-        _context_conditioner_state_dict(control_sub),
-        control_sub.decoder.state_dict(),
-        control_sub.predictor.state_dict(),  # empty for identity
-        control_sub.latent_init.detach().cpu(),
-        control_sub.residuals.detach().cpu(),
-        control_sub.ego_motion_buffer.detach().cpu(),
-        control_meta,
-        config=control_cfg,
+    base_control_meta = dict(meta)
+    base_control_meta["z7_mamba2_control_kind"] = (
+        "identity_predictor_static_capacity"
     )
-    control_zip_path = Path("/tmp") / "_static_control_smoke.zip"  # ephemeral; caller saves real path
-    control_zip_bytes = _build_archive_zip(control_zip_path, bin_bytes=control_bytes)
+    base_control_meta.update(control_sub.decoder_metadata())
+    padding_key = "z7_mamba2_static_control_noop_padding"
+
+    def _pack_control_with_meta(control_meta: dict[str, object]) -> bytes:
+        return pack_archive(
+            _context_conditioner_state_dict(control_sub),
+            control_sub.decoder.state_dict(),
+            control_sub.predictor.state_dict(),  # empty for identity
+            control_sub.latent_init.detach().cpu(),
+            control_sub.residuals.detach().cpu(),
+            control_sub.ego_motion_buffer.detach().cpu(),
+            control_meta,
+            config=control_cfg,
+        )
+
+    control_bytes = _pack_control_with_meta(base_control_meta)
+    base_zip_bytes = _archive_zip_bytes(bin_bytes=control_bytes)
+    delta = int(target_archive_zip_bytes) - len(base_zip_bytes)
+    if delta < 0:
+        raise ValueError(
+            "static-control archive cannot match recurrent archive size: "
+            f"control_base_zip_bytes={len(base_zip_bytes)} "
+            f"target_archive_zip_bytes={target_archive_zip_bytes}"
+        )
+
+    noop_meta_padding_bytes = 0
+    if delta > 0xFFFF:
+        best_bytes = control_bytes
+        best_zip_bytes = base_zip_bytes
+        best_padding_len = 0
+        lo = 0
+        hi = delta
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            trial_meta = dict(base_control_meta)
+            trial_meta[padding_key] = _deterministic_padding_text(
+                mid,
+                label="z7-mamba2-static-control-meta-noop-padding",
+            )
+            trial_bytes = _pack_control_with_meta(trial_meta)
+            trial_zip_bytes = _archive_zip_bytes(bin_bytes=trial_bytes)
+            if len(trial_zip_bytes) <= int(target_archive_zip_bytes):
+                best_bytes = trial_bytes
+                best_zip_bytes = trial_zip_bytes
+                best_padding_len = mid
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        control_bytes = best_bytes
+        base_zip_bytes = best_zip_bytes
+        noop_meta_padding_bytes = best_padding_len
+        delta = int(target_archive_zip_bytes) - len(base_zip_bytes)
+
+    if delta > 0xFFFF:
+        raise ValueError(
+            "static-control archive could not absorb enough deterministic "
+            "no-op metadata padding to leave a valid ZIP comment residual: "
+            f"remaining_padding={delta}"
+        )
+    control_zip_bytes = _archive_zip_bytes(
+        bin_bytes=control_bytes,
+        comment=_deterministic_comment(delta) if delta else b"",
+    )
+    if len(control_zip_bytes) != int(target_archive_zip_bytes):
+        raise ValueError(
+            "static-control archive failed exact same-byte construction: "
+            f"control_zip_bytes={len(control_zip_bytes)} "
+            f"target_archive_zip_bytes={target_archive_zip_bytes}"
+        )
     return control_bytes, control_zip_bytes, {
         "kind": "identity_predictor_static_capacity",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
         "archive_bin_bytes": len(control_bytes),
         "archive_zip_bytes": len(control_zip_bytes),
         "target_archive_zip_bytes": int(target_archive_zip_bytes),
+        "same_archive_zip_bytes_as_recurrent": len(control_zip_bytes)
+        == int(target_archive_zip_bytes),
+        "archive_zip_byte_parity_with_target": len(control_zip_bytes)
+        == int(target_archive_zip_bytes),
+        "noop_meta_padding_bytes": int(noop_meta_padding_bytes),
+        "zip_comment_padding_bytes": int(delta),
         "predictor_trainable_params": 0,
     }
 
@@ -768,6 +957,95 @@ def _write_runtime(submission_dir: Path) -> None:
     dependency closure: torch + brotli + (mamba_ssm optional)).
     """
     submission_dir.mkdir(parents=True, exist_ok=True)
+    for pkg_init in (
+        submission_dir / "src" / "tac" / "__init__.py",
+        submission_dir / "src" / "tac" / "optimization" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "_shared" / "__init__.py",
+    ):
+        pkg_init.parent.mkdir(parents=True, exist_ok=True)
+        pkg_init.write_text("", encoding="utf-8")
+
+    runtime_files = (
+        (
+            REPO_ROOT / "src" / "tac" / "optimization" / "mamba2_predictor.py",
+            submission_dir / "src" / "tac" / "optimization" / "mamba2_predictor.py",
+        ),
+        (
+            REPO_ROOT / "src" / "tac" / "substrates" / "_shared" / "inflate_runtime.py",
+            submission_dir
+            / "src"
+            / "tac"
+            / "substrates"
+            / "_shared"
+            / "inflate_runtime.py",
+        ),
+        (
+            REPO_ROOT
+            / "src"
+            / "tac"
+            / "substrates"
+            / "time_traveler_l5_z6"
+            / "architecture.py",
+            submission_dir
+            / "src"
+            / "tac"
+            / "substrates"
+            / "time_traveler_l5_z6"
+            / "architecture.py",
+        ),
+        (
+            REPO_ROOT
+            / "src"
+            / "tac"
+            / "substrates"
+            / "time_traveler_l5_z7_lstm_predictive_coding"
+            / "architecture.py",
+            submission_dir
+            / "src"
+            / "tac"
+            / "substrates"
+            / "time_traveler_l5_z7_lstm_predictive_coding"
+            / "architecture.py",
+        ),
+    )
+    for src, dst in runtime_files:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+
+    for pkg_dir, doc in (
+        (
+            submission_dir / "src" / "tac" / "substrates" / "time_traveler_l5_z6",
+            "Z6 decoder dependency for Z7-Mamba-2 inflate runtime.",
+        ),
+        (
+            submission_dir
+            / "src"
+            / "tac"
+            / "substrates"
+            / "time_traveler_l5_z7_lstm_predictive_coding",
+            "Z7 context-conditioner dependency for Z7-Mamba-2 inflate runtime.",
+        ),
+    ):
+        pkg_dir.mkdir(parents=True, exist_ok=True)
+        (pkg_dir / "__init__.py").write_text(f'"""{doc}"""\n', encoding="utf-8")
+
+    z7_src = REPO_ROOT / "src" / "tac" / "substrates" / "time_traveler_l5_z7_mamba2"
+    z7_dst = (
+        submission_dir
+        / "src"
+        / "tac"
+        / "substrates"
+        / "time_traveler_l5_z7_mamba2"
+    )
+    z7_dst.mkdir(parents=True, exist_ok=True)
+    for name in ("architecture.py", "archive.py", "inflate.py"):
+        shutil.copy2(z7_src / name, z7_dst / name)
+    (z7_dst / "__init__.py").write_text(
+        '"""Z7-Mamba-2 runtime package (inflate-time only; no scorer imports)."""\n',
+        encoding="utf-8",
+    )
+
     # inflate.sh: canonical 3-arg dispatch contract per Catalog #146
     inflate_sh = """#!/bin/bash
 set -euo pipefail
@@ -846,7 +1124,14 @@ if __name__ == "__main__":
 def _boolish(value: object) -> bool:
     if isinstance(value, bool):
         return value
-    return str(value).lower() in ("true", "1", "yes")
+    normalized = str(value).strip().lower()
+    if normalized in ("true", "1", "yes", "y", "on"):
+        return True
+    if normalized in ("false", "0", "no", "n", "off", "none", ""):
+        return False
+    raise argparse.ArgumentTypeError(
+        f"expected boolean value, got {value!r}; use true/false"
+    )
 
 
 def _full_main(args: argparse.Namespace) -> int:
@@ -906,10 +1191,16 @@ def _full_main(args: argparse.Namespace) -> int:
     cfg = _resolve_full_config(args)
     device = _select_device(args.device)
     loss_mode = _normalize_loss_mode(args.loss_mode)
+    ego_source = _normalize_ego_source(args.ego_source)
+    _require_batch_size_actuated(
+        batch_size=int(args.batch_size),
+        num_pairs=cfg.num_pairs,
+    )
     torch.manual_seed(721)  # Distinct from Z7-LSTM seed 711 for paired-comparison
 
     print(f"[z7_mamba2_full] output_dir={output_dir}")
     print(f"[z7_mamba2_full] device={device} loss_mode={loss_mode}")
+    print(f"[z7_mamba2_full] ego_source={ego_source}")
     print(f"[z7_mamba2_full] num_pairs={cfg.num_pairs} epochs={args.epochs}")
     print(f"[z7_mamba2_full] mamba2 d_model={cfg.d_model} d_state={cfg.d_state} expand={cfg.expand}")
 
@@ -955,6 +1246,7 @@ def _full_main(args: argparse.Namespace) -> int:
     breakdown = model.num_parameters_breakdown()
     print(f"[z7_mamba2_full] model built: params={breakdown}")
     print(f"[z7_mamba2_full] predictor backend_active={model.predictor.backend_active}")
+    _require_export_replay_backend(model)
 
     # Stage 3: optional score-aware loss build
     archive_bytes_proxy_tensor = torch.tensor(
@@ -1022,6 +1314,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 "residual": float(residual_loss.item()),
                 "latent_smoothness": float(latent_smoothness.item()),
             }
+        _require_finite_loss(loss, epoch=epoch)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
@@ -1043,10 +1336,11 @@ def _full_main(args: argparse.Namespace) -> int:
         "target_pairs": cfg.num_pairs,
         "epochs": epochs,
         "batch_size_flag": int(args.batch_size),
+        "batch_size_actuation_status": "whole_sequence_only_batch_size_must_equal_num_pairs",
         "lr": float(args.lr),
         "loss_mode": loss_mode,
         "score_aware_scorer_loss_used": loss_mode == "score_aware",
-        "ego_source": str(args.ego_source),
+        "ego_source": ego_source,
         "ego_motion_source": "real_video_pair_delta_proxy_no_scorer_load",
         "score_claim": False,
         "promotion_eligible": False,
@@ -1087,13 +1381,19 @@ def _full_main(args: argparse.Namespace) -> int:
             control_bin_path = control_dir / "0.bin"
             control_zip_path = control_dir / "archive.zip"
             control_bin_path.write_bytes(static_control_bytes)
-            _build_archive_zip(control_zip_path, bin_bytes=static_control_bytes)
+            control_zip_path.write_bytes(static_control_zip_bytes)
             assert isinstance(static_control, dict)
             static_control["archive_bin_path"] = str(control_bin_path)
             static_control["archive_zip_path"] = str(control_zip_path)
+            static_control["archive_zip_sha256"] = _sha256_bytes(
+                static_control_zip_bytes
+            )
         except Exception as e:  # pragma: no cover - defensive
-            print(f"[z7_mamba2_full] static control emission failed: {e}", file=sys.stderr)
-            static_control = {"emission_failed": str(e)}
+            raise RuntimeError(
+                "Z7-Mamba-2 static same-byte control emission failed; refusing "
+                "to continue because paired recurrent/static evidence would be "
+                "non-comparable"
+            ) from e
 
     # Stage 6: submission runtime tree
     submission_dir = output_dir / "submission_runtime"
@@ -1190,6 +1490,8 @@ def _full_main(args: argparse.Namespace) -> int:
         },
         "param_breakdown": breakdown,
         "losses": losses,
+        "loss_mode": loss_mode,
+        "score_aware_scorer_loss_used": loss_mode == "score_aware",
         "final_loss": final_loss.get("loss"),
         "final_loss_proxy": final_loss.get("loss") if loss_mode == "proxy" else None,
         "final_loss_score_aware": (
@@ -1202,6 +1504,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "archive_zip_bytes": len(archive_zip_bytes),
         "archive_zip_sha256": _sha256_bytes(archive_zip_bytes),
         "static_capacity_control": static_control,
+        "submission_runtime_dir": str(submission_dir),
         "inflate_verify": inflate_verify,
         "timing_smoke": timing_smoke,
         # Authority flags — non-promotable by construction per CLAUDE.md

@@ -27,7 +27,11 @@ from __future__ import annotations
 import argparse
 import importlib
 import inspect
+import json
+import os
+import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -391,6 +395,271 @@ def test_trainer_full_main_emits_non_promotable_authority_flags():
     )
 
 
+def test_static_control_archive_zip_is_in_memory_and_byte_faithful(tmp_path):
+    """Static-control archive accounting must not route through fixed /tmp paths.
+
+    Per Catalog #204 custody discipline + same-archive-bytes disambiguator
+    requirements, the control ZIP bytes returned for accounting must be the
+    exact bytes persisted to the operator-visible artifact path.
+    """
+    mod = _import_trainer_module()
+    cfg = mod.Z7Mamba2PredictiveCodingConfig(
+        num_pairs=2,
+        latent_dim=8,
+        ego_motion_dim=4,
+        d_model=16,
+        d_state=8,
+        expand=2,
+        d_conv=4,
+        decoder_embed_dim=8,
+        decoder_initial_grid_h=4,
+        decoder_initial_grid_w=4,
+        decoder_channels=(8, 8, 4, 4),
+        decoder_num_upsample_blocks=2,
+        output_height=16,
+        output_width=16,
+    )
+    model = mod.Z7Mamba2PredictiveCodingSubstrate(cfg)
+    model.eval()
+    meta = {**model.decoder_metadata(), "loss_mode": "proxy"}
+    archive_bytes = mod.pack_archive(
+        mod._context_conditioner_state_dict(model),
+        model.decoder.state_dict(),
+        model.predictor.state_dict(),
+        model.latent_init.detach().cpu(),
+        model.residuals.detach().cpu(),
+        model.ego_motion_buffer.detach().cpu(),
+        meta,
+        config=cfg,
+    )
+    archive_zip_bytes = mod._archive_zip_bytes(bin_bytes=archive_bytes)
+
+    control_bytes, control_zip_bytes, control_meta = mod._static_control_archive_pair(
+        model=model,
+        cfg=cfg,
+        meta=meta,
+        target_archive_zip_bytes=len(archive_zip_bytes),
+    )
+
+    zip_path = tmp_path / "static_control.zip"
+    zip_path.write_bytes(control_zip_bytes)
+    persisted_zip_bytes = zip_path.read_bytes()
+    assert persisted_zip_bytes == control_zip_bytes
+    assert control_meta["archive_zip_bytes"] == len(control_zip_bytes)
+    assert control_meta["target_archive_zip_bytes"] == len(archive_zip_bytes)
+    assert control_meta["archive_zip_byte_parity_with_target"] is True
+    assert control_meta["same_archive_zip_bytes_as_recurrent"] is True
+    assert control_meta["score_claim"] is False
+    assert control_meta["promotion_eligible"] is False
+    assert control_meta["ready_for_exact_eval_dispatch"] is False
+    assert control_meta["ready_for_paid_dispatch"] is False
+    assert len(control_zip_bytes) == len(archive_zip_bytes)
+    assert control_meta["zip_comment_padding_bytes"] >= 0
+    with zipfile.ZipFile(zip_path) as zf:
+        assert zf.namelist() == ["0.bin"]
+        assert zf.read("0.bin") == control_bytes
+        assert len(zf.comment) == control_meta["zip_comment_padding_bytes"]
+        if zf.comment:
+            assert zf.comment == mod._deterministic_comment(len(zf.comment))
+
+    static_source = inspect.getsource(mod._static_control_archive_pair)
+    assert 'Path("/tmp")' not in static_source
+    assert "_static_control_smoke.zip" not in static_source
+
+
+def test_static_control_archive_supports_large_same_byte_gap(tmp_path):
+    """Same-byte control must work when the gap exceeds ZIP comment capacity."""
+    mod = _import_trainer_module()
+    cfg = mod.Z7Mamba2PredictiveCodingConfig(
+        num_pairs=2,
+        latent_dim=8,
+        ego_motion_dim=4,
+        d_model=16,
+        d_state=8,
+        expand=2,
+        d_conv=4,
+        decoder_embed_dim=8,
+        decoder_initial_grid_h=4,
+        decoder_initial_grid_w=4,
+        decoder_channels=(8, 8, 4, 4),
+        decoder_num_upsample_blocks=2,
+        output_height=16,
+        output_width=16,
+    )
+    model = mod.Z7Mamba2PredictiveCodingSubstrate(cfg)
+    model.eval()
+    meta = {**model.decoder_metadata(), "loss_mode": "proxy"}
+    base_control_bytes, base_control_zip_bytes, _ = mod._static_control_archive_pair(
+        model=model,
+        cfg=cfg,
+        meta=meta,
+        target_archive_zip_bytes=len(
+            mod._archive_zip_bytes(
+                bin_bytes=mod.pack_archive(
+                    mod._context_conditioner_state_dict(model),
+                    model.decoder.state_dict(),
+                    model.predictor.state_dict(),
+                    model.latent_init.detach().cpu(),
+                    model.residuals.detach().cpu(),
+                    model.ego_motion_buffer.detach().cpu(),
+                    meta,
+                    config=cfg,
+                )
+            )
+        ),
+    )
+    target_size = len(base_control_zip_bytes) + 90_000
+    control_bytes, control_zip_bytes, control_meta = mod._static_control_archive_pair(
+        model=model,
+        cfg=cfg,
+        meta=meta,
+        target_archive_zip_bytes=target_size,
+    )
+
+    assert len(control_zip_bytes) == target_size
+    assert control_meta["same_archive_zip_bytes_as_recurrent"] is True
+    assert control_meta["noop_meta_padding_bytes"] > 0
+    assert control_meta["zip_comment_padding_bytes"] <= 0xFFFF
+    assert len(control_bytes) > len(base_control_bytes)
+    # The no-op padding is inside the Z7MCM2 metadata and must parse cleanly.
+    from tac.substrates.time_traveler_l5_z7_mamba2.archive import parse_archive
+    parsed = parse_archive(control_bytes)
+    assert parsed.config.identity_predictor is True
+    zip_path = tmp_path / "large_static_control.zip"
+    zip_path.write_bytes(control_zip_bytes)
+    with zipfile.ZipFile(zip_path) as zf:
+        assert zf.namelist() == ["0.bin"]
+        assert zf.read("0.bin") == control_bytes
+
+
+def test_static_control_archive_size_match_fails_closed_when_impossible():
+    """A same-bytes disambiguator must refuse controls that cannot match bytes."""
+    mod = _import_trainer_module()
+    base = mod._archive_zip_bytes(bin_bytes=b"control")
+    with pytest.raises(ValueError, match="cannot match recurrent archive size"):
+        mod._archive_zip_bytes_matching_size(
+            bin_bytes=b"control",
+            target_size=len(base) - 1,
+        )
+    with pytest.raises(ValueError, match="larger than 65535"):
+        mod._archive_zip_bytes_matching_size(
+            bin_bytes=b"control",
+            target_size=len(base) + 0x10000,
+        )
+
+
+def test_trainer_bool_flags_accept_explicit_remote_driver_values():
+    """Remote drivers pass true/false values; argparse must not reject them."""
+    mod = _import_trainer_module()
+    parser = mod._build_argparser()
+    args = parser.parse_args([
+        "--smoke",
+        "false",
+        "--identity-predictor",
+        "false",
+        "--stateful",
+        "true",
+        "--inflate-verify",
+        "true",
+        "--emit-static-control",
+        "false",
+    ])
+    assert args.smoke is False
+    assert args.identity_predictor is False
+    assert args.stateful is True
+    assert args.inflate_verify is True
+    assert args.emit_static_control is False
+
+
+def test_trainer_bool_flags_still_support_const_form():
+    """Local smoke usage like `--smoke` without a value must keep working."""
+    mod = _import_trainer_module()
+    parser = mod._build_argparser()
+    args = parser.parse_args(["--smoke"])
+    assert args.smoke is True
+
+
+def test_full_trainer_authority_guard_helpers_fail_closed():
+    """False-authority guards must reject unimplemented or non-actuated modes."""
+    mod = _import_trainer_module()
+    assert mod._normalize_ego_source("frame_delta_proxy") == "frame_delta_proxy"
+    assert mod._normalize_ego_source("real_video_pair_delta_proxy") == "frame_delta_proxy"
+    with pytest.raises(ValueError, match="not implemented"):
+        mod._normalize_ego_source("posenet_projection")
+    with pytest.raises(ValueError, match="not implemented"):
+        mod._normalize_ego_source("scorer_logit_compressed")
+
+    mod._require_batch_size_actuated(batch_size=2, num_pairs=2)
+    with pytest.raises(RuntimeError, match="batch-size is not yet actuated"):
+        mod._require_batch_size_actuated(batch_size=1, num_pairs=2)
+
+    with pytest.raises(argparse.ArgumentTypeError, match="expected boolean"):
+        mod._boolish("sometimes")
+
+
+def test_export_replay_backend_guard_refuses_non_reference_backend():
+    """Training backends must match byte-faithful inflate replay semantics."""
+    mod = _import_trainer_module()
+
+    class Predictor:
+        backend_active = "mamba_ssm"
+
+    class Model:
+        predictor = Predictor()
+
+    with pytest.raises(RuntimeError, match="reference_torch"):
+        mod._require_export_replay_backend(Model())
+
+    for backend in ("reference_torch", "identity"):
+        Predictor.backend_active = backend
+        mod._require_export_replay_backend(Model())
+
+
+def test_non_finite_loss_guard_refuses_export_path():
+    """NaN/Inf training losses must fail before backward/export artifacts."""
+    mod = _import_trainer_module()
+    mod._require_finite_loss(torch.tensor(1.0), epoch=0)
+    with pytest.raises(FloatingPointError, match="non-finite loss"):
+        mod._require_finite_loss(torch.tensor(float("nan")), epoch=3)
+
+
+def test_write_runtime_vendors_required_scorer_free_modules(tmp_path):
+    """Generated runtime must be self-contained, not repo-checkout-dependent."""
+    mod = _import_trainer_module()
+    submission_dir = tmp_path / "submission_runtime"
+    mod._write_runtime(submission_dir)
+
+    required_files = {
+        "inflate.sh",
+        "inflate.py",
+        "src/tac/__init__.py",
+        "src/tac/optimization/mamba2_predictor.py",
+        "src/tac/substrates/_shared/inflate_runtime.py",
+        "src/tac/substrates/time_traveler_l5_z6/architecture.py",
+        "src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/architecture.py",
+        "src/tac/substrates/time_traveler_l5_z7_mamba2/architecture.py",
+        "src/tac/substrates/time_traveler_l5_z7_mamba2/archive.py",
+        "src/tac/substrates/time_traveler_l5_z7_mamba2/inflate.py",
+    }
+    missing = [rel for rel in sorted(required_files) if not (submission_dir / rel).exists()]
+    assert not missing, f"runtime vendor tree missing files: {missing}"
+
+    probe = (
+        "import json, sys; "
+        "sys.path.insert(0, 'src'); "
+        "import tac.substrates.time_traveler_l5_z7_mamba2.inflate as inflate; "
+        "print(json.dumps({'module': inflate.__name__}))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=submission_dir,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(result.stdout)["module"].endswith("time_traveler_l5_z7_mamba2.inflate")
+
+
 def test_trainer_tier_1_operator_required_flags_present():
     """Catalog #151 manifest must declare all required Z7-Mamba-2 flags."""
     mod = _import_trainer_module()
@@ -416,6 +685,10 @@ def test_trainer_tier_1_operator_required_flags_present():
     assert required_flags.issubset(set(flags.keys())), (
         f"Catalog #151 manifest must declare all required flags; missing: "
         f"{required_flags - set(flags.keys())}"
+    )
+    assert flags["--mamba2-backend"]["default"] == "reference_torch", (
+        "Trainer/export backend must default to byte-faithful reference_torch; "
+        "mamba_ssm remains opt-in until inflate replay is implemented."
     )
 
 
@@ -485,6 +758,195 @@ def test_recipe_declares_predicted_band_validation_status_pending_per_catalog_32
     assert "predicted_band_validation_status" in content, (
         "Per Catalog #324: recipe must declare predicted_band_validation_status"
     )
+
+
+def test_recipe_remote_driver_path_exists():
+    """Recipe remote_driver must point to the actual checked-in driver path."""
+    recipe_path = (
+        REPO_ROOT / ".omx" / "operator_authorize_recipes"
+        / "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml"
+    )
+    content = recipe_path.read_text()
+    driver_lines = [
+        line for line in content.splitlines()
+        if line.strip().startswith("remote_driver:")
+    ]
+    assert len(driver_lines) == 1
+    driver_rel = driver_lines[0].split(":", 1)[1].strip()
+    assert driver_rel == "scripts/remote_lane_substrate_time_traveler_l5_z7_mamba_2.sh"
+    assert (REPO_ROOT / driver_rel).is_file()
+    assert "modal:\n  lane_script: scripts/remote_lane_substrate_time_traveler_l5_z7_mamba_2.sh" in content
+    assert 'Z7_MAMBA2_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"' in content
+    assert 'DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"' in content
+    assert "Z7_MAMBA2_LANE_ID: lane_z7_as_mamba_2_full_landing_20260518" in content
+    assert "Z7_MAMBA2_BACKEND: reference_torch" in content
+    assert "Z7_MAMBA2_EGO_SOURCE: frame_delta_proxy" in content
+
+
+def test_remote_driver_enforces_dispatch_claim_and_terminal_closure():
+    """Paid remote driver must not run without an active lane claim."""
+    script_path = REPO_ROOT / "scripts" / "remote_lane_substrate_time_traveler_l5_z7_mamba_2.sh"
+    content = script_path.read_text()
+    assert "Z7_MAMBA2_REQUIRE_DISPATCH_CLAIM" not in content
+    assert "claim_lane_dispatch.py\" summary" in content
+    assert "--live-only" in content
+    assert "stage_0_dispatch_claim_verified" in content
+    assert "append_terminal_claim" in content
+    assert "failed_z7_mamba2_claim_verification_rc_" in content
+    assert "completed_z7_mamba2_remote_driver_no_score_claim" in content
+    assert "failed_z7_mamba2_remote_driver_rc_" in content
+    assert "trap cleanup EXIT" in content
+    assert content.index("trap cleanup EXIT") < content.index("stage_0_dispatch_claim_verified")
+    assert "score_claim=false" in content
+    assert "expected stats missing" in content
+    assert "set +e\n\"$PYBIN\" -u experiments/train_substrate_time_traveler_l5_z7_mamba2.py" in content
+    assert "TRAINER_RC=\"${PIPESTATUS[0]}\"\nset -e" in content
+
+
+def test_remote_driver_smoke_requires_claim_and_closes_terminal(tmp_path):
+    """Smoke path should verify an active claim and close it terminal no-score."""
+    claims_path = tmp_path / "claims.md"
+    job_id = "z7_mamba2_pytest_success"
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+            "claim",
+            "--claims-path",
+            str(claims_path),
+            "--lane-id",
+            "lane_z7_as_mamba_2_full_landing_20260518",
+            "--platform",
+            "local",
+            "--instance-job-id",
+            job_id,
+            "--agent",
+            "pytest",
+            "--status",
+            "training",
+            "--notes",
+            "z7_mamba2_remote_driver_success_test score_claim=false",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    env = {
+        **os.environ,
+        "WORKSPACE": str(REPO_ROOT),
+        "LOG_DIR": str(tmp_path / "log"),
+        "Z7_MAMBA2_OUTPUT_DIR": str(tmp_path / "output"),
+        "DISPATCH_CLAIMS_PATH": str(claims_path),
+        "DISPATCH_PLATFORM": "local",
+        "DISPATCH_INSTANCE_JOB_ID": job_id,
+        "Z7_MAMBA2_TRAINER_MODE": "smoke",
+        "Z7_MAMBA2_DEVICE": "cpu",
+        "Z7_MAMBA2_BACKEND": "reference_torch",
+    }
+    result = subprocess.run(
+        ["/bin/bash", str(REPO_ROOT / "scripts" / "remote_lane_substrate_time_traveler_l5_z7_mamba_2.sh")],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "stage_0_dispatch_claim_verified" in result.stdout
+
+    summary = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+            "summary",
+            "--claims-path",
+            str(claims_path),
+            "--live-only",
+            "--format",
+            "json",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(summary.stdout)
+    assert payload["active_count"] == 0
+    assert payload["terminal_latest"][0]["status"] == (
+        "completed_z7_mamba2_remote_driver_no_score_claim"
+    )
+    assert "score_claim=false" in payload["terminal_latest"][0]["notes"]
+
+
+def test_remote_driver_missing_claim_writes_terminal_failure(tmp_path):
+    """Missing active claim should fail before trainer and write terminal evidence."""
+    claims_path = tmp_path / "claims.md"
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+            "claim",
+            "--claims-path",
+            str(claims_path),
+            "--lane-id",
+            "lane_z7_as_mamba_2_full_landing_20260518",
+            "--platform",
+            "local",
+            "--instance-job-id",
+            "different_job",
+            "--agent",
+            "pytest",
+            "--status",
+            "training",
+            "--notes",
+            "different active claim",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    env = {
+        **os.environ,
+        "WORKSPACE": str(REPO_ROOT),
+        "LOG_DIR": str(tmp_path / "log"),
+        "Z7_MAMBA2_OUTPUT_DIR": str(tmp_path / "output"),
+        "DISPATCH_CLAIMS_PATH": str(claims_path),
+        "DISPATCH_PLATFORM": "local",
+        "DISPATCH_INSTANCE_JOB_ID": "missing_job",
+        "Z7_MAMBA2_TRAINER_MODE": "smoke",
+        "Z7_MAMBA2_DEVICE": "cpu",
+        "Z7_MAMBA2_BACKEND": "reference_torch",
+    }
+    result = subprocess.run(
+        ["/bin/bash", str(REPO_ROOT / "scripts" / "remote_lane_substrate_time_traveler_l5_z7_mamba_2.sh")],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 21
+    assert "no active dispatch claim" in result.stderr
+
+    summary = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"),
+            "summary",
+            "--claims-path",
+            str(claims_path),
+            "--live-only",
+            "--format",
+            "json",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(summary.stdout)
+    statuses = [row["status"] for row in payload["terminal_latest"]]
+    assert "failed_z7_mamba2_claim_verification_rc_1" in statuses
 
 
 # ---------------------------------------------------------------------------

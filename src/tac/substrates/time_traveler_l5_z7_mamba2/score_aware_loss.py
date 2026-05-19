@@ -77,6 +77,13 @@ class Z7Mamba2PredictiveCodingScoreAwareLoss(torch.nn.Module):
         self.pose_scorer = pose_scorer
         self.weights = weights
 
+    def train(self, mode: bool = True) -> "Z7Mamba2PredictiveCodingScoreAwareLoss":
+        """Toggle loss-mode while keeping frozen contest scorers in eval mode."""
+        super().train(mode)
+        self.seg_scorer.eval()
+        self.pose_scorer.eval()
+        return self
+
     def forward(
         self,
         *,

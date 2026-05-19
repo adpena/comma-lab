@@ -343,6 +343,37 @@ def test_score_aware_loss_construction_canonical_helper_routing():
     )
 
 
+def test_score_aware_loss_train_keeps_frozen_scorers_eval():
+    """Calling train() on the wrapper must not put contest scorers in train mode."""
+    from tac.substrates.time_traveler_l5_z7_mamba2 import (
+        Z7Mamba2PredictiveCodingLossWeights,
+        Z7Mamba2PredictiveCodingScoreAwareLoss,
+    )
+
+    class MockScorer(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.dropout = torch.nn.Dropout(p=0.5)
+
+        def forward(self, x):
+            return self.dropout(x).mean()
+
+    seg_scorer = MockScorer()
+    pose_scorer = MockScorer()
+    loss = Z7Mamba2PredictiveCodingScoreAwareLoss(
+        seg_scorer=seg_scorer,
+        pose_scorer=pose_scorer,
+        weights=Z7Mamba2PredictiveCodingLossWeights(),
+    )
+    loss.train()
+
+    assert loss.training is True
+    assert seg_scorer.training is False
+    assert pose_scorer.training is False
+    assert seg_scorer.dropout.training is False
+    assert pose_scorer.dropout.training is False
+
+
 def test_score_aware_loss_refuses_eval_roundtrip_false():
     """Per CLAUDE.md eval_roundtrip non-negotiable + Catalog #5:
     score-aware loss MUST refuse apply_eval_roundtrip=False."""

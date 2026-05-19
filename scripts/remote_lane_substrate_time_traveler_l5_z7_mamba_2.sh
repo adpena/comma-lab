@@ -37,6 +37,11 @@ DEFAULT_LANE_ID="lane_z7_as_mamba_2_full_landing_20260518"
 LANE_ID="${Z7_MAMBA2_LANE_ID:-${PACT_DISPATCH_LANE_ID:-$DEFAULT_LANE_ID}}"
 TAG="${TAG:-substrate_time_traveler_l5_z7_mamba2}"
 RECIPE_PATH="${Z7_MAMBA2_RECIPE_PATH:-.omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml}"
+DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
+DISPATCH_INSTANCE_JOB_ID="${Z7_MAMBA2_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
+DISPATCH_CLAIMS_PATH="${DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
+CLAIM_VERIFIED=0
+CLAIM_VERIFICATION_RC=0
 
 # Multi-candidate workspace resolution per Catalog #152 Modal-aware extension.
 # In Modal runtime the workspace lives at /workspace/pact (mounted code) AND
@@ -56,6 +61,119 @@ else
 fi
 Z7_MAMBA2_OUTPUT_DIR="${Z7_MAMBA2_OUTPUT_DIR:-$OUTPUT_DIR}"
 PROVENANCE="$LOG_DIR/provenance.json"
+
+mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
+
+# Resolve Python binary before dispatch-claim verification and trainer launch.
+if [ -z "$PYBIN" ]; then
+    if [ -x "$WORKSPACE/.venv/bin/python" ]; then
+        PYBIN="$WORKSPACE/.venv/bin/python"
+    elif command -v python3 >/dev/null 2>&1; then
+        PYBIN="$(command -v python3)"
+    else
+        PYBIN="$(command -v python)"
+    fi
+fi
+
+CLAIM_PYTHON="$PYBIN"
+
+append_terminal_claim() {
+    local rc="$1"
+    if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
+        echo "[lane-z7-mamba2] WARN: missing dispatch job id; cannot append terminal dispatch claim" >&2
+        return 0
+    fi
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        echo "[lane-z7-mamba2] WARN: claim helper missing; cannot append terminal dispatch claim" >&2
+        return 0
+    fi
+    local status
+    if [ "$CLAIM_VERIFIED" != "1" ]; then
+        local verify_rc="$CLAIM_VERIFICATION_RC"
+        if [ "$verify_rc" = "0" ]; then
+            verify_rc="$rc"
+        fi
+        status="failed_z7_mamba2_claim_verification_rc_${verify_rc}"
+    elif [ "$rc" -eq 0 ]; then
+        status="completed_z7_mamba2_remote_driver_no_score_claim"
+    else
+        status="failed_z7_mamba2_remote_driver_rc_${rc}"
+    fi
+    local stats_path="$OUTPUT_DIR/z7_mamba2_full_main_export_stats.json"
+    if [ "${SMOKE_ONLY:-0}" = "1" ]; then
+        stats_path="$OUTPUT_DIR/z7_mamba2_scaffold_smoke_stats.json"
+    fi
+    "$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" claim \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --force \
+        --lane-id "$LANE_ID" \
+        --platform "$DISPATCH_PLATFORM" \
+        --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
+        --agent "remote_lane_substrate_time_traveler_l5_z7_mamba_2" \
+        --status "$status" \
+        --notes "remote_driver_terminal rc=$rc score_claim=false mode=${Z7_MAMBA2_TRAINER_MODE:-unknown} stats_path=$stats_path output_dir=$OUTPUT_DIR" \
+        >> "$LOG_DIR/run.log" 2>&1 || {
+        echo "[lane-z7-mamba2] WARN: failed to append terminal dispatch claim status=$status" >&2
+    }
+}
+
+cleanup() {
+    local rc="$?"
+    append_terminal_claim "$rc"
+    exit "$rc"
+}
+trap cleanup EXIT
+
+if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
+    echo "[lane-z7-mamba2] FATAL: Z7_MAMBA2_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required" >&2
+    exit 21
+fi
+if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+    echo "[lane-z7-mamba2] FATAL: claim helper missing at $WORKSPACE/tools/claim_lane_dispatch.py" >&2
+    CLAIM_VERIFICATION_RC=21
+    exit 21
+fi
+if [ ! -f "$DISPATCH_CLAIMS_PATH" ]; then
+    echo "[lane-z7-mamba2] FATAL: dispatch-claims ledger missing at $DISPATCH_CLAIMS_PATH" >&2
+    CLAIM_VERIFICATION_RC=21
+    exit 21
+fi
+CLAIM_SUMMARY_JSON="$LOG_DIR/dispatch_claim_summary.json"
+set +e
+"$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" summary \
+    --claims-path "$DISPATCH_CLAIMS_PATH" \
+    --live-only \
+    --format json > "$CLAIM_SUMMARY_JSON"
+SUMMARY_RC=$?
+set -e
+if [ "$SUMMARY_RC" -ne 0 ]; then
+    echo "[lane-z7-mamba2] FATAL: claim summary failed for $DISPATCH_CLAIMS_PATH" >&2
+    CLAIM_VERIFICATION_RC="$SUMMARY_RC"
+    exit 21
+fi
+set +e
+"$CLAIM_PYTHON" - "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY'
+import json
+import sys
+
+summary_path, lane_id, job_id = sys.argv[1:4]
+with open(summary_path, encoding="utf-8") as fh:
+    payload = json.load(fh)
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == job_id:
+        raise SystemExit(0)
+print(f"missing active claim lane={lane_id} job={job_id}", file=sys.stderr)
+raise SystemExit(1)
+PY
+CLAIM_RC=$?
+set -e
+if [ "$CLAIM_RC" -ne 0 ]; then
+    echo "[lane-z7-mamba2] FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID" >&2
+    CLAIM_VERIFICATION_RC="$CLAIM_RC"
+    exit 21
+fi
+CLAIM_VERIFIED=1
+echo "[lane-z7-mamba2] stage_0_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID" | tee -a "$LOG_DIR/run.log"
 
 # Catalog #326 driver-mode-discipline: support multi-key mode resolution with
 # explicit precedence Z7_MAMBA2_TRAINER_MODE > SMOKE_ONLY. Default to
@@ -102,8 +220,13 @@ resolve_required_input_modal_aware() {
     return 1
 }
 
-Z7_MAMBA2_VIDEO_PATH="${Z7_MAMBA2_VIDEO_PATH:-$(resolve_required_input_modal_aware upstream/videos/0.mkv 'contest video upstream/videos/0.mkv')}"
-Z7_MAMBA2_UPSTREAM_DIR="${Z7_MAMBA2_UPSTREAM_DIR:-$(dirname "$(dirname "$Z7_MAMBA2_VIDEO_PATH")")}"
+if [ "$SMOKE_ONLY" != "1" ]; then
+    Z7_MAMBA2_VIDEO_PATH="${Z7_MAMBA2_VIDEO_PATH:-$(resolve_required_input_modal_aware upstream/videos/0.mkv 'contest video upstream/videos/0.mkv')}"
+    Z7_MAMBA2_UPSTREAM_DIR="${Z7_MAMBA2_UPSTREAM_DIR:-$(dirname "$(dirname "$Z7_MAMBA2_VIDEO_PATH")")}"
+else
+    Z7_MAMBA2_VIDEO_PATH="${Z7_MAMBA2_VIDEO_PATH:-}"
+    Z7_MAMBA2_UPSTREAM_DIR="${Z7_MAMBA2_UPSTREAM_DIR:-$WORKSPACE/upstream}"
+fi
 
 # Mode-specific defaults
 Z7_MAMBA2_EPOCHS="${Z7_MAMBA2_EPOCHS:-}"
@@ -116,7 +239,7 @@ Z7_MAMBA2_EGO_MOTION_DIM="${Z7_MAMBA2_EGO_MOTION_DIM:-}"
 Z7_MAMBA2_D_MODEL="${Z7_MAMBA2_D_MODEL:-}"
 Z7_MAMBA2_D_STATE="${Z7_MAMBA2_D_STATE:-}"
 Z7_MAMBA2_EXPAND="${Z7_MAMBA2_EXPAND:-}"
-Z7_MAMBA2_BACKEND="${Z7_MAMBA2_BACKEND:-auto}"
+Z7_MAMBA2_BACKEND="${Z7_MAMBA2_BACKEND:-reference_torch}"
 Z7_MAMBA2_MAX_PAIRS="${Z7_MAMBA2_MAX_PAIRS:-}"
 Z7_MAMBA2_DECODER_EMBED_DIM="${Z7_MAMBA2_DECODER_EMBED_DIM:-}"
 Z7_MAMBA2_DECODER_CHANNELS="${Z7_MAMBA2_DECODER_CHANNELS:-}"
@@ -129,7 +252,7 @@ Z7_MAMBA2_OUTPUT_WIDTH="${Z7_MAMBA2_OUTPUT_WIDTH:-}"
 if [ "$Z7_MAMBA2_TRAINER_MODE" = "smoke" ]; then
     # Smoke: tiny config; architecture sanity check only.
     Z7_MAMBA2_EPOCHS="${Z7_MAMBA2_EPOCHS:-1}"
-    Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-4}"
+    Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-600}"
     Z7_MAMBA2_LR="${Z7_MAMBA2_LR:-5e-4}"
     Z7_MAMBA2_LATENT_DIM="${Z7_MAMBA2_LATENT_DIM:-24}"
     Z7_MAMBA2_EGO_MOTION_DIM="${Z7_MAMBA2_EGO_MOTION_DIM:-8}"
@@ -148,7 +271,7 @@ elif [ "$Z7_MAMBA2_TRAINER_MODE" = "full" ]; then
     # Full: 100ep on 600 pairs at contest resolution. Requires per-substrate
     # symposium PROCEED-unconditional per Catalog #325 + Wave-N+1 council.
     Z7_MAMBA2_EPOCHS="${Z7_MAMBA2_EPOCHS:-100}"
-    Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-4}"
+    Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-600}"
     Z7_MAMBA2_LR="${Z7_MAMBA2_LR:-5e-4}"
     Z7_MAMBA2_LATENT_DIM="${Z7_MAMBA2_LATENT_DIM:-24}"
     Z7_MAMBA2_EGO_MOTION_DIM="${Z7_MAMBA2_EGO_MOTION_DIM:-8}"
@@ -166,7 +289,7 @@ elif [ "$Z7_MAMBA2_TRAINER_MODE" = "full" ]; then
 else
     # Timing smoke: real-pair decode + tiny config for end-to-end timing measurement.
     Z7_MAMBA2_EPOCHS="${Z7_MAMBA2_EPOCHS:-1}"
-    Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-1}"
+    Z7_MAMBA2_BATCH_SIZE="${Z7_MAMBA2_BATCH_SIZE:-2}"
     Z7_MAMBA2_LR="${Z7_MAMBA2_LR:-1e-3}"
     Z7_MAMBA2_LATENT_DIM="${Z7_MAMBA2_LATENT_DIM:-8}"
     Z7_MAMBA2_EGO_MOTION_DIM="${Z7_MAMBA2_EGO_MOTION_DIM:-4}"
@@ -183,7 +306,7 @@ else
     Z7_MAMBA2_OUTPUT_WIDTH="${Z7_MAMBA2_OUTPUT_WIDTH:-16}"
 fi
 
-Z7_MAMBA2_EGO_SOURCE="${Z7_MAMBA2_EGO_SOURCE:-posenet_projection}"
+Z7_MAMBA2_EGO_SOURCE="${Z7_MAMBA2_EGO_SOURCE:-frame_delta_proxy}"
 Z7_MAMBA2_IDENTITY_PREDICTOR="${Z7_MAMBA2_IDENTITY_PREDICTOR:-false}"
 Z7_MAMBA2_STATEFUL="${Z7_MAMBA2_STATEFUL:-true}"
 Z7_MAMBA2_BETA_IB="${Z7_MAMBA2_BETA_IB:-1.0}"
@@ -192,8 +315,6 @@ Z7_MAMBA2_ALPHA_RATE="${Z7_MAMBA2_ALPHA_RATE:-25.0}"
 Z7_MAMBA2_BETA_SEG="${Z7_MAMBA2_BETA_SEG:-100.0}"
 Z7_MAMBA2_INFLATE_VERIFY="${Z7_MAMBA2_INFLATE_VERIFY:-true}"
 Z7_MAMBA2_EMIT_STATIC_CONTROL="${Z7_MAMBA2_EMIT_STATIC_CONTROL:-true}"
-
-mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 
 # Provenance manifest per Catalog L "remote scripts write provenance"
 cat > "$PROVENANCE" <<EOF
@@ -225,6 +346,9 @@ cat > "$PROVENANCE" <<EOF
   "upstream_dir": "$Z7_MAMBA2_UPSTREAM_DIR",
   "output_dir": "$OUTPUT_DIR",
   "log_dir": "$LOG_DIR",
+  "dispatch_platform": "$DISPATCH_PLATFORM",
+  "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
+  "dispatch_claim_verified": "$CLAIM_VERIFIED",
   "dali_disable_nvml": "$DALI_DISABLE_NVML",
   "cublas_workspace_config": "$CUBLAS_WORKSPACE_CONFIG",
   "pytorch_cuda_alloc_conf": "$PYTORCH_CUDA_ALLOC_CONF",
@@ -289,17 +413,6 @@ else
     )
 fi
 
-# Resolve Python binary
-if [ -z "$PYBIN" ]; then
-    if [ -x "$WORKSPACE/.venv/bin/python" ]; then
-        PYBIN="$WORKSPACE/.venv/bin/python"
-    elif command -v python3 >/dev/null 2>&1; then
-        PYBIN="$(command -v python3)"
-    else
-        PYBIN="$(command -v python)"
-    fi
-fi
-
 # PYTHONPATH per README canonical entry point
 export PYTHONPATH="${PYTHONPATH:-${WORKSPACE}/src:${WORKSPACE}/upstream:${WORKSPACE}}"
 
@@ -310,13 +423,43 @@ echo "[lane-z7-mamba2] trainer args: ${TRAINER_ARGS[*]}"
 # Run the trainer
 TRAINER_LOG="$LOG_DIR/trainer_$(date -u +%Y%m%dT%H%M%SZ).log"
 cd "$WORKSPACE"
+set +e
 "$PYBIN" -u experiments/train_substrate_time_traveler_l5_z7_mamba2.py "${TRAINER_ARGS[@]}" 2>&1 | tee "$TRAINER_LOG"
 TRAINER_RC="${PIPESTATUS[0]}"
+set -e
 
 if [ "$TRAINER_RC" -ne 0 ]; then
     echo "[lane-z7-mamba2] FATAL: trainer rc=$TRAINER_RC" >&2
     exit "$TRAINER_RC"
 fi
+
+if [ "$SMOKE_ONLY" = "1" ]; then
+    STATS_PATH="$OUTPUT_DIR/z7_mamba2_scaffold_smoke_stats.json"
+else
+    STATS_PATH="$OUTPUT_DIR/z7_mamba2_full_main_export_stats.json"
+fi
+if [ ! -f "$STATS_PATH" ]; then
+    echo "[lane-z7-mamba2] FATAL: expected stats missing at $STATS_PATH" >&2
+    exit 30
+fi
+"$PYBIN" - "$STATS_PATH" <<'PY'
+import json
+import sys
+
+stats_path = sys.argv[1]
+with open(stats_path, encoding="utf-8") as fh:
+    stats = json.load(fh)
+bad = []
+for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+    if stats.get(key) is not False:
+        bad.append(f"{key}={stats.get(key)!r}")
+if bad:
+    print(
+        f"Z7-Mamba-2 stats authority flags must stay false: {', '.join(bad)}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+PY
 
 echo "[lane-z7-mamba2] DONE [no-auth-eval-pending-wave-N+1-council per Catalog #325]"
 echo "[lane-z7-mamba2] artifacts under: $OUTPUT_DIR"

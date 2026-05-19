@@ -22,7 +22,7 @@ dispatch_blockers:
   - z7_mamba2_beta_ib_parameter_requires_c6_ibps_phase_2_empirical_beta_anchor_per_revision_5
   - z7_mamba2_wave_2_probe_requires_paired_exact_eval_json_from_probe_z7_mamba2_temporal_coherence_vs_static_capacity_disambiguator
   - z7_mamba2_requires_same_archive_bytes_identity_disambiguator_before_full_dispatch
-  - z7_mamba2_mamba_ssm_pypi_install_must_succeed_in_modal_a100_image_pre_dispatch
+  - z7_mamba2_reference_torch_runtime_exact_handoff_must_validate_before_paid_dispatch
 
 summary: |
   Z7-Mamba-2 is the canonical Catalog #308 N>=3 alternative-probe-methodology
@@ -48,7 +48,7 @@ dispatch_contracts:
     archive_role: planned_z7mcm2_monolithic_payload
     builder_surface: experiments/train_substrate_time_traveler_l5_z7_mamba2.py
     status: post_build_research_only
-    exact_eval_path: blocked_pending_wave_n_plus_1_council_identity_disambiguator_and_mamba_ssm_preflight
+    exact_eval_path: blocked_pending_wave_n_plus_1_council_identity_disambiguator_and_exact_handoff
     blocker_basis: .omx/research/z7_mamba2_substrate_design_memo_20260518.md
 
 cost_band:
@@ -122,23 +122,35 @@ pact_must_prove: |
   (Catalog #220 + #272 byte-mutation smoke); (3) identity/static-capacity
   disambiguator at same archive bytes shows Z7-Mamba-2-WIN at score
   delta >= 0.005 on contest-CUDA; (4) paired CPU/CUDA exact eval is
-  harvested under lane claim custody per Catalog #226 + #245; (5) mamba_ssm
-  PyPI package installs successfully in Modal A100 image per Catalog #244
-  NVML env block + Catalog #270 Tier 1/2/3 protocol.
+  harvested under lane claim custody per Catalog #226 + #245; (5) if the
+  optional mamba_ssm backend is re-enabled, its trained state must have a
+  byte-faithful export/replay contract. Current authorized runtime defaults
+  to scorer-free reference_torch for exact archive replay.
 
 decode_complexity_evidence: |
-  Planned inflate runtime is <=200 LOC with deterministic Mamba-2 selective
-  state-space unroll across 600 pairs (substrate-engineering HNeRV parity
-  L4 waiver). Runtime deps: torch + brotli + mamba_ssm (3 deps; exceeds
-  default L4 budget of <=2 per HNeRV parity L4; substrate-engineering L7
-  waiver applies). No runtime exists yet; this is a blocker, not evidence.
+  Built inflate runtime is scorer-free and vendors the Z7MCM2 parser,
+  reference_torch Mamba-2 predictor, Z6 decoder, and shared raw writer into
+  submission_runtime/src. Runtime deps: torch plus Python stdlib. The
+  mamba_ssm CUDA backend remains training-only research until exact
+  state/export replay is implemented.
 
 envelope_status: |
   Non-dispatchable. If all gates are later ratified, the symposium cost
   path is $22-30 total: trainer build $0 GPU, Wave 2 smoke/disambiguator
   $5-10, full dispatch $20-30 Modal A100 + paired CPU/CUDA $1.50-2.
 
-remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z7_mamba2.sh
+remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z7_mamba_2.sh
+
+modal:
+  lane_script: scripts/remote_lane_substrate_time_traveler_l5_z7_mamba_2.sh
+
+env_overrides:
+  Z7_MAMBA2_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  Z7_MAMBA2_LANE_ID: lane_z7_as_mamba_2_full_landing_20260518
+  Z7_MAMBA2_RECIPE_PATH: .omx/operator_authorize_recipes/substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch.yaml
+  Z7_MAMBA2_BACKEND: reference_torch
+  Z7_MAMBA2_EGO_SOURCE: frame_delta_proxy
 
 required_input_files: []
 
