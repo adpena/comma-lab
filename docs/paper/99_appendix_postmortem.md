@@ -245,4 +245,3 @@ calibrated against Linux CPU, and to localize mechanism before claiming
 the source of the gap. The current mechanism hypotheses are decoder
 drift, network-kernel drift, and mixed drift; the landed tracers are
 `tools/probe_eval_loader_drift.py` and `tools/probe_posenet_layer_drift.py`.
-  in the parent comma-lab repository's auto-memory store

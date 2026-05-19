@@ -153,9 +153,11 @@ Operational disclosure posture for this blueprint:
   extraction. Current repository docs identify `tac` as the Task-Aware
   Compression library under [`src/tac/README.md`](../../src/tac/README.md), per
   `project_pr107_disclosure_tac_oss_public_20260505`.
-- comma-lab repo remains internal-private; operational levers (Joint-ADMM
-  allocation weights, learned-prior architecture, FiLM-protect patterns) are
-  not disclosed publicly without explicit operator sign-off.
+- This May 8 blueprint was written before the current public `comma-lab`
+  naming/docs contract stabilized. Treat any disclosure decision as scoped to
+  a specific surface; operational levers (Joint-ADMM allocation weights,
+  learned-prior architecture, FiLM-protect patterns) are not disclosed publicly
+  without explicit operator sign-off.
 - Internal supplemental URLs and credentials stay confined to private repo
   documentation until operator explicitly approves a broader surface.
 - Paper publication is gated on operator approval (Gate 5: "approve

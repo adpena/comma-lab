@@ -33,7 +33,7 @@ explicitly calls out visualizations). It requires:
 - GT video (`upstream/videos/0.mkv`)
 - SegNet via `(B, T, C, H, W)` input format with `T=1` for the sequence dim
 
-Generation script template lives in the parent comma-lab repo at
+Generation script template lives in the repository root at
 `scripts/generate_six_panel_diagnostic.py` (not yet in
 `docs/paper/figures/` source-of-truth tree).
 
