@@ -313,6 +313,25 @@ def test_authority_packet_keeps_runtime_literal_probe_separate():
     assert packet["contest_compliance_authority"] == "docs/contest_compliance_authority.md"
 
 
+def test_default_authority_packet_includes_weight_derived_promotion_path():
+    packet = build_procedural_seed_authority_packet(
+        "weight_seed_probe",
+        runtime_consumption_proof=True,
+        self_contained_archive_proof=True,
+        scorer_free_inflate_proof=True,
+        no_external_state_proof=True,
+        packet_compiler_target_declared=True,
+        exact_eval_validated=True,
+    )
+
+    assert packet["mode_count"] == 3
+    assert set(packet["modes"]) == {"archive_seeded", "weight_derived", "runtime_constant"}
+    assert packet["modes"]["weight_derived"]["promotion_eligible"] is True
+    assert packet["modes"]["weight_derived"]["compliance_class"] == "canonical_weight_derived_from_charged_member"
+    assert packet["promotion_eligible_modes"] == ["archive_seeded", "weight_derived"]
+    assert "derived from charged archive bytes" in packet["authority_protocol"]
+
+
 def test_authority_packet_rejects_unknown_or_empty_modes():
     with pytest.raises(ValueError, match="unknown procedural authority mode"):
         build_procedural_seed_authority_packet("bad", modes=("archive_seeded", "banana"))

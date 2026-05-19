@@ -198,13 +198,14 @@ def build_procedural_seed_authority_packet(
 ) -> dict[str, object]:
     """Build the authority packet for procedural seed/weight variants.
 
-    Ambiguous procedural-generation designs should carry both the charged
-    archive-seeded variant and any proposed ``inflate.py`` constant variant.
-    The packet makes that arbitration explicit: archive-contained seed/weight
-    carriers may become promotion-eligible after the proof stack and exact eval;
-    a per-video runtime literal stays research-only unless it has an explicit
-    compliance ruling. This is the code surface behind the repository docs'
-    two-track ``archive_seeded`` / ``runtime_constant`` authority protocol.
+    Ambiguous procedural-generation designs should carry the charged
+    archive-seeded, weight-derived, and any proposed ``inflate.py`` constant
+    variant. The packet makes that arbitration explicit: archive-contained
+    seed/weight carriers may become promotion-eligible after the proof stack
+    and exact eval; a per-video runtime literal stays research-only unless it
+    has an explicit compliance ruling. This is the code surface behind the
+    repository docs' three-mode ``archive_seeded`` / ``weight_derived`` /
+    ``runtime_constant`` authority protocol.
     """
 
     normalized_modes: list[AuthorityMode] = []
@@ -276,9 +277,11 @@ def build_procedural_seed_authority_packet(
         "ready_for_exact_eval_dispatch": bool(preferred_record.get("ready_for_exact_eval_dispatch")),
         "research_only": not bool(preferred_record.get("promotion_eligible")),
         "authority_protocol": (
-            "compare archive_seeded and runtime_constant variants when both are "
-            "defensible; promote only byte-closed variants whose score-bearing "
-            "information is archive-charged or explicitly ruled decoder logic"
+            "compare archive_seeded, weight_derived, and runtime_constant "
+            "variants when they are defensible; promote only byte-closed "
+            "variants whose score-bearing information is archive-charged, "
+            "derived from charged archive bytes, or explicitly ruled decoder "
+            "logic"
         ),
         "contest_compliance_authority": "docs/contest_compliance_authority.md",
     }

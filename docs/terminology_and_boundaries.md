@@ -83,17 +83,18 @@ Repo policy is stricter than the permissive edge of that rule:
 - Constants in `inflate.py` may describe how to decode a charged payload, but
   they must not hide a large uncharged model, lookup table, sidecar payload, or
   scorer-derived artifact.
-- Procedural generators should declare either `archive_seeded` or
+- Procedural generators should declare `archive_seeded`, `weight_derived`, or
   `runtime_constant` mode per
   [`docs/contest_compliance_authority.md`](contest_compliance_authority.md).
   Score-bearing seeds, weights, tables, generated code, or distilled
   transducers belong in `archive.zip` unless a compliance memo proves they are
   merely decoder logic.
-- Ambiguous seed-placement designs should carry both variants through an
-  authority packet. The archive-seeded version is the canonical promotion path;
-  the runtime-constant version remains research/probe evidence unless it proves
-  the literal is decoder logic rather than relocated payload. The reusable
-  helper is `tac.procedural_codebook_generator.build_procedural_seed_authority_packet`.
+- Ambiguous seed-placement designs should carry all plausible variants through
+  an authority packet. The archive-seeded and weight-derived versions are the
+  canonical promotion paths; the runtime-constant version remains
+  research/probe evidence unless it proves the literal is decoder logic rather
+  than relocated payload. The reusable helper is
+  `tac.procedural_codebook_generator.build_procedural_seed_authority_packet`.
 - Generated code, tiny transducers, and fixed tables are valid design tools
   when they remain self-contained, documented, and cheaper than shipping the
   equivalent bytes directly.
@@ -130,7 +131,8 @@ agree on these points:
    compression engine.
 4. Score authority comes from byte-closed exact evaluation, not prose.
 5. Procedural generation is contest-eligible only when self-contained and
-   charged through archive bytes or a clearly sanctioned tiny runtime contract.
+   charged through archive bytes, derived from already charged archive bytes,
+   or covered by a clearly sanctioned tiny runtime contract.
 6. Contest-compliance authority flows through
    `docs/contest_compliance_authority.md`.
 

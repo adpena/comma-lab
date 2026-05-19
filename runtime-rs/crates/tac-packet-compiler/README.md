@@ -1,8 +1,9 @@
 # `tac-packet-compiler`
 
 Rust native port for [`tac.packet_compiler`](../../../src/tac/packet_compiler/),
-the reusable byte-grammar and entropy-coder primitives extracted from the
-public PR101 (`hnerv_ft_microcodec`) and PR103 (`hnerv_lc_ac`) submissions.
+the reusable byte-grammar and entropy-coder primitives inside the `tac`
+Task-Aware Compression library, extracted from the public PR101
+(`hnerv_ft_microcodec`) and PR103 (`hnerv_lc_ac`) submissions.
 
 > **Status — `v0.2.0-rc1` LOCAL release tag (2026-05-11). 19 of 19 primitives byte-for-byte-parity GREEN. COMPLETE NATIVE PARITY.**
 >

@@ -415,7 +415,8 @@ def check_repo(root: Path) -> list[Finding]:
         ("Feature coding for machines", "FCM terminology"),
         ("Semantic communication", "adjacent semantic/goal-oriented communication framing"),
         ("Use **compression** for the project and research program", "codec/compression distinction"),
-        ("procedural generation from archive-contained seeds or weights", "procedural generation boundary"),
+        ("procedural generation from archive-contained seeds or charged archive", "procedural generation boundary"),
+        ("weight-derived promotion paths", "procedural weight-derived authority boundary"),
         ("procedural-seed authority packets", "procedural authority packet boundary"),
         ("docs/contest_compliance_authority.md", "contest authority pointer"),
     ):
@@ -490,8 +491,10 @@ def check_repo(root: Path) -> list[Finding]:
         )
     for needle in (
         "Procedural generation from an archive-contained seed",
+        "derived from already charged archive bytes",
         "Constants in `inflate.py` may describe how to decode a charged payload",
-        "archive-seeded version is the canonical promotion path",
+        "archive-seeded and weight-derived versions are the",
+        "canonical promotion paths",
         "Package Ownership",
         "docs/contest_compliance_authority.md",
     ):
@@ -509,8 +512,10 @@ def check_repo(root: Path) -> list[Finding]:
         ("Authority Ladder", "source hierarchy"),
         ("Public PR Precedents", "public precedent section"),
         ("archive_seeded", "procedural archive-seeded mode"),
+        ("weight_derived", "procedural weight-derived mode"),
         ("runtime_constant", "procedural runtime-constant mode"),
-        ("score-bearing information must be charged through `archive.zip`", "payload relocation guard"),
+        ("score-bearing information must be charged", "payload relocation guard"),
+        ("through `archive.zip`", "archive charging surface"),
         ("How To Establish Authority", "procedural authority packet protocol"),
         ("build_procedural_seed_authority_packet", "procedural authority packet helper"),
         ("#35 tensor_inversion", "scorer inflate precedent"),

@@ -93,9 +93,10 @@ high-traffic workflows are:
 - deterministic packet compilation and byte-closed archive grammar work;
 - master-gradient, xray, Venn, and sensitivity-map surfaces for score-aware
   optimization;
-- procedural generation from archive-contained seeds or weights, with explicit
-  provenance, mutation-proof checks, and authority packets that keep
-  archive-seeded promotion paths separate from runtime-constant probes;
+- procedural generation from archive-contained seeds or charged archive
+  weights, with explicit provenance, mutation-proof checks, and authority
+  packets that keep archive-seeded and weight-derived promotion paths separate
+  from runtime-constant probes;
 - Cathedral autopilot candidate rows that stay false-authority until archive
   bytes, inflate/runtime consumption, full-frame parity, and exact eval land;
 - contest-compliant replay and deconstruction of public submissions.

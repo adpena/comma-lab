@@ -59,18 +59,46 @@ Procedural generation is contest-relevant and should remain a first-class
 Task-Aware Compression (`tac`) design path. The compliant question is where
 the information lives.
 
-Use two explicit modes:
+Use three explicit modes:
 
 | Mode | Payload location | Local authority |
 |---|---|---|
 | `archive_seeded` | Seed, weights, lookup tables, and score-bearing parameters live in `archive.zip`. | Preferred for score claims; charged bytes are explicit. |
+| `weight_derived` | The generator derives seeds/codebooks from an existing charged archive member such as renderer weights. | Preferred when it removes a redundant table without adding new score-bearing bytes; requires source-member SHA and no-new-bytes proof. |
 | `runtime_constant` | Tiny constants or code-generation logic live in `inflate.py`. | Allowed only for decoder logic or negligible implementation constants; not allowed for relocating score-bearing payloads. |
 
 If a seed, table, distilled transducer, generated code blob, or model parameter
 set materially determines the reconstructed frames, treat it as score-bearing
-unless proven otherwise. For score claims, score-bearing information must be charged through `archive.zip`. The safest route is to put it in `archive.zip`,
-meter it, and make `inflate.py` a deterministic interpreter for the charged
-payload.
+unless proven otherwise. For score claims, score-bearing information must be
+charged through `archive.zip` or deterministically derived from bytes that are
+already charged inside `archive.zip`. The safest route is to put it in
+`archive.zip`, meter it, and make `inflate.py` a deterministic interpreter for
+the charged payload.
+Payload-relocation guard phrase: score-bearing information must be charged
+through `archive.zip` unless it is demonstrably derived from bytes already
+charged in that same archive.
+
+## Current Answer For Seeds And Weights
+
+Procedural generation from a seed or from weights is a canonical path when the
+receiver can reproduce the generated object from self-contained, charged
+information:
+
+- `archive_seeded`: ship the seed/table/transducer bytes as an archive member
+  and prove the runtime consumes that member.
+- `weight_derived`: derive the seed or codebook from an existing archive member
+  such as renderer weights, freeze that member's SHA-256, and prove the
+  candidate did not add or rewrite score-bearing bytes to hide the derived
+  object.
+- `runtime_constant`: keep only generic decoder logic or negligible
+  implementation constants in `inflate.py`; a per-video literal seed remains a
+  research/probe variant unless an explicit compliance ruling says it is code
+  rather than relocated payload.
+
+When multiple seed placements are plausible, build all relevant variants. The
+archive-seeded or weight-derived variant is the promotion candidate; the
+runtime-constant variant is a disambiguation probe until it clears the same
+authority packet.
 
 ## How To Establish Authority
 
@@ -99,11 +127,12 @@ Minimum packet fields:
 - Exact auth-eval result for the exact archive/runtime pair, with `[contest-CPU]`
   and `[contest-CUDA]` kept distinct.
 
-When both seed placements are defensible, pursue two variants:
+When multiple seed placements are defensible, pursue the variants explicitly:
 
 | Variant | Purpose | Promotion default |
 |---|---|---|
 | `archive_seeded` | Put score-bearing seed, weights, generated tables, or distilled transducer bytes in `archive.zip`. | Canonical promotion path after proof stack and exact eval. |
+| `weight_derived` | Derive the seed/codebook from existing charged archive bytes such as renderer weights. | Canonical promotion path after source-member SHA, no-new-bytes proof, proof stack, and exact eval. |
 | `runtime_constant` | Put only generic decoder logic or tiny implementation constants in `inflate.py`. | Research/probe path unless a maintainer/operator ruling proves it is code rather than payload relocation. |
 
 This avoids the false dichotomy between "procedural generation is forbidden"
@@ -115,8 +144,8 @@ The reusable code helper is
 `tac.procedural_codebook_generator.build_procedural_seed_authority_packet`.
 Use it before routing procedural generation into Cathedral autopilot or any
 dispatch queue. It emits a fail-closed packet that keeps the archive-seeded
-variant separate from the runtime-constant variant, so exact eval cannot
-silently launder an uncharged payload into a score claim.
+and weight-derived variants separate from the runtime-constant variant, so
+exact eval cannot silently launder an uncharged payload into a score claim.
 
 ## Deterministic Packet Compiler Rule
 

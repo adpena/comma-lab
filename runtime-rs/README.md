@@ -3,6 +3,9 @@
 Rust workspace for hot-path experiments.
 
 This lane is intentionally separate from the Python harness.
+It contains native speed-layer ports for reusable `tac` Task-Aware Compression
+primitives; Python `src/tac/` remains the semantic oracle until native parity is
+proven against committed golden vectors.
 
 Targets:
 - Rust-backed Python AST/source indexing for fast preflight scans
