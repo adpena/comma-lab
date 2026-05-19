@@ -49,8 +49,11 @@ does NOT pull these.
 | `[runtime]` | [einops](https://github.com/arogozhnikov/einops) | MIT | Tensor reshape primitives |
 | `[runtime]` | [segmentation_models.pytorch](https://github.com/qubvel/segmentation_models.pytorch) | MIT | SegNet architecture (used by the contest scorer) |
 | `[dev]` | [pytest](https://github.com/pytest-dev/pytest) | MIT | Test runner |
+| `[dev]` | [pytest-timeout](https://github.com/pytest-dev/pytest-timeout) | MIT | Per-test wall-clock guard |
+| `[dev]` | [pytest-subtests](https://github.com/pytest-dev/pytest-subtests) | MIT | Parameterized sub-test reporting |
 | `[dev]` | [hypothesis](https://github.com/HypothesisWorks/hypothesis) | MPL-2.0 | Property-based testing |
 | `[dev]` | [ruff](https://github.com/astral-sh/ruff) | MIT | Linter and formatter |
+| `[dev]` | [ty](https://github.com/astral-sh/ty) | MIT | Type checker (astral.sh) |
 | `[dev]` | [mypy](https://github.com/python/mypy) | MIT | Type checker |
 | `[dev]` | [scipy](https://github.com/scipy/scipy) | BSD-3-Clause | Numerical routines (Rodrigues / Rotation reference) |
 | `[dev]` | [PyWavelets](https://github.com/PyWavelets/pywt) | MIT | Wavelet oracle for tests |
