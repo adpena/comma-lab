@@ -300,6 +300,29 @@ def dispatch(
         )
 
     api = HfApi(token=token)
+    if register_in_ledger:
+        from tac.deploy.hf_jobs.job_id_ledger import (
+            register_hf_jobs_dispatch_intent,
+        )
+
+        register_hf_jobs_dispatch_intent(
+            lane_id=plan.lane_id,
+            label=plan.label,
+            flavor=plan.flavor,
+            expected_cost_usd=plan.estimated_cost_usd,
+            expected_axis=expected_axis,
+            recipe=str(plan.recipe_path) if plan.recipe_path else None,
+            max_seconds=plan.timeout_seconds,
+            mounted_code_git_head=_git_head_sha(REPO_ROOT),
+            agent="claude",
+            subagent_id=subagent_id,
+            session_id=session_id,
+            hub_model_repo=plan.hub_model_repo,
+            hub_dataset_repo=plan.hub_dataset_repo,
+            hub_dataset_sha=hub_dataset_sha,
+            upstream_snapshot_sha256=upstream_snapshot_sha256,
+        )
+
     # Per directive #1: pass script_args (NOT edit script variables).
     # Per directive #2: secrets={"HF_TOKEN": <actual value>}.
     # Per directive #5: explicit timeout.

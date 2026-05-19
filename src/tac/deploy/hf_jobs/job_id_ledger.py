@@ -11,7 +11,8 @@ Schema (mirrors ``tac.deploy.modal.call_id_ledger`` per the canonical
 4-layer pattern):
 
 - ``schema_version``: pinned at MODULE-level constant.
-- ``event_type``: one of {``dispatched``, ``harvested``, ``failed``, ``stale``}.
+- ``event_type``: one of {``intent``, ``dispatched``, ``harvested``, ``failed``,
+  ``stale``}.
 - ``hf_jobs_id``: HF Jobs job id returned by ``run_uv_job(...).id``.
 - ``lane_id``: canonical lane id (e.g.
   ``lane_hf_jobs_segnet_surrogate_distillation_20260519``).
@@ -70,12 +71,14 @@ from typing import Any, Iterable
 
 SCHEMA_VERSION = "hf_jobs_ledger_v1_catalog342_20260519"
 
+EVENT_INTENT = "intent"
 EVENT_DISPATCHED = "dispatched"
 EVENT_HARVESTED = "harvested"
 EVENT_FAILED = "failed"
 EVENT_STALE = "stale"
 
 VALID_EVENT_TYPES: frozenset[str] = frozenset({
+    EVENT_INTENT,
     EVENT_DISPATCHED,
     EVENT_HARVESTED,
     EVENT_FAILED,
@@ -87,6 +90,7 @@ VALID_EVENT_TYPES: frozenset[str] = frozenset({
 # has status="harvested"; failed has status="failed"; stale has
 # status="stale").
 STATUS_DISPATCHED = "dispatched"
+STATUS_INTENT = "intent"
 TERMINAL_STATUSES: frozenset[str] = frozenset({
     EVENT_HARVESTED,
     EVENT_FAILED,
@@ -343,6 +347,89 @@ def register_dispatched_hf_jobs_id(
         "archive_sha256": None,
         "archive_bytes": None,
         "evidence_grade": None,
+        "max_seconds": max_seconds,
+        "mounted_code_git_head": mounted_code_git_head,
+        "agent": agent,
+        "subagent_id": subagent_id,
+        "session_id": session_id,
+        "hub_model_repo": hub_model_repo,
+        "hub_model_sha": None,
+        "hub_dataset_repo": hub_dataset_repo,
+        "hub_dataset_sha": hub_dataset_sha,
+        "upstream_snapshot_sha256": upstream_snapshot_sha256,
+        "written_at_utc": _now_iso(),
+        "written_pid": os.getpid(),
+        "written_host": socket.gethostname(),
+    }
+    reserved = set(record.keys())
+    for k, v in extra.items():
+        if k in reserved:
+            raise ValueError(
+                f"extra kwarg {k!r} collides with a reserved schema field"
+            )
+        record[k] = v
+    return _append_event_locked(record, path=path, lock_path=lock_path)
+
+
+def register_hf_jobs_dispatch_intent(
+    *,
+    lane_id: str,
+    label: str,
+    intent_id: str | None = None,
+    flavor: str = "t4-small",
+    expected_cost_usd: float | None = None,
+    expected_axis: str = "advisory",
+    recipe: str | None = None,
+    max_seconds: int | None = None,
+    mounted_code_git_head: str | None = None,
+    agent: str = "claude",
+    subagent_id: str | None = None,
+    session_id: str | None = None,
+    hub_model_repo: str | None = None,
+    hub_dataset_repo: str | None = None,
+    hub_dataset_sha: str | None = None,
+    upstream_snapshot_sha256: str | None = None,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    """Append a pre-launch intent row before calling HF Hub ``run_uv_job``.
+
+    This row is the recoverable local custody anchor that exists before any
+    remote job can be created. It does not claim an HF job id; the placeholder
+    ``hf_jobs_id`` is namespaced as ``pending:<label>`` so downstream harvesters
+    can distinguish it from real HF job ids.
+    """
+
+    if not isinstance(lane_id, str) or not lane_id.strip():
+        raise ValueError("lane_id must be a non-empty string")
+    if not isinstance(label, str) or not label.strip():
+        raise ValueError("label must be a non-empty string")
+    resolved_intent_id = intent_id or f"pending:{label}"
+    if not resolved_intent_id.startswith("pending:"):
+        resolved_intent_id = f"pending:{resolved_intent_id}"
+    record: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "event_type": EVENT_INTENT,
+        "hf_jobs_id": resolved_intent_id,
+        "lane_id": lane_id,
+        "label": label,
+        "platform": "hf_jobs",
+        "flavor": flavor,
+        "expected_cost_usd": expected_cost_usd,
+        "expected_axis": expected_axis,
+        "recipe": recipe,
+        "dispatched_at_utc": None,
+        "harvested_at_utc": None,
+        "status": STATUS_INTENT,
+        "rc": None,
+        "elapsed_seconds": None,
+        "cost_actual_usd": None,
+        "score": None,
+        "score_axis": None,
+        "archive_sha256": None,
+        "archive_bytes": None,
+        "evidence_grade": "pre_dispatch_intent_no_remote_job_id_yet",
         "max_seconds": max_seconds,
         "mounted_code_git_head": mounted_code_git_head,
         "agent": agent,
@@ -732,12 +819,14 @@ __all__ = [
     "EVENT_DISPATCHED",
     "EVENT_FAILED",
     "EVENT_HARVESTED",
+    "EVENT_INTENT",
     "EVENT_STALE",
     "HF_JOBS_CALL_ID_LEDGER_PATH",
     "HFJobsLedgerCorruptError",
     "HFJobsLedgerRegistrationFailedError",
     "SCHEMA_VERSION",
     "STATUS_DISPATCHED",
+    "STATUS_INTENT",
     "TERMINAL_STATUSES",
     "VALID_EVENT_TYPES",
     "latest_status_by_hf_jobs_id",
@@ -748,5 +837,6 @@ __all__ = [
     "query_by_lane",
     "register_dispatched_hf_jobs_id",
     "register_dispatched_hf_jobs_id_fail_closed",
+    "register_hf_jobs_dispatch_intent",
     "update_hf_jobs_outcome",
 ]
