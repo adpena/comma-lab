@@ -28,7 +28,6 @@ from tac.cathedral.consumer_contract import (
 )
 from tac.cathedral_consumers import per_byte_sensitivity_consumer as consumer
 
-
 # ─────────────────────────────────────────────────────────────────────────
 # Canonical contract satisfaction (Catalog #335)
 # ─────────────────────────────────────────────────────────────────────────
@@ -346,11 +345,12 @@ def test_per_byte_consumer_has_correct_hooks_in_discovery(
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def test_live_repo_per_byte_consumer_count_at_least_23(autopilot_loop_module) -> None:
-    """Per the landing memo: cumulative cathedral_consumers count is >= 23.
+def test_live_repo_per_byte_consumer_count_at_least_22(autopilot_loop_module) -> None:
+    """Per the live repo floor: cumulative cathedral_consumers count is >= 22.
 
-    22 existing (per `feedback_mps_prescreen_cathedral_consumer_wire_in_landed_
-    20260519.md`) + 1 NEW per_byte_sensitivity_consumer = 23 minimum.
+    The exact directory cardinality can change as sister work lands, but the
+    production discovery surface must not silently drop below the current
+    floor while still claiming the per-byte sensitivity consumer is wired.
     """
     modules = autopilot_loop_module.discover_compliant_consumer_modules()
     assert len(modules) >= 22, (
