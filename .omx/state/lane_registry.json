@@ -40260,6 +40260,170 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_wave_2c_cargo_cult_unwind_audit_20260519",
+      "name": "Wave 2C cargo-cult-unwind audit",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/cargo_cult_unwind_audit_atom_consumer_20260519.md (4 audit memos + integrated landing memo)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_wave_2c_cargo_cult_unwind_audit_landed_20260519.md + MEMORY.md prepend"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_byte_sensitivity_consumer_cathedral_wire_in_20260519",
+      "name": "Per-byte sensitivity cathedral consumer (Catalog #335 paradigm shift)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/cathedral_consumers/per_byte_sensitivity_consumer/__init__.py + src/tac/master_gradient_per_byte_consumer.py; 50 tests pass; Catalog #335 LIVE_COUNT=0"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_silent_no_spawn_structural_extinction_20260519",
+      "name": "Silent-no-spawn structural extinction (Catalog #339)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Layer 1 canonical helper: tac.deploy.modal.call_id_ledger.register_dispatched_call_id_fail_closed + LedgerRegistrationFailedError + poll_ledger_for_call_id (~600 LOC extension). Layer 2 wrapper fix: experiments/modal_train_lane.py replaced silent except Exception swallow at lines 1921-1960 with explicit catch+sys.exit(13). Layer 3 sister mitigation: tools/operator_authorize.py _dispatch_modal polls canonical ledger 10s after spawned_call=True + raises SystemExit on miss. Layer 4 STRICT preflight gate: catalog #339."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #339 check_modal_dispatcher_registers_call_id_before_successful_exit STRICT-from-byte-one. Live count 0. 35 tests pass (20 gate + 15 helper)."
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_317_scope_narrowing_plus_consumer_routing_sister_gate_20260519",
+      "name": "Catalog #317 scope-narrowing + Catalog #341 sister gate",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "preflight.py:check_cathedral_consumer_mps_prescreen_routing_carries_canonical_markers wired strict=True; gate function defined; CLAUDE.md row 341 added; live count 0"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "STRICT-from-byte-one Catalog #341; 27 dedicated tests in src/tac/tests/test_check_341_cathedral_consumer_mps_prescreen_routing.py PASS; live count 0"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_catalog_317_scope_narrowing_plus_consumer_routing_sister_gate_landed_20260519.md + MEMORY.md prepended"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -40269,5 +40433,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T06:41:10Z"
+  "updated_at": "2026-05-19T12:26:45Z"
 }
