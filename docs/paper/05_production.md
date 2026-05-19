@@ -62,7 +62,7 @@ Compression enters at two points: on-device encoding for local storage and uploa
 
 ### Scenario A: Fleet data compression (server-side)
 
-The most natural deployment. comma's servers hold petabytes of driving video from a fleet of 250,000+ devices. Re-compressing this corpus with a task-aware codec reduces storage costs and speeds up training data loading, without degrading downstream model training quality.
+The most natural deployment. comma's servers hold petabytes of driving video from a fleet of 250,000+ devices. Re-compressing this corpus with a task-aware compression system reduces storage costs and speeds up training data loading, without degrading downstream model training quality.
 
 **How it works.** The renderer runs on server GPUs (A100, H100, or commodity 4090s). For each route:
 

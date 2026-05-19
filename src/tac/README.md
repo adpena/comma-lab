@@ -37,6 +37,7 @@ planning, archive custody, and exact scorer contracts.
 References:
 
 - MPEG-AI Part 2, [Video coding for machines](https://www.mpeg.org/standards/MPEG-AI/2/)
+- MPEG-AI Part 4, [Feature coding for machines](https://www.mpeg.org/standards/MPEG-AI/4/)
 - MPEG WG 4, [Video Coding Working Group](https://www.mpeg.org/structure/video-coding/)
 - CVPR 2023, [AccelIR: Task-aware Image Compression for Accelerating Neural Restoration](https://openaccess.thecvf.com/content/CVPR2023/papers/Ye_AccelIR_Task-Aware_Image_Compression_for_Accelerating_Neural_Restoration_CVPR_2023_paper.pdf)
 
@@ -68,6 +69,30 @@ or dated `.omx/research/` ledgers.
 | `tac.optimizer` | Exact-readiness, dispatch authority, proxy-candidate contracts, and planning gates |
 | `tac.procedural_codebook_generator` | Archive-seeded and weight-derived deterministic codebook generation |
 | `tac.preflight` | Reusable contest/runtime/package validity checks |
+
+## Active Workflows
+
+This package is active research software, not a frozen artifact. Current
+high-traffic workflows are:
+
+- exact archive and runtime custody for `[contest-CPU]` and `[contest-CUDA]`
+  score claims;
+- deterministic packet compilation and byte-closed archive grammar work;
+- master-gradient, xray, Venn, and sensitivity-map surfaces for score-aware
+  optimization;
+- procedural generation from archive-contained seeds or weights, with explicit
+  provenance and mutation-proof checks;
+- Cathedral autopilot candidate rows that stay false-authority until archive
+  bytes, inflate/runtime consumption, full-frame parity, and exact eval land;
+- contest-compliant replay and deconstruction of public submissions.
+
+For naming, keep the hierarchy strict:
+
+- `tac`: Task-Aware Compression, the whole package and research stack.
+- `codec`: a concrete encoder/decoder, entropy coder, packet grammar, or
+  archive/inflate pair inside that stack.
+- `comma_lab`: the lab control plane that records, audits, and publishes
+  `tac` outputs.
 
 ## Installation
 

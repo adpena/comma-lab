@@ -140,7 +140,7 @@ Memory: `feedback_oss_release_v0_2_0_rc1_landed_20260514.md`.
 ## [1.0.0] - 2026-03-20
 
 ### Added
-- Initial release of `tac` (Task-Aware Codec)
+- Initial release of `tac` (Task-Aware Compression)
 - `tac.architectures`: `PostFilter`, `DilatedPostFilter`, `PixelShufflePostFilter` with 12 variant aliases
 - `tac.training`: `Trainer` with QAT, EMA, best-checkpoint, lazy loading
 - `tac.losses`: `scorer_loss`, `eval_scorer_loss`, `segnet_ste_loss`

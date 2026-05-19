@@ -45,7 +45,7 @@ Pick 3-4 from the existing D3 interactive site. Each should have a static fallba
 
 | Artifact | Link target | Notes |
 |---|---|---|
-| GitHub repo | `github.com/adpena/pact` | Point to README + `tac/` library |
+| GitHub repo | `github.com/adpena/comma-lab` | Point to README + `tac/` library |
 | Interactive writeup | Cloudflare site | Full D3 visualizations, experiment details |
 | Technical paper | PDF or site subpage | The 18-experiment writeup |
 | `tac` library | PyPI or GitHub subdir | 7 modules, v0.5.0, certified via review |

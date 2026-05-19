@@ -43,6 +43,21 @@ control plane that keeps those artifacts auditable and production-ready.
 | `comma_lab.state_sync` | Deterministic state projection and doctor/sync flows |
 | `comma_lab.snapshot` | Repository snapshot helpers |
 
+## Active Workflows
+
+This package is the live operations harness around the `tac` compression
+library. Current active workflows include:
+
+- projecting promoted score and custody state into operator-facing read models;
+- exposing strict `tac.preflight` checks through normal lab/operator flows;
+- auditing which `.omx/research`, state, report, and reverse-engineering files
+  should be tracked, externalized, summarized, or ignored;
+- keeping public-frontier intake and deconstruction trees clean;
+- producing release, paper, and OSS hygiene reports without moving algorithmic
+  compression logic out of `tac`;
+- preserving exact evidence labels so advisory local or proxy signals never
+  masquerade as score-bearing contest authority.
+
 ## Boundary Rule
 
 When adding code, ask which layer owns the durable abstraction:

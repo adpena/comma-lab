@@ -1,4 +1,4 @@
-# Homebrew formula for tac - Task-Aware Codec
+# Homebrew formula for tac - Task-Aware Compression
 #
 # This is a sketch formula. To publish to Homebrew:
 # 1. Build the sdist/wheel and upload to PyPI
@@ -12,8 +12,8 @@
 class Tac < Formula
   include Language::Python::Virtualenv
 
-  desc "Task-Aware Codec: Neural video compression for perception models"
-  homepage "https://github.com/adpena/pact"
+  desc "Task-Aware Compression: neural video compression for perception models"
+  homepage "https://github.com/adpena/comma-lab"
   url "https://files.pythonhosted.org/packages/source/t/tac/tac-1.0.0.tar.gz"
   sha256 "PLACEHOLDER_SHA256"
   license "MIT"

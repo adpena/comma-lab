@@ -1,4 +1,4 @@
-# pact
+# comma-lab / pact
 
 Task-Aware Compression research and artifact tooling for the
 [comma.ai video compression challenge](https://github.com/commaai/comma_video_compression_challenge).
@@ -11,6 +11,8 @@ In this repository, `tac` means **Task-Aware Compression**: compression
 optimized for a downstream task/scorer. A **codec** is a narrower concrete
 encoder/decoder or wire format inside that stack. The `comma_lab` package is the
 lab and operations layer around `tac`, not a second compression engine.
+The package-level boundary docs are [src/tac/README.md](src/tac/README.md) and
+[src/comma_lab/README.md](src/comma_lab/README.md).
 
 Score-bearing claims must be read through the repository evidence grades. The
 ranked public rows live in `docs/paper/04_results.md`; roadmap and planning
@@ -73,7 +75,7 @@ Key components:
 
 ```bash
 # Install
-git clone https://github.com/adpena/pact.git && cd pact
+git clone https://github.com/adpena/comma-lab.git && cd comma-lab
 uv venv && uv pip install -e ".[dev]"
 
 # Compress a video
