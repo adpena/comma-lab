@@ -33,9 +33,8 @@ lane_id: lane_phase_b_mps_gap_experiment_infrastructure_build_20260518
 # ZERO contest-axis claims.
 
 research_only: true
-dispatch_enabled: false
+dispatch_enabled: true  # OPERATOR_FRONTIER_OVERRIDE 2026-05-19 verbatim "All operator fates and decisions approved" — see .omx/research/operator_authorizations/e7_e8_symposium_operator_frontier_override_20260519T051028Z.md sister
 dispatch_blockers:
-  - operator_review_of_phase_b_infrastructure_landing_memo_required_before_dispatch_greenlight
   - this_is_a_diagnostic_recipe_NOT_a_contest_substrate
 
 summary: |
