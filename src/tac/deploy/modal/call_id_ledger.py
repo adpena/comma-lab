@@ -1204,7 +1204,29 @@ def update_call_id_outcome(
             raise ValueError(f"extra kwarg {k!r} collides with a reserved schema field")
         record[k] = v
 
-    return _append_event_locked(record, path=path, lock_path=lock_path)
+    appended = _append_event_locked(record, path=path, lock_path=lock_path)
+
+    # Catalog #343 DX auto-update wire-in: every harvested outcome with a
+    # numeric score auto-refreshes the canonical frontier pointer so
+    # operator-facing surfaces never drift from canonical state. Fail-quiet
+    # per CLAUDE.md "Subagent coherence-by-default" maximum-signal-preservation:
+    # pointer refresh failure must not propagate (ledger write already
+    # succeeded; pointer is a downstream observability surface).
+    try:
+        from tac.canonical_frontier_pointer import (
+            auto_refresh_canonical_frontier_after_dispatch_outcome,
+        )
+
+        auto_refresh_canonical_frontier_after_dispatch_outcome(
+            status=status,
+            score=score,
+            score_axis=score_axis,
+            archive_sha256=archive_sha256,
+        )
+    except Exception:  # noqa: BLE001 — fail-quiet per the contract
+        pass
+
+    return appended
 
 
 # ─────────────────────────────────────────────────────────────────────────

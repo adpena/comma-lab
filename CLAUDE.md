@@ -808,6 +808,64 @@ Detached public PR clones, stashes, quarantine trees, provider workspaces, and
 subagent forks are forensic inputs only; promoted code, docs, artifacts, and
 ledgers must land back on `main` after explicit review.
 
+## Frontier scores are pointer-only — NON-NEGOTIABLE
+
+**Source of truth for OUR LOCAL FRONTIER + PUBLIC LEADERBOARD scores:**
+`.omx/state/canonical_frontier_pointer.json` (machine-readable; updated via
+`tools/refresh_canonical_frontier.py` or auto on dispatch completion per
+Catalog #343).
+
+**FORBIDDEN**: hardcoded score literals in CLAUDE.md / MEMORY.md / memory
+files for our local frontier or current public leaderboard. The pointer
+file is the SoT; hardcoding causes drift that produces misleading operator
+briefings.
+
+Empirical anchor: the pre-pointer state let a frontier-score conflation
+between our local frontier (lane
+`pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean`, archive sha
+prefix `6bae0201`) and the PR101 GOLD UPSTREAM baseline (archive sha
+prefix `b83bf348`) go undetected until the operator corrected it
+2026-05-19. The pointer is the structural extinction of that drift class.
+
+**ALLOWED**: hardcoded score literals in HISTORICAL-CONTEXT (catalog row
+docstrings, falsification verdicts, postmortems, historical PR refs per
+CLAUDE.md "KILL/FALSIFIED memory verdicts" + Catalog #110 / #113
+HISTORICAL_PROVENANCE non-negotiable) — these MUST be tagged with same-line
+`# HISTORICAL_SCORE_LITERAL_OK:<rationale>` waiver to pass Catalog #343
+strict gate.
+
+**Operator-facing access**:
+
+```bash
+# Print current frontier in human-readable form.
+.venv/bin/python tools/refresh_canonical_frontier.py
+
+# Opt in to upstream public leaderboard fetch (~30s network call).
+.venv/bin/python tools/refresh_canonical_frontier.py --update-upstream
+
+# Strict mode: exit rc=1 if pointer is stale (>24h).
+.venv/bin/python tools/refresh_canonical_frontier.py --strict
+
+# Machine-readable JSON for autopilot / dashboard consumers.
+.venv/bin/python tools/refresh_canonical_frontier.py --json
+```
+
+**DX auto-update**: every successful Modal / HF Jobs dispatch completion
+fires `tac.canonical_frontier_pointer.auto_refresh_canonical_frontier_after_dispatch_outcome`
+from inside `tac.deploy.modal.call_id_ledger.update_call_id_outcome` +
+`tac.deploy.hf_jobs.job_id_ledger.update_hf_jobs_outcome`. The pointer
+auto-refreshes; operators rarely need the manual refresh CLI.
+
+**Sister discipline**: Catalog #316 (`check_reports_latest_md_not_stale_vs_canonical_frontier`)
+keeps `reports/latest.md` aligned. Catalog #131 + #138 (fcntl-locked atomic
+write + strict-load fail-closed) keep the pointer's persistence layer
+consistent. Catalog #245 (Modal call_id ledger) is the canonical 4-layer
+exemplar this pointer mirrors. Catalog #343 (this gate) refuses NEW
+hardcoded literals in CLAUDE.md without canonical pointer reference or
+HISTORICAL_SCORE_LITERAL_OK waiver (warn-only initially per Strict-flip
+atomicity rule because legacy CLAUDE.md has dozens of historical anchors
+that need backfill OR HISTORICAL-CONTEXT waivers).
+
 ## Frontier target — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 The target is the best contest-faithful public frontier, not an obsolete
