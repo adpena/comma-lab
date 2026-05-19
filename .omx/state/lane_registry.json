@@ -40711,6 +40711,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_hf_jobs_segnet_surrogate_distillation_per_pixel_20260519",
+      "name": "HF Jobs SegNet surrogate distillation per-pixel mIoU sister lane (Contrarian VETO honored)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/hf_jobs_segnet_surrogate_distillation_per_pixel.py + tools/dispatch_hf_jobs_segnet_surrogate_per_pixel.py + .omx/operator_authorize_recipes/substrate_hf_jobs_segnet_surrogate_distillation_per_pixel_t4_dispatch.yaml + .omx/research/council_t1_hf_jobs_segnet_surrogate_distillation_per_pixel_symposium_20260519.md; 31/31 tests pass; honors slot 7 T1 symposium Contrarian VETO"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_hf_jobs_segnet_surrogate_per_pixel_sister_lane_landed_20260519.md + MEMORY.md prepend"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -40720,5 +40761,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T12:49:22Z"
+  "updated_at": "2026-05-19T12:59:00Z"
 }
