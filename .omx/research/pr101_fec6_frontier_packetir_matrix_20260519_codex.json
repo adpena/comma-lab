@@ -1,0 +1,344 @@
+{
+  "archive": {
+    "bytes": 178517,
+    "exists": true,
+    "expected_bytes": 178517,
+    "expected_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "kind": "archive",
+    "manifest": {
+      "bytes": 2161,
+      "exists": true,
+      "json_valid": true,
+      "kind": "archive_manifest",
+      "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive_manifest.json",
+      "schema": "pr101_frame_exploit_selector_archive_manifest_v1",
+      "sha256": "58a3d952303c4d4d68600a3cfb60bc7e668b3dc01f5a4aa92f2320655ca06896"
+    },
+    "packet_manifest": {
+      "bytes": 28125,
+      "exists": true,
+      "json_valid": true,
+      "kind": "packet_manifest",
+      "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packet_manifest.json",
+      "schema": "pr101_frame_exploit_selector_packet_manifest_v1",
+      "sha256": "7d3a639487b4313b57978c4514cb68eb8f947d6b77274f4a8d4500925a48ede2"
+    },
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "sha256_matches_manifest": true,
+    "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e"
+  },
+  "artifact_paths": {
+    "json": ".omx/research/pr101_fec6_frontier_packetir_matrix_20260519_codex.json",
+    "markdown": ".omx/research/pr101_fec6_frontier_packetir_matrix_20260519_codex.md"
+  },
+  "artifact_sha256": {
+    "json": null,
+    "json_omitted_reason": "self_referential_json_hash_requires_external_manifest",
+    "markdown": "e42adc4fa1eca697d3ae4320c8af07eaba06ef757e74010dad199513dc7412d0"
+  },
+  "authority_summary": {
+    "current_authority": "parser_profile_and_exact_eval_evidence_only_no_compiler_identity_no_packetir_candidate_queue",
+    "fec6_frontier_archive_present": true,
+    "fec6_has_contest_cpu_evidence": true,
+    "fec6_has_contest_cuda_evidence": true,
+    "fec6_has_deterministic_compiler_identity_evidence": false,
+    "fec6_has_parser_profile_evidence": true,
+    "fec6_has_pr106_style_packetir_candidate_queue": false,
+    "pr101_packet_compiler_packetir_primitives_are_general": true
+  },
+  "axis_semantics": {
+    "contest_cpu": "kept separate from contest_cuda; no conversion",
+    "contest_cuda": "kept separate from contest_cpu; no conversion"
+  },
+  "blockers": [
+    "deterministic_compiler_identity_manifest_missing",
+    "pr106_style_packetir_candidate_queue_missing"
+  ],
+  "candidate_queue": {
+    "exists": false,
+    "kind": "pr101_fec6_packetir_candidate_queue",
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packetir_candidate_queue.json",
+    "pr106_style_packetir_candidate_queue": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "deterministic_compiler_manifest": {
+    "deterministic_compiler_identity": false,
+    "exists": false,
+    "kind": "deterministic_compiler_identity_manifest",
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/deterministic_packet_compiler_manifest.json",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "dispatch_attempted": false,
+  "dispatch_commands_emitted": false,
+  "exact_eval_artifacts": {
+    "contest_cpu": {
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "archive_size_bytes": 178517,
+      "avg_posenet_dist": 2.943e-05,
+      "avg_segnet_dist": 0.00056029,
+      "axis": "contest_cpu",
+      "blockers": [],
+      "bytes": 9199,
+      "canonical_score": 0.1920513168811056,
+      "evidence_grade": "contest-CPU",
+      "exists": true,
+      "hardware": {
+        "device": "cpu",
+        "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+        "gpu_t4_match": false,
+        "platform_machine": "x86_64",
+        "platform_system": "Linux"
+      },
+      "inflated_output_manifest": {
+        "aggregate_sha256": "10c68e4266e79fc3e878fd20136e8aaa56262b3a2ff45eed7b8d5a4b1e1ee66d",
+        "path": "/root/modal_auth_eval_cpu_work/eval_work/inflated_outputs_manifest.json",
+        "present": true,
+        "raw_file_count": 1,
+        "sha256": "5cadb4566bf7f7d9bcec511c8066ade58530a1b0b8e0de55e18f10293a47b0c1",
+        "total_bytes": 3662409600
+      },
+      "json_valid": true,
+      "kind": "contest_cpu_exact_eval",
+      "n_samples": 600,
+      "path": "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json",
+      "promotion_eligible_in_source_artifact": false,
+      "runtime_content_tree_sha256": "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df",
+      "runtime_tree_sha256": "f67b5b52ca1f11e1a582c53965d88ef738bef86d425b82abdf2e98f3f3fd9166",
+      "schema": 1,
+      "score_axis": "contest_cpu",
+      "score_claim_in_source_artifact": false,
+      "score_claim_valid_in_source_artifact": false,
+      "score_recomputed_from_components": 0.1920513168811056,
+      "sha256": "e82e1b46c61f72e17366e52e64bfa7ccdbbf8058f2363e80d4eb914a9485b6bd",
+      "valid_axis_evidence": true
+    },
+    "contest_cuda": {
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "archive_size_bytes": 178517,
+      "avg_posenet_dist": 0.00016846,
+      "avg_segnet_dist": 0.00066299,
+      "axis": "contest_cuda",
+      "blockers": [],
+      "bytes": 9399,
+      "canonical_score": 0.22621002169349796,
+      "evidence_grade": "contest-CUDA",
+      "exists": true,
+      "hardware": {
+        "device": "cuda",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "platform_machine": "x86_64",
+        "platform_system": "Linux"
+      },
+      "inflated_output_manifest": {
+        "aggregate_sha256": "6fe2b1941f10e4f984dcda96f84acb60b06c353cc8868fba33b7f3a32508f9ed",
+        "path": "/root/modal_auth_eval_work/eval_work/inflated_outputs_manifest.json",
+        "present": true,
+        "raw_file_count": 1,
+        "sha256": "cda84f6e20f80abc44ecebe5662c74a01212355f3a8bf21f53f1c495e43fb470",
+        "total_bytes": 3662409600
+      },
+      "json_valid": true,
+      "kind": "contest_cuda_exact_eval",
+      "n_samples": 600,
+      "path": "experiments/results/modal_auth_eval/archive_6bae0201fb08/contest_auth_eval.json",
+      "promotion_eligible_in_source_artifact": false,
+      "runtime_content_tree_sha256": "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df",
+      "runtime_tree_sha256": "12d4315dcbf0943f07fcd357eaf06b126a999c252f8edeb2681179831248df04",
+      "schema": 1,
+      "score_axis": "contest_cuda",
+      "score_claim_in_source_artifact": true,
+      "score_claim_valid_in_source_artifact": true,
+      "score_recomputed_from_components": 0.22621002169349796,
+      "sha256": "e7b64d010ad1b68a07d18304bec32869f156ed1f7da105efd25876a969e4a9b8",
+      "valid_axis_evidence": true
+    }
+  },
+  "next_actions": [
+    {
+      "description": "Round-trip the exact PR101/FEC6 archive through the canonical deterministic compiler identity profile and persist the compiler manifest without dispatch or score promotion.",
+      "id": "run_compile_packet_identity_closure",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "status": "pending"
+    },
+    {
+      "description": "Materialize a PR101/FEC6 PacketIR candidate queue from the FP11 wrapper sections and FEC6 selector stream.",
+      "id": "generate_fec6_packetir_candidate_queue",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "status": "pending"
+    },
+    {
+      "description": "For each candidate, record parser-consumption proof, member payload hashes, wrapper offsets, and all score-affecting bytes.",
+      "id": "prove_parser_consumption_and_byte_accounting",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "status": "pending"
+    },
+    {
+      "description": "Run local parser/profile smoke on generated PacketIR candidates; keep CPU/CUDA exact-eval authority separate.",
+      "id": "local_identity_profile_smoke",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "status": "pending"
+    },
+    {
+      "description": "Only after candidate generation, local parser evidence, and an explicit lane claim should a future turn dispatch paired CPU/CUDA exact eval. This matrix emits no provider command.",
+      "id": "paired_exact_eval_after_candidate_queue",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "status": "blocked_until_candidate_queue_and_operator_authorization"
+    }
+  ],
+  "packetir_primitives": [
+    {
+      "bytes": 37895,
+      "exists": true,
+      "general_pr101_packet_compiler_primitive": true,
+      "kind": "packetir_primitive",
+      "path": "src/tac/packet_compiler/pr101_sidecar_grammar.py",
+      "score_claim": false,
+      "sha256": "67600d87798eea78ed6c96bf66d231345699274192088b3606fe9486c54ce19b"
+    },
+    {
+      "bytes": 14171,
+      "exists": true,
+      "general_pr101_packet_compiler_primitive": true,
+      "kind": "packetir_primitive",
+      "path": "src/tac/packet_compiler/pr101_decoder_storage_order.py",
+      "score_claim": false,
+      "sha256": "5c7daf3ea8e386ab2af25b66d215a339234b08260cd07652acb2d0da7a26a6ef"
+    },
+    {
+      "bytes": 14001,
+      "exists": true,
+      "general_pr101_packet_compiler_primitive": true,
+      "kind": "packetir_primitive",
+      "path": "src/tac/packet_compiler/pr101_conv4_storage_perms.py",
+      "score_claim": false,
+      "sha256": "068dd5739afba08731004c73668f35aacfd4839047a529a316dfbbdc53c6d99c"
+    },
+    {
+      "bytes": 13772,
+      "exists": true,
+      "general_pr101_packet_compiler_primitive": true,
+      "kind": "packetir_primitive",
+      "path": "src/tac/packet_compiler/pr101_decoder_byte_maps.py",
+      "score_claim": false,
+      "sha256": "afcde3b7e70f3d090692dcb27c413d1b3fa23dd7533ab58d4b5cb1d119256c64"
+    },
+    {
+      "bytes": 767,
+      "exists": true,
+      "general_pr101_packet_compiler_primitive": true,
+      "kind": "packetir_primitive",
+      "path": "src/tac/packet_compiler/golden_vectors/pr101_decoder_storage_order_v1.json",
+      "score_claim": false,
+      "sha256": "30517b5f70436459590cf050d90c8c8d3711985f2b546e412ca9654bef3e860b"
+    },
+    {
+      "bytes": 442,
+      "exists": true,
+      "general_pr101_packet_compiler_primitive": true,
+      "kind": "packetir_primitive",
+      "path": "src/tac/packet_compiler/golden_vectors/pr101_conv4_storage_perms_v1.json",
+      "score_claim": false,
+      "sha256": "6998990d53700429810467c02aef93f754f3914bcf62eb2064f53c39bb4d19f7"
+    },
+    {
+      "bytes": 371,
+      "exists": true,
+      "general_pr101_packet_compiler_primitive": true,
+      "kind": "packetir_primitive",
+      "path": "src/tac/packet_compiler/golden_vectors/pr101_decoder_byte_maps_v1.json",
+      "score_claim": false,
+      "sha256": "e1754020ad421ec82b0691c5aeb12adabd90d9c3a95b71aa2a6f19f0b8064c79"
+    }
+  ],
+  "parser_profile_artifacts": [
+    {
+      "bytes": 2639,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/fec3_k16_fec6_k16_full_streaming_parity.json",
+      "sha256": "67c3f993f62488ed1351a9b437fe9c7d1828d3321827af5ab19cda97d5488e86"
+    },
+    {
+      "bytes": 10916,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": "experiments/results/pr101_fec6_byte_escape_profile_20260515_codex/profile.json",
+      "sha256": "ad458d9f4a50dc498e82021abd664a3ef3af602487beb7f727c0f3cb840618ff"
+    },
+    {
+      "bytes": 1047,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": "experiments/results/pr101_fec6_byte_escape_profile_20260515_codex/profile.md",
+      "sha256": "bf93e6f265b8c4b794ffda535178f3b414f8d89584d055f37f11bbab7bf57a76"
+    },
+    {
+      "bytes": 2145,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": ".omx/research/pr101_fec6_wrapper_profile_20260515_codex.md",
+      "sha256": "1ba39d143681a1ab655fa212877b08f4fb74a6a7b9ed90e0c007e637ce4ea03b"
+    },
+    {
+      "bytes": 2978,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": ".omx/research/pr101_fec6_parser_wire_in_20260515_codex.md",
+      "sha256": "ceb35899f940692ae6067a7530bcfb87ab780938c2e27a3f806692fcf333b395"
+    },
+    {
+      "bytes": 4309,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": ".omx/research/pr101_fec6_paired_cpu_cuda_axis_xray_20260515_codex.md",
+      "sha256": "d475970747a80378b04bbad6ba8aef927116f2a1468bea524807abc685f14342"
+    },
+    {
+      "bytes": 6153,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": "experiments/results/xray_paired_cpu_cuda_axis_delta_pr101_fec6_20260515_codex/paired_axis_delta.json",
+      "sha256": "fbc2a95fcd9611eb17359a7497df2b87e51a0ea0ef889376e8ab8afa3eb6338c"
+    },
+    {
+      "bytes": 2079,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": "experiments/results/xray_entropy_pr101_fec6_vs_pr106_packetir_20260515_codex/heatmap.json",
+      "sha256": "caeeeed7e21e535813359e2068a0f292912f6743101b539aa7996eed5cbebb86"
+    },
+    {
+      "bytes": 64010,
+      "exists": true,
+      "kind": "parser_profile",
+      "path": "experiments/results/fec6_selector_operator_space_20260517_codex/operator_space_manifest.json",
+      "sha256": "af36eee0ebe7d27bb9b8a120c3a901e4800624a0f150d8122aedd7768281af2b"
+    }
+  ],
+  "promotion_eligible": false,
+  "proof_scope": "archive_exact_eval_parser_profile_join_no_candidate_generation_no_dispatch",
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr101_fec6_frontier_packetir_matrix_v1",
+  "score_claim": false,
+  "status": "parser_profile_no_compiler_identity_no_packetir_candidate_queue",
+  "subject": "PR101/FEC6 frontier PacketIR authority matrix"
+}
