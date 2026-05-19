@@ -10,8 +10,9 @@ actually moved the scorer-visible terms or merely changed bytes/rate.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 from tac.exact_eval_custody import (
     ExactEvalEvidenceValidation,
@@ -20,7 +21,6 @@ from tac.exact_eval_custody import (
     extract_observed_runtime_tree_sha256,
     validate_exact_eval_evidence,
 )
-
 
 VERDICT_SCORER_RESPONSE_POSITIVE = "SCORER_RESPONSE_POSITIVE"
 VERDICT_SCORER_RESPONSE_PRESENT_RATE_NEGATIVE = "SCORER_RESPONSE_PRESENT_RATE_NEGATIVE"
@@ -185,6 +185,37 @@ def _command_flag_value(command: object, flag: str) -> str:
     return ""
 
 
+def _cpu_modal_auto_inflate_is_cpu(
+    *,
+    axis: str,
+    inflate_device: object,
+    provenance: Mapping[str, Any],
+    command: object,
+) -> bool:
+    """Return true for Modal CPU auth-eval's canonical auto inflate policy."""
+
+    if axis != "contest_cpu":
+        return False
+    if str(inflate_device or "").strip().lower() != "auto":
+        return False
+    if str(provenance.get("device") or "").strip().lower() != "cpu":
+        return False
+    if provenance.get("cuda_available") is not False:
+        return False
+    if _command_flag_value(command, "--device").lower() != "cpu":
+        return False
+    hardware_text = " ".join(
+        str(part)
+        for part in (
+            provenance.get("platform_system"),
+            provenance.get("platform_machine"),
+            provenance.get("device"),
+        )
+        if part
+    )
+    return bool(hardware_text and "linux" in hardware_text.lower())
+
+
 def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, Any]:
     """Normalize common contest-auth-eval schemas into flat custody fields.
 
@@ -203,7 +234,11 @@ def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, An
     score_recomputation = _nested_mapping(mapping, "score_recomputation")
     runtime_manifest = _nested_mapping(provenance, "inflate_runtime_manifest")
     inflated_manifest = _nested_mapping(provenance, "inflated_output_manifest")
-    command = _first_value(out, "auth_eval_command", "command") or custody.get("command")
+    command = (
+        _first_value(out, "auth_eval_command", "command")
+        or custody.get("command")
+        or provenance.get("sys_argv")
+    )
 
     out["axis"] = _normalize_axis_label(
         _first_value(out, "axis", "score_axis", "evidence_axis")
@@ -264,13 +299,21 @@ def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, An
         )
         if part
     )
-    out["inflate_device"] = _first_value(
+    inflate_device = _first_value(
         out,
         "inflate_device",
         "inflate_device_policy",
     ) or _command_flag_value(command, "--inflate-device") or provenance.get(
         "inflate_device_policy"
     ) or provenance.get("device") or custody.get("device")
+    if _cpu_modal_auto_inflate_is_cpu(
+        axis=str(out["axis"]),
+        inflate_device=inflate_device,
+        provenance=provenance,
+        command=command,
+    ):
+        inflate_device = "cpu(auto)"
+    out["inflate_device"] = inflate_device
     out["eval_device"] = _first_value(out, "eval_device", "device") or provenance.get(
         "device"
     ) or custody.get("device")
@@ -517,8 +560,6 @@ def compare_score_response(
 
 
 __all__ = [
-    "ScoreResponseEvidence",
-    "ScoreResponseReport",
     "VERDICT_BLOCKED_CONTROL_MISMATCH",
     "VERDICT_BLOCKED_CUSTODY",
     "VERDICT_NO_MEASURABLE_RESPONSE",
@@ -526,6 +567,8 @@ __all__ = [
     "VERDICT_SCORER_RESPONSE_POSITIVE",
     "VERDICT_SCORER_RESPONSE_PRESENT_RATE_NEGATIVE",
     "VERDICT_SCORE_REGRESSION",
+    "ScoreResponseEvidence",
+    "ScoreResponseReport",
     "compare_score_response",
     "normalize_score_response_mapping",
     "validate_score_response_evidence",

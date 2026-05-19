@@ -55,6 +55,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
+    parser.add_argument(
+        "--dispatch-claims-path",
+        type=Path,
+        help="Optional active-lane-claims ledger path for result-custody refreshes.",
+    )
     parser.add_argument("--no-diagnostics", action="store_true")
     parser.add_argument("--min-total-improvement", type=float, default=0.001)
     parser.add_argument("--min-scorer-term-improvement", type=float, default=0.0005)
@@ -82,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
             label=args.label,
             lane_id=args.lane_id,
             output_root=args.output_root,
+            dispatch_claims_path=args.dispatch_claims_path,
             include_diagnostics=not args.no_diagnostics,
             min_total_improvement=args.min_total_improvement,
             min_scorer_term_improvement=args.min_scorer_term_improvement,

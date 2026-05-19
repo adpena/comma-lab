@@ -12,7 +12,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from tac.scorer_response_probe import (  # noqa: E402
+from tac.scorer_response_probe import (
     VERDICT_BLOCKED_CONTROL_MISMATCH,
     VERDICT_BLOCKED_CUSTODY,
     compare_score_response,
@@ -26,7 +26,13 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _render_markdown(report: dict[str, Any], *, title: str) -> str:
+def _render_markdown(
+    report: dict[str, Any],
+    *,
+    title: str,
+    baseline_json: Path | None = None,
+    candidate_json: Path | None = None,
+) -> str:
     baseline = report.get("baseline") or {}
     candidate = report.get("candidate") or {}
     deltas = report.get("deltas") or {}
@@ -35,16 +41,20 @@ def _render_markdown(report: dict[str, Any], *, title: str) -> str:
         f"# {title}",
         "",
         "Authority:",
-        "- score_claim: false",
-        "- promotion_eligible: false",
-        "- ready_for_exact_eval_dispatch: false",
-        "- dispatch_attempted: false",
+        "- probe_score_claim: false",
+        "- score_response_promotion_eligible: false",
+        "- score_response_rank_or_kill_eligible: false",
+        "- input_exact_eval_artifacts_consumed: true",
         "",
         f"Verdict: `{report['verdict']}`",
         f"Mode: `{report['mode']}`",
         "",
         "Axis note: exact contest axes and advisory axes are kept distinct. "
         "A `macos_cpu_advisory` report is not a `[contest-CPU]` promotion claim.",
+        "",
+        "Input artifacts:",
+        f"- baseline_json: `{baseline_json}`",
+        f"- candidate_json: `{candidate_json}`",
         "",
         "## Thresholds",
         "",
@@ -157,7 +167,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.output_md is not None:
         args.output_md.parent.mkdir(parents=True, exist_ok=True)
         args.output_md.write_text(
-            _render_markdown(payload, title=args.title),
+            _render_markdown(
+                payload,
+                title=args.title,
+                baseline_json=args.baseline_json,
+                candidate_json=args.candidate_json,
+            ),
             encoding="utf-8",
         )
     print(f"[score-response-probe] {payload['verdict']} wrote {args.output_json}")

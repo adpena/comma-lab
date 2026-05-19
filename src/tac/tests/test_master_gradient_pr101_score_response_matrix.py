@@ -195,10 +195,84 @@ def test_pr101_pose_axis_score_response_matrix_pairs_contest_axes(tmp_path: Path
     assert "modal_contest_cpu_linux_x86_auto_active_lane_claim_missing" in matrix[
         "dispatch_blockers"
     ]
-    assert "full_inflate_output_manifest_missing_until_auth_eval" in matrix[
+    assert "paired_contest_cuda_cpu_exact_eval_missing" in matrix["dispatch_blockers"]
+    assert "paired_contest_cuda_and_cpu_result_review_missing" in matrix[
         "dispatch_blockers"
     ]
-    assert "paired_contest_cuda_cpu_exact_eval_missing" in matrix["dispatch_blockers"]
+
+
+def test_pr101_pose_axis_score_response_matrix_clears_completed_exact_eval_blockers(
+    tmp_path: Path,
+) -> None:
+    data = _inputs(tmp_path)
+    output_root = tmp_path / "score_response_outputs"
+    claims_path = tmp_path / "active_lane_dispatch_claims.md"
+    matrix = build_pr101_pose_axis_score_response_matrix(
+        source_archive=data["source_archive"],
+        source_submission_dir=data["submission_dir"],
+        operator_candidate_manifest=data["operator_manifest"],
+        packet_candidate_manifest=data["packet_manifest"],
+        runtime_consumption_proof=data["runtime_proof"],
+        runtime_manifest=_runtime_manifest(),
+        repo_root=Path.cwd(),
+        label="unit-op7",
+        lane_id="unit_op7_lane",
+        output_root=output_root.as_posix(),
+        dispatch_claims_path=claims_path,
+        include_diagnostics=False,
+    )
+    contest_pairs = [
+        pair
+        for pair in matrix["target_pairs"]
+        if pair["target_id"]
+        in {"modal_contest_cpu_linux_x86_auto", "modal_contest_cuda_t4_auto"}
+    ]
+    claim_rows = [
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for pair in contest_pairs:
+        for side in ("baseline", "candidate"):
+            result_path = Path(pair[f"{side}_result_json"])
+            result_path.parent.mkdir(parents=True, exist_ok=True)
+            result_path.write_text("{}\n", encoding="utf-8")
+            (result_path.parent / "inflated_outputs_manifest.json").write_text(
+                "{}\n",
+                encoding="utf-8",
+            )
+            claim_rows.append(
+                "| 2026-05-19T00:00:00Z | test | "
+                f"{pair[f'{side}_lane_id']} | modal | job-{side} |  | "
+                "completed_contest_modal_auth_eval_recovered | unit |"
+            )
+        score_response_path = Path(pair["score_response_output_json"])
+        score_response_path.parent.mkdir(parents=True, exist_ok=True)
+        score_response_path.write_text('{"verdict":"SCORE_REGRESSION"}\n', encoding="utf-8")
+    claims_path.write_text("\n".join(claim_rows) + "\n", encoding="utf-8")
+
+    refreshed = build_pr101_pose_axis_score_response_matrix(
+        source_archive=data["source_archive"],
+        source_submission_dir=data["submission_dir"],
+        operator_candidate_manifest=data["operator_manifest"],
+        packet_candidate_manifest=data["packet_manifest"],
+        runtime_consumption_proof=data["runtime_proof"],
+        runtime_manifest=_runtime_manifest(),
+        repo_root=Path.cwd(),
+        label="unit-op7",
+        lane_id="unit_op7_lane",
+        output_root=output_root.as_posix(),
+        dispatch_claims_path=claims_path,
+        include_diagnostics=False,
+    )
+
+    assert refreshed["ready_for_score_response_probe"] is True
+    assert refreshed["dispatch_attempted"] is True
+    assert refreshed["contest_exact_eval_artifacts_present"] is True
+    assert refreshed["score_response_blockers"] == []
+    assert refreshed["dispatch_blockers"] == []
+    text = render_pr101_pose_axis_score_response_matrix_markdown(refreshed)
+    assert "## Result Presence" in text
+    assert "| `modal_contest_cuda_t4_auto` | True | True | True |" in text
 
 
 def test_pr101_pose_axis_score_response_matrix_blocks_non_component_moving(

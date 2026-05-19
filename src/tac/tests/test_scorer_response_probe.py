@@ -13,13 +13,12 @@ from tac.scorer_response_probe import (
     VERDICT_BLOCKED_CUSTODY,
     VERDICT_NO_MEASURABLE_RESPONSE,
     VERDICT_RATE_ONLY_IMPROVEMENT,
+    VERDICT_SCORE_REGRESSION,
     VERDICT_SCORER_RESPONSE_POSITIVE,
     VERDICT_SCORER_RESPONSE_PRESENT_RATE_NEGATIVE,
-    VERDICT_SCORE_REGRESSION,
     compare_score_response,
     normalize_score_response_mapping,
 )
-
 
 SHA_A = "a" * 64
 SHA_B = "b" * 64
@@ -245,6 +244,78 @@ def test_normalizes_contest_auth_eval_schema() -> None:
     assert normalized["pose_dist"] == 0.000032
 
 
+def test_normalizes_modal_cpu_auto_inflate_as_cpu_when_cuda_unavailable() -> None:
+    payload = {
+        "score_axis": "contest_cpu",
+        "canonical_score": contest_score(0.00056, 0.000032, 178_262),
+        "avg_segnet_dist": 0.00056,
+        "avg_posenet_dist": 0.000032,
+        "archive_size_bytes": 178_262,
+        "n_samples": 600,
+        "log_path": "experiments/results/modal_cpu/contest_auth_eval.log",
+        "provenance": {
+            "archive_sha256": SHA_B,
+            "device": "cpu",
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "cuda_available": False,
+            "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cpu"],
+            "inflate_device_policy": "auto",
+            "inflate_runtime_manifest": {"runtime_tree_sha256": SHA_A},
+        },
+    }
+    normalized = normalize_score_response_mapping(payload)
+    assert normalized["inflate_device"] == "cpu(auto)"
+
+    report = compare_score_response(
+        baseline=payload,
+        candidate={
+            **payload,
+            "canonical_score": contest_score(0.00057, 0.000032, 178_262),
+            "avg_segnet_dist": 0.00057,
+        },
+        expected_axis="contest_cpu",
+    )
+
+    assert "baseline:inflate_device_not_cpu" not in report.blockers
+    assert "candidate:inflate_device_not_cpu" not in report.blockers
+    assert report.verdict == VERDICT_SCORE_REGRESSION
+
+    cuda_available_payload = {
+        **payload,
+        "provenance": {**payload["provenance"], "cuda_available": True},
+    }
+    assert normalize_score_response_mapping(cuda_available_payload)["inflate_device"] == "auto"
+    cuda_command_payload = {
+        **payload,
+        "provenance": {
+            **payload["provenance"],
+            "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cuda"],
+        },
+    }
+    assert normalize_score_response_mapping(cuda_command_payload)["inflate_device"] == "auto"
+    non_linux_payload = {
+        **payload,
+        "provenance": {**payload["provenance"], "platform_system": "Darwin"},
+    }
+    assert normalize_score_response_mapping(non_linux_payload)["inflate_device"] == "auto"
+    non_contest_cpu_payload = {**payload, "score_axis": "contest_cuda"}
+    assert (
+        normalize_score_response_mapping(non_contest_cpu_payload)["inflate_device"]
+        == "auto"
+    )
+    generic_auto_payload = {
+        **payload,
+        "provenance": {
+            "archive_sha256": SHA_B,
+            "device": "cpu",
+            "inflate_device_policy": "auto",
+            "inflate_runtime_manifest": {"runtime_tree_sha256": SHA_A},
+        },
+    }
+    assert normalize_score_response_mapping(generic_auto_payload)["inflate_device"] == "auto"
+
+
 def test_relaxed_probe_accepts_contest_auth_eval_schema() -> None:
     baseline = {
         "score_axis": "cpu_advisory",
@@ -399,5 +470,8 @@ def test_cli_writes_json_and_markdown(tmp_path: pathlib.Path) -> None:
     )
     assert rc == 0
     payload = json.loads(output_json.read_text(encoding="utf-8"))
+    markdown = output_md.read_text(encoding="utf-8")
     assert payload["verdict"] == VERDICT_SCORER_RESPONSE_POSITIVE
-    assert "SCORER_RESPONSE_POSITIVE" in output_md.read_text(encoding="utf-8")
+    assert "SCORER_RESPONSE_POSITIVE" in markdown
+    assert "probe_score_claim: false" in markdown
+    assert "dispatch_attempted: false" not in markdown

@@ -43,6 +43,7 @@ def build_pr101_pose_axis_score_response_matrix(
     label: str,
     lane_id: str,
     output_root: str,
+    dispatch_claims_path: Path | None = None,
     include_diagnostics: bool = True,
     min_total_improvement: float = 0.001,
     min_scorer_term_improvement: float = 0.0005,
@@ -118,11 +119,37 @@ def build_pr101_pose_axis_score_response_matrix(
     )
     contest_pairs = [pair for pair in target_pairs if pair["target_id"] in CONTEST_TARGET_IDS]
     missing_result_blockers = _missing_result_blockers(contest_pairs)
+    missing_inflated_manifest_blockers = _missing_inflated_manifest_blockers(
+        contest_pairs,
+        repo_root=repo_root,
+    )
+    missing_result_review_blockers = _missing_result_review_blockers(contest_pairs)
+    claim_lane_ids = _claimed_lane_ids(
+        repo_root / ".omx/state/active_lane_dispatch_claims.md"
+        if dispatch_claims_path is None
+        else dispatch_claims_path
+    )
     active_claim_blockers = [
         f"{pair['target_id']}_active_lane_claim_missing"
         for pair in contest_pairs
         if pair["dispatch_claim_required"] is True
+        and (
+            pair.get("baseline_lane_id") not in claim_lane_ids
+            or pair.get("candidate_lane_id") not in claim_lane_ids
+        )
     ]
+    contest_lane_ids = {
+        str(pair.get(key))
+        for pair in contest_pairs
+        for key in ("baseline_lane_id", "candidate_lane_id")
+        if pair.get(key)
+    }
+    exact_eval_artifacts_present = bool(contest_pairs) and not missing_result_blockers
+    dispatch_attempted = bool(contest_lane_ids & claim_lane_ids) or any(
+        pair.get("baseline_result_json_exists") is True
+        or pair.get("candidate_result_json_exists") is True
+        for pair in contest_pairs
+    )
     exact_eval_blockers = [
         f"{pair['target_id']}_exact_eval_missing"
         for pair in contest_pairs
@@ -131,7 +158,12 @@ def build_pr101_pose_axis_score_response_matrix(
     ]
     prerequisites_clear = not input_blockers
     ready_after_exact = prerequisites_clear and not active_claim_blockers
-    ready_now = ready_after_exact and not missing_result_blockers
+    ready_now = (
+        ready_after_exact
+        and not missing_result_blockers
+        and not missing_inflated_manifest_blockers
+        and not missing_result_review_blockers
+    )
 
     return {
         "schema": SCHEMA,
@@ -141,7 +173,8 @@ def build_pr101_pose_axis_score_response_matrix(
         "rank_or_kill_eligible": False,
         "ready_for_provider_dispatch": False,
         "ready_for_exact_eval_dispatch": False,
-        "dispatch_attempted": False,
+        "dispatch_attempted": dispatch_attempted,
+        "contest_exact_eval_artifacts_present": exact_eval_artifacts_present,
         "raw_archive_byte_coordinates_allowed": False,
         "candidate_specs_are_dispatchable": False,
         "ready_for_score_response_probe": ready_now,
@@ -152,9 +185,13 @@ def build_pr101_pose_axis_score_response_matrix(
         "dispatch_blockers": [
             *active_claim_blockers,
             *exact_eval_blockers,
-            "full_inflate_output_manifest_missing_until_auth_eval",
-            "paired_contest_cuda_cpu_exact_eval_missing",
-            "paired_contest_cuda_and_cpu_result_review_missing",
+            *missing_inflated_manifest_blockers,
+            *(
+                ["paired_contest_cuda_cpu_exact_eval_missing"]
+                if missing_result_blockers
+                else []
+            ),
+            *missing_result_review_blockers,
         ],
         "source_archive": {
             "path": repo_relative(source_archive, repo_root),
@@ -195,8 +232,10 @@ def render_pr101_pose_axis_score_response_matrix_markdown(matrix: Mapping[str, A
         "Authority:",
         "- score_claim: false",
         "- promotion_eligible: false",
-        "- ready_for_exact_eval_dispatch: false",
-        "- dispatch_attempted: false",
+        f"- ready_for_exact_eval_dispatch: {matrix.get('ready_for_exact_eval_dispatch')}",
+        f"- dispatch_attempted: {matrix.get('dispatch_attempted')}",
+        "- contest_exact_eval_artifacts_present: "
+        f"{matrix.get('contest_exact_eval_artifacts_present')}",
         "",
         f"Candidate: `{candidate.get('path')}`",
         f"Archive bytes: `{candidate.get('bytes')}`",
@@ -228,6 +267,25 @@ def render_pr101_pose_axis_score_response_matrix_markdown(matrix: Mapping[str, A
             f"`{pair.get('baseline_result_json')}` | "
             f"`{pair.get('candidate_result_json')}` | "
             f"`{pair.get('score_response_output_json')}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Result Presence",
+            "",
+            "| target | baseline exact | candidate exact | score-response probe |",
+            "|---|---:|---:|---:|",
+        ]
+    )
+    for pair in matrix.get("target_pairs", []):
+        if not isinstance(pair, Mapping):
+            continue
+        lines.append(
+            "| "
+            f"`{pair.get('target_id')}` | "
+            f"{pair.get('baseline_result_json_exists')} | "
+            f"{pair.get('candidate_result_json_exists')} | "
+            f"{pair.get('score_response_output_json_exists')} |"
         )
     lines.extend(["", "## Blockers", ""])
     blockers = list(matrix.get("authority_blockers") or []) + list(
@@ -501,6 +559,8 @@ def _build_target_pairs(
                 "dispatch_claim_required": candidate.get("dispatch_claim_required") is True,
                 "baseline_command": baseline.get("command"),
                 "candidate_command": candidate.get("command"),
+                "baseline_lane_id": _command_flag_value(baseline.get("command"), "--lane-id"),
+                "candidate_lane_id": _command_flag_value(candidate.get("command"), "--lane-id"),
                 "baseline_result_json": baseline_json,
                 "candidate_result_json": candidate_json,
                 "baseline_result_json_exists": (repo_root / baseline_json).is_file(),
@@ -539,6 +599,8 @@ def _planned_result_json(target: Mapping[str, Any]) -> str:
 
 
 def _command_flag_value(command: list[Any], flag: str) -> str:
+    if not isinstance(command, list):
+        return ""
     parts = [str(part) for part in command]
     for index, part in enumerate(parts[:-1]):
         if part == flag:
@@ -555,6 +617,56 @@ def _missing_result_blockers(contest_pairs: list[Mapping[str, Any]]) -> list[str
         if pair.get("candidate_result_json_exists") is not True:
             blockers.append(f"{target_id}_candidate_exact_eval_json_missing")
     return blockers
+
+
+def _missing_inflated_manifest_blockers(
+    contest_pairs: list[Mapping[str, Any]],
+    *,
+    repo_root: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    for pair in contest_pairs:
+        target_id = str(pair.get("target_id") or "unknown")
+        for side in ("baseline", "candidate"):
+            result_json = pair.get(f"{side}_result_json")
+            if not isinstance(result_json, str) or not result_json:
+                continue
+            result_path = Path(result_json)
+            if not result_path.is_absolute():
+                result_path = repo_root / result_path
+            if not result_path.is_file():
+                continue
+            if not (result_path.parent / "inflated_outputs_manifest.json").is_file():
+                blockers.append(f"{target_id}_{side}_inflated_outputs_manifest_missing")
+    return blockers
+
+
+def _missing_result_review_blockers(contest_pairs: list[Mapping[str, Any]]) -> list[str]:
+    missing = [
+        pair
+        for pair in contest_pairs
+        if pair.get("score_response_output_json_exists") is not True
+    ]
+    return ["paired_contest_cuda_and_cpu_result_review_missing"] if missing else []
+
+
+def _claimed_lane_ids(path: Path) -> set[str]:
+    if not path.is_file():
+        return set()
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return set()
+    lane_ids: set[str] = set()
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        if "timestamp_utc" in line and "lane_id" in line:
+            continue
+        cells = [cell.strip().replace("\\|", "|") for cell in line.strip("|").split("|")]
+        if len(cells) >= 3 and cells[2]:
+            lane_ids.add(cells[2])
+    return lane_ids
 
 
 def _resolve_existing_file(path: Path, repo_root: Path, label: str) -> Path:
