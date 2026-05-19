@@ -39404,15 +39404,15 @@
       "id": "lane_mps_phase_b_fire_and_harvest_20260519",
       "name": "MPS Phase B fire + harvest",
       "phase": 5.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "3 commits bf6a2ecea+182bcab44+ab296d5b3; 4 Modal A10G dispatches under $0.50 envelope; final fc-01KRZBHXARS5EGW4EM5P4NJRK6 rc=0 11.6s harvested gap_results.json [MPS-research-signal]"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[MPS-research-signal] empirical anchor at experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T053223Z_modal/harvested_artifacts/mps_gap_results/gap_results.json; per-component gap pixel_l1=0.0 segnet=0.0 posenet=NaN; verdict DEFER per Catalog #313 probe outcome blocking expires 2026-06-18T05:35:30Z; paradigm-intact implementation-level finding"
         },
         "contest_cuda": {
           "status": false,
@@ -39431,12 +39431,12 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/mps_phase_b_gap_experiment_verdict_20260519T053530Z.md + memory feedback_mps_phase_b_gap_experiment_verdict_landed_20260519.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/run_mps_gap_experiment.sh + scripts/remote_mps_gap_experiment_a10g.sh (canonical bootstrap + $PYBIN + canonical NVML env block per Catalog #244/#163)"
         }
       },
       "notes": ""
@@ -39522,6 +39522,170 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_wiring_remediation_t1_plus_t2_20260519",
+      "name": "Wiring remediation T1 + T2 batch",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_cable_c_substrate_symposium_draft_batch_20260519",
+      "name": "Cable C substrate symposium DRAFT batch",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_cable_b1_e7_e8_combined_dispatch_20260519",
+      "name": "Cable B1 E.7+E.8 combined dispatch",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_cable_d_master_gradient_extension_batch_20260519",
+      "name": "Cable D master-gradient extension batch (D2+D3+D4)",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -39531,5 +39695,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T05:27:00Z"
+  "updated_at": "2026-05-19T05:38:28Z"
 }
