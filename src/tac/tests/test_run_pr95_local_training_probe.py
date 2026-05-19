@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -84,6 +85,34 @@ def test_stage_epoch_override_parser_is_fail_closed() -> None:
         helper.parse_stage_epoch_overrides(["9=1"])
     with pytest.raises(ValueError, match="positive"):
         helper.parse_stage_epoch_overrides(["1=0"])
+
+
+def test_stored_single_member_zip_strips_extra_fields(tmp_path: Path) -> None:
+    helper = _load_helper()
+    payload = tmp_path / "0.bin"
+    payload.write_bytes(b"already dense payload")
+    archive = tmp_path / "archive.zip"
+
+    meta = helper.write_stored_single_member_zip(payload, archive)
+
+    assert meta["bytes"] == payload.stat().st_size + 108
+    assert meta["compression_method"] == "stored"
+    assert meta["extra_field_bytes"] == 0
+    assert meta["member_sha256"] == helper._sha256_file(payload)
+    with zipfile.ZipFile(archive, mode="r") as zf:
+        infos = zf.infolist()
+    assert [info.filename for info in infos] == ["0.bin"]
+    assert infos[0].compress_type == zipfile.ZIP_STORED
+    assert infos[0].extra == b""
+
+
+def test_stored_single_member_zip_requires_canonical_payload_name(tmp_path: Path) -> None:
+    helper = _load_helper()
+    payload = tmp_path / "not_zero.bin"
+    payload.write_bytes(b"x")
+
+    with pytest.raises(ValueError, match=r"0\.bin"):
+        helper.write_stored_single_member_zip(payload, tmp_path / "archive.zip")
 
 
 def test_mps_fallback_policy_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -18,6 +18,7 @@ import platform
 import random
 import sys
 import time
+import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -82,6 +83,39 @@ def _sha256_file(path: Path) -> str:
         while chunk := fh.read(1 << 20):
             h.update(chunk)
     return h.hexdigest()
+
+
+def write_stored_single_member_zip(payload_path: Path, archive_path: Path) -> dict[str, Any]:
+    """Write a contest archive without platform extra fields or recompression."""
+    payload_path = payload_path.resolve()
+    archive_path = archive_path.resolve()
+    if payload_path.name != "0.bin":
+        raise ValueError(f"PR95 archive payload must be named 0.bin, got {payload_path.name!r}")
+    data = payload_path.read_bytes()
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    info.external_attr = 0o100644 << 16
+    info.extra = b""
+    with zipfile.ZipFile(archive_path, mode="w") as zf:
+        zf.comment = b""
+        zf.writestr(info, data)
+    with zipfile.ZipFile(archive_path, mode="r") as zf:
+        infos = zf.infolist()
+    if len(infos) != 1 or infos[0].filename != "0.bin":
+        raise RuntimeError("PR95 archive writer emitted a non-single-member archive")
+    if infos[0].compress_type != zipfile.ZIP_STORED or infos[0].extra:
+        raise RuntimeError("PR95 archive writer emitted compression or ZIP extra fields")
+    return {
+        "path": _rel(archive_path),
+        "bytes": archive_path.stat().st_size,
+        "sha256": _sha256_file(archive_path),
+        "member": "0.bin",
+        "member_bytes": payload_path.stat().st_size,
+        "member_sha256": _sha256_file(payload_path),
+        "compression_method": "stored",
+        "extra_field_bytes": len(infos[0].extra),
+    }
 
 
 def _truthy(value: str | None) -> bool:
@@ -414,10 +448,16 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
             codec_out = output_dir / "submission_archive"
             codec_started = time.perf_counter()
             codec_result = codec_stage.run_codec_stage(prev, codec_out, video_path)
+            archive_zip = output_dir / "archive.zip"
+            archive_zip_result = write_stored_single_member_zip(
+                codec_out / "0.bin",
+                archive_zip,
+            )
             manifest["codec_stage"] = {
                 **codec_result,
                 "wall_seconds": time.perf_counter() - codec_started,
             }
+            manifest["archive_zip"] = archive_zip_result
     except Exception as exc:
         manifest.update({
             "ok": False,
