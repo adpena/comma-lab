@@ -48,6 +48,8 @@ def classify_procedural_seed_authority(
     no_external_state_proof: bool = False,
     packet_compiler_target_declared: bool = False,
     exact_eval_validated: bool = False,
+    explicit_compliance_ruling: bool = False,
+    non_payload_decoder_logic_proof: bool = False,
 ) -> dict[str, object]:
     """Return a fail-closed authority record for a procedural seed carrier.
 
@@ -141,12 +143,20 @@ def classify_procedural_seed_authority(
                     "script-side payload smuggling as scoring-script gaming"
                 ),
             }
+        score_affecting_runtime_allowed = bool(
+            not score_affecting
+            or (
+                explicit_compliance_ruling
+                and non_payload_decoder_logic_proof
+            )
+        )
         ready = bool(
             runtime_consumption_proof
             and self_contained_archive_proof
             and scorer_free_inflate_proof
             and no_external_state_proof
             and packet_compiler_target_declared
+            and score_affecting_runtime_allowed
         )
         promoted = bool(ready and exact_eval_validated)
         return {
@@ -165,8 +175,21 @@ def classify_procedural_seed_authority(
             "rank_or_kill_eligible": promoted,
             "ready_for_exact_eval_dispatch": ready,
             "research_only": not promoted,
+            "proof_status": {
+                "runtime_consumption_proof": bool(runtime_consumption_proof),
+                "self_contained_archive_proof": bool(self_contained_archive_proof),
+                "scorer_free_inflate_proof": bool(scorer_free_inflate_proof),
+                "no_external_state_proof": bool(no_external_state_proof),
+                "packet_compiler_target_declared": bool(packet_compiler_target_declared),
+                "exact_eval_validated": bool(exact_eval_validated),
+                "explicit_compliance_ruling": bool(explicit_compliance_ruling),
+                "non_payload_decoder_logic_proof": bool(non_payload_decoder_logic_proof),
+                "score_affecting_runtime_allowed": score_affecting_runtime_allowed,
+            },
             "required_proofs": [
                 "constant_is_generic_decoder_code_not_per_video_payload",
+                "explicit_compliance_ruling_for_score_affecting_runtime_constant",
+                "non_payload_decoder_logic_proof",
                 "runtime_consumption_proof",
                 "self_contained_archive_or_fixed_contest_code_proof",
                 "scorer_free_inflate_proof",
@@ -195,6 +218,8 @@ def build_procedural_seed_authority_packet(
     no_external_state_proof: bool = False,
     packet_compiler_target_declared: bool = False,
     exact_eval_validated: bool = False,
+    explicit_compliance_ruling: bool = False,
+    non_payload_decoder_logic_proof: bool = False,
 ) -> dict[str, object]:
     """Build the authority packet for procedural seed/weight variants.
 
@@ -230,6 +255,8 @@ def build_procedural_seed_authority_packet(
             no_external_state_proof=no_external_state_proof,
             packet_compiler_target_declared=packet_compiler_target_declared,
             exact_eval_validated=exact_eval_validated,
+            explicit_compliance_ruling=explicit_compliance_ruling,
+            non_payload_decoder_logic_proof=non_payload_decoder_logic_proof,
         )
     if "weight_derived" in normalized_modes:
         records["weight_derived"] = classify_procedural_seed_authority(

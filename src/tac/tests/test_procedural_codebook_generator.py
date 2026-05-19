@@ -270,7 +270,7 @@ def test_non_score_affecting_inflate_py_constant_has_separate_authority():
     assert "constant_is_generic_decoder_code_not_per_video_payload" in authority["required_proofs"]
 
 
-def test_score_affecting_generic_inflate_py_decoder_constant_can_be_gated():
+def test_score_affecting_generic_inflate_py_decoder_constant_requires_explicit_ruling():
     authority = classify_procedural_seed_authority(
         "inflate_py_literal_seed",
         literal_payload_kind="generic_decoder_constant",
@@ -285,9 +285,37 @@ def test_score_affecting_generic_inflate_py_decoder_constant_can_be_gated():
 
     assert authority["compliance_class"] == "ordinary_decoder_code_constant"
     assert authority["score_affecting"] is True
-    assert authority["ready_for_exact_eval_dispatch"] is True
+    assert authority["ready_for_exact_eval_dispatch"] is False
     assert authority["promotion_eligible"] is False
     assert authority["research_only"] is True
+    assert authority["proof_status"]["explicit_compliance_ruling"] is False
+    assert authority["proof_status"]["score_affecting_runtime_allowed"] is False
+    assert (
+        "explicit_compliance_ruling_for_score_affecting_runtime_constant"
+        in authority["required_proofs"]
+    )
+
+
+def test_score_affecting_generic_inflate_py_decoder_constant_can_be_ruled_code():
+    authority = classify_procedural_seed_authority(
+        "inflate_py_literal_seed",
+        literal_payload_kind="generic_decoder_constant",
+        score_affecting=True,
+        runtime_consumption_proof=True,
+        self_contained_archive_proof=True,
+        scorer_free_inflate_proof=True,
+        no_external_state_proof=True,
+        packet_compiler_target_declared=True,
+        explicit_compliance_ruling=True,
+        non_payload_decoder_logic_proof=True,
+        exact_eval_validated=True,
+    )
+
+    assert authority["compliance_class"] == "ordinary_decoder_code_constant"
+    assert authority["proof_status"]["score_affecting_runtime_allowed"] is True
+    assert authority["ready_for_exact_eval_dispatch"] is True
+    assert authority["promotion_eligible"] is True
+    assert authority["rank_or_kill_eligible"] is True
 
 
 def test_authority_packet_keeps_runtime_literal_probe_separate():
