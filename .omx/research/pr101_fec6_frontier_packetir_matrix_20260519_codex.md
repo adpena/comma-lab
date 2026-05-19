@@ -10,7 +10,9 @@ This is an audit artifact only: `score_claim=false`, `promotion_eligible=false`,
 - FEC6 frontier archive present: `True`
 - contest_cpu evidence: `True`
 - contest_cuda evidence: `True`
+- paired exact same archive/runtime: `True`
 - parser/profile evidence: `True`
+- PacketIR identity evidence: `True`
 - deterministic compiler identity evidence: `False`
 - PR106-style PacketIR candidate queue: `False`
 

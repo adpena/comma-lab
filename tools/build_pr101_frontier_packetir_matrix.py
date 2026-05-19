@@ -60,8 +60,14 @@ def main(argv: list[str] | None = None) -> int:
                 "fec6_has_contest_cuda_evidence": summary[
                     "fec6_has_contest_cuda_evidence"
                 ],
+                "fec6_has_paired_exact_same_archive_runtime": summary[
+                    "fec6_has_paired_exact_same_archive_runtime"
+                ],
                 "fec6_has_parser_profile_evidence": summary[
                     "fec6_has_parser_profile_evidence"
+                ],
+                "fec6_has_packetir_identity_evidence": summary[
+                    "fec6_has_packetir_identity_evidence"
                 ],
                 "fec6_has_deterministic_compiler_identity_evidence": summary[
                     "fec6_has_deterministic_compiler_identity_evidence"

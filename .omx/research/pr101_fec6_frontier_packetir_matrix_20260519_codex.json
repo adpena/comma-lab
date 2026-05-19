@@ -38,7 +38,7 @@
   "artifact_sha256": {
     "json": null,
     "json_omitted_reason": "self_referential_json_hash_requires_external_manifest",
-    "markdown": "e42adc4fa1eca697d3ae4320c8af07eaba06ef757e74010dad199513dc7412d0"
+    "markdown": "03f6b883f4f2f9984b84f339403afec21b9beec58fe1481a73a4a85e62584ec1"
   },
   "authority_summary": {
     "current_authority": "parser_profile_and_exact_eval_evidence_only_no_compiler_identity_no_packetir_candidate_queue",
@@ -46,6 +46,8 @@
     "fec6_has_contest_cpu_evidence": true,
     "fec6_has_contest_cuda_evidence": true,
     "fec6_has_deterministic_compiler_identity_evidence": false,
+    "fec6_has_packetir_identity_evidence": true,
+    "fec6_has_paired_exact_same_archive_runtime": true,
     "fec6_has_parser_profile_evidence": true,
     "fec6_has_pr106_style_packetir_candidate_queue": false,
     "pr101_packet_compiler_packetir_primitives_are_general": true
@@ -204,6 +206,30 @@
       "status": "blocked_until_candidate_queue_and_operator_authorization"
     }
   ],
+  "packetir_identity_proof": {
+    "archive_reemit_identity": true,
+    "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "blockers": [],
+    "bytes": 11075,
+    "contest_axis_claim": false,
+    "exists": true,
+    "full_frame_inflate_output_parity_claim": false,
+    "json_valid": true,
+    "kind": "packetir_identity_proof",
+    "member_bytes": 178417,
+    "member_name": "x",
+    "member_reemit_identity": true,
+    "member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+    "packetir_identity_passed": true,
+    "path": ".omx/research/pr101_fec6_packetir_identity_proof_20260519_codex.json",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reemit_identity": true,
+    "runtime_consumption_claim": false,
+    "schema": "pr101_fec6_packetir_identity_proof_v1",
+    "score_claim": false,
+    "sha256": "3e13e3a6fecf09de14c8c9fb9426574754174071ebb9bd52053fcd8c8d21f7df"
+  },
   "packetir_primitives": [
     {
       "bytes": 37895,
@@ -269,6 +295,19 @@
       "sha256": "e1754020ad421ec82b0691c5aeb12adabd90d9c3a95b71aa2a6f19f0b8064c79"
     }
   ],
+  "paired_exact_eval": {
+    "archive_sha256_values": [
+      "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+    ],
+    "blockers": [],
+    "paired_exact_same_archive_runtime": true,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_content_tree_sha256_values": [
+      "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df"
+    ],
+    "score_claim": false
+  },
   "parser_profile_artifacts": [
     {
       "bytes": 2639,

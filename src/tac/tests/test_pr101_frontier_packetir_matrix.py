@@ -76,7 +76,12 @@ def _exact_eval_payload(
     }
 
 
-def _fixture_spec(tmp_path: Path, *, include_queue: bool = False) -> PR101FEC6FrontierMatrixSpec:
+def _fixture_spec(
+    tmp_path: Path,
+    *,
+    include_identity: bool = True,
+    include_queue: bool = False,
+) -> PR101FEC6FrontierMatrixSpec:
     archive_bytes = b"fec6 archive bytes"
     archive_sha = _sha(archive_bytes)
     archive = tmp_path / "fec6" / "archive.zip"
@@ -129,6 +134,29 @@ def _fixture_spec(tmp_path: Path, *, include_queue: bool = False) -> PR101FEC6Fr
     _write_json(profile_json, {"schema": "profile", "score_claim": False})
     _write_text(parser_md, "parser evidence\n")
 
+    identity_path = tmp_path / "fec6" / "packetir_identity_proof.json"
+    if include_identity:
+        _write_json(
+            identity_path,
+            {
+                "schema": "pr101_fec6_packetir_identity_proof_v1",
+                "archive_sha256": archive_sha,
+                "member_name": "x",
+                "member_bytes": len(archive_bytes),
+                "member_sha256": archive_sha,
+                "packet_ir_identity_passed": True,
+                "reemit_identity": True,
+                "member_reemit_identity": True,
+                "archive_reemit_identity": True,
+                "runtime_consumption_claim": False,
+                "full_frame_inflate_output_parity_claim": False,
+                "contest_axis_claim": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        )
+
     queue_path = tmp_path / "fec6" / "packetir_candidate_queue.json"
     if include_queue:
         _write_json(
@@ -145,6 +173,7 @@ def _fixture_spec(tmp_path: Path, *, include_queue: bool = False) -> PR101FEC6Fr
         archive_path=str(archive),
         archive_manifest_path=str(tmp_path / "fec6" / "archive_manifest.json"),
         packet_manifest_path=str(tmp_path / "fec6" / "packet_manifest.json"),
+        packetir_identity_proof_path=str(identity_path),
         deterministic_compiler_manifest_path=str(
             tmp_path / "fec6" / "deterministic_packet_compiler_manifest.json"
         ),
@@ -173,7 +202,9 @@ def test_pr101_fec6_matrix_answers_authority_without_candidate_queue(
     assert summary["pr101_packet_compiler_packetir_primitives_are_general"] is True
     assert summary["fec6_has_contest_cpu_evidence"] is True
     assert summary["fec6_has_contest_cuda_evidence"] is True
+    assert summary["fec6_has_paired_exact_same_archive_runtime"] is True
     assert summary["fec6_has_parser_profile_evidence"] is True
+    assert summary["fec6_has_packetir_identity_evidence"] is True
     assert summary["fec6_has_deterministic_compiler_identity_evidence"] is False
     assert summary["fec6_has_pr106_style_packetir_candidate_queue"] is False
     assert (
@@ -182,7 +213,11 @@ def test_pr101_fec6_matrix_answers_authority_without_candidate_queue(
     )
     assert "deterministic_compiler_identity_manifest_missing" in matrix["blockers"]
     assert "pr106_style_packetir_candidate_queue_missing" in matrix["blockers"]
+    assert "packetir_identity_proof_missing_or_blocked" not in matrix["blockers"]
+    assert "paired_exact_same_archive_runtime_missing_or_blocked" not in matrix["blockers"]
     assert matrix["archive"]["sha256_matches_manifest"] is True
+    assert matrix["packetir_identity_proof"]["packetir_identity_passed"] is True
+    assert matrix["paired_exact_eval"]["paired_exact_same_archive_runtime"] is True
     assert (
         matrix["exact_eval_artifacts"]["contest_cpu"]["inflated_output_manifest"][
             "aggregate_sha256"
@@ -191,6 +226,8 @@ def test_pr101_fec6_matrix_answers_authority_without_candidate_queue(
     )
     assert matrix["next_actions"][0]["id"] == "run_compile_packet_identity_closure"
     assert matrix["next_actions"][0]["status"] == "pending"
+    assert matrix["next_actions"][2]["id"] == "prove_parser_consumption_and_byte_accounting"
+    assert matrix["next_actions"][2]["status"] == "pending"
     assert all(action["score_claim"] is False for action in matrix["next_actions"])
 
 
@@ -211,6 +248,7 @@ def test_pr101_fec6_matrix_records_candidate_queue_when_present(tmp_path: Path) 
     assert "pr106_style_packetir_candidate_queue_missing" not in matrix["blockers"]
     assert matrix["next_actions"][0]["status"] == "pending"
     assert matrix["next_actions"][1]["status"] == "done"
+    assert matrix["next_actions"][2]["status"] == "pending"
 
 
 def test_pr101_fec6_matrix_blocks_mismatched_exact_eval_archive(
@@ -230,6 +268,7 @@ def test_pr101_fec6_matrix_blocks_mismatched_exact_eval_archive(
         archive_path=spec.archive_path,
         archive_manifest_path=spec.archive_manifest_path,
         packet_manifest_path=spec.packet_manifest_path,
+        packetir_identity_proof_path=spec.packetir_identity_proof_path,
         deterministic_compiler_manifest_path=(
             spec.deterministic_compiler_manifest_path
         ),
@@ -247,6 +286,52 @@ def test_pr101_fec6_matrix_blocks_mismatched_exact_eval_archive(
     assert cuda["valid_axis_evidence"] is False
     assert "archive_sha256_mismatch" in cuda["blockers"]
     assert "contest_cuda_evidence_missing_or_blocked" in matrix["blockers"]
+    assert "paired_exact_same_archive_runtime_missing_or_blocked" in matrix["blockers"]
+
+
+def test_pr101_fec6_matrix_blocks_mismatched_exact_eval_runtime(
+    tmp_path: Path,
+) -> None:
+    spec = _fixture_spec(tmp_path)
+    archive_sha = Path(spec.archive_path).read_bytes()
+    bad_cuda = tmp_path / "eval" / "cuda_runtime_bad" / "contest_auth_eval.json"
+    _write_json(
+        bad_cuda,
+        _exact_eval_payload(
+            axis="contest_cuda",
+            archive_sha=_sha(archive_sha),
+            runtime_content_sha="9" * 64,
+        ),
+    )
+    spec = PR101FEC6FrontierMatrixSpec(
+        archive_path=spec.archive_path,
+        archive_manifest_path=spec.archive_manifest_path,
+        packet_manifest_path=spec.packet_manifest_path,
+        packetir_identity_proof_path=spec.packetir_identity_proof_path,
+        deterministic_compiler_manifest_path=(
+            spec.deterministic_compiler_manifest_path
+        ),
+        candidate_queue_path=spec.candidate_queue_path,
+        exact_eval_paths={
+            "contest_cpu": spec.exact_eval_paths["contest_cpu"],
+            "contest_cuda": str(bad_cuda),
+        },
+        parser_profile_paths=spec.parser_profile_paths,
+    )
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    assert matrix["exact_eval_artifacts"]["contest_cuda"]["valid_axis_evidence"] is True
+    assert matrix["authority_summary"]["fec6_has_contest_cuda_evidence"] is True
+    assert (
+        matrix["authority_summary"]["fec6_has_paired_exact_same_archive_runtime"]
+        is False
+    )
+    assert (
+        "paired_exact_runtime_content_sha256_mismatch_or_missing"
+        in matrix["paired_exact_eval"]["blockers"]
+    )
+    assert "paired_exact_same_archive_runtime_missing_or_blocked" in matrix["blockers"]
 
 
 def test_pr101_fec6_matrix_writes_json_and_markdown(tmp_path: Path) -> None:
@@ -277,6 +362,38 @@ def test_pr101_fec6_matrix_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "score_claim=false" in markdown
     assert "PR106-style PacketIR candidate queue: `False`" in markdown
     assert "run_compile_packet_identity_closure" in markdown
+    assert "PacketIR identity evidence: `True`" in markdown
+
+
+def test_pr101_fec6_matrix_blocks_overclaiming_identity_proof(tmp_path: Path) -> None:
+    spec = _fixture_spec(tmp_path)
+    identity_path = Path(spec.packetir_identity_proof_path)
+    payload = json.loads(identity_path.read_text(encoding="utf-8"))
+    payload["reemit_identity"] = False
+    payload["contest_axis_claim"] = True
+    payload["runtime_consumption_claim"] = True
+    _write_json(identity_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    identity = matrix["packetir_identity_proof"]
+    assert identity["packetir_identity_passed"] is False
+    assert "identity_proof_reemit_identity_not_true" in identity["blockers"]
+    assert "identity_proof_overclaims_contest_axis" in identity["blockers"]
+    assert "identity_proof_overclaims_runtime_consumption" in identity["blockers"]
+    assert "packetir_identity_proof_missing_or_blocked" in matrix["blockers"]
+    assert matrix["authority_summary"]["fec6_has_packetir_identity_evidence"] is False
+
+
+def test_pr101_fec6_matrix_blocks_missing_identity_proof(tmp_path: Path) -> None:
+    spec = _fixture_spec(tmp_path, include_identity=False)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    assert matrix["authority_summary"]["fec6_has_packetir_identity_evidence"] is False
+    assert "packetir_identity_proof_missing_or_blocked" in matrix["blockers"]
+    assert matrix["next_actions"][2]["id"] == "prove_parser_consumption_and_byte_accounting"
+    assert matrix["next_actions"][2]["status"] == "pending"
 
 
 def test_pr101_fec6_matrix_markdown_is_non_dispatching(tmp_path: Path) -> None:
