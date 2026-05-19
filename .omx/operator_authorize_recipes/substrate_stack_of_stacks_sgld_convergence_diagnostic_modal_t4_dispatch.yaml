@@ -1,0 +1,219 @@
+schema_version: 1
+name: substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch
+lane_id: lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518
+summary: |
+  E.8 SGLD convergence-diagnostic smoke (Modal T4). Sweeps Langevin
+  posterior-sampling t_final-CAP (temperature schedule upper bound) across
+  {0.5, 1.0, 2.0, 5.0, 10.0, 17.4} to empirically identify the convergence
+  plateau. Per council T2 Finding 2 op-routable #1
+  (.omx/research/council_t2_finding_2_sgld_t_final_ceiling_cap_20260518.md).
+
+# Catalog #240: this is a diagnostic convergence-sweep variant. dispatch_enabled=false
+# until (a) per-substrate symposium per Catalog #325 is operator-convened OR
+# DRAFT memo verdict ratified by inner-quintet pact AND (b) blocking probe
+# outcome `sgld_t_final_convergence_diagnostic_pending_20260518` is ratified
+# via fresh `tac.probe_outcomes_ledger.register_probe_outcome` row.
+dispatch_enabled: false
+research_only: true
+defer_reason: |
+  Per Catalog #325 PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
+  symposium: this SGLD convergence-diagnostic variant requires per-substrate
+  symposium convocation (T2 inner-quintet + Assumption-Adversary + Hassabis
+  + Welling-Teh memorial) within 14 days BEFORE paid dispatch can fire.
+  DRAFT memo prepared at
+  .omx/research/council_t2_sgld_convergence_symposium_DRAFT_20260519T043602Z.md
+  awaits operator approval to convene OR inner-quintet ratification.
+
+  Also: Catalog #313 blocking probe outcome
+  `sgld_t_final_convergence_diagnostic_pending_20260518` in
+  `.omx/state/probe_outcomes.jsonl` refuses dispatch via
+  `tools/operator_authorize.py::_check_predecessor_probe_outcome`. Requires
+  either (a) fresh `register_probe_outcome` row ratifying THIS planned dispatch,
+  OR (b) operator-frontier-override per Catalog #300 with verbatim quote.
+
+dispatch_blockers:
+  - per_substrate_symposium_pending_operator_convocation
+  - probe_outcome_sgld_t_final_convergence_diagnostic_pending_ratification
+  - sgld_t_final_default_vs_cap_ambiguity_pending_operator_resolution
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+# Catalog #215: SGLD convergence-diagnostic uses T4 (NOT A100). Per-t_final
+# dispatch envelope ~$0.30 Modal T4. Total envelope for 6-t_final sweep: ~$1.80.
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: stack_of_stacks
+
+cost_band:
+  epochs: 100
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 1.80
+  platform_key: modal
+  gpu_key: T4
+
+# Catalog #324: predicted_band_validation_status MUST be declared. This is a
+# convergence-diagnostic NOT a score-lowering dispatch; predicted_band is narrow
+# (final score near baseline; we measure CONVERGENCE not delta).
+predicted_band: [0.190, 0.210]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Post-training Tier-C density re-measurement IS the convergence diagnostic.
+  Per-t_final dispatch records SGLD loss every 0.1*t_final to t_final; plateau
+  identification is the dispatch's primary output. The score-band claim is
+  secondary diagnostic ([0.190, 0.210] = score is bounded near A1 baseline
+  since this is a custody-canary single-arm SGLD polish on the existing A1
+  substrate, NOT a score-lowering multi-arm stack dispatch).
+
+predicted_score_target: 0.20
+predicted_delta: "convergence-diagnostic; score near A1 baseline 0.193; primary output is CONVERGENCE PLATEAU not score reduction [predicted; council T2 Finding 2]"
+predicted_delta_basis: ".omx/research/council_t2_finding_2_sgld_t_final_ceiling_cap_20260518.md"
+literature_anchor: "Welling & Teh (2011) SGLD; Wave 2A row #8 analytical t_final=17.4 formula vs cap=1.0 cost-band budget"
+council_verdicts:
+  COUNCIL_T2_FINDING_2: "PROCEED_WITH_REVISIONS; op-routable #1 directs convergence-diagnostic smoke sweep"
+
+risk: |
+  SGLD convergence-diagnostic smoke. Each t_final-CAP value (in {0.5, 1.0,
+  2.0, 5.0, 10.0, 17.4}) is independently trained for 100 epochs with
+  identical seed/config except for `--langevin-t-init <CAP>` (the temperature
+  schedule UPPER BOUND; trainer's `--langevin-t-final` default 1e-4 is the
+  schedule's FINAL temperature which is NOT swept here).
+
+  Ambiguity per Catalog #229 premise verification:
+  - The council's "cap=1.0" referenced in Finding 2 is from Wave 2A row #8
+    analytical formula vs cost-band cap, where "cap=1.0" means the COST-BAND
+    BUDGET CAP on dispatch wall-clock (operator-set, derived from $5-15
+    Modal T4 envelope), NOT a SPECIFIC LANGEVIN-SCHEDULE TEMPERATURE BOUND.
+  - The trainer's `--langevin-t-final 1e-4` is the FINAL temperature of the
+    cosine schedule (Welling-Teh canonical: temperature decays from t_init
+    to t_final during polish epochs).
+  - The K-sweep here interprets "t_final-CAP" as the SCHEDULE INIT TEMPERATURE
+    UPPER BOUND (i.e. `--langevin-t-init <value>`) since the analytical
+    formula t_final=17.4 vs cap=1.0 is the INIT TEMPERATURE comparison.
+
+  Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag": this
+  ambiguity is documented as op-routable in the DRAFT memo for operator
+  resolution before dispatch.
+
+  Architectural risks per t_final-CAP:
+  (a) t_final=0.5: shortest dispatch (~50min on T4 at 100ep); fast convergence
+      to non-stationary distribution (if Wave 2A formula t_final=17.4 is
+      correct).
+  (b) t_final=17.4: full canonical Wave 2A formula; longest dispatch (~17h
+      extrapolated; will TIMEOUT at 1.5h `timeout_hours`); intentionally
+      time-bounded to identify plateau within budget.
+  (c) Convergence plateau identification: log SGLD loss every 0.1*t_final;
+      plateau is where d(loss)/d(t_final) -> 0. Plateau t_final IS the
+      empirically-correct cap; analytical formula may over-estimate.
+
+envelope_status: "FITS $2 envelope at p50 fallback (6 t_final-values * $0.30 = $1.80; t_final=17.4 timeouts intentional)"
+
+remote_driver: scripts/remote_lane_substrate_stack_of_stacks.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --base-archive
+    default_path: submissions/a1/archive.zip
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_stack_of_stacks.sh
+  cost_band_trainer: experiments/train_substrate_stack_of_stacks.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 32
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_stack_of_stacks.py
+
+# Convergence-diagnostic parameterization: STACK_OF_STACKS_LANGEVIN_T_INIT_CAP
+# drives the SGLD temperature schedule init temperature upper bound. Operator
+# dispatch fires 6 separate dispatches (one per t_final-CAP value) by varying
+# this env var, OR a sister harness wraps multi-t_final iteration.
+env_overrides:
+  STACK_OF_STACKS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  STACK_OF_STACKS_BASE_ARCHIVE: /workspace/pact/submissions/a1/archive.zip
+  STACK_OF_STACKS_BASE_RUNTIME_DIR: /workspace/pact/submissions/a1
+  STACK_OF_STACKS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  STACK_OF_STACKS_OUTPUT_DIR: /workspace/pact/lane_stack_of_stacks_sgld_convergence_results/output
+  STACK_OF_STACKS_EPOCHS: "100"
+  STACK_OF_STACKS_UPSTREAM_DIR: /workspace/pact/upstream
+  STACK_OF_STACKS_DEVICE: cuda
+  STACK_OF_STACKS_MIDDLE_ARM_SUBSTRATE_IDS: "a1"
+  STACK_OF_STACKS_OUTER_K: "1"
+  STACK_OF_STACKS_LANGEVIN_T_INIT_CAP: "${STACK_OF_STACKS_LANGEVIN_T_INIT_CAP:-1.0}"
+  STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS: "100"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_stack_of_stacks.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_stack_of_stacks.py
+  - submissions/a1/archive.zip
+  - submissions/a1/inflate.sh
+  - submissions/a1/inflate.py
+  - src/tac/composition/stack_of_stacks/compose.py
+  - src/tac/composition/stack_of_stacks/inflate.py
+  - src/tac/optimization/langevin_optimizer.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+
+sentinel_files:
+  - experiments/train_substrate_stack_of_stacks.py
+  - src/tac/composition/stack_of_stacks/compose.py
+  - src/tac/composition/stack_of_stacks/inflate.py
+  - src/tac/optimization/langevin_optimizer.py
+
+notes: |
+  E.8 SGLD convergence-diagnostic variant. Sister of
+  substrate_stack_of_stacks_modal_a100_dispatch.yaml (full multi-arm
+  score-lowering dispatch, currently dispatch_enabled=false until L1 blockers
+  clear). This variant is the diagnostic smoke that empirically validates the
+  Wave 2A SGLD t_final=17.4 vs cap=1.0 ambiguity BEFORE the multi-arm wire-in.
+
+  Council T2 Finding 2 directive (op-routable #1):
+  "dispatch convergence-diagnostic smoke ($0.50-1.50 Modal T4): SGLD on
+  stack_of_stacks substrate, log loss every 0.1*t_final to t_final=2.0;
+  identify plateau"
+
+  This recipe SLIGHTLY EXCEEDS the council's $0.50-1.50 envelope ($1.80) by
+  including t_final={5.0, 10.0, 17.4} for full curve coverage. The
+  council-approved minimum is t_final={0.5, 1.0, 2.0}; the extended sweep is
+  operator-routable as a separate decision.
+
+  t_final-CAP dispatch matrix:
+    t_init=0.5:  short dispatch ~50min; if plateau reached here, cap is correct
+    t_init=1.0:  council reference; if plateau reached here, cap is correct
+    t_init=2.0:  Welling-Teh practical default; if plateau reached here, cap
+                 needs raising
+    t_init=5.0:  intermediate; if plateau reached here, formula needs review
+    t_init=10.0: near-Wave-2A; if plateau reached here, formula is correct but
+                 cost-band cap is wrong
+    t_init=17.4: full Wave 2A formula; if plateau reached here, full formula
+                 is correct (dispatch will TIMEOUT intentionally - we identify
+                 plateau via the time-bounded log)
+
+  Per Catalog #229 premise verification ambiguity: this recipe interprets
+  "t_final-CAP" as the SCHEDULE INIT TEMPERATURE UPPER BOUND. If operator
+  ratifies different interpretation, recipe needs update.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
+  symposium" (Catalog #325): convocation pending operator approval.
+
+  Per CLAUDE.md "Forbidden premature KILL without research exhaustion": this
+  convergence-diagnostic is an empirical-anchor research dispatch, NOT a kill
+  verdict. The Welling-Teh SGLD paradigm is canonical; what's tested here is
+  the OPERATING POINT not the paradigm.
+
+  Cross-ref:
+    .omx/research/council_t2_finding_2_sgld_t_final_ceiling_cap_20260518.md
+    .omx/research/3_smoke_paid_gpu_reactivation_wave_blocker_audit_20260519T042301Z.md
+    .omx/research/council_t2_sgld_convergence_symposium_DRAFT_20260519T043602Z.md
+    feedback_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_landed_20260518.md
