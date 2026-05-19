@@ -27,7 +27,6 @@ if str(REPO_ROOT / "tools") not in sys.path:
 from asymptotic_pursuit_candidate_readiness_assessment import (  # noqa: E402
     CANONICAL_CANDIDATES,
     CandidateReadiness,
-    ReadinessAssessment,
     _classify_horizon_class,
     _classify_readiness_verdict,
     _compute_blocking_issues,
@@ -35,6 +34,7 @@ from asymptotic_pursuit_candidate_readiness_assessment import (  # noqa: E402
     _estimate_dispatch_cost,
     _parse_recipe,
     _prediction_band_recipe_metadata,
+    _recipe_session_budget_floor_usd,
     _recipe_targets_contest_exact_eval,
     _resolve_identity_disambiguator_probe,
     assess_candidate,
@@ -42,21 +42,21 @@ from asymptotic_pursuit_candidate_readiness_assessment import (  # noqa: E402
     build_operator_authorize_command,
     rank_by_ev_per_dollar,
     write_artifact,
-    _recipe_session_budget_floor_usd,
 )
 from asymptotic_pursuit_dispatch_queue import (  # noqa: E402
-    CATALOG202_BYPASS_AUDIT_JSON_ENV_VAR,
     CATALOG202_BYPASS_ATTESTATION_ENV_VAR,
+    CATALOG202_BYPASS_AUDIT_JSON_ENV_VAR,
     CATALOG202_BYPASS_INTENT_ENV_VAR,
     _catalog202_dirty_tree_attestation,
     _paid_launch_missing_preconditions,
-    build_payload,
     build_dispatch_sequence,
+    build_payload,
     compute_cost_band_rollup,
     compute_operator_attention_budget,
+)
+from asymptotic_pursuit_dispatch_queue import (  # noqa: E402
     write_artifact as write_dispatch_queue_artifact,
 )
-
 
 # ---------- helper unit tests ----------
 
@@ -620,8 +620,9 @@ def test_assess_candidate_z7_mamba2_scaffold_is_visible_with_score_band_axis():
     )
     assert (
         "z7_mamba2_reference_torch_runtime_exact_handoff_must_validate_before_paid_dispatch"
-        in c.dispatch_blockers
+        not in c.dispatch_blockers
     )
+    assert "reference_torch" in str(c.recipe_path.read_text())
     assert c.score_claim is False
     assert c.promotion_eligible is False
 
@@ -799,19 +800,33 @@ def test_rank_by_ev_per_dollar_ready_before_needs_fix_before_defer():
 
 def test_rank_by_ev_per_dollar_within_tier_by_ev():
     """Within same tier, higher EV wins."""
-    base = dict(
-        recipe_basename="x", recipe_path=None, trainer_path=None,
-        lane_maturity="L1", impl_complete=True, full_main_implemented=True,
-        full_main_blocker=None, latest_council_verdict="PROCEED",
-        research_only=False, dispatch_enabled=True, dispatch_blockers=(),
-        predecessor_probe_blocking=False, predecessor_probe_id=None,
-        predecessor_probe_verdict=None, predicted_delta_s_band_low=0.10,
-        predicted_delta_s_band_high=0.12, predicted_delta_s_provenance="X",
-        estimated_dispatch_cost_usd=1.0, estimated_dispatch_wall_clock_seconds=100,
-        gpu_class="T4", min_smoke_gpu="T4", cost_band_epochs=100,
-        horizon_class="asymptotic_pursuit", blocking_issues=(),
-        readiness_verdict="NEEDS_FIX",
-    )
+    base = {
+        "recipe_basename": "x",
+        "recipe_path": None,
+        "trainer_path": None,
+        "lane_maturity": "L1",
+        "impl_complete": True,
+        "full_main_implemented": True,
+        "full_main_blocker": None,
+        "latest_council_verdict": "PROCEED",
+        "research_only": False,
+        "dispatch_enabled": True,
+        "dispatch_blockers": (),
+        "predecessor_probe_blocking": False,
+        "predecessor_probe_id": None,
+        "predecessor_probe_verdict": None,
+        "predicted_delta_s_band_low": 0.10,
+        "predicted_delta_s_band_high": 0.12,
+        "predicted_delta_s_provenance": "X",
+        "estimated_dispatch_cost_usd": 1.0,
+        "estimated_dispatch_wall_clock_seconds": 100,
+        "gpu_class": "T4",
+        "min_smoke_gpu": "T4",
+        "cost_band_epochs": 100,
+        "horizon_class": "asymptotic_pursuit",
+        "blocking_issues": (),
+        "readiness_verdict": "NEEDS_FIX",
+    }
     a = CandidateReadiness(substrate_id="a", **base, ev_per_dollar=0.50)
     b = CandidateReadiness(substrate_id="b", **base, ev_per_dollar=0.10)
     ranked = rank_by_ev_per_dollar((b, a))

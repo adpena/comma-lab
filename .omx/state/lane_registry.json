@@ -42269,6 +42269,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z7_mamba2_reference_torch_exact_handoff_blocker_cleanup_20260519",
+      "name": "Z7-Mamba-2 reference_torch exact-handoff blocker cleanup",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_z7_mamba2_reference_torch_handoff_blocker_cleanup_20260519T203932Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_slot_q_pr_body_integration_rounds_1_12_20260519",
+      "name": "Slot Q PR body integration Rounds 1-12",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "PR body 767 words + 102-line submission_dir/README.md committed at ed25c2ecd; Slot J 5 binding revisions applied; Round 5 leaderboard correction applied"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_slot_q_pr_body_integration_rounds_1_12_landed_20260519T201500Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -42278,5 +42360,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T20:32:05Z"
+  "updated_at": "2026-05-19T20:49:05Z"
 }
