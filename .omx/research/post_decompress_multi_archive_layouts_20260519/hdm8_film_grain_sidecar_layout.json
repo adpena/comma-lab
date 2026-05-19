@@ -1,0 +1,44 @@
+{
+  "archive_bytes": 186395,
+  "archive_family": "hdm8_film_grain_sidecar",
+  "archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+  "mutation_grain": "post_brotli_decompress_hdm8_film_grain_sidecar_bytes",
+  "notes": "HDM8 film-grain sidecar wrapper: SIDECAR_MAGIC + format_id + pr106_len + pr106_bytes + sidecar_len + sidecar_blob [+ framing_meta]. format_id=0x01 uses brotli on int8 dim+delta_q (BOUNDED cascade); 0x02+ uses PR101 ranked-no-op grammar (BOUNDED). Per Catalog #287/#323: anchors emitted at this grain are diagnostic-only.",
+  "payload_sha256": "bc72f274f768f4f53a882fc2b6cee33536e565b27045bdbe6d28ae088dfc29b4",
+  "streams": [
+    {
+      "cascade_severity": "none_byte_local_codec",
+      "codec": "pr106_delegated",
+      "compressed_length": 185754,
+      "compressed_offset": 6,
+      "decompressed_length": 185754,
+      "decompressed_offset": 0,
+      "decompressed_sha256": "89057ca9224bd414e92c4d90e5bbc3d982e0c24fcd322dd13d781ff6e91d0a05",
+      "section_name": "pr106_bytes_delegated",
+      "stream_index": 0
+    },
+    {
+      "cascade_severity": "bounded_sliding_window_codec",
+      "codec": "pr101_ranked_no_op_grammar_format_0x02",
+      "compressed_length": 527,
+      "compressed_offset": 185762,
+      "decompressed_length": 527,
+      "decompressed_offset": 185754,
+      "decompressed_sha256": "b017563f85cd8e6b44bed10782451894f18eb75b8bcf54945ba6a288b9516dd6",
+      "section_name": "film_grain_sidecar_blob",
+      "stream_index": 1
+    },
+    {
+      "cascade_severity": "none_byte_local_codec",
+      "codec": "raw_framing_meta_6_bytes",
+      "compressed_length": 6,
+      "compressed_offset": 186289,
+      "decompressed_length": 6,
+      "decompressed_offset": 186281,
+      "decompressed_sha256": "62fefebec3cdc23b944f9a1d02f68c8bcc6861fa45beea02d92d2c28be03de09",
+      "section_name": "framing_meta",
+      "stream_index": 2
+    }
+  ],
+  "total_decompressed_bytes": 186287
+}

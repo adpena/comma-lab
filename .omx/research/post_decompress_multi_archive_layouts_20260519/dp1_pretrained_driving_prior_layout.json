@@ -1,0 +1,66 @@
+{
+  "archive_bytes": 12032,
+  "archive_family": "dp1_pretrained_driving_prior",
+  "archive_sha256": "d8fd63ff9898d4856aac0c25b68f50db795765dc8d8589a24ebfc5b3e2b4a2ad",
+  "mutation_grain": "post_brotli_pickle_decompress_dp1_renderer_state_dict_bytes",
+  "notes": "DP1 mixes byte-local (codebook + raw header) with brotli-wrapped (renderer state_dict + residual) sections. The renderer_blob is brotli(pickle); the pickle output IS the canonical post-decompress analysis surface. Per Catalog #287/#323: anchors emitted at this grain are diagnostic-only.",
+  "payload_sha256": "e042d49c09a8e6e16dc0a2b00ef3b98bcccda1c04eb829684cc53c9ed6f0c764",
+  "streams": [
+    {
+      "cascade_severity": "none_byte_local_codec",
+      "codec": "raw_uint8",
+      "compressed_length": 28,
+      "compressed_offset": 0,
+      "decompressed_length": 28,
+      "decompressed_offset": 0,
+      "decompressed_sha256": "56b0a1b4db4a066bf1861917c0251db4d46be0594dca523c11dee8a83cd5ec44",
+      "section_name": "dp1_header",
+      "stream_index": 0
+    },
+    {
+      "cascade_severity": "none_byte_local_codec",
+      "codec": "codebook_lookup",
+      "compressed_length": 8585,
+      "compressed_offset": 28,
+      "decompressed_length": 8585,
+      "decompressed_offset": 28,
+      "decompressed_sha256": "b8e742ac42caffaea646db580c0177d426d623bf2bbb48f9db0a7429412c8813",
+      "section_name": "codebook_blob",
+      "stream_index": 1
+    },
+    {
+      "cascade_severity": "bounded_sliding_window_codec",
+      "codec": "brotli_pickle",
+      "compressed_length": 2976,
+      "compressed_offset": 8613,
+      "decompressed_length": 4539,
+      "decompressed_offset": 8613,
+      "decompressed_sha256": "2023ebcb9a6e154332335328a18867353d716b00f9ac42e37fa9fc0210b717ab",
+      "section_name": "renderer_blob",
+      "stream_index": 2
+    },
+    {
+      "cascade_severity": "bounded_sliding_window_codec",
+      "codec": "brotli",
+      "compressed_length": 10,
+      "compressed_offset": 11589,
+      "decompressed_length": 32,
+      "decompressed_offset": 13152,
+      "decompressed_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+      "section_name": "residual_blob",
+      "stream_index": 3
+    },
+    {
+      "cascade_severity": "bounded_sliding_window_codec",
+      "codec": "json",
+      "compressed_length": 325,
+      "compressed_offset": 11599,
+      "decompressed_length": 325,
+      "decompressed_offset": 13184,
+      "decompressed_sha256": "8c0aff4939c6507f99235a03e1c104c8570ef4395b8eeab6357f451cebdbd20e",
+      "section_name": "meta_blob",
+      "stream_index": 4
+    }
+  ],
+  "total_decompressed_bytes": 13509
+}

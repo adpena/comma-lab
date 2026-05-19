@@ -1,0 +1,22 @@
+{
+  "archive_bytes": 186876,
+  "archive_family": "pr106_format0d",
+  "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+  "mutation_grain": "post_brotli_decompress_pr106_format0d_packed_hnerv_decoder_bytes",
+  "notes": "PR106 format0d primary packed-HNeRV decoder uses either HDM-packed (codebook-lookup, NO cascade) OR brotli (BOUNDED cascade) depending on the per-archive choice; cascade severity is recorded per-stream. Discrete base/extra sidecar streams are NOT entropy-coded. Per Catalog #287/#323: anchors emitted at this grain are diagnostic-only.",
+  "payload_sha256": "15a5dccba352838df7a8dd190a8782e51afa53b475bcf07921f05ce88c10785e",
+  "streams": [
+    {
+      "cascade_severity": "none_byte_local_codec",
+      "codec": "hdm_packed_HDM9",
+      "compressed_length": 169950,
+      "compressed_offset": 10,
+      "decompressed_length": 169950,
+      "decompressed_offset": 0,
+      "decompressed_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+      "section_name": "packed_hnerv_decoder_blob",
+      "stream_index": 0
+    }
+  ],
+  "total_decompressed_bytes": 169950
+}
