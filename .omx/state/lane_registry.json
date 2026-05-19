@@ -38160,6 +38160,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_top_3_reclamation_local_cpu_smoke_20260518",
+      "name": "TOP-3 reclamation local-CPU advisory smoke",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "3 prototype tools landed: tools/build_top_1_a1_local_cpu_advisory_smoke.py + tools/build_top_2_f4_summary_local_cpu_advisory_smoke.py + tools/build_top_3_f5_resblock_local_cpu_advisory_smoke.py; ADOPT canonical tac.contest_exploits.a1_specialized_inverter; FORK per-method feature extraction (A1 latents/PoseNet summary/PoseNet ResBlock hooks); CASCADE rule + macOS-CPU advisory wrapping per Catalog #192/#317/#323"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_top_3_reclamation_local_cpu_smoke_3_of_3_framework_validated_advisory_landed_20260518.md (3-of-3 PROCEED; 806B/747B/639B compressed; CASCADE not triggered; 30-day staleness window)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=substrate_engineering; macOS-CPU advisory only per Catalog #192; framework validation per Yousfi BINDING; CASCADE rule per Assumption-Adversary; sister of TOP-1+TOP-2+TOP-3 routing directives (commit 248120281); Lane A archive=experiments/results/lane_a_landed/archive_lane_a.zip"
+    },
+    {
+      "id": "lane_master_gradient_extractor_extensions_plus_wire_in_completion_20260518",
+      "name": "Master-gradient extractor extensions + wire-in completion (47% \u2192 100%)",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/master_gradient_wire_in.py + src/tac/master_gradient_archive_parsers.py + tools/audit_master_gradient_wire_in_coverage.py + 37 tests pass; 47.0% -> 76.9% surface coverage"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_rate_attack_process_ach_assumption_autopilot_features_20260519",
+      "name": "RATE ACH assumption autopilot features",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/contest_exploits/rate_attack_autopilot_features.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; process_feature_only; canonical_consumer=tools/cathedral_autopilot_autonomous_loop.py; no score/promotion/exact-dispatch authority"
     }
   ],
   "level_rules": {
@@ -38169,5 +38292,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-18T23:07:39Z"
+  "updated_at": "2026-05-19T00:42:04Z"
 }
