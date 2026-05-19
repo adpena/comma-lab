@@ -40014,6 +40014,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_r11_h1_1_plus_h1_6_fix_wave_20260519",
+      "name": "R11 H1-1+H1-6 FIX-WAVE invoker callsite + structural protection",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_204_driver_fix_plus_free_cuda_recovery_20260519",
+      "name": "Catalog #204 driver fix + FREE contest-CUDA recovery for A1 passthrough sha=110cfaa3",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_stack_of_stacks.sh canonical OUTPUT_DIR 3-branch resolution lines 45-52 + LOG_DIR re-routed for Modal /modal_results durable output"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog 204 STRICT gate scope is PR101 LC v2 only check_pr95plus_modal_smoke_uses_durable_provider_output; stack of stacks driver fix extincts bug class at source following canonical pattern; cross-driver gate expansion queued follow-on"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/catalog_204_driver_fix_plus_free_cuda_recovery_landed_20260519T062024Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_r11_remaining_remediations_h1_2_3_4_5_20260519",
+      "name": "R11 remaining remediations (H1-2/H1-3/H1-4/H1-5 bundle)",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -40023,5 +40146,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T06:13:44Z"
+  "updated_at": "2026-05-19T06:21:56Z"
 }

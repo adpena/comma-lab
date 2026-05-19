@@ -29,8 +29,27 @@ PYBIN="${PYBIN:-}"
 LANE_ID="${LANE_ID:-lane_stack_of_stacks_composition_implementation_20260513}"
 TAG="${TAG:-substrate_stack_of_stacks_canary}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_stack_of_stacks_results}"
-OUTPUT_DIR="${STACK_OF_STACKS_OUTPUT_DIR:-$LOG_DIR/output}"
 DISPATCH_INSTANCE_JOB_ID="${STACK_OF_STACKS_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
+
+# === Catalog #204 CONTEST_AUTH_EVAL_DURABLE_OUTPUT discipline ===
+# Bug-class anchor: E.8 SGLD #2 dispatch fc-01KRZCSQ7FPVMSAXZQDSZJCTN4 (2026-05-19)
+# trainer rc=0 archive built sha=110cfaa3 size=179008, then auth_eval rc=1
+# because evidence path was under /tmp/pact (Modal worker workspace) and
+# experiments/contest_auth_eval.py correctly refuses temp-storage evidence
+# per CLAUDE.md "Forbidden /tmp paths in any persisted artifact" non-negotiable.
+# Sister regression to STC v2 2026-05-14 anchor; canonical fix lives in
+# scripts/remote_lane_substrate_pr101_lc_v2_clone_enhanced_curriculum.sh.
+# On Modal workers (MODAL_RUNTIME=1) write archive/runtime/auth-eval artifacts
+# under the /modal_results volume so modal_train_lane.py harvests durable
+# provider output and contest_auth_eval can produce promotable score evidence.
+if [ -n "${STACK_OF_STACKS_OUTPUT_DIR:-}" ]; then
+    OUTPUT_DIR="$STACK_OF_STACKS_OUTPUT_DIR"
+elif [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]; then
+    OUTPUT_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output"
+    LOG_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/lane_stack_of_stacks_results"
+else
+    OUTPUT_DIR="$LOG_DIR/output"
+fi
 DISPATCH_CLAIMS_PATH="${STACK_OF_STACKS_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
 PROVENANCE="$LOG_DIR/provenance.json"
