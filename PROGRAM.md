@@ -8,9 +8,9 @@ architecture), then `CLAUDE.md` (agent-binding contracts).
 The "Architecture" / "Experiment profiles" sections below describe the
 2026-04 WILDE / SHIRAZ / GREEN cycle. The current substrate canvas
 (43+ substrate trainers) is documented in `SYSTEM_MAP.md` §1 and
-`.omx/state/lane_registry.json` (758+ lanes). The frontier today is
-A1 at `0.1928 [contest-CPU]`, NOT the renderer-only path described
-below. See `HANDOFF.md` §2 for current frontier state.
+`.omx/state/lane_registry.json` (758+ lanes). This file is historical
+architecture context, not the live frontier ledger. Read `reports/latest.md`
+first, then `HANDOFF.md` §2 for the latest durable orientation snapshot.
 
 Nomenclature: `tac` means Task-Aware Compression, the reusable library and
 algorithmic engine. A codec is a concrete encoder/decoder or wire format inside

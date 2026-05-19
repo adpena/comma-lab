@@ -2,7 +2,8 @@
 ara_version: 0.1
 ara_paradigm: "Agent-Native Research Artifact (arXiv 2604.24658)"
 title: "Task-Aware Video Compression: From Codec Post-Filtering to Neural Renderer"
-project: pact
+project: comma-lab
+project_local_alias: pact
 project_track: "comma.ai video compression challenge"
 deadline: 2026-05-03
 last_updated: 2026-04-30
@@ -38,7 +39,8 @@ layer_index:
 # PAPER.md — Ara root manifest
 
 This is the agent-native research artifact for the comma.ai video compression
-challenge entry produced by the `pact` lab. It follows the Ara paradigm
+challenge entry produced by the `comma-lab` workspace. The local checkout was
+historically named `pact`; use `comma-lab` for public/release references. It follows the Ara paradigm
 (Agent-Native Research Artifacts, arXiv 2604.24658): a four-layer
 machine-executable knowledge package that replaces a single PDF narrative.
 

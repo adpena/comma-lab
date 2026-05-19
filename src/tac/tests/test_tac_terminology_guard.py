@@ -187,6 +187,30 @@ def test_bare_tac_doc_heading_is_rejected(tmp_path: Path) -> None:
     assert "TAC headings must expand to Task-Aware Compression" in rendered
 
 
+def test_stale_public_tac_and_frontier_phrases_are_rejected(tmp_path: Path) -> None:
+    module = _load_tool()
+    _write_canonical_texts(tmp_path)
+    release = tmp_path / "docs" / "release" / "notes.md"
+    release.parent.mkdir(parents=True, exist_ok=True)
+    release.write_text(
+        "`tac` (the Comma Lab Compression Challenge library)\n"
+        "- **`tac/`** — reusable codec / runtime library.\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PROGRAM.md").write_text(
+        MINIMAL_CANONICAL_TEXTS["PROGRAM.md"]
+        + "The frontier today is A1 at 0.1928.\n",
+        encoding="utf-8",
+    )
+
+    findings = module.check_repo(tmp_path)
+
+    rendered = "\n".join(finding.render() for finding in findings)
+    assert "Task-Aware Compression library" in rendered
+    assert "runtime-contract library" in rendered
+    assert "reports/latest.md" in rendered
+
+
 def test_cli_strict_passes_live_docs() -> None:
     result = subprocess.run(
         [sys.executable, str(TOOL), "--strict", "--json"],

@@ -33,6 +33,29 @@ FORBIDDEN_TAC_DEFINITION_RE = re.compile(
 )
 AMBIGUOUS_TAC_HEADING_RE = re.compile(r"^#{1,6}\s+.*\bTAC\b")
 
+STALE_PUBLIC_PHRASES: tuple[tuple[str, str], ...] = (
+    (
+        "Comma Lab Compression Challenge library",
+        "describe `tac` as the Task-Aware Compression library",
+    ),
+    (
+        "reusable codec / runtime library",
+        "describe `tac` as the reusable Task-Aware Compression runtime-contract library",
+    ),
+    (
+        "The frontier today is",
+        "durable docs must point to reports/latest.md instead of hard-coding a live frontier",
+    ),
+    (
+        "Today's public frontier",
+        "durable docs must point to reports/latest.md instead of hard-coding a live frontier",
+    ),
+    (
+        "current frontier state",
+        "durable docs must say frontier snapshot or point to reports/latest.md",
+    ),
+)
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -101,6 +124,44 @@ def _ambiguous_tac_heading_findings(root: Path) -> list[Finding]:
     return findings
 
 
+def _stale_public_phrase_findings(root: Path) -> list[Finding]:
+    """Catch public-facing phrasing that weakens TAC/comma-lab authority."""
+
+    findings: list[Finding] = []
+    scan_roots = [
+        root / "README.md",
+        root / "CONTRIBUTING.md",
+        root / "HANDOFF.md",
+        root / "PROGRAM.md",
+        root / "SYSTEM_MAP.md",
+        root / "docs",
+        root / "src" / "tac" / "README.md",
+        root / "src" / "comma_lab" / "README.md",
+    ]
+    paths: list[Path] = []
+    for scan_root in scan_roots:
+        if scan_root.is_file():
+            paths.append(scan_root)
+        elif scan_root.is_dir():
+            paths.extend(scan_root.rglob("*.md"))
+    for path in sorted(set(paths)):
+        relpath = path.relative_to(root).as_posix()
+        if "docs/superpowers/" in relpath:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            for phrase, replacement in STALE_PUBLIC_PHRASES:
+                if phrase in line:
+                    findings.append(
+                        Finding(
+                            relpath,
+                            f"stale public wording {phrase!r}; {replacement}",
+                            lineno,
+                        )
+                    )
+    return findings
+
+
 def check_repo(root: Path) -> list[Finding]:
     """Return terminology findings for a repository root."""
 
@@ -110,6 +171,7 @@ def check_repo(root: Path) -> list[Finding]:
     for relpath, text in texts.items():
         findings.extend(_forbidden_definition_findings(relpath, text))
     findings.extend(_ambiguous_tac_heading_findings(root))
+    findings.extend(_stale_public_phrase_findings(root))
 
     root_readme = texts["README.md"]
     _require_contains(

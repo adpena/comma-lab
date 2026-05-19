@@ -14,7 +14,7 @@
 
 ## TL;DR
 
-`tac` (the Comma Lab Compression Challenge library) ships its first
+`tac` (the Task-Aware Compression library) ships its first
 public-ready OSS release candidate aligned with the
 [comma.ai / openpilot](https://github.com/commaai/openpilot) style:
 
@@ -56,7 +56,7 @@ for this release (see the [empirical:provenance-only] tag below).
 
 ### Architecture
 
-- **`tac/`** — reusable codec / runtime library. Substrates (the
+- **`tac/`** — reusable Task-Aware Compression runtime-contract library. Substrates (the
   per-architecture trainers + archive grammar + score-aware loss) live
   under `tac/substrates/`. There are 31 substrate trainers in
   `experiments/train_substrate_*.py` at rc1, each declaring a

@@ -28,10 +28,11 @@ artifacts into a `submissions/<name>/archive.zip` + `inflate.sh` runtime
 tree that the contest grader can replay. The contest scoring formula is
 `100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * archive_bytes /
 37,545,489`. The official leaderboard ranks by `contest-CPU`
-(GitHub Actions Linux x86_64). The CUDA axis is informational. Today's
-public frontier is **PR101 gold at 0.193 [contest-CPU]**.
+(GitHub Actions Linux x86_64). The CUDA axis is informational. For the live
+frontier, read `reports/latest.md`; the dated snapshot below is historical
+orientation, not authority.
 
-## 2. Current frontier state (one line per axis)
+## 2. Frontier state snapshot (2026-05-16)
 
 - **Public gold:** PR101 at `0.193 [contest-CPU]` (HNeRV-family,
   ~605 LOC).
@@ -47,8 +48,8 @@ public frontier is **PR101 gold at 0.193 [contest-CPU]**.
 
 ## 3. Top 5-7 highest-impact lanes currently in flight
 
-Snapshot 2026-05-16; re-run `python tools/lane_maturity.py audit | head
--40` for the live view.
+Snapshot 2026-05-16; read `reports/latest.md`, then re-run
+`python tools/lane_maturity.py audit | head -40` for the live view.
 
 1. **`lane_canonical_dispatch_optimization_protocol_20260515`** (L1) —
    Catalog #270 umbrella protocol gate. Strict-flip pending the
