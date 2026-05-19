@@ -490,7 +490,7 @@ size_categories:
 # comma-video-substrate-eval-{n_pairs}pairs
 
 Canonical evaluation dataset for the [comma.ai video compression challenge](https://comma.ai)
-substrate-research lab at [github.com/adpena/pact](https://github.com/adpena/pact).
+substrate-research lab at [github.com/adpena/comma-lab](https://github.com/adpena/comma-lab).
 
 ## Provenance
 

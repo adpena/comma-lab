@@ -17,7 +17,7 @@
 set -euo pipefail
 
 # ---- Configuration ----
-REPO_URL="https://github.com/adpena/pact.git"
+REPO_URL="https://github.com/adpena/comma-lab.git"
 REPO_DIR="$HOME/pact"
 VENV_DIR="$REPO_DIR/.venv"
 LOG_DIR="$HOME/pact-logs"

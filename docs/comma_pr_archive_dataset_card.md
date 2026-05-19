@@ -161,8 +161,9 @@ print(f"{summary['n_with_archive']} of {summary['total_attempted']} PRs have arc
 
 ## License
 
-MIT - same as the upstream contest repo and the
-[`tac` library](https://github.com/adpena/tac) the analysis tooling lives in.
+MIT - same as the upstream contest repo and the `tac` Task-Aware Compression
+library under [`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac),
+where the analysis tooling lives.
 
 ## Citation
 
