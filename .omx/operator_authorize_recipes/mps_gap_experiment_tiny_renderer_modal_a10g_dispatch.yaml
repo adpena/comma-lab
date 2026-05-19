@@ -34,8 +34,8 @@ lane_id: lane_phase_b_mps_gap_experiment_infrastructure_build_20260518
 
 research_only: true
 dispatch_enabled: true  # OPERATOR_FRONTIER_OVERRIDE 2026-05-19 verbatim "All operator fates and decisions approved" — see .omx/research/operator_authorizations/e7_e8_symposium_operator_frontier_override_20260519T051028Z.md sister
-dispatch_blockers:
-  - this_is_a_diagnostic_recipe_NOT_a_contest_substrate
+dispatch_blockers: []  # OPERATOR_FRONTIER_OVERRIDE 2026-05-19 cleared per operator approval; the "diagnostic recipe" marker was documentation NOT a substantive blocker. research_only:true preserved per CLAUDE.md "Forbidden component-aliasing for baselines" — every artifact remains evidence_grade=MPS-research-signal / [diagnostic-CUDA Modal A10G] per recipe summary thresholds. Lane lane_mps_phase_b_fire_and_harvest_20260519.
+dispatch_kind: tool  # Per CLAUDE.md "Scope clarification: substrate trainer vs tool dispatch (2026-05-17)" + tac.deploy.dispatch_protocol._is_tool_dispatch: this is a one-shot CUDA forward-inference + harvest dispatch (NOT substrate training). Catalog #270 Tier-1 substrate-only primitives (autocast_fp16/TF32/torch_compile/canonical scorer-loss helper routing) + Tier-2 min_smoke_gpu GPU-class enforcement are categorically skipped per the scope-fix; Tier-1 engineering invariants + Tier-2 hardware correctness (min_vram_gb/video_input_strategy/pyav_decode_strategy/target_modes/canary_status/Modal NVML env block per Catalog #244) + Tier-3 no_grad/inference_mode eval-time memory hygiene still apply universally.
 
 summary: |
   Phase B MPS-train CUDA-score gap diagnostic — runs the tiny renderer's
@@ -50,9 +50,9 @@ summary: |
     - gap >= 20%                    -> LOCAL_MPS_TRAIN_NOT_VIABLE_PIVOT_MLX_OR_VTOOLBOX
 
 platform: modal
-gpu: a10g
+gpu: A10G  # Canonical case per tac.deploy.dispatch_protocol.LEGAL_GPU_ORDER (T4/L4/A10G/L40S/A100/H100)
 min_vram_gb: 16
-min_smoke_gpu: a10g
+min_smoke_gpu: A10G  # Canonical case per tac.deploy.dispatch_protocol.LEGAL_GPU_ORDER
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
@@ -64,7 +64,7 @@ cost_band:
   all_flags_on: false
   hand_calibrated_fallback_p50_usd: 0.50
   platform_key: modal
-  gpu_key: a10g
+  gpu_key: A10G  # Canonical case per tac.deploy.dispatch_protocol.LEGAL_GPU_ORDER
 
 predicted_score_target: null
 predicted_band: [0.18, 0.30]

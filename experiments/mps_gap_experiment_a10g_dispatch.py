@@ -23,6 +23,8 @@ NOTE: This file is intentionally a thin dispatch entry point. The heavy
 lifting lives in ``tac.mps_gap_experiment.harvest_and_verdict``. The Modal
 runtime side runs `compute_gap_components` with `target_device="cuda"`.
 
+# NO_GRAD_WAIVED:thin-dispatch-entry-point; actual torch forward inference happens in tac.mps_gap_experiment.harvest_and_verdict::compute_gap_components which executes inside @torch.no_grad() context per the canonical helper contract. This dispatch entry point itself does NOT execute any torch graph; it just resolves CLI args + calls the canonical helper. Per Catalog #270 Tier-3 scope-fix for tool dispatches + the existing NO_GRAD_WAIVED token mechanism. Sister waiver pattern: see other dispatch_kind:tool entry points.
+
 # TIER_1_OPERATOR_REQUIRED_FLAGS — declared per Catalog #151 so the
 # operator wrapper threads them by default
 TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict] = {
