@@ -53,7 +53,32 @@ from tac.cathedral_solver_wire_in.consumers_7_14_contributions import (
     sensitivity_map_contribution_for_consumer,
 )
 
+# Slot LL 2026-05-20 — close hooks #5 + #6 for FULL Catalog #125 6-hook loop.
+# Per Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY: NEW modules; the
+# HH ``consumers_7_14_contributions`` module is unchanged.
+from tac.cathedral_solver_wire_in.hook5_continual_learning import (
+    CABLE_D_CONSUMERS_7_14_HOOK_5_ACTIVE,
+    CABLE_D_CONSUMERS_7_14_HOOK_5_PAIRS,
+    Hook5PosteriorAnchor,
+    collect_all_hook_5_anchors_for_archive,
+    consumer_owns_hook_5,
+    is_hook_5_anchor_promotable,
+    query_posterior_for_consumer,
+)
+from tac.cathedral_solver_wire_in.hook6_probe_disambiguator import (
+    CABLE_D_CONSUMERS_7_14_HOOK_6_ACTIVE,
+    CABLE_D_CONSUMERS_7_14_HOOK_6_PAIRS,
+    DEFAULT_DISAMBIGUATOR_TOP_N,
+    HOOK_6_DEFAULT_VERDICT,
+    Hook6DisambiguatorVerdict,
+    collect_all_hook_6_verdicts_for_archive,
+    consumer_owns_hook_6,
+    disambiguate_per_pair_stationarity,
+    is_hook_6_verdict_promotable,
+)
+
 __all__ = [
+    # HH hooks #1+#2+#3 (unchanged)
     "CABLE_D_CONSUMERS_7_14_HOOK_REGISTRY",
     "CABLE_D_CONSUMERS_7_14_SOLVER_HOOK_PAIRS",
     "SOLVER_WIRE_IN_OBSERVABILITY_AXIS",
@@ -64,4 +89,22 @@ __all__ = [
     "is_solver_contribution_promotable",
     "pareto_constraint_contribution_for_consumer",
     "sensitivity_map_contribution_for_consumer",
+    # LL hook #5 (continual-learning posterior)
+    "CABLE_D_CONSUMERS_7_14_HOOK_5_ACTIVE",
+    "CABLE_D_CONSUMERS_7_14_HOOK_5_PAIRS",
+    "Hook5PosteriorAnchor",
+    "collect_all_hook_5_anchors_for_archive",
+    "consumer_owns_hook_5",
+    "is_hook_5_anchor_promotable",
+    "query_posterior_for_consumer",
+    # LL hook #6 (probe-disambiguator)
+    "CABLE_D_CONSUMERS_7_14_HOOK_6_ACTIVE",
+    "CABLE_D_CONSUMERS_7_14_HOOK_6_PAIRS",
+    "DEFAULT_DISAMBIGUATOR_TOP_N",
+    "HOOK_6_DEFAULT_VERDICT",
+    "Hook6DisambiguatorVerdict",
+    "collect_all_hook_6_verdicts_for_archive",
+    "consumer_owns_hook_6",
+    "disambiguate_per_pair_stationarity",
+    "is_hook_6_verdict_promotable",
 ]
