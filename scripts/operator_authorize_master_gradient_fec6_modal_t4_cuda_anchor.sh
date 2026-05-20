@@ -91,6 +91,28 @@ MASTER_GRADIENT_HARDWARE_SUBSTRATE="${MASTER_GRADIENT_HARDWARE_SUBSTRATE:-linux_
 DISPATCH_INSTANCE_JOB_ID="${MASTER_GRADIENT_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${MASTER_GRADIENT_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
+
+# === Catalog #204 cross-driver expansion (2026-05-19) + Catalog #220 transient-evidence trap fix (2026-05-20) ===
+# When running on Modal (MODAL_RUNTIME=1), the WORKSPACE-anchored path
+# $WORKSPACE/.omx/state/... resolves to /tmp/pact/.omx/state/... on the worker
+# (Modal mounts working tree under /tmp/pact/, NOT /workspace/pact/).
+# tools/extract_master_gradient.py:2369-2373 REFUSES /tmp paths per CLAUDE.md
+# "Forbidden /tmp paths in any persisted artifact" (Catalog #220 transient-
+# evidence trap). Bug-class anchor: WAVE-3-OP3 dispatch fc-01KS2Z2WJQW532A9226JAVQM8Y
+# (2026-05-20T15:11:22Z) failed rc=1 at 9.74s because the recipe-supplied
+# MASTER_GRADIENT_OUTPUT_NPY=/workspace/pact/.omx/state/... resolved to
+# /tmp/pact/.omx/state/... and triggered the extractor's /tmp refusal.
+# Fix: redirect to /modal_results/<DISPATCH_INSTANCE_JOB_ID>/output/ (durable
+# Modal volume; modal_train_lane.py harvests it back to local repo at completion).
+# Sister of stack_of_stacks / stc_v2 / a1_plus_lapose driver fixes per the
+# canonical Catalog #204 3-branch pattern.
+# Override placed AFTER DISPATCH_INSTANCE_JOB_ID resolution to ensure non-empty
+# under set -u + ${VAR:-} expansion semantics.
+if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ] && [ -n "${DISPATCH_INSTANCE_JOB_ID:-}" ]; then
+    # Always override on Modal to extinct the /tmp refusal class structurally,
+    # regardless of whether the env_overrides block specified a /workspace/... default.
+    MASTER_GRADIENT_OUTPUT_NPY="/modal_results/${DISPATCH_INSTANCE_JOB_ID}/output/master_gradient_fec6_contest_cuda_t4_20260520.npy"
+fi
 HEARTBEAT_PID=""
 
 log() { echo "[lane-master-gradient-t4-cuda] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
