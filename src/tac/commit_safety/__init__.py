@@ -43,6 +43,12 @@ from tac.commit_safety.sister_checkpoint_guard import (
     check_files_against_sister_checkpoints,
     parse_override_env,
 )
+from tac.commit_safety.pre_write_sister_check import (
+    DEFAULT_LOOKBACK_HOURS,
+    STAND_DOWN_FILE_OVERLAP_THRESHOLD,
+    SisterRecentlyLandedVerdict,
+    check_sister_files_recently_landed,
+)
 
 __all__ = (
     "DEFAULT_LOOKBACK_MINUTES",
@@ -54,4 +60,10 @@ __all__ = (
     "bare_override_attempted",
     "check_files_against_sister_checkpoints",
     "parse_override_env",
+    # WAVE-3-PRE-WRITE-SISTER-ACTIVITY-CHECK-HELPER 2026-05-20: sister of
+    # Catalog #340 at the PRE-WRITE / git-log surface.
+    "DEFAULT_LOOKBACK_HOURS",
+    "STAND_DOWN_FILE_OVERLAP_THRESHOLD",
+    "SisterRecentlyLandedVerdict",
+    "check_sister_files_recently_landed",
 )
