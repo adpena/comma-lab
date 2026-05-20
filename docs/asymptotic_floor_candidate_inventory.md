@@ -1,18 +1,46 @@
 # Asymptotic-floor candidate inventory
 
-This document is a snapshot inventory of class-shift candidate substrates I have either trained, scaffolded, or designed against the comma video compression challenge while building the FEC6 + fixed-Huffman bolt-ons submitted as PR #110. It is not a roadmap, not a benchmark suite, and not a claim about how close any of these come to a theoretical floor. It is the operator-facing context for the work that exists in this repo beyond the submission packet.
+This document is a snapshot inventory of class-shift candidate substrates trained, scaffolded, or designed against the comma video compression challenge while building the FEC6 + fixed-Huffman bolt-ons submitted as PR #110. It is operator-facing context for the work that exists beyond the submission packet — not a roadmap, not a benchmark suite, and not a claim about how close any candidate comes to a theoretical floor.
 
 Anchor: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
 
+---
+
+## Contents
+
+- [A. Where the local floor sits](#a-where-the-local-floor-sits)
+- [B. Empirically-run anchors](#b-empirically-run-anchors)
+- [C. Class-shift candidate inventory](#c-class-shift-candidate-inventory)
+  - [C.1 Predictive-coding world models](#c1-predictive-coding-world-models-rao--ballard-1999-hafner-dreamerv3-2023)
+  - [C.2 Cooperative-receiver framings](#c2-cooperative-receiver-framings-atick--redlich-1990-1992)
+  - [C.3 Information-Bottleneck framings](#c3-information-bottleneck-framings-tishby--zaslavsky-2015)
+  - [C.4 Pretrained driving priors](#c4-pretrained-driving-priors)
+  - [C.5 Pose-axis, foveation, spatial-sparse](#c5-pose-axis-foveation-spatial-sparse-gibson-1950-lapose)
+  - [C.6 NeRV-family beyond HNeRV](#c6-nerv-family-beyond-hnerv-chen-et-al-2023-lineage)
+  - [C.7 Non-NeRV substrate architectures](#c7-non-nerv-substrate-architectures)
+  - [C.8 Codec primitives and entropy coding](#c8-codec-primitives-and-entropy-coding)
+  - [C.9 Self-compression family](#c9-self-compression-family)
+  - [C.10 Composition substrates + stacking](#c10-composition-substrates--stacking-carmack-hotz-strip-everything-lineage)
+  - [C.11 Higher-order optimization framings](#c11-higher-order-optimization-framings)
+- [D. Cost-efficiency and hardware](#d-cost-efficiency-and-hardware)
+- [E. What is in this repo beyond the submission packet](#e-what-is-in-this-repo-beyond-the-submission-packet)
+- [F. What is stuck](#f-what-is-stuck)
+- [G. Caveats](#g-caveats)
+- [H. Reproducibility and cross-links](#h-reproducibility-and-cross-links)
+
+---
+
 ## A. Where the local floor sits
 
-The HNeRV-family cluster (@AaronLeslie138 PR #95 / @EthanYangTW PR #98 / @BradyMeighan PR #100 / @SajayR PR #101 / @EthanYangTW PR #102 / @rem2 PR #103 / this PR #110) sits within roughly 0.0008 of each other on the CPU axis the leaderboard ranks. Within-HNeRV-family the local floor appears effectively reached; further within-class bolt-ons increasingly trade smaller distortion savings against larger rate costs.
+The HNeRV-family cluster (@AaronLeslie138 PR #95 / @EthanYangTW PR #98 / @BradyMeighan PR #100 / @SajayR PR #101 / @EthanYangTW PR #102 / @rem2 PR #103 / this PR #110) sits within roughly `0.0008` of each other on the CPU axis the leaderboard ranks. Within-HNeRV-family the local floor appears effectively reached; further within-class bolt-ons increasingly trade smaller distortion savings against larger rate costs.
 
-Class-shift to a different substrate paradigm is the visible next direction. Multiple theoretical-floor analyses I have run (R(D) bound from the contest's scoring formula, Blahut-Arimoto on conditional entropy of the scorer outputs, Dykstra-feasibility on the intersection of rate / segmentation / pose constraint polytopes, scorer-conditional MDL density via the post-training tier-C method) all give different estimates of where the next floor sits. None of them agrees on a single number, so I treat "where the floor is" as a band rather than a point, and the rest of this document is what I have tried to push into that band.
+Class-shift to a different substrate paradigm is the visible next direction. Multiple theoretical-floor analyses give different estimates of where the next floor sits — Shannon R(D) bound from the contest's scoring formula, Blahut-Arimoto on conditional entropy of the scorer outputs, Dykstra-feasibility on the intersection of rate / segmentation / pose constraint polytopes, scorer-conditional MDL density via the post-training tier-C method. None agree on a single number, so "where the floor is" is treated as a band rather than a point. The rest of this document is what has been tried to push into that band.
+
+---
 
 ## B. Empirically-run anchors
 
-These are end-to-end measurements I have actually run on contest-1:1 hardware. Score literals are axis-tagged; CPU evaluations are on `linux_x86_64_cpu` Modal containers matching the GitHub-Actions `ubuntu-latest` runner family; CUDA evaluations are on Modal Tesla T4. Anything tagged `[advisory only]` or `[macOS-CPU advisory]` is local development signal that I do not use for promotion, ranking, or submission decisions.
+End-to-end measurements actually run on contest-1:1 hardware. Score literals are axis-tagged. CPU evaluations are on `linux_x86_64_cpu` Modal containers matching the GitHub-Actions `ubuntu-latest` runner family; CUDA evaluations are on Modal Tesla T4. Anything tagged `[advisory only]` or `[macOS-CPU advisory]` is local development signal — not used for promotion, ranking, or submission decisions.
 
 | Lane | Class | Score | Status |
 |---|---|---|---|
@@ -20,147 +48,320 @@ These are end-to-end measurements I have actually run on contest-1:1 hardware. S
 | `hnerv_ft_microcodec` PR #101 reproduction | within-HNeRV-family | `0.192845 [contest-CPU]` recomputed from bot eval | EMPIRICAL, sister anchor |
 | `lane_a1_…` paired anchor | A1 substrate engineering | `0.19285 [contest-CPU]` paired CUDA | EMPIRICAL, paired |
 | `pr106_format0d_latent_score_table` | within-HNeRV-family CUDA-side | `0.205330 [contest-CUDA T4]` | EMPIRICAL, single-axis |
-| Earlier within-HNeRV-family iterations | bolt-on | multiple `[contest-CUDA T4]` anchors `0.95`–`1.45` (historical; pre-PR101-substrate) | EMPIRICAL, retired-config |
-| `c6_ibps` 50ep IB-bottleneck smoke | information-bottleneck | `final_score = 3.04 [contest-CUDA A10G]` vs design-time predicted band `[0.113, 0.163]` | FALSIFIED-at-this-latent-dim. The 24-dim IB bottleneck collapses segmentation (`d_seg` dominates ~86% of the score). Reactivation: latent-dim sweep at `{48, 96, 192}` + post-training tier-C density re-measurement on the next archive |
-| `nscs06` Carmack-Hotz Strip-Everything | composition substrate | v6 `105.15 [contest-CUDA T4]` → v7 `58.89 [contest-CUDA T4]` after one cargo-cult unwind iteration (44% improvement) | EMPIRICAL design-time validation; not paired contest-CPU yet; reactivation = continue the unwind ladder before paired re-measurement |
+| Earlier within-HNeRV-family iterations | bolt-on | multiple `[contest-CUDA T4]` anchors `0.95`–`1.45` | EMPIRICAL, retired-config (pre-PR101-substrate) |
+| `c6_ibps` 50ep IB-bottleneck smoke | information-bottleneck | `final_score = 3.04 [contest-CUDA A10G]` vs design-time predicted band `[0.113, 0.163]` | FALSIFIED-at-this-latent-dim. 24-dim IB bottleneck collapses segmentation (`d_seg` dominates ~86%). Reactivation: latent-dim sweep `{48, 96, 192}` + post-training tier-C density re-measurement |
+| `nscs06` Carmack-Hotz Strip-Everything | composition substrate | v6 `105.15 [contest-CUDA T4]` → v7 `58.89 [contest-CUDA T4]` after one cargo-cult-unwind iteration (44% improvement) | EMPIRICAL design-time validation; not paired contest-CPU yet; reactivation = continue unwind ladder |
 | `lane_g_v3` historical | within-class | `1.05 [contest-CUDA T4]` | EMPIRICAL historical (pre-HNeRV-family arrival) |
-| `apogee_int4` PTQ smoke | low-bit weight quantization | `1.42866394 [contest-CUDA T4]` | FALSIFIED-at-naive-PTQ; reactivation = QAT / LSQ / per-channel / smaller blocks / outlier handling, not yet attempted on the post-HNeRV substrate |
+| `apogee_int4` PTQ smoke | low-bit weight quantization | `1.42866394 [contest-CUDA T4]` | FALSIFIED-at-naive-PTQ; reactivation = QAT / LSQ / per-channel / smaller blocks / outlier handling, not yet attempted on post-HNeRV substrate |
 
-The honest summary: outside the HNeRV-family local cluster, every other paradigm I have empirically tested either falsifies at a specific implementation config (not at the paradigm class) or has not yet been pushed end-to-end to a paired CPU + CUDA anchor on contest-1:1 hardware.
+The honest summary: outside the HNeRV-family local cluster, every other paradigm empirically tested either falsifies at a specific implementation config (not at the paradigm class) or has not yet been pushed end-to-end to a paired CPU + CUDA anchor on contest-1:1 hardware.
+
+---
 
 ## C. Class-shift candidate inventory
 
-Grouped by paradigm class rather than alphabetically. Each entry is one-or-two sentences on what the candidate is plus a status tag. I deliberately do not give predicted-band numbers for any candidate that has not been empirically anchored at contest scale — the cost of design-time band claims that fail to validate (the C6 IBPS case above) is high enough that I would rather understate.
+Grouped by paradigm class. Each section cites the canonical reference paper(s), the inspiration / "why" for the class, an inventory table of candidates, and where useful an internal-research link. Predicted-band numbers are deliberately omitted for any candidate that has not been empirically anchored at contest scale — the cost of design-time band claims that fail to validate (the C6 IBPS case in Section B above) is high enough that understatement is preferred.
 
-### C.1 Predictive-coding world models (Rao & Ballard 1999; Hafner DreamerV3)
+### C.1 Predictive-coding world models (Rao & Ballard 1999; Hafner DreamerV3 2023)
 
-Class hypothesis: ego-motion-conditioned next-frame prediction has lower scorer-conditional entropy than per-frame independent encoding. The dashcam contest video has strong ego-motion coherence; this is the class with the most design effort behind it.
+Canonical references:
 
-- **Z6 multi-layer FiLM (depth=3, ~300K params)** — primary predictive-receiver substrate; SCAFFOLDED end-to-end. Wave 2 smoke fired but ran the smoke-mode trainer path instead of the full-mode path due to a driver mode-routing bug (now closed at the gate level). Reactivation: re-fire the full-mode 100ep canary.
-- **Z6-v2 cargo-cult-unwind redesign** — DESIGN-ONLY response to a council critique that the original Z6 inherited canonical capacity assumptions without testing them.
-- **Z7 LSTM/GRU temporal predictor** and **Z7-as-Mamba-2 (SSM substrate)** — DESIGN-ONLY sisters; the deep-research path-forward symposium recommended the Mamba-2 variant as the most direct paradigm-bridge to recent state-space-model results.
-- **Z8 hierarchical predictive coding (canonical quadruple)** — DESIGN-ONLY. Composes Daubechies wavelet hierarchical prior + Mallat multi-resolution + Rao-Ballard hierarchy + Wyner-Ziv side-information into one substrate. Untested at contest scale.
-- **DreamerV3 RSSM categorical-posterior paradigm-bridge** — DESIGN-ONLY with a tiered cost ladder. Tightened predicted band `[0.20, 0.40]` is honest inherited uncertainty; post-training tier-C measurement is the canonical validator and has not been run.
+- Rao, R. P. N., & Ballard, D. H. (1999). [Predictive coding in the visual cortex: a functional interpretation of some extra-classical receptive-field effects](https://www.nature.com/articles/nn0199_79). *Nature Neuroscience*, 2(1), 79–87.
+- Hafner, D., Pasukonis, J., Ba, J., & Lillicrap, T. (2023). [Mastering Diverse Domains through World Models](https://arxiv.org/abs/2301.04104). *arXiv:2301.04104* (DreamerV3).
 
-### C.2 Cooperative-receiver framings (Atick & Redlich 1990)
+**Why**: the contest video is 20 seconds of ego-motion dashcam footage. The next-frame prior is dominated by translational + rotational optical flow, which Rao-Ballard hierarchical predictive coding is structurally designed for. A world model that predicts the next frame from ego-motion-conditioned latent dynamics has lower scorer-conditional entropy than per-frame independent encoding.
 
-Class hypothesis: bytes the decoder shares with the scorer (the SegNet/PoseNet weights are public and fixed) should be exploited as side information; the encoder optimizes against the decoder-and-scorer joint, not just the decoder.
+> "Hierarchical predictive coding offers a unifying account of visual processing in the cortex, in which top-down predictions are subtracted from bottom-up inputs and only the residual error is propagated upward." — Rao & Ballard (1999)
 
-- **Z4 cooperative-receiver loss** — SCAFFOLDED as a bolt-on objective term; full path is council-gated.
-- **ATW V1 (Atick-Tishby-Wyner triple)** — DESIGN-ONLY v1; folded into ATW V2.
-- **ATW V2** — SCAFFOLDED L1; first conditioning probe returned `INDEPENDENT` verdict (`MI = 0.006385 bits/symbol`, two orders below the meaningful-conditioning threshold). DEFERRED-pending-research; reactivation = trained ATW residual probe or substrate-native scorer-logit sketch instead of an opaque conditioning channel.
-- **ATW V2-1 with Faiss IVF-PQ per-region SegNet softmax channel** — DESIGN-ONLY; probe budget pre-empted by ATW V2's INDEPENDENT verdict.
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `Z6 multi-layer FiLM (depth=3, ~300K params)` | SCAFFOLDED end-to-end | Primary predictive-receiver substrate. Wave 2 smoke fired but ran smoke-mode trainer path due to driver mode-routing bug (now closed at gate level). Reactivation: re-fire full-mode 100ep canary. |
+| `Z6-v2 cargo-cult-unwind redesign` | DESIGN-ONLY | Response to council critique that original Z6 inherited canonical capacity assumptions without testing them. |
+| `Z7 LSTM/GRU temporal predictor` | DESIGN-ONLY | Sister to Z6; recurrent temporal predictor variant. |
+| `Z7-as-Mamba-2 (SSM substrate)` | DESIGN-ONLY | Mamba-2 selective state-space model variant. Recent deep-research recommended it as the most direct paradigm-bridge to current SSM results. |
+| `Z8 hierarchical predictive coding` | DESIGN-ONLY | Canonical quadruple: Daubechies wavelet hierarchical prior + Mallat multi-resolution + Rao-Ballard hierarchy + Wyner-Ziv side-information composed into one substrate. Untested at contest scale. |
+| `DreamerV3 RSSM categorical-posterior paradigm-bridge` | DESIGN-ONLY | Tiered cost ladder. Tightened predicted band `[0.20, 0.40]` is honest inherited uncertainty; post-training tier-C measurement is the canonical validator and has not been run. |
+
+Additional canonical reference for Mamba-2 SSM:
+
+- Dao, T., & Gu, A. (2024). [Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality](https://arxiv.org/abs/2405.21060). *arXiv:2405.21060*.
+
+**Internal research**: per-pair master-gradient `Taylor + Cauchy-Schwarz` bound (canonical equation slot `per_pair_master_gradient_score_impact_taylor_v1`) gives the upper-bound score-impact framing the predictive-coding residual rate must beat per pair to be competitive.
+
+### C.2 Cooperative-receiver framings (Atick & Redlich 1990, 1992)
+
+Canonical references:
+
+- Atick, J. J., & Redlich, A. N. (1990). [Towards a theory of early visual processing](https://www.mitpressjournals.org/doi/10.1162/neco.1990.2.3.308). *Neural Computation*, 2(3), 308–320.
+- Atick, J. J., & Redlich, A. N. (1992). [What does the retina know about natural scenes?](https://www.mitpressjournals.org/doi/10.1162/neco.1992.4.2.196). *Neural Computation*, 4(2), 196–210.
+
+**Why**: the contest scorer (SegNet + PoseNet weights) is public and fixed. The decoder shares those weights with the encoder. Per Atick-Redlich's cooperative-receiver theorem, the encoder should optimize against the decoder-and-scorer joint, not just the decoder. Bytes that exploit the scorer as side-information are bytes the marginal-source rate did not need to pay for.
+
+> "The natural choice for a measure of information transmission is the mutual information between the input and the output of the visual system, which the system should maximize subject to its physical constraints." — Atick & Redlich (1990)
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `Z4 cooperative-receiver loss` | SCAFFOLDED | Bolt-on objective term. Full path is council-gated. |
+| `ATW V1 (Atick-Tishby-Wyner triple)` | DESIGN-ONLY | Folded into ATW V2. |
+| `ATW V2` | SCAFFOLDED L1 | First conditioning probe returned `INDEPENDENT` verdict (`MI = 0.006385 bits/symbol`, two orders below the meaningful-conditioning threshold). DEFERRED-pending-research. Reactivation: trained ATW residual probe or substrate-native scorer-logit sketch instead of an opaque conditioning channel. |
+| `ATW V2-1 with Faiss IVF-PQ per-region SegNet softmax channel` | DESIGN-ONLY | Probe budget pre-empted by ATW V2's INDEPENDENT verdict. |
+
+Sister-canonical reference for the Wyner half of "ATW":
+
+- Wyner, A. D., & Ziv, J. (1976). [The rate-distortion function for source coding with side information at the decoder](https://ieeexplore.ieee.org/document/1055508). *IEEE Transactions on Information Theory*, 22(1), 1–10.
+
+**Internal research**: the Wyner-Ziv deliverability proof builder at `tac.codec.wyner_ziv_layer` rejects research-sidecar phantom savings; ATW V2's `INDEPENDENT` probe verdict is recorded in the canonical probe-outcomes ledger per Catalog #313 so the apparatus does not re-fire the same probe inside the 30-day staleness window.
 
 ### C.3 Information-Bottleneck framings (Tishby & Zaslavsky 2015)
 
-Class hypothesis: the optimal codec compresses to the minimum sufficient statistic for the scorer's outputs, rather than for pixel reconstruction.
+Canonical references:
 
-- **C6 IBPS (canonical Path B quadruple)** — EMPIRICAL anchor falsified the specific 24-dim latent at 50ep; paradigm not killed. The post-training tier-C re-measurement on the landed archive surfaced the structural reason (segmentation collapse). Reactivation: latent-dim sweep + β_ib calibration before any further paid dispatch.
-- **C6 IBPS β_ib sweep, E4 MDL-IBPS, Tishby IB-pure** — DESIGN-ONLY sisters; queued behind the latent-dim sweep.
+- Tishby, N., Pereira, F. C., & Bialek, W. (1999). [The Information Bottleneck Method](https://arxiv.org/abs/physics/0004057). *arXiv:physics/0004057*.
+- Tishby, N., & Zaslavsky, N. (2015). [Deep Learning and the Information Bottleneck Principle](https://arxiv.org/abs/1503.02406). *arXiv:1503.02406*.
+
+**Why**: the optimal codec compresses to the minimum sufficient statistic for the scorer's outputs, not for pixel reconstruction. The IB framework gives a principled rate-distortion-information trade via the Lagrangian `L = I(X;T) - beta * I(T;Y)`, where `T` is the compressed representation, `X` the input frame, and `Y` the scorer's relevant outputs. A `beta_ib` sweep enumerates the rate-distortion frontier the contest scorer cares about.
+
+> "The information bottleneck method finds a representation T that is maximally informative about the relevance variable Y while compressing the input X." — Tishby & Zaslavsky (2015)
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `C6 IBPS (canonical Path B quadruple)` | EMPIRICAL anchor falsified | Specific 24-dim latent at 50ep falsified at `3.04 [contest-CUDA A10G]` vs predicted `[0.113, 0.163]`. Paradigm not killed — post-training tier-C re-measurement surfaced the structural reason (segmentation collapse). Reactivation: latent-dim sweep + `beta_ib` calibration before any further paid dispatch. |
+| `C6 IBPS β_ib sweep` | DESIGN-ONLY | Queued behind latent-dim sweep. |
+| `E4 MDL-IBPS` | DESIGN-ONLY | Queued behind C6 IBPS reactivation. |
+| `Tishby IB-pure` | DESIGN-ONLY | Queued behind C6 IBPS reactivation. |
+
+**Internal research**: the C6 IBPS empirical falsification is recorded as canonical Provenance per Catalog #323; the `mps_drift_architecture_class_dependent_v1` canonical-equation slot tracks per-architecture noise-source calibration so an IB-class architecture's MPS-vs-CUDA gap is treated as architecture-dependent rather than universal.
 
 ### C.4 Pretrained driving priors
 
-Compress against an out-of-distribution dashcam codebook trained on Comma2k19, not against the contest video itself. **DP1 Phase 2** is SCAFFOLDED with a Comma2k19 local-cache canonical helper, codebook provenance metadata, deliverability proof builder, and OOD-codebook + Wyner-Ziv composition path; full path pending Phase 2 council ratification. **DP1 + PR101 composition** is DESIGN-ONLY, pending an empirical anchor on DP1 alone.
+Canonical reference for the underlying dataset:
+
+- Schafer, H., Santana, E., Haden, A., & Biasini, R. (2018). [A Commute in Data: The comma2k19 Dataset](https://arxiv.org/abs/1812.05752). *arXiv:1812.05752*.
+
+**Why**: compress against an out-of-distribution dashcam codebook trained on comma2k19, rather than against the contest video itself. The codebook captures driving-domain priors (lane lines, sky region, vehicles, road texture) that the contest scorer rewards faithful preservation of, without leaking contest-video information into the codebook.
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `DP1 Phase 2` | SCAFFOLDED | Comma2k19 local-cache canonical helper, codebook provenance metadata, deliverability proof builder, OOD-codebook + Wyner-Ziv composition path. Full path pending Phase 2 council ratification. |
+| `DP1 + PR101 composition` | DESIGN-ONLY | Pending empirical anchor on DP1 alone. |
+
+**Internal research**: the canonical Comma2k19 local-cache helper enforces SHA-pinned chunk integrity per Catalog #213; the DP1 codebook provenance metadata is required per Catalog #210 so license tags and downstream Wyner-Ziv consumers can audit the codebook's origin.
 
 ### C.5 Pose-axis, foveation, spatial-sparse (Gibson 1950; LAPose)
 
-Class hypothesis: the pose axis of the score and the spatially-non-uniform information density of the dashcam frame both reward representations that allocate bits non-uniformly. **TT5L V2 foveation + LAPose redesign** is DESIGN-ONLY, reformulated after a `REFUSE` verdict on V1's monolithic ~3000-epoch training plan; V2 splits into staged probes. **FF foveation lane scaffold** is an L0 scaffold predicated on TT5L probe outcomes. **RAFT-derived poses, LAPose pose codec, SAR coherent pose pairs** are SCAFFOLDED or DESIGN-ONLY; none promoted.
+Canonical reference:
+
+- Gibson, J. J. (1950). *[The Perception of the Visual World](https://archive.org/details/perceptionofvisu00gibs)*. Houghton Mifflin. (Ego-motion + optical flow + focus-of-expansion).
+
+**Why**: the pose axis of the score and the spatially-non-uniform information density of the dashcam frame both reward representations that allocate bits non-uniformly. The focus-of-expansion (FOE) under forward motion concentrates pose-relevant information into a narrow image region; bits should be allocated proportionally.
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `TT5L V2 foveation + LAPose redesign` | DESIGN-ONLY | Reformulated after a `REFUSE` verdict on V1's monolithic ~3000-epoch training plan; V2 splits into staged probes. |
+| `FF foveation lane scaffold` | L0 scaffold | Predicated on TT5L probe outcomes. |
+| `RAFT-derived poses` | SCAFFOLDED | Optical-flow-derived pose channel. |
+| `LAPose pose codec` | SCAFFOLDED | Pose-axis dedicated codec. |
+| `SAR coherent pose pairs` | DESIGN-ONLY | Sister to LAPose. |
+
+Sister-canonical reference for the optical-flow component:
+
+- Teed, Z., & Deng, J. (2020). [RAFT: Recurrent All-Pairs Field Transforms for Optical Flow](https://arxiv.org/abs/2003.12039). *arXiv:2003.12039*.
+
+**Internal research**: the per-pair master-gradient framework (canonical equation slots `per_pair_master_gradient_score_impact_taylor_v1` + `master_gradient_locality_violation_by_codec_v1`) provides the basis for per-pair bit allocation that pose-axis foveation requires.
 
 ### C.6 NeRV-family beyond HNeRV (Chen et al. 2023 lineage)
 
-Variants of the implicit-neural-representation family the medal cluster lives in. TCNeRV, BlockNeRV, FFNeRV, DSNeRV, HiNeRV, e_nerv, ego_nerv, and nervdc are SCAFFOLDED at varying maturity. Several hit dispatch-time API crashes (Wave 3) and are tagged `research_only` pending reactivation through the canonical Phase 2 council flow rather than treated as paradigm-falsified.
+Canonical references:
+
+- Chen, H., Gwilliam, M., Lim, S. N., & Shrivastava, A. (2023). [HNeRV: A Hybrid Neural Representation for Videos](https://arxiv.org/abs/2304.02633). *arXiv:2304.02633*.
+- Chen, H., He, B., Wang, H., Ren, Y., Lim, S. N., & Shrivastava, A. (2021). [NeRV: Neural Representations for Videos](https://arxiv.org/abs/2110.13903). *arXiv:2110.13903*.
+
+**Why**: HNeRV is the substrate the entire medal cluster (PR #95 / #100 / #101 / #102 / #103) builds on. Variants of the implicit-neural-representation family that swap the underlying architecture (temporal, block-decomposed, frequency-domain, feature-grid, deformable) are the most direct paradigm-adjacent candidates.
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `TCNeRV` | SCAFFOLDED | Temporal-convolutional NeRV. |
+| `BlockNeRV` | SCAFFOLDED | Block-decomposed NeRV. |
+| `FFNeRV` | SCAFFOLDED | Feature-grid NeRV. |
+| `DSNeRV` | SCAFFOLDED | Deformable-scene NeRV. |
+| `HiNeRV` | SCAFFOLDED | Hierarchical NeRV. |
+| `e_nerv` | SCAFFOLDED | Sister NeRV variant. |
+| `ego_nerv` | SCAFFOLDED | Ego-motion-conditioned NeRV. |
+| `nervdc` | SCAFFOLDED | Sister NeRV variant. |
+
+Several of these hit dispatch-time API crashes (Wave 3) and are tagged `research_only` pending reactivation through the canonical Phase 2 council flow — they are not treated as paradigm-falsified.
 
 ### C.7 Non-NeRV substrate architectures
 
-Cool-Chic and C3 are DESIGN-ONLY with open export-contract gates. Wavelet residual, hybrid renderer + residual, SIREN coordinate MLP, and VQ-VAE (van den Oord 2017; discrete-posterior precedent for some predictive-coding work) are SCAFFOLDED. A grayscale-LUT extension of the Selfcomp PR #56 paradigm is DESIGN-ONLY beyond what PR #56 already shipped. A Quantizr-faithful reimplementation has historical `[contest-CUDA T4]` anchors in the `0.33`–`0.41` band from competitive-intelligence work; not the current frontier. A diffusion renderer is DESIGN-ONLY.
+Canonical references:
+
+- Sitzmann, V., Martel, J. N. P., Bergman, A. W., Lindell, D. B., & Wetzstein, G. (2020). [Implicit Neural Representations with Periodic Activation Functions](https://arxiv.org/abs/2006.09661). *arXiv:2006.09661* (SIREN).
+- van den Oord, A., Vinyals, O., & Kavukcuoglu, K. (2017). [Neural Discrete Representation Learning](https://arxiv.org/abs/1711.00937). *arXiv:1711.00937* (VQ-VAE).
+- Ladune, T., Philippe, P., Henry, F., & Bonnet, V. (2023). [COOL-CHIC: Coordinate-based Low Complexity Hierarchical Image Codec](https://arxiv.org/abs/2212.05458). *arXiv:2212.05458*.
+- Kim, H., Bauer, M., Theis, L., Schwarz, J. R., & Dupont, E. (2023). [C3: High-performance and low-complexity neural compression from a single image or video](https://arxiv.org/abs/2312.02753). *arXiv:2312.02753*.
+
+**Why**: not all viable codec substrates live in the NeRV family. Coordinate-based MLPs, periodic-activation networks, discrete-latent codecs, and learned hierarchical codecs each represent different inductive biases over the spatio-temporal signal.
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `Cool-Chic` | DESIGN-ONLY | Open export-contract gate. |
+| `C3` | DESIGN-ONLY | Open export-contract gate. |
+| `Wavelet residual` | SCAFFOLDED | Daubechies wavelet residual sidechannel. |
+| `Hybrid renderer + residual` | SCAFFOLDED | Composition substrate. |
+| `SIREN coordinate MLP` | SCAFFOLDED | Periodic-activation INR. |
+| `VQ-VAE` | SCAFFOLDED | Discrete-latent codec; van den Oord 2017 precedent. |
+| `Grayscale-LUT (Selfcomp PR #56 extension)` | DESIGN-ONLY | Beyond what PR #56 already shipped. |
+| `Quantizr-faithful reimplementation` | Historical | `[contest-CUDA T4]` anchors `0.33`–`0.41`. Not the current frontier. |
+| `Diffusion renderer` | DESIGN-ONLY | Speculative. |
 
 ### C.8 Codec primitives and entropy coding
 
-A canonical Wyner-Ziv layer at `tac.codec.wyner_ziv_layer` is paired with a deliverability proof builder that distinguishes truly deliverable side-information savings from research-sidecar phantom savings; several speculative composition rows have been rejected as `NOT_DELIVERABLE`. Hierarchical Wyner-Ziv composition (the canonical Daubechies + Mallat + Rao-Ballard + Wyner-Ziv quadruple) is DESIGN-ONLY. STC-Dasher arithmetic-coding maximalism, a Ballé hyperprior with CompressAI primitives registered in the canonical inventory, the Selfcomp block-FP lineage from PR #56, Hessian-block-FP, and UNIWARD texture-aware encoding from the Fridrich lineage are SCAFFOLDED.
+Canonical references for the steganalysis lineage (relevant because the contest scorer IS an inverse-steganalysis primitive):
+
+- Fridrich, J., & Kodovský, J. (2012). [Rich Models for Steganalysis of Digital Images](https://ieeexplore.ieee.org/document/6197267). *IEEE Transactions on Information Forensics and Security*, 7(3), 868–882.
+- Yousfi, Y., & Fridrich, J. (2020). [An Intriguing Struggle of CNNs in JPEG Steganalysis and the OneHot Solution](https://ieeexplore.ieee.org/document/9028352). *IEEE Signal Processing Letters*, 27, 830–834.
+
+Canonical references for the neural compression lineage:
+
+- Ballé, J., Laparra, V., & Simoncelli, E. P. (2017). [End-to-end Optimized Image Compression](https://arxiv.org/abs/1611.01704). *arXiv:1611.01704*.
+- Ballé, J., Minnen, D., Singh, S., Hwang, S. J., & Johnston, N. (2018). [Variational Image Compression with a Scale Hyperprior](https://arxiv.org/abs/1802.01436). *arXiv:1802.01436*.
+
+Wavelet multi-resolution canonical references:
+
+- Daubechies, I. (1988). [Orthonormal bases of compactly supported wavelets](https://onlinelibrary.wiley.com/doi/10.1002/cpa.3160410705). *Communications on Pure and Applied Mathematics*, 41(7), 909–996.
+- Mallat, S. (1989). [A theory for multiresolution signal decomposition: the wavelet representation](https://ieeexplore.ieee.org/document/192463). *IEEE Trans. Pattern Anal. Mach. Intell.*, 11(7), 674–693.
+
+**Why**: every byte that gets allocated to the archive's entropy-coded streams is a byte the rate term charges for. Codec primitives that exploit known structure in the source (texture-adaptive cost like UNIWARD, side-information-aware coding like Wyner-Ziv, hierarchical priors like Ballé's hyperprior, syndrome-trellis coding from steganography) are the entropy-side counterpart to substrate-side architecture changes.
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `tac.codec.wyner_ziv_layer` (canonical) | LANDED | Paired with deliverability proof builder that distinguishes truly deliverable side-information savings from research-sidecar phantom savings (Catalog #321 / #322). |
+| Hierarchical Wyner-Ziv composition | DESIGN-ONLY | Canonical Daubechies + Mallat + Rao-Ballard + Wyner-Ziv quadruple (same as Z8 in C.1). |
+| STC-Dasher arithmetic-coding maximalism | SCAFFOLDED | Syndrome-trellis coding pushed to arithmetic-coder limit. |
+| Ballé hyperprior (CompressAI primitives registered) | SCAFFOLDED | Canonical inventory entry. |
+| Selfcomp block-FP (PR #56 lineage) | SCAFFOLDED | Block-floating-point weight compression. |
+| Hessian-block-FP | SCAFFOLDED | Sister to block-FP using Hessian-weighted blocks. |
+| UNIWARD texture-aware encoding | SCAFFOLDED | Fridrich-lineage texture-adaptive cost; targets the scorer's blind-spot regions per the inverse-steganalysis framing. |
+
+**Internal research**: the per-byte leverage canonical equation (slot `per_byte_leverage_uniformly_distributed_v1`) empirically established that per-byte optimization saturates quickly for entropy-coded archives (PR101 top-1% byte leverage = 6.4%); substrate-class shifts dominate per-byte edits on entropy-coded archives. The `master_gradient_locality_violation_by_codec_v1` canonical equation enforces that raw-byte master-gradient is invalid for entropy-coded archives; post-decompress grain is the canonical basis.
 
 ### C.9 Self-compression family
 
-SC++ (SegMap + KL distill) and MDL FP4 TTO are SCAFFOLDED. `lane_17_imp` iterative magnitude pruning is L2 SCAFFOLDED; the council symposium deferred dispatch pending a cycle-0 empirical regression and a score-gradient saliency sidecar.
+Canonical reference:
+
+- Hinton, G., Vinyals, O., & Dean, J. (2015). [Distilling the Knowledge in a Neural Network](https://arxiv.org/abs/1503.02531). *arXiv:1503.02531*.
+
+**Why**: the SegNet weights distilled into a smaller surrogate would amortize per-pair gradient computation cost across many iterations. Iterative magnitude pruning (IMP) is the classic complement: pruning toward the lottery-ticket subnetwork that retains scorer accuracy.
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `SC++ (SegMap + KL distill)` | SCAFFOLDED | KL-distilled SegNet surrogate. |
+| `MDL FP4 TTO` | SCAFFOLDED | MDL-optimal FP4 quantization via test-time optimization. |
+| `lane_17_imp` iterative magnitude pruning | L2 SCAFFOLDED | Council symposium deferred dispatch pending cycle-0 empirical regression + score-gradient saliency sidecar. |
 
 ### C.10 Composition substrates + stacking (Carmack-Hotz Strip-Everything lineage)
 
-- **NSCS06 v6 → v7 → v8 (Strip-Everything, per-class chroma anchor)** — EMPIRICAL anchor at v7 `58.89 [contest-CUDA T4]` (44% improvement over v6 `105.15`) in one cargo-cult-unwind iteration. Variant C is a redesign queued for further unwinds. The paradigm is intact; the v6-falsification is implementation-level, not paradigm-level.
-- **NSCS01 nullspace-split renderer** — SCAFFOLDED.
-- **NSCS02 downsampled renderer** — SCAFFOLDED.
-- **NSCS03 Ballé end-to-end joint codec** — SCAFFOLDED.
-- **`stack_of_stacks`** — SCAFFOLDED; recipe-level composition framework.
-- **S2SBS byte-stuffing** — SCAFFOLDED.
-- **SAR composition** — see C.5.
+**Why**: composing N independent substrate primitives into a single dispatch can be additive in score reduction if the substrates are orthogonal in their bit-allocation axes. Carmack-Hotz Strip-Everything is the canonical composition example: per-class chroma anchor + grayscale-LUT + arithmetic-coded delta + N=1 sample composition. The composition substrate is where Dykstra-feasibility on the intersection of constraint polytopes determines whether the composition is achievable rather than just predicted.
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `NSCS06 v6 → v7 → v8 (Strip-Everything, per-class chroma anchor)` | EMPIRICAL anchor at v7 | `58.89 [contest-CUDA T4]` (44% improvement over v6 `105.15`) in ONE cargo-cult-unwind iteration. Variant C queued. Paradigm intact; v6 falsification is implementation-level. |
+| `NSCS01 nullspace-split renderer` | SCAFFOLDED | Renderer split along nullspace direction. |
+| `NSCS02 downsampled renderer` | SCAFFOLDED | Downsampled-input renderer. |
+| `NSCS03 Ballé end-to-end joint codec` | SCAFFOLDED | Ballé hyperprior + end-to-end-trained renderer. |
+| `stack_of_stacks` | SCAFFOLDED | Recipe-level composition framework. |
+| `S2SBS byte-stuffing` | SCAFFOLDED | Sample-to-sample byte-stuffing. |
+| `SAR composition` | (see C.5) | Pose-axis composition. |
+
+**Internal research**: the canonical cargo-cult-unwind methodology (NSCS06 v6 → v7) is the canonical example of one-iteration paradigm-rescue per CLAUDE.md "Forbidden premature KILL without research exhaustion" — implementation-level falsification at v6 unwound 4-of-7 cargo-culted assumptions to land v7 at 44% improvement.
 
 ### C.11 Higher-order optimization framings
 
-**Riemannian-Newton substrate engineering** (manifold-aware second-order optimization for the substrate weight space) and **Tropical d_seg solver** (sister) are DESIGN-ONLY. **Joint-ADMM coordinator** is SCAFFOLDED as a cross-substrate consensus framework following Boyd's ADMM. **3-set Venn classification** (high-pair-invariant / pair-specific / per-pair) is the empirical classifier driving the per-pair master-gradient framework; it informs which bits live in which composition axis.
+Canonical references:
 
-Section-cumulative note: several candidates above have empirical anchors that falsify a specific implementation (Z6 driver-mode bug, C6 IBPS 24-dim latent collapse, NSCS06 v6 7-cargo-cult stack, ATW V2 D4 weak conditioning, Wunderkind G1 v2 reducer, NSCS01 nullspace, NSCS06 v8 Path B variant). In every case I have tried to record the falsification at the level it actually applies (implementation) rather than the level it does not (paradigm class), because the recurring failure mode this session has been mislabelling implementation falsification as paradigm kill and losing the paradigm.
+- Boyd, S., Parikh, N., Chu, E., Peleato, B., & Eckstein, J. (2011). [Distributed Optimization and Statistical Learning via the Alternating Direction Method of Multipliers](https://www.nowpublishers.com/article/Details/MAL-016). *Foundations and Trends in Machine Learning*, 3(1), 1–122. (ADMM).
+- Dykstra, R. L. (1983). [An algorithm for restricted least squares regression](https://www.jstor.org/stable/2288033). *J. Amer. Statist. Assoc.*, 78(384), 837–842. (Alternating projections for convex feasibility).
+
+**Why**: substrate engineering is a constrained optimization problem. ADMM, Dykstra alternating projections, and Riemannian manifold-aware optimization are the canonical algorithmic primitives for navigating multi-constraint feasibility (rate ≤ R, segmentation ≤ S, pose ≤ P, archive size ≤ A).
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `Riemannian-Newton substrate engineering` | DESIGN-ONLY | Manifold-aware second-order optimization for substrate weight space. |
+| `Tropical d_seg solver` | DESIGN-ONLY | Sister to Riemannian-Newton; tropical-algebra approach to segmentation distortion. |
+| `Joint-ADMM coordinator` | SCAFFOLDED | Cross-substrate consensus framework following Boyd's ADMM. |
+| `3-set Venn classification` (high-pair-invariant / pair-specific / per-pair) | EMPIRICAL classifier | Drives per-pair master-gradient framework; informs which bits live in which composition axis. |
+
+**Internal research**: per-pair Pareto envelope cathedral consumer ingests the 3-set Venn classification + per-pair master-gradient Cauchy-Schwarz bound (canonical equation slot `per_pair_master_gradient_score_impact_taylor_v1`) to emit per-pair candidate-rank annotations downstream of the cathedral autopilot ranker.
+
+---
 
 ## D. Cost-efficiency and hardware
 
-Concrete cost classes I budget against:
+| Hardware | Rate | Use |
+|---|---|---|
+| Vast.ai RTX 4090 | `~$0.25/hr` | Primary; cheapest 24GB CUDA. |
+| Modal Tesla T4 | `~$0.59/hr` | Fallback or T4-only recipes. |
+| Modal A100 | `~$1.50/hr` | VRAM > 24GB or `min_smoke_gpu: A100`. |
+| Lightning Studio free tier | opportunistic | 22h/month subscription cap. |
+| Local Linux x86_64 Modal CPU | contest-1:1 | Only authoritative CPU axis (GHA `ubuntu-latest` match). |
+| Local macOS CPU (M-series) | free | Advisory proxy; within `~6e-6` of Linux x86_64 on one prior submission. Tagged `[macOS-CPU advisory]`. Never promoted. |
+| Local MPS | free | Development only. PoseNet drift vs CUDA `~23x`. Never used for ranking, promotion, or submission. |
 
-- Vast.ai RTX 4090 at roughly `$0.25/hr` — primary substrate; cheapest path to 24GB of CUDA VRAM.
-- Modal Tesla T4 at roughly `$0.59/hr` — fallback when Vast.ai is rate-limited or when a recipe declares T4-only.
-- Modal A100 at roughly `$1.50/hr` — used when VRAM exceeds 24GB or when the recipe declares `min_smoke_gpu: A100`.
-- Lightning Studio free tier — opportunistic; 22h/month subscription cap.
-- Local Linux x86_64 Modal CPU container — contest-1:1 hardware match for the GitHub-Actions `ubuntu-latest` runner family; the only authoritative CPU axis.
-- Local macOS CPU on M-series — used as a free advisory proxy; empirically within roughly `6e-6` of the Linux x86_64 anchor on at least one prior submission, but always tagged `[macOS-CPU advisory]` and never promoted.
-- Local MPS — development signal only; PoseNet drift versus the contest CUDA scorer is roughly `23×`, so MPS is never used for ranking, promotion, or submission decisions.
+A typical class-shift training run on a substrate the size of the HNeRV cluster costs `$15`–`$300` per attempt. Most spend goes into smokes — that's where implementation-level cargo-cult assumptions get falsified before the full meter starts.
 
-A typical class-shift training run on a substrate the size of the HNeRV cluster costs between `$15` and `$300` per attempt depending on stage count, curriculum length, and how many smokes precede the full dispatch. Most of my session-to-session spend goes into smokes rather than full runs, because the smokes are the place where implementation-level cargo-cult assumptions get falsified before the full meter starts.
+---
 
 ## E. What is in this repo beyond the submission packet
 
+The submission's runtime is intentionally small (~1140 LOC across 4 files). The repo carries the rest of the apparatus.
+
 ### E.1 Tooling
 
-The submission's runtime is intentionally small. The repo that produced it carries the rest of the apparatus:
-
-- A cathedral-style autopilot ranker that ingests candidate substrates and emits ranked dispatch recommendations.
-- A per-pair master-gradient extractor plus a per-pair optimal treatment plan via a Lagrangian-dual solver that emits per-pair recommendations the cathedral autopilot consumes.
-- A canonical equations registry that stores empirically-calibrated equations as fcntl-locked append-only JSONL rows; this is where claims like "brotli cascade saturates at a per-stream bound" or "MPS drift is architecture-class dependent" live.
-- A Modal call-id ledger + harvester that closes the spawn-and-lose failure mode on Modal's detached function-call cache.
-- A subagent crash-resume checkpoint protocol writing to fcntl-locked append-only JSONL so a session that dies mid-work can be resumed from disk.
-- A frontier pointer canonical helper that is the single source of truth for our local-best CPU and CUDA anchors, refreshed automatically on successful dispatch completion.
-- An empirical per-X optimal codec planner with DuckDB unification for cross-pair-sensitivity queries.
-- A probe-outcomes ledger that prevents re-firing a dispatch the apparatus has already adjudicated within a 30-day window.
-- A canonical Provenance helper attached to every score-claiming row in persisted state.
-- A Wyner-Ziv deliverability proof builder that distinguishes truly deliverable side-information savings from research-sidecar phantom savings; several speculative composition rows have been rejected by the builder as `NOT_DELIVERABLE` rather than landed.
-- Pre-dispatch adversarial review automation that runs an external reviewer pass before any paid dispatch above a cost threshold.
-- A master-gradient x-ray visualization tool, and an asymptotic-pursuit candidate readiness assessment that scans the registry against the dispatch-protocol catalog gates and surfaces the top-ranked candidate that is actually ready to fire.
-- Roughly 300 STRICT preflight gates that fail closed on the bug classes the session has empirically encountered.
+| Component | What it does |
+|---|---|
+| Cathedral autopilot ranker | Ingests candidate substrates → ranked dispatch recommendations. |
+| Per-pair master-gradient + Lagrangian-dual per-pair treatment plan | Per-pair recommendations the cathedral autopilot consumes. |
+| Canonical equations registry | fcntl-locked append-only JSONL of empirically-calibrated equations (e.g. `brotli_cascade_bounded_per_stream_v1`, `mps_drift_architecture_class_dependent_v1`). |
+| Modal call-id ledger + harvester | Closes the spawn-and-lose failure mode on Modal's detached function-call cache. |
+| Subagent crash-resume checkpoint | fcntl-locked append-only JSONL for resume-from-disk. |
+| Frontier pointer canonical helper | Single source of truth for local-best CPU/CUDA anchors; auto-refreshed on dispatch completion. |
+| Per-X optimal codec planner | DuckDB unification for cross-pair-sensitivity queries. |
+| Probe-outcomes ledger | Prevents re-firing already-adjudicated dispatches within a 30-day window. |
+| Canonical Provenance helper | Attached to every score-claiming row in persisted state. |
+| Wyner-Ziv deliverability proof builder | Distinguishes deliverable side-information savings from research-sidecar phantom savings. |
+| Pre-dispatch adversarial review automation | External reviewer pass before any paid dispatch above a cost threshold. |
+| Master-gradient x-ray + asymptotic-pursuit readiness assessment | Scans registry against dispatch-protocol gates; surfaces top-ranked actually-ready candidate. |
+| ~300 STRICT preflight gates | Fail-closed on empirically-encountered bug classes. |
 
 ### E.2 Methodology and discipline
 
-The methodology side is what made the per-class candidate inventory possible without compounding errors faster than I could fix them.
+Cargo-cult unwind methodology (NSCS06 v6→v7 = 44% improvement in one iteration via hard-earned-vs-cargo-culted assumption classification). Per-deliberation explicit assumption surfacing. Per-substrate adversarial-council symposium discipline before paid dispatch above threshold; recursive adversarial review with three-clean-pass counter; 4-tier council hierarchy with explicit attendees, quorum, tie-break. Bug-class extinction at orthogonal surfaces (design-memo / runtime-effect / per-feature contract / promotion gate / retirement gate / council discipline / iteration discipline / post-training validation). Sister library [`adpena/tac`](https://github.com/adpena/tac) holds the task-aware-compression primitives the submission runtime imports from.
 
-- A cargo-cult unwind methodology, with NSCS06 v6 → v7 as the canonical example (44% empirical improvement in one iteration by enumerating each cargo-culted assumption, classifying it as hard-earned-from-evidence or cargo-culted-from-inheritance, and unwinding the cargo-culted ones).
-- A hard-earned-vs-cargo-culted classification framework applied per deliberation; council members surface their operating-within assumption explicitly so the framing the discussion sits within can be challenged.
-- Per-substrate adversarial-council symposium discipline before any paid dispatch above a threshold; recursive adversarial review with a three-clean-pass counter; a 4-tier council hierarchy with explicit attendees, quorum, and tie-break rules.
-- Bug-class extinction at orthogonal surfaces (design-memo / runtime-effect / per-feature contract / promotion gate / retirement gate / council discipline / iteration discipline / post-training validation), which is where most of the preflight-gate count comes from.
-- A sister library `adpena/tac` that holds the task-aware-compression primitives the submission's runtime imports a small slice of.
+---
 
 ## F. What is stuck
 
 Each class-shift candidate is stuck on one or more of:
 
-1. **Substrate-engineering cost.** Training a new architecture from scratch against the contest scorer costs roughly `$50`–`$500` per honest attempt. Cheap smokes triage some failures, but the smoke does not always disambiguate between implementation falsification and paradigm falsification.
-2. **Cargo-cult-vs-hard-earned classification.** Knowing which design choices carry over from a paradigm's canonical reference (Hafner DreamerV3's GRU-deterministic state, Atick-Redlich's retinal-receptive-field structure, Rao-Ballard's predictive coding hierarchy, Tishby-Zaslavsky's bottleneck parameterization) and which are domain-specific to the reference's original problem requires empirical testing. Several candidates above have been falsified at the implementation level because a canonical-reference assumption did not transfer cleanly to the dashcam contest scorer.
-3. **Score-axis surrogate.** Training against the contest scorer directly is GPU-bound. Distilling the scorer into a smaller surrogate would amortize the cost, but the distillation gap needs characterization first; the gap on PoseNet at minor numerical perturbations is large enough that an unmeasured surrogate would not be safe.
-4. **Distinguishing-feature versus implementation falsification.** Several recent empirical anchors falsified a specific implementation (Z6 driver-mode bug, C6 IBPS 24-dim latent collapse, ATW V2 weak conditioning, NSCS06 v6 7-cargo-cult stack, NSCS01 nullspace, Wunderkind G1 v2 reducer) — not the paradigm class. The recurring failure mode in this session has been mislabelling implementation falsification as paradigm kill and losing the paradigm.
+1. **Substrate-engineering cost.** A new architecture from scratch against the contest scorer is `$50`–`$500` per honest attempt. Cheap smokes triage some failures, but smokes do not always disambiguate implementation falsification from paradigm falsification.
+2. **Cargo-cult-vs-hard-earned classification.** Knowing which design choices carry over from a paradigm's canonical reference (DreamerV3's GRU state, Atick-Redlich's retinal receptive fields, Rao-Ballard's predictive coding hierarchy, Tishby-Zaslavsky's bottleneck parameterization) and which are domain-specific to the original problem requires empirical testing. Several candidates above were falsified at the implementation level because a canonical-reference assumption did not transfer cleanly to the dashcam contest scorer.
+3. **Score-axis surrogate.** Training against the contest scorer directly is GPU-bound. Distilling the scorer into a smaller surrogate would amortize cost, but the distillation gap needs characterization first; the PoseNet gap at minor numerical perturbations is large enough that an unmeasured surrogate would not be safe.
+4. **Implementation versus paradigm falsification.** Recent empirical anchors falsified specific implementations (Z6 driver-mode bug, C6 IBPS 24-dim latent collapse, ATW V2 weak conditioning, NSCS06 v6 7-cargo-cult stack, NSCS01 nullspace, Wunderkind G1 v2 reducer) — not the paradigm class. The recurring failure mode this session has been mislabelling implementation falsification as paradigm kill and losing the paradigm.
+
+---
 
 ## G. Caveats
 
-Most of what is described above is prototype-level. The intention is production-hardened OSS, and the apparatus is moving in that direction (the OSS hardening pass on the sister `adpena/tac` repo against comma.ai / openpilot conventions is a recent step), but several class-shift research artifacts in the repo are either buggy, flawed, half-finished, or duplicated across sibling lanes. The inventory above is honest about which candidates have empirical anchors and which are design-only, but it does not claim every research path is at the same level of polish.
+Most of what is described above is prototype-level. The intention is production-hardened OSS and the apparatus is moving in that direction (OSS hardening pass on sister `adpena/tac` against comma.ai / openpilot conventions is recent), but several class-shift research artifacts are buggy, half-finished, or duplicated across sibling lanes. The inventory is honest about which candidates have empirical anchors and which are design-only — it does not claim every research path is at the same polish level.
 
-The theoretical-floor estimates I run jump around depending on the analysis basis (Shannon R(D), Blahut-Arimoto, Dykstra-feasibility intersection, post-training tier-C scorer-conditional MDL density, others). There is no single canonical floor; "where we could go from here" is honestly uncertain at the 0.001–0.01 scale even before considering which class-shift would actually validate.
+Theoretical-floor estimates jump around depending on the analysis basis. There is no single canonical floor; "where we could go from here" is honestly uncertain at the `0.001`–`0.01` scale even before considering which class-shift would actually validate.
 
-This document is a snapshot at the time of authoring. It will be wrong in detail within a few sessions of further work — the substrate registry, the empirical anchors, and the falsification state move fast. The PR body remains the canonical source for the submission packet itself; this document is context for the work that exists beyond it.
+This document is a snapshot at authoring time. It will be wrong in detail within a few sessions — the substrate registry, empirical anchors, and falsification state move fast. The PR body remains the canonical source for the submission packet itself; this document is context for the work that exists beyond it.
+
+---
 
 ## H. Reproducibility and cross-links
 
-- Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110) + the `submissions/hnerv_fec6_fixed_huffman_k16/` directory it ships under.
-- Sister library: [`adpena/tac`](https://github.com/adpena/tac) (task-aware compression primitives; CI badges, OSS hygiene, the canonical helpers the submission runtime imports from a small surface area).
-- This repo: [`adpena/comma-lab`](https://github.com/adpena/comma-lab) (the working repo for the broader inventory; not the submission packet).
+- **Submission packet**: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110) + the `submissions/hnerv_fec6_fixed_huffman_k16/` directory it ships under.
+- **Sister library**: [`adpena/tac`](https://github.com/adpena/tac) — task-aware compression primitives. CI badges, OSS hygiene, the canonical helpers the submission runtime imports from a small surface area.
+- **This repo**: [`adpena/comma-lab`](https://github.com/adpena/comma-lab) — working repo for the broader inventory. Not the submission packet.
