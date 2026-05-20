@@ -228,6 +228,9 @@ def build_mps_drift_architecture_class_dependent_v1() -> CanonicalEquation:
         canonical_consumers=(
             "tac.cathedral_consumers.mps_viable_prescreen_consumer",
             "tac.cathedral_consumers.mps_diagnostic_consumer",
+            "tac.engineered_corrections.kahan_summation",
+            "tac.engineered_corrections.softmax_with_epsilon",
+            "tac.engineered_corrections.fp32_matmul",
             "tools/operator_authorize.py",
         ),
         canonical_producers=(

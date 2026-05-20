@@ -8,7 +8,7 @@ submission archive and are applied additively at inflate time. Per the
 corrections compose well with every other lane because they are a pure
 additive correction applied AFTER the renderer's forward pass.
 
-Predicted band [contest-CUDA]: [0.85, 1.10] solo from a Lane A 1.15 anchor.
+Predicted band [contest-CUDA]: [0.85, 1.10] solo from a Lane A 1.15 anchor [prediction].
 The downside is bounded by --max-artifact-bytes (council Quantizr).
 
 Strict-scorer-rule: corrections.bin is DATA, not MODEL. The inflate path
@@ -31,6 +31,65 @@ here so downstream consumers can do::
     )
 
 without reaching into experiments/.
+
+MPS-vs-CUDA engineering corrections
+-----------------------------------
+
+Per the standing CLAUDE.md "MPS auth eval is NOISE — NON-NEGOTIABLE,
+HIGHEST EMPHASIS" rule and CLAUDE.md "Forbidden MPS-derived strategic
+decision (the MPS-falsification trap)" forbidden pattern, every MPS forward
+pass through SegNet / PoseNet / renderer drifts substantially vs CUDA
+(empirically: PoseNet 23x worse, SegNet 2x worse, final score 2.5x worse
+on the canonical 2026-04-25 paired measurement). The drift is calibrated
+in the canonical equations registry per Catalog #344 as
+``mps_drift_architecture_class_dependent_v1`` with three modeled noise
+sources (``conv2d_accumulation`` / ``softmax_numerics`` / ``matmul_fp16``).
+
+This module surfaces the three canonical engineering corrections targeting
+each noise source as a single import surface alongside the rest of the
+engineered-corrections public API. The heavy implementations live under
+``tac.mps_diagnostic.*`` and are re-exported here so callers can do::
+
+    from tac.engineered_corrections import (
+        kahan_summation,             # conv2d_accumulation noise
+        softmax_with_epsilon,        # softmax_numerics noise
+        fp32_matmul,                 # matmul_fp16 noise
+    )
+
+without reaching across two namespaces. Per Catalog #344 these helpers are
+the canonical_consumers of equation #2; per Catalog #287 / #323 every
+result they emit is non-promotable (axis tag ``[macOS-MPS-*-PyTorch]``)
+until a paired Linux x86_64 anchor lands. The corrections are COMPRESS-TIME
+ONLY — the strict-scorer-rule (Catalog #6) forbids loading PoseNet / SegNet
+at inflate time, and these helpers operate on the SCORER FORWARD PASS that
+only the compress-time path touches.
+
+  - ``kahan_summation(summands, dim=-1, keepdim=False)`` — Kahan-compensated
+    sum reducing fp32 accumulation drift from O(eps * sqrt(N)) to O(eps).
+    Anchor: slot 9 formalization predicts ~10x aggregate-weighted gap
+    reduction for Conv2d-heavy networks (SegNet / PoseNet / NeRV) [prediction].
+    Sister: ``kahan_conv2d`` is the full Conv2d drop-in replacement.
+  - ``softmax_with_epsilon(logits, dim=-1, intermediate_dtype=fp64)`` —
+    pinned-epsilon softmax with fp64 log-sum-exp stabilization. Anchor:
+    slot 9 §4.2 predicts ~50% SegNet 5-class boundary-flip reduction vs
+    naive ``F.softmax`` on MPS [prediction].
+  - ``fp32_matmul(...)`` — context manager pinning ``torch.backends.cuda.matmul
+    .allow_tf32=False`` + ``torch.backends.cudnn.allow_tf32=False`` so the
+    cross-backend gap shrinks symmetrically. Anchor: slot 9 predicts 2x
+    drift reduction for the matmul-accumulation component [prediction].
+
+All three helpers preserve the input dtype and degrade gracefully (no-op
+or fallback) when run on a backend that does not exhibit the noise source
+they target.
+
+Cross-references:
+  - Canonical equation: ``tac.canonical_equations.builtins.build_mps_drift_architecture_class_dependent_v1``
+    (equation #2 per ``feedback_canonical_equations_and_models_registry_formalization_landed_20260519.md``).
+  - CLAUDE.md "MPS auth eval is NOISE — NON-NEGOTIABLE, HIGHEST EMPHASIS".
+  - CLAUDE.md FORBIDDEN_PATTERNS "Forbidden MPS-derived strategic decision
+    (the MPS-falsification trap)".
+  - Catalog #6 (strict-scorer-rule), #287 (no-phantom-API), #323 (canonical
+    Provenance), #344 (canonical equations registry).
 """
 from __future__ import annotations
 
@@ -55,6 +114,40 @@ from experiments.precompute_gradient_corrections import (  # noqa: E402
     unpack_sparse_corrections,
 )
 
+# Re-export the canonical MPS-vs-CUDA engineering corrections from
+# tac.mps_diagnostic.*. The heavy implementations + monkey-patch wiring
+# live there; we surface a single canonical import name here so callers
+# get the three corrections alongside the rest of the engineered-corrections
+# public API. The aliasing pattern (canonical_name = tac.mps_diagnostic.X)
+# matches the operator-facing names cited in the canonical equation
+# registry entry #2 docstring AND the task spec; the underlying primitives
+# retain their full-precision names + monkey-patch surfaces.
+#
+# Per Catalog #287 phantom-API guard: every aliased name resolves to a
+# real importable function via this module body at import time.
+from tac.mps_diagnostic.fp32_matmul_override import (  # noqa: E402
+    MPS_BLAS_PREFERENCE_API_AVAILABLE,
+    STRICT_FP32_FLAGS,
+    enable_fp32_matmul_accumulation_strict,
+    restore_fp32_matmul_accumulation_state,
+    strict_fp32_matmul_accumulation as fp32_matmul,
+)
+from tac.mps_diagnostic.kahan_conv2d import (  # noqa: E402
+    KAHAN_CONV2D_AXIS_TAG,
+    KAHAN_CONV2D_EVIDENCE_GRADE,
+    kahan_conv2d,
+    kahan_sum as kahan_summation,
+    patch_conv2d_to_kahan_for_mps_globally,
+    restore_torch_conv2d,
+)
+from tac.mps_diagnostic.pinned_softmax import (  # noqa: E402
+    PINNED_SOFTMAX_AXIS_TAG,
+    PINNED_SOFTMAX_EVIDENCE_GRADE,
+    patch_softmax_to_pinned_for_mps_globally,
+    pinned_softmax as softmax_with_epsilon,
+    restore_torch_softmax,
+)
+
 if TYPE_CHECKING:
     import torch
 
@@ -71,6 +164,24 @@ __all__ = [
     "unpack_sparse_corrections",
     "sparse_to_dense_int8",
     "sparsify_and_quantize",
+    # MPS-vs-CUDA engineering corrections (Catalog #344 equation #2 consumers).
+    "kahan_summation",
+    "softmax_with_epsilon",
+    "fp32_matmul",
+    # Heavy sister surfaces (drop-in conv2d / global patches / state).
+    "kahan_conv2d",
+    "patch_conv2d_to_kahan_for_mps_globally",
+    "restore_torch_conv2d",
+    "KAHAN_CONV2D_AXIS_TAG",
+    "KAHAN_CONV2D_EVIDENCE_GRADE",
+    "patch_softmax_to_pinned_for_mps_globally",
+    "restore_torch_softmax",
+    "PINNED_SOFTMAX_AXIS_TAG",
+    "PINNED_SOFTMAX_EVIDENCE_GRADE",
+    "enable_fp32_matmul_accumulation_strict",
+    "restore_fp32_matmul_accumulation_state",
+    "STRICT_FP32_FLAGS",
+    "MPS_BLAS_PREFERENCE_API_AVAILABLE",
 ]
 
 
