@@ -66,9 +66,39 @@ predicted_score_target: 0.138
 # 18-22x outside the upper band). Keep the historical band visible for
 # debrief/debugging, but do not allow it to authorize further spend until a
 # post-training Tier-C density measurement replaces the random-init basis.
+#
+# 2026-05-19 POST-TRAINING TIER-C RE-MEASUREMENT LANDED per Catalog #324 +
+# DD C6 IBPS v2 symposium mandatory op-routable. Canonical helper run on
+# landed archive be06a4b0972e6c (the 50ep smoke archive that produced
+# final_score=3.04): MDL Tier-C density = 0.9711 (substrate-class verdict
+# WITHIN_CLASS per Catalog #324 threshold density >= 0.70). Random-init
+# Tier-C density (prior phantom basis) = 2.67e-5 (across-class claim);
+# post-training density is ~36,400x higher than the random-init claim.
+# The original [0.113, 0.163] predicted_band IS EMPIRICALLY PHANTOM:
+# (a) random-init Tier-C said ACROSS-class (predicting class-shift gains);
+# (b) post-training Tier-C says WITHIN-class (no class shift achieved by
+#     the 24-dim IB bottleneck at this beta/depth);
+# (c) empirical smoke final_score=3.04 dominated by SegNet collapse
+#     (score_seg_contribution=2.60) is consistent with WITHIN-class verdict
+#     under the same per-pair latent budget — the IB bottleneck operates
+#     within the existing HNeRV-family substrate class, not across.
+# Recipe state remains dispatch_enabled=false per Catalog #324; predicted_band
+# is now phantom_random_init (NOT pending_post_training; the post-training
+# re-measurement has landed and FALSIFIES the band).
+# Post-training Tier-C density artifact:
+#   experiments/results/c6_ibps_post_training_tier_c_remeasurement_20260520T020900Z/c6_ibps_50ep_be06a4b09_post_training_mdl_ablation.json
+# (archive_sha256=be06a4b0972e6cedcfe64ebc69bde394b72dab3cc5d372a887ecf185d8a2dbec;
+#  30-pair CPU run; Tier-A/B skipped per Catalog #324 scope; ~493s wall-clock; $0 GPU).
 predicted_band: [0.113, 0.163]
-predicted_band_validation_status: pending_post_training
-predicted_band_reactivation_criteria: "Catalog #324: dispatch remains disabled until the C6 smoke archive receives post-training Tier-C density validation and a revised score band, or an explicit operator waiver with rationale is recorded. Current band is a falsified random-init-derived prediction."
+predicted_band_validation_status: phantom_random_init
+predicted_band_post_training_tier_c_density: 0.9711
+predicted_band_post_training_tier_c_substrate_class_verdict: within_class
+predicted_band_post_training_tier_c_curve_knee_signal: 251.786
+predicted_band_post_training_tier_c_latent_sigma1_delta: 1.0365
+predicted_band_post_training_tier_c_artifact: experiments/results/c6_ibps_post_training_tier_c_remeasurement_20260520T020900Z/c6_ibps_50ep_be06a4b09_post_training_mdl_ablation.json
+predicted_band_post_training_archive_sha256: be06a4b0972e6cedcfe64ebc69bde394b72dab3cc5d372a887ecf185d8a2dbec
+predicted_band_post_training_falsification_evidence: "Random-init Tier-C density 2.67e-5 (ACROSS_CLASS claim, used to derive [0.113, 0.163]); post-training Tier-C density 0.9711 (WITHIN_CLASS per Catalog #324 threshold >= 0.70). ~36,400x higher than random-init claim. Per Catalog #324: random-init Tier-C does NOT predict post-training behavior; predicted_band is phantom_random_init."
+predicted_band_reactivation_criteria: "Catalog #324: dispatch remains disabled. Post-training Tier-C re-measurement on archive be06a4b09 landed 2026-05-19 with density 0.971 (within_class) FALSIFYING the random-init-derived band. Per CLAUDE.md 'Forbidden premature KILL': this is implementation-level falsification of beta_ib=0.01 + latent_dim=24, NOT paradigm-level. Reactivation requires new C6 variant with revised architecture (e.g. DD Path B2 DreamerV3 RSSM categorical posterior; Path B1 hierarchical IB; Path B3 beta-tuned sweep; Path B4 combined) AND fresh per-substrate symposium per Catalog #325 AND new post-training Tier-C re-measurement on the variant's first-anchor archive."
 smoke_score_band: [0.10, 0.30]
 predicted_delta: "predicted delta -0.080 to -0.030 from PR101 baseline 0.193 -> predicted band [0.113, 0.163] [prediction] per Dykstra-feasibility polytope projection [0.099879, 0.531541] containing the predicted band + Tier-C ACROSS_CLASS verdict 2.67e-5 + sextet PROCEED-unconditional 2026-05-17"
 predicted_delta_basis: ".omx/research/c6_e4_mdl_ibps_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND landed 2026-05-16) + .omx/state/dykstra_feasibility_c6_e4_mdl_ibps.json (Dykstra polytope 2026-05-17 FEASIBLE) + .omx/state/tier_c_density_reconciliation_c6_e4_mdl_ibps.json (Tier-C ACROSS_CLASS 2026-05-17) + .omx/state/composition_alpha_c6_e4_mdl_ibps_x_wyner_ziv.json (composition_alpha=1.0 ORTHOGONAL with WZ pipeline-stage 2026-05-17) + .omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md (sextet PROCEED-unconditional 2026-05-17 6-of-6 + Catalog #315 satisfied) + Catalog #219 Z1 ablation + Catalog #227 Tier-C boundary semantics + Catalog #296 Dykstra-feasibility + Catalog #315 OPTIMAL FORM"
