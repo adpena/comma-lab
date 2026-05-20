@@ -2272,19 +2272,28 @@ def _compute_operating_point_and_per_param_gradients_chunked(
             )
         else:
             raise ValueError(f"unknown roundtrip_mode={roundtrip_mode!r}")
-        gt_rt = apply_eval_roundtrip_during_training(
-            gt, simulate_uint8=True, simulate_resize=True
-        )
+
+        # GT pipeline is detached from the gradient computation (loss uses
+        # log_p_gt.detach() + pose_gt.detach()). Wrapping in torch.no_grad()
+        # eliminates the gt autograd graph which would otherwise consume
+        # ~50% of per-chunk peak memory (encoder+decoder activations for both
+        # PoseNet FastViT-T12 + SegNet UNet EfficientNet-B2 doubled). This is
+        # mathematically identical because gt's contribution to the gradient
+        # is already detached at loss-time.
+        with torch.no_grad():
+            gt_rt = apply_eval_roundtrip_during_training(
+                gt, simulate_uint8=True, simulate_resize=True
+            )
+            posenet_in_gt = posenet.preprocess_input(gt_rt)
+            segnet_in_gt = segnet.preprocess_input(gt_rt)
+            posenet_out_gt = posenet(posenet_in_gt)
+            segnet_out_gt = segnet(segnet_in_gt)
 
         posenet_in_decoded = posenet.preprocess_input(decoded_rt)
         segnet_in_decoded = segnet.preprocess_input(decoded_rt)
-        posenet_in_gt = posenet.preprocess_input(gt_rt)
-        segnet_in_gt = segnet.preprocess_input(gt_rt)
 
         posenet_out_decoded = posenet(posenet_in_decoded)
-        posenet_out_gt = posenet(posenet_in_gt)
         segnet_out_decoded = segnet(segnet_in_decoded)
-        segnet_out_gt = segnet(segnet_in_gt)
 
         # SegNet differentiable surrogate (per-pixel CE; per-chunk sum-then-mean)
         log_p_decoded = F.log_softmax(segnet_out_decoded, dim=1)

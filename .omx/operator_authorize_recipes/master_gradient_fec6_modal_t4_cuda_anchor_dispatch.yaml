@@ -109,7 +109,7 @@ env_overrides:
   # bicubic = 20×2×3×874×1164×4 ≈ 488 MiB doubled for autograd. Gradients accumulate
   # per-chunk via the canonical Catalog #218 pattern (math identity:
   # mean(loss_over_n) = sum_chunks(sum(loss_in_chunk)/n_total)).
-  MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE: "20"
+  MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE: "10"
   MASTER_GRADIENT_HARDWARE_SUBSTRATE: linux_x86_64_t4_modal
   LOCAL_CUDA_WORKER: "0"
 
