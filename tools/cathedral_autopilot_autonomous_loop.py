@@ -6510,6 +6510,21 @@ def main(argv: list[str] | None = None) -> int:
         default=10,
         help="When --report-only is set: number of top-ranked candidates to print (default 10).",
     )
+    parser.add_argument(
+        "--persist-consumer-verdicts",
+        action="store_true",
+        help=(
+            "T3 council prioritization 2026-05-19 rank #4 ACTIVATION sprint: "
+            "persist the cathedral consumer invocation batch to "
+            ".omx/state/cathedral_autopilot_consumer_verdicts.jsonl per the "
+            "canonical fcntl-locked append-only ledger pattern "
+            "(Catalog #245/#313/#333/#344 sister discipline). Opt-in default "
+            "OFF so smoke runs don't pollute the canonical ledger; the "
+            "operator-runnable activation sprint enables it explicitly. "
+            "Per Catalog #287/#323 persisted rows are score_claim=False + "
+            "promotion_eligible=False + axis_tag=[predicted]."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -6764,6 +6779,40 @@ def main(argv: list[str] | None = None) -> int:
             panel_axis=args.score_panel_axis,
         )
 
+        # T3 council prioritization 2026-05-19 rank #4 ACTIVATION sprint:
+        # persist the consumer invocation batch to the canonical fcntl-locked
+        # JSONL ledger so the operator-runnable summary tool can audit what
+        # the cathedral autopilot recommended across sessions. Per
+        # CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #287/#323
+        # the persisted row is observability-only (score_claim=False).
+        if args.persist_consumer_verdicts:
+            try:
+                from tac.cathedral.verdict_ledger import append_consumer_invocation_batch
+                append_consumer_invocation_batch(
+                    consumer_invocations,
+                    panel_axis=args.score_panel_axis,
+                    rank_axis=args.rank_axis,
+                    candidate_ids=[c.candidate_id for c in top],
+                    top_candidates_summary=[
+                        {
+                            "rank": rank_i,
+                            "candidate_id": c.candidate_id,
+                            "archive_sha256": c.archive_sha256,
+                            "predicted_score_delta_raw": c.predicted_score_delta,
+                            "estimated_dispatch_cost_usd": c.estimated_dispatch_cost_usd,
+                            "blockers_count": len(c.blockers),
+                        }
+                        for rank_i, c in enumerate(top, start=1)
+                    ],
+                    invocations_summary_path=str(args.output) if args.output else None,
+                    notes="report-only autopilot run",
+                )
+            except Exception as exc:  # noqa: BLE001  defensive: never crash the loop
+                print(
+                    f"cathedral_autopilot_autonomous_loop: WARNING — verdict-ledger persistence failed: {type(exc).__name__}: {exc}",
+                    file=sys.stderr,
+                )
+
         # Emit minimal JSON on stdout (machine-readable consumer surface).
         # NEVER includes promotion / score-claim / dispatch-authority fields per
         # CLAUDE.md "Apples-to-apples evidence discipline".
@@ -6870,6 +6919,41 @@ def main(argv: list[str] | None = None) -> int:
             "master_gradient_annotations": [],
             "error": f"{type(exc).__name__}: {exc}",
         }
+        ranked_post_loop = []
+
+    # T3 council prioritization 2026-05-19 rank #4 ACTIVATION sprint:
+    # persist the post-loop consumer invocation batch to the canonical
+    # fcntl-locked JSONL ledger so historical autopilot activity is
+    # queryable across sessions. Per Catalog #287/#323 the persisted
+    # row is observability-only (score_claim=False).
+    if args.persist_consumer_verdicts and consumer_invocations_post_loop.get("invocations"):
+        try:
+            from tac.cathedral.verdict_ledger import append_consumer_invocation_batch
+            top_post_loop = ranked_post_loop[:min(args.max_dispatch_recommendations or 10, 10)]
+            append_consumer_invocation_batch(
+                consumer_invocations_post_loop,
+                panel_axis=args.score_panel_axis,
+                rank_axis=args.rank_axis,
+                candidate_ids=[c.candidate_id for c in top_post_loop],
+                top_candidates_summary=[
+                    {
+                        "rank": rank_i,
+                        "candidate_id": c.candidate_id,
+                        "archive_sha256": c.archive_sha256,
+                        "predicted_score_delta_raw": c.predicted_score_delta,
+                        "estimated_dispatch_cost_usd": c.estimated_dispatch_cost_usd,
+                        "blockers_count": len(c.blockers),
+                    }
+                    for rank_i, c in enumerate(top_post_loop, start=1)
+                ],
+                invocations_summary_path=str(args.output) if args.output else None,
+                notes="run_continuous_loop autopilot run",
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"cathedral_autopilot_autonomous_loop: WARNING — verdict-ledger persistence failed: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
 
     if args.use_substrate_composition_matrix_ranking is not None:
         source_tag = "substrate_composition_matrix_constraints_enforced"

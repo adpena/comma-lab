@@ -43,13 +43,33 @@ from tac.cathedral.consumer_contract import (
     discover_waiver_in_init,
     validate_consumer_module,
 )
+from tac.cathedral.verdict_ledger import (
+    CATHEDRAL_CONSUMER_VERDICT_LEDGER_PATH,
+    CATHEDRAL_CONSUMER_VERDICT_SCHEMA_VERSION,
+    CathedralConsumerVerdictLedgerCorruptError,
+    append_consumer_invocation_batch,
+    load_verdict_events_lenient,
+    load_verdict_ledger_strict,
+    query_consumer_activity_summary,
+    query_latest_session,
+    query_sessions,
+)
 
 __all__ = [
+    "CATHEDRAL_CONSUMER_VERDICT_LEDGER_PATH",
+    "CATHEDRAL_CONSUMER_VERDICT_SCHEMA_VERSION",
     "CathedralConsumerContract",
     "CathedralConsumerContractError",
+    "CathedralConsumerVerdictLedgerCorruptError",
     "ConsumerRegistration",
     "HookNumber",
     "WAIVER_TOKEN",
+    "append_consumer_invocation_batch",
     "discover_waiver_in_init",
+    "load_verdict_events_lenient",
+    "load_verdict_ledger_strict",
+    "query_consumer_activity_summary",
+    "query_latest_session",
+    "query_sessions",
     "validate_consumer_module",
 ]

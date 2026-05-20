@@ -63,6 +63,8 @@ experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20
 !experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/
 experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/*
 !experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py
+!experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/deterministic_packet_compiler_manifest.json
+!experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packetir_candidate_queue.json
 outputs/
 
 # Local Claude scheduler locks contain machine/session PIDs and must not churn.
@@ -198,6 +200,14 @@ src/tac.egg-info/
 .omx/state/canonical_equations_registry.jsonl.lock
 .omx/state/canonical_equations_registry.jsonl.tmp.*
 .omx/state/canonical_equations_registry.jsonl.corrupt.*
+# Cathedral autopilot consumer verdict ledger (T3 council prioritization
+# 2026-05-19 rank #4 ACTIVATION sprint; observability-only HISTORICAL_PROVENANCE
+# per Catalog #287/#323 non-promotable invariant; queryable across sessions via
+# tools/cathedral_autopilot_activation_summary.py).
+!.omx/state/cathedral_autopilot_consumer_verdicts.jsonl
+.omx/state/cathedral_autopilot_consumer_verdicts.jsonl.lock
+.omx/state/cathedral_autopilot_consumer_verdicts.jsonl.tmp.*
+.omx/state/cathedral_autopilot_consumer_verdicts.jsonl.corrupt.*
 .omx/state/.canonical_task_status.lock
 .omx/state/canonical_task_status.jsonl.lock
 .omx/state/canonical_task_status.jsonl.tmp.*

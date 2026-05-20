@@ -39236,6 +39236,17 @@ _BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS: tuple[str, ...] = (
     "update_equation_with_empirical_anchor",
     "load_equation_registry_strict",
     "load_registry_events_lenient",
+    # Cathedral autopilot consumer verdict ledger helpers (T3 council
+    # prioritization 2026-05-19 rank #4 ACTIVATION sprint). Operator-facing
+    # historical surface for the 32-consumer × N-candidate verdict matrix
+    # so future sessions can audit what the cathedral autopilot recommended
+    # WITHOUT re-running the loop. Follows Catalog #245/#313/#333/#344
+    # canonical fcntl-locked JSONL append-only pattern.
+    "append_consumer_invocation_batch",
+    "load_verdict_ledger_strict",
+    "load_verdict_events_lenient",
+    "query_latest_session",
+    "query_consumer_activity_summary",
 )
 
 # Files that legitimately implement canonical fcntl-locked helpers OR are
@@ -39261,6 +39272,7 @@ _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/codex_to_claude_inbox.py",  # canonical (Catalog #333)
     "src/tac/canonical_frontier_pointer.py",  # canonical (Catalog #343)
     "src/tac/canonical_equations/registry.py",  # canonical (Catalog #344)
+    "src/tac/cathedral/verdict_ledger.py",  # canonical cathedral verdict ledger (T3 #4 activation)
     "src/tac/deploy/vastai/client.py",  # routes through register_instance (vastai_tracker)
     "src/tac/preflight.py",  # this gate's own scanning code
     "src/tac/preflight_fs_cache.py",  # threading.Lock (in-process cache only)
