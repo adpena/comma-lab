@@ -10,6 +10,8 @@ PR #110 ships `~1140 LOC` across four files. The repo carries the rest: 52 subst
 
 The submission's CPU score is `0.192051 [contest-CPU]` paired with `0.226210 [contest-CUDA T4]`, both on the same archive bytes (`sha256: 6bae0201fb08…`, 178,517 bytes, single ZIP member `x` stored uncompressed). That's `-0.000794` below PR [#101](https://github.com/commaai/comma_video_compression_challenge/pull/101)'s `0.192845 [contest-CPU]` on the axis the leaderboard ranks. Within the HNeRV-family cluster — PR [#95](https://github.com/commaai/comma_video_compression_challenge/pull/95) [#100](https://github.com/commaai/comma_video_compression_challenge/pull/100) [#101](https://github.com/commaai/comma_video_compression_challenge/pull/101) [#102](https://github.com/commaai/comma_video_compression_challenge/pull/102) [#103](https://github.com/commaai/comma_video_compression_challenge/pull/103) plus this — the local floor sits inside `~0.0008`. Class-shift to a different substrate paradigm is the visible next direction; most of the apparatus exists to make that step deliberate rather than expensive.
 
+Each `0.0001` of CPU-axis score lowering looks marginal on a single 20-second clip; at production-fleet scale across time (devices × hours × video uplink + on-device-storage + energy costs), small per-archive improvements compound — the contest reads as R&D probe for production-relevant compression infrastructure, not only a leaderboard.
+
 ---
 
 ## 2. What is empirically validated
@@ -82,4 +84,10 @@ Five lanes have paired or single-axis empirical anchors on contest hardware; the
 
 The intent is to push more candidates through the pipeline. The submission packet is the validated tip; the apparatus is ~3 orders of magnitude larger and most of it has not been paid for in GPU hours. The bug-class extinction work, canonical-helper consolidation, and meta-engineering discipline are leverageable — a collaborator stepping into one of the scaffolded paradigm classes inherits the tooling without rebuilding it.
 
-References: [PR #110 anchor](https://github.com/commaai/comma_video_compression_challenge/pull/110) · [inventory](./asymptotic_floor_candidate_inventory.md) · [cargo-cult unwind methodology](./cargo_cult_unwind_methodology.md) · [canonical equations tour](./canonical_equations_tour.md) · [master-gradient extractor tour](./master_gradient_extractor_tour.md) · [strict preflight catalog summary](./strict_preflight_catalog_summary.md) · [sister library `adpena/tac`](https://github.com/adpena/tac).
+References: [PR #110 anchor](https://github.com/commaai/comma_video_compression_challenge/pull/110) · [inventory](./asymptotic_floor_candidate_inventory.md) · [cargo-cult unwind methodology](./cargo_cult_unwind_methodology.md) · [canonical equations tour](./canonical_equations_tour.md) · [master-gradient extractor tour](./master_gradient_extractor_tour.md) · [strict preflight catalog summary](./strict_preflight_catalog_summary.md) · [META engineering vision](./meta_engineering_vision.md) · [AI-assisted inverse steganalysis + persona-council methodology](./ai_assisted_inverse_steganalysis_persona_council.md) · [sister library `adpena/tac`](https://github.com/adpena/tac).
+
+---
+
+## 6. Who built this
+
+A Python developer with around eight years of programming and no formal background in video compression, neural representation learning, or steganalysis. A friend introduced me to comma.ai; I love the application and the philosophy — open-source hardware and software democratizing self-driving, plus the wider tinygrad and openpilot-as-OS-for-robotics vision. Missed the hackathon, saw this contest, got nerd-sniped (the same way Quantizr was, per the operator-canonical PR #56 attribution), and have spent nearly two months solo-grinding with AI assistance. Many thoughts, many open questions, still actively pursuing the frontier and doing it in public — the contest, comma.ai's mission, and the Yousfi + Fridrich + Quantizr + medal-class-PR-author lineage are the important things; this work is a small humble contribution to that arc.

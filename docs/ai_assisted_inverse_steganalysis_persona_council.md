@@ -67,6 +67,22 @@ The combination — named personas + assumption surfacing + adversarial-perspect
 
 ---
 
+## 3.5 How the work actually happens: Claude Code + Codex + subagents
+
+The persona-council methodology described above is the deliberation pattern. Under it, the actual engineering loop runs across two AI-assisted CLI tools used in concert plus scope-isolated subagent dispatch:
+
+- **Claude Code as the primary engineering interface.** The operator's local CLI driving substantive engineering work — codebase exploration, multi-file edits via canonical `Read` / `Edit` / `Write` / `Bash` / `Agent` tools, commits through the canonical serializer at `tools/subagent_commit_serializer.py`, and dispatch coordination. Claude Code's strength is sustained, multi-step engineering with full context over a working session.
+
+- **Codex as the canonical adversarial-review companion.** Invoked per the `/codex:adversarial-review` skill and the canonical persistent-codex-review protocol documented in this repo's contributor standards. Codex runs independent review-only passes against diffs, branches, and specific findings — explicitly tasked with surfacing shared-assumption cargo-cults the primary author has already operating-within. Several of the cargo-cult-unwind anchors (NSCS06 v6 cargo-cults, the canonical-vs-unique decision-per-layer pattern, the orphan-signal-at-cathedral-autopilot bug class) were either originated or independently confirmed by Codex pre-deploy review.
+
+- **Subagents intra both.** Both Claude Code (via its `Agent` tool with named subagent types) and Codex (via its companion runtime) spawn subagents for parallel scope-isolated work. The discipline infrastructure is real: subagent crash-resume per a canonical checkpoint ledger (Catalog #206); sister-checkpoint guard before each commit to prevent edit-time collision (Catalog #340); canonical serializer with `--expected-content-sha256` to extinct the commit-swap bug class (Catalog #117/#157/#174/#235/#289); file-level ownership coordination via the in-flight subagent registry. Subagents enable parallel scope expansion that the structural discipline prevents from accumulating undisciplined work.
+
+- **The 4-tier council apparatus bridges them.** Both Claude Code and Codex subagents operate inside the same named-persona deliberation discipline. T1 working groups happen freely; T2 inner-skunkworks deliberations are bounded at ≤3/day; T3 full grand councils at ≤3/week; T4 symposia at ≤2/month. Operator-frontier-override is documented at every tier per the mission-alignment binding directive — rigor yields when the mission requires faster cadence.
+
+The combination accelerates engineering velocity substantially: Claude Code drives the primary work; Codex provides independent adversarial review and bug-class surfacing; subagents enable scope expansion; the canonical serializer + sister-checkpoint guard + 4-tier council apparatus + ~300 STRICT preflight gates prevent velocity from outrunning structural discipline.
+
+---
+
 ## 4. What this unlocked
 
 A short list of concrete things that came out of the AI-assisted-inverse-steganalysis posture paired with the persona-council methodology:
@@ -105,6 +121,16 @@ The canonical Anthropic persona-vectors paper is research on what the underlying
 - Sister library [`adpena/tac`](https://github.com/adpena/tac) — task-aware compression primitives.
 - Working repo [`adpena/comma-lab`](https://github.com/adpena/comma-lab) — the broader apparatus.
 - [PR #110](https://github.com/commaai/comma_video_compression_challenge/pull/110) — the immediate contest submission this methodology lands into.
+
+---
+
+## 7. Who built this (a brief aside)
+
+A Python developer with around eight years of programming and no formal background in compression, steganalysis, neural representation learning, or comma.ai's research culture. A friend introduced me to comma.ai; I loved the application and the philosophy — open-source hardware and software democratizing self-driving cars, plus the wider mission of tinygrad and openpilot-as-OS-for-robotics and the broader visions of the future. Missed the in-person hackathon; came across the comma video compression challenge; got nerd-sniped the way Quantizr (Jimmy, UCLA CSE/Neuro per the operator-canonical PR #56 lineage attribution) did. Have spent nearly two months obsessed solo-grinding with AI assistance — Claude Code + Codex + subagents as documented above — and learned a substantial amount about the contest's research lineage, the surrounding inverse-steganalysis information space, and the underlying mathematics and geometry.
+
+The persona-council methodology and AI-assisted inverse-steganalysis posture documented here are methodology contributions, not codec contributions. They emerged from the experience of operating against a contest like this as a solo developer with bounded GPU budget and a short calendar — the kind of constraints under which structural discipline, named persona-council deliberation, and AI-assisted mining of the contest's observable information space become load-bearing rather than decorative.
+
+Many thoughts, many open questions, still passionate about discovering and establishing the frontier and doing it in public. The contest itself, comma.ai's mission, Yousfi + Fridrich + their Binghamton DDE Lab research lineage, Quantizr, the prior medal-class PR authors (`@AaronLeslie138` PR #95, `@EthanYangTW` PR #98 / #102, `@BradyMeighan` PR #100, `@SajayR` PR #101, `@rem2` PR #103), the canonical-paper authors named on the council roster, the Anthropic persona-vectors research team whose work the methodology builds on, and the broader ML / compression / steganalysis / robotics research community are the important things here. This memo is one solo-developer-with-AI-assistance methodology disclosure; the methodology is the small humble contribution to a much larger arc.
 
 ---
 
