@@ -20,6 +20,7 @@ from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BY
 
 SCHEMA = "scorer_response_dataset.v1"
 ROW_SCHEMA = "scorer_response_row.v1"
+NULL_BYTE_PRIORITY_SCHEMA = "ll_null_byte_priority_weights.v1"
 TOOL = "tac.optimization.scorer_response_dataset"
 RATE_SCORE_PER_BYTE = 25.0 / CONTEST_UNCOMPRESSED_BYTES
 
@@ -337,7 +338,128 @@ def build_response_dataset(
     }
 
 
-def build_next_probe_plan(dataset: dict[str, Any]) -> dict[str, Any]:
+def build_null_byte_priority_weights(
+    null_byte_matrix: dict[str, Any],
+    *,
+    max_candidates: int = 8,
+    seed_budget_k: int = 16,
+) -> dict[str, Any]:
+    """Turn a null-byte matrix into fail-closed LL sampling priorities.
+
+    The matrix is a routing prior for scorer-response harvest, not score
+    evidence. All emitted rows remain non-promotional by construction.
+    """
+
+    if not isinstance(null_byte_matrix, dict):
+        raise ScorerResponseDatasetError("null-byte matrix must be a JSON object")
+    if max_candidates <= 0:
+        raise ScorerResponseDatasetError("max_candidates must be positive")
+    if seed_budget_k <= 0:
+        raise ScorerResponseDatasetError("seed_budget_k must be positive")
+    if null_byte_matrix.get("schema") != "null_byte_master_gradient_probe_matrix_v1":
+        raise ScorerResponseDatasetError("null-byte matrix schema mismatch")
+    for key in ("score_claim", "promotion_eligible", "rank_or_kill_eligible", "promotable"):
+        if null_byte_matrix.get(key) is not False:
+            raise ScorerResponseDatasetError(f"null-byte matrix {key} must be false")
+    if null_byte_matrix.get("axis_tag") != "[predicted]":
+        raise ScorerResponseDatasetError("null-byte matrix axis_tag must be [predicted]")
+
+    candidates = null_byte_matrix.get("top5_replacement_candidates")
+    if not isinstance(candidates, list) or not candidates:
+        candidates = [
+            row
+            for row in null_byte_matrix.get("per_anchor", [])
+            if isinstance(row, dict) and row.get("status") == "OK"
+        ]
+    if not isinstance(candidates, list):
+        raise ScorerResponseDatasetError("null-byte matrix has no candidate rows")
+
+    priority_rows: list[dict[str, Any]] = []
+    seed_key = f"K={seed_budget_k}"
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        n_null = _as_int(candidate.get("n_null_bytes"))
+        if n_null is None or n_null <= 0:
+            continue
+        if n_null <= seed_budget_k:
+            continue
+        predicted = candidate.get("predicted_delta_s_per_seed_budget")
+        if not isinstance(predicted, dict) or seed_key not in predicted:
+            raise ScorerResponseDatasetError(
+                f"null-byte matrix candidate missing predicted_delta_s_per_seed_budget.{seed_key}"
+            )
+        predicted_delta_s = _as_float(predicted.get(seed_key))
+        if predicted_delta_s is None:
+            raise ScorerResponseDatasetError(
+                f"null-byte matrix candidate has invalid {seed_key} predicted delta"
+            )
+        priority_weight = max(0.0, -predicted_delta_s)
+        if priority_weight <= 0.0:
+            continue
+        priority_rows.append(
+            {
+                "substrate_label": str(candidate.get("substrate_label") or "unknown_substrate"),
+                "scored_archive_sha256": candidate.get("scored_archive_sha256"),
+                "codec_family": candidate.get("codec_family"),
+                "axis": candidate.get("axis"),
+                "anchor_index": candidate.get("anchor_index"),
+                "n_null_bytes": n_null,
+                "null_fraction": _as_float(candidate.get("null_fraction")),
+                "seed_budget_k": seed_budget_k,
+                "predicted_delta_s": predicted_delta_s,
+                "priority_weight": priority_weight,
+                "priority_weight_units": "absolute_predicted_score_delta",
+                "priority_weight_source": (
+                    f"null_byte_matrix.predicted_delta_s_per_seed_budget.{seed_key}"
+                ),
+                "predicted_delta_s_per_seed_budget": predicted,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+
+    priority_rows.sort(
+        key=lambda row: (
+            -float(row["priority_weight"]),
+            -int(row["n_null_bytes"]),
+            str(row["substrate_label"]),
+            str(row.get("scored_archive_sha256")),
+        )
+    )
+    priority_rows = priority_rows[:max_candidates]
+    total_weight = sum(float(row["priority_weight"]) for row in priority_rows)
+    for rank, row in enumerate(priority_rows, start=1):
+        row["rank"] = rank
+        row["ll_sampling_weight"] = (
+            float(row["priority_weight"]) / total_weight if total_weight > 0.0 else 0.0
+        )
+
+    return {
+        "schema": NULL_BYTE_PRIORITY_SCHEMA,
+        "source_schema": null_byte_matrix.get("schema"),
+        "producer": TOOL,
+        "weighting_method": "absolute_predicted_score_delta_for_selected_seed_budget",
+        "seed_budget_k": seed_budget_k,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "summary": {
+            "candidate_count": len(priority_rows),
+            "source_n_anchors_probed_ok": null_byte_matrix.get("n_anchors_probed_ok"),
+            "max_candidates": max_candidates,
+        },
+        "priority_rows": priority_rows,
+    }
+
+
+def build_next_probe_plan(
+    dataset: dict[str, Any],
+    *,
+    null_byte_matrix: dict[str, Any] | None = None,
+    null_byte_seed_budget_k: int = 16,
+) -> dict[str, Any]:
     """Build a deterministic LL next-probe plan from response economics."""
 
     rows = dataset.get("rows")
@@ -424,6 +546,34 @@ def build_next_probe_plan(dataset: dict[str, Any]) -> dict[str, Any]:
             "acceptance_gate": ">=50 rows with at least two families containing held-out folds 0..4",
         },
     ]
+    null_byte_priority_weights = None
+    if null_byte_matrix is not None:
+        null_byte_priority_weights = build_null_byte_priority_weights(
+            null_byte_matrix,
+            seed_budget_k=null_byte_seed_budget_k,
+        )
+        for probe in probes:
+            probe["priority"] = int(probe["priority"]) + 1
+        probes.insert(
+            0,
+            {
+                "probe_id": "ll_null_byte_procedural_codebook_candidates",
+                "priority": 1,
+                "class": "surrogate_training_data",
+                "rationale": (
+                    "Use the null-byte master-gradient matrix as the next LL "
+                    "training-data harvest prior; highest null-byte budgets get "
+                    "sampled first while remaining fail-closed routing signals."
+                ),
+                "input_rows": [],
+                "null_byte_priority_rows": null_byte_priority_weights["priority_rows"],
+                "acceptance_gate": (
+                    "typed CandidateModificationSpec + byte-consumption/no-op proof "
+                    "+ exact contest eval before any score claim"
+                ),
+            },
+        )
+
     return {
         "schema": "ll_scorer_response_next_probe_plan.v1",
         "producer": TOOL,
@@ -434,6 +584,7 @@ def build_next_probe_plan(dataset: dict[str, Any]) -> dict[str, Any]:
         "best_total_row": best_total,
         "best_scorer_row": best_scorer,
         "best_byte_budget_margin_row": best_margin,
+        "null_byte_priority_weights": null_byte_priority_weights,
         "prohibitions": prohibitions,
         "probes": probes,
     }
@@ -586,9 +737,21 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
         f"- Best scorer row: `{plan.get('best_scorer_row')}`",
         f"- Best byte-budget margin row: `{plan.get('best_byte_budget_margin_row')}`",
         "",
-        "## Prohibitions",
-        "",
     ]
+    null_priority = plan.get("null_byte_priority_weights")
+    if isinstance(null_priority, dict):
+        lines.extend(["## Null-Byte Matrix Priority", ""])
+        for row in null_priority.get("priority_rows", [])[:8]:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                "- "
+                f"P{row.get('rank')} `{row.get('substrate_label')}` "
+                f"null_bytes={row.get('n_null_bytes')} "
+                f"weight={float(row.get('ll_sampling_weight', 0.0)):.6g}"
+            )
+        lines.append("")
+    lines.extend(["## Prohibitions", ""])
     for item in plan.get("prohibitions", []):
         lines.append(f"- `{item['rule']}`: {item['reason']}")
     lines.extend(["", "## Probes", ""])

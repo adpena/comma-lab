@@ -7,6 +7,7 @@ boundary cases.
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -109,6 +110,117 @@ def test_consume_candidate_surfaces_substrate_metadata() -> None:
     assert row["n_codebook_bytes"] == 4096
     assert row["k_seed_bytes"] == 32
     assert row["generator_kind"] == "pcg64"
+
+
+def test_consume_candidate_wires_per_frame_seed_budget_allocation() -> None:
+    """Procedural-codebook consumer delegates frame ordering to per-frame consumer."""
+    row = M.consume_candidate(
+        {
+            "procedural_codebook_savings_candidate": {
+                "substrate_id": "frame_local_seed_candidate",
+                "n_codebook_bytes": 4096,
+                "k_seed_bytes": 8,
+                "generator_kind": "pcg64",
+                "affected_frame_indices": [1, 3],
+            },
+            "per_frame_decomposition": {
+                "topology": "non_overlapping",
+                "n_pairs": 2,
+                "n_frames": 4,
+                "top_frames": [
+                    {"rank": 1, "frame_index": 1, "total_l1": 3.0},
+                    {"rank": 2, "frame_index": 3, "total_l1": 1.0},
+                ],
+            },
+        }
+    )
+
+    allocation = row["per_frame_seed_budget_allocation"]
+    assert row["per_frame_sensitivity_signal_kind"] == "per_frame_sensitivity_routing"
+    assert allocation["schema"] == "procedural_codebook_seed_budget_allocation_v1"
+    assert allocation["allocation_status"] == "allocated"
+    assert allocation["score_claim"] is False
+    assert allocation["promotion_eligible"] is False
+    assert allocation["recommended_k_seed_bytes"] == 8
+    assert allocation["allocation"][0]["frame_index"] == 1
+    assert allocation["allocation"][0]["seed_budget_hint_bytes"] == 6
+    assert allocation["allocation"][1]["frame_index"] == 3
+    assert allocation["allocation"][1]["seed_budget_hint_bytes"] == 2
+
+
+def test_consume_candidate_uses_per_frame_allocation_when_k_seed_missing() -> None:
+    row = M.consume_candidate(
+        {
+            "procedural_codebook_savings_candidate": {
+                "substrate_id": "frame_local_seed_candidate",
+                "n_codebook_bytes": 4096,
+                "affected_frame_indices": [1, 3],
+            },
+            "per_frame_decomposition": {
+                "topology": "non_overlapping",
+                "n_pairs": 2,
+                "n_frames": 4,
+                "top_frames": [
+                    {"rank": 1, "frame_index": 1, "total_l1": 3.0},
+                    {"rank": 2, "frame_index": 3, "total_l1": 1.0},
+                ],
+            },
+        }
+    )
+
+    assert row["consumer_signal_kind"] == "procedural_codebook_savings_routing"
+    assert row["k_seed_bytes"] == 32
+    assert row["bytes_saved"] == 4064
+    assert row["per_frame_seed_budget_allocation"]["allocation_status"] == "allocated"
+
+
+def test_consume_candidate_missing_frame_scope_fails_closed_for_allocation() -> None:
+    row = M.consume_candidate(
+        {
+            "procedural_codebook_savings_candidate": {
+                "substrate_id": "global_seed_candidate",
+                "n_codebook_bytes": 4096,
+                "k_seed_bytes": 32,
+            },
+            "per_frame_decomposition": {
+                "topology": "non_overlapping",
+                "n_pairs": 2,
+                "n_frames": 4,
+                "top_frames": [{"rank": 1, "frame_index": 1, "total_l1": 3.0}],
+            },
+        }
+    )
+
+    allocation = row["per_frame_seed_budget_allocation"]
+    assert row["consumer_signal_kind"] == "procedural_codebook_savings_routing"
+    assert allocation["allocation_status"] == "missing_frame_scope"
+    assert allocation["score_claim"] is False
+
+
+def test_consume_candidate_accepts_per_frame_json_path(tmp_path) -> None:
+    payload = {
+        "topology": "non_overlapping",
+        "n_pairs": 2,
+        "n_frames": 4,
+        "top_frames": [{"rank": 1, "frame_index": 1, "total_l1": 3.0}],
+    }
+    path = tmp_path / "per_frame.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    row = M.consume_candidate(
+        {
+            "procedural_codebook_savings_candidate": {
+                "substrate_id": "json_path_candidate",
+                "n_codebook_bytes": 4096,
+                "k_seed_bytes": 16,
+                "affected_frame_indices": [1],
+            },
+            "per_frame_decomposition_json": str(path),
+        }
+    )
+
+    assert row["per_frame_sensitivity_signal_kind"] == "per_frame_sensitivity_routing"
+    assert row["per_frame_seed_budget_allocation"]["allocation_status"] == "allocated"
 
 
 def test_consume_candidate_includes_compliance_citation_chain() -> None:

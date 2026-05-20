@@ -7,6 +7,8 @@ from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BY
 from tac.optimization.scorer_response_dataset import (
     RATE_SCORE_PER_BYTE,
     ResponseBaseline,
+    ScorerResponseDatasetError,
+    build_null_byte_priority_weights,
     build_next_probe_plan,
     build_response_dataset,
     render_next_probe_plan_markdown,
@@ -148,6 +150,92 @@ def test_next_probe_plan_blocks_overbudget_coordinate_residual(tmp_path) -> None
     assert plan["prohibitions"][0]["rule"] == "do_not_widen_coordinate_sparse_residual_sidecar"
     assert plan["probes"][0]["probe_id"] == "ll_byte_neutral_decoder_q_response_model"
     assert "Next-Probe" in render_next_probe_plan_markdown(plan)
+
+
+def _null_byte_matrix() -> dict:
+    return {
+        "schema": "null_byte_master_gradient_probe_matrix_v1",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "axis_tag": "[predicted]",
+        "n_anchors_probed_ok": 2,
+        "top5_replacement_candidates": [
+            {
+                "substrate_label": "smaller_null_budget",
+                "codec_family": "hnerv_family",
+                "scored_archive_sha256": "b" * 64,
+                "axis": "[contest-CUDA]",
+                "anchor_index": 2,
+                "n_null_bytes": 128,
+                "null_fraction": 0.1,
+                "predicted_delta_s_per_seed_budget": {"K=16": -0.0001},
+            },
+            {
+                "substrate_label": "larger_null_budget",
+                "codec_family": "hnerv_family",
+                "scored_archive_sha256": "a" * 64,
+                "axis": "[contest-CUDA]",
+                "anchor_index": 1,
+                "n_null_bytes": 256,
+                "null_fraction": 0.2,
+                "predicted_delta_s_per_seed_budget": {"K=16": -0.0002},
+            },
+        ],
+    }
+
+
+def test_null_byte_priority_weights_sort_by_predicted_delta() -> None:
+    weights = build_null_byte_priority_weights(_null_byte_matrix())
+
+    assert weights["score_claim"] is False
+    assert weights["summary"]["candidate_count"] == 2
+    assert weights["priority_rows"][0]["substrate_label"] == "larger_null_budget"
+    assert weights["priority_rows"][0]["priority_weight"] == 0.0002
+    assert weights["priority_rows"][0]["priority_weight_units"] == "absolute_predicted_score_delta"
+    assert 0.0 < weights["priority_rows"][0]["ll_sampling_weight"] < 1.0
+
+
+def test_next_probe_plan_consumes_null_byte_matrix_as_first_probe(tmp_path) -> None:
+    path = tmp_path / "overbudget.json"
+    score = 1.0 + RATE_SCORE_PER_BYTE
+    payload = {
+        "schema": "scorer_gradient_sparse_residual_smoke.v1",
+        "candidate": {"advisory_eval": _advisory(score, 103, 0.001, 0.01)},
+        "authority": {"score_claim": False},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    dataset = build_response_dataset([path], baseline=ResponseBaseline(score=1.0, archive_bytes=100))
+
+    plan = build_next_probe_plan(dataset, null_byte_matrix=_null_byte_matrix())
+
+    assert plan["null_byte_priority_weights"]["schema"] == "ll_null_byte_priority_weights.v1"
+    assert plan["probes"][0]["probe_id"] == "ll_null_byte_procedural_codebook_candidates"
+    assert plan["probes"][0]["priority"] == 1
+    assert plan["probes"][1]["probe_id"] == "ll_byte_neutral_decoder_q_response_model"
+    assert "CandidateModificationSpec" in plan["probes"][0]["acceptance_gate"]
+    assert "Null-Byte Matrix Priority" in render_next_probe_plan_markdown(plan)
+
+
+def test_null_byte_matrix_fail_closed_on_promotional_or_missing_k() -> None:
+    bad = _null_byte_matrix()
+    bad["score_claim"] = True
+    try:
+        build_null_byte_priority_weights(bad)
+    except ScorerResponseDatasetError as exc:
+        assert "score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected promotional matrix rejection")
+
+    missing_k = _null_byte_matrix()
+    missing_k["top5_replacement_candidates"][0]["predicted_delta_s_per_seed_budget"] = {"K=32": -0.1}
+    try:
+        build_null_byte_priority_weights(missing_k)
+    except ScorerResponseDatasetError as exc:
+        assert "K=16" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected missing K rejection")
 
 
 def test_build_response_dataset_skips_non_advisory_rows(tmp_path) -> None:

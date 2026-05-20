@@ -27,6 +27,20 @@ from tac.optimization.scorer_response_dataset import (  # noqa: E402
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, required=True)
+    parser.add_argument(
+        "--null-byte-matrix",
+        type=Path,
+        help=(
+            "Optional tools/probe_null_byte_master_gradient_matrix.py JSON output "
+            "to weight the next LL surrogate training-data harvest."
+        ),
+    )
+    parser.add_argument(
+        "--null-byte-seed-budget-k",
+        type=int,
+        default=16,
+        help="Seed budget key K to read from null-byte matrix predicted_delta_s_per_seed_budget.",
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
     return parser.parse_args(argv)
@@ -36,7 +50,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         dataset = json.loads(args.dataset.read_text(encoding="utf-8"))
-        plan = build_next_probe_plan(dataset)
+        null_byte_matrix = (
+            None
+            if args.null_byte_matrix is None
+            else json.loads(args.null_byte_matrix.read_text(encoding="utf-8"))
+        )
+        plan = build_next_probe_plan(
+            dataset,
+            null_byte_matrix=null_byte_matrix,
+            null_byte_seed_budget_k=args.null_byte_seed_budget_k,
+        )
     except (OSError, ValueError, ScorerResponseDatasetError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
         return 2

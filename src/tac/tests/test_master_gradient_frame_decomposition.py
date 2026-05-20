@@ -97,6 +97,9 @@ def test_json_and_markdown_outputs_are_operator_safe() -> None:
     md = render_markdown(payload)
 
     assert "frame_axis_l1" not in ready
+    assert ready["schema"] == "per_frame_decomposition_segnet_per_frame_posenet_per_pair_v1"
+    for key in ("frame_index", "rank", "total_l1", "seg_l1", "pose_l1", "rate_l1"):
+        assert key in ready["top_frames"][0]
     assert "score_claim" in encoded
     assert "Master-Gradient Per-Frame Decomposition" in md
 

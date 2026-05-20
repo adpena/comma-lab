@@ -498,6 +498,7 @@ class CandidateRow:
     score_claim: bool = False
     promotion_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
+    consumer_payload: dict[str, Any] = field(default_factory=dict)
 
     def eig_per_dollar(self) -> float:
         cost = _require_candidate_planning_cost(self)
@@ -3690,6 +3691,20 @@ def _candidate_has_effective_negative_delta_for_race_mode(
     return delta < 0.0
 
 
+def _coerce_consumer_payload(raw: Mapping[str, Any], *, context: str) -> dict[str, Any]:
+    """Return bounded consumer-only payload passthrough fields."""
+
+    value = raw.get("consumer_payload")
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{context}: consumer_payload must be a JSON object")
+    for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+        if value.get(key) is True:
+            raise ValueError(f"{context}: consumer_payload.{key}=true is forbidden")
+    return dict(value)
+
+
 def _candidate_row_from_raw(
     raw: dict[str, Any],
     *,
@@ -3841,6 +3856,7 @@ def _candidate_row_from_raw(
             if allow_dispatch_authority_flags
             else False
         ),
+        consumer_payload=_coerce_consumer_payload(raw, context=context),
     )
 
 
@@ -4208,6 +4224,7 @@ def load_candidates_from_substrate_composition_ranking(
             score_claim=False,
             promotion_eligible=False,
             ready_for_exact_eval_dispatch=False,
+            consumer_payload=_coerce_consumer_payload(raw, context=context),
         ))
     return rows
 
@@ -6440,6 +6457,9 @@ def _invoke_consumer_safely(
             "estimated_dispatch_cost_usd": candidate.estimated_dispatch_cost_usd,
             "blockers": list(candidate.blockers),
         }
+        for key, value in candidate.consumer_payload.items():
+            if key not in candidate_payload:
+                candidate_payload[key] = value
         contribution = module.consume_candidate(candidate_payload)
         if not isinstance(contribution, Mapping):
             return {

@@ -1,0 +1,84 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from tools.cathedral_autopilot_autonomous_loop import (
+    CandidateRow,
+    _invoke_consumer_safely,
+    load_candidates_from_jsonl,
+)
+
+
+class _PayloadEchoConsumer:
+    __name__ = "payload_echo_consumer"
+    CONSUMER_NAME = "payload_echo_consumer"
+    CONSUMER_VERSION = "0.1.0"
+
+    @staticmethod
+    def consume_candidate(payload: dict) -> dict:
+        return {
+            "predicted_delta_adjustment": 0.0,
+            "rationale": (
+                f"procedural={isinstance(payload.get('procedural_codebook_savings_candidate'), dict)} "
+                f"per_frame={isinstance(payload.get('per_frame_decomposition'), dict)}"
+            ),
+            "axis_tag": "[predicted]",
+            "promotable": False,
+            "confidence": 0.0,
+        }
+
+
+def _consumer_payload() -> dict:
+    return {
+        "procedural_codebook_savings_candidate": {
+            "substrate_id": "test",
+            "n_codebook_bytes": 4096,
+            "k_seed_bytes": 16,
+            "affected_frame_indices": [1],
+        },
+        "per_frame_decomposition": {
+            "topology": "non_overlapping",
+            "n_pairs": 1,
+            "n_frames": 2,
+            "top_frames": [{"rank": 1, "frame_index": 1, "total_l1": 1.0}],
+        },
+    }
+
+
+def test_candidate_row_consumer_payload_reaches_consumer() -> None:
+    candidate = CandidateRow(
+        candidate_id="c",
+        family="test",
+        predicted_score_delta=0.0,
+        expected_information_gain=0.0,
+        estimated_dispatch_cost_usd=0.0,
+        consumer_payload=_consumer_payload(),
+    )
+
+    out = _invoke_consumer_safely(_PayloadEchoConsumer, candidate)
+
+    assert "error" not in out
+    assert out["rationale"] == "procedural=True per_frame=True"
+
+
+def test_load_candidates_from_jsonl_preserves_consumer_payload(tmp_path: Path) -> None:
+    path = tmp_path / "candidates.jsonl"
+    row = {
+        "candidate_id": "c",
+        "family": "test",
+        "predicted_score_delta": 0.0,
+        "expected_information_gain": 0.0,
+        "estimated_dispatch_cost_usd": 0.01,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "consumer_payload": _consumer_payload(),
+    }
+    path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+
+    candidates = load_candidates_from_jsonl(path)
+
+    assert candidates[0].consumer_payload["procedural_codebook_savings_candidate"][
+        "affected_frame_indices"
+    ] == [1]

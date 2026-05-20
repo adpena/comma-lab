@@ -104,6 +104,24 @@ def test_probe_null_byte_master_gradient_matrix_cli(tmp_path: Path) -> None:
     assert "probed_ok=1" in completed.stderr
     matrix = json.loads((output_dir / "null_byte_matrix.json").read_text(encoding="utf-8"))
     assert matrix["n_anchors_probed_ok"] == 1
+    assert matrix["score_claim"] is False
+    assert matrix["promotion_eligible"] is False
+    assert matrix["rank_or_kill_eligible"] is False
+    assert matrix["promotable"] is False
+    assert matrix["axis_tag"] == "[predicted]"
+    top = matrix["top5_replacement_candidates"][0]
+    for key in (
+        "substrate_label",
+        "codec_family",
+        "scored_archive_sha256",
+        "axis",
+        "anchor_index",
+        "n_null_bytes",
+        "null_fraction",
+        "predicted_delta_s_per_seed_budget",
+    ):
+        assert key in top
+    assert "K=16" in top["predicted_delta_s_per_seed_budget"]
     assert matrix["provenance"]["score_claim"] is False
     assert (output_dir / "null_byte_matrix.md").read_text(encoding="utf-8").startswith(
         "# Null-byte master-gradient probe matrix"

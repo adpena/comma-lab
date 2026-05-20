@@ -71,6 +71,13 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from tac.cathedral.consumer_contract import HookNumber
+from tac.cathedral_consumers.per_frame_sensitivity_consumer import (
+    consume_candidate as consume_per_frame_sensitivity_candidate,
+)
+from tac.procedural_codebook_generator.seed_budget_allocation import (
+    DEFAULT_SEED_BUDGET_CANDIDATES,
+    allocate_seed_budget_from_frame_sensitivity,
+)
 
 
 CONSUMER_NAME = "procedural_codebook_savings_consumer"
@@ -200,6 +207,29 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         return _no_signal(
             f"payload missing/invalid n_codebook_bytes (got {n_codebook_bytes!r})"
         )
+    per_frame_signal = consume_per_frame_sensitivity_candidate(candidate)
+    per_frame_allocation = None
+    if per_frame_signal.get("consumer_signal_kind") == "per_frame_sensitivity_routing":
+        seed_budget_candidates = DEFAULT_SEED_BUDGET_CANDIDATES
+        if isinstance(k_seed_bytes, int) and k_seed_bytes > 0:
+            seed_budget_candidates = tuple(
+                sorted({k_seed_bytes, *DEFAULT_SEED_BUDGET_CANDIDATES})
+            )
+        per_frame_allocation = allocate_seed_budget_from_frame_sensitivity(
+            procedural_candidate=payload,
+            per_frame_decomposition=per_frame_signal,
+            seed_budget_candidates=seed_budget_candidates,
+            default_seed_bytes=(
+                k_seed_bytes
+                if isinstance(k_seed_bytes, int) and k_seed_bytes > 0
+                else 32
+            ),
+        )
+        if not isinstance(k_seed_bytes, int) or k_seed_bytes <= 0:
+            recommended = per_frame_allocation.get("recommended_k_seed_bytes")
+            if isinstance(recommended, int) and recommended > 0:
+                k_seed_bytes = recommended
+
     if not isinstance(k_seed_bytes, int) or k_seed_bytes <= 0:
         return _no_signal(
             f"payload missing/invalid k_seed_bytes (got {k_seed_bytes!r})"
@@ -215,6 +245,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         f"(generator={generator_kind}); predicted_delta_s="
         f"{savings['predicted_delta_s']:+.6f}; "
         f"actionable={savings['actionable']}; "
+        f"per_frame_seed_budget_allocation={'available' if per_frame_allocation else 'absent'}; "
         "promotion gated by Catalog #325 + #324 + #272 [predicted]"
     )
 
@@ -237,6 +268,10 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "predicted_delta_s_per_canonical_equation": savings["predicted_delta_s"],
         "actionable_above_min_bytes_saved_threshold": savings["actionable"],
         "generator_kind": generator_kind,
+        "per_frame_sensitivity_signal_kind": per_frame_signal.get(
+            "consumer_signal_kind"
+        ),
+        "per_frame_seed_budget_allocation": per_frame_allocation,
         # Cite-chain (Catalog #305 observability surface)
         "canonical_equation_id": savings["canonical_equation_id"],
         "canonical_producer": "tac.procedural_codebook_generator.derive_codebook_from_seed",

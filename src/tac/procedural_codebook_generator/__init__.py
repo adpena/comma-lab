@@ -33,6 +33,12 @@ from .seed_derived_codebook import (
     derive_codebook_from_seed,
     verify_codebook_from_seed,
 )
+from .seed_budget_allocation import (
+    DEFAULT_SEED_BUDGET_CANDIDATES,
+    FRAME_SCOPE_KEYS,
+    SeedBudgetAllocationError,
+    allocate_seed_budget_from_frame_sensitivity,
+)
 from .weight_derived_codebook_generator import (
     derive_codebook_from_archive_bytes,
     freeze_source_member_sha256,
@@ -42,10 +48,13 @@ from .weight_derived_codebook_generator import (
 __all__ = [
     "AuthorityMode",
     "DEFAULT_GENERATOR_KIND",
+    "DEFAULT_SEED_BUDGET_CANDIDATES",
+    "FRAME_SCOPE_KEYS",
     "LiteralPayloadKind",
     "MAX_OUTPUT_BYTES",
     "NullSpanCandidate",
     "ProceduralCodebookGeneratorError",
+    "SeedBudgetAllocationError",
     "SUPPORTED_GENERATOR_KINDS",
     "SeedCarrier",
     "build_null_seed_replacement_plan",
@@ -58,6 +67,7 @@ __all__ = [
     "emit_seed",
     "expand_seed_to_codebook",
     "freeze_source_member_sha256",
+    "allocate_seed_budget_from_frame_sensitivity",
     "render_null_seed_replacement_markdown",
     "verify_codebook_from_seed",
     "verify_generator_seed_mutation_smoke",
