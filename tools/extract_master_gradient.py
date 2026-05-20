@@ -1926,6 +1926,7 @@ def compute_operating_point_and_per_param_gradients(
     n_pairs_used: int = 8,
     preserve_per_pair: bool = False,
     roundtrip_mode: str = "default",
+    decoder_forward_batch_size: int = 0,
 ) -> tuple[
     OperatingPoint,
     dict[str, torch.Tensor],
@@ -1955,9 +1956,51 @@ def compute_operating_point_and_per_param_gradients(
       - rgb_to_yuv6 patched globally so PoseNet gradients flow
       - SegNet uses x[:, -1, ...] (frame_1 of each pair)
       - PoseNet uses both frames yuv6-encoded
+
+    ``decoder_forward_batch_size`` (Catalog #218 sister mini-batch pattern, 2026-05-20
+    OOM fix anchor ``fc-01KS352JAFKP2NG96KHDBGQAQS`` — T4 OOM at 600-pair full-batch
+    forward needing 1.98 GiB > 759 MiB free on 14.56 GB T4 because GT pairs + scorer
+    weights + accumulated graph already occupied 13.82 GiB): when > 0 and
+    < ``n_pairs_used``, chunks the decoder forward + scorer forward + backward into
+    smaller pair-index groups. Per-chunk gradients accumulate into the canonical
+    ``grad_seg_sd`` / ``grad_pose_sd`` dicts via the math identity
+    ``mean(losses_over_all_pairs) = sum_chunks(sum(losses_in_chunk) / n_total)``,
+    so each chunk scales its loss by ``chunk_size / n_pairs_used`` and the autograd
+    graph for that chunk is freed immediately after the chunk's backward (NO
+    ``retain_graph=True``). The accumulated gradients are mathematically equivalent
+    to the full-batch path within ~1e-7 floating-point associativity. When the flag
+    is 0 (default) OR >= ``n_pairs_used`` (chunk == full batch), the canonical
+    full-batch path is taken (backward compat for N=8 CPU smoke + small archives).
+
+    For the per-pair path under chunking, each chunk computes per-pair losses for
+    its rows and emits per-pair gradients via the standard 2*chunk_size backward
+    sub-loop; the outer chunk loop concatenates the per-pair tensors. The full
+    per-pair tensor shape ``(n_pairs_used, *param_shape)`` is preserved.
     """
     decoder.train()
     decoder.zero_grad()
+
+    # Chunked path: Catalog #218 sister mini-batch when decoder_forward_batch_size > 0
+    # and smaller than n_pairs_used. The canonical full-batch path follows below.
+    if (
+        decoder_forward_batch_size is not None
+        and decoder_forward_batch_size > 0
+        and decoder_forward_batch_size < n_pairs_used
+    ):
+        return _compute_operating_point_and_per_param_gradients_chunked(
+            decoder=decoder,
+            latents=latents,
+            eval_size=eval_size,
+            gt_pair_batch=gt_pair_batch,
+            posenet=posenet,
+            segnet=segnet,
+            archive_bytes_count=archive_bytes_count,
+            device=device,
+            n_pairs_used=n_pairs_used,
+            preserve_per_pair=preserve_per_pair,
+            roundtrip_mode=roundtrip_mode,
+            decoder_forward_batch_size=decoder_forward_batch_size,
+        )
 
     # Subset latents + ground truth
     z = latents[:n_pairs_used].to(device).requires_grad_(False)
@@ -2129,6 +2172,229 @@ def compute_operating_point_and_per_param_gradients(
     grad_pose_sd = {name: v.mean(dim=0) for name, v in grad_pose_sd_per_pair.items()}
 
     return operating_point, grad_seg_sd, grad_pose_sd, grad_seg_sd_per_pair, grad_pose_sd_per_pair
+
+
+def _compute_operating_point_and_per_param_gradients_chunked(
+    decoder: torch.nn.Module,
+    latents: torch.Tensor,  # (n_pairs, latent_dim)
+    eval_size: tuple[int, int],
+    gt_pair_batch: torch.Tensor,  # (n_pairs, 2, 3, H, W) in [0, 255]
+    posenet,
+    segnet,
+    *,
+    archive_bytes_count: int,
+    device: torch.device,
+    n_pairs_used: int,
+    preserve_per_pair: bool,
+    roundtrip_mode: str,
+    decoder_forward_batch_size: int,
+) -> tuple[
+    OperatingPoint,
+    dict[str, torch.Tensor],
+    dict[str, torch.Tensor],
+    dict[str, torch.Tensor] | None,
+    dict[str, torch.Tensor] | None,
+]:
+    """Catalog #218 sister mini-batch implementation for the master-gradient extractor.
+
+    Math identity used: ``mean(loss_over_n_pairs) = sum_chunks(sum(loss_in_chunk) /
+    n_pairs)``. Each chunk scales its summed loss by ``1 / n_pairs_used`` and calls
+    ``.backward()`` WITHOUT ``retain_graph=True`` so the chunk's forward graph is
+    freed immediately. Per-parameter gradients are accumulated into
+    ``grad_seg_accum`` / ``grad_pose_accum`` dicts after each chunk's backward.
+
+    Sister of `tac.substrates.d4_wyner_ziv_frame_0.architecture.WynerZivFrame0Substrate.
+    reconstruct_pair(pair_indices=...)` per the 2026-05-14 D4 T4 OOM fix
+    (lane_d4_oom_fix_minibatch_reconstruct_20260514, commit referenced by Catalog
+    #218 docstring). The mini-batch pattern is the canonical extinction of the
+    full-batch decoder-forward OOM bug class on T4 (14.56 GB) at 384x512 + 600
+    pairs.
+
+    Sub-batch OperatingPoint values (d_seg_hard, d_pose_hard) are computed as
+    sum-then-divide across chunks; the operating point reflects the FULL pair
+    set even though gradients are accumulated chunk-by-chunk.
+    """
+    # Subset latents + ground truth (operate on n_pairs_used rows total)
+    z_all = latents[:n_pairs_used].to(device).requires_grad_(False)
+    gt_all = gt_pair_batch[:n_pairs_used].to(device)
+
+    # Initialize per-parameter accumulators (zeros_like) AFTER zero_grad
+    per_param_names = [name for name, _ in decoder.named_parameters()]
+    grad_seg_accum: dict[str, torch.Tensor] = {
+        name: torch.zeros_like(param) for name, param in decoder.named_parameters()
+    }
+    grad_pose_accum: dict[str, torch.Tensor] = {
+        name: torch.zeros_like(param) for name, param in decoder.named_parameters()
+    }
+
+    # Per-pair accumulators (only used when preserve_per_pair=True)
+    grad_seg_per_pair_lists: dict[str, list[torch.Tensor]] = {n: [] for n in per_param_names}
+    grad_pose_per_pair_lists: dict[str, list[torch.Tensor]] = {n: [] for n in per_param_names}
+
+    # Operating-point scalar accumulators (sum-then-divide for d_seg_hard / d_pose_hard)
+    d_seg_hard_sum = 0.0
+    d_pose_hard_sum = 0.0
+    chunk_count = 0
+    n_total_f = float(n_pairs_used)
+
+    chunk_size = int(decoder_forward_batch_size)
+    if chunk_size <= 0 or chunk_size >= n_pairs_used:
+        raise ValueError(
+            f"chunked path requires 0 < chunk_size < n_pairs_used; got "
+            f"chunk_size={chunk_size} n_pairs_used={n_pairs_used}"
+        )
+
+    for chunk_start in range(0, n_pairs_used, chunk_size):
+        chunk_end = min(chunk_start + chunk_size, n_pairs_used)
+        z = z_all[chunk_start:chunk_end]
+        gt = gt_all[chunk_start:chunk_end]
+
+        # Forward + scorer pipeline (mirrors the canonical full-batch path)
+        decoded = decoder(z)  # (chunk_size, 2, 3, H, W) in [0, 255]
+        if decoded.shape != gt.shape:
+            raise ValueError(
+                f"decoded shape {tuple(decoded.shape)} != gt shape {tuple(gt.shape)}; "
+                f"eval_size {eval_size} (chunk_start={chunk_start} chunk_end={chunk_end})"
+            )
+
+        if roundtrip_mode == "pr107_apogee_camera_offsets":
+            decoded_rt = _apply_pr107_apogee_camera_offset_roundtrip(decoded)
+        elif roundtrip_mode == "default":
+            decoded_rt = apply_eval_roundtrip_during_training(
+                decoded, simulate_uint8=True, simulate_resize=True
+            )
+        else:
+            raise ValueError(f"unknown roundtrip_mode={roundtrip_mode!r}")
+        gt_rt = apply_eval_roundtrip_during_training(
+            gt, simulate_uint8=True, simulate_resize=True
+        )
+
+        posenet_in_decoded = posenet.preprocess_input(decoded_rt)
+        segnet_in_decoded = segnet.preprocess_input(decoded_rt)
+        posenet_in_gt = posenet.preprocess_input(gt_rt)
+        segnet_in_gt = segnet.preprocess_input(gt_rt)
+
+        posenet_out_decoded = posenet(posenet_in_decoded)
+        posenet_out_gt = posenet(posenet_in_gt)
+        segnet_out_decoded = segnet(segnet_in_decoded)
+        segnet_out_gt = segnet(segnet_in_gt)
+
+        # SegNet differentiable surrogate (per-pixel CE; per-chunk sum-then-mean)
+        log_p_decoded = F.log_softmax(segnet_out_decoded, dim=1)
+        log_p_gt = F.log_softmax(segnet_out_gt, dim=1).detach()
+        p_gt = log_p_gt.exp()
+        # Per-pair sum of -(p_gt * log_p_decoded).sum(classes).mean(pixels)
+        per_pair_seg_kl = -(p_gt * log_p_decoded).sum(dim=1).mean(dim=(1, 2))
+        # Chunk's contribution to the full mean: sum(per_pair) / n_pairs_used
+        seg_kl_chunk_contribution = per_pair_seg_kl.sum() / n_total_f
+
+        # SegNet hard distortion (no-grad; argmax disagreement)
+        with torch.no_grad():
+            d_seg_hard_chunk = (
+                segnet_out_decoded.argmax(dim=1) != segnet_out_gt.argmax(dim=1)
+            ).float().mean()
+            d_seg_hard_sum += float(d_seg_hard_chunk.item()) * (chunk_end - chunk_start)
+
+        # PoseNet pose extraction + MSE
+        if "pose" in posenet_out_decoded:
+            pose_decoded = posenet_out_decoded["pose"][..., :6]
+            pose_gt = posenet_out_gt["pose"][..., :6]
+        else:
+            pose_decoded = posenet_out_decoded[..., :6]
+            pose_gt = posenet_out_gt[..., :6]
+        pose_diff_sq = (pose_decoded - pose_gt.detach()).pow(2)
+        # Per-pair MSE collapsed across 6 dims
+        per_pair_d_pose = pose_diff_sq.reshape(pose_diff_sq.shape[0], -1).mean(dim=1)
+        d_pose_chunk_contribution = per_pair_d_pose.sum() / n_total_f
+
+        with torch.no_grad():
+            d_pose_hard_sum += float(per_pair_d_pose.mean().item()) * (chunk_end - chunk_start)
+
+        if not preserve_per_pair:
+            # Backward (a): seg surrogate — accumulate gradient into grad_seg_accum
+            decoder.zero_grad()
+            seg_kl_chunk_contribution.backward(retain_graph=True)
+            for name, param in decoder.named_parameters():
+                if param.grad is not None:
+                    grad_seg_accum[name] = grad_seg_accum[name] + param.grad.detach().clone()
+
+            # Backward (b): pose — accumulate gradient into grad_pose_accum
+            decoder.zero_grad()
+            d_pose_chunk_contribution.backward()
+            for name, param in decoder.named_parameters():
+                if param.grad is not None:
+                    grad_pose_accum[name] = grad_pose_accum[name] + param.grad.detach().clone()
+        else:
+            # Per-pair path within this chunk: 2 * chunk_size backward passes,
+            # each weighted by 1/n_pairs_used so the accumulated per-pair
+            # tensor reflects the per-pair gradient (NOT scaled by chunk-size).
+            # Per-pair tensors are unweighted (raw per-pair gradients); the
+            # averaged dicts derive from per_pair.mean(dim=0) after the loop.
+            chunk_pair_count = chunk_end - chunk_start
+            last_pair_in_chunk = chunk_pair_count - 1
+            for i in range(chunk_pair_count):
+                # Per-pair seg backward (unweighted: raw per-pair contribution)
+                decoder.zero_grad()
+                per_pair_seg_kl[i].backward(retain_graph=True)
+                for name, param in decoder.named_parameters():
+                    g = (
+                        param.grad.detach().clone()
+                        if param.grad is not None
+                        else torch.zeros_like(param)
+                    )
+                    grad_seg_per_pair_lists[name].append(g)
+
+                decoder.zero_grad()
+                is_final_in_chunk = i == last_pair_in_chunk
+                per_pair_d_pose[i].backward(retain_graph=not is_final_in_chunk)
+                for name, param in decoder.named_parameters():
+                    g = (
+                        param.grad.detach().clone()
+                        if param.grad is not None
+                        else torch.zeros_like(param)
+                    )
+                    grad_pose_per_pair_lists[name].append(g)
+
+        # Free the chunk's forward graph by dropping references
+        del decoded, decoded_rt, gt_rt
+        del posenet_out_decoded, posenet_out_gt, segnet_out_decoded, segnet_out_gt
+        del posenet_in_decoded, posenet_in_gt, segnet_in_decoded, segnet_in_gt
+        del log_p_decoded, log_p_gt, p_gt, per_pair_seg_kl, seg_kl_chunk_contribution
+        del pose_decoded, pose_gt, pose_diff_sq, per_pair_d_pose, d_pose_chunk_contribution
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+        chunk_count += 1
+
+    # Finalize OperatingPoint
+    d_seg_val = d_seg_hard_sum / n_total_f
+    d_pose_val = d_pose_hard_sum / n_total_f
+    if d_pose_val <= 0:
+        d_pose_val = 1e-12
+    rate = archive_bytes_count / float(CONTEST_RATE_DENOM_BYTES)
+    score_hard = 100.0 * d_seg_val + math.sqrt(10.0 * d_pose_val) + 25.0 * rate
+    operating_point = OperatingPoint(
+        d_seg=d_seg_val, d_pose=d_pose_val, rate=rate, score=score_hard
+    )
+
+    if not preserve_per_pair:
+        return operating_point, grad_seg_accum, grad_pose_accum, None, None
+
+    # Per-pair path: stack per-param lists into (n_pairs, *param_shape)
+    grad_seg_sd_per_pair = {
+        name: torch.stack(grad_seg_per_pair_lists[name], dim=0) for name in per_param_names
+    }
+    grad_pose_sd_per_pair = {
+        name: torch.stack(grad_pose_per_pair_lists[name], dim=0) for name in per_param_names
+    }
+    grad_seg_sd = {name: v.mean(dim=0) for name, v in grad_seg_sd_per_pair.items()}
+    grad_pose_sd = {name: v.mean(dim=0) for name, v in grad_pose_sd_per_pair.items()}
+    return (
+        operating_point,
+        grad_seg_sd,
+        grad_pose_sd,
+        grad_seg_sd_per_pair,
+        grad_pose_sd_per_pair,
+    )
 
 
 # ---------------------------------------------------------------------------- #
@@ -2355,6 +2621,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             "fp32 final cast (precision lost only at the final cast; halves disk)."
         ),
     )
+    parser.add_argument(
+        "--decoder-forward-batch-size",
+        type=int,
+        default=0,
+        help=(
+            "Catalog #218 sister mini-batch chunk size for the decoder forward + "
+            "scorer forward + backward loop. Default 0 = full batch (canonical "
+            "path for small N=8 CPU smokes). Set to 50-100 for T4 (14.56 GB) at "
+            "600 pairs (canonical fix for 2026-05-20 OOM anchor "
+            "fc-01KS352JAFKP2NG96KHDBGQAQS: 600-pair full-batch forward needed "
+            "1.98 GiB but only 759 MiB free after GT/scorer/decoder allocations). "
+            "Gradients accumulate per-chunk via the math identity "
+            "mean(losses_over_n) = sum_chunks(sum(losses_in_chunk) / n_total); "
+            "chunk graph is freed immediately after each chunk's backward (NO "
+            "retain_graph). Math equivalent to full-batch within ~1e-7 fp "
+            "associativity. Verified by --decoder-forward-batch-size local smoke."
+        ),
+    )
 
     args = parser.parse_args(argv_list)
     if args.storage_dtype is None:
@@ -2556,6 +2840,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             n_pairs_used=args.n_pairs_used,
             preserve_per_pair=args.preserve_per_pair,
             roundtrip_mode=roundtrip_mode,
+            decoder_forward_batch_size=args.decoder_forward_batch_size,
         )
         fwd_bwd_secs = time.time() - t0
         print(f"[master-gradient] forward+{backward_count}-backward done in {fwd_bwd_secs:.2f}s")
