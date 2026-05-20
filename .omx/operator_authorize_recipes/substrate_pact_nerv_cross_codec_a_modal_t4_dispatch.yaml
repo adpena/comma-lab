@@ -1,0 +1,132 @@
+schema_version: 1
+name: substrate_pact_nerv_cross_codec_a_modal_t4_dispatch
+lane_id: lane_pact_nerv_cross_codec_a_l0_scaffold_20260520
+summary: |
+  pact_nerv_cross_codec_a L0 SCAFFOLD diagnostic recipe (Modal T4). NOT
+  DISPATCH-ELIGIBLE: research_only until PACT-NERV-ULTIMATE STAIRCASE
+  Step 16 dispatch operator-gated.
+
+  Literature: Atick-Redlich 1990 cooperative-receiver framing + CROSS-CANDIDATE
+  finding #3 empirical SUPER_ADDITIVE signature (PR101/A1/fec6 <-> PR106
+  per-axis Pearson [-0.094, -0.078]).
+
+  Cross-codec composition: fec6 base codec (Huffman k=16 selector) + Pact-NeRV
+  side-info residual bolt-on. Predicted SUPER_ADDITIVE per
+  cross_codec_orthogonality_predictor_consumer commit 80484241f.
+
+dispatch_enabled: false
+research_only: true
+
+dispatch_blockers:
+  - pact_nerv_ultimate_staircase_step_16_dispatch_operator_gated_per_catalog_325
+  - full_main_raises_NotImplementedError_per_catalog_240
+  - per_substrate_council_symposium_proceed_unconditional_required_per_catalog_315
+  - cross_codec_composition_l1_learned_gate_pending_atick_redlich_1990
+  - score_aware_lagrangian_wire_in_pending_for_full_path
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 12
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 100
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Post-training Tier-C density re-measurement after Stage 1 dispatch
+  operator-gated per Catalog #324. Predicted SUPER_ADDITIVE composition_alpha
+  derives from CROSS-CANDIDATE finding #3 empirical anchor; absolute magnitude
+  pending paired CPU+CUDA validation per Catalog #322.
+
+predicted_score_target: "unknown_l0_scaffold_pending_stage_1_dispatch"
+predicted_delta: "unknown_l0_scaffold_no_empirical_alpha_anchor_pending_stage_1_dispatch"
+literature_anchor: "Atick-Redlich 1990 cooperative-receiver + CROSS-CANDIDATE finding #3 (PR101/A1/fec6 <-> PR106 SUPER_ADDITIVE per-axis Pearson [-0.094, -0.078])"
+
+risk: |
+  L0 SCAFFOLD; trainer _full_main raises NotImplementedError per Catalog #240.
+  pact_nerv_cross_codec_a composites fec6 Huffman k=16 base codec with
+  Pact-NeRV-A1-class side-info residual. Hypothesis (PACT-NERV-ULTIMATE
+  Variant #16): SUPER_ADDITIVE composition because codecs operate on
+  DIFFERENT receptive fields of the contest scorer.
+
+envelope_status: |
+  RESEARCH_ONLY: dispatch refused per recipe + trainer + 5 catalog gates.
+
+remote_driver: scripts/remote_lane_substrate_pact_nerv_cross_codec_a.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default)"
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pact_nerv_cross_codec_a.sh
+  cost_band_trainer: experiments/train_substrate_pact_nerv_cross_codec_a.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 2
+  cost_band_all_flags_on: false
+
+required_input_files_trainer: experiments/train_substrate_pact_nerv_cross_codec_a.py
+
+env_overrides:
+  PACT_NERV_CROSS_CODEC_A_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PACT_NERV_CROSS_CODEC_A_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  PACT_NERV_CROSS_CODEC_A_OUTPUT_DIR: /workspace/pact/lane_pact_nerv_cross_codec_a_l0_scaffold_results/output
+  PACT_NERV_CROSS_CODEC_A_EPOCHS: "2"
+  PACT_NERV_CROSS_CODEC_A_UPSTREAM_DIR: /workspace/pact/upstream
+  PACT_NERV_CROSS_CODEC_A_DEVICE: cpu
+  PACT_NERV_CROSS_CODEC_A_SMOKE: "1"
+  SMOKE_ONLY: "1"
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/remote_lane_substrate_pact_nerv_cross_codec_a.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_pact_nerv_cross_codec_a.py
+  - src/tac/substrates/pact_nerv_cross_codec_a/__init__.py
+  - src/tac/substrates/pact_nerv_cross_codec_a/architecture.py
+  - src/tac/substrates/pact_nerv_cross_codec_a/archive.py
+  - src/tac/substrates/pact_nerv_cross_codec_a/inflate.py
+  - src/tac/substrates/pact_nerv_cross_codec_a/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+sentinel_files:
+  - src/tac/substrates/pact_nerv_cross_codec_a/architecture.py
+  - src/tac/substrates/pact_nerv_cross_codec_a/archive.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+reactivation_criteria: |
+  1. STAIRCASE Step 16 dispatch operator-gated per Catalog #325.
+  2. Cargo-cult audit per Catalog #303 (static composition_alpha CARGO-CULTED;
+     L1 needs learned composition gate per Atick-Redlich 1990 cooperative-
+     receiver).
+  3. Cross-codec composition contract: fec6 base + Pact-NeRV residual binding.
+  4. Trainer _full_main wires score-aware Lagrangian + auth-eval per #226.
+  5. research_only flips to false; predicted_band declared per #324.
+
+notes: |
+  Sister cite: PACT-NERV-ULTIMATE (commit e3ad4243a) Variant #16 PRIORITY 1.
+  cross_codec_orthogonality_predictor_consumer commit 80484241f provides
+  predicted SUPER_ADDITIVE classification.
+
+  6-hook wire-in per Catalog #125:
+  - hook #1 sensitivity-map: N/A (L0 SCAFFOLD)
+  - hook #2 Pareto constraint: rate_distortion_v1
+  - hook #3 bit-allocator: N/A (cross-codec at per-pair granularity)
+  - hook #4 cathedral autopilot dispatch: N/A (research_only)
+  - hook #5 continual-learning posterior: N/A (no anchor)
+  - hook #6 probe-disambiguator: N/A (composition_alpha sweep IS Stage 1)

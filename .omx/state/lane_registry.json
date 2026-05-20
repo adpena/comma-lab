@@ -44800,6 +44800,211 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_master_gradient_frame_decomposition_20260520",
+      "name": "Master-gradient per-frame decomposition consumer for SegNet/PoseNet input topology",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pact_nerv_cross_codec_a_l0_scaffold_20260520",
+      "name": "Pact-NeRV-CROSS-CODEC-A L0 SCAFFOLD (fec6 base + Pact-NeRV-A1 side-info)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_cross_codec_a/__init__.py + architecture.py + archive.py + inflate.py + score_aware_loss.py + tests/ (15 tests pass); trainer experiments/train_substrate_pact_nerv_cross_codec_a.py with _full_main raising NotImplementedError per Catalog #240; research_only=true per HNeRV parity L2"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_cross_codec_a_l0_scaffold_design_20260520T214500Z.md (design memo per Catalog #290/#294/#296/#303/#305/#309)"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_cross_codec_a.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_cross_codec_a_modal_t4_dispatch.yaml (research_only=true; dispatch_enabled=false); heartbeat + canonical NVML block per Catalog #244"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pact_nerv_cross_codec_b_l0_scaffold_20260520",
+      "name": "Pact-NeRV-CROSS-CODEC-B L0 SCAFFOLD (PR106 base + Pact-NeRV-IA3 side-info)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_cross_codec_b/__init__.py + architecture.py + archive.py + inflate.py + score_aware_loss.py + tests/ (16 tests pass); trainer experiments/train_substrate_pact_nerv_cross_codec_b.py with _full_main raising NotImplementedError per Catalog #240; research_only=true"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_cross_codec_b_l0_scaffold_design_20260520T214500Z.md (design memo per Catalog #290/#294/#296/#303/#305/#309)"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_cross_codec_b.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_cross_codec_b_modal_t4_dispatch.yaml (research_only=true; dispatch_enabled=false); canonical NVML block per Catalog #244"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pact_nerv_neural_codec_e2e_cross_l0_scaffold_20260520",
+      "name": "Pact-NeRV-NEURAL-CODEC-E2E-CROSS L0 SCAFFOLD (end-to-end neural composition + Ball\u00e9 hyperprior gate)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_neural_codec_e2e_cross/__init__.py + architecture.py + archive.py + inflate.py + score_aware_loss.py + tests/ (17 tests pass); trainer experiments/train_substrate_pact_nerv_neural_codec_e2e_cross.py with _full_main raising NotImplementedError per Catalog #240; research_only=true; end-to-end neural codec composition with Balle hyperprior gate"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_neural_codec_e2e_cross_l0_scaffold_design_20260520T214500Z.md (design memo per Catalog #290/#294/#296/#303/#305/#309; horizon_class=frontier_pursuit)"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_neural_codec_e2e_cross.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_neural_codec_e2e_cross_modal_t4_dispatch.yaml (research_only=true; dispatch_enabled=false); canonical NVML block per Catalog #244"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wave_3_null_exploit_probe_20260520",
+      "name": "WAVE-3 null-exploit probe + procedural-codebook design",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -44809,5 +45014,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T21:28:45Z"
+  "updated_at": "2026-05-20T22:04:15Z"
 }
