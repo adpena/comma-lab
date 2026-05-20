@@ -1,0 +1,1091 @@
+{
+  "archive_bytes": 178517,
+  "archive_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "authority_contract": "pr101_fec6_source_anatomy_is_read_only_byte_profile_not_score_evidence",
+  "axis_tag": "[predicted]",
+  "cascade_relevance": {
+    "direct_current_pr101_fec6_payload_magic_codec_supported": false,
+    "magic_codec_dense_streams_residual_path_status": "candidate_on_newly_produced_residual_streams_only",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "summary": "This profile is a negative control for post-hoc magic-codec rewrites of the current PR101/FEC6 archive member bytes. It does not refute magic_codec or magic_codec_dense_streams on newly produced streams; the plausible stack is procedural/DWT/world-model generation first, then dense-stream coding of the residual between generated and empirical bytes."
+  },
+  "interpretation": "The largest null run is not one semantic object: it is the final byte of the PR101 decoder blob, the entire PR101 latent blob, the entire latent sidecar, and the FEC6 selector length/payload. Direct magic-codec/generic rewrites of the current PR101 latent bytes do not beat the incumbent latent blob in this profile (best delta +69 bytes). The next artifact path should therefore be a runtime-adapter/no-op proof for the latent+sidecar semantic null span or a sidecar-only exact-eval probe, not another post-hoc recompression of the already-compressed archive member bytes.",
+  "latent_typed_runtime_adapter_probe": {
+    "best_typed_candidate_bytes": 15456,
+    "best_typed_candidate_id": "latent_raw_lzma_xz9_extreme",
+    "best_typed_delta_vs_current_latent_blob": 69,
+    "current_latent_blob_bytes": 15387,
+    "latent_delta_code_bytes": 16800,
+    "latent_min_fp16_bytes": 56,
+    "latent_raw_bytes": 16912,
+    "latent_scale_fp16_bytes": 56,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "status": "ok",
+    "typed_candidates": [
+      {
+        "authority_contract": "latent_typed_probe_diagnostic_only",
+        "candidate_id": "latent_raw_lzma_xz9_extreme",
+        "description": "generic xz/lzma over decoded PR101 latent raw stream",
+        "payload_bytes": 15456,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_adapter_required": true,
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      {
+        "authority_contract": "latent_typed_probe_diagnostic_only",
+        "candidate_id": "latent_raw_brotli_q11",
+        "description": "brotli over decoded PR101 latent raw stream",
+        "payload_bytes": 15530,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_adapter_required": true,
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      {
+        "authority_contract": "latent_typed_probe_diagnostic_only",
+        "candidate_id": "latent_codes_lzma_xz9_extreme_plus_min_scale",
+        "description": "xz/lzma over latent code bytes plus original fp16 min/scale vectors",
+        "payload_bytes": 15456,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_adapter_required": true,
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      {
+        "authority_contract": "latent_typed_probe_diagnostic_only",
+        "byte_count_comparison_role": "diagnostic_only_not_lossless_alternative",
+        "candidate_id": "latent_delta_matrix_magic_codec",
+        "delta_vs_current_latent_blob": 1315,
+        "lossless_roundtrip_required_for_promotion": true,
+        "lossless_roundtrip_verified": false,
+        "payload_bytes": 16702,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_adapter_required": true,
+        "score_claim": false,
+        "score_claim_valid": false,
+        "selected_primitive": "pr101_centered_delta_uint8_lzma",
+        "status": "ok"
+      }
+    ]
+  },
+  "member_name": "x",
+  "member_payload_bytes": 178417,
+  "member_payload_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+  "null_indices": {
+    "all_indices_covered_by_semantic_sections": true,
+    "bounds_validated_against_member_payload_bytes": true,
+    "coordinate_space": "fec6_member_payload_byte_offsets_zero_based_half_open",
+    "count": 16292,
+    "covered_by_semantic_sections_count": 16292,
+    "member_payload_bytes": 178417,
+    "sha256": "dc6ce0d408702ddca086cfd6bad06cb526d85d6dea878195c5e72e58209d6bb9"
+  },
+  "promotion_eligible": false,
+  "rank1_null_run_decomposition": {
+    "components": [
+      {
+        "bytes": 1,
+        "name": "pr101_decoder_blob",
+        "range": [
+          162171,
+          162172
+        ],
+        "role": "pr101_hnerv_decoder_weights"
+      },
+      {
+        "bytes": 15387,
+        "name": "pr101_latent_blob",
+        "range": [
+          162172,
+          177559
+        ],
+        "role": "pr101_pair_latents"
+      },
+      {
+        "bytes": 607,
+        "name": "pr101_sidecar_blob",
+        "range": [
+          177559,
+          178166
+        ],
+        "role": "pr101_latent_sidecar"
+      },
+      {
+        "bytes": 2,
+        "name": "selector_len_u16le",
+        "range": [
+          178166,
+          178168
+        ],
+        "role": "fec6_wrapper_header"
+      },
+      {
+        "bytes": 249,
+        "name": "selector_fec6_payload",
+        "range": [
+          178168,
+          178417
+        ],
+        "role": "fec6_selector_payload"
+      }
+    ],
+    "length_bytes": 16246,
+    "promotion_eligible": false,
+    "range": [
+      162171,
+      178417
+    ],
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "status": "ok"
+  },
+  "rank_or_kill_eligible": false,
+  "ranked_next_targets": [
+    {
+      "bytes_at_stake": 15994,
+      "current_typed_or_magic_delta_bytes": 69,
+      "materialization_risk": "high_runtime_adapter_and_exact_eval_required",
+      "null_bytes": 15994,
+      "null_fraction": 1.0,
+      "promotion_eligible": false,
+      "rank": 1,
+      "rate_delta_upper_bound_if_seed16": -0.010639094352986055,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": "Build a runtime-adapter candidate that replaces latent+sidecar encoding, then run byte-mutation/no-op and exact CPU/CUDA eval.",
+      "score_claim": false,
+      "target_id": "latent_blob_plus_sidecar_semantic_null_span"
+    },
+    {
+      "bytes_at_stake": 607,
+      "current_typed_or_magic_delta_bytes": null,
+      "materialization_risk": "medium_exact_eval_required",
+      "null_bytes": 607,
+      "null_fraction": 1.0,
+      "promotion_eligible": false,
+      "rank": 2,
+      "rate_delta_upper_bound_if_seed16": -0.0003935226412952033,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": "Probe sidecar-only seed or compact grammar mutations before touching the full latent blob.",
+      "score_claim": false,
+      "target_id": "pr101_sidecar_only_null_span"
+    },
+    {
+      "bytes_at_stake": 249,
+      "current_typed_or_magic_delta_bytes": null,
+      "materialization_risk": "low_but_already_falsified_by_seeded_selector_probe",
+      "null_bytes": 249,
+      "null_fraction": 1.0,
+      "promotion_eligible": false,
+      "rank": 3,
+      "rate_delta_upper_bound_if_seed16": -0.00015514513607746592,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": "Do not materialize simple selector-seed adapter unless a new predictor beats 249 charged bytes.",
+      "score_claim": false,
+      "target_id": "selector_fec6_payload"
+    },
+    {
+      "bytes_at_stake": 10,
+      "current_typed_or_magic_delta_bytes": null,
+      "materialization_risk": "header_no_op_and_too_small",
+      "null_bytes": 10,
+      "null_fraction": 1.0,
+      "promotion_eligible": false,
+      "rank": 4,
+      "rate_delta_upper_bound_if_seed16": -0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "recommended_next_action": "Ignore for score movement; preserve for parser custody.",
+      "score_claim": false,
+      "target_id": "wrapper_headers"
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr101_fec6_source_payload_anatomy_profile_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "sections": [
+    {
+      "entropy": {
+        "shannon_bits_per_byte": 1.5,
+        "shannon_floor_bytes": 1,
+        "unique_byte_values": 3
+      },
+      "generic_recompression": {
+        "brotli_q11_bytes": 8,
+        "lzma9_extreme_bytes": 60,
+        "source_bytes": 4,
+        "zlib9_bytes": 12
+      },
+      "incumbent_codec": "literal",
+      "length_bytes": 4,
+      "magic_codec_byte_stream_probe": {
+        "best_delta_vs_section_bytes": 39,
+        "best_direct_byte_stream_magic_candidate_beats_current": false,
+        "best_payload_bytes": 43,
+        "best_selected_primitive": "sparse_rle_of_zeros",
+        "best_stream_type": "weight_tensor",
+        "candidates": [
+          {
+            "delta_vs_section_bytes": 158,
+            "payload_bytes": 162,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr91_arithmetic_coder_constriction",
+                "refusal_reason": "encode failed: The given array is not contiguous",
+                "refused": true
+              },
+              {
+                "encoded_bytes": 152,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "categorical"
+          },
+          {
+            "delta_vs_section_bytes": 39,
+            "payload_bytes": 43,
+            "selected_primitive": "sparse_rle_of_zeros",
+            "selection_log": [
+              {
+                "encoded_bytes": 152,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 33,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "weight_tensor"
+          },
+          {
+            "delta_vs_section_bytes": 39,
+            "payload_bytes": 43,
+            "selected_primitive": "sparse_rle_of_zeros",
+            "selection_log": [
+              {
+                "encoded_bytes": 152,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 33,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr101_centered_delta_uint8_lzma",
+                "refusal_reason": "centered-delta-uint8 requires 2D (n_rows, n_dims); got shape (4,)",
+                "refused": true
+              }
+            ],
+            "status": "ok",
+            "stream_type": "latent_sidecar"
+          }
+        ],
+        "score_claim": false,
+        "section_name": "fp11_magic"
+      },
+      "name": "fp11_magic",
+      "null_coverage": {
+        "contiguous_run_count": 1,
+        "contiguous_runs": [
+          [
+            0,
+            4
+          ]
+        ],
+        "contiguous_runs_truncated": false,
+        "longest_contiguous_run_bytes": 4,
+        "n_null_bytes": 4,
+        "null_fraction_within_section": 1.0,
+        "null_indices_provided": true
+      },
+      "promotion_eligible": false,
+      "range": [
+        0,
+        4
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "rewrite_surface": "header_not_material_rate_target",
+      "role": "fec6_wrapper_header",
+      "score_claim": false,
+      "sha256": "349d73e1d171f3a88dabf70abb9a5a9ef7c24194a1ff68347479eb6d7d2d3115"
+    },
+    {
+      "entropy": {
+        "shannon_bits_per_byte": 2.0,
+        "shannon_floor_bytes": 1,
+        "unique_byte_values": 4
+      },
+      "generic_recompression": {
+        "brotli_q11_bytes": 8,
+        "lzma9_extreme_bytes": 60,
+        "source_bytes": 4,
+        "zlib9_bytes": 12
+      },
+      "incumbent_codec": "literal_u32le",
+      "length_bytes": 4,
+      "magic_codec_byte_stream_probe": {
+        "best_delta_vs_section_bytes": 37,
+        "best_direct_byte_stream_magic_candidate_beats_current": false,
+        "best_payload_bytes": 41,
+        "best_selected_primitive": "sparse_rle_of_zeros",
+        "best_stream_type": "weight_tensor",
+        "candidates": [
+          {
+            "delta_vs_section_bytes": 986,
+            "payload_bytes": 990,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr91_arithmetic_coder_constriction",
+                "refusal_reason": "encode failed: The given array is not contiguous",
+                "refused": true
+              },
+              {
+                "encoded_bytes": 980,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "categorical"
+          },
+          {
+            "delta_vs_section_bytes": 37,
+            "payload_bytes": 41,
+            "selected_primitive": "sparse_rle_of_zeros",
+            "selection_log": [
+              {
+                "encoded_bytes": 980,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 31,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "weight_tensor"
+          },
+          {
+            "delta_vs_section_bytes": 37,
+            "payload_bytes": 41,
+            "selected_primitive": "sparse_rle_of_zeros",
+            "selection_log": [
+              {
+                "encoded_bytes": 980,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 31,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr101_centered_delta_uint8_lzma",
+                "refusal_reason": "centered-delta-uint8 requires 2D (n_rows, n_dims); got shape (4,)",
+                "refused": true
+              }
+            ],
+            "status": "ok",
+            "stream_type": "latent_sidecar"
+          }
+        ],
+        "score_claim": false,
+        "section_name": "source_len_u32le"
+      },
+      "name": "source_len_u32le",
+      "null_coverage": {
+        "contiguous_run_count": 1,
+        "contiguous_runs": [
+          [
+            4,
+            8
+          ]
+        ],
+        "contiguous_runs_truncated": false,
+        "longest_contiguous_run_bytes": 4,
+        "n_null_bytes": 4,
+        "null_fraction_within_section": 1.0,
+        "null_indices_provided": true
+      },
+      "promotion_eligible": false,
+      "range": [
+        4,
+        8
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "rewrite_surface": "header_not_material_rate_target",
+      "role": "fec6_wrapper_header",
+      "score_claim": false,
+      "sha256": "fbf50690bdbd147096140de72c452ac52e1e154e160ba2d823bf48a1f136d845"
+    },
+    {
+      "entropy": {
+        "shannon_bits_per_byte": 7.998424748434305,
+        "shannon_floor_bytes": 162133,
+        "unique_byte_values": 256
+      },
+      "generic_recompression": {
+        "brotli_q11_bytes": 162169,
+        "lzma9_extreme_bytes": 162232,
+        "source_bytes": 162164,
+        "zlib9_bytes": 162220
+      },
+      "incumbent_codec": "concatenated_brotli_quantized_tensor_streams",
+      "length_bytes": 162164,
+      "magic_codec_byte_stream_probe": {
+        "best_delta_vs_section_bytes": 1026,
+        "best_direct_byte_stream_magic_candidate_beats_current": false,
+        "best_payload_bytes": 163190,
+        "best_selected_primitive": "sparse_arithmetic_coefficients",
+        "best_stream_type": "categorical",
+        "candidates": [
+          {
+            "delta_vs_section_bytes": 1026,
+            "payload_bytes": 163190,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr91_arithmetic_coder_constriction",
+                "refusal_reason": "encode failed: The given array is not contiguous",
+                "refused": true
+              },
+              {
+                "encoded_bytes": 163180,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "categorical"
+          },
+          {
+            "delta_vs_section_bytes": 1026,
+            "payload_bytes": 163190,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 163180,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 969793,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "weight_tensor"
+          },
+          {
+            "delta_vs_section_bytes": 1026,
+            "payload_bytes": 163190,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 163180,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 969793,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr101_centered_delta_uint8_lzma",
+                "refusal_reason": "centered-delta-uint8 requires 2D (n_rows, n_dims); got shape (162164,)",
+                "refused": true
+              }
+            ],
+            "status": "ok",
+            "stream_type": "latent_sidecar"
+          }
+        ],
+        "score_claim": false,
+        "section_name": "pr101_decoder_blob"
+      },
+      "name": "pr101_decoder_blob",
+      "null_coverage": {
+        "contiguous_run_count": 28,
+        "contiguous_runs": [
+          [
+            696,
+            698
+          ],
+          [
+            1730,
+            1732
+          ],
+          [
+            1808,
+            1809
+          ],
+          [
+            26587,
+            26589
+          ],
+          [
+            26601,
+            26603
+          ],
+          [
+            35780,
+            35781
+          ],
+          [
+            35783,
+            35785
+          ],
+          [
+            68822,
+            68823
+          ]
+        ],
+        "contiguous_runs_truncated": true,
+        "longest_contiguous_run_bytes": 2,
+        "n_null_bytes": 39,
+        "null_fraction_within_section": 0.00024049727436422388,
+        "null_indices_provided": true
+      },
+      "promotion_eligible": false,
+      "range": [
+        8,
+        162172
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "rewrite_surface": "magic_codec_rewrite_possible_but_current_bytes_are_entropy_saturated",
+      "role": "pr101_hnerv_decoder_weights",
+      "score_claim": false,
+      "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+    },
+    {
+      "entropy": {
+        "shannon_bits_per_byte": 7.988287210567595,
+        "shannon_floor_bytes": 15365,
+        "unique_byte_values": 256
+      },
+      "generic_recompression": {
+        "brotli_q11_bytes": 15391,
+        "lzma9_extreme_bytes": 15448,
+        "source_bytes": 15387,
+        "zlib9_bytes": 15398
+      },
+      "incumbent_codec": "raw_lzma1_centered_delta_uint8_latents",
+      "length_bytes": 15387,
+      "magic_codec_byte_stream_probe": {
+        "best_delta_vs_section_bytes": 1035,
+        "best_direct_byte_stream_magic_candidate_beats_current": false,
+        "best_payload_bytes": 16422,
+        "best_selected_primitive": "sparse_arithmetic_coefficients",
+        "best_stream_type": "categorical",
+        "candidates": [
+          {
+            "delta_vs_section_bytes": 1035,
+            "payload_bytes": 16422,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr91_arithmetic_coder_constriction",
+                "refusal_reason": "encode failed: The given array is not contiguous",
+                "refused": true
+              },
+              {
+                "encoded_bytes": 16412,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "categorical"
+          },
+          {
+            "delta_vs_section_bytes": 1035,
+            "payload_bytes": 16422,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 16412,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 91933,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "weight_tensor"
+          },
+          {
+            "delta_vs_section_bytes": 1035,
+            "payload_bytes": 16422,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 16412,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 91933,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr101_centered_delta_uint8_lzma",
+                "refusal_reason": "centered-delta-uint8 requires 2D (n_rows, n_dims); got shape (15387,)",
+                "refused": true
+              }
+            ],
+            "status": "ok",
+            "stream_type": "latent_sidecar"
+          }
+        ],
+        "score_claim": false,
+        "section_name": "pr101_latent_blob"
+      },
+      "name": "pr101_latent_blob",
+      "null_coverage": {
+        "contiguous_run_count": 1,
+        "contiguous_runs": [
+          [
+            162172,
+            177559
+          ]
+        ],
+        "contiguous_runs_truncated": false,
+        "longest_contiguous_run_bytes": 15387,
+        "n_null_bytes": 15387,
+        "null_fraction_within_section": 1.0,
+        "null_indices_provided": true
+      },
+      "promotion_eligible": false,
+      "range": [
+        162172,
+        177559
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "rewrite_surface": "typed_runtime_adapter_candidate",
+      "role": "pr101_pair_latents",
+      "score_claim": false,
+      "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe"
+    },
+    {
+      "entropy": {
+        "shannon_bits_per_byte": 7.710458167173375,
+        "shannon_floor_bytes": 586,
+        "unique_byte_values": 242
+      },
+      "generic_recompression": {
+        "brotli_q11_bytes": 611,
+        "lzma9_extreme_bytes": 668,
+        "source_bytes": 607,
+        "zlib9_bytes": 618
+      },
+      "incumbent_codec": "compact_ranked_or_huffman_latent_sidecar",
+      "length_bytes": 607,
+      "magic_codec_byte_stream_probe": {
+        "best_delta_vs_section_bytes": 1035,
+        "best_direct_byte_stream_magic_candidate_beats_current": false,
+        "best_payload_bytes": 1642,
+        "best_selected_primitive": "sparse_arithmetic_coefficients",
+        "best_stream_type": "categorical",
+        "candidates": [
+          {
+            "delta_vs_section_bytes": 1035,
+            "payload_bytes": 1642,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr91_arithmetic_coder_constriction",
+                "refusal_reason": "encode failed: The given array is not contiguous",
+                "refused": true
+              },
+              {
+                "encoded_bytes": 1632,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "categorical"
+          },
+          {
+            "delta_vs_section_bytes": 1035,
+            "payload_bytes": 1642,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 1632,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 3643,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "weight_tensor"
+          },
+          {
+            "delta_vs_section_bytes": 1035,
+            "payload_bytes": 1642,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 1632,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 3643,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr101_centered_delta_uint8_lzma",
+                "refusal_reason": "centered-delta-uint8 requires 2D (n_rows, n_dims); got shape (607,)",
+                "refused": true
+              }
+            ],
+            "status": "ok",
+            "stream_type": "latent_sidecar"
+          }
+        ],
+        "score_claim": false,
+        "section_name": "pr101_sidecar_blob"
+      },
+      "name": "pr101_sidecar_blob",
+      "null_coverage": {
+        "contiguous_run_count": 1,
+        "contiguous_runs": [
+          [
+            177559,
+            178166
+          ]
+        ],
+        "contiguous_runs_truncated": false,
+        "longest_contiguous_run_bytes": 607,
+        "n_null_bytes": 607,
+        "null_fraction_within_section": 1.0,
+        "null_indices_provided": true
+      },
+      "promotion_eligible": false,
+      "range": [
+        177559,
+        178166
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "rewrite_surface": "typed_runtime_adapter_candidate",
+      "role": "pr101_latent_sidecar",
+      "score_claim": false,
+      "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+    },
+    {
+      "entropy": {
+        "shannon_bits_per_byte": 1.0,
+        "shannon_floor_bytes": 1,
+        "unique_byte_values": 2
+      },
+      "generic_recompression": {
+        "brotli_q11_bytes": 6,
+        "lzma9_extreme_bytes": 60,
+        "source_bytes": 2,
+        "zlib9_bytes": 10
+      },
+      "incumbent_codec": "literal_u16le",
+      "length_bytes": 2,
+      "magic_codec_byte_stream_probe": {
+        "best_delta_vs_section_bytes": 27,
+        "best_direct_byte_stream_magic_candidate_beats_current": false,
+        "best_payload_bytes": 29,
+        "best_selected_primitive": "sparse_rle_of_zeros",
+        "best_stream_type": "weight_tensor",
+        "candidates": [
+          {
+            "delta_vs_section_bytes": 1032,
+            "payload_bytes": 1034,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr91_arithmetic_coder_constriction",
+                "refusal_reason": "encode failed: The given array is not contiguous",
+                "refused": true
+              },
+              {
+                "encoded_bytes": 1024,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "categorical"
+          },
+          {
+            "delta_vs_section_bytes": 27,
+            "payload_bytes": 29,
+            "selected_primitive": "sparse_rle_of_zeros",
+            "selection_log": [
+              {
+                "encoded_bytes": 1024,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 19,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "weight_tensor"
+          },
+          {
+            "delta_vs_section_bytes": 27,
+            "payload_bytes": 29,
+            "selected_primitive": "sparse_rle_of_zeros",
+            "selection_log": [
+              {
+                "encoded_bytes": 1024,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 19,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr101_centered_delta_uint8_lzma",
+                "refusal_reason": "centered-delta-uint8 requires 2D (n_rows, n_dims); got shape (2,)",
+                "refused": true
+              }
+            ],
+            "status": "ok",
+            "stream_type": "latent_sidecar"
+          }
+        ],
+        "score_claim": false,
+        "section_name": "selector_len_u16le"
+      },
+      "name": "selector_len_u16le",
+      "null_coverage": {
+        "contiguous_run_count": 1,
+        "contiguous_runs": [
+          [
+            178166,
+            178168
+          ]
+        ],
+        "contiguous_runs_truncated": false,
+        "longest_contiguous_run_bytes": 2,
+        "n_null_bytes": 2,
+        "null_fraction_within_section": 1.0,
+        "null_indices_provided": true
+      },
+      "promotion_eligible": false,
+      "range": [
+        178166,
+        178168
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "rewrite_surface": "header_not_material_rate_target",
+      "role": "fec6_wrapper_header",
+      "score_claim": false,
+      "sha256": "29fb468aa10598ab84c07ba09235b22ba69986fb964ac16f536a100ce00c54ea"
+    },
+    {
+      "entropy": {
+        "shannon_bits_per_byte": 7.0442859944442064,
+        "shannon_floor_bytes": 220,
+        "unique_byte_values": 150
+      },
+      "generic_recompression": {
+        "brotli_q11_bytes": 253,
+        "lzma9_extreme_bytes": 312,
+        "source_bytes": 249,
+        "zlib9_bytes": 260
+      },
+      "incumbent_codec": "fixed_huffman_k16_selector",
+      "length_bytes": 249,
+      "magic_codec_byte_stream_probe": {
+        "best_delta_vs_section_bytes": 1029,
+        "best_direct_byte_stream_magic_candidate_beats_current": false,
+        "best_payload_bytes": 1278,
+        "best_selected_primitive": "sparse_arithmetic_coefficients",
+        "best_stream_type": "categorical",
+        "candidates": [
+          {
+            "delta_vs_section_bytes": 1029,
+            "payload_bytes": 1278,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr91_arithmetic_coder_constriction",
+                "refusal_reason": "encode failed: The given array is not contiguous",
+                "refused": true
+              },
+              {
+                "encoded_bytes": 1268,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "categorical"
+          },
+          {
+            "delta_vs_section_bytes": 1029,
+            "payload_bytes": 1278,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 1268,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 1507,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              }
+            ],
+            "status": "ok",
+            "stream_type": "weight_tensor"
+          },
+          {
+            "delta_vs_section_bytes": 1029,
+            "payload_bytes": 1278,
+            "selected_primitive": "sparse_arithmetic_coefficients",
+            "selection_log": [
+              {
+                "encoded_bytes": 1268,
+                "primitive_name": "sparse_arithmetic_coefficients",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 1507,
+                "primitive_name": "sparse_rle_of_zeros",
+                "refusal_reason": null,
+                "refused": false
+              },
+              {
+                "encoded_bytes": 0,
+                "primitive_name": "pr101_centered_delta_uint8_lzma",
+                "refusal_reason": "centered-delta-uint8 requires 2D (n_rows, n_dims); got shape (249,)",
+                "refused": true
+              }
+            ],
+            "status": "ok",
+            "stream_type": "latent_sidecar"
+          }
+        ],
+        "score_claim": false,
+        "section_name": "selector_fec6_payload"
+      },
+      "name": "selector_fec6_payload",
+      "null_coverage": {
+        "contiguous_run_count": 1,
+        "contiguous_runs": [
+          [
+            178168,
+            178417
+          ]
+        ],
+        "contiguous_runs_truncated": false,
+        "longest_contiguous_run_bytes": 249,
+        "n_null_bytes": 249,
+        "null_fraction_within_section": 1.0,
+        "null_indices_provided": true
+      },
+      "promotion_eligible": false,
+      "range": [
+        178168,
+        178417
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "rewrite_surface": "selector_seed_adapter_already_empirically_falsified_on_current_payload",
+      "role": "fec6_selector_payload",
+      "score_claim": false,
+      "sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca"
+    }
+  ],
+  "selector_payload_bytes": 249,
+  "source_payload_bytes": 178158
+}
