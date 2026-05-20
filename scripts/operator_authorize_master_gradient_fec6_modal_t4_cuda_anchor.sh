@@ -87,11 +87,17 @@ MASTER_GRADIENT_DEVICE="${MASTER_GRADIENT_DEVICE:-cuda}"
 # n_pairs_used == n_pairs_total (full 600 pair contest set).
 MASTER_GRADIENT_N_PAIRS_USED="${MASTER_GRADIENT_N_PAIRS_USED:-600}"
 # Catalog #218 sister mini-batch chunk size for decoder forward + scorer forward + backward loop.
-# Default 100 for T4 (14.56 GB): 600/100 = 6 chunks; estimated ~0.33 GiB activation per chunk vs
-# 14.56 GB capacity vs the OOM at 600-pair full-batch needing 1.98 GiB > 759 MiB free. Recipe can
-# override via env_overrides (e.g. 50 for tighter memory budget, 200 for A10G/A100, 0 for
-# full-batch path on CPU smokes).
-MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE="${MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE:-100}"
+# Default 20 for T4 (14.56 GB): 600/20 = 30 chunks. Activation memory per chunk dominated by the
+# eval_roundtrip 384x512→874x1164 bicubic upsample = 20 × 2 × 3 × 874 × 1164 × 4 bytes ≈ 488 MiB
+# for the upsampled tensor (doubled for autograd grad storage). Plus FastViT-T12 PoseNet +
+# EfficientNet-B2 SegNet forward activations. With the per-chunk GT transfer fix (avoids holding
+# all 600 GT pairs on GPU), 20-chunk should fit T4 capacity. Recipe can override via
+# env_overrides (e.g. 50-100 for A10G/A100, 0 for full-batch CPU smoke).
+# 2026-05-20 anchor 2: chunk=100 fc-01KS36941EMJBZT0PYEADWYYW7 STILL OOM'd at eval_roundtrip
+# bicubic upsample (450 MiB needed; 295 MiB free; baseline 14.27 GiB) because all 600 GT pairs
+# were transferred to GPU upfront. Fix at tools/extract_master_gradient.py: per-chunk GT transfer
+# + smaller default chunk size.
+MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE="${MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE:-20}"
 MASTER_GRADIENT_HARDWARE_SUBSTRATE="${MASTER_GRADIENT_HARDWARE_SUBSTRATE:-linux_x86_64_t4_modal}"
 
 DISPATCH_INSTANCE_JOB_ID="${MASTER_GRADIENT_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"

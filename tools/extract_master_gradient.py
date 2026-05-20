@@ -2214,9 +2214,15 @@ def _compute_operating_point_and_per_param_gradients_chunked(
     sum-then-divide across chunks; the operating point reflects the FULL pair
     set even though gradients are accumulated chunk-by-chunk.
     """
-    # Subset latents + ground truth (operate on n_pairs_used rows total)
-    z_all = latents[:n_pairs_used].to(device).requires_grad_(False)
-    gt_all = gt_pair_batch[:n_pairs_used].to(device)
+    # Subset latents + ground truth. Catalog #218 sister memory-pressure fix
+    # (2026-05-20 OOM anchor fc-01KS36941EMJBZT0PYEADWYYW7 with chunk=100 STILL
+    # OOM'd at 14.27 GiB because all 600 GT pairs + scorers + decoder + autograd
+    # graph already occupied 13.82 GiB on baseline before any chunk forward
+    # started). Keep both latents AND GT on CPU; transfer per-chunk inside the
+    # chunk loop below. The per-chunk transfer cost is amortized over the
+    # chunk's forward+backward time (~negligible vs forward FLOPs).
+    z_all_cpu = latents[:n_pairs_used].detach().cpu().requires_grad_(False)
+    gt_all_cpu = gt_pair_batch[:n_pairs_used].detach().cpu()
 
     # Initialize per-parameter accumulators (zeros_like) AFTER zero_grad
     per_param_names = [name for name, _ in decoder.named_parameters()]
@@ -2246,8 +2252,9 @@ def _compute_operating_point_and_per_param_gradients_chunked(
 
     for chunk_start in range(0, n_pairs_used, chunk_size):
         chunk_end = min(chunk_start + chunk_size, n_pairs_used)
-        z = z_all[chunk_start:chunk_end]
-        gt = gt_all[chunk_start:chunk_end]
+        # Per-chunk transfer to device (avoids holding all 600 GT pairs on GPU)
+        z = z_all_cpu[chunk_start:chunk_end].to(device)
+        gt = gt_all_cpu[chunk_start:chunk_end].to(device)
 
         # Forward + scorer pipeline (mirrors the canonical full-batch path)
         decoded = decoder(z)  # (chunk_size, 2, 3, H, W) in [0, 255]
