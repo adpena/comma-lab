@@ -51,6 +51,7 @@ Returns the canonical claim dict on success::
         "auth_eval_score_axis": "contest_cuda",
         "auth_eval_lane_tag": claim.lane_tag,
         "auth_eval_score_claim_valid": True,
+        "auth_eval_exact_cuda_complete": True,
     }
 
 Returns ``None`` on refusal AND sets ``args.auth_eval_skipped_reason``
@@ -521,4 +522,5 @@ def gate_auth_eval_call(
         "auth_eval_score_axis": required_score_axis,
         "auth_eval_lane_tag": claim.lane_tag,
         "auth_eval_score_claim_valid": True,
+        "auth_eval_exact_cuda_complete": True,
     }

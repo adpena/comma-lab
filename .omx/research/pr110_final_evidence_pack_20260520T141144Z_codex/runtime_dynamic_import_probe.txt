@@ -1,0 +1,7 @@
+torch: ok (/Users/adpena/Projects/pact/.venv/lib/python3.12/site-packages/torch/__init__.py)
+numpy: ok (/Users/adpena/Projects/pact/.venv/lib/python3.12/site-packages/numpy/__init__.py)
+brotli: ok (/Users/adpena/Projects/pact/.venv/lib/python3.12/site-packages/brotli.py)
+codec_sidecar: ok (/Users/adpena/Projects/pact/.omx/research/pr110_final_evidence_pack_20260520T141144Z_codex/runtime_snapshot/submissions/hnerv_fec6_fixed_huffman_k16/src/codec_sidecar.py)
+model: ok (/Users/adpena/Projects/pact/.omx/research/pr110_final_evidence_pack_20260520T141144Z_codex/runtime_snapshot/submissions/hnerv_fec6_fixed_huffman_k16/src/model.py)
+frame_selector: ok (/Users/adpena/Projects/pact/.omx/research/pr110_final_evidence_pack_20260520T141144Z_codex/runtime_snapshot/submissions/hnerv_fec6_fixed_huffman_k16/src/frame_selector.py)
+codec: ok (/Users/adpena/Projects/pact/.omx/research/pr110_final_evidence_pack_20260520T141144Z_codex/runtime_snapshot/submissions/hnerv_fec6_fixed_huffman_k16/src/codec.py)

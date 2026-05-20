@@ -1,0 +1,45 @@
+Archive:  .omx/research/pr110_final_evidence_pack_20260520T141144Z_codex/archive.zip
+There is no zipfile comment.
+
+End-of-central-directory record:
+-------------------------------
+
+  Zip archive file size:                    178517 (000000000002B955h)
+  Actual end-cent-dir record offset:        178495 (000000000002B93Fh)
+  Expected end-cent-dir record offset:      178495 (000000000002B93Fh)
+  (based on the length of the central directory and its expected offset)
+
+  This zipfile constitutes the sole disk of a single-part archive; its
+  central directory contains 1 entry.
+  The central directory is 47 (000000000000002Fh) bytes long,
+  and its (expected) offset in bytes from the beginning of the zipfile
+  is 178448 (000000000002B910h).
+
+
+Central directory entry #1:
+---------------------------
+
+  x
+
+  offset of local header from start of archive:   0
+                                                  (0000000000000000h) bytes
+  file system or operating system of origin:      Unix
+  version of encoding software:                   2.0
+  minimum file system compatibility required:     MS-DOS, OS/2 or NT FAT
+  minimum software version required to extract:   2.0
+  compression method:                             none (stored)
+  file security status:                           not encrypted
+  extended local header:                          no
+  file last modified on (DOS date/time):          1980 Jan 1 00:00:00
+  32-bit CRC value (hex):                         c4a71a7a
+  compressed size:                                178417 bytes
+  uncompressed size:                              178417 bytes
+  length of filename:                             1 characters
+  length of extra field:                          0 bytes
+  length of file comment:                         0 characters
+  disk number on which file begins:               disk 1
+  apparent file type:                             binary
+  Unix file attributes (000600 octal):            ?rw-------
+  MS-DOS file attributes (00 hex):                none
+
+  There is no file comment.

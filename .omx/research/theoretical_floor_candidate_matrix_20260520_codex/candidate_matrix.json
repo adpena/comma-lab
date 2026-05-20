@@ -1,0 +1,227 @@
+{
+  "baseline": {
+    "distortion_only_zero_archive_score": 0.07318417414659495,
+    "id": "pr110_cpu_axis_component_decomposition",
+    "posenet_raw_distortion": 2.943e-05,
+    "posenet_weighted_score_term": 0.017155174146594957,
+    "rate_only_perfect_distortion_score": 0.11886714273451066,
+    "rate_weighted_score_term": 0.11886714273451066,
+    "segnet_raw_distortion": 0.00056029,
+    "segnet_weighted_score_term": 0.056028999999999995,
+    "total_recomputed_score": 0.1920513168811056
+  },
+  "policy": {
+    "external_models_at_inflate_time": "forbidden_unless_weights_and_runtime_are_charged",
+    "score_claim_requires": "byte_closed_archive_runtime, no_op_controls, component recompute, and exact CPU/CUDA auth-eval axis custody",
+    "teacher_models": "compress_time_only"
+  },
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_contracts": [
+    {
+      "candidate_id": "tf_siren_first_anchor",
+      "compress_time_teachers": [
+        "score_aware_loss"
+      ],
+      "dispatch_blockers": [
+        "operator_authorization_required_for_gpu_spend",
+        "active_lane_dispatch_claim_required",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "first_gate": ".venv/bin/python experiments/train_substrate_siren.py --video-path upstream/videos/0.mkv --output-dir experiments/results/siren_smoke_<utc> --epochs 3 --device cpu --smoke --skip-archive-build --skip-auth-eval",
+      "local_surface_status": {
+        "experiments/train_substrate_siren.py": true,
+        "src/tac/substrates/siren/archive.py": true,
+        "src/tac/substrates/siren/inflate.py": true,
+        "tools/audit_siren_substrate_readiness.py": true
+      },
+      "local_surfaces": [
+        "experiments/train_substrate_siren.py",
+        "src/tac/substrates/siren/archive.py",
+        "src/tac/substrates/siren/inflate.py",
+        "tools/audit_siren_substrate_readiness.py"
+      ],
+      "objective": "Replace HNeRV-family representation with a byte-closed SIREN coordinate renderer and exact archive/inflate contract.",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_dependencies": [
+        "stdlib",
+        "torch"
+      ],
+      "runtime_payload_members": [
+        "0.bin",
+        "inflate.py",
+        "inflate.sh"
+      ],
+      "score_claim": false
+    },
+    {
+      "candidate_id": "tf_telescope_lfv1_pose_foveation",
+      "compress_time_teachers": [
+        "telescope_hyperbolic_foveation",
+        "la_pose",
+        "sea_raft",
+        "visual_primitives"
+      ],
+      "dispatch_blockers": [
+        "runtime_loader_parity_not_passed",
+        "scorer_visible_output_parity_not_proven",
+        "runtime_output_parity_not_proven",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "first_gate": ".venv/bin/python tools/build_lapose_foveation_payload_archive.py --out-dir experiments/results/theoretical_floor_lfv1_<utc>/archive_candidate --lfv1-payload experiments/results/theoretical_floor_lfv1_<utc>/lapose_foveation_tuples.lfv1 --source-readiness-json experiments/results/theoretical_floor_lfv1_<utc>/lfv1_payload_readiness.json",
+      "local_surface_status": {
+        "src/tac/hyperbolic_foveation.py": true,
+        "src/tac/lapose_foveation_payload_candidate.py": true,
+        "tools/build_lapose_foveation_atom_manifest.py": true,
+        "tools/build_lapose_foveation_payload_archive.py": true,
+        "tools/build_lapose_foveation_tuple_payload.py": true
+      },
+      "local_surfaces": [
+        "src/tac/hyperbolic_foveation.py",
+        "src/tac/lapose_foveation_payload_candidate.py",
+        "tools/build_lapose_foveation_atom_manifest.py",
+        "tools/build_lapose_foveation_tuple_payload.py",
+        "tools/build_lapose_foveation_payload_archive.py"
+      ],
+      "objective": "Use Telescope-style hyperbolic foveation plus LA-Pose/SEA-RAFT/visual-primitive teachers to emit a tiny charged geometry payload consumed by a contest runtime.",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_dependencies": [
+        "stdlib",
+        "numpy",
+        "torch"
+      ],
+      "runtime_payload_members": [
+        "lapose_foveation_tuples.lfv1",
+        "foveation_params.bin",
+        "runtime_consumer.py",
+        "inflate.sh"
+      ],
+      "score_claim": false
+    },
+    {
+      "candidate_id": "tf_vqvae_full_renderer",
+      "compress_time_teachers": [
+        "score_aware_loss",
+        "codebook_perplexity_gate"
+      ],
+      "dispatch_blockers": [
+        "byte_closed_export_smoke_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "first_gate": ".venv/bin/python -m pytest src/tac/tests/test_train_vqvae_as_renderer.py src/tac/tests/test_vqvae_mask_codec.py -q",
+      "local_surface_status": {
+        "experiments/train_vqvae_as_renderer.py": true,
+        "src/tac/vqvae_as_full_renderer.py": true,
+        "src/tac/vqvae_mask_codec.py": true
+      },
+      "local_surfaces": [
+        "src/tac/vqvae_as_full_renderer.py",
+        "experiments/train_vqvae_as_renderer.py",
+        "src/tac/vqvae_mask_codec.py"
+      ],
+      "objective": "Move from continuous HNeRV weights to discrete codebook tokens with charged codebook, token stream, and small decoder runtime.",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_dependencies": [
+        "stdlib",
+        "torch",
+        "brotli"
+      ],
+      "runtime_payload_members": [
+        "0.bin",
+        "inflate.py",
+        "inflate.sh"
+      ],
+      "score_claim": false
+    },
+    {
+      "candidate_id": "tf_c3_coolchic_sparse_residual",
+      "compress_time_teachers": [
+        "cool_chic",
+        "c3",
+        "hinton_distilled_scorer"
+      ],
+      "dispatch_blockers": [
+        "decoded_raw_required",
+        "gt_raw_required",
+        "explicit_byte_budget_required",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "first_gate": "Run l2_encoded materializer with explicit --decoded-raw, --gt-raw, --byte-budget, --encoding sparse, and no score claim.",
+      "local_surface_status": {
+        "src/tac/residual_basis/c3_residual.py": true,
+        "src/tac/residual_basis/cool_chic_residual.py": true,
+        "tools/materialize_c3_residual_pr106_sidecar.py": true,
+        "tools/materialize_cool_chic_residual_pr106_sidecar.py": true
+      },
+      "local_surfaces": [
+        "tools/materialize_cool_chic_residual_pr106_sidecar.py",
+        "tools/materialize_c3_residual_pr106_sidecar.py",
+        "src/tac/residual_basis/cool_chic_residual.py",
+        "src/tac/residual_basis/c3_residual.py"
+      ],
+      "objective": "Attach sparse learned-codec residual bytes to a proven base runtime, using score-aware sparse Lagrangian instead of empty sidecars.",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_dependencies": [
+        "stdlib",
+        "numpy",
+        "torch",
+        "brotli"
+      ],
+      "runtime_payload_members": [
+        "archive.zip",
+        "residual_bytes"
+      ],
+      "score_claim": false
+    }
+  ],
+  "schema": "theoretical_floor_candidate_matrix_v1",
+  "score_claim": false,
+  "sources": [
+    {
+      "role": "Source for compact hyperbolic foveation transforms and far-field scale normalization.",
+      "runtime_dependency_allowed": false,
+      "source_id": "telescope_hyperbolic_foveation",
+      "title": "Telescope: Learnable Hyperbolic Foveation for Ultra-Long-Range Object Detection",
+      "url": "https://princeton-computational-imaging.github.io/Telescope/"
+    },
+    {
+      "role": "Compress-time pose/latent-action teacher for selecting geometry-sensitive atoms.",
+      "runtime_dependency_allowed": false,
+      "source_id": "la_pose",
+      "title": "LA-Pose: Latent Action Pretraining Meets Pose Estimation",
+      "url": "https://arxiv.org/abs/2604.27448"
+    },
+    {
+      "role": "Compress-time optical-flow teacher for motion/foveation priors.",
+      "runtime_dependency_allowed": false,
+      "source_id": "sea_raft",
+      "title": "SEA-RAFT: Simple, Efficient, Accurate RAFT for Optical Flow",
+      "url": "https://arxiv.org/abs/2405.14793"
+    },
+    {
+      "role": "Design reference for small point/box primitives as charged spatial hints.",
+      "runtime_dependency_allowed": false,
+      "source_id": "visual_primitives",
+      "title": "Thinking with Visual Primitives",
+      "url": "https://www.k-a.in/Thinking_with_Visual_Primitives.pdf"
+    },
+    {
+      "role": "Candidate full renderer with a small coordinate-network inflate runtime.",
+      "runtime_dependency_allowed": true,
+      "source_id": "siren",
+      "title": "Implicit neural representation / SIREN family",
+      "url": "https://arxiv.org/abs/2006.09661"
+    },
+    {
+      "role": "Candidate full renderer using charged codebook and token streams.",
+      "runtime_dependency_allowed": true,
+      "source_id": "vq_vae",
+      "title": "Neural Discrete Representation Learning / VQ-VAE family",
+      "url": "https://arxiv.org/abs/1711.00937"
+    }
+  ]
+}

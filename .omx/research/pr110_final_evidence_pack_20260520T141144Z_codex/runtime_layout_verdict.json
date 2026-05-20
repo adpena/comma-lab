@@ -1,0 +1,15 @@
+{
+  "archive_zip_in_head_tree_detected": false,
+  "expected_runtime_files_under_prefix_present": {
+    "submissions/hnerv_fec6_fixed_huffman_k16/inflate.py": true,
+    "submissions/hnerv_fec6_fixed_huffman_k16/inflate.sh": true,
+    "submissions/hnerv_fec6_fixed_huffman_k16/src/codec.py": true,
+    "submissions/hnerv_fec6_fixed_huffman_k16/src/codec_sidecar.py": true,
+    "submissions/hnerv_fec6_fixed_huffman_k16/src/frame_selector.py": true,
+    "submissions/hnerv_fec6_fixed_huffman_k16/src/model.py": true
+  },
+  "head_tree_runtime_prefix": "submissions/hnerv_fec6_fixed_huffman_k16/",
+  "root_readme_detected": true,
+  "root_runtime_files_detected": [],
+  "verdict": "runtime files are under submissions/hnerv_fec6_fixed_huffman_k16/; no root runtime files detected; archive.zip verified via GitHub Release URL, not as a PR head tree blob"
+}

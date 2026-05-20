@@ -96,6 +96,26 @@ from .unified_action_bridge import (
     atom_pool_to_meta_lagrangian_ledger,
     evaluate_action_with_atoms,
 )
+from .contest_granularity import (
+    BudgetVector,
+    ByteScope,
+    CONTEST_RATE_DENOMINATOR_BYTES,
+    ContestAtom,
+    ContestAtomError,
+    ContestScopeKind,
+    ContestSignal,
+    FrameScope,
+    PairScope,
+    PixelRegionScope,
+    ScoreVector,
+    build_lattice_report,
+    byte_atoms_from_master_gradient,
+    frame_and_pixel_atoms_from_xray_row,
+    merge_atoms_by_id,
+    pair_atom_from_component_row,
+    pair_signal_overlap,
+    select_latest_master_gradient_anchor,
+)
 
 # --- Linguistic extensions (TOP-3 per design memo APPENDIX B) ---
 # ADDITIVE extension landed 2026-05-18 alongside ``tac.contest_oracle``.
@@ -156,6 +176,25 @@ __all__ = [
     "evaluate_action_with_atoms",
     "atom_pool_to_meta_lagrangian_ledger",
     "atom_pool_to_cathedral_autopilot_candidates",
+    # contest-granularity atom lattice
+    "BudgetVector",
+    "ByteScope",
+    "CONTEST_RATE_DENOMINATOR_BYTES",
+    "ContestAtom",
+    "ContestAtomError",
+    "ContestScopeKind",
+    "ContestSignal",
+    "FrameScope",
+    "PairScope",
+    "PixelRegionScope",
+    "ScoreVector",
+    "build_lattice_report",
+    "byte_atoms_from_master_gradient",
+    "frame_and_pixel_atoms_from_xray_row",
+    "merge_atoms_by_id",
+    "pair_atom_from_component_row",
+    "pair_signal_overlap",
+    "select_latest_master_gradient_anchor",
     # linguistic extensions (TOP-3 per design memo APPENDIX B)
     "ArbitrarinessClassification",
     "AtomAlgebraError",

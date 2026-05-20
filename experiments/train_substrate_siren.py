@@ -1143,7 +1143,9 @@ def _full_main(args: argparse.Namespace) -> int:
                 auth_eval_score_claim_valid = bool(
                     auth_result["auth_eval_score_claim_valid"]
                 )
-                auth_eval_exact_cuda_complete = True
+                auth_eval_exact_cuda_complete = bool(
+                    auth_result["auth_eval_exact_cuda_complete"]
+                )
                 print(
                     f"[full] {auth_eval_lane_tag or '[contest-CUDA]'} score = "
                     f"{contest_cuda_score} (axis={auth_eval_score_axis}, "

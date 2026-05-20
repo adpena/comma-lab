@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import json
+import os
 import struct
 import subprocess
 import sys
 import zipfile
 from pathlib import Path
+
+import torch
 
 from tac.analysis.lapose_foveation_atoms import build_foveation_transport_atom_manifest
 from tac.analysis.lapose_foveation_payload import (
@@ -29,8 +32,14 @@ from tac.lapose_foveation_runtime_skeleton import (
     PROOF_MEMBER,
     RUNTIME_EFFECT_CONTROLS_CONTRACT,
     RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT,
+    apply_lfv1_to_rgb_frames,
+    build_inflate_adapter_byte_output_control_report,
     build_lfv1_foveation_params_bridge_report,
     build_runtime_effect_control_report,
+    build_scorer_visible_byte_output_control_report,
+    build_scorer_visible_frame_warp_control_report,
+    load_foveation_params,
+    rgb_frames_to_rgb24_bytes,
 )
 from tac.repo_io import read_json, sha256_bytes, sha256_file, write_json
 
@@ -104,6 +113,43 @@ def test_build_lapose_foveation_payload_archive_is_byte_closed_and_fail_closed(
     assert readiness["lfv1_payload_decode"]["accepted"] is True
     assert readiness["runtime_effect_controls"]["accepted"] is True
     assert readiness["runtime_effect_controls"]["contract"] == RUNTIME_EFFECT_CONTROLS_CONTRACT
+    frame_warp_control = readiness["runtime_effect_controls"][
+        "scorer_visible_frame_warp_control"
+    ]
+    assert frame_warp_control["contract"] == (
+        "lapose_foveation_scorer_visible_frame_warp_control_v1"
+    )
+    assert frame_warp_control["passed"] is True
+    assert frame_warp_control["identity_control"]["passed"] is True
+    assert frame_warp_control["nonidentity_control"]["passed"] is True
+    assert frame_warp_control["nonidentity_control"]["output_changed"] is True
+    byte_output_control = readiness["runtime_effect_controls"][
+        "scorer_visible_byte_output_control"
+    ]
+    assert byte_output_control["contract"] == (
+        "lapose_foveation_scorer_visible_byte_output_control_v1"
+    )
+    assert byte_output_control["passed"] is True
+    assert byte_output_control["identity_byte_output_control"]["byte_exact"] is True
+    assert byte_output_control["nonidentity_byte_output_control"]["output_changed"] is True
+    inflate_adapter_control = readiness["runtime_effect_controls"][
+        "inflate_adapter_byte_output_control"
+    ]
+    assert inflate_adapter_control["contract"] == (
+        "lapose_foveation_local_rgb24_inflate_adapter_control_v1"
+    )
+    assert inflate_adapter_control["passed"] is True
+    assert inflate_adapter_control["identity_adapter_control"]["byte_exact"] is True
+    assert inflate_adapter_control["nonidentity_adapter_control"]["output_changed"] is True
+    assert readiness["runtime_effect_controls"]["scored_runtime_output_parity"][
+        "local_frame_warp_control_passed"
+    ] is True
+    assert readiness["runtime_effect_controls"]["scored_runtime_output_parity"][
+        "local_byte_output_control_passed"
+    ] is True
+    assert readiness["runtime_effect_controls"]["scored_runtime_output_parity"][
+        "local_inflate_adapter_control_passed"
+    ] is True
     assert candidate["lfv1_foveation_params_bridge"]["contract"] == (
         LFV1_FOVEATION_PARAMS_BRIDGE_CONTRACT
     )
@@ -161,6 +207,9 @@ def test_build_lapose_foveation_payload_archive_is_byte_closed_and_fail_closed(
         "lfv1_tuple_mutation_runtime_output_control",
         "charged_member_presence_control",
         "runtime_consumes_foveation_tuple_control",
+        "scorer_visible_frame_warp_control",
+        "scorer_visible_byte_output_control",
+        "inflate_adapter_byte_output_control",
     }
 
     archive_member_manifest = read_json(out_a / "archive_member_manifest.json")
@@ -200,6 +249,9 @@ def test_build_lapose_foveation_payload_archive_is_byte_closed_and_fail_closed(
     assert proof_skeleton["proof_status"]["archive_contains_payload_and_runtime"] is True
     assert proof_skeleton["proof_status"]["runtime_output_parity"] is False
     assert proof_skeleton["proof_status"]["structural_runtime_consumption"] is True
+    assert proof_skeleton["proof_status"]["scorer_visible_frame_warp_control"] is True
+    assert proof_skeleton["proof_status"]["scorer_visible_byte_output_control"] is True
+    assert proof_skeleton["proof_status"]["local_rgb24_inflate_adapter_control"] is True
     assert proof_skeleton["proof_status"]["lfv1_to_foveation_params_bridge"] is True
     assert proof_skeleton["proof_status"]["scorer_visible_output_bridge"] is True
     assert proof_skeleton["proof_status"]["scored_runtime_output_parity"] is False
@@ -278,6 +330,9 @@ def test_lfv1_runtime_effect_controls_identity_and_structural_mutation() -> None
     identity = report["lfv1_identity_decode_control"]
     mutation = report["lfv1_tuple_mutation_runtime_output_control"]
     runtime_consumes = report["runtime_consumes_foveation_tuple_control"]
+    frame_warp = report["scorer_visible_frame_warp_control"]
+    byte_output = report["scorer_visible_byte_output_control"]
+    inflate_adapter = report["inflate_adapter_byte_output_control"]
     assert report["passed"] is True
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
@@ -293,7 +348,218 @@ def test_lfv1_runtime_effect_controls_identity_and_structural_mutation() -> None
     assert runtime_consumes["passed"] is True
     assert runtime_consumes["source_structural_output"]["route_count"] == 2
     assert report["structural_runtime_consumption"]["passed"] is True
+    assert frame_warp["passed"] is True
+    assert frame_warp["identity_control"]["passed"] is True
+    assert frame_warp["nonidentity_control"]["passed"] is True
+    assert frame_warp["nonidentity_control"]["output_changed"] is True
+    assert byte_output["passed"] is True
+    assert byte_output["identity_byte_output_control"]["byte_exact"] is True
+    assert byte_output["nonidentity_byte_output_control"]["output_changed"] is True
+    assert inflate_adapter["passed"] is True
+    assert inflate_adapter["identity_adapter_control"]["byte_exact"] is True
+    assert inflate_adapter["nonidentity_adapter_control"]["output_changed"] is True
     assert report["scored_runtime_output_parity"]["passed"] is False
+    assert report["scored_runtime_output_parity"]["local_frame_warp_control_passed"] is True
+    assert report["scored_runtime_output_parity"]["local_byte_output_control_passed"] is True
+    assert report["scored_runtime_output_parity"]["local_inflate_adapter_control_passed"] is True
+
+
+def test_lfv1_foveation_params_drive_scorer_visible_rgb_warp(tmp_path: Path) -> None:
+    payload = _lfv1_payload()
+    out_dir = tmp_path / "direct"
+    result = build_lapose_foveation_payload_archive_candidate(
+        out_dir=out_dir,
+        lfv1_payload=payload,
+        payload_source={
+            "kind": "fixture_lfv1_payload",
+            "payload_bytes": len(payload),
+            "payload_sha256": sha256_bytes(payload),
+        },
+        repo_root=REPO,
+    )
+    foveation_record = next(
+        record
+        for record in result["archive_member_manifest"]["members"]
+        if record["name"] == FOVEATION_PARAMS_MEMBER
+    )
+    assert result["summary"]["archive_sha256"] == sha256_file(out_dir / "archive.zip")
+    with zipfile.ZipFile(out_dir / "archive.zip") as archive:
+        foveation_params = archive.read(FOVEATION_PARAMS_MEMBER)
+
+    assert foveation_record["sha256"] == sha256_bytes(foveation_params)
+    control = build_scorer_visible_frame_warp_control_report(foveation_params)
+    assert control["passed"] is True
+    params = load_foveation_params(foveation_params)
+    frame_index = control["probe_frame_indices"][0]
+    image_size = control["hf_v1_decode"]["image_size"]
+    sample = torch.linspace(
+        0.0,
+        1.0,
+        steps=3 * image_size["height"] * image_size["width"],
+        dtype=torch.float32,
+    ).view(1, 3, image_size["height"], image_size["width"])
+    warped = apply_lfv1_to_rgb_frames(
+        sample,
+        params,
+        frame_indices=[frame_index],
+    )
+    assert tuple(warped.shape) == tuple(sample.shape)
+    assert not torch.allclose(warped, sample, atol=1e-5, rtol=1e-5)
+
+
+def test_lfv1_runtime_rgb24_inflate_adapter_writes_changed_bytes(tmp_path: Path) -> None:
+    payload = _lfv1_payload()
+    out_dir = tmp_path / "adapter"
+    result = build_lapose_foveation_payload_archive_candidate(
+        out_dir=out_dir,
+        lfv1_payload=payload,
+        payload_source={
+            "kind": "fixture_lfv1_payload",
+            "payload_bytes": len(payload),
+            "payload_sha256": sha256_bytes(payload),
+        },
+        repo_root=REPO,
+    )
+    extract_dir = tmp_path / "extract_adapter"
+    with zipfile.ZipFile(out_dir / "archive.zip") as archive:
+        archive.extractall(extract_dir)
+        foveation_params = archive.read(FOVEATION_PARAMS_MEMBER)
+
+    byte_control = build_scorer_visible_byte_output_control_report(foveation_params)
+    adapter_control = build_inflate_adapter_byte_output_control_report(foveation_params)
+    assert byte_control["passed"] is True
+    assert adapter_control["passed"] is True
+    frame_index = adapter_control["probe_frame_indices"][0]
+    image_size = adapter_control["hf_v1_decode"]["image_size"]
+    sample = torch.zeros(1, 3, image_size["height"], image_size["width"], dtype=torch.float32)
+    sample[:, 0] = 1.0
+    sample[:, 1, :, ::2] = 1.0
+    sample[:, 2, ::2, :] = 1.0
+    input_raw = rgb_frames_to_rgb24_bytes(sample)
+    input_path = tmp_path / "input.rgb24"
+    output_path = tmp_path / "output.rgb24"
+    input_path.write_bytes(input_raw)
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(extract_dir / "runtime_consumer.py"),
+            "--archive-root",
+            str(extract_dir),
+            "--input-rgb24",
+            str(input_path),
+            "--output-rgb24",
+            str(output_path),
+            "--frame-count",
+            "1",
+            "--height",
+            str(image_size["height"]),
+            "--width",
+            str(image_size["width"]),
+            "--frame-indices",
+            str(frame_index),
+        ],
+        check=False,
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert output_path.is_file()
+    output_raw = output_path.read_bytes()
+    assert len(output_raw) == len(input_raw)
+    assert output_raw != input_raw
+    report = json.loads(proc.stdout)
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["runtime_adapter_executed"] is True
+    adapter_run = report["local_rgb24_inflate_adapter_run"]
+    assert adapter_run["adapter_scope"] == "local_rgb24_fixture_not_full_contest_inflate"
+    assert adapter_run["output_changed"] is True
+    assert adapter_run["output"]["sha256"] == sha256_bytes(output_raw)
+    assert report["lfv1_payload_decode"] == result["candidate_manifest"]["lfv1_payload"]["decoded"]
+
+
+def test_lfv1_inflate_sh_official_signature_facade_uses_base_raw_dir(tmp_path: Path) -> None:
+    payload = _small_pair0_lfv1_payload()
+    out_dir = tmp_path / "official_candidate"
+    build_lapose_foveation_payload_archive_candidate(
+        out_dir=out_dir,
+        lfv1_payload=payload,
+        payload_source={
+            "kind": "fixture_pair0_lfv1_payload",
+            "payload_bytes": len(payload),
+            "payload_sha256": sha256_bytes(payload),
+        },
+        repo_root=REPO,
+    )
+    extract_dir = tmp_path / "official_extract"
+    with zipfile.ZipFile(out_dir / "archive.zip") as archive:
+        archive.extractall(extract_dir)
+        foveation_params = archive.read(FOVEATION_PARAMS_MEMBER)
+    adapter_control = build_inflate_adapter_byte_output_control_report(foveation_params)
+    image_size = adapter_control["hf_v1_decode"]["image_size"]
+    frame_count = max(adapter_control["probe_frame_indices"]) + 1
+    base_dir = tmp_path / "base_raw"
+    inflated_dir = tmp_path / "inflated"
+    file_list = tmp_path / "file_list.txt"
+    base_dir.mkdir()
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    sample = torch.zeros(
+        frame_count,
+        3,
+        image_size["height"],
+        image_size["width"],
+        dtype=torch.float32,
+    )
+    for frame_index in range(frame_count):
+        sample[frame_index, 0] = 1.0 if frame_index % 2 == 0 else 0.0
+        sample[frame_index, 1, :, ::2] = 1.0
+        sample[frame_index, 2, ::2, :] = 1.0
+    input_raw = rgb_frames_to_rgb24_bytes(sample)
+    (base_dir / "0.raw").write_bytes(input_raw)
+    env = os.environ.copy()
+    env["PACT_PYTHON_BIN"] = sys.executable
+    env["LFV1_BASE_RAW_DIR"] = str(base_dir)
+    env["LFV1_CHUNK_FRAMES"] = "1"
+
+    proc = subprocess.run(
+        [
+            "bash",
+            str(extract_dir / "inflate.sh"),
+            str(extract_dir),
+            str(inflated_dir),
+            str(file_list),
+        ],
+        check=False,
+        cwd=REPO,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    output_path = inflated_dir / "0.raw"
+    assert output_path.is_file()
+    output_raw = output_path.read_bytes()
+    assert len(output_raw) == len(input_raw)
+    assert output_raw != input_raw
+    report = json.loads(proc.stderr)
+    facade = report["official_signature_local_facade_run"]
+    assert facade["adapter_scope"] == (
+        "official_signature_local_base_raw_facade_not_self_sufficient_contest_decoder"
+    )
+    assert facade["hardware_contract"]["chunked_streaming"] is True
+    assert facade["hardware_contract"]["chunk_frames"] == 1
+    assert facade["research_fidelity_contract"]["external_teacher_models_at_inflate"] is False
+    assert facade["research_fidelity_contract"]["posenet_segnet_sensitivity_collapsed"] is False
+    assert facade["all_outputs_written"] is True
+    assert facade["any_output_changed"] is True
+    assert facade["records"][0]["output"]["sha256"] == sha256_bytes(output_raw)
+    assert facade["records"][0]["pair_sensitivity_route_summary"][
+        "posenet_segnet_sensitivity_collapsed"
+    ] is False
 
 
 def test_lapose_foveation_candidate_audit_fails_closed_on_payload_member_mismatch(
@@ -340,6 +606,12 @@ def test_lapose_foveation_candidate_audit_fails_closed_on_payload_member_mismatc
 def _lfv1_payload() -> bytes:
     payload, _pack = pack_lapose_foveation_tuple_payload(_manifest(), max_atoms=2)
     return payload
+
+
+def _small_pair0_lfv1_payload() -> bytes:
+    header = struct.Struct("<4sHHHH").pack(b"LFV1", 1, 1, 32, 24)
+    row = struct.Struct("<BHHHHHH").pack(1, 0, 32768, 32768, 32768, 32768, 32768)
+    return header + row
 
 
 def _manifest() -> dict:

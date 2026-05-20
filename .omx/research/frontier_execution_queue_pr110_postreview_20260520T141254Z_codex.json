@@ -1,0 +1,177 @@
+{
+  "schema_version": "frontier_execution_queue_pr110_postreview_v1",
+  "written_at_utc": "2026-05-20T14:12:54Z",
+  "author": "codex",
+  "scope": {
+    "write_scope": [
+      ".omx/research/frontier_execution_queue_pr110_postreview_20260520T141254Z_codex.md",
+      ".omx/research/frontier_execution_queue_pr110_postreview_20260520T141254Z_codex.json"
+    ],
+    "score_claim": false,
+    "promotion_eligible": false,
+    "dispatch_attempted": false
+  },
+  "frontier": {
+    "canonical_frontier_pointer_refreshed_utc": "2026-05-20T13:47:03.952511+00:00",
+    "contest_cpu": {
+      "score": 0.1920513168811056,
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "evidence_grade": "[contest-CPU]",
+      "hardware_substrate": "linux_x86_64_cpu"
+    },
+    "contest_cuda": {
+      "score": 0.20533002902019143,
+      "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "evidence_grade": "[contest-CUDA]",
+      "hardware_substrate": "linux_x86_64_t4"
+    }
+  },
+  "pr110_postreview": {
+    "state": "open_mergeable_clean_per_reports_latest_and_pr110_review_memo",
+    "release_archive_size_bytes": 178517,
+    "release_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "verified_member": {
+      "name": "x",
+      "bytes": 178417,
+      "compression_method": "stored"
+    },
+    "public_surface_action": "monitor_only_no_new_positioning_artifact"
+  },
+  "recommended_immediate_artifact_path": {
+    "lane_id": "lane_pr101_fec6_packetir_compiler_identity_queue_20260519",
+    "output_dir": "experiments/results/pr101_fec6_rule6_component_candidate_20260520_codex/",
+    "required_outputs": [
+      "archive.zip with member bytes different from current FEC6 archive",
+      "manifest.json with archive bytes, archive sha256, member sha256, changed PacketIR sections, operator rationale",
+      "runtime-consumption/no-op proof for changed bytes",
+      "local inflate smoke or exact failure classification",
+      "status fields score_claim=false promotion_eligible=false ready_for_exact_eval_dispatch=false"
+    ],
+    "fallback_if_no_materializable_candidate": "terminalize exact_failure_classification=packetir_queue_has_no_materializable_component_candidate then pivot to TT5L doctor/source-manifest path"
+  },
+  "queue": [
+    {
+      "rank": 1,
+      "lane_id": "lane_pr101_fec6_packetir_compiler_identity_queue_20260519",
+      "title": "Rule #6 FEC6 PacketIR component-moving candidate",
+      "evidence_axis": "local byte/runtime proof first; paired [contest-CPU] and [contest-CUDA] only after proof",
+      "first_command_or_gate": "Start from experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packetir_candidate_queue.json; materialize one grammar-aware selector/procedural-residual candidate; rerun runtime-consumption/no-op proof",
+      "compute_class": "local_cpu_editor_first_no_provider",
+      "expected_artifact": "experiments/results/pr101_fec6_rule6_component_candidate_20260520_codex/archive.zip plus manifest and no-op proof",
+      "stop_continue_threshold": "continue only if bytes differ, inflate succeeds, changed bytes are consumed, and candidate plausibly changes Seg/Pose or consumed runtime state; stop if all rows are proxy-only or byte-polish-only below 78 charged bytes",
+      "blocker_or_claim_requirement": "no claim for local build; before exact eval claim lane via tools/claim_lane_dispatch.py and prepare paired-axis terminal-claim plan",
+      "frontier_rationale": "closest artifact path because PacketIR identity and runtime-consumption surfaces already exist"
+    },
+    {
+      "rank": 2,
+      "lane_id": "lane_l5_v2_tt5l_side_info_effect_curve",
+      "title": "TT5L side-info paired effect curve",
+      "evidence_axis": "paired [contest-CPU] and [contest-CUDA]",
+      "first_command_or_gate": "regenerate route/doctor packet; run required Lightning doctor; stage per-cell source manifests",
+      "compute_class": "Lightning_or_Modal_exact_eval_cells_after_doctor",
+      "expected_artifact": "10-cell paired CPU/CUDA side-info effect curve with source manifests, archive manifests, exact eval JSONs, terminal claims",
+      "stop_continue_threshold": "continue if doctor/source-manifest custody green and rate-only shrink approaches corrected 0.0019-0.0032 savings band or shows component movement; stop on doctor failure, stale manifests, non-causal side-info, or no-op proof failure",
+      "blocker_or_claim_requirement": "claim each cell before provider execution; no architecture lock before harvested paired cells",
+      "frontier_rationale": "best longer staircase path to cross strict CPU frontier by real rate or component movement"
+    },
+    {
+      "rank": 3,
+      "lane_id": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518",
+      "title": "Z6 4c scorer-logit conditioning re-fire",
+      "evidence_axis": "diagnostic smoke until paired exact evidence",
+      "first_command_or_gate": "fresh post-fix Z6 4c smoke after verifying driver mode/env handling and no active claim conflict",
+      "compute_class": "Modal_A10G_or_T4_smoke_about_3_usd",
+      "expected_artifact": "harvested smoke with archive/runtime custody, full-vs-identity disambiguator rows, Catalog #313 outcome",
+      "stop_continue_threshold": "continue only if corrected 4c path runs intended architecture and beats identity on measured component target; stop if it re-enters smoke-hardcoded/synthetic mode or misses band by implementation-class failure",
+      "blocker_or_claim_requirement": "claim before dispatch; close or supersede stale duplicate task rows",
+      "frontier_rationale": "highest unblock leverage from tactical triage for a class-shift ego/scorer-logit path"
+    },
+    {
+      "rank": 4,
+      "lane_id": "lane_dreamer_v3_rssm_3_free_probes_20260520",
+      "proposed_lane_id": "lane_dreamer_v3_rssm_b2_optimal_form_20260520",
+      "title": "DreamerV3 RSSM B2 optimal-form bridge",
+      "evidence_axis": "free probes only; future smoke diagnostic until exact eval",
+      "first_command_or_gate": "consume 3-probe result, register/consume canonical equation, iterate design to PROCEED-unconditional",
+      "compute_class": "zero_cost_design_probe_then_later_modal_t4_5_to_15_usd_smoke",
+      "expected_artifact": "optimal-form design memo plus equation/probe closure plus optional 50-100ep smoke archive",
+      "stop_continue_threshold": "continue to smoke only after blocking canonical-equation gap is closed and Catalog #315 optimal-form iteration is satisfied; stop if still PROCEED_WITH_REVISIONS or research_only=true",
+      "blocker_or_claim_requirement": "paid smoke requires lane claim and operator authorization; no dispatch while Catalog #313 blocking DEFER remains active",
+      "frontier_rationale": "best mid-term class-shift candidate if it exits lifted-trainer form"
+    },
+    {
+      "rank": 5,
+      "lane_id": "lane_nscs06_v8_hybrid_class_shift_path_c_20260520",
+      "title": "NSCS06 v8 hybrid class-shift path C",
+      "evidence_axis": "design/K-coverage first; future smoke diagnostic",
+      "first_command_or_gate": "write Variant C K-coverage methodology validation and hybrid path-C design; iterate cargo-cult unwind to PROCEED-unconditional",
+      "compute_class": "zero_cost_design_first_then_conditional_modal_smoke_15_to_50_usd",
+      "expected_artifact": "design memo, K-coverage validation manifest, smoke recipe only if validation passes",
+      "stop_continue_threshold": "continue only if K-coverage is predicted-reachable and runtime effect is operational; stop if validation falsifies K-coverage or lane is scaffold-only without research_only=true",
+      "blocker_or_claim_requirement": "paid smoke requires claim and explicit post-validation approval",
+      "frontier_rationale": "uses the strongest optimal-form iteration evidence from NSCS06 v6 to v7 without retreading failed Path B"
+    },
+    {
+      "rank": 6,
+      "lane_id": "lane_master_gradient_operator_response_fec6_20260520",
+      "title": "FEC6 master-gradient operator response rows",
+      "evidence_axis": "local operator rows only; no score authority until exact eval",
+      "first_command_or_gate": "extend grammar-aware operator rows beyond current FEC6 selector table; avoid raw archive-byte gradients",
+      "compute_class": "local_cpu_editor",
+      "expected_artifact": "CandidateModificationSpec manifest with raw_archive_byte_rows_emitted=0, ZIP/CRC rebuild proof, inflate proof",
+      "stop_continue_threshold": "continue if rows rebuild valid packets and point to component-moving candidates; stop if rows are raw byte flips, proxy-only, or cannot prove inflate success",
+      "blocker_or_claim_requirement": "no provider claim until a packet-valid candidate exists",
+      "frontier_rationale": "turns sensitivity infrastructure into packet-valid modifications instead of false-authority gradients"
+    },
+    {
+      "rank": 7,
+      "lane_id": "lane_stc_v2_ratify_or_defer_20260520",
+      "title": "STC v2 RATIFY-or-DEFER smoke",
+      "evidence_axis": "diagnostic smoke with Catalog #313 outcome",
+      "first_command_or_gate": "run post-fix STC v2 smoke only if no conflicting active claim",
+      "compute_class": "Modal_T4_about_0_20_usd",
+      "expected_artifact": "harvested smoke and RATIFY-or-DEFER memo",
+      "stop_continue_threshold": "continue only on green smoke with runtime custody; otherwise register DEFER with reactivation criteria",
+      "blocker_or_claim_requirement": "claim before dispatch",
+      "frontier_rationale": "cheap backlog-unblocking information gain, lower immediate frontier odds than FEC6/TT5L/Z6"
+    }
+  ],
+  "staircase": {
+    "short_term_0_72h": [
+      "monitor PR #110 comments/eval only",
+      "build FEC6 PacketIR component-moving local artifact",
+      "if materialization fails, write exact failure classification and pivot to TT5L doctor/source-manifest prep",
+      "avoid new T3/T4 deliberations unless hard elevation trigger fires"
+    ],
+    "mid_term_3_14d": [
+      "execute TT5L paired side-info effect cells only after doctor/source-manifest custody is green",
+      "re-fire Z6 4c only after driver-mode fix is verified against intended architecture",
+      "close DreamerV3 RSSM blocking free-probe/equation gap before paid smoke",
+      "advance NSCS06 v8 path C through K-coverage validation before spend"
+    ],
+    "long_term_1_3mo": [
+      "mature unified S_total(theta, archive_bytes, hardware) meta-Lagrangian solver",
+      "convert per-pair/per-byte/per-class priors into per-element routing via cathedral consumers and bit allocator surfaces",
+      "use solver to pick next two paid class-shift candidates per 7-day window"
+    ]
+  },
+  "source_surfaces": [
+    "reports/latest.md",
+    ".omx/state/canonical_frontier_pointer.json",
+    ".omx/state/current_focus.md",
+    ".omx/state/next_experiments.md",
+    ".omx/state/active_lane_dispatch_claims.md",
+    ".omx/state/canonical_task_status.jsonl",
+    ".omx/state/subagent_progress.jsonl",
+    ".omx/research/codex_findings_pr110_source_map_recursive_review_20260520T140229Z_codex.md",
+    ".omx/research/codex_chosen_frontier_path_rule6_fec6_component_moving_20260520T121606Z_codex.md",
+    ".omx/research/council_t3_grand_strategy_review_20260520T120000Z.md",
+    ".omx/research/strategy_staircase_synthesis_20260520T120000Z.md",
+    ".omx/research/comprehensive_plan_short_mid_long_term_20260520T120000Z.md",
+    ".omx/research/task_triage_inventory_20260520T120607Z.md",
+    ".omx/research/codex_session_summary_20260520T065500Z_codex.md",
+    ".omx/research/codex_findings_vq_k2_diagnostic_terminalized_20260520T121133Z_codex.md",
+    "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packetir_candidate_queue.json",
+    "experiments/results/fec6_selector_operator_space_20260517_codex/operator_space_manifest.json"
+  ]
+}

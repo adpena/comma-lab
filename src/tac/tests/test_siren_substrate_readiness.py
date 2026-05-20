@@ -173,11 +173,11 @@ def test_live_cli_json_is_fail_closed_but_locally_ready() -> None:
 def test_live_trainer_requires_contest_cuda_auth_eval_claim() -> None:
     text = (REPO / "experiments/train_substrate_siren.py").read_text(encoding="utf-8")
 
-    assert "require_contest_cuda_auth_eval_claim" in text
+    assert "_canon_gate_auth_eval_call" in text
     assert "archive_sha256=archive_sha" in text
     assert 'substrate_tag="siren"' in text
-    assert "auth_eval_score_claim_valid = claim.score_claim_valid" in text
-    assert "auth_eval_exact_cuda_complete = claim.exact_cuda_eval_complete" in text
+    assert 'auth_result["auth_eval_score_claim_valid"]' in text
+    assert 'auth_result["auth_eval_exact_cuda_complete"]' in text
 
 
 def test_live_remote_driver_logs_scored_archive_zip_not_payload_bin() -> None:

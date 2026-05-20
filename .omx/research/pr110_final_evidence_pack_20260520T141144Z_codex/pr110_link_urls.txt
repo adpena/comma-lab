@@ -1,0 +1,12 @@
+https://github.com/adpena/comma-lab/blob/b7f16a081ee381803dd5d917bdaf805453fb81f3/docs/asymptotic_floor_candidate_inventory.md
+https://github.com/adpena/comma-lab/blob/b7f16a081ee381803dd5d917bdaf805453fb81f3/docs/full_stack_source_map.md
+https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip
+https://github.com/adpena/comma_video_compression_challenge/tree/ec6cc7f98c16b6ad2db8bc7cde65757bb7993004/submissions/hnerv_fec6_fixed_huffman_k16
+https://github.com/adpena/tac
+https://github.com/commaai/comma_video_compression_challenge/pull/100
+https://github.com/commaai/comma_video_compression_challenge/pull/101
+https://github.com/commaai/comma_video_compression_challenge/pull/102
+https://github.com/commaai/comma_video_compression_challenge/pull/103
+https://github.com/commaai/comma_video_compression_challenge/pull/108
+https://github.com/commaai/comma_video_compression_challenge/pull/95
+https://github.com/commaai/comma_video_compression_challenge/pull/98

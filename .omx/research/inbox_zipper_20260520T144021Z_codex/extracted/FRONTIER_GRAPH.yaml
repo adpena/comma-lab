@@ -1,0 +1,231 @@
+nodes:
+  # Baseline and control arms
+  - lane_id: PR110_baseline
+    family: HNeRV variant
+    status: baseline
+    evidence_grade: EMPIRICAL
+    estimated_cost: low
+    parallelizable: false
+    next_gate: "Recompute scores locally to ensure reproducibility"
+    promotion_gate: "Used as control arm for all future comparisons"
+    kill_criteria: "Never; this is the control baseline"
+    reactivation_criteria: "N/A"
+
+  # Variants of HNeRV family
+  - lane_id: E_NeRV
+    family: HNeRV variant
+    status: candidate
+    evidence_grade: SCAFFOLDED
+    estimated_cost: medium (T4 GPU ~20h)
+    parallelizable: true
+    next_gate: "Train small E‑NeRV model on one video; export and evaluate"
+    promotion_gate: "≥0.0005 improvement on CPU at similar bytes"
+    kill_criteria: "No improvement after pilot training or export fails"
+    reactivation_criteria: "If training recipe changes or new priors emerge"
+
+  - lane_id: HiNeRV
+    family: HNeRV variant
+    status: candidate
+    evidence_grade: SCAFFOLDED
+    estimated_cost: medium (T4 GPU ~20h)
+    parallelizable: true
+    next_gate: "Train HiNeRV on single video; check export compatibility"
+    promotion_gate: "≥0.0005 CPU improvement"
+    kill_criteria: "No improvement or unstable training"
+    reactivation_criteria: "If new training curriculum unlocks performance"
+
+  # Selector extensions
+  - lane_id: FEC7_selector
+    family: Selector
+    status: candidate
+    evidence_grade: DESIGN_ONLY
+    estimated_cost: low to medium (CPU search + T4 training)
+    parallelizable: true
+    next_gate: "Implement 63‑mode selector; offline search on one video"
+    promotion_gate: "Net score gain ≥0.0003 after accounting for sidecar bytes"
+    kill_criteria: "Selector overhead outweighs score gain"
+    reactivation_criteria: "If more expressive transforms discovered"
+
+  # Coordinate/INR codecs
+  - lane_id: SIREN_INR
+    family: Coordinate INR
+    status: candidate
+    evidence_grade: SCAFFOLDED
+    estimated_cost: medium to high (4090/A100 ~30h)
+    parallelizable: true
+    next_gate: "Train SIREN on one video; verify export"
+    promotion_gate: "≥0.001 improvement on CPU or significant byte reduction"
+    kill_criteria: "Training cost prohibitive or poor results"
+    reactivation_criteria: "If new activation schedules or weight sharing discovered"
+
+  # Discrete latent tokens
+  - lane_id: VQ_VAE
+    family: Discrete latent
+    status: candidate
+    evidence_grade: SCAFFOLDED
+    estimated_cost: medium to high (4090/A100 ~40h)
+    parallelizable: true
+    next_gate: "Train small VQ‑VAE and export tokens"
+    promotion_gate: "≥0.002 CPU improvement or tokens compress >10% better"
+    kill_criteria: "Poor convergence or inflated archive size"
+    reactivation_criteria: "If improved token encoders become available"
+
+  # Pretraining and priors
+  - lane_id: MAE_VideoMAE_pretraining
+    family: Pretraining
+    status: candidate
+    evidence_grade: DESIGN_ONLY
+    estimated_cost: medium (4090 ~50h)
+    parallelizable: true
+    next_gate: "Load pretrained weights; run small training smoke"
+    promotion_gate: "Faster convergence or better scores in small run"
+    kill_criteria: "No improvement or added complexity"
+    reactivation_criteria: "If later tasks require better initialization"
+
+  - lane_id: Foveation_Wavelet
+    family: Allocation
+    status: candidate
+    evidence_grade: DESIGN_ONLY
+    estimated_cost: medium (CPU search + T4 ~30h)
+    parallelizable: true
+    next_gate: "Implement mask generation and variable‑resolution decoder"
+    promotion_gate: "Byte savings outweigh distortion penalties"
+    kill_criteria: "Pose/SegNet errors increase too much"
+    reactivation_criteria: "If more precise foveation masks become available"
+
+  - lane_id: Predictor_Tuning
+    family: Meta search
+    status: landed_tooling
+    evidence_grade: LANDED_TOOLING
+    estimated_cost: low
+    parallelizable: true
+    next_gate: "Calibrate predictor on new anchors"
+    promotion_gate: "Lower false accept/reject rates"
+    kill_criteria: "Predictor cannot generalise beyond existing anchors"
+    reactivation_criteria: "When new anchor data gathered"
+
+  - lane_id: RAFT_PosePrior
+    family: Pose/geometry prior
+    status: candidate
+    evidence_grade: SCAFFOLDED
+    estimated_cost: medium (T4 ~40h)
+    parallelizable: true
+    next_gate: "Integrate RAFT/LA‑Pose as auxiliary loss; train on small set"
+    promotion_gate: "Pose distortion reduction ≥10%"
+    kill_criteria: "No improvement or training instability"
+    reactivation_criteria: "When better optical‑flow models become available"
+
+  # Neural codec families
+  - lane_id: C3_CoolChic
+    family: Neural codec
+    status: design_only
+    evidence_grade: DESIGN_ONLY
+    estimated_cost: high (A100 ~200h)
+    parallelizable: limited
+    next_gate: "Integrate C3 or Cool‑Chic into comma‑lab; test export"
+    promotion_gate: "≥0.003 improvement with manageable bytes"
+    kill_criteria: "Training cost too high or no improvement"
+    reactivation_criteria: "If simpler variants of neural codecs become available"
+
+  - lane_id: WorldModel_Prior
+    family: World model
+    status: design_only
+    evidence_grade: DESIGN_ONLY
+    estimated_cost: very high (multi‑month A100 cluster)
+    parallelizable: limited
+    next_gate: "Implement predictive model (DreamerV3/V‑JEPA/Mamba) and test on toy data"
+    promotion_gate: "Strong predictive power and compressive gains"
+    kill_criteria: "Compute budget exhausted with little progress"
+    reactivation_criteria: "If cheaper world‑model approximations emerge"
+
+  # Semantic and dense features
+  - lane_id: Semantic_Conditioning
+    family: Semantic conditioning
+    status: design_only
+    evidence_grade: DESIGN_ONLY
+    estimated_cost: high (A100 ~150h)
+    parallelizable: limited
+    next_gate: "Implement SPADE/CLADE layers; prepare ground‑truth masks"
+    promotion_gate: "Better segmentation and total score reduction ≥0.002"
+    kill_criteria: "Implementation complexity outweighs gains"
+    reactivation_criteria: "If improved segmentation priors become available"
+
+  - lane_id: DenseFeature_Prior
+    family: Dense feature prior
+    status: external_reference
+    evidence_grade: EXTERNAL_REFERENCE
+    estimated_cost: very high
+    parallelizable: limited
+    next_gate: "Explore distillation of SAM3/Falcon/DINOv3 features; small smoke on CPU"
+    promotion_gate: "Evidence of compressive benefit"
+    kill_criteria: "Models too large to include or no benefit"
+    reactivation_criteria: "If smaller dense‑feature models are released"
+
+  # Steganography and entropy
+  - lane_id: STC_UNIWARD
+    family: Steganography
+    status: candidate
+    evidence_grade: SCAFFOLDED
+    estimated_cost: medium (CPU heavy optimisation)
+    parallelizable: true
+    next_gate: "Implement UNIWARD cost and STC coder; test on synthetic data"
+    promotion_gate: "Byte savings ≥5% without increasing distortion"
+    kill_criteria: "Complexity too high or no savings"
+    reactivation_criteria: "If combined with master‑gradient allocation"
+
+  # Composition
+  - lane_id: Composition_ADMM
+    family: Composition
+    status: design_only
+    evidence_grade: DESIGN_ONLY
+    estimated_cost: high
+    parallelizable: limited
+    next_gate: "Develop stack‑of‑stacks coordinator using ADMM/Dykstra"
+    promotion_gate: "Demonstrated synergy of at least two innovations"
+    kill_criteria: "Interference between modules overwhelms gains"
+    reactivation_criteria: "When at least two modules have proven gains"
+
+edges:
+  # Baseline is prerequisite for all candidates
+  - from: PR110_baseline
+    to: E_NeRV
+  - from: PR110_baseline
+    to: HiNeRV
+  - from: PR110_baseline
+    to: FEC7_selector
+  - from: PR110_baseline
+    to: SIREN_INR
+  - from: PR110_baseline
+    to: VQ_VAE
+  - from: PR110_baseline
+    to: Foveation_Wavelet
+  - from: PR110_baseline
+    to: RAFT_PosePrior
+  - from: PR110_baseline
+    to: Predictor_Tuning
+
+  # Selector depends on understanding baseline bytes
+  - from: FEC7_selector
+    to: Composition_ADMM
+
+  # SIREN, VQ‑VAE, Foveation and RAFT can be composed later
+  - from: SIREN_INR
+    to: Composition_ADMM
+  - from: VQ_VAE
+    to: Composition_ADMM
+  - from: Foveation_Wavelet
+    to: Composition_ADMM
+  - from: RAFT_PosePrior
+    to: Composition_ADMM
+
+  # Neural codecs and world models depend on baseline but also feed into composition
+  - from: C3_CoolChic
+    to: Composition_ADMM
+  - from: WorldModel_Prior
+    to: Composition_ADMM
+  - from: Semantic_Conditioning
+    to: Composition_ADMM
+  - from: DenseFeature_Prior
+    to: Composition_ADMM
+  - from: STC_UNIWARD
+    to: Composition_ADMM

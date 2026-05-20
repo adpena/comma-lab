@@ -1,0 +1,65 @@
+{
+  "schema_version": "zipper_frontier_queue_normalized.v1",
+  "created_at_utc": "2026-05-20T14:51:17Z",
+  "owner": "codex",
+  "source_package": ".omx/research/inbox_zipper_20260520T144021Z_codex/research_package.zip",
+  "source_package_sha256": "9ffce5d7802ebdb0669b21888b7ec76496561dee652c72f7993be803c38d2506",
+  "authority_policy": {
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "notes": "This queue normalizes advisory Zipper package material into Pact-native gates. It is not score authority and does not authorize GPU dispatch."
+  },
+  "items": [
+    {
+      "task_id": "zipper_followup_20260520::z_fec7_byte_negative",
+      "title": "Terminalize byte-only FEC7 selector recoding on PR110/FEC6 bytes",
+      "status": "completed",
+      "owner": "codex",
+      "evidence_grade": "local_byte_closed_no_score",
+      "artifact": "experiments/results/pr110_zipper_fec7_selector_profile_20260520_codex/profile.json",
+      "result": "best charged FEC7 prototype is 268 bytes vs FEC6 selector 249 bytes; 19 bytes worse; target 79-byte saving not met",
+      "next_gate": "Reactivate only with a new selector prior/model whose charged model plus stream saves at least 79 bytes or with a component-score-improving selector, not byte recoding alone."
+    },
+    {
+      "task_id": "zipper_followup_20260520::z_source_map_audit",
+      "title": "Classify source-map and candidate-inventory items against real repo surfaces",
+      "status": "completed",
+      "owner": "codex",
+      "evidence_grade": "local_repo_surface_audit",
+      "artifact": ".omx/research/zipper_source_map_surface_audit_20260520T145523Z_codex.md",
+      "result": "Zipper lanes classified against repo-native surfaces; package scaffolds rejected as implementation authority; stale public candidate-inventory doc flagged as not PR-link-safe until sanitized.",
+      "next_gate": "Use existing readiness/export surfaces for each lane; do not copy package pseudocode into src/tac."
+    },
+    {
+      "task_id": "zipper_followup_20260520::z_c3_coolchic_smoke_spec",
+      "title": "Reconcile C3/Cool-Chic recommendations with existing packet-compiler and prototype surfaces",
+      "status": "completed",
+      "owner": "codex",
+      "evidence_grade": "local_byte_closed_research_signal",
+      "artifact": ".omx/research/zipper_followup_readiness_gates_20260520T150513Z_codex.md",
+      "result": "Cool-Chic and C3 empty sidecar materializers produced byte-closed research artifacts with score_claim=false and ready_for_exact_eval_dispatch=false.",
+      "next_gate": "Only run l2_encoded materializers with explicit decoded_raw/gt_raw/byte_budget inputs; no dispatch from package prose."
+    },
+    {
+      "task_id": "zipper_followup_20260520::z_siren_vqvae_export_gate",
+      "title": "Define smallest byte-closed export gate for SIREN/VQ-VAE style lanes",
+      "status": "completed",
+      "owner": "codex",
+      "evidence_grade": "local_readiness_green",
+      "artifact": ".omx/research/zipper_followup_readiness_gates_20260520T150513Z_codex.md",
+      "result": "SIREN readiness audit local-ready; SIREN/VQ focused tests green after canonical auth-eval exact_cuda field wiring patch.",
+      "next_gate": "Run SIREN first-anchor local CPU smoke, then consider lane-claimed remote dispatch only with operator authorization."
+    },
+    {
+      "task_id": "zipper_followup_20260520::z_foveation_raft_gate",
+      "title": "Reconcile foveation and RAFT/LA-Pose suggestions with existing local surfaces",
+      "status": "completed",
+      "owner": "codex",
+      "evidence_grade": "local_tests_green",
+      "artifact": ".omx/research/zipper_followup_readiness_gates_20260520T150513Z_codex.md",
+      "result": "Foveation payload/archive and RAFT pipeline tests green locally; future real dispatch remains lane-claim/provider gated.",
+      "next_gate": "Build an LFV1 payload artifact or record missing-dependency blocker before any foveation/RAFT GPU run."
+    }
+  ]
+}

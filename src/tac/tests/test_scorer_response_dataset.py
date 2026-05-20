@@ -1,0 +1,163 @@
+from __future__ import annotations
+
+import json
+import math
+
+from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
+from tac.optimization.scorer_response_dataset import (
+    RATE_SCORE_PER_BYTE,
+    ResponseBaseline,
+    build_next_probe_plan,
+    build_response_dataset,
+    render_next_probe_plan_markdown,
+    render_markdown,
+)
+
+
+def _advisory(score: float, archive_bytes: int, pose: float, seg: float) -> dict:
+    return {
+        "canonical_score": score,
+        "archive_size_bytes": archive_bytes,
+        "avg_posenet_dist": pose,
+        "avg_segnet_dist": seg,
+        "axis": "[macOS-CPU advisory test]",
+        "archive": {"sha256": "a" * 64, "bytes": archive_bytes},
+        "raw": {"sha256": "b" * 64},
+    }
+
+
+def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
+    path = tmp_path / "scorer_gradient.json"
+    payload = {
+        "schema": "scorer_gradient_sparse_residual_smoke.v1",
+        "summary": {
+            "component": "pose",
+            "pair_indices": [7],
+            "changed_pixel_count": 3,
+            "changed_byte_count": 8,
+            "packed_bytes": 12,
+            "delta_vs_baseline_score": 0.1,
+        },
+        "candidate": {
+            "advisory_eval": _advisory(1.25, 110, 0.004, 0.010),
+            "inputs": {"target_raw_sha256": "c" * 64},
+            "plan": {"selected_gain_sum": 5.5, "n_kept": 3},
+            "local_pair_evals": [
+                {
+                    "delta": {"pose_dist_delta": -0.25, "seg_dist_delta": 0.0},
+                    "worse_or_null": False,
+                }
+            ],
+        },
+        "authority": {"score_claim": False, "promotion_blockers": ["advisory"]},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    baseline = ResponseBaseline(score=1.0, archive_bytes=100)
+
+    dataset = build_response_dataset([path], baseline=baseline)
+
+    assert dataset["score_claim"] is False
+    assert dataset["summary"]["row_count"] == 1
+    row = dataset["rows"][0]
+    assert row["family"] == "scorer_gradient_sparse_residual"
+    assert row["delta_vs_baseline_score"] == 0.25
+    expected_rate_delta = 25.0 * 10.0 / CONTEST_UNCOMPRESSED_BYTES
+    assert math.isclose(row["rate_delta_vs_baseline"], expected_rate_delta)
+    assert math.isclose(row["scorer_delta_vs_baseline"], 0.25 - expected_rate_delta)
+    assert row["added_archive_bytes"] == 10
+    assert math.isclose(row["required_scorer_gain_for_added_bytes"], expected_rate_delta)
+    assert row["observed_scorer_gain_vs_baseline"] == 0.0
+    assert math.isclose(row["scorer_gain_shortfall_to_break_even"], expected_rate_delta)
+    assert row["break_even_added_bytes_from_scorer_gain"] is None
+    assert row["byte_budget_margin_vs_break_even"] is None
+    assert row["local_pose_delta_sum"] == -0.25
+    assert row["target_raw_sha256"] == "c" * 64
+    assert row["holdout_fold"] in {0, 1, 2, 3, 4}
+
+
+def test_build_response_dataset_normalizes_candidate_list_and_correlations(tmp_path) -> None:
+    path = tmp_path / "op3_summary.json"
+    payload = {
+        "schema": "op3v3_decoder_q_advisory_batch.v1",
+        "producer": "tools/run_decoder_q_candidate_advisory_batch.py",
+        "candidates": [
+            {
+                "candidate_id": f"c{i}",
+                "advisory_eval": _advisory(1.0 + i * 0.1, 100 + i, 0.001 + i * 0.001, 0.01),
+            }
+            for i in range(4)
+        ],
+        "authority": {"score_claim": False},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=1.0, archive_bytes=100),
+    )
+
+    assert dataset["summary"]["row_count"] == 4
+    assert dataset["summary"]["family_counts"] == {"decoder_q": 4}
+    assert dataset["feature_correlations"]
+    md = render_markdown(dataset)
+    assert "Scorer Response Dataset" in md
+    assert "`decoder_q`: 4" in md
+
+
+def test_response_dataset_computes_break_even_bytes_for_scorer_gain(tmp_path) -> None:
+    path = tmp_path / "gain.json"
+    score = 1.0 - RATE_SCORE_PER_BYTE
+    payload = {
+        "schema": "sparse_residual_oracle_smoke.v1",
+        "candidate": {
+            "advisory_eval": _advisory(score, 102, 0.001, 0.01),
+            "plan": {"packed_bytes": 2},
+        },
+        "authority": {"score_claim": False},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset([path], baseline=ResponseBaseline(score=1.0, archive_bytes=100))
+    row = dataset["rows"][0]
+
+    assert row["added_archive_bytes"] == 2
+    assert math.isclose(row["rate_delta_vs_baseline"], 2.0 * RATE_SCORE_PER_BYTE)
+    assert math.isclose(row["scorer_delta_vs_baseline"], -3.0 * RATE_SCORE_PER_BYTE)
+    assert math.isclose(row["observed_scorer_gain_vs_baseline"], 3.0 * RATE_SCORE_PER_BYTE)
+    assert math.isclose(row["required_scorer_gain_for_added_bytes"], 2.0 * RATE_SCORE_PER_BYTE)
+    assert row["scorer_gain_shortfall_to_break_even"] == 0.0
+    assert math.isclose(row["break_even_added_bytes_from_scorer_gain"], 3.0)
+    assert math.isclose(row["byte_budget_margin_vs_break_even"], 1.0)
+    assert dataset["summary"]["best_byte_budget_margin"]["byte_budget_margin_vs_break_even"] > 0
+
+
+def test_next_probe_plan_blocks_overbudget_coordinate_residual(tmp_path) -> None:
+    path = tmp_path / "overbudget.json"
+    score = 1.0 + RATE_SCORE_PER_BYTE
+    payload = {
+        "schema": "scorer_gradient_sparse_residual_smoke.v1",
+        "candidate": {"advisory_eval": _advisory(score, 103, 0.001, 0.01)},
+        "authority": {"score_claim": False},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    dataset = build_response_dataset([path], baseline=ResponseBaseline(score=1.0, archive_bytes=100))
+
+    plan = build_next_probe_plan(dataset)
+
+    assert plan["score_claim"] is False
+    assert plan["prohibitions"][0]["rule"] == "do_not_widen_coordinate_sparse_residual_sidecar"
+    assert plan["probes"][0]["probe_id"] == "ll_byte_neutral_decoder_q_response_model"
+    assert "Next-Probe" in render_next_probe_plan_markdown(plan)
+
+
+def test_build_response_dataset_skips_non_advisory_rows(tmp_path) -> None:
+    path = tmp_path / "skip.json"
+    path.write_text(
+        json.dumps({"candidate": {"advisory_eval": {"skipped": True, "reason": "local_veto"}}}),
+        encoding="utf-8",
+    )
+
+    dataset = build_response_dataset([path], baseline=ResponseBaseline(score=1.0, archive_bytes=100))
+
+    assert dataset["summary"]["row_count"] == 0
+    assert dataset["skipped"][0]["reason"].endswith("no usable advisory row")

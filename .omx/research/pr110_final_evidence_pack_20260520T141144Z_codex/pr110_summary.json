@@ -1,0 +1,23 @@
+{
+  "number": 110,
+  "title": "hnerv_fec6_fixed_huffman_k16",
+  "state": "open",
+  "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/110",
+  "created_at": "2026-05-20T03:28:56Z",
+  "updated_at": "2026-05-20T14:00:48Z",
+  "user": "adpena",
+  "head": {
+    "repo": "adpena/comma_video_compression_challenge",
+    "ref": "hnerv_fec6_fixed_huffman_k16",
+    "sha": "ec6cc7f98c16b6ad2db8bc7cde65757bb7993004"
+  },
+  "base": {
+    "repo": "commaai/comma_video_compression_challenge",
+    "ref": "master",
+    "sha": "d0013db5a97066414217667e82673254eff2347d"
+  },
+  "changed_files": 6,
+  "additions": 1256,
+  "deletions": 0,
+  "mergeable_state": "clean"
+}

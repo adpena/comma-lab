@@ -175,6 +175,12 @@ src/tac.egg-info/
 # Audit the boundary with:
 #   python tools/audit_research_state_tracking.py --repo-root .
 #
+# PR110 evidence packs are useful local custody bundles, but the hosted archive
+# and runtime snapshot are rebuildable/raw public artifacts. Keep their compact
+# manifests and README trackable while preventing accidental bulk-adds.
+.omx/research/pr110_final_evidence_pack_*_codex/archive.zip
+.omx/research/pr110_final_evidence_pack_*_codex/runtime_snapshot/
+#
 # Subagent commit serializer artifacts (lock + JSONL log are local-only forensics)
 .omx/state/.commit-lock
 .omx/state/commit-serializer.log

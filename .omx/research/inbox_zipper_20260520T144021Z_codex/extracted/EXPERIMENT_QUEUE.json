@@ -1,0 +1,135 @@
+[
+  {
+    "id": "exp_s1_verify_pr110",
+    "description": "Reproduce PR #110 archive and scores on local CPU.",
+    "commands": [
+      "wget -O archive.zip <release-url>",
+      "sha256sum archive.zip",
+      "python submissions/hnerv_fec6_fixed_huffman_k16/inflate.py --archive archive.zip --out out_dir",
+      "python upstream/evaluate.py --device cpu --num_threads 2 --archive archive.zip"
+    ],
+    "resources": "local_cpu",
+    "expected_outputs": ["contest_auth_eval.json", "report.txt", "archive_manifest.json"],
+    "success_criteria": "Total score within 0.001 of 0.192051",
+    "failure_criteria": "Score drift >0.001 or errors during inflate/evaluate"
+  },
+  {
+    "id": "exp_s2_packet_compiler",
+    "description": "Implement deterministic packet compiler and reproduce PR #110 archive.",
+    "commands": [
+      "python tools/packet_compiler.py --source source_payload.bin --selector selector.bin --out archive.zip",
+      "sha256sum archive.zip"
+    ],
+    "resources": "local_cpu",
+    "expected_outputs": ["packet_compiler.py", "archive.zip"],
+    "success_criteria": "SHA matches 6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "failure_criteria": "SHA mismatch or nondeterministic output"
+  },
+  {
+    "id": "exp_s3_hnerv_variants_table",
+    "description": "Recreate baseline table for PR #95/#98/#100/#101/#102/#103/#110.",
+    "commands": [
+      "for pr in 95 98 100 101 102 103 110; do wget -O pr$pr.zip <url_to_pr_archive_$pr>; sha256sum pr$pr.zip; python submissions/hnerv_pr$pr/inflate.py --archive pr$pr.zip --out out_dir; python upstream/evaluate.py --device cpu --archive pr$pr.zip --num_threads 2; python upstream/evaluate.py --device cuda --archive pr$pr.zip; done"
+    ],
+    "resources": "cloud_cpu_and_cuda",
+    "expected_outputs": ["variants_scores.csv"],
+    "success_criteria": "Table of scores and sizes without errors",
+    "failure_criteria": "Any archive fails to reproduce or evaluation script errors"
+  },
+  {
+    "id": "exp_s4_byte_profile",
+    "description": "Byte‑level sensitivity analysis of PR #110 archive.",
+    "commands": [
+      "python tools/byte_profile.py --archive archive.zip --scorer upstream/evaluate.py --device cpu --output sensitivity.npy"
+    ],
+    "resources": "local_cpu",
+    "expected_outputs": ["sensitivity.npy", "heatmap.png"],
+    "success_criteria": "Heatmap produced and top sensitive bits identified",
+    "failure_criteria": "Tool fails or produces flat sensitivities"
+  },
+  {
+    "id": "exp_m2_fec7_smoke",
+    "description": "Implement FEC7 selector and run offline search on a single video.",
+    "commands": [
+      "python src/frame_selector.py --modes 63 --active 32 --input video.mp4 --output selector.bin",
+      "python tools/packet_compiler.py --source source_payload.bin --selector selector.bin --out fec7_archive.zip",
+      "python upstream/evaluate.py --device cpu --archive fec7_archive.zip"
+    ],
+    "resources": "local_cpu",
+    "expected_outputs": ["fec7_archive.zip", "report.txt"],
+    "success_criteria": "Score improvement ≥0.0001 on CPU with reasonable byte overhead",
+    "failure_criteria": "No improvement or large archive size"
+  },
+  {
+    "id": "exp_m1_enerv_smoke",
+    "description": "Train an E‑NeRV model on one video and export archive.",
+    "commands": [
+      "python train_enerv.py --video video.mp4 --epochs 200 --output model.pth",
+      "python export_enerv.py --model model.pth --out source_payload.bin",
+      "python tools/packet_compiler.py --source source_payload.bin --out enerv_archive.zip",
+      "python upstream/evaluate.py --device cuda --archive enerv_archive.zip"
+    ],
+    "resources": "cloud_gpu_t4",
+    "expected_outputs": ["enerv_archive.zip", "training_log.txt"],
+    "success_criteria": "Score improvement ≥0.0005 over baseline",
+    "failure_criteria": "No improvement or export fails"
+  },
+  {
+    "id": "exp_m3_siren_smoke",
+    "description": "Train a SIREN INR model on a short clip and evaluate.",
+    "commands": [
+      "python train_siren.py --video clip.mp4 --epochs 500 --output siren.pth",
+      "python export_siren.py --model siren.pth --out siren_payload.bin",
+      "python tools/packet_compiler.py --source siren_payload.bin --out siren_archive.zip",
+      "python upstream/evaluate.py --device cuda --archive siren_archive.zip"
+    ],
+    "resources": "cloud_gpu_4090",
+    "expected_outputs": ["siren_archive.zip", "training_metrics.json"],
+    "success_criteria": "CPU score improvement ≥0.001 or archive bytes reduced",
+    "failure_criteria": "Training diverges or archive too large"
+  },
+  {
+    "id": "exp_m4_vqvae_smoke",
+    "description": "Train a VQ‑VAE model and evaluate discrete latent codec.",
+    "commands": [
+      "python train_vqvae.py --video video.mp4 --epochs 400 --vocab 256 --out vqvae.pth",
+      "python export_vqvae.py --model vqvae.pth --out tokens.bin",
+      "python run_arith_coder.py --input tokens.bin --out codes.bin",
+      "python tools/packet_compiler.py --source codes.bin --out vqvae_archive.zip",
+      "python upstream/evaluate.py --device cuda --archive vqvae_archive.zip"
+    ],
+    "resources": "cloud_gpu_4090",
+    "expected_outputs": ["vqvae_archive.zip", "tokens.bin", "codes.bin"],
+    "success_criteria": "CPU score improvement ≥0.002 or byte savings ≥10%",
+    "failure_criteria": "Poor convergence or bigger archive"
+  },
+  {
+    "id": "exp_m6_foveation_smoke",
+    "description": "Prototype foveation mask and evaluate variable‑resolution decoder.",
+    "commands": [
+      "python generate_foveation_mask.py --video video.mp4 --output mask.npy",
+      "python train_foveated_decoder.py --video video.mp4 --mask mask.npy --epochs 200 --out foveated_model.pth",
+      "python export_foveated.py --model foveated_model.pth --mask mask.npy --out foveated_payload.bin",
+      "python tools/packet_compiler.py --source foveated_payload.bin --out foveation_archive.zip",
+      "python upstream/evaluate.py --device cuda --archive foveation_archive.zip"
+    ],
+    "resources": "cloud_gpu_t4",
+    "expected_outputs": ["foveation_archive.zip", "mask.npy"],
+    "success_criteria": "Byte savings outweigh increased distortion (score improvement ≥0.0001)",
+    "failure_criteria": "Worse total score or training instability"
+  },
+  {
+    "id": "exp_m8_raft_pose_smoke",
+    "description": "Integrate RAFT or LA‑Pose into training and evaluate pose prior.",
+    "commands": [
+      "python train_hnerv_with_raft.py --video video.mp4 --epochs 300 --out hnerv_raft.pth",
+      "python export_hnerv_with_raft.py --model hnerv_raft.pth --out raft_payload.bin",
+      "python tools/packet_compiler.py --source raft_payload.bin --out raft_archive.zip",
+      "python upstream/evaluate.py --device cuda --archive raft_archive.zip"
+    ],
+    "resources": "cloud_gpu_4090",
+    "expected_outputs": ["raft_archive.zip", "hnerv_raft.pth"],
+    "success_criteria": "Pose distortion reduced ≥10% and total score improved ≥0.001",
+    "failure_criteria": "No improvement or heavy training cost"
+  }
+]

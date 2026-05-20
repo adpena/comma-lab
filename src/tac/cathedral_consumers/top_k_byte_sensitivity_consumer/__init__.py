@@ -77,6 +77,7 @@ import hashlib
 from typing import Any, Mapping
 
 from tac.cathedral.consumer_contract import AxisDecomposition, HookNumber
+from tac.optimization.byte_score_impact import rank_bytes_by_score_impact
 
 
 CONSUMER_NAME = "top_k_byte_sensitivity_consumer"
@@ -279,12 +280,37 @@ def rank_archive_bytes_by_sensitivity(
     return [int(i) for i in order[:k_top_clamped]]
 
 
+def rank_archive_bytes_by_score_impact(
+    M_archive,
+    k_top: int,
+    *,
+    marginal_coefficients: Mapping[str, float],
+    axis: str | None = None,
+) -> list[int]:
+    """Rank archive bytes by score-weighted impact magnitude.
+
+    This is the contest-score-aware variant of
+    :func:`rank_archive_bytes_by_sensitivity`.  It multiplies the per-axis
+    archive gradient by the operating-point scorer marginals before ranking:
+    `seg=100`, `pose=5/sqrt(10*d_pose)`, and
+    `rate=25/37545489`.
+    """
+
+    return rank_bytes_by_score_impact(
+        M_archive,
+        marginal_coefficients,
+        k_top=k_top,
+        axis=axis,
+    )
+
+
 __all__ = [
     "CONSUMER_NAME",
     "CONSUMER_VERSION",
     "CONSUMER_HOOK_NUMBERS",
     "consume_candidate",
     "rank_archive_bytes_by_sensitivity",
+    "rank_archive_bytes_by_score_impact",
     "update_from_anchor",
     "_build_per_axis_decomposition",
 ]

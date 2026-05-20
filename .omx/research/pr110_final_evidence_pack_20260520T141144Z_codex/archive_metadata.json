@@ -1,0 +1,23 @@
+{
+  "bytes": 178517,
+  "members": [
+    {
+      "compress_size": 178417,
+      "compress_type": 0,
+      "crc32": "c4a71a7a",
+      "date_time": [
+        1980,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "external_attr": 25165824,
+      "file_size": 178417,
+      "filename": "x"
+    }
+  ],
+  "path": ".omx/research/pr110_final_evidence_pack_20260520T141144Z_codex/archive.zip",
+  "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+}

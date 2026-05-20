@@ -1,0 +1,4 @@
+Archive:  .omx/research/pr110_final_evidence_pack_20260520T141144Z_codex/archive.zip
+Zip file size: 178517 bytes, number of entries: 1
+?rw-------  2.0 unx   178417 b-   178417 stor 80-Jan-01 00:00 x
+1 file, 178417 bytes uncompressed, 178417 bytes compressed:  0.0%

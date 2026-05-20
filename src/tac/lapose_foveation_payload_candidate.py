@@ -68,6 +68,9 @@ REQUIRED_NO_OP_CONTROLS = (
     "lfv1_tuple_mutation_runtime_output_control",
     "charged_member_presence_control",
     "runtime_consumes_foveation_tuple_control",
+    "scorer_visible_frame_warp_control",
+    "scorer_visible_byte_output_control",
+    "inflate_adapter_byte_output_control",
 )
 
 
@@ -120,8 +123,16 @@ def _inflate_script() -> bytes:
     return (
         b"#!/usr/bin/env bash\n"
         b"set -euo pipefail\n"
-        b"cd \"$(dirname \"$0\")\"\n"
-        b"python3 runtime_consumer.py --archive-root . >/dev/stderr || true\n"
+        b"HERE=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n"
+        b"PYTHON_BIN=\"${PACT_PYTHON_BIN:-python3}\"\n"
+        b"if [ \"$#\" -eq 3 ] && [ -n \"${LFV1_BASE_RAW_DIR:-}\" ]; then\n"
+        b"  \"$PYTHON_BIN\" \"$HERE/runtime_consumer.py\" --archive-root \"$1\" "
+        b"--official-output-dir \"$2\" --file-list \"$3\" "
+        b"--base-raw-dir \"$LFV1_BASE_RAW_DIR\" "
+        b"--chunk-frames \"${LFV1_CHUNK_FRAMES:-16}\" >/dev/stderr\n"
+        b"  exit 0\n"
+        b"fi\n"
+        b"\"$PYTHON_BIN\" \"$HERE/runtime_consumer.py\" --archive-root \"$HERE\" >/dev/stderr || true\n"
         b"echo 'LFV1 lapose_foveation payload candidate is fail-closed: "
         b"runtime output parity, no-op controls, and exact CUDA auth eval are missing' >&2\n"
         b"exit 2\n"
@@ -191,6 +202,15 @@ def _runtime_proof_skeleton(
             "lfv1_structure_decode": True,
             "structural_runtime_consumption": runtime_effect_controls[
                 "structural_runtime_consumption"
+            ]["passed"],
+            "scorer_visible_frame_warp_control": runtime_effect_controls[
+                "scorer_visible_frame_warp_control"
+            ]["passed"],
+            "scorer_visible_byte_output_control": runtime_effect_controls[
+                "scorer_visible_byte_output_control"
+            ]["passed"],
+            "local_rgb24_inflate_adapter_control": runtime_effect_controls[
+                "inflate_adapter_byte_output_control"
             ]["passed"],
             "lfv1_to_foveation_params_bridge": lfv1_foveation_params_bridge["passed"],
             "scorer_visible_output_bridge": scorer_visible_bridge["bridge_path_present"],
@@ -369,6 +389,15 @@ def build_lapose_foveation_payload_archive_candidate(
             },
             "runtime_consumes_foveation_tuple_control": runtime_effect_controls[
                 "runtime_consumes_foveation_tuple_control"
+            ],
+            "scorer_visible_frame_warp_control": runtime_effect_controls[
+                "scorer_visible_frame_warp_control"
+            ],
+            "scorer_visible_byte_output_control": runtime_effect_controls[
+                "scorer_visible_byte_output_control"
+            ],
+            "inflate_adapter_byte_output_control": runtime_effect_controls[
+                "inflate_adapter_byte_output_control"
             ],
         },
         "charged_members": member_records,
@@ -710,7 +739,7 @@ def _runtime_loader_parity_report(
             if item not in charged_by_name:
                 blockers.append(f"runtime_loader_parity_loaded_charged_member_not_declared:{item}")
     summary["loaded_charged_members"] = loaded_member_names
-    for required in (PAYLOAD_MEMBER, PROOF_MEMBER):
+    for required in (PAYLOAD_MEMBER, FOVEATION_PARAMS_MEMBER, PROOF_MEMBER):
         if required not in loaded_member_names:
             blockers.append(f"runtime_loader_parity_required_member_not_loaded:{required}")
 
@@ -739,6 +768,9 @@ def _runtime_effect_controls_report(
         "declared": isinstance(report, dict),
         "accepted": False,
         "structural_runtime_consumption": {"passed": False},
+        "scorer_visible_frame_warp_control": {"passed": False},
+        "scorer_visible_byte_output_control": {"passed": False},
+        "inflate_adapter_byte_output_control": {"passed": False},
         "scored_runtime_output_parity": {"passed": False},
         "identity_decode_control_passed": False,
         "tuple_mutation_control_passed": False,
@@ -751,6 +783,15 @@ def _runtime_effect_controls_report(
 
     summary["structural_runtime_consumption"] = report.get(
         "structural_runtime_consumption", {"passed": False}
+    )
+    summary["scorer_visible_frame_warp_control"] = report.get(
+        "scorer_visible_frame_warp_control", {"passed": False}
+    )
+    summary["scorer_visible_byte_output_control"] = report.get(
+        "scorer_visible_byte_output_control", {"passed": False}
+    )
+    summary["inflate_adapter_byte_output_control"] = report.get(
+        "inflate_adapter_byte_output_control", {"passed": False}
     )
     summary["scored_runtime_output_parity"] = report.get(
         "scored_runtime_output_parity", {"passed": False}
@@ -780,10 +821,25 @@ def _runtime_effect_controls_report(
         blockers.append("runtime_effect_controls_tuple_mutation_not_passed")
     if not _control_passed(report.get("runtime_consumes_foveation_tuple_control")):
         blockers.append("runtime_effect_controls_runtime_consumption_not_passed")
+    if not _control_passed(report.get("scorer_visible_frame_warp_control")):
+        blockers.append("runtime_effect_controls_scorer_visible_frame_warp_not_passed")
+    if not _control_passed(report.get("scorer_visible_byte_output_control")):
+        blockers.append("runtime_effect_controls_scorer_visible_byte_output_not_passed")
+    if not _control_passed(report.get("inflate_adapter_byte_output_control")):
+        blockers.append("runtime_effect_controls_inflate_adapter_byte_output_not_passed")
 
     structural = report.get("structural_runtime_consumption")
     if not isinstance(structural, dict) or structural.get("passed") is not True:
         blockers.append("runtime_effect_controls_structural_consumption_not_passed")
+    frame_warp = report.get("scorer_visible_frame_warp_control")
+    if not isinstance(frame_warp, dict) or frame_warp.get("passed") is not True:
+        blockers.append("runtime_effect_controls_frame_warp_control_not_passed")
+    byte_output = report.get("scorer_visible_byte_output_control")
+    if not isinstance(byte_output, dict) or byte_output.get("passed") is not True:
+        blockers.append("runtime_effect_controls_byte_output_control_not_passed")
+    inflate_adapter = report.get("inflate_adapter_byte_output_control")
+    if not isinstance(inflate_adapter, dict) or inflate_adapter.get("passed") is not True:
+        blockers.append("runtime_effect_controls_inflate_adapter_control_not_passed")
     scored_output = report.get("scored_runtime_output_parity")
     if not isinstance(scored_output, dict):
         blockers.append("runtime_effect_controls_scored_output_parity_missing")

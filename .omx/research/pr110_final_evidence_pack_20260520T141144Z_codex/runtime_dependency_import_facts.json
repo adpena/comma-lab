@@ -1,0 +1,70 @@
+{
+  "external_import_candidates": [
+    "__future__",
+    "brotli",
+    "codec",
+    "codec_sidecar",
+    "frame_selector",
+    "lzma",
+    "model",
+    "numpy",
+    "torch"
+  ],
+  "importlib_find_spec_available": {
+    "__future__": true,
+    "brotli": true,
+    "codec": false,
+    "codec_sidecar": false,
+    "frame_selector": false,
+    "lzma": true,
+    "model": false,
+    "numpy": true,
+    "torch": true
+  },
+  "imports_by_file": {
+    "inflate.py": [
+      "__future__",
+      "codec",
+      "frame_selector",
+      "model",
+      "pathlib",
+      "struct",
+      "sys",
+      "torch"
+    ],
+    "src/codec.py": [
+      "brotli",
+      "codec_sidecar",
+      "io",
+      "lzma",
+      "model",
+      "numpy",
+      "torch"
+    ],
+    "src/codec_sidecar.py": [
+      "brotli",
+      "functools",
+      "math",
+      "numpy",
+      "torch"
+    ],
+    "src/frame_selector.py": [
+      "__future__",
+      "math",
+      "struct",
+      "torch"
+    ],
+    "src/model.py": [
+      "torch"
+    ]
+  },
+  "py_compile": {
+    "inflate.py": "ok",
+    "src/codec.py": "ok",
+    "src/codec_sidecar.py": "ok",
+    "src/frame_selector.py": "ok",
+    "src/model.py": "ok"
+  },
+  "python": "3.12.13 (main, Mar 10 2026, 18:18:07) [Clang 21.1.4 ]",
+  "runtime_root": ".omx/research/pr110_final_evidence_pack_20260520T141144Z_codex/runtime_snapshot/submissions/hnerv_fec6_fixed_huffman_k16"
+}
