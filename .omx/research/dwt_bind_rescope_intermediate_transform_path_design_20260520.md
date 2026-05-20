@@ -120,6 +120,23 @@ Predicted operator-routable outcome: equation #26's `predicted_vs_empirical_resi
 * **Cite-able**: every claim in this memo cites a canonical artifact (commit / equation / symposium / sister memo).
 * **Counterfactual-able**: the OPTION A/B/C analysis IS the counterfactual — what if we had attempted each path? Predicted ΔS bands quantify the answer per option.
 
+## Canonical-vs-unique decision per layer
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" non-negotiable (Catalog #290) + "Canonical equations + models registry" non-negotiable (Catalog #344): this memo amends an existing canonical equation rather than introducing a new substrate scaffold. The per-layer decisions:
+
+| Layer | Decision | Rationale |
+|---|---|---|
+| Canonical equation registry (Catalog #344) | **ADOPT_CANONICAL_BECAUSE_SERVES** | `tac.canonical_equations.update_equation_with_domain_refinement` is the canonical APPEND-ONLY mutation surface; the new `EVENT_DOMAIN_REFINED` event-type extends the canonical taxonomy without forking. Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE preserved. |
+| Cathedral consumer Tier A markers (Catalog #341) | **ADOPT_CANONICAL_BECAUSE_SERVES** | `[predicted_domain_violated]` augments canonical `[predicted]` axis_tag; `predicted_delta_adjustment=0.0` + `promotable=False` markers preserved per canonical Catalog #341 contract. No fork; the augmented tag is sister to existing `[predicted_domain_uncertain]` per Tier A observability-only routing. |
+| Canonical Provenance umbrella (Catalog #323) | **ADOPT_CANONICAL_BECAUSE_SERVES** | The `update_equation_with_domain_refinement` helper threads Provenance through the canonical helper; no per-call construction shortcut. |
+| fcntl-locked JSONL discipline (Catalog #131) | **ADOPT_CANONICAL_BECAUSE_SERVES** | Helper uses canonical `_registry_lock` + `_append_event_locked` + atomic-tmp-replace pattern; no bare write. |
+| strict-load discipline (Catalog #138) | **ADOPT_CANONICAL_BECAUSE_SERVES** | Helper routes through `load_equation_registry_strict` with corrupt-quarantine fall-back per canonical Catalog #138 sister pattern. |
+| Domain-validation rule (THIS memo's distinguishing contribution) | **FORK_BECAUSE_PRINCIPLED_MISMATCH** | The `validate_context_is_in_domain` helper is a NEW canonical-equation-specific helper because the canonical `CanonicalEquation` dataclass treats `domain_of_validity` as an opaque `Mapping[str, Any]` — there is no canonical per-equation context-validation rule to share. The forked helper is published as a sister API the cathedral consumer + future per-substrate symposia consume; subsequent canonical equations may share the helper signature OR define their own (per-equation domain semantics differ). |
+| Cargo-cult audit per Catalog #303 | **ADOPT_CANONICAL_BECAUSE_SERVES** (sister cited inline at §3.1-§3.3 Mallat 1989 + Berger 1971 anchors) | The OPTION A bilinear-detail spectral-dominance assumption is HARD-EARNED (Mallat 1989 Theorem 1; not cargo-culted); the OPTION B Laplacian-source brotli rate assumption is HARD-EARNED (Berger 1971 source-coding theorem; not cargo-culted). No fork. |
+| 9-dim checklist per Catalog #294 | **DEFER (memo type is design-memo-amendment-not-substrate-scaffold)** | This memo amends an existing canonical equation; it does NOT introduce a substrate scaffold per Catalog #294 9-dim checklist scope. The sister `f25f8cc1b` landing memo + `procedural_codebook_generator_null_exploit_design_20260520` design memo already declare 9-dim coverage for the parent producer. |
+
+The bolt-on vs substrate-engineering split per HNeRV parity discipline L7 is unchanged: this landing is BOLT-ON-SHARING (canonical helpers extended with a new event-type + a new exception + a new validator helper; total LOC delta ~250 across 5 source files). The parent canonical equation #26 producer (`tac.procedural_codebook_generator.derive_codebook_from_seed`) is the SUBSTRATE-ENGINEERING surface and remains unchanged.
+
 ## 9. Cross-references
 
 * `~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_dwt_detail_subband_procedural_cpu_smoke_landed_20260520.md` — sister landing memo (empirical vindication)
