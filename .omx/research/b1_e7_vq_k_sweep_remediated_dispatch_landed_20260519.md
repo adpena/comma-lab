@@ -176,24 +176,46 @@ VQ_VAE_CODEBOOK_SIZE=2
 ### K=64 dispatch DEFERRED
 A subsequent K=64 attempt failed at lane-claim stage with rc=3 (`REFUSING_DISPATCH: conflict detected`) because the K=2 lane was already active. Per CLAUDE.md "Cross-agent dispatch coordination" + Catalog #230 ownership-map discipline: I did NOT force parallel dispatch. Operator-routable: a sister slot can dispatch K=64 + sister K-values via `--allow-parallel --child-of <K=2 job_id> --parallel-reason "K-sweep arm parallelization"`.
 
-### K=2 harvest (Phase 5 conclusion)
+### K=2 harvest (Phase 5 conclusion) — COMPLETE 2026-05-20T02:56Z
 
-K=2 dispatch elapsed ~58 min (estimated per K=512 anchor). Background polling via custom poll script at `/tmp/poll_k_2.sh` checks status every 90s and triggers canonical `tools/harvest_modal_calls.py --from-ledger --execute` once elapsed > 10 min.
+K=2 dispatch completed in 3286.35s (54.8 min, slightly faster than K=512's 3472s = 57.9 min). Background polling via canonical `tools/harvest_modal_calls.py --from-ledger --execute` triggered harvest at 2026-05-20T02:54Z; Catalog #339 fail-closed event_type=harvested appended to canonical ledger; Catalog #245 4-layer pattern honored.
 
-**K=2 final result** (FILLED IN POST-HARVEST):
+**K=2 final result** (HARVESTED + canonical ledger updated via `update_call_id_outcome`):
 
 | Field | Value |
 |---|---|
 | call_id | `fc-01KS1HQQ0F9GY1VYCQESSH4R4K` |
-| rc | TBD (poll in progress) |
-| elapsed_seconds | TBD |
-| final_score | TBD |
+| rc | **0** (SUCCESS) |
+| elapsed_seconds | **3286.35** |
+| cost_actual | **$1.004** (3286s @ $1.10/hr A10G) |
+| **final_score** | **65.61** [diagnostic-CPU A10G advisory; per Catalog #127 + #192 non-promotable] |
+| canonical_score | 65.6149 |
 | score_axis | `diagnostic_cpu` (per trainer `MODAL_AUTH_EVAL_ADVISORY_ONLY=1` default) |
-| archive_sha256 | TBD |
-| archive_bytes | TBD |
-| evidence_grade | TBD |
+| avg_posenet_dist | 24.861 |
+| avg_segnet_dist | 0.4924 |
+| rate_unscaled | 0.02442 |
+| score_seg_contribution | 49.24 (dominates) |
+| score_pose_contribution | 15.77 |
+| score_rate_contribution | 0.61 |
+| archive_sha256 | `fc421058084d57429b71b3992b150e3550e82376a59c7a89241ef4e29e083569` |
+| archive_bytes | 916,996 (~54% of K=512's 1,705,124) |
+| n_samples | 600 |
+| evidence_grade | B |
+| lane_tag | `[diagnostic-auth-eval]` |
+| score_claim | False |
+| promotion_eligible | False |
+| score_claim_valid | False |
+| rank_or_kill_eligible | False |
+| modal_auth_eval_advisory_only | True |
+| device | cpu |
+| platform_machine | x86_64 |
+| gpu_model | NVIDIA A10G |
 
-Will be updated in commit + canonical helper `update_call_id_outcome` post-harvest.
+**Critical empirical insight**: K=2 score=65.61 is **WORSE** than K=512 score=25.5 (by **2.57×**). This is the OPPOSITE of Wave 2A's predicted Pareto-pole hypothesis (K=2 predicted OPTIMUM, K=64/256 predicted ANTI-PARETO). The Wave 2A analytical R-D Pareto-frontier solution is empirically FALSIFIED for VQ-VAE substrate at 100ep smoke per Catalog #303 cargo-cult-unwind methodology.
+
+**Mechanism**: K=2 codebook is too SMALL — only 2 distinct codewords means catastrophic information loss at the latent quantization step. The renderer cannot recover SegNet-discriminating features from a 2-codeword codebook → score_seg=49.24 (almost 3× worse than K=512's 18.36). K=2 codebook COLLAPSE was anticipated as a risk in the original recipe per van den Oord council dissent: *"K=2 collapse risk - 2-codeword codebook may collapse to mode-averaged outputs"*. **The risk was confirmed empirically**.
+
+**Per CLAUDE.md "Forbidden premature KILL without research exhaustion"**: K=2=65.61 + K=512=25.5 is **NOT a substrate-class kill** for VQ-VAE. It IS empirical falsification of Wave 2A's K=2-predicted-optimum sub-hypothesis. The VQ-VAE substrate paradigm remains DEFERRED-pending-research at the K-sweep + epoch axes. Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag": every score in this memo carries the `[diagnostic-CPU A10G advisory]` tag.
 
 ## Total paid GPU spend vs $4.20 cap
 
@@ -201,28 +223,35 @@ Will be updated in commit + canonical helper `update_call_id_outcome` post-harve
 |---|---|---|---|---|
 | K=512 (recovered via OP-3) | `fc-01KRZCX15GAF5Z5E3E568Q60FF` | $1.06 | $1.06 | Sister CC slot dispatched 2026-05-19T05:56Z; Slot GG harvested 2026-05-20T01:41Z |
 | K=2 first attempt (rc=2 Catalog #166 refusal) | none — never reached Modal | $0.00 | $1.06 | Lane claim opened then closed as failed_dispatch_rc_2 |
-| K=2 retry (Catalog #202 bypass) | `fc-01KS1HQQ0F9GY1VYCQESSH4R4K` | ~$1.06 (TBD post-harvest) | ~$2.12 | A10G, currently in-flight |
-| K=64 attempt (rc=3 lane-claim conflict) | none — never reached Modal | $0.00 | $2.12 | Operator-routable per CLAUDE.md "Cross-agent dispatch coordination" |
+| K=2 retry (Catalog #202 bypass) | `fc-01KS1HQQ0F9GY1VYCQESSH4R4K` | **$1.00** | **$2.06** | A10G, completed rc=0 elapsed=3286.35s; harvested 2026-05-20T02:54Z |
+| K=64 attempt (rc=3 lane-claim conflict) | none — never reached Modal | $0.00 | $2.06 | Operator-routable per CLAUDE.md "Cross-agent dispatch coordination" |
 
-**Total**: $2.12 (within $4.20 cap, $2.08 unused budget).
+**Total**: **$2.06** (within $4.20 cap, **$2.14 unused budget**). K=512's $1.06 was sister CC's spend (recovered via OP-3 this slot; not paid by THIS slot). This slot's actual paid spend: **$1.00 (K=2 only)**.
 
 ## E.7 VQ K-sweep answer per K (council T3 rank #2 op-routable)
 
-| K | Score | Archive sha (prefix) | Axis | Hardware | Status |
-|---|---|---|---|---|---|
-| 2 | TBD post-harvest | TBD | diagnostic_cpu | A10 | In-flight `fc-01KS1HQQ0F9GY1VYCQESSH4R4K` |
-| 4 | NOT DISPATCHED | — | — | — | Operator-routable |
-| 8 | NOT DISPATCHED | — | — | — | Operator-routable |
-| 16 | NOT DISPATCHED | — | — | — | Operator-routable (was original recipe smoke default, never reached due to T4 OOM) |
-| 32 | NOT DISPATCHED | — | — | — | Operator-routable |
-| 64 | NOT DISPATCHED | — | — | — | Operator-routable (Wave 2A predicted anti-Pareto; arm needed for Pareto-pole hypothesis test) |
-| 128 | NOT DISPATCHED | — | — | — | Operator-routable |
-| 256 | NOT DISPATCHED | — | — | — | Operator-routable (Wave 2A predicted anti-Pareto) |
-| 512 | **25.5** | `43a39cf8...` | diagnostic_cpu | A10 | RECOVERED via OP-3 harvest |
+| K | Score | Archive sha (prefix) | Archive bytes | Axis | Hardware | Status |
+|---|---|---|---|---|---|---|
+| **2** | **65.61** | `fc421058...` | 916,996 | diagnostic_cpu | A10G | HARVESTED `fc-01KS1HQQ0F9GY1VYCQESSH4R4K` rc=0 3286s $1.00 |
+| 4 | NOT DISPATCHED | — | — | — | — | Operator-routable |
+| 8 | NOT DISPATCHED | — | — | — | — | Operator-routable |
+| 16 | NOT DISPATCHED | — | — | — | — | Operator-routable (was original recipe smoke default, never reached due to T4 OOM) |
+| 32 | NOT DISPATCHED | — | — | — | — | Operator-routable |
+| 64 | NOT DISPATCHED | — | — | — | — | Operator-routable (Wave 2A predicted anti-Pareto; arm needed for Pareto-pole hypothesis test) |
+| 128 | NOT DISPATCHED | — | — | — | — | Operator-routable |
+| 256 | NOT DISPATCHED | — | — | — | — | Operator-routable (Wave 2A predicted anti-Pareto) |
+| **512** | **25.5** | `43a39cf8...` | 1,705,124 | diagnostic_cpu | A10 | RECOVERED via OP-3 harvest `fc-01KRZCX15GAF5Z5E3E568Q60FF` rc=0 3472s $1.06 |
 
-**Council T3 rank #2 answer**: PARTIAL — 2-of-8 K-values resolved (K=2 in-flight + K=512 harvested baseline). Pareto-pole hypothesis test requires at least K=2 (predicted optimum) + K=64 OR K=256 (predicted anti-Pareto). With remaining $2.08 budget I could fire K=64 in a subsequent slot but the lane-claim collision blocks it from this slot.
+**Council T3 rank #2 answer**: PARTIAL but EMPIRICALLY MEANINGFUL — 2-of-8 K-values resolved.
+- **K=2 score=65.61 vs K=512 score=25.5 → K=512 is 2.57× BETTER**
+- This **FALSIFIES** Wave 2A's K=2-predicted-optimum sub-hypothesis at 100ep smoke for VQ-VAE substrate
+- The empirical Pareto curve at this 2-point sample slopes K=2 (worst) → K=512 (best) at 100ep smoke
+- Wave 2A predicted: K=2 (best) → K=64/256 (worst) → K=512 (likely also poor due to underutilization)
+- Empirical: K=2 (worst) → K=512 (best 2-of-2; could still be SUB-OPTIMAL vs intermediate K values 32/64/128 — NOT TESTED)
 
-**Inference on Wave 2A hypothesis**: K=512 → score=25.5 is far above predicted band [0.180, 0.300]. This is consistent with VQ-VAE substrate at 100ep smoke being WELL OUT of the Pareto-pole regime — the substrate likely needs 1000s of epochs OR a different substrate (e.g. D4 or sane_hnerv per council T3 Finding 1 original directive) to reach the band. Per CLAUDE.md "Forbidden premature KILL without research exhaustion": this is NOT a KILL verdict, it's a DEFERRED-pending-research at the K-sweep + epoch + substrate-class axes.
+**Inference on Wave 2A hypothesis**: Both data points are far above predicted band [0.180, 0.300]. This is consistent with VQ-VAE substrate at 100ep smoke being WELL OUT of the Pareto-pole regime — the substrate likely needs 1000s of epochs OR a different substrate (e.g. D4 or sane_hnerv per council T3 Finding 1 original directive) to reach the band. Per CLAUDE.md "Forbidden premature KILL without research exhaustion": this is NOT a KILL verdict. Per Catalog #307 paradigm-vs-implementation falsification: the IMPLEMENTATION-level Wave 2A K=2-optimum sub-hypothesis is falsified; the PARADIGM-level VQ-VAE substrate is DEFERRED-pending-research at the K-sweep + epoch + substrate-class axes.
+
+**Highest-EV remaining K value to test**: K=64 or K=128 (mid-range; if Wave 2A's "anti-Pareto at K=64/256" is also falsified — i.e., if K=64 or K=128 SCORE BETTER than K=512 — then we have a NEW empirical Pareto pole at mid-K. If K=64 is WORSE than K=512, the empirical curve is monotonic K=2 → K=512 within tested range and the next experiment should extend K beyond 512.
 
 ## Highest-EV op-routable surfaced
 
