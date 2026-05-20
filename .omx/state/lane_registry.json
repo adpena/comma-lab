@@ -45005,6 +45005,230 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pact_nerv_mamba_l0_scaffold_20260520",
+      "name": "Pact-NeRV-MAMBA L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_mamba/ + experiments/train_substrate_pact_nerv_mamba.py + scripts/remote_lane_substrate_pact_nerv_mamba.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_mamba_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G1 BLEEDING-EDGE variant Group 1; research_only=true dispatch_enabled=false"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_mamba.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var + #163 sentinel + #152 required-input validation"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 1 BLEEDING-EDGE variant; literature=Gu-Dao 2023 arXiv:2312.00752 Mamba + Dao-Gu 2024 arXiv:2405.21060 Mamba-2 selective-scan SSM; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "PNMB monolithic single-file 0.bin (27-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 400,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_moe_l0_scaffold_20260520",
+      "name": "Pact-NeRV-MOE L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_moe/ + experiments/train_substrate_pact_nerv_moe.py + scripts/remote_lane_substrate_pact_nerv_moe.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_moe_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G1 BLEEDING-EDGE variant Group 1; research_only=true dispatch_enabled=false"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_moe.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var + #163 sentinel + #152 required-input validation"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 1 BLEEDING-EDGE variant; literature=Shazeer 2017 arXiv:1701.06538 sparsely-gated top-k=2 MoE + Atick-Redlich 1990 cooperative-receiver gate; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "PNMO monolithic single-file 0.bin (22-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 400,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_diffusion_distilled_l0_scaffold_20260520",
+      "name": "Pact-NeRV-DIFFUSION-DISTILLED L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_diffusion_distilled/ + experiments/train_substrate_pact_nerv_diffusion_distilled.py + scripts/remote_lane_substrate_pact_nerv_diffusion_distilled.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_diffusion_distilled_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G1 BLEEDING-EDGE variant Group 1; research_only=true dispatch_enabled=false"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_diffusion_distilled.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var + #163 sentinel + #152 required-input validation"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 1 BLEEDING-EDGE variant; literature=Song 2023 arXiv:2303.01469 Consistency Models + Salimans-Ho 2022 arXiv:2202.00512 Progressive Distillation + Yin 2024 DMD arXiv:2311.18828; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "PNDD monolithic single-file 0.bin (23-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 450,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_neural_codec_e2e_l0_scaffold_20260520",
+      "name": "Pact-NeRV-NEURAL-CODEC-E2E L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_neural_codec_e2e/ + experiments/train_substrate_pact_nerv_neural_codec_e2e.py + scripts/remote_lane_substrate_pact_nerv_neural_codec_e2e.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_neural_codec_e2e_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G1 BLEEDING-EDGE variant Group 1; research_only=true dispatch_enabled=false"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_neural_codec_e2e.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var + #163 sentinel + #152 required-input validation"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 1 BLEEDING-EDGE variant; literature=Balle 2018 arXiv:1802.01436 Scale Hyperprior + Cheng 2020 arXiv:2001.01568 GMM; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "PNNC monolithic single-file 0.bin (23-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 500,
+        "no_op_detector_planned": true
+      }
     }
   ],
   "level_rules": {
@@ -45014,5 +45238,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T22:04:15Z"
+  "updated_at": "2026-05-20T22:10:54Z"
 }
