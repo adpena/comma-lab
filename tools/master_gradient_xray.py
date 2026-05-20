@@ -95,6 +95,30 @@ from tac.master_gradient_consumers import (  # noqa: E402
 from tac.provenance.builders import (  # noqa: E402
     build_provenance_for_predicted,
 )
+from tac.continual_learning import NON_PROMOTABLE_TAGS as _CANONICAL_NON_PROMOTABLE_TAGS  # noqa: E402
+
+
+# Catalog #341 widening per Slot JJ Path B (2026-05-19): xray tool's
+# verdict-matrix Catalog #341 strict check at consumer_verdict_matrix
+# accepts ANY axis_tag in the canonical non-promotable set, NOT only the
+# narrow "[predicted]" string. The canonical sources of truth are
+# ``src/tac/continual_learning.py::NON_PROMOTABLE_TAGS`` (8 entries:
+# [macOS-CPU advisory only] / [macOS-CPU calibrated] / [MPS-PROXY] /
+# [MPS-research-signal] / [advisory only] / [distortion-proxy:local] /
+# [byte-anchor] / [predicted; unified-action; closed-form weighted-sum])
+# AND ``src/tac/provenance/contract.py::CANONICAL_MEASUREMENT_AXES``
+# (includes [MPS-PROXY]).  The narrow "[predicted]" string is the
+# default for consumers that ONLY annotate predicted-helper-availability
+# without proxy/diagnostic source; the canonical apparatus mandates the
+# 2 MPS consumers (mps_diagnostic_consumer / mps_gap_experiment_consumer)
+# use [MPS-PROXY] per CLAUDE.md "MPS auth eval is NOISE" Rule 3 + the
+# FORBIDDEN PATTERN "Forbidden MPS-derived strategic decision". Widening
+# the strict check to ``axis_tag in CANONICAL_NON_PROMOTABLE_AXES`` brings
+# this tool into alignment with both canonical sources. Cross-ref Slot II
+# classification memo ``.omx/research/catalog_341_noncompliance_classification_20260519.md``.
+CANONICAL_NON_PROMOTABLE_AXES: frozenset[str] = frozenset(
+    {"[predicted]"} | set(_CANONICAL_NON_PROMOTABLE_TAGS)
+)
 
 
 CANONICAL_PLOTS = (
@@ -968,10 +992,14 @@ def _collect_consumer_verdicts(
                     "rationale": str(result.get("rationale", "")),
                 })
                 # Catalog #341 marker compliance check (3 canonical markers).
+                # Slot JJ Path B (2026-05-19): widened from narrow
+                # ``axis_tag == "[predicted]"`` to ``axis_tag in
+                # CANONICAL_NON_PROMOTABLE_AXES`` per Slot II classification
+                # memo + canonical Provenance/NON_PROMOTABLE_TAGS surfaces.
                 markers_compliant = (
                     verdict_row["predicted_delta_adjustment"] == 0.0
                     and verdict_row["promotable"] is False
-                    and verdict_row["axis_tag"] == "[predicted]"
+                    and verdict_row["axis_tag"] in CANONICAL_NON_PROMOTABLE_AXES
                 )
                 verdict_row["catalog_341_markers_compliant"] = markers_compliant
                 verdict_row["non_vacuous"] = bool(

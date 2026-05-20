@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# CATHEDRAL_CONSUMER_DEFERRED_OK:axis_tag_is_intentionally_[MPS-PROXY]_per_CLAUDE_md_MPS_auth_eval_is_noise_rule_3_and_forbidden_MPS_derived_strategic_decision_falsification_trap_active_sister_mps_phase_b_fire_and_harvest_20260519_owns_per_experiment_verdict_harvest_per_slot_II_classification_memo_catalog_341_noncompliance_classification_20260519
 """Cathedral consumer for ``tac.mps_gap_experiment`` MPS gap quantification.
 
 Per Catalog #335 + tac.cathedral.consumer_contract.CathedralConsumerContract.
