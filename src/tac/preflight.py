@@ -2541,6 +2541,22 @@ def preflight_all(
         check_cathedral_consumer_mps_prescreen_routing_carries_canonical_markers(
             strict=True, verbose=verbose,
         )
+        # 2026-05-20 Catalog #357 — DUAL-TIER ARCHITECTURE Tier B contract.
+        # Sister extension of Catalog #341 per CATHEDRAL-SMARTER-DESIGN-MEMO
+        # Dimension 6 Step 6.3. Refuses any cathedral_consumers/* package
+        # that declares ``CONSUMER_TIER = ConsumerTier.TIER_B_SCORE_CONTRIBUTING``
+        # WITHOUT the canonical score-contributing contract (import
+        # ConsumerTier + carry provenance + promotable=False + use
+        # empirically-grounded axis_tag != "[predicted]"). Tier A consumers
+        # are out of scope; covered by sister Catalog #341 routing-markers.
+        # File-level waiver: `# CATHEDRAL_CONSUMER_TIER_B_DEFERRED_OK:<rationale>`
+        # (placeholder rejected). STRICT-from-byte-one per CLAUDE.md
+        # "Strict-flip atomicity rule" — live count at landing: 0 (no Tier B
+        # consumers exist yet; the dual-tier landing is foundation-only).
+        # Memory: feedback_wave_1_dim_6_dual_tier_consumer_architecture_foundation_landed_20260520.md.
+        check_cathedral_consumer_tier_b_declares_canonical_contract(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-17 Catalog #318 — MASTER-GRADIENT RAW BYTE AUTHORITY.
         # Per the May 17 L5/Rule #6 rebaseline, raw archive-byte / bit finite
         # differences over ZIP + entropy-coded packets are not local score
@@ -5164,6 +5180,18 @@ def preflight_all(
         # consumer landing in the canonical directory.
         # Memory: feedback_cathedral_auto_ingest_paradigm_shift_landed_20260519.
         check_cathedral_consumer_directory_package_exposes_canonical_contract(
+            strict=False, verbose=verbose
+        )
+
+        # Catalog #356: per-axis decomposition carries canonical Provenance.
+        # Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Steps 3.1-3.3 (operator
+        # blanket approval 2026-05-20). Sister of Catalog #335 at the
+        # per-axis emission sub-surface. WARN-ONLY at landing 2026-05-20 per
+        # CLAUDE.md "Strict-flip atomicity rule"; live count: 0 (no
+        # production consumer migrated to Tier B yet per Dim 3 Step 3.4 /
+        # Dim 6 Step 6.5).
+        # Memory: feedback_wave_1_dim_3_per_axis_decomposition_foundation_landed_20260520.
+        check_per_axis_decomposition_carries_canonical_provenance(
             strict=False, verbose=verbose
         )
 
@@ -28384,6 +28412,216 @@ def check_cathedral_consumer_directory_package_exposes_canonical_contract(
             "per CLAUDE.md 'Bugs must be permanently fixed AND self-protected "
             "against' non-negotiable (sister of Catalog #265):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #356 — per-axis decomposition carries canonical Provenance
+# ────────────────────────────────────────────────────────────────────────────
+#
+# Per WAVE-1-DIM-3-PROTOCOL-AND-HELPER 2026-05-20 (operator blanket approval
+# 2026-05-20 per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Steps 3.1-3.3) + CLAUDE.md
+# "Apples-to-apples evidence discipline" + Catalog #287 / #323 sister discipline.
+#
+# Sister of Catalog #335 at the per-axis emission sub-surface. Where #335
+# enforces the canonical Protocol contract at the package surface, #356
+# enforces the canonical Provenance shape on the OPTIONAL
+# ``predicted_axis_decomposition`` field a consumer MAY emit.
+#
+# Bug class: a cathedral consumer that emits ``predicted_axis_decomposition``
+# without canonical Provenance can silently leak a per-axis prediction into
+# the autopilot ranker's downstream consumers (Pareto polytope solver,
+# bit-allocator) without the canonical axis_tag + hardware_substrate +
+# evidence_grade triple per Catalog #323. Per CLAUDE.md "Forbidden
+# empirical-claim-without-evidence-tag" + the meta-class extinction at
+# Catalog #323, the canonical Provenance is the structural protection that
+# per-axis predictions cannot be silently promoted to score signals or used
+# without proper non-promotable markers per Catalog #341.
+#
+# Acceptance: (a) consumer package does not emit per-axis decomposition (the
+# Catalog #341 backward-compat scalar-only path); (b) consumer's source
+# carries the canonical Provenance import + non-empty Provenance construction
+# adjacent to the per-axis emission; (c) same-line waiver
+# ``# PER_AXIS_DECOMPOSITION_PROVENANCE_OK:<rationale>`` on the emission line
+# with non-placeholder rationale (≥4 chars).
+#
+# Detection is intentionally LIBERAL (looks for the literal field name in any
+# consumer's __init__.py); the structural protection is REQUIRING the
+# canonical Provenance builder call OR explicit waiver in the same file. This
+# is the same shape as Catalog #335 (package-level structural validation) +
+# Catalog #287 (placeholder-rationale rejection).
+#
+# Memory: feedback_wave_1_dim_3_per_axis_decomposition_foundation_landed_20260520.
+
+_CHECK_356_CONSUMER_DIR_RELPATH = "src/tac/cathedral_consumers"
+_CHECK_356_EXEMPT_SUBDIRS: frozenset[str] = frozenset({"__pycache__", "tests"})
+_CHECK_356_TRIGGER_TOKEN = "predicted_axis_decomposition"
+# Canonical Provenance acceptance tokens (any one of these in the consumer's
+# source within the same file satisfies the Provenance requirement).
+_CHECK_356_PROVENANCE_TOKENS: tuple[str, ...] = (
+    "build_provenance_for_predicted",
+    "build_provenance_for_archive_member",
+    "build_provenance_for_macos_cpu_advisory",
+    "build_provenance_for_mps_proxy",
+    "build_provenance_for_research_sidecar",
+    "build_provenance_aggregate",
+    "from tac.provenance",
+    "provenance_to_dict",
+    "canonical_provenance=",
+)
+_CHECK_356_WAIVER_TOKEN = "PER_AXIS_DECOMPOSITION_PROVENANCE_OK"
+_CHECK_356_PLACEHOLDER_RATIONALES = frozenset(
+    {"<rationale>", "<reason>", "rationale", "reason"}
+)
+_CHECK_356_MIN_RATIONALE_LEN = 4
+
+
+def _check_356_extract_waiver_rationale(line: str) -> str | None:
+    """Extract waiver rationale from a same-line ``# WAIVER_TOKEN:<rationale>``."""
+    marker = f"# {_CHECK_356_WAIVER_TOKEN}:"
+    idx = line.find(marker)
+    if idx < 0:
+        return None
+    raw = line[idx + len(marker):].strip()
+    # Strip trailing punctuation / quotes.
+    rationale = raw.rstrip("'\"`*").strip()
+    if not rationale:
+        return None
+    if rationale.lower() in _CHECK_356_PLACEHOLDER_RATIONALES:
+        return None
+    if len(rationale) < _CHECK_356_MIN_RATIONALE_LEN:
+        return None
+    return rationale
+
+
+def check_per_axis_decomposition_carries_canonical_provenance(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #356 — per-axis decomposition emission carries Provenance.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Steps 3.1-3.3 + Catalog #287 /
+    #323 sister discipline. Sister of Catalog #335 at the per-axis emission
+    sub-surface.
+
+    Refuses any subdirectory under ``src/tac/cathedral_consumers/`` whose
+    ``__init__.py`` references the canonical trigger token
+    ``predicted_axis_decomposition`` (the field a consumer would emit per
+    CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.1) WITHOUT either:
+
+    1. A canonical Provenance builder import / construction in the same file
+       (per ``_CHECK_356_PROVENANCE_TOKENS`` set covering
+       ``build_provenance_for_predicted`` + sister builders + the
+       ``canonical_provenance=`` keyword assignment); OR
+    2. A same-line waiver
+       ``# PER_AXIS_DECOMPOSITION_PROVENANCE_OK:<rationale>`` on the
+       trigger-token line with non-placeholder rationale
+       (≥4 chars; ``<rationale>`` / ``<reason>`` placeholders rejected per
+       Catalog #287 sister discipline so the gate's docstring example
+       cannot self-waive).
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+    — live count at landing: 0 (the canonical reference fixture
+    ``_example_consumer`` does not yet emit per-axis decomposition; no
+    production consumer has been migrated to Tier B yet per Dim 3 Step
+    3.4 / Dim 6 Step 6.5). Strict-flip atomic with the first NEW per-axis
+    emission landing (which by construction will carry canonical
+    Provenance because the gate fires structurally before commit).
+
+    Sister of:
+    - Catalog #335 (canonical Protocol contract at the package surface;
+      #356 is the per-axis sub-surface)
+    - Catalog #287 (placeholder-rationale rejection)
+    - Catalog #323 (canonical Provenance umbrella)
+    - Catalog #125 (6-hook wire-in non-negotiable)
+    - Catalog #176 (META-meta: STRICT callsites have CLAUDE.md row)
+    - Catalog #185 (META-meta: Live count: 0 verified empirically)
+    - Catalog #341 (Tier-A canonical-routing-markers; #356 preserves
+      Tier-A backward-compat by gating on TRIGGER TOKEN presence, not
+      forcing emission)
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    consumer_dir = root / _CHECK_356_CONSUMER_DIR_RELPATH
+    if not consumer_dir.is_dir():
+        if verbose:
+            print(
+                f"  [per-axis-provenance] {_CHECK_356_CONSUMER_DIR_RELPATH} "
+                "not present, skipping"
+            )
+        return []
+
+    violations: list[str] = []
+    for sub in sorted(consumer_dir.iterdir()):
+        if not sub.is_dir():
+            continue
+        if sub.name in _CHECK_356_EXEMPT_SUBDIRS:
+            continue
+        init_path = sub / "__init__.py"
+        if not init_path.exists():
+            continue
+
+        try:
+            with init_path.open("r", encoding="utf-8", errors="replace") as fh:
+                text = fh.read()
+        except OSError:
+            continue
+
+        # Quick reject: no trigger token in source → out of scope.
+        if _CHECK_356_TRIGGER_TOKEN not in text:
+            continue
+
+        # Detect trigger token positions; check each line for waiver OR file-
+        # level Provenance acceptance. The acceptance is FILE-WIDE because a
+        # single canonical Provenance builder call serves multiple emissions
+        # in the same consumer (e.g. one builder, multiple per-axis branches).
+        has_provenance_token = any(
+            tok in text for tok in _CHECK_356_PROVENANCE_TOKENS
+        )
+
+        # Per-line waiver check on every line containing the trigger token.
+        trigger_lines: list[tuple[int, str]] = []
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if _CHECK_356_TRIGGER_TOKEN in line:
+                trigger_lines.append((lineno, line))
+
+        # If every trigger line has a valid waiver, the consumer is exempt.
+        all_lines_waived = trigger_lines and all(
+            _check_356_extract_waiver_rationale(line) is not None
+            for _, line in trigger_lines
+        )
+
+        if has_provenance_token or all_lines_waived:
+            continue
+
+        rel = str(sub.relative_to(root))
+        first_lineno = trigger_lines[0][0] if trigger_lines else 0
+        violations.append(
+            f"{rel}: emits `predicted_axis_decomposition` (first at line "
+            f"{first_lineno}) without canonical Provenance "
+            f"({', '.join(_CHECK_356_PROVENANCE_TOKENS[:3])}, ...) "
+            f"OR same-line `# {_CHECK_356_WAIVER_TOKEN}:<rationale>` waiver. "
+            "Catalog #356 requires canonical Provenance per Catalog #323 "
+            "to prevent silent phantom-score leak into autopilot ranker "
+            "via per-axis emission (CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3)."
+        )
+
+    if verbose:
+        print(
+            f"  [per-axis-provenance] {len(violations)} violation(s) "
+            f"(Catalog #356 WARN-ONLY initial wire-in)"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_per_axis_decomposition_carries_canonical_provenance "
+            f"found {len(violations)} violation(s). Catalog #356 enforces "
+            "canonical Provenance on per-axis emission per "
+            "CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 + Catalog #287 / #323:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
 
@@ -73138,6 +73376,330 @@ def check_cathedral_consumer_mps_prescreen_routing_carries_canonical_markers(
             + "\n  ".join(v[:500] for v in violations[:5])
         )
     return violations
+
+
+# Catalog #357 - check_cathedral_consumer_tier_b_declares_canonical_contract
+# 2026-05-20 lane_wave_1_dim_6_dual_tier_consumer_architecture_foundation_20260520.
+#
+# DUAL-TIER ARCHITECTURE PER CATHEDRAL-SMARTER-DESIGN-MEMO DIMENSION 6:
+# Resolves the operator-mental-model gap surfaced by WIRE-IN-RIGOR audit
+# (44+ cathedral consumers fire per loop iteration but per Catalog #341 ALL
+# return predicted_delta_adjustment=0.0). The dual-tier system makes the
+# Tier A observability-only vs Tier B score-contributing distinction
+# STRUCTURAL rather than tribal-knowledge.
+#
+# SCOPE: scans every package under src/tac/cathedral_consumers/ that
+# declares ``CONSUMER_TIER = ConsumerTier.TIER_B_SCORE_CONTRIBUTING`` at
+# module level. Tier A consumers (default; omit CONSUMER_TIER OR set to
+# TIER_A_OBSERVABILITY_ONLY) are out of scope (covered by sister Catalog
+# #341 routing-markers gate).
+#
+# ACCEPTANCE: Tier B consumers MUST satisfy ALL of:
+#   1. Import ``ConsumerTier`` from ``tac.cathedral.consumer_contract``
+#      (required for the class-level declaration to resolve).
+#   2. Body contains the literal token ``TIER_B_SCORE_CONTRIBUTING``
+#      (declares tier intent).
+#   3. Body contains ``provenance`` substring (Catalog #323 canonical
+#      Provenance must be threaded into every contribution return value).
+#   4. Body contains ``promotable`` substring AND ``False`` (Tier B
+#      contributes to RANKING but NEVER to PROMOTION; promotable=False
+#      preserved per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA").
+#   5. Body does NOT contain ``axis_tag="[predicted]"`` /
+#      ``axis_tag='[predicted]'`` / ``'axis_tag': '[predicted]'`` /
+#      ``"axis_tag": "[predicted]"`` (Tier B requires empirically-grounded
+#      axis token; ``[predicted]`` is Tier A semantics).
+#
+# WAIVER: file-level ``# CATHEDRAL_CONSUMER_TIER_B_DEFERRED_OK:<rationale>``
+# in __init__.py first 60 lines (placeholder ``<rationale>`` / ``<reason>``
+# / rationales <4 chars rejected per Catalog #287 sister discipline so the
+# gate's docstring example cannot self-waive). Reserved for Tier B
+# consumers in scaffold state awaiting Phase 2 wire-in per Dim 6 Step 6.5.
+#
+# Sister of Catalog #341 (Tier A routing-markers; #357 is the Tier B
+# sister extension), Catalog #335 (canonical Protocol contract), Catalog
+# #323 (canonical Provenance umbrella), Catalog #356 (Tier B per-axis
+# decomposition prerequisite), Catalog #287 (placeholder-rationale
+# rejection), Catalog #125 (6-hook wire-in non-negotiable), Catalog #176
+# (META-meta: STRICT callsites have CLAUDE.md row), Catalog #185
+# (META-meta-meta: Live count: 0 verified empirically).
+#
+# Together they extinct the Tier-B-without-canonical-contract bug class
+# STRUCTURALLY at FIVE surfaces: canonical Protocol (#335) + Tier A
+# routing-markers (#341) + Tier B contract (#357) + per-axis Provenance
+# (#356) + canonical Provenance umbrella (#323).
+#
+# STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+# self-protected against" + "Strict-flip atomicity rule" — live count at
+# landing: 0 (no Tier B consumers exist yet; the gate fires structurally
+# the moment a Tier B consumer lands without the canonical contract).
+
+_CHECK_357_CONSUMER_DIR_RELPATH = "src/tac/cathedral_consumers"
+_CHECK_357_EXEMPT_SUBDIRS: frozenset[str] = frozenset({"__pycache__", "tests"})
+
+# In-scope token: presence in __init__.py marks the consumer as Tier B.
+_CHECK_357_TIER_B_INSCOPE_TOKEN = "TIER_B_SCORE_CONTRIBUTING"
+
+# Required tokens for Tier B canonical contract compliance.
+_CHECK_357_TIER_B_REQUIRED_PROVENANCE_TOKEN = "provenance"
+_CHECK_357_TIER_B_REQUIRED_PROMOTABLE_TOKEN = "promotable"
+_CHECK_357_TIER_B_REQUIRED_FALSE_TOKEN = "False"
+_CHECK_357_TIER_B_REQUIRED_IMPORT_TOKEN = "ConsumerTier"
+
+# Forbidden axis_tag forms (Tier B requires non-[predicted] empirical axis).
+_CHECK_357_TIER_B_FORBIDDEN_PREDICTED_AXIS_FORMS: tuple[str, ...] = (
+    'axis_tag="[predicted]"',
+    "axis_tag='[predicted]'",
+    '"axis_tag": "[predicted]"',
+    "'axis_tag': '[predicted]'",
+)
+
+_CHECK_357_WAIVER_PATTERN = re.compile(
+    r"# CATHEDRAL_CONSUMER_TIER_B_DEFERRED_OK:(.+?)(?:$|#)", re.MULTILINE
+)
+_CHECK_357_WAIVER_LOOKBACK_LINES = 60
+
+
+def _check_357_consumer_is_tier_b(body: str) -> bool:
+    """Return True iff body has a module-level assignment of the form
+    ``CONSUMER_TIER = ... TIER_B_SCORE_CONTRIBUTING ...`` (or sister
+    annotated form).
+
+    AST-based detection per Catalog #168 (sister gate for the same
+    Assign-vs-AnnAssign META-class). Substring detection alone would
+    false-positive on docstring mentions of the canonical promotion path
+    (e.g. ``"Add CONSUMER_TIER = ConsumerTier.TIER_B_SCORE_CONTRIBUTING"``
+    in a docstring documenting the promotion path).
+
+    Returns False on syntax errors (defensive; the operator-facing #335
+    canonical-contract gate handles broken consumers; #357 silently
+    skips them rather than crash).
+    """
+    try:
+        tree = ast.parse(body)
+    except SyntaxError:
+        return False
+
+    for node in tree.body:
+        # Handle both ``CONSUMER_TIER = ...`` (Assign) and
+        # ``CONSUMER_TIER: ConsumerTier = ...`` (AnnAssign) per Catalog #168.
+        targets: list[ast.expr] = []
+        value: ast.expr | None = None
+        if isinstance(node, ast.Assign):
+            targets = list(node.targets)
+            value = node.value
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target] if node.target is not None else []
+            value = node.value
+
+        if value is None:
+            continue
+
+        for tgt in targets:
+            if isinstance(tgt, ast.Name) and tgt.id == "CONSUMER_TIER":
+                # Walk the RHS expression looking for TIER_B_SCORE_CONTRIBUTING.
+                for sub in ast.walk(value):
+                    if isinstance(sub, ast.Attribute):
+                        if sub.attr == _CHECK_357_TIER_B_INSCOPE_TOKEN:
+                            return True
+                    elif isinstance(sub, ast.Name):
+                        if sub.id == _CHECK_357_TIER_B_INSCOPE_TOKEN:
+                            return True
+                # CONSUMER_TIER assignment found but doesn't reference Tier B.
+                # Stop scanning further; this consumer is Tier A.
+                return False
+    return False
+
+
+def _check_357_extract_waiver_rationale(body: str) -> str | None:
+    """Return the non-placeholder waiver rationale if present in the first
+    60 lines, else None.
+
+    Per Catalog #287 sister discipline: placeholder rationales
+    (``<rationale>`` / ``<reason>`` / ``rationale`` / ``reason`` literals,
+    empty, or <4 chars) reject the waiver so the gate's docstring example
+    cannot self-waive.
+    """
+    # Restrict scan to first 60 lines.
+    lines = body.split("\n", _CHECK_357_WAIVER_LOOKBACK_LINES + 1)
+    head = "\n".join(lines[:_CHECK_357_WAIVER_LOOKBACK_LINES])
+    m = _CHECK_357_WAIVER_PATTERN.search(head)
+    if not m:
+        return None
+    rationale = m.group(1).strip().rstrip(":").strip()
+    low = rationale.lower()
+    if low in ("<rationale>", "<reason>", "rationale", "reason", ""):
+        return None
+    if len(rationale) < 4:
+        return None
+    return rationale
+
+
+def _check_357_find_violations(body: str) -> list[str]:
+    """Return list of canonical-contract violations for a Tier B consumer body."""
+    violations: list[str] = []
+    # (1) Import token
+    if _CHECK_357_TIER_B_REQUIRED_IMPORT_TOKEN not in body:
+        violations.append(
+            f"missing import of '{_CHECK_357_TIER_B_REQUIRED_IMPORT_TOKEN}' "
+            "(required to resolve CONSUMER_TIER declaration)"
+        )
+    # (3) provenance present
+    if _CHECK_357_TIER_B_REQUIRED_PROVENANCE_TOKEN not in body:
+        violations.append(
+            f"missing '{_CHECK_357_TIER_B_REQUIRED_PROVENANCE_TOKEN}' field "
+            "(Tier B contributions MUST carry canonical Provenance per "
+            "Catalog #323)"
+        )
+    # (4) promotable AND False present
+    if _CHECK_357_TIER_B_REQUIRED_PROMOTABLE_TOKEN not in body:
+        violations.append(
+            f"missing '{_CHECK_357_TIER_B_REQUIRED_PROMOTABLE_TOKEN}' field "
+            "(Tier B contributions MUST carry promotable=False per CLAUDE.md "
+            '"Submission auth eval — BOTH CPU AND CUDA")'
+        )
+    elif _CHECK_357_TIER_B_REQUIRED_FALSE_TOKEN not in body:
+        violations.append(
+            "'promotable' present but no 'False' literal found; Tier B "
+            "MUST carry promotable=False"
+        )
+    # (5) Forbidden axis_tag="[predicted]" forms
+    for forbidden in _CHECK_357_TIER_B_FORBIDDEN_PREDICTED_AXIS_FORMS:
+        if forbidden in body:
+            violations.append(
+                f"forbidden axis_tag form: {forbidden!r}. Tier B requires "
+                'empirically-grounded axis token (NOT "[predicted]"). If '
+                "signal is speculative, declare CONSUMER_TIER = "
+                "ConsumerTier.TIER_A_OBSERVABILITY_ONLY instead."
+            )
+            break
+    return violations
+
+
+def check_cathedral_consumer_tier_b_declares_canonical_contract(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Catalog #357 — Tier B cathedral consumers declare the canonical
+    score-contributing contract.
+
+    Sister extension of Catalog #341 per CATHEDRAL-SMARTER-DESIGN-MEMO Dim
+    6 Step 6.3. Tier A consumers (default; Catalog #341 routing-markers
+    apply) are out of scope. Tier B consumers (those declaring
+    ``CONSUMER_TIER = ConsumerTier.TIER_B_SCORE_CONTRIBUTING``) MUST
+    satisfy the canonical contract: import ConsumerTier, carry provenance
+    + promotable=False, and use an empirically-grounded axis_tag (not
+    ``[predicted]``).
+
+    Bug class: a Tier B consumer that omits canonical Provenance OR
+    ``promotable=False`` OR uses ``[predicted]`` axis_tag silently leaks
+    score predictions into the autopilot ranker without the structural
+    protection that the markers were designed to provide. The dual-tier
+    architecture's safety relies on Tier B carrying empirical grounding;
+    without this gate, a Tier B label would be cosmetic.
+
+    SCOPE: ``src/tac/cathedral_consumers/*/__init__.py`` containing the
+    ``TIER_B_SCORE_CONTRIBUTING`` token.
+
+    ACCEPTANCE per Dim 6 Step 6.3:
+      1. Import of ``ConsumerTier``
+      2. ``provenance`` field threaded through contribution returns
+      3. ``promotable=False`` preserved
+      4. NO ``axis_tag="[predicted]"`` (use canonical contest or
+         diagnostic axis instead)
+
+    WAIVER: file-level
+    ``# CATHEDRAL_CONSUMER_TIER_B_DEFERRED_OK:<rationale>`` in __init__.py
+    first 60 lines for Tier B scaffolds awaiting Phase 2 wire-in. Per
+    Catalog #287 sister discipline placeholder rationales rejected so the
+    gate's docstring example cannot self-waive.
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+    live count at landing: 0 (no Tier B consumers exist yet; the dual-
+    tier landing in this commit batch is foundation-only).
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    consumer_dir = root / _CHECK_357_CONSUMER_DIR_RELPATH
+    all_violations: list[str] = []
+
+    if not consumer_dir.is_dir():
+        if verbose:
+            print(
+                f"  [cathedral-consumer-tier-b] {_CHECK_357_CONSUMER_DIR_RELPATH} "
+                "not present, skipping"
+            )
+        return all_violations
+
+    for sub in sorted(consumer_dir.iterdir()):
+        if not sub.is_dir():
+            continue
+        if sub.name in _CHECK_357_EXEMPT_SUBDIRS:
+            continue
+        if sub.name.startswith("_"):
+            # Reference packages exempt (e.g. _example_consumer).
+            continue
+        init_path = sub / "__init__.py"
+        if not init_path.exists():
+            continue
+
+        try:
+            body = init_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            if verbose:
+                print(
+                    f"  [cathedral-consumer-tier-b] SKIP {sub.name} "
+                    f"(read failed: {exc})"
+                )
+            continue
+
+        # In-scope check: must have ACTUAL module-level CONSUMER_TIER
+        # assignment to ConsumerTier.TIER_B_SCORE_CONTRIBUTING (AST-based
+        # per Catalog #168 to avoid false-positives on docstring mentions
+        # of the canonical promotion path).
+        if not _check_357_consumer_is_tier_b(body):
+            continue
+
+        # Waiver check (waiver short-circuits validation).
+        if _check_357_extract_waiver_rationale(body) is not None:
+            continue
+
+        # Canonical-contract check.
+        violations = _check_357_find_violations(body)
+        if violations:
+            rel = str(init_path.relative_to(root))
+            for v in violations:
+                all_violations.append(
+                    f"{rel}: Tier B canonical contract violation: {v}. "
+                    "Per Catalog #357 (DUAL-TIER ARCHITECTURE Dim 6 Step 6.3) "
+                    "every Tier B cathedral consumer MUST satisfy the canonical "
+                    "score-contributing contract (import ConsumerTier + carry "
+                    "provenance + promotable=False + use empirically-grounded "
+                    'axis_tag != "[predicted]"). Either fix the violation, '
+                    "downgrade to TIER_A_OBSERVABILITY_ONLY, OR add "
+                    "`# CATHEDRAL_CONSUMER_TIER_B_DEFERRED_OK:<rationale>` "
+                    "file-level waiver in __init__.py first 60 lines "
+                    "(placeholder rationale rejected; rationale ≥4 chars)."
+                )
+
+    if verbose:
+        if all_violations:
+            print(
+                f"  [cathedral-consumer-tier-b] {len(all_violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [cathedral-consumer-tier-b] OK (all Tier B consumers, if "
+                "any, carry the canonical score-contributing contract)"
+            )
+    if all_violations and strict:
+        raise PreflightError(
+            "check_cathedral_consumer_tier_b_declares_canonical_contract "
+            f"found {len(all_violations)} violation(s) per Catalog #357 "
+            "(DUAL-TIER ARCHITECTURE Dim 6 Step 6.3).\n  "
+            + "\n  ".join(v[:500] for v in all_violations[:5])
+        )
+    return all_violations
 
 
 # Catalog #318 - check_master_gradient_raw_byte_authority_not_landed

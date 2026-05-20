@@ -43048,6 +43048,88 @@
         }
       },
       "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_nervdc.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/nervdc_as_renderer.py predates canonical package convention. Decoder-internal _CondSummary prev-frame conditioning (sequential inflate; HNeRV parity L9 runtime closure verification required at Phase 2). Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/nervdc/ package migration + submissions/nervdc_substrate/ contest-compliant inflate. Recipe substrate_nervdc_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/nervdc_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_nervdc_as_renderer (sister)."
+    },
+    {
+      "id": "lane_wave_2_prereq_bit_allocator_namespace_20260520",
+      "name": "WAVE-2-PREREQ-BIT-ALLOCATOR-NAMESPACE \u2014 sister-extend existing tac.bit_allocator package with per_byte / per_class / per_axis / pareto_dual allocators",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wave_1_dim_6_dual_tier_consumer_architecture_foundation_20260520",
+      "name": "WAVE-1-DIM-6 dual-tier consumer architecture foundation",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/cathedral/consumer_contract.py + src/tac/preflight.py Catalog #357 + src/tac/cathedral_consumers/README.md + src/tac/tests/test_dual_tier_consumer_architecture.py (62/62 tests pass; live count: 0)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #357 STRICT-from-byte-one in preflight_all; live count: 0"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_wave_1_dim_6_dual_tier_consumer_architecture_foundation_landed_20260520.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -43057,5 +43139,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T12:57:58Z"
+  "updated_at": "2026-05-20T13:49:03Z"
 }
