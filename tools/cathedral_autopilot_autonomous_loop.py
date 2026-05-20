@@ -6563,6 +6563,368 @@ def invoke_cathedral_consumers_on_candidates(
 # ─────────────────────────────────────────────────────────────────────────
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# META-LAGRANGIAN-WIRE-1 Phase 1 invoker callsite (2026-05-20)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Per T3 grand-strategy Decision 5 long-term centerpiece + operator decision
+# 2026-05-20 + WIRE-IN-RIGOR-AUDIT empirical finding that
+# `src/tac/findings_lagrangian/` had ZERO production callers despite being
+# the canonical "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST
+# EMPHASIS" surface per CLAUDE.md. THIS PHASE 1 wire-in lands the canonical
+# invocation point + per-iteration call + a basic Lagrangian-derived
+# adjuster; Phase 2-N (sister subagents over a 1-3 week window) extend to
+# actual dual-variable computation + typed atom flow into the solver +
+# per-element learned-optimal destination.
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #287/#323
+# the invocation does NOT mutate predicted_score_delta on the candidate
+# rows; the Lagrangian-derived signal is surfaced as observability-only
+# annotations attached to the output payload for downstream consumers
+# (operator audit, autopilot ranker downweighting via 1/(1+sigma) per Q7
+# binding decision, action-selector candidate enrichment).
+#
+# Per Catalog #336 / #337 sister-pattern: the invocation lands in main()
+# AFTER `invoke_cathedral_consumers_on_candidates` so Lagrangian-derived
+# adjustments compose on top of the autopilot consumer cascade (the
+# Lagrangian sees the same candidate-set the cathedral consumers saw).
+
+META_LAGRANGIAN_INVOCATION_SCHEMA = "meta_lagrangian_invocation_v1_20260520"
+"""Canonical schema id for the meta-Lagrangian invocation output payload.
+
+Versioned per the canonical helper pattern (Catalog #245 ledger /
+#300 council deliberation v2 / Catalog #336 sister discipline). Bump
+when the output shape changes meaningfully.
+"""
+
+
+def _candidate_residuals_for_lagrangian(
+    candidate: CandidateRow,
+) -> tuple[float, ...]:
+    """Extract Phase 1 anchor residuals for a candidate.
+
+    Phase 1: minimal residual signal — uses the candidate's
+    ``predicted_score_delta`` as the single residual (the "predicted minus
+    canonical baseline" anchor proxy; baseline = 0 per the canonical
+    sign convention where negative delta = improvement). Phase 2 will
+    replace this with per-pair master-gradient residuals + per-class
+    SegNet/PoseNet component residuals (the typed-atom flow into the
+    solver per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable).
+
+    The Phase 1 proxy is BOUNDED (clipped to [-1.0, +1.0]) so a runaway
+    candidate prediction cannot destabilize the Lagrangian posterior
+    update. The bound is documented in the helper's return-value
+    rationale so a future Phase 2 successor can audit + lift it.
+    """
+    raw = float(candidate.predicted_score_delta)
+    if raw != raw:  # NaN guard
+        return ()
+    if raw > 1.0:
+        raw = 1.0
+    elif raw < -1.0:
+        raw = -1.0
+    return (raw,)
+
+
+def _lagrangian_derived_adjustment_factor(
+    scalar_lagrangian: float,
+    posterior_sigma: float,
+) -> float:
+    """Phase 1 bounded adjustment factor in [0.95, 1.05].
+
+    Derives a small bounded multiplicative factor from the Lagrangian
+    scalar + posterior uncertainty. Phase 1 keeps the adjustment narrow
+    (5% maximum either direction) because the actual dual-variable
+    computation lives in Phase 2; this factor is a placeholder that
+    exercises the wiring without claiming the Lagrangian has empirically
+    arbitrated the candidate's ranking.
+
+    Per Q7 binding decision (slot 20 + supplemental): higher posterior
+    uncertainty → downweight via 1/(1+sigma). Phase 1 implements this
+    AS THE BOUNDED 5% PROXY; Phase 2 extends to the full asymmetric-cost
+    formulation per Lindley 1956 + Foster 2019.
+
+    Returns 1.0 (passthrough) when inputs are non-finite OR when the
+    Lagrangian/sigma values would push outside the [0.95, 1.05] bound;
+    fail-closed so operator audit always observes a deterministic
+    bounded multiplier.
+    """
+    if scalar_lagrangian != scalar_lagrangian:  # NaN
+        return 1.0
+    if posterior_sigma != posterior_sigma:  # NaN
+        return 1.0
+    if posterior_sigma < 0:
+        return 1.0
+    # 1/(1+sigma) downweight per Q7 binding decision
+    uncertainty_factor = 1.0 / (1.0 + max(posterior_sigma, 0.0))
+    # Map scalar Lagrangian to a small signed adjustment.
+    # Lower Lagrangian = better fit = positive adjustment (favor candidate);
+    # higher Lagrangian = worse fit = negative adjustment.
+    # Sigmoid-like compression to bound the contribution.
+    import math as _math
+
+    if scalar_lagrangian > 50.0:
+        scalar_lagrangian = 50.0
+    elif scalar_lagrangian < -50.0:
+        scalar_lagrangian = -50.0
+    lagrangian_sign_factor = _math.tanh(-scalar_lagrangian / 10.0)  # in [-1, 1]
+    # Compose: small 5% maximum adjustment band.
+    adjustment_delta = 0.05 * uncertainty_factor * lagrangian_sign_factor
+    factor = 1.0 + adjustment_delta
+    # Defense-in-depth bound check.
+    if factor < 0.95:
+        factor = 0.95
+    elif factor > 1.05:
+        factor = 1.05
+    return float(factor)
+
+
+def invoke_meta_lagrangian_on_candidates(
+    candidates: list[CandidateRow],
+    *,
+    top_n: int | None = None,
+    repo_root: Path | str | None = None,
+    panel_axis: str = "contest_cpu",
+    sigma_obs: float = 1.0,
+) -> dict[str, Any]:
+    """Phase 1 canonical invocation of the meta-Lagrangian on candidates.
+
+    Mirrors :func:`invoke_cathedral_consumers_on_candidates` per Catalog
+    #336 invoker-callsite pattern. For each candidate, this Phase 1
+    helper:
+
+      1. Extracts a bounded residual signal via
+         :func:`_candidate_residuals_for_lagrangian`.
+      2. Builds a 1-dim Gaussian posterior keyed to the candidate's
+         family (treated as the equation_id for Phase 1) via
+         :func:`tac.findings_lagrangian.posterior_update_from_anchors`.
+      3. Computes the 4-term findings Lagrangian via
+         :func:`tac.findings_lagrangian.compute_findings_lagrangian` on
+         the initial partition.
+      4. Derives a bounded adjustment factor in [0.95, 1.05] via
+         :func:`_lagrangian_derived_adjustment_factor` and surfaces it
+         as an observability annotation (NOT a candidate mutation).
+
+    Phase 2-N (sister subagents) will:
+      - Replace the bounded-residual Phase 1 proxy with per-pair
+        master-gradient residuals + per-class component residuals.
+      - Compute actual dual variables (lambda_*, mu_*) instead of
+        the placeholder bounded factor.
+      - Flow typed-atom candidate rows into the Lagrangian's
+        partition + action-selector surfaces (currently the action
+        selector is invoked separately if at all).
+      - Extend the adjustment factor's bound + add per-candidate
+        info-gain-per-dollar ranking signal per Lindley 1956 + Foster
+        2019.
+      - Per-element learned-optimal destination per the META engineering
+        vision (Phase 4).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog
+    #287/#323: this helper's contribution is OBSERVABILITY-ONLY at
+    Phase 1; it surfaces ``lagrangian_scalar`` + ``adjustment_factor``
+    + ``posterior_sigma_per_term`` + ``decompose`` for operator audit
+    + downstream consumers, but it does NOT mutate
+    ``predicted_score_delta`` on candidate rows.
+
+    Per CLAUDE.md "Forbidden score claims": every annotation row carries
+    ``score_claim=False`` + ``promotable=False`` +
+    ``axis_tag="[predicted]"``. Per Catalog #319 / #323: this is a
+    Provenance-bearing surface that downstream consumers must NOT route
+    into score-claim posterior writes.
+
+    Args:
+        candidates: ranked candidate list (typically the autopilot
+            ranker output).
+        top_n: cap at top-N candidates; ``None`` means all (default).
+        repo_root: optional repo root override for the canonical
+            equations lookup (unused at Phase 1; reserved for Phase 2).
+        panel_axis: contest score axis (mirrors sister helpers).
+        sigma_obs: observation noise std-dev for the conjugate update
+            (default 1.0 per :mod:`tac.findings_lagrangian.posterior`).
+
+    Returns:
+        Dict with:
+          - ``schema``: pinned schema version
+          - ``evidence_grade``: "[predicted, meta-Lagrangian invocation]"
+          - ``score_claim``: False
+          - ``promotion_eligible``: False
+          - ``ready_for_exact_eval_dispatch``: False
+          - ``panel_axis``: passthrough
+          - ``top_n``: passthrough
+          - ``candidates_invoked``: count
+          - ``phase``: ``"phase_1_canonical_invocation_with_bounded_proxy_adjuster"``
+          - ``invocations``: per-candidate annotation rows
+          - ``per_candidate_errors``: count of trapped exceptions (each
+            recorded inline in ``invocations``)
+          - ``next_phase_roadmap``: pointer to the design memo
+    """
+    # Bound the candidate set.
+    target_candidates = list(candidates)
+    if top_n is not None and top_n > 0:
+        target_candidates = target_candidates[:top_n]
+
+    # Lazy import — keeps the cathedral autopilot import tree light when
+    # the wire-in is not on the hot path.
+    try:
+        from tac.findings_lagrangian import (
+            posterior_update_from_anchors,
+            compute_findings_lagrangian,
+            build_initial_partition,
+        )
+        _LAGRANGIAN_OK = True
+        _import_error: str | None = None
+    except Exception as exc:  # noqa: BLE001  defensive
+        _LAGRANGIAN_OK = False
+        _import_error = f"{type(exc).__name__}: {exc}"
+
+    invocations: list[dict[str, Any]] = []
+    per_candidate_errors = 0
+
+    if not _LAGRANGIAN_OK:
+        # Surface the import failure as a single observability row + return.
+        # Per Phase 1: fail-OPEN at the helper (do NOT crash main()).
+        # Sister Catalog #355 STRICT preflight gate ensures the invocation
+        # CALLSITE is present in main(); the helper's runtime resilience is
+        # separate from the gate's structural protection.
+        invocations.append({
+            "schema_error": (
+                "tac.findings_lagrangian unavailable: "
+                f"{_import_error}"
+            ),
+            "score_claim": False,
+            "promotable": False,
+            "axis_tag": "[predicted]",
+        })
+        return {
+            "schema": META_LAGRANGIAN_INVOCATION_SCHEMA,
+            "evidence_grade": "[predicted, meta-Lagrangian invocation]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "panel_axis": panel_axis,
+            "top_n": top_n,
+            "candidates_invoked": 0,
+            "phase": "phase_1_canonical_invocation_with_bounded_proxy_adjuster",
+            "invocations": invocations,
+            "per_candidate_errors": per_candidate_errors + 1,
+            "next_phase_roadmap": (
+                ".omx/research/meta_lagrangian_wire_in_phase_1_canonical_"
+                "invocation_landed_20260520T*.md"
+            ),
+        }
+
+    # Build a canonical initial partition (used per-candidate Phase 1; Phase
+    # 2 will route distinct candidates through distinct partition refinements
+    # per the MDL-with-wavelet-prior splitting rule per Catalog #277).
+    try:
+        partition = build_initial_partition()
+    except Exception as exc:  # noqa: BLE001  defensive
+        invocations.append({
+            "schema_error": (
+                f"build_initial_partition failed: "
+                f"{type(exc).__name__}: {exc}"
+            ),
+            "score_claim": False,
+            "promotable": False,
+            "axis_tag": "[predicted]",
+        })
+        partition = None
+        per_candidate_errors += 1
+
+    for candidate in target_candidates:
+        # Phase 1: use family as equation_id stand-in (no canonical equation
+        # entry exists for arbitrary candidate families). The bounded-proxy
+        # signal is observability-only; the equation_id mismatch with the
+        # canonical_equations registry is documented as a Phase 2 follow-on
+        # per the design memo.
+        equation_id = candidate.family or candidate.candidate_id or "unknown_family"
+        residuals = _candidate_residuals_for_lagrangian(candidate)
+
+        if partition is None or not residuals:
+            invocations.append({
+                "candidate_id": candidate.candidate_id,
+                "family": candidate.family,
+                "lagrangian_scalar": None,
+                "adjustment_factor": 1.0,
+                "axis_tag": "[predicted]",
+                "score_claim": False,
+                "promotable": False,
+                "rationale": (
+                    "Phase 1 skip: missing partition OR empty residuals"
+                ),
+            })
+            continue
+
+        try:
+            posterior = posterior_update_from_anchors(
+                equation_id,
+                prior_mu=(0.0,),
+                prior_sigma_diagonal=(1.0,),
+                anchor_residuals=residuals,
+                sigma_obs=sigma_obs,
+            )
+            lag_result = compute_findings_lagrangian(
+                equation_id,
+                posterior=posterior,
+                partition=partition,
+                anchor_residuals=residuals,
+                sigma_obs=sigma_obs,
+            )
+            scalar = float(lag_result.scalar)
+            sigma = float(lag_result.posterior_sigma_per_term[0])
+            adjustment = _lagrangian_derived_adjustment_factor(scalar, sigma)
+            invocations.append({
+                "candidate_id": candidate.candidate_id,
+                "family": candidate.family,
+                "equation_id_used": equation_id,
+                "lagrangian_scalar": scalar,
+                "posterior_sigma": sigma,
+                "adjustment_factor": adjustment,
+                "decompose": dict(lag_result.decompose()),
+                "axis_tag": "[predicted]",
+                "score_claim": False,
+                "promotable": False,
+                "rationale": (
+                    "Phase 1 bounded-proxy adjustment (5% band); "
+                    "Phase 2 will replace with actual dual variables"
+                )[:512],
+            })
+        except Exception as exc:  # noqa: BLE001  defensive per-candidate
+            per_candidate_errors += 1
+            invocations.append({
+                "candidate_id": candidate.candidate_id,
+                "family": candidate.family,
+                "error": f"{type(exc).__name__}: {exc}",
+                "adjustment_factor": 1.0,
+                "axis_tag": "[predicted]",
+                "score_claim": False,
+                "promotable": False,
+            })
+
+    return {
+        "schema": META_LAGRANGIAN_INVOCATION_SCHEMA,
+        "evidence_grade": "[predicted, meta-Lagrangian invocation]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "panel_axis": panel_axis,
+        "top_n": top_n,
+        "candidates_invoked": len(target_candidates),
+        "phase": "phase_1_canonical_invocation_with_bounded_proxy_adjuster",
+        "invocations": invocations,
+        "per_candidate_errors": per_candidate_errors,
+        "next_phase_roadmap": (
+            ".omx/research/meta_lagrangian_wire_in_phase_1_canonical_"
+            "invocation_landed_20260520T*.md"
+        ),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# End of META-LAGRANGIAN-WIRE-1 Phase 1 invoker callsite
+# ─────────────────────────────────────────────────────────────────────────
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -7046,6 +7408,21 @@ def main(argv: list[str] | None = None) -> int:
             panel_axis=args.score_panel_axis,
         )
 
+        # META-LAGRANGIAN-WIRE-1 Phase 1 (2026-05-20): invoke the canonical
+        # findings Lagrangian on the same ranked top-N AFTER the cathedral
+        # consumer cascade. Per T3 grand-strategy Decision 5 + WIRE-IN-RIGOR
+        # AUDIT empirical anchor (zero production callers pre-2026-05-20).
+        # Per Catalog #355 + #287/#323: contribution is observability-only
+        # at Phase 1 (bounded proxy adjuster in [0.95, 1.05]); Phase 2+
+        # will compute actual dual variables + flow typed atoms into the
+        # solver per the canonical "Meta-Lagrangian/Pareto solver" non-
+        # negotiable.
+        meta_lagrangian_invocations = invoke_meta_lagrangian_on_candidates(
+            ranked,
+            top_n=top_n,
+            panel_axis=args.score_panel_axis,
+        )
+
         # T3 council prioritization 2026-05-19 rank #4 ACTIVATION sprint:
         # persist the consumer invocation batch to the canonical fcntl-locked
         # JSONL ledger so the operator-runnable summary tool can audit what
@@ -7095,8 +7472,10 @@ def main(argv: list[str] | None = None) -> int:
                 "no_kill_verdict",
                 "anti_duplication_reuses_rank_candidates",
                 "cathedral_consumer_invocation_active_catalog_336_337",
+                "meta_lagrangian_invocation_active_catalog_355",
             ],
             "cathedral_consumer_invocations": consumer_invocations,
+            "meta_lagrangian_invocations": meta_lagrangian_invocations,
             "rank_axis": args.rank_axis,
             "z1_empirical_revision_applied": True,
             "continual_posterior_loaded": args.load_continual_posterior,
@@ -7174,6 +7553,16 @@ def main(argv: list[str] | None = None) -> int:
             top_n=min(args.max_dispatch_recommendations or 10, 10),
             panel_axis=args.score_panel_axis,
         )
+        # META-LAGRANGIAN-WIRE-1 Phase 1 (2026-05-20): same post-loop wire-in
+        # as the report-only path. Per T3 grand-strategy Decision 5 + sister
+        # Catalog #355 STRICT preflight gate enforcing the invocation
+        # callsite presence. Contribution is observability-only at Phase 1
+        # per Catalog #287/#323.
+        meta_lagrangian_invocations_post_loop = invoke_meta_lagrangian_on_candidates(
+            ranked_post_loop,
+            top_n=min(args.max_dispatch_recommendations or 10, 10),
+            panel_axis=args.score_panel_axis,
+        )
     except Exception as exc:  # noqa: BLE001  defensive: never crash the loop
         consumer_invocations_post_loop = {
             "schema": CATHEDRAL_CONSUMER_INVOCATION_SCHEMA,
@@ -7184,6 +7573,17 @@ def main(argv: list[str] | None = None) -> int:
             "consumer_names": [],
             "invocations": [],
             "master_gradient_annotations": [],
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+        meta_lagrangian_invocations_post_loop = {
+            "schema": META_LAGRANGIAN_INVOCATION_SCHEMA,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "candidates_invoked": 0,
+            "phase": "phase_1_canonical_invocation_with_bounded_proxy_adjuster",
+            "invocations": [],
+            "per_candidate_errors": 0,
             "error": f"{type(exc).__name__}: {exc}",
         }
         ranked_post_loop = []
@@ -7244,8 +7644,10 @@ def main(argv: list[str] | None = None) -> int:
             if args.use_compressive_sensing_lattice
             else "compressive_sensing_lattice_diagnostic_not_requested",
             "cathedral_consumer_invocation_active_catalog_336_337",
+            "meta_lagrangian_invocation_active_catalog_355",
         ],
         "cathedral_consumer_invocations": consumer_invocations_post_loop,
+        "meta_lagrangian_invocations": meta_lagrangian_invocations_post_loop,
         "iterations_run": len(reports),
         "race_mode": args.race_mode,
         "operator_authorized_mode": {

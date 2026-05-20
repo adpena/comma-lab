@@ -5189,6 +5189,21 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #355: cathedral_autopilot main() invokes meta-Lagrangian.
+        # META-LAGRANGIAN-WIRE-1 Phase 1 self-protection per CLAUDE.md
+        # "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS"
+        # non-negotiable + T3 grand-strategy Decision 5 long-term centerpiece
+        # + operator decision 2026-05-20. Sister of Catalog #336/#337 at the
+        # meta-Lagrangian invocation surface (same META-class: importable
+        # canonical helper is necessary but NOT sufficient; the invoker
+        # callsite in main() is the missing structural protection).
+        # STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+        # canonical Phase 1 wire-in lands in same commit batch.
+        # Memory: feedback_slot_meta_lagrangian_wire_1_phase_1_canonical_invocation_landed_20260520.
+        check_cathedral_autopilot_main_invokes_meta_lagrangian(
+            strict=True, verbose=verbose
+        )
+
         # Catalog #354: master-gradient exploit consumers bundle completeness.
         # RESPAWN-MG-7-BUNDLE 2026-05-20 self-protection per operator
         # NON-NEGOTIABLE 2026-05-19 verbatim "Implement all exploits and wire
@@ -28765,6 +28780,226 @@ def check_rerank_candidates_via_master_gradient_invokes_consumers(
             "necessary but not sufficient; the invoker callsite in main() is "
             "the missing structural protection (same META-class as Catalog "
             "#336):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #355 — cathedral_autopilot main() invokes meta-Lagrangian (Phase 1)
+# ────────────────────────────────────────────────────────────────────────────
+#
+# META-LAGRANGIAN-WIRE-1 Phase 1 self-protection 2026-05-20 (per T3 grand
+# strategy review Decision 5 long-term centerpiece + operator decision
+# 2026-05-20 + WIRE-IN-RIGOR-AUDIT empirical finding
+# `feedback_wire_in_rigor_audit_meta_class_extinction_20260520.md` that
+# `src/tac/findings_lagrangian/` had ZERO production callers despite being
+# the canonical "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST
+# EMPHASIS" surface per CLAUDE.md).
+#
+# Sister of Catalog #336 (cathedral consumer discovery invoker) + Catalog
+# #337 (master-gradient rerank invoker) at the meta-Lagrangian invocation
+# surface. Same META-class as #336/#337: convention-over-implementation
+# (importable canonical helper) is necessary but NOT sufficient to extinct
+# the orphan-signal class. The INVOKER CALLSITE in main() is the missing
+# structural protection that THIS gate enforces.
+#
+# Phase 1 lands the canonical invocation point + per-iteration call + basic
+# bounded-proxy adjuster in [0.95, 1.05]. Phase 2-N (sister subagents over
+# a 1-3 week window) extend to actual dual-variable computation + typed
+# atom flow into the solver + per-element learned-optimal destination per
+# the META engineering vision.
+
+_CHECK_355_TARGET_RELPATH = "tools/cathedral_autopilot_autonomous_loop.py"
+_CHECK_355_ACCEPTANCE_TOKENS: frozenset[str] = frozenset({
+    "invoke_meta_lagrangian_on_candidates",
+    # Sister direct-helper acceptance (rare; expected to use the canonical
+    # invoker above but a future Phase 2 callsite may invoke the underlying
+    # findings_lagrangian primitives directly).
+    "compute_findings_lagrangian",
+    "recommend_next_action_via_expected_information_gain",
+})
+_CHECK_355_WAIVER_TOKEN = "META_LAGRANGIAN_INVOKER_WAIVED"
+_CHECK_355_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "rationale", "reason",
+})
+
+
+def check_cathedral_autopilot_main_invokes_meta_lagrangian(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #355 — cathedral_autopilot main() invokes meta-Lagrangian.
+
+    META-LAGRANGIAN-WIRE-1 Phase 1 self-protection per CLAUDE.md
+    "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS"
+    non-negotiable. Refuses any state of the canonical autopilot entry
+    point where main() does NOT contain a call to one of the canonical
+    invocation tokens:
+
+    - ``invoke_meta_lagrangian_on_candidates`` (the canonical Phase 1
+      helper that wraps :func:`tac.findings_lagrangian.compute_findings_lagrangian`
+      + per-candidate bounded-proxy adjuster).
+    - ``compute_findings_lagrangian`` (direct invocation; acceptable
+      if main() also wires the result into the output payload).
+    - ``recommend_next_action_via_expected_information_gain`` (sister
+      direct invocation per Lindley 1956 + Foster 2019 action-selector).
+
+    Acceptance: (a) any of the 3 tokens appears as a Call node in the
+    main() function body via AST scan; OR (b) same-line waiver
+    ``# META_LAGRANGIAN_INVOKER_WAIVED:<rationale>`` on the
+    ``def main`` line with non-placeholder rationale (≥4 chars;
+    placeholder literals ``<rationale>`` / ``<reason>`` rejected per
+    Catalog #287 sister discipline so the gate's docstring example
+    cannot self-waive).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+    the canonical Phase 1 wire-in lands in same commit batch driving
+    live count to 0. Sister of Catalog #336 (cathedral consumer
+    discovery invoker; same META-class) + Catalog #337 (master-gradient
+    rerank invoker; same META-class) + Catalog #287 (placeholder-
+    rationale rejection) + Catalog #125 (6-hook wire-in non-negotiable;
+    THIS gate IS the structural protection for hook #4 cathedral
+    autopilot dispatch on the meta-Lagrangian sub-surface) +
+    Catalog #176 (META-meta: STRICT callsites have CLAUDE.md row) +
+    Catalog #185 (META-meta: Live count: 0 verified empirically).
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against": the canonical surface existing in src/tac/findings_lagrangian/
+    is necessary but not sufficient; the invoker callsite is the
+    missing structural protection that THIS gate enforces.
+
+    Per CLAUDE.md "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE,
+    HIGHEST EMPHASIS": *"The meta-Lagrangian, Pareto, field-equation,
+    and cross-paradigm selector stack is a living solver, not a one-off
+    planning report."* The invoker callsite is the structural primitive
+    that keeps the solver living + iterating per session.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / _CHECK_355_TARGET_RELPATH
+    if not target.is_file():
+        if verbose:
+            print(
+                f"  [meta-lagrangian-invoker] {_CHECK_355_TARGET_RELPATH} "
+                "not present, skipping"
+            )
+        return []
+
+    try:
+        source = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_autopilot_main_invokes_meta_lagrangian: "
+                f"cannot read {target}: {exc}"
+            )
+        return [f"cannot read {target}: {exc}"]
+
+    # Check waiver on the def main line.
+    lines = source.splitlines()
+    main_lineno: int | None = None
+    for i, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if stripped.startswith("def main(") or stripped.startswith("def main "):
+            main_lineno = i
+            if _CHECK_355_WAIVER_TOKEN + ":" in line:
+                idx = line.find(_CHECK_355_WAIVER_TOKEN + ":")
+                rationale = line[idx + len(_CHECK_355_WAIVER_TOKEN) + 1:].strip()
+                rationale = rationale.rstrip("'\"`*")
+                if rationale and len(rationale) >= 4 and rationale.lower() not in _CHECK_355_PLACEHOLDER_RATIONALES:
+                    if verbose:
+                        print(
+                            f"  [meta-lagrangian-invoker] waiver active: {rationale[:80]}"
+                        )
+                    return []
+            break
+
+    if main_lineno is None:
+        violations = [
+            f"{_CHECK_355_TARGET_RELPATH}: missing def main(); "
+            "Catalog #355 requires main() function present per META-LAGRANGIAN-WIRE-1 Phase 1 contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_cathedral_autopilot_main_invokes_meta_lagrangian "
+                f"found {len(violations)} violation(s):\n  " + "\n  ".join(violations)
+            )
+        return violations
+
+    import ast as _ast
+    try:
+        tree = _ast.parse(source, filename=str(target))
+    except SyntaxError as exc:
+        if strict:
+            raise PreflightError(
+                f"check_cathedral_autopilot_main_invokes_meta_lagrangian: "
+                f"SyntaxError parsing {target}: {exc}"
+            )
+        return [f"SyntaxError parsing {target}: {exc}"]
+
+    main_node: _ast.FunctionDef | None = None
+    for node in tree.body:
+        if isinstance(node, _ast.FunctionDef) and node.name == "main":
+            main_node = node
+            break
+
+    if main_node is None:
+        violations = [
+            f"{_CHECK_355_TARGET_RELPATH}: no top-level def main found; "
+            "Catalog #355 requires main() function present per META-LAGRANGIAN-WIRE-1 Phase 1 contract"
+        ]
+        if strict:
+            raise PreflightError(
+                "check_cathedral_autopilot_main_invokes_meta_lagrangian "
+                f"found {len(violations)} violation(s):\n  " + "\n  ".join(violations)
+            )
+        return violations
+
+    # Walk main() body looking for any Call to one of the acceptance tokens.
+    found_invoker = False
+    for sub in _ast.walk(main_node):
+        if isinstance(sub, _ast.Call):
+            func = sub.func
+            if isinstance(func, _ast.Name):
+                if func.id in _CHECK_355_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+            elif isinstance(func, _ast.Attribute):
+                if func.attr in _CHECK_355_ACCEPTANCE_TOKENS:
+                    found_invoker = True
+                    break
+
+    violations: list[str] = []
+    if not found_invoker:
+        violations.append(
+            f"{_CHECK_355_TARGET_RELPATH}: main() does NOT invoke any of "
+            f"{sorted(_CHECK_355_ACCEPTANCE_TOKENS)}; Catalog #355 enforces the "
+            "META-LAGRANGIAN-WIRE-1 Phase 1 invoker callsite (the canonical "
+            "tac.findings_lagrangian surface existing is necessary but NOT "
+            "sufficient; the invoker callsite in main() is the missing "
+            "structural protection per CLAUDE.md 'Meta-Lagrangian/Pareto "
+            "solver — NON-NEGOTIABLE, HIGHEST EMPHASIS'). Add a call to "
+            "invoke_meta_lagrangian_on_candidates OR add same-line "
+            f"`# {_CHECK_355_WAIVER_TOKEN}:<rationale>` waiver on the "
+            "def main line"
+        )
+
+    if verbose:
+        print(f"  [meta-lagrangian-invoker] {len(violations)} violation(s)")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_cathedral_autopilot_main_invokes_meta_lagrangian "
+            f"found {len(violations)} violation(s). Catalog #355 enforces "
+            "the META-LAGRANGIAN-WIRE-1 Phase 1 invoker-callsite structural "
+            "protection per CLAUDE.md 'Bugs must be permanently fixed AND "
+            "self-protected against' non-negotiable + 'Meta-Lagrangian/Pareto "
+            "solver — NON-NEGOTIABLE, HIGHEST EMPHASIS'. Sister of Catalog "
+            "#336 + #337 at the meta-Lagrangian surface:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
