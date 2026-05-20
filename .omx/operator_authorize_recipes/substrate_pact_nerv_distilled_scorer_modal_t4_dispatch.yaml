@@ -1,0 +1,130 @@
+schema_version: 1
+name: substrate_pact_nerv_distilled_scorer_modal_t4_dispatch
+lane_id: lane_pact_nerv_distilled_scorer_l0_scaffold_20260520
+summary: |
+  pact_nerv_distilled_scorer L0 SCAFFOLD diagnostic recipe (Modal T4). Pairs
+  with experiments/train_substrate_pact_nerv_distilled_scorer.py
+  (WAVE-3-PACT-NERV-G2-MID-LOC-L0-BUILD queue 2026-05-20). NOT DISPATCH-ELIGIBLE:
+  substrate is research_only until PACT-NERV symposium Stage 1 dispatch
+  operator-gated approval per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via
+  adversarial grand council symposium" (Catalog #325) + sister Catalog #240
+  (recipe-vs-trainer-state consistency) lands.
+
+  Literature: Hinton-Vinyals-Dean 2015 (arXiv:1503.02531). KL-T=2.0 distillation
+  is the canonical Quantizr 0.33 [contest-CUDA] technique per CLAUDE.md
+  "Quantizr intelligence" (cited as historical anchor). <!-- HISTORICAL_SCORE_LITERAL_OK:quantizr_0_33_anchor_in_recipe_summary -->
+
+dispatch_enabled: false
+research_only: true
+
+dispatch_blockers:
+  - pact_nerv_symposium_stage_1_dispatch_operator_gated_per_catalog_325
+  - full_main_raises_NotImplementedError_per_catalog_240
+  - per_substrate_council_symposium_proceed_unconditional_required_per_catalog_315
+  - score_aware_lagrangian_wire_in_pending_for_full_path
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 12
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 100
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.40
+  platform_key: modal
+  gpu_key: T4
+
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Post-training Tier-C density re-measurement via
+  tools/mdl_scorer_conditional_ablation.py --tier c on the landed archive
+  after Stage 1 dispatch operator-gated approval. Pre-training prediction is
+  CARGO-CULTED per Catalog #324 + sister C6 IBPS 22x miss empirical anchor.
+
+predicted_score_target: "unknown_l0_scaffold_pending_stage_1_dispatch"
+predicted_delta: "unknown_l0_scaffold_no_empirical_anchor_pending_stage_1_dispatch"
+literature_anchor: "Hinton-Vinyals-Dean 2015 (arXiv:1503.02531; KL-T=2.0 distillation)"
+
+risk: |
+  L0 SCAFFOLD posture. Trainer raises NotImplementedError on non-smoke path
+  per Catalog #240. The internal scorer surrogate IS the distinguishing
+  primitive — at Stage 1 dispatch the surrogate co-trains via KL-T=2.0 to
+  mimic frozen upstream SegNet + PoseNet logits per Hinton 1503.02531 §3.
+
+envelope_status: |
+  RESEARCH_ONLY: dispatch refused per recipe + trainer + 4 catalog gates
+  (#220 + #240 + #315 + #325). Reactivation criteria in trainer _full_main
+  docstring + this recipe's dispatch_blockers + lane registry notes.
+
+remote_driver: scripts/remote_lane_substrate_pact_nerv_distilled_scorer.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default); operator must thread"
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pact_nerv_distilled_scorer.sh
+  cost_band_trainer: experiments/train_substrate_pact_nerv_distilled_scorer.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 2
+  cost_band_all_flags_on: false
+
+required_input_files_trainer: experiments/train_substrate_pact_nerv_distilled_scorer.py
+
+env_overrides:
+  PACT_NERV_DISTILLED_SCORER_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PACT_NERV_DISTILLED_SCORER_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  PACT_NERV_DISTILLED_SCORER_OUTPUT_DIR: /workspace/pact/lane_pact_nerv_distilled_scorer_l0_scaffold_results/output
+  PACT_NERV_DISTILLED_SCORER_EPOCHS: "2"
+  PACT_NERV_DISTILLED_SCORER_UPSTREAM_DIR: /workspace/pact/upstream
+  PACT_NERV_DISTILLED_SCORER_DEVICE: cpu
+  PACT_NERV_DISTILLED_SCORER_SMOKE: "1"
+  SMOKE_ONLY: "1"
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/remote_lane_substrate_pact_nerv_distilled_scorer.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_pact_nerv_distilled_scorer.py
+  - src/tac/substrates/pact_nerv_distilled_scorer/__init__.py
+  - src/tac/substrates/pact_nerv_distilled_scorer/architecture.py
+  - src/tac/substrates/pact_nerv_distilled_scorer/archive.py
+  - src/tac/substrates/pact_nerv_distilled_scorer/inflate.py
+  - src/tac/substrates/pact_nerv_distilled_scorer/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+sentinel_files:
+  - src/tac/substrates/pact_nerv_distilled_scorer/architecture.py
+  - src/tac/substrates/pact_nerv_distilled_scorer/archive.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+reactivation_criteria: |
+  1. PACT-NERV-DESIGN-SYMPOSIUM Stage 1 dispatch operator-gated approval per
+     Catalog #325. Hinton's dissent in the source symposium (op-routable #9)
+     IS the canonical reactivation cue for this variant.
+  2. Cargo-cult audit per Catalog #303 surfaces the CARGO-CULTED choices.
+  3. Trainer _full_main path replaces NotImplementedError with real KL-T=2.0
+     distillation + EMA + canonical auth-eval helper invocation per Catalog #226.
+  4. Recipe research_only flips false; dispatch_enabled flips true; predicted_band
+     declared with validation_status per Catalog #324.
+
+notes: |
+  L0 SCAFFOLD recipe. Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or
+  RESEARCH-ONLY" non-negotiable.
+
+  Cross-ref:
+    src/tac/substrates/pact_nerv_distilled_scorer/
+    experiments/train_substrate_pact_nerv_distilled_scorer.py
+    .omx/research/pact_nerv_ultimate_research_and_design_20260520T193443Z.md
+    feedback_wave_3_pact_nerv_g2_mid_loc_l0_build_landed_20260520.md

@@ -44759,6 +44759,47 @@
         "bolt_on_loc_budget": 400,
         "no_op_detector_planned": true
       }
+    },
+    {
+      "id": "lane_wave_3_pact_nerv_g2_mid_loc_l0_build_20260520",
+      "name": "WAVE-3-PACT-NERV-G2-MID-LOC-L0-BUILD parent",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 PACT-NERV-ULTIMATE Group 2 mid-LOC L0 variants landed (DistilledScorer + VQ + Bayesian + MultiModal + DiffusionTrajectory); 61/61 tests pass; all research_only=true + dispatch_enabled=false; 5 design memos + 1 landing memo"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -44768,5 +44809,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T21:23:18Z"
+  "updated_at": "2026-05-20T21:28:45Z"
 }
