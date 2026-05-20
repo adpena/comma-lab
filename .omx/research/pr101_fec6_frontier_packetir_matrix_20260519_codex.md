@@ -13,8 +13,12 @@ This is an audit artifact only: `score_claim=false`, `promotion_eligible=false`,
 - paired exact same archive/runtime: `True`
 - parser/profile evidence: `True`
 - PacketIR identity evidence: `True`
-- deterministic compiler identity evidence: `False`
-- PR106-style PacketIR candidate queue: `False`
+- deterministic compiler identity evidence: `True`
+- PacketIR candidate queue artifact: `True`
+- PR106-style PacketIR candidate queue: `True`
+- parser byte accounting evidence: `True`
+- runtime consumption evidence: `True`
+- candidate byte accounting evidence: `True`
 
 ## Archive
 
@@ -47,8 +51,9 @@ This is an audit artifact only: `score_claim=false`, `promotion_eligible=false`,
 
 | id | status | non-promotional flags |
 |---|---|---|
-| `run_compile_packet_identity_closure` | `pending` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
-| `generate_fec6_packetir_candidate_queue` | `pending` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
-| `prove_parser_consumption_and_byte_accounting` | `pending` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
-| `local_identity_profile_smoke` | `pending` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
+| `run_compile_packet_identity_closure` | `done` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
+| `generate_fec6_packetir_candidate_queue` | `done` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
+| `prove_parser_consumption_and_byte_accounting` | `done` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
+| `prove_runtime_byte_consumption_noop_detector` | `done` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
+| `local_identity_profile_smoke` | `done` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |
 | `paired_exact_eval_after_candidate_queue` | `blocked_until_candidate_queue_and_operator_authorization` | score_claim=false, promotion_eligible=false, ready_for_exact_eval_dispatch=false |

@@ -1261,6 +1261,17 @@ def _resolve_env_var(value: Any, default: Any) -> Any:
     return value if value is not None else default
 
 
+def _required_env_var_reference(value: Any) -> str | None:
+    """Return the referenced env var for ``${VAR}`` values without fallbacks."""
+
+    if not isinstance(value, str) or not value.startswith("${") or not value.endswith("}"):
+        return None
+    body = value[2:-1]
+    if ":-" in body or not body:
+        return None
+    return body
+
+
 @dataclass
 class Recipe:
     """In-memory recipe representation after env-var resolution."""
@@ -1502,6 +1513,18 @@ def _build_env_overrides(recipe: Recipe, instance_job_id: str) -> str:
     # correlate the dispatch claim with its INSTANCE_JOB_ID env var.
     if isinstance(raw_env, dict):
         for k, v in raw_env.items():
+            required_var = _required_env_var_reference(v)
+            if (
+                required_var is not None
+                and required_var != "INSTANCE_JOB_ID"
+                and required_var not in os.environ
+            ):
+                raise SystemExit(
+                    "[operator-authorize] FATAL: recipe env_overrides requires "
+                    f"explicit environment variable {required_var} for key {k}; "
+                    "no fallback is declared, refusing provider dispatch before "
+                    "a phantom default can be launched."
+                )
             resolved = os.environ.get(str(k), _resolve_env_var(v, v))
             # Substitute ${INSTANCE_JOB_ID} sentinel if present.
             if isinstance(resolved, str) and "${INSTANCE_JOB_ID}" in resolved:

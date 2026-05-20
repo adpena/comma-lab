@@ -36,15 +36,11 @@ for path in (REPO_ROOT, REPO_ROOT / "src", REPO_ROOT / "tools", REPO_ROOT / "ups
     if text not in sys.path:
         sys.path.insert(0, text)
 
-from tools.probe_latent_conditional_entropy_h_latent_given_scorer_class import (  # noqa: E402
-    INDEPENDENCE_TOLERANCE_BITS,
-    _count_joint,
-    _count_symbols,
-    _plug_in_entropy_bits,
-)
 from tac.optimization.faiss_ivf_pq_atw_channel import (  # noqa: E402
     CONTEST_RATE_NORMALIZER_BYTES,
+    DEFAULT_MEANINGFUL_MI_THRESHOLD_BITS,
     build_pq_codebook,
+    compute_pq_mi_verdict,
     decode_per_region_histogram,
     encode_per_region_histogram,
     estimate_pq_encoding_budget,
@@ -53,7 +49,6 @@ from tac.optimization.faiss_ivf_pq_atw_channel import (  # noqa: E402
 
 SEGNET_TARGET_H = 384
 SEGNET_TARGET_W = 512
-DEFAULT_MEANINGFUL_MI_THRESHOLD_BITS = 0.5
 HIGH_CARDINALITY_UNIQUE_FRACTION = 0.25
 
 DEFAULT_STATE_JSON = (
@@ -82,20 +77,6 @@ class PqVariantSpec:
     m_subq: int
     nbits: int
     top_k_regions: int | None
-
-
-@dataclass(frozen=True)
-class PqMiVerdict:
-    verdict: str
-    h_latent_unconditional_bits_per_symbol: float
-    h_latent_given_side_info_bits_per_symbol: float
-    mutual_information_bits: float
-    wyner_ziv_gain_ceiling_fraction: float
-    num_latent_symbols: int
-    num_side_info_symbols: int
-    num_unique_side_info_symbols: int
-    meaningful_mi_threshold_bits: float
-    independence_tolerance_bits: float
 
 
 def utc_now() -> str:
@@ -421,55 +402,6 @@ def encode_variant_packets(
             json.dumps(region_indices_by_pair, sort_keys=True).encode("utf-8")
         ),
     }
-
-
-def compute_pq_mi_verdict(
-    *,
-    latent_stream: bytes,
-    per_pair_symbols: list[int],
-    symbols_per_pair: int,
-    threshold: float = DEFAULT_MEANINGFUL_MI_THRESHOLD_BITS,
-) -> PqMiVerdict:
-    if symbols_per_pair <= 0:
-        raise ValueError("symbols_per_pair must be positive")
-    if not per_pair_symbols:
-        raise ValueError("per_pair_symbols must be non-empty")
-    expanded: list[int] = []
-    for symbol in per_pair_symbols:
-        if int(symbol) < 0:
-            raise ValueError("per_pair_symbols must be non-negative")
-        expanded.extend([int(symbol)] * symbols_per_pair)
-    if len(expanded) != len(latent_stream):
-        raise ValueError(
-            f"expanded side-info length {len(expanded)} != latent length {len(latent_stream)}"
-        )
-    latent_counts = _count_symbols(latent_stream)
-    side_counts = _count_symbols(expanded)
-    joint = _count_joint(latent_stream, expanded)
-    h_latent = _plug_in_entropy_bits(latent_counts)
-    total = sum(side_counts.values())
-    h_cond = 0.0
-    for symbol, per_symbol in joint.items():
-        h_cond += (side_counts[symbol] / total) * _plug_in_entropy_bits(per_symbol)
-    mi = max(h_latent - h_cond, 0.0)
-    if mi <= INDEPENDENCE_TOLERANCE_BITS:
-        verdict = "INDEPENDENT"
-    elif mi >= threshold:
-        verdict = "MEANINGFUL_CONDITIONING"
-    else:
-        verdict = "WEAK_CONDITIONING"
-    return PqMiVerdict(
-        verdict=verdict,
-        h_latent_unconditional_bits_per_symbol=float(h_latent),
-        h_latent_given_side_info_bits_per_symbol=float(h_cond),
-        mutual_information_bits=float(mi),
-        wyner_ziv_gain_ceiling_fraction=float(mi / h_latent if h_latent > 0 else 0.0),
-        num_latent_symbols=len(latent_stream),
-        num_side_info_symbols=len(expanded),
-        num_unique_side_info_symbols=len(set(per_pair_symbols)),
-        meaningful_mi_threshold_bits=threshold,
-        independence_tolerance_bits=INDEPENDENCE_TOLERANCE_BITS,
-    )
 
 
 def build_probe_payload(

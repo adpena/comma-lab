@@ -427,6 +427,8 @@ def gate_auth_eval_call(
         str(upstream_dir),
         "--device",
         auth_eval_device_type,
+        "--inflate-device",
+        auth_eval_device_type,
         "--json-out",
         str(output_json),
         "--keep-work-dir",

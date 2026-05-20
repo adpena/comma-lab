@@ -29,8 +29,9 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
   ``alpha*B(theta)/N + beta*d_seg + gamma*sqrt(d_pose) + lambda*commitment``
   per HNeRV parity lesson L6 + van den Oord 2017 commitment-loss term.
 - AdamW lr cosine annealing; gradient clip 1.0; NaN watchdog per Council D.
-- End with CUDA auth eval on best EMA checkpoint per CLAUDE.md "Auth eval
-  EVERYWHERE"; refuse MPS (Catalog #1); CPU permitted only with ``--smoke``.
+- End with exact CUDA auth eval on best EMA checkpoint when the eval substrate
+  is CUDA. Modal training wrappers may explicitly route inline auth eval to CPU;
+  that result is diagnostic/non-promotable and never feeds CUDA claim fields.
 - Continual-learning posterior update via ``posterior_update_locked``
   (Catalog #128 atomic fcntl).
 - Cost-band anchor append via ``tools/append_cost_band_anchor.py``.
@@ -79,6 +80,7 @@ Usage (full; CUDA-required; threads from operator wrapper)::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -669,6 +671,34 @@ def _write_runtime(submission_dir: Path) -> None:
     (submission_dir / "inflate.py").write_text(inflate_py, encoding="utf-8")
 
 
+def _write_submission_runtime_manifest(submission_dir: Path) -> dict[str, Any]:
+    """Record deterministic custody for the emitted inflate runtime tree."""
+
+    ignored = {"0.bin", "archive.zip", "submission_runtime_manifest.json"}
+    files: list[dict[str, Any]] = []
+    tree_hasher = hashlib.sha256()
+    for path in sorted(p for p in submission_dir.rglob("*") if p.is_file()):
+        rel = path.relative_to(submission_dir).as_posix()
+        if rel in ignored:
+            continue
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        files.append({"path": rel, "bytes": len(data), "sha256": digest})
+        tree_hasher.update(rel.encode("utf-8"))
+        tree_hasher.update(b"\0")
+        tree_hasher.update(digest.encode("ascii"))
+        tree_hasher.update(b"\0")
+    manifest = {
+        "schema": "submission_runtime_manifest_v1",
+        "runtime_tree_sha256": tree_hasher.hexdigest(),
+        "files": files,
+    }
+    (submission_dir / "submission_runtime_manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    return manifest
+
+
 def _build_archive_zip(
     archive_zip_path: Path,
     *,
@@ -1089,6 +1119,9 @@ def _full_main(args: argparse.Namespace) -> int:
         # 11. Build the VQV1 archive bytes from the EMA shadow
         archive_sha = ""
         archive_bytes = 0
+        payload_bin_sha = ""
+        payload_bin_bytes = 0
+        runtime_manifest: dict[str, Any] | None = None
         archive_zip_path = args.output_dir / "archive.zip"
         if not args.skip_archive_build:
             print(f"[full] building archive from {ckpt_best_path} ...")
@@ -1120,28 +1153,49 @@ def _full_main(args: argparse.Namespace) -> int:
                 embedding_dim=cfg.embedding_dim,
             )
             (args.output_dir / "0.bin").write_bytes(bin_bytes)
-            archive_sha = _sha256_bytes(bin_bytes)
-            archive_bytes = len(bin_bytes)
-            print(f"[full] wrote 0.bin ({archive_bytes} bytes, sha256={archive_sha})")
+            payload_bin_sha = _sha256_bytes(bin_bytes)
+            payload_bin_bytes = len(bin_bytes)
+            print(
+                f"[full] wrote 0.bin "
+                f"({payload_bin_bytes} bytes, sha256={payload_bin_sha})"
+            )
 
             submission_dir = args.output_dir / "submission"
             _write_runtime(submission_dir)
+            runtime_manifest = _write_submission_runtime_manifest(submission_dir)
             (submission_dir / "0.bin").write_bytes(bin_bytes)
             _build_archive_zip(
                 archive_zip_path,
                 bin_bytes=bin_bytes,
                 submission_dir=submission_dir,
             )
-            print(f"[full] wrote {archive_zip_path}")
+            archive_zip_bytes = archive_zip_path.read_bytes()
+            archive_sha = _sha256_bytes(archive_zip_bytes)
+            archive_bytes = len(archive_zip_bytes)
+            print(
+                f"[full] wrote {archive_zip_path} "
+                f"({archive_bytes} bytes, sha256={archive_sha})"
+            )
             _stage(f"archive_built_bytes_{archive_bytes}")
 
-        # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
-        # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)
+        # 12. Auth eval — canonical helper (Catalog #226 self-protect).
+        # Modal training sets AUTH_EVAL_DEVICE=cpu for diagnostic custody; do
+        # not let that flow through CUDA-named paths or CUDA score fields.
         auth_eval_result_path: Path | None = None
+        auth_eval_result: dict[str, object] | None = None
         contest_cuda_score: float | None = None
         if not args.skip_auth_eval and archive_zip_path.is_file():
-            print("[full] launching CUDA auth eval ...")
-            auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
+            explicit_auth_eval_device = os.environ.get("AUTH_EVAL_DEVICE", "").strip()
+            if explicit_auth_eval_device:
+                auth_eval_device_name = explicit_auth_eval_device.lower().split(":", 1)[0]
+            else:
+                auth_eval_device_name = str(getattr(device, "type", device)).lower().split(":", 1)[0]
+            if auth_eval_device_name not in {"cpu", "cuda"}:
+                auth_eval_device_name = "cuda"
+            print(f"[full] launching {auth_eval_device_name} auth eval ...")
+            auth_eval_result_path = (
+                args.output_dir / f"contest_auth_eval_{auth_eval_device_name}.json"
+            )
             auth_result = _canon_gate_auth_eval_call(
                 args=args,
                 archive_zip=archive_zip_path,
@@ -1151,20 +1205,116 @@ def _full_main(args: argparse.Namespace) -> int:
                 contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
                 substrate_tag="vq_vae",
                 device=device,
+                auth_eval_device=explicit_auth_eval_device or None,
+                return_non_cuda_result=True,
             )
             if auth_result is not None:
-                contest_cuda_score = auth_result["auth_eval_cuda_score"]
-                print(
-                    f"[full] [contest-CUDA] score = "
-                    f"{contest_cuda_score} "
-                    f"(axis={auth_result['auth_eval_score_axis']}, "
-                    f"lane_tag={auth_result['auth_eval_lane_tag']}, "
-                    f"archive_sha256={archive_sha})"
+                auth_eval_result = dict(auth_result)
+                score_axis = str(auth_result.get("auth_eval_score_axis") or "")
+                score_claim_valid = bool(auth_result.get("auth_eval_score_claim_valid"))
+                if (
+                    "auth_eval_cuda_score" in auth_result
+                    and score_axis == "contest_cuda"
+                    and score_claim_valid
+                ):
+                    contest_cuda_score = float(auth_result["auth_eval_cuda_score"])
+                    print(
+                        f"[full] [contest-CUDA] score = "
+                        f"{contest_cuda_score} "
+                        f"(axis={score_axis}, "
+                        f"lane_tag={auth_result['auth_eval_lane_tag']}, "
+                        f"archive_sha256={archive_sha})"
+                    )
+                else:
+                    print(
+                        "[full] non-promotable auth eval recorded "
+                        f"(device={auth_result.get('auth_eval_device')}, "
+                        f"axis={score_axis}, "
+                        f"score={auth_result.get('auth_eval_score')}, "
+                        "score_claim=false, promotion_eligible=false)"
+                    )
+            _stage(f"auth_eval_{auth_eval_device_name}_done")
+
+        auth_eval_json_path_value = (
+            str(auth_eval_result.get("auth_eval_json_path"))
+            if auth_eval_result is not None
+            and auth_eval_result.get("auth_eval_json_path") is not None
+            else (str(auth_eval_result_path) if auth_eval_result_path else None)
+        )
+        auth_eval_json_path_obj = (
+            Path(auth_eval_json_path_value) if auth_eval_json_path_value else None
+        )
+        auth_eval_json_exists = bool(
+            auth_eval_json_path_obj is not None and auth_eval_json_path_obj.is_file()
+        )
+        auth_eval_payload: dict[str, Any] = {}
+        if auth_eval_json_exists and auth_eval_json_path_obj is not None:
+            try:
+                loaded_payload = json.loads(
+                    auth_eval_json_path_obj.read_text(encoding="utf-8")
                 )
-            _stage("auth_eval_cuda_done")
+                if isinstance(loaded_payload, dict):
+                    auth_eval_payload = loaded_payload
+            except json.JSONDecodeError:
+                auth_eval_payload = {}
+
+        auth_eval_archive_size = auth_eval_payload.get("archive_size_bytes")
+        auth_eval_archive_sha = auth_eval_payload.get("archive_sha256")
+        auth_eval_archive_sha_matches = (
+            isinstance(auth_eval_archive_sha, str)
+            and bool(archive_sha)
+            and auth_eval_archive_sha == archive_sha
+        )
+        auth_eval_archive_size_matches = (
+            isinstance(auth_eval_archive_size, int)
+            and archive_bytes > 0
+            and auth_eval_archive_size == archive_bytes
+        )
+        local_runtime_tree_sha = (
+            runtime_manifest.get("runtime_tree_sha256")
+            if runtime_manifest is not None
+            else None
+        )
+        auth_eval_runtime_tree_sha = auth_eval_payload.get("runtime_tree_sha256")
+        auth_eval_runtime_tree_matches = (
+            isinstance(auth_eval_runtime_tree_sha, str)
+            and bool(local_runtime_tree_sha)
+            and auth_eval_runtime_tree_sha == local_runtime_tree_sha
+        )
+        auth_eval_score_claim_valid_raw = (
+            auth_eval_result is not None
+            and auth_eval_result.get("auth_eval_score_claim_valid") is True
+        )
+        auth_eval_custody_blockers: list[str] = []
+        if contest_cuda_score is not None:
+            if not auth_eval_score_claim_valid_raw:
+                auth_eval_custody_blockers.append("auth_eval_score_claim_invalid")
+            if not auth_eval_json_exists:
+                auth_eval_custody_blockers.append("auth_eval_json_missing")
+            if not archive_sha or archive_bytes <= 0:
+                auth_eval_custody_blockers.append("archive_identity_missing")
+            if not auth_eval_archive_sha_matches:
+                auth_eval_custody_blockers.append("auth_eval_archive_sha256_mismatch")
+            if not auth_eval_archive_size_matches:
+                auth_eval_custody_blockers.append("auth_eval_archive_size_mismatch")
+            if not auth_eval_runtime_tree_matches:
+                auth_eval_custody_blockers.append("auth_eval_runtime_tree_sha256_mismatch")
+        auth_eval_custody_complete = (
+            contest_cuda_score is not None
+            and not auth_eval_custody_blockers
+        )
+        auth_eval_score_claim_valid = (
+            auth_eval_score_claim_valid_raw and auth_eval_custody_complete
+        )
+        if contest_cuda_score is not None and not auth_eval_custody_complete:
+            print(
+                "[full] WARNING: contest-CUDA score demoted because auth-eval "
+                f"custody is incomplete: {auth_eval_custody_blockers}",
+                file=sys.stderr,
+            )
 
         # 13. Continual-learning posterior update (Catalog #128 atomic)
-        if contest_cuda_score is not None and archive_sha:
+        if contest_cuda_score is not None and auth_eval_custody_complete:
             try:
                 from tac.continual_learning import (
                     ContestResult,
@@ -1281,19 +1431,70 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "best_epoch": int(best_epoch),
             "train_elapsed_sec": float(train_elapsed_sec),
+            "payload_bin_sha256": payload_bin_sha,
+            "payload_bin_bytes": payload_bin_bytes,
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
+            "archive_path": str(archive_zip_path) if archive_zip_path.is_file() else None,
+            "auth_eval_score": (
+                auth_eval_result.get("auth_eval_score")
+                if auth_eval_result is not None
+                else contest_cuda_score
+            ),
             "auth_eval_cuda_score": contest_cuda_score,
-            "auth_eval_json_path": (
-                str(auth_eval_result_path) if auth_eval_result_path else None
+            "auth_eval_json_path": auth_eval_json_path_value,
+            "auth_eval_json_exists": auth_eval_json_exists,
+            "auth_eval_archive_sha256": auth_eval_archive_sha,
+            "auth_eval_archive_sha256_matches": auth_eval_archive_sha_matches,
+            "auth_eval_archive_size_bytes": auth_eval_archive_size,
+            "auth_eval_archive_size_matches": auth_eval_archive_size_matches,
+            "auth_eval_runtime_tree_sha256": auth_eval_runtime_tree_sha,
+            "auth_eval_runtime_tree_sha256_matches": auth_eval_runtime_tree_matches,
+            "local_runtime_tree_sha256": local_runtime_tree_sha,
+            "auth_eval_custody_complete": auth_eval_custody_complete,
+            "auth_eval_custody_blockers": auth_eval_custody_blockers,
+            "auth_eval_device": (
+                auth_eval_result.get("auth_eval_device")
+                if auth_eval_result is not None
+                else ("cuda" if contest_cuda_score is not None else None)
+            ),
+            "auth_eval_score_axis": (
+                auth_eval_result.get("auth_eval_score_axis")
+                if auth_eval_result is not None
+                else ("contest_cuda" if contest_cuda_score is not None else None)
+            ),
+            "auth_eval_lane_tag": (
+                auth_eval_result.get("auth_eval_lane_tag")
+                if auth_eval_result is not None
+                else ("[contest-CUDA]" if contest_cuda_score is not None else None)
+            ),
+            "auth_eval_evidence_grade": (
+                auth_eval_result.get("auth_eval_evidence_grade")
+                if auth_eval_result is not None
+                else None
+            ),
+            "auth_eval_score_claim_valid": (
+                auth_eval_score_claim_valid
+            ),
+            "auth_eval_promotion_eligible": (
+                auth_eval_result.get("auth_eval_promotion_eligible")
+                if auth_eval_result is not None
+                else False
+            ),
+            "auth_eval_result": auth_eval_result,
+            "runtime_tree_sha256": local_runtime_tree_sha,
+            "submission_runtime_manifest_path": (
+                str(args.output_dir / "submission" / "submission_runtime_manifest.json")
+                if runtime_manifest is not None
+                else None
             ),
             "cost_band_anchor_appended": cost_band_anchor_appended,
             "cost_band_anchor_skip_reason": cost_band_anchor_skip_reason,
             "stage_log": stage_log,
             "custody_status": "ci-rebuildable",
-            "score_claim": contest_cuda_score is not None,
+            "score_claim": auth_eval_score_claim_valid,
             "score_axis_tag": (
-                "[contest-CUDA]" if contest_cuda_score is not None else None
+                "[contest-CUDA]" if auth_eval_score_claim_valid else None
             ),
             # WAVE-1-A is a TRAINER BUILD landing, not a DISPATCH landing.
             # Both flags stay False per CLAUDE.md "score_claim must remain

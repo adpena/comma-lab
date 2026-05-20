@@ -567,6 +567,9 @@ def _candidate_queue_row(
         artifact_kind="pr101_fec6_packetir_candidate_queue",
     )
     blockers: list[str] = []
+    candidate_queue_generated = False
+    parser_byte_accounting_present = False
+    runtime_consumption_proven = False
     if row["exists"] is not True or not payload:
         blockers.append("candidate_queue_missing_or_invalid_json")
     else:
@@ -621,6 +624,19 @@ def _candidate_queue_row(
                     ),
                 )
             )
+            parser_byte_accounting_present = (
+                byte_accounting.get("schema") == PR101_FEC6_BYTE_ACCOUNTING_SCHEMA
+                and byte_accounting.get("all_payload_bytes_accounted") is True
+                and byte_accounting.get("parser_byte_accounting_passed") is True
+                and isinstance(sections, list)
+                and bool(sections)
+            )
+            runtime_consumption_proven = (
+                parser_byte_accounting_present
+                and byte_accounting.get("runtime_consumption_proven") is True
+                and byte_accounting.get("runtime_consumed_byte_accounting_passed")
+                is True
+            )
 
         candidates = payload.get("candidates")
         if not isinstance(candidates, list) or not candidates:
@@ -644,12 +660,28 @@ def _candidate_queue_row(
                     blockers.append(
                         f"candidate_queue_candidate_{candidate_id}_consumer_surfaces_missing"
                     )
+        candidate_queue_generated = (
+            payload.get("schema") == PR101_FEC6_CANDIDATE_QUEUE_SCHEMA
+            and str(payload.get("archive_sha256") or "").strip().lower()
+            == expected_archive_sha256
+            and (
+                not isinstance(expected_archive_bytes, int)
+                or payload.get("archive_size_bytes") == expected_archive_bytes
+            )
+            and payload.get("expected_archive_sha256_matches") is not False
+            and isinstance(payload.get("candidates"), list)
+            and bool(payload.get("candidates"))
+            and payload.get("candidate_count") == len(payload.get("candidates", []))
+        )
     row["pr106_style_packetir_candidate_queue"] = (
         row["exists"] is True and not blockers
     )
     row["candidate_byte_accounting_present"] = (
         row["pr106_style_packetir_candidate_queue"] is True
     )
+    row["candidate_queue_generated"] = candidate_queue_generated
+    row["parser_byte_accounting_present"] = parser_byte_accounting_present
+    row["runtime_consumption_proven"] = runtime_consumption_proven
     row["blockers"] = blockers
     row["score_claim"] = False
     row["promotion_eligible"] = False
@@ -848,7 +880,11 @@ def _paired_exact_eval_authority(
 def _next_actions(
     *,
     candidate_queue_present: bool,
+    candidate_queue_generated: bool,
     candidate_byte_accounting_present: bool,
+    parser_byte_accounting_present: bool,
+    parser_profile_present: bool,
+    runtime_consumption_proven: bool,
     deterministic_compiler_identity_present: bool,
 ) -> list[dict[str, Any]]:
     actions = [
@@ -868,7 +904,7 @@ def _next_actions(
         },
         {
             "id": "generate_fec6_packetir_candidate_queue",
-            "status": "pending" if not candidate_queue_present else "done",
+            "status": "done" if candidate_queue_generated else "pending",
             "description": (
                 "Materialize a PR101/FEC6 PacketIR candidate queue from the FP11 "
                 "wrapper sections and FEC6 selector stream."
@@ -879,7 +915,7 @@ def _next_actions(
         },
         {
             "id": "prove_parser_consumption_and_byte_accounting",
-            "status": "done" if candidate_byte_accounting_present else "pending",
+            "status": "done" if parser_byte_accounting_present else "pending",
             "description": (
                 "For each candidate, record parser-consumption proof, member "
                 "payload hashes, wrapper offsets, and all score-affecting bytes."
@@ -889,8 +925,26 @@ def _next_actions(
             "ready_for_exact_eval_dispatch": False,
         },
         {
+            "id": "prove_runtime_byte_consumption_noop_detector",
+            "status": "done" if runtime_consumption_proven else "pending",
+            "description": (
+                "Prove candidate bytes are consumed by the runtime/inflate path, "
+                "not only by the PacketIR parser; old identity no-op proofs do "
+                "not satisfy this gate."
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        {
             "id": "local_identity_profile_smoke",
-            "status": "pending",
+            "status": (
+                "done"
+                if candidate_byte_accounting_present and parser_profile_present
+                else "pending"
+                if candidate_byte_accounting_present
+                else "blocked"
+            ),
             "description": (
                 "Run local parser/profile smoke on generated PacketIR candidates; "
                 "keep CPU/CUDA exact-eval authority separate."
@@ -967,8 +1021,17 @@ def build_pr101_frontier_packetir_matrix(
     candidate_queue_present = (
         candidate_queue.get("pr106_style_packetir_candidate_queue") is True
     )
+    candidate_queue_generated = (
+        candidate_queue.get("candidate_queue_generated") is True
+    )
     candidate_byte_accounting_present = (
         candidate_queue.get("candidate_byte_accounting_present") is True
+    )
+    parser_byte_accounting_present = (
+        candidate_queue.get("parser_byte_accounting_present") is True
+    )
+    runtime_consumption_proven = (
+        candidate_queue.get("runtime_consumption_proven") is True
     )
     blockers: list[str] = []
     if archive.get("exists") is not True:
@@ -987,6 +1050,10 @@ def build_pr101_frontier_packetir_matrix(
         blockers.append("deterministic_compiler_identity_manifest_missing")
     if not candidate_queue_present:
         blockers.append("pr106_style_packetir_candidate_queue_missing")
+    if candidate_queue_generated and not parser_byte_accounting_present:
+        blockers.append("packetir_candidate_parser_byte_accounting_missing_or_blocked")
+    if parser_byte_accounting_present and not runtime_consumption_proven:
+        blockers.append("packetir_candidate_runtime_consumption_missing_or_blocked")
 
     if (
         deterministic_compiler_identity_present
@@ -1002,6 +1069,15 @@ def build_pr101_frontier_packetir_matrix(
             "packetir_identity_and_candidate_queue_present_needs_byte_accounting_review"
         )
         status = "packetir_candidate_queue_present_needs_review"
+    elif (
+        deterministic_compiler_identity_present
+        and candidate_queue_generated
+        and parser_byte_accounting_present
+    ):
+        current_authority = (
+            "packetir_identity_compiler_identity_candidate_queue_parser_accounted_runtime_consumption_unproven_no_score_claim"
+        )
+        status = "packetir_candidate_queue_runtime_consumption_unproven"
     elif deterministic_compiler_identity_present:
         current_authority = (
             "parser_profile_exact_eval_and_compiler_identity_no_packetir_candidate_queue"
@@ -1038,6 +1114,11 @@ def build_pr101_frontier_packetir_matrix(
                 deterministic_compiler_identity_present
             ),
             "fec6_has_pr106_style_packetir_candidate_queue": candidate_queue_present,
+            "fec6_has_packetir_candidate_queue_artifact": candidate_queue_generated,
+            "fec6_has_parser_byte_accounting_evidence": (
+                parser_byte_accounting_present
+            ),
+            "fec6_has_runtime_consumption_evidence": runtime_consumption_proven,
             "fec6_has_candidate_byte_accounting_evidence": (
                 candidate_byte_accounting_present
             ),
@@ -1055,7 +1136,11 @@ def build_pr101_frontier_packetir_matrix(
         "candidate_queue": candidate_queue,
         "next_actions": _next_actions(
             candidate_queue_present=candidate_queue_present,
+            candidate_queue_generated=candidate_queue_generated,
             candidate_byte_accounting_present=candidate_byte_accounting_present,
+            parser_byte_accounting_present=parser_byte_accounting_present,
+            parser_profile_present=bool(parser_profiles),
+            runtime_consumption_proven=runtime_consumption_proven,
             deterministic_compiler_identity_present=(
                 deterministic_compiler_identity_present
             ),
@@ -1100,7 +1185,10 @@ def render_pr101_frontier_packetir_matrix_markdown(
         f"- parser/profile evidence: `{summary_map.get('fec6_has_parser_profile_evidence')}`",
         f"- PacketIR identity evidence: `{summary_map.get('fec6_has_packetir_identity_evidence')}`",
         f"- deterministic compiler identity evidence: `{summary_map.get('fec6_has_deterministic_compiler_identity_evidence')}`",
+        f"- PacketIR candidate queue artifact: `{summary_map.get('fec6_has_packetir_candidate_queue_artifact')}`",
         f"- PR106-style PacketIR candidate queue: `{summary_map.get('fec6_has_pr106_style_packetir_candidate_queue')}`",
+        f"- parser byte accounting evidence: `{summary_map.get('fec6_has_parser_byte_accounting_evidence')}`",
+        f"- runtime consumption evidence: `{summary_map.get('fec6_has_runtime_consumption_evidence')}`",
         f"- candidate byte accounting evidence: `{summary_map.get('fec6_has_candidate_byte_accounting_evidence')}`",
         "",
         "## Archive",

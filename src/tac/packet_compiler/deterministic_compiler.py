@@ -63,9 +63,11 @@ from __future__ import annotations
 import dataclasses
 import datetime as _dt
 import hashlib
+import io
 import json
 import shutil
 import stat
+import tokenize
 import zipfile
 from collections.abc import Mapping
 from pathlib import Path
@@ -297,6 +299,18 @@ def _scan_text_for_forbidden(
     return found
 
 
+def _strip_python_comments_for_scan(text: str) -> str:
+    try:
+        tokens = [
+            token
+            for token in tokenize.generate_tokens(io.StringIO(text).readline)
+            if token.type != tokenize.COMMENT
+        ]
+        return tokenize.untokenize(tokens)
+    except tokenize.TokenError:
+        return text
+
+
 def _scan_runtime_text(packet_dir: Path) -> list[str]:
     """Scan inflate.sh / inflate.py / src/* for forbidden patterns."""
 
@@ -306,28 +320,30 @@ def _scan_runtime_text(packet_dir: Path) -> list[str]:
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
+        scan_text = _strip_python_comments_for_scan(text) if path.suffix == ".py" else text
         blockers.extend(_scan_text_for_forbidden(
-            text, FORBIDDEN_INFLATE_TOKENS, label=name,
+            scan_text, FORBIDDEN_INFLATE_TOKENS, label=name,
         ))
         blockers.extend(_scan_text_for_forbidden(
-            text, FORBIDDEN_NETWORK_TOKENS, label=name,
+            scan_text, FORBIDDEN_NETWORK_TOKENS, label=name,
         ))
         blockers.extend(_scan_text_for_forbidden(
-            text, FORBIDDEN_EXTERNAL_STATE_PATTERNS, label=name,
+            scan_text, FORBIDDEN_EXTERNAL_STATE_PATTERNS, label=name,
         ))
     src_dir = packet_dir / "src"
     if src_dir.is_dir():
         for py in src_dir.rglob("*.py"):
             text = py.read_text(encoding="utf-8", errors="replace")
+            scan_text = _strip_python_comments_for_scan(text)
             rel = py.relative_to(packet_dir).as_posix()
             blockers.extend(_scan_text_for_forbidden(
-                text, FORBIDDEN_INFLATE_TOKENS, label=rel,
+                scan_text, FORBIDDEN_INFLATE_TOKENS, label=rel,
             ))
             blockers.extend(_scan_text_for_forbidden(
-                text, FORBIDDEN_NETWORK_TOKENS, label=rel,
+                scan_text, FORBIDDEN_NETWORK_TOKENS, label=rel,
             ))
             blockers.extend(_scan_text_for_forbidden(
-                text, FORBIDDEN_EXTERNAL_STATE_PATTERNS, label=rel,
+                scan_text, FORBIDDEN_EXTERNAL_STATE_PATTERNS, label=rel,
             ))
     return blockers
 

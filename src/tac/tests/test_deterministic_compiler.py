@@ -548,6 +548,25 @@ def test_scorer_at_inflate_blocks(tmp_path: Path) -> None:
     assert any("upstream.modules" in b for b in result.blockers)
 
 
+def test_scorer_names_in_python_comments_do_not_block(tmp_path: Path) -> None:
+    packet = _write_canonical_packet(tmp_path / "packet")
+    (packet / "inflate.py").write_text(
+        "# offline probe referenced PoseNet + SegNet, but runtime imports none\n"
+        "from pathlib import Path\n"
+        "Path(__file__)\n",
+        encoding="utf-8",
+    )
+
+    result = compile_packet(
+        input_packet=packet,
+        output_dir=tmp_path / "out",
+        mode="identity",
+        target_profile="contest_one_video_replay",
+    )
+
+    assert not any("PoseNet" in b or "SegNet" in b for b in result.blockers)
+
+
 def test_network_in_inflate_blocks(tmp_path: Path) -> None:
     packet = _write_packet_with_network_in_inflate(tmp_path / "packet")
     result = compile_packet(

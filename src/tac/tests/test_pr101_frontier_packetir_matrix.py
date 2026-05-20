@@ -443,6 +443,7 @@ def test_pr101_fec6_matrix_records_candidate_queue_when_present(tmp_path: Path) 
     assert matrix["next_actions"][0]["status"] == "pending"
     assert matrix["next_actions"][1]["status"] == "done"
     assert matrix["next_actions"][2]["status"] == "done"
+    assert matrix["next_actions"][4]["status"] == "done"
 
 
 def test_pr101_fec6_matrix_records_compiler_and_queue_when_valid(
@@ -466,6 +467,48 @@ def test_pr101_fec6_matrix_records_compiler_and_queue_when_valid(
     assert matrix["next_actions"][0]["status"] == "done"
     assert matrix["next_actions"][1]["status"] == "done"
     assert matrix["next_actions"][2]["status"] == "done"
+    assert matrix["next_actions"][4]["id"] == "local_identity_profile_smoke"
+    assert matrix["next_actions"][4]["status"] == "done"
+
+
+def test_pr101_fec6_matrix_separates_parser_queue_from_runtime_consumption(
+    tmp_path: Path,
+) -> None:
+    spec = _fixture_spec(tmp_path, include_queue=True, include_compiler=True)
+    queue_path = Path(spec.candidate_queue_path)
+    payload = _valid_candidate_queue_payload(
+        archive_sha=_sha(Path(spec.archive_path).read_bytes()),
+        archive_bytes=Path(spec.archive_path).stat().st_size,
+        runtime_consumption_proven=False,
+    )
+    payload["blockers"] = ["runtime_byte_consumption_noop_detector_missing"]
+    _write_json(queue_path, payload)
+
+    matrix = build_pr101_frontier_packetir_matrix(repo_root=tmp_path, spec=spec)
+
+    summary = matrix["authority_summary"]
+    assert summary["fec6_has_packetir_candidate_queue_artifact"] is True
+    assert summary["fec6_has_parser_byte_accounting_evidence"] is True
+    assert summary["fec6_has_runtime_consumption_evidence"] is False
+    assert summary["fec6_has_pr106_style_packetir_candidate_queue"] is False
+    assert summary["fec6_has_candidate_byte_accounting_evidence"] is False
+    assert matrix["candidate_queue"]["candidate_queue_generated"] is True
+    assert matrix["candidate_queue"]["parser_byte_accounting_present"] is True
+    assert matrix["candidate_queue"]["runtime_consumption_proven"] is False
+    assert (
+        matrix["status"]
+        == "packetir_candidate_queue_runtime_consumption_unproven"
+    )
+    assert "pr106_style_packetir_candidate_queue_missing" in matrix["blockers"]
+    assert (
+        "packetir_candidate_runtime_consumption_missing_or_blocked"
+        in matrix["blockers"]
+    )
+    assert matrix["next_actions"][1]["status"] == "done"
+    assert matrix["next_actions"][2]["status"] == "done"
+    assert matrix["next_actions"][3]["id"] == "prove_runtime_byte_consumption_noop_detector"
+    assert matrix["next_actions"][3]["status"] == "pending"
+    assert matrix["next_actions"][4]["status"] == "blocked"
 
 
 def test_pr101_fec6_matrix_blocks_overclaiming_candidate_queue(

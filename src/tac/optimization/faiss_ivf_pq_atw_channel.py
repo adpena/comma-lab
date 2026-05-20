@@ -57,6 +57,7 @@ probe BEFORE any paid Modal dispatch.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -167,8 +168,173 @@ class PqEncodingBudget:
         }
 
 
+DEFAULT_MEANINGFUL_MI_THRESHOLD_BITS: float = 0.5
+"""Default MI threshold for a meaningful PQ side-info channel.
+
+Per the ATW/Faiss probe family this mirrors the conditional-entropy probe's
+0.5 bits/symbol floor, but it lives in ``tac`` so V8/V4/V1-V3 code no longer
+needs to import a tool-local helper as canonical API authority.
+"""
+
+
+INDEPENDENCE_TOLERANCE_BITS: float = 0.01
+"""Numerical floor below which PQ side-info MI is treated as independent."""
+
+
+@dataclass(frozen=True)
+class PqMiVerdict:
+    """Mutual-information verdict for PQ side-info symbols.
+
+    This intentionally carries no score or promotion authority. It is a local
+    diagnostic primitive for deciding whether a PQ side-info stream is worth
+    further byte-closed prototype work.
+    """
+
+    verdict: str
+    h_latent_unconditional_bits_per_symbol: float
+    h_latent_given_side_info_bits_per_symbol: float
+    mutual_information_bits: float
+    wyner_ziv_gain_ceiling_fraction: float
+    num_latent_symbols: int
+    num_side_info_symbols: int
+    num_unique_side_info_symbols: int
+    meaningful_mi_threshold_bits: float
+    independence_tolerance_bits: float
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "verdict": self.verdict,
+            "h_latent_unconditional_bits_per_symbol": (
+                self.h_latent_unconditional_bits_per_symbol
+            ),
+            "h_latent_given_side_info_bits_per_symbol": (
+                self.h_latent_given_side_info_bits_per_symbol
+            ),
+            "mutual_information_bits": self.mutual_information_bits,
+            "wyner_ziv_gain_ceiling_fraction": self.wyner_ziv_gain_ceiling_fraction,
+            "num_latent_symbols": self.num_latent_symbols,
+            "num_side_info_symbols": self.num_side_info_symbols,
+            "num_unique_side_info_symbols": self.num_unique_side_info_symbols,
+            "meaningful_mi_threshold_bits": self.meaningful_mi_threshold_bits,
+            "independence_tolerance_bits": self.independence_tolerance_bits,
+        }
+
+
 CONTEST_RATE_NORMALIZER_BYTES: float = 37_545_489.0
 """Canonical contest rate normalizer (per CLAUDE.md "Apples-to-apples evidence discipline")."""
+
+
+def _plug_in_entropy_bits(counts: dict[int, int]) -> float:
+    """Plug-in Shannon entropy estimator in bits/symbol."""
+    total = sum(counts.values())
+    if total <= 0:
+        return 0.0
+    entropy = 0.0
+    for count in counts.values():
+        if count <= 0:
+            continue
+        p = count / total
+        entropy -= p * math.log2(p)
+    return entropy
+
+
+def _count_symbols(stream: bytes | list[int]) -> dict[int, int]:
+    counts: dict[int, int] = {}
+    if isinstance(stream, bytes):
+        for symbol in stream:
+            counts[symbol] = counts.get(symbol, 0) + 1
+    else:
+        for symbol in stream:
+            si = int(symbol)
+            counts[si] = counts.get(si, 0) + 1
+    return counts
+
+
+def _count_joint(
+    latent_stream: bytes | list[int],
+    side_info_stream: bytes | list[int],
+) -> dict[int, dict[int, int]]:
+    if len(latent_stream) != len(side_info_stream):
+        raise ValueError(
+            f"latent stream length {len(latent_stream)} != side-info stream length "
+            f"{len(side_info_stream)}"
+        )
+    joint: dict[int, dict[int, int]] = {}
+    for latent, side in zip(latent_stream, side_info_stream, strict=True):
+        side_i = int(side)
+        latent_i = int(latent)
+        per_side = joint.setdefault(side_i, {})
+        per_side[latent_i] = per_side.get(latent_i, 0) + 1
+    return joint
+
+
+def compute_pq_mi_verdict(
+    *,
+    latent_stream: bytes,
+    per_pair_symbols: list[int],
+    symbols_per_pair: int,
+    threshold: float = DEFAULT_MEANINGFUL_MI_THRESHOLD_BITS,
+    independence_tolerance_bits: float = INDEPENDENCE_TOLERANCE_BITS,
+) -> PqMiVerdict:
+    """Estimate ``I(latent; PQ-side-info)`` from per-pair PQ symbols.
+
+    ``per_pair_symbols`` is expanded across ``symbols_per_pair`` latent bytes
+    so the estimator compares one side-info symbol against the corresponding
+    latent-symbol slice for each pair. The result is diagnostic-only and must
+    not be promoted as a contest score.
+    """
+    if not isinstance(latent_stream, bytes):
+        raise ValueError(f"latent_stream must be bytes, got {type(latent_stream)}")
+    if not latent_stream:
+        raise ValueError("latent_stream must be non-empty")
+    if symbols_per_pair <= 0:
+        raise ValueError("symbols_per_pair must be positive")
+    if not per_pair_symbols:
+        raise ValueError("per_pair_symbols must be non-empty")
+    if threshold < 0:
+        raise ValueError("threshold must be non-negative")
+    if independence_tolerance_bits < 0:
+        raise ValueError("independence_tolerance_bits must be non-negative")
+
+    expanded: list[int] = []
+    for symbol in per_pair_symbols:
+        symbol_i = int(symbol)
+        if symbol_i < 0:
+            raise ValueError("per_pair_symbols must be non-negative")
+        expanded.extend([symbol_i] * symbols_per_pair)
+    if len(expanded) != len(latent_stream):
+        raise ValueError(
+            f"expanded side-info length {len(expanded)} != latent length "
+            f"{len(latent_stream)}"
+        )
+
+    latent_counts = _count_symbols(latent_stream)
+    side_counts = _count_symbols(expanded)
+    joint = _count_joint(latent_stream, expanded)
+    h_latent = _plug_in_entropy_bits(latent_counts)
+    total = sum(side_counts.values())
+    h_cond = 0.0
+    for symbol, per_symbol in joint.items():
+        h_cond += (side_counts[symbol] / total) * _plug_in_entropy_bits(per_symbol)
+    mi = max(h_latent - h_cond, 0.0)
+    if mi <= independence_tolerance_bits:
+        verdict = "INDEPENDENT"
+    elif mi >= threshold:
+        verdict = "MEANINGFUL_CONDITIONING"
+    else:
+        verdict = "WEAK_CONDITIONING"
+    return PqMiVerdict(
+        verdict=verdict,
+        h_latent_unconditional_bits_per_symbol=float(h_latent),
+        h_latent_given_side_info_bits_per_symbol=float(h_cond),
+        mutual_information_bits=float(mi),
+        wyner_ziv_gain_ceiling_fraction=float(mi / h_latent if h_latent > 0 else 0.0),
+        num_latent_symbols=len(latent_stream),
+        num_side_info_symbols=len(expanded),
+        num_unique_side_info_symbols=len(set(per_pair_symbols)),
+        meaningful_mi_threshold_bits=float(threshold),
+        independence_tolerance_bits=float(independence_tolerance_bits),
+    )
 
 
 def estimate_pq_encoding_budget(
@@ -555,12 +721,16 @@ __all__ = [
     "CANONICAL_VARIANT_V2_SPARSE_TOP_K",
     "CANONICAL_VARIANT_V3_POOL_SHARED",
     "CONTEST_RATE_NORMALIZER_BYTES",
+    "DEFAULT_MEANINGFUL_MI_THRESHOLD_BITS",
     "DEFAULT_M_SUBQ",
     "DEFAULT_NBITS",
     "DEFAULT_NLIST",
     "DEFAULT_TRAINING_SEED",
+    "INDEPENDENCE_TOLERANCE_BITS",
     "PqEncodingBudget",
+    "PqMiVerdict",
     "build_pq_codebook",
+    "compute_pq_mi_verdict",
     "decode_per_region_histogram",
     "deserialize_codebook",
     "encode_per_region_histogram",

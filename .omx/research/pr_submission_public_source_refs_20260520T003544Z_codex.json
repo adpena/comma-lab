@@ -1,0 +1,13 @@
+{
+  "schema": "public_source_ref_manifest_v1",
+  "observed_at_utc": "2026-05-20T00:35:44Z",
+  "repo_url": "https://github.com/adpena/comma-lab",
+  "remote": "origin",
+  "command": "git ls-remote origin refs/heads/main",
+  "refs": {
+    "refs/heads/main": "e0e7d239b1c330449d9b799a67ad727a8737e789"
+  },
+  "local_head": "31c5fa2a9c6b98a8d532d6ba02b23f14fa20480f",
+  "local_head_publicly_visible_at_observed_refs": false,
+  "notes": "Observed origin/main is behind the local source-sync candidate. This manifest is intentionally not sufficient to clear a 31c5fa2a9c6b98a8d532d6ba02b23f14fa20480f public source pin."
+}

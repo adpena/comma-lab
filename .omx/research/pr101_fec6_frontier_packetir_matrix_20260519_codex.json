@@ -38,45 +38,69 @@
   "artifact_sha256": {
     "json": null,
     "json_omitted_reason": "self_referential_json_hash_requires_external_manifest",
-    "markdown": "03f6b883f4f2f9984b84f339403afec21b9beec58fe1481a73a4a85e62584ec1"
+    "markdown": "34410b89594e9d6d87e7432f519dc333198458479c7a86392ffb9e6b26dacc3c"
   },
   "authority_summary": {
-    "current_authority": "parser_profile_and_exact_eval_evidence_only_no_compiler_identity_no_packetir_candidate_queue",
+    "current_authority": "packetir_identity_deterministic_compiler_identity_and_candidate_queue_validated_no_score_claim",
     "fec6_frontier_archive_present": true,
+    "fec6_has_candidate_byte_accounting_evidence": true,
     "fec6_has_contest_cpu_evidence": true,
     "fec6_has_contest_cuda_evidence": true,
-    "fec6_has_deterministic_compiler_identity_evidence": false,
+    "fec6_has_deterministic_compiler_identity_evidence": true,
+    "fec6_has_packetir_candidate_queue_artifact": true,
     "fec6_has_packetir_identity_evidence": true,
     "fec6_has_paired_exact_same_archive_runtime": true,
+    "fec6_has_parser_byte_accounting_evidence": true,
     "fec6_has_parser_profile_evidence": true,
-    "fec6_has_pr106_style_packetir_candidate_queue": false,
+    "fec6_has_pr106_style_packetir_candidate_queue": true,
+    "fec6_has_runtime_consumption_evidence": true,
     "pr101_packet_compiler_packetir_primitives_are_general": true
   },
   "axis_semantics": {
     "contest_cpu": "kept separate from contest_cuda; no conversion",
     "contest_cuda": "kept separate from contest_cpu; no conversion"
   },
-  "blockers": [
-    "deterministic_compiler_identity_manifest_missing",
-    "pr106_style_packetir_candidate_queue_missing"
-  ],
+  "blockers": [],
   "candidate_queue": {
-    "exists": false,
+    "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "archive_size_bytes": 178517,
+    "blockers": [],
+    "bytes": 75605,
+    "candidate_byte_accounting_present": true,
+    "candidate_count": 33,
+    "candidate_queue_generated": true,
+    "exists": true,
+    "json_valid": true,
     "kind": "pr101_fec6_packetir_candidate_queue",
+    "operator_candidate_count": 29,
+    "parser_byte_accounting_present": true,
     "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packetir_candidate_queue.json",
-    "pr106_style_packetir_candidate_queue": false,
+    "pr106_style_packetir_candidate_queue": true,
     "promotion_eligible": false,
     "ready_for_exact_eval_dispatch": false,
-    "score_claim": false
+    "runtime_consumption_proven": true,
+    "schema": "pr101_fec6_packetir_candidate_queue_v2",
+    "score_claim": false,
+    "sha256": "567512b67cc3412149c402c86e665bc100da3ba5b46b8c035d1c269bf60531f2"
   },
   "deterministic_compiler_manifest": {
-    "deterministic_compiler_identity": false,
-    "exists": false,
+    "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "archive_size_bytes": 178517,
+    "blockers": [],
+    "bytes": 6634,
+    "deterministic_compiler_identity": true,
+    "exists": true,
+    "json_valid": true,
     "kind": "deterministic_compiler_identity_manifest",
+    "mode": "identity",
+    "no_op_detector_passed": true,
     "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/deterministic_packet_compiler_manifest.json",
     "promotion_eligible": false,
     "ready_for_exact_eval_dispatch": false,
-    "score_claim": false
+    "schema": "deterministic_packet_compiler.v1",
+    "score_claim": false,
+    "sha256": "d89f2786e89fcf54d8a9e6c4cfa167f26ca52fe55fe5b510eeaba60d579c23d3",
+    "target_profile": "contest_one_video_replay"
   },
   "dispatch_attempted": false,
   "dispatch_commands_emitted": false,
@@ -171,7 +195,7 @@
       "promotion_eligible": false,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
-      "status": "pending"
+      "status": "done"
     },
     {
       "description": "Materialize a PR101/FEC6 PacketIR candidate queue from the FP11 wrapper sections and FEC6 selector stream.",
@@ -179,7 +203,7 @@
       "promotion_eligible": false,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
-      "status": "pending"
+      "status": "done"
     },
     {
       "description": "For each candidate, record parser-consumption proof, member payload hashes, wrapper offsets, and all score-affecting bytes.",
@@ -187,7 +211,15 @@
       "promotion_eligible": false,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
-      "status": "pending"
+      "status": "done"
+    },
+    {
+      "description": "Prove candidate bytes are consumed by the runtime/inflate path, not only by the PacketIR parser; old identity no-op proofs do not satisfy this gate.",
+      "id": "prove_runtime_byte_consumption_noop_detector",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "status": "done"
     },
     {
       "description": "Run local parser/profile smoke on generated PacketIR candidates; keep CPU/CUDA exact-eval authority separate.",
@@ -195,7 +227,7 @@
       "promotion_eligible": false,
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
-      "status": "pending"
+      "status": "done"
     },
     {
       "description": "Only after candidate generation, local parser evidence, and an explicit lane claim should a future turn dispatch paired CPU/CUDA exact eval. This matrix emits no provider command.",
@@ -378,6 +410,6 @@
   "ready_for_exact_eval_dispatch": false,
   "schema": "pr101_fec6_frontier_packetir_matrix_v1",
   "score_claim": false,
-  "status": "parser_profile_no_compiler_identity_no_packetir_candidate_queue",
+  "status": "packetir_compiler_identity_and_candidate_queue_validated",
   "subject": "PR101/FEC6 frontier PacketIR authority matrix"
 }

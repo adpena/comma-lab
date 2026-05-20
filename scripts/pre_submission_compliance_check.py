@@ -10,6 +10,7 @@ auth-eval artifact, archive, manifest, report, and dispatch ledger agree.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import importlib.util
 import json
@@ -17,6 +18,7 @@ import math
 import re
 import stat
 import struct
+import sys
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
@@ -59,6 +61,7 @@ DEFAULT_MAX_SUBMISSION_SCORE = 0.192
 SUBMISSION_SCORE_AXIS_CHOICES = ("contest_cuda", "contest_cpu")
 PACKED_PAYLOAD_MEMBER_NAMES = ("p", "renderer_payload.bin", "renderer_payload.bin.br")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 TERMINAL_DISPATCH_STATUS_PREFIXES = tuple(CLAIM_TERMINAL_PREFIXES)
 SUCCESSFUL_EXACT_EVAL_TERMINAL_STATUS_PREFIXES = (
     "completed_contest_cuda",
@@ -71,6 +74,41 @@ SUCCESSFUL_CPU_EVAL_TERMINAL_STATUS_PREFIXES = (
 )
 PRIVATE_SURFACE_RE = re.compile(
     r"(/Users/|ssh\d+\.vast\.ai|fc-[A-Z0-9]{20,}|ap-[A-Za-z0-9]{12,}|sk-[A-Za-z0-9_-]{20,})"
+)
+INFLATE_SH_FORBIDDEN_EVAL_RE = re.compile(
+    r"\b(?:evaluate\.py|contest_auth_eval|DistortionNet|segnet_sd_path|posenet_sd_path|compute_distortion)\b"
+)
+RUNTIME_SCORER_IMPORT_RE = re.compile(
+    r"(?m)^\s*(?:from\s+modules\s+import|import\s+modules\b)|"
+    r"\b(?:evaluate\.py|contest_auth_eval|DistortionNet|segnet_sd_path|posenet_sd_path|compute_distortion)\b"
+)
+RUNTIME_FORBIDDEN_SIDE_EFFECT_RE = re.compile(
+    r"\b(?:curl|wget|scp|rsync|ssh)\b|"
+    r"\b(?:pip|pip3|conda|mamba|apt|apt-get)\s+install\b|"
+    r"\bpython(?:3)?\s+-m\s+pip\s+install\b|"
+    r"\bgit\s+clone\b|"
+    r"\b(?:requests\.(?:get|post|put|request)|urllib\.request|socket\.socket|subprocess\.Popen|os\.system)\b|"
+    r"https?://|/Users/"
+)
+RUNTIME_ALLOWED_NON_STDLIB_IMPORT_ROOTS = frozenset(
+    {
+        "brotli",
+        "codec",
+        "codec_sidecar",
+        "frame_selector",
+        "model",
+        "numpy",
+        "src",
+        "torch",
+    }
+)
+PUBLIC_TEMPLATE_PLACEHOLDER_RE = re.compile(r"<[^>\n]*[A-Z][A-Z0-9_ -]*[^>\n]*>")
+PUBLIC_TEMPLATE_PLACEHOLDER_ALLOWLIST = frozenset(
+    {
+        "<archive_dir>",
+        "<output_dir>",
+        "<file_list>",
+    }
 )
 SUBMISSION_RUNTIME_CUSTODY_FILENAMES = {
     "archive_manifest.json",
@@ -87,12 +125,20 @@ POST_DEADLINE_POLICY_CONTEXT_RE = re.compile(
     re.IGNORECASE,
 )
 SOURCE_REPO_RE = re.compile(r"https://github\.com/adpena/[A-Za-z0-9_.-]+")
+SOURCE_PIN_PLACEHOLDER_RE = re.compile(
+    r"<[^>\n]*(?:PINNED|COMMIT|SOURCE[_ -]?REF|SOURCE[_ -]?SHA)[^>\n]*>|"
+    r"\bPINNED_(?:COMMIT|SOURCE_REF|SOURCE_SHA|SHA)\b",
+    re.IGNORECASE,
+)
 PINNED_SOURCE_RE = re.compile(
     r"https://github\.com/adpena/[A-Za-z0-9_.-]+/"
     r"(?:commit/[0-9a-fA-F]{40}|releases/tag/[A-Za-z0-9_.-]+|"
     r"tree/(?!main\b|master\b|HEAD\b)[A-Za-z0-9_.-]+)"
     r"|(?<![0-9a-fA-F])[0-9a-fA-F]{40}(?![0-9a-fA-F])"
 )
+PINNED_SOURCE_COMMIT_URL_RE = re.compile(r"/commit/([0-9a-fA-F]{40})(?:\b|$)")
+PINNED_SOURCE_TAG_URL_RE = re.compile(r"/releases/tag/([A-Za-z0-9_.-]+)(?:\b|$)")
+PINNED_SOURCE_TREE_URL_RE = re.compile(r"/tree/([A-Za-z0-9_.-]+)(?:\b|$)")
 OSS_REPRO_RE = re.compile(
     r"\b(oss|open\s*source|mit|apache|source\s+code|deterministic|reproducib|"
     r"runtime\s+tree|commit)\b",
@@ -107,6 +153,14 @@ ARCHIVE_RUNTIME_SHA_BINDING_RE = re.compile(
     r"runtime\s+tree\s+sha(?:-?256)?|runtime_content_tree_sha256)\b\s*[:=]\s*"
     r"[0-9a-fA-F]{64}\b",
     re.IGNORECASE,
+)
+HOSTED_ARCHIVE_PLACEHOLDER_RE = re.compile(
+    r"<[^>\n]*(?:HOSTED|URL|PLACEHOLDER)[^>\n]*>|"
+    r"\bHOSTED_[A-Z0-9_]*(?:URL|PLACEHOLDER)\b",
+    re.IGNORECASE,
+)
+HOSTED_ARCHIVE_GITHUB_RELEASE_RE = re.compile(
+    r"^https://github\.com/adpena/[A-Za-z0-9_.-]+/releases/download/[^\s<>\"']+$"
 )
 PUBLIC_AXIS_LABELS = ("[contest-CUDA]", "[contest-CPU]")
 POST_DEADLINE_POLICY_NEGATED_RE = re.compile(
@@ -729,6 +783,267 @@ def _auth_runtime_candidates(auth_eval: dict[str, Any]) -> dict[str, str]:
     return merged
 
 
+def _proof_string_values(payload: dict[str, Any], keys: tuple[str, ...]) -> set[str]:
+    values: set[str] = set()
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, str):
+            values.add(value)
+    return values
+
+
+def _proof_int_value(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _runtime_equivalence_output_identity_valid(proof: dict[str, Any]) -> bool:
+    output = proof.get("output_equivalence")
+    if not isinstance(output, dict):
+        output = {}
+    basis = proof.get("equivalence_basis") or output.get("basis")
+    diff_bytes = proof.get("diff_bytes", output.get("diff_bytes"))
+    baseline_sha = proof.get("baseline_output_sha256") or output.get("baseline_output_sha256")
+    candidate_sha = proof.get("candidate_output_sha256") or output.get("candidate_output_sha256")
+    if (
+        basis != "full_inflate_output_byte_identity"
+        or diff_bytes != 0
+        or not isinstance(baseline_sha, str)
+        or not isinstance(candidate_sha, str)
+        or baseline_sha != candidate_sha
+        or not SHA256_RE.match(baseline_sha)
+    ):
+        return False
+    files = output.get("files", proof.get("output_files", []))
+    if files is None:
+        return True
+    if not isinstance(files, list):
+        return False
+    for row in files:
+        if not isinstance(row, dict):
+            return False
+        old_sha = row.get("auth_eval_output_sha256") or row.get("baseline_output_sha256")
+        new_sha = row.get("submission_output_sha256") or row.get("candidate_output_sha256")
+        row_diff = row.get("diff_bytes", 0)
+        if (
+            not isinstance(old_sha, str)
+            or not isinstance(new_sha, str)
+            or old_sha != new_sha
+            or row_diff != 0
+            or not SHA256_RE.match(old_sha)
+        ):
+            return False
+    return True
+
+
+def _runtime_equivalence_proof_expected_match(
+    proof: dict[str, Any] | None,
+    *,
+    archive: dict[str, Any],
+    expected_runtime_tree_sha256: str,
+    auth_runtime_candidates: dict[str, str],
+) -> bool:
+    if not isinstance(proof, dict):
+        return False
+    auth_values = _proof_string_values(
+        proof,
+        (
+            "auth_eval_runtime_tree_sha256",
+            "auth_eval_runtime_tree_sha256_without_submission_custody_files",
+            "auth_eval_portable_runtime_tree_sha256_without_submission_custody_files",
+        ),
+    )
+    submission_values = _proof_string_values(
+        proof,
+        (
+            "submission_runtime_tree_sha256",
+            "submission_portable_runtime_tree_sha256_without_custody_files",
+        ),
+    )
+    return (
+        proof.get("schema") == "pre_submission_runtime_equivalence_proof_v1"
+        and proof.get("archive_sha256") == archive.get("sha256")
+        and _proof_int_value(proof.get("archive_size_bytes")) == archive.get("bytes")
+        and expected_runtime_tree_sha256 in submission_values
+        and bool(auth_values & set(auth_runtime_candidates.values()))
+        and _runtime_equivalence_output_identity_valid(proof)
+    )
+
+
+def _runtime_shape_from_manifest(manifest: dict[str, Any]) -> dict[str, str]:
+    shape: dict[str, str] = {}
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return shape
+    for row in files:
+        if not isinstance(row, dict):
+            continue
+        rel = row.get("relative_path")
+        sha = row.get("sha256")
+        if isinstance(rel, str) and isinstance(sha, str):
+            shape[rel] = sha
+    return dict(sorted(shape.items()))
+
+
+def _runtime_shape_diff(proof_shape: Any, current_shape: dict[str, str]) -> dict[str, Any]:
+    if not isinstance(proof_shape, dict):
+        return {
+            "provided": False,
+            "matches": True,
+            "note": "proof has no submission_runtime_shape; hash-level proof checks still apply",
+        }
+    normalized_proof_shape = {
+        str(key): str(value)
+        for key, value in proof_shape.items()
+        if isinstance(key, str) and isinstance(value, str)
+    }
+    proof_paths = set(normalized_proof_shape)
+    current_paths = set(current_shape)
+    changed = [
+        {
+            "relative_path": rel,
+            "proof_sha256": normalized_proof_shape[rel],
+            "current_sha256": current_shape[rel],
+        }
+        for rel in sorted(proof_paths & current_paths)
+        if normalized_proof_shape[rel] != current_shape[rel]
+    ]
+    missing_from_current = [
+        {"relative_path": rel, "proof_sha256": normalized_proof_shape[rel]}
+        for rel in sorted(proof_paths - current_paths)
+    ]
+    added_to_current = [
+        {"relative_path": rel, "current_sha256": current_shape[rel]}
+        for rel in sorted(current_paths - proof_paths)
+    ]
+    return {
+        "provided": True,
+        "matches": not changed and not missing_from_current and not added_to_current,
+        "changed": changed,
+        "missing_from_current": missing_from_current,
+        "added_to_current": added_to_current,
+    }
+
+
+def inspect_runtime_equivalence_proof(
+    proof: dict[str, Any] | None,
+    path: Path | None,
+    *,
+    archive: dict[str, Any],
+    auth_eval: dict[str, Any],
+    submission_runtime_manifest: dict[str, Any],
+) -> tuple[dict[str, Any], list[Check]]:
+    checks: list[Check] = []
+    if path is None:
+        return {"provided": False}, checks
+    _add(checks, "runtime_equivalence_proof_exists", path.is_file(), _rel(path))
+    _add(
+        checks,
+        "runtime_equivalence_proof_json_object",
+        isinstance(proof, dict),
+        _rel(path),
+    )
+    if not isinstance(proof, dict):
+        return {"provided": True, "path": _rel(path), "valid": False}, checks
+
+    auth_candidates = _auth_runtime_candidates(auth_eval)
+    submission_candidates = {
+        str(value)
+        for value in (
+            submission_runtime_manifest.get("runtime_tree_sha256"),
+            submission_runtime_manifest.get("portable_runtime_tree_sha256_without_custody_files"),
+        )
+        if isinstance(value, str)
+    }
+    proof_auth_values = _proof_string_values(
+        proof,
+        (
+            "auth_eval_runtime_tree_sha256",
+            "auth_eval_runtime_tree_sha256_without_submission_custody_files",
+            "auth_eval_portable_runtime_tree_sha256_without_submission_custody_files",
+        ),
+    )
+    proof_submission_values = _proof_string_values(
+        proof,
+        (
+            "submission_runtime_tree_sha256",
+            "submission_portable_runtime_tree_sha256_without_custody_files",
+        ),
+    )
+    schema_ok = proof.get("schema") == "pre_submission_runtime_equivalence_proof_v1"
+    archive_ok = (
+        proof.get("archive_sha256") == archive.get("sha256")
+        and _proof_int_value(proof.get("archive_size_bytes")) == archive.get("bytes")
+    )
+    auth_ok = bool(proof_auth_values & set(auth_candidates.values()))
+    submission_ok = bool(proof_submission_values & submission_candidates)
+    output_ok = _runtime_equivalence_output_identity_valid(proof)
+    current_submission_shape = _runtime_shape_from_manifest(submission_runtime_manifest)
+    submission_shape_diff = _runtime_shape_diff(
+        proof.get("submission_runtime_shape"),
+        current_submission_shape,
+    )
+    submission_shape_ok = bool(submission_shape_diff.get("matches"))
+    _add(
+        checks,
+        "runtime_equivalence_proof_schema",
+        schema_ok,
+        str(proof.get("schema")),
+    )
+    _add(
+        checks,
+        "runtime_equivalence_proof_archive_matches",
+        archive_ok,
+        (
+            f"proof_sha={proof.get('archive_sha256')} archive_sha={archive.get('sha256')} "
+            f"proof_bytes={proof.get('archive_size_bytes')} archive_bytes={archive.get('bytes')}"
+        ),
+    )
+    _add(
+        checks,
+        "runtime_equivalence_proof_auth_runtime_matches",
+        auth_ok,
+        f"proof_auth={sorted(proof_auth_values)} auth_candidates={auth_candidates}",
+    )
+    _add(
+        checks,
+        "runtime_equivalence_proof_submission_runtime_matches",
+        submission_ok,
+        f"proof_submission={sorted(proof_submission_values)} submission={sorted(submission_candidates)}",
+    )
+    _add(
+        checks,
+        "runtime_equivalence_proof_submission_runtime_shape_matches",
+        submission_shape_ok,
+        json.dumps(submission_shape_diff, sort_keys=True)[:1000],
+    )
+    _add(
+        checks,
+        "runtime_equivalence_proof_full_output_identity",
+        output_ok,
+        str(proof.get("output_equivalence") or {}),
+    )
+    valid = schema_ok and archive_ok and auth_ok and submission_ok and submission_shape_ok and output_ok
+    return {
+        "provided": True,
+        "path": _rel(path),
+        "valid": valid,
+        "proof_auth_runtime_values": sorted(proof_auth_values),
+        "proof_submission_runtime_values": sorted(proof_submission_values),
+        "proof_submission_runtime_shape": proof.get("submission_runtime_shape"),
+        "current_submission_runtime_shape": current_submission_shape,
+        "submission_runtime_shape_diff": submission_shape_diff,
+    }, checks
+
+
 def _payload_provenance(payload: dict[str, Any]) -> dict[str, Any]:
     provenance = payload.get("provenance")
     return provenance if isinstance(provenance, dict) else {}
@@ -750,11 +1065,128 @@ def _payload_runtime_candidate_values(payload: dict[str, Any]) -> dict[str, str]
     return candidates
 
 
+def _runtime_scorer_import_hits(submission_dir: Path, manifest: dict[str, Any]) -> list[str]:
+    hits: list[str] = []
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return hits
+    for row in files:
+        if not isinstance(row, dict):
+            continue
+        rel = row.get("relative_path")
+        if not isinstance(rel, str) or not rel.endswith((".py", ".sh")):
+            continue
+        path = submission_dir / rel
+        if not path.is_file():
+            continue
+        for lineno, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+            if RUNTIME_SCORER_IMPORT_RE.search(line):
+                hits.append(f"{_rel(path)}:{lineno}:{line.strip()[:160]}")
+    return sorted(set(hits))
+
+
+def _runtime_forbidden_side_effect_hits(submission_dir: Path, manifest: dict[str, Any]) -> list[str]:
+    hits: list[str] = []
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return hits
+    for row in files:
+        if not isinstance(row, dict):
+            continue
+        rel = row.get("relative_path")
+        if not isinstance(rel, str) or not rel.endswith((".py", ".sh")):
+            continue
+        path = submission_dir / rel
+        if not path.is_file():
+            continue
+        for lineno, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+            if RUNTIME_FORBIDDEN_SIDE_EFFECT_RE.search(line):
+                hits.append(f"{_rel(path)}:{lineno}:{line.strip()[:160]}")
+    return sorted(set(hits))
+
+
+def _runtime_local_import_roots(manifest: dict[str, Any]) -> set[str]:
+    roots: set[str] = set()
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return roots
+    for row in files:
+        if not isinstance(row, dict):
+            continue
+        rel = row.get("relative_path")
+        if not isinstance(rel, str) or not rel.endswith(".py"):
+            continue
+        path = PurePosixPath(rel)
+        roots.add(path.stem)
+        if len(path.parts) > 1:
+            roots.add(path.parts[0])
+    return roots
+
+
+def _is_allowed_runtime_import_root(root: str, local_roots: set[str]) -> bool:
+    if root in local_roots or root in RUNTIME_ALLOWED_NON_STDLIB_IMPORT_ROOTS:
+        return True
+    stdlib_roots = getattr(sys, "stdlib_module_names", frozenset())
+    return root in stdlib_roots
+
+
+def _runtime_import_roots(path: Path) -> tuple[set[str], str | None]:
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"), filename=str(path))
+    except SyntaxError as exc:
+        return set(), f"{_rel(path)}:{exc.lineno or 0}:{exc.msg}"
+    roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            roots.update(alias.name.split(".", 1)[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                continue
+            if node.module:
+                roots.add(node.module.split(".", 1)[0])
+    return roots, None
+
+
+def _runtime_import_allowlist_inspection(
+    submission_dir: Path,
+    manifest: dict[str, Any],
+) -> tuple[list[str], list[str], list[str], list[str]]:
+    imports: list[str] = []
+    disallowed: list[str] = []
+    parse_errors: list[str] = []
+    local_roots = _runtime_local_import_roots(manifest)
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        return imports, disallowed, parse_errors, sorted(local_roots)
+    for row in files:
+        if not isinstance(row, dict):
+            continue
+        rel = row.get("relative_path")
+        if not isinstance(rel, str) or not rel.endswith(".py"):
+            continue
+        path = submission_dir / rel
+        if not path.is_file():
+            continue
+        roots, parse_error = _runtime_import_roots(path)
+        if parse_error:
+            parse_errors.append(parse_error)
+            continue
+        for root in sorted(roots):
+            record = f"{_rel(path)}:{root}"
+            imports.append(record)
+            if not _is_allowed_runtime_import_root(root, local_roots):
+                disallowed.append(record)
+    return sorted(set(imports)), sorted(set(disallowed)), sorted(set(parse_errors)), sorted(local_roots)
+
+
 def inspect_submission_runtime(
     submission_dir: Path,
     auth_eval: dict[str, Any],
     *,
     required: bool,
+    runtime_equivalence_proof: dict[str, Any] | None = None,
+    runtime_equivalence_proof_path: Path | None = None,
+    archive: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     inflate_sh = submission_dir / "inflate.sh"
@@ -780,6 +1212,35 @@ def inspect_submission_runtime(
         return {"inflate_sh": _rel(inflate_sh), "exists": True}, checks
 
     _add(checks, "submission_runtime_manifest_computable", True, manifest.get("schema", ""))
+    scorer_hits = _runtime_scorer_import_hits(submission_dir, manifest)
+    side_effect_hits = _runtime_forbidden_side_effect_hits(submission_dir, manifest)
+    runtime_imports, disallowed_imports, import_parse_errors, local_import_roots = (
+        _runtime_import_allowlist_inspection(submission_dir, manifest)
+    )
+    _add(
+        checks,
+        "submission_runtime_loads_no_scorers_or_eval",
+        (not required) or not scorer_hits,
+        f"hits={scorer_hits[:20]}",
+    )
+    _add(
+        checks,
+        "submission_runtime_has_no_network_install_or_local_paths",
+        (not required) or not side_effect_hits,
+        f"hits={side_effect_hits[:20]}",
+    )
+    _add(
+        checks,
+        "submission_runtime_import_allowlist_parseable",
+        (not required) or not import_parse_errors,
+        f"parse_errors={import_parse_errors[:20]}",
+    )
+    _add(
+        checks,
+        "submission_runtime_imports_within_allowlist",
+        (not required) or not disallowed_imports,
+        f"disallowed={disallowed_imports[:20]}",
+    )
     runtime_sha = manifest.get("runtime_tree_sha256")
     _add(
         checks,
@@ -797,12 +1258,33 @@ def inspect_submission_runtime(
         )
         if isinstance(value, str)
     }
+    proof_record, proof_checks = inspect_runtime_equivalence_proof(
+        runtime_equivalence_proof,
+        runtime_equivalence_proof_path,
+        archive=archive or {},
+        auth_eval=auth_eval,
+        submission_runtime_manifest=manifest,
+    )
+    checks.extend(proof_checks)
+    proof_valid = bool(proof_record.get("valid"))
     _add(
         checks,
         "submission_runtime_tree_matches_auth_eval",
-        (not required) or bool(submission_candidates & expected),
-        f"submission_candidates={sorted(submission_candidates)} auth_eval_candidates={candidates}",
+        (not required) or bool(submission_candidates & expected) or proof_valid,
+        (
+            f"submission_candidates={sorted(submission_candidates)} "
+            f"auth_eval_candidates={candidates} "
+            f"runtime_equivalence_proof_valid={proof_valid}"
+        ),
     )
+    manifest["runtime_equivalence_proof"] = proof_record
+    manifest["scorer_import_hits"] = scorer_hits
+    manifest["forbidden_side_effect_hits"] = side_effect_hits
+    manifest["runtime_imports"] = runtime_imports
+    manifest["disallowed_runtime_imports"] = disallowed_imports
+    manifest["runtime_import_parse_errors"] = import_parse_errors
+    manifest["runtime_local_import_roots"] = local_import_roots
+    manifest["runtime_allowed_non_stdlib_import_roots"] = sorted(RUNTIME_ALLOWED_NON_STDLIB_IMPORT_ROOTS)
     return manifest, checks
 
 
@@ -1118,11 +1600,23 @@ def inspect_auth_eval(
         f"candidates={runtime_candidates}",
     )
     if args.expected_runtime_tree_sha256:
+        proof = getattr(args, "_runtime_equivalence_proof_payload", None)
+        proof_accepts_expected = _runtime_equivalence_proof_expected_match(
+            proof,
+            archive=archive,
+            expected_runtime_tree_sha256=args.expected_runtime_tree_sha256,
+            auth_runtime_candidates=runtime_candidates,
+        )
         _add(
             checks,
             "auth_eval_runtime_tree_expected_match",
-            args.expected_runtime_tree_sha256 in set(runtime_candidates.values()),
-            f"expected={args.expected_runtime_tree_sha256} candidates={runtime_candidates}",
+            args.expected_runtime_tree_sha256 in set(runtime_candidates.values())
+            or proof_accepts_expected,
+            (
+                f"expected={args.expected_runtime_tree_sha256} "
+                f"candidates={runtime_candidates} "
+                f"runtime_equivalence_proof_accepts_expected={proof_accepts_expected}"
+            ),
         )
 
     return {
@@ -1441,6 +1935,22 @@ def inspect_submission_dir(submission_dir: Path) -> tuple[dict[str, Any], list[C
     if inflate.is_file():
         executable = bool(inflate.stat().st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH))
         _add(checks, "inflate_sh_executable", executable, f"mode={oct(stat.S_IMODE(inflate.stat().st_mode))}")
+        text = inflate.read_text(encoding="utf-8", errors="ignore")
+        has_three_arg_contract = all(token in text for token in ("$1", "$2", "$3"))
+        reads_file_list = "read -r" in text or "read " in text
+        forbidden_eval = sorted(set(INFLATE_SH_FORBIDDEN_EVAL_RE.findall(text)))
+        _add(
+            checks,
+            "inflate_sh_uses_canonical_three_arg_contract",
+            has_three_arg_contract and reads_file_list,
+            "requires archive_dir=$1 output_dir=$2 file_list=$3 and file-list read loop",
+        )
+        _add(
+            checks,
+            "inflate_sh_loads_no_scorers_or_eval",
+            not forbidden_eval,
+            f"forbidden_eval_tokens={forbidden_eval}",
+        )
     return {"path": _rel(submission_dir), "required_files": files}, checks
 
 
@@ -1631,6 +2141,53 @@ def inspect_public_hygiene(paths: list[Path]) -> tuple[dict[str, Any], list[Chec
     return {"scan_paths": [_rel(path) for path in paths], "hits": hits}, checks
 
 
+def _public_template_placeholder_hits(files: list[Path]) -> tuple[list[str], list[str]]:
+    placeholders: list[str] = []
+    locations: list[str] = []
+    for path in files:
+        for lineno, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+            for match in PUBLIC_TEMPLATE_PLACEHOLDER_RE.findall(line):
+                if match in PUBLIC_TEMPLATE_PLACEHOLDER_ALLOWLIST:
+                    continue
+                placeholders.append(match)
+                locations.append(f"{_rel(path)}:{lineno}:{match}")
+    return sorted(set(placeholders)), sorted(set(locations))
+
+
+def inspect_public_template_placeholders(
+    submission_dir: Path,
+    public_scan_paths: list[Path],
+    *,
+    required: bool,
+) -> tuple[dict[str, Any], list[Check]]:
+    checks: list[Check] = []
+    files = _submission_public_files(submission_dir) + _public_scan_files(public_scan_paths)
+    _, sources = _public_files_text(files)
+    placeholders, locations = _public_template_placeholder_hits(files)
+    if required:
+        _add(
+            checks,
+            "public_text_has_no_unresolved_template_placeholders",
+            not placeholders,
+            f"placeholders={placeholders} locations={locations[:20]}",
+        )
+    else:
+        _add(
+            checks,
+            "public_template_placeholders_optional",
+            True,
+            "not required for this non-final packet",
+            severity="info",
+        )
+    return {
+        "required": required,
+        "sources": sources,
+        "allowlist": sorted(PUBLIC_TEMPLATE_PLACEHOLDER_ALLOWLIST),
+        "placeholders": placeholders,
+        "placeholder_locations": locations,
+    }, checks
+
+
 def _load_policy_statement(args: argparse.Namespace, submission_dir: Path) -> tuple[str, str | None]:
     inline = getattr(args, "competitive_or_innovative_statement", None)
     if inline:
@@ -1768,7 +2325,7 @@ def inspect_post_deadline_submission_policy(
     }, checks
 
 
-def _submission_public_text(submission_dir: Path) -> tuple[str, list[str]]:
+def _submission_public_files(submission_dir: Path) -> list[Path]:
     names = (
         "README.md",
         "WRITEUP.md",
@@ -1778,28 +2335,330 @@ def _submission_public_text(submission_dir: Path) -> tuple[str, list[str]]:
         "PR_BODY.md",
         "archive_manifest.json",
     )
+    return [submission_dir / name for name in names if (submission_dir / name).is_file()]
+
+
+def _public_scan_files(paths: list[Path]) -> list[Path]:
+    files: list[Path] = []
+    for path in paths:
+        candidates = [path] if path.is_file() else sorted(path.rglob("*")) if path.is_dir() else []
+        files.extend(candidate for candidate in candidates if candidate.is_file())
+    return files
+
+
+def _public_files_text(files: list[Path]) -> tuple[str, list[str]]:
     chunks: list[str] = []
     sources: list[str] = []
-    for name in names:
-        path = submission_dir / name
-        if not path.is_file():
-            continue
+    for path in files:
         chunks.append(path.read_text(encoding="utf-8", errors="ignore"))
         sources.append(_rel(path))
     return "\n\n".join(chunks), sources
+
+
+def _submission_public_text(submission_dir: Path) -> tuple[str, list[str]]:
+    return _public_files_text(_submission_public_files(submission_dir))
+
+
+def _public_scan_text(paths: list[Path]) -> tuple[str, list[str]]:
+    return _public_files_text(_public_scan_files(paths))
+
+
+def _hosted_placeholder_hits(files: list[Path]) -> tuple[list[str], list[str]]:
+    placeholders: list[str] = []
+    locations: list[str] = []
+    for path in files:
+        for lineno, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+            for match in HOSTED_ARCHIVE_PLACEHOLDER_RE.findall(line):
+                placeholders.append(match)
+                locations.append(f"{_rel(path)}:{lineno}:{match}")
+    return sorted(set(placeholders)), sorted(set(locations))
+
+
+def _hosted_placeholder_details(placeholders: list[str], locations: list[str]) -> str:
+    return f"placeholders={placeholders} locations={locations[:20]}"
+
+
+def _hosted_manifest_string(manifest: dict[str, Any], keys: tuple[str, ...]) -> str | None:
+    for key in keys:
+        value = manifest.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _hosted_manifest_int(manifest: dict[str, Any], keys: tuple[str, ...]) -> int | None:
+    for key in keys:
+        value = manifest.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                continue
+    return None
+
+
+def inspect_hosted_archive_manifest(
+    manifest: dict[str, Any] | None,
+    path: Path | None,
+    archive: dict[str, Any],
+    *,
+    submission_dir: Path,
+    extra_public_scan_paths: list[Path] | None = None,
+    required: bool,
+) -> tuple[dict[str, Any], list[Check]]:
+    checks: list[Check] = []
+    public_files = _submission_public_files(submission_dir) + _public_scan_files(extra_public_scan_paths or [])
+    public_text, sources = _public_files_text(public_files)
+    placeholders, placeholder_locations = _hosted_placeholder_hits(public_files)
+    placeholder_details = _hosted_placeholder_details(placeholders, placeholder_locations)
+    if path is None:
+        if required:
+            _add(
+                checks,
+                "hosted_archive_manifest_supplied",
+                False,
+                "strict contest-final packets require --hosted-archive-manifest-json",
+            )
+            _add(
+                checks,
+                "hosted_archive_public_text_has_no_placeholder",
+                not placeholders,
+                placeholder_details,
+            )
+        else:
+            _add(
+                checks,
+                "hosted_archive_manifest_optional",
+                True,
+                "not required unless --strict contest-final is used",
+                severity="info",
+            )
+        return {
+            "required": required,
+            "provided": False,
+            "public_text_sources": sources,
+            "placeholders": placeholders,
+            "placeholder_locations": placeholder_locations,
+        }, checks
+
+    _add(checks, "hosted_archive_manifest_exists", path.is_file(), _rel(path))
+    _add(
+        checks,
+        "hosted_archive_manifest_json_object",
+        isinstance(manifest, dict),
+        _rel(path),
+    )
+    _add(
+        checks,
+        "hosted_archive_public_text_has_no_placeholder",
+        not placeholders,
+        placeholder_details,
+    )
+    if not isinstance(manifest, dict):
+        return {
+            "required": required,
+            "provided": True,
+            "path": _rel(path),
+            "valid": False,
+            "public_text_sources": sources,
+            "placeholders": placeholders,
+            "placeholder_locations": placeholder_locations,
+        }, checks
+
+    url = _hosted_manifest_string(manifest, ("url", "archive_url", "download_url"))
+    sha = _hosted_manifest_string(
+        manifest,
+        ("sha256", "archive_sha256", "download_sha256"),
+    )
+    size = _hosted_manifest_int(
+        manifest,
+        ("size_bytes", "archive_size_bytes", "download_size_bytes", "bytes"),
+    )
+    schema_ok = manifest.get("schema") == "hosted_archive_manifest_v1"
+    url_present = bool(url)
+    url_https = bool(url and url.startswith("https://"))
+    url_release = bool(url and HOSTED_ARCHIVE_GITHUB_RELEASE_RE.match(url))
+    url_not_placeholder = bool(url and not HOSTED_ARCHIVE_PLACEHOLDER_RE.search(url))
+    url_in_public_text = bool(url and url in public_text)
+    sha_match = bool(sha and sha.lower() == str(archive.get("sha256") or "").lower())
+    size_match = size == archive.get("bytes")
+    _add(checks, "hosted_archive_manifest_schema", schema_ok, str(manifest.get("schema")))
+    _add(checks, "hosted_archive_url_present", url_present, str(url))
+    _add(checks, "hosted_archive_url_https", url_https, str(url))
+    _add(checks, "hosted_archive_url_github_release", url_release, str(url))
+    _add(checks, "hosted_archive_url_not_placeholder", url_not_placeholder, str(url))
+    _add(checks, "hosted_archive_url_in_public_text", url_in_public_text, str(url))
+    _add(
+        checks,
+        "hosted_archive_sha256_matches",
+        sha_match,
+        f"manifest_sha={sha} archive_sha={archive.get('sha256')}",
+    )
+    _add(
+        checks,
+        "hosted_archive_size_bytes_matches",
+        size_match,
+        f"manifest_size={size} archive_size={archive.get('bytes')}",
+    )
+    valid = (
+        schema_ok
+        and url_present
+        and url_https
+        and url_release
+        and url_not_placeholder
+        and url_in_public_text
+        and sha_match
+        and size_match
+        and not placeholders
+    )
+    return {
+        "required": required,
+        "provided": True,
+        "path": _rel(path),
+        "valid": valid,
+        "url": url,
+        "sha256": sha,
+        "size_bytes": size,
+        "public_text_sources": sources,
+        "placeholders": placeholders,
+        "placeholder_locations": placeholder_locations,
+    }, checks
+
+
+def _source_ref_manifest_refs(manifest: dict[str, Any] | None) -> dict[str, str]:
+    if not isinstance(manifest, dict):
+        return {}
+    refs = manifest.get("refs")
+    if isinstance(refs, dict):
+        return {str(name): str(sha).lower() for name, sha in refs.items() if isinstance(sha, str)}
+    if isinstance(refs, list):
+        normalized: dict[str, str] = {}
+        for row in refs:
+            if not isinstance(row, dict):
+                continue
+            name = row.get("name") or row.get("ref")
+            sha = row.get("sha256") or row.get("sha")
+            if isinstance(name, str) and isinstance(sha, str):
+                normalized[name] = sha.lower()
+        return normalized
+    return {}
+
+
+def _source_pin_publicly_visible(pin: str, refs: dict[str, str]) -> bool:
+    commit_match = PINNED_SOURCE_COMMIT_URL_RE.search(pin)
+    if commit_match:
+        return commit_match.group(1).lower() in set(refs.values())
+    if GIT_SHA_RE.match(pin):
+        return pin.lower() in set(refs.values())
+
+    tag_match = PINNED_SOURCE_TAG_URL_RE.search(pin)
+    if tag_match:
+        tag = tag_match.group(1)
+        return f"refs/tags/{tag}" in refs or f"refs/tags/{tag}^{{}}" in refs
+
+    tree_match = PINNED_SOURCE_TREE_URL_RE.search(pin)
+    if tree_match:
+        ref = tree_match.group(1)
+        return (
+            f"refs/heads/{ref}" in refs
+            or f"refs/tags/{ref}" in refs
+            or f"refs/tags/{ref}^{{}}" in refs
+        )
+    return False
+
+
+def _source_pin_placeholder_hits(files: list[Path]) -> tuple[list[str], list[str]]:
+    placeholders: list[str] = []
+    locations: list[str] = []
+    for path in files:
+        for lineno, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+            for match in SOURCE_PIN_PLACEHOLDER_RE.findall(line):
+                placeholders.append(match)
+                locations.append(f"{_rel(path)}:{lineno}:{match}")
+    return sorted(set(placeholders)), sorted(set(locations))
+
+
+def _source_pin_placeholder_details(placeholders: list[str], locations: list[str]) -> str:
+    return f"placeholders={placeholders} locations={locations[:20]}"
+
+
+def _inspect_public_source_ref_manifest(
+    manifest: dict[str, Any] | None,
+    path: Path | None,
+    *,
+    pinned_source_refs: list[str],
+) -> tuple[dict[str, Any], list[Check]]:
+    checks: list[Check] = []
+    if path is None:
+        return {"provided": False}, checks
+
+    _add(checks, "public_source_ref_manifest_exists", path.is_file(), _rel(path))
+    _add(
+        checks,
+        "public_source_ref_manifest_json_object",
+        isinstance(manifest, dict),
+        _rel(path),
+    )
+    if not isinstance(manifest, dict):
+        return {"provided": True, "path": _rel(path), "valid": False}, checks
+
+    schema_ok = manifest.get("schema") == "public_source_ref_manifest_v1"
+    refs = _source_ref_manifest_refs(manifest)
+    visible_pins = [
+        pin for pin in pinned_source_refs if _source_pin_publicly_visible(pin, refs)
+    ]
+    _add(
+        checks,
+        "public_source_ref_manifest_schema",
+        schema_ok,
+        str(manifest.get("schema")),
+    )
+    _add(
+        checks,
+        "public_source_ref_manifest_has_refs",
+        bool(refs),
+        f"ref_count={len(refs)}",
+    )
+    _add(
+        checks,
+        "public_source_pinned_revision_publicly_visible",
+        bool(visible_pins),
+        (
+            f"pinned_source_refs={pinned_source_refs} "
+            f"visible_pins={visible_pins} "
+            f"remote_refs={sorted(refs.items())[:10]}"
+        ),
+    )
+    return {
+        "provided": True,
+        "path": _rel(path),
+        "valid": schema_ok and bool(refs) and bool(visible_pins),
+        "repo_url": manifest.get("repo_url"),
+        "ref_count": len(refs),
+        "visible_pins": visible_pins,
+    }, checks
 
 
 def inspect_public_source_reproducibility(
     submission_dir: Path,
     *,
     required: bool,
+    extra_public_scan_paths: list[Path] | None = None,
+    source_ref_manifest: dict[str, Any] | None = None,
+    source_ref_manifest_path: Path | None = None,
 ) -> tuple[dict[str, Any], list[Check]]:
     """Validate public repo links and reproducibility claims for final packets."""
 
     checks: list[Check] = []
-    text, sources = _submission_public_text(submission_dir)
+    public_files = _submission_public_files(submission_dir) + _public_scan_files(extra_public_scan_paths or [])
+    text, sources = _public_files_text(public_files)
     repo_links = sorted(set(SOURCE_REPO_RE.findall(text)))
     pinned_source_refs = sorted({match.group(0) for match in PINNED_SOURCE_RE.finditer(text)})
+    pin_placeholders, pin_placeholder_locations = _source_pin_placeholder_hits(public_files)
     has_repro_context = bool(OSS_REPRO_RE.search(text))
     has_reproduce_command = bool(REPRO_COMMAND_RE.search(text))
     archive_runtime_sha_bindings = sorted(
@@ -1823,6 +2682,12 @@ def inspect_public_source_reproducibility(
         )
         _add(
             checks,
+            "public_source_pin_text_has_no_placeholder",
+            not pin_placeholders,
+            _source_pin_placeholder_details(pin_placeholders, pin_placeholder_locations),
+        )
+        _add(
+            checks,
             "public_source_reproducibility_context_present",
             has_repro_context,
             (
@@ -1839,7 +2704,14 @@ def inspect_public_source_reproducibility(
                 "archive/runtime SHA binding"
             ),
         )
+        manifest_record, manifest_checks = _inspect_public_source_ref_manifest(
+            source_ref_manifest,
+            source_ref_manifest_path,
+            pinned_source_refs=pinned_source_refs,
+        )
+        checks.extend(manifest_checks)
     else:
+        manifest_record = {"provided": False}
         _add(
             checks,
             "public_source_reproducibility_optional",
@@ -1847,11 +2719,21 @@ def inspect_public_source_reproducibility(
             "not required for this non-final packet",
             severity="info",
         )
+        if source_ref_manifest_path is not None:
+            manifest_record, manifest_checks = _inspect_public_source_ref_manifest(
+                source_ref_manifest,
+                source_ref_manifest_path,
+                pinned_source_refs=pinned_source_refs,
+            )
+            checks.extend(manifest_checks)
     return {
         "required": required,
         "sources": sources,
         "repo_links": repo_links,
         "pinned_source_refs": pinned_source_refs,
+        "pin_placeholders": pin_placeholders,
+        "pin_placeholder_locations": pin_placeholder_locations,
+        "source_ref_manifest": manifest_record,
         "has_reproducibility_context": has_repro_context,
         "has_reproduce_command": has_reproduce_command,
         "archive_runtime_sha_bindings": archive_runtime_sha_bindings,
@@ -1863,11 +2745,13 @@ def inspect_public_evidence_axis_labels(
     submission_dir: Path,
     *,
     required: bool,
+    extra_public_scan_paths: list[Path] | None = None,
 ) -> tuple[dict[str, Any], list[Check]]:
     """Require public packet text to keep CPU/CUDA score axes visibly separate."""
 
     checks: list[Check] = []
-    text, sources = _submission_public_text(submission_dir)
+    public_files = _submission_public_files(submission_dir) + _public_scan_files(extra_public_scan_paths or [])
+    text, sources = _public_files_text(public_files)
     present = {label: label in text for label in PUBLIC_AXIS_LABELS}
     if required:
         _add(
@@ -1948,12 +2832,45 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--competitive-or-innovative-statement-file", type=Path)
     parser.add_argument("--require-competitive-or-innovative-statement", action="store_true")
     parser.add_argument("--public-scan-path", type=Path, action="append", default=[])
+    parser.add_argument(
+        "--hosted-archive-manifest-json",
+        type=Path,
+        help=(
+            "Manifest proving the public downloadable archive URL, SHA-256, "
+            "and byte size. Required for --strict --contest-final."
+        ),
+    )
+    parser.add_argument(
+        "--public-source-ref-manifest-json",
+        type=Path,
+        help=(
+            "Optional git-ls-remote style manifest used to prove pinned public "
+            "source refs are actually visible on the public remote."
+        ),
+    )
+    parser.add_argument("--runtime-equivalence-proof-json", type=Path)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--strict", action="store_true")
     return parser
 
 
 def build_report(args: argparse.Namespace) -> dict[str, Any]:
+    proof_payload = (
+        _load_json(args.runtime_equivalence_proof_json)
+        if args.runtime_equivalence_proof_json
+        else None
+    )
+    source_ref_manifest = (
+        _load_json(args.public_source_ref_manifest_json)
+        if args.public_source_ref_manifest_json
+        else None
+    )
+    hosted_archive_manifest = (
+        _load_json(args.hosted_archive_manifest_json)
+        if args.hosted_archive_manifest_json
+        else None
+    )
+    args._runtime_equivalence_proof_payload = proof_payload
     if args.contest_final:
         args.require_auth_eval = True
         args.require_t4_equivalent = args.submission_score_axis == "contest_cuda"
@@ -2025,6 +2942,9 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         submission_dir,
         auth_record,
         required=args.require_submission_runtime_match,
+        runtime_equivalence_proof=proof_payload,
+        runtime_equivalence_proof_path=args.runtime_equivalence_proof_json,
+        archive=archive,
     )
     sections["submission_runtime"] = runtime_record
     checks.extend(runtime_checks)
@@ -2046,18 +2966,39 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     policy_record, policy_checks = inspect_post_deadline_submission_policy(args, submission_dir)
     sections["post_deadline_submission_policy"] = policy_record
     checks.extend(policy_checks)
+    hosted_record, hosted_checks = inspect_hosted_archive_manifest(
+        hosted_archive_manifest,
+        args.hosted_archive_manifest_json,
+        archive,
+        submission_dir=submission_dir,
+        extra_public_scan_paths=args.public_scan_path,
+        required=args.contest_final and args.strict,
+    )
+    sections["hosted_archive"] = hosted_record
+    checks.extend(hosted_checks)
     source_repro_record, source_repro_checks = inspect_public_source_reproducibility(
         submission_dir,
         required=args.contest_final,
+        extra_public_scan_paths=args.public_scan_path,
+        source_ref_manifest=source_ref_manifest,
+        source_ref_manifest_path=args.public_source_ref_manifest_json,
     )
     sections["public_source_reproducibility"] = source_repro_record
     checks.extend(source_repro_checks)
     axis_label_record, axis_label_checks = inspect_public_evidence_axis_labels(
         submission_dir,
         required=args.contest_final,
+        extra_public_scan_paths=args.public_scan_path,
     )
     sections["public_evidence_axis_labels"] = axis_label_record
     checks.extend(axis_label_checks)
+    placeholder_record, placeholder_checks = inspect_public_template_placeholders(
+        submission_dir,
+        args.public_scan_path,
+        required=args.contest_final,
+    )
+    sections["public_template_placeholders"] = placeholder_record
+    checks.extend(placeholder_checks)
     if args.contest_final:
         _add(
             checks,

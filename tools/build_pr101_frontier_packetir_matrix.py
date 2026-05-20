@@ -72,8 +72,17 @@ def main(argv: list[str] | None = None) -> int:
                 "fec6_has_deterministic_compiler_identity_evidence": summary[
                     "fec6_has_deterministic_compiler_identity_evidence"
                 ],
+                "fec6_has_packetir_candidate_queue_artifact": summary[
+                    "fec6_has_packetir_candidate_queue_artifact"
+                ],
                 "fec6_has_pr106_style_packetir_candidate_queue": summary[
                     "fec6_has_pr106_style_packetir_candidate_queue"
+                ],
+                "fec6_has_parser_byte_accounting_evidence": summary[
+                    "fec6_has_parser_byte_accounting_evidence"
+                ],
+                "fec6_has_runtime_consumption_evidence": summary[
+                    "fec6_has_runtime_consumption_evidence"
                 ],
                 "artifact_paths": matrix["artifact_paths"],
                 "artifact_sha256": matrix["artifact_sha256"],

@@ -396,6 +396,8 @@ def test_gate_subprocess_command_contains_required_flags(tmp_path: Path) -> None
     assert "--upstream-dir" in cmd
     assert "--device" in cmd
     assert "cuda" in cmd
+    assert "--inflate-device" in cmd
+    assert cmd[cmd.index("--inflate-device") + 1] == "cuda"
     assert "--json-out" in cmd
     assert "--keep-work-dir" in cmd
     assert "--work-dir" in cmd
@@ -433,6 +435,7 @@ def test_gate_modal_cpu_advisory_uses_explicit_temp_bypass(
     assert out is None
     cmd = captured["cmd"]
     assert cmd[cmd.index("--device") + 1] == "cpu"
+    assert cmd[cmd.index("--inflate-device") + 1] == "cpu"
     assert "--keep-work-dir" in cmd
     assert "--work-dir" in cmd
     assert "--allow-temp-work-dir" in cmd

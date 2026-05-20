@@ -46,6 +46,7 @@ from tac.optimization.faiss_ivf_pq_atw_channel import (  # noqa: E402
     DEFAULT_NLIST,
     DEFAULT_TRAINING_SEED,
     PqEncodingBudget,
+    compute_pq_mi_verdict,
     estimate_pq_encoding_budget,
 )
 
@@ -203,6 +204,29 @@ def test_budget_frozen_dataclass():
     )
     with pytest.raises((AttributeError, TypeError)):
         budget.variant_id = "mutated"  # type: ignore[misc]
+
+
+def test_compute_pq_mi_verdict_detects_correlated_side_info():
+    """PQ MI verdict is a reusable tac helper, not a probe-local API."""
+    latent = bytes([0, 0, 0, 0, 255, 255, 255, 255])
+    verdict = compute_pq_mi_verdict(
+        latent_stream=latent,
+        per_pair_symbols=[1, 2],
+        symbols_per_pair=4,
+        threshold=0.5,
+    )
+    assert verdict.verdict == "MEANINGFUL_CONDITIONING"
+    assert verdict.mutual_information_bits >= 0.99
+    assert verdict.num_unique_side_info_symbols == 2
+
+
+def test_compute_pq_mi_verdict_rejects_length_mismatch():
+    with pytest.raises(ValueError, match="expanded side-info length"):
+        compute_pq_mi_verdict(
+            latent_stream=b"\x00\x01\x02",
+            per_pair_symbols=[1, 2],
+            symbols_per_pair=2,
+        )
 
 
 # ============================================================================
@@ -575,12 +599,16 @@ def test_module_all_exports_canonical_api():
         "CANONICAL_VARIANT_V2_SPARSE_TOP_K",
         "CANONICAL_VARIANT_V3_POOL_SHARED",
         "CONTEST_RATE_NORMALIZER_BYTES",
+        "DEFAULT_MEANINGFUL_MI_THRESHOLD_BITS",
         "DEFAULT_M_SUBQ",
         "DEFAULT_NBITS",
         "DEFAULT_NLIST",
         "DEFAULT_TRAINING_SEED",
+        "INDEPENDENCE_TOLERANCE_BITS",
         "PqEncodingBudget",
+        "PqMiVerdict",
         "build_pq_codebook",
+        "compute_pq_mi_verdict",
         "decode_per_region_histogram",
         "deserialize_codebook",
         "encode_per_region_histogram",

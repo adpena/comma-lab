@@ -135,6 +135,7 @@ RECIPE_BY_SUBSTRATE: dict[str, str] = {
     "time_traveler_l5_z7_mamba2": "substrate_time_traveler_l5_z7_mamba2_modal_a100_dispatch",
     "atw_codec_v2": "substrate_atw_codec_v2_modal_a100_dispatch",
     "atw_codec_v2_1_faiss_ivf_pq": "substrate_atw_v2_1_modal_t4_smoke_dispatch",
+    "v8_learned_compression_faiss": "substrate_v8_learned_compression_faiss_modal_a100_smoke",
     "time_traveler_l5_autonomy": "substrate_time_traveler_l5_autonomy_modal_a100_dispatch",
     "c6_e4_mdl_ibps": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch",
     "dp1_pr101_composition": "substrate_pr101_with_dp1_prior_modal_cpu_smoke_dispatch",
@@ -148,6 +149,7 @@ TRAINER_BY_SUBSTRATE: dict[str, str] = {
     "time_traveler_l5_z7_lstm_predictive_coding": "train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py",
     "time_traveler_l5_z7_mamba2": "train_substrate_time_traveler_l5_z7_mamba2.py",
     "atw_codec_v2_1_faiss_ivf_pq": "train_substrate_atw_v2_1.py",
+    "v8_learned_compression_faiss": "train_substrate_v8_learned_compression_faiss.py",
     "dp1_pr101_composition": "train_substrate_pr101_with_dp1_prior_regularizer.py",
     "lane_17_imp": "train_imp_cycle.py",
 }
@@ -179,6 +181,12 @@ SUBSTRATE_ALIASES: dict[str, tuple[str, ...]] = {
         "faiss-ivf-pq",
         "substrate_atw_v2_1_modal_t4_smoke_dispatch",
         "lane_top5_3_atw_v2_1_faiss_ivf_pq_scaffold_design_20260518",
+    ),
+    "v8_learned_compression_faiss": (
+        "atw_v2_1_faiss_pq_v8",
+        "atw_codec_v2_1_faiss_ivf_pq_v8_learned_compression",
+        "substrate_v8_learned_compression_faiss_modal_a100_smoke",
+        "lane_v8_learned_compression_faiss_scaffold_codex_20260520",
     ),
 }
 

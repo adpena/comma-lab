@@ -78,6 +78,16 @@ from tac.packet_compiler.pr100_schema_driven_decoder import (
     decode_schema_driven,
     encode_schema_driven,
 )
+from tac.packet_compiler.pr101_fec6_candidate_queue import (
+    PR101FEC6CandidateQueueError,
+    PR101_FEC6_BYTE_ACCOUNTING_SCHEMA,
+    PR101_FEC6_CANDIDATE_QUEUE_SCHEMA,
+    QUEUE_CONSUMER_SURFACES,
+    RUNTIME_CONSUMER_SURFACES,
+    build_pr101_fec6_packetir_candidate_queue,
+    packetir_byte_accounting,
+    render_pr101_fec6_packetir_candidate_queue_markdown,
+)
 from tac.packet_compiler.pr105_packed_state_schema import (
     PackedStateSchemaEntry,
     pack_state_schema_size_sorted,
@@ -498,6 +508,15 @@ __all__ = [
     "SchemaDrivenPayload",
     "decode_schema_driven",
     "encode_schema_driven",
+    # PR101/FEC6 — PacketIR candidate queue byte accounting
+    "PR101FEC6CandidateQueueError",
+    "PR101_FEC6_BYTE_ACCOUNTING_SCHEMA",
+    "PR101_FEC6_CANDIDATE_QUEUE_SCHEMA",
+    "QUEUE_CONSUMER_SURFACES",
+    "RUNTIME_CONSUMER_SURFACES",
+    "build_pr101_fec6_packetir_candidate_queue",
+    "packetir_byte_accounting",
+    "render_pr101_fec6_packetir_candidate_queue_markdown",
     # PR105 — kitchen_sink packed-state-schema size-sorted helper
     "PackedStateSchemaEntry",
     "pack_state_schema_size_sorted",

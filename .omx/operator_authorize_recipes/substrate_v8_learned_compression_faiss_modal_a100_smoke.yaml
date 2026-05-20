@@ -1,0 +1,63 @@
+schema_version: 1
+name: substrate_v8_learned_compression_faiss_modal_a100_smoke
+lane_id: lane_v8_learned_compression_faiss_scaffold_codex_20260520
+summary: |
+  V8 learned-compression Faiss local/Modal smoke recipe scaffold. This is
+  intentionally disabled after the local byte-closed fixture export landed:
+  paid smoke still requires real contest-video scorer training, exact-eval
+  custody, and Catalog #324 post-training Tier-C validation.
+
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - real_contest_video_scorer_training_not_run
+  - exact_cuda_auth_eval_missing
+  - catalog_324_tier_c_validation_missing
+  - modal_dispatch_recipe_remains_research_only_and_disabled
+pre_promotion_blockers:
+  - v8_learned_byte_closed_archive_missing
+  - v8_contest_runtime_custody_missing
+  - v8_exact_cuda_auth_eval_missing
+  - v8_exact_cpu_cuda_axis_pair_missing
+  - v8_score_claim_provenance_missing
+
+platform: modal
+gpu: A100
+min_vram_gb: 40
+min_smoke_gpu: "A100"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+
+predicted_band: [0.187, 0.193]
+predicted_band_kind: predicted_score_band
+predicted_band_axis: contest-CPU
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Dispatch and promotion require a byte-closed archive, runtime custody,
+  post-training Tier-C validation, and exact CUDA/CPU auth-eval artifacts.
+predicted_delta: "design-level prediction only; no score claim; no dispatch authority"
+predicted_delta_basis: .omx/research/v1_faiss_v8_learned_compression_faiss_design_20260519.md
+
+remote_driver: experiments/train_substrate_v8_learned_compression_faiss.py
+required_input_files_trainer: experiments/train_substrate_v8_learned_compression_faiss.py
+
+required_input_files:
+  - flag: --base-archive
+    default_path: submissions/a1/archive.zip
+  - flag: --upstream-dir
+    default_path: upstream
+
+modal:
+  lane_script: experiments/train_substrate_v8_learned_compression_faiss.py
+  cost_band_trainer: experiments/train_substrate_v8_learned_compression_faiss.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: false
+
+env_overrides:
+  V8_FAISS_TRAINER_MODE: smoke
+  V8_FAISS_DEVICE: cuda
+  V8_FAISS_BASE_ARCHIVE: /workspace/pact/submissions/a1/archive.zip
+  V8_FAISS_UPSTREAM_DIR: /workspace/pact/upstream

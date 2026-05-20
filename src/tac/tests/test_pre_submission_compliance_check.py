@@ -47,7 +47,19 @@ def _write_submission(
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("x", b"payload")
     inflate = root / "inflate.sh"
-    inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8")
+    inflate.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "ARCHIVE_DIR=\"$1\"\n"
+        "OUTPUT_DIR=\"$2\"\n"
+        "FILE_LIST=\"$3\"\n"
+        "mkdir -p \"$OUTPUT_DIR\"\n"
+        "while IFS= read -r line; do\n"
+        "  [ -z \"$line\" ] && continue\n"
+        "  : \"$ARCHIVE_DIR/$line\"\n"
+        "done < \"$FILE_LIST\"\n",
+        encoding="utf-8",
+    )
     inflate.chmod(0o755)
     if runtime_tree is None:
         runtime_tree = mod._submission_runtime_manifest(root)["runtime_tree_sha256"]
@@ -234,6 +246,29 @@ def _write_terminal_claim(
     )
 
 
+def _write_hosted_archive_manifest(
+    path: Path,
+    *,
+    archive_sha256: str,
+    archive_size_bytes: int,
+    url: str = "https://github.com/adpena/comma_video_compression_challenge/releases/download/pr101-fec6/archive.zip",
+) -> str:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "hosted_archive_manifest_v1",
+                "url": url,
+                "archive_sha256": archive_sha256,
+                "archive_size_bytes": archive_size_bytes,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return url
+
+
 def _rewrite_auth_score(path: Path, target_score: float) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     archive_bytes = int(payload["archive_size_bytes"])
@@ -285,6 +320,213 @@ def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
     assert strict_formula["score"] == strict_formula["report_reconstructed_score"]
     assert report["contest_cpu_auth_eval"]["record"]["score_axis"] == "contest_cpu"
     assert report["contest_cpu_auth_eval"]["record"]["promotion_eligible"] is False
+
+
+def test_strict_contest_final_requires_hosted_archive_manifest(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--strict",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "hosted_archive_manifest_supplied" in _failed_check_names(report)
+
+
+def test_strict_contest_final_accepts_hosted_archive_manifest(tmp_path: Path) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    hosted_manifest = tmp_path / "hosted_archive.json"
+    url = _write_hosted_archive_manifest(
+        hosted_manifest,
+        archive_sha256=expected["archive_sha256"],
+        archive_size_bytes=expected["archive_size_bytes"],
+    )
+    with (submission / "report.txt").open("a", encoding="utf-8") as handle:
+        handle.write(f"hosted archive: {url}\n")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--auth-eval-json",
+                str(submission / "contest_auth_eval.json"),
+                "--contest-final",
+                "--strict",
+                "--hosted-archive-manifest-json",
+                str(hosted_manifest),
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    assert report["hosted_archive"]["valid"] is True
+
+
+def test_strict_contest_final_rejects_hosted_archive_placeholder(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    hosted_manifest = tmp_path / "hosted_archive.json"
+    url = _write_hosted_archive_manifest(
+        hosted_manifest,
+        archive_sha256=expected["archive_sha256"],
+        archive_size_bytes=expected["archive_size_bytes"],
+    )
+    with (submission / "report.txt").open("a", encoding="utf-8") as handle:
+        handle.write(f"hosted archive: {url}\n")
+        handle.write("draft placeholder: <HOSTED_URL_PLACEHOLDER>\n")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--auth-eval-json",
+                str(submission / "contest_auth_eval.json"),
+                "--contest-final",
+                "--strict",
+                "--hosted-archive-manifest-json",
+                str(hosted_manifest),
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "hosted_archive_public_text_has_no_placeholder" in _failed_check_names(report)
+
+
+def test_strict_contest_final_rejects_hosted_archive_placeholder_in_public_scan_path(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    hosted_manifest = tmp_path / "hosted_archive.json"
+    url = _write_hosted_archive_manifest(
+        hosted_manifest,
+        archive_sha256=expected["archive_sha256"],
+        archive_size_bytes=expected["archive_size_bytes"],
+    )
+    with (submission / "report.txt").open("a", encoding="utf-8") as handle:
+        handle.write(f"hosted archive: {url}\n")
+    public_pr_body = tmp_path / "PR_BODY.md"
+    public_pr_body.write_text("Hosted at: <HOSTED_URL_PLACEHOLDER>\n", encoding="utf-8")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--auth-eval-json",
+                str(submission / "contest_auth_eval.json"),
+                "--contest-final",
+                "--strict",
+                "--hosted-archive-manifest-json",
+                str(hosted_manifest),
+                "--public-scan-path",
+                str(public_pr_body),
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "hosted_archive_public_text_has_no_placeholder" in _failed_check_names(report)
+    assert mod._rel(public_pr_body) in report["hosted_archive"]["public_text_sources"]
 
 
 def test_pre_submission_check_contest_final_requires_cpu_auth_eval_json(
@@ -806,6 +1048,273 @@ def test_contest_final_accepts_pinned_source_and_reproduce_command(
     }
 
 
+def test_contest_final_accepts_public_source_ref_manifest(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    source_refs = tmp_path / "source_refs.json"
+    source_refs.write_text(
+        json.dumps(
+            {
+                "schema": "public_source_ref_manifest_v1",
+                "repo_url": "https://github.com/adpena/tac",
+                "refs": {"refs/heads/main": PINNED_GIT_SHA},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+                "--public-source-ref-manifest-json",
+                str(source_refs),
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    source = report["public_source_reproducibility"]
+    assert source["source_ref_manifest"]["valid"] is True
+    assert source["source_ref_manifest"]["visible_pins"] == [
+        f"https://github.com/adpena/tac/commit/{PINNED_GIT_SHA}"
+    ]
+    assert mod._source_pin_publicly_visible(
+        PINNED_GIT_SHA,
+        {"refs/heads/main": PINNED_GIT_SHA},
+    )
+
+
+def test_contest_final_accepts_public_source_pin_in_public_scan_path(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    report_path = submission / "report.txt"
+    report_path.write_text(
+        f"archive_sha256: {expected['archive_sha256']}\n"
+        f"archive_size_bytes: {expected['archive_size_bytes']}\n"
+        f"runtime_tree_sha256: {expected['runtime_tree']}\n"
+        "CUDA axis score: 0.1 [contest-CUDA]\n"
+        "CPU axis score: 0.1 [contest-CPU]\n"
+        "source code: https://github.com/adpena/tac\n"
+        "reproduce command: .venv/bin/python experiments/contest_auth_eval.py "
+        "--archive archive.zip --inflate-sh inflate.sh --device cuda\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    source_refs = tmp_path / "source_refs.json"
+    source_refs.write_text(
+        json.dumps(
+            {
+                "schema": "public_source_ref_manifest_v1",
+                "repo_url": "https://github.com/adpena/tac",
+                "refs": {"refs/heads/main": PINNED_GIT_SHA},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    public_pr_body = tmp_path / "PR_BODY.md"
+    public_pr_body.write_text(
+        f"Public source pin: https://github.com/adpena/tac/commit/{PINNED_GIT_SHA}\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+                "--public-source-ref-manifest-json",
+                str(source_refs),
+                "--public-scan-path",
+                str(public_pr_body),
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    source = report["public_source_reproducibility"]
+    assert mod._rel(public_pr_body) in source["sources"]
+    assert source["pinned_source_refs"] == [
+        f"https://github.com/adpena/tac/commit/{PINNED_GIT_SHA}"
+    ]
+
+
+def test_contest_final_rejects_source_pin_placeholder_in_public_scan_path(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    report_path = submission / "report.txt"
+    report_path.write_text(
+        f"archive_sha256: {expected['archive_sha256']}\n"
+        f"archive_size_bytes: {expected['archive_size_bytes']}\n"
+        f"runtime_tree_sha256: {expected['runtime_tree']}\n"
+        "CUDA axis score: 0.1 [contest-CUDA]\n"
+        "CPU axis score: 0.1 [contest-CPU]\n"
+        "source code: https://github.com/adpena/tac\n"
+        "reproduce command: .venv/bin/python experiments/contest_auth_eval.py "
+        "--archive archive.zip --inflate-sh inflate.sh --device cuda\n",
+        encoding="utf-8",
+    )
+    public_pr_body = tmp_path / "PR_BODY.md"
+    public_pr_body.write_text(
+        "Source checkout: git checkout <PINNED_COMMIT>\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--contest-final",
+                "--public-scan-path",
+                str(public_pr_body),
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    failed = _failed_check_names(report)
+    assert not report["passed"]
+    assert "public_source_pinned_revision_present" in failed
+    assert "public_source_pin_text_has_no_placeholder" in failed
+    assert report["public_source_reproducibility"]["pin_placeholders"] == [
+        "<PINNED_COMMIT>"
+    ]
+    assert any(
+        mod._rel(public_pr_body) in hit
+        for hit in report["public_source_reproducibility"]["pin_placeholder_locations"]
+    )
+
+
+def test_contest_final_rejects_unpublished_source_pin_manifest(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    source_refs = tmp_path / "source_refs.json"
+    source_refs.write_text(
+        json.dumps(
+            {
+                "schema": "public_source_ref_manifest_v1",
+                "repo_url": "https://github.com/adpena/tac",
+                "refs": {"refs/heads/main": "b" * 40},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+                "--public-source-ref-manifest-json",
+                str(source_refs),
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "public_source_pinned_revision_publicly_visible" in _failed_check_names(report)
+    assert report["public_source_reproducibility"]["source_ref_manifest"]["valid"] is False
+
+
 def test_contest_final_requires_public_cpu_and_cuda_axis_labels(tmp_path: Path) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")
@@ -858,6 +1367,166 @@ def test_contest_final_requires_public_cpu_and_cuda_axis_labels(tmp_path: Path) 
     assert "public_evidence_contest_cpu_label_present" in failed
 
 
+def test_contest_final_accepts_public_axis_labels_in_public_scan_path(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    report_path = submission / "report.txt"
+    report_path.write_text(
+        f"archive_sha256: {expected['archive_sha256']}\n"
+        f"archive_size_bytes: {expected['archive_size_bytes']}\n"
+        "score: 0.1\n"
+        "source code: https://github.com/adpena/tac\n"
+        f"pinned source: https://github.com/adpena/tac/commit/{PINNED_GIT_SHA}\n"
+        f"runtime_tree_sha256: {expected['runtime_tree']}\n"
+        "reproduce command: .venv/bin/python experiments/contest_auth_eval.py "
+        "--archive archive.zip --inflate-sh inflate.sh --device cuda\n",
+        encoding="utf-8",
+    )
+    public_pr_body = tmp_path / "PR_BODY.md"
+    public_pr_body.write_text(
+        "CUDA evidence: 0.1 [contest-CUDA]\nCPU evidence: 0.1 [contest-CPU]\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--contest-final",
+                "--public-scan-path",
+                str(public_pr_body),
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    labels = report["public_evidence_axis_labels"]
+    assert labels["labels"] == {"[contest-CUDA]": True, "[contest-CPU]": True}
+    assert mod._rel(public_pr_body) in labels["sources"]
+
+
+def test_contest_final_rejects_generic_public_template_placeholder(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    public_pr_body = tmp_path / "PR_BODY.md"
+    public_pr_body.write_text("Release URL: <REPLACE_ME>\n", encoding="utf-8")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--contest-final",
+                "--public-scan-path",
+                str(public_pr_body),
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "public_text_has_no_unresolved_template_placeholders" in _failed_check_names(report)
+    placeholders = report["public_template_placeholders"]
+    assert placeholders["placeholders"] == ["<REPLACE_ME>"]
+    assert any(mod._rel(public_pr_body) in hit for hit in placeholders["placeholder_locations"])
+
+
+def test_contest_final_allows_upstream_inflate_signature_placeholders(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    public_pr_body = tmp_path / "PR_BODY.md"
+    public_pr_body.write_text(
+        "Contract: inflate.sh <archive_dir> <output_dir> <file_list>\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--contest-final",
+                "--public-scan-path",
+                str(public_pr_body),
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    placeholders = report["public_template_placeholders"]
+    assert placeholders["placeholders"] == []
+    assert "<archive_dir>" in placeholders["allowlist"]
+
+
 def test_pre_submission_check_contest_final_rejects_runtime_tree_mismatch(
     tmp_path: Path,
 ) -> None:
@@ -882,6 +1551,229 @@ def test_pre_submission_check_contest_final_rejects_runtime_tree_mismatch(
 
     assert not report["passed"]
     assert "submission_runtime_tree_matches_auth_eval" in _failed_check_names(report)
+
+
+def test_pre_submission_check_accepts_strict_runtime_equivalence_proof(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission, runtime_tree="b" * 64)
+    current_runtime_tree = mod._submission_runtime_manifest(submission)["runtime_tree_sha256"]
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=current_runtime_tree,
+    )
+    proof = tmp_path / "runtime_equivalence.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "pre_submission_runtime_equivalence_proof_v1",
+                "archive_sha256": expected["archive_sha256"],
+                "archive_size_bytes": expected["archive_size_bytes"],
+                "auth_eval_runtime_tree_sha256": "b" * 64,
+                "submission_runtime_tree_sha256": current_runtime_tree,
+                "equivalence_basis": "full_inflate_output_byte_identity",
+                "output_equivalence": {
+                    "basis": "full_inflate_output_byte_identity",
+                    "baseline_output_sha256": "c" * 64,
+                    "candidate_output_sha256": "c" * 64,
+                    "diff_bytes": 0,
+                    "files": [
+                        {
+                            "path": "0.raw",
+                            "auth_eval_output_sha256": "c" * 64,
+                            "submission_output_sha256": "c" * 64,
+                            "diff_bytes": 0,
+                        }
+                    ],
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                current_runtime_tree,
+                "--runtime-equivalence-proof-json",
+                str(proof),
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    assert report["submission_runtime"]["runtime_equivalence_proof"]["valid"] is True
+
+
+def test_pre_submission_check_rejects_stale_runtime_equivalence_shape(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission, runtime_tree="b" * 64)
+    current_runtime_tree = mod._submission_runtime_manifest(submission)["runtime_tree_sha256"]
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=current_runtime_tree,
+    )
+    proof = tmp_path / "runtime_equivalence.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "pre_submission_runtime_equivalence_proof_v1",
+                "archive_sha256": expected["archive_sha256"],
+                "archive_size_bytes": expected["archive_size_bytes"],
+                "auth_eval_runtime_tree_sha256": "b" * 64,
+                "submission_runtime_tree_sha256": current_runtime_tree,
+                "submission_runtime_shape": {"inflate.sh": "0" * 64},
+                "equivalence_basis": "full_inflate_output_byte_identity",
+                "output_equivalence": {
+                    "basis": "full_inflate_output_byte_identity",
+                    "baseline_output_sha256": "c" * 64,
+                    "candidate_output_sha256": "c" * 64,
+                    "diff_bytes": 0,
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                current_runtime_tree,
+                "--runtime-equivalence-proof-json",
+                str(proof),
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    failed = _failed_check_names(report)
+    assert not report["passed"]
+    assert "runtime_equivalence_proof_submission_runtime_shape_matches" in failed
+    diff = report["submission_runtime"]["runtime_equivalence_proof"][
+        "submission_runtime_shape_diff"
+    ]
+    assert diff["changed"][0]["relative_path"] == "inflate.sh"
+    assert report["submission_runtime"]["runtime_equivalence_proof"]["valid"] is False
+
+
+def test_pre_submission_check_rejects_malformed_runtime_equivalence_proof_size(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission, runtime_tree="b" * 64)
+    current_runtime_tree = mod._submission_runtime_manifest(submission)["runtime_tree_sha256"]
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=current_runtime_tree,
+    )
+    proof = tmp_path / "runtime_equivalence.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "pre_submission_runtime_equivalence_proof_v1",
+                "archive_sha256": expected["archive_sha256"],
+                "archive_size_bytes": "not-an-int",
+                "auth_eval_runtime_tree_sha256": "b" * 64,
+                "submission_runtime_tree_sha256": current_runtime_tree,
+                "equivalence_basis": "full_inflate_output_byte_identity",
+                "output_equivalence": {
+                    "basis": "full_inflate_output_byte_identity",
+                    "baseline_output_sha256": "c" * 64,
+                    "candidate_output_sha256": "c" * 64,
+                    "diff_bytes": 0,
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                current_runtime_tree,
+                "--runtime-equivalence-proof-json",
+                str(proof),
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    failed = _failed_check_names(report)
+    assert not report["passed"]
+    assert "runtime_equivalence_proof_archive_matches" in failed
+    assert "auth_eval_runtime_tree_expected_match" in failed
+    assert "submission_runtime_tree_matches_auth_eval" in failed
+    assert report["submission_runtime"]["runtime_equivalence_proof"]["valid"] is False
 
 
 def test_pre_submission_check_matches_auth_runtime_after_custody_pruning_and_remote_root(
@@ -1750,3 +2642,186 @@ def test_pre_submission_check_detects_non_executable_inflate(tmp_path: Path) -> 
     report = mod.build_report(mod.build_arg_parser().parse_args(["--submission-dir", str(tmp_path / "submission")]))
     assert not report["passed"]
     assert "inflate_sh_executable" in _failed_check_names(report)
+
+
+def test_pre_submission_check_requires_canonical_inflate_signature(tmp_path: Path) -> None:
+    mod = _load_module()
+    _write_submission(tmp_path / "submission")
+    (tmp_path / "submission" / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\npython inflate.py \"$1\" \"$2\"\n",
+        encoding="utf-8",
+    )
+    report = mod.build_report(mod.build_arg_parser().parse_args(["--submission-dir", str(tmp_path / "submission")]))
+    assert not report["passed"]
+    assert "inflate_sh_uses_canonical_three_arg_contract" in _failed_check_names(report)
+
+
+def test_pre_submission_check_rejects_runtime_scorer_imports(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    (tmp_path / "submission" / "inflate.py").write_text(
+        "from modules import DistortionNet\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+    assert not report["passed"]
+    assert "submission_runtime_loads_no_scorers_or_eval" in _failed_check_names(report)
+
+
+def test_pre_submission_check_rejects_runtime_network_install_or_local_paths(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    (tmp_path / "submission" / "inflate.py").write_text(
+        "import urllib.request\nurllib.request.urlopen('https://example.com/archive.zip')\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+    assert not report["passed"]
+    assert "submission_runtime_has_no_network_install_or_local_paths" in _failed_check_names(report)
+
+
+def test_pre_submission_check_rejects_runtime_dependency_outside_allowlist(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    (tmp_path / "submission" / "inflate.py").write_text(
+        "import pandas as pd\nprint(pd.__version__)\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+    assert not report["passed"]
+    assert "submission_runtime_imports_within_allowlist" in _failed_check_names(report)
+    assert any(
+        hit.endswith("submission/inflate.py:pandas")
+        for hit in report["submission_runtime"]["disallowed_runtime_imports"]
+    )
+
+
+def test_pre_submission_check_rejects_unparseable_runtime_imports(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    (tmp_path / "submission" / "inflate.py").write_text(
+        "import torch\nif True print('bad')\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+    assert not report["passed"]
+    assert "submission_runtime_import_allowlist_parseable" in _failed_check_names(report)
+    assert report["submission_runtime"]["runtime_import_parse_errors"]

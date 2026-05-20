@@ -20,9 +20,9 @@
 #   - van den Oord, Vinyals, Kavukcuoglu - "Neural Discrete Representation
 #     Learning" NeurIPS 2017 (architectural anchor)
 #
-# Score-tagging: any score this script produces is tagged [contest-CUDA] in
-# the completion-log line (LANE_VQ_VAE_DONE marker) per the CLAUDE.md
-# score-tag rule and preflight completion-tag check.
+# Score-tagging: the Modal training wrapper usually sets AUTH_EVAL_DEVICE=cpu
+# and MODAL_AUTH_EVAL_ADVISORY_ONLY=1, so inline auth-eval is diagnostic and
+# non-promotable unless the actual auth-eval artifact is CUDA-axis.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity - non-negotiable".
 set -euo pipefail
@@ -66,6 +66,8 @@ VQ_VAE_EPOCHS="${VQ_VAE_EPOCHS:-2000}"
 VQ_VAE_BATCH_SIZE="${VQ_VAE_BATCH_SIZE:-16}"
 VQ_VAE_UPSTREAM_DIR="${VQ_VAE_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 VQ_VAE_DEVICE="${VQ_VAE_DEVICE:-cuda}"
+VQ_VAE_CODEBOOK_SIZE="${VQ_VAE_CODEBOOK_SIZE:-}"
+VQ_VAE_ALPHA_RATE="${VQ_VAE_ALPHA_RATE:-}"
 
 DISPATCH_INSTANCE_JOB_ID="${VQ_VAE_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${VQ_VAE_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -76,6 +78,23 @@ log() { echo "[lane-vq-vae] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; 
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
+
+if [ -z "$VQ_VAE_CODEBOOK_SIZE" ]; then
+    log "FATAL: VQ_VAE_CODEBOOK_SIZE is required by the K-sweep recipe; refusing phantom default K"
+    exit 64
+fi
+if [ -z "$VQ_VAE_ALPHA_RATE" ]; then
+    log "FATAL: VQ_VAE_ALPHA_RATE is required by the K-sweep recipe; refusing phantom default alpha"
+    exit 64
+fi
+if ! [[ "$VQ_VAE_CODEBOOK_SIZE" =~ ^[0-9]+$ ]]; then
+    log "FATAL: VQ_VAE_CODEBOOK_SIZE must be an integer, got '$VQ_VAE_CODEBOOK_SIZE'"
+    exit 64
+fi
+if ! [[ "$VQ_VAE_ALPHA_RATE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+    log "FATAL: VQ_VAE_ALPHA_RATE must be a non-negative decimal, got '$VQ_VAE_ALPHA_RATE'"
+    exit 64
+fi
 
 # Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
 rm -f upstream/videos/._*.mkv
@@ -160,13 +179,15 @@ prov = {
     'epochs': $VQ_VAE_EPOCHS,
     'batch_size': $VQ_VAE_BATCH_SIZE,
     'device': '$VQ_VAE_DEVICE',
-    # Council Phase 5 prediction: 0.17 [contest-CUDA].
-    # Source: .omx/research/grand_council_fields_medal_substrate_design_20260512.md
-    # + recipe substrate_vq_vae_modal_a100_dispatch.yaml::predicted_score_target.
-    # Band convention: [LOW, HIGH] in score-space (lower = better contest score).
-    # Predicted target = 0.17; council 95% CI band [0.155, 0.185].
-    'predicted_band': [0.155, 0.185],
-    'predicted_basis': 'grand_council_fields_medal_substrate_design_20260512',
+    'codebook_size': $VQ_VAE_CODEBOOK_SIZE,
+    'alpha_rate': $VQ_VAE_ALPHA_RATE,
+    'diagnostic_contract': 'fixed_int16_vqv1_quality_probe_no_frontier_authority',
+    'predicted_band': None,
+    'predicted_basis': 'none_for_fixed_int16_diagnostic',
+    'class_shift_followup': 'vq_v1_k_dependent_entropy_packed_archive',
+    'score_claim': False,
+    'promotion_eligible': False,
+    'rank_or_kill_eligible': False,
     'literature_anchor': 'van den Oord et al. NeurIPS 2017 - Neural Discrete Representation Learning',
 }
 import pathlib
@@ -188,7 +209,7 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # Stage 4: invoke trainer.
 #
 # All 6 TIER_1_OPERATOR_REQUIRED_FLAGS are threaded explicitly per Catalog #151.
-log "stage_4_trainer_invoke_begin video=$VQ_VAE_VIDEO_PATH epochs=$VQ_VAE_EPOCHS device=$VQ_VAE_DEVICE batch_size=$VQ_VAE_BATCH_SIZE"
+log "stage_4_trainer_invoke_begin video=$VQ_VAE_VIDEO_PATH epochs=$VQ_VAE_EPOCHS device=$VQ_VAE_DEVICE batch_size=$VQ_VAE_BATCH_SIZE codebook_size=$VQ_VAE_CODEBOOK_SIZE alpha_rate=$VQ_VAE_ALPHA_RATE"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 set +e
 "$PYBIN" experiments/train_substrate_vq_vae.py \
@@ -198,6 +219,8 @@ set +e
     --batch-size "$VQ_VAE_BATCH_SIZE" \
     --upstream-dir "$VQ_VAE_UPSTREAM_DIR" \
     --device "$VQ_VAE_DEVICE" \
+    --codebook-size "$VQ_VAE_CODEBOOK_SIZE" \
+    --alpha-rate "$VQ_VAE_ALPHA_RATE" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e
@@ -205,11 +228,21 @@ TRAIN_END_UTC=$(date -u +%FT%TZ)
 log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_END_UTC"
 
 # Stage 5: completion record.
-AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_cuda.json"
-ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
+AUTH_EVAL_DEVICE_RESOLVED="${AUTH_EVAL_DEVICE:-$VQ_VAE_DEVICE}"
+AUTH_EVAL_DEVICE_RESOLVED="${AUTH_EVAL_DEVICE_RESOLVED%%:*}"
+case "$AUTH_EVAL_DEVICE_RESOLVED" in
+    cuda|cpu) ;;
+    *) AUTH_EVAL_DEVICE_RESOLVED="cuda" ;;
+esac
+AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_${AUTH_EVAL_DEVICE_RESOLVED}.json"
+ARCHIVE_PATH="$OUTPUT_DIR/archive.zip"
 if [ -f "$AUTH_EVAL_JSON" ]; then
-    log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_VQ_VAE_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+    log "auth_eval_artifact_present device=$AUTH_EVAL_DEVICE_RESOLVED path=$AUTH_EVAL_JSON"
+    if [ "$AUTH_EVAL_DEVICE_RESOLVED" = "cuda" ]; then
+        log "LANE_VQ_VAE_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+    else
+        log "LANE_VQ_VAE_DONE [diagnostic-auth-eval] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC score_claim=false promotion_eligible=false"
+    fi
 else
     log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 12)"
 fi

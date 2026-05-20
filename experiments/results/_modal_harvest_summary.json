@@ -1384,112 +1384,123 @@
   {
     "label": "mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z",
     "call_id": "fc-01KRZD8662BV697P8JVNR4WGCC",
+    "status": "already_harvested",
     "rc": 0,
     "elapsed_seconds": 9.496662852,
     "timed_out": false,
     "n_artifacts": 10,
-    "artifact_files": [
-      {
-        "relative_path": "results/mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z/modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/results/mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z/modal_worker_head_ledger.json",
-        "bytes": 2854
-      },
-      {
-        "relative_path": "experiments/results/mps_gap_experiment_local/checkpoint_ema.pt",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/experiments/results/mps_gap_experiment_local/checkpoint_ema.pt",
-        "bytes": 32253
-      },
-      {
-        "relative_path": "experiments/results/mps_gap_experiment_local/frame_cache.pt",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/experiments/results/mps_gap_experiment_local/frame_cache.pt",
-        "bytes": 47187589
-      },
-      {
-        "relative_path": "modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/modal_worker_head_ledger.json",
-        "bytes": 2854
-      },
-      {
-        "relative_path": "modal_lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/modal_lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z.log",
-        "bytes": 191
-      },
-      {
-        "relative_path": "modal_live_metadata.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/modal_live_metadata.json",
-        "bytes": 439
-      },
-      {
-        "relative_path": "checkpoint_ema.pt",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/checkpoint_ema.pt",
-        "bytes": 32253
-      },
-      {
-        "relative_path": "frame_cache.pt",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/frame_cache.pt",
-        "bytes": 47187589
-      },
-      {
-        "relative_path": "mps_gap_results/target_cuda_components.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/mps_gap_results/target_cuda_components.json",
-        "bytes": 774
-      },
-      {
-        "relative_path": "mps_gap_results/target_cuda_forward_outputs.pt",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal/harvested_artifacts/mps_gap_results/target_cuda_forward_outputs.pt",
-        "bytes": 47187328
-      }
-    ],
     "crash_kind": "OK",
-    "outcome_classification": "successful_dispatch",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
-      "appended": true,
+      "all_flags_on": false,
       "already_appended": false,
-      "score_claim": false,
-      "promotion_eligible": false,
+      "appended": true,
+      "batch_size": 2,
       "cost_estimate": true,
       "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
       "dispatch_label": "mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z",
-      "trainer": "experiments/mps_gap_experiment_a10g_dispatch.py",
-      "platform": "modal",
-      "gpu": "A10G",
-      "epochs": 1,
-      "batch_size": 2,
-      "all_flags_on": false,
       "elapsed_seconds": 9.496662852,
+      "epochs": 1,
       "estimated_cost_usd": 0.002901758093666667,
+      "gpu": "A10G",
       "hourly_rate_usd": 1.1,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=1.1; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
       "outcome": "successful_dispatch",
-      "returncode": 0,
+      "platform": "modal",
       "posterior_path": null,
-      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=1.1; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/mps_gap_experiment_a10g_dispatch.py"
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "lane_phase_b_mps_gap_experiment_infrastructure_build_20260518",
+      "appended": true,
       "instance_job_id": "mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z",
+      "lane_id": "lane_phase_b_mps_gap_experiment_infrastructure_build_20260518",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=9.496662852; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal",
       "platform": "modal",
-      "status": "completed_modal_training_recovered_no_score_claim",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=9.496662852; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
     },
     "terminal_evidence": {
-      "appended": true,
-      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "appended": false,
+      "already_covered": true,
       "lane_id": "lane_phase_b_mps_gap_experiment_infrastructure_build_20260518",
       "instance_job_id": "mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T060202Z",
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRZD8662BV697P8JVNR4WGCC",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-19T06:03:59.395682Z"
+      "latest_status": "harvested"
+    }
+  },
+  {
+    "label": "mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T062140Z",
+    "call_id": "fc-01KRZEC44SCJ649P8NAZ1NH1NE",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 9.214218467999999,
+    "timed_out": false,
+    "n_artifacts": 1,
+    "crash_kind": "HARVESTED_PARTIAL",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "cost_band_anchor": {
+      "all_flags_on": false,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 2,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T062140Z",
+      "elapsed_seconds": 9.214218467999999,
+      "epochs": 1,
+      "estimated_cost_usd": 0.002815455643,
+      "gpu": "A10G",
+      "hourly_rate_usd": 1.1,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=1.1; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/mps_gap_experiment_a10g_dispatch.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T062140Z",
+      "lane_id": "lane_phase_b_mps_gap_experiment_infrastructure_build_20260518",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=9.214218467999999; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T062140Z_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_phase_b_mps_gap_experiment_infrastructure_build_20260518",
+      "instance_job_id": "mps_gap_experiment_tiny_renderer_modal_a10g_dispatch_20260519T062140Z",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRZEC44SCJ649P8NAZ1NH1NE",
+      "latest_status": "harvested"
     }
   },
   {
@@ -4418,258 +4429,125 @@
   {
     "label": "substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z",
     "call_id": "fc-01KRZCHVY6C1TSFNNS6KN13G70",
+    "status": "already_harvested",
     "rc": 1,
     "elapsed_seconds": 2.1138350979999956,
     "timed_out": false,
     "n_artifacts": 7,
-    "artifact_files": [
-      {
-        "relative_path": "results/substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z/modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal/harvested_artifacts/results/substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z/modal_worker_head_ledger.json",
-        "bytes": 2380
-      },
-      {
-        "relative_path": "modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal/harvested_artifacts/modal_worker_head_ledger.json",
-        "bytes": 2380
-      },
-      {
-        "relative_path": "modal_lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal/harvested_artifacts/modal_lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z.log",
-        "bytes": 176
-      },
-      {
-        "relative_path": "modal_live_metadata.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal/harvested_artifacts/modal_live_metadata.json",
-        "bytes": 484
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal/harvested_artifacts/lane_stack_of_stacks_results/provenance.json",
-        "bytes": 1222
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/run_record.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal/harvested_artifacts/lane_stack_of_stacks_results/run_record.json",
-        "bytes": 1222
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/dispatch_claim_summary.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal/harvested_artifacts/lane_stack_of_stacks_results/dispatch_claim_summary.json",
-        "bytes": 385615
-      }
-    ],
     "crash_kind": "RC_1",
-    "outcome_classification": "failed_rc_1",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
-      "appended": true,
+      "all_flags_on": true,
       "already_appended": false,
-      "score_claim": false,
-      "promotion_eligible": false,
+      "appended": true,
+      "batch_size": 32,
       "cost_estimate": true,
       "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
       "dispatch_label": "substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z",
-      "trainer": "experiments/train_substrate_stack_of_stacks.py",
-      "platform": "modal",
-      "gpu": "T4",
-      "epochs": 100,
-      "batch_size": 32,
-      "all_flags_on": true,
       "elapsed_seconds": 2.1138350979999956,
+      "epochs": 100,
       "estimated_cost_usd": 0.00034643408550555485,
+      "gpu": "T4",
       "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
       "outcome": "failed_dispatch",
-      "returncode": 1,
+      "platform": "modal",
       "posterior_path": null,
-      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_stack_of_stacks.py"
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "lane_cable_b1_e7_e8_combined_dispatch_20260519",
+      "appended": true,
       "instance_job_id": "substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z",
+      "lane_id": "lane_cable_b1_e7_e8_combined_dispatch_20260519",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=2.1138350979999956; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal",
       "platform": "modal",
-      "status": "failed_modal_training_rc_1",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=2.1138350979999956; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
     },
     "terminal_evidence": {
-      "appended": true,
-      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "appended": false,
+      "already_covered": true,
       "lane_id": "lane_cable_b1_e7_e8_combined_dispatch_20260519",
       "instance_job_id": "substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T054851Z",
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRZCHVY6C1TSFNNS6KN13G70",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-19T06:04:00.020253Z"
+      "latest_status": "failed"
     }
   },
   {
     "label": "substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z",
     "call_id": "fc-01KRZCSQ7FPVMSAXZQDSZJCTN4",
+    "status": "already_harvested",
     "rc": 1,
     "elapsed_seconds": 19.507571397999996,
     "timed_out": false,
     "n_artifacts": 20,
-    "artifact_files": [
-      {
-        "relative_path": "results/substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z/modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/results/substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z/modal_worker_head_ledger.json",
-        "bytes": 2380
-      },
-      {
-        "relative_path": "modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/modal_worker_head_ledger.json",
-        "bytes": 2380
-      },
-      {
-        "relative_path": "modal_lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/modal_lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z.log",
-        "bytes": 3989
-      },
-      {
-        "relative_path": "modal_live_metadata.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/modal_live_metadata.json",
-        "bytes": 484
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/provenance.json",
-        "bytes": 1433
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/run_record.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/run_record.json",
-        "bytes": 1433
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/dispatch_claim_summary.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/dispatch_claim_summary.json",
-        "bytes": 386027
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/run.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/run.log",
-        "bytes": 1968
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/heartbeat.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/heartbeat.log",
-        "bytes": 91
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/auth_eval/heartbeat.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/auth_eval/heartbeat.log",
-        "bytes": 38
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/auth_eval/run.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/auth_eval/run.log",
-        "bytes": 1540
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/auth_eval/provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/auth_eval/provenance.json",
-        "bytes": 834
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/auth_eval/scorer_deps_probe_raw.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/auth_eval/scorer_deps_probe_raw.log",
-        "bytes": 0
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/auth_eval/runtime_tooling.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/auth_eval/runtime_tooling.json",
-        "bytes": 795
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/auth_eval/archive.zip",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/auth_eval/archive.zip",
-        "bytes": 179008
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/auth_eval/archive_custody.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/auth_eval/archive_custody.json",
-        "bytes": 447
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_results/auth_eval/auth_eval.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_results/auth_eval/auth_eval.log",
-        "bytes": 214
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_sgld_convergence_results/output/stack_of_stacks_compose_summary.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_sgld_convergence_results/output/stack_of_stacks_compose_summary.json",
-        "bytes": 1573
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_sgld_convergence_results/output/provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_sgld_convergence_results/output/provenance.json",
-        "bytes": 3105
-      },
-      {
-        "relative_path": "lane_stack_of_stacks_sgld_convergence_results/output/submission_dir/archive.zip",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal/harvested_artifacts/lane_stack_of_stacks_sgld_convergence_results/output/submission_dir/archive.zip",
-        "bytes": 179008
-      }
-    ],
     "crash_kind": "ERROR",
-    "outcome_classification": "failed_rc_1",
+    "archive_sha256": "110cfaa3f2ebbd02b91542633445e54a837ea663f98a7807a914f95651fdff9f",
+    "archive_bytes": 179008,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
-      "appended": true,
+      "all_flags_on": true,
       "already_appended": false,
-      "score_claim": false,
-      "promotion_eligible": false,
+      "appended": true,
+      "batch_size": 32,
       "cost_estimate": true,
       "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
       "dispatch_label": "substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z",
-      "trainer": "experiments/train_substrate_stack_of_stacks.py",
-      "platform": "modal",
-      "gpu": "T4",
-      "epochs": 100,
-      "batch_size": 32,
-      "all_flags_on": true,
       "elapsed_seconds": 19.507571397999996,
+      "epochs": 100,
       "estimated_cost_usd": 0.003197074201338888,
+      "gpu": "T4",
       "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
       "outcome": "failed_dispatch",
-      "returncode": 1,
+      "platform": "modal",
       "posterior_path": null,
-      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_stack_of_stacks.py"
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "lane_cable_b1_e7_e8_combined_dispatch_20260519",
+      "appended": true,
       "instance_job_id": "substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z",
+      "lane_id": "lane_cable_b1_e7_e8_combined_dispatch_20260519",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=19.507571397999996; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal",
       "platform": "modal",
-      "status": "failed_modal_training_rc_1",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=19.507571397999996; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
     },
     "terminal_evidence": {
-      "appended": true,
-      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "appended": false,
+      "already_covered": true,
       "lane_id": "lane_cable_b1_e7_e8_combined_dispatch_20260519",
       "instance_job_id": "substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch_20260519T055409Z",
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRZCSQ7FPVMSAXZQDSZJCTN4",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-19T06:04:00.321590Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -4921,103 +4799,190 @@
   {
     "label": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z",
     "call_id": "fc-01KRZC53Y0D28B6BYEQ1MRG347",
+    "status": "already_harvested",
     "rc": 1,
     "elapsed_seconds": 141.810405924,
     "timed_out": false,
     "n_artifacts": 7,
-    "artifact_files": [
-      {
-        "relative_path": "results/substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z/modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal/harvested_artifacts/results/substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z/modal_worker_head_ledger.json",
-        "bytes": 1620
-      },
-      {
-        "relative_path": "modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal/harvested_artifacts/modal_worker_head_ledger.json",
-        "bytes": 1620
-      },
-      {
-        "relative_path": "modal_lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal/harvested_artifacts/modal_lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z.log",
-        "bytes": 7603
-      },
-      {
-        "relative_path": "modal_live_metadata.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal/harvested_artifacts/modal_live_metadata.json",
-        "bytes": 417
-      },
-      {
-        "relative_path": "lane_substrate_vq_vae_results/run.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal/harvested_artifacts/lane_substrate_vq_vae_results/run.log",
-        "bytes": 6749
-      },
-      {
-        "relative_path": "lane_substrate_vq_vae_results/provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal/harvested_artifacts/lane_substrate_vq_vae_results/provenance.json",
-        "bytes": 761
-      },
-      {
-        "relative_path": "lane_substrate_vq_vae_results/heartbeat.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal/harvested_artifacts/lane_substrate_vq_vae_results/heartbeat.log",
-        "bytes": 75
-      }
-    ],
     "crash_kind": "RC_1",
-    "outcome_classification": "failed_rc_1",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
-      "appended": true,
+      "all_flags_on": true,
       "already_appended": false,
-      "score_claim": false,
-      "promotion_eligible": false,
+      "appended": true,
+      "batch_size": 16,
       "cost_estimate": true,
       "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
       "dispatch_label": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z",
-      "trainer": "experiments/train_substrate_vq_vae.py",
-      "platform": "modal",
-      "gpu": "T4",
-      "epochs": 100,
-      "batch_size": 16,
-      "all_flags_on": true,
       "elapsed_seconds": 141.810405924,
+      "epochs": 100,
       "estimated_cost_usd": 0.023241149859766667,
+      "gpu": "T4",
       "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
       "outcome": "failed_dispatch",
-      "returncode": 1,
+      "platform": "modal",
       "posterior_path": null,
-      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_vq_vae.py"
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
+      "appended": true,
       "instance_job_id": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z",
+      "lane_id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=141.810405924; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal",
       "platform": "modal",
-      "status": "failed_modal_training_rc_1",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=141.810405924; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
     },
     "terminal_evidence": {
-      "appended": true,
-      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "appended": false,
+      "already_covered": true,
       "lane_id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
       "instance_job_id": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T054244Z",
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRZC53Y0D28B6BYEQ1MRG347",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-19T06:04:00.637012Z"
+      "latest_status": "failed"
     }
   },
   {
     "label": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T055556Z",
-    "status": "not_ready",
-    "call_id": "fc-01KRZCX15GAF5Z5E3E568Q60FF"
+    "call_id": "fc-01KRZCX15GAF5Z5E3E568Q60FF",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 3472.4503194749996,
+    "timed_out": false,
+    "n_artifacts": 18,
+    "crash_kind": "OK",
+    "archive_sha256": "43a39cf87c0432b41f3e41c1b3726c1593102050dd05006fe2e285361f0eec98",
+    "archive_bytes": 1705124,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 16,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T055556Z",
+      "elapsed_seconds": 3472.4503194749996,
+      "epochs": 100,
+      "estimated_cost_usd": 1.06102648650625,
+      "gpu": "A10G",
+      "hourly_rate_usd": 1.1,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=1.1; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_vq_vae.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T055556Z",
+      "lane_id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=3472.4503194749996; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T055556Z_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
+      "instance_job_id": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260519T055556Z",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRZCX15GAF5Z5E3E568Q60FF",
+      "latest_status": "harvested"
+    }
+  },
+  {
+    "label": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260520T015850Z_k_2_slot_gg_v2",
+    "call_id": "fc-01KS1HQQ0F9GY1VYCQESSH4R4K",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 3286.3493701049997,
+    "timed_out": false,
+    "n_artifacts": 18,
+    "crash_kind": "OK",
+    "archive_sha256": "fc421058084d57429b71b3992b150e3550e82376a59c7a89241ef4e29e083569",
+    "archive_bytes": 916996,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 16,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260520T015850Z_k_2_slot_gg_v2",
+      "elapsed_seconds": 3286.3493701049997,
+      "epochs": 100,
+      "estimated_cost_usd": 1.0041623075320834,
+      "gpu": "A10G",
+      "hourly_rate_usd": 1.1,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=1.1; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_vq_vae.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260520T015850Z_k_2_slot_gg_v2",
+      "lane_id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=3286.3493701049997; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_vq_vae_k_sweep_modal_t4_dispatch_20260520T015850Z_k_2_slot_gg_v2_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518",
+      "instance_job_id": "substrate_vq_vae_k_sweep_modal_t4_dispatch_20260520T015850Z_k_2_slot_gg_v2",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KS1HQQ0F9GY1VYCQESSH4R4K",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-20T02:55:28.887368Z"
+    }
   },
   {
     "label": "substrate_vq_vae_modal_a100_dispatch_20260514T101849Z__smoke__100ep",

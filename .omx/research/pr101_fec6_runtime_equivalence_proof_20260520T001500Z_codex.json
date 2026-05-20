@@ -1,0 +1,56 @@
+{
+  "schema": "pre_submission_runtime_equivalence_proof_v1",
+  "generated_at_utc": "2026-05-20T00:15:00Z",
+  "lane_id": "lane_pr_submission_public_surface_convergence_20260519",
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "archive_size_bytes": 178517,
+  "archive_member_name": "x",
+  "archive_member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+  "auth_eval_runtime_tree_sha256": "ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61",
+  "auth_eval_runtime_tree_sha256_without_submission_custody_files": "a498d5c4967a823dc2330da5875c7b2500105255ffc85e244d593cfe7d1ac0d7",
+  "auth_eval_portable_runtime_tree_sha256_without_submission_custody_files": "b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49",
+  "submission_runtime_tree_sha256": "fd4b36b0114789ffd25c6169f529bca70b20da8f70e4ee1336dad9fd64971a09",
+  "submission_portable_runtime_tree_sha256_without_custody_files": "ee53871c8766718b9ab289c4a12a59501795ce7fbf71bfbb42728b5669884e8c",
+  "auth_eval_runtime_shape": {
+    "inflate.py": "6758c3b518b4a94c7a531f66b542128d47ef8183adf68314b3191aa89c2ca06f",
+    "inflate.sh": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+    "src/codec.py": "124623c07e066e82f0f1ad5e2aaec6c0cb31b195266c406eca76604e8a934deb",
+    "src/frame_selector.py": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6",
+    "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+  },
+  "submission_runtime_shape": {
+    "inflate.py": "6758c3b518b4a94c7a531f66b542128d47ef8183adf68314b3191aa89c2ca06f",
+    "inflate.sh": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+    "src/codec.py": "8a9bc8b23d2eb30815e955deeeea989632ffcb57630f86fc5878f30d31ab3fd9",
+    "src/codec_sidecar.py": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483",
+    "src/frame_selector.py": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6",
+    "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+  },
+  "equivalence_basis": "full_inflate_output_byte_identity",
+  "output_equivalence": {
+    "basis": "full_inflate_output_byte_identity",
+    "file_list": "upstream/public_test_video_names.txt",
+    "samples": 1200,
+    "baseline_output_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c",
+    "candidate_output_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c",
+    "diff_bytes": 0,
+    "files": [
+      {
+        "path": "0.raw",
+        "bytes": 3662409600,
+        "auth_eval_output_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c",
+        "submission_output_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c",
+        "diff_bytes": 0
+      }
+    ]
+  },
+  "evidence_sources": [
+    ".omx/research/codex_codec_py_refactor_verification_20260519T200658Z.md",
+    ".omx/research/codex_codec_py_refactor_verification_20260519T214807Z.md",
+    "fresh local split-runtime inflate on 2026-05-20T00:15Z"
+  ],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_submission": false,
+  "notes": "This proof only establishes output-byte equivalence between the existing monolithic auth-eval runtime and the current split codec/codec_sidecar runtime for the frozen archive. It is not a new score claim and does not clear CPU threshold, source pin, or lane/job terminal-claim blockers."
+}

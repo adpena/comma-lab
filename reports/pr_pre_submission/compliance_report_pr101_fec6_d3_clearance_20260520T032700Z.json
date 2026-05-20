@@ -1,0 +1,1194 @@
+{
+  "archive": {
+    "bytes": 178517,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 178417,
+        "crc": 3299285626,
+        "file_size": 178417,
+        "local_header": {
+          "compress_size": 178417,
+          "compress_type": 0,
+          "crc32": 3299285626,
+          "extra_len": 0,
+          "file_size": 178417,
+          "flag_bits": 0,
+          "mod_date": 33,
+          "mod_time": 0,
+          "name": "x",
+          "version_needed": 20
+        },
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json"
+  },
+  "auth_eval": {
+    "anchor_proof": {
+      "archive": {
+        "bytes": 178517,
+        "members": [
+          {
+            "compress_size": 178417,
+            "crc": 3299285626,
+            "file_size": 178417,
+            "local_header": {
+              "compress_size": 178417,
+              "compress_type": 0,
+              "crc32": 3299285626,
+              "extra_len": 0,
+              "file_size": 178417,
+              "flag_bits": 0,
+              "mod_date": 33,
+              "mod_time": 0,
+              "name": "x",
+              "version_needed": 20
+            },
+            "local_header_name": "x",
+            "name": "x",
+            "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+            "unsafe_reason": null
+          }
+        ],
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+        "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+      },
+      "auth_eval": {
+        "contest_auth_eval_elapsed_seconds": 81.17945453,
+        "cuda_version": "12.4",
+        "device": "cuda",
+        "eval_command_sanitized": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "archive.zip",
+          "--inflate-sh",
+          "submission_dir/inflate.sh",
+          "--upstream-dir",
+          "upstream",
+          "--device",
+          "cuda"
+        ],
+        "evaluate_elapsed_seconds": 34.398863945,
+        "evidence_grade": "contest-CUDA",
+        "gpu_driver": "580.95.05",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "inflate_elapsed_seconds": 36.268792051000005,
+        "samples": 600,
+        "tool": "experiments/contest_auth_eval.py",
+        "torch_version": "2.5.1+cu124",
+        "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "auth_eval_local_custody_ignored_by_git": true,
+      "auth_eval_local_custody_path": "experiments/results/modal_auth_eval_paired_20260519/cuda/contest_auth_eval.json",
+      "record_score_source": "tools.auth_eval_records.parse_auth_eval_payload",
+      "runtime": {
+        "runtime_file_count": 6,
+        "runtime_files": [
+          {
+            "bytes": 18165,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.py",
+            "sha256": "6758c3b518b4a94c7a531f66b542128d47ef8183adf68314b3191aa89c2ca06f"
+          },
+          {
+            "bytes": 818,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/inflate.sh",
+            "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+          },
+          {
+            "bytes": 671,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/report.txt",
+            "sha256": "3d608e0345f931495f7aecf5aa8bd1461d265a61503765afbdac8e5da2e642a9"
+          },
+          {
+            "bytes": 17108,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/codec.py",
+            "sha256": "124623c07e066e82f0f1ad5e2aaec6c0cb31b195266c406eca76604e8a934deb"
+          },
+          {
+            "bytes": 7980,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/frame_selector.py",
+            "sha256": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6"
+          },
+          {
+            "bytes": 2197,
+            "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          }
+        ],
+        "runtime_tree_sha256": "ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61",
+        "runtime_tree_sha256_candidates": {
+          "provenance.inflate_runtime_manifest.runtime_tree_sha256": "ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61"
+        }
+      },
+      "schema": "pre_submission_compliance_anchor_proof_v1",
+      "score_basis": {
+        "archive_bytes": 178517,
+        "archive_rate_unscaled": 0.004754685709380427,
+        "avg_posenet_dist": 0.00016846,
+        "avg_segnet_dist": 0.00066299,
+        "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+        "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+        "report_reconstructed_score": 0.22621002169349796,
+        "score": 0.22621002169349796,
+        "score_delta_vs_report_reconstruction": 0.0
+      }
+    },
+    "exists": true,
+    "path": "experiments/results/modal_auth_eval_paired_20260519/cuda/contest_auth_eval.json",
+    "record": {
+      "archive_bytes": 178517,
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "avg_posenet_dist": 0.00016846,
+      "avg_segnet_dist": 0.00066299,
+      "cpu_leaderboard_reproduction_eligible": false,
+      "device": "cuda",
+      "evidence_grade": "contest-CUDA",
+      "gpu_t4_match": true,
+      "hardware_compliance_blocker": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_unscaled": 0.004754685709380427,
+      "samples": 600,
+      "score": 0.22621002169349796,
+      "score_axis": "contest_cuda",
+      "score_claim_valid": true
+    },
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61"
+    },
+    "runtime_tree_pruned_candidates": {
+      "provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files": "b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49",
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files": "a498d5c4967a823dc2330da5875c7b2500105255ffc85e244d593cfe7d1ac0d7"
+    },
+    "strict_formula": {
+      "archive_bytes": 178517,
+      "archive_rate_unscaled": 0.004754685709380427,
+      "avg_posenet_dist": 0.00016846,
+      "avg_segnet_dist": 0.00066299,
+      "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+      "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+      "report_reconstructed_score": 0.22621002169349796,
+      "score": 0.22621002169349796,
+      "score_delta_vs_report_reconstruction": 0.0
+    }
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "requires archive_dir=$1 output_dir=$2 file_list=$3 and file-list read loop",
+      "name": "inflate_sh_uses_canonical_three_arg_contract",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "forbidden_eval_tokens=[]",
+      "name": "inflate_sh_loads_no_scorers_or_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_local_header_metadata_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_payload_readable:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=178517 actual=178517",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval_paired_20260519/cuda/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval_paired_20260519/cuda/contest_auth_eval.json",
+      "name": "auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "auth_eval_score_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178517 actual=178517",
+      "name": "auth_eval_archive_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical score/components/formula consistent",
+      "name": "auth_eval_schema_metric_consistency",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "auth_eval_has_components",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "record=0.22621002169349796 recomputed=0.22621002169349796",
+      "name": "auth_eval_score_recomputes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "strict=0.22621002169349796 record=0.22621002169349796 delta=0.0",
+      "name": "auth_eval_strict_formula_score_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cpu record_axis=contest_cuda",
+      "name": "auth_eval_selected_axis_matches_submission_gate",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cpu score=0.22621002169349796 source=strict_formula threshold=0.1928450127024255",
+      "name": "auth_eval_score_at_or_below_submission_threshold",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True",
+      "name": "auth_eval_t4_equivalent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True claim=True exact_cuda_eval_complete=True",
+      "name": "auth_eval_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires explicit exact_cuda_eval_complete=true, score_claim_valid=true, lane_tag=[contest-CUDA], score_axis=contest_cuda in the auth-eval JSON; promotion eligibility is decided by this compliance gate, not raw contest_auth_eval.py",
+      "name": "auth_eval_explicit_exact_cuda_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61'}",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval_paired_20260519/cpu/contest_auth_eval.json",
+      "name": "contest_cpu_auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/modal_auth_eval_paired_20260519/cpu/contest_auth_eval.json",
+      "name": "contest_cpu_auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "contest_cpu_auth_eval_score_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "contest_cpu_auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178517 actual=178517",
+      "name": "contest_cpu_auth_eval_archive_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical score/components/formula consistent",
+      "name": "contest_cpu_auth_eval_schema_metric_consistency",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "samples=600",
+      "name": "contest_cpu_auth_eval_full_600_samples",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "platform_system=Linux platform_machine=x86_64",
+      "name": "contest_cpu_auth_eval_linux_x86_64_provenance",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cpu samples=600 axis=contest_cpu cpu_repro=True blocker=None",
+      "name": "contest_cpu_auth_eval_contest_cpu_axis",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "score_claim=True promotion_eligible=False score_claim_valid=True rank_or_kill_eligible=False",
+      "name": "contest_cpu_auth_eval_explicit_score_claim_non_promotional",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "score_axis=contest_cpu lane_tag=[contest-CPU] evidence_grade=contest-CPU cpu_leaderboard_reproduction_eligible=True",
+      "name": "contest_cpu_auth_eval_explicit_contest_cpu_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cpu record_axis=contest_cpu",
+      "name": "contest_cpu_auth_eval_selected_axis_matches_submission_gate",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "selected_axis=contest_cpu score=0.1920513168811056 source=strict_formula threshold=0.1928450127024255",
+      "name": "contest_cpu_auth_eval_score_at_or_below_submission_threshold",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'e0d7fd8dc86545a273f163b7c9b35d186705f22623429d36d7ce75ed9e6b9130', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': '15827c2357e7091de0ca0ca53f85d26b43440b9eee426aac4001cd8cca63335e', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': 'b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49'} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a498d5c4967a823dc2330da5875c7b2500105255ffc85e244d593cfe7d1ac0d7', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': 'b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "cpu_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'e0d7fd8dc86545a273f163b7c9b35d186705f22623429d36d7ce75ed9e6b9130', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': '15827c2357e7091de0ca0ca53f85d26b43440b9eee426aac4001cd8cca63335e', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': 'b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49'} cuda_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a498d5c4967a823dc2330da5875c7b2500105255ffc85e244d593cfe7d1ac0d7', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': 'b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49'}",
+      "name": "contest_cpu_auth_eval_runtime_tree_matches_cuda",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "hits=[]",
+      "name": "submission_runtime_loads_no_scorers_or_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "hits=[]",
+      "name": "submission_runtime_has_no_network_install_or_local_paths",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "parse_errors=[]",
+      "name": "submission_runtime_import_allowlist_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "disallowed=[]",
+      "name": "submission_runtime_imports_within_allowlist",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr101_fec6_runtime_equivalence_proof_post_qq_scrub_20260520T032500Z.json",
+      "name": "runtime_equivalence_proof_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/research/pr101_fec6_runtime_equivalence_proof_post_qq_scrub_20260520T032500Z.json",
+      "name": "runtime_equivalence_proof_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_equivalence_proof_v1",
+      "name": "runtime_equivalence_proof_schema",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "proof_sha=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf archive_sha=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf proof_bytes=178517 archive_bytes=178517",
+      "name": "runtime_equivalence_proof_archive_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "proof_auth=['a498d5c4967a823dc2330da5875c7b2500105255ffc85e244d593cfe7d1ac0d7', 'b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49', 'ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61'] auth_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a498d5c4967a823dc2330da5875c7b2500105255ffc85e244d593cfe7d1ac0d7', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': 'b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49'}",
+      "name": "runtime_equivalence_proof_auth_runtime_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "proof_submission=['0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1', 'cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57'] submission=['0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1', 'cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57']",
+      "name": "runtime_equivalence_proof_submission_runtime_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "{\"added_to_current\": [], \"changed\": [], \"matches\": true, \"missing_from_current\": [], \"provided\": true}",
+      "name": "runtime_equivalence_proof_submission_runtime_shape_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "{'basis': 'full_inflate_output_byte_identity', 'file_list': 'upstream/public_test_video_names.txt', 'samples': 1200, 'baseline_output_sha256': 'd1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c', 'candidate_output_sha256': 'd1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c', 'diff_bytes': 0, 'files': [{'path': '0.raw', 'bytes': 3662409600, 'auth_eval_output_sha256': 'd1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c', 'submission_output_sha256': 'd1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c', 'diff_bytes': 0}], 'verification_provenance': {'verifier': 'claude_slot_rr_d3_compliance_gate_clearance_20260520', 'verified_at_utc': '2026-05-20T03:23:30Z', 'verification_command': '/tmp/d3_smoke local CPU inflate.sh smoke on post-QQ-scrub submission_dir', 'submission_tree_runtime_tree_sha256_at_verification': 'cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57'}}",
+      "name": "runtime_equivalence_proof_full_output_identity",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_candidates=['0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1', 'cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57'] auth_eval_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61', 'provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files': 'a498d5c4967a823dc2330da5875c7b2500105255ffc85e244d593cfe7d1ac0d7', 'provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files': 'b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49'} runtime_equivalence_proof_valid=True",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf actual=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178517 actual=178517",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_members_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed_members=1 actual_members=1",
+      "name": "archive_manifest_member_count_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='x' actual='x'",
+      "name": "archive_manifest_member_0_name_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178417 actual=178417",
+      "name": "archive_manifest_member_0_file_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=178417 actual=178417",
+      "name": "archive_manifest_member_0_compress_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=3299285626 actual=3299285626",
+      "name": "archive_manifest_member_0_crc_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed='f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd' actual='f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd'",
+      "name": "archive_manifest_member_0_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "6bae0201fb082457",
+      "name": "report_mentions_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "178517",
+      "name": "report_mentions_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packets must include the PR-template `competitive or innovative` answer",
+      "name": "post_deadline_policy_statement_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "statement must affirm competitive and/or innovative status",
+      "name": "post_deadline_policy_statement_names_mode",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "non-template rationale",
+      "name": "post_deadline_policy_statement_not_template",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "affirmative rationale",
+      "name": "post_deadline_policy_statement_not_negated",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "statement must explain score/leaderboard competitiveness or novelty",
+      "name": "post_deadline_policy_statement_has_frontier_context",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "statement length=1171 chars; minimum 80",
+      "name": "post_deadline_policy_statement_substantive",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/pre_submission_compliance.hosted_archive_manifest.json",
+      "name": "hosted_archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/pre_submission_compliance.hosted_archive_manifest.json",
+      "name": "hosted_archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "placeholders=[] locations=[]",
+      "name": "hosted_archive_public_text_has_no_placeholder",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "hosted_archive_manifest_v1",
+      "name": "hosted_archive_manifest_schema",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip",
+      "name": "hosted_archive_url_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip",
+      "name": "hosted_archive_url_https",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip",
+      "name": "hosted_archive_url_github_release",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip",
+      "name": "hosted_archive_url_not_placeholder",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip",
+      "name": "hosted_archive_url_in_public_text",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "manifest_sha=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf archive_sha=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "name": "hosted_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "manifest_size=178517 archive_size=178517",
+      "name": "hosted_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must link public source repo(s)",
+      "name": "public_source_repo_link_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must include a pinned commit/tag URL or 40-char git SHA",
+      "name": "public_source_pinned_revision_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "placeholders=[] locations=[]",
+      "name": "public_source_pin_text_has_no_placeholder",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must mention OSS/open-source, deterministic reproducibility, source code, commit, archive SHA, or runtime tree",
+      "name": "public_source_reproducibility_context_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final packet must include a reproduce command or an archive/runtime SHA binding",
+      "name": "public_source_reproduce_command_or_sha_binding_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final public text must label CUDA evidence as [contest-CUDA]",
+      "name": "public_evidence_contest_cuda_label_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final public text must label CPU evidence as [contest-CPU]",
+      "name": "public_evidence_contest_cpu_label_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "placeholders=[] locations=[]",
+      "name": "public_text_has_no_unresolved_template_placeholders",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-lane-id",
+      "name": "contest_final_expected_lane_id_supplied",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final requires --expected-job-id",
+      "name": "contest_final_expected_job_id_supplied",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/state/active_lane_dispatch_claims.md",
+      "name": "dispatch_claims_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=lane_pr101_fec6_paired_pre_submission_20260519_contest_cpu job_id=pr101_fec6_k16_clean_paired_pre_submission_20260519_paired_modal_auth_20260519T212331Z_cpu matching_rows=4 latest_matching_status='completed_contest_cpu_modal_auth_eval_post_qq_scrub_runtime_tree_bound'",
+      "name": "dispatch_claim_terminal_row",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=lane_pr101_fec6_paired_pre_submission_20260519_contest_cpu job_id=pr101_fec6_k16_clean_paired_pre_submission_20260519_paired_modal_auth_20260519T212331Z_cpu matching_rows=4 latest_matching_status='completed_contest_cpu_modal_auth_eval_post_qq_scrub_runtime_tree_bound' selected_axis=contest_cpu",
+      "name": "dispatch_claim_successful_exact_eval_terminal_row",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final terminal claim must bind the exact scored archive sha256=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf; latest_matching_notes='Post-QQ-scrub submission tree binding: submission_runtime_tree_sha256=cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57 portable_runtime_tree_sha256_without_custody_files=0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1. archive_sha=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf archive_bytes=178517. Inflate output byte-identical (sha=d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c) to auth-eval baseline per local CPU smoke 2026-05-20T03:23:30Z (runtime equivalence proof: .omx/research/pr101_fec6_runtime_equivalence_proof_post_qq_scrub_20260520T032500Z.json). axis=contest_cpu evidence_grade=contest-CPU hardware_substrate=linux_x86_64_cpu score_recomputed=0.1920513168811056 score_claim=false promotion_eligible=false (pending operator gh pr create). Pre-existing terminal row 2026-05-20T00:25:01Z bound the pre-QQ-scrub submission tree fd4b36b0114789ffd25c6169f529bca70b20da8f70e4ee1336dad9fd64971a09; this row binds the post-scrub tree for D-3 contest-final compliance gate clearance. cite: Catalog #316 frontier-regression block + Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY.'",
+      "name": "dispatch_claim_terminal_archive_sha_bound",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "contest-final terminal claim must bind the exact scored runtime_tree_sha256=cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57; latest_matching_notes='Post-QQ-scrub submission tree binding: submission_runtime_tree_sha256=cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57 portable_runtime_tree_sha256_without_custody_files=0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1. archive_sha=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf archive_bytes=178517. Inflate output byte-identical (sha=d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c) to auth-eval baseline per local CPU smoke 2026-05-20T03:23:30Z (runtime equivalence proof: .omx/research/pr101_fec6_runtime_equivalence_proof_post_qq_scrub_20260520T032500Z.json). axis=contest_cpu evidence_grade=contest-CPU hardware_substrate=linux_x86_64_cpu score_recomputed=0.1920513168811056 score_claim=false promotion_eligible=false (pending operator gh pr create). Pre-existing terminal row 2026-05-20T00:25:01Z bound the pre-QQ-scrub submission tree fd4b36b0114789ffd25c6169f529bca70b20da8f70e4ee1336dad9fd64971a09; this row binds the post-scrub tree for D-3 contest-final compliance gate clearance. cite: Catalog #316 frontier-regression block + Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY.'",
+      "name": "dispatch_claim_terminal_runtime_tree_sha_bound",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=lane_pr101_fec6_paired_pre_submission_20260519_contest_cpu job_id=pr101_fec6_k16_clean_paired_pre_submission_20260519_paired_modal_auth_20260519T212331Z_cpu matching_rows=4 has_prior_nonterminal_matching_row=True",
+      "name": "dispatch_claim_prior_active_row",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "axis=contest_cpu candidate=0.192051 canonical_best=0.192051 canonical_archive=6bae0201fb08 same_archive=True",
+      "name": "frontier_no_regression_on_submitted_axis",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "contest_cpu_auth_eval": {
+    "exists": true,
+    "path": "experiments/results/modal_auth_eval_paired_20260519/cpu/contest_auth_eval.json",
+    "record": {
+      "archive_bytes": 178517,
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "avg_posenet_dist": 2.943e-05,
+      "avg_segnet_dist": 0.00056029,
+      "cpu_leaderboard_reproduction_eligible": true,
+      "device": "cpu",
+      "evidence_grade": "contest-CPU",
+      "gpu_t4_match": false,
+      "hardware_compliance_blocker": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_unscaled": 0.004754685709380427,
+      "samples": 600,
+      "score": 0.1920513168811056,
+      "score_axis": "contest_cpu",
+      "score_claim_valid": true
+    },
+    "required": true,
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "e0d7fd8dc86545a273f163b7c9b35d186705f22623429d36d7ce75ed9e6b9130"
+    },
+    "runtime_tree_pruned_candidates": {
+      "provenance.inflate_runtime_manifest.portable_runtime_tree_sha256_without_submission_custody_files": "b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49",
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256_without_submission_custody_files": "15827c2357e7091de0ca0ca53f85d26b43440b9eee426aac4001cd8cca63335e"
+    },
+    "strict_formula": {
+      "archive_bytes": 178517,
+      "archive_rate_unscaled": 0.004754685709380427,
+      "avg_posenet_dist": 2.943e-05,
+      "avg_segnet_dist": 0.00056029,
+      "basis": "contest_cpu_auth_eval_components_plus_exact_archive_bytes",
+      "report_reconstructed_score": 0.1920513168811056,
+      "score": 0.1920513168811056,
+      "score_delta_vs_report_reconstruction": 0.0
+    }
+  },
+  "dispatch_claims": {
+    "exists": true,
+    "has_prior_nonterminal_matching_row": true,
+    "latest_matching_notes": "Post-QQ-scrub submission tree binding: submission_runtime_tree_sha256=cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57 portable_runtime_tree_sha256_without_custody_files=0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1. archive_sha=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf archive_bytes=178517. Inflate output byte-identical (sha=d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c) to auth-eval baseline per local CPU smoke 2026-05-20T03:23:30Z (runtime equivalence proof: .omx/research/pr101_fec6_runtime_equivalence_proof_post_qq_scrub_20260520T032500Z.json). axis=contest_cpu evidence_grade=contest-CPU hardware_substrate=linux_x86_64_cpu score_recomputed=0.1920513168811056 score_claim=false promotion_eligible=false (pending operator gh pr create). Pre-existing terminal row 2026-05-20T00:25:01Z bound the pre-QQ-scrub submission tree fd4b36b0114789ffd25c6169f529bca70b20da8f70e4ee1336dad9fd64971a09; this row binds the post-scrub tree for D-3 contest-final compliance gate clearance. cite: Catalog #316 frontier-regression block + Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY.",
+    "latest_matching_row": "| 2026-05-20T03:24:55Z | claude:slot_rr_d3_compliance_gate_clearance | lane_pr101_fec6_paired_pre_submission_20260519_contest_cpu | modal | pr101_fec6_k16_clean_paired_pre_submission_20260519_paired_modal_auth_20260519T212331Z_cpu |  | completed_contest_cpu_modal_auth_eval_post_qq_scrub_runtime_tree_bound | Post-QQ-scrub submission tree binding: submission_runtime_tree_sha256=cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57 portable_runtime_tree_sha256_without_custody_files=0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1. archive_sha=6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf archive_bytes=178517. Inflate output byte-identical (sha=d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c) to auth-eval baseline per local CPU smoke 2026-05-20T03:23:30Z (runtime equivalence proof: .omx/research/pr101_fec6_runtime_equivalence_proof_post_qq_scrub_20260520T032500Z.json). axis=contest_cpu evidence_grade=contest-CPU hardware_substrate=linux_x86_64_cpu score_recomputed=0.1920513168811056 score_claim=false promotion_eligible=false (pending operator gh pr create). Pre-existing terminal row 2026-05-20T00:25:01Z bound the pre-QQ-scrub submission tree fd4b36b0114789ffd25c6169f529bca70b20da8f70e4ee1336dad9fd64971a09; this row binds the post-scrub tree for D-3 contest-final compliance gate clearance. cite: Catalog #316 frontier-regression block + Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY. |",
+    "latest_matching_status": "completed_contest_cpu_modal_auth_eval_post_qq_scrub_runtime_tree_bound",
+    "matching_rows": 4,
+    "path": ".omx/state/active_lane_dispatch_claims.md",
+    "rows": 1388
+  },
+  "frontier_baseline": {
+    "candidate": {
+      "axis": "contest_cpu",
+      "score": 0.1920513168811056,
+      "score_source": "strict_formula"
+    },
+    "canonical_best": {
+      "contest_cpu": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "hardware_substrate": "linux_x86_64_cpu",
+        "lane_id": null,
+        "score": 0.1920513168811056
+      },
+      "contest_cuda": {
+        "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+        "hardware_substrate": "linux_x86_64_t4",
+        "lane_id": null,
+        "score": 0.20533002902019143
+      }
+    },
+    "schema": "pact_frontier_check_v1"
+  },
+  "hosted_archive": {
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/pre_submission_compliance.hosted_archive_manifest.json",
+    "placeholder_locations": [],
+    "placeholders": [],
+    "provided": true,
+    "public_text_sources": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json"
+    ],
+    "required": true,
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "size_bytes": 178517,
+    "url": "https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip",
+    "valid": true
+  },
+  "passed": true,
+  "post_deadline_submission_policy": {
+    "chars": 1171,
+    "has_frontier_context": true,
+    "names_mode": true,
+    "negation_reason": null,
+    "required": true,
+    "source": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/pre_submission_compliance.competitive_or_innovative_statement.txt",
+    "statement_preview": "This submission is both competitive and innovative against the current leaderboard frontier per the maintainer's PR #108 closure (2026-05-11 new-submission gate). Competitive: on Modal Linux x86_64 the contest-CPU score is 0.192051, beating",
+    "template_reason": null
+  },
+  "public_evidence_axis_labels": {
+    "labels": {
+      "[contest-CPU]": true,
+      "[contest-CUDA]": true
+    },
+    "required": true,
+    "sources": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json"
+    ]
+  },
+  "public_source_reproducibility": {
+    "archive_runtime_sha_bindings": [
+      "Archive SHA-256: 6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+    ],
+    "has_reproduce_command": true,
+    "has_reproduce_command_or_sha_binding": true,
+    "has_reproducibility_context": true,
+    "pin_placeholder_locations": [],
+    "pin_placeholders": [],
+    "pinned_source_refs": [
+      "b392343d758aba0d3595dd18609f9ca8a8af3e1b"
+    ],
+    "repo_links": [
+      "https://github.com/adpena/comma-lab",
+      "https://github.com/adpena/comma-lab.git",
+      "https://github.com/adpena/comma_video_compression_challenge",
+      "https://github.com/adpena/tac"
+    ],
+    "required": true,
+    "source_ref_manifest": {
+      "provided": false
+    },
+    "sources": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json"
+    ]
+  },
+  "public_template_placeholders": {
+    "allowlist": [
+      "<archive_dir>",
+      "<file_list>",
+      "<output_dir>"
+    ],
+    "placeholder_locations": [],
+    "placeholders": [],
+    "required": true,
+    "sources": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/README.md",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive_manifest.json"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "disallowed_runtime_imports": [],
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "contest_auth_eval_cpu.json",
+      "contest_cpu_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 18824,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py",
+        "sha256": "45722504b03c1a08bfb28d223c6b2f5a73123b6b42b8c878c56940ace378230a"
+      },
+      {
+        "bytes": 818,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh",
+        "sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+      },
+      {
+        "bytes": 6514,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py",
+        "sha256": "79bad598244d2d5afb7b7b3f258a88921b6dffc45a7071a496245989e24f6685"
+      },
+      {
+        "bytes": 12158,
+        "relative_path": "src/codec_sidecar.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py",
+        "sha256": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483"
+      },
+      {
+        "bytes": 7980,
+        "relative_path": "src/frame_selector.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py",
+        "sha256": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ],
+    "forbidden_side_effect_hits": [],
+    "portable_runtime_tree_sha256_without_custody_files": "0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1",
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "submission_dir",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_allowed_non_stdlib_import_roots": [
+      "brotli",
+      "codec",
+      "codec_sidecar",
+      "frame_selector",
+      "model",
+      "numpy",
+      "src",
+      "torch"
+    ],
+    "runtime_equivalence_proof": {
+      "current_submission_runtime_shape": {
+        "inflate.py": "45722504b03c1a08bfb28d223c6b2f5a73123b6b42b8c878c56940ace378230a",
+        "inflate.sh": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+        "src/codec.py": "79bad598244d2d5afb7b7b3f258a88921b6dffc45a7071a496245989e24f6685",
+        "src/codec_sidecar.py": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483",
+        "src/frame_selector.py": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6",
+        "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      "path": ".omx/research/pr101_fec6_runtime_equivalence_proof_post_qq_scrub_20260520T032500Z.json",
+      "proof_auth_runtime_values": [
+        "a498d5c4967a823dc2330da5875c7b2500105255ffc85e244d593cfe7d1ac0d7",
+        "b94638718572c12300886a6ce786810bfa5d9305d216753feefbcaa463011c49",
+        "ca7f4f323d57a346739532c74c95af4f0a82fedf400a9c6f9e201eb5124f1e61"
+      ],
+      "proof_submission_runtime_shape": {
+        "inflate.py": "45722504b03c1a08bfb28d223c6b2f5a73123b6b42b8c878c56940ace378230a",
+        "inflate.sh": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+        "src/codec.py": "79bad598244d2d5afb7b7b3f258a88921b6dffc45a7071a496245989e24f6685",
+        "src/codec_sidecar.py": "cc4fa4f48a65910e18908a93a1cd05af0642b5897719eb3ea49d6eef36b96483",
+        "src/frame_selector.py": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6",
+        "src/model.py": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      "proof_submission_runtime_values": [
+        "0c70199106957e6140520e879c86fa13e23a5915abf6b15acedccafcb9635de1",
+        "cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57"
+      ],
+      "provided": true,
+      "submission_runtime_shape_diff": {
+        "added_to_current": [],
+        "changed": [],
+        "matches": true,
+        "missing_from_current": [],
+        "provided": true
+      },
+      "valid": true
+    },
+    "runtime_file_count": 6,
+    "runtime_import_parse_errors": [],
+    "runtime_imports": [
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py:__future__",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py:codec",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py:frame_selector",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py:model",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py:pathlib",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py:struct",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py:sys",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py:torch",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py:brotli",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py:codec_sidecar",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py:io",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py:lzma",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py:model",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py:numpy",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec.py:torch",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py:brotli",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py:functools",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py:math",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py:numpy",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py:torch",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py:__future__",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py:math",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py:struct",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/frame_selector.py:torch",
+      "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/model.py:torch"
+    ],
+    "runtime_local_import_roots": [
+      "codec",
+      "codec_sidecar",
+      "frame_selector",
+      "inflate",
+      "model",
+      "src"
+    ],
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+    "runtime_tree_sha256": "cd76c8ac46b04e03ba2a1fab14f4f93e4ed02efe7c56a983a27cd13331167c57",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "scorer_import_hits": [],
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}
