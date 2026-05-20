@@ -1,0 +1,163 @@
+schema_version: 1
+name: master_gradient_fec6_modal_t4_cuda_anchor_dispatch
+lane_id: lane_wave_3_op3_paid_master_gradient_anchor_20260520
+summary: Extract per-byte master gradient for fec6 frontier archive on Modal T4 (Linux x86_64 contest-CUDA axis), FULL 600-pair authoritative anchor per WAVE-3-OP3 spec + CATHEDRAL-SMARTER-DESIGN-MEMO prerequisite (b) + T3 Decision 2 Week-1 paid-dispatch cap. CUDA sister of master_gradient_fec6_modal_cpu_dispatch.
+
+# Per Catalog #270 scope clarification (2026-05-17 + lane_catalog_270_scope_fix_tool_vs_substrate_dispatch_20260517):
+# this dispatch is a TOOL invocation (``tools/extract_master_gradient.py``), NOT a
+# substrate trainer. ``dispatch_kind: tool`` opts this recipe out of substrate-only
+# Tier 2/3 fields (Catalogs #172 autocast / #178 TF32 / #179 torch.compile / #226
+# canonical auth-eval helper) per the same precedent as the sister CPU recipe.
+dispatch_kind: tool
+
+platform: modal
+gpu: "T4"
+min_vram_gb: 12  # T4 has 16 GB; HNeRV fec6 decoder + frozen SegNet/PoseNet scorers fit comfortably
+# Per Catalog #215 + Catalog #270 scope fix: tool dispatches MAY declare GPU-class
+# strings beyond T4-and-up because the extractor needs the actual GPU it will run on.
+# smoke == full for the extractor (single-shot, not iterative); pin T4 explicitly.
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+  - contest_one_video_replay
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  # T4 hourly = $0.59 per tac.cost_band_calibration.PLATFORM_RATES_USD_PER_HOUR.
+  # Full 600-pair extraction = 1 forward + 2 backward passes (aggregate path, not
+  # per-pair). Expected wall-clock ~20-45 min on T4 (HNeRV decoder + frozen scorers
+  # over 600 pairs); cost p50 fallback ~$0.30; envelope $5 hard cap per session
+  # paired-env OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=5.00.
+  hand_calibrated_fallback_p50_usd: 0.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null  # extraction emits metadata, not a score
+predicted_delta: "n/a — this is a sensitivity extractor, not a score-lowering dispatch"
+predicted_delta_basis: "WAVE-3-OP3 paired-axis discipline per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA'; companion to existing master_gradient_fec6_modal_cpu_dispatch.yaml"
+literature_anchor: "Symposium §3 + §3.6 (8 in-training/in-design uses; this dispatch produces the authoritative [contest-CUDA T4] anchor for cathedral autopilot v2 cascade per Catalog #319 + CATHEDRAL-SMARTER prerequisite (b))"
+council_phase_5_prediction: null
+
+risk: |
+  Low-risk T4 single-shot extraction. 1 forward + 2 backward passes through the
+  fec6 HNeRV decoder + frozen scorers on 600 contest pairs; expected wall-clock
+  ~20-45 min on a Modal T4 instance (Linux x86_64 + Tesla T4 = contest-CUDA axis
+  per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT
+  HARDWARE" non-negotiable).
+
+  No score claim; emits a MasterGradient anchor at axis [contest-CUDA] + sidecar
+  .npy for autopilot consumer hooks per symposium §3.6. Closes WIRE-IN-RIGOR's
+  10/10 non-authoritative master-gradient baseline by landing the FIRST
+  authoritative [contest-CUDA T4] anchor in the canonical ledger.
+
+  Sensitivity-mass projection through the fec6 int8+fp16 codec Jacobian is the
+  primary numerical risk; mitigated by the strict gradient-finiteness check
+  (NaN/Inf -> RuntimeError) before sidecar write. Sister CPU anchor already
+  validated this path empirically; CUDA differs only in device dispatch.
+
+  Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact" (Catalog #220
+  transient-evidence trap): output sidecar MUST live under .omx/state/ or
+  experiments/results/. The CLI explicitly refuses /tmp paths.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": this dispatch uses .spawn()
+  via experiments/modal_train_lane.py; the ledger anchor is harvested via the
+  canonical helper after the worker writes the fcntl-locked anchor row.
+
+envelope_status: "FITS $5 envelope at p50 fallback (~$0.30-0.50); session paired-env cap OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=5.00"
+
+remote_driver: scripts/operator_authorize_master_gradient_fec6_modal_t4_cuda_anchor.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --archive
+    default_path: experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - flag: --inflate-py
+    default_path: experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/operator_authorize_master_gradient_fec6_modal_t4_cuda_anchor.sh
+  cost_band_trainer: tools/extract_master_gradient.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 8
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: tools/extract_master_gradient.py
+
+env_overrides:
+  MASTER_GRADIENT_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  MASTER_GRADIENT_ARCHIVE_PATH: /workspace/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  MASTER_GRADIENT_INFLATE_PY_PATH: /workspace/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py
+  MASTER_GRADIENT_UPSTREAM_DIR: /workspace/pact/upstream
+  MASTER_GRADIENT_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  MASTER_GRADIENT_OUTPUT_NPY: /workspace/pact/.omx/state/master_gradient_fec6_contest_cuda_t4_20260520.npy
+  MASTER_GRADIENT_AXIS: "[contest-CUDA]"
+  MASTER_GRADIENT_DEVICE: cuda
+  # Full pair count per the authoritative-axis gate in tools/extract_master_gradient.py:2177
+  # ([contest-CUDA] anchors require n_pairs_used == n_pairs_total per the authority check)
+  MASTER_GRADIENT_N_PAIRS_USED: "600"
+  MASTER_GRADIENT_HARDWARE_SUBSTRATE: linux_x86_64_t4_modal
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/operator_authorize_master_gradient_fec6_modal_t4_cuda_anchor.sh
+  - tools/extract_master_gradient.py
+  - src/tac/master_gradient.py
+  - src/tac/differentiable_eval_roundtrip.py
+  - src/tac/scorer.py
+  - upstream/videos/0.mkv
+  - upstream/models/posenet.safetensors
+  - upstream/models/segnet.safetensors
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+
+notes: |
+  WAVE-3-OP3 paid CUDA T4 master-gradient anchor per operator NON-NEGOTIABLE
+  2026-05-20 ASYMPTOTIC-INVENTORY-REFRESH TOP-5 OP3 + CATHEDRAL-SMARTER-DESIGN-MEMO
+  prerequisite (b) + T3 Decision 2 Week-1 paid-dispatch cap.
+
+  This dispatch produces the FIRST authoritative [contest-CUDA T4] master-gradient
+  anchor for the fec6 frontier archive (0.19205 [contest-CPU] per canonical_frontier_
+  pointer; archive sha 6bae0201fb082457a02c6956...). Closes the WIRE-IN-RIGOR
+  10/10 non-authoritative baseline (all existing master-gradient anchors are
+  [macOS-CPU advisory] per row dump 2026-05-20).
+
+  Sister of master_gradient_fec6_modal_cpu_dispatch.yaml (axis [contest-CPU]) for
+  apples-to-apples paired-CPU/CUDA per CLAUDE.md "Submission auth eval — BOTH CPU
+  AND CUDA". Together they unblock the Catalog #319 v2 cascade for actual
+  score-mutating use of the cathedral autopilot:
+    - tac.cathedral_autopilot_autonomous_loop.adjust_predicted_delta_for_venn_classification_v2
+    - tac.cathedral_consumers.canonical_equation_lookup_consumer (Catalog #344)
+    - tac.optimization.bit_allocator (planned Cable D consumer)
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": axis=[contest-CUDA T4]
+  matches the GHA-host T4 reference axis (PR102/PR103 medal-class CUDA).
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": the extractor's output
+  is fcntl-locked to `/workspace/pact/.omx/state/master_gradient_anchors.jsonl`
+  on the worker; the harvest step copies the worker's anchor row back to the
+  local ledger via the canonical helper.
+
+  Per Catalog #199 paired-env discipline: dispatch fires under
+  OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 +
+  OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=5.00 per WAVE-3-OP3 operator blanket
+  approval 2026-05-20 "all operator decisions approved".
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'T4', 1) - current
+  confidence: hand_calibrated_fallback (N=0 master-gradient CUDA anchors). This
+  first dispatch bootstraps the master-gradient T4 calibration.
+
+  Cross-ref:
+    .omx/operator_authorize_recipes/master_gradient_fec6_modal_cpu_dispatch.yaml (sister CPU)
+    .omx/research/cpu_frontier_master_gradient_campaign_plan_20260517.md
+    .omx/research/grand_reunion_t4_symposium_orthogonal_optimization_master_gradient_20260517.md
+    src/tac/master_gradient.py (canonical helper; #245-exemplar 4-layer pattern)
+    tools/cathedral_autopilot_autonomous_loop.py::rerank_candidates_via_master_gradient
