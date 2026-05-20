@@ -6450,7 +6450,14 @@ def _invoke_consumer_safely(
                     "expected Mapping per CathedralConsumerContract"
                 ),
             }
-        return {
+        # Catalog #356 + CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.3:
+        # detect per-axis decomposition + auto-compose via canonical helper.
+        # Consumers that don't emit `predicted_axis_decomposition` keep
+        # working unchanged (per-axis branch is None for them).
+        per_axis_breakdown = _compose_per_axis_decomposition_if_present(
+            contribution, candidate
+        )
+        result = {
             "consumer_module": getattr(module, "__name__", "<unknown>"),
             "consumer_name": getattr(module, "CONSUMER_NAME", "<unknown>"),
             "consumer_version": getattr(module, "CONSUMER_VERSION", "unknown"),
@@ -6463,12 +6470,114 @@ def _invoke_consumer_safely(
             "promotable": bool(contribution.get("promotable", False)),
             "confidence": float(contribution.get("confidence", 0.0)),
         }
+        if per_axis_breakdown is not None:
+            result["predicted_axis_decomposition"] = per_axis_breakdown
+        return result
     except Exception as exc:  # noqa: BLE001  defensive at consumer boundary
         return {
             "consumer_module": getattr(module, "__name__", "<unknown>"),
             "candidate_id": candidate.candidate_id,
             "error": f"{type(exc).__name__}: {exc}",
         }
+
+
+def _compose_per_axis_decomposition_if_present(
+    contribution: Mapping[str, Any],
+    candidate: CandidateRow,
+) -> dict[str, Any] | None:
+    """Detect + auto-compose ``predicted_axis_decomposition`` from a consumer.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.3 + Catalog #356.
+
+    Returns ``None`` when the consumer does NOT emit per-axis
+    decomposition (the normal backward-compat path per Catalog #341).
+    Returns a JSON-safe dict with the composed breakdown when present.
+
+    Defensive: any malformed per-axis emission (wrong shape, missing
+    Provenance, NaN deltas, etc.) is surfaced as an ``error`` field on
+    the breakdown rather than crashing the ranker; the scalar
+    ``predicted_delta_adjustment`` continues to flow unaffected so
+    Tier-A canonical-routing-markers semantics are preserved per
+    Catalog #341.
+
+    Baselines:
+    - ``current_archive_bytes`` defaults to CANONICAL_RATE_DENOM_BYTES
+      (the canonical contest archive size) when no candidate-level
+      baseline is available; this is a CONSERVATIVE default that
+      under-weights the rate contribution slightly but never makes a
+      candidate look better than it is.
+    - ``current_d_pose`` defaults to 0.0 when no canonical operating
+      point is available; the sqrt-difference term collapses to
+      ``sqrt(10*delta_d_pose)`` which is the LINEAR-DOMINANT-AT-LOW-POSE
+      regime per CLAUDE.md "SegNet vs PoseNet importance" so the
+      composition is observability-safe.
+
+    Future Dim 3 Step 3.4+: caller will source baselines from the
+    canonical frontier pointer via
+    :func:`tac.score_composition.load_baseline_pose_from_canonical_frontier_pointer`
+    once the AnchorRecord schema is extended with per-axis components.
+    """
+    raw = contribution.get("predicted_axis_decomposition")
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping):
+        return {
+            "error": (
+                "predicted_axis_decomposition must be a Mapping per "
+                f"Catalog #356 + Dim 3 Step 3.1; got {type(raw).__name__}"
+            ),
+        }
+    try:
+        # Lazy import to avoid a hard runtime dependency for the
+        # cathedral autopilot loop when score_composition isn't needed.
+        from tac.cathedral.consumer_contract import AxisDecomposition
+        from tac.score_composition import (
+            CANONICAL_RATE_DENOM_BYTES as _RATE_DENOM,
+            compose_score_from_axes,
+        )
+    except ImportError as exc:
+        return {
+            "error": (
+                "Failed to import tac.score_composition / "
+                f"AxisDecomposition: {exc}"
+            ),
+        }
+    try:
+        decomp = AxisDecomposition.from_dict(raw)
+    except (KeyError, TypeError, ValueError) as exc:
+        return {
+            "error": (
+                f"AxisDecomposition.from_dict refused per-axis emission: "
+                f"{type(exc).__name__}: {exc}"
+            ),
+        }
+    # Source baselines: prefer candidate-supplied attributes if a future
+    # CandidateRow extension carries them; otherwise fall back to
+    # canonical defaults per the docstring's conservative semantics.
+    current_archive_bytes = getattr(
+        candidate, "current_archive_bytes", _RATE_DENOM
+    )
+    if not isinstance(current_archive_bytes, int) or isinstance(
+        current_archive_bytes, bool
+    ):
+        current_archive_bytes = _RATE_DENOM
+    current_d_pose = getattr(candidate, "current_d_pose", 0.0)
+    if not isinstance(current_d_pose, (int, float)) or current_d_pose < 0:
+        current_d_pose = 0.0
+    try:
+        composed = compose_score_from_axes(
+            decomp,
+            current_archive_bytes=int(current_archive_bytes),
+            current_d_pose=float(current_d_pose),
+        )
+    except (TypeError, ValueError) as exc:
+        return {
+            "error": (
+                f"compose_score_from_axes refused composition: "
+                f"{type(exc).__name__}: {exc}"
+            ),
+        }
+    return composed.as_dict()
 
 
 def invoke_cathedral_consumers_on_candidates(
