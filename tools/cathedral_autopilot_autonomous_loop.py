@@ -1109,6 +1109,30 @@ def apply_z1_empirical_revision_to_candidate_delta(
         c.archive_sha256,
         panel_axis=score_panel_axis,
     )
+    # Cable D consumers 7-14 sub-cascade 2026-05-20 (Slot FF
+    # `lane_cable_d_consumers_7_14_autopilot_cascade_wire_in_20260519`):
+    # consume the 6 sister Cable D per-pair canonical sidecars NOT yet read
+    # by the cathedral cascade — per_pair_pareto_envelope (consumer 7) +
+    # per_pair_lagrangian_lambda_bisection (consumer 8) +
+    # per_pair_lora_supervision_signal (consumer 9) +
+    # per_pair_coding_budget_allocation (consumer 10) +
+    # per_pair_kkt_residuals (consumer 12) + per_pair_volterra_cross_terms
+    # (consumer 13). Consumer 11 (per_pair_difficulty_atlas) was wired above
+    # via ITEM_7; consumer 14 (per_pair_optimal_treatment_plan_via_lagrangian_dual)
+    # is the PRIMARY in v2 venn cascade above (Catalog #319 CASCADE 1).
+    #
+    # Composed multiplicatively per the existing sister-#817 + atlas pattern;
+    # sidecar ABSENT → 1.0× passthrough (NO FAKE REWARD per CLAUDE.md
+    # "Forbidden empirical-claim-without-evidence-tag" + sister Q2+Q3 cascade
+    # discipline). Per CLAUDE.md "Apples-to-apples evidence discipline":
+    # planning-only reweighting; never creates a score claim or dispatch
+    # authority. Per Catalog #318 raw-byte-authority guard: this cascade
+    # never returns raw byte tensors — only multiplicative factors derived
+    # from canonical sidecar SCHEMA-validated presence.
+    d = adjust_predicted_delta_for_cable_d_consumers_7_14_sidecars(
+        d,
+        c.archive_sha256,
+    )
     # Grand council T3 finding #12 (2026-05-18) realistic-stacking correction:
     # the Wave 2A 52-row composite EV [-0.139, -0.026] assumes additive
     # composition; Wave 1 NSCS06 v8 anchor empirically refutes additivity
@@ -1790,6 +1814,249 @@ def adjust_predicted_delta_for_per_pair_difficulty_atlas(
         archive_sha256,
         panel_axis=panel_axis,
     )
+
+
+# ── Cable D consumers 7-14 sub-cascade (Slot FF, 2026-05-20) ────────────────
+#
+# Per `.omx/research/cable_d_wire_in_batch_landed_20260519.md` highest-EV
+# op-routable: wire the 6 sister Cable D per-pair canonical sidecars (NOT yet
+# read by the cathedral cascade) into the ranker so per-pair Pareto envelope +
+# Lagrangian lambda + KKT residuals + Volterra cross-terms + LoRA supervision +
+# coding-budget signals influence candidate ordering.
+#
+# CANONICAL SIDECAR IDS (per `tac.master_gradient_consumers` consumer_id field):
+#   - per_pair_pareto_envelope (consumer 7) — schema:
+#       master_gradient_consumer_per_pair_pareto_envelope_v1
+#   - per_pair_lagrangian_lambda_bisection (consumer 8) — schema:
+#       master_gradient_consumer_per_pair_lambda_bisection_v1
+#   - per_pair_lora_supervision_signal (consumer 9) — schema:
+#       master_gradient_consumer_per_pair_lora_supervision_v1
+#   - per_pair_coding_budget_allocation (consumer 10) — schema:
+#       master_gradient_consumer_per_pair_coding_budget_v1
+#   - per_pair_kkt_residuals (consumer 12) — schema:
+#       master_gradient_consumer_per_pair_kkt_residuals_v1
+#   - per_pair_volterra_cross_terms (consumer 13) — schema:
+#       master_gradient_consumer_per_pair_volterra_v1
+#
+# Wired separately above (NOT in this sub-cascade):
+#   - per_pair_difficulty_atlas (consumer 11) — ITEM_7 closure (line ~1107)
+#   - per_pair_optimal_treatment_plan_via_lagrangian_dual (consumer 14) —
+#     Catalog #319 CASCADE 1 PRIMARY (line ~1393)
+#
+# REWARD SEMANTICS (multiplicative factor; lower predicted_score_delta is
+# better, improvements are negative; factor > 1.0 makes a negative delta MORE
+# negative = better-ranked):
+#
+# Each sidecar that is PRESENT + canonical-SCHEMA-valid + custody-clean +
+# carries non-zero structural signal contributes a CONSERVATIVE 1.01× reward
+# (1% bonus per sidecar; deliberately small per CLAUDE.md "Forbidden
+# empirical-claim-without-evidence-tag" — sidecars are PREDICTIVE signal not
+# empirical anchors). The factors compose multiplicatively — with all 6
+# sidecars present at maximum signal the combined factor is 1.01^6 = ~1.0615×
+# (modest stacked reward). With 0 sidecars present the factor is 1.0×
+# (NO FAKE REWARD per sister Q2+Q3 v2 cascade discipline + sister-#817 +
+# atlas pattern).
+#
+# Per CATALOG #327 raw-byte-authority guard: this cascade never reads raw
+# byte tensors or projects bytes-to-score — it ONLY reads canonical sidecar
+# SCHEMA-validated presence + structural signal markers (n_pairs > 0,
+# canonical schema tag matches, archive_sha256 matches, score_claim=false).
+#
+# Per CATALOG #341 cathedral consumer routing canonical markers: this is a
+# rank-time helper invoked from `apply_z1_empirical_revision_to_candidate_delta`
+# (not from a cathedral consumer package directly). The sister Cable D
+# consumer packages (per_pair_pareto_envelope_consumer / etc.) already carry
+# the 3 canonical non-promotable markers (predicted_delta_adjustment=0.0 /
+# promotable=False / axis_tag="[predicted]") at the consumer surface; this
+# cascade is the downstream RANKER consumption surface, distinct from the
+# consumer surface. The ranker reweight is observability-only (does NOT
+# mutate the row's predicted_score_delta; the adjustment is transient for
+# sort-key purposes only per docstring on apply_z1_empirical_revision).
+
+_CABLE_D_CONSUMERS_7_14_SIDECAR_REWARD_FACTOR_PER_PRESENT = 1.01
+_CABLE_D_CONSUMERS_7_14_SIDECAR_REWARD_FACTOR_ABSENT = 1.0
+
+# Canonical sidecar IDs + their schema tags (per
+# `tac.master_gradient_consumers` write_consumer_sidecar_json calls).
+# Ordered to match Cable D consumer numbering 7+8+9+10+12+13.
+_CABLE_D_CONSUMERS_7_14_CANONICAL_SIDECARS = (
+    (
+        "per_pair_pareto_envelope",
+        "master_gradient_consumer_per_pair_pareto_envelope_v1",
+    ),
+    (
+        "per_pair_lagrangian_lambda_bisection",
+        "master_gradient_consumer_per_pair_lambda_bisection_v1",
+    ),
+    (
+        "per_pair_lora_supervision_signal",
+        "master_gradient_consumer_per_pair_lora_supervision_v1",
+    ),
+    (
+        "per_pair_coding_budget_allocation",
+        "master_gradient_consumer_per_pair_coding_budget_v1",
+    ),
+    (
+        "per_pair_kkt_residuals",
+        "master_gradient_consumer_per_pair_kkt_residuals_v1",
+    ),
+    (
+        "per_pair_volterra_cross_terms",
+        "master_gradient_consumer_per_pair_volterra_v1",
+    ),
+)
+
+
+def _latest_cable_d_consumer_sidecar_for_archive(
+    consumer_id: str,
+    archive_sha256: str,
+) -> Path | None:
+    """Find the most-recent canonical sidecar for the given consumer + archive.
+
+    Mirrors ``_latest_per_pair_bit_allocation_sidecar_for_archive`` pattern.
+    Returns None when no matching sidecar exists.
+    """
+    if not _PER_PAIR_SIDECAR_SCAN_ROOT.exists():
+        return None
+    sha_short = archive_sha256[:12]
+    matches = sorted(
+        _PER_PAIR_SIDECAR_SCAN_ROOT.glob(f"{consumer_id}_{sha_short}_*.json")
+    )
+    if not matches:
+        return None
+    return matches[-1]  # lex-max == chrono-max (UTC YYYYMMDDTHHMMSS suffix)
+
+
+def _cable_d_consumer_sidecar_carries_structural_signal(
+    sidecar_path: Path,
+    archive_sha256: str,
+    expected_schema: str,
+) -> bool:
+    """Read sidecar JSON; verify canonical schema + custody + non-trivial signal.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #287/#323
+    + Catalog #341: a sidecar contributes a reward only when:
+      (a) JSON parses (no malformed payload poisoning ranking);
+      (b) schema tag matches the canonical expected_schema for the consumer
+          (no orphan sidecar from a different consumer);
+      (c) archive_sha256 matches the candidate's archive (no cross-archive
+          contamination);
+      (d) score_claim is explicitly False (no phantom-score sidecar leak per
+          Catalog #321/#322/#323 sister discipline);
+      (e) promotion_eligible is explicitly False (no promotion-leak via sidecar);
+      (f) n_pairs > 0 OR n_bytes > 0 (non-trivial structural signal; an
+          empty sidecar carries no information).
+
+    Returns True iff all 6 conditions hold. Returns False on any failure
+    (file IO, JSON parse, schema mismatch, custody violation, trivial signal).
+    """
+    try:
+        payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    # (b) canonical schema tag matches
+    if payload.get("schema") != expected_schema:
+        return False
+    # (c) archive_sha256 matches (case-insensitive defensive)
+    payload_sha = payload.get("archive_sha256")
+    if (
+        not isinstance(payload_sha, str)
+        or payload_sha.lower() != archive_sha256.lower()
+    ):
+        return False
+    # (d) score_claim explicitly False
+    if payload.get("score_claim") is not False:
+        return False
+    # (e) promotion_eligible explicitly False
+    if payload.get("promotion_eligible") is not False:
+        return False
+    # (f) non-trivial structural signal: n_pairs > 0 OR n_bytes > 0
+    n_pairs = payload.get("n_pairs", 0)
+    n_bytes = payload.get("n_bytes", 0)
+    if not isinstance(n_pairs, (int, float)) or not isinstance(
+        n_bytes, (int, float)
+    ):
+        return False
+    if n_pairs <= 0 and n_bytes <= 0:
+        return False
+    return True
+
+
+def _cable_d_consumers_7_14_sidecar_reward_factor(
+    archive_sha256: str,
+) -> float:
+    """Compose multiplicative reward across the 6 sister Cable D sidecars.
+
+    For each of the 6 canonical sidecars (per_pair_pareto_envelope +
+    per_pair_lagrangian_lambda_bisection + per_pair_lora_supervision_signal +
+    per_pair_coding_budget_allocation + per_pair_kkt_residuals +
+    per_pair_volterra_cross_terms):
+      - If sidecar PRESENT + canonical-SCHEMA-valid + custody-clean +
+        carries non-trivial structural signal: factor *= 1.01
+      - Otherwise (absent / malformed / cross-archive / score_claim-leak /
+        promotion_eligible-leak / trivial signal): factor *= 1.0
+
+    Returns the composed multiplicative factor in [1.0, 1.01^6] = [1.0, ~1.0615].
+
+    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" + sister
+    Q2+Q3 + sister-#817 + atlas v2 cascade discipline: this is a CONSERVATIVE
+    reward for structural-signal presence, not an empirical anchor.
+    """
+    factor = 1.0
+    for consumer_id, expected_schema in _CABLE_D_CONSUMERS_7_14_CANONICAL_SIDECARS:
+        sidecar = _latest_cable_d_consumer_sidecar_for_archive(
+            consumer_id, archive_sha256
+        )
+        if sidecar is None:
+            continue
+        if _cable_d_consumer_sidecar_carries_structural_signal(
+            sidecar, archive_sha256, expected_schema
+        ):
+            factor *= _CABLE_D_CONSUMERS_7_14_SIDECAR_REWARD_FACTOR_PER_PRESENT
+    return factor
+
+
+def adjust_predicted_delta_for_cable_d_consumers_7_14_sidecars(
+    predicted_delta: float,
+    archive_sha256: str,
+) -> float:
+    """Apply Cable D consumers 7-14 sidecar consumption to predicted_delta.
+
+    Slot FF 2026-05-20 — `lane_cable_d_consumers_7_14_autopilot_cascade_wire_in_20260519`.
+    The Cable D wire-in batch landed 6 sister per-pair canonical sidecars
+    that the cathedral autopilot ranker did NOT consume prior to this cascade.
+    This wire-in extends the existing sister-#817 + atlas pattern to surface
+    the 6 sidecars' structural-signal presence as a CONSERVATIVE 1.01× per
+    sidecar multiplicative reward (composed up to ~1.0615× when all 6 present).
+
+    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" + sister
+    Q2+Q3 v2 cascade discipline: sidecar ABSENT or invalid → 1.0× passthrough
+    (NO FAKE REWARD); sidecar PRESENT + canonical-SCHEMA-valid + custody-clean
+    + carries non-trivial structural signal → 1.01× reward per sidecar.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #287/#323:
+    this is PLANNING-ONLY reweighting; never creates a score claim or dispatch
+    authority. Only changes autopilot ranking ordering.
+
+    Per Catalog #318 master-gradient raw-byte-authority guard: this cascade
+    never returns raw byte tensors — only multiplicative factors derived from
+    canonical sidecar SCHEMA-validated presence + structural-signal markers.
+
+    Args:
+        predicted_delta: Predicted score delta from the candidate row after
+            the upstream cascade chain (v2 venn + sister-817 + atlas).
+            Negative = score improvement per autopilot convention.
+        archive_sha256: 64-char hex sha of the target archive bytes.
+
+    Returns:
+        Adjusted predicted_delta per the composed multiplicative factor.
+    """
+    if not archive_sha256:
+        return predicted_delta
+    factor = _cable_d_consumers_7_14_sidecar_reward_factor(archive_sha256)
+    return predicted_delta * factor
 
 
 # ── Tier C substrate-class density (Catalog #227 wire-in, 2026-05-14) ─────
