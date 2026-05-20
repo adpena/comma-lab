@@ -293,6 +293,27 @@ Canonical references:
 
 **Internal research**: per-pair Pareto envelope cathedral consumer ingests the 3-set Venn classification + per-pair master-gradient Cauchy-Schwarz bound (canonical equation slot `per_pair_master_gradient_score_impact_taylor_v1`) to emit per-pair candidate-rank annotations downstream of the cathedral autopilot ranker.
 
+### C.12 Selector + microcodec extensions (orthogonal-overlay class)
+
+Canonical references for the orthogonal-overlay paradigm + per-byte sensitivity grounding:
+
+- Wang, F., & Rudin, C. (2015). [Falling Rule Lists](https://proceedings.mlr.press/v38/wang15a.html). *AISTATS*, 1013–1022. (selector-as-falling-rule-list canonical discipline; sister of Catalog #274).
+- Huffman, D. A. (1952). [A method for the construction of minimum-redundancy codes](https://ieeexplore.ieee.org/document/4051119). *Proc. IRE*, 40(9), 1098–1101.
+
+**Why**: per the 2026-05-20 cross-candidate sensitivity comparative analysis ([`docs/per_byte_sensitivity_comparative_analysis_methodology.md`](per_byte_sensitivity_comparative_analysis_methodology.md)) the HNeRV-class backbone is **class-saturated** at the 0.19xxx medal cluster (Pearson seg ρ=0.961 + pose ρ=0.971 between PR101 and fec6 on the shared 178,158-byte backbone). The empirical path forward on this class is **orthogonal selector + microcodec overlays** that add bytes ON TOP of the saturated backbone, not refinement OF the backbone itself. fec6 frontier (+259 bytes; +794 ppm reduction) is the proof-of-concept; the SELECTOR-EXTENSIONS class generalizes the discovery.
+
+| Candidate | Status | One-line summary |
+|---|---|---|
+| `fec6 fixed-Huffman k=16 frame-exploit selector` (PR110) | EMPIRICALLY VALIDATED | `0.19205 [contest-CPU]` on archive sha `6bae0201` — the canonical anchor. |
+| `Per-class Huffman selector with k-sweep` | DESIGN-ONLY | Generalize fec6's k=16 to learned-per-class k via Wang-Rudin falling-rule-list discipline. |
+| `Frame-pair-specific selector (vs frame-exploit-only)` | DESIGN-ONLY | Extend selector granularity from frame to pair. |
+| `Arithmetic-coded selector (vs fixed-Huffman)` | DESIGN-ONLY | STC-Dasher-style entropy-coded selector overhead. |
+| `Two-tier selector + microcodec composition` | DESIGN-ONLY | Selector chooses among k microcodecs each tuned for a different per-pair regime. |
+| `Selector-aware bit-allocator` (per-class Pareto routing) | DESIGN-ONLY | Bit-allocator that respects the per-class selector signal. |
+| `PR106 score-table as orthogonal-codec stack on HNeRV backbone` | DESIGN-ONLY | Per canonical equation #9 `cross_codec_super_additive_orthogonality_predictor_v1`; PR106 vs HNeRV-family pairs classify SUPER_ADDITIVE with top-K Jaccard 0.000. |
+
+**Internal research**: the canonical equation `hnerv_backbone_sensitivity_saturated_across_medal_cluster_v1` (per Catalog #344 commit `80484241f`) empirically established that the entire +794 ppm fec6 advantage is concentrated in selector overhead, not backbone refinement. The sister equation `cross_codec_super_additive_orthogonality_predictor_v1` predicts that PR106-vs-HNeRV-family compositions are orthogonal-codec (Jaccard 0.000) so PR106's score-table stacking on an HNeRV backbone is a structural SUPER_ADDITIVE candidate. Together these establish the SELECTOR-EXTENSIONS class as a first-class attack surface independent of the within-backbone substrate engineering covered by C.6–C.10. The `tac.cathedral_consumers.auto_trigger_similarity_after_master_gradient_anchor_consumer` (Catalog #335-compliant; per the per-byte sensitivity methodology) auto-pre-classifies new master-gradient anchors against this taxonomy so candidate generation surfaces SELECTOR-EXTENSIONS as a default ranker dimension.
+
 ---
 
 ## D. Cost-efficiency and hardware

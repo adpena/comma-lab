@@ -62,6 +62,8 @@ The other ~50 substrates listed in the inventory are scaffolded or designed but 
 
 This is the calibration: the META is the leverageable artifact; the per-candidate empirical state is mixed. Both true.
 
+**PR110/fec6 as methodology-proving artifact (Wave 3 cross-candidate sensitivity comparison, 2026-05-20).** The +0.000794 advantage of fec6 frontier (`0.19205 [contest-CPU]`) over PR101 GOLD (`0.19284 [contest-CPU]`) is not a backbone refinement — the 21-pair cross-candidate per-byte sensitivity matrix established empirically that the 178,158-byte HNeRV backbone has IDENTICAL per-axis aggregate sensitivity between PR101 and fec6 (Pearson seg ρ = 0.961, pose ρ = 0.971). The entire +794 ppm advantage is concentrated in **+259 bytes of FEC6 selector + Huffman k=16 frame-exploit orthogonal overhead**. PR110 IS the proof-of-concept that orthogonal selector overlays on the saturated HNeRV-class backbone are a valid score-lowering path; the structural insight propagates beyond the immediate submission into the selector-extensions class of future substrate work. The discipline that produced this finding ([`docs/per_byte_sensitivity_comparative_analysis_methodology.md`](./per_byte_sensitivity_comparative_analysis_methodology.md)) is now reusable infrastructure; the three canonical equations codified (per_byte_leverage_cross_hardware_aware_v2 + hnerv_backbone_sensitivity_saturated_across_medal_cluster_v1 + cross_codec_super_additive_orthogonality_predictor_v1 per Catalog #344 commit 80484241f) are first-class artifacts independent of PR110's submission use.
+
 ---
 
 ## 5. The full meal

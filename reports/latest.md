@@ -1,31 +1,26 @@
 <!--
-generated_at: 2026-05-12T00:00:00Z
-from_state_hash: 07f25a7046e72c9504cd9e053a378d0a4da86837533ed9f0ed0bd864df431b26
-regenerated_by: subagent:wave9_progress_audit_20260512
-last_refreshed_at: 2026-05-13T00:00:00Z
-last_refreshed_by: subagent:FIX-COMBINED-Z-PLUS-R5
-last_refreshed_head: b1552977
+generated_at: 2026-05-20T12:11:33Z
+from_state_hash: canonical_frontier_pointer_20260520T115711Z
+regenerated_by: codex:vq_k2_terminalize_and_frontier_refresh_20260520
+last_refreshed_at: 2026-05-20T12:11:33Z
+last_refreshed_by: codex:vq_k2_terminalize_and_frontier_refresh_20260520
+last_refreshed_head: local_dirty_worktree
 last_refreshed_note: |
-  R5 finding R5-3 (Low, 2026-05-13) flagged this report as stale by ~24h
-  + 35+ commits since the 2026-05-12 regen. The body content below is
-  unchanged (no substantive regen this pass); this header records the
-  re-acknowledgement and points future agents at the canonical regen
-  driver. Per CLAUDE.md "Required durable state" non-negotiable,
-  reports/latest.md is on the post-cycle update list and should be
-  re-generated against current state on the next session-close gate
-  per the WAVE-9-CLOSURE pattern. Reactivation criterion: if this header
-  is again >24h or >25 commits stale at session close, R5-3 reactivates
-  and FIX-WAVE-R5+ should fully regenerate the body. See
-  feedback_recursive_review_r5_LANDED_20260513.md + the FIX-COMBINED-Z-PLUS-R5
-  closure memo (feedback_fix_combined_z_plus_r5_LANDED_20260513.md).
+  Current frontier/status refresh after PR #110, D-3 compliance clearance,
+  PR101/FEC6 PacketIR runtime-consumption closure, and VQ K=2 diagnostic
+  terminalization. The scanner-derived FRONTIER section below is current as of
+  canonical_frontier_pointer.json refreshed at 2026-05-20T11:57:11Z. Later
+  historical sections remain useful context, but the FRONTIER and 2026-05-20
+  operation notes are the current authority.
 -->
 
-# Comma Lab — Substrate Canvas + Phase B-2 Readiness — 2026-05-12
+# Comma Lab - Current Frontier Snapshot - 2026-05-20
 
-> **R5-3 closure note (2026-05-13)**: report body below remains the 2026-05-12
-> snapshot. Header refreshed by FIX-COMBINED-Z-PLUS-R5 to acknowledge staleness
-> without unilaterally rewriting the body. Full regen deferred to next
-> session-close gate per the WAVE-9-CLOSURE pattern.
+> **2026-05-20 refresh note**: the scanner-derived FRONTIER section and
+> operations notes are current. Historical roadmap sections below remain
+> retained for context; use `.omx/state/current_focus.md`,
+> `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
+> detailed queue routing.
 
 ## FRONTIER (scanner-derived from canonical state)
 
@@ -41,7 +36,7 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best — last regenerated 2026-05-17
+### Current best - last regenerated 2026-05-20T12:11Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
@@ -53,18 +48,43 @@ last_refreshed_note: |
 **`[contest-CPU]`**:
 
 1. **0.1920513169** — `6bae0201fb08` — `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515`
-2. 0.1920978868 — `8866ebb655e9` — pr101 fec sibling
-3. 0.1948697174 — `7d1e46331a04`
-4. 0.1982817145 — `14190c2aac3d`
-5. 0.1983654164 — `ac8b7681cde0`
+2. 0.1920513169 — `6bae0201fb08` — duplicate canonical anchor for current CPU frontier
+3. 0.1920978868 — `8866ebb655e9` — pr101 fec sibling
+4. 0.1920978868 — `8866ebb655e9` — duplicate canonical anchor for fec sibling
+5. 0.1928475774 — `87ec7ca5f2f3` — `hnerv_ft_microcodec`
 
 **`[contest-CUDA T4]`**:
 
 1. **0.2053300290** — `9cb989cef519` — `lane_pr106_format0d_latent_score_table_20260516_contest_cuda`
-2. 0.2063163866 — `56cdd10bdc43` — `lane_pr106_format0c_exact_radix_paired_20260515`
-3. 0.2063257086 — `5c9ef623a089` — `lane_pr106_hdm11_hlm3_magicless_packetir_format0b_20260515`
-4. 0.2063310355 — `186a3d59f203`
-5. 0.2063330331 — `09bcd867c277`
+2. 0.2053300290 — `9cb989cef519` — duplicate canonical anchor for current CUDA frontier
+3. 0.2063163866 — `56cdd10bdc43` — `lane_pr106_format0c_exact_radix_paired_20260515`
+4. 0.2063163866 — `56cdd10bdc43` — duplicate canonical anchor for format0c
+5. 0.2063257086 — `5c9ef623a089` — `lane_pr106_hdm11_hlm3_magicless_packetir_format0b_20260515`
+
+### 2026-05-20 operations refresh
+
+- **PR #110** (`hnerv_fec6_fixed_huffman_k16`) is open, non-draft, and
+  mergeable-clean at head `ec6cc7f98c16b6ad2db8bc7cde65757bb7993004`. The
+  live diff is correctly under
+  `submissions/hnerv_fec6_fixed_huffman_k16/`; the root README is restored.
+- **FEC6 PR submission custody**: hosted archive release, public source pin,
+  D-3 strict compliance clearance, and runtime equivalence are recorded in
+  dated `.omx/research/` ledgers. Public maintainer/bot feedback is still
+  pending.
+- **PR101/FEC6 PacketIR closure**: runtime-consumption proof shows all
+  `178417` member bytes consumed, no-op detector passed, and candidate queue
+  rebuilt. Authority remains local/compiler-only; no score or promotion claim.
+- **VQ K=2 diagnostic**: call `fc-01KS21XSVGM2KJ5ET0ET3YCCFN` completed and was
+  terminalized at `2026-05-20T12:10:19Z`; diagnostic CPU score
+  `78.07586900258559`, archive SHA
+  `fea2cd8af897fcc22525b86a4a6bc9745b47a385cc83c392e01e56fdb93dda76`,
+  `score_claim=false`, `promotion_eligible=false`.
+- **Next chosen frontier-moving path**: Rule #6 / FEC6 component-moving packet
+  path, recorded at
+  `.omx/research/codex_chosen_frontier_path_rule6_fec6_component_moving_20260520T121606Z_codex.md`.
+  Same-runtime byte polish is below the ~78 charged-byte threshold, so the next
+  useful artifact must change Seg/Pose components or add a consumed procedural
+  residual layer before paired exact eval.
 
 ### Comparison vs public PRs
 
@@ -83,6 +103,7 @@ last_refreshed_note: |
 
 - The Top-5 CUDA bucket is dominated by PR106 `format0*` family (alien-tech routing per `feedback_a1d3dd050fc09dc54`) — a clear architectural cluster worth deeper investigation.
 - The CPU/CUDA bifurcation is real: best-CPU is fec6 (PR101 family) but best-CUDA is format0d (PR106 family). Different lanes win different axes. **A binding artifact that combines fec6's selector + PR106 format0d's score-table grammar + FP4 codebook + Ballé hyperprior + Cheng2020 has every primitive we'd need for a dual-axis frontier sweep.**
+- **Per-byte sensitivity comparative analysis (Wave 3, 2026-05-20).** The 21-pair cross-candidate matrix empirically established the HNeRV-class backbone is class-saturated at the 0.19xxx medal cluster (Pearson seg ρ=0.961 between PR101 and fec6 on shared 178,158 backbone bytes); the entire +794 ppm fec6 advantage is concentrated in +259 bytes of orthogonal selector overhead. PR106-vs-HNeRV-family pairs classify SUPER_ADDITIVE (top-K Jaccard 0.000) per canonical equation `cross_codec_super_additive_orthogonality_predictor_v1`, structurally supporting the dual-axis stack candidate. Discipline + methodology: [`docs/per_byte_sensitivity_comparative_analysis_methodology.md`](../docs/per_byte_sensitivity_comparative_analysis_methodology.md). Selector-extensions class enumeration: [`docs/asymptotic_floor_candidate_inventory.md`](../docs/asymptotic_floor_candidate_inventory.md) §C.12.
 
 ### G1 CPU-axis optimization — 2026-05-18 Codex local rerank
 
