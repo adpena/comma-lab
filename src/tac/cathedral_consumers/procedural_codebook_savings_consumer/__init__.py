@@ -70,6 +70,13 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from tac.canonical_equations.equation import DomainOfValidityViolation
+from tac.canonical_equations.procedural_codebook_savings import (
+    _DEFAULT_CONTEXT,
+    _EXCLUDED_CONTEXTS,
+    _INCLUDED_CONTEXTS,
+    validate_context_is_in_domain,
+)
 from tac.cathedral.consumer_contract import HookNumber
 from tac.cathedral_consumers.per_frame_sensitivity_consumer import (
     consume_candidate as consume_per_frame_sensitivity_candidate,
@@ -145,6 +152,82 @@ def _no_signal(reason: str) -> Mapping[str, Any]:
     }
 
 
+def _domain_violated_signal(
+    *,
+    context: str,
+    substrate_id: str,
+    reason: str,
+) -> Mapping[str, Any]:
+    """Tier A canonical signal for candidates whose context is EXCLUDED.
+
+    Per WAVE-3-CANONICAL-EQUATION-26-DOMAIN-REFINEMENT 2026-05-20 + the
+    DWT-DETAIL-SUBBAND CPU SMOKE empirical anchor (commit ``f25f8cc1b``;
+    KL=1.638 nats / 3.28σ proving direct procedural-codebook substitution
+    on DWT detail subbands corrupts inverse DWT): consumers MUST refuse
+    candidates in :data:`_EXCLUDED_CONTEXTS` by emitting a non-promotable
+    advisory rather than silently producing a phantom savings prediction
+    that downstream cathedral autopilot / Pareto solver / continual-
+    learning consumers would absorb.
+
+    Canonical Catalog #341 markers + augmented ``axis_tag`` =
+    ``[predicted_domain_violated]`` so downstream rerankers + observability
+    surfaces can route the candidate to the domain-violated bucket
+    (rather than treat it as predicted-but-actionable).
+    """
+    rationale = (
+        f"procedural-codebook savings consumer REFUSED: context={context!r} "
+        f"(substrate={substrate_id!r}) is EXPLICITLY excluded from canonical "
+        f"equation procedural_codebook_from_seed_compression_savings_v1 "
+        f"domain_of_validity; reason={reason}; "
+        "see sister anchor DWT-DETAIL-SUBBAND CPU smoke (commit f25f8cc1b; "
+        "KL=1.638 nats / 3.28σ) [predicted_domain_violated]"
+    )
+    return {
+        "predicted_delta_adjustment": 0.0,
+        "rationale": rationale,
+        "axis_tag": "[predicted_domain_violated]",
+        "promotable": False,
+        "confidence": 0.0,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "consumer_signal_kind": "procedural_codebook_savings_domain_violated",
+        "substrate_id": substrate_id,
+        "context_attempted": context,
+        "canonical_equation_id": "procedural_codebook_from_seed_compression_savings_v1",
+        "excluded_contexts": list(_EXCLUDED_CONTEXTS),
+        "included_contexts": list(_INCLUDED_CONTEXTS),
+        "empirical_anchor_citation": (
+            "experiments/results/dwt_detail_subband_procedural_smoke_20260520T232239Z/smoke_result.json + "
+            ".omx/state/canonical_equations_registry.jsonl#procedural_codebook_from_seed_compression_savings_v1#anchor_2026_05_20T23_22_40Z"
+        ),
+        "re_scope_design_memo": (
+            ".omx/research/dwt_bind_rescope_intermediate_transform_path_design_20260520.md"
+        ),
+    }
+
+
+def _domain_uncertain_signal(
+    *,
+    context: str,
+    substrate_id: str,
+) -> Mapping[str, Any]:
+    """Tier A canonical signal for candidates whose context is unknown.
+
+    The context is neither in :data:`_INCLUDED_CONTEXTS` nor
+    :data:`_EXCLUDED_CONTEXTS`. The consumer falls back to the canonical
+    formula prediction but tags the row ``[predicted_domain_uncertain]``
+    so downstream consumers know the prediction is advisory pending
+    explicit context-classification.
+    """
+    return {
+        "context_attempted": context,
+        "substrate_id": substrate_id,
+        "domain_classification": "uncertain_not_in_included_or_excluded",
+        "canonical_equation_id": "procedural_codebook_from_seed_compression_savings_v1",
+    }
+
+
 def _load_candidate_payload(candidate: Mapping[str, Any]) -> Mapping[str, Any] | None:
     """Locate the procedural-codebook savings candidate payload."""
     for key in _PROCEDURAL_CANDIDATE_KEYS:
@@ -202,6 +285,36 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     n_codebook_bytes = payload.get("n_codebook_bytes")
     k_seed_bytes = payload.get("k_seed_bytes")
     generator_kind = payload.get("generator_kind", "pcg64")
+    # WAVE-3-CANONICAL-EQUATION-26-DOMAIN-REFINEMENT 2026-05-20: extract
+    # explicit context kwarg. Legacy callers omit; default applied per
+    # `validate_context_is_in_domain` semantics. Recognized payload keys
+    # are listed in order of precedence.
+    substrate_context = (
+        payload.get("substrate_context")
+        or payload.get("context")
+        or payload.get("domain_of_validity_context")
+        or _DEFAULT_CONTEXT
+    )
+    # Domain-of-validity gating per Catalog #344 + WAVE-3 empirical anchor.
+    # Excluded contexts (e.g. direct_dwt_detail_subband_byte_substitution)
+    # are refused via canonical `[predicted_domain_violated]` markers per
+    # Catalog #341 — NEVER silently produce a phantom savings prediction.
+    try:
+        domain_ok = validate_context_is_in_domain(
+            substrate_context, raise_on_excluded=False
+        )
+    except Exception:  # pragma: no cover - defensive
+        domain_ok = False
+    if str(substrate_context).strip().lower() in _EXCLUDED_CONTEXTS:
+        return _domain_violated_signal(
+            context=str(substrate_context),
+            substrate_id=str(substrate_id),
+            reason=(
+                "direct procedural-codebook byte substitution on transform "
+                "coefficients (DWT detail subband / wavelet decomposition) "
+                "corrupts inverse transform per KL=1.638 nats / 3.28σ smoke"
+            ),
+        )
 
     if not isinstance(n_codebook_bytes, int) or n_codebook_bytes <= 0:
         return _no_signal(
@@ -239,21 +352,40 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         n_codebook_bytes=n_codebook_bytes,
         k_seed_bytes=k_seed_bytes,
     )
+    # WAVE-3-CANONICAL-EQUATION-26-DOMAIN-REFINEMENT 2026-05-20: if the
+    # context was unknown (not in INCLUDED + not in EXCLUDED), tag the
+    # axis as `[predicted_domain_uncertain]` so downstream consumers know
+    # the prediction is advisory pending explicit context classification.
+    is_domain_uncertain = not domain_ok
+    axis_tag = (
+        "[predicted_domain_uncertain]" if is_domain_uncertain else "[predicted]"
+    )
     rationale = (
-        f"procedural-codebook savings prediction for substrate={substrate_id}; "
+        f"procedural-codebook savings prediction for substrate={substrate_id} "
+        f"(context={substrate_context!r}, domain_ok={domain_ok}); "
         f"N_codebook={n_codebook_bytes} -> K_seed={k_seed_bytes} "
         f"(generator={generator_kind}); predicted_delta_s="
         f"{savings['predicted_delta_s']:+.6f}; "
         f"actionable={savings['actionable']}; "
         f"per_frame_seed_budget_allocation={'available' if per_frame_allocation else 'absent'}; "
-        "promotion gated by Catalog #325 + #324 + #272 [predicted]"
+        f"promotion gated by Catalog #325 + #324 + #272 {axis_tag}"
     )
+    domain_meta = _domain_uncertain_signal(
+        context=str(substrate_context), substrate_id=str(substrate_id)
+    ) if is_domain_uncertain else {
+        "context_attempted": str(substrate_context),
+        "substrate_id": str(substrate_id),
+        "domain_classification": "in_included_contexts",
+        "canonical_equation_id": (
+            "procedural_codebook_from_seed_compression_savings_v1"
+        ),
+    }
 
     return {
         # Catalog #341 Tier A canonical routing markers (observability-only)
         "predicted_delta_adjustment": 0.0,
         "rationale": rationale,
-        "axis_tag": "[predicted]",
+        "axis_tag": axis_tag,
         "promotable": False,
         "confidence": 0.0,
         "score_claim": False,
@@ -287,4 +419,6 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
             "catalog_324_post_training_tier_c_validation + "
             "catalog_272_distinguishing_feature_byte_mutation_smoke"
         ),
+        # WAVE-3 domain-of-validity classification surface
+        "domain_of_validity_classification": domain_meta,
     }

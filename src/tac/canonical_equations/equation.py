@@ -66,6 +66,26 @@ class InvalidEquationError(ValueError):
     """
 
 
+class DomainOfValidityViolation(ValueError):
+    """Raised when a context is explicitly excluded from an equation's domain.
+
+    Per CLAUDE.md "Canonical equations + models registry" non-negotiable +
+    Catalog #344 sister discipline: every canonical equation MAY declare
+    ``domain_of_validity_included`` + ``domain_of_validity_excluded`` lists
+    inside its ``domain_of_validity`` mapping. Callers that invoke an
+    equation's predictor in an EXCLUDED context (e.g., the DWT detail-
+    subband empirical vindication 2026-05-20: KL=1.638 nats / 3.28σ proves
+    direct procedural-codebook substitution on DWT detail subbands corrupts
+    inverse DWT) MUST be refused at the source rather than silently
+    producing a phantom prediction that downstream cathedral autopilot /
+    Pareto solver / continual-learning consumers would absorb.
+
+    Sister of :class:`InvalidEquationError` at the per-invocation surface
+    (``InvalidEquationError`` is per-construction; this exception is
+    per-invocation in a specific context).
+    """
+
+
 def _utc_now_iso() -> str:
     """Canonical UTC timestamp with trailing Z."""
     return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -349,6 +369,7 @@ __all__ = [
     "RECALIBRATE_NEVER_AUTO",
     "VALID_RECALIBRATION_TRIGGERS",
     "InvalidEquationError",
+    "DomainOfValidityViolation",
     "EmpiricalAnchor",
     "CanonicalEquation",
 ]

@@ -58,6 +58,7 @@ from __future__ import annotations
 
 from tac.canonical_equations.equation import (
     CanonicalEquation,
+    DomainOfValidityViolation,
     EmpiricalAnchor,
     RECALIBRATE_ON_NEW_ANCHORS,
 )
@@ -77,6 +78,106 @@ _NSCS06_V8_PREDICTED_DELTA_S = (
     -CANONICAL_RATE_MULTIPLIER * _NSCS06_V8_BYTES_SAVED / CANONICAL_RATE_DENOM_BYTES
 )
 _AGGREGATE_PREDICTED_DELTA_S = -0.013  # per memo Top-3 #2 quote
+
+# ---------------------------------------------------------------------------
+# Domain-of-validity refinement per WAVE-3-CANONICAL-EQUATION-26-DOMAIN-
+# REFINEMENT 2026-05-20 (sister DWT-DETAIL-SUBBAND CPU smoke commit
+# `f25f8cc1b`; KL=1.638 nats / 3.28σ empirical vindication that direct
+# procedural-codebook byte substitution on DWT detail subbands corrupts
+# inverse DWT). Catalog #344 sister discipline + Catalog #110/#113
+# APPEND-ONLY HISTORICAL_PROVENANCE.
+# ---------------------------------------------------------------------------
+
+# Contexts where the canonical equation #26 producer
+# (`derive_codebook_from_seed`) IS valid — the codebook is consumed at an
+# INTERMEDIATE transform position (quantizer table / dequantizer LUT / class
+# anchor) rather than directly substituted into pixel/coefficient bytes.
+_INCLUDED_CONTEXTS = (
+    "intermediate_transform_quantizer",
+    "intermediate_transform_dequantizer",
+    "procedural_codebook_as_lookup_table",
+    "comma2k19_ood_derived_basis_replacement",
+    "chroma_lut_replacement",
+    "class_anchor_replacement",
+    "nscs06_v8_chroma_lut",
+    "atw_v2_codec_quantizer_lut",
+    "tt5l_transformer_tokens",
+    "dp1_codebook_bytes",
+    "deterministic_constants_codebook_replacement",
+)
+
+# Contexts EXPLICITLY excluded — direct byte substitution on transform
+# coefficients (DWT detail subbands / DCT coefficients / etc.) where the
+# uniform-PRNG distributional mismatch (KL=1.638 nats / 3.28σ on the DWT
+# anchor) corrupts the downstream inverse transform.
+_EXCLUDED_CONTEXTS = (
+    "direct_dwt_detail_subband_byte_substitution",
+    "direct_byte_substitution_on_wavelet_decomposition_coefficients",
+)
+
+# Default context applied to legacy callers that don't pass an explicit
+# context kwarg. Maps to the original IMPLICIT assumption from the equation's
+# pre-refinement (registered 2026-05-20T22:37:45Z): intermediate-transform
+# codebook substitution per memo §4.
+_DEFAULT_CONTEXT = "intermediate_transform_quantizer"
+
+
+def validate_context_is_in_domain(
+    context: str | None = None,
+    *,
+    raise_on_excluded: bool = True,
+) -> bool:
+    """Verify a substrate context is within canonical equation #26's domain.
+
+    Per WAVE-3-CANONICAL-EQUATION-26-DOMAIN-REFINEMENT 2026-05-20 + the
+    DWT-DETAIL-SUBBAND CPU SMOKE empirical anchor (commit ``f25f8cc1b``;
+    KL=1.638 nats / 3.28σ proving direct procedural-codebook substitution
+    on DWT detail subbands corrupts inverse DWT). Equation
+    ``procedural_codebook_from_seed_compression_savings_v1`` is valid in
+    :data:`_INCLUDED_CONTEXTS` (intermediate-transform codebook positions)
+    and EXPLICITLY invalid in :data:`_EXCLUDED_CONTEXTS` (direct byte
+    substitution on transform coefficients).
+
+    Args:
+        context: a canonical context token (string). If ``None`` or empty,
+            the default :data:`_DEFAULT_CONTEXT` (``intermediate_transform_quantizer``)
+            is applied for backward-compat with legacy callers that
+            predate this refinement.
+        raise_on_excluded: when True (default), raises
+            :class:`DomainOfValidityViolation` if the context is in
+            :data:`_EXCLUDED_CONTEXTS`. When False, returns ``False``
+            instead so callers can route the candidate to a non-promotable
+            advisory surface per Catalog #341.
+
+    Returns:
+        True if ``context`` is in :data:`_INCLUDED_CONTEXTS`; False if the
+        context is unknown (neither included nor excluded) OR if the
+        context is excluded AND ``raise_on_excluded=False``.
+
+    Raises:
+        DomainOfValidityViolation: when ``context`` is in
+            :data:`_EXCLUDED_CONTEXTS` AND ``raise_on_excluded=True``.
+    """
+    if context is None or not str(context).strip():
+        context = _DEFAULT_CONTEXT
+    ctx = str(context).strip().lower()
+    if ctx in _EXCLUDED_CONTEXTS:
+        if raise_on_excluded:
+            raise DomainOfValidityViolation(
+                f"context={context!r} is EXPLICITLY excluded from canonical "
+                "equation procedural_codebook_from_seed_compression_savings_v1 "
+                "domain_of_validity per WAVE-3 DWT-DETAIL-SUBBAND CPU smoke "
+                "(commit f25f8cc1b; KL=1.638 nats / 3.28σ > 2σ threshold proves "
+                "direct procedural-codebook substitution on DWT detail subbands "
+                "corrupts inverse DWT). Re-scope the consumer to an "
+                "INTERMEDIATE-TRANSFORM context (e.g., chroma_lut_replacement) "
+                "or use a sister canonical equation. See "
+                ".omx/research/dwt_bind_rescope_intermediate_transform_path_design_20260520.md"
+            )
+        return False
+    if ctx in _INCLUDED_CONTEXTS:
+        return True
+    return False  # unknown context: not refused, not endorsed
 
 
 def build_procedural_codebook_from_seed_compression_savings_v1() -> CanonicalEquation:
@@ -178,6 +279,14 @@ def build_procedural_codebook_from_seed_compression_savings_v1() -> CanonicalEqu
             "generator_kinds": ["xorshift", "lcg", "pcg64"],
             "measurement_axes": ["[contest-CUDA]", "[contest-CPU]"],
             "empirical_anchor_status": "predicted_only_at_landing_2026_05_20",
+            # WAVE-3-CANONICAL-EQUATION-26-DOMAIN-REFINEMENT 2026-05-20:
+            # canonical refinement fields populated at builder construction
+            # so the FIRST `registered` event already carries the refined
+            # surface. Sister DWT-DETAIL-SUBBAND CPU smoke (commit f25f8cc1b)
+            # empirically vindicated the EXCLUDED contexts list.
+            "domain_of_validity_included": list(_INCLUDED_CONTEXTS),
+            "domain_of_validity_excluded": list(_EXCLUDED_CONTEXTS),
+            "default_context_when_legacy_caller_omits": _DEFAULT_CONTEXT,
         },
         units_in={
             "n_codebook_bytes": "int_archive_member_bytes_count",

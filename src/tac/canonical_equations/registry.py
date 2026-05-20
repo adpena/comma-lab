@@ -78,6 +78,17 @@ EVENT_REGISTERED = "registered"
 EVENT_ANCHOR_APPENDED = "anchor_appended"
 EVENT_RECALIBRATED = "recalibrated"
 EVENT_DEPRECATED = "deprecated"
+# WAVE-3-CANONICAL-EQUATION-26-DOMAIN-REFINEMENT 2026-05-20: NEW event type for
+# evidence-driven domain_of_validity narrowing. Per Catalog #110/#113 APPEND-ONLY
+# HISTORICAL_PROVENANCE: a domain_refined event NEVER mutates the prior
+# registered/anchor_appended rows; it appends a NEW payload row with extended
+# domain_of_validity fields (_included + _excluded) so downstream consumers
+# (cathedral autopilot reranker / canonical_equation_lookup_consumer / future
+# canonical-equation lookups) cannot silently re-make the cargo-culted assumption
+# the empirical anchor falsified. Sister anchor: DWT-DETAIL-SUBBAND CPU SMOKE
+# (commit f25f8cc1b; KL=1.638 nats / 3.28σ) proving direct procedural-codebook
+# substitution on DWT detail subbands corrupts inverse DWT.
+EVENT_DOMAIN_REFINED = "domain_refined"
 
 VALID_EVENT_TYPES = frozenset(
     {
@@ -85,6 +96,7 @@ VALID_EVENT_TYPES = frozenset(
         EVENT_ANCHOR_APPENDED,
         EVENT_RECALIBRATED,
         EVENT_DEPRECATED,
+        EVENT_DOMAIN_REFINED,
     }
 )
 
@@ -378,6 +390,112 @@ def update_equation_with_empirical_anchor(
     return updated
 
 
+def update_equation_with_domain_refinement(
+    equation_id: str,
+    *,
+    domain_of_validity_extension: Mapping[str, Any],
+    rationale: str,
+    path: Path | None = None,
+    lock_path: Path | None = None,
+    agent: str | None = None,
+    subagent_id: str | None = None,
+    notes: str | None = None,
+) -> CanonicalEquation:
+    """Append a ``domain_refined`` event narrowing the equation's domain_of_validity.
+
+    Per WAVE-3-CANONICAL-EQUATION-26-DOMAIN-REFINEMENT 2026-05-20: the
+    sister DWT-DETAIL-SUBBAND CPU smoke (commit ``f25f8cc1b``; KL=1.638
+    nats / 3.28σ) empirically vindicated the T3 DWT BIND symposium
+    Assumption-Adversary verdict #1, proving direct procedural-codebook
+    substitution on DWT detail subbands corrupts inverse DWT. Equation
+    ``procedural_codebook_from_seed_compression_savings_v1`` remains valid
+    for INTERMEDIATE-TRANSFORM contexts (NSCS06 v8 chroma LUT / DP1 OOD-
+    derived basis / similar quantizer paths) but MUST exclude direct
+    detail-subband byte substitution. This helper codifies the lesson
+    permanently in the canonical surface.
+
+    The ``domain_of_validity_extension`` is merged into the equation's
+    existing ``domain_of_validity`` mapping. The two CANONICAL refinement
+    fields are:
+
+      * ``domain_of_validity_included`` (tuple[str, ...]) — contexts the
+        equation is valid for.
+      * ``domain_of_validity_excluded`` (tuple[str, ...]) — contexts the
+        equation is EXPLICITLY invalid for. Callers in these contexts
+        MUST be refused via :class:`DomainOfValidityViolation`.
+
+    The ``rationale`` MUST be a substantive non-placeholder string (>= 4
+    chars; not ``<rationale>`` / ``<reason>`` literal) per Catalog #287
+    sister discipline so the helper's own docstring example cannot
+    self-waive.
+
+    Per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE: the prior
+    registered/anchor_appended rows are preserved verbatim; only a NEW
+    ``domain_refined`` event row is added. Sister of
+    :func:`update_equation_with_empirical_anchor` (same append-only
+    pattern at the anchor surface; this helper is the domain-of-validity
+    surface).
+
+    Returns the updated CanonicalEquation (frozen-safe; original is not
+    mutated).
+    """
+    from dataclasses import replace
+
+    if not isinstance(domain_of_validity_extension, Mapping):
+        raise InvalidEquationError(
+            "domain_of_validity_extension must be a Mapping"
+        )
+    if not isinstance(rationale, str):
+        raise InvalidEquationError("rationale must be a string")
+    cleaned = rationale.strip()
+    if len(cleaned) < 4:
+        raise InvalidEquationError(
+            f"rationale must be a substantive non-placeholder string (>= 4 chars); "
+            f"got {rationale!r}"
+        )
+    placeholder_tokens = ("<rationale>", "<reason>", "<rationale_here>", "<reason_here>")
+    if cleaned in placeholder_tokens:
+        raise InvalidEquationError(
+            f"rationale {cleaned!r} is a placeholder literal; provide substantive "
+            "rationale per Catalog #287 sister discipline"
+        )
+
+    p_path = path or CANONICAL_EQUATIONS_REGISTRY_PATH
+    l_path = lock_path or CANONICAL_EQUATIONS_REGISTRY_LOCK
+
+    with _registry_lock(l_path):
+        try:
+            existing = load_equation_registry_strict(p_path)
+        except CanonicalEquationsRegistryCorruptError:
+            _quarantine_corrupt_file(p_path)
+            existing = []
+        latest_payload = None
+        for row in existing:
+            if row.get("equation_id") == equation_id:
+                latest_payload = row.get("equation_payload")
+        if latest_payload is None:
+            raise InvalidEquationError(
+                f"equation_id={equation_id!r} not found in registry; "
+                "call register_canonical_equation first"
+            )
+        equation = _equation_from_dict(latest_payload)
+        merged_domain: dict[str, Any] = dict(equation.domain_of_validity)
+        merged_domain.update(domain_of_validity_extension)
+        merged_domain["last_domain_refinement_utc"] = _utc_now_iso()
+        merged_domain["last_domain_refinement_rationale"] = cleaned
+        updated = replace(equation, domain_of_validity=merged_domain)
+        _append_event_locked(
+            EVENT_DOMAIN_REFINED,
+            updated,
+            path=p_path,
+            lock_path=l_path,
+            agent=agent,
+            subagent_id=subagent_id,
+            notes=notes or f"domain_refined: {cleaned[:120]}",
+        )
+    return updated
+
+
 def _equation_from_dict(payload: Mapping[str, Any]) -> CanonicalEquation:
     """Reconstruct a CanonicalEquation from a serialized payload dict."""
     from tac.provenance.contract import (
@@ -582,6 +700,7 @@ __all__ = [
     "EVENT_ANCHOR_APPENDED",
     "EVENT_RECALIBRATED",
     "EVENT_DEPRECATED",
+    "EVENT_DOMAIN_REFINED",
     "VALID_EVENT_TYPES",
     "CanonicalEquationsRegistryCorruptError",
     "RecalibrationReport",
@@ -589,6 +708,7 @@ __all__ = [
     "load_equation_registry_strict",
     "register_canonical_equation",
     "update_equation_with_empirical_anchor",
+    "update_equation_with_domain_refinement",
     "query_equations",
     "query_equations_by_domain",
     "query_equations_by_consumer",
