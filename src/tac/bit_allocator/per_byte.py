@@ -525,6 +525,214 @@ def allocate_per_byte(
     )
 
 
+def allocate_per_byte_from_master_gradient_anchor(
+    total_budget_bits: int,
+    *,
+    archive_sha256: str | None = None,
+    anchor: Mapping[str, object] | None = None,
+    axis_aggregator: str = "score_weighted_sum",
+    method: PerByteAllocationMethod | str = PerByteAllocationMethod.TOP_K_BY_SENSITIVITY,
+    top_k: int = 32,
+    per_byte_bit_cap: int = 8,
+    captured_at_utc: str | None = None,
+) -> PerByteAllocationPlan:
+    """Allocate per-byte bits using a canonical master-gradient anchor.
+
+    Bridges :func:`tac.master_gradient_consumers.load_aggregate_gradient_from_anchor`
+    into :func:`allocate_per_byte` so the bit-allocator can directly consume
+    authoritative per-byte (seg, pose, rate) sensitivity tensors emitted by
+    the master-gradient extractor (e.g. the 2026-05-20 ``fc-01KS370Z9TF4QZMKQ9ND72KH4N``
+    Modal T4 fec6 ``[contest-CUDA]`` anchor; shape ``(N_bytes, 3)``).
+
+    The (N_bytes, 3) per-byte sensitivity tensor is aggregated to a scalar
+    per-byte sensitivity via ``axis_aggregator``:
+
+    * ``score_weighted_sum`` (default): canonical contest formula coefficients
+      from the anchor's ``operating_point`` per
+      :func:`tac.master_gradient.compute_marginal_coefficients` (the canonical
+      ``(100, sqrt(10/d_pose)/2, 25/37_545_489)`` per CLAUDE.md
+      "SegNet vs PoseNet importance"). Returns ``|seg|*100 + |pose|*alpha +
+      |rate|*beta``.
+    * ``abs_seg``: per-byte ``|seg|`` component only.
+    * ``abs_pose``: per-byte ``|pose|`` component only.
+    * ``abs_rate``: per-byte ``|rate|`` component only.
+    * ``l1``: per-byte ``|seg| + |pose| + |rate|`` (axis-agnostic).
+    * ``l2``: per-byte ``sqrt(seg^2 + pose^2 + rate^2)``.
+
+    Args:
+        total_budget_bits: as per :func:`allocate_per_byte`.
+        archive_sha256: contest archive sha256 for canonical anchor lookup
+            (mutually exclusive with ``anchor`` kwarg). Routes through
+            :func:`tac.master_gradient_consumers.load_aggregate_gradient_from_anchor`
+            which filters via Catalog #327 contest-axis authority.
+        anchor: optional pre-loaded anchor dict (skips registry lookup).
+            Must carry ``gradient_array_path`` + ``operating_point`` per
+            ``master_gradient_anchor_v1`` schema.
+        axis_aggregator: scalar aggregation method over the (seg, pose, rate)
+            axes of the (N_bytes, 3) tensor.
+        method, top_k, per_byte_bit_cap, captured_at_utc: forwarded to
+            :func:`allocate_per_byte`.
+
+    Returns:
+        :class:`PerByteAllocationPlan` whose ``notes`` carries the anchor's
+        canonical metadata (``measurement_axis``, ``measurement_hardware``,
+        ``measurement_call_id``, ``n_pairs_used``, ``axis_aggregator``).
+
+    Raises:
+        PerByteAllocationError: on missing inputs or invariant violation.
+        FileNotFoundError: when no authoritative anchor matches the archive
+            sha256 (sister of Catalog #327 contest-axis authority filter).
+    """
+    if archive_sha256 is None and anchor is None:
+        raise PerByteAllocationError(
+            "must pass either archive_sha256 or anchor"
+        )
+    if archive_sha256 is not None and anchor is not None:
+        raise PerByteAllocationError(
+            "must pass exactly one of archive_sha256 / anchor"
+        )
+
+    _VALID_AGGREGATORS = (
+        "score_weighted_sum",
+        "abs_seg",
+        "abs_pose",
+        "abs_rate",
+        "l1",
+        "l2",
+    )
+    if axis_aggregator not in _VALID_AGGREGATORS:
+        raise PerByteAllocationError(
+            f"axis_aggregator={axis_aggregator!r} must be one of {_VALID_AGGREGATORS!r}"
+        )
+
+    # Lazy imports — numpy and master_gradient are heavy.
+    try:
+        import numpy as np
+    except ImportError as exc:  # pragma: no cover
+        raise PerByteAllocationError(
+            "numpy required to consume master-gradient anchor tensors"
+        ) from exc
+
+    if anchor is None:
+        try:
+            from tac.master_gradient_consumers import (
+                load_aggregate_gradient_from_anchor,
+            )
+        except ImportError as exc:  # pragma: no cover
+            raise PerByteAllocationError(
+                "tac.master_gradient_consumers unavailable"
+            ) from exc
+        gradient_array, anchor_dict = load_aggregate_gradient_from_anchor(
+            archive_sha256=archive_sha256
+        )
+    else:
+        anchor_dict = dict(anchor)
+        gradient_path_value = anchor_dict.get("gradient_array_path")
+        if not isinstance(gradient_path_value, str) or not gradient_path_value:
+            raise PerByteAllocationError(
+                "anchor missing gradient_array_path"
+            )
+        from pathlib import Path as _Path
+
+        gradient_path = _Path(gradient_path_value)
+        if not gradient_path.is_absolute():
+            gradient_path = _Path.cwd() / gradient_path
+        if not gradient_path.is_file():
+            raise FileNotFoundError(
+                f"gradient array not found: {gradient_path}"
+            )
+        gradient_array = np.load(gradient_path)
+
+    if gradient_array.ndim != 2 or gradient_array.shape[-1] != 3:
+        raise PerByteAllocationError(
+            f"gradient_array must have shape (N_bytes, 3); got {gradient_array.shape!r}"
+        )
+
+    abs_tensor = np.abs(gradient_array.astype(np.float64, copy=False))
+
+    if axis_aggregator == "abs_seg":
+        per_byte = abs_tensor[:, 0]
+    elif axis_aggregator == "abs_pose":
+        per_byte = abs_tensor[:, 1]
+    elif axis_aggregator == "abs_rate":
+        per_byte = abs_tensor[:, 2]
+    elif axis_aggregator == "l1":
+        per_byte = abs_tensor.sum(axis=1)
+    elif axis_aggregator == "l2":
+        per_byte = np.sqrt(np.square(abs_tensor).sum(axis=1))
+    else:  # score_weighted_sum
+        try:
+            from tac.master_gradient import (
+                OperatingPoint,
+                compute_marginal_coefficients,
+            )
+        except ImportError as exc:  # pragma: no cover
+            raise PerByteAllocationError(
+                "tac.master_gradient required for score_weighted_sum"
+            ) from exc
+        op_raw = anchor_dict.get("operating_point")
+        if not isinstance(op_raw, Mapping):
+            raise PerByteAllocationError(
+                "anchor operating_point missing; required for score_weighted_sum"
+            )
+        op = OperatingPoint(
+            d_seg=float(op_raw["d_seg"]),
+            d_pose=float(op_raw["d_pose"]),
+            rate=float(op_raw.get("rate", op_raw.get("R", 0.0))),
+            score=float(op_raw["score"]),
+        )
+        coeffs = np.asarray(compute_marginal_coefficients(op), dtype=np.float64)
+        per_byte = (abs_tensor * coeffs[None, :]).sum(axis=1)
+
+    n_bytes = int(per_byte.shape[0])
+    sensitivity_per_byte = {i: float(per_byte[i]) for i in range(n_bytes)}
+
+    anchor_archive_sha = anchor_dict.get("archive_sha256")
+    plan = allocate_per_byte(
+        total_budget_bits=total_budget_bits,
+        sensitivity_per_byte=sensitivity_per_byte,
+        method=method,
+        top_k=top_k,
+        per_byte_bit_cap=per_byte_bit_cap,
+        archive_sha256=(
+            anchor_archive_sha if isinstance(anchor_archive_sha, str) else None
+        ),
+        captured_at_utc=captured_at_utc,
+    )
+
+    # Augment notes with anchor provenance (immutable plan; rebuild via
+    # dataclass replace would lose Provenance invariants — return as new
+    # plan with augmented notes via field rewrite).
+    augmented_notes = dict(plan.notes)
+    augmented_notes["master_gradient_anchor"] = {
+        "measurement_axis": anchor_dict.get("measurement_axis"),
+        "measurement_hardware": anchor_dict.get("measurement_hardware"),
+        "measurement_call_id": anchor_dict.get("measurement_call_id"),
+        "measurement_method": anchor_dict.get("measurement_method"),
+        "n_pairs_used": anchor_dict.get("n_pairs_used"),
+        "n_pairs_total": anchor_dict.get("n_pairs_total"),
+        "axis_aggregator": axis_aggregator,
+        "gradient_tensor_kind": anchor_dict.get("gradient_tensor_kind"),
+        "gradient_subject_sha256": anchor_dict.get("gradient_subject_sha256"),
+        "gradient_array_path": anchor_dict.get("gradient_array_path"),
+    }
+    return PerByteAllocationPlan(
+        bits_per_byte=plan.bits_per_byte,
+        method=plan.method,
+        total_budget_bits=plan.total_budget_bits,
+        residual_bits=plan.residual_bits,
+        n_bytes_allocated=plan.n_bytes_allocated,
+        n_bytes_in_scope=plan.n_bytes_in_scope,
+        per_byte_bit_cap=plan.per_byte_bit_cap,
+        canonical_equation_id=plan.canonical_equation_id,
+        provenance=plan.provenance,
+        score_claim=False,
+        promotion_eligible=False,
+        axis_tag="[predicted]",
+        notes=augmented_notes,
+    )
+
+
 __all__ = (
     "CANONICAL_EQUATION_ID",
     "CANONICAL_MODEL_ID_PER_BYTE",
@@ -532,4 +740,5 @@ __all__ = (
     "PerByteAllocationMethod",
     "PerByteAllocationPlan",
     "allocate_per_byte",
+    "allocate_per_byte_from_master_gradient_anchor",
 )

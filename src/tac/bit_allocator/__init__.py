@@ -166,6 +166,7 @@ from tac.bit_allocator.per_byte import (
     PerByteAllocationMethod,
     PerByteAllocationPlan,
     allocate_per_byte,
+    allocate_per_byte_from_master_gradient_anchor,
 )
 from tac.bit_allocator.per_class import (
     CANONICAL_MODEL_ID_PER_CLASS,
@@ -211,6 +212,7 @@ __all__ = (
     "PerByteAllocationMethod",
     "PerByteAllocationPlan",
     "allocate_per_byte",
+    "allocate_per_byte_from_master_gradient_anchor",
     # per_class
     "CANONICAL_MODEL_ID_PER_CLASS",
     "CANONICAL_SEGNET_CLASS_NAMES",

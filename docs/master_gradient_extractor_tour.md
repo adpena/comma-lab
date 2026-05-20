@@ -55,6 +55,52 @@ Each exploit consumes the extractor's output for a different purpose. None requi
 
 10. **Streaming master-gradient during training (Taylor expansion real-time prediction).** Per the canonical Taylor + Cauchy-Schwarz bound (equation 4), the master-gradient at the current operating point upper-bounds the per-pair score impact of any small weight update at the next step. Streaming the gradient during training enables online prediction of which gradient-descent step will move score most, supporting adaptive learning-rate schedules.
 
+## Canonical authoritative anchor (2026-05-20)
+
+The first `[contest-CUDA T4]` authoritative master-gradient anchor for the FEC6 frontier archive (PR #110, sha `6bae0201fb08...`) landed via Modal call `fc-01KS370Z9TF4QZMKQ9ND72KH4N` on 2026-05-20 (n_pairs_used=600 / full set; sidecar `.omx/state/master_gradient_fec6_contest_cuda_t4_20260520.npy`, shape `(178417, 3)`, fp32). The anchor is the canonical posterior source any downstream consumer should query via:
+
+```python
+from tac.master_gradient import latest_anchor_for_archive
+from tac.master_gradient_consumers import load_aggregate_gradient_from_anchor
+
+FEC6_SHA = '6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf'
+anchor = latest_anchor_for_archive(FEC6_SHA, axis='[contest-CUDA]')
+gradient_array, anchor_dict = load_aggregate_gradient_from_anchor(archive_sha256=FEC6_SHA)
+# gradient_array.shape == (178417, 3); axes = (seg, pose, rate)
+```
+
+The 600-pair operating point recorded in the anchor is `{d_seg=0.001, d_pose=0.00381654, rate=0.004755, score=0.4175}`; per-byte sensitivity is dominated by the seg axis (78.5%) with secondary pose contribution (12.4%) per the recorded `score_axis_dominance` payload.
+
+### Downstream consumer wire-in (Catalog #125 hook #3 + #4)
+
+Three cathedral consumers already auto-discover this anchor via the canonical `latest_anchor_for_archive` + `load_aggregate_gradient_from_anchor` loaders (per Catalog #335 auto-discovery + Catalog #344 canonical equations registry):
+
+- `tac.cathedral_consumers.canonical_equation_lookup_consumer` annotates fec6 candidates with the 3 registered equations whose `canonical_consumers` overlap the candidate's substrate / archive tokens (`brotli_cascade_bounded_per_stream_v1`, `per_byte_leverage_uniformly_distributed_v1`, `master_gradient_locality_violation_by_codec_v1`).
+- `tac.cathedral_consumers.information_theoretic_floor_consumer` (Tier B per Catalog #357) consumes the per-axis Fisher information density from the (178417, 3) tensor to compute the Cramér-Rao floor + emits per-axis decomposition into the ranker.
+- `tac.cathedral_consumers.substrate_fit_diagnostic_consumer` (Tier B per Catalog #357) consumes per-axis residuals against the T4 anchor's operating point + emits seg/pose decomposition for substrate-class disambiguation.
+
+The bit-allocator hook (Catalog #125 hook #3) consumes the same anchor directly via the new canonical helper:
+
+```python
+from tac.bit_allocator import allocate_per_byte_from_master_gradient_anchor, PerByteAllocationMethod
+
+plan = allocate_per_byte_from_master_gradient_anchor(
+    total_budget_bits=256,
+    archive_sha256=FEC6_SHA,
+    axis_aggregator='score_weighted_sum',  # canonical contest formula coefficients
+    method=PerByteAllocationMethod.TOP_K_BY_SENSITIVITY,
+    top_k=32,
+    per_byte_bit_cap=8,
+)
+# plan.notes['master_gradient_anchor'] carries the anchor's canonical metadata
+# (measurement_axis=[contest-CUDA], measurement_hardware=linux_x86_64_t4_modal,
+# measurement_call_id=fc-01KS370Z9TF4QZMKQ9ND72KH4N, n_pairs_used=600).
+# Returns observability-only PerByteAllocationPlan per Catalog #341
+# (score_claim=False, promotion_eligible=False, axis_tag="[predicted]").
+```
+
+Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA": the bit-allocator output is non-promotable by construction; realizing the allocation as actual archive bytes + paired-axis Linux x86_64 auth-eval is required before any contest score claim.
+
 ## Example outputs
 
 The canonical state for the FEC6 frontier archive (PR #110, sha `6bae0201fb08...`) lives in the registry's anchor JSONL. A representative excerpt of what the extractor returns (per the [canonical equations tour](canonical_equations_tour.md) equation #3 anchor):
