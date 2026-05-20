@@ -369,6 +369,20 @@ class CathedralConsumerContract(Protocol):
     # ``CONSUMER_TIER = ConsumerTier.TIER_B_SCORE_CONTRIBUTING`` at module
     # level + satisfy the Catalog #357 STRICT preflight contract.
 
+    # OPTIONAL ``CONSUMES_MASTER_GRADIENT_ANCHORS`` per WAVE-3-AUTO-TRIGGER-
+    # RUNTIME-WIRE-IN (2026-05-20) — INTENTIONALLY NOT a Protocol-required
+    # attribute so ``runtime_checkable`` ``isinstance`` checks stay
+    # backward-compatible. Consumers that opt-in by setting the module-level
+    # ``CONSUMES_MASTER_GRADIENT_ANCHORS = True`` receive every new
+    # master-gradient anchor via their ``update_from_anchor(anchor_row)``
+    # hook (fired by :func:`tac.master_gradient.append_anchor_locked` after
+    # the fcntl-locked append succeeds). Default-False per
+    # ``getattr(mod, "CONSUMES_MASTER_GRADIENT_ANCHORS", False)`` lookup;
+    # non-opt-in consumers are skipped. Sister of Catalog #343 pattern at
+    # :func:`tac.canonical_frontier_pointer.auto_refresh_canonical_frontier_after_dispatch_outcome`.
+    # Canonical opt-in fixture:
+    # :mod:`tac.cathedral_consumers.auto_trigger_similarity_after_master_gradient_anchor_consumer`.
+
     @staticmethod
     def update_from_anchor(anchor: Any) -> None:
         """Continual-learning posterior hook (Catalog #125 hook #5).

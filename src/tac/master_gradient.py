@@ -524,7 +524,27 @@ def append_anchor_locked(
     path: Path | None = None,
     lock_path: Path | None = None,
 ) -> None:
-    """fcntl-locked append per Catalog #128 / #131 / #245."""
+    """fcntl-locked append per Catalog #128 / #131 / #245.
+
+    After the atomic append succeeds, fires the canonical cathedral-consumer
+    post-anchor hook (sister of Catalog #343
+    :func:`tac.canonical_frontier_pointer.auto_refresh_canonical_frontier_after_dispatch_outcome`
+    pattern). Auto-discovers consumers under ``src/tac/cathedral_consumers/``
+    that opt-in via module-level ``CONSUMES_MASTER_GRADIENT_ANCHORS = True``
+    and calls each consumer's ``update_from_anchor(anchor_row)`` with the
+    just-appended JSONL row (parsed dict).
+
+    Per CLAUDE.md "Subagent coherence-by-default" maximum-signal-preservation
+    + the Catalog #343 sister contract: per-consumer exceptions are caught
+    + warning-logged so the ledger write (which already succeeded) is not
+    blocked by a buggy downstream consumer. The ledger is canonical state;
+    the consumer hook is an observability-only downstream signal.
+
+    Closes the orphan-signal gap from commit ``7b9d5e280``
+    (PER-BYTE-METHODOLOGY-FOLLOWUP) which landed the structural consumer
+    package but explicitly deferred this runtime wire-in per Catalog
+    #110/#113 APPEND-ONLY discipline.
+    """
     target = path or MASTER_GRADIENT_LEDGER_PATH
     lock = lock_path or _LEDGER_LOCK_PATH
     _ensure_parent(lock)
@@ -541,6 +561,84 @@ def append_anchor_locked(
             _atomic_write_append(target, line)
         finally:
             fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+
+    # WAVE-3-AUTO-TRIGGER-RUNTIME-WIRE-IN: cathedral consumer post-anchor
+    # hook (sister of Catalog #343 dispatch-outcome auto-refresh pattern).
+    # Fail-quiet per the canonical contract: ledger write succeeded; the
+    # downstream consumer surface must not block the canonical write path.
+    try:
+        _fire_post_anchor_consumer_hooks(payload)
+    except Exception:  # noqa: BLE001 — fail-quiet per the canonical contract
+        pass
+
+
+def _fire_post_anchor_consumer_hooks(anchor_row: dict) -> None:
+    """Invoke ``update_from_anchor`` on every opt-in cathedral consumer.
+
+    Discovers compliant consumers via
+    :func:`tools.cathedral_autopilot_autonomous_loop.discover_compliant_consumer_modules`
+    (sister of Catalog #335 canonical-contract auto-discovery), filters to
+    those declaring module-level ``CONSUMES_MASTER_GRADIENT_ANCHORS = True``,
+    and calls each consumer's ``update_from_anchor(anchor_row)``.
+
+    Per-consumer exceptions are caught + warning-logged so a single buggy
+    consumer cannot block sister consumers from receiving the anchor.
+
+    Sister of Catalog #343 pattern at
+    :func:`tac.canonical_frontier_pointer.auto_refresh_canonical_frontier_after_dispatch_outcome`.
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Lazy import — keep master_gradient module import-time lightweight and
+    # avoid circular imports with cathedral_consumers packages that may
+    # themselves import from tac.master_gradient at module top-level.
+    try:
+        # The canonical discovery helper lives in tools/ — load via importlib
+        # spec to keep the master_gradient → tools dependency one-directional.
+        import importlib.util
+        spec = importlib.util.find_spec(
+            "tools.cathedral_autopilot_autonomous_loop"
+        )
+        if spec is None:
+            # tools/ not on PYTHONPATH (e.g. installed-package surface);
+            # fail-quiet — the hook is observability-only.
+            return
+        loop_module = importlib.import_module(
+            "tools.cathedral_autopilot_autonomous_loop"
+        )
+        discover = getattr(
+            loop_module, "discover_compliant_consumer_modules", None
+        )
+        if discover is None:
+            return
+        modules = discover()
+    except Exception as exc:  # noqa: BLE001 — fail-quiet
+        logger.warning(
+            "master_gradient.append_anchor_locked: consumer discovery "
+            "failed (%s); skipping post-anchor hook fan-out",
+            exc,
+        )
+        return
+
+    for mod in modules:
+        if not getattr(mod, "CONSUMES_MASTER_GRADIENT_ANCHORS", False):
+            continue
+        hook = getattr(mod, "update_from_anchor", None)
+        if hook is None or not callable(hook):
+            continue
+        try:
+            hook(anchor_row)
+        except Exception as exc:  # noqa: BLE001 — fail-quiet per consumer
+            logger.warning(
+                "master_gradient.append_anchor_locked: consumer %s "
+                "update_from_anchor raised %s (%s); ledger write "
+                "preserved; sister consumers continue",
+                getattr(mod, "__name__", "<unknown>"),
+                type(exc).__name__,
+                exc,
+            )
 
 
 def load_anchors_lenient(path: Path | None = None) -> list[dict]:

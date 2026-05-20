@@ -61,12 +61,23 @@ from tac.cathedral.consumer_contract import HookNumber
 
 
 CONSUMER_NAME = "auto_trigger_similarity_after_master_gradient_anchor_consumer"
-CONSUMER_VERSION = "0.1.0"
+CONSUMER_VERSION = "0.2.0"
 CONSUMER_HOOK_NUMBERS = (
     HookNumber.CATHEDRAL_AUTOPILOT_DISPATCH,
     HookNumber.CONTINUAL_LEARNING_POSTERIOR,
     HookNumber.PROBE_DISAMBIGUATOR,
 )
+
+# WAVE-3-AUTO-TRIGGER-RUNTIME-WIRE-IN opt-in marker (2026-05-20).
+# Per Catalog #335 canonical-contract auto-discovery + the sister Catalog #343
+# auto-refresh-after-canonical-event pattern: consumers that opt-in to receive
+# master-gradient anchor events declare ``CONSUMES_MASTER_GRADIENT_ANCHORS =
+# True`` at module level. The runtime hook in
+# :func:`tac.master_gradient.append_anchor_locked` then fans the anchor row
+# out to every opt-in consumer's ``update_from_anchor(anchor_row)`` after the
+# fcntl-locked append succeeds. Sister consumers that do NOT opt-in are
+# skipped (default-False per ``getattr(mod, ..., False)`` lookup).
+CONSUMES_MASTER_GRADIENT_ANCHORS = True
 
 
 # Canonical equation IDs consumed by this auto-trigger consumer (per
@@ -126,30 +137,35 @@ def update_from_anchor(anchor: Any) -> None:
     """Catalog #125 hook #5 - continual-learning posterior update.
 
     Triggered when a new master-gradient anchor lands at
-    ``.omx/state/master_gradient_anchors.jsonl``. In the canonical
-    integration path (deferred to follow-on sister landing per
-    Catalog #110/#113 APPEND-ONLY discipline), this would recompute the
-    cross-substrate similarity matrix against existing anchors and
-    append the new matrix snapshot to
-    ``.omx/state/cross_substrate_sensitivity_similarity_matrix_<UTC>.jsonl``.
+    ``.omx/state/master_gradient_anchors.jsonl`` via
+    :func:`tac.master_gradient.append_anchor_locked`. The runtime hook
+    in ``append_anchor_locked`` discovers this consumer through the
+    canonical Catalog #335 auto-discovery loop, filters by the
+    module-level ``CONSUMES_MASTER_GRADIENT_ANCHORS = True`` opt-in,
+    and calls ``update_from_anchor(anchor_row)`` with the just-appended
+    JSONL row (parsed dict). Sister of Catalog #343
+    :func:`tac.canonical_frontier_pointer.auto_refresh_canonical_frontier_after_dispatch_outcome`
+    pattern; landed 2026-05-20 in WAVE-3-AUTO-TRIGGER-RUNTIME-WIRE-IN.
 
-    The current implementation is a TIER-A observability-only stub: the
-    canonical similarity computation tool
+    Current implementation: observability-only acknowledgment. The
+    canonical similarity matrix recomputation
     (``PYTHONPATH=src python /tmp/wave3_analysis/compute_similarity_matrix.py``)
     remains operator-triggered per Catalog #287/#323 measurement
-    provenance. This consumer's structural role is the WIRE-IN point
-    for the future auto-trigger mechanism; the equation-based
-    pre-classification (via :func:`_classify_pair_via_canonical_equations`)
-    is the observability-only signal it provides today.
+    provenance discipline; this consumer's auto-trigger surface is
+    deliberately observability-only so a single buggy anchor cannot
+    corrupt the similarity matrix posterior.
 
-    Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
-    auto-trigger is DEFERRED-pending-empirical-validation, NOT KILLED.
-    Reactivation: the follow-on sister subagent that wires the auto-trigger
-    into :func:`tac.master_gradient.append_anchor_locked` (sister of
-    Catalog #343 :func:`auto_refresh_canonical_frontier_after_dispatch_outcome`
-    pattern) lands the structural extension.
+    Per Catalog #341 Tier-A canonical-routing-markers: this consumer
+    contributes ``predicted_delta_adjustment=0.0`` + ``promotable=False``
+    + ``axis_tag="[predicted]"`` always; the auto-trigger fan-out at
+    ``append_anchor_locked`` does NOT mutate any score signal.
+
+    Per CLAUDE.md "Subagent coherence-by-default" maximum-signal-preservation:
+    per-consumer exceptions raised here are caught + warning-logged by
+    ``append_anchor_locked``; the ledger write (which already succeeded)
+    is never blocked by a downstream consumer failure.
     """
-    _ = anchor  # explicit acknowledgment; structural wire-in point
+    _ = anchor  # acknowledgment; downstream extension lands here
 
 
 def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
