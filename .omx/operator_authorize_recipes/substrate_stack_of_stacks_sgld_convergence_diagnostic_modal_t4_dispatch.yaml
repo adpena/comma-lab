@@ -150,6 +150,13 @@ env_overrides:
   STACK_OF_STACKS_OUTER_K: "1"
   STACK_OF_STACKS_LANGEVIN_T_INIT_CAP: "${STACK_OF_STACKS_LANGEVIN_T_INIT_CAP:-1.0}"
   STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS: "100"
+  # E.8 SGLD convergence-diagnostic OP-2 fix (lane
+  # lane_b1_e8_sgld_trainer_scope_fix_op2_20260519). This recipe drives the
+  # trainer through the SGLD polish loop (NOT the single-arm A1 passthrough
+  # that the empirical E.8 failures fc-01KRZCHVY6C1TSFNNS6KN13G70 +
+  # fc-01KRZCSQ7FPVMSAXZQDSZJCTN4 ran 2026-05-19). Per Catalog #326 substrate
+  # driver mode hardcode discipline: explicit recipe-side opt-IN required.
+  STACK_OF_STACKS_SGLD_ONLY_POLISH_MODE: "1"
   STACK_OF_STACKS_AUTH_EVAL_REQUIRE_CONTEST_CUDA: "1"
   LOCAL_CUDA_WORKER: "1"
 

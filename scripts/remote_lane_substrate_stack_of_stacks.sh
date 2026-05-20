@@ -69,6 +69,14 @@ STACK_OF_STACKS_OUTER_K="${STACK_OF_STACKS_OUTER_K:-1}"
 STACK_OF_STACKS_MAX_TOTAL_ARCHIVE_BYTES="${STACK_OF_STACKS_MAX_TOTAL_ARCHIVE_BYTES:-250000}"
 STACK_OF_STACKS_LANGEVIN_T_INIT_CAP="${STACK_OF_STACKS_LANGEVIN_T_INIT_CAP:-1.0}"
 STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS="${STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS:-100}"
+# E.8 SGLD convergence-diagnostic mode (OP-2 fix 2026-05-19): when set to "1",
+# the trainer routes through the Welling-Teh SGLD polish loop INSTEAD of the
+# default single-arm A1 passthrough that the empirical E.8 failures (
+# fc-01KRZCHVY6C1TSFNNS6KN13G70 + fc-01KRZCSQ7FPVMSAXZQDSZJCTN4 2026-05-19)
+# ran. Per CLAUDE.md Catalog #326 substrate driver mode hardcode discipline:
+# this env var has an EXPLICIT default of "0" (off) so the existing single-arm
+# passthrough behavior is preserved; recipe must set "1" to opt INTO SGLD.
+STACK_OF_STACKS_SGLD_ONLY_POLISH_MODE="${STACK_OF_STACKS_SGLD_ONLY_POLISH_MODE:-0}"
 
 log() { echo "[lane-stack-of-stacks] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
@@ -272,6 +280,11 @@ HEARTBEAT_PID=$!
 
 log "stage_2_trainer_invoke_begin mode=single_arm_a1_passthrough epochs=$STACK_OF_STACKS_EPOCHS"
 set +e
+SGLD_ONLY_POLISH_MODE_FLAG=()
+if [ "$STACK_OF_STACKS_SGLD_ONLY_POLISH_MODE" = "1" ]; then
+    SGLD_ONLY_POLISH_MODE_FLAG=("--sgld-only-polish-mode")
+    log "stage_2_sgld_only_polish_mode_active per E.8 OP-2 fix"
+fi
 "$PYBIN" experiments/train_substrate_stack_of_stacks.py \
     --base-archive "$STACK_OF_STACKS_BASE_ARCHIVE" \
     --base-runtime-dir "$STACK_OF_STACKS_BASE_RUNTIME_DIR" \
@@ -285,6 +298,7 @@ set +e
     --max-total-archive-bytes "$STACK_OF_STACKS_MAX_TOTAL_ARCHIVE_BYTES" \
     --langevin-t-init "$STACK_OF_STACKS_LANGEVIN_T_INIT_CAP" \
     --langevin-polish-epochs "$STACK_OF_STACKS_LANGEVIN_POLISH_EPOCHS" \
+    ${SGLD_ONLY_POLISH_MODE_FLAG[@]+"${SGLD_ONLY_POLISH_MODE_FLAG[@]}"} \
     --lane-id "$LANE_ID" \
     --dispatch-instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
     --dispatch-platform "$DISPATCH_PLATFORM" \

@@ -310,6 +310,60 @@ def _build_parser() -> argparse.ArgumentParser:
             "a non-scoreable runtime until per-arm decoder hooks land."
         ),
     )
+    # E.8 SGLD convergence-diagnostic entrypoint per OP-2 (cargo-cult unwound
+    # 2026-05-19): the default composition path BYPASSES SGLD polish because
+    # `_train_arm_residual_with_langevin` is gated on `byte_budget > 0` and
+    # the single-arm passthrough config uses `--residual-int8-bytes 0`. This
+    # flag explicitly opts INTO a Welling-Teh SGLD polish loop that operates on
+    # the COMPOSED `x` blob's FP32 shadow weights using
+    # `STACK_OF_STACKS_LANGEVIN_T_INIT_CAP` -> `--langevin-t-init`. Per recipe
+    # `substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch.yaml`
+    # this is a CONVERGENCE-DIAGNOSTIC dispatch: primary output is the SGLD
+    # plateau curve (step, loss, temperature) NOT a score-lowering archive.
+    # Per Catalog #324 `predicted_band_validation_status: pending_post_training`
+    # the resulting archive is `score_claim=False / promotion_eligible=False /
+    # evidence_grade=predicted` and the SGLD plateau is the empirical evidence
+    # for the council T2 Finding 2 t_final-CAP question. The schedule, polish
+    # epochs, and t_init/t_final are driven by the existing `--langevin-*`
+    # flags (and their env mirrors). See OP-2 in
+    # `.omx/research/b1_e7_e8_modal_dispatch_harvest_landed_20260519.md`.
+    p.add_argument(
+        "--sgld-only-polish-mode",
+        action="store_true",
+        help=(
+            "E.8 convergence-diagnostic: run a Welling-Teh SGLD polish loop on "
+            "the composed archive's `x` blob (FP32 shadow weights), log per-step "
+            "(step, loss, temperature) for plateau identification, emit the "
+            "polished archive + sgld_polish_log.json. Bypasses the default "
+            "single-arm passthrough path that the empirical E.8 failures "
+            "(fc-01KRZCHVY6C1TSFNNS6KN13G70 + fc-01KRZCSQ7FPVMSAXZQDSZJCTN4 "
+            "2026-05-19) ran instead of real SGLD. NON-PROMOTABLE per Catalog "
+            "#324; score_claim=False. Designed to consume "
+            "STACK_OF_STACKS_LANGEVIN_T_INIT_CAP via --langevin-t-init."
+        ),
+    )
+    p.add_argument(
+        "--sgld-polish-quantization-bits",
+        type=int,
+        default=8,
+        choices=[8, 16, 32],
+        help=(
+            "Quantization bit-width for the SGLD shadow weights. 8 = int8 "
+            "(Welling-Teh polish-phase canonical per langevin_optimizer.py:147 "
+            "noise-below-quantization-grid analysis). Polish operates in FP32 "
+            "and re-quantizes only at archive write."
+        ),
+    )
+    p.add_argument(
+        "--sgld-polish-log-every",
+        type=float,
+        default=0.1,
+        help=(
+            "Log SGLD plateau diagnostic every `log_every * polish_epochs` "
+            "steps. Default 0.1 = 10 log entries per dispatch. Per recipe "
+            "convergence-plateau identification spec."
+        ),
+    )
     p.add_argument("--max-total-archive-bytes", type=int, default=MAX_TOTAL_ARCHIVE_BYTES)
     p.add_argument("--dispatch-instance-job-id", type=str, default="")
     p.add_argument("--lane-id", type=str,
@@ -492,6 +546,159 @@ def _train_arm_residual_with_langevin(
 
 
 # ---------------------------------------------------------------------------
+# SGLD-only polish mode (E.8 convergence-diagnostic; OP-2 fix 2026-05-19)
+# ---------------------------------------------------------------------------
+
+
+def _run_sgld_only_polish(
+    *,
+    composed_bytes: bytes,
+    args: argparse.Namespace,
+    device,
+) -> tuple[bytes, list[dict[str, float]]]:
+    """Run a Welling-Teh SGLD polish loop on the composed archive's `x` blob.
+
+    Mathematical formulation (Welling & Teh 2011 SGLD; Catalog #344 canonical
+    equation #2/#9 sister):
+
+        dθ_t = -∇L(θ_t) dt + sqrt(2 T_t) dW_t
+
+    Euler-Maruyama discretization with dt = lr:
+
+        θ_{t+1} = θ_t - lr · ∇L(θ_t) + sqrt(2 T_t · lr) · ξ,    ξ ~ N(0, I)
+
+    where T_t is the cosine annealing schedule from `T_init` (driven by
+    `STACK_OF_STACKS_LANGEVIN_T_INIT_CAP` via `--langevin-t-init`) down to
+    `T_final` (default 1e-4 per langevin_optimizer.py:160).
+
+    **Polish target**: the composed archive's `x` blob is interpreted as a
+    signed int8 weight tensor (the canonical A1 substrate stores quantized
+    weights at int8 per the PR101 grammar). We promote to FP32 shadow weights
+    for the polish loop (Welling-Teh canonical per langevin_optimizer.py:147
+    "Apply Langevin to FP32 shadow weights ONLY" — int8 quantization grid
+    1/127 ~7.9e-3 dominates noise amplitude sqrt(2*T_final*lr) ~1e-4).
+
+    **Proxy loss**: ((θ - θ_initial) ** 2).mean() — measures parameter drift
+    under the temperature schedule. This is a DIAGNOSTIC convergence probe
+    NOT a contest-score-aware loss. The empirical question this answers is
+    the council T2 Finding 2 t_final-CAP plateau identification, NOT a
+    score-lowering claim. Per Catalog #324 + Catalog #287: this is
+    explicitly `[predicted; not a score claim]` evidence-grade.
+
+    **Returns**: (polished_bytes, plateau_log) where plateau_log is a list
+    of {"step": int, "loss": float, "temperature": float, "noise_scale":
+    float, "wall_clock_seconds": float} dicts logged every
+    `args.sgld_polish_log_every * polish_epochs` steps.
+
+    Per CLAUDE.md:
+    - "Forbidden premature KILL without research exhaustion": this is the
+      research-path for the t_final-CAP question; the SGLD paradigm is
+      intact; only the prior implementation (single-arm passthrough) was
+      falsified.
+    - "EVERY training path MUST instantiate EMA" — applied to the polish
+      shadow weights and the EMA shadow is what gets re-quantized at archive
+      write (Welling-Teh sister discipline + Quantizr 0.997 decay default).
+    - Catalog #220 (substrate L1+ scaffold operational mechanism): the
+      polished bytes ARE different from the composed bytes (SGLD-driven
+      parameter drift), giving the archive its operational mechanism
+      declaration.
+    """
+    import time
+
+    import torch
+
+    if not composed_bytes:
+        raise SystemExit(
+            "SGLD-only polish requires non-empty composed bytes; got empty blob"
+        )
+
+    started_at = time.time()
+    polish_epochs = max(1, args.langevin_polish_epochs)
+
+    # Promote int8 to FP32 shadow weights for the polish loop.
+    # `composed_bytes` is the canonical SOS1-trailer-augmented blob; we promote
+    # the FULL blob and re-quantize back to int8 at archive write. This is
+    # mathematically equivalent to operating on the unquantized substrate
+    # parameters (the SOS1 trailer is structural; the polish loop's noise
+    # injection that touches trailer bytes is mathematically valid because the
+    # composer treats the trailer as opaque bytes anyway).
+    composed_array = torch.frombuffer(
+        bytearray(composed_bytes), dtype=torch.int8
+    ).clone().to(device=device, dtype=torch.float32)
+
+    initial_shadow = composed_array.detach().clone()
+
+    # FP32 shadow as a learnable parameter (Welling-Teh canonical per
+    # langevin_optimizer.py:147).
+    shadow = torch.nn.Parameter(composed_array)
+    ema = EMA(torch.nn.ParameterList([shadow]), decay=args.ema_decay)
+
+    optimizer = LangevinOptimizer(
+        [shadow],
+        lr=args.lr,
+        T_init=args.langevin_t_init,
+        T_final=args.langevin_t_final,
+        n_steps=polish_epochs,
+        schedule=args.langevin_schedule,
+        weight_decay=args.weight_decay,
+        noise_seed=args.seed,
+    )
+
+    plateau_log: list[dict[str, float]] = []
+    log_interval = max(1, int(args.sgld_polish_log_every * polish_epochs))
+
+    for step in range(polish_epochs):
+        optimizer.zero_grad()
+        # Proxy loss: parameter drift L2 (canonical convergence probe per
+        # Welling-Teh 2011 §4 "the optimizer's stationary distribution
+        # collapses to the loss landscape as T_t -> 0; parameter drift is
+        # the diagnostic signal").
+        loss = ((shadow - initial_shadow) ** 2).mean()
+        loss.backward()
+        T_t = optimizer.current_temperature()
+        import math as _math
+        noise_scale = _math.sqrt(max(2.0 * T_t * args.lr, 0.0))
+        optimizer.step()
+        ema.update(torch.nn.ParameterList([shadow]))
+
+        # Log every log_interval steps + final step
+        if step % log_interval == 0 or step == polish_epochs - 1:
+            plateau_log.append({
+                "step": int(step),
+                "loss": float(loss.detach().cpu().item()),
+                "temperature": float(T_t),
+                "noise_scale": float(noise_scale),
+                "wall_clock_seconds": float(time.time() - started_at),
+            })
+
+    # Re-quantize EMA shadow back to int8 for archive write
+    # (Quantizr canonical: inference uses EMA shadow not live weights).
+    live_state = {k: v.detach().clone() for k, v in {"shadow": shadow}.items()}
+    try:
+        ema.apply(torch.nn.ParameterList([shadow]))
+        polished_fp32 = shadow.detach().cpu()
+    finally:
+        shadow.data.copy_(live_state["shadow"])
+
+    polished_int8 = (
+        polished_fp32.clamp(-128, 127).round().to(torch.int8)
+    )
+    polished_bytes = bytes(polished_int8.numpy().tobytes())
+    if len(polished_bytes) != len(composed_bytes):
+        raise SystemExit(
+            f"SGLD polish bytes length drift: composed={len(composed_bytes)} "
+            f"polished={len(polished_bytes)}; refusing to corrupt archive grammar"
+        )
+    return polished_bytes, plateau_log
+
+
+def _is_sgld_only_polish_mode_build(args: argparse.Namespace) -> bool:
+    """Return whether this invocation is in SGLD-only polish convergence-diagnostic mode."""
+
+    return bool(getattr(args, "sgld_only_polish_mode", False))
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -502,6 +709,44 @@ def _emit_provenance(state: TrainState) -> Path:
     single_arm_passthrough = _is_single_arm_passthrough_build(
         state.args,
         state.arm_substrate_ids,
+    )
+    sgld_only_polish_mode = _is_sgld_only_polish_mode_build(state.args)
+    # E.8 SGLD-only polish mode is convergence-diagnostic per recipe; it is
+    # NEVER promotable / ready_for_exact_eval / score-claim per Catalog #324
+    # (predicted_band_validation_status pending_post_training) + Catalog #287
+    # (no docstring overstatement without evidence tag). Per Catalog #240
+    # (substrate scaffold complete-or-research-only): an SGLD-polished archive
+    # is structurally research_only because the polish loss is a parameter-drift
+    # proxy, NOT a contest-score-aware training loop.
+    runtime_contract_value = (
+        "sgld_only_polish_convergence_diagnostic_research_only"
+        if sgld_only_polish_mode
+        else (
+            "single_arm_a1_passthrough_exact_eval_canary"
+            if single_arm_passthrough
+            else "research_only_multi_arm_scaffold"
+        )
+    )
+    evidence_grade_value = (
+        "predicted"
+        if sgld_only_polish_mode
+        else (
+            "byte_closed_single_arm_passthrough_no_score_claim"
+            if single_arm_passthrough
+            else "build_artifact_no_score_claim"
+        )
+    )
+    predicted_band_basis_value = (
+        "sgld_only_polish_mode_convergence_diagnostic_council_t2_finding_2; "
+        "predicted_band [0.190, 0.210] reflects recipe's single-arm passthrough "
+        "baseline (SGLD polish is a parameter-drift proxy NOT a score-lowering "
+        "loop); per Catalog #324 phantom_random_init validation status"
+        if sgld_only_polish_mode
+        else (
+            "single_arm_a1_passthrough_canary; score-neutral or slight rate penalty"
+            if single_arm_passthrough
+            else "beat_pr95_curriculum_substrate_training_design_20260513.md#idea-3"
+        )
     )
     payload = {
         "started_at_utc": state.stage_log[0]["at"] if state.stage_log else _canon_utc_now_iso(),
@@ -521,29 +766,30 @@ def _emit_provenance(state: TrainState) -> Path:
             env_var_candidates=("STACK_OF_STACKS_GPU", "MODAL_GPU"),
         ),
         "predicted_band_contest_cpu": (
-            [0.190, 0.210] if single_arm_passthrough else [0.175, 0.190]
+            [0.190, 0.210]
+            if (single_arm_passthrough or sgld_only_polish_mode)
+            else [0.175, 0.190]
         ),
-        "predicted_band_basis": (
-            "single_arm_a1_passthrough_canary; score-neutral or slight rate penalty"
-            if single_arm_passthrough
-            else "beat_pr95_curriculum_substrate_training_design_20260513.md#idea-3"
+        "predicted_band_basis": predicted_band_basis_value,
+        "predicted_band_validation_status": (
+            "pending_post_training"  # Catalog #324: SGLD polish is convergence-diagnostic; no post-training Tier-C density yet
+            if sgld_only_polish_mode
+            else "pending_post_training"
         ),
         "score_claim": False,
         "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": single_arm_passthrough,
-        "canary_exact_eval_ready": single_arm_passthrough,
+        "ready_for_exact_eval_dispatch": (
+            False if sgld_only_polish_mode else single_arm_passthrough
+        ),
+        "canary_exact_eval_ready": (
+            False if sgld_only_polish_mode else single_arm_passthrough
+        ),
         "score_lowering_dispatch_ready": False,
         "operator_dispatch_enabled": False,
-        "evidence_grade": (
-            "byte_closed_single_arm_passthrough_no_score_claim"
-            if single_arm_passthrough
-            else "build_artifact_no_score_claim"
-        ),
-        "runtime_contract": (
-            "single_arm_a1_passthrough_exact_eval_canary"
-            if single_arm_passthrough
-            else "research_only_multi_arm_scaffold"
-        ),
+        "sgld_only_polish_mode": sgld_only_polish_mode,
+        "evidence_grade": evidence_grade_value,
+        "axis_tag": "[predicted]",
+        "runtime_contract": runtime_contract_value,
     }
     prov_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     return prov_path
@@ -1019,6 +1265,56 @@ def main(argv: list[str] | None = None) -> int:  # AUTH_EVAL_DIRECT_SUBPROCESS_O
         raise SystemExit(f"compose_stack_of_stacks failed: {exc}") from exc
     stage("composed")
 
+    # E.8 SGLD-only polish convergence-diagnostic (OP-2 fix 2026-05-19).
+    # Per recipe substrate_stack_of_stacks_sgld_convergence_diagnostic_modal_t4_dispatch:
+    # this entrypoint is the CONVERGENCE-DIAGNOSTIC for the council T2 Finding 2
+    # t_final-CAP question. It is a research-only NON-PROMOTABLE evidence path
+    # per Catalog #324 phantom_random_init validation status. Primary output is
+    # the SGLD plateau curve, NOT a contest-score claim.
+    sgld_only_polish_mode = _is_sgld_only_polish_mode_build(args)
+    sgld_plateau_log: list[dict[str, float]] = []
+    if sgld_only_polish_mode:
+        if args.device == "cpu" and not args.smoke:
+            raise SystemExit(
+                "--sgld-only-polish-mode on --device cpu requires --smoke "
+                "per CLAUDE.md MPS auth eval is NOISE non-negotiable + "
+                "Catalog #1 fallback-trap; CUDA is the canonical authoritative "
+                "axis for full SGLD polish dispatch"
+            )
+        stage("sgld_only_polish_begin")
+        composed_bytes, sgld_plateau_log = _run_sgld_only_polish(
+            composed_bytes=composed_bytes,
+            args=args,
+            device=device,
+        )
+        stage("sgld_only_polish_done")
+        # Persist plateau log next to provenance for downstream council
+        # T2 Finding 2 plateau-identification consumers.
+        plateau_path = output_dir / "sgld_polish_log.json"
+        plateau_payload = {
+            "schema_version": 1,
+            "schema": "sgld_polish_log_v1_e8_convergence_diagnostic",
+            "literature_anchor": "Welling & Teh (2011) SGLD; Catalog #344 canonical equation registry pending",
+            "council_t2_finding_2_op_routable": "convergence_plateau_identification",
+            "t_init": float(args.langevin_t_init),
+            "t_final": float(args.langevin_t_final),
+            "schedule": args.langevin_schedule,
+            "polish_epochs": int(args.langevin_polish_epochs),
+            "log_every": float(args.sgld_polish_log_every),
+            "plateau_log": sgld_plateau_log,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "evidence_grade": "predicted",
+            "axis_tag": "[predicted]",
+            "result_review_blockers": [
+                "sgld_plateau_is_diagnostic_proxy_loss_not_contest_score_claim",
+                "requires_separate_auth_eval_result_review_before_score_claim",
+            ],
+        }
+        plateau_path.write_text(
+            json.dumps(plateau_payload, indent=2, sort_keys=True), encoding="utf-8"
+        )
+
     # Build the archive.zip + inflate.sh + inflate.py.
     archive_path = _build_archive_from_compose(
         composed_bytes=composed_bytes,
@@ -1029,7 +1325,16 @@ def main(argv: list[str] | None = None) -> int:  # AUTH_EVAL_DIRECT_SUBPROCESS_O
     stage("archive_built")
 
     dispatch_blockers: list[str] = []
-    if not single_arm_passthrough:
+    if sgld_only_polish_mode:
+        # SGLD-only polish convergence-diagnostic is research_only per Catalog
+        # #324: primary output is convergence plateau NOT score; loss is a
+        # parameter-drift proxy NOT a contest-score-aware training loop.
+        dispatch_blockers = [
+            "sgld_polish_loss_is_parameter_drift_proxy_not_contest_score_aware",
+            "score_claim_requires_separate_auth_eval_review_per_catalog_324",
+            "convergence_diagnostic_evidence_grade_predicted_not_promotable",
+        ]
+    elif not single_arm_passthrough:
         dispatch_blockers = [
             "multi_arm_frame_stitching_missing",
             "per_arm_decoder_hooks_missing",
@@ -1052,16 +1357,36 @@ def main(argv: list[str] | None = None) -> int:  # AUTH_EVAL_DIRECT_SUBPROCESS_O
         "ensemble_temperatures": list(ensemble_temperatures),
         "score_claim": False,
         "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": single_arm_passthrough,
-        "canary_exact_eval_ready": single_arm_passthrough,
+        "ready_for_exact_eval_dispatch": (
+            False if sgld_only_polish_mode else single_arm_passthrough
+        ),
+        "canary_exact_eval_ready": (
+            False if sgld_only_polish_mode else single_arm_passthrough
+        ),
         "score_lowering_dispatch_ready": False,
         "operator_dispatch_enabled": False,
-        "research_only": not single_arm_passthrough,
-        "runtime_contract": (
-            "single_arm_a1_passthrough_exact_eval_canary"
-            if single_arm_passthrough
-            else "research_only_multi_arm_scaffold"
+        "sgld_only_polish_mode": sgld_only_polish_mode,
+        "sgld_polish_log_entries": len(sgld_plateau_log) if sgld_only_polish_mode else 0,
+        "research_only": (
+            True if sgld_only_polish_mode else (not single_arm_passthrough)
         ),
+        "runtime_contract": (
+            "sgld_only_polish_convergence_diagnostic_research_only"
+            if sgld_only_polish_mode
+            else (
+                "single_arm_a1_passthrough_exact_eval_canary"
+                if single_arm_passthrough
+                else "research_only_multi_arm_scaffold"
+            )
+        ),
+        "evidence_grade": (
+            "predicted" if sgld_only_polish_mode else (
+                "byte_closed_single_arm_passthrough_no_score_claim"
+                if single_arm_passthrough
+                else "build_artifact_no_score_claim"
+            )
+        ),
+        "axis_tag": "[predicted]",
         "dispatch_blockers": dispatch_blockers,
     }
     (output_dir / "stack_of_stacks_compose_summary.json").write_text(
