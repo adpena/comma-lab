@@ -42925,6 +42925,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ego_nerv_l0_scaffold_20260520",
+      "name": "Ego-NeRV L0 SCAFFOLD (BUILD-1 NeRV-trio queue fill)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_ego_nerv.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_ego_nerv_l0_scaffold.sh"
+        }
+      },
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_ego_nerv.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/ego_nerv_as_renderer.py predates canonical package convention. Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/ego_nerv/ package migration + submissions/ego_nerv_substrate/ contest-compliant inflate. Recipe substrate_ego_nerv_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/ego_nerv_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_ego_nerv_as_renderer (sister)."
+    },
+    {
+      "id": "lane_e_nerv_l0_scaffold_20260520",
+      "name": "E-NeRV L0 SCAFFOLD (BUILD-1 NeRV-trio queue fill)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_e_nerv.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_e_nerv_l0_scaffold.sh"
+        }
+      },
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_e_nerv.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/e_nerv_as_renderer.py predates canonical package convention. ENeRVEncoder is compress-time-only NOT shipped in archive per strict-scorer-rule. Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/e_nerv/ package migration + submissions/e_nerv_substrate/ contest-compliant inflate. Recipe substrate_e_nerv_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/e_nerv_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_e_nerv_as_renderer (sister). Literature: Li et al. NeurIPS 2022 arXiv:2207.08132."
+    },
+    {
+      "id": "lane_nervdc_l0_scaffold_20260520",
+      "name": "NeRVdc L0 SCAFFOLD (BUILD-1 NeRV-trio queue fill)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_nervdc.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_nervdc_l0_scaffold.sh"
+        }
+      },
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_nervdc.py mirrors tc_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate library at src/tac/nervdc_as_renderer.py predates canonical package convention. Decoder-internal _CondSummary prev-frame conditioning (sequential inflate; HNeRV parity L9 runtime closure verification required at Phase 2). Reactivation: Phase 2 council symposium per Catalog #325 + canonical src/tac/substrates/nervdc/ package migration + submissions/nervdc_substrate/ contest-compliant inflate. Recipe substrate_nervdc_modal_a10g_diagnostic_dispatch.yaml. Design memo .omx/research/nervdc_l0_scaffold_design_20260520T140000Z.md. Cross-ref legacy lane_nervdc_as_renderer (sister)."
     }
   ],
   "level_rules": {
@@ -42934,5 +43057,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T04:53:22Z"
+  "updated_at": "2026-05-20T12:57:58Z"
 }

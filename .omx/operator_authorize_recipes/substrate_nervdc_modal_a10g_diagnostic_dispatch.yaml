@@ -1,0 +1,162 @@
+schema_version: 1
+name: substrate_nervdc_modal_a10g_diagnostic_dispatch
+lane_id: lane_nervdc_l0_scaffold_20260520
+summary: |
+  nervdc L0 SCAFFOLD diagnostic recipe (Modal A10G). This recipe pairs with
+  experiments/train_substrate_nervdc.py (BUILD-1 NeRV-trio queue fill
+  2026-05-20). NOT DISPATCH-ELIGIBLE: substrate is research_only until the
+  Phase 2 council symposium per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via
+  adversarial grand council symposium" (Catalog #325) lands AND the canonical
+  src/tac/substrates/nervdc/ package migration completes (currently the
+  substrate library lives at src/tac/nervdc_as_renderer.py in legacy
+  monolithic format).
+
+  Sister recipe substrate_nervdc_modal_a100_dispatch.yaml (legacy 2026-05-13)
+  pairs with the OLD experiments/train_nervdc_as_renderer.py scaffold-only
+  trainer and is preserved per CLAUDE.md HISTORICAL_PROVENANCE Catalog #110/#113.
+
+dispatch_enabled: false
+research_only: true
+
+dispatch_blockers:
+  - per_substrate_council_symposium_pending_per_catalog_325
+  - canonical_substrate_package_migration_pending
+  - full_main_raises_NotImplementedError_per_catalog_240
+  - phase_2_council_approval_required_to_lift_research_only_per_catalog_315
+
+platform: modal
+gpu: "${MODAL_GPU:-A10G}"
+min_vram_gb: 22
+min_smoke_gpu: "A10G"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: sane_hnerv
+
+cost_band:
+  epochs: 100
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 1.10
+  platform_key: modal
+  gpu_key: A10G
+
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Post-training Tier-C density re-measurement via
+  tools/mdl_scorer_conditional_ablation.py --tier c on the landed archive
+  after Phase 2 council symposium per Catalog #325 admits the substrate for
+  full-mode training.
+
+predicted_score_target: "unknown_l0_scaffold_pending_council_symposium"
+predicted_delta: "unknown_l0_scaffold_no_empirical_anchor"
+literature_anchor: "NeRV decoder-conditioning variant (canonical: NeRV Chen et al. NeurIPS 2021 + autoregressive conditioning hypothesis)"
+
+risk: |
+  L0 SCAFFOLD posture. The trainer experiments/train_substrate_nervdc.py
+  raises NotImplementedError on the non-smoke path per Catalog #240. The
+  recipe is dispatch_enabled:false + research_only:true so the
+  operator-authorize harness refuses to fire a paid dispatch.
+
+  Architectural distinction vs sane_hnerv canary: nervdc adds an internal
+  _CondSummary module to the decoder that maps the previously-decoded frame
+  to a small conditioning vector (cond_dim=8 default). At inflate time the
+  prev_frame is always available (output of the previous pair's decode); no
+  extra archive bytes are required for conditioning (the _CondSummary module
+  weights are part of the decoder weight blob). Hypothesis: prev-frame
+  conditioning acts as a cheap autoregressive prior that improves temporal
+  consistency without any extra bytes.
+
+  Phase 2 council symposium MUST evaluate per Catalog #325 6-step contract +
+  must specifically check whether the sequential-inflate-time conditioning
+  contract (which adds inflate-time wallclock cost) is contest-permissible
+  within the contest runtime budget per HNeRV parity discipline L9 runtime
+  closure.
+
+envelope_status: |
+  RESEARCH_ONLY: dispatch refused per recipe + trainer + 4 catalog gates
+  (#220 + #240 + #315 + #325). Reactivation criteria documented in trainer
+  _full_main docstring + this recipe's dispatch_blockers + lane registry
+  notes.
+
+remote_driver: scripts/remote_lane_substrate_nervdc_l0_scaffold.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default); operator must thread"
+
+modal:
+  lane_script: scripts/remote_lane_substrate_nervdc_l0_scaffold.sh
+  cost_band_trainer: experiments/train_substrate_nervdc.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 2
+  cost_band_all_flags_on: false
+
+required_input_files_trainer: experiments/train_substrate_nervdc.py
+
+env_overrides:
+  NERVDC_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  NERVDC_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  NERVDC_OUTPUT_DIR: /workspace/pact/lane_nervdc_l0_scaffold_results/output
+  NERVDC_EPOCHS: "2"
+  NERVDC_UPSTREAM_DIR: /workspace/pact/upstream
+  NERVDC_DEVICE: cpu
+  NERVDC_SMOKE: "1"
+  SMOKE_ONLY: "1"
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/remote_lane_substrate_nervdc_l0_scaffold.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_nervdc.py
+  - src/tac/nervdc_as_renderer.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+
+sentinel_files:
+  - src/tac/nervdc_as_renderer.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+reactivation_criteria: |
+  1. Per-substrate adversarial grand council symposium per Catalog #325
+     returns PROCEED or PROCEED_WITH_REVISIONS verdict for nervdc specifically.
+  2. Canonical src/tac/substrates/nervdc/ package migration lands with
+     architecture.py + archive.py + inflate.py + score_aware_loss.py
+     matching tc_nerv structure.
+  3. submissions/nervdc_substrate/inflate.{py,sh} smoke proves a
+     contest-compliant 3-positional-arg runtime per Catalog #146 AND
+     proves the sequential-inflate-time prev-frame conditioning fits
+     within the contest runtime wallclock budget (HNeRV parity L9).
+  4. Trainer experiments/train_substrate_nervdc.py _full_main path
+     replaces NotImplementedError with real score-aware Lagrangian + EMA
+     + canonical auth-eval helper invocation per Catalog #226.
+  5. Recipe research_only flips from true to false; dispatch_enabled
+     flips from false to true; predicted_band declared with
+     validation_status per Catalog #324.
+
+notes: |
+  This is the L0 SCAFFOLD recipe. Per CLAUDE.md "Substrate scaffolds MUST be
+  COMPLETE or RESEARCH-ONLY" non-negotiable. The sister recipe
+  substrate_nervdc_modal_a100_dispatch.yaml predates this BUILD-1 wave and
+  references the legacy experiments/train_nervdc_as_renderer.py trainer.
+
+  6-hook wire-in declaration per Catalog #125:
+  - hook #1 sensitivity-map: N/A (L0 SCAFFOLD)
+  - hook #2 Pareto constraint: rate_distortion_v1
+  - hook #3 bit-allocator: N/A
+  - hook #4 cathedral autopilot dispatch: N/A (research_only)
+  - hook #5 continual-learning posterior: N/A
+  - hook #6 probe-disambiguator: N/A (single mechanism: decoder-internal
+    prev-frame conditioning)
+
+  Cross-ref:
+    experiments/train_substrate_nervdc.py
+    src/tac/nervdc_as_renderer.py
+    .omx/research/nervdc_l0_scaffold_design_20260520T140000Z.md
+    feedback_slot_build_1_nerv_trio_scaffolds_landed_20260520.md
