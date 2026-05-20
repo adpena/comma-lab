@@ -132,6 +132,9 @@ def test_candidate_queue_accounts_bytes_and_stays_nonpromotional(
     )
     assert queue["candidate_count"] == len(queue["candidates"])
     assert queue["operator_candidate_count"] == 1
+    candidate_ids = {candidate["candidate_id"] for candidate in queue["candidates"]}
+    assert "pr101_sidecar_only_runtime_probe" in candidate_ids
+    assert "pr101_latent_plus_sidecar_runtime_adapter_probe" in candidate_ids
     assert all(candidate["score_claim"] is False for candidate in queue["candidates"])
     assert all(candidate["consumer_surfaces"] for candidate in queue["candidates"])
 
@@ -144,6 +147,7 @@ def test_candidate_queue_flips_runtime_proven_when_proof_supplied(
     """
 
     member_payload = _fp11_member()
+    source_len = len(b"\x02source-pr101")
     archive = _single_member_archive(tmp_path, member_payload)
     proof_path = tmp_path / "noop_proof.json"
     proof_path.write_text(
@@ -154,6 +158,20 @@ def test_candidate_queue_flips_runtime_proven_when_proof_supplied(
                 "no_op_detector_passed": True,
                 "runtime_bytes_consumed": len(member_payload),
                 "runtime_consumption_proof_source": "inflate_smoke",
+                "consumed_section_names": [
+                    "source_pr101_payload",
+                    "selector_fec6_payload",
+                ],
+                "consumed_byte_ranges": [
+                    {
+                        "section_name": "source_pr101_payload",
+                        "range": [8, 8 + source_len],
+                    },
+                    {
+                        "section_name": "selector_fec6_payload",
+                        "range": [8 + source_len + 2, len(member_payload)],
+                    },
+                ],
             }
         )
     )
@@ -165,6 +183,10 @@ def test_candidate_queue_flips_runtime_proven_when_proof_supplied(
     )
 
     assert queue["byte_accounting"]["runtime_consumption_proven"] is True
+    assert queue["byte_accounting"]["runtime_consumed_section_names"] == [
+        "selector_fec6_payload",
+        "source_pr101_payload",
+    ]
     assert (
         queue["byte_accounting"]["runtime_consumed_byte_accounting_passed"] is True
     )

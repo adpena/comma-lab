@@ -1,0 +1,194 @@
+{
+  "archive_bytes": 178517,
+  "archive_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+  "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "baseline_runtime_decode": {
+    "decoder_state_digest": "9c05c9284cfbaabe24bb37b57dd332e84badec967c8b42a51ed200f59483c7d6",
+    "decoder_tensor_count": 28,
+    "latents_sha256": "587c0623d060a344eca518f5605b2e4a3b5d84569502897c2318af1aeb39f890",
+    "latents_shape": [
+      600,
+      28
+    ],
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 600
+    }
+  },
+  "baseline_runtime_decode_digest": "90372516af6100bf9a49d8db4ccbe9b457a34a94f70b368dff8b3f44306edfba",
+  "blockers": [],
+  "consumed_byte_ranges": [
+    {
+      "probe_id": "source_payload_byte_mutation_runtime_visible",
+      "probe_offset": 8,
+      "range": [
+        8,
+        178166
+      ],
+      "section_name": "source_pr101_payload"
+    },
+    {
+      "probe_id": "selector_code_mutation_runtime_visible",
+      "probe_offset": null,
+      "range": [
+        178168,
+        178417
+      ],
+      "section_name": "selector_fec6_payload"
+    },
+    {
+      "probe_id": "pr101_latent_blob_byte_mutation_runtime_visible",
+      "probe_offset": 162172,
+      "range": [
+        162172,
+        177559
+      ],
+      "section_name": "pr101_latent_blob"
+    },
+    {
+      "probe_id": "pr101_sidecar_blob_byte_mutation_runtime_visible",
+      "probe_offset": 177559,
+      "range": [
+        177559,
+        178166
+      ],
+      "section_name": "pr101_sidecar_blob"
+    }
+  ],
+  "consumed_section_names": [
+    "pr101_latent_blob",
+    "pr101_sidecar_blob",
+    "selector_fec6_payload",
+    "source_pr101_payload"
+  ],
+  "contest_axis_claim": false,
+  "dispatch_attempted": false,
+  "expected_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+  "expected_archive_sha256_matches": true,
+  "expected_archive_sha256_well_formed": true,
+  "full_frame_inflate_output_parity_claim": false,
+  "member_name": "x",
+  "member_payload_bytes": 178417,
+  "member_payload_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+  "mutation_probes": [
+    {
+      "error": "PR101 frame-selector magic mismatch: b'XP11'",
+      "error_type": "ValueError",
+      "mutated_member_sha256": "c76bafc79cad9546ffd8dd6278af56a68151af40fc2affc9591dc5e494b929fd",
+      "mutation_kind": "fp11_magic_first_byte_F_to_X",
+      "passed": true,
+      "probe_id": "fp11_magic_mutation_rejected",
+      "runtime_rejected": true
+    },
+    {
+      "error": "PR101 frame-selector trailing bytes: pos=178417 total=178418",
+      "error_type": "ValueError",
+      "mutated_member_sha256": "40a467fbe212a2b2c0b9811fbd7818d8e13837f12919113a18f5997b960624a9",
+      "mutation_kind": "append_trailing_zero_byte_after_selector_payload",
+      "passed": true,
+      "probe_id": "trailing_member_byte_rejected",
+      "runtime_rejected": true
+    },
+    {
+      "error": "brotli: decoder failed",
+      "error_type": "error",
+      "mutated_member_sha256": "0fdb53f3c1d62ca1f109a8cd5610e477b6c3d8e0a18c3c7722403077f1a2e51a",
+      "mutation_kind": "source_payload_first_byte_xor_0x01",
+      "offset": 8,
+      "passed": true,
+      "probe_id": "source_payload_byte_mutation_runtime_visible",
+      "runtime_rejected": true,
+      "section_name": "source_pr101_payload",
+      "section_range": [
+        8,
+        178166
+      ]
+    },
+    {
+      "mutated_member_sha256": "c9b2a78f659e2d1e181363dcae511d808f961bb441e8248ea943eb9780c81607",
+      "mutation_kind": "same_bit_length_selector_code_substitution",
+      "new_code": 2,
+      "old_code": 0,
+      "pair_index": 0,
+      "passed": true,
+      "probe_id": "selector_code_mutation_runtime_visible",
+      "runtime_rejected": false,
+      "runtime_selector_codes_changed": true,
+      "section_name": "selector_fec6_payload",
+      "section_range": [
+        178168,
+        178417
+      ],
+      "selector_kind": "compact",
+      "targeted_code_changed": true
+    },
+    {
+      "error": "Corrupt input data",
+      "error_type": "LZMAError",
+      "mutated_member_sha256": "b043c144630f5f3eda37bd402e135bd3bede13e9c8099e0794d489e9f608bebc",
+      "mutation_kind": "pr101_latent_blob_first_byte_xor_0x01",
+      "offset": 162172,
+      "passed": true,
+      "probe_id": "pr101_latent_blob_byte_mutation_runtime_visible",
+      "runtime_rejected": true,
+      "section_name": "pr101_latent_blob",
+      "section_range": [
+        162172,
+        177559
+      ]
+    },
+    {
+      "baseline_decode_digest": "90372516af6100bf9a49d8db4ccbe9b457a34a94f70b368dff8b3f44306edfba",
+      "mutated_decode_digest": "adbb064e3d8159bb7a8c574a0ee60eedbe531fdba6aec658f0739f159646f419",
+      "mutated_member_sha256": "74c6fb52609220d2469b59027d115910845e37052243346de6765f69c4c18fe3",
+      "mutation_kind": "pr101_sidecar_blob_first_byte_xor_0x01",
+      "offset": 177559,
+      "passed": true,
+      "probe_id": "pr101_sidecar_blob_byte_mutation_runtime_visible",
+      "runtime_decode_changed": true,
+      "runtime_rejected": false,
+      "section_name": "pr101_sidecar_blob",
+      "section_range": [
+        177559,
+        178166
+      ]
+    }
+  ],
+  "no_op_detector_passed": true,
+  "promotion_eligible": false,
+  "proof_family": "pr101_fec6_runtime_consumption_proof_v1",
+  "proof_scope": "runtime_parser_and_codec_byte_consumption_not_full_frame_not_score",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_operator_probe": false,
+  "ready_for_provider_dispatch": false,
+  "required_next_proof": "full-frame source-vs-candidate inflate output parity and paired contest CPU/CUDA exact eval with archive/runtime custody before score or promotion language",
+  "runtime_bytes_consumed": 178417,
+  "runtime_codec_py_sha256": "79bad598244d2d5afb7b7b3f258a88921b6dffc45a7071a496245989e24f6685",
+  "runtime_consumption_claim": true,
+  "runtime_consumption_proof_path": ".omx/research/pr101_fec6_runtime_consumption_section_proof_20260520T235030Z_codex.json",
+  "runtime_consumption_proof_source": "submission_dir/inflate.py::parse_pr101_frame_selector_archive + submission_dir/src/codec.py::parse_archive + deterministic source/selector mutation probes",
+  "runtime_dir": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+  "runtime_frame_selector_py_sha256": "e47d2ba86abc4b3fa493e6a079822e65fc610c9b58825308370e2c25067b7ea6",
+  "runtime_inflate_py_sha256": "45722504b03c1a08bfb28d223c6b2f5a73123b6b42b8c878c56940ace378230a",
+  "runtime_parse": {
+    "selector_code_count": 600,
+    "selector_codes_match_packetir": true,
+    "selector_codes_sha256": "7c7c545ddddfe76af24c62c76ba623c872ba9da16cb322d3777c62e502178c9c",
+    "selector_kind": "compact",
+    "selector_len": 249,
+    "selector_specs_count": 16,
+    "source_len": 178158,
+    "source_payload_matches_packetir": true,
+    "source_payload_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf"
+  },
+  "schema": "deterministic_no_op_proof.v1",
+  "schema_version": "deterministic_no_op_proof.v1",
+  "score_claim": false,
+  "section_mutation_probe_count": 2
+}

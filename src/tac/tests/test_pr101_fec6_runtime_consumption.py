@@ -178,6 +178,8 @@ def test_runtime_consumption_proof_passes_and_flips_candidate_queue(
     assert proof["proof_family"] == PR101_FEC6_RUNTIME_CONSUMPTION_PROOF_FAMILY
     assert proof["no_op_detector_passed"] is True
     assert proof["runtime_bytes_consumed"] == len(member_payload)
+    assert "source_pr101_payload" in proof["consumed_section_names"]
+    assert "selector_fec6_payload" in proof["consumed_section_names"]
     assert proof["score_claim"] is False
     assert proof["promotion_eligible"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
@@ -241,4 +243,10 @@ def test_real_pr101_fec6_runtime_consumption_proof_if_present() -> None:
     assert proof["runtime_parse"]["selector_code_count"] == 600
     assert proof["runtime_parse"]["selector_specs_count"] == 16
     assert proof["no_op_detector_passed"] is True
+    assert proof["section_mutation_probe_count"] == 2
+    assert "pr101_latent_blob" in proof["consumed_section_names"]
+    assert "pr101_sidecar_blob" in proof["consumed_section_names"]
+    ranges = {row["section_name"]: row["range"] for row in proof["consumed_byte_ranges"]}
+    assert ranges["pr101_latent_blob"] == [162_172, 177_559]
+    assert ranges["pr101_sidecar_blob"] == [177_559, 178_166]
     assert proof["score_claim"] is False

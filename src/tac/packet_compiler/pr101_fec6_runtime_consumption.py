@@ -30,6 +30,10 @@ from tac.packet_compiler.pr101_fec6_packetir import (
     read_single_stored_fec6_member_archive,
     sha256_hex,
 )
+from tac.packet_compiler.pr101_fec6_source_anatomy import (
+    PR101_DECODER_BLOB_LEN,
+    PR101_LATENT_BLOB_LEN,
+)
 from tac.repo_io import repo_relative, sha256_file
 
 PR101_FEC6_RUNTIME_CONSUMPTION_PROOF_FAMILY = (
@@ -92,6 +96,13 @@ def prove_pr101_fec6_runtime_consumption(
     if baseline_decode["blocker"] is not None:
         blockers.append(baseline_decode["blocker"])
 
+    source_section_probes = _probe_pr101_source_sections(
+        runtime_module,
+        member.payload,
+        source_offset=8,
+        source_payload_len=len(source_payload),
+        baseline_decode_digest=baseline_decode["decode_digest"],
+    )
     probes = [
         _probe_bad_magic(runtime_module, member.payload),
         _probe_trailing_byte(runtime_module, member.payload),
@@ -106,12 +117,15 @@ def prove_pr101_fec6_runtime_consumption(
             member.payload,
             packet_selector_codes=packet.selector_codes,
         ),
+        *source_section_probes,
     ]
     for probe in probes:
         if probe["passed"] is not True:
             blockers.append(f"no_op_detector_failed:{probe['probe_id']}")
 
     no_op_detector_passed = not blockers
+    consumed_ranges = _consumed_byte_ranges_from_probes(probes)
+    consumed_section_names = sorted({row["section_name"] for row in consumed_ranges})
     proof_path = None
     return {
         "schema_version": PR101_FEC6_RUNTIME_CONSUMPTION_SCHEMA_VERSION,
@@ -140,6 +154,8 @@ def prove_pr101_fec6_runtime_consumption(
         "member_payload_bytes": len(member.payload),
         "member_payload_sha256": sha256_hex(member.payload),
         "runtime_bytes_consumed": len(member.payload),
+        "consumed_section_names": consumed_section_names,
+        "consumed_byte_ranges": consumed_ranges,
         "runtime_consumption_proof_path": proof_path,
         "runtime_consumption_proof_source": (
             "submission_dir/inflate.py::parse_pr101_frame_selector_archive + "
@@ -168,6 +184,7 @@ def prove_pr101_fec6_runtime_consumption(
         },
         "baseline_runtime_decode_digest": baseline_decode["decode_digest"],
         "mutation_probes": probes,
+        "section_mutation_probe_count": len(source_section_probes),
         "no_op_detector_passed": no_op_detector_passed,
         "runtime_consumption_claim": no_op_detector_passed,
         "full_frame_inflate_output_parity_claim": False,
@@ -384,6 +401,8 @@ def _probe_source_payload_mutation(
         return {
             "probe_id": "source_payload_byte_mutation_runtime_visible",
             "mutation_kind": "source_payload_first_byte_xor_0x01",
+            "section_name": "source_pr101_payload",
+            "section_range": [source_offset, _source_end(member_payload)],
             "offset": source_offset,
             "mutated_member_sha256": sha256_hex(mutated_payload),
             "passed": True,
@@ -396,6 +415,8 @@ def _probe_source_payload_mutation(
         return {
             "probe_id": "source_payload_byte_mutation_runtime_visible",
             "mutation_kind": "source_payload_first_byte_xor_0x01",
+            "section_name": "source_pr101_payload",
+            "section_range": [source_offset, _source_end(member_payload)],
             "offset": source_offset,
             "mutated_member_sha256": sha256_hex(mutated_payload),
             "passed": True,
@@ -410,6 +431,8 @@ def _probe_source_payload_mutation(
     return {
         "probe_id": "source_payload_byte_mutation_runtime_visible",
         "mutation_kind": "source_payload_first_byte_xor_0x01",
+        "section_name": "source_pr101_payload",
+        "section_range": [source_offset, _source_end(member_payload)],
         "offset": source_offset,
         "mutated_member_sha256": sha256_hex(mutated_payload),
         "passed": changed,
@@ -418,6 +441,132 @@ def _probe_source_payload_mutation(
         "mutated_decode_digest": mutated_decode["decode_digest"],
         "runtime_decode_changed": changed,
     }
+
+
+def _probe_pr101_source_sections(
+    runtime_module: ModuleType,
+    member_payload: bytes,
+    *,
+    source_offset: int,
+    source_payload_len: int,
+    baseline_decode_digest: str | None,
+) -> list[dict[str, Any]]:
+    """Probe PR101 internal latent and sidecar sections when the source is real-sized."""
+
+    latent_start = PR101_DECODER_BLOB_LEN
+    latent_end = latent_start + PR101_LATENT_BLOB_LEN
+    section_specs = (
+        ("pr101_latent_blob", latent_start, latent_end),
+        ("pr101_sidecar_blob", latent_end, source_payload_len),
+    )
+    probes: list[dict[str, Any]] = []
+    for section_name, start, end in section_specs:
+        if start >= end or end > source_payload_len:
+            continue
+        probes.append(
+            _probe_source_section_mutation(
+                runtime_module,
+                member_payload,
+                section_name=section_name,
+                member_start=source_offset + start,
+                member_end=source_offset + end,
+                baseline_decode_digest=baseline_decode_digest,
+            )
+        )
+    return probes
+
+
+def _probe_source_section_mutation(
+    runtime_module: ModuleType,
+    member_payload: bytes,
+    *,
+    section_name: str,
+    member_start: int,
+    member_end: int,
+    baseline_decode_digest: str | None,
+) -> dict[str, Any]:
+    mutated = bytearray(member_payload)
+    probe_offset = member_start
+    mutated[probe_offset] ^= 0x01
+    mutated_payload = bytes(mutated)
+    try:
+        source_payload, _kind, _codes, _specs = runtime_module.parse_pr101_frame_selector_archive(
+            mutated_payload
+        )
+    except Exception as exc:
+        return {
+            "probe_id": f"{section_name}_byte_mutation_runtime_visible",
+            "mutation_kind": f"{section_name}_first_byte_xor_0x01",
+            "section_name": section_name,
+            "section_range": [member_start, member_end],
+            "offset": probe_offset,
+            "mutated_member_sha256": sha256_hex(mutated_payload),
+            "passed": True,
+            "runtime_rejected": True,
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+        }
+    mutated_decode = _runtime_decode_source(runtime_module, source_payload)
+    if mutated_decode["blocker"] is not None:
+        return {
+            "probe_id": f"{section_name}_byte_mutation_runtime_visible",
+            "mutation_kind": f"{section_name}_first_byte_xor_0x01",
+            "section_name": section_name,
+            "section_range": [member_start, member_end],
+            "offset": probe_offset,
+            "mutated_member_sha256": sha256_hex(mutated_payload),
+            "passed": True,
+            "runtime_rejected": True,
+            "error_type": mutated_decode.get("error_type"),
+            "error": mutated_decode.get("error"),
+        }
+    changed = (
+        baseline_decode_digest is not None
+        and mutated_decode["decode_digest"] != baseline_decode_digest
+    )
+    return {
+        "probe_id": f"{section_name}_byte_mutation_runtime_visible",
+        "mutation_kind": f"{section_name}_first_byte_xor_0x01",
+        "section_name": section_name,
+        "section_range": [member_start, member_end],
+        "offset": probe_offset,
+        "mutated_member_sha256": sha256_hex(mutated_payload),
+        "passed": changed,
+        "runtime_rejected": False,
+        "baseline_decode_digest": baseline_decode_digest,
+        "mutated_decode_digest": mutated_decode["decode_digest"],
+        "runtime_decode_changed": changed,
+    }
+
+
+def _source_end(member_payload: bytes) -> int:
+    return 8 + int.from_bytes(member_payload[4:8], "little")
+
+
+def _consumed_byte_ranges_from_probes(probes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ranges: list[dict[str, Any]] = []
+    for probe in probes:
+        if probe.get("passed") is not True:
+            continue
+        section_name = probe.get("section_name")
+        section_range = probe.get("section_range")
+        if not isinstance(section_name, str):
+            continue
+        if (
+            not isinstance(section_range, list)
+            or len(section_range) != 2
+            or not all(isinstance(value, int) for value in section_range)
+        ):
+            continue
+        ranges.append(
+            {
+                "section_name": section_name,
+                "range": section_range,
+                "probe_offset": probe.get("offset"),
+                "probe_id": probe.get("probe_id"),
+            }
+        )
+    return ranges
 
 
 def _probe_selector_code_mutation(
@@ -438,6 +587,8 @@ def _probe_selector_code_mutation(
         return {
             "probe_id": "selector_code_mutation_runtime_visible",
             "mutation_kind": "same_bit_length_selector_code_substitution",
+            "section_name": "selector_fec6_payload",
+            "section_range": [selector_start, selector_end],
             "passed": False,
             "blocker": "mutated_selector_length_changed",
         }
@@ -452,6 +603,8 @@ def _probe_selector_code_mutation(
         return {
             "probe_id": "selector_code_mutation_runtime_visible",
             "mutation_kind": "same_bit_length_selector_code_substitution",
+            "section_name": "selector_fec6_payload",
+            "section_range": [selector_start, selector_end],
             "pair_index": mutation["pair_index"],
             "old_code": mutation["old_code"],
             "new_code": mutation["new_code"],
@@ -466,6 +619,8 @@ def _probe_selector_code_mutation(
     return {
         "probe_id": "selector_code_mutation_runtime_visible",
         "mutation_kind": "same_bit_length_selector_code_substitution",
+        "section_name": "selector_fec6_payload",
+        "section_range": [selector_start, selector_end],
         "pair_index": mutation["pair_index"],
         "old_code": mutation["old_code"],
         "new_code": mutation["new_code"],

@@ -25,6 +25,10 @@ from tac.packet_compiler.pr101_fec6_packetir import (
     read_single_stored_fec6_member_archive,
     sha256_hex,
 )
+from tac.packet_compiler.pr101_fec6_source_anatomy import (
+    PR101_DECODER_BLOB_LEN,
+    PR101_LATENT_BLOB_LEN,
+)
 from tac.repo_io import read_json
 
 PR101_FEC6_CANDIDATE_QUEUE_SCHEMA = "pr101_fec6_packetir_candidate_queue_v2"
@@ -159,11 +163,15 @@ def _runtime_consumption_proof_summary(
     schema_version = proof.get("schema_version")
     if schema_version not in ("deterministic_no_op_proof.v1",):
         blockers.append("runtime_consumption_proof_schema_unrecognized")
+    consumed_section_names = _string_list(proof.get("consumed_section_names"))
+    consumed_byte_ranges = _mapping_list(proof.get("consumed_byte_ranges"))
     return {
         "runtime_consumption_proven": not blockers,
         "no_op_detector_passed": (
             no_op_detector_passed if isinstance(no_op_detector_passed, bool) else None
         ),
+        "consumed_section_names": consumed_section_names,
+        "consumed_byte_ranges": consumed_byte_ranges,
         "runtime_consumption_proof_path": proof.get("runtime_consumption_proof_path"),
         "runtime_consumption_proof_source": proof.get(
             "runtime_consumption_proof_source"
@@ -209,6 +217,12 @@ def packetir_byte_accounting(
         member_payload_bytes=member_payload_bytes,
     )
     runtime_proven = bool(parser_passed and proof_summary["runtime_consumption_proven"])
+    consumed_section_names = set(proof_summary.get("consumed_section_names") or [])
+    if runtime_proven and consumed_section_names:
+        for row in rows:
+            if row["name"] in consumed_section_names:
+                row["runtime_consumption_proven"] = True
+                row["runtime_consumed"] = True
     accounting_blockers: list[str] = []
     if not parser_passed:
         accounting_blockers.append("parser_byte_accounting_failed")
@@ -224,6 +238,8 @@ def packetir_byte_accounting(
         # Catalog #105 + #139 + #220 sister discipline; flips True only via
         # supplied runtime_consumption_proof.
         "runtime_consumption_proven": runtime_proven,
+        "runtime_consumed_section_names": sorted(consumed_section_names),
+        "runtime_consumed_byte_ranges": proof_summary.get("consumed_byte_ranges") or [],
         "runtime_consumption_proof_summary": proof_summary,
         # Legacy v1 alias: rebound to runtime_consumption_proven so downstream
         # readers cannot consume the old length-summation lie.
@@ -251,6 +267,18 @@ def _selector_entropy_floor_bytes(codes: tuple[int, ...]) -> int:
         count * math.log2(count / total) for count in counts.values()
     )
     return math.ceil(entropy_bits / 8.0)
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
+
+
+def _mapping_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, Mapping)]
 
 
 def _false_authority_flags() -> dict[str, bool]:
@@ -481,6 +509,46 @@ def build_pr101_fec6_packetir_candidate_queue(
             "byte_region": "source_pr101_payload",
             "current_source_payload_bytes": len(packet.source_pr101_payload),
             "blockers": list(DEFAULT_OPERATOR_BLOCKERS),
+            "consumer_surfaces": list(RUNTIME_CONSUMER_SURFACES)
+            + list(QUEUE_CONSUMER_SURFACES),
+            **_false_authority_flags(),
+        },
+        {
+            "candidate_id": "pr101_sidecar_only_runtime_probe",
+            "candidate_kind": "section_runtime_visibility_probe",
+            "status": "queue_only_not_materialized",
+            "byte_region": "pr101_sidecar_blob",
+            "current_sidecar_bytes": max(
+                0,
+                len(packet.source_pr101_payload)
+                - PR101_DECODER_BLOB_LEN
+                - PR101_LATENT_BLOB_LEN,
+            ),
+            "required_runtime_consumed_section": "pr101_sidecar_blob",
+            "blockers": list(DEFAULT_OPERATOR_BLOCKERS)
+            + ["sidecar_only_materializer_missing"],
+            "consumer_surfaces": list(RUNTIME_CONSUMER_SURFACES)
+            + list(QUEUE_CONSUMER_SURFACES),
+            **_false_authority_flags(),
+        },
+        {
+            "candidate_id": "pr101_latent_plus_sidecar_runtime_adapter_probe",
+            "candidate_kind": "section_runtime_adapter_probe",
+            "status": "queue_only_not_materialized",
+            "byte_region": "pr101_latent_blob+pr101_sidecar_blob",
+            "current_latent_bytes": PR101_LATENT_BLOB_LEN,
+            "current_sidecar_bytes": max(
+                0,
+                len(packet.source_pr101_payload)
+                - PR101_DECODER_BLOB_LEN
+                - PR101_LATENT_BLOB_LEN,
+            ),
+            "required_runtime_consumed_sections": [
+                "pr101_latent_blob",
+                "pr101_sidecar_blob",
+            ],
+            "blockers": list(DEFAULT_OPERATOR_BLOCKERS)
+            + ["latent_sidecar_runtime_adapter_missing"],
             "consumer_surfaces": list(RUNTIME_CONSUMER_SURFACES)
             + list(QUEUE_CONSUMER_SURFACES),
             **_false_authority_flags(),
