@@ -74,7 +74,7 @@ The submission packet is intentionally narrow. The apparatus that produced it is
 
 Discipline: per-substrate adversarial-council symposium before paid dispatch above threshold (canonical 6-step contract: cargo-cult audit + 9-dim checklist + observability surface + sextet pact + reactivation criteria + post-training Tier-C validation), recursive 3-clean-pass adversarial review with per-round assumption-challenge axis, 4-tier council hierarchy with explicit quorum and tie-break (T1 unbounded / T2 ≤3/day / T3 ≤3/week / T4 ≤2/month), per-deliberation HARD-EARNED-vs-CARGO-CULTED assumption surfacing. See [`cargo_cult_unwind_methodology.md`](./cargo_cult_unwind_methodology.md) for the NSCS06 v6→v7 anchor (44% reduction in one iteration).
 
-Sister library [`adpena/tac`](https://github.com/adpena/tac) holds the task-aware compression primitives the submission runtime imports from.
+Sister library [`adpena/tac`](https://github.com/adpena/tac) holds task-aware-compression research primitives and reusable tooling used during development; it is not required by the PR #110 submission runtime.
 
 ---
 

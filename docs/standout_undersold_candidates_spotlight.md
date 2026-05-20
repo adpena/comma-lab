@@ -103,5 +103,5 @@ Read this composition graph as "where these go next" rather than "what they curr
 - [Canonical equations tour](./canonical_equations_tour.md) — the canonical equations registry described in B.9.
 - [Master-gradient extractor tour](./master_gradient_extractor_tour.md) — operator-facing deep dive on B.8.
 - Submission packet: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
-- Sister library: [`adpena/tac`](https://github.com/adpena/tac) — the task-aware compression primitives this repo's submission imports from.
+- Sister library: [`adpena/tac`](https://github.com/adpena/tac) — task-aware-compression research primitives and reusable tooling used during development; not required by the PR #110 submission runtime.
 - This repo: [`adpena/comma-lab`](https://github.com/adpena/comma-lab).
