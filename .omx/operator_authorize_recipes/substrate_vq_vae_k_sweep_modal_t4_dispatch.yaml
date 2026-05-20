@@ -24,12 +24,18 @@ dispatch_blockers_cleared:
   - probe_outcome_ratification_pending_post_symposium: ratified_via_operator_frontier_override_20260519
 
 platform: modal
-gpu: "${MODAL_GPU:-T4}"
-min_vram_gb: 14
-# Catalog #215: K-sweep variant uses T4 (NOT A100). 100-epoch smoke at K<=256
-# fits in T4 14.56GB capacity. Per-K dispatch envelope: ~$0.30 on Modal T4.
-# Total envelope for 8-K sweep: ~$2.40.
-min_smoke_gpu: "T4"
+gpu: "${MODAL_GPU:-A10G}"
+min_vram_gb: 22
+# Catalog #215 + Slot GG OP-1 (2026-05-20): K-sweep variant upgraded T4 -> A10G
+# per harvest_e7_vq_k_sweep_1_t4_oom_20260519 BLOCKING DEFER (T4 OOMed at SegNet
+# BatchNorm forward; needed 27262976 bytes beyond T4 14.56GB). A10G provides
+# 24GB shared = solves OOM. Empirically verified by fc-01KRZCX15GAF5Z5E3E568Q60FF
+# (K=512 at 100ep: rc=0 elapsed=3472s cost=$1.06 final_score=25.5 [diagnostic-CPU
+# A10 advisory; per Catalog #127 non-promotable]).
+# Per-K dispatch envelope: ~$1.06 on Modal A10G (3472s @ $1.10/hr).
+# Full 8-K sweep envelope: ~$8.49 (EXCEEDS prior $2.40 T4 envelope).
+# Operator-routable per Slot GG landing: 3-K subset {K=2, K=8, K=64} fits ~$3.18 envelope.
+min_smoke_gpu: "A10G"
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
@@ -40,9 +46,10 @@ canary_dependency: vq_vae
 cost_band:
   epochs: 100
   all_flags_on: true
-  hand_calibrated_fallback_p50_usd: 2.40
+  # Per Slot GG OP-1 empirical anchor: A10G cost $1.06/K-100ep; 8-K = ~$8.49
+  hand_calibrated_fallback_p50_usd: 8.49
   platform_key: modal
-  gpu_key: T4
+  gpu_key: A10G
 
 # Catalog #324: predicted_band_validation_status MUST be declared.
 # Predicted_band derived from analytical Wave 2A R-D (NOT post-training);
