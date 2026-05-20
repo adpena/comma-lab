@@ -2,171 +2,60 @@ schema_version: 1
 name: substrate_vq_vae_k_sweep_modal_t4_dispatch
 lane_id: lane_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_20260518
 summary: |
-  E.7 VQ-VAE codebook K-sweep paired-comparison smoke (Modal T4). Empirically
-  validates the Wave 2A `8b987215a` analytical Pareto-frontier claim that
-  K=2 is optimal at lambda=1.0 (K=64 + K=256 ANTI-PARETO). Per council T3
-  Finding 1 op-routable #1 (.omx/research/council_t3_finding_1_vq_codebook_anti_pareto_20260518.md).
+  DEPRECATED compatibility pointer for the former E.7 VQ-VAE K-sweep T4
+  recipe. T4 was empirically insufficient for this diagnostic path; the live
+  corrected surface is `substrate_vq_vae_k_sweep_modal_a10g_diagnostic_dispatch`.
 
-# OPERATOR_FRONTIER_OVERRIDE 2026-05-19 per Catalog #300 §"Mission alignment"
-# Consequence #1. Operator verbatim "All operator fates and decisions approved"
-# captured at .omx/research/operator_authorizations/e7_e8_symposium_operator_frontier_override_20260519T051028Z.md
-# (commit 8233584e4). DRAFT symposium memo at
-# .omx/research/council_t2_vq_vae_k_sweep_symposium_DRAFT_20260519T043602Z.md
-# ratified to VERDICT=PROCEED via the override.
-dispatch_enabled: true
-research_only: false
-operator_override_rationale: "All operator fates and decisions approved"
-operator_override_memo: .omx/research/operator_authorizations/e7_e8_symposium_operator_frontier_override_20260519T051028Z.md
+dispatch_enabled: false
+research_only: true
+defer_reason: |
+  Superseded on 2026-05-20 by the A10G diagnostic recipe after T4 OOM and
+  false-authority review. Do not dispatch this recipe name. Use
+  `.omx/operator_authorize_recipes/substrate_vq_vae_k_sweep_modal_a10g_diagnostic_dispatch.yaml`
+  for any future non-promotional VQ K-sweep diagnostic work, and preserve
+  CPU-diagnostic-only axis labels.
+dispatch_blockers:
+  - superseded_by_substrate_vq_vae_k_sweep_modal_a10g_diagnostic_dispatch
+  - t4_surface_name_is_stale_after_a10g_migration
+  - prior_t4_recipe_contained_stale_contest_cuda_language
+pre_promotion_blockers:
+  - exact_cuda_auth_eval_missing
+  - paired_cpu_cuda_axis_custody_missing
+  - k_dependent_archive_grammar_missing
 
-dispatch_blockers: []
-dispatch_blockers_cleared:
-  - per_substrate_symposium_pending_operator_convocation: ratified_via_operator_frontier_override_20260519
-  - probe_outcome_ratification_pending_post_symposium: ratified_via_operator_frontier_override_20260519
+superseded_by_recipe: substrate_vq_vae_k_sweep_modal_a10g_diagnostic_dispatch
+superseded_by_path: .omx/operator_authorize_recipes/substrate_vq_vae_k_sweep_modal_a10g_diagnostic_dispatch.yaml
+platform: none
+gpu: none
 
-platform: modal
-gpu: "${MODAL_GPU:-A10G}"
-min_vram_gb: 22
-# Catalog #215 + Slot GG OP-1 (2026-05-20): K-sweep variant upgraded T4 -> A10G
-# per harvest_e7_vq_k_sweep_1_t4_oom_20260519 BLOCKING DEFER (T4 OOMed at SegNet
-# BatchNorm forward; needed 27262976 bytes beyond T4 14.56GB). A10G provides
-# 24GB shared = solves OOM. Empirically verified by fc-01KRZCX15GAF5Z5E3E568Q60FF
-# (K=512 at 100ep: rc=0 elapsed=3472s cost=$1.06 final_score=25.5 [diagnostic-CPU
-# A10 advisory; per Catalog #127 non-promotable]).
-# Per-K dispatch envelope: ~$1.06 on Modal A10G (3472s @ $1.10/hr).
-# Full 8-K sweep envelope: ~$8.49 (EXCEEDS prior $2.40 T4 envelope).
-# Operator-routable per Slot GG landing: 3-K subset {K=2, K=8, K=64} fits ~$3.18 envelope.
-min_smoke_gpu: "A10G"
-video_input_strategy: per_dispatch_local_copy
-pyav_decode_strategy: cpu_thread_async_upload
-target_modes:
-  - research_substrate
-canary_status: post_canary_dependent
-canary_dependency: vq_vae
+# Catalog #170/#171/#173/#181/#182 same-line waivers (deprecated fail-closed
+# compatibility pointer; dispatch_enabled:false + research_only:true above
+# already guarantee no Modal/GPU dispatch can fire against this recipe; the
+# 5 substrate-recipe-schema fields below would only be relevant for a live
+# dispatchable recipe per the WAVE-1-FORENSIC-FIX 2026-05-20 audit).
+min_vram_gb: 0  # MIN_VRAM_GB_OK:deprecated_fail_closed_pointer_dispatch_enabled_false_research_only_true_per_lines_9_10_supersedes_to_a10g_diagnostic_recipe
+video_input_strategy: "not_applicable"  # VIDEO_INPUT_STRATEGY_OK:deprecated_fail_closed_pointer_no_dispatch_can_fire_per_dispatch_enabled_false
+canary_status: "independent_substrate"  # CANARY_FIRST_OK:deprecated_fail_closed_pointer_no_dispatch_can_fire_per_dispatch_enabled_false
+pyav_decode_strategy: "not_applicable"  # PYAV_DECODE_STRATEGY_OK:deprecated_fail_closed_pointer_no_dispatch_can_fire_per_dispatch_enabled_false
+target_modes: [research_substrate]  # TARGET_MODES_OK:deprecated_fail_closed_pointer_research_only_per_line_10_supersedes_to_a10g_diagnostic_recipe
 
 cost_band:
-  epochs: 100
+  epochs: 0
   all_flags_on: true
-  # Per Slot GG OP-1 empirical anchor: A10G cost $1.06/K-100ep; 8-K = ~$8.49
-  hand_calibrated_fallback_p50_usd: 8.49
-  platform_key: modal
-  gpu_key: A10G
+  hand_calibrated_fallback_p50_usd: 0.0
+  platform_key: none
+  gpu_key: none
 
-# Catalog #324: predicted_band_validation_status MUST be declared.
-# Predicted_band derived from analytical Wave 2A R-D (NOT post-training);
-# requires post-training Tier-C re-measurement before promotion.
-predicted_band: [0.180, 0.300]
-predicted_band_validation_status: pending_post_training
-predicted_band_reactivation_criteria: |
-  Post-training Tier-C density re-measurement via
-  tools/mdl_scorer_conditional_ablation.py --tier c on the landed
-  smoke archive. The analytical Pareto-frontier solution from Wave 2A
-  (`8b987215a` rows #2+#3) is a CARGO-CULTED prediction under canonical
-  IID-symbol R-D assumptions; substrate-VQ score-aware loss regime
-  requires empirical confirmation per council T3 Finding 1
-  Assumption-Adversary verdict.
-
-predicted_score_target: 0.18
-predicted_delta: "K=2 optimum candidate per Wave 2A analytical R-D; empirical Pareto-frontier validation required [predicted; council T3 Finding 1]"
-predicted_delta_basis: ".omx/research/council_t3_finding_1_vq_codebook_anti_pareto_20260518.md"
-literature_anchor: "van den Oord, Vinyals, Kavukcuoglu (2017); Wave 2A R-D analytical Pareto-frontier solution rows #2+#3"
-council_verdicts:
-  COUNCIL_T3_FINDING_1: "PROCEED_WITH_REVISIONS; op-routable #1 directs K-sweep paired-comparison smoke"
-
+predicted_delta: "none; deprecated fail-closed compatibility surface"
+predicted_delta_basis: ".omx/research/codex_findings_vq_k_sweep_compliance_hardening_20260520T053245Z_codex.md"
 risk: |
-  K-sweep paired-comparison diagnostic smoke. Each K value (K in {2, 4, 8, 16,
-  32, 64, 128, 256}) is independently trained for 100 epochs at lambda=1.0
-  with identical seed/config; final auth-eval score recorded per K.
-
-  Architectural risks per K:
-  (a) K=2 collapse risk - 2-codeword codebook may collapse to mode-averaged
-      outputs (vanDenOord council dissent); empirical anchor IS the question.
-  (b) K=256 codebook utilization - large codebook may underutilize without
-      sufficient training signal at 100ep smoke (typical full VQ-VAE training
-      runs 1000s of epochs to populate large K).
-  (c) Lambda=1.0 selectivity - the Pareto pole is reported at lambda=1.0
-      specifically; the K-optimum may shift at other lambda values.
-
-  Single-axis [contest-CUDA] acceptable for empirical anchor; CPU axis
-  required separately for promotion claims.
-
-envelope_status: "FITS $5 envelope at p50 fallback (8 K-values * $0.30 = $2.40)"
-
-remote_driver: scripts/remote_lane_substrate_vq_vae.sh
-timeout_hours: 1.5
-
-required_input_files:
-  - flag: --video-path
-    default_path: upstream/videos/0.mkv
-
-modal:
-  lane_script: scripts/remote_lane_substrate_vq_vae.sh
-  cost_band_trainer: experiments/train_substrate_vq_vae.py
-  cost_band_epochs: 100
-  cost_band_batch_size: 16
-  cost_band_all_flags_on: true
-
-required_input_files_trainer: experiments/train_substrate_vq_vae.py
-
-# K-sweep parameterization: VQ_VAE_CODEBOOK_SIZE drives --codebook-size flag.
-# Operator dispatch fires 8 separate dispatches (one per K-value) by varying
-# this env var, OR a sister harness wraps multi-K iteration.
-env_overrides:
-  VQ_VAE_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
-  VQ_VAE_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
-  VQ_VAE_OUTPUT_DIR: /workspace/pact/lane_substrate_vq_vae_k_sweep_results/output
-  VQ_VAE_EPOCHS: "100"
-  VQ_VAE_BATCH_SIZE: "16"
-  VQ_VAE_UPSTREAM_DIR: /workspace/pact/upstream
-  VQ_VAE_DEVICE: cuda
-  VQ_VAE_CODEBOOK_SIZE: "${VQ_VAE_CODEBOOK_SIZE:-16}"
-  VQ_VAE_ALPHA_RATE: "1.0"
-  LOCAL_CUDA_WORKER: "1"
-
-dependencies:
-  - scripts/remote_lane_substrate_vq_vae.sh
-  - upstream/videos/0.mkv
-  - experiments/train_substrate_vq_vae.py
-  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  Dispatching this recipe name would reopen a stale T4/A10G naming ambiguity and
+  stale contest-CUDA authority language. It is intentionally non-dispatchable.
+envelope_status: "refused: superseded by A10G diagnostic recipe"
 
 notes: |
-  E.7 K-sweep diagnostic variant. Sister of substrate_vq_vae_modal_a100_dispatch.yaml
-  (full 2000ep production dispatch); this variant is the diagnostic smoke that
-  empirically validates the Wave 2A Pareto-pole hypothesis BEFORE the
-  full-substrate K wire-in wave.
+  Resolution of the deleted tracked recipe surface requested 2026-05-20.
+  Keeping this fail-closed pointer is safer than leaving the name missing,
+  because old task rows and operator notes still cite
+  `substrate_vq_vae_k_sweep_modal_t4_dispatch`.
 
-  Council T3 Finding 1 directive (op-routable #1):
-  "dispatch K-sweep paired-comparison smoke ($1-3 Modal T4) on D4 or
-  sane_hnerv: K in {2, 4, 8, 16, 32, 64, 256} at lambda=1.0 to empirically
-  validate the Pareto pole"
-
-  Why VQ-VAE substrate (not D4 or sane_hnerv): the VQ-VAE substrate IS the
-  canonical persistent-codebook substrate (van den Oord 2017); the K-sweep
-  here is the direct test on the substrate-of-canonical-VQ-design. D4/sane_hnerv
-  K-sweeps would be follow-on lanes.
-
-  K dispatch matrix:
-    K=2:   per-cell rate = 1 bit;  ~768 B + codebook 32 B
-    K=4:   per-cell rate = 2 bits; ~1536 B + codebook 64 B
-    K=8:   per-cell rate = 3 bits; ~2304 B + codebook 128 B
-    K=16:  per-cell rate = 4 bits; ~3072 B + codebook 256 B  (smoke default)
-    K=32:  per-cell rate = 5 bits; ~3840 B + codebook 512 B
-    K=64:  per-cell rate = 6 bits; ~4608 B + codebook 1024 B  (Wave 2A anti-Pareto)
-    K=128: per-cell rate = 7 bits; ~5376 B + codebook 2048 B
-    K=256: per-cell rate = 8 bits; ~6144 B + codebook 4096 B  (Wave 2A anti-Pareto)
-
-  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
-  .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
-
-  Per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
-  symposium" (Catalog #325): convocation pending operator approval.
-
-  Per CLAUDE.md "Forbidden premature KILL without research exhaustion": this
-  K-sweep is an empirical-anchor research dispatch, NOT a kill verdict. Any
-  K-value that under-performs at 100ep smoke is DEFERRED-pending-research
-  (e.g. longer epochs may rescue large-K underutilization).
-
-  Cross-ref:
-    .omx/research/council_t3_finding_1_vq_codebook_anti_pareto_20260518.md
-    .omx/research/3_smoke_paid_gpu_reactivation_wave_blocker_audit_20260519T042301Z.md
-    .omx/research/council_t2_vq_vae_k_sweep_symposium_DRAFT_20260519T043602Z.md
-    feedback_e7_vq_k_sweep_plus_e8_sgld_convergence_prep_landed_20260518.md
