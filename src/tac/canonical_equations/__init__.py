@@ -82,6 +82,16 @@ from tac.canonical_equations.builtins import (
     build_all_initial_equations,
     populate_initial_equations,
 )
+from tac.canonical_equations.bayesian_posterior_update import (
+    BayesianPosterior,
+    DEFAULT_NIG_PRIOR,
+    NormalInverseGammaHyperparameters,
+    PosteriorUpdateError,
+    append_empirical_anchor_to_equation_with_posterior_update,
+    bootstrap_posterior_from_anchor_residuals,
+    compute_predicted_band_from_posterior,
+    update_equation_with_anchor_via_conjugate_prior,
+)
 
 __all__ = [
     # Contract
@@ -112,4 +122,13 @@ __all__ = [
     # Initial population
     "build_all_initial_equations",
     "populate_initial_equations",
+    # Bayesian posterior update (SLOT MG-2, Catalog #350)
+    "BayesianPosterior",
+    "DEFAULT_NIG_PRIOR",
+    "NormalInverseGammaHyperparameters",
+    "PosteriorUpdateError",
+    "append_empirical_anchor_to_equation_with_posterior_update",
+    "bootstrap_posterior_from_anchor_residuals",
+    "compute_predicted_band_from_posterior",
+    "update_equation_with_anchor_via_conjugate_prior",
 ]
