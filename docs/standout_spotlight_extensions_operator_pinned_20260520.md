@@ -1,8 +1,6 @@
 # Standout-candidates spotlight — operator-pinned extensions
 
-Companion to [`standout_undersold_candidates_spotlight.md`](standout_undersold_candidates_spotlight.md). Where that document spotlights ten technically standout candidates that the [main inventory memo](asymptotic_floor_candidate_inventory.md) understates, this companion adds four entries that the operator specifically asked to surface plus one honest meta-observation section on where the work actually sits.
-
-Authored as a sister memo because the primary spotlight document was still being authored at the time of these amendments. Once both are committed, this memo's entries can be folded into the primary spotlight memo if useful; until then they live side-by-side.
+Companion to [`standout_undersold_candidates_spotlight.md`](standout_undersold_candidates_spotlight.md). That document spotlights ten technically standout candidates the [main inventory memo](asymptotic_floor_candidate_inventory.md) understates; this companion adds four candidates the operator specifically asked to surface plus one honest assessment of where the work actually sits.
 
 Same hygiene as the primary spotlight: every score literal axis-tagged, no extrapolation from one configuration to another, honest about what is empirical vs design.
 
