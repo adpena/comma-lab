@@ -1,6 +1,6 @@
 # Asymptotic-floor candidate inventory
 
-This document is a snapshot inventory of class-shift candidate substrates trained, scaffolded, or designed against the comma video compression challenge while building the FEC6 + fixed-Huffman bolt-ons submitted as PR #110. It is operator-facing context for the work that exists beyond the submission packet — not a roadmap, not a benchmark suite, and not a claim about how close any candidate comes to a theoretical floor.
+This document is a snapshot inventory of class-shift candidate substrates trained, scaffolded, or designed against the comma video compression challenge while building the FEC6 + fixed-Huffman bolt-ons submitted as PR #110. It is technical context for the work that exists beyond the submission packet — not a roadmap, not a benchmark suite, not a runtime dependency, and not a claim about how close any candidate comes to a theoretical floor.
 
 Anchor: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110).
 
@@ -313,7 +313,7 @@ A typical class-shift training run on a substrate the size of the HNeRV cluster 
 
 ## E. What is in this repo beyond the submission packet
 
-The submission's runtime is intentionally small (~1140 LOC across 4 files). The repo carries the rest of the apparatus.
+The submission's runtime is intentionally small and self-contained in PR #110 under `submissions/hnerv_fec6_fixed_huffman_k16/` (six files: `inflate.sh`, `inflate.py`, and four local `src/` modules). The repo carries the rest of the research/build apparatus.
 
 ### E.1 Tooling
 
@@ -335,7 +335,7 @@ The submission's runtime is intentionally small (~1140 LOC across 4 files). The 
 
 ### E.2 Methodology and discipline
 
-Cargo-cult unwind methodology (NSCS06 v6→v7 = 44% improvement in one iteration via hard-earned-vs-cargo-culted assumption classification). Per-deliberation explicit assumption surfacing. Per-substrate adversarial-council symposium discipline before paid dispatch above threshold; recursive adversarial review with three-clean-pass counter; 4-tier council hierarchy with explicit attendees, quorum, tie-break. Bug-class extinction at orthogonal surfaces (design-memo / runtime-effect / per-feature contract / promotion gate / retirement gate / council discipline / iteration discipline / post-training validation). Sister library [`adpena/tac`](https://github.com/adpena/tac) holds the task-aware-compression primitives the submission runtime imports from.
+Cargo-cult unwind methodology (NSCS06 v6→v7 = 44% improvement in one iteration via hard-earned-vs-cargo-culted assumption classification). Per-deliberation explicit assumption surfacing. Per-substrate adversarial-council symposium discipline before paid dispatch above threshold; recursive adversarial review with three-clean-pass counter; 4-tier council hierarchy with explicit attendees, quorum, tie-break. Bug-class extinction at orthogonal surfaces (design-memo / runtime-effect / per-feature contract / promotion gate / retirement gate / council discipline / iteration discipline / post-training validation). Sister library [`adpena/tac`](https://github.com/adpena/tac) holds task-aware-compression research primitives and reusable tooling used during development; it is not required by the PR #110 submission runtime.
 
 ---
 
@@ -363,7 +363,7 @@ This document is a snapshot at authoring time. It will be wrong in detail within
 ## H. Reproducibility and cross-links
 
 - **Submission packet**: [`commaai/comma_video_compression_challenge#110`](https://github.com/commaai/comma_video_compression_challenge/pull/110) + the `submissions/hnerv_fec6_fixed_huffman_k16/` directory it ships under.
-- **Sister library**: [`adpena/tac`](https://github.com/adpena/tac) — task-aware compression primitives. CI badges, OSS hygiene, the canonical helpers the submission runtime imports from a small surface area.
+- **Sister library**: [`adpena/tac`](https://github.com/adpena/tac) — task-aware-compression research primitives, CI/OSS hygiene, canonical helpers, and reusable tooling used during development. It is not required by the PR #110 submission runtime.
 - **This repo**: [`adpena/comma-lab`](https://github.com/adpena/comma-lab) — working repo for the broader inventory. Not the submission packet.
 - **Meta engineering vision**: [`docs/meta_engineering_vision.md`](meta_engineering_vision.md) — light hors d'oeuvres on the unifying engineering vision (replace arbitrary constants with learned or discovered optimals; continual-learning mechanism; signal-driven; per-element optimal target). Names xray + atoms + meta-Lagrangian/Pareto + canonical equations + master-gradient + canonical Provenance + cathedral autopilot + continual-learning posterior + wiring discipline + STRICT preflight as the canonical operational surfaces that operationalize the META. Lead-with-META reading for the public introduction.
 - **Tight public overview**: [`docs/comma_lab_overview.md`](comma_lab_overview.md) — 1500-word operator-facing introduction. TLDR + empirical anchors table + paradigm-class scaffolded table + tooling/methodology bullets + collaboration framing. Targeted at a reader who has 5 minutes and wants the canonical picture of what comma-lab is, what it has, and what it doesn't.
