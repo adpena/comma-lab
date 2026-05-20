@@ -1,0 +1,689 @@
+{
+  "axis_tag": "[predicted]",
+  "codec_family_rollups": {
+    "hnerv_family": {
+      "anchor_count": 9,
+      "null_bytes_mean": 12557.333333333334,
+      "null_bytes_total": 113016,
+      "null_fraction_max": 0.09131416849291267,
+      "null_fraction_mean": 0.07043955289525519,
+      "null_fraction_min": 0.0,
+      "null_fraction_stddev": 0.03994008287553275
+    },
+    "pr106_format0d_family": {
+      "anchor_count": 1,
+      "null_bytes_mean": 16909.0,
+      "null_bytes_total": 16909,
+      "null_fraction_max": 0.09053090332805071,
+      "null_fraction_mean": 0.09053090332805071,
+      "null_fraction_min": 0.09053090332805071,
+      "null_fraction_stddev": 0.0
+    },
+    "pr107_apogee_family": {
+      "anchor_count": 1,
+      "null_bytes_mean": 15987.0,
+      "null_bytes_total": 15987,
+      "null_fraction_max": 0.08967153530322407,
+      "null_fraction_mean": 0.08967153530322407,
+      "null_fraction_min": 0.08967153530322407,
+      "null_fraction_stddev": 0.0
+    }
+  },
+  "cross_hardware_drift_per_archive": [
+    {
+      "absolute_spread": 0.0,
+      "axes_present": [
+        "[contest-CPU]",
+        "[macOS-CPU advisory]"
+      ],
+      "per_axis_mean_null_fraction": {
+        "[contest-CPU]": 0.0,
+        "[macOS-CPU advisory]": 0.0
+      },
+      "relative_spread": 0.0,
+      "scored_archive_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+      "substrate_label": "fec6_subject_sha"
+    },
+    {
+      "absolute_spread": 0.0,
+      "axes_present": [
+        "[contest-CUDA]",
+        "[macOS-CPU advisory]"
+      ],
+      "per_axis_mean_null_fraction": {
+        "[contest-CUDA]": 0.09131416849291267,
+        "[macOS-CPU advisory]": 0.09131416849291267
+      },
+      "relative_spread": 0.0,
+      "scored_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "substrate_label": "pr101_fec6_frontier"
+    }
+  ],
+  "epsilon": 1e-09,
+  "n_anchors_missing_npy": 0,
+  "n_anchors_probed_ok": 11,
+  "n_anchors_scanned": 11,
+  "per_anchor": [
+    {
+      "anchor_index": 1,
+      "archive_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+      "axis": "[contest-CPU]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": null,
+      "hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+      "n_bytes_declared": 178417,
+      "n_null_bytes": 0,
+      "n_pairs_used": null,
+      "n_total_bytes": 178417,
+      "npy_path": ".omx/state/master_gradient_fec6_contest_cpu_scorer_macos_host_advisory_20260517.npy",
+      "null_fraction": 0.0,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16292,
+        "rate_axis_zero_count": 0,
+        "seg_axis_zero_count": 16638
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": 0.0,
+        "K=16": 0.0,
+        "K=256": 0.0,
+        "K=32": 0.0,
+        "K=64": 0.0
+      },
+      "replacement_priority_proxy_null_bytes": 0,
+      "scored_archive_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+      "section_breakdown": {
+        "_note": "no FP11/FEC6 grammar detected; section bucketing skipped"
+      },
+      "status": "OK",
+      "substrate_label": "fec6_subject_sha"
+    },
+    {
+      "anchor_index": 2,
+      "archive_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": null,
+      "hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+      "n_bytes_declared": 178417,
+      "n_null_bytes": 0,
+      "n_pairs_used": 8,
+      "n_total_bytes": 178417,
+      "npy_path": ".omx/state/master_gradient_fec6_contest_cpu_scorer_macos_host_advisory_20260517.npy",
+      "null_fraction": 0.0,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16292,
+        "rate_axis_zero_count": 0,
+        "seg_axis_zero_count": 16638
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": 0.0,
+        "K=16": 0.0,
+        "K=256": 0.0,
+        "K=32": 0.0,
+        "K=64": 0.0
+      },
+      "replacement_priority_proxy_null_bytes": 0,
+      "scored_archive_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+      "section_breakdown": {
+        "_note": "no FP11/FEC6 grammar detected; section bucketing skipped"
+      },
+      "status": "OK",
+      "substrate_label": "fec6_subject_sha"
+    },
+    {
+      "anchor_index": 3,
+      "archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": null,
+      "hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+      "n_bytes_declared": 178162,
+      "n_null_bytes": 16037,
+      "n_pairs_used": 8,
+      "n_total_bytes": 178162,
+      "npy_path": "/Users/adpena/Projects/pact/experiments/results/master_gradient_per_archive_fp64_extraction_wave_20260519T012404Z/master_gradient_a1_finetuned_macos_cpu_advisory_8pair_fp64_20260518.npy",
+      "null_fraction": 0.09001358314343126,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16037,
+        "rate_axis_zero_count": 178162,
+        "seg_axis_zero_count": 16383
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010593150085220625,
+        "K=16": -0.010667726287970308,
+        "K=256": -0.010507920139220986,
+        "K=32": -0.010657072544720352,
+        "K=64": -0.010635765058220443
+      },
+      "replacement_priority_proxy_null_bytes": 16037,
+      "scored_archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "section_breakdown": {
+        "_note": "no FP11/FEC6 grammar detected; section bucketing skipped"
+      },
+      "status": "OK",
+      "substrate_label": "a1_finetuned"
+    },
+    {
+      "anchor_index": 4,
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": null,
+      "hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+      "n_bytes_declared": 178158,
+      "n_null_bytes": 16033,
+      "n_pairs_used": 8,
+      "n_total_bytes": 178158,
+      "npy_path": "/Users/adpena/Projects/pact/experiments/results/master_gradient_per_archive_fp64_extraction_wave_20260519T012404Z/master_gradient_pr101_lc_v2_macos_cpu_advisory_8pair_fp64_20260518.npy",
+      "null_fraction": 0.08999315214584806,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16033,
+        "rate_axis_zero_count": 178158,
+        "seg_axis_zero_count": 16379
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010590486649408135,
+        "K=16": -0.010665062852157818,
+        "K=256": -0.010505256703408497,
+        "K=32": -0.010654409108907864,
+        "K=64": -0.010633101622407954
+      },
+      "replacement_priority_proxy_null_bytes": 16033,
+      "scored_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "section_breakdown": {
+        "_note": "no FP11/FEC6 grammar detected; section bucketing skipped"
+      },
+      "status": "OK",
+      "substrate_label": "pr101_lc_v2"
+    },
+    {
+      "anchor_index": 5,
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": "FEC6",
+      "hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+      "n_bytes_declared": 178417,
+      "n_null_bytes": 16292,
+      "n_pairs_used": 8,
+      "n_total_bytes": 178417,
+      "npy_path": "/Users/adpena/Projects/pact/experiments/results/master_gradient_per_archive_fp64_extraction_wave_20260519T012404Z/master_gradient_pr101_fec6_frontier_macos_cpu_advisory_8pair_fp64_20260518.npy",
+      "null_fraction": 0.09131416849291267,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16292,
+        "rate_axis_zero_count": 178417,
+        "seg_axis_zero_count": 16638
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010762944118266778,
+        "K=16": -0.010837520321016461,
+        "K=256": -0.01067771417226714,
+        "K=32": -0.010826866577766506,
+        "K=64": -0.010805559091266596
+      },
+      "replacement_priority_proxy_null_bytes": 16292,
+      "scored_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "section_breakdown": {
+        "OUTER_MAGIC": {
+          "length_bytes": 4,
+          "n_null": 4,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            0,
+            4
+          ]
+        },
+        "selector_len_hdr": {
+          "length_bytes": 2,
+          "n_null": 2,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            178166,
+            178168
+          ]
+        },
+        "selector_payload": {
+          "length_bytes": 249,
+          "n_null": 249,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            178168,
+            178417
+          ]
+        },
+        "source_len_hdr": {
+          "length_bytes": 4,
+          "n_null": 4,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            4,
+            8
+          ]
+        },
+        "source_payload": {
+          "length_bytes": 178158,
+          "n_null": 16033,
+          "null_fraction_within_section": 0.08999315214584806,
+          "range": [
+            8,
+            178166
+          ]
+        }
+      },
+      "status": "OK",
+      "substrate_label": "pr101_fec6_frontier"
+    },
+    {
+      "anchor_index": 6,
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": null,
+      "hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+      "n_bytes_declared": 178158,
+      "n_null_bytes": 16033,
+      "n_pairs_used": 8,
+      "n_total_bytes": 178158,
+      "npy_path": "/Users/adpena/Projects/pact/experiments/results/master_gradient_per_archive_fp64_extraction_wave_20260519T012404Z/master_gradient_pr101_lc_v2_macos_cpu_advisory_8pair_fp64_20260518.npy",
+      "null_fraction": 0.08999315214584806,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16033,
+        "rate_axis_zero_count": 178158,
+        "seg_axis_zero_count": 16379
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010590486649408135,
+        "K=16": -0.010665062852157818,
+        "K=256": -0.010505256703408497,
+        "K=32": -0.010654409108907864,
+        "K=64": -0.010633101622407954
+      },
+      "replacement_priority_proxy_null_bytes": 16033,
+      "scored_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "section_breakdown": {
+        "_note": "no FP11/FEC6 grammar detected; section bucketing skipped"
+      },
+      "status": "OK",
+      "substrate_label": "pr101_lc_v2"
+    },
+    {
+      "anchor_index": 7,
+      "archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": null,
+      "hardware": "darwin_arm64_local_cpu_advisory",
+      "n_bytes_declared": 178162,
+      "n_null_bytes": 16037,
+      "n_pairs_used": 8,
+      "n_total_bytes": 178162,
+      "npy_path": "/Users/adpena/Projects/pact/.omx/state/master_gradient_a1_8pair_20260519.npy",
+      "null_fraction": 0.09001358314343126,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16037,
+        "rate_axis_zero_count": 178162,
+        "seg_axis_zero_count": 16383
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010593150085220625,
+        "K=16": -0.010667726287970308,
+        "K=256": -0.010507920139220986,
+        "K=32": -0.010657072544720352,
+        "K=64": -0.010635765058220443
+      },
+      "replacement_priority_proxy_null_bytes": 16037,
+      "scored_archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "section_breakdown": {
+        "_note": "no FP11/FEC6 grammar detected; section bucketing skipped"
+      },
+      "status": "OK",
+      "substrate_label": "a1_finetuned"
+    },
+    {
+      "anchor_index": 8,
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": "FEC6",
+      "hardware": "darwin_arm64_local_cpu_advisory",
+      "n_bytes_declared": 178417,
+      "n_null_bytes": 16292,
+      "n_pairs_used": 8,
+      "n_total_bytes": 178417,
+      "npy_path": "/Users/adpena/Projects/pact/.omx/state/master_gradient_pr101_lc_v2_fec6_8pair_20260519.npy",
+      "null_fraction": 0.09131416849291267,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16292,
+        "rate_axis_zero_count": 178417,
+        "seg_axis_zero_count": 16638
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010762944118266778,
+        "K=16": -0.010837520321016461,
+        "K=256": -0.01067771417226714,
+        "K=32": -0.010826866577766506,
+        "K=64": -0.010805559091266596
+      },
+      "replacement_priority_proxy_null_bytes": 16292,
+      "scored_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "section_breakdown": {
+        "OUTER_MAGIC": {
+          "length_bytes": 4,
+          "n_null": 4,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            0,
+            4
+          ]
+        },
+        "selector_len_hdr": {
+          "length_bytes": 2,
+          "n_null": 2,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            178166,
+            178168
+          ]
+        },
+        "selector_payload": {
+          "length_bytes": 249,
+          "n_null": 249,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            178168,
+            178417
+          ]
+        },
+        "source_len_hdr": {
+          "length_bytes": 4,
+          "n_null": 4,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            4,
+            8
+          ]
+        },
+        "source_payload": {
+          "length_bytes": 178158,
+          "n_null": 16033,
+          "null_fraction_within_section": 0.08999315214584806,
+          "range": [
+            8,
+            178166
+          ]
+        }
+      },
+      "status": "OK",
+      "substrate_label": "pr101_fec6_frontier"
+    },
+    {
+      "anchor_index": 9,
+      "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "pr106_format0d_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": null,
+      "hardware": "darwin_arm64_local_cpu_advisory",
+      "n_bytes_declared": 186776,
+      "n_null_bytes": 16909,
+      "n_pairs_used": 8,
+      "n_total_bytes": 186776,
+      "npy_path": "/Users/adpena/Projects/pact/.omx/state/master_gradient_pr106_format0d_8pair_20260519.npy",
+      "null_fraction": 0.09053090332805071,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16909,
+        "rate_axis_zero_count": 186776,
+        "seg_axis_zero_count": 17273
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.011173779092343157,
+        "K=16": -0.01124835529509284,
+        "K=256": -0.01108854914634352,
+        "K=32": -0.011237701551842887,
+        "K=64": -0.011216394065342977
+      },
+      "replacement_priority_proxy_null_bytes": 16909,
+      "scored_archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "section_breakdown": {
+        "_note": "no FP11/FEC6 grammar detected; section bucketing skipped"
+      },
+      "status": "OK",
+      "substrate_label": "pr106_format0d"
+    },
+    {
+      "anchor_index": 10,
+      "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "pr107_apogee_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": null,
+      "hardware": "darwin_arm64_local_cpu_advisory",
+      "n_bytes_declared": 178284,
+      "n_null_bytes": 15987,
+      "n_pairs_used": 8,
+      "n_total_bytes": 178284,
+      "npy_path": "/Users/adpena/Projects/pact/.omx/state/master_gradient_pr107_apogee_8pair_20260519.npy",
+      "null_fraction": 0.08967153530322407,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 15987,
+        "rate_axis_zero_count": 178284,
+        "seg_axis_zero_count": 16335
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010559857137564516,
+        "K=16": -0.010634433340314199,
+        "K=256": -0.010474627191564877,
+        "K=32": -0.010623779597064243,
+        "K=64": -0.010602472110564334
+      },
+      "replacement_priority_proxy_null_bytes": 15987,
+      "scored_archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+      "section_breakdown": {
+        "_note": "no FP11/FEC6 grammar detected; section bucketing skipped"
+      },
+      "status": "OK",
+      "substrate_label": "pr107_apogee"
+    },
+    {
+      "anchor_index": 11,
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "axis": "[contest-CUDA]",
+      "codec_family": "hnerv_family",
+      "epsilon": 1e-09,
+      "grammar_detected_label": "FEC6",
+      "hardware": "linux_x86_64_t4_modal",
+      "n_bytes_declared": 178417,
+      "n_null_bytes": 16292,
+      "n_pairs_used": 600,
+      "n_total_bytes": 178417,
+      "npy_path": "/Users/adpena/Projects/pact/.omx/state/master_gradient_fec6_contest_cuda_t4_20260520.npy",
+      "null_fraction": 0.09131416849291267,
+      "per_axis_zero_counts": {
+        "pose_axis_zero_count": 16292,
+        "rate_axis_zero_count": 178417,
+        "seg_axis_zero_count": 16638
+      },
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010762944118266778,
+        "K=16": -0.010837520321016461,
+        "K=256": -0.01067771417226714,
+        "K=32": -0.010826866577766506,
+        "K=64": -0.010805559091266596
+      },
+      "replacement_priority_proxy_null_bytes": 16292,
+      "scored_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "section_breakdown": {
+        "OUTER_MAGIC": {
+          "length_bytes": 4,
+          "n_null": 4,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            0,
+            4
+          ]
+        },
+        "selector_len_hdr": {
+          "length_bytes": 2,
+          "n_null": 2,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            178166,
+            178168
+          ]
+        },
+        "selector_payload": {
+          "length_bytes": 249,
+          "n_null": 249,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            178168,
+            178417
+          ]
+        },
+        "source_len_hdr": {
+          "length_bytes": 4,
+          "n_null": 4,
+          "null_fraction_within_section": 1.0,
+          "range": [
+            4,
+            8
+          ]
+        },
+        "source_payload": {
+          "length_bytes": 178158,
+          "n_null": 16033,
+          "null_fraction_within_section": 0.08999315214584806,
+          "range": [
+            8,
+            178166
+          ]
+        }
+      },
+      "status": "OK",
+      "substrate_label": "pr101_fec6_frontier"
+    }
+  ],
+  "promotable": false,
+  "promotion_eligible": false,
+  "provenance": {
+    "artifact_kind": "PREDICTED_FROM_MODEL",
+    "axis_tag": "[predicted]",
+    "canonical_helper_invocation": "tools/probe_null_byte_master_gradient_matrix.py",
+    "captured_at_utc": "2026-05-20T22:40:27.763018+00:00",
+    "evidence_grade": "predicted",
+    "hardware_substrate": "unknown",
+    "inputs_sha256": "da2b8940f9642fcd5fbed53c42e05e4687872911f7f293e03a32109635475f4b",
+    "measurement_axis": "[predicted]",
+    "model_id": "null_byte_master_gradient_probe_matrix.v1",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "score_claim": false,
+    "source_anchors_jsonl": ".omx/state/master_gradient_anchors.jsonl"
+  },
+  "rank_or_kill_eligible": false,
+  "schema": "null_byte_master_gradient_probe_matrix_v1",
+  "score_claim": false,
+  "seed_budgets_k": [
+    16,
+    32,
+    64,
+    128,
+    256
+  ],
+  "top5_replacement_candidates": [
+    {
+      "anchor_index": 9,
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "pr106_format0d_family",
+      "n_null_bytes": 16909,
+      "null_fraction": 0.09053090332805071,
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.011173779092343157,
+        "K=16": -0.01124835529509284,
+        "K=256": -0.01108854914634352,
+        "K=32": -0.011237701551842887,
+        "K=64": -0.011216394065342977
+      },
+      "rank": 1,
+      "scored_archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "substrate_label": "pr106_format0d"
+    },
+    {
+      "anchor_index": 5,
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "n_null_bytes": 16292,
+      "null_fraction": 0.09131416849291267,
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010762944118266778,
+        "K=16": -0.010837520321016461,
+        "K=256": -0.01067771417226714,
+        "K=32": -0.010826866577766506,
+        "K=64": -0.010805559091266596
+      },
+      "rank": 2,
+      "scored_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "substrate_label": "pr101_fec6_frontier"
+    },
+    {
+      "anchor_index": 3,
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "n_null_bytes": 16037,
+      "null_fraction": 0.09001358314343126,
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010593150085220625,
+        "K=16": -0.010667726287970308,
+        "K=256": -0.010507920139220986,
+        "K=32": -0.010657072544720352,
+        "K=64": -0.010635765058220443
+      },
+      "rank": 3,
+      "scored_archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "substrate_label": "a1_finetuned"
+    },
+    {
+      "anchor_index": 4,
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "hnerv_family",
+      "n_null_bytes": 16033,
+      "null_fraction": 0.08999315214584806,
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010590486649408135,
+        "K=16": -0.010665062852157818,
+        "K=256": -0.010505256703408497,
+        "K=32": -0.010654409108907864,
+        "K=64": -0.010633101622407954
+      },
+      "rank": 4,
+      "scored_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "substrate_label": "pr101_lc_v2"
+    },
+    {
+      "anchor_index": 10,
+      "axis": "[macOS-CPU advisory]",
+      "codec_family": "pr107_apogee_family",
+      "n_null_bytes": 15987,
+      "null_fraction": 0.08967153530322407,
+      "predicted_delta_s_per_seed_budget": {
+        "K=128": -0.010559857137564516,
+        "K=16": -0.010634433340314199,
+        "K=256": -0.010474627191564877,
+        "K=32": -0.010623779597064243,
+        "K=64": -0.010602472110564334
+      },
+      "rank": 5,
+      "scored_archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+      "substrate_label": "pr107_apogee"
+    }
+  ]
+}

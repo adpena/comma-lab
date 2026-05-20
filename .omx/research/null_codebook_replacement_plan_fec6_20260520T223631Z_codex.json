@@ -1,0 +1,96 @@
+{
+  "authority_contract": "null_seed_replacement_plan_requires_packet_compiler_and_exact_eval",
+  "candidates": [
+    {
+      "authority_contract": "null_seed_replacement_candidate_requires_packet_compiler_and_exact_eval",
+      "candidate_id": "null-seed-contiguous_null_run-source_payload_selector_len_hdr_selector_payload-162171-178417",
+      "net_saved_inner_bytes": 16238,
+      "original_bytes": 16246,
+      "original_sha256": "473a8343306b5d7d2d2279dd947856328c4038ae28f1bb60c47cca0ac971a85d",
+      "predicted_rate_delta_upper_bound": -0.01081221768079782,
+      "promotion_eligible": false,
+      "range": [
+        162171,
+        178417
+      ],
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_next_proofs": [
+        "stock_inflate_runtime_consumes_seed_inside_archive_zip",
+        "seed_mutation_changes_inflated_frames_or_expected_null_region",
+        "packet_compiler_candidate_not_raw_byte_splice",
+        "exact_cuda_eval_on_shrunk_archive"
+      ],
+      "research_only": true,
+      "runtime_header_bytes": 0,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section": "source_payload+selector_len_hdr+selector_payload",
+      "seed_bytes": 8,
+      "source": "contiguous_null_run"
+    },
+    {
+      "authority_contract": "null_seed_replacement_candidate_requires_packet_compiler_and_exact_eval",
+      "candidate_id": "null-seed-whole_null_section-selector_payload-178168-178417",
+      "net_saved_inner_bytes": 241,
+      "original_bytes": 249,
+      "original_sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca",
+      "predicted_rate_delta_upper_bound": -0.0001604720077024433,
+      "promotion_eligible": false,
+      "range": [
+        178168,
+        178417
+      ],
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_next_proofs": [
+        "stock_inflate_runtime_consumes_seed_inside_archive_zip",
+        "seed_mutation_changes_inflated_frames_or_expected_null_region",
+        "packet_compiler_candidate_not_raw_byte_splice",
+        "exact_cuda_eval_on_shrunk_archive"
+      ],
+      "research_only": true,
+      "runtime_header_bytes": 0,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "section": "selector_payload",
+      "seed_bytes": 8,
+      "source": "whole_null_section"
+    }
+  ],
+  "input_paths": {
+    "archive_zip": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "inner_member_name": "x",
+    "null_indices": "experiments/results/null_byte_probe_20260520T220614Z/null_byte_indices.npy",
+    "null_summary": "experiments/results/null_byte_probe_20260520T220614Z/null_byte_summary.json"
+  },
+  "inputs": {
+    "epsilon": 1e-09,
+    "inner_bytes_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+    "max_candidates": 50,
+    "min_run_length": 16,
+    "n_null_bytes": 16292,
+    "n_total_bytes": 178417,
+    "null_fraction": 0.09131416849291267,
+    "runtime_header_bytes": 0,
+    "seed_bytes": 8,
+    "source_null_probe_schema": "null_byte_master_gradient_probe_v1"
+  },
+  "planner_note": "Planning-only null-span ranking. A future packet compiler must replace the span with archive-charged seed bytes, prove runtime consumption, and pass exact CUDA eval before any score claim.",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "research_only": true,
+  "schema": "null_space_seed_replacement_plan_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "best_net_saved_inner_bytes": 16238,
+    "candidate_count": 2,
+    "emitted_candidate_count": 2,
+    "greedy_disjoint_net_saved_inner_bytes_upper_bound": 16238,
+    "greedy_disjoint_positive_candidate_count": 1,
+    "greedy_disjoint_rate_delta_upper_bound": -0.01081221768079782,
+    "positive_candidate_count": 2
+  }
+}
