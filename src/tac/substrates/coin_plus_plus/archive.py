@@ -98,7 +98,7 @@ def _quantize_modulations_to_int8(
         raise ValueError(f"modulations must be float; got {modulations.dtype}")
     f = modulations.detach().to(dtype=torch.float32, device="cpu")
     lo, hi = float(f.min()), float(f.max())
-    if hi <= lo:
+    if hi <= lo:  # QUANTIZE_DEGENERATE_OK:coin_plus_plus_l0_scaffold_research_only_uses_int8_256level_minus_128_sentinel_math_correct_alternative_to_canonical_254level_minus_127_pattern_dequant_recovers_lo_exactly_via_q_plus_128_times_one_plus_lo_per_lane_registry_lane_coin_plus_plus_l0_scaffold_20260520_l0_status_full_main_raises_not_implemented_error_per_catalog_240_research_substrate_class_no_paid_dispatch_eligible_until_phase_2_council_approval
         # Degenerate-range branch (FFFF Catalog #161 fix): use -128 sentinel
         # so dequant = 0 * scale + lo = lo.
         return (torch.full_like(f, -128, dtype=torch.int8), 1.0, lo)

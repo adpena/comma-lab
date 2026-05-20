@@ -30,7 +30,7 @@ council_attendees:
   - Mallat
 council_quorum_met: true
 council_verdict: PROCEED_WITH_REVISIONS
-council_predicted_mission_contribution: frontier_breaking_enabler
+council_predicted_mission_contribution: frontier_breaking
 council_override_invoked: false
 council_override_rationale: null
 horizon_class: plateau_adjacent_with_frontier_pursuit_stages
