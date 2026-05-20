@@ -411,6 +411,44 @@ def build_readiness_manifest(
     }
 
 
+def compose_procedural_archive(
+    original_archive_bytes: bytes,
+    seed_bytes: bytes,
+) -> bytes:
+    """Thin convenience wrapper for procedural-codebook archive composition.
+
+    Per task description §B (DP1 PROCEDURAL VARIANT BUILD 2026-05-20):
+    delegates to
+    :func:`tac.substrates.pretrained_driving_prior.distillation_procedural_variant.compose_with_procedural_codebook`
+    using canonical defaults (32-byte seed, PCG64, shape ``(1024, 4)``,
+    ``np.uint8`` dtype).
+
+    Sister of :func:`pack_archive` (canonical builder for the
+    Comma2k19-derived codebook variant). The procedural variant replaces
+    the codebook section bytes only; renderer / residual / meta sections
+    are preserved byte-for-byte from the original archive.
+
+    Args:
+        original_archive_bytes: Existing DP1 archive bytes (parseable
+            via :func:`parse_dp1_archive_bytes`).
+        seed_bytes: Procedural seed (8-256 bytes; canonical 32 bytes).
+
+    Returns:
+        Procedural-variant archive bytes with the codebook slot replaced.
+    """
+    # Lazy import to avoid cyclic-import friction; the variant module
+    # imports DP1_HEADER_FMT / DP1_HEADER_SIZE / DP1_MAGIC /
+    # DP1_SCHEMA_VERSION / parse_dp1_archive_bytes from this module.
+    from tac.substrates.pretrained_driving_prior.distillation_procedural_variant import (
+        compose_with_procedural_codebook,
+    )
+
+    return compose_with_procedural_codebook(
+        original_archive_bytes=original_archive_bytes,
+        seed_bytes=seed_bytes,
+    )
+
+
 __all__ = [
     "DP1_HEADER_FMT",
     "DP1_HEADER_SIZE",
@@ -419,6 +457,7 @@ __all__ = [
     "DP1_SECTION_ROLES",
     "DrivingPriorArchive",
     "build_readiness_manifest",
+    "compose_procedural_archive",
     "pack_archive",
     "parse_archive",
     "parse_dp1_archive_bytes",

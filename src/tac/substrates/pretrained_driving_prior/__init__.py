@@ -65,6 +65,7 @@ from tac.substrates.pretrained_driving_prior.archive import (
     DP1_SECTION_ROLES,
     DrivingPriorArchive,
     build_readiness_manifest,
+    compose_procedural_archive,
     pack_archive,
     parse_archive,
     parse_dp1_archive_bytes,
@@ -111,6 +112,28 @@ from tac.substrates.pretrained_driving_prior.distillation import (
     distill_codebook,
     write_codebook_to_disk,
 )
+from tac.substrates.pretrained_driving_prior.distillation_procedural_variant import (
+    CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT,
+    PROCEDURAL_CODEBOOK_DTYPE_DEFAULT,
+    PROCEDURAL_CODEBOOK_SHAPE_DEFAULT,
+    PROCEDURAL_SEED_SIZE_BYTES,
+    ProceduralVariantConfig,
+    ProceduralVariantError,
+    compose_with_procedural_codebook,
+    derive_procedural_codebook_replacement,
+    verify_procedural_codebook_in_domain,
+    verify_seed_mutation_changes_codebook_bytes,
+)
+
+PROCEDURAL_VARIANT_AVAILABLE: bool = True
+"""Flag indicating the DP1 procedural-codebook replacement variant is
+landed and importable. Sister recipe checkers (operator-authorize harness,
+canonical autopilot ranker) may import this flag for capability detection.
+
+Set to ``True`` at scaffold landing 2026-05-20 per
+``feedback_dp1_procedural_codebook_paired_smoke_pre_dispatch_design_landed_20260520.md``
+OP-ROUTABLE #2 (BUILD the variant trainer extension).
+"""
 from tac.substrates.pretrained_driving_prior.local_chunk_cache import (
     COMMA2K19_LICENSE_SPDX,
     COMMA2K19_REPO_URL,
@@ -162,6 +185,7 @@ from tac.substrates.pretrained_driving_prior.score_aware_loss import (
 )
 
 __all__ = [
+    "CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT",
     "CODEBOOK_TOTAL_TARGET_BYTES_MAX",
     "CODEBOOK_TOTAL_TARGET_BYTES_MIN",
     "COMMA2K19_LICENSE_SPDX",
@@ -177,6 +201,10 @@ __all__ = [
     "DPCOMP_SCHEMA_VERSION",
     "EVAL_HW",
     "LANE_CURVATURE_PCA_SHAPE",
+    "PROCEDURAL_CODEBOOK_DTYPE_DEFAULT",
+    "PROCEDURAL_CODEBOOK_SHAPE_DEFAULT",
+    "PROCEDURAL_SEED_SIZE_BYTES",
+    "PROCEDURAL_VARIANT_AVAILABLE",
     "ROAD_PLANE_BASIS_SHAPE",
     "SKY_HORIZON_PROFILE_SHAPE",
     "STREAMER_CANONICAL_SOURCE_URL",
@@ -206,6 +234,8 @@ __all__ = [
     "DynamicChunkingStrategy",
     "LogIncrementalSchedule",
     "PriorApplicationWeights",
+    "ProceduralVariantConfig",
+    "ProceduralVariantError",
     "SHA256MismatchError",
     "ScheduleStepResult",
     "StreamAccessRecord",
@@ -218,9 +248,12 @@ __all__ = [
     "codebook_to_torch_tensors",
     "collect_local_video_manifest",
     "compose_from_files",
+    "compose_procedural_archive",
     "compose_with",
+    "compose_with_procedural_codebook",
     "decompose",
     "default_cache_dir",
+    "derive_procedural_codebook_replacement",
     "deterministic_zero_codebook",
     "distill_codebook",
     "final_step_chunk_ids",
@@ -239,5 +272,7 @@ __all__ = [
     "validate_codebook",
     "verify_chunk_sha256",
     "verify_composition",
+    "verify_procedural_codebook_in_domain",
+    "verify_seed_mutation_changes_codebook_bytes",
     "write_codebook_to_disk",
 ]

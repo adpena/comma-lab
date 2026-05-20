@@ -45393,6 +45393,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_dp1_procedural_codebook_replacement_variant_20260520",
+      "name": "DP1 procedural-codebook replacement variant (L0 SCAFFOLD)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pretrained_driving_prior/distillation_procedural_variant.py (~400 LOC scaffold + 15 tests pass; archive_grammar=DP1 monolithic variant; parser_section_manifest=4 length-prefixed sections (codebook=brotli(32B seed) + renderer + residual + meta); inflate_runtime_loc_budget=existing DP1 runtime + procedural derivation helper; runtime_dep_closure=numpy + brotli; export_format=DP1 monolithic single-zip-member 0.bin; score_aware_loss=inherits DP1 DrivingPriorScoreAwareLoss; bolt_on_loc_budget=lane_class=substrate_engineering HNeRV parity L7; no_op_detector_planned=Catalog #272 byte-mutation smoke PASSED; research_only=true; lane_class=substrate_engineering; score_improvement_mechanism_status=OPERATIONAL via tac.substrates.pretrained_driving_prior.distillation_procedural_variant.compose_with_procedural_codebook; runtime_overlay_consumed=true; l2_integration_landed=false (paired-smoke pending operator OP-ROUTABLE #3); archive_bytes_added=-4064 (NEGATIVE \u2014 variant REDUCES archive bytes by ~4 KB per canonical equation #26); distinguishing_feature_name=procedural_codebook_seed_replacement; distinguishing_bytes_path=codebook_blob section in DP1 archive; inflate_consumer_function=tac.procedural_codebook_generator.derive_codebook_from_seed; byte_mutation_smoke_passes=true_per_test_compose_with_procedural_codebook_byte_mutation_smoke_catalog_272; canonical_equation_context=comma2k19_ood_derived_basis_replacement; target_modes=[research_substrate]; horizon_class=frontier_protecting; reactivation_criteria=operator_routed_paired_smoke_modal_t4_per_design_memo_OP_ROUTABLE_3"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wave_3_canonical_equation_26_domain_refinement_20260520",
+      "name": "WAVE-3 canonical equation #26 domain refinement (DWT-detail-subband exclusion + intermediate-transform inclusion)",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/canonical_equations/procedural_codebook_savings.py + tac.canonical_equations.update_equation_with_domain_refinement helper + DomainOfValidityViolation exception + EVENT_DOMAIN_REFINED event_type + cathedral consumer Catalog #341 markers"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #185 0 violations post-landing; Catalog #344 my memo not in 4 pre-existing violations"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_canonical_equation_26_domain_refinement_landed_20260520.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -45402,5 +45484,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T23:33:06Z"
+  "updated_at": "2026-05-20T23:49:16Z"
 }
