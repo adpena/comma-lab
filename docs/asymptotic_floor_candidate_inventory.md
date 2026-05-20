@@ -366,6 +366,7 @@ This document is a snapshot at authoring time. It will be wrong in detail within
 - **Sister library**: [`adpena/tac`](https://github.com/adpena/tac) — task-aware compression primitives. CI badges, OSS hygiene, the canonical helpers the submission runtime imports from a small surface area.
 - **This repo**: [`adpena/comma-lab`](https://github.com/adpena/comma-lab) — working repo for the broader inventory. Not the submission packet.
 - **Standout candidates spotlight**: [`docs/standout_undersold_candidates_spotlight.md`](standout_undersold_candidates_spotlight.md) — 90-second skim of ten candidates from this inventory that deserve prominent attention (Z7-Mamba-2, RAFT-derived poses + LAPose, CLADE, SPADE, SIREN, UNIWARD, freezing toolkit, master-gradient extractor, cargo-cult-unwind methodology, 4-tier council discipline). Targeted at a reader with time for one thing beyond the submission.
+- **Operator-pinned spotlight extensions**: [`docs/standout_spotlight_extensions_operator_pinned_20260520.md`](standout_spotlight_extensions_operator_pinned_20260520.md) — companion to the spotlight memo above. Adds Fridrich lineage (the contest is inverse steganalysis), wavelets at full prominence (Daubechies + Mallat cross-cutting role), telescopic foveation revival, and water-bucket filling (Cover-Thomas convex-optimal rate allocation, Lane Ω-W V1 shipped through V3 launch-ready). Includes an honest meta-observation section on the gap between scaffold-level work and paid-GPU-validated work.
 
 ### Companion methodology + tooling tours
 
