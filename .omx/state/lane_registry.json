@@ -42515,6 +42515,293 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr101_fec6_packetir_compiler_identity_queue_20260519",
+      "name": "PR101/FEC6 PacketIR compiler identity and queue",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Codex PacketIR/compiler continuation: close deterministic identity + candidate queue blockers without score/promotion claims"
+    },
+    {
+      "id": "lane_pr_submission_adversarial_refire_20260519",
+      "name": "PR submission adversarial re-fire audit 20260519",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/pr_submission_adversarial_audit_20260519T230000Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Codex audit lane for final PR body README manifest review; no dispatch, no PR submission."
+    },
+    {
+      "id": "lane_pr_submission_adversarial_audit_refire_20260519",
+      "name": "PR submission adversarial audit re-fire",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "DUPLICATE_ALIAS_CREATED_DURING_REFIRE_PREFLIGHT; canonical active lane is lane_pr_submission_adversarial_refire_20260519. No separate deliverable ownership."
+    },
+    {
+      "id": "lane_pr_submission_codebase_history_expanded_audit_20260519",
+      "name": "PR submission codebase/history expanded audit",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/pr_submission_codebase_history_expanded_audit_20260519T235633Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr_submission_public_surface_convergence_20260519",
+      "name": "PR submission public surface convergence patch",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/pr_submission_hosted_archive_manifest_gate_20260520T004139Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/pr_submission_public_source_pin_manifest_gate_20260520T003544Z_codex.md"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_cable_d_wire_in_batch_d2_d3_20260519",
+      "name": "Cable D wire-in batch D2+D3 master-gradient cathedral consumers",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit 3af31f709 + 2 cathedral consumer packages + 33 dedicated tests + sister regression 88 tests PASS"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/cable_d_wire_in_batch_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_master_gradient_xray_viz_tool_797_20260519",
+      "name": "Master-gradient xray VIZ tool: consumer_verdict_matrix + provenance_audit_timeline",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Slot EE 2026-05-19 task #797 \u2014 plot_consumer_verdict_matrix + plot_provenance_audit_timeline added to tools/master_gradient_xray.py; 23 dedicated tests pass at src/tac/tests/test_tools_master_gradient_xray.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/master_gradient_xray_viz_tool_797_landed_20260519.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -42524,5 +42811,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-19T21:55:30Z"
+  "updated_at": "2026-05-20T01:49:36Z"
 }

@@ -105,6 +105,9 @@ CANONICAL_PLOTS = (
     "wyner_ziv_flow",
     "drift_vs_sensitivity_scatter",
     "cascade_smearing_comparison",
+    # Slot EE 2026-05-19 extensions per task #797 operator spec:
+    "consumer_verdict_matrix",
+    "provenance_audit_timeline",
     "all",
 )
 
@@ -897,6 +900,418 @@ def plot_cascade_smearing_comparison(
 
 
 # ──────────────────────────────────────────────────────────────────────────── #
+# Plot 8 — cathedral consumer verdict matrix                                   #
+# (Slot EE 2026-05-19 extension per task #797 operator spec — sister of the   #
+# 35-consumer Cable D auto-discovery surface; per Catalog #341 routing        #
+# markers + Catalog #335 canonical contract)                                  #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def _collect_consumer_verdicts(
+    candidate: dict,
+    *,
+    consumer_modules: list | None = None,
+) -> list[dict[str, object]]:
+    """Invoke `consume_candidate` on every auto-discovered consumer.
+
+    Returns a list of per-consumer verdict dicts with structured fields for
+    matrix rendering. Pure observability per Catalog #341 + #335: NEVER
+    promotes a routing recommendation into a score signal; markers
+    (`predicted_delta_adjustment=0.0` / `promotable=False` /
+    `axis_tag="[predicted]"`) are surfaced verbatim from the consumer's own
+    return value so the matrix is faithful to the canonical contract.
+    """
+    if consumer_modules is None:
+        # `tools/` is not a package on sys.path; load the canonical
+        # cathedral_autopilot_autonomous_loop module by file path per the
+        # same pattern other operator-facing tools use. Register in
+        # sys.modules BEFORE exec to satisfy dataclass machinery.
+        import importlib.util as _ilu  # noqa: E402
+        _mod_name = "cathedral_autopilot_autonomous_loop_xray_loader"
+        if _mod_name in sys.modules:
+            _cathedral_mod = sys.modules[_mod_name]
+        else:
+            _cathedral_loop_path = REPO_ROOT / "tools" / "cathedral_autopilot_autonomous_loop.py"
+            _spec = _ilu.spec_from_file_location(
+                _mod_name, _cathedral_loop_path
+            )
+            if _spec is None or _spec.loader is None:
+                raise SystemExit(
+                    f"plot consumer_verdict_matrix: cannot load "
+                    f"{_cathedral_loop_path}; verify file exists per Catalog #335 + #336."
+                )
+            _cathedral_mod = _ilu.module_from_spec(_spec)
+            sys.modules[_mod_name] = _cathedral_mod  # register BEFORE exec
+            _spec.loader.exec_module(_cathedral_mod)
+        consumer_modules = _cathedral_mod.discover_compliant_consumer_modules()
+    verdicts: list[dict[str, object]] = []
+    for mod in consumer_modules:
+        consumer_name = getattr(mod, "CONSUMER_NAME", mod.__name__.rsplit(".", 1)[-1])
+        consumer_version = getattr(mod, "CONSUMER_VERSION", "unknown")
+        hook_numbers = getattr(mod, "CONSUMER_HOOK_NUMBERS", ())
+        verdict_row: dict[str, object] = {
+            "consumer_name": consumer_name,
+            "consumer_version": str(consumer_version),
+            "hook_numbers": [int(h) for h in hook_numbers],
+            "error": None,
+        }
+        try:
+            result = mod.consume_candidate(candidate)
+            if isinstance(result, dict):
+                verdict_row.update({
+                    "predicted_delta_adjustment": float(
+                        result.get("predicted_delta_adjustment", 0.0)
+                    ),
+                    "promotable": bool(result.get("promotable", False)),
+                    "axis_tag": str(result.get("axis_tag", "[predicted]")),
+                    "confidence": float(result.get("confidence", 0.0)),
+                    "rationale": str(result.get("rationale", "")),
+                })
+                # Catalog #341 marker compliance check (3 canonical markers).
+                markers_compliant = (
+                    verdict_row["predicted_delta_adjustment"] == 0.0
+                    and verdict_row["promotable"] is False
+                    and verdict_row["axis_tag"] == "[predicted]"
+                )
+                verdict_row["catalog_341_markers_compliant"] = markers_compliant
+                verdict_row["non_vacuous"] = bool(
+                    verdict_row["rationale"]
+                    and verdict_row["rationale"] not in ("", "no anchor lookup attempted")
+                )
+            else:
+                verdict_row.update({
+                    "error": f"non-dict return: {type(result).__name__}",
+                    "catalog_341_markers_compliant": False,
+                    "non_vacuous": False,
+                })
+        except (FileNotFoundError, ValueError, OSError, KeyError, AttributeError) as exc:
+            verdict_row.update({
+                "error": f"{type(exc).__name__}: {exc}",
+                "catalog_341_markers_compliant": False,
+                "non_vacuous": False,
+            })
+        verdicts.append(verdict_row)
+    return verdicts
+
+
+def plot_consumer_verdict_matrix(
+    candidate: dict,
+    output_path: Path,
+    *,
+    consumer_modules: list | None = None,
+) -> dict[str, object]:
+    """Render the per-consumer × per-candidate verdict matrix.
+
+    The matrix shows, for one candidate, which of the auto-discovered
+    cathedral consumers fire NON-VACUOUS verdicts (a real rationale; not
+    just "no anchor lookup attempted") AND which carry the Catalog #341
+    canonical 3 routing markers (predicted_delta_adjustment=0.0 /
+    promotable=False / axis_tag="[predicted]").
+
+    Per Catalog #335 the consumer surface is auto-discovered; this plot
+    operationalizes the live count empirically per CLAUDE.md
+    "Max observability — non-negotiable" + Catalog #305 6-facet
+    observability.
+
+    Per Catalog #318 raw-byte-authority guard: this plot NEVER surfaces
+    raw byte tensors; the matrix encodes consumer-level verdict booleans
+    + hook coverage only.
+
+    Returns the metrics dict (consumer_count + non_vacuous_count + markers
+    compliance rate + per-hook-coverage histogram) for the sister JSON
+    sidecar.
+    """
+    plt = _ensure_matplotlib()
+    verdicts = _collect_consumer_verdicts(candidate, consumer_modules=consumer_modules)
+    n_consumers = len(verdicts)
+    if n_consumers == 0:
+        raise SystemExit(
+            "plot consumer_verdict_matrix: 0 compliant consumers discovered; "
+            "verify src/tac/cathedral_consumers/* + Catalog #335 contract."
+        )
+
+    # Build matrix: rows = consumers (sorted by hook count desc then name)
+    # cols = (non_vacuous, catalog_341_compliant, promotable)
+    verdicts_sorted = sorted(
+        verdicts,
+        key=lambda v: (-len(v.get("hook_numbers", [])), str(v.get("consumer_name", ""))),
+    )
+    matrix_rows: list[list[float]] = []
+    consumer_labels: list[str] = []
+    for v in verdicts_sorted:
+        row = [
+            1.0 if v.get("non_vacuous") else 0.0,
+            1.0 if v.get("catalog_341_markers_compliant") else 0.0,
+            1.0 if v.get("promotable") else 0.0,  # always 0 for canonical consumers
+            1.0 if v.get("error") is None else 0.0,
+        ]
+        matrix_rows.append(row)
+        hooks_str = ",".join(str(h) for h in v.get("hook_numbers", [])) or "—"
+        consumer_labels.append(f"{v.get('consumer_name', '?')[:42]} [h:{hooks_str}]")
+
+    matrix = np.array(matrix_rows, dtype=np.float32)
+    col_labels = ["non-vacuous", "Catalog #341 markers", "promotable (should=0)", "no-error"]
+    candidate_id = str(candidate.get("candidate_id", "(unnamed)"))[:32]
+    archive_sha = candidate.get("archive_sha256", "")
+    archive_short = _short_sha(archive_sha) if archive_sha else "no-archive-sha"
+
+    fig_height = max(8.0, 0.32 * n_consumers + 2.0)
+    fig, ax = plt.subplots(figsize=(11, fig_height))
+    im = ax.imshow(matrix, aspect="auto", cmap="RdYlGn", vmin=0.0, vmax=1.0,
+                   interpolation="nearest")
+    ax.set_xticks(range(len(col_labels)))
+    ax.set_xticklabels(col_labels, rotation=20, ha="right", fontsize=8)
+    ax.set_yticks(range(n_consumers))
+    ax.set_yticklabels(consumer_labels, fontsize=6)
+    ax.set_xlabel("verdict dimension")
+    ax.set_title(
+        f"Cathedral consumer verdict matrix — candidate={candidate_id}\n"
+        f"archive={archive_short}  n_consumers={n_consumers}  "
+        f"per Catalog #335 + #341 [predicted]",
+        fontsize=10,
+    )
+    fig.colorbar(im, ax=ax, label="verdict (0=red / 1=green)", fraction=0.025)
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=120)
+    plt.close(fig)
+
+    # Sister-summary metrics
+    non_vacuous_count = sum(1 for v in verdicts if v.get("non_vacuous"))
+    markers_compliant_count = sum(1 for v in verdicts if v.get("catalog_341_markers_compliant"))
+    promotable_violation_count = sum(1 for v in verdicts if v.get("promotable"))
+    error_count = sum(1 for v in verdicts if v.get("error") is not None)
+    hook_histogram: dict[str, int] = {}
+    for v in verdicts:
+        for h in v.get("hook_numbers", []):
+            hook_histogram[str(int(h))] = hook_histogram.get(str(int(h)), 0) + 1
+    return {
+        "n_consumers": n_consumers,
+        "non_vacuous_count": non_vacuous_count,
+        "non_vacuous_fraction": (
+            float(non_vacuous_count) / n_consumers if n_consumers else 0.0
+        ),
+        "catalog_341_markers_compliant_count": markers_compliant_count,
+        "catalog_341_markers_compliant_fraction": (
+            float(markers_compliant_count) / n_consumers if n_consumers else 0.0
+        ),
+        "promotable_violation_count": promotable_violation_count,
+        "error_count": error_count,
+        "hook_coverage_histogram": hook_histogram,
+        "candidate_id": candidate_id,
+        "archive_sha256": archive_sha,
+        "per_consumer_verdicts": [
+            {
+                "consumer_name": v["consumer_name"],
+                "non_vacuous": v.get("non_vacuous"),
+                "catalog_341_markers_compliant": v.get("catalog_341_markers_compliant"),
+                "promotable": v.get("promotable"),
+                "axis_tag": v.get("axis_tag"),
+                "error": v.get("error"),
+            }
+            for v in verdicts_sorted
+        ],
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Plot 9 — provenance audit timeline                                           #
+# (Slot EE 2026-05-19 extension per task #797 operator spec — sister of       #
+# Catalog #323 canonical Provenance umbrella + Catalog #287/#327 axis +       #
+# hardware + custody discipline; surfaces canonical 6-tuple completeness     #
+# per anchor row in chronological order)                                     #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+CANONICAL_PROVENANCE_KEYS = (
+    "archive_sha256",
+    "measurement_axis",
+    "measurement_hardware",
+    "measurement_utc",
+    "measurement_call_id",
+    "measurement_method",
+)
+
+
+def _classify_provenance_for_anchor(anchor: dict) -> dict[str, object]:
+    """Classify one anchor row by canonical Provenance completeness.
+
+    Returns dict with `complete` bool + `missing_keys` list + `axis_tag` +
+    `is_authoritative` + `reject_reason` (None if accepted). Mirrors the
+    Catalog #287/#323 sister contract pattern.
+
+    Per Catalog #318 we do NOT touch raw byte tensors here; the audit
+    operates over the anchor METADATA only.
+    """
+    missing_keys: list[str] = []
+    for key in CANONICAL_PROVENANCE_KEYS:
+        val = anchor.get(key)
+        if val is None or (isinstance(val, str) and not val.strip()):
+            missing_keys.append(key)
+    # Importing here defers the dependency for unit-testability.
+    try:
+        from tac.master_gradient import (  # noqa: E402
+            contest_axis_authority_violation_reason,
+            is_authoritative_axis_anchor,
+        )
+        is_auth = bool(is_authoritative_axis_anchor(anchor))
+        reject_reason = contest_axis_authority_violation_reason(anchor)
+    except ImportError:
+        is_auth = False
+        reject_reason = "tac.master_gradient unavailable"
+    return {
+        "complete": not missing_keys,
+        "missing_keys": missing_keys,
+        "axis_tag": str(anchor.get("measurement_axis", "unknown")),
+        "is_authoritative": is_auth,
+        "reject_reason": reject_reason,
+    }
+
+
+def plot_provenance_audit_timeline(
+    anchors: list[dict],
+    output_path: Path,
+    *,
+    since_utc: str | None = None,
+) -> dict[str, object]:
+    """Chronological timeline of per-row Provenance completeness.
+
+    Each anchor row is plotted as a vertical bar at its `measurement_utc`,
+    colored by (a) Provenance completeness (all 6 canonical keys present)
+    AND (b) authoritative-axis status per `is_authoritative_axis_anchor`.
+
+    Color taxonomy:
+    - GREEN: complete + authoritative
+    - YELLOW: complete + non-authoritative (advisory / proxy)
+    - RED: incomplete (REJECT verdict per Catalog #323 validate_provenance)
+
+    Per Catalog #305 6-facet observability: this plot is the canonical
+    operator-facing audit surface for ledger Provenance health over time.
+    Per Catalog #110/#113: ledger rows are APPEND-ONLY; the timeline is
+    historical truth that NEVER mutates.
+
+    Per Catalog #287 placeholder-rationale rejection: rows with empty or
+    "<rationale>" / "<reason>" measurement_method are surfaced as REJECT.
+
+    Returns sister-summary metrics dict.
+    """
+    plt = _ensure_matplotlib()
+    # Filter by since_utc if provided.
+    if since_utc:
+        anchors = [
+            a for a in anchors
+            if str(a.get("measurement_utc", "")) >= since_utc
+            or str(a.get("written_at_utc", "")) >= since_utc
+        ]
+    if not anchors:
+        raise SystemExit(
+            "plot provenance_audit_timeline: 0 anchors in scope; "
+            f"check ledger or relax --since-utc {since_utc!r}"
+        )
+
+    # Sort by measurement_utc ascending (fallback to written_at_utc).
+    def _ts(a: dict) -> str:
+        return str(a.get("measurement_utc") or a.get("written_at_utc") or "")
+    anchors_sorted = sorted(anchors, key=_ts)
+    n_anchors = len(anchors_sorted)
+
+    classifications = [_classify_provenance_for_anchor(a) for a in anchors_sorted]
+
+    # Build bar plot: x = index, y = boolean stacks
+    x_positions = list(range(n_anchors))
+    colors = []
+    bar_heights = []
+    for cls in classifications:
+        if not cls["complete"]:
+            colors.append("tab:red")
+            bar_heights.append(0.4)  # short red bar = REJECT
+        elif cls["is_authoritative"]:
+            colors.append("tab:green")
+            bar_heights.append(1.0)  # full green bar = ACCEPT-AUTHORITATIVE
+        else:
+            colors.append("gold")
+            bar_heights.append(0.7)  # medium yellow = ACCEPT-ADVISORY
+
+    fig, ax = plt.subplots(figsize=(max(12.0, 0.45 * n_anchors), 6))
+    ax.bar(x_positions, bar_heights, color=colors, edgecolor="black", linewidth=0.4)
+
+    # Tick labels = sha[:8] + measurement_utc[:19]
+    labels = []
+    for a in anchors_sorted:
+        sha = _short_sha(a.get("archive_sha256"))
+        utc = str(a.get("measurement_utc") or a.get("written_at_utc") or "")[:19]
+        labels.append(f"{sha}\n{utc}")
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(labels, rotation=70, ha="right", fontsize=6)
+    ax.set_ylabel("Provenance verdict (1=auth / 0.7=advisory / 0.4=REJECT)")
+    ax.set_ylim(0, 1.15)
+    ax.set_title(
+        f"Provenance audit timeline — n_anchors={n_anchors}  "
+        f"green=auth  gold=advisory  red=incomplete\n"
+        f"per Catalog #287/#323 canonical Provenance + #327 contest-axis custody",
+        fontsize=10,
+    )
+
+    # Legend
+    from matplotlib.patches import Patch  # noqa: E402
+    legend_handles = [
+        Patch(color="tab:green", label="complete + authoritative"),
+        Patch(color="gold", label="complete + advisory (non-promotable)"),
+        Patch(color="tab:red", label="incomplete (REJECT per Catalog #323)"),
+    ]
+    ax.legend(handles=legend_handles, loc="upper left", fontsize=8)
+
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=120)
+    plt.close(fig)
+
+    # Sister-summary metrics
+    complete_count = sum(1 for c in classifications if c["complete"])
+    authoritative_count = sum(1 for c in classifications if c["is_authoritative"])
+    reject_count = sum(1 for c in classifications if not c["complete"])
+    # Categorize REJECTs
+    reject_categories: dict[str, int] = {}
+    for c, a in zip(classifications, anchors_sorted):
+        if not c["complete"]:
+            cat = "missing_keys:" + ",".join(c["missing_keys"][:3])
+            reject_categories[cat] = reject_categories.get(cat, 0) + 1
+        elif c.get("reject_reason"):
+            cat = f"axis_violation:{c['reject_reason'][:48]}"
+            reject_categories[cat] = reject_categories.get(cat, 0) + 1
+    # Axis breakdown
+    axis_histogram: dict[str, int] = {}
+    for c in classifications:
+        ax_tag = c["axis_tag"]
+        axis_histogram[ax_tag] = axis_histogram.get(ax_tag, 0) + 1
+    return {
+        "n_anchors": n_anchors,
+        "complete_count": complete_count,
+        "complete_fraction": (
+            float(complete_count) / n_anchors if n_anchors else 0.0
+        ),
+        "authoritative_count": authoritative_count,
+        "authoritative_fraction": (
+            float(authoritative_count) / n_anchors if n_anchors else 0.0
+        ),
+        "reject_count": reject_count,
+        "reject_categories": reject_categories,
+        "axis_histogram": axis_histogram,
+        "since_utc": since_utc,
+        "first_anchor_utc": str(
+            anchors_sorted[0].get("measurement_utc")
+            or anchors_sorted[0].get("written_at_utc")
+            or ""
+        )[:19],
+        "last_anchor_utc": str(
+            anchors_sorted[-1].get("measurement_utc")
+            or anchors_sorted[-1].get("written_at_utc")
+            or ""
+        )[:19],
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
 # Sister JSON sidecar emission — per Catalog #305 observability +              #
 # Catalog #323 canonical Provenance                                            #
 # ──────────────────────────────────────────────────────────────────────────── #
@@ -1484,6 +1899,75 @@ def _emit_plot(
                 "cascade_smearing_metrics": metrics,
             },
             "extra": {"plot_top_k": 128, "grain_filter": "compare_both"},
+        }
+    elif plot_name == "consumer_verdict_matrix":
+        # Slot EE 2026-05-19 plot type 3 per task #797 operator spec.
+        # Per Catalog #335 + #341: invoke every auto-discovered consumer
+        # for ONE candidate and render the per-consumer × per-candidate
+        # verdict matrix. The candidate is synthesized from the first
+        # archive_sha if no full candidate dict is available at the CLI
+        # surface (richer candidate routing is operator-facing via direct
+        # call to `plot_consumer_verdict_matrix`).
+        sha = archive_shas[0]
+        # Try to fetch a real per-pair anchor first; fall back to aggregate
+        anchor: dict | None = None
+        soft_per_pair = _resolve_anchor_for_plot(sha, require_per_pair=True, soft=True)
+        if soft_per_pair is not None:
+            anchor = soft_per_pair[1]
+        else:
+            soft_agg = _resolve_anchor_for_plot(
+                sha, require_per_pair=False, soft=True, grain_filter=resolver_grain
+            )
+            if soft_agg is not None:
+                anchor = soft_agg[1]
+        candidate = {
+            "candidate_id": f"matrix_candidate_{sha[:8]}",
+            "archive_sha256": sha,
+            "predicted_delta": -0.005,
+            "family": "ad_hoc_xray_visualization",
+            "literature_anchor": (
+                anchor.get("substrate_id") if isinstance(anchor, dict) else None
+            ),
+            "pareto_scope": "rate_seg_pose",
+        }
+        metrics = plot_consumer_verdict_matrix(candidate, output)
+        return {
+            "anchor": anchor or {"archive_sha256": sha},
+            "summary": metrics,
+            "extra": {
+                "candidate_id": candidate["candidate_id"],
+                "grain_filter": grain or "any",
+            },
+        }
+    elif plot_name == "provenance_audit_timeline":
+        # Slot EE 2026-05-19 plot type 5 per task #797 operator spec.
+        # Operates over the FULL canonical ledger (not per-archive); the
+        # CLI's `--archive-sha` filter is honored to scope by sha.
+        from tac.master_gradient import load_anchors_lenient  # noqa: E402
+
+        anchors = load_anchors_lenient()
+        if archive_shas:
+            anchors = [
+                a for a in anchors
+                if any(
+                    str(a.get("archive_sha256", "")).startswith(sha)
+                    for sha in archive_shas
+                )
+            ]
+        metrics = plot_provenance_audit_timeline(anchors, output, since_utc=None)
+        # Sister-JSON anchor synthesizes the audit-level metadata
+        fake_anchor = {
+            "archive_sha256": archive_shas[0] if archive_shas else None,
+            "measurement_axis": "[predicted]",
+            "measurement_hardware": "visualization_derived_view",
+            "measurement_utc": _utc_now_iso(),
+            "evidence_grade": "[predicted; provenance audit derived view]",
+            "n_bytes": metrics["n_anchors"],
+        }
+        return {
+            "anchor": fake_anchor,
+            "summary": metrics,
+            "extra": {"plot_type": "provenance_audit_timeline"},
         }
     else:
         raise SystemExit(f"unknown plot name: {plot_name!r}")

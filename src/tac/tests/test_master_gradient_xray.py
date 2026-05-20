@@ -196,9 +196,12 @@ def test_canonical_plots_constant_pinned(xray_module):
     assert "drift_vs_sensitivity_scatter" in xray_module.CANONICAL_PLOTS
     # Slot 10 grain-awareness wave 2026-05-19: 7th plot type
     assert "cascade_smearing_comparison" in xray_module.CANONICAL_PLOTS
+    # Slot EE 2026-05-19 task #797 extensions: 2 new plot types
+    assert "consumer_verdict_matrix" in xray_module.CANONICAL_PLOTS
+    assert "provenance_audit_timeline" in xray_module.CANONICAL_PLOTS
     assert "all" in xray_module.CANONICAL_PLOTS
-    # 5 canonical + 1 optional drift + 1 optional cascade + "all" sentinel = 8
-    assert len(xray_module.CANONICAL_PLOTS) == 8
+    # 5 canonical + 1 optional drift + 1 cascade + 2 slot-EE + "all" sentinel = 10
+    assert len(xray_module.CANONICAL_PLOTS) == 10
     # CANONICAL_OUTPUT_DIR_PLOTS is the canonical 5 (no drift, no all)
     assert xray_module.CANONICAL_OUTPUT_DIR_PLOTS == (
         "per_pair_distribution",
