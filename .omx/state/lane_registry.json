@@ -43608,11 +43608,11 @@
       "id": "lane_inflate_postprocess_surface_smoke_20260520",
       "name": "Inflate Postprocess Surface Smoke",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/run_inflate_postprocess_smoke.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -43644,7 +43644,10 @@
         }
       },
       "notes": "",
-      "research_only": true
+      "research_only": true,
+      "reactivation_criteria": [
+        "reactivate only for charged learned/sidecar postprocess parameters or scorer-informed pixel residual proposals; constant luma and naive temporal blend are advisory-dominated"
+      ]
     },
     {
       "id": "lane_selector_paradigm_per_class_chroma_20260520",
@@ -43973,6 +43976,418 @@
         }
       },
       "notes": "L1 SCAFFOLD; sister of af727e3c1 + PACT-NERV-ULTIMATE; 3 NEW canonical equations + new cross_codec_orthogonality_predictor_consumer + 7 selector-paradigm L0 SKETCH seeds; research_only=true"
+    },
+    {
+      "id": "lane_sparse_residual_oracle_charged_smoke_20260520",
+      "name": "Sparse residual oracle charged smoke",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/sparse_residual_oracle.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/sparse_residual_oracle_charged_smoke_20260520_codex/sparse_residual_oracle_k256_d1_20260520_codex.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "widen only with scorer/pixel sensitivity targeting or real inflate consumer; raw-error top-k k256 produced component-null +0.00045725 rate-only regression"
+      ]
+    },
+    {
+      "id": "lane_pact_nerv_selector_v2_l0_scaffold_20260520",
+      "name": "pact_nerv_selector_v2 L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_selector_v2/ package + experiments/train_substrate_pact_nerv_selector_v2.py + .omx/operator_authorize_recipes/substrate_pact_nerv_selector_v2_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_selector_v2.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML + #204 Modal-aware + #326 mode env var"
+        }
+      },
+      "notes": "WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20 per PACT-NERV-ULTIMATE commit e3ad4243a Variant G3. dispatch_enabled=false research_only=true score_improvement_mechanism_status=RESEARCH_ONLY lane_class=score_gradient_aware_substrate_engineering. archive_bytes_added=N/A (L0 SCAFFOLD; no full path; trainer _full_main raises NotImplementedError per Catalog #240). 6-hook wire-in: hook #1 sensitivity-map N/A (L0); hook #2 Pareto rate_distortion_v1; hook #3 bit-allocator N/A; hook #4 cathedral autopilot N/A (research_only); hook #5 continual-learning N/A (no anchor); hook #6 probe-disambiguator N/A. Reactivation: PACT-NERV-ULTIMATE STAIRCASE dispatch operator-gated per Catalog #325 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability per Catalog #305 + Dykstra feasibility per Catalog #296 + score-aware Lagrangian wire-in per Catalog #226.",
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "research_only": true,
+      "design_evidence": {
+        "archive_grammar": "PSV2 monolithic single-file 0.bin (26-byte header; arithmetic-coded u8 selectors over FEC6 k=16 palette per Witten 1987)",
+        "parser_section_manifest": "header_26B_PSV2 + decoder_blob_brotli + latent_blob_int16 + selector_blob_arithmetic_coded + meta_blob_json",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli",
+          "av"
+        ],
+        "export_format": "custom",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 350,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_selector_v3_l0_scaffold_20260520",
+      "name": "pact_nerv_selector_v3 L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_selector_v3/ package + experiments/train_substrate_pact_nerv_selector_v3.py + .omx/operator_authorize_recipes/substrate_pact_nerv_selector_v3_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_selector_v3.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML + #204 Modal-aware + #326 mode env var"
+        }
+      },
+      "notes": "WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20 per PACT-NERV-ULTIMATE commit e3ad4243a Variant G3. dispatch_enabled=false research_only=true score_improvement_mechanism_status=RESEARCH_ONLY lane_class=score_gradient_aware_substrate_engineering. archive_bytes_added=N/A (L0 SCAFFOLD; no full path; trainer _full_main raises NotImplementedError per Catalog #240). 6-hook wire-in: hook #1 sensitivity-map N/A (L0); hook #2 Pareto rate_distortion_v1; hook #3 bit-allocator N/A; hook #4 cathedral autopilot N/A (research_only); hook #5 continual-learning N/A (no anchor); hook #6 probe-disambiguator N/A. Reactivation: PACT-NERV-ULTIMATE STAIRCASE dispatch operator-gated per Catalog #325 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability per Catalog #305 + Dykstra feasibility per Catalog #296 + score-aware Lagrangian wire-in per Catalog #226.",
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "research_only": true,
+      "design_evidence": {
+        "archive_grammar": "PSV3 monolithic single-file 0.bin (26-byte header; Rice-Golomb-coded u8 selectors over FEC6 k=16 palette per Golomb 1966 + Rice 1971)",
+        "parser_section_manifest": "header_26B_PSV3 + decoder_blob_brotli + latent_blob_int16 + selector_blob_rice_golomb_coded + meta_blob_includes_rice_golomb_k",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli",
+          "av"
+        ],
+        "export_format": "custom",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 350,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_selector_v4_l0_scaffold_20260520",
+      "name": "pact_nerv_selector_v4 L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_selector_v4/ package + experiments/train_substrate_pact_nerv_selector_v4.py + .omx/operator_authorize_recipes/substrate_pact_nerv_selector_v4_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_selector_v4.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML + #204 Modal-aware + #326 mode env var"
+        }
+      },
+      "notes": "WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20 per PACT-NERV-ULTIMATE commit e3ad4243a Variant G3. dispatch_enabled=false research_only=true score_improvement_mechanism_status=RESEARCH_ONLY lane_class=score_gradient_aware_substrate_engineering. archive_bytes_added=N/A (L0 SCAFFOLD; no full path; trainer _full_main raises NotImplementedError per Catalog #240). 6-hook wire-in: hook #1 sensitivity-map N/A (L0); hook #2 Pareto rate_distortion_v1; hook #3 bit-allocator N/A; hook #4 cathedral autopilot N/A (research_only); hook #5 continual-learning N/A (no anchor); hook #6 probe-disambiguator N/A. Reactivation: PACT-NERV-ULTIMATE STAIRCASE dispatch operator-gated per Catalog #325 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability per Catalog #305 + Dykstra feasibility per Catalog #296 + score-aware Lagrangian wire-in per Catalog #226.",
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "research_only": true,
+      "design_evidence": {
+        "archive_grammar": "PSV4 monolithic single-file 0.bin (26-byte header; RLE-coded (value, varint) pairs over FEC6 k=16 palette per Robinson-Cherry 1967)",
+        "parser_section_manifest": "header_26B_PSV4 + decoder_blob_brotli + latent_blob_int16 + selector_blob_rle_value_varint_pairs + meta_blob",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli",
+          "av"
+        ],
+        "export_format": "custom",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 350,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_ia3_multi_l0_scaffold_20260520",
+      "name": "pact_nerv_ia3_multi L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_ia3_multi/ package + experiments/train_substrate_pact_nerv_ia3_multi.py + .omx/operator_authorize_recipes/substrate_pact_nerv_ia3_multi_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_ia3_multi.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_ia3_multi_modal_t4_dispatch.yaml dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML + #204 Modal-aware + #326 mode env var"
+        }
+      },
+      "notes": "WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20 per PACT-NERV-ULTIMATE commit e3ad4243a Variant G3. dispatch_enabled=false research_only=true score_improvement_mechanism_status=RESEARCH_ONLY lane_class=score_gradient_aware_substrate_engineering. archive_bytes_added=N/A (L0 SCAFFOLD; no full path; trainer _full_main raises NotImplementedError per Catalog #240). 6-hook wire-in: hook #1 sensitivity-map N/A (L0); hook #2 Pareto rate_distortion_v1; hook #3 bit-allocator N/A; hook #4 cathedral autopilot N/A (research_only); hook #5 continual-learning N/A (no anchor); hook #6 probe-disambiguator N/A. Reactivation: PACT-NERV-ULTIMATE STAIRCASE dispatch operator-gated per Catalog #325 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability per Catalog #305 + Dykstra feasibility per Catalog #296 + score-aware Lagrangian wire-in per Catalog #226.",
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "research_only": true,
+      "design_evidence": {
+        "archive_grammar": "PIM1 monolithic single-file 0.bin (31-byte header carrying POSE_DIM + DIFFICULTY_DIM u8 distinctive fields; base + multi-block IA3 gamma_proj weights)",
+        "parser_section_manifest": "header_31B_PIM1 + decoder_blob_brotli_includes_multi_block_ia3_gamma_projs + latent + ego_pose + difficulty + meta",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli",
+          "av"
+        ],
+        "export_format": "custom",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 350,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_asymmetric_boundary_l0_scaffold_20260520",
+      "name": "pact_nerv_asymmetric_boundary L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_asymmetric_boundary/ package + experiments/train_substrate_pact_nerv_asymmetric_boundary.py + .omx/operator_authorize_recipes/substrate_pact_nerv_asymmetric_boundary_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G3 variant; archive_grammar declared; research_only=true dispatch_enabled=false score_improvement_mechanism_status=RESEARCH_ONLY"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_asymmetric_boundary.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_asymmetric_boundary_modal_t4_dispatch.yaml dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML + #204 Modal-aware + #326 mode env var"
+        }
+      },
+      "notes": "WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20 per PACT-NERV-ULTIMATE commit e3ad4243a Variant G3. dispatch_enabled=false research_only=true score_improvement_mechanism_status=RESEARCH_ONLY lane_class=score_gradient_aware_substrate_engineering. archive_bytes_added=N/A (L0 SCAFFOLD; no full path; trainer _full_main raises NotImplementedError per Catalog #240). 6-hook wire-in: hook #1 sensitivity-map N/A (L0); hook #2 Pareto rate_distortion_v1; hook #3 bit-allocator N/A; hook #4 cathedral autopilot N/A (research_only); hook #5 continual-learning N/A (no anchor); hook #6 probe-disambiguator N/A. Reactivation: PACT-NERV-ULTIMATE STAIRCASE dispatch operator-gated per Catalog #325 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability per Catalog #305 + Dykstra feasibility per Catalog #296 + score-aware Lagrangian wire-in per Catalog #226.",
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "research_only": true,
+      "design_evidence": {
+        "archive_grammar": "PAB1 monolithic single-file 0.bin (26-byte header; base + asymmetric boundary FiLM gamma+beta weights; 5-class boundary_signals)",
+        "parser_section_manifest": "header_26B_PAB1 + decoder_blob_brotli_includes_boundary_film + latent + boundary_signals_5class + meta",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli",
+          "av"
+        ],
+        "export_format": "custom",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 350,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_wave_3_pact_nerv_g3_selector_extensions_l0_build_20260520",
+      "name": "WAVE-3 PACT-NERV G3 SELECTOR EXTENSIONS L0 BUILD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 substrate packages + 5 trainers + 5 recipes + 5 drivers + 74 tests pass + design memo + landing memo + lane registry append for 5 sub-lanes"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_wave_3_pact_nerv_g3_selector_extensions_l0_build_landed_20260520.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Parent lane for 5 G3 substrate L0 SCAFFOLDs (V2/V3/V4/IA3-Multi/AsymmetricBoundary) per PACT-NERV-ULTIMATE commit e3ad4243a Variants 11-15. 74/74 tests pass. dispatch_enabled=false research_only=true across all 5 sub-lanes."
+    },
+    {
+      "id": "lane_scorer_gradient_sparse_residual_pose_hardpair_smoke_20260520",
+      "name": "Scorer-gradient sparse residual pose hardpair smoke",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -43982,5 +44397,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T20:08:02Z"
+  "updated_at": "2026-05-20T20:50:40Z"
 }

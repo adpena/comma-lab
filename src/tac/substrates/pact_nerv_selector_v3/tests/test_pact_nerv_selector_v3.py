@@ -1,0 +1,200 @@
+# SPDX-License-Identifier: MIT
+"""Catalog #91 ENCODE_INFLATE_ROUNDTRIP + #139 no_op_proof + L0 SCAFFOLD contract for V3."""
+
+from __future__ import annotations
+
+import torch
+
+from tac.substrates.pact_nerv_selector_v3.architecture import (
+    PactNervSelectorV3Config,
+    PactNervSelectorV3Substrate,
+    RiceGolombSelectorCoder,
+)
+from tac.substrates.pact_nerv_selector_v3.archive import (
+    PSV3_HEADER_SIZE,
+    PSV3_MAGIC,
+    PSV3_SCHEMA_VERSION,
+    pack_archive,
+    parse_archive,
+)
+
+
+def _smoke_cfg() -> PactNervSelectorV3Config:
+    return PactNervSelectorV3Config(
+        latent_dim=8,
+        embed_dim=24,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(20, 16, 12),
+        sin_frequency=30.0,
+        num_upsample_blocks=3,
+        num_pairs=3,
+        output_height=24,
+        output_width=32,
+        selector_palette_size=16,
+        rice_golomb_k=2,
+    )
+
+
+def _smoke_meta(cfg: PactNervSelectorV3Config) -> dict[str, object]:
+    return {
+        "embed_dim": cfg.embed_dim,
+        "initial_grid_h": cfg.initial_grid_h,
+        "initial_grid_w": cfg.initial_grid_w,
+        "decoder_channels": list(cfg.decoder_channels),
+        "sin_frequency": cfg.sin_frequency,
+        "num_upsample_blocks": cfg.num_upsample_blocks,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+        "rice_golomb_k": cfg.rice_golomb_k,
+    }
+
+
+def test_module_import_resolves_canonical_symbols() -> None:
+    from tac.substrates import pact_nerv_selector_v3 as m
+    for name in (
+        "PactNervSelectorV3Config", "PactNervSelectorV3Substrate",
+        "RiceGolombSelectorCoder", "pack_archive", "parse_archive",
+        "PactNervSelectorV3ScoreAwareLoss", "PactNervSelectorV3Archive",
+    ):
+        assert hasattr(m, name), f"missing canonical symbol: {name}"
+
+
+def test_substrate_forward_produces_unit_interval_rgb() -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = PactNervSelectorV3Substrate(cfg).eval()
+    idx = torch.tensor([0, 1], dtype=torch.long)
+    with torch.no_grad():
+        rgb_0, rgb_1 = model(idx)
+    assert rgb_0.shape == (2, 3, cfg.output_height, cfg.output_width)
+    assert float(rgb_0.min()) >= 0.0
+    assert float(rgb_0.max()) <= 1.0
+
+
+def test_rice_golomb_encode_geometric_decay_invariant() -> None:
+    """Rice-Golomb: symbol n with parameter k costs (n>>k) + 1 + k bits."""
+    coder = RiceGolombSelectorCoder(palette_size=16, k=2)
+    # Symbol 0: q=0, 1 unary bit + 2 suffix bits = 3 bits per sym 0
+    # Symbol 4: q=1, 2 unary bits + 2 suffix bits = 4 bits per sym
+    bits = coder.encoded_bit_length([0, 4])
+    assert bits == 3 + 4
+
+
+def test_rice_golomb_rejects_invalid_symbols() -> None:
+    coder = RiceGolombSelectorCoder(palette_size=16, k=2)
+    try:
+        coder.encode([16])
+    except ValueError as exc:
+        assert "out of palette" in str(exc)
+    else:
+        raise AssertionError("expected ValueError for symbol >= palette")
+
+
+def test_rice_golomb_k_parameter_validation() -> None:
+    try:
+        RiceGolombSelectorCoder(palette_size=16, k=-1)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for k=-1")
+    try:
+        RiceGolombSelectorCoder(palette_size=16, k=9)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for k=9")
+
+
+def test_archive_pack_then_parse_roundtrip() -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = PactNervSelectorV3Substrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents", "selectors")}
+    latents = sd["latents"].clone()
+    selector_bytes = b"\x00\x01\x02"
+    blob = pack_archive(
+        decoder_sd, latents, selector_bytes, _smoke_meta(cfg), palette_size=16
+    )
+    arc = parse_archive(blob)
+    assert arc.schema_version == PSV3_SCHEMA_VERSION
+    assert blob[:4] == PSV3_MAGIC
+    assert arc.palette_size == 16
+    assert arc.selector_bytes == selector_bytes
+
+
+def test_archive_header_size_invariant_is_26_bytes() -> None:
+    assert PSV3_HEADER_SIZE == 26
+
+
+def test_byte_mutation_changes_archive_no_op_proof() -> None:
+    cfg = _smoke_cfg()
+    torch.manual_seed(13)
+    model = PactNervSelectorV3Substrate(cfg).eval()
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents", "selectors")}
+    latents = sd["latents"].clone()
+    blob_a = pack_archive(decoder_sd, latents, b"\x00\x01", _smoke_meta(cfg), palette_size=16)
+    blob_b = pack_archive(decoder_sd, latents, b"\xff\x01", _smoke_meta(cfg), palette_size=16)
+    assert blob_a != blob_b
+
+
+def test_trainer_full_main_raises_not_implemented_at_l0_scaffold() -> None:
+    import argparse
+    import importlib
+    trainer = importlib.import_module("experiments.train_substrate_pact_nerv_selector_v3")
+    ns = argparse.Namespace(output_dir=None, epochs=1, smoke=False, device="cpu")
+    try:
+        trainer._full_main(ns)
+    except NotImplementedError as exc:
+        assert "OPERATOR-GATED" in str(exc) or "L0 SCAFFOLD" in str(exc)
+    else:
+        raise AssertionError("expected NotImplementedError")
+
+
+def test_trainer_routes_through_canonical_scorer_loss_helper() -> None:
+    import inspect
+    from tac.substrates.pact_nerv_selector_v3 import score_aware_loss as sal
+    src = inspect.getsource(sal)
+    assert "score_pair_components_dispatch" in src
+    assert "tac.substrates.score_aware_common" in src
+
+
+def test_trainer_patches_differentiable_eval_roundtrip_before_scorer() -> None:
+    import inspect
+    import experiments.train_substrate_pact_nerv_selector_v3 as trainer_module
+    src = inspect.getsource(trainer_module._smoke_main)
+    assert "patch_upstream_yuv6_globally" in src
+
+
+def test_recipe_research_only_and_dispatch_disabled() -> None:
+    from pathlib import Path
+    import yaml  # type: ignore[import-untyped]
+    recipe = yaml.safe_load(
+        (Path(__file__).resolve().parents[5]
+         / ".omx/operator_authorize_recipes/substrate_pact_nerv_selector_v3_modal_t4_dispatch.yaml"
+        ).read_text(encoding="utf-8")
+    )
+    assert recipe["dispatch_enabled"] is False
+    assert recipe["research_only"] is True
+
+
+def test_driver_carries_canonical_nvml_block() -> None:
+    from pathlib import Path
+    txt = (
+        Path(__file__).resolve().parents[5]
+        / "scripts/remote_lane_substrate_pact_nerv_selector_v3.sh"
+    ).read_text(encoding="utf-8")
+    assert "DALI_DISABLE_NVML" in txt
+    assert "CUBLAS_WORKSPACE_CONFIG" in txt
+    assert "PYTORCH_CUDA_ALLOC_CONF" in txt
+
+
+def test_inflate_py_loc_under_200() -> None:
+    from pathlib import Path
+    loc = len(
+        (Path(__file__).resolve().parents[1] / "inflate.py")
+        .read_text(encoding="utf-8").splitlines()
+    )
+    assert loc <= 200

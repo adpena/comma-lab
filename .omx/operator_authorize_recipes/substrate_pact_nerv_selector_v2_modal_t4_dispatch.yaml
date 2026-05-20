@@ -1,0 +1,144 @@
+schema_version: 1
+name: substrate_pact_nerv_selector_v2_modal_t4_dispatch
+lane_id: lane_pact_nerv_selector_v2_l0_scaffold_20260520
+summary: |
+  pact_nerv_selector_v2 L0 SCAFFOLD diagnostic recipe (Modal T4). Pairs with
+  experiments/train_substrate_pact_nerv_selector_v2.py
+  (WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20). NOT
+  DISPATCH-ELIGIBLE: substrate is research_only until PACT-NERV-ULTIMATE
+  STAIRCASE Step 11 dispatch operator-gated approval per Catalog #325 +
+  sister Catalog #240 (recipe-vs-trainer-state consistency).
+
+  Literature: Witten-Neal-Cleary 1987 + Said 2004 (arithmetic coding;
+  fractional-bit precision over FEC6 k=16 selector palette).
+
+dispatch_enabled: false
+research_only: true
+
+dispatch_blockers:
+  - pact_nerv_ultimate_staircase_step_11_dispatch_operator_gated_per_catalog_325
+  - full_main_raises_NotImplementedError_per_catalog_240
+  - per_substrate_council_symposium_proceed_unconditional_required_per_catalog_315
+  - score_aware_lagrangian_wire_in_pending_for_full_path
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 12
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 100
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: T4
+
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Post-training Tier-C density re-measurement via
+  tools/mdl_scorer_conditional_ablation.py --tier c on landed archive
+  after Stage 1 dispatch operator-gated. Pre-training prediction is
+  CARGO-CULTED per Catalog #324 + sister C6 IBPS 22x miss empirical anchor.
+
+predicted_score_target: "unknown_l0_scaffold_pending_stage_1_dispatch"
+predicted_delta: "unknown_l0_scaffold_no_empirical_anchor_pending_stage_1_dispatch"
+literature_anchor: "Witten-Neal-Cleary 1987 + Said 2004 (arithmetic coding fractional-bit precision over FEC6 k=16 palette)"
+
+risk: |
+  L0 SCAFFOLD posture. The trainer raises NotImplementedError on non-smoke
+  path per Catalog #240. Recipe is dispatch_enabled:false + research_only:true.
+
+  Architectural distinction: pact_nerv_selector_v2 extends the FEC6 fixed-
+  Huffman k=16 frame-exploit selector with arithmetic coding (Witten 1987).
+  The hypothesis (per CROSS-CANDIDATE finding #1 + PACT-NERV-ULTIMATE
+  Variant #11): the FEC6 fixed-Huffman wastes fractional bits on every
+  selector; arithmetic coding tightens code-length without changing the
+  16-mode palette. Stage 1 dispatch evaluates whether the fractional-bit
+  precision translates to ~30-100 bytes of additional rate savings on the
+  current 178158-byte saturated HNeRV backbone.
+
+envelope_status: |
+  RESEARCH_ONLY: dispatch refused per recipe + trainer + 4 catalog gates
+  (#220 + #240 + #315 + #325). Reactivation criteria documented in trainer
+  _full_main docstring + this recipe's dispatch_blockers.
+
+remote_driver: scripts/remote_lane_substrate_pact_nerv_selector_v2.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default)"
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pact_nerv_selector_v2.sh
+  cost_band_trainer: experiments/train_substrate_pact_nerv_selector_v2.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 2
+  cost_band_all_flags_on: false
+
+required_input_files_trainer: experiments/train_substrate_pact_nerv_selector_v2.py
+
+env_overrides:
+  PACT_NERV_SELECTOR_V2_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PACT_NERV_SELECTOR_V2_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  PACT_NERV_SELECTOR_V2_OUTPUT_DIR: /workspace/pact/lane_pact_nerv_selector_v2_l0_scaffold_results/output
+  PACT_NERV_SELECTOR_V2_EPOCHS: "2"
+  PACT_NERV_SELECTOR_V2_UPSTREAM_DIR: /workspace/pact/upstream
+  PACT_NERV_SELECTOR_V2_DEVICE: cpu
+  PACT_NERV_SELECTOR_V2_SMOKE: "1"
+  SMOKE_ONLY: "1"
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/remote_lane_substrate_pact_nerv_selector_v2.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_pact_nerv_selector_v2.py
+  - src/tac/substrates/pact_nerv_selector_v2/__init__.py
+  - src/tac/substrates/pact_nerv_selector_v2/architecture.py
+  - src/tac/substrates/pact_nerv_selector_v2/archive.py
+  - src/tac/substrates/pact_nerv_selector_v2/inflate.py
+  - src/tac/substrates/pact_nerv_selector_v2/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+sentinel_files:
+  - src/tac/substrates/pact_nerv_selector_v2/architecture.py
+  - src/tac/substrates/pact_nerv_selector_v2/archive.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+reactivation_criteria: |
+  1. PACT-NERV-ULTIMATE STAIRCASE Step 11 dispatch operator-gated per
+     Catalog #325. Symposium memo at
+     .omx/research/pact_nerv_ultimate_research_and_design_20260520T193443Z.md
+     (commit e3ad4243a) variant #11 PRIORITY 1.
+  2. Cargo-cult audit per Catalog #303 surfaces the 2 CARGO-CULTED choices
+     (static cum_freq + per-symbol encoding). Audit MUST validate empirically
+     OR reclassify as HARD-EARNED.
+  3. Trainer _full_main path wires score-aware Lagrangian + EMA + canonical
+     auth-eval helper per Catalog #226.
+  4. Recipe research_only flips to false; dispatch_enabled flips to true;
+     predicted_band declared with validation_status per Catalog #324.
+
+notes: |
+  L0 SCAFFOLD recipe per CLAUDE.md "Substrate scaffolds MUST be COMPLETE
+  or RESEARCH-ONLY" non-negotiable.
+
+  Sister cite:
+    .omx/research/pact_nerv_ultimate_research_and_design_20260520T193443Z.md
+    (commit e3ad4243a) Section 5 Finding #1 + Variant #11 PRIORITY 1.
+
+  6-hook wire-in per Catalog #125:
+  - hook #1 sensitivity-map: N/A (L0 SCAFFOLD)
+  - hook #2 Pareto constraint: rate_distortion_v1
+  - hook #3 bit-allocator: N/A (arithmetic at selector granularity)
+  - hook #4 cathedral autopilot dispatch: N/A (research_only)
+  - hook #5 continual-learning posterior: N/A (no anchor)
+  - hook #6 probe-disambiguator: N/A (arithmetic vs Huffman IS Stage 1)
