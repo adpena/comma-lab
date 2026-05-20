@@ -390,3 +390,7 @@ Downstream consumers per Catalog #325:
 - **Top-priority reactivation path**: Path B2 DreamerV3 RSSM categorical posterior ($5-15 Modal T4 smoke)
 - **Predicted cost**: $0 mandatory (Catalog #324 post-training Tier-C re-measurement on existing archive be06a4b0972e6c) + $5-15 Path B2 smoke → if WIN ($score ≤0.50), $30-50 follow-on Modal A100 200-300ep full run with paired CPU+CUDA harvest = $35-65 total worst-case for canonical Path B2 variant
 - **Structural recommendation to operator**: Catalog #324 post-training Tier-C re-measurement on existing archive be06a4b0972e6c IMMEDIATELY (free; methodology validation). Then authorize Path B2 design memo + smoke ($5-15). If Path B2 smoke produces sub-medal-class anchor (≤0.20), ratify as PRIMARY frontier-pursuit + advance to L2. If outcome is asymptotic-pursuit-bounded ([0.20, 0.50]), evaluate as L1+ research_substrate. If outcome >0.50, surface as Catalog #324 violation and pivot to sister cargo-cult resurrection candidates (sister NSCS06 v8 Variant C hybrid_class_shift_path_C + sister V1 Faiss Path 1 V4) per Assumption-Adversary alt-1/alt-2/alt-3/alt-4.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:council-T3-cargo-cult-resurrection-c6-IBPS-v2-deliberation-trigger-tokens-in-resurrection-verdict-not-new-equation -->

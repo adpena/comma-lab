@@ -66,3 +66,7 @@ NONE of the historical anchors require RE-EVAL because:
 - Sister Catalog #287 (placeholder-rationale rejection — applied to `WORKSPACE_OUTPUT_PATH_OK:<rationale>` waiver).
 - Sister Catalog #307 (paradigm-vs-implementation-falsification classification — confirms IMPLEMENTATION-LEVEL verdicts for all 4 historical anchors).
 - OP3-RETRY landing memo: `feedback_wave_3_op3_paid_retry_with_tmp_path_fix_landed_20260520.md` (the canonical Catalog #204 per-driver fix that THIS L3 META gate sister-extends).
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:retroactive-sweep-Catalog-358-recipe-workspace-output-path-trigger-tokens-describe-swept-bug-class-not-new-equation -->

@@ -150,3 +150,7 @@ This deliberation will be appended to `.omx/state/council_deliberation_posterior
 - Canonical CPU auth_eval: `experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/modal_cpu_auth_eval_result.json` (score 0.192051, Linux x86_64, 2026-05-15)
 - CLAUDE.md "Forbidden score claims" + "Apples-to-apples evidence discipline" + "Submission auth eval — BOTH CPU AND CUDA" + "Required durable state"
 - Codex byte-identity verification: `.omx/research/codex_codec_py_refactor_verification_20260519T200658Z.md` (`d1afc583b01ff4a7...` sha)
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:grand-council-T3-PR-body-slot-R-recursive-round-1-trigger-tokens-in-recursive-review-not-new-equation -->

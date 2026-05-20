@@ -215,3 +215,7 @@ non-negotiable + the trainer's `_full_main` docstring:
 - `feedback_nerv_family_expansion_blocknerv_ffnerv_dsnerv_hinerv_tcnerv_landed_20260511.md`
 - `.omx/research/substrate_tradition_taxonomy_20260512.md`
 - `feedback_slot_build_1_nerv_trio_scaffolds_landed_20260520.md` (this BUILD-1 landing)
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:ego-NeRV-L0-scaffold-design-memo-trigger-tokens-in-design-rationale-section-not-new-equation-pre-anchor-design -->

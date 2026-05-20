@@ -221,3 +221,7 @@ Per CLAUDE.md "Mission alignment — non-negotiable" 5 operational consequences:
 ---
 
 **End of synthesis.**
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:STC-paradigm-reformulation-A1-residual-disambiguator-design-synthesis-trigger-tokens-in-design-section-not-new-equation -->

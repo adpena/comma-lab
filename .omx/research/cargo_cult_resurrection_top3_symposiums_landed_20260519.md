@@ -151,3 +151,7 @@ The operator's NEXT decision is:
 4. **Cathedral autopilot dispatch hook**: ACTIVE — 3 canonical posterior anchors appended via `tac.council_continual_learning.append_council_anchor`; cathedral autopilot ranker consumes via `query_anchors_by_topic` for substrate ranking.
 5. **Continual-learning posterior update**: ACTIVE — 3 anchors append to `.omx/state/council_deliberation_posterior.jsonl` with full v2 frontmatter per Catalog #300.
 6. **Probe-disambiguator**: ACTIVE — V4 hand-rolled probe (FREE) + Catalog #324 post-training Tier-C re-measurement (FREE) + Variant C-4 K-coverage methodology validation memo (FREE) are 3 canonical disambiguator paths per substrate.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:cargo-cult-resurrection-symposium-landing-memo-trigger-tokens-in-council-hook-summaries-not-new-equation -->

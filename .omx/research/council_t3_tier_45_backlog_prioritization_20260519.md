@@ -476,3 +476,7 @@ The Phase 1 top-3 + parallel B1 dispatch is the canonical race-mode-aware alloca
 **Catalog #346 canonical roster completeness**: satisfied (validate_council_dispatch_roster `complete=True`)
 
 **Continual-learning anchor**: appended to `.omx/state/council_deliberation_posterior.jsonl` via `tac.council_continual_learning.append_council_anchor` post-write
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:council-T3-tier-45-backlog-prioritization-deliberation-trigger-tokens-in-backlog-deliberation-not-new-equation -->

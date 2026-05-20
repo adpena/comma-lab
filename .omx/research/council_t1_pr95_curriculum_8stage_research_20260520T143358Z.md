@@ -468,3 +468,7 @@ Per the Contrarian dissent, each HARD-EARNED stamp in this memo SHOULD have a re
 ---
 
 **End of T1 working-group memo.** Total: ~7400 words. Reviewable in 30 minutes per CLAUDE.md HNeRV parity L12.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:council-T1-PR95-curriculum-research-memo-trigger-tokens-in-deliberation-content-not-new-equation -->

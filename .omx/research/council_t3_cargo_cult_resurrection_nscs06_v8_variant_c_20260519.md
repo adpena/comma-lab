@@ -370,3 +370,7 @@ Downstream consumers per Catalog #325:
   - PRIMARY-FRONTIER-BREAKING: hybrid_class_shift_path_C design memo ($0 GPU) + conditional smoke ($15-50; medal-class POTENTIAL)
 - **Predicted cost**: $0 immediate (Variant C-4 + hybrid_class_shift_path_C design memos) → if hybrid_class_shift_path_C smoke ≤0.30, $50-150 full run; if Variant C-1 smoke desired, additional $5-15 conditional smoke + $15-30 follow-on if WIN
 - **Structural recommendation to operator**: Authorize Variant C-4 + hybrid_class_shift_path_C design memos IMMEDIATELY (free; $0 GPU). Hold Variant C-1/C-2/C-3 smoke funding decision until Variant C-4 outcome lands. Hold hybrid_class_shift_path_C paid dispatch decision until design memo lands + explicit operator-frontier-override per Catalog #199. If hybrid_class_shift_path_C smoke produces sub-medal-class anchor (≤0.20), ratify as PARADIGM-BRIDGE primary + advance to L2 frontier-pursuit per HORIZON-CLASS framework. If outcome is within-paradigm-bounded (≥0.30), pivot to sister cargo-cult resurrection candidates (V1 Faiss + C6 IBPS v2 RSSM categorical) per Assumption-Adversary alt-1/alt-2/alt-3.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:council-T3-cargo-cult-resurrection-NSCS06-v8-deliberation-trigger-tokens-in-resurrection-verdict-not-new-equation -->

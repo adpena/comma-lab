@@ -221,3 +221,7 @@ This classification memo CLOSES sister EE op-routable #1 ("classify each as ..."
   - `deploy_runbook` — N/A (no runbook for classification artifact)
 
 Expected lane level after this commit: **L1** (impl_complete + memory_entry).
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:catalog-341-cathedral-consumer-routing-marker-classification-audit-trigger-tokens-describe-gate-not-new-equation -->

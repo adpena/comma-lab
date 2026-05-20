@@ -387,3 +387,7 @@ Downstream consumers per Catalog #325:
   - PRIMARY-CROSS-POLLINATION: V8 learned-compression Faiss extension design memo ($0 GPU) + conditional smoke ($5-30; medal-class POTENTIAL [0.187, 0.193])
 - **Predicted cost**: $0.15 immediate (V4 probe) + $0 immediate (V8 design memo) → if V8 smoke approved, $5-30 → if V8 smoke WIN ≤0.20, $30-100 full run + paired CUDA harvest = $35-130 total worst-case for canonical V8 variant
 - **Structural recommendation to operator**: Authorize V4 hand-rolled probe + V8 design memo IMMEDIATELY (free; $0 GPU). Hold V8 paid dispatch decision until design memo lands + explicit operator-frontier-override per Catalog #199. If V8 smoke produces sub-medal-class anchor (≤0.20), ratify as PARADIGM-BRIDGE primary + advance to L2 frontier-pursuit per HORIZON-CLASS framework. If V4 produces MI ≥ 0.5 at byte cost ≤ 2KB, V4 IS canonical reactivation primary; escalate to V2 codec-loop disambiguator if V4 MI < 0.5. Cross-pollination canonical with sister C6 IBPS v2 Path B2 + sister NSCS06 v8 Variant C hybrid_class_shift_path_C (ALL THREE converge on discrete-posterior strategy at small-neural-architecture scale).
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:council-T3-cargo-cult-resurrection-v1-FAISS-deliberation-trigger-tokens-in-resurrection-verdict-not-new-equation -->

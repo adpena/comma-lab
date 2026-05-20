@@ -166,3 +166,7 @@ L0 SCAFFOLD predicted_band EXPLICITLY UNSET per Catalog #324.
 - `scripts/remote_lane_substrate_nervdc.sh` (legacy)
 - `feedback_nerv_family_expansion_blocknerv_ffnerv_dsnerv_hinerv_tcnerv_landed_20260511.md`
 - `feedback_slot_build_1_nerv_trio_scaffolds_landed_20260520.md`
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:NeRV-DC-L0-scaffold-design-memo-trigger-tokens-in-design-rationale-section-not-new-equation-pre-anchor-design -->

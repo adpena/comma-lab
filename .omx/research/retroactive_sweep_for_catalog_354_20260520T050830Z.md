@@ -118,3 +118,7 @@ score signal requires:
 Until then, the consumers feed the autopilot ranker as observability +
 diagnostic surfaces; the cathedral autopilot's adjustment cascade
 remains structurally non-promotable until paired-axis evidence lands.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:retroactive-sweep-Catalog-354-master-gradient-exploit-consumer-bundle-trigger-tokens-describe-swept-bug-class-not-new-equation -->

@@ -484,3 +484,7 @@ These revisions are operator-routable to a sister editorial-execution subagent (
 **PR #110 body is FROZEN as calibrated. The 4 Tier-1 companion memos PROCEED as-landed at 7-11K each. The 2 spotlight memos REQUIRE COMPRESSION (Revision 1 → 3-candidate candy voice; Revision 2 → 2-3-sentence per-candidate paragraphs). Works-cited consolidation to `docs/works_cited.md` per Boyd binding extincts the drift class structurally. Internal sweep extends with 4 surface categories per operator amendment #1. Response templates PROCEED. Voice recalibration: light hors d'oeuvres = small + multiple + crafted + cross-linked, NOT exhaustive file enumeration.**
 
 Council verdict: **PROCEED_WITH_REVISIONS** (7 binding revisions, 19-of-19 quorum on Decisions 1+4+5+7+8 + Revision 5+6+7; majority on the rest with documented dissent preserved verbatim). Mission contribution: `frontier_protecting`.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:council-T3-PR-110-editorial-positioning-symposium-trigger-tokens-in-editorial-deliberation-not-new-equation -->

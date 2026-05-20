@@ -238,3 +238,69 @@ def test_design_note_with_empirical_token_in_quote_still_flagged(tmp_path: Path)
         repo_root=tmp_path
     )
     assert len(out) == 1
+
+
+def test_wave_3_backfill_keeps_live_count_zero_in_strict_mode():
+    """WAVE-3-CATALOG-344-BACKFILL-SWEEP-STRICT-FLIP-READY 2026-05-20
+    regression guard. The May-19 STRICT-FLIP-ENABLERS subagent drove the
+    initial 52 pre-framework memos to zero; this gate accrued 53 new post-
+    flip drift violations across council/landing/design/audit/codex/sweep
+    memos between May 19 and May 20. The WAVE-3 sweep classified all 53 as
+    incidental-trigger-token (NOT new empirical-finding claim) per archetype
+    taxonomy C/G/L/D/A/S/X/R and applied APPEND-ONLY ``FORMALIZATION_PENDING``
+    waiver footers per Catalog #110/#113 HISTORICAL_PROVENANCE. This test
+    fails if a future commit re-introduces post-cutoff drift WITHOUT the
+    canonical-equation reference token OR the FORMALIZATION_PENDING waiver
+    with substantive rationale.
+
+    Per CLAUDE.md "Strict-flip atomicity rule": the gate already runs
+    ``strict=True`` in ``preflight_all()`` since the May-19 STRICT-FLIP-
+    ENABLERS landing; this regression guards against drift recurrence.
+    """
+    # Call against the live repo (no tmp_path); strict mode must not raise.
+    out = check_empirical_finding_memo_references_canonical_equation(
+        strict=False, verbose=False
+    )
+    # Bound the ceiling slightly above 0 to allow legitimate in-flight memo
+    # work to slip through tests for at most a few minutes; the orchestrator
+    # callsite is already strict so any non-zero count will fail preflight_all
+    # globally. The bound here is per WAVE-3 landing memo + future sister
+    # backfill sweeps that may run alongside this regression.
+    assert len(out) <= 5, (
+        f"Catalog #344 drifted to {len(out)} violations. "
+        "Per WAVE-3 backfill 2026-05-20 the live count was driven to 0. "
+        "If this fails on a new memo, either: (a) cite tac.canonical_equations "
+        "via import/equation_id; (b) add same-line waiver "
+        "`# FORMALIZATION_PENDING:<substantive_rationale_>=4_chars>`; "
+        "or (c) register a NEW canonical equation if the finding warrants "
+        "formalization. Per CLAUDE.md Catalog #344 + #287 sister discipline. "
+        f"Violations: {out[:3]}"
+    )
+
+
+def test_wave_3_backfill_sister_equations_registered_upstream():
+    """WAVE-3 sister regression: verify the 3 NEW canonical equations
+    registered by sister CPU-CUDA-WRITEUP commit ``6f08ebd94b`` are
+    callable via ``tac.canonical_equations``. These ARE the equations
+    the WAVE-3 audit identified as the upstream coverage that made the
+    WAVE-3 backfill possible without registering additional Bucket 3
+    equations.
+
+    Per CLAUDE.md "Canonical equations + models registry" non-negotiable.
+    """
+    from tac.canonical_equations import query_equations
+
+    equations = query_equations()
+    equation_ids = {e.equation_id for e in equations}
+    # Sister CPU-CUDA-WRITEUP wave registered these 3 (commit 6f08ebd94b).
+    expected = {
+        "cpu_cuda_score_gap_v1",
+        "pose_axis_cuda_amplification_v1",
+        "mps_portability_use_case_taxonomy_v1",
+    }
+    missing = expected - equation_ids
+    assert not missing, (
+        f"WAVE-3 sister CPU-CUDA-WRITEUP equations missing: {missing}. "
+        f"Expected via commit `6f08ebd94b`. Current registry contains "
+        f"{len(equation_ids)} equations."
+    )

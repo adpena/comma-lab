@@ -275,3 +275,7 @@ The feasible region is the intersection of (a) byte budget ≤ 6KB (V8 target; r
 5. **30-day retrospective** per CLAUDE.md "Mission alignment" Consequence 3 (due 2026-06-18): re-audit V8 + V4 + sister cross-pollination outcomes.
 
 **Highest-EV op-routable surfaced**: V4 hand-rolled probe outcome (bundled in sister landing memo) informs V8 design priors. If V4 MI ≥ 0.5 at byte cost ≤ 5KB, V8 inherits empirical anchor that the V3→V2 transition zone IS feasible — V8 design priors STRENGTHENED; V8 smoke recommendation moves from CONDITIONAL to RECOMMENDED-NEXT-PAID-DISPATCH-AUTHORIZATION.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:v1-FAISS-v8-learned-compression-substrate-design-memo-trigger-tokens-in-design-rationale-not-new-equation -->

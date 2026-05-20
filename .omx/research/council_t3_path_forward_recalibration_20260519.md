@@ -259,3 +259,7 @@ The operator's recalibration question (a/b/c) is answered by the council as **cl
 **Council session closed** 2026-05-19. Anchor appended to `.omx/state/council_deliberation_posterior.jsonl` via `tac.council_continual_learning.append_council_anchor` per Catalog #300 + #346. Roster validated `complete=True`.
 
 <!-- # COUNCIL_ROSTER_INCOMPLETE_OK:canonical_council_roster_helper_landed_2026-05-19_post_dated_this_memos_2026-05-19_convocation_balle_was_NOT_yet_in_canonical_inner_council_set_at_convocation_time_per_catalog_346_landing_memo_FEEDBACK_t3_second_supplemental_missing_voices_plus_canonical_roster_helper_landed_20260519_md_HISTORICAL_PROVENANCE_append_only_discipline_per_catalog_110_113_NO_BODY_MUTATION_waiver_appended_by_wave_1_forensic_fix_20260520_per_claude_md_forbidden_premature_kill_research_exhaustion -->
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:council-T3-path-forward-recalibration-deliberation-trigger-tokens-in-strategic-recalibration-not-new-equation -->

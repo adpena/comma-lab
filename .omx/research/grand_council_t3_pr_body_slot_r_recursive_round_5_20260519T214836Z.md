@@ -135,3 +135,7 @@ This deliberation will be appended to `.omx/state/council_deliberation_posterior
 - Upstream archive contract: `upstream/README.md` L100-101 (compressed data + inflate.sh + optional code)
 - Rate term verification: `upstream/evaluate.py` L63 (compressed_size = archive.zip.stat().st_size; internal ZIP structure NOT measured)
 - CLAUDE.md "Bit-level deconstruction and entropy discipline" + "Apples-to-apples evidence discipline" + "Recursive adversarial review protocol — close paths"
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:grand-council-T3-PR-body-slot-R-recursive-round-5-trigger-tokens-in-recursive-review-not-new-equation -->

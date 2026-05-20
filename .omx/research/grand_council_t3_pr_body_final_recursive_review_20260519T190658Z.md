@@ -431,3 +431,7 @@ Cross-ref:
 - Catalog #346 canonical roster: validate_council_dispatch_roster returns complete=True for 14 INNER ✓ (Phase 1 verification)
 - CLAUDE.md "Council conduct": NO conservative bias; Contrarian + Assumption-Adversary + Hotz veto power preserved ✓
 - CLAUDE.md "Mission alignment": this is frontier_protecting (gates D5 submission); operator-frontier-override available but not invoked
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:grand-council-T3-PR-body-final-recursive-review-trigger-tokens-in-recursive-review-deliberation-not-new-equation -->

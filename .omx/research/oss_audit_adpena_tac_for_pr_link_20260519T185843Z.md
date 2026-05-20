@@ -321,3 +321,7 @@ operationally consequential even though it does not feed the solver stack.
 Both gaps are non-blocking for the PR body link landing in Slot I's edit.
 The link is appropriate to add today based on the PASS_WITH_MINOR_GAPS
 audit verdict.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:OSS-hardening-audit-adpena-tac-for-PR-link-memo-trigger-tokens-describe-audit-criteria-not-new-equation -->

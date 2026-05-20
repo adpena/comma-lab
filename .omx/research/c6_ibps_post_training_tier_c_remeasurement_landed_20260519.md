@@ -208,3 +208,7 @@ This is a methodology-validation landing (not a substrate scaffold landing), so 
 - **GPU spend**: $0 (Tier-C measurement is CPU-only per Catalog #324 design; the canonical helper does not require GPU)
 - **Modal/Lightning/Vast.ai**: NOT invoked
 - **Codex**: NOT invoked (canonical helper + recipe edit are deterministic; codex review applies at the next operator-routable Path B2 paid dispatch decision)
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:c6-ibps-falsification-anchor-already-formalized-via-catalog-324-phantom-random-init-rationale-NOT-new-equation -->

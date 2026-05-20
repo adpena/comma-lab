@@ -304,3 +304,7 @@ This landing memo CLOSES DD V1 Faiss symposium op-routables #2 (V4 hand-rolled p
 - `.omx/research/v1_faiss_v8_learned_compression_faiss_design_20260519.md` (NEW; V8 design memo per Catalog #325 6-step contract)
 - `.omx/research/v1_faiss_v4_probe_plus_v8_design_landed_20260519.md` (NEW; THIS landing memo)
 - `.omx/state/subagent_progress.jsonl` (APPEND per Catalog #131 + #206; checkpoints from this subagent)
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:v1-FAISS-v4-probe-plus-v8-design-resurrection-landing-trigger-tokens-in-resurrection-status-not-new-equation -->

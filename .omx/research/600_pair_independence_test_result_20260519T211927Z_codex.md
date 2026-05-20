@@ -69,3 +69,7 @@ The diagnostic remains non-promotional:
 Cathedral autopilot, cost-band posterior updates, Thompson sampling, and per-pair solvers should use block-aware or temporally correlated assumptions for 600-pair vectors. This does not rank, kill, promote, or dispatch any substrate.
 
 The earlier pending probe row `fp64_master_gradient_600_pair_independence_pending_20260518` should be superseded as "empirical test run; iid assumption blocked" so it no longer reads as "pending empirical test."
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:codex-pivot-independence-test-result-memo-trigger-tokens-in-recommendation-section-not-new-equation-claim -->

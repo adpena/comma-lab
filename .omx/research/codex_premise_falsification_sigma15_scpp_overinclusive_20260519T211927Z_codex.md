@@ -33,3 +33,7 @@ Applying `{0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0}` blindly to SCPP would be
 - SCPP sweep: separate block-FP integer-cutoff sweep, with payload-byte and reconstruction-error metrics.
 
 This was caught before provider dispatch, scorer invocation, or paid spend.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:codex-premise-falsification-memo-trigger-tokens-describe-sigma15-SCPP-overinclusion-not-new-equation-falsification-of-single-config -->

@@ -125,3 +125,7 @@ This deliberation will be appended to `.omx/state/council_deliberation_posterior
 - Canonical upstream/evaluate.py CLI: `experiments/contest_auth_eval.py` L1147-1154
 - Canonical inflate.sh FILE_LIST contract: `experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.sh` L7 + L22-35
 - CLAUDE.md "Apples-to-apples evidence discipline" + "Beauty, simplicity, and developer experience" + "Recursive adversarial review protocol"
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:grand-council-T3-PR-body-slot-R-recursive-round-4-trigger-tokens-in-recursive-review-not-new-equation -->

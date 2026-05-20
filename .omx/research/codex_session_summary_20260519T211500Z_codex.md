@@ -35,3 +35,7 @@ fresh captured-output evidence, the older single-arm-passthrough SGLD blocker is
 addressed, or a paired explicit bypass is ratified outside this Codex loop.
 The next unblocked Codex queue item is the no-spend `CLUSTER_F1` or paid items
 1-3 after their own fresh #313/#325 checks.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:codex-session-summary-memo-trigger-tokens-describe-session-work-summary-not-new-equation-claim -->

@@ -226,3 +226,7 @@ All 5 are operator-gated per CLAUDE.md "Executing actions with care" + "Submissi
 - Operator-routable: D-1 (`gh release create` on `adpena/comma_video_compression_challenge` fork)
 - Cite-chain: codex V2 audit (`.omx/tmp/codex_runs/pr_audit_v2_respawn.last.txt` + `.log`) + T3 council memo (`.omx/research/council_t3_pr_submission_corrected_draft_review_20260519.md`) + draft v1 (`.omx/research/pr_body_corrected_draft_20260519T233000Z.md`) + draft v2 (`.omx/research/pr_body_corrected_draft_v2_20260520T024500Z.md`) + operator-binding memory files
 - Next sister landing (post-D-5): post-publication continual-learning anchor per T3 Revision #5 + Catalog #300 council deliberation posterior update
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:PR-body-corrected-draft-v2-source-comment-scrub-landing-trigger-tokens-in-content-status-not-new-equation -->

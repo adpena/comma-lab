@@ -230,3 +230,7 @@ Per T3 Decision 4's "at most 2 candidates for the next 7-day window" cap:
 **Confidence in strategy:** the T3 Decision 4 asymptotic-pursuit queue remains the canonical mid-term mission contribution; no strategic pivot required.
 
 **Pivot considered but rejected:** per CLAUDE.md "Forbidden premature KILL" + Carmack's T3 dissent + Hotz's T3 dissent — if 0/7 had CONFIRMED, the strategic pivot would be to dedicate the operator's next session to META-paradigm research (Schmidhuber's compression-as-intelligence + the rate-attack META-paradigm + the unified solver per T3 Decision 5). Since 7/7 CONFIRMED, the apparatus stays on course; the next paid dispatch is the canonical advancement vector.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:class-shift-hypothesis-empirical-disambiguator-design-synthesis-trigger-tokens-describe-7-candidates-not-new-equation -->

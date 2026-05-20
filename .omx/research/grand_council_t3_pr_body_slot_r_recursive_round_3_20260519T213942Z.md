@@ -129,3 +129,7 @@ This deliberation will be appended to `.omx/state/council_deliberation_posterior
 - PR101 GOLD source (for K-value verification): `experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec/`
 - Our predecessor FEC3 (K=8): lane `pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514_codex`
 - CLAUDE.md "Apples-to-apples evidence discipline" + "Bit-level deconstruction and entropy discipline" + "Recursive adversarial review protocol"
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:grand-council-T3-PR-body-slot-R-recursive-round-3-trigger-tokens-in-recursive-review-not-new-equation -->

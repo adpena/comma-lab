@@ -209,3 +209,7 @@ or invoke via `codex exec` per CLAUDE.md "Codex CLI invocation" non-negotiable. 
 ---
 
 **End of operator check-in package.** Recommended operator decision-point: D2 (codex review) before any other action.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:PR-pre-submission-check-in-package-PR101-FEC6-trigger-tokens-describe-pre-submission-status-not-new-equation -->

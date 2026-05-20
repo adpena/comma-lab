@@ -116,3 +116,7 @@ This deliberation will be appended to `.omx/state/council_deliberation_posterior
 - Pre-Round-1 stale commit: `922aeeae6` (Slot Q-Q + Slot S intermediate)
 - Canonical CUDA auth_eval Modal call_id: `fc-01KRMP4ZM5J8P1H3R2JN96VSC5` (T4, 2026-05-15T02:07:55Z)
 - CLAUDE.md "Apples-to-apples evidence discipline" + "Public Disclosure Hygiene" + "Recursive adversarial review protocol"
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:grand-council-T3-PR-body-slot-R-recursive-round-2-trigger-tokens-in-recursive-review-not-new-equation -->

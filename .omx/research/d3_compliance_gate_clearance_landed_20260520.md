@@ -128,3 +128,7 @@ This is the structural extinction of the runtime-tree-drift question: the QQ sou
 - **Operator-routable D-5**: `gh pr create --repo commaai/comma_video_compression_challenge --base main --head adpena:<branch> --title "..." --body-file ...` per operator routing 2026-05-19 *"all is approved; do gh commands for me"*. The D-5 gh command itself is NOT in this slot's scope per CLAUDE.md "Executing actions with care" + the operator's request was clearly to me (main thread) not to this subagent; this subagent is D-3-clearance-only.
 - **Optional D-4 verification**: `curl -L https://github.com/adpena/comma_video_compression_challenge/releases/download/fec6-frontier-submission-20260520/archive.zip -o /tmp/verify.zip && shasum -a 256 /tmp/verify.zip` should yield `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`. Already verified internally via `gh release view ... --jq '.assets[0].digest'`.
 - Post-publication: continual-learning posterior anchor per T3 Revision #5 + Catalog #300 council deliberation posterior update.
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:D-3-compliance-gate-clearance-landing-memo-trigger-tokens-in-compliance-clearance-status-not-new-equation -->

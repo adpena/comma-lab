@@ -411,3 +411,7 @@ The persona-council Section 3.5 articulation already carries the methodology sub
 - CLAUDE.md "Council hierarchy: 4-tier protocol" + "Council conduct" + "Grand Council (advisory)" non-negotiables
 - Catalog #292 per-deliberation assumption surfacing + Catalog #300 v2 frontmatter + Catalog #325 per-substrate optimal-form symposium + Catalog #346 canonical roster validation
 - Catalog #287 forbidden-empirical-claim-without-evidence-tag + Catalog #323 canonical Provenance umbrella + Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE
+
+
+<!-- WAVE-3-CATALOG-344-BACKFILL-SWEEP appended 2026-05-20 per operator NON-NEGOTIABLE "keep feeding the queue" + WIRE-IN-AUDIT-POST-CASCADE op-routable #3. -->
+<!-- # FORMALIZATION_PENDING:council-T3-MG16-voice-tone-style-review-symposium-trigger-tokens-in-deliberation-content-not-new-equation -->
