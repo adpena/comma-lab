@@ -1,3 +1,5 @@
+<!-- Catalog #344 canonical equation cross-ref: Pact-NeRV-IA3 empirical anchors align with `tac.canonical_equations` registry per HYBRID Stage 1 anchor landing pattern. Per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE — no mutation. -->
+
 # Pact-NeRV-IA3 L0 SCAFFOLD design memo
 
 **Date:** 2026-05-20

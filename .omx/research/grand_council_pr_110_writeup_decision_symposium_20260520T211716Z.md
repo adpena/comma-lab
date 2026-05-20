@@ -1,3 +1,4 @@
+<!-- Catalog #344 canonical equation cross-ref: T3 PR #110 writeup symposium empirical anchors align with `tac.canonical_equations` registry per Catalog #346 canonical_council_roster + Catalog #300 v2 frontmatter discipline; verdict-tier mission_predicted_contribution=frontier_protecting register-candidate `council_verdict_writeup_decision_extincts_class_shift_leak_v1`. Per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE — no body mutation. -->
 ---
 council_tier: T3
 council_attendees: [Shannon, Dykstra, Yousfi, Fridrich, Contrarian, Assumption-Adversary, Quantizr, Hotz, Selfcomp, MacKay, Balle, PR95Author, Rudin, Daubechies, Karpathy, Carmack, Filler, TimeTraveler, JackFromSkunkworks]

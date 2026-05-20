@@ -1,3 +1,4 @@
+<!-- Catalog #344 canonical equation cross-ref: STC paradigm reformulation empirical anchors align with `tac.canonical_equations` registry; the per-pair residual `stc_residual_sidecar_a1_savings_v1` is candidate registration upon empirical anchor landing per op-routable #4. Per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE — no mutation. -->
 ---
 council_tier: T2
 council_attendees: [Shannon, Dykstra, Rudin, Daubechies, Yousfi, Fridrich, Contrarian, Assumption-Adversary, Filler]

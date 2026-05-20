@@ -1,3 +1,4 @@
+<!-- Catalog #344 canonical equation cross-ref: BoostNeRV empirical anchors align with `tac.canonical_equations` registry per boosting-paradigm anchor landing pattern. Per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE — no mutation. -->
 ---
 council_tier: T1
 council_attendees: [Shannon, Dykstra, Yousfi, Fridrich, Contrarian, Assumption-Adversary]

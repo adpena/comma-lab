@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: MIT -->
+<!-- Catalog #344 canonical equation cross-ref: empirical anchors in this memo align with `tac.canonical_equations` registry equations `per_byte_leverage_cross_hardware_aware_v2` + `cross_codec_super_additive_orthogonality_predictor_v1` (commit `80484241f`). Per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE — no mutation to landing-memo body. -->
 ---
 council_tier: T1
 council_attendees:
