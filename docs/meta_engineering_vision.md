@@ -74,6 +74,7 @@ The depth surfaces:
 - [`docs/master_gradient_extractor_tour.md`](./master_gradient_extractor_tour.md) — tool tour for the per-element sensitivity extractor and the ten exploits it enables.
 - [`docs/strict_preflight_catalog_summary.md`](./strict_preflight_catalog_summary.md) — browseable summary of the structural bug-class extinction surface.
 - [`docs/standout_undersold_candidates_spotlight.md`](./standout_undersold_candidates_spotlight.md) — 90-second skim of ten candidates worth attention.
+- [`docs/ai_assisted_inverse_steganalysis_persona_council.md`](./ai_assisted_inverse_steganalysis_persona_council.md) — the META concepts that ran underneath the substrate work: inverse-steganalysis on the contest's information space + the named-persona 4-tier council methodology grounded in Anthropic's persona-vectors research.
 - Sister library [`adpena/tac`](https://github.com/adpena/tac) — the task-aware compression primitives the submission runtime imports from.
 - Working repo [`adpena/comma-lab`](https://github.com/adpena/comma-lab) — the broader apparatus.
 - [PR #110](https://github.com/commaai/comma_video_compression_challenge/pull/110) — the immediate contest submission the META lands into.
