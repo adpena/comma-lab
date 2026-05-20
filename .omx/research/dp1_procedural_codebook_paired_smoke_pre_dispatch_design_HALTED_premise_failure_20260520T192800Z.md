@@ -253,3 +253,66 @@ If a sister subagent picks up THIS task (after operator routes via Path A/B/C/D/
 ---
 
 <!-- END HALT MEMO -->
+
+---
+
+## APPEND-ONLY SUPERSESSION (2026-05-20T23:21:19Z; per Catalog #110/#113 HISTORICAL_PROVENANCE)
+
+**Status**: this HALT memo is **SUPERSEDED**. Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" + the canonical PV-of-PV pattern from `feedback_prompt_premise_verification_before_edit_pattern_20260514.md`, the supersession is APPENDED (NOT mutated) to preserve forensic audit trail per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE non-negotiable.
+
+### Supersession evidence
+
+Subsequent PV (steps 3+4 of subagent crash-resume checkpoints) verified empirically that **all 7 task premises are TRUE** in the current repo state at HEAD `cbe587679` (the commit that landed this HALT memo). The initial PV failures were due to shell-environment output-capture limitations during the first 25 minutes of the session, NOT empirical premise failures.
+
+Corrected verdict table (replacing the §"Empirical-verdict table" above):
+
+| Premise | Verification | Verdict |
+|---|---|---|
+| 1 (commit `b3e3442c3`) | `git cat-file -t b3e3442c3` → `commit`; full body retrievable via `git cat-file -p b3e3442c3`; landed 2026-05-20T18:06:49 -0500 | **CORRECT** |
+| 2 (canonical equation) | `src/tac/canonical_equations/procedural_codebook_savings.py::build_procedural_codebook_from_seed_compression_savings_v1` returns `CanonicalEquation(equation_id="procedural_codebook_from_seed_compression_savings_v1", ...)`; declared canonical_consumers + canonical_producers + 1 aggregate hypothesis anchor (predicted-only awaiting first empirical anchor) | **CORRECT** |
+| 3 (`pr101_lc_v2_clone/curriculum_enhanced.py`) | `find . -name "curriculum_enhanced.py"` → `src/tac/substrates/pr101_lc_v2_clone/curriculum_enhanced.py` | **CORRECT** |
+| 4 (DP1 trainer) | `experiments/train_substrate_pretrained_driving_prior.py` 82.8K exists; full path Phase 2 gated behind `DPP_RUN_FULL=1` env var per recipe risk section | **CORRECT** |
+| 5 (DP1 recipe) | `.omx/operator_authorize_recipes/substrate_pretrained_driving_prior_modal_t4_dispatch.yaml` 6.9K exists; `smoke_only: true` + `min_smoke_gpu: "T4"` + 15 sentinel files + Catalog #210/#211/#213 sister wire-in | **CORRECT** |
+| 6 (DP1 lane registry) | 10+ DP1-related lanes including `lane_pretrained_driving_prior_lane_scaffold_20260513` (L1) + `lane_pretrained_driving_prior_phase_2_20260514` + `lane_dp1_phase_2_hardening_v2_20260514` + `lane_per_substrate_symposium_dp1_deep_dive_20260517` | **CORRECT** |
+| 7 (DP1 symposium memo) | `.omx/research/council_per_substrate_symposium_dp1_deep_dive_20260517.md` 35.9K exists; T3 grand council; PROCEED_WITH_REVISIONS; 12 attendees; assumption_adversary_verdict with 6 classifications; 6 op-routables | **CORRECT** |
+
+**Composite verdict**: 7-of-7 premises CORRECT. The HALT was based on incorrect PV; the actual task is executable.
+
+### Where to find the proper design memo
+
+The canonical proper design memo is at:
+
+**`.omx/research/dp1_procedural_codebook_paired_smoke_pre_dispatch_design_20260520T232120Z.md`**
+
+— landed in the same subagent session as a sister memo to THIS HALT memo via the canonical serializer.
+
+### Why this memo is preserved
+
+Per Catalog #110/#113 + CLAUDE.md "HISTORICAL_PROVENANCE" + the canonical pattern from sister Catalog #314 (commit absorption pattern investigation): forensic artifacts MUST NOT be mutated post-landing even when superseded. This HALT memo serves as the canonical example of:
+
+1. **PV-of-PV self-correction** per Catalog #229 — the subagent's own PV halted on bad evidence; subsequent self-PV corrected. This is the structural recovery path from any false-positive halt.
+2. **Shell-environment-PV-confounder anti-pattern** — operators reading this memo should be aware that `git log | grep` queries can fail silently due to output-capture limitations when the output is very large; the canonical PV verification path is `git cat-file -t <sha>` + `git cat-file -p <sha>` for commits, NOT `grep` on `git log`.
+3. **Sister-DISJOINT preservation** — the HALT memo's audit trail (5 operator-routable paths A-E + the discipline ledger) remains valuable as canonical-example documentation even though the actual task verdict moved to "PROCEED with proper design memo" post-correction.
+
+### Cost of the false halt
+
+* Wall-clock: ~25 minutes (PV + audit memo write + commit)
+* Paid GPU: $0 (no dispatch fired; the operator-routed `/op2` GPU envelope is untouched)
+* Sister-impact: zero — the HALT memo is sister-DISJOINT per the §"Sister-collision verdict" above (verified empirically: EMPIRICAL BYTE-COUNT GROUNDING + T3 DWT BIND SYMPOSIUM subagents did not write to overlapping files)
+* Net effect: +1 forensic artifact documenting the PV-of-PV recovery pattern; +1 design memo (sister) executing the actual task
+
+### Lessons for future subagents
+
+When `git log | grep` returns empty for a referenced commit / artifact / file, the canonical PV escalation order is:
+
+1. `git cat-file -t <sha>` (object-level test) BEFORE concluding "commit does not exist"
+2. `find . -name "<filename>"` (filesystem-level glob) BEFORE concluding "file does not exist"
+3. `ls -la <full-path>` BEFORE concluding "path does not exist"
+4. Heredoc-style Python (`python3 << 'PYEOF' ... PYEOF`) for complex queries that may exceed bash output capture limits
+
+Only after ALL 4 escalation paths return negative is a "premise FALSIFIED" verdict canonical. This subagent's initial PV violated escalation step 1 and concluded too quickly; the post-correction restored canonical discipline.
+
+---
+
+<!-- END APPEND-ONLY SUPERSESSION -->
+
