@@ -1,0 +1,136 @@
+{
+  "archive_custody": {
+    "bytes": 178517,
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "provenance_kind": "archive_zip_custody",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+  },
+  "authority_contract": "null_seed_candidate_spec_requires_runtime_adapter_and_exact_eval",
+  "blockers": [
+    "full_frame_inflate_output_parity_missing",
+    "contest_cpu_exact_eval_missing",
+    "contest_cuda_exact_eval_missing",
+    "seed_reconstruction_mismatch",
+    "runtime_adapter_not_materialized",
+    "seed_mutation_frame_delta_proof_missing",
+    "source_payload_seed_substitution_parse_risk",
+    "selector_seed_adapter_required"
+  ],
+  "candidate_modification_spec": {
+    "axis_label": "[predicted-rate-only-upper-bound]",
+    "blockers": [
+      "full_frame_inflate_output_parity_missing",
+      "contest_cpu_exact_eval_missing",
+      "contest_cuda_exact_eval_missing",
+      "seed_reconstruction_mismatch",
+      "runtime_adapter_not_materialized",
+      "seed_mutation_frame_delta_proof_missing",
+      "source_payload_seed_substitution_parse_risk",
+      "selector_seed_adapter_required"
+    ],
+    "coordinate_system": "packetir_inner_member_section_span",
+    "dispatch_attempted": false,
+    "mutation_grain": "archive_seeded_procedural_replacement",
+    "mutation_operator": "seed_derive_null_span_candidate",
+    "operator_id": "null_seed_replacement::null-seed-contiguous_null_run-source_payload_selector_len_hdr_selector_payload-162171-178417",
+    "packet_proofs_available": false,
+    "packet_proofs_required": [
+      "runtime_adapter_decodes_seeded_span",
+      "seed_mutation_frame_delta_proof",
+      "updated_zip_headers",
+      "updated_zip_crc",
+      "inflate_success_proof",
+      "exact_cuda_eval_on_candidate_archive"
+    ],
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "rationale": [
+      "null-gradient rank is planning evidence only",
+      "seed replacement must be parser-valid or runtime-adapter backed",
+      "candidate remains non-dispatchable until exact eval closes the loop"
+    ],
+    "raw_archive_byte_coordinates_allowed": false,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_operator_probe": false,
+    "ready_for_provider_dispatch": false,
+    "response_matrix_columns": [
+      "seg_dist_delta",
+      "pose_dist_delta",
+      "rate_bytes_delta"
+    ],
+    "score_claim": false,
+    "section_name": "source_payload+selector_len_hdr+selector_payload",
+    "section_role": "master_gradient_null_span",
+    "source_archive_bytes": 178517,
+    "source_archive_path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "source_archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "source_member_name": "x",
+    "source_member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+    "spec_id": "candidate_modification::null-seed-contiguous_null_run-source_payload_selector_len_hdr_selector_payload-162171-178417"
+  },
+  "coordinate_system": "packetir_inner_member_section_span",
+  "direct_replacement_ready": false,
+  "dispatch_attempted": false,
+  "input_paths": {
+    "archive_zip_override": null,
+    "inner_member_name_override": null,
+    "plan_json": ".omx/research/null_codebook_replacement_plan_fec6_20260520T223631Z_codex.json"
+  },
+  "member_custody": {
+    "bytes": 178417,
+    "compress_type": 0,
+    "compressed_bytes": 178417,
+    "crc32": "c4a71a7a",
+    "name": "x",
+    "provenance_kind": "archive_member_custody",
+    "sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd"
+  },
+  "null_span": {
+    "net_saved_inner_bytes": 16238,
+    "original_bytes": 16246,
+    "original_sha256": "473a8343306b5d7d2d2279dd947856328c4038ae28f1bb60c47cca0ac971a85d",
+    "plan_original_sha256": "473a8343306b5d7d2d2279dd947856328c4038ae28f1bb60c47cca0ac971a85d",
+    "predicted_rate_delta_upper_bound": -0.01081221768079782,
+    "range": [
+      162171,
+      178417
+    ],
+    "section": "source_payload+selector_len_hdr+selector_payload",
+    "source": "contiguous_null_run"
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_archive_byte_coordinates_allowed": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_provider_dispatch": false,
+  "required_next_proofs": [
+    "runtime_adapter_decodes_seeded_span",
+    "seed_mutation_changes_inflated_frames_or_expected_null_region",
+    "full_frame_inflate_output_parity_or_exact_candidate_delta_report",
+    "contest_cpu_and_cuda_exact_eval_on_candidate_archive"
+  ],
+  "research_only": true,
+  "runtime_adapter_required": true,
+  "schema": "null_seed_candidate_spec_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "seed_replacement": {
+    "authority_mode": "archive_seeded",
+    "derived_payload_sha256": "cd00e638ae58e65a76965e742d752e384437e1732ff07ed27171bc137b6b84c2",
+    "generator_kind": "pcg64",
+    "output_dtype": "uint8",
+    "output_shape": [
+      16246
+    ],
+    "seed_bytes": 8,
+    "seed_derivation": "sha256(domain || candidate_id || original_span_sha256)",
+    "seed_hex": "3b3a1c69a96de518",
+    "seed_reconstructs_original_payload": false,
+    "seed_sha256": "7a98ab2841286a7b9ebc5312b5c0e7e5b2f5294cfc37e32e0f06714e7022f9fd"
+  },
+  "source_candidate_id": "null-seed-contiguous_null_run-source_payload_selector_len_hdr_selector_payload-162171-178417",
+  "source_candidate_rank": 1,
+  "source_plan_schema": "null_space_seed_replacement_plan_v1",
+  "spec_id": "null_seed_candidate::null-seed-contiguous_null_run-source_payload_selector_len_hdr_selector_payload-162171-178417",
+  "verdict": "blocked_until_runtime_adapter_and_exact_eval"
+}
