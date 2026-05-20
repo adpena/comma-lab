@@ -85,7 +85,7 @@ env_overrides:
   FEC6_HAAR_RESIDUAL_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   FEC6_HAAR_RESIDUAL_FEC6_ARCHIVE_PATH: /workspace/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
   FEC6_HAAR_RESIDUAL_RESIDUALS_NPZ_PATH: /workspace/pact/experiments/results/fec6_plus_haar_residual_discovery_20260517/per_frame_residuals.npz
-  FEC6_HAAR_RESIDUAL_OUTPUT_DIR: /workspace/pact/experiments/results/fec6_plus_haar_residual_modal_dispatch_20260517
+  FEC6_HAAR_RESIDUAL_OUTPUT_DIR: /workspace/pact/experiments/results/fec6_plus_haar_residual_modal_dispatch_20260517  # WORKSPACE_OUTPUT_PATH_OK:driver_scaffold_pending_per_recipe_dispatch_ready_but_not_fired_yet_pending_phase_2_base_inflate_wiring_per_catalog_240_research_recipe_pattern
   LOCAL_CUDA_WORKER: "0"
 
 dependencies:

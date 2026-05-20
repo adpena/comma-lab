@@ -5247,6 +5247,21 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #358: WAVE-3-HARDEN-1 META gate — refuses tool-dispatch
+        # recipes whose env_overrides emit /workspace/pact/<OUTPUT> paths
+        # without a canonical Catalog #204 3-branch Modal-aware driver
+        # override (the bug class extincts at the recipe-level surface).
+        # Bug-class anchor: WAVE-3-OP3 fc-01KS2Z2WJQW532A9226JAVQM8Y
+        # (2026-05-20T15:11:22Z) rc=1 / 9.74s. Sister of Catalog #204
+        # (per-driver) + #220 (extractor /tmp guard) + #270 (tool scope).
+        # STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+        # live count at landing: 0 (L2 sister CPU driver fix + mps_gap
+        # driver fix + 2 orphan recipe waivers land in same commit batch).
+        # Memory: feedback_wave_3_harden_1_master_gradient_tmp_path_extinction_landed_20260520.
+        check_recipe_workspace_output_path_canonical_or_modal_aware(
+            strict=True, verbose=verbose
+        )
+
         # Catalog #344: canonical equations registry — refuse new empirical-
         # finding memos missing canonical equation reference.
         # STRICT-FLIPPED 2026-05-19 by STRICT-FLIP-ENABLERS subagent per
@@ -77072,6 +77087,393 @@ def check_master_gradient_exploit_consumers_complete(
             "RESPAWN-MG-7-BUNDLE completeness contract per CLAUDE.md "
             "'Subagent coherence-by-default' non-negotiable (sister of Catalog #335):\n  "
             + "\n  ".join(v[:400] for v in violations[:8])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #358 - check_recipe_workspace_output_path_canonical_or_modal_aware
+# ============================================================================
+# WAVE-3-HARDEN-1-MASTER-GRADIENT-TMP-PATH-BUG-CLASS-EXTINCTION self-protection
+# 2026-05-20 (operator NON-NEGOTIABLE "must fix and harden all").
+#
+# BUG CLASS ANCHOR: WAVE-3-OP3 dispatch fc-01KS2Z2WJQW532A9226JAVQM8Y
+# (2026-05-20T15:11:22Z) failed rc=1 at 9.74s because the recipe's
+# `env_overrides` block set `MASTER_GRADIENT_OUTPUT_NPY=/workspace/pact/...`
+# which resolves to `/tmp/pact/...` on the Modal worker (Modal mounts working
+# tree under /tmp/pact/, NOT /workspace/pact/). tools/extract_master_gradient.py
+# REFUSED with /tmp guard per CLAUDE.md "Forbidden /tmp paths in any persisted
+# artifact" (Catalog #220 transient-evidence trap).
+#
+# Per-driver fixes (Catalog #204 expansion) covered the OP3 (CUDA T4) recipe
+# at commit 75d39f32e + this lane's L2 sister (CPU) + mps_gap driver. But the
+# bug class WILL recur the moment any NEW tool-dispatch recipe lands a
+# `/workspace/pact/.../{*_NPY,*_OUTPUT_DIR}` env var without the canonical
+# driver-side override. This META gate makes the bug class STRUCTURALLY
+# extinct at the recipe-level surface.
+#
+# SCOPE: scans every `.omx/operator_authorize_recipes/*.yaml` recipe with
+# `dispatch_kind: tool` per Catalog #270 scope (tool dispatches have different
+# scope rules than substrate trainers). Substrate trainers covered by sister
+# Catalog #240 (recipe-vs-trainer-state consistency).
+#
+# DETECTION: for each in-scope recipe, parses the `env_overrides:` block for
+# any key matching `*_NPY:` / `*_OUTPUT_DIR:` / `*_OUTPUT_*:` / `*_OUT_*:`
+# whose value starts with `/workspace/pact/`. For each such OUTPUT path,
+# checks whether the recipe's `lane_script` (or `remote_driver`) implements
+# the canonical Catalog #204 3-branch Modal-aware override pattern (
+# `if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ] && ...`).
+#
+# ACCEPTANCE: (a) recipe has no `/workspace/pact/.../<OUTPUT>` env var; (b)
+# all such OUTPUT env vars are covered by the canonical 3-branch override in
+# the corresponding driver script (or the driver references /modal_results/...
+# explicitly); (c) recipe is `dispatch_enabled: false` OR `research_only:
+# true` (transparent non-dispatchable per CLAUDE.md "Substrate scaffolds MUST
+# be COMPLETE or RESEARCH-ONLY"); (d) same-line waiver
+# `# WORKSPACE_OUTPUT_PATH_OK:<rationale>` on the env_var line with non-
+# placeholder rationale ≥4 chars (placeholder `<rationale>` / `<reason>`
+# literals rejected per Catalog #287 sister discipline so the gate's docstring
+# example cannot self-waive).
+#
+# Sister of Catalog #204 (substrate driver surface; #358 is the tool-recipe
+# sister at the recipe-level surface) + Catalog #220 (source-text /tmp guard
+# at extractor surface) + Catalog #270 (umbrella protocol scope-clarification)
+# + Catalog #152 (operator-wrapper-validates-required-input-files canonical
+# insertion point) + Catalog #240 (recipe-vs-trainer-state consistency) +
+# Catalog #185 (META-meta drift detection) + Catalog #176 (META-meta STRICT-
+# callsite-has-CLAUDE.md-row) + Catalog #287 (placeholder-rationale
+# rejection). Together they extinct the
+# /workspace/pact/...-OUTPUT-resolves-to-/tmp/pact/...-on-Modal bug class
+# STRUCTURALLY at FIVE surfaces: per-driver (#204) + recipe-level (#358) +
+# extractor source-text /tmp guard (#220) + substrate scope (#240) +
+# operator-wrapper canonical entry point (#152).
+#
+# STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+# self-protected against" + "Strict-flip atomicity rule" — live count at
+# landing: 0 (L2 sister CPU driver + mps_gap driver fixes land in same commit
+# batch as this gate; the CUDA T4 recipe already had its driver-side fix at
+# OP3-RETRY commit 75d39f32e).
+
+_CHECK_358_RECIPE_DIR = ".omx/operator_authorize_recipes"
+_CHECK_358_RECIPE_GLOB = "*.yaml"
+_CHECK_358_WORKSPACE_PREFIX = "/workspace/pact/"
+# OUTPUT-token suffix patterns: env var name ends with one of these.
+_CHECK_358_OUTPUT_SUFFIXES: tuple[str, ...] = (
+    "_NPY",
+    "_OUTPUT_DIR",
+    "_OUTPUT_PATH",
+    "_OUTPUT_NPY",
+    "_OUTPUT_JSON",
+    "_OUTPUT_FILE",
+    "_OUT_DIR",
+    "_OUT_PATH",
+    "_OUT_NPY",
+    "_OUT_FILE",
+)
+# Canonical 3-branch Modal-aware override pattern in driver scripts.
+# The canonical form per Catalog #204 + OP3-RETRY commit 75d39f32e is a
+# single-line shell test:
+#   if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ] && [ -n ... ]; then
+_CHECK_358_CANONICAL_PATTERN_RE = re.compile(
+    r'MODAL_RUNTIME[^\n]*?=[^\n]*?"?1"?[^\n]*?-d[^\n]*?"?/modal_results"?',
+)
+# Alternative: driver explicitly references `/modal_results/` somewhere.
+_CHECK_358_MODAL_RESULTS_TOKEN = "/modal_results/"
+_CHECK_358_WAIVER_PATTERN = re.compile(
+    r"#\s*WORKSPACE_OUTPUT_PATH_OK:\s*([^\n]+)"
+)
+_CHECK_358_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "rationale", "reason",
+})
+
+
+def _check_358_recipe_is_in_scope(recipe_text: str) -> bool:
+    """Return True iff recipe declares ``dispatch_kind: tool`` per Catalog
+    #270 scope clarification."""
+    for line in recipe_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        if stripped.startswith("dispatch_kind:"):
+            value = stripped.split(":", 1)[1].strip().strip("\"'")
+            return value == "tool"
+    return False
+
+
+def _check_358_recipe_is_opted_out(recipe_text: str) -> bool:
+    """Return True iff recipe carries `dispatch_enabled: false` OR
+    `research_only: true` top-level."""
+    has_dispatch_disabled = False
+    has_research_only = False
+    for line in recipe_text.splitlines():
+        if line.startswith(" ") or line.startswith("\t"):
+            continue  # only top-level
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        if stripped.startswith("dispatch_enabled:"):
+            value = stripped.split(":", 1)[1].strip().strip("\"'").lower()
+            if value == "false":
+                has_dispatch_disabled = True
+        elif stripped.startswith("research_only:"):
+            value = stripped.split(":", 1)[1].strip().strip("\"'").lower()
+            if value == "true":
+                has_research_only = True
+    return has_dispatch_disabled or has_research_only
+
+
+def _check_358_extract_lane_script(recipe_text: str) -> str | None:
+    """Return the `lane_script` (or `remote_driver` fallback) declared
+    in the recipe, or None if neither is present.
+
+    Searches both top-level `remote_driver:` and nested `modal.lane_script:`.
+    """
+    lane_script: str | None = None
+    remote_driver: str | None = None
+    in_modal_block = False
+    for line in recipe_text.splitlines():
+        stripped = line.rstrip()
+        if not stripped or stripped.lstrip().startswith("#"):
+            continue
+        # Top-level: any line not starting with whitespace.
+        if not line.startswith(" ") and not line.startswith("\t"):
+            in_modal_block = stripped.startswith("modal:")
+            if stripped.startswith("remote_driver:"):
+                remote_driver = stripped.split(":", 1)[1].strip().strip("\"'")
+            continue
+        # Nested under modal:
+        if in_modal_block and "lane_script:" in stripped:
+            lane_script = stripped.split("lane_script:", 1)[1].strip().strip("\"'")
+    return lane_script or remote_driver
+
+
+def _check_358_extract_output_env_vars(
+    recipe_text: str,
+) -> list[tuple[str, str, int, str]]:
+    """Return list of (env_var_name, value, line_number, full_line) tuples
+    for env_overrides whose value starts with `/workspace/pact/` AND name
+    matches an OUTPUT suffix."""
+    results: list[tuple[str, str, int, str]] = []
+    in_env_overrides = False
+    for i, line in enumerate(recipe_text.splitlines(), start=1):
+        stripped = line.rstrip()
+        if not stripped:
+            continue
+        # Top-level "env_overrides:" opens the block.
+        if not line.startswith(" ") and not line.startswith("\t"):
+            in_env_overrides = stripped.startswith("env_overrides:")
+            continue
+        if not in_env_overrides:
+            continue
+        # Strip comment lines.
+        if stripped.lstrip().startswith("#"):
+            continue
+        # Look for KEY: VALUE where KEY ends with an OUTPUT suffix.
+        if ":" not in stripped:
+            continue
+        key, _, value = stripped.lstrip().partition(":")
+        key = key.strip()
+        value_full = value.strip()
+        # Strip trailing inline comment for VALUE parsing but preserve full
+        # line for waiver detection.
+        value_no_comment = value_full
+        if "#" in value_no_comment:
+            # Only strip if # is preceded by whitespace (not a URL fragment).
+            comment_idx = value_no_comment.find("#")
+            if comment_idx > 0 and value_no_comment[comment_idx - 1].isspace():
+                value_no_comment = value_no_comment[:comment_idx].rstrip()
+        value_clean = value_no_comment.strip().strip("\"'")
+        # Filter: key must end with one of the OUTPUT suffixes (skip if not).
+        if not any(key.endswith(suffix) for suffix in _CHECK_358_OUTPUT_SUFFIXES):
+            continue
+        # Filter: value must start with /workspace/pact/.
+        if not value_clean.startswith(_CHECK_358_WORKSPACE_PREFIX):
+            continue
+        results.append((key, value_clean, i, line))
+    return results
+
+
+def _check_358_driver_implements_canonical_override(
+    driver_text: str,
+    output_env_var: str,
+) -> bool:
+    """Return True iff driver text implements the canonical 3-branch Modal-
+    aware override for the given output env var.
+
+    Acceptance: the driver contains BOTH the canonical single-line shell
+    pattern (``[ "${MODAL_RUNTIME:-0}" = "1" ] && [ -d "/modal_results" ]``)
+    AND a reassignment of the target env var to a ``/modal_results/...`` path
+    within ±10 lines of the pattern match.
+    """
+    pat_match = _CHECK_358_CANONICAL_PATTERN_RE.search(driver_text)
+    if pat_match is None:
+        return False
+    # Find canonical-pattern line numbers.
+    lines = driver_text.splitlines()
+    pattern_lines: list[int] = []
+    for i, line in enumerate(lines):
+        if _CHECK_358_CANONICAL_PATTERN_RE.search(line):
+            pattern_lines.append(i)
+    if not pattern_lines:
+        return False
+    # Find lines that reassign the target env var to a /modal_results/ path.
+    # Pattern: `<env_var>=...modal_results...` or `<env_var>="...modal_results..."`.
+    env_reassign_lines: list[int] = []
+    env_reassign_re = re.compile(
+        rf'\b{re.escape(output_env_var)}\s*=\s*["\']?[^"\'\n]*{re.escape(_CHECK_358_MODAL_RESULTS_TOKEN)}'
+    )
+    for i, line in enumerate(lines):
+        if env_reassign_re.search(line):
+            env_reassign_lines.append(i)
+    if not env_reassign_lines:
+        return False
+    # Check if any env_reassign_line is within ±10 of any pattern_line.
+    for env_line in env_reassign_lines:
+        for pat_line in pattern_lines:
+            if abs(env_line - pat_line) <= 10:
+                return True
+    return False
+
+
+def _check_358_line_has_waiver(line: str) -> bool:
+    """Return True iff line carries a substantive
+    `# WORKSPACE_OUTPUT_PATH_OK:<rationale>` waiver."""
+    m = _CHECK_358_WAIVER_PATTERN.search(line)
+    if m is None:
+        return False
+    rationale = m.group(1).strip().rstrip("'\"`*")
+    if not rationale:
+        return False
+    if rationale.lower() in _CHECK_358_PLACEHOLDER_RATIONALES:
+        return False
+    if len(rationale) < 4:
+        return False
+    return True
+
+
+def check_recipe_workspace_output_path_canonical_or_modal_aware(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #358. WAVE-3-HARDEN-1 META gate.
+
+    Refuses tool-dispatch recipes (``dispatch_kind: tool`` per Catalog #270)
+    whose ``env_overrides`` block emits an OUTPUT env var
+    (``*_NPY`` / ``*_OUTPUT_DIR`` / ``*_OUTPUT_*`` / ``*_OUT_*``) with a value
+    under ``/workspace/pact/`` UNLESS the corresponding ``lane_script`` /
+    ``remote_driver`` implements the canonical Catalog #204 3-branch Modal-
+    aware override OR the env_var line carries a
+    ``# WORKSPACE_OUTPUT_PATH_OK:<rationale>`` waiver.
+
+    Bug-class anchor: WAVE-3-OP3 dispatch ``fc-01KS2Z2WJQW532A9226JAVQM8Y``
+    (2026-05-20) failed rc=1 at 9.74s because the recipe's
+    ``MASTER_GRADIENT_OUTPUT_NPY=/workspace/pact/.omx/state/...`` resolved
+    to ``/tmp/pact/.omx/state/...`` on the Modal worker (Modal mounts
+    working tree under ``/tmp/pact/``, NOT ``/workspace/pact/``) and
+    triggered ``tools/extract_master_gradient.py:2369-2373`` ``/tmp``
+    refusal per CLAUDE.md "Forbidden /tmp paths in any persisted artifact"
+    (Catalog #220 transient-evidence trap).
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    if isinstance(root, str):
+        root = Path(root)
+    recipes_dir = root / _CHECK_358_RECIPE_DIR
+    violations: list[str] = []
+    if not recipes_dir.is_dir():
+        if verbose:
+            print(
+                "  [catalog-358] OK "
+                "(no operator_authorize_recipes dir; 0 file(s) scanned)"
+            )
+        return violations
+    scanned = 0
+    flagged = 0
+    for recipe_path in sorted(recipes_dir.glob(_CHECK_358_RECIPE_GLOB)):
+        rel = str(recipe_path.relative_to(root))
+        try:
+            recipe_text = recipe_path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: read error {exc!s}")
+            continue
+        scanned += 1
+        # Scope filter: only tool-dispatch recipes per Catalog #270.
+        if not _check_358_recipe_is_in_scope(recipe_text):
+            continue
+        # Opt-out filter: dispatch_enabled=false OR research_only=true.
+        if _check_358_recipe_is_opted_out(recipe_text):
+            continue
+        # Extract OUTPUT env vars with /workspace/pact/... values.
+        output_env_vars = _check_358_extract_output_env_vars(recipe_text)
+        if not output_env_vars:
+            continue
+        # Load the corresponding driver script.
+        lane_script = _check_358_extract_lane_script(recipe_text)
+        driver_text = ""
+        driver_rel = "(no lane_script declared)"
+        if lane_script is not None:
+            driver_path = root / lane_script
+            driver_rel = lane_script
+            if driver_path.is_file():
+                try:
+                    driver_text = driver_path.read_text(
+                        encoding="utf-8", errors="replace"
+                    )
+                except OSError:
+                    driver_text = ""
+            else:
+                driver_text = ""
+        # For each OUTPUT env var, check waiver OR canonical driver pattern.
+        for env_var, value, line_num, line_text in output_env_vars:
+            if _check_358_line_has_waiver(line_text):
+                continue
+            if driver_text and _check_358_driver_implements_canonical_override(
+                driver_text, env_var
+            ):
+                continue
+            flagged += 1
+            violations.append(
+                f"{rel}:{line_num}: env_overrides has OUTPUT var "
+                f"`{env_var}: {value[:60]}` under `/workspace/pact/` "
+                f"but driver `{driver_rel}` does NOT implement the "
+                "canonical Catalog #204 3-branch Modal-aware override. "
+                "On Modal workers, $WORKSPACE → /tmp/pact (NOT /workspace/"
+                "pact), so the OUTPUT path resolves to /tmp/pact/... and "
+                "either crashes (extractor /tmp guard) or silently loses "
+                "data (no Modal harvest). Fix: add the canonical "
+                "`if [ \"${MODAL_RUNTIME:-0}\" = \"1\" ] && "
+                "[ -d \"/modal_results\" ] && [ -n \"${INSTANCE_JOB_ID:-}\" ]; "
+                "then ...=/modal_results/${INSTANCE_JOB_ID}/output/...; fi` "
+                "block to the driver (sister of "
+                "scripts/operator_authorize_master_gradient_fec6_modal_t4_"
+                "cuda_anchor.sh commit 75d39f32e) OR add a same-line "
+                "`# WORKSPACE_OUTPUT_PATH_OK:<rationale>` waiver."
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-358] {len(violations)} violation(s) across "
+                f"{scanned} recipe(s):"
+            )
+            for v in violations[:5]:
+                print(f"    - {v[:300]}")
+        else:
+            print(
+                f"  [catalog-358] OK ({scanned} recipe(s); "
+                "all tool-dispatch /workspace/pact/<OUTPUT> paths covered "
+                "by canonical Catalog #204 driver-side override or waiver)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_recipe_workspace_output_path_canonical_or_modal_aware "
+            f"found {len(violations)} violation(s). Catalog #358 "
+            "WAVE-3-HARDEN-1 extincts the /workspace/pact/<OUTPUT>-"
+            "resolves-to-/tmp/pact/-on-Modal bug class (anchor: WAVE-3-OP3 "
+            "fc-01KS2Z2WJQW532A9226JAVQM8Y rc=1 / 9.74s) at the recipe-"
+            "level surface. Sister of Catalog #204 (per-driver) + "
+            "#220 (extractor /tmp guard) + #270 (tool scope):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
 
