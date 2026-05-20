@@ -73,13 +73,15 @@ Per Catalog #305:
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Any, Mapping
 
-from tac.cathedral.consumer_contract import HookNumber
+from tac.cathedral.consumer_contract import AxisDecomposition, HookNumber
 
 
 CONSUMER_NAME = "top_k_byte_sensitivity_consumer"
-CONSUMER_VERSION = "1.0.0"
+CONSUMER_VERSION = "1.1.0"  # bumped: per-axis decomposition emission (Dim 3 Step 3.4)
+_PROVENANCE_MODEL_ID = "top_k_byte_sensitivity_consumer.predicted_axis_decomposition_v1"
 CONSUMER_HOOK_NUMBERS = (
     HookNumber.SENSITIVITY_MAP,
     HookNumber.BIT_ALLOCATOR,
@@ -100,6 +102,68 @@ def update_from_anchor(anchor: Any) -> None:
     _ = anchor
 
 
+def _build_per_axis_decomposition(
+    top_k_indices: list[int] | None,
+    k_value: int | None,
+    per_byte_sensitivity_sums: Mapping[str, float] | None,
+    archive_bytes_protected_delta: int,
+    m_archive_sha: str | None,
+) -> AxisDecomposition:
+    """Build canonical per-axis decomposition with Provenance.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: this consumer is
+    rate-axis-dominant by definition (top-K byte protection is codec design
+    that changes archive bytes via canonical-Huffman / fixed-precision /
+    redundancy). When the caller supplies per-axis sensitivity sums (the
+    canonical chain-rule output decomposes per byte into seg/pose/rate axes),
+    we propagate those sums; otherwise seg + pose contributions default to 0
+    per Catalog #341 observability-only invariant.
+    """
+    try:
+        from tac.provenance.builders import build_provenance_for_predicted
+        from tac.provenance.validator import provenance_to_dict
+    except ImportError:  # pragma: no cover
+        canonical_provenance: Mapping[str, Any] = {
+            "artifact_kind": "predicted_from_model",
+            "model_id": _PROVENANCE_MODEL_ID,
+            "measurement_axis": "[predicted]",
+            "evidence_grade": "predicted",
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+        }
+    else:
+        sha_seed = m_archive_sha or "no_m_archive_sha"
+        n_top = len(top_k_indices) if top_k_indices else 0
+        inputs_seed = f"{_PROVENANCE_MODEL_ID}:m_archive_sha={sha_seed}:k={k_value or 0}:n={n_top}"
+        inputs_sha256 = hashlib.sha256(inputs_seed.encode("utf-8")).hexdigest()
+        prov = build_provenance_for_predicted(
+            model_id=_PROVENANCE_MODEL_ID,
+            inputs_sha256=inputs_sha256,
+            measurement_axis="[predicted]",
+            hardware_substrate="cpu_local",
+        )
+        canonical_provenance = provenance_to_dict(prov)
+
+    # Per-axis sensitivity sums propagation: when caller supplies the sums
+    # from the canonical Catalog #318 chain-rule output, we propagate them.
+    # Default 0.0 when not provided (consumer is observability-only).
+    seg_delta = 0.0
+    pose_delta = 0.0
+    if per_byte_sensitivity_sums is not None and isinstance(
+        per_byte_sensitivity_sums, Mapping
+    ):
+        seg_delta = float(per_byte_sensitivity_sums.get("seg_axis_sum", 0.0))
+        pose_delta = float(per_byte_sensitivity_sums.get("pose_axis_sum", 0.0))
+
+    return AxisDecomposition(
+        predicted_d_seg_delta=seg_delta,
+        predicted_d_pose_delta=pose_delta,
+        predicted_archive_bytes_delta=int(archive_bytes_protected_delta),
+        axis_tag="[predicted]",
+        canonical_provenance=canonical_provenance,
+    )
+
+
 def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     """Catalog #125 hook #4 - cathedral autopilot ranker contribution.
 
@@ -107,10 +171,19 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     markers because top-K is a CODEC-DESIGN guidance signal, not a score
     claim. The candidate dict MAY carry ``top_k_byte_indices`` /
     ``m_archive_array_sha256`` if a prior pipeline stage computed them.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: also emits canonical
+    ``predicted_axis_decomposition`` (rate-axis-dominant for byte-protection
+    overhead; seg/pose from per-byte sensitivity sums when caller supplies
+    them). Per-axis emission is OBSERVABILITY-ONLY per Catalog #341.
     """
     top_k_indices = candidate.get("top_k_byte_indices")
     m_archive_sha = candidate.get("m_archive_array_sha256")
     k_value = candidate.get("k_top")
+    per_byte_sensitivity_sums = candidate.get("per_byte_sensitivity_sums")
+    archive_bytes_protected_delta = int(
+        candidate.get("archive_bytes_protected_delta") or 0
+    )
 
     rationale_parts = [
         "top-K byte sensitivity consumer (exploit #3)",
@@ -124,6 +197,14 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         rationale_parts.append(f"M_archive sha256[:12]={str(m_archive_sha)[:12]}")
     rationale = "; ".join(rationale_parts)
 
+    decomposition = _build_per_axis_decomposition(
+        top_k_indices=top_k_indices,
+        k_value=k_value,
+        per_byte_sensitivity_sums=per_byte_sensitivity_sums,
+        archive_bytes_protected_delta=archive_bytes_protected_delta,
+        m_archive_sha=m_archive_sha,
+    )
+
     return {
         "predicted_delta_adjustment": 0.0,
         "rationale": rationale,
@@ -134,6 +215,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "top_k_byte_indices": top_k_indices,
         "k_top": k_value,
         "m_archive_array_sha256": m_archive_sha,
+        "predicted_axis_decomposition": decomposition.as_dict(),
     }
 
 
@@ -204,4 +286,5 @@ __all__ = [
     "consume_candidate",
     "rank_archive_bytes_by_sensitivity",
     "update_from_anchor",
+    "_build_per_axis_decomposition",
 ]

@@ -64,13 +64,15 @@ Per Catalog #305:
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Any, Mapping
 
-from tac.cathedral.consumer_contract import HookNumber
+from tac.cathedral.consumer_contract import AxisDecomposition, HookNumber
 
 
 CONSUMER_NAME = "per_pair_gradient_clustering_consumer"
-CONSUMER_VERSION = "1.0.0"
+CONSUMER_VERSION = "1.1.0"  # bumped: per-axis decomposition emission (Dim 3 Step 3.4)
+_PROVENANCE_MODEL_ID = "per_pair_gradient_clustering_consumer.predicted_axis_decomposition_v1"
 CONSUMER_HOOK_NUMBERS = (
     HookNumber.SENSITIVITY_MAP,
     HookNumber.BIT_ALLOCATOR,
@@ -90,11 +92,75 @@ def update_from_anchor(anchor: Any) -> None:
     _ = anchor
 
 
+def _build_per_axis_decomposition(
+    equivalence_classes: Any,
+    pose_axis_dominant_pair_indices: list[int] | None,
+    per_cluster_archive_bytes_saved: int,
+    per_cluster_pose_axis_savings: float,
+    m_contest_sha: str | None,
+) -> AxisDecomposition:
+    """Build canonical per-axis decomposition with Provenance.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: this consumer is
+    pose-axis-dominant for ego-motion pairs (per-pair clustering surfaces
+    pairs whose pose-gradient signature is similar; codec-sharing across
+    cluster members reduces archive bytes AND can recover pose-axis fidelity
+    via shared optimization). Seg-axis contribution defaults to 0 (clustering
+    does not move per-class chroma). Rate-axis = archive bytes saved via
+    cluster-based parameter sharing (caller-supplied; defaults 0).
+    """
+    try:
+        from tac.provenance.builders import build_provenance_for_predicted
+        from tac.provenance.validator import provenance_to_dict
+    except ImportError:  # pragma: no cover
+        canonical_provenance: Mapping[str, Any] = {
+            "artifact_kind": "predicted_from_model",
+            "model_id": _PROVENANCE_MODEL_ID,
+            "measurement_axis": "[predicted]",
+            "evidence_grade": "predicted",
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+        }
+    else:
+        sha_seed = m_contest_sha or "no_m_contest_sha"
+        n_clusters = len(equivalence_classes) if equivalence_classes else 0
+        inputs_seed = (
+            f"{_PROVENANCE_MODEL_ID}:m_contest_sha={sha_seed}:n_clusters={n_clusters}"
+        )
+        inputs_sha256 = hashlib.sha256(inputs_seed.encode("utf-8")).hexdigest()
+        prov = build_provenance_for_predicted(
+            model_id=_PROVENANCE_MODEL_ID,
+            inputs_sha256=inputs_sha256,
+            measurement_axis="[predicted]",
+            hardware_substrate="cpu_local",
+        )
+        canonical_provenance = provenance_to_dict(prov)
+
+    return AxisDecomposition(
+        predicted_d_seg_delta=0.0,  # clustering does not move seg-class chroma
+        predicted_d_pose_delta=float(per_cluster_pose_axis_savings),
+        predicted_archive_bytes_delta=int(per_cluster_archive_bytes_saved),
+        axis_tag="[predicted]",
+        canonical_provenance=canonical_provenance,
+    )
+
+
 def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Catalog #125 hook #4 - cathedral autopilot ranker contribution."""
+    """Catalog #125 hook #4 - cathedral autopilot ranker contribution.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: also emits canonical
+    ``predicted_axis_decomposition`` (pose-axis-dominant for ego-motion
+    clusters; seg=0; rate=archive_bytes_saved via codec sharing). Per-axis
+    emission is OBSERVABILITY-ONLY per Catalog #341.
+    """
     equivalence_classes = candidate.get("pair_equivalence_classes")
     m_contest_sha = candidate.get("m_contest_array_sha256")
     threshold = candidate.get("similarity_threshold")
+    pose_dominant_pairs = candidate.get("pose_axis_dominant_pair_indices")
+    per_cluster_bytes_saved = int(candidate.get("per_cluster_archive_bytes_saved") or 0)
+    per_cluster_pose_savings = float(
+        candidate.get("per_cluster_pose_axis_savings") or 0.0
+    )
 
     rationale_parts = [
         "per-pair gradient clustering consumer (exploit #9 symmetry-breaking)",
@@ -110,6 +176,14 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         rationale_parts.append(f"M_contest sha256[:12]={str(m_contest_sha)[:12]}")
     rationale = "; ".join(rationale_parts)
 
+    decomposition = _build_per_axis_decomposition(
+        equivalence_classes=equivalence_classes,
+        pose_axis_dominant_pair_indices=pose_dominant_pairs,
+        per_cluster_archive_bytes_saved=per_cluster_bytes_saved,
+        per_cluster_pose_axis_savings=per_cluster_pose_savings,
+        m_contest_sha=m_contest_sha,
+    )
+
     return {
         "predicted_delta_adjustment": 0.0,
         "rationale": rationale,
@@ -120,6 +194,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "pair_equivalence_classes": equivalence_classes,
         "similarity_threshold": threshold,
         "m_contest_array_sha256": m_contest_sha,
+        "predicted_axis_decomposition": decomposition.as_dict(),
     }
 
 
@@ -203,4 +278,5 @@ __all__ = [
     "cluster_pairs_by_gradient_similarity_consumer_api",
     "consume_candidate",
     "update_from_anchor",
+    "_build_per_axis_decomposition",
 ]

@@ -79,13 +79,15 @@ Per Catalog #305:
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Any, Mapping
 
-from tac.cathedral.consumer_contract import HookNumber
+from tac.cathedral.consumer_contract import AxisDecomposition, HookNumber
 
 
 CONSUMER_NAME = "per_segnet_class_chroma_consumer"
-CONSUMER_VERSION = "1.0.0"
+CONSUMER_VERSION = "1.1.0"  # bumped: per-axis decomposition emission (Dim 3 Step 3.4)
+_PROVENANCE_MODEL_ID = "per_segnet_class_chroma_consumer.predicted_axis_decomposition_v1"
 CONSUMER_HOOK_NUMBERS = (
     HookNumber.SENSITIVITY_MAP,
     HookNumber.BIT_ALLOCATOR,
@@ -106,6 +108,81 @@ def update_from_anchor(anchor: Any) -> None:
     _ = anchor
 
 
+def _build_per_axis_decomposition(
+    per_class_priority: Mapping[int, float] | None,
+    per_class_seg_deltas: Mapping[int, float] | None,
+    chroma_anchor_bytes_added: int,
+    m_contest_sha: str | None,
+) -> AxisDecomposition:
+    """Build canonical per-axis decomposition with Provenance.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: this consumer is
+    seg-axis-dominant (per-class chroma re-allocation acts on the
+    SegNet-conditional gradient). Pose-axis contribution is 0 by construction
+    (chroma priority does not move pose features). Rate-axis = chroma anchor
+    bytes added (caller supplies via ``chroma_anchor_bytes_added`` candidate
+    field; defaults to 0 when not provided).
+
+    The seg-delta is computed via the canonical 100·sum(class_weights *
+    class_seg_deltas) formula. When per-class seg-deltas are not provided,
+    seg-delta defaults to 0 (observability-only consumer per Catalog #341).
+    """
+    # Canonical Provenance per Catalog #323. Try/except matches the canonical
+    # pattern in findings_lagrangian_consumer for defensive checkout fallback.
+    try:
+        from tac.provenance.builders import build_provenance_for_predicted
+        from tac.provenance.validator import provenance_to_dict
+    except ImportError:  # pragma: no cover
+        canonical_provenance: Mapping[str, Any] = {
+            "artifact_kind": "predicted_from_model",
+            "model_id": _PROVENANCE_MODEL_ID,
+            "measurement_axis": "[predicted]",
+            "evidence_grade": "predicted",
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+        }
+    else:
+        sha_seed = m_contest_sha or "no_m_contest_sha"
+        n_classes = len(per_class_priority) if per_class_priority else 0
+        inputs_seed = f"{_PROVENANCE_MODEL_ID}:m_contest_sha={sha_seed}:n_classes={n_classes}"
+        inputs_sha256 = hashlib.sha256(inputs_seed.encode("utf-8")).hexdigest()
+        prov = build_provenance_for_predicted(
+            model_id=_PROVENANCE_MODEL_ID,
+            inputs_sha256=inputs_sha256,
+            measurement_axis="[predicted]",
+            hardware_substrate="cpu_local",
+        )
+        canonical_provenance = provenance_to_dict(prov)
+
+    # Seg-axis: 100·sum(class_weights * class_seg_deltas). When per-class
+    # deltas not provided (the common case), default to 0 — the consumer is
+    # OBSERVABILITY-ONLY per Catalog #341 unless caller wires the deltas.
+    seg_delta = 0.0
+    if per_class_priority is not None and per_class_seg_deltas is not None:
+        if isinstance(per_class_priority, Mapping) and isinstance(
+            per_class_seg_deltas, Mapping
+        ):
+            seg_delta = sum(
+                float(per_class_priority.get(cls, 0.0))
+                * float(per_class_seg_deltas.get(cls, 0.0))
+                for cls in per_class_priority
+            )
+
+    # Pose-axis: 0 by construction (chroma re-allocation does not move pose).
+    pose_delta = 0.0
+
+    # Rate-axis: chroma anchor bytes added (signed; positive = larger archive).
+    archive_bytes_delta = int(chroma_anchor_bytes_added)
+
+    return AxisDecomposition(
+        predicted_d_seg_delta=seg_delta,
+        predicted_d_pose_delta=pose_delta,
+        predicted_archive_bytes_delta=archive_bytes_delta,
+        axis_tag="[predicted]",
+        canonical_provenance=canonical_provenance,
+    )
+
+
 def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     """Catalog #125 hook #4 - cathedral autopilot ranker contribution.
 
@@ -115,9 +192,17 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     ``per_class_chroma_priority`` if a prior pipeline stage computed it;
     this consumer surfaces it in its contribution dict for downstream
     bit-allocator consumers to chain.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: also emits canonical
+    ``predicted_axis_decomposition`` field carrying ``AxisDecomposition``
+    (seg-axis-dominant per the NSCS06 v6->v7 anchor; pose=0 by construction;
+    rate=chroma_anchor_bytes_added). Per-axis emission is OBSERVABILITY-ONLY
+    per Catalog #341; the scalar ``predicted_delta_adjustment`` stays 0.0.
     """
     per_class_priority = candidate.get("per_class_chroma_priority")
+    per_class_seg_deltas = candidate.get("per_class_seg_deltas")
     m_contest_sha = candidate.get("m_contest_array_sha256")
+    chroma_anchor_bytes_added = int(candidate.get("chroma_anchor_bytes_added") or 0)
 
     rationale_parts = [
         "per-SegNet-class chroma priority consumer (exploit #5)",
@@ -134,6 +219,14 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         rationale_parts.append(f"M_contest sha256[:12]={str(m_contest_sha)[:12]}")
     rationale = "; ".join(rationale_parts)
 
+    # canonical_provenance= (the canonical kwarg is the Catalog #356 accept token)
+    decomposition = _build_per_axis_decomposition(
+        per_class_priority=per_class_priority,
+        per_class_seg_deltas=per_class_seg_deltas,
+        chroma_anchor_bytes_added=chroma_anchor_bytes_added,
+        m_contest_sha=m_contest_sha,
+    )
+
     return {
         "predicted_delta_adjustment": 0.0,
         "rationale": rationale,
@@ -144,6 +237,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "per_class_chroma_priority": per_class_priority,
         "m_contest_array_sha256": m_contest_sha,
         "empirical_anchor_cite": "NSCS06_v6_to_v7_chroma_optical_flow_redesign_20260516",
+        "predicted_axis_decomposition": decomposition.as_dict(),
     }
 
 
@@ -204,4 +298,5 @@ __all__ = [
     "compute_per_class_chroma_priority",
     "consume_candidate",
     "update_from_anchor",
+    "_build_per_axis_decomposition",
 ]

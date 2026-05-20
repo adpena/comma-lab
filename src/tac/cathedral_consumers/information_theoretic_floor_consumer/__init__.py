@@ -82,13 +82,17 @@ of arbitrary discrete memoryless channels* IEEE Trans Information Theory.
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Any, Mapping
 
-from tac.cathedral.consumer_contract import HookNumber
+from tac.cathedral.consumer_contract import AxisDecomposition, HookNumber
 
 
 CONSUMER_NAME = "information_theoretic_floor_consumer"
-CONSUMER_VERSION = "1.0.0"
+CONSUMER_VERSION = "1.1.0"  # bumped: per-axis decomposition emission (Dim 3 Step 3.4)
+_PROVENANCE_MODEL_ID = (
+    "information_theoretic_floor_consumer.predicted_axis_decomposition_v1"
+)
 CONSUMER_HOOK_NUMBERS = (
     HookNumber.SENSITIVITY_MAP,
     HookNumber.PARETO_CONSTRAINT,
@@ -107,12 +111,88 @@ def update_from_anchor(anchor: Any) -> None:
     _ = anchor
 
 
+def _build_per_axis_decomposition(
+    floor_estimate: float | None,
+    mode: str,
+    per_axis_floor: Mapping[str, float] | None,
+    m_contest_sha: str | None,
+) -> AxisDecomposition:
+    """Build canonical per-axis decomposition with Provenance.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: this consumer's natural
+    decomposition is the per-axis Cramer-Rao lower bound (the producer's
+    ``cramer_rao`` mode computes ``1 / fisher_info_per_axis`` for each of
+    seg / pose / rate axes; the sum is the scalar floor; the per-axis
+    components ARE the canonical decomposition per Cover & Thomas 2006 Ch
+    4 + Catalog #344). When the caller supplies ``per_axis_floor`` dict
+    {"seg": float, "pose": float, "rate_bytes": int} from the producer
+    surface, we propagate it directly; otherwise per-axis defaults to 0
+    per Catalog #341 observability-only invariant.
+
+    The values represent ACHIEVABLE-FLOOR deltas (signed; a negative
+    delta = improvement from current operating point toward the floor).
+    Consumer surfaces the per-axis decomposition as observability for the
+    Pareto polytope solver; the floor estimate itself is NOT a score
+    prediction — see consumer docstring's cargo-cult audit.
+    """
+    try:
+        from tac.provenance.builders import build_provenance_for_predicted
+        from tac.provenance.validator import provenance_to_dict
+    except ImportError:  # pragma: no cover
+        canonical_provenance: Mapping[str, Any] = {
+            "artifact_kind": "predicted_from_model",
+            "model_id": _PROVENANCE_MODEL_ID,
+            "measurement_axis": "[predicted]",
+            "evidence_grade": "predicted",
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+        }
+    else:
+        sha_seed = m_contest_sha or "no_m_contest_sha"
+        floor_seed = f"{floor_estimate:.6e}" if floor_estimate is not None else "none"
+        inputs_seed = (
+            f"{_PROVENANCE_MODEL_ID}:m_contest_sha={sha_seed}:mode={mode}"
+            f":floor={floor_seed}"
+        )
+        inputs_sha256 = hashlib.sha256(inputs_seed.encode("utf-8")).hexdigest()
+        prov = build_provenance_for_predicted(
+            model_id=_PROVENANCE_MODEL_ID,
+            inputs_sha256=inputs_sha256,
+            measurement_axis="[predicted]",
+            hardware_substrate="cpu_local",
+        )
+        canonical_provenance = provenance_to_dict(prov)
+
+    seg_delta = 0.0
+    pose_delta = 0.0
+    rate_bytes_delta = 0
+    if per_axis_floor is not None and isinstance(per_axis_floor, Mapping):
+        seg_delta = float(per_axis_floor.get("seg", 0.0))
+        pose_delta = float(per_axis_floor.get("pose", 0.0))
+        rate_bytes_delta = int(per_axis_floor.get("rate_bytes", 0))
+
+    return AxisDecomposition(
+        predicted_d_seg_delta=seg_delta,
+        predicted_d_pose_delta=pose_delta,
+        predicted_archive_bytes_delta=rate_bytes_delta,
+        axis_tag="[predicted]",
+        canonical_provenance=canonical_provenance,
+    )
+
+
 def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Catalog #125 hook #4 - cathedral autopilot ranker contribution."""
+    """Catalog #125 hook #4 - cathedral autopilot ranker contribution.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: also emits canonical
+    ``predicted_axis_decomposition`` (per-axis Cramer-Rao lower-bound
+    components per Cover & Thomas 2006 Ch 4). Per-axis emission is
+    OBSERVABILITY-ONLY per Catalog #341.
+    """
     floor_estimate = candidate.get("information_theoretic_floor")
     mode = candidate.get("floor_estimate_mode", "cramer_rao")
     m_contest_sha = candidate.get("m_contest_array_sha256")
     current_best_score = candidate.get("current_best_empirical_score")
+    per_axis_floor = candidate.get("per_axis_floor")
 
     rationale_parts = [
         "information-theoretic floor consumer (exploit #7)",
@@ -131,6 +211,13 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         rationale_parts.append(f"M_contest sha256[:12]={str(m_contest_sha)[:12]}")
     rationale = "; ".join(rationale_parts)
 
+    decomposition = _build_per_axis_decomposition(
+        floor_estimate=floor_estimate,
+        mode=str(mode),
+        per_axis_floor=per_axis_floor,
+        m_contest_sha=m_contest_sha,
+    )
+
     return {
         "predicted_delta_adjustment": 0.0,
         "rationale": rationale,
@@ -142,6 +229,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "floor_estimate_mode": mode,
         "current_best_empirical_score": current_best_score,
         "m_contest_array_sha256": m_contest_sha,
+        "predicted_axis_decomposition": decomposition.as_dict(),
     }
 
 
@@ -219,4 +307,5 @@ __all__ = [
     "consume_candidate",
     "estimate_cramer_rao_lower_bound",
     "update_from_anchor",
+    "_build_per_axis_decomposition",
 ]

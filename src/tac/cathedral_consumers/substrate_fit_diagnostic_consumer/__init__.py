@@ -74,13 +74,15 @@ Per Catalog #305:
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Any, Mapping
 
-from tac.cathedral.consumer_contract import HookNumber
+from tac.cathedral.consumer_contract import AxisDecomposition, HookNumber
 
 
 CONSUMER_NAME = "substrate_fit_diagnostic_consumer"
-CONSUMER_VERSION = "1.0.0"
+CONSUMER_VERSION = "1.1.0"  # bumped: per-axis decomposition emission (Dim 3 Step 3.4)
+_PROVENANCE_MODEL_ID = "substrate_fit_diagnostic_consumer.predicted_axis_decomposition_v1"
 CONSUMER_HOOK_NUMBERS = (
     HookNumber.SENSITIVITY_MAP,
     HookNumber.CATHEDRAL_AUTOPILOT_DISPATCH,
@@ -99,11 +101,78 @@ def update_from_anchor(anchor: Any) -> None:
     _ = anchor
 
 
+def _build_per_axis_decomposition(
+    substrate_fit_scores: Mapping[str, float] | None,
+    candidate_substrate: str | None,
+    per_axis_residuals: Mapping[str, float] | None,
+    m_contest_sha: str | None,
+) -> AxisDecomposition:
+    """Build canonical per-axis decomposition with Provenance.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: this consumer directly
+    separates seg-axis residual from pose-axis residual (substrate-fit
+    diagnostic already computes M_inflated vs M_contest cosine per axis).
+    Rate-axis = 0 by construction (substrate-fit is observability of the
+    rendered-frame gradient, not codec choice). When the caller supplies
+    explicit ``per_axis_residuals`` dict {"seg": float, "pose": float}, we
+    propagate them directly; otherwise residuals default to 0 per Catalog
+    #341 observability-only invariant.
+    """
+    try:
+        from tac.provenance.builders import build_provenance_for_predicted
+        from tac.provenance.validator import provenance_to_dict
+    except ImportError:  # pragma: no cover
+        canonical_provenance: Mapping[str, Any] = {
+            "artifact_kind": "predicted_from_model",
+            "model_id": _PROVENANCE_MODEL_ID,
+            "measurement_axis": "[predicted]",
+            "evidence_grade": "predicted",
+            "promotion_eligible": False,
+            "score_claim_valid": False,
+        }
+    else:
+        sha_seed = m_contest_sha or "no_m_contest_sha"
+        n_subs = len(substrate_fit_scores) if substrate_fit_scores else 0
+        inputs_seed = (
+            f"{_PROVENANCE_MODEL_ID}:m_contest_sha={sha_seed}:n_subs={n_subs}"
+            f":substrate={candidate_substrate or 'none'}"
+        )
+        inputs_sha256 = hashlib.sha256(inputs_seed.encode("utf-8")).hexdigest()
+        prov = build_provenance_for_predicted(
+            model_id=_PROVENANCE_MODEL_ID,
+            inputs_sha256=inputs_sha256,
+            measurement_axis="[predicted]",
+            hardware_substrate="cpu_local",
+        )
+        canonical_provenance = provenance_to_dict(prov)
+
+    seg_delta = 0.0
+    pose_delta = 0.0
+    if per_axis_residuals is not None and isinstance(per_axis_residuals, Mapping):
+        seg_delta = float(per_axis_residuals.get("seg", 0.0))
+        pose_delta = float(per_axis_residuals.get("pose", 0.0))
+
+    return AxisDecomposition(
+        predicted_d_seg_delta=seg_delta,
+        predicted_d_pose_delta=pose_delta,
+        predicted_archive_bytes_delta=0,  # substrate-fit does not change archive
+        axis_tag="[predicted]",
+        canonical_provenance=canonical_provenance,
+    )
+
+
 def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Catalog #125 hook #4 - cathedral autopilot ranker contribution."""
+    """Catalog #125 hook #4 - cathedral autopilot ranker contribution.
+
+    Per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4: also emits canonical
+    ``predicted_axis_decomposition`` (seg + pose residuals from substrate-fit
+    diagnostic; rate=0). Per-axis emission is OBSERVABILITY-ONLY per Catalog
+    #341.
+    """
     substrate_fit_scores = candidate.get("substrate_fit_scores")
     m_contest_sha = candidate.get("m_contest_array_sha256")
     candidate_substrate = candidate.get("substrate_name")
+    per_axis_residuals = candidate.get("per_axis_residuals")
 
     rationale_parts = [
         "substrate-fit diagnostic consumer (exploit #6)",
@@ -121,6 +190,13 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         rationale_parts.append(f"M_contest sha256[:12]={str(m_contest_sha)[:12]}")
     rationale = "; ".join(rationale_parts)
 
+    decomposition = _build_per_axis_decomposition(
+        substrate_fit_scores=substrate_fit_scores,
+        candidate_substrate=candidate_substrate,
+        per_axis_residuals=per_axis_residuals,
+        m_contest_sha=m_contest_sha,
+    )
+
     return {
         "predicted_delta_adjustment": 0.0,
         "rationale": rationale,
@@ -131,6 +207,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "substrate_fit_scores": substrate_fit_scores,
         "candidate_substrate": candidate_substrate,
         "m_contest_array_sha256": m_contest_sha,
+        "predicted_axis_decomposition": decomposition.as_dict(),
     }
 
 
@@ -211,4 +288,5 @@ __all__ = [
     "compute_substrate_fit_score",
     "consume_candidate",
     "update_from_anchor",
+    "_build_per_axis_decomposition",
 ]
