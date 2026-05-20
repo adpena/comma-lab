@@ -44352,6 +44352,92 @@
       "id": "lane_scorer_gradient_sparse_residual_pose_hardpair_smoke_20260520",
       "name": "Scorer-gradient sparse residual pose hardpair smoke",
       "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/scorer_gradient_sparse_residual.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/scorer_gradient_sparse_residual_smoke_20260520_codex/scorer_gradient_pose_pair508_k512_d1_20260520_codex.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "pose-gradient hardpair pair508 k512 regressed +0.00137973 with PoseNet unchanged and SegNet worse; require local pre/post component micro-eval or SegNet-boundary veto before widening"
+      ]
+    },
+    {
+      "id": "lane_grand_council_pr_110_writeup_decision_symposium_20260520",
+      "name": "T3 Grand Council PR #110 writeup decision symposium",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/grand_council_pr_110_writeup_decision_symposium_20260520T211716Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_grand_council_pr_110_writeup_decision_landed_20260520.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_ll_hinton_distilled_scorer_saliency_residual_20260520",
+      "name": "LL: L2 Hinton-distilled scorer surrogate + saliency-masked residual",
+      "phase": 0.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -44387,7 +44473,292 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "Registered after corrected-target scorer-gradient smoke regressed full advisory despite local PoseNet pair improvement; proceed as $0 compress-time backprop/surrogate lane with held-out advisory-correlation gate.",
+      "research_only": true,
+      "lane_class": "optimization_tool",
+      "reactivation_criteria": [
+        "Build $0 local scorer-surrogate dataset from baseline/target pairs and existing sparse-residual failures; require held-out full-advisory correlation before any widened candidate spend."
+      ]
+    },
+    {
+      "id": "lane_pact_nerv_distilled_scorer_l0_scaffold_20260520",
+      "name": "Pact-NeRV-DistilledScorer L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_distilled_scorer/ + experiments/train_substrate_pact_nerv_distilled_scorer.py + scripts/remote_lane_substrate_pact_nerv_distilled_scorer.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_distilled_scorer_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G2 variant Group 2 mid-LOC; archive_grammar=PDS monolithic 0.bin (21-byte header); research_only=true dispatch_enabled=false; literature=Hinton-Vinyals-Dean 2015 arXiv:1503.02531 KL-T=2.0 distillation"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_distilled_scorer.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 2 mid-LOC variant; literature=Hinton-Vinyals-Dean 2015 arXiv:1503.02531 KL-T=2.0 distillation; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "monolithic single-file 0.bin PDS (21-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 400,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_vq_l0_scaffold_20260520",
+      "name": "Pact-NeRV-VQ L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_vq/ + experiments/train_substrate_pact_nerv_vq.py + scripts/remote_lane_substrate_pact_nerv_vq.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_vq_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G2 variant Group 2 mid-LOC; archive_grammar=PVQ monolithic 0.bin (27-byte header); research_only=true dispatch_enabled=false; literature=van den Oord 2017 VQ-VAE arXiv:1711.00937"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_vq.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 2 mid-LOC variant; literature=van den Oord 2017 VQ-VAE arXiv:1711.00937; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "monolithic single-file 0.bin PVQ (27-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 400,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_bayesian_l0_scaffold_20260520",
+      "name": "Pact-NeRV-Bayesian L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_bayesian/ + experiments/train_substrate_pact_nerv_bayesian.py + scripts/remote_lane_substrate_pact_nerv_bayesian.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_bayesian_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G2 variant Group 2 mid-LOC; archive_grammar=PBN monolithic 0.bin (21-byte header); research_only=true dispatch_enabled=false; literature=Blundell 2015 Bayes by Backprop arXiv:1505.05424"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_bayesian.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 2 mid-LOC variant; literature=Blundell 2015 Bayes by Backprop arXiv:1505.05424; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "monolithic single-file 0.bin PBN (21-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 400,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_multi_modal_l0_scaffold_20260520",
+      "name": "Pact-NeRV-MultiModal L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_multi_modal/ + experiments/train_substrate_pact_nerv_multi_modal.py + scripts/remote_lane_substrate_pact_nerv_multi_modal.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_multi_modal_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G2 variant Group 2 mid-LOC; archive_grammar=PMM monolithic 0.bin (36-byte header); research_only=true dispatch_enabled=false; literature=Baltrusaitis 2019 + Radford 2021 CLIP arXiv:2103.00020"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_multi_modal.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 2 mid-LOC variant; literature=Baltrusaitis 2019 + Radford 2021 CLIP arXiv:2103.00020; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "monolithic single-file 0.bin PMM (36-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 400,
+        "no_op_detector_planned": true
+      }
+    },
+    {
+      "id": "lane_pact_nerv_diffusion_trajectory_l0_scaffold_20260520",
+      "name": "Pact-NeRV-DiffusionTrajectory L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_diffusion_trajectory/ + experiments/train_substrate_pact_nerv_diffusion_trajectory.py + scripts/remote_lane_substrate_pact_nerv_diffusion_trajectory.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_diffusion_trajectory_modal_t4_dispatch.yaml; tests pass; PACT-NERV-ULTIMATE G2 variant Group 2 mid-LOC; archive_grammar=PDT monolithic 0.bin (22-byte header); research_only=true dispatch_enabled=false; literature=Rombach 2022 LDM arXiv:2112.10752 + Blattmann 2023 video LDM"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_diffusion_trajectory.sh + recipe dispatch_enabled:false research_only:true; bash -n verified; Catalog #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 multi-key mode env var"
+        }
+      },
+      "notes": "PACT-NERV-ULTIMATE Group 2 mid-LOC variant; literature=Rombach 2022 LDM arXiv:2112.10752 + Blattmann 2023 video LDM; dispatch_enabled=false in recipe per Catalog #240; research_only=true; lane_class=score_gradient_aware_substrate_engineering; score_improvement_mechanism_status=RESEARCH_ONLY pending PACT-NERV symposium Stage 1 dispatch operator-gated. Reactivation: PACT-NERV Stage 1 + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "monolithic single-file 0.bin PDT (22-byte header)",
+        "parser_section_manifest": "header + decoder_blob + payload_blobs + meta_blob = 4+ sections per package design",
+        "inflate_runtime_loc_budget": 200,
+        "runtime_dep_closure": [
+          "torch",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 per-pair data",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 400,
+        "no_op_detector_planned": true
+      }
     }
   ],
   "level_rules": {
@@ -44397,5 +44768,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T20:50:40Z"
+  "updated_at": "2026-05-20T21:23:18Z"
 }
