@@ -86,6 +86,12 @@ MASTER_GRADIENT_DEVICE="${MASTER_GRADIENT_DEVICE:-cuda}"
 # CUDA authoritative-axis gate per tools/extract_master_gradient.py:2177 requires
 # n_pairs_used == n_pairs_total (full 600 pair contest set).
 MASTER_GRADIENT_N_PAIRS_USED="${MASTER_GRADIENT_N_PAIRS_USED:-600}"
+# Catalog #218 sister mini-batch chunk size for decoder forward + scorer forward + backward loop.
+# Default 100 for T4 (14.56 GB): 600/100 = 6 chunks; estimated ~0.33 GiB activation per chunk vs
+# 14.56 GB capacity vs the OOM at 600-pair full-batch needing 1.98 GiB > 759 MiB free. Recipe can
+# override via env_overrides (e.g. 50 for tighter memory budget, 200 for A10G/A100, 0 for
+# full-batch path on CPU smokes).
+MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE="${MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE:-100}"
 MASTER_GRADIENT_HARDWARE_SUBSTRATE="${MASTER_GRADIENT_HARDWARE_SUBSTRATE:-linux_x86_64_t4_modal}"
 
 DISPATCH_INSTANCE_JOB_ID="${MASTER_GRADIENT_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
@@ -221,7 +227,7 @@ trap "kill $HEARTBEAT_PID 2>/dev/null || true" EXIT
 # Stage 4: invoke the extractor.
 log "stage_4_extractor_begin"
 log "archive=$MASTER_GRADIENT_ARCHIVE_PATH inflate=$MASTER_GRADIENT_INFLATE_PY_PATH"
-log "axis=$MASTER_GRADIENT_AXIS device=$MASTER_GRADIENT_DEVICE n_pairs_used=$MASTER_GRADIENT_N_PAIRS_USED hardware_substrate=$MASTER_GRADIENT_HARDWARE_SUBSTRATE"
+log "axis=$MASTER_GRADIENT_AXIS device=$MASTER_GRADIENT_DEVICE n_pairs_used=$MASTER_GRADIENT_N_PAIRS_USED hardware_substrate=$MASTER_GRADIENT_HARDWARE_SUBSTRATE decoder_forward_batch_size=$MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE"
 
 set +e
 PYTHONPATH="$WORKSPACE/src:$WORKSPACE/upstream:$WORKSPACE/tools:${PYTHONPATH:-}" \
@@ -234,6 +240,7 @@ PYTHONPATH="$WORKSPACE/src:$WORKSPACE/upstream:$WORKSPACE/tools:${PYTHONPATH:-}"
     --output-npy "$MASTER_GRADIENT_OUTPUT_NPY" \
     --device "$MASTER_GRADIENT_DEVICE" \
     --n-pairs-used "$MASTER_GRADIENT_N_PAIRS_USED" \
+    --decoder-forward-batch-size "$MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE" \
     --hardware-substrate "$MASTER_GRADIENT_HARDWARE_SUBSTRATE" \
     --call-id "$DISPATCH_INSTANCE_JOB_ID" \
     --verbose \

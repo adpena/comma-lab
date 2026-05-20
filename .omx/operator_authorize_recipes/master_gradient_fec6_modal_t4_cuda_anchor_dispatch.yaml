@@ -101,6 +101,12 @@ env_overrides:
   # Full pair count per the authoritative-axis gate in tools/extract_master_gradient.py:2177
   # ([contest-CUDA] anchors require n_pairs_used == n_pairs_total per the authority check)
   MASTER_GRADIENT_N_PAIRS_USED: "600"
+  # Catalog #218 sister mini-batch chunk size for the decoder forward + scorer forward +
+  # backward loop (canonical fix for 2026-05-20 OOM anchor fc-01KS352JAFKP2NG96KHDBGQAQS:
+  # 600-pair full-batch needed 1.98 GiB > 759 MiB free on 14.56 GB T4). 100 chunks = 6
+  # passes of 100 pairs each; gradients accumulate per-chunk via the canonical Catalog
+  # #218 pattern (math identity: mean(loss_over_n)=sum_chunks(sum(loss_in_chunk)/n_total)).
+  MASTER_GRADIENT_DECODER_FORWARD_BATCH_SIZE: "100"
   MASTER_GRADIENT_HARDWARE_SUBSTRATE: linux_x86_64_t4_modal
   LOCAL_CUDA_WORKER: "0"
 
