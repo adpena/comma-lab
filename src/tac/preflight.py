@@ -39638,6 +39638,15 @@ _SHARED_STATE_PATH_MARKERS: tuple[str, ...] = (
     # / ``update_equation_with_empirical_anchor`` are refused.
     "canonical_equations_registry",
     "CANONICAL_EQUATIONS_REGISTRY_PATH",
+    # WAVE-3-DIM-1-PHASE-2 (2026-05-20) — Phase 2 per-adjuster ablation
+    # posterior. Sister of Catalog #245/#313/#333/#344 canonical fcntl-locked
+    # JSONL APPEND-ONLY ledgers. Direct writes outside
+    # ``tac.findings_lagrangian.phase_2_ablation.append_paired_comparison_row``
+    # are refused. Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable
+    # + Catalog #287/#323 the persisted rows are observability-only
+    # (score_claim=False + promotable=False + axis_tag=[predicted]).
+    "phase_2_ablation_posterior",
+    "PHASE_2_ABLATION_POSTERIOR_PATH",
 )
 
 _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
@@ -39649,6 +39658,7 @@ _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
     "_active_vms_lock",
     "_ledger_lock",  # Catalog #245 (Modal call_id ledger)
     "_inbox_lock",  # Catalog #333 (Codex to Claude inbox)
+    "PHASE_2_ABLATION_POSTERIOR_LOCK_PATH",  # WAVE-3-DIM-1-PHASE-2
     "FileLock",
 )
 
@@ -39735,6 +39745,14 @@ _BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS: tuple[str, ...] = (
     "load_verdict_events_lenient",
     "query_latest_session",
     "query_consumer_activity_summary",
+    # WAVE-3-DIM-1-PHASE-2 (2026-05-20) — Phase 2 per-adjuster ablation
+    # canonical fcntl-locked APPEND-ONLY helpers. Sister of Catalog #245
+    # canonical 4-layer ledger pattern.
+    "append_paired_comparison_row",
+    "load_paired_comparison_rows_strict",
+    "load_paired_comparison_rows_lenient",
+    "paired_comparison_against_hand_derived",
+    "compute_solver_dual_variable_for_adjuster",
 )
 
 # Files that legitimately implement canonical fcntl-locked helpers OR are
@@ -39761,6 +39779,7 @@ _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/canonical_frontier_pointer.py",  # canonical (Catalog #343)
     "src/tac/canonical_equations/registry.py",  # canonical (Catalog #344)
     "src/tac/cathedral/verdict_ledger.py",  # canonical cathedral verdict ledger (T3 #4 activation)
+    "src/tac/findings_lagrangian/phase_2_ablation/ablation_framework.py",  # WAVE-3-DIM-1-PHASE-2 canonical
     "src/tac/deploy/vastai/client.py",  # routes through register_instance (vastai_tracker)
     "src/tac/preflight.py",  # this gate's own scanning code
     "src/tac/preflight_fs_cache.py",  # threading.Lock (in-process cache only)

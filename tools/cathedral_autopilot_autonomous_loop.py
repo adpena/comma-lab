@@ -6788,6 +6788,295 @@ def _lagrangian_derived_adjustment_factor(
     return float(factor)
 
 
+PHASE_2_ABLATION_INVOCATION_SCHEMA = "phase_2_ablation_invocation_v1_20260520"
+"""Canonical schema id for the Phase 2 ablation invocation output payload.
+
+Mirrors :data:`META_LAGRANGIAN_INVOCATION_SCHEMA` per Catalog #245/#300/#336
+sister versioning discipline. Bump when output shape changes meaningfully.
+"""
+
+
+def invoke_phase_2_ablation_on_candidates(
+    candidates: list[CandidateRow],
+    *,
+    mode: str = "paired_comparison",
+    top_n: int | None = None,
+    panel_axis: str = "contest_cpu",
+    sigma_obs: float = 1.0,
+    persist_to_posterior: bool = False,
+) -> dict[str, Any]:
+    """WAVE-3-DIM-1-PHASE-2 (2026-05-20) per-adjuster ablation invoker.
+
+    Mirrors :func:`invoke_meta_lagrangian_on_candidates` per Catalog #336
+    invoker-callsite pattern. For each candidate, this Phase 2 helper:
+
+      1. Iterates over the 3 SUPPORTED_ADJUSTERS (mdl_density,
+         predicted_dispatch_risk, composition_alpha_v2).
+      2. Builds an ``AdjusterAblationContext`` per (candidate, adjuster).
+      3. Invokes :func:`paired_comparison_against_hand_derived` to compute
+         the hand-derived adjustment + solver-derived dual variable +
+         divergence statistics.
+      4. Optionally appends each verdict to
+         ``.omx/state/phase_2_ablation_posterior.jsonl`` via
+         :func:`append_paired_comparison_row` (only when
+         ``persist_to_posterior=True``; defaults OFF so smoke runs don't
+         pollute the canonical ledger).
+      5. Surfaces aggregate divergence statistics (mean / max / variance /
+         sign-flip count) per Catalog #306 paired-comparison discipline.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #287/#323:
+    every verdict carries ``score_claim=False`` + ``promotable=False`` +
+    ``axis_tag="[predicted]"``. The aggregate verdict surface is observability-
+    only; the ranker continues to use ``apply_z1_empirical_revision_to_candidate_delta``
+    as authoritative (the hand-derived cascade) — Phase 2 is the
+    paired-comparison measurement window, not the promotion event.
+
+    Per CLAUDE.md "Meta-Lagrangian/Pareto solver - NON-NEGOTIABLE": Phase 2
+    is the bridge from Phase 1 (bounded proxy adjuster) to Phase 3+
+    (typed-atom flow + per-element learned-optimal destination). The 3
+    selected adjusters are HIGH-leverage HIGH-EV starting points; sister
+    subagents (Wave-4/5/6) extend to the remaining 7.
+
+    Args:
+        candidates: ranked candidate list (typically autopilot ranker output).
+        mode: one of {hand_derived, solver_derived, paired_comparison}. Phase
+            2 default = paired_comparison (safety rail).
+        top_n: cap at top-N candidates; ``None`` means all (default).
+        panel_axis: contest score axis (mirrors sister helpers).
+        sigma_obs: observation noise std-dev for the Gaussian posterior.
+        persist_to_posterior: when True, append verdicts to the canonical
+            fcntl-locked JSONL ledger. Default OFF.
+
+    Returns:
+        Dict with:
+          - ``schema``: pinned schema id
+          - ``evidence_grade``: "[predicted, Phase 2 ablation]"
+          - ``score_claim``: False
+          - ``promotion_eligible``: False
+          - ``ready_for_exact_eval_dispatch``: False
+          - ``panel_axis``: passthrough
+          - ``mode``: passthrough
+          - ``top_n``: passthrough
+          - ``candidates_invoked``: count
+          - ``adjusters_per_candidate``: count (== 3 for Phase 2 START)
+          - ``verdicts``: per-(candidate, adjuster) annotation rows
+          - ``aggregate_divergence``: per-adjuster stats
+            (mean / max / std / sign_flip_count / out_of_tolerance_count)
+          - ``per_candidate_errors``: count of trapped exceptions
+          - ``posterior_persisted_count``: rows written to the JSONL ledger
+          - ``next_phase_roadmap``: pointer to the landing memo
+    """
+    # Bound the candidate set.
+    target_candidates = list(candidates)
+    if top_n is not None and top_n > 0:
+        target_candidates = target_candidates[:top_n]
+
+    # Lazy import — keep the autopilot import tree light when wire-in is not
+    # on the hot path.
+    try:
+        from tac.findings_lagrangian.phase_2_ablation import (
+            AblationMode,
+            AdjusterAblationContext,
+            AdjusterAblationVerdict,
+            SUPPORTED_ADJUSTERS,
+            append_paired_comparison_row,
+            paired_comparison_against_hand_derived,
+        )
+        _ABLATION_OK = True
+        _import_error: str | None = None
+    except Exception as exc:  # noqa: BLE001 defensive
+        _ABLATION_OK = False
+        _import_error = f"{type(exc).__name__}: {exc}"
+
+    if not _ABLATION_OK:
+        return {
+            "schema": PHASE_2_ABLATION_INVOCATION_SCHEMA,
+            "evidence_grade": "[predicted, Phase 2 ablation]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "panel_axis": panel_axis,
+            "mode": mode,
+            "top_n": top_n,
+            "candidates_invoked": 0,
+            "adjusters_per_candidate": 0,
+            "verdicts": [],
+            "aggregate_divergence": {},
+            "per_candidate_errors": 1,
+            "posterior_persisted_count": 0,
+            "schema_error": f"tac.findings_lagrangian.phase_2_ablation unavailable: {_import_error}",
+            "next_phase_roadmap": (
+                ".omx/research/cathedral_autopilot_smarter_design_blueprint_"
+                "20260520T130325Z.md Dim 1 Phase 2"
+            ),
+        }
+
+    # Map string mode -> enum.
+    try:
+        ablation_mode = AblationMode(mode)
+    except (KeyError, ValueError) as exc:
+        return {
+            "schema": PHASE_2_ABLATION_INVOCATION_SCHEMA,
+            "evidence_grade": "[predicted, Phase 2 ablation]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "panel_axis": panel_axis,
+            "mode": mode,
+            "top_n": top_n,
+            "candidates_invoked": 0,
+            "adjusters_per_candidate": 0,
+            "verdicts": [],
+            "aggregate_divergence": {},
+            "per_candidate_errors": 1,
+            "posterior_persisted_count": 0,
+            "schema_error": (
+                f"invalid mode={mode!r}: {type(exc).__name__}: {exc}"
+            ),
+            "next_phase_roadmap": (
+                ".omx/research/cathedral_autopilot_smarter_design_blueprint_"
+                "20260520T130325Z.md Dim 1 Phase 2"
+            ),
+        }
+
+    verdicts: list[dict[str, Any]] = []
+    per_candidate_errors = 0
+    posterior_persisted_count = 0
+
+    # Track per-adjuster divergence stats for aggregate reporting.
+    divergences_per_adjuster: dict[str, list[float]] = {
+        name: [] for name in SUPPORTED_ADJUSTERS
+    }
+    sign_flips_per_adjuster: dict[str, int] = {
+        name: 0 for name in SUPPORTED_ADJUSTERS
+    }
+    out_of_tolerance_per_adjuster: dict[str, int] = {
+        name: 0 for name in SUPPORTED_ADJUSTERS
+    }
+
+    # Map adjuster name -> CandidateRow field accessor.
+    def _signal_for_adjuster(c: CandidateRow, name: str) -> float | None:
+        if name == "mdl_density":
+            return c.mdl_density
+        if name == "predicted_dispatch_risk":
+            return c.predicted_dispatch_risk
+        if name == "composition_alpha_v2":
+            return c.composition_alpha
+        return None
+
+    for candidate in target_candidates:
+        for adjuster_name in SUPPORTED_ADJUSTERS:
+            try:
+                signal_value = _signal_for_adjuster(candidate, adjuster_name)
+                ctx = AdjusterAblationContext(
+                    adjuster_name=adjuster_name,
+                    mode=ablation_mode,
+                    base_delta=float(candidate.predicted_score_delta),
+                    signal_value=signal_value,
+                    candidate_id=candidate.candidate_id,
+                    family=candidate.family or "",
+                    sigma_obs=sigma_obs,
+                    panel_axis=panel_axis,
+                )
+                verdict = paired_comparison_against_hand_derived(ctx)
+                verdicts.append(verdict.to_jsonl_dict())
+
+                # Accumulate aggregate stats (only when solver fired).
+                if ablation_mode is not AblationMode.HAND_DERIVED:
+                    divergences_per_adjuster[adjuster_name].append(
+                        verdict.divergence
+                    )
+                    if verdict.sign_flip:
+                        sign_flips_per_adjuster[adjuster_name] += 1
+                    if not verdict.within_tolerance:
+                        out_of_tolerance_per_adjuster[adjuster_name] += 1
+
+                if persist_to_posterior:
+                    try:
+                        append_paired_comparison_row(verdict)
+                        posterior_persisted_count += 1
+                    except Exception as persist_exc:  # noqa: BLE001
+                        per_candidate_errors += 1
+                        verdicts.append({
+                            "candidate_id": candidate.candidate_id,
+                            "adjuster_name": adjuster_name,
+                            "error": (
+                                "posterior_persist_failed: "
+                                f"{type(persist_exc).__name__}: {persist_exc}"
+                            ),
+                            "axis_tag": "[predicted]",
+                            "score_claim": False,
+                            "promotable": False,
+                        })
+            except Exception as exc:  # noqa: BLE001 defensive
+                per_candidate_errors += 1
+                verdicts.append({
+                    "candidate_id": candidate.candidate_id,
+                    "adjuster_name": adjuster_name,
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "axis_tag": "[predicted]",
+                    "score_claim": False,
+                    "promotable": False,
+                })
+
+    # Build aggregate stats.
+    aggregate_divergence: dict[str, dict[str, Any]] = {}
+    for name in SUPPORTED_ADJUSTERS:
+        divs = divergences_per_adjuster[name]
+        if not divs:
+            aggregate_divergence[name] = {
+                "n": 0,
+                "mean_abs_divergence": None,
+                "max_abs_divergence": None,
+                "std_abs_divergence": None,
+                "sign_flip_count": 0,
+                "out_of_tolerance_count": 0,
+            }
+            continue
+        abs_divs = [abs(d) for d in divs]
+        mean_abs = sum(abs_divs) / len(abs_divs)
+        max_abs = max(abs_divs)
+        if len(abs_divs) >= 2:
+            # Population std-dev (n divisor) for compatibility with downstream
+            # statistical-power reporting; sample std requires n>=2.
+            try:
+                import statistics as _stats
+                std_abs = _stats.pstdev(abs_divs)
+            except Exception:  # noqa: BLE001
+                std_abs = None
+        else:
+            std_abs = 0.0
+        aggregate_divergence[name] = {
+            "n": len(divs),
+            "mean_abs_divergence": mean_abs,
+            "max_abs_divergence": max_abs,
+            "std_abs_divergence": std_abs,
+            "sign_flip_count": sign_flips_per_adjuster[name],
+            "out_of_tolerance_count": out_of_tolerance_per_adjuster[name],
+        }
+
+    return {
+        "schema": PHASE_2_ABLATION_INVOCATION_SCHEMA,
+        "evidence_grade": "[predicted, Phase 2 ablation]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "panel_axis": panel_axis,
+        "mode": mode,
+        "top_n": top_n,
+        "candidates_invoked": len(target_candidates),
+        "adjusters_per_candidate": len(SUPPORTED_ADJUSTERS),
+        "verdicts": verdicts,
+        "aggregate_divergence": aggregate_divergence,
+        "per_candidate_errors": per_candidate_errors,
+        "posterior_persisted_count": posterior_persisted_count,
+        "next_phase_roadmap": (
+            ".omx/research/cathedral_autopilot_smarter_design_blueprint_"
+            "20260520T130325Z.md Dim 1 Phase 2"
+        ),
+    }
+
+
 def invoke_meta_lagrangian_on_candidates(
     candidates: list[CandidateRow],
     *,
@@ -7263,6 +7552,38 @@ def main(argv: list[str] | None = None) -> int:
             "promotion_eligible=False + axis_tag=[predicted]."
         ),
     )
+    parser.add_argument(
+        "--phase-2-ablation-mode",
+        choices=("hand_derived", "solver_derived", "paired_comparison"),
+        default="paired_comparison",
+        help=(
+            "WAVE-3-DIM-1-PHASE-2 (META-LAGRANGIAN-WIRE-1 Phase 2; 2026-05-20): "
+            "select which adjustment cascade is authoritative for the "
+            "3 selected adjusters (mdl_density, predicted_dispatch_risk, "
+            "composition_alpha_v2). 'hand_derived' = pre-Phase-2 baseline "
+            "(solver not invoked); 'solver_derived' = promotion-target mode; "
+            "'paired_comparison' (default; safety-rail) = both fire, hand-"
+            "derived authoritative, divergence emitted to "
+            ".omx/state/phase_2_ablation_posterior.jsonl. Per CLAUDE.md "
+            "'Forbidden premature KILL': hand-derived stays authoritative "
+            "until 30+ days of paired-comparison data show max regression < "
+            "$1 EV. Per Catalog #287/#323 ablation rows are observability-only."
+        ),
+    )
+    parser.add_argument(
+        "--persist-phase-2-ablation",
+        action="store_true",
+        help=(
+            "WAVE-3-DIM-1-PHASE-2 (2026-05-20): persist paired-comparison "
+            "verdicts to .omx/state/phase_2_ablation_posterior.jsonl per "
+            "the canonical fcntl-locked APPEND-ONLY ledger pattern "
+            "(Catalog #131/#138/#245 sister discipline). Opt-in default OFF "
+            "so smoke runs don't pollute the canonical ledger; --report-only "
+            "+ --phase-2-ablation-mode paired_comparison reports inline only "
+            "when this flag is omitted. Per Catalog #287/#323 persisted rows "
+            "carry score_claim=False + promotable=False + axis_tag=[predicted]."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -7532,6 +7853,22 @@ def main(argv: list[str] | None = None) -> int:
             panel_axis=args.score_panel_axis,
         )
 
+        # WAVE-3-DIM-1-PHASE-2 (2026-05-20): per-adjuster ablation invocation
+        # on the same ranked top-N. EXTENDS Phase 1 (does NOT replace it).
+        # Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable:
+        # replaces hand-derived adjusters with solver-derived dual variables
+        # for the 3 highest-leverage adjusters (mdl_density,
+        # predicted_dispatch_risk, composition_alpha_v2). Per Catalog
+        # #287/#323: contribution is OBSERVABILITY-ONLY; default mode is
+        # paired_comparison (safety rail; hand-derived authoritative).
+        phase_2_ablation_invocations = invoke_phase_2_ablation_on_candidates(
+            ranked,
+            mode=args.phase_2_ablation_mode,
+            top_n=top_n,
+            panel_axis=args.score_panel_axis,
+            persist_to_posterior=args.persist_phase_2_ablation,
+        )
+
         # T3 council prioritization 2026-05-19 rank #4 ACTIVATION sprint:
         # persist the consumer invocation batch to the canonical fcntl-locked
         # JSONL ledger so the operator-runnable summary tool can audit what
@@ -7582,9 +7919,12 @@ def main(argv: list[str] | None = None) -> int:
                 "anti_duplication_reuses_rank_candidates",
                 "cathedral_consumer_invocation_active_catalog_336_337",
                 "meta_lagrangian_invocation_active_catalog_355",
+                "phase_2_ablation_invocation_active_wave_3_dim_1",
             ],
             "cathedral_consumer_invocations": consumer_invocations,
             "meta_lagrangian_invocations": meta_lagrangian_invocations,
+            "phase_2_ablation_invocations": phase_2_ablation_invocations,
+            "phase_2_ablation_mode": args.phase_2_ablation_mode,
             "rank_axis": args.rank_axis,
             "z1_empirical_revision_applied": True,
             "continual_posterior_loaded": args.load_continual_posterior,
@@ -7672,6 +8012,17 @@ def main(argv: list[str] | None = None) -> int:
             top_n=min(args.max_dispatch_recommendations or 10, 10),
             panel_axis=args.score_panel_axis,
         )
+
+        # WAVE-3-DIM-1-PHASE-2 (2026-05-20): same post-loop wire-in as
+        # report-only. Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-
+        # negotiable + Catalog #287/#323 observability-only at Phase 2.
+        phase_2_ablation_invocations_post_loop = invoke_phase_2_ablation_on_candidates(
+            ranked_post_loop,
+            mode=args.phase_2_ablation_mode,
+            top_n=min(args.max_dispatch_recommendations or 10, 10),
+            panel_axis=args.score_panel_axis,
+            persist_to_posterior=args.persist_phase_2_ablation,
+        )
     except Exception as exc:  # noqa: BLE001  defensive: never crash the loop
         consumer_invocations_post_loop = {
             "schema": CATHEDRAL_CONSUMER_INVOCATION_SCHEMA,
@@ -7693,6 +8044,20 @@ def main(argv: list[str] | None = None) -> int:
             "phase": "phase_1_canonical_invocation_with_bounded_proxy_adjuster",
             "invocations": [],
             "per_candidate_errors": 0,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+        phase_2_ablation_invocations_post_loop = {
+            "schema": PHASE_2_ABLATION_INVOCATION_SCHEMA,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "candidates_invoked": 0,
+            "adjusters_per_candidate": 0,
+            "mode": args.phase_2_ablation_mode,
+            "verdicts": [],
+            "aggregate_divergence": {},
+            "per_candidate_errors": 0,
+            "posterior_persisted_count": 0,
             "error": f"{type(exc).__name__}: {exc}",
         }
         ranked_post_loop = []
@@ -7754,9 +8119,12 @@ def main(argv: list[str] | None = None) -> int:
             else "compressive_sensing_lattice_diagnostic_not_requested",
             "cathedral_consumer_invocation_active_catalog_336_337",
             "meta_lagrangian_invocation_active_catalog_355",
+            "phase_2_ablation_invocation_active_wave_3_dim_1",
         ],
         "cathedral_consumer_invocations": consumer_invocations_post_loop,
         "meta_lagrangian_invocations": meta_lagrangian_invocations_post_loop,
+        "phase_2_ablation_invocations": phase_2_ablation_invocations_post_loop,
+        "phase_2_ablation_mode": args.phase_2_ablation_mode,
         "iterations_run": len(reports),
         "race_mode": args.race_mode,
         "operator_authorized_mode": {
