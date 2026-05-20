@@ -5189,6 +5189,21 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #354: master-gradient exploit consumers bundle completeness.
+        # RESPAWN-MG-7-BUNDLE 2026-05-20 self-protection per operator
+        # NON-NEGOTIABLE 2026-05-19 verbatim "Implement all exploits and wire
+        # and integrate all". Sister of Catalog #335 at the bundle-
+        # completeness surface; refuses any state where one or more of the 8
+        # required master-gradient exploit consumers (exploits 2-9) is
+        # missing OR breaks the canonical contract.
+        # STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+        # the 8 consumer packages land in the same commit batch as this gate
+        # driving live count to 0.
+        # Memory: feedback_slot_mg7_bundle_master_gradient_exploits_landed_20260520.
+        check_master_gradient_exploit_consumers_complete(
+            strict=True, verbose=verbose
+        )
+
         # Catalog #344: canonical equations registry — refuse new empirical-
         # finding memos missing canonical equation reference.
         # STRICT-FLIPPED 2026-05-19 by STRICT-FLIP-ENABLERS subagent per
@@ -76048,6 +76063,198 @@ def check_new_gate_landing_includes_retroactive_sweep_evidence(
             "ship `.omx/research/retroactive_sweep_for_catalog_<N>_<utc>.md` "
             "with the 4-field contract, or an explicit same-line "
             "RETROACTIVE_SWEEP_WAIVED rationale:\n  "
+            + "\n  ".join(v[:400] for v in violations[:8])
+        )
+    return violations
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Catalog #354 — master-gradient exploit consumers bundle (exploits 2-9)
+# ────────────────────────────────────────────────────────────────────────────
+#
+# RESPAWN-MG-7-BUNDLE 2026-05-20 self-protection per operator NON-NEGOTIABLE
+# 2026-05-19 verbatim *"Implement all exploits and wire and integrate all"*.
+# Sister of Catalog #335 (the canonical contract surface for all cathedral
+# consumers; #354 specifically verifies the 8 master-gradient exploit
+# consumers ARE present + importable + canonical-contract-compliant). Per
+# CLAUDE.md "Bugs must be permanently fixed AND self-protected against".
+#
+# The 8 required packages map to the 10-exploit enumeration in the producer
+# surface ``tac.master_gradient_comparison.multi_granularity`` (sister MG-3):
+#   #2 score_weighted_reconstruction_error_consumer
+#   #3 top_k_byte_sensitivity_consumer
+#   #4 bottom_k_free_entropy_byte_consumer
+#   #5 per_segnet_class_chroma_consumer
+#   #6 substrate_fit_diagnostic_consumer
+#   #7 information_theoretic_floor_consumer
+#   #8 bit_level_score_critical_bits_consumer
+#   #9 per_pair_gradient_clustering_consumer
+# (exploit #1 covered by sister MG-4 per_pair_difficulty_atlas_consumer;
+#  exploit #10 covered by sister MG-5 streaming_prediction_consumer)
+#
+# This gate is a STRUCTURAL completeness check: the cathedral autopilot
+# ranker's master-gradient exploit cascade requires ALL 8 consumers present
+# + canonical-contract-compliant. If a future refactor removes one OR
+# breaks its canonical contract, the cathedral ranker silently loses the
+# exploit's contribution (orphan-signal class per CLAUDE.md
+# "Subagent coherence-by-default" non-negotiable).
+
+_CHECK_354_REQUIRED_CONSUMERS: tuple[str, ...] = (
+    "score_weighted_reconstruction_error_consumer",
+    "per_segnet_class_chroma_consumer",
+    "top_k_byte_sensitivity_consumer",
+    "bottom_k_free_entropy_byte_consumer",
+    "substrate_fit_diagnostic_consumer",
+    "information_theoretic_floor_consumer",
+    "bit_level_score_critical_bits_consumer",
+    "per_pair_gradient_clustering_consumer",
+)
+_CHECK_354_WAIVER_TOKEN = "MASTER_GRADIENT_EXPLOIT_CONSUMER_BUNDLE_WAIVED"
+_CHECK_354_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "rationale", "reason",
+})
+
+
+def check_master_gradient_exploit_consumers_complete(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #354 — master-gradient exploit consumer bundle present + compliant.
+
+    Per RESPAWN-MG-7-BUNDLE 2026-05-20 + Catalog #335 sister discipline.
+    Refuses any state of ``src/tac/cathedral_consumers/`` where one or more
+    of the 8 required exploit-consumer packages is missing OR fails the
+    canonical :class:`tac.cathedral.consumer_contract.CathedralConsumerContract`.
+
+    The 8 required packages each implement one of master-gradient exploits
+    2-9 per the producer surface
+    ``tac.master_gradient_comparison.multi_granularity`` (sister MG-3).
+
+    Acceptance: (a) all 8 consumer packages present + canonical-contract-
+    compliant; (b) file-level waiver
+    ``# MASTER_GRADIENT_EXPLOIT_CONSUMER_BUNDLE_WAIVED:<rationale>`` in
+    ``src/tac/cathedral_consumers/README.md`` first 60 lines with non-
+    placeholder rationale (≥4 chars; placeholder literals rejected per
+    Catalog #287 sister discipline).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+    the 8 consumer packages land in the same commit batch as this gate
+    driving live count to 0.
+
+    Sister of Catalog #335 (upstream canonical contract; #354 is the
+    bundle-completeness surface) + Catalog #265 (symposium_impls
+    canonical contract — same META pattern) + Catalog #287 (placeholder-
+    rationale rejection) + Catalog #176 (META-meta: STRICT callsites
+    have CLAUDE.md row) + Catalog #185 (META-meta: Live count: 0
+    verified empirically).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+
+    # Check for the file-level waiver first.
+    readme_path = root / "src" / "tac" / "cathedral_consumers" / "README.md"
+    if readme_path.is_file():
+        try:
+            with readme_path.open("r", encoding="utf-8", errors="replace") as fh:
+                head_lines = []
+                for i, line in enumerate(fh):
+                    if i >= 60:
+                        break
+                    head_lines.append(line)
+            head_text = "".join(head_lines)
+            # Look for waiver token.
+            import re as _re
+            waiver_match = _re.search(
+                r"#\s*" + _re.escape(_CHECK_354_WAIVER_TOKEN) + r":\s*([^\n]+)",
+                head_text,
+            )
+            if waiver_match:
+                rationale = waiver_match.group(1).strip().rstrip("'\"`*")
+                if (
+                    rationale
+                    and rationale.lower() not in _CHECK_354_PLACEHOLDER_RATIONALES
+                    and len(rationale) >= 4
+                ):
+                    if verbose:
+                        print(
+                            f"  [catalog-354] file-level waiver active: {rationale[:80]}"
+                        )
+                    return []
+        except OSError:
+            pass
+
+    consumer_dir = root / "src" / "tac" / "cathedral_consumers"
+    if not consumer_dir.is_dir():
+        msg = (
+            f"src/tac/cathedral_consumers/ directory not found at {consumer_dir}; "
+            "Catalog #354 requires the canonical consumer namespace present"
+        )
+        if strict:
+            raise PreflightError(f"check_master_gradient_exploit_consumers_complete: {msg}")
+        return [msg]
+
+    try:
+        from tac.cathedral.consumer_contract import validate_consumer_module
+    except ImportError as exc:
+        msg = (
+            f"tac.cathedral.consumer_contract import failed: {exc}; "
+            "Catalog #354 requires the canonical contract surface present"
+        )
+        if strict:
+            raise PreflightError(f"check_master_gradient_exploit_consumers_complete: {msg}")
+        return [msg]
+
+    violations: list[str] = []
+    import importlib
+
+    for consumer_name in _CHECK_354_REQUIRED_CONSUMERS:
+        sub = consumer_dir / consumer_name
+        init_path = sub / "__init__.py"
+        if not init_path.exists():
+            violations.append(
+                f"missing required consumer package: src/tac/cathedral_consumers/{consumer_name}/__init__.py; "
+                "Catalog #354 RESPAWN-MG-7-BUNDLE requires 8 master-gradient exploit consumers (#2-#9)"
+            )
+            continue
+
+        module_dotted = f"tac.cathedral_consumers.{consumer_name}"
+        try:
+            mod = importlib.import_module(module_dotted)
+        except ImportError as exc:
+            violations.append(
+                f"{consumer_name}: import failed ({type(exc).__name__}: {exc}); "
+                "Catalog #354 requires the consumer importable + contract-compliant"
+            )
+            continue
+
+        reg = validate_consumer_module(mod, module_path=module_dotted)
+        if not reg.contract_compliant:
+            error_summary = "; ".join(reg.validation_errors[:5])
+            violations.append(
+                f"{consumer_name}: canonical-contract violation(s) [{error_summary}]; "
+                "Catalog #354 requires CathedralConsumerContract on all 8 exploit consumers"
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-354] {len(violations)} violation(s) across required exploit consumers"
+            )
+        else:
+            print(
+                "  [catalog-354] OK (all 8 master-gradient exploit consumers present + compliant)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_master_gradient_exploit_consumers_complete found "
+            f"{len(violations)} violation(s) across the 8 required master-gradient "
+            "exploit consumers (exploits 2-9). Catalog #354 enforces the "
+            "RESPAWN-MG-7-BUNDLE completeness contract per CLAUDE.md "
+            "'Subagent coherence-by-default' non-negotiable (sister of Catalog #335):\n  "
             + "\n  ".join(v[:400] for v in violations[:8])
         )
     return violations
