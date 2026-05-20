@@ -43603,6 +43603,376 @@
         "bolt_on_loc_budget": 350,
         "no_op_detector_planned": true
       }
+    },
+    {
+      "id": "lane_inflate_postprocess_surface_smoke_20260520",
+      "name": "Inflate Postprocess Surface Smoke",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true
+    },
+    {
+      "id": "lane_selector_paradigm_per_class_chroma_20260520",
+      "name": "Per-class chroma selector",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SKETCH; cross-codec orthogonality predictor v1 candidate; lane_class=substrate_engineering; research_only=true; WAVE-3-STRATEGIC-FINDINGS-CANONICAL-EXTENSION"
+    },
+    {
+      "id": "lane_selector_paradigm_per_pair_difficulty_atlas_20260520",
+      "name": "Per-pair difficulty atlas selector",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SKETCH; consumes per_pair_difficulty_atlas_consumer; lane_class=substrate_engineering; research_only=true; WAVE-3-STRATEGIC-FINDINGS-CANONICAL-EXTENSION"
+    },
+    {
+      "id": "lane_selector_paradigm_huffman_k_variant_sweep_20260520",
+      "name": "Huffman k-variant frame-exploit sweep",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SKETCH; +259-byte FEC6 pattern with alternate k; lane_class=substrate_engineering; research_only=true; WAVE-3-STRATEGIC-FINDINGS-CANONICAL-EXTENSION"
+    },
+    {
+      "id": "lane_selector_paradigm_arithmetic_coding_20260520",
+      "name": "Arithmetic coding selector overlay",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SKETCH; finer-entropy sister of FEC6; lane_class=substrate_engineering; research_only=true; WAVE-3-STRATEGIC-FINDINGS-CANONICAL-EXTENSION"
+    },
+    {
+      "id": "lane_selector_paradigm_rice_golomb_20260520",
+      "name": "Rice-Golomb selector",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SKETCH; geometric-distribution-friendly selector for residual streams; lane_class=substrate_engineering; research_only=true; WAVE-3-STRATEGIC-FINDINGS-CANONICAL-EXTENSION"
+    },
+    {
+      "id": "lane_selector_paradigm_run_length_encoded_20260520",
+      "name": "Run-length-encoded selector",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SKETCH; sparse-frame-class selector; lane_class=substrate_engineering; research_only=true; WAVE-3-STRATEGIC-FINDINGS-CANONICAL-EXTENSION"
+    },
+    {
+      "id": "lane_selector_paradigm_dictionary_coded_20260520",
+      "name": "Dictionary-coded selector",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 SKETCH; LZ-class selector overlay; lane_class=substrate_engineering; research_only=true; WAVE-3-STRATEGIC-FINDINGS-CANONICAL-EXTENSION"
+    },
+    {
+      "id": "lane_wave_3_strategic_findings_canonical_extension_20260520",
+      "name": "WAVE-3 strategic findings canonical extension",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/cross_candidate_strategic_findings_canonical_extension_20260520T195940Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L1 SCAFFOLD; sister of af727e3c1 + PACT-NERV-ULTIMATE; 3 NEW canonical equations + new cross_codec_orthogonality_predictor_consumer + 7 selector-paradigm L0 SKETCH seeds; research_only=true"
     }
   ],
   "level_rules": {
@@ -43612,5 +43982,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T19:35:07Z"
+  "updated_at": "2026-05-20T20:08:02Z"
 }
