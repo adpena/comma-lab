@@ -120,15 +120,36 @@ Canonical-vs-unique decision per layer (CLAUDE.md Catalog #290):
   :mod:`tac.findings_lagrangian` at META Lagrangian level (observability-
   only at this phase; downstream meta-Lagrangian-wire-in is a sister wave).
 
-Legacy ``tac.bit_allocator.allocate_bits`` (Lane Ω water-fill per-weight
-Hessian importance allocator) lives at ``src/tac/bit_allocator.py`` and
-is currently SHADOWED by this package per Python package precedence.
-The legacy allocator's reachability is a sister-subagent territory; this
-package does NOT mutate the legacy file or its test
-(``src/tac/tests/test_bit_allocator.py``).
+Lane Ω water-fill per-weight Hessian importance allocator is re-exported
+from :mod:`tac.bit_allocator.lane_omega` (originally at the legacy module
+location ``src/tac/bit_allocator.py``; renamed by WAVE-3-FORENSIC-FIX-2
+2026-05-20 to extinct the package-shadows-legacy-module bug class). The
+canonical caller API ``from tac.bit_allocator import allocate_bits`` /
+``allocation_report`` / ``DEFAULT_ALPHA`` / ``DEFAULT_MIN_BITS`` /
+``DEFAULT_MAX_BITS`` continues to work without modification.
+
+Quick start — Lane Ω water-fill per-weight Fisher importance:
+
+    from tac.bit_allocator import allocate_bits, allocation_report
+
+    bits = allocate_bits(
+        importance={"l.weight": torch.tensor([0.1, 1.0, 10.0])},
+        total_bits=20,
+        alpha=0.5,
+        min_bits=1,
+        max_bits=8,
+    )
+    report = allocation_report(bits)
 """
 from __future__ import annotations
 
+from tac.bit_allocator.lane_omega import (
+    DEFAULT_ALPHA,
+    DEFAULT_MAX_BITS,
+    DEFAULT_MIN_BITS,
+    allocate_bits,
+    allocation_report,
+)
 from tac.bit_allocator.per_axis import (
     CANONICAL_MODEL_ID_PER_AXIS,
     CANONICAL_SCORER_AXES,
@@ -171,6 +192,13 @@ from tac.bit_allocator.per_pair_difficulty_weighted import (
 )
 
 __all__ = (
+    # lane_omega (Lane Ω per-weight Fisher water-fill; renamed from legacy
+    # src/tac/bit_allocator.py by WAVE-3-FORENSIC-FIX-2 2026-05-20)
+    "DEFAULT_ALPHA",
+    "DEFAULT_MAX_BITS",
+    "DEFAULT_MIN_BITS",
+    "allocate_bits",
+    "allocation_report",
     # per_pair (legacy sister; existing canonical landing)
     "AllocationStrategy",
     "BitAllocationResult",
