@@ -1,0 +1,207 @@
+schema_version: 1
+name: substrate_pact_nerv_ia3_modal_t4_dispatch
+lane_id: lane_pact_nerv_ia3_l0_scaffold_20260520
+summary: |
+  pact_nerv_ia3 L0 SCAFFOLD diagnostic recipe (Modal T4). Pairs with
+  experiments/train_substrate_pact_nerv_ia3.py (WAVE-3-PACT-NERV-IA3-L0-BUILD-STAGE-1
+  queue 2026-05-20). NOT DISPATCH-ELIGIBLE: substrate is research_only until
+  PACT-NERV-DESIGN-SYMPOSIUM Stage 1 dispatch operator-gated approval per
+  CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
+  symposium" (Catalog #325) + sister Catalog #240 (recipe-vs-trainer-state
+  consistency) lands.
+
+  Literature: Liu et al. 2022 IA3 (γ-only rate-extremal modulation;
+  arXiv:2205.05638). PACT-NERV symposium HYBRID Stage 1 verdict: this is
+  the cheapest empirical experiment per Hotz + Carmack staging discipline
+  (50 LOC γ-only single-primitive probe; ~$0.30 Modal T4 smoke).
+
+dispatch_enabled: false
+research_only: true
+
+dispatch_blockers:
+  - pact_nerv_symposium_stage_1_dispatch_operator_gated_per_catalog_325
+  - full_main_raises_NotImplementedError_per_catalog_240
+  - per_substrate_council_symposium_proceed_unconditional_required_per_catalog_315
+  - score_aware_lagrangian_wire_in_pending_for_full_path
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 12
+# Catalog #215: T4 acceptable for pact_nerv_ia3 L0 SCAFFOLD smoke (HNeRV-class
+# base decoder + IA3 γ_proj heads add ~1K weights; comfortably fits T4 16GB).
+# Full mode is gated.
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 100
+  all_flags_on: false
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: T4
+
+# Catalog #324: predicted_band_validation_status MUST be declared for any
+# recipe carrying predicted_band. L0 SCAFFOLD recipe omits predicted_band
+# entirely because no measurement has been made. Stage 1 dispatch will land
+# the first empirical anchor.
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: |
+  Post-training Tier-C density re-measurement via
+  tools/mdl_scorer_conditional_ablation.py --tier c on the landed archive
+  after Stage 1 dispatch operator-gated approval admits the substrate for
+  full-mode training. Pre-training prediction is CARGO-CULTED per Catalog
+  #324 + sister C6 IBPS 22x miss empirical anchor 2026-05-17.
+
+predicted_score_target: "unknown_l0_scaffold_pending_stage_1_dispatch"
+predicted_delta: "unknown_l0_scaffold_no_empirical_anchor_pending_stage_1_dispatch"
+literature_anchor: "Liu et al. 2022 IA3 (arXiv:2205.05638; γ-only rate-extremal modulation)"
+
+risk: |
+  L0 SCAFFOLD posture. The trainer experiments/train_substrate_pact_nerv_ia3.py
+  raises NotImplementedError on the non-smoke path per Catalog #240
+  (recipe-vs-trainer-state consistency). The recipe is dispatch_enabled:false
+  + research_only:true so the operator-authorize harness refuses to fire a
+  paid dispatch from this recipe per the recipe-state-consistency gate.
+
+  Architectural distinction vs boost_nerv canonical sister: pact_nerv_ia3
+  replaces boost_nerv's iterative-residual chain with IA3 γ-only ego-pose-
+  conditioned per-block modulation (Liu 2205.05638). The IA3 γ-only
+  primitive halves conditioning bytes vs full FiLM γ+β per IA3 paper §3.2;
+  the Stage 1 dispatch's empirical purpose is to test whether the β term
+  carries significant per-frame signal on OUR specific contest video.
+
+  Stage 1 dispatch will evaluate (per PACT-NERV symposium Section 13):
+    (a) does IA3 ≈ FiLM (β-noise hypothesis confirmed; proceed to
+        Pact-NeRV-A1 with confidence);
+    (b) does IA3 << FiLM (β-signal hypothesis confirmed; Pact-NeRV-FULL
+        must include β);
+    (c) does IA3 >> FiLM (FiLM-overcapacity hypothesis; the simpler IA3
+        IS Pact-NeRV-A2 — a paper-worthy finding).
+
+  Per-substrate symposium MUST evaluate at Stage 1 dispatch:
+    (a) cargo-cult audit per Catalog #303 (per-block modulation +
+        shared-γ_proj-across-frame_0/frame_1 CARGO-CULTED at L0;
+        require empirical sweep);
+    (b) 9-dim success checklist evidence per Catalog #294;
+    (c) observability surface declaration per Catalog #305;
+    (d) Dykstra-feasibility predicted-band per Catalog #296;
+    (e) horizon-class declaration per Catalog #309 (plateau_adjacent
+        at Stage 1 per HYBRID staged path Stages 1-2);
+    (f) per-substrate symposium 6-step contract per Catalog #325.
+
+envelope_status: |
+  RESEARCH_ONLY: dispatch refused per recipe + trainer + 4 catalog gates
+  (#220 + #240 + #315 + #325). Reactivation criteria documented in trainer
+  _full_main docstring + this recipe's dispatch_blockers + lane registry
+  notes.
+
+remote_driver: scripts/remote_lane_substrate_pact_nerv_ia3.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --output-dir
+    note: "required (no default); operator must thread"
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pact_nerv_ia3.sh
+  cost_band_trainer: experiments/train_substrate_pact_nerv_ia3.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 2
+  cost_band_all_flags_on: false
+
+required_input_files_trainer: experiments/train_substrate_pact_nerv_ia3.py
+
+env_overrides:
+  # Catalog #326 driver-mode-hardcode-fix: this recipe explicitly forces
+  # SMOKE_ONLY=1 because the trainer's full path raises NotImplementedError;
+  # the only legitimate execution path is the smoke.
+  PACT_NERV_IA3_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  PACT_NERV_IA3_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  PACT_NERV_IA3_OUTPUT_DIR: /workspace/pact/lane_pact_nerv_ia3_l0_scaffold_results/output
+  PACT_NERV_IA3_EPOCHS: "2"
+  PACT_NERV_IA3_UPSTREAM_DIR: /workspace/pact/upstream
+  PACT_NERV_IA3_DEVICE: cpu
+  PACT_NERV_IA3_SMOKE: "1"
+  SMOKE_ONLY: "1"
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/remote_lane_substrate_pact_nerv_ia3.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_pact_nerv_ia3.py
+  - src/tac/substrates/pact_nerv_ia3/__init__.py
+  - src/tac/substrates/pact_nerv_ia3/architecture.py
+  - src/tac/substrates/pact_nerv_ia3/archive.py
+  - src/tac/substrates/pact_nerv_ia3/inflate.py
+  - src/tac/substrates/pact_nerv_ia3/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+sentinel_files:
+  - src/tac/substrates/pact_nerv_ia3/architecture.py
+  - src/tac/substrates/pact_nerv_ia3/archive.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/differentiable_eval_roundtrip.py
+
+reactivation_criteria: |
+  1. PACT-NERV-DESIGN-SYMPOSIUM Stage 1 dispatch operator-gated approval
+     per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
+     symposium" (Catalog #325). The symposium memo at
+     .omx/research/council_per_substrate_symposium_pact_nerv_*_20260520T185500Z.md
+     already returned PROCEED_WITH_REVISIONS with HYBRID Stage 1 = Pact-NeRV-IA3
+     ~$0.30 Modal T4 50-LOC γ-only rate-extremal smoke as the cheapest
+     empirical experiment (op-routable #1).
+  2. Cargo-cult audit per Catalog #303 surfaces the 2 CARGO-CULTED choices
+     documented in src/tac/substrates/pact_nerv_ia3/__init__.py
+     (per-block modulation; shared γ_proj across frame_0/frame_1). The
+     audit MUST either (a) empirically validate each via sweep at Stage 1
+     dispatch OR (b) reclassify as HARD-EARNED with citation.
+  3. Trainer experiments/train_substrate_pact_nerv_ia3.py _full_main path
+     replaces NotImplementedError with real score-aware Lagrangian + EMA
+     + canonical auth-eval helper invocation per Catalog #226. The
+     PactNervIa3ScoreAwareLoss helper provides the loss surface; the
+     trainer's full path must wire it in.
+  4. Recipe research_only flips from true to false; dispatch_enabled
+     flips from false to true; predicted_band declared with
+     validation_status (post_training validated or pending_post_training
+     with reactivation criterion) per Catalog #324.
+
+notes: |
+  This is the L0 SCAFFOLD recipe. Per CLAUDE.md "Substrate scaffolds MUST be
+  COMPLETE or RESEARCH-ONLY" non-negotiable: scaffolds may exist with
+  research_only:true tagged honestly + no paid dispatch eligibility.
+
+  Stage 1 cite: .omx/research/council_per_substrate_symposium_pact_nerv_*_20260520T185500Z.md
+  (commit 5371d4dd4) HYBRID Stage 1 verdict.
+
+  FILM-FAMILY-RESEARCH cite:
+  .omx/research/film_family_alternatives_bleeding_edge_research_20260520T184150Z.md
+  Section 10 Recommendation #5 (IA3-style γ-only modulation as
+  rate-extremal variant; HARD-EARNED-LITERATURE).
+
+  6-hook wire-in declaration per Catalog #125:
+  - hook #1 sensitivity-map: N/A (L0 SCAFFOLD; no sensitivity signal until
+    Stage 1 + full path)
+  - hook #2 Pareto constraint: rate_distortion_v1 (per SubstrateContract)
+  - hook #3 bit-allocator: N/A (fp16 brotli on weight blocks; no per-tensor
+    bit allocator at scaffold posture)
+  - hook #4 cathedral autopilot dispatch: N/A (research_only; not dispatch-
+    eligible)
+  - hook #5 continual-learning posterior: N/A (no anchor until [contest-CUDA]
+    measurement at Stage 1 dispatch)
+  - hook #6 probe-disambiguator: N/A (single mechanism: IA3 γ-only
+    modulation; FiLM vs IA3 IS the Stage 1 dispatch's empirical purpose)
+
+  Cross-ref:
+    src/tac/substrates/pact_nerv_ia3/
+    experiments/train_substrate_pact_nerv_ia3.py
+    .omx/research/pact_nerv_ia3_l0_scaffold_design_20260520T<UTC>.md
+    .omx/research/council_per_substrate_symposium_pact_nerv_*_20260520T185500Z.md
+    .omx/research/film_family_alternatives_bleeding_edge_research_20260520T184150Z.md
+    feedback_wave_3_pact_nerv_ia3_l0_build_stage_1_landed_20260520.md

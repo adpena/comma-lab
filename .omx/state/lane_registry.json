@@ -43546,6 +43546,63 @@
         }
       },
       "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_coin_plus_plus.py NOT NeRV-family but modulation-paradigm cousin; mirrors ds_nerv canonical L0 SCAFFOLD pattern, _full_main raises NotImplementedError per Catalog #240. Substrate package src/tac/substrates/coin_plus_plus/ with shared base coord-MLP + per-pair FiLM modulation (CPP1 magic, 21-byte header carrying MODULATION_DIM u16). Catalog #124 8 fields: archive_grammar=CPP1 monolithic single-file 0.bin fixed offsets | parser_section_manifest=parse_archive() returns 6 sections (HEADER + BASE_MLP_BLOB + MODULATION_BLOB + META_BLOB + implicit shared_base_mlp_weights + per_pair_modulations subsets) | inflate_runtime_loc_budget=<=200 LOC | runtime_dep_closure=torch + brotli | export_format=brotli-quality9 pickled fp16 base MLP + int8 modulations + utf8-json meta | score_aware_loss=L=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) (eval-roundtrip wired at L1) | bolt_on_loc_budget=substrate_engineering ~700 LOC total | no_op_detector_planned=Catalog #139 byte-mutation smoke in tests/test_coin_plus_plus.py | distinctive_prior=modulation-based parameter-efficient INR (MOD_DIM=64 default; int8 modulation quant; FiLM-style scale+shift on coord-MLP hidden layers; per-pair latent ~76 KB for 600 pairs at MOD_DIM=64 + int8) | param_target=~140K base + tiny per-pair | literature_anchor=Dupont et al. ICML 2022 COIN++ (arXiv:2201.12904) | operator_fit_ranking=MODERATE_FIT_3_of_5. Reactivation: Phase 2 council symposium + per-pair coordinate batching strategy + coord-MLP-vs-CNN-base TENSION resolution. Recipe substrate_coin_plus_plus_modal_t4_dispatch.yaml. Design memo .omx/research/coin_plus_plus_l0_scaffold_design_20260520T184500Z.md."
+    },
+    {
+      "id": "lane_pact_nerv_ia3_l0_scaffold_20260520",
+      "name": "Pact-NeRV-IA3 L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/pact_nerv_ia3/ package + experiments/train_substrate_pact_nerv_ia3.py + scripts/remote_lane_substrate_pact_nerv_ia3.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_ia3_modal_t4_dispatch.yaml + 12/12 tests pass; Stage 1 HYBRID per PACT-NERV symposium commit 5371d4dd4 + FILM-FAMILY-RESEARCH commit 9a95d1daf Section 10 Recommendation #5; IA3 \u03b3-only modulation per Liu 2205.05638; ~50 LOC IA3 core class IA3GammaOnlyModulation; archive_grammar=PIA3 monolithic 0.bin; parser_section_manifest=6 sections; inflate_runtime_loc_budget=150; runtime_dep_closure=torch+brotli; export_format=FP4+Brotli; score_aware_loss=true; bolt_on_loc_budget=350; no_op_detector_planned=true; research_only=true; dispatch_enabled=false; lane_class=score_gradient_aware_substrate_engineering"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_pact_nerv_ia3.sh + .omx/operator_authorize_recipes/substrate_pact_nerv_ia3_modal_t4_dispatch.yaml dispatch_enabled:false research_only:true; bash -n syntax verified; Catalog #244 NVML env block + Catalog #204 Modal-aware OUTPUT_DIR + Catalog #326 multi-key mode env var"
+        }
+      },
+      "notes": "Stage 1 HYBRID per PACT-NERV-DESIGN-SYMPOSIUM commit 5371d4dd4 + FILM-FAMILY-RESEARCH commit 9a95d1daf Section 10 Recommendation #5. IA3 \u03b3-only modulation per Liu 2205.05638. ~50 LOC IA3 core class IA3GammaOnlyModulation. dispatch_enabled=false in recipe per Catalog #240. research_only=true. lane_class=score_gradient_aware_substrate_engineering. score_improvement_mechanism_status=RESEARCH_ONLY pending Stage 1 dispatch operator-gated approval. Reactivation: PACT-NERV symposium Stage 1 dispatch + cargo-cult audit per Catalog #303 + 9-dim checklist per Catalog #294 + observability surface per Catalog #305 + score-aware Lagrangian wire-in per Catalog #226.",
+      "research_only": true,
+      "lane_class": "score_gradient_aware_substrate_engineering",
+      "design_evidence": {
+        "archive_grammar": "monolithic single-file 0.bin PIA3 (26-byte header carrying POSE_DIM u8 + EGO_POSE_BLOB_LEN u32 distinctive fields)",
+        "parser_section_manifest": "FP11 base decoder weights + IA3 gamma_proj head weights (logical subset in DECODER_BLOB) + int16 latents + int16 ego_poses + utf-8 json meta = 6 sections",
+        "inflate_runtime_loc_budget": 150,
+        "runtime_dep_closure": [
+          "torch",
+          "numpy",
+          "brotli"
+        ],
+        "export_format": "FP4+Brotli (Quantizr canonical) for weights; int16 latents + int16 ego_poses",
+        "score_aware_loss": "true",
+        "bolt_on_loc_budget": 350,
+        "no_op_detector_planned": true
+      }
     }
   ],
   "level_rules": {
@@ -43555,5 +43612,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T19:07:43Z"
+  "updated_at": "2026-05-20T19:35:07Z"
 }
