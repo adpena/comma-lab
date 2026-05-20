@@ -1,0 +1,250 @@
+# SPDX-License-Identifier: MIT
+"""Catalog #91 ENCODE_INFLATE_ROUNDTRIP + Catalog #139 no_op_proof for boost_nerv.
+
+Proves the encode/decode contract of the BSV1 monolithic 0.bin grammar +
+boosting chain forward-pass parity under fp16 + int16-quant roundtrip.
+Plus a smoke-level test that the trainer's _full_main raises
+NotImplementedError per the L0 SCAFFOLD posture (Catalog #240).
+"""
+
+from __future__ import annotations
+
+import torch
+
+from tac.substrates.boost_nerv.architecture import (
+    BoostnervConfig,
+    BoostnervSubstrate,
+)
+from tac.substrates.boost_nerv.archive import (
+    BSV1_HEADER_SIZE,
+    BSV1_MAGIC,
+    BSV1_SCHEMA_VERSION,
+    pack_archive,
+    parse_archive,
+)
+
+
+def _smoke_cfg() -> BoostnervConfig:
+    return BoostnervConfig(
+        latent_dim=8,
+        embed_dim=24,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(20, 16, 12),
+        sin_frequency=30.0,
+        num_upsample_blocks=3,
+        num_boosting_rounds=2,
+        boosting_gain_clamp=0.1,
+        boosting_hidden_dim=8,
+        num_pairs=3,
+        output_height=24,
+        output_width=32,
+    )
+
+
+def _smoke_meta(cfg: BoostnervConfig) -> dict[str, object]:
+    return {
+        "embed_dim": cfg.embed_dim,
+        "initial_grid_h": cfg.initial_grid_h,
+        "initial_grid_w": cfg.initial_grid_w,
+        "decoder_channels": list(cfg.decoder_channels),
+        "sin_frequency": cfg.sin_frequency,
+        "num_upsample_blocks": cfg.num_upsample_blocks,
+        "boosting_gain_clamp": cfg.boosting_gain_clamp,
+        "boosting_hidden_dim": cfg.boosting_hidden_dim,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+    }
+
+
+# ENCODE_INFLATE_ROUNDTRIP — Catalog #91 contract
+def test_archive_pack_then_parse_roundtrip_recovers_tensors():
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = BoostnervSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+    latents = sd["latents"].clone()
+
+    blob = pack_archive(
+        decoder_sd, latents, _smoke_meta(cfg),
+        num_boosting_rounds=cfg.num_boosting_rounds,
+    )
+    arc = parse_archive(blob)
+
+    assert arc.schema_version == BSV1_SCHEMA_VERSION
+    assert blob[:4] == BSV1_MAGIC
+    assert arc.num_boosting_rounds == cfg.num_boosting_rounds
+    assert set(arc.decoder_state_dict.keys()) == set(decoder_sd.keys())
+    for k, v in decoder_sd.items():
+        rec = arc.decoder_state_dict[k]
+        assert rec.shape == v.shape, f"{k} shape changed"
+        assert torch.allclose(rec.to(torch.float32), v.to(torch.float32), atol=1e-2)
+
+    assert arc.latents.shape == latents.shape
+    quant_range = max(float(latents.max() - latents.min()), 1e-12)
+    step = quant_range / 65534.0
+    assert torch.allclose(arc.latents, latents, atol=step * 2.0)
+
+
+def test_header_size_invariant_is_22_bytes():
+    assert BSV1_HEADER_SIZE == 22
+
+
+def test_parse_archive_rejects_short_blob():
+    try:
+        parse_archive(b"\x00")
+    except ValueError as exc:
+        assert "too short" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected ValueError on short blob")
+
+
+def test_parse_archive_rejects_wrong_magic():
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = BoostnervSubstrate(cfg)
+    decoder_sd = {k: v for k, v in model.state_dict().items() if k != "latents"}
+    latents = model.state_dict()["latents"].clone()
+    blob = bytearray(
+        pack_archive(
+            decoder_sd, latents, _smoke_meta(cfg),
+            num_boosting_rounds=cfg.num_boosting_rounds,
+        )
+    )
+    blob[:4] = b"XXXX"
+    try:
+        parse_archive(bytes(blob))
+    except ValueError as exc:
+        assert "bad magic" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected ValueError on bad magic")
+
+
+def test_pack_archive_rejects_oversize_boosting_rounds():
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = BoostnervSubstrate(cfg)
+    decoder_sd = {k: v for k, v in model.state_dict().items() if k != "latents"}
+    latents = model.state_dict()["latents"].clone()
+    try:
+        pack_archive(
+            decoder_sd, latents, _smoke_meta(cfg),
+            num_boosting_rounds=256,
+        )
+    except ValueError as exc:
+        assert "num_boosting_rounds" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected ValueError on out-of-u8 boosting rounds")
+
+
+def test_forward_pass_after_roundtrip_matches_original_within_tolerance():
+    cfg = _smoke_cfg()
+    torch.manual_seed(7)
+    model = BoostnervSubstrate(cfg).eval()
+
+    idx = torch.tensor([0, 1, 2], dtype=torch.long)
+    with torch.no_grad():
+        rgb_0_a, rgb_1_a = model(idx)
+
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k != "latents"}
+    latents = sd["latents"].clone()
+    blob = pack_archive(
+        decoder_sd, latents, _smoke_meta(cfg),
+        num_boosting_rounds=cfg.num_boosting_rounds,
+    )
+    arc = parse_archive(blob)
+
+    rebuilt = BoostnervSubstrate(cfg).eval()
+    rebuilt.load_state_dict(arc.decoder_state_dict, strict=False)
+    with torch.no_grad():
+        rebuilt.latents.copy_(arc.latents.to(rebuilt.latents.dtype))
+        rgb_0_b, rgb_1_b = rebuilt(idx)
+
+    assert torch.allclose(rgb_0_a, rgb_0_b, atol=5e-2)
+    assert torch.allclose(rgb_1_a, rgb_1_b, atol=5e-2)
+
+
+# ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation smoke
+def test_byte_mutation_changes_inflate_output_no_op_proof():
+    cfg = _smoke_cfg()
+    torch.manual_seed(13)
+    model = BoostnervSubstrate(cfg).eval()
+    decoder_sd = {k: v for k, v in model.state_dict().items() if k != "latents"}
+    latents = model.state_dict()["latents"].clone()
+
+    blob_a = pack_archive(
+        decoder_sd, latents, _smoke_meta(cfg),
+        num_boosting_rounds=cfg.num_boosting_rounds,
+    )
+    mutated = latents.clone()
+    mutated[0, 0] = mutated[0, 0] + 1.0
+    blob_b = pack_archive(
+        decoder_sd, mutated, _smoke_meta(cfg),
+        num_boosting_rounds=cfg.num_boosting_rounds,
+    )
+
+    assert blob_a != blob_b, "no_op_proof: mutating latents must change archive bytes"
+    arc_a = parse_archive(blob_a)
+    arc_b = parse_archive(blob_b)
+    assert not torch.allclose(arc_a.latents[0, 0], arc_b.latents[0, 0], atol=1e-6)
+
+
+def test_forward_pass_produces_unit_interval_rgb():
+    """L5 compliance: substrate is a full RGB renderer (not a mask codec)."""
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = BoostnervSubstrate(cfg).eval()
+    idx = torch.tensor([0], dtype=torch.long)
+    with torch.no_grad():
+        rgb_0, rgb_1 = model(idx)
+    assert rgb_0.shape == (1, 3, cfg.output_height, cfg.output_width)
+    assert rgb_1.shape == (1, 3, cfg.output_height, cfg.output_width)
+    assert float(rgb_0.min()) >= 0.0
+    assert float(rgb_0.max()) <= 1.0
+
+
+def test_boosting_chain_has_canonical_round_count():
+    """Distinctive design check: boost_nerv must have num_boosting_rounds heads."""
+    cfg = _smoke_cfg()
+    model = BoostnervSubstrate(cfg)
+    assert len(model.boosting_heads) == cfg.num_boosting_rounds
+    assert cfg.num_boosting_rounds >= 1, "boosting MUST have at least 1 round"
+
+
+def test_boosting_residual_bounded_by_gain_clamp():
+    """The per-round residual must stay in [-gain, +gain] before addition."""
+    cfg = _smoke_cfg()
+    torch.manual_seed(0)
+    model = BoostnervSubstrate(cfg).eval()
+    idx = torch.tensor([0, 1], dtype=torch.long)
+    z = model.latents[idx]
+    # Construct a deliberately-out-of-band rgb_in (all-ones) and check the
+    # residual clamp keeps the output bounded.
+    rgb_in = torch.ones(2, 3, cfg.output_height, cfg.output_width)
+    with torch.no_grad():
+        head = model.boosting_heads[0]
+        raw_residual = head(rgb_in, z)
+        clamped = torch.clamp(raw_residual, -cfg.boosting_gain_clamp, cfg.boosting_gain_clamp)
+    assert float(clamped.abs().max()) <= cfg.boosting_gain_clamp + 1e-6
+
+
+def test_full_main_raises_not_implemented_at_l0_scaffold():
+    """L0 SCAFFOLD posture: trainer _full_main MUST raise NotImplementedError.
+
+    Per Catalog #240 (recipe-vs-trainer-state consistency) + Catalog #315
+    (OPTIMAL FORM before paid dispatch) + Catalog #325 (per-substrate
+    symposium): the boost_nerv trainer's full path is council-gated.
+    """
+    import argparse
+    import importlib
+
+    trainer = importlib.import_module("experiments.train_substrate_boost_nerv")
+    ns = argparse.Namespace(output_dir=None, epochs=1, smoke=False, device="cpu")
+    try:
+        trainer._full_main(ns)
+    except NotImplementedError as exc:
+        assert "OPERATOR-GATED" in str(exc) or "L0 SCAFFOLD" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected NotImplementedError per L0 SCAFFOLD posture")

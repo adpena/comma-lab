@@ -43053,11 +43053,11 @@
       "id": "lane_wave_2_prereq_bit_allocator_namespace_20260520",
       "name": "WAVE-2-PREREQ-BIT-ALLOCATOR-NAMESPACE \u2014 sister-extend existing tac.bit_allocator package with per_byte / per_class / per_axis / pareto_dual allocators",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "62 new tests pass (62/62) per src/tac/bit_allocator/tests/test_per_byte_per_class_per_axis_pareto_dual.py + 27 existing per_pair tests pass + commit e885918f0"
         },
         "real_archive_empirical": {
           "status": false,
@@ -43080,8 +43080,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_wave_2_prereq_bit_allocator_namespace_landed_20260520.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -43130,6 +43130,422 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_wave_3_dim_3_step_3_4_consumer_conversion_20260520",
+      "name": "WAVE-3 DIM-3 Step 3.4 Consumer Conversion",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 consumer __init__.py converted to emit per-axis AxisDecomposition per CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.4; CONSUMER_VERSION 1.0.0->1.1.0; canonical Provenance via build_provenance_for_predicted; commit a59117d4d"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #356 STRICT live count 0 across all 5 converted consumers; sister Catalog #335/341/354 all 0 violations preserved; commit a59117d4d"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_wave_3_dim_3_step_3_4_consumer_conversion_landed_20260520.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_zipper_package_intake_20260520",
+      "name": "Zipper package intake and frontier queue integration",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Zipper package advisory intake; PR110 public-surface fixes applied; FEC7 byte-only selector recoding terminal local negative; pending tasks mirrored in canonical_task_status.",
+      "research_only": true,
+      "lane_class": "research_intake"
+    },
+    {
+      "id": "lane_theoretical_floor_source_backed_candidates_20260520",
+      "name": "Source-backed theoretical-floor candidate runtime matrix",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/theoretical_floor_candidates.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/theoretical_floor_lfv1_pose_foveation_20260520_codex/archive_candidate/archive.zip"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L2 no-spend source-backed theoretical-floor substrate. LFV1/HFV1 now has local PR101/FEC6 integration in experiments/results/pr101_fec6_lfv1_hfv1_integrated_adapter_20260520_codex: official inflate.sh control passed no-sidecar==identity and nonidentity boundary changed only frames 32/33. Still no score claim; exact CUDA auth eval and tuned sidecar search remain blockers.",
+      "research_only": false,
+      "lane_class": "substrate_engineering"
+    },
+    {
+      "id": "lane_gws_zipper_2_3_email_review_20260520",
+      "name": "GWS Zipper 2 and 3 email review",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_gws_zipper_2_3_email_review_20260520T190000Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_percepta_microprogram_pact_integration_20260520",
+      "name": "Percepta programs-in-weights contest-faithful Pact microprogram integration plan",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/percepta_microprogram_plan.py + tools/plan_percepta_microprogram_candidate.py + src/tac/tests/test_percepta_microprogram_plan.py (9/9 focused tests pass); planning/helper only, score_claim=false"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_percepta_pact_integration_20260520T185519Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "L0 planning/helper lane only; research_only=true until byte-closed candidate archive plus exact-eval custody exists; do not edit PR110 live submission files.",
+      "research_only": true
+    },
+    {
+      "id": "lane_percepta_provenance_adversarial_research_20260520",
+      "name": "Percepta provenance adversarial research",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_percepta_provenance_20260520T185739Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; provenance/factual-claim audit for Percepta transformer-vm/WASM executor; no PR110 live submission files touched",
+      "research_only": true
+    },
+    {
+      "id": "lane_percepta_wasm_mechanics_reverse_engineering_20260520",
+      "name": "Percepta WASM mechanics reverse engineering",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_percepta_wasm_mechanics_20260520T185820Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_boost_nerv_l0_scaffold_20260520",
+      "name": "BoostNeRV L0 SCAFFOLD (WAVE-3-NERV-LITERATURE-L0-RESCOPED 2026-05-20)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_boost_nerv.py + src/tac/substrates/boost_nerv/{__init__.py,architecture.py,archive.py,inflate.py,score_aware_loss.py} + tests/test_boost_nerv.py (11 tests pass); _full_main raises NotImplementedError per Catalog #240 L0 SCAFFOLD posture; @register_substrate(SubstrateContract) per Catalog #241; TIER_1_OPERATOR_REQUIRED_FLAGS dict[str, dict[str, Any]] AnnAssign per Catalog #168."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_boost_nerv.sh (canonical L0 SCAFFOLD pattern; Catalog #163 sentinel + #244 NVML env block + #204 Modal-aware OUTPUT_DIR + #326 mode env var)"
+        }
+      },
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_boost_nerv.py mirrors ds_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate package src/tac/substrates/boost_nerv/ with iterative boosting residual chain (BSV1 magic, 22-byte header carrying NUM_BOOSTING_ROUNDS u8). Catalog #124 8 fields: archive_grammar=BSV1 monolithic single-file 0.bin fixed offsets | parser_section_manifest=parse_archive() returns 6 sections (HEADER + DECODER_BLOB + LATENT_BLOB + META_BLOB + implicit boosting_residual_heads + base_decoder_weights subsets) | inflate_runtime_loc_budget=<=200 LOC | runtime_dep_closure=torch + brotli | export_format=brotli-quality9 pickled fp16 state_dict + int16 latents + utf8-json meta | score_aware_loss=L=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) (eval-roundtrip wired at L1) | bolt_on_loc_budget=substrate_engineering ~700 LOC total | no_op_detector_planned=Catalog #139 byte-mutation smoke in tests/test_boost_nerv.py | distinctive_prior=iterative residual chain (NUM_BOOSTING_ROUNDS=2 default; gain clamp [-0.1, 0.1]) | param_target=~170K including boosting | literature_anchor=Liu et al. ECCV 2024 BoostNeRV | operator_fit_ranking=HIGH_FIT_5_of_5. Reactivation: Phase 2 council symposium per Catalog #325 + cargo-cult unwind per Catalog #303. Recipe substrate_boost_nerv_modal_t4_dispatch.yaml. Design memo .omx/research/boost_nerv_l0_scaffold_design_20260520T184500Z.md."
+    },
+    {
+      "id": "lane_nirvana_l0_scaffold_20260520",
+      "name": "NIRVANA L0 SCAFFOLD (WAVE-3-NERV-LITERATURE-L0-RESCOPED 2026-05-20)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_nirvana.py + src/tac/substrates/nirvana/{__init__.py,architecture.py,archive.py,inflate.py,score_aware_loss.py} + tests/test_nirvana.py (11 tests pass); _full_main raises NotImplementedError per Catalog #240 L0 SCAFFOLD posture."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_nirvana.sh (canonical L0 SCAFFOLD pattern)"
+        }
+      },
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_nirvana.py mirrors ds_nerv canonical pattern, _full_main raises NotImplementedError per Catalog #240. Substrate package src/tac/substrates/nirvana/ with patch-wise + adaptive scheduling paradigm (NRV1 magic, 25-byte header carrying PATCH_GRID_H/W u8 + PATCH_EMBED_DIM u16). Catalog #124 8 fields: archive_grammar=NRV1 monolithic single-file 0.bin fixed offsets | parser_section_manifest=parse_archive() returns 6 sections (HEADER + DECODER_BLOB + LATENT_BLOB + META_BLOB + implicit per_patch_decoder_weights + patch_embeddings subsets) | inflate_runtime_loc_budget=<=200 LOC | runtime_dep_closure=torch + brotli | export_format=brotli-quality9 pickled fp16 state_dict + int16 latents + utf8-json meta | score_aware_loss=L=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) (eval-roundtrip wired at L1) | bolt_on_loc_budget=substrate_engineering ~750 LOC total | no_op_detector_planned=Catalog #139 byte-mutation smoke in tests/test_nirvana.py | distinctive_prior=patch-wise decoding (PATCH_GRID 4x4 default; SHARED per-patch decoder + learned per-patch embeddings; adaptive scheduler training-time only) | param_target=~180K | literature_anchor=Maiya et al. CVPR 2024 NIRVANA (arXiv:2212.14593) | operator_fit_ranking=MODERATE_HIGH_FIT_4_of_5. Reactivation: Phase 2 council symposium + adaptive scheduler wire-in. Recipe substrate_nirvana_modal_t4_dispatch.yaml. Design memo .omx/research/nirvana_l0_scaffold_design_20260520T184500Z.md."
+    },
+    {
+      "id": "lane_coin_plus_plus_l0_scaffold_20260520",
+      "name": "COIN++ L0 SCAFFOLD (WAVE-3-NERV-LITERATURE-L0-RESCOPED 2026-05-20)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_coin_plus_plus.py + src/tac/substrates/coin_plus_plus/{__init__.py,architecture.py,archive.py,inflate.py,score_aware_loss.py} + tests/test_coin_plus_plus.py (11 tests pass); _full_main raises NotImplementedError per Catalog #240 L0 SCAFFOLD posture."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_coin_plus_plus.sh (canonical L0 SCAFFOLD pattern)"
+        }
+      },
+      "notes": "L0 SCAFFOLD: research_only=true; dispatch_enabled=false; trainer experiments/train_substrate_coin_plus_plus.py NOT NeRV-family but modulation-paradigm cousin; mirrors ds_nerv canonical L0 SCAFFOLD pattern, _full_main raises NotImplementedError per Catalog #240. Substrate package src/tac/substrates/coin_plus_plus/ with shared base coord-MLP + per-pair FiLM modulation (CPP1 magic, 21-byte header carrying MODULATION_DIM u16). Catalog #124 8 fields: archive_grammar=CPP1 monolithic single-file 0.bin fixed offsets | parser_section_manifest=parse_archive() returns 6 sections (HEADER + BASE_MLP_BLOB + MODULATION_BLOB + META_BLOB + implicit shared_base_mlp_weights + per_pair_modulations subsets) | inflate_runtime_loc_budget=<=200 LOC | runtime_dep_closure=torch + brotli | export_format=brotli-quality9 pickled fp16 base MLP + int8 modulations + utf8-json meta | score_aware_loss=L=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) (eval-roundtrip wired at L1) | bolt_on_loc_budget=substrate_engineering ~700 LOC total | no_op_detector_planned=Catalog #139 byte-mutation smoke in tests/test_coin_plus_plus.py | distinctive_prior=modulation-based parameter-efficient INR (MOD_DIM=64 default; int8 modulation quant; FiLM-style scale+shift on coord-MLP hidden layers; per-pair latent ~76 KB for 600 pairs at MOD_DIM=64 + int8) | param_target=~140K base + tiny per-pair | literature_anchor=Dupont et al. ICML 2022 COIN++ (arXiv:2201.12904) | operator_fit_ranking=MODERATE_FIT_3_of_5. Reactivation: Phase 2 council symposium + per-pair coordinate batching strategy + coord-MLP-vs-CNN-base TENSION resolution. Recipe substrate_coin_plus_plus_modal_t4_dispatch.yaml. Design memo .omx/research/coin_plus_plus_l0_scaffold_design_20260520T184500Z.md."
     }
   ],
   "level_rules": {
@@ -43139,5 +43555,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T13:49:03Z"
+  "updated_at": "2026-05-20T19:07:43Z"
 }
