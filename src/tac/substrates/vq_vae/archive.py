@@ -58,6 +58,9 @@ VQV1_SCHEMA_VERSION: int = 1
 VQV1_PROCEDURAL_DECODER_SENTINEL: bytes = b"VQVP"
 """Decoder-section sentinel for procedural-codebook VQV1 archives."""
 
+VQV1_PROCEDURAL_INDICES_SENTINEL: bytes = b"VQPI"
+"""Indices-section sentinel for procedural-index residual VQV1 archives."""
+
 # Header layout: MAGIC(4) + VERSION(1) + 5 u16 (10) + 3 u32 (12) = 27 bytes
 VQV1_HEADER_FMT: str = "<4sBHHHHHIII"
 VQV1_HEADER_SIZE: int = struct.calcsize(VQV1_HEADER_FMT)
@@ -250,6 +253,33 @@ def _unpack_indices_int16(blob: bytes, shape: tuple[int, ...]) -> torch.Tensor:
     return t
 
 
+def _deserialize_indices_blob(
+    blob: bytes,
+    *,
+    shape: tuple[int, ...],
+    codebook_size: int,
+    expected_indices_bytes: int,
+) -> torch.Tensor:
+    """Deserialize either raw int16 indices or a VQPI residual envelope."""
+
+    if blob.startswith(VQV1_PROCEDURAL_INDICES_SENTINEL):
+        from tac.substrates.vq_vae.indices_procedural_variant import (
+            decode_procedural_indices_blob,
+        )
+
+        return decode_procedural_indices_blob(
+            blob,
+            shape=shape,
+            codebook_size=codebook_size,
+        )
+    if len(blob) != expected_indices_bytes:
+        raise ValueError(
+            f"indices_len {len(blob)} != expected raw length "
+            f"{expected_indices_bytes} and no procedural-indices sentinel present"
+        )
+    return _unpack_indices_int16(blob, shape)
+
+
 def pack_archive(
     decoder_state_dict: dict[str, torch.Tensor],
     indices: torch.Tensor,
@@ -326,11 +356,6 @@ def parse_archive(blob: bytes) -> VqVaeArchive:
         raise ValueError(f"unsupported schema version: {version}")
 
     expected_indices_bytes = num_pairs * 2 * h_grid * w_grid * 2  # int16 = 2 bytes
-    if indices_len != expected_indices_bytes:
-        raise ValueError(
-            f"indices_len {indices_len} != expected {expected_indices_bytes}"
-        )
-
     pos = VQV1_HEADER_SIZE
     decoder_blob = blob[pos : pos + decoder_len]
     pos += decoder_len
@@ -346,7 +371,12 @@ def parse_archive(blob: bytes) -> VqVaeArchive:
         codebook_size=int(codebook_size),
         embedding_dim=int(embedding_dim),
     )
-    indices = _unpack_indices_int16(indices_blob, (num_pairs, 2, h_grid, w_grid))
+    indices = _deserialize_indices_blob(
+        indices_blob,
+        shape=(num_pairs, 2, h_grid, w_grid),
+        codebook_size=int(codebook_size),
+        expected_indices_bytes=int(expected_indices_bytes),
+    )
     meta = json.loads(meta_blob.decode("utf-8"))
 
     return VqVaeArchive(

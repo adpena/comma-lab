@@ -454,6 +454,28 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip building the archive.zip (e.g. for trainer-only smoke).",
     )
+    p.add_argument(
+        "--enable-procedural-indices-residual",
+        action="store_true",
+        default=False,
+        help=(
+            "Build archive with VQPI seed-plus-residual indices envelope. "
+            "Research-only; routes byte accounting through "
+            "procedural_predictor_plus_residual_correction_savings_v1."
+        ),
+    )
+    p.add_argument(
+        "--procedural-indices-seed-bytes",
+        type=int,
+        default=32,
+        help="VQPI procedural-index predictor seed byte count (8-256; default 32).",
+    )
+    p.add_argument(
+        "--procedural-indices-generator-kind",
+        choices=["xorshift", "lcg", "pcg64"],
+        default="pcg64",
+        help="VQPI procedural-index predictor generator kind.",
+    )
 
     # Tier-1 optimization CLI surface (per F3-BACKPORT-WAVE-V2 + Council
     # omnibus Decision 13 PROCEED Option C 2026-05-14). Defaults preserve
@@ -611,7 +633,7 @@ def _write_runtime(submission_dir: Path) -> None:
     ):
         pkg_init.write_text("", encoding="utf-8")
     substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "vq_vae"
-    for name in ("architecture.py", "archive.py", "inflate.py"):
+    for name in ("architecture.py", "archive.py", "inflate.py", "indices_procedural_variant.py"):
         shutil.copy2(substrate_src / name, runtime_pkg / name)
     procedural_src = REPO_ROOT / "src" / "tac" / "procedural_codebook_generator"
     procedural_dst = submission_dir / "src" / "tac" / "procedural_codebook_generator"
@@ -758,6 +780,24 @@ def _update_vq_codebook_ema_after_step(model: Any, pair_indices: Any, ema: Any) 
     model.update_codebook_ema(pair_indices)
     ema.update(model)
     _sync_codebook_ema_shadow(ema, model)
+
+
+def _derive_procedural_indices_seed(args: argparse.Namespace) -> bytes:
+    """Derive a deterministic VQPI seed from trainer config."""
+
+    n_bytes = int(args.procedural_indices_seed_bytes)
+    if n_bytes < 8 or n_bytes > 256:
+        raise ValueError("--procedural-indices-seed-bytes must be in [8, 256]")
+    material = (
+        f"vqpi:v1:seed={args.seed}:k={args.codebook_size}:"
+        f"d={args.embedding_dim}:grid={args.grid_downsample}:n={n_bytes}"
+    ).encode("utf-8")
+    out = bytearray()
+    counter = 0
+    while len(out) < n_bytes:
+        out.extend(hashlib.sha256(material + counter.to_bytes(4, "little")).digest())
+        counter += 1
+    return bytes(out[:n_bytes])
 
 
 # ---------------------------------------------------------------------------
@@ -1131,6 +1171,7 @@ def _full_main(args: argparse.Namespace) -> int:
         payload_bin_sha = ""
         payload_bin_bytes = 0
         runtime_manifest: dict[str, Any] | None = None
+        procedural_indices_variant: dict[str, Any] | None = None
         archive_zip_path = args.output_dir / "archive.zip"
         if not args.skip_archive_build:
             print(f"[full] building archive from {ckpt_best_path} ...")
@@ -1161,6 +1202,33 @@ def _full_main(args: argparse.Namespace) -> int:
                 codebook_size=cfg.codebook_size,
                 embedding_dim=cfg.embedding_dim,
             )
+            if args.enable_procedural_indices_residual:
+                from tac.substrates.vq_vae.indices_procedural_variant import (
+                    compose_with_procedural_indices,
+                )
+
+                seed_bytes = _derive_procedural_indices_seed(args)
+                composition = compose_with_procedural_indices(
+                    original_archive_bytes=bin_bytes,
+                    seed_bytes=seed_bytes,
+                    generator_kind=args.procedural_indices_generator_kind,
+                )
+                bin_bytes = composition.archive_bytes
+                procedural_indices_variant = {
+                    "enabled": True,
+                    "schema": "vqpi_seed_plus_residual_indices_v1",
+                    "seed_bytes": len(seed_bytes),
+                    "generator_kind": args.procedural_indices_generator_kind,
+                    "original_indices_bytes": composition.original_indices_bytes,
+                    "replacement_total_bytes": composition.replacement_total_bytes,
+                    "delta_bytes_replacement_minus_original": (
+                        composition.delta_bytes_replacement_minus_original
+                    ),
+                    "predicted_rate_accounting": composition.predicted_rate_accounting,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                }
             (args.output_dir / "0.bin").write_bytes(bin_bytes)
             payload_bin_sha = _sha256_bytes(bin_bytes)
             payload_bin_bytes = len(bin_bytes)
@@ -1492,6 +1560,7 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "auth_eval_result": auth_eval_result,
             "runtime_tree_sha256": local_runtime_tree_sha,
+            "procedural_indices_variant": procedural_indices_variant,
             "submission_runtime_manifest_path": (
                 str(args.output_dir / "submission" / "submission_runtime_manifest.json")
                 if runtime_manifest is not None

@@ -68,6 +68,9 @@ VQ_VAE_UPSTREAM_DIR="${VQ_VAE_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 VQ_VAE_DEVICE="${VQ_VAE_DEVICE:-cuda}"
 VQ_VAE_CODEBOOK_SIZE="${VQ_VAE_CODEBOOK_SIZE:-}"
 VQ_VAE_ALPHA_RATE="${VQ_VAE_ALPHA_RATE:-}"
+VQ_VAE_ENABLE_PROCEDURAL_INDICES_RESIDUAL="${VQ_VAE_ENABLE_PROCEDURAL_INDICES_RESIDUAL:-0}"
+VQ_VAE_PROCEDURAL_INDICES_SEED_BYTES="${VQ_VAE_PROCEDURAL_INDICES_SEED_BYTES:-32}"
+VQ_VAE_PROCEDURAL_INDICES_GENERATOR_KIND="${VQ_VAE_PROCEDURAL_INDICES_GENERATOR_KIND:-pcg64}"
 
 DISPATCH_INSTANCE_JOB_ID="${VQ_VAE_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${VQ_VAE_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -211,6 +214,14 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # All 6 TIER_1_OPERATOR_REQUIRED_FLAGS are threaded explicitly per Catalog #151.
 log "stage_4_trainer_invoke_begin video=$VQ_VAE_VIDEO_PATH epochs=$VQ_VAE_EPOCHS device=$VQ_VAE_DEVICE batch_size=$VQ_VAE_BATCH_SIZE codebook_size=$VQ_VAE_CODEBOOK_SIZE alpha_rate=$VQ_VAE_ALPHA_RATE"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
+EXTRA_TRAINER_FLAGS=()
+if [ "$VQ_VAE_ENABLE_PROCEDURAL_INDICES_RESIDUAL" = "1" ]; then
+    EXTRA_TRAINER_FLAGS+=(
+        "--enable-procedural-indices-residual"
+        "--procedural-indices-seed-bytes" "$VQ_VAE_PROCEDURAL_INDICES_SEED_BYTES"
+        "--procedural-indices-generator-kind" "$VQ_VAE_PROCEDURAL_INDICES_GENERATOR_KIND"
+    )
+fi
 set +e
 "$PYBIN" experiments/train_substrate_vq_vae.py \
     --video-path "$VQ_VAE_VIDEO_PATH" \
@@ -221,6 +232,7 @@ set +e
     --device "$VQ_VAE_DEVICE" \
     --codebook-size "$VQ_VAE_CODEBOOK_SIZE" \
     --alpha-rate "$VQ_VAE_ALPHA_RATE" \
+    "${EXTRA_TRAINER_FLAGS[@]}" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e
