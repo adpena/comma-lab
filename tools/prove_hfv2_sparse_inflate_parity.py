@@ -152,6 +152,8 @@ def _embedded_sidecar_from_wrapped_x(raw: bytes) -> tuple[str, bytes] | None:
         return "embedded_foveation_params.hfv4", trailer
     if trailer.startswith(b"HFV5"):
         return "embedded_foveation_params.hfv5", trailer
+    if trailer and len(trailer) == 12:
+        return "embedded_foveation_params.hfv7", trailer
     if trailer:
         return "embedded_foveation_params.hfv6", trailer
     raise ValueError(f"unsupported embedded sidecar trailer magic: {trailer[:4]!r}")
