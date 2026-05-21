@@ -381,6 +381,7 @@ def _collect_artifacts(out_dir: Path, work_dir: Path) -> dict[str, bytes]:
         out_dir / "contest_auth_eval.stderr.log",
         work_dir / "contest_auth_eval.json",
         work_dir / "inflated_outputs_manifest.json",
+        work_dir / "scorer_input_cache_hashes.json",
         work_dir / "provenance.json",
         work_dir / "report.txt",
     ):
@@ -406,6 +407,8 @@ def _run_auth_eval_inner(
     inflate_timeout: int,
     evaluate_timeout: int,
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -434,6 +437,8 @@ def _run_auth_eval_inner(
             "source_repo_commit": source_repo_commit,
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
             "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+            "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
+            "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
         }
     )
     write_json(out_dir / "modal_cpu_preflight.json", preflight)
@@ -577,6 +582,15 @@ def _run_auth_eval_inner(
     ]
     if expected_runtime_tree_sha256:
         cmd.extend(["--expected-runtime-tree-sha256", expected_runtime_tree_sha256])
+    if scorer_input_cache_hashes:
+        cmd.extend(
+            [
+                "--scorer-input-cache-hashes-out",
+                str(work_dir / "scorer_input_cache_hashes.json"),
+                "--scorer-input-cache-hash-batch-pairs",
+                str(int(scorer_input_cache_hash_batch_pairs)),
+            ]
+        )
     env = {
         **os.environ,
         "PYTHONPATH": REMOTE_PYTHONPATH,
@@ -676,6 +690,8 @@ def _run_auth_eval_inner(
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "source_repo_commit": source_repo_commit,
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+        "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
+        "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
         "validation_errors": validation_errors,
         "score_claim": payload_score_claim,
         "promotion_eligible": False,  # CPU axis: not promotion-eligible
@@ -733,6 +749,8 @@ def _run_auth_eval_cpu_fail_closed(
     inflate_timeout: int,
     evaluate_timeout: int,
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
@@ -746,6 +764,8 @@ def _run_auth_eval_cpu_fail_closed(
             inflate_timeout=inflate_timeout,
             evaluate_timeout=evaluate_timeout,
             expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+            scorer_input_cache_hashes=scorer_input_cache_hashes,
+            scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
         )
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
@@ -780,6 +800,8 @@ def run_auth_eval_cpu(
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     """Run the canonical CPU auth eval on Modal Linux x86_64."""
 
@@ -794,6 +816,8 @@ def run_auth_eval_cpu(
         inflate_timeout=inflate_timeout,
         evaluate_timeout=evaluate_timeout,
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        scorer_input_cache_hashes=scorer_input_cache_hashes,
+        scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
     )
 
 
@@ -807,6 +831,8 @@ def main(
     inflate_timeout: int = 1800,
     evaluate_timeout: int = 5400,
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
     detach: bool = False,
     provider_detach_ack: bool = False,
     lane_id: str = "",
@@ -879,6 +905,8 @@ def main(
         "submission_dir_zip_sha256": submission_dir_zip_sha256,
         "source_repo_commit": source_repo_commit,
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+        "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
+        "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
         "modal_dispatch_mode": "detached_spawn" if detach else "blocking_remote",
         "score_claim": False,
@@ -921,6 +949,8 @@ def main(
         int(inflate_timeout),
         int(evaluate_timeout),
         expected_runtime_tree_sha256,
+        bool(scorer_input_cache_hashes),
+        int(scorer_input_cache_hash_batch_pairs),
     )
     claim_modal_auth_eval_dispatch(
         repo_root=Path.cwd(),
@@ -1033,6 +1063,8 @@ def main(
     result["inflate_sh"] = inflate_sh_rel
     result["source_repo_commit"] = source_repo_commit
     result["expected_runtime_tree_sha256"] = expected_runtime_tree_sha256
+    result["scorer_input_cache_hashes_requested"] = bool(scorer_input_cache_hashes)
+    result["scorer_input_cache_hash_batch_pairs"] = int(scorer_input_cache_hash_batch_pairs)
     result.update(pairing)
     write_json(out_dir / "modal_cpu_auth_eval_result.json", result)
 

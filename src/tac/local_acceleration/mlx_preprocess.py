@@ -35,10 +35,12 @@ __all__ = [
     "non_overlapping_pair_indices",
     "preprocess_scorer_inputs_from_pairs",
     "write_scorer_input_cache",
+    "write_scorer_input_cache_hash_manifest_from_raw_file",
     "write_scorer_input_cache_from_raw_file",
 ]
 
 SCHEMA_VERSION = "mlx_scorer_input_cache.v1"
+HASH_MANIFEST_SCHEMA_VERSION = "mlx_scorer_input_cache_hashes.v1"
 SEQ_LEN = 2
 CAMERA_SIZE = (1164, 874)  # upstream frame_utils.py: (W, H)
 CAMERA_HW = (874, 1164)
@@ -209,6 +211,101 @@ def write_scorer_input_cache(
     return manifest
 
 
+def write_scorer_input_cache_hash_manifest_from_raw_file(
+    raw_path: str | Path,
+    output_path: str | Path,
+    *,
+    archive_sha256: str | None = None,
+    inflated_outputs_aggregate_sha256: str | None = None,
+    batch_pairs: int = 8,
+) -> dict[str, Any]:
+    """Stream scorer-input tensors from raw frames and write hash-only manifest.
+
+    This is the contest-Linux bridge for MLX transfer calibration: Modal can
+    emit a compact JSON identity artifact without returning multi-GB NumPy
+    arrays through the function result payload. The array hashes use the same
+    domain as :func:`_array_sha256`, so they are directly comparable to a full
+    cache manifest.
+    """
+
+    if batch_pairs <= 0:
+        raise ValueError(f"batch_pairs must be positive, got {batch_pairs}")
+    raw_path = Path(raw_path)
+    raw = load_raw_video_memmap(raw_path)
+    pair_indices = non_overlapping_pair_indices(raw.shape[0])
+    pair_count = int(len(pair_indices))
+
+    seg_shape = (pair_count, 3, *SEGNET_INPUT_HW)
+    pose_shape = (pair_count, 12, *YUV6_INPUT_HW)
+    seg_hash = _StreamingArraySha256(seg_shape, np.dtype("float32"))
+    pose_hash = _StreamingArraySha256(pose_shape, np.dtype("float32"))
+
+    for start in range(0, pair_count, int(batch_pairs)):
+        chunk_indices = pair_indices[start : start + int(batch_pairs)]
+        frame_indices = chunk_indices.reshape(-1)
+        pairs = np.asarray(raw[frame_indices]).reshape(
+            len(chunk_indices), SEQ_LEN, *raw.shape[1:]
+        )
+        batch = preprocess_scorer_inputs_from_pairs(
+            pairs,
+            pair_indices=chunk_indices,
+            source=str(raw_path),
+        )
+        seg_hash.update(batch.segnet_last_rgb)
+        pose_hash.update(batch.posenet_yuv6_pair)
+
+    manifest = {
+        "schema_version": HASH_MANIFEST_SCHEMA_VERSION,
+        "source": str(raw_path),
+        "hash_only": True,
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "streaming_batch_pairs": int(batch_pairs),
+        "frame_shape_hwc": [int(raw.shape[1]), int(raw.shape[2]), int(raw.shape[3])],
+        "seq_len": SEQ_LEN,
+        "pair_count": pair_count,
+        "segnet_last_rgb_shape": list(seg_shape),
+        "posenet_yuv6_pair_shape": list(pose_shape),
+        "pair_indices_shape": list(pair_indices.shape),
+        "archive_sha256": archive_sha256,
+        "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
+        "raw_sha256": _file_sha256(raw_path),
+        "artifacts": {},
+        "omitted_artifacts_reason": "hash_only_manifest_no_tensor_payloads_written",
+        "array_sha256": {
+            "segnet_last_rgb": seg_hash.hexdigest(),
+            "posenet_yuv6_pair": pose_hash.hexdigest(),
+            "pair_indices": _array_sha256(pair_indices),
+        },
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "device_contract": {
+            "allowed_uses": [
+                "contest_linux_scorer_input_identity",
+                "local_mlx_training_transfer_calibration",
+                "surrogate_error_measurement_against_matching_auth_axis",
+            ],
+            "forbidden_uses": [
+                "auth_eval",
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+                "leaderboard_claim",
+            ],
+        },
+    }
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
 def write_scorer_input_cache_from_raw_file(
     raw_path: str | Path,
     output_dir: str | Path,
@@ -273,6 +370,38 @@ def _array_sha256(arr: np.ndarray) -> str:
     h.update(json.dumps(list(contiguous.shape), separators=(",", ":")).encode("utf-8"))
     h.update(contiguous.tobytes())
     return h.hexdigest()
+
+
+class _StreamingArraySha256:
+    """Streaming equivalent of ``_array_sha256`` for first-axis chunks."""
+
+    def __init__(self, shape: tuple[int, ...], dtype: np.dtype) -> None:
+        self._shape = tuple(int(x) for x in shape)
+        self._dtype = np.dtype(dtype)
+        self._seen = 0
+        self._h = hashlib.sha256()
+        self._h.update(str(self._dtype).encode("utf-8"))
+        self._h.update(
+            json.dumps(list(self._shape), separators=(",", ":")).encode("utf-8")
+        )
+
+    def update(self, chunk: np.ndarray) -> None:
+        arr = np.ascontiguousarray(chunk)
+        if arr.dtype != self._dtype:
+            raise TypeError(f"chunk dtype {arr.dtype} != expected {self._dtype}")
+        if arr.ndim != len(self._shape) or arr.shape[1:] != self._shape[1:]:
+            raise ValueError(
+                f"chunk shape {arr.shape} is incompatible with stream shape {self._shape}"
+            )
+        self._seen += int(arr.shape[0])
+        if self._seen > self._shape[0]:
+            raise ValueError(f"stream received too many rows: {self._seen}>{self._shape[0]}")
+        self._h.update(arr.tobytes())
+
+    def hexdigest(self) -> str:
+        if self._seen != self._shape[0]:
+            raise ValueError(f"stream incomplete: {self._seen}!={self._shape[0]}")
+        return self._h.hexdigest()
 
 
 def _file_sha256(path: str | Path) -> str:

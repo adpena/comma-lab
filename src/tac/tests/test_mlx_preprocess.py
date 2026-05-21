@@ -16,6 +16,7 @@ from tac.local_acceleration.mlx_preprocess import (
     non_overlapping_pair_indices,
     preprocess_scorer_inputs_from_pairs,
     write_scorer_input_cache,
+    write_scorer_input_cache_hash_manifest_from_raw_file,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -105,3 +106,118 @@ def test_raw_memmap_and_cli_smoke_on_default_contest_shape(tmp_path: Path) -> No
     assert manifest["pair_count"] == 1
     assert manifest["segnet_last_rgb_shape"] == [1, 3, *SEGNET_INPUT_HW]
     assert manifest["posenet_yuv6_pair_shape"] == [1, 12, *YUV6_INPUT_HW]
+
+
+def test_hash_only_manifest_matches_full_cache_hashes(tmp_path: Path) -> None:
+    h, w = CAMERA_HW
+    raw_path = tmp_path / "0.raw"
+    frames = np.arange(4 * h * w * 3, dtype=np.uint32)
+    frames = (frames % 251).astype(np.uint8).reshape(4, h, w, 3)
+    raw_path.write_bytes(frames.tobytes())
+
+    full_dir = tmp_path / "full"
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache.py"),
+            "--raw",
+            str(raw_path),
+            "--output-dir",
+            str(full_dir),
+            "--archive-sha256",
+            "a" * 64,
+            "--inflated-outputs-aggregate-sha256",
+            "b" * 64,
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    hash_manifest_path = tmp_path / "hash" / "manifest.json"
+    hash_manifest = write_scorer_input_cache_hash_manifest_from_raw_file(
+        raw_path,
+        hash_manifest_path,
+        archive_sha256="a" * 64,
+        inflated_outputs_aggregate_sha256="b" * 64,
+        batch_pairs=1,
+    )
+    full_manifest = json.loads((full_dir / "manifest.json").read_text(encoding="utf-8"))
+    saved_hash_manifest = json.loads(hash_manifest_path.read_text(encoding="utf-8"))
+
+    assert hash_manifest["hash_only"] is True
+    assert saved_hash_manifest["artifacts"] == {}
+    assert hash_manifest["array_sha256"] == full_manifest["array_sha256"]
+
+
+def test_hash_only_cli_writes_no_tensor_payloads(tmp_path: Path) -> None:
+    h, w = CAMERA_HW
+    raw_path = tmp_path / "0.raw"
+    frames = np.zeros((2, h, w, 3), dtype=np.uint8)
+    raw_path.write_bytes(frames.tobytes())
+    out_dir = tmp_path / "hash_cli"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache.py"),
+            "--raw",
+            str(raw_path),
+            "--output-dir",
+            str(out_dir),
+            "--archive-sha256",
+            "a" * 64,
+            "--inflated-outputs-aggregate-sha256",
+            "b" * 64,
+            "--hash-only",
+            "--batch-pairs",
+            "1",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"pair_count": 1' in completed.stdout
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["hash_only"] is True
+    assert not (out_dir / "segnet_last_rgb.npy").exists()
+    assert not (out_dir / "posenet_yuv6_pair.npy").exists()
+    assert len(manifest["array_sha256"]["posenet_yuv6_pair"]) == 64
+
+
+def test_contest_auth_eval_hash_artifact_updates_provenance(tmp_path: Path) -> None:
+    from experiments.contest_auth_eval import _record_scorer_input_cache_hash_artifact
+
+    h, w = CAMERA_HW
+    inflated = tmp_path / "inflated"
+    inflated.mkdir()
+    raw_path = inflated / "0.raw"
+    frames = np.zeros((2, h, w, 3), dtype=np.uint8)
+    frames[1, ...] = 255
+    raw_path.write_bytes(frames.tobytes())
+    video_names = tmp_path / "videos.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    (work_dir / "provenance.json").write_text("{}\n", encoding="utf-8")
+
+    prov = {"archive_sha256": "a" * 64}
+    manifest = _record_scorer_input_cache_hash_artifact(
+        prov,
+        work_dir,
+        inflated,
+        video_names,
+        {"aggregate_sha256": "b" * 64},
+        Path("scorer_input_cache_hashes.json"),
+        batch_pairs=1,
+    )
+
+    assert manifest["pair_count"] == 1
+    assert manifest["archive_sha256"] == "a" * 64
+    assert manifest["inflated_outputs_aggregate_sha256"] == "b" * 64
+    assert manifest["video_name"] == "0.mkv"
+    saved = json.loads((work_dir / "scorer_input_cache_hashes.json").read_text())
+    assert saved["hash_only"] is True
+    provenance = json.loads((work_dir / "provenance.json").read_text())
+    assert provenance["scorer_input_cache_hash_manifest"]["payload"]["video_name"] == "0.mkv"

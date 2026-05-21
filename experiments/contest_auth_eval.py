@@ -702,6 +702,56 @@ def _record_inflated_output_artifacts(
     return aggregate_payload
 
 
+def _record_scorer_input_cache_hash_artifact(
+    prov: dict,
+    work_dir: Path,
+    inflated_dir: Path,
+    video_names_file: Path,
+    inflated_manifest: dict,
+    output_path: Path,
+    *,
+    batch_pairs: int,
+) -> dict:
+    """Write compact scorer-input array hashes for the inflated raw surface."""
+
+    raw_paths: list[tuple[str, Path]] = []
+    for name in [n.strip() for n in video_names_file.read_text().splitlines() if n.strip()]:
+        raw_paths.append((name, inflated_dir / Path(name).with_suffix(".raw")))
+    if len(raw_paths) != 1:
+        raise RuntimeError(
+            "scorer-input hash artifact currently expects exactly one raw file; "
+            f"got {len(raw_paths)} from {video_names_file}"
+        )
+    video_name, raw_path = raw_paths[0]
+    if not raw_path.is_file():
+        raise RuntimeError(f"scorer-input hash raw file missing: {raw_path}")
+
+    from tac.local_acceleration.mlx_preprocess import (
+        write_scorer_input_cache_hash_manifest_from_raw_file,
+    )
+
+    target = output_path if output_path.is_absolute() else work_dir / output_path
+    manifest = write_scorer_input_cache_hash_manifest_from_raw_file(
+        raw_path,
+        target,
+        archive_sha256=str(prov.get("archive_sha256") or ""),
+        inflated_outputs_aggregate_sha256=str(
+            inflated_manifest.get("aggregate_sha256") or ""
+        ),
+        batch_pairs=int(batch_pairs),
+    )
+    manifest["video_name"] = video_name
+    target.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    prov["scorer_input_cache_hash_manifest"] = {
+        "path": str(target),
+        "sha256": _sha256(target, prefix=0),
+        "payload": manifest,
+    }
+    with open(work_dir / "provenance.json", "w") as f:
+        json.dump(prov, f, indent=2)
+    return manifest
+
+
 def _validate_expected_runtime_tree(prov: dict, expected_runtime_tree_sha256: str | None) -> None:
     if not expected_runtime_tree_sha256:
         return
@@ -1607,6 +1657,22 @@ def main() -> int:
             "Non-auto values demote the result to diagnostic evidence."
         ),
     )
+    parser.add_argument(
+        "--scorer-input-cache-hashes-out",
+        type=Path,
+        default=None,
+        help=(
+            "Optional compact JSON artifact with streamed scorer-input tensor "
+            "hashes for the inflated raw surface. This does not write tensor "
+            "payloads and does not change score authority."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-cache-hash-batch-pairs",
+        type=int,
+        default=8,
+        help="Batch size for --scorer-input-cache-hashes-out streaming preprocessing.",
+    )
     args = parser.parse_args()
 
     # Resolve required paths
@@ -1713,7 +1779,19 @@ def main() -> int:
             extra_env=inflate_env_overrides,
         )
         _record_inflate_runtime_artifacts(prov, work_dir, extracted)
-        _record_inflated_output_artifacts(prov, work_dir, inflated, video_names_file)
+        inflated_manifest = _record_inflated_output_artifacts(
+            prov, work_dir, inflated, video_names_file
+        )
+        if args.scorer_input_cache_hashes_out is not None:
+            _record_scorer_input_cache_hash_artifact(
+                prov,
+                work_dir,
+                inflated,
+                video_names_file,
+                inflated_manifest,
+                args.scorer_input_cache_hashes_out,
+                batch_pairs=args.scorer_input_cache_hash_batch_pairs,
+            )
 
         # Stage 3: run upstream/evaluate.py on submission_dir = work_dir
         # Note: evaluate.py needs (submission_dir / 'archive.zip') AND
