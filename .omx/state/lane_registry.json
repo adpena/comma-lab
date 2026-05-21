@@ -45690,7 +45690,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "tools/run_parser_safe_subset_smoke.py + src/tac/tests/test_parser_safe_subset_smoke.py 12/12 PASS"
+          "evidence": "tools/run_parser_safe_subset_smoke.py + src/tac/tests/test_parser_safe_subset_smoke.py + canonical equation #26 domain_refined event APPENDED + smoke_result.json PARSER_SAFE_SUBSET_EMPTY verdict on fec6 frontier"
         },
         "real_archive_empirical": {
           "status": true,
@@ -45713,8 +45713,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_parser_safe_subset_smoke_landed_20260520.md + .omx/research/parser_safe_subset_smoke_landed_20260520.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -45772,5 +45772,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T01:49:40Z"
+  "updated_at": "2026-05-21T01:54:31Z"
 }
