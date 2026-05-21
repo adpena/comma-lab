@@ -46622,8 +46622,8 @@
           "evidence": ""
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/build_mlx_scorer_input_cache.py"
         }
       },
       "notes": ""
@@ -46636,5 +46636,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T20:50:52Z"
+  "updated_at": "2026-05-21T20:56:01Z"
 }
