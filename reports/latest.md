@@ -1,15 +1,16 @@
 <!--
-generated_at: 2026-05-21T23:23:58Z
-from_state_hash: frontier_scan_no_drift_plus_mlx_local_acceleration_20260521T2323Z
-regenerated_by: codex:mlx_local_acceleration_windowing_profiler_20260521
-last_refreshed_at: 2026-05-21T23:23:58Z
-last_refreshed_by: codex:mlx_local_acceleration_windowing_profiler_20260521
-last_refreshed_head: 7362930ed8717b9778cdc2ad7935e77198ff32ec
+generated_at: 2026-05-21T23:47:02Z
+from_state_hash: frontier_scan_no_drift_plus_mlx_profile_selection_20260521T2347Z
+regenerated_by: codex:mlx_profile_stability_selection_20260521
+last_refreshed_at: 2026-05-21T23:47:02Z
+last_refreshed_by: codex:mlx_profile_stability_selection_20260521
+last_refreshed_head: 41e7d056cf28babf97dc3b8b39870470dc3d6a0a
 last_refreshed_note: |
   Current frontier/status refresh after MLX scorer-response full-cache
-  calibration, deterministic pair-windowing, and local profiler landing. The
-  scanner-derived FRONTIER section below was rechecked with
-  tools/scan_best_anchor_per_axis.py --format json at 2026-05-21T23:23Z; no
+  calibration, deterministic pair-windowing, local profiler landing, profile
+  stability selection, and GPU batch-invariance gating. The scanner-derived
+  FRONTIER section below was rechecked with
+  tools/scan_best_anchor_per_axis.py --check-drift at 2026-05-21T23:47Z; no
   CPU/CUDA frontier score changed. MLX local acceleration remains
   candidate-generation only until matching CPU/CUDA auth-axis transfer
   calibration passes.
@@ -18,7 +19,7 @@ last_refreshed_note: |
 # Comma Lab - Current Frontier Snapshot - 2026-05-21 UTC
 
 > **2026-05-21 refresh note**: the scanner-derived FRONTIER section was
-> rechecked after the MLX local-acceleration landings at head `7362930ed`; the
+> rechecked after the MLX local-acceleration landings at head `41e7d056c`; the
 > CPU/CUDA leaders are unchanged. Historical roadmap sections below remain
 > retained for context; use `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
@@ -38,12 +39,27 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-05-21T23:23Z
+### Current best - last rechecked 2026-05-21T23:47Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU GHA Linux x86_64]`** | **0.1920513169** | `6bae0201fb08` | linux_x86_64_cpu | `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515` |
 | **`[contest-CUDA T4]`** | **0.2053300290** | `9cb989cef519` | linux_x86_64_t4 | `lane_pr106_format0d_latent_score_table_20260516_contest_cuda` |
+
+### 2026-05-21 MLX local-acceleration guard refresh
+
+- MLX scorer-response remains **local candidate-generation signal only**.
+  It is not auth-eval evidence, not rank/kill evidence, and not promotion
+  evidence.
+- The MLX GPU profile is fast but not CPU-transfer-stable on the FEC6 pair
+  window `[16, 20]`: GPU rows are rejected by
+  `tools/check_mlx_scorer_response_profile_stability.py` under CPU-baseline
+  thresholds.
+- The new row-selection surface recommends the fastest stable row from that
+  profile: `device=cpu`, `batch_pairs=2`, `pairs_per_second=1.1846059274864154`.
+- The new batch-invariance guard records CPU pass and GPU batch-2 fail on the
+  same reference cache window; future GPU scorer-response use requires explicit
+  `--allow-gpu-research-signal` plus passing invariance/transfer checks.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
