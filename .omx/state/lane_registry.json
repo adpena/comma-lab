@@ -45649,7 +45649,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/substrates/grayscale_lut/distillation_procedural_variant.py 564 LOC + tests/test_procedural_variant.py 26/26 PASS + sister regression 35/35 PASS + Catalog #272 byte-mutation smoke 32/32 distinct + canonical equation #26 predicted_delta_s=-0.000149 verified [predicted][canonical_equation_26_chroma_lut_replacement_in_domain_context]"
+          "evidence": "src/tac/substrates/grayscale_lut/distillation_procedural_variant.py + tests/test_procedural_variant.py 30/30 PASS + grayscale_lut regression 39/39 PASS + Catalog #272 byte-mutation smoke 32/32 distinct + canonical helper delegation non-skipping + compose rejects non-self-describing shape/dtype + canonical equation #26 predicted_delta_s=-0.000149 verified [prediction][glv2_replacement_hypothesis]"
         },
         "real_archive_empirical": {
           "status": false,
@@ -45690,5 +45690,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T01:36:09Z"
+  "updated_at": "2026-05-21T01:42:26Z"
 }

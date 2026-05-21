@@ -238,13 +238,19 @@ def test_verify_procedural_lut_in_domain_wrong_context_fails() -> None:
 
 
 def test_verify_procedural_lut_in_domain_uses_slot_3_helper_if_available() -> None:
-    """Smoke that slot 3 helper is called when present (no-op assertion)."""
-    try:
-        from tac.canonical_equations import validate_context_is_in_domain  # noqa: F401
-    except ImportError:
-        pytest.skip("slot 3 helper not yet landed; fallback path is exercised elsewhere")
-    # If imported successfully, the verify function delegates to it.
-    assert verify_procedural_lut_in_domain() is True
+    """Smoke that the landed slot-3 helper path is the source of truth."""
+    from tac.canonical_equations.procedural_codebook_savings import (
+        validate_context_is_in_domain,
+    )
+
+    context = "chroma_lut_replacement"
+    assert verify_procedural_lut_in_domain(context) is validate_context_is_in_domain(
+        context, raise_on_excluded=False
+    )
+    excluded_context = "direct_dwt_detail_subband_byte_substitution"
+    assert verify_procedural_lut_in_domain(excluded_context) is validate_context_is_in_domain(
+        excluded_context, raise_on_excluded=False
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +262,16 @@ def test_verify_seed_mutation_changes_lut_bytes_passes_for_canonical_seed() -> N
     """Mutating any seed byte produces a different LUT (operational mechanism)."""
     seed = bytes(range(32))
     assert verify_seed_mutation_changes_lut_bytes(seed) is True
+
+
+def test_derive_procedural_lut_replacement_all_seed_bytes_affect_output() -> None:
+    """Catalog #272: each canonical seed byte is byte-mutation-traceable."""
+    seed = bytes(range(32))
+    original = derive_procedural_lut_replacement(seed)
+    for byte_index in range(len(seed)):
+        mutated = bytearray(seed)
+        mutated[byte_index] = (mutated[byte_index] + 1) & 0xFF
+        assert not np.array_equal(original, derive_procedural_lut_replacement(bytes(mutated)))
 
 
 # ---------------------------------------------------------------------------
@@ -316,18 +332,20 @@ def test_compose_procedural_archive_convenience_wrapper_matches_full_API() -> No
 
 
 def test_compose_with_procedural_lut_byte_mutation_smoke_catalog_272() -> None:
-    """Catalog #272: mutate one seed byte -> different envelope bytes."""
+    """Catalog #272: every seed byte mutation changes envelope bytes."""
     original = _make_synthetic_glv1_archive_bytes()
     seed = bytes(range(32))
-    mutated = bytearray(seed)
-    mutated[0] = (mutated[0] + 1) & 0xFF
     new_orig = compose_with_procedural_lut(original, seed)
-    new_mut = compose_with_procedural_lut(original, bytes(mutated))
-    assert new_orig != new_mut
-    # The original archive prefix is identical; only the envelope differs.
     orig_envelope = new_orig[len(original):]
-    mut_envelope = new_mut[len(original):]
-    assert orig_envelope != mut_envelope
+    for byte_index in range(len(seed)):
+        mutated = bytearray(seed)
+        mutated[byte_index] = (mutated[byte_index] + 1) & 0xFF
+        new_mut = compose_with_procedural_lut(original, bytes(mutated))
+        assert new_orig != new_mut
+        # The original archive prefix is identical; only the envelope differs.
+        assert new_mut.startswith(original)
+        mut_envelope = new_mut[len(original):]
+        assert orig_envelope != mut_envelope
 
 
 def test_compose_with_procedural_lut_rejects_non_glv1_archive() -> None:
@@ -342,6 +360,20 @@ def test_compose_with_procedural_lut_rejects_short_seed() -> None:
     original = _make_synthetic_glv1_archive_bytes()
     with pytest.raises(ProceduralVariantError, match="seed_bytes length"):
         compose_with_procedural_lut(original, b"x" * 4)
+
+
+def test_compose_with_procedural_lut_rejects_shape_not_encoded_in_envelope() -> None:
+    """GLPV envelope is intentionally narrow until GLV2 encodes shape metadata."""
+    original = _make_synthetic_glv1_archive_bytes()
+    with pytest.raises(ProceduralVariantError, match="output_shape"):
+        compose_with_procedural_lut(original, bytes(range(32)), output_shape=(512,))
+
+
+def test_compose_with_procedural_lut_rejects_dtype_not_encoded_in_envelope() -> None:
+    """GLPV envelope is intentionally narrow until GLV2 encodes dtype metadata."""
+    original = _make_synthetic_glv1_archive_bytes()
+    with pytest.raises(ProceduralVariantError, match="dtype"):
+        compose_with_procedural_lut(original, bytes(range(32)), dtype=np.float32)
 
 
 def test_sister_grayscale_lut_base_substrate_archive_still_parses() -> None:

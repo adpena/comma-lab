@@ -86,7 +86,8 @@ operational mechanism IS byte-mutation-traceable: mutating any of the
 frames (verified via ``verify_seed_mutation_changes_lut_bytes``).
 
 **Catalog #287 + #323 canonical Provenance**: no score claim asserted in
-this module; all return values carry ``score_claim=False`` markers via
+this module. Public APIs return plain Python/numpy values; lane-level
+authority is carried by the registry and landing memo, not by return-value
 metadata.
 
 **Catalog #324 post-training Tier-C validation**: the predicted ΔS
@@ -448,9 +449,9 @@ def verify_procedural_lut_in_domain(
     Per CANONICAL EQUATION #26 DOMAIN REFINEMENT commit ``8d8a7c6c5``,
     ``chroma_lut_replacement`` is the strongest IN-DOMAIN fit for the
     grayscale_lut substrate. The slot 3 helper
-    ``validate_context_is_in_domain`` IS landed in
-    ``tac.canonical_equations``; this function delegates to it when
-    available + falls back to the canonical IN-DOMAIN context set if not.
+    ``validate_context_is_in_domain`` is implemented in
+    ``tac.canonical_equations.procedural_codebook_savings``; this function
+    delegates to that landed helper and falls back only for old checkouts.
 
     Args:
         context: The context string to validate (default
@@ -460,13 +461,13 @@ def verify_procedural_lut_in_domain(
         True if context is IN-DOMAIN per canonical equation #26.
     """
     try:
-        from tac.canonical_equations import (  # type: ignore[attr-defined]
+        from tac.canonical_equations.procedural_codebook_savings import (
             validate_context_is_in_domain,
         )
         return bool(
             validate_context_is_in_domain(
-                equation_id="procedural_codebook_from_seed_compression_savings_v1",
                 context=context,
+                raise_on_excluded=False,
             )
         )
     except ImportError:
@@ -606,6 +607,22 @@ def compose_with_procedural_lut(
     """
     if output_shape is None:
         output_shape = (lut_bytes,)
+    else:
+        output_shape = tuple(output_shape)
+
+    expected_output_shape = (int(lut_bytes),)
+    if output_shape != expected_output_shape:
+        raise ProceduralVariantError(
+            "compose_with_procedural_lut envelope encodes only lut_bytes, "
+            f"not arbitrary output_shape; got output_shape={output_shape!r}, "
+            f"expected {expected_output_shape!r}"
+        )
+    if np.dtype(dtype) != PROCEDURAL_LUT_DTYPE_DEFAULT:
+        raise ProceduralVariantError(
+            "compose_with_procedural_lut envelope encodes no dtype tag; "
+            f"got dtype={np.dtype(dtype)!r}, expected "
+            f"{PROCEDURAL_LUT_DTYPE_DEFAULT!r}"
+        )
 
     config = ProceduralVariantConfig(
         seed_bytes=bytes(seed_bytes),
@@ -692,17 +709,17 @@ def verify_seed_mutation_changes_lut_bytes(
         dtype=config.dtype,
         generator_kind=config.generator_kind,
     )
-    # Flip the FIRST byte to test mutation propagation (full byte-mutation
-    # sweep is the operator-routed runtime verifier; this is the per-seed
-    # invariant check per sister DP1 + VQ-VAE pattern).
-    mutated_seed = bytearray(config.seed_bytes)
-    mutated_seed[0] = (mutated_seed[0] + 1) & 0xFF
-    mutated_lut = derive_codebook_from_seed(
-        seed_bytes=bytes(mutated_seed),
-        output_shape=config.output_shape,
-        dtype=config.dtype,
-        generator_kind=config.generator_kind,
-    )
-    if mutated_lut.shape != original_lut.shape:
-        return True
-    return not bool(np.array_equal(original_lut, mutated_lut))
+    for byte_index in range(len(config.seed_bytes)):
+        mutated_seed = bytearray(config.seed_bytes)
+        mutated_seed[byte_index] = (mutated_seed[byte_index] + 1) & 0xFF
+        mutated_lut = derive_codebook_from_seed(
+            seed_bytes=bytes(mutated_seed),
+            output_shape=config.output_shape,
+            dtype=config.dtype,
+            generator_kind=config.generator_kind,
+        )
+        if mutated_lut.shape == original_lut.shape and bool(
+            np.array_equal(original_lut, mutated_lut)
+        ):
+            return False
+    return True

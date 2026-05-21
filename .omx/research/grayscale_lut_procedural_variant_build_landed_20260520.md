@@ -8,14 +8,14 @@
 
 ## Headline
 
-BUILD landed the 3rd canonical PROCEDURAL VARIANT module — `tac.substrates.grayscale_lut.distillation_procedural_variant` — following the canonical pattern established by DP1 (commit `9cbfa471c`; 472 LOC) and VQ-VAE (commit `6fea30f22`; 620 LOC). Sister API surface; 564 LOC; 26/26 dedicated tests PASS; 35/35 grayscale_lut sister regression tests PASS; Catalog #272 byte-mutation smoke 32/32 PASS. Canonical equation #26 IN-DOMAIN context = `chroma_lut_replacement` (strongest IN-DOMAIN fit per CANONICAL EQUATION #26 DOMAIN REFINEMENT commit `8d8a7c6c5`).
+BUILD landed the 3rd canonical PROCEDURAL VARIANT module — `tac.substrates.grayscale_lut.distillation_procedural_variant` — following the canonical pattern established by DP1 (commit `9cbfa471c`) and VQ-VAE (commit `6fea30f22`). Sister API surface; 30/30 dedicated tests PASS; 39/39 grayscale_lut regression tests PASS; Catalog #272 byte-mutation smoke 32/32 PASS. Canonical equation #26 IN-DOMAIN context = `chroma_lut_replacement` (strongest IN-DOMAIN fit per CANONICAL EQUATION #26 DOMAIN REFINEMENT commit `8d8a7c6c5`).
 
 ## 9-dimension success checklist evidence
 
 1. **UNIQUENESS** — Variant context `chroma_lut_replacement` is structurally distinct from DP1's `comma2k19_ood_derived_basis_replacement` (PCA basis) + VQ-VAE's `intermediate_transform_quantizer` (K×D embedding table). All three are members of canonical equation #26 `_INCLUDED_CONTEXTS` but address different LUT-target sub-surfaces.
-2. **BEAUTY + ELEGANCE** — 564 LOC module reviewable in 30s; sister-identical structure to DP1/VQ-VAE (Config + 4 public functions + 1 envelope helper + 4 canonical constants). Convenience wrapper `compose_procedural_archive` in `archive.py` delegates to full API for byte-stability + canonical defaults.
+2. **BEAUTY + ELEGANCE** — Sister-structured module matching DP1/VQ-VAE (Config + public functions + one envelope helper + canonical constants). Convenience wrapper `compose_procedural_archive` in `archive.py` delegates to full API for byte-stability + canonical defaults.
 3. **DISTINCTNESS** — Distinguishing feature: `PROCEDURAL_LUT_SENTINEL = b"GLPV"` envelope appended to GLV1 archives (vs DP1's in-place codebook section replacement + VQ-VAE's `b"VQVP"` sentinel-prefix inside the decoder blob). The architectural reality of the current grayscale_lut substrate (FiLM-conditioned RGB decoder rather than explicit chroma LUT section) is documented honestly per CLAUDE.md "Apples-to-apples evidence discipline".
-4. **RIGOR** — Premise verification per Catalog #229: read full DP1 + VQ-VAE canonical reference patterns (sister files in full) + grayscale_lut substrate code + canonical equation #26 `_INCLUDED_CONTEXTS` + `validate_context_is_in_domain` helper BEFORE writing the variant. All 26 dedicated tests pass on first run; canonical equation predicted ΔS = -0.000149 verified analytically + computationally; byte-mutation smoke 32/32 distinct.
+4. **RIGOR** — Premise verification per Catalog #229: read full DP1 + VQ-VAE canonical reference patterns (sister files in full) + grayscale_lut substrate code + canonical equation #26 `_INCLUDED_CONTEXTS` + `validate_context_is_in_domain` helper BEFORE writing the variant. After Codex adversarial correction, all 30 dedicated tests pass; canonical equation predicted ΔS = -0.000149 verified analytically + computationally; byte-mutation smoke 32/32 distinct.
 5. **OPTIMIZATION PER TECHNIQUE** — Per Catalog #290 canonical-vs-unique decision per layer:
    - Forked: archive grammar (GLPV sentinel envelope is grayscale_lut-unique; DP1 replaces dp1_codebook section, VQ-VAE prepends VQVP inside decoder_blob — neither pattern fits the current GLV1 grammar which lacks a dedicated chroma_lut section).
    - Adopted canonical: ProceduralVariantConfig dataclass shape; PROCEDURAL_SEED_SIZE_BYTES=32 constant; PCG64 default generator_kind; `derive_codebook_from_seed` helper; `verify_*_in_domain` slot-3-aware pattern with fallback set; `verify_seed_mutation_changes_*_bytes` Catalog #272 invariant; `predicted_archive_bytes_saved` + `predicted_delta_s` canonical equation #26 closed-form.
@@ -72,9 +72,9 @@ Dykstra-feasibility check per Catalog #296: the predicted band sits within the c
 
 | Test suite | Before | After |
 |---|---|---|
-| `src/tac/substrates/grayscale_lut/tests/` (9 existing tests) | 9 PASS / 1 skip | 9 PASS / 1 skip (unchanged) |
-| `src/tac/substrates/grayscale_lut/tests/test_procedural_variant.py` (NEW; 26 tests) | n/a | 26 PASS / 1 skip |
-| **Total grayscale_lut** | 9 PASS / 1 skip | **35 PASS / 1 skip** |
+| `src/tac/substrates/grayscale_lut/tests/` (9 existing tests) | 9 PASS | 9 PASS |
+| `src/tac/substrates/grayscale_lut/tests/test_procedural_variant.py` (NEW; 30 tests) | n/a | 30 PASS |
+| **Total grayscale_lut** | 9 PASS / 1 skip | **39 PASS** |
 
 Sister regression of DP1 + VQ-VAE substrates not run by this subagent (out of scope). The new variant module is structurally additive: no canonical helper modified; no sister substrate touched.
 
@@ -112,7 +112,7 @@ Sister regression of DP1 + VQ-VAE substrates not run by this subagent (out of sc
 
 ## Blockers
 
-No blocker to committing as `research_only=true` scaffold. All 26 dedicated tests pass; 35/35 sister regression pass; 0 new catalog violations from my work. Module is L1 SCAFFOLD per impl_complete + strict_preflight gates marked.
+No blocker to committing as `research_only=true` scaffold. All 30 dedicated tests pass; 39/39 grayscale_lut regression pass; 0 new catalog violations from my work. Module is L1 SCAFFOLD per impl_complete + strict_preflight gates marked.
 
 Score/promotion blocker remains explicit: current GLV1 has no chroma-LUT section, so the compose function APPENDS the envelope and increases bytes by 41 B for a 32 B seed. A score-eligible archive requires GLV2 LUT-explicit grammar + inflate consumer before the `-0.000149` rate-axis hypothesis can be tested.
 
