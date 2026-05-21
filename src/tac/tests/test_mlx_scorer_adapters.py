@@ -13,6 +13,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     run_mlx_batchnorm2d_nchw,
     run_mlx_conv2d_nchw,
     run_mlx_fastvit_stage_nchw,
+    run_mlx_fastvit_vision_nchw,
     run_mlx_linear,
     run_mlx_mobileone_block_nchw,
     run_mlx_mobileone_stem_nchw,
@@ -21,6 +22,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     torch_batchnorm2d_to_mlx,
     torch_conv2d_to_mlx,
     torch_fastvit_stage_to_mlx,
+    torch_fastvit_vision_to_mlx,
     torch_linear_to_mlx,
     torch_mobileone_block_to_mlx,
     torch_mobileone_stem_to_mlx,
@@ -239,6 +241,57 @@ def test_posenet_fastvit_stage1_gpu_drift_is_measured() -> None:
     assert 0.0 < drift < 5.0e-3
 
 
+@pytest.mark.parametrize(
+    "stage_index,input_shape,seed,tolerance",
+    [
+        (2, (1, 128, 8, 10), 59, 1.0e-3),
+        (3, (1, 256, 4, 5), 61, 1.0e-3),
+    ],
+)
+def test_posenet_later_fastvit_stages_match_torch_on_mlx_cpu(
+    stage_index: int,
+    input_shape: tuple[int, int, int, int],
+    seed: int,
+    tolerance: float,
+) -> None:
+    torch.manual_seed(seed)
+    stage = _loaded_posenet_stage(stage_index)
+    x = torch.randn(*input_shape)
+
+    expected = stage(x).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_fastvit_stage_nchw(torch_fastvit_stage_to_mlx(stage), x.numpy())
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < tolerance
+
+
+def test_posenet_fastvit_vision_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(67)
+    vision = _loaded_posenet_vision()
+    x = torch.randn(1, 12, 64, 80)
+
+    expected = vision(x).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_fastvit_vision_nchw(torch_fastvit_vision_to_mlx(vision), x.numpy())
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 2.0e-3
+
+
+def test_posenet_fastvit_vision_gpu_drift_is_measured() -> None:
+    torch.manual_seed(67)
+    vision = _loaded_posenet_vision()
+    x = torch.randn(1, 12, 64, 80)
+
+    expected = vision(x).detach().numpy()
+    with temporary_mlx_device("gpu"):
+        actual = run_mlx_fastvit_vision_nchw(torch_fastvit_vision_to_mlx(vision), x.numpy())
+
+    drift = _max_abs(actual, expected)
+    assert 0.0 < drift < 1.0e-2
+
+
 def _loaded_posenet_stem_block0() -> nn.Module:
     return _loaded_posenet_stem()[0].eval()
 
@@ -260,6 +313,10 @@ def _loaded_posenet_stage0_block0() -> nn.Module:
 
 
 def _loaded_posenet_stage(index: int) -> nn.Module:
+    return _loaded_posenet_vision().stages[index].eval()
+
+
+def _loaded_posenet_vision() -> nn.Module:
     import sys
     from pathlib import Path
 
@@ -268,4 +325,4 @@ def _loaded_posenet_stage(index: int) -> nn.Module:
 
     posenet = modules.PoseNet().eval()
     posenet.load_state_dict(load_file(modules.posenet_sd_path))
-    return posenet.vision.stages[index].eval()
+    return posenet.vision.eval()

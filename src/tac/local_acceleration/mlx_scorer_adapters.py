@@ -24,10 +24,12 @@ __all__ = [
     "run_mlx_mobileone_stem_nchw",
     "run_mlx_repmixer_block_nchw",
     "run_mlx_fastvit_stage_nchw",
+    "run_mlx_fastvit_vision_nchw",
     "torch_batchnorm2d_to_mlx",
     "torch_conv2d_to_mlx",
     "torch_conv_mlp_to_mlx",
     "torch_fastvit_stage_to_mlx",
+    "torch_fastvit_vision_to_mlx",
     "torch_linear_to_mlx",
     "torch_mobileone_block_to_mlx",
     "torch_mobileone_stem_to_mlx",
@@ -54,6 +56,31 @@ class MLXConvNormAct2dAdapter:
         return self.bn(self.conv(x_nhwc))
 
 
+class MLXSEModuleAdapter:
+    """MLX adapter for timm ``SEModule`` on NHWC tensors."""
+
+    def __init__(self, torch_se: Any):
+        if bool(getattr(torch_se, "add_maxpool", False)):
+            raise NotImplementedError("SEModule add_maxpool branch is not covered")
+        if _class_path(getattr(torch_se, "bn", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("SEModule non-identity BN is not covered")
+        if _class_path(getattr(torch_se, "act", None)) != "torch.nn.modules.activation.ReLU":
+            raise NotImplementedError(f"unsupported SEModule activation: {_class_path(torch_se.act)}")
+        gate_path = _class_path(getattr(torch_se, "gate", None))
+        if gate_path != "timm.layers.activations.Sigmoid":
+            raise NotImplementedError(f"unsupported SEModule gate: {gate_path}")
+        self.fc1 = torch_conv2d_to_mlx(torch_se.fc1)
+        self.fc2 = torch_conv2d_to_mlx(torch_se.fc2)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        import mlx.core as mx
+
+        x_se = mx.mean(x_nhwc, axis=(1, 2), keepdims=True)
+        x_se = mlx_relu(self.fc1(x_se))
+        x_se = self.fc2(x_se)
+        return x_nhwc * mlx_sigmoid(x_se)
+
+
 class MLXMobileOneBlockAdapter:
     """MLX adapter for upstream PoseNet stem ``MobileOneBlock`` in eval mode."""
 
@@ -61,8 +88,15 @@ class MLXMobileOneBlockAdapter:
         if getattr(torch_block, "reparam_conv", None) is not None:
             raise NotImplementedError("reparameterized MobileOneBlock is not covered yet")
         se = getattr(torch_block, "se", None)
-        if se is not None and _class_path(se) != "torch.nn.modules.linear.Identity":
-            raise NotImplementedError("MobileOne SqueezeExcite branch is not covered yet")
+        se_path = _class_path(se)
+        if se_path == "torch.nn.modules.linear.Identity":
+            self.se = None
+        elif se_path == "timm.layers.squeeze_excite.SEModule":
+            self.se = MLXSEModuleAdapter(se)
+        elif se is None:
+            self.se = None
+        else:
+            raise NotImplementedError(f"unsupported MobileOne SE branch: {se_path}")
         self.identity = (
             torch_batchnorm2d_to_mlx(torch_block.identity)
             if getattr(torch_block, "identity", None) is not None
@@ -99,6 +133,8 @@ class MLXMobileOneBlockAdapter:
             out = branch if out is None else out + branch
         if out is None:
             out = mx.zeros_like(x_nhwc)
+        if self.se is not None:
+            out = self.se(out)
         return mlx_gelu_tanh(out) if self.use_gelu_tanh else out
 
 
@@ -246,6 +282,47 @@ class MLXFastVitStageAdapter:
         return out
 
 
+class MLXClassifierHeadAdapter:
+    """MLX adapter for FastViT ``ClassifierHead`` with average pooling."""
+
+    def __init__(self, torch_head: Any):
+        global_pool = getattr(torch_head, "global_pool", None)
+        pool_type = getattr(global_pool, "pool_type", None)
+        if pool_type != "avg":
+            raise NotImplementedError(f"unsupported classifier pool type: {pool_type!r}")
+        drop = getattr(torch_head, "drop", None)
+        if drop is not None and getattr(drop, "training", False):
+            raise NotImplementedError("training-mode classifier dropout is not covered")
+        if _class_path(getattr(torch_head, "flatten", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("non-identity classifier flatten is not covered")
+        self.fc = torch_linear_to_mlx(torch_head.fc)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        import mlx.core as mx
+
+        pooled = mx.mean(x_nhwc, axis=(1, 2))
+        return self.fc(pooled)
+
+
+class MLXFastVitVisionAdapter:
+    """MLX adapter for upstream PoseNet's FastViT vision trunk."""
+
+    def __init__(self, torch_vision: Any):
+        if bool(getattr(torch_vision, "fork_feat", False)):
+            raise NotImplementedError("FastViT fork_feat path is not covered")
+        self.stem = torch_mobileone_stem_to_mlx(torch_vision.stem)
+        self.stages = [torch_fastvit_stage_to_mlx(stage) for stage in torch_vision.stages]
+        self.final_conv = torch_mobileone_block_to_mlx(torch_vision.final_conv)
+        self.head = MLXClassifierHeadAdapter(torch_vision.head)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = self.stem(x_nhwc)
+        for stage in self.stages:
+            out = stage(out)
+        out = self.final_conv(out)
+        return self.head(out)
+
+
 def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
     """Convert a PyTorch ``nn.Conv2d`` layer to MLX ``nn.Conv2d``."""
 
@@ -352,13 +429,19 @@ def torch_fastvit_stage_to_mlx(torch_stage: Any) -> MLXFastVitStageAdapter:
     return MLXFastVitStageAdapter(torch_stage)
 
 
+def torch_fastvit_vision_to_mlx(torch_vision: Any) -> MLXFastVitVisionAdapter:
+    """Convert upstream PoseNet's FastViT vision trunk to MLX."""
+
+    return MLXFastVitVisionAdapter(torch_vision)
+
+
 def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
     """Run an MLX Conv2d on NCHW input and return NCHW output."""
 
     import mlx.core as mx
 
     out = mlx_conv(mx.array(nchw_to_nhwc(x_nchw)))
-    return nhwc_to_nchw(np.asarray(out))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 
 def run_mlx_batchnorm2d_nchw(mlx_bn: Any, x_nchw: np.ndarray) -> np.ndarray:
@@ -367,7 +450,7 @@ def run_mlx_batchnorm2d_nchw(mlx_bn: Any, x_nchw: np.ndarray) -> np.ndarray:
     import mlx.core as mx
 
     out = mlx_bn(mx.array(nchw_to_nhwc(x_nchw)))
-    return nhwc_to_nchw(np.asarray(out))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 
 def run_mlx_linear(mlx_linear: Any, x: np.ndarray) -> np.ndarray:
@@ -375,7 +458,7 @@ def run_mlx_linear(mlx_linear: Any, x: np.ndarray) -> np.ndarray:
 
     import mlx.core as mx
 
-    return np.asarray(mlx_linear(mx.array(np.ascontiguousarray(x))))
+    return _mlx_array_to_numpy(mlx_linear(mx.array(np.ascontiguousarray(x))))
 
 
 def run_mlx_mobileone_block_nchw(adapter: MLXMobileOneBlockAdapter, x_nchw: np.ndarray) -> np.ndarray:
@@ -384,7 +467,7 @@ def run_mlx_mobileone_block_nchw(adapter: MLXMobileOneBlockAdapter, x_nchw: np.n
     import mlx.core as mx
 
     out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
-    return nhwc_to_nchw(np.asarray(out))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 
 def run_mlx_mobileone_stem_nchw(adapter: MLXMobileOneStemAdapter, x_nchw: np.ndarray) -> np.ndarray:
@@ -393,7 +476,7 @@ def run_mlx_mobileone_stem_nchw(adapter: MLXMobileOneStemAdapter, x_nchw: np.nda
     import mlx.core as mx
 
     out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
-    return nhwc_to_nchw(np.asarray(out))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 
 def run_mlx_patch_embed_nchw(adapter: MLXPatchEmbedAdapter, x_nchw: np.ndarray) -> np.ndarray:
@@ -402,7 +485,7 @@ def run_mlx_patch_embed_nchw(adapter: MLXPatchEmbedAdapter, x_nchw: np.ndarray) 
     import mlx.core as mx
 
     out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
-    return nhwc_to_nchw(np.asarray(out))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 
 def run_mlx_repmixer_block_nchw(adapter: MLXRepMixerBlockAdapter, x_nchw: np.ndarray) -> np.ndarray:
@@ -411,7 +494,7 @@ def run_mlx_repmixer_block_nchw(adapter: MLXRepMixerBlockAdapter, x_nchw: np.nda
     import mlx.core as mx
 
     out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
-    return nhwc_to_nchw(np.asarray(out))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 
 def run_mlx_fastvit_stage_nchw(adapter: MLXFastVitStageAdapter, x_nchw: np.ndarray) -> np.ndarray:
@@ -420,7 +503,15 @@ def run_mlx_fastvit_stage_nchw(adapter: MLXFastVitStageAdapter, x_nchw: np.ndarr
     import mlx.core as mx
 
     out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
-    return nhwc_to_nchw(np.asarray(out))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_fastvit_vision_nchw(adapter: MLXFastVitVisionAdapter, x_nchw: np.ndarray) -> np.ndarray:
+    """Run a FastViT vision adapter on NCHW input and return a NumPy array."""
+
+    import mlx.core as mx
+
+    return _mlx_array_to_numpy(adapter(mx.array(nchw_to_nhwc(x_nchw))))
 
 
 def mlx_gelu_tanh(x: Any) -> Any:
@@ -431,6 +522,18 @@ def mlx_gelu_tanh(x: Any) -> Any:
     return 0.5 * x * (
         1.0 + mx.tanh(0.7978845608028654 * (x + 0.044715 * mx.power(x, 3)))
     )
+
+
+def mlx_relu(x: Any) -> Any:
+    import mlx.core as mx
+
+    return mx.maximum(x, 0.0)
+
+
+def mlx_sigmoid(x: Any) -> Any:
+    import mlx.core as mx
+
+    return 1.0 / (1.0 + mx.exp(-x))
 
 
 def nchw_to_nhwc(x: np.ndarray) -> np.ndarray:
@@ -449,6 +552,17 @@ def nhwc_to_nchw(x: np.ndarray) -> np.ndarray:
 
 def _torch_tensor_to_numpy(tensor: Any) -> np.ndarray:
     return tensor.detach().cpu().numpy().astype(np.float32, copy=False)
+
+
+def _mlx_array_to_numpy(array: Any) -> np.ndarray:
+    import mlx.core as mx
+
+    mx.eval(array)
+    try:
+        mx.synchronize()
+    except AttributeError:
+        pass
+    return np.asarray(array)
 
 
 def _pair(value: Any) -> tuple[int, int]:
@@ -487,6 +601,14 @@ class temporary_mlx_device:
     def __enter__(self) -> None:
         import mlx.core as mx
 
+        try:
+            mx.synchronize()
+        except AttributeError:
+            pass
+        try:
+            mx.clear_cache()
+        except AttributeError:
+            pass
         self._old_device = mx.default_device()
         kind = mx.cpu if self._device_type == "cpu" else mx.gpu
         mx.set_default_device(mx.Device(kind))
@@ -495,4 +617,8 @@ class temporary_mlx_device:
         if self._old_device is not None:
             import mlx.core as mx
 
+            try:
+                mx.synchronize()
+            except AttributeError:
+                pass
             mx.set_default_device(self._old_device)
