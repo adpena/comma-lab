@@ -138,6 +138,46 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "default": "0.005",
         "required_input_file": False,
     },
+    # WAVE-3-DP1-DISPATCH-READY-EXTENSION 2026-05-20 — procedural codebook
+    # replacement variant flags per `dp1_paired_smoke_dispatch_pre_authorization_
+    # checklist_20260520` OP-ROUTABLE #2 + parent design memo §4 paired-smoke
+    # recipe spec. Six env-var flags wire the 3 recipe variants (original /
+    # procedural / null_exploit_control). Catalog #151 + #152 + #324 sister.
+    "--enable-procedural-codebook-replacement": {
+        "env": "DPP_PROCEDURAL_CODEBOOK_REPLACEMENT",
+        "default": "0",
+        "required_input_file": False,
+    },
+    "--procedural-codebook-seed-hex": {
+        "env": "DPP_PROCEDURAL_CODEBOOK_SEED_HEX",
+        "default": "",
+        "required_input_file": False,
+    },
+    "--procedural-codebook-generator-kind": {
+        "env": "DPP_PROCEDURAL_CODEBOOK_GENERATOR_KIND",
+        "default": "pcg64",
+        "required_input_file": False,
+    },
+    "--procedural-codebook-null-exploit-control": {
+        "env": "DPP_PROCEDURAL_CODEBOOK_NULL_EXPLOIT_CONTROL",
+        "default": "0",
+        "required_input_file": False,
+    },
+    "--procedural-codebook-validate-domain": {
+        "env": "DPP_PROCEDURAL_CODEBOOK_VALIDATE_DOMAIN",
+        "default": "1",
+        "required_input_file": False,
+    },
+    "--procedural-variant-provenance-path": {
+        "env": "DPP_PROCEDURAL_VARIANT_PROVENANCE_PATH",
+        "default": "",
+        "required_input_file": False,
+    },
+    "--procedural-variant-distillation-skip": {
+        "env": "DPP_PROCEDURAL_VARIANT_DISTILLATION_SKIP",
+        "default": "0",
+        "required_input_file": False,
+    },
 }
 
 
@@ -510,6 +550,87 @@ def build_argparser() -> argparse.ArgumentParser:
             "with --full-cpu per Catalog #197."
         ),
     )
+    # WAVE-3-DP1-DISPATCH-READY-EXTENSION 2026-05-20 — procedural codebook
+    # replacement variant per OP-ROUTABLE #2 of `dp1_paired_smoke_dispatch_
+    # pre_authorization_checklist_20260520`. When enabled, the canonical
+    # `pack_archive(...)` output is post-processed via
+    # `tac.substrates.pretrained_driving_prior.distillation_procedural_variant.
+    # compose_with_procedural_codebook(...)` so the codebook section bytes
+    # are replaced by `brotli(seed_bytes)`. Inflate re-derives via
+    # `tac.procedural_codebook_generator.derive_codebook_from_seed(...)`.
+    # Catalog #324 predicted_band_validation_status=pending_post_training is
+    # emitted in the readiness manifest so first paired Modal T4 smoke is the
+    # canonical anchor for canonical equation #26.
+    parser.add_argument(
+        "--enable-procedural-codebook-replacement",
+        action="store_true",
+        help=(
+            "Replace the Comma2k19-distilled codebook section with a "
+            "deterministic procedural seed (32 bytes by default) per "
+            "canonical equation #26. Inflate runtime re-derives the "
+            "codebook bytes from the seed."
+        ),
+    )
+    parser.add_argument(
+        "--procedural-codebook-seed-hex",
+        default="",
+        help=(
+            "32-byte procedural seed in hex (64 hex chars). Empty = deterministic "
+            "default seed derived from --seed (so byte-stable test runs work). "
+            "Operator-supplied seeds must match the canonical equation #26 "
+            "domain-of-validity 8-256 bytes."
+        ),
+    )
+    parser.add_argument(
+        "--procedural-codebook-generator-kind",
+        default="pcg64",
+        choices=("xorshift", "lcg", "pcg64"),
+        help=(
+            "PRNG kind for codebook derivation (default pcg64). Sister of "
+            "tac.procedural_codebook_generator.SUPPORTED_GENERATOR_KINDS."
+        ),
+    )
+    parser.add_argument(
+        "--procedural-codebook-null-exploit-control",
+        action="store_true",
+        help=(
+            "Recipe #3 NULL-EXPLOIT-CONTROL: emit a procedural variant whose "
+            "seed bytes are all-zero. The null-exploit control measures the "
+            "score-axis impact of a degenerate seed; sister of the canonical "
+            "PCG64-seeded variant per parent design memo §4 recipe #3."
+        ),
+    )
+    parser.add_argument(
+        "--procedural-codebook-validate-domain",
+        action="store_true",
+        default=True,
+        help=(
+            "When enabled, call "
+            "tac.substrates.pretrained_driving_prior.distillation_procedural_variant."
+            "verify_procedural_codebook_in_domain(...) before composing the "
+            "variant. Default ON; opt-out for diagnostic runs only."
+        ),
+    )
+    parser.add_argument(
+        "--procedural-variant-provenance-path",
+        default="",
+        help=(
+            "Optional path to write the canonical Provenance + variant manifest "
+            "JSON (Catalog #323 sister). When empty, writes alongside the "
+            "archive at <output_dir>/procedural_variant_provenance.json."
+        ),
+    )
+    parser.add_argument(
+        "--procedural-variant-distillation-skip",
+        action="store_true",
+        help=(
+            "Skip the Comma2k19-derived distillation step when the variant "
+            "replaces the codebook entirely. Use with --enable-procedural-"
+            "codebook-replacement; the canonical Comma2k19 cache + log-"
+            "incremental feeder are NOT consulted, so the variant is "
+            "structurally OOD by construction (Catalog #209/#213 sister)."
+        ),
+    )
     return parser
 
 
@@ -522,6 +643,174 @@ def _validate_full_cpu_flags(args: argparse.Namespace) -> None:
             "eligible artifacts; the explicit attestation makes that "
             "operator-visible."
         )
+
+
+def _resolve_procedural_seed_bytes(args: argparse.Namespace) -> bytes:
+    """Resolve the 32-byte procedural seed per WAVE-3-DP1-DISPATCH-READY-EXTENSION.
+
+    Precedence (parent design memo §4 paired-smoke recipe #2 + #3):
+
+    1. ``--procedural-codebook-null-exploit-control`` (recipe #3) → 32
+       zero bytes. The all-zero seed measures the score-axis impact of a
+       degenerate seed; the variant module's
+       :func:`verify_seed_mutation_changes_codebook_bytes` invariant still
+       holds because PRG output is not constant.
+    2. ``--procedural-codebook-seed-hex <hex>`` (operator-supplied seed)
+       → parsed verbatim. Must be 16-512 hex chars (8-256 bytes); raises
+       ``SystemExit`` on malformed input. Domain-of-validity per canonical
+       equation #26 is 8-256 bytes.
+    3. Default → ``hashlib.sha256(f"dpp-procedural-seed:{args.seed}".encode())``
+       gives a deterministic 32-byte seed for byte-stable test runs.
+
+    Returns: 32-byte (or operator-sized) seed bytes.
+
+    Raises: ``SystemExit`` on malformed --procedural-codebook-seed-hex.
+    """
+    if args.procedural_codebook_null_exploit_control:
+        return b"\x00" * 32
+    if args.procedural_codebook_seed_hex:
+        hex_str = args.procedural_codebook_seed_hex.strip().lower()
+        if not all(c in "0123456789abcdef" for c in hex_str):
+            raise SystemExit(
+                f"ERROR: --procedural-codebook-seed-hex contains non-hex "
+                f"chars: {args.procedural_codebook_seed_hex!r}"
+            )
+        if not (16 <= len(hex_str) <= 512) or (len(hex_str) % 2) != 0:
+            raise SystemExit(
+                f"ERROR: --procedural-codebook-seed-hex length {len(hex_str)} "
+                f"outside canonical equation #26 domain-of-validity "
+                f"[16, 512] hex chars (8-256 bytes); must be even-length."
+            )
+        return bytes.fromhex(hex_str)
+    return hashlib.sha256(
+        f"dpp-procedural-seed:{args.seed}".encode("utf-8")
+    ).digest()
+
+
+def _apply_procedural_codebook_replacement(
+    *,
+    args: argparse.Namespace,
+    canonical_archive_bytes: bytes,
+    seed_bytes: bytes,
+    output_dir: Path,
+) -> bytes:
+    """Apply procedural codebook replacement post pack_archive.
+
+    Per WAVE-3-DP1-DISPATCH-READY-EXTENSION 2026-05-20 OP-ROUTABLE #2 of
+    ``dp1_paired_smoke_dispatch_pre_authorization_checklist_20260520``.
+
+    Delegates to
+    :func:`tac.substrates.pretrained_driving_prior.distillation_procedural_variant.compose_with_procedural_codebook`
+    which swaps the DP1 archive's ``codebook_blob`` for ``brotli(seed_bytes)``
+    and rewrites the header ``codebook_len`` field. Renderer / residual /
+    meta sections are preserved byte-for-byte.
+
+    Catalog #344 cross-reference: when ``--procedural-codebook-validate-domain``
+    is set (default ON), invokes
+    :func:`verify_procedural_codebook_in_domain` BEFORE composition; the
+    helper gracefully falls back to constant comparison when sister
+    ``tac.canonical_equations.validate_context_is_in_domain`` has not yet
+    landed.
+
+    Catalog #323 canonical Provenance: writes the variant manifest to
+    ``--procedural-variant-provenance-path`` (or default
+    ``<output_dir>/procedural_variant_provenance.json``). The manifest
+    carries ``score_claim=False`` + ``promotion_eligible=False`` +
+    ``axis_tag=[predicted]`` per CLAUDE.md "Forbidden empirical-claim-
+    without-evidence-tag" non-negotiable.
+
+    Args:
+        args: argparse namespace.
+        canonical_archive_bytes: DP1 archive bytes emitted by ``pack_archive``.
+        seed_bytes: Resolved procedural seed bytes.
+        output_dir: Trainer output directory (default provenance path root).
+
+    Returns:
+        Post-replacement archive bytes. Header ``codebook_len`` is rewritten.
+    """
+    from tac.substrates.pretrained_driving_prior.distillation_procedural_variant import (
+        CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT,
+        compose_with_procedural_codebook,
+        verify_procedural_codebook_in_domain,
+    )
+
+    if args.procedural_codebook_validate_domain:
+        if not verify_procedural_codebook_in_domain(
+            CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT,
+        ):
+            raise SystemExit(
+                "ERROR: procedural codebook context "
+                f"{CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT!r} fails IN-DOMAIN "
+                "verification per canonical equation #26 + Catalog #344. "
+                "Pass --no-procedural-codebook-validate-domain (or unset env "
+                "DPP_PROCEDURAL_CODEBOOK_VALIDATE_DOMAIN) for diagnostic runs."
+            )
+
+    canonical_len = len(canonical_archive_bytes)
+    new_archive_bytes = compose_with_procedural_codebook(
+        original_archive_bytes=canonical_archive_bytes,
+        seed_bytes=seed_bytes,
+        generator_kind=args.procedural_codebook_generator_kind,
+    )
+    new_len = len(new_archive_bytes)
+    bytes_saved = canonical_len - new_len
+    predicted_delta_s = -25.0 * bytes_saved / 37_545_489.0
+    print(
+        f"[full] procedural codebook replacement: "
+        f"{canonical_len} B -> {new_len} B (saved {bytes_saved} B; "
+        f"predicted ΔS={predicted_delta_s:+.6f})"
+    )
+
+    # Catalog #323 canonical Provenance sidecar manifest.
+    provenance_path = (
+        Path(args.procedural_variant_provenance_path)
+        if args.procedural_variant_provenance_path
+        else output_dir / "procedural_variant_provenance.json"
+    )
+    provenance_payload = {
+        "schema": "dp1_procedural_variant_provenance_v1",
+        "schema_landing": "wave_3_dp1_dispatch_ready_extension_20260520",
+        "canonical_equation_id": (
+            "procedural_codebook_from_seed_compression_savings_v1"
+        ),
+        "canonical_equation_context": CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT,
+        "seed_size_bytes": int(len(seed_bytes)),
+        "seed_sha256": hashlib.sha256(seed_bytes).hexdigest(),
+        "generator_kind": args.procedural_codebook_generator_kind,
+        "null_exploit_control": bool(
+            args.procedural_codebook_null_exploit_control
+        ),
+        "validate_domain": bool(args.procedural_codebook_validate_domain),
+        "distillation_skip": bool(args.procedural_variant_distillation_skip),
+        "canonical_archive_bytes": int(canonical_len),
+        "post_replacement_archive_bytes": int(new_len),
+        "archive_bytes_saved": int(bytes_saved),
+        "predicted_delta_s_contest_rate": float(predicted_delta_s),
+        "predicted_band_validation_status": "pending_post_training",
+        "evidence_grade": "[predicted]",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "axis_tag": "[predicted]",
+        "lane_id": "lane_dp1_procedural_codebook_replacement_variant_20260520",
+        "design_memo": (
+            ".omx/research/dp1_procedural_codebook_paired_smoke_pre_dispatch_design_20260520T232120Z.md"
+        ),
+        "checklist_memo": (
+            "feedback_dp1_paired_smoke_dispatch_pre_authorization_checklist_landed_20260520.md"
+        ),
+        "wave_3_landing_memo": (
+            "feedback_dp1_dispatch_ready_extension_landed_20260520.md"
+        ),
+    }
+    provenance_path.parent.mkdir(parents=True, exist_ok=True)
+    provenance_path.write_text(
+        json.dumps(provenance_payload, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return new_archive_bytes
 
 
 def _maybe_set_tf32(enable: bool) -> None:
@@ -1590,6 +1879,36 @@ def _full_main(args: argparse.Namespace) -> int:
                 "num_frames_used": book.metadata.get("num_frames_used", 0),
                 "dataset_source_manifest": dataset_source_manifest,
             }
+            # WAVE-3-DP1-DISPATCH-READY-EXTENSION 2026-05-20 — procedural
+            # variant meta-flags. Inflate runtime reads these to decide
+            # whether to re-derive the codebook via
+            # tac.procedural_codebook_generator.derive_codebook_from_seed.
+            # Per Catalog #324 the variant emits
+            # predicted_band_validation_status=pending_post_training so the
+            # first paired Modal T4 smoke is the canonical anchor for
+            # canonical equation #26.
+            procedural_seed_bytes: bytes | None = None
+            if args.enable_procedural_codebook_replacement:
+                procedural_seed_bytes = _resolve_procedural_seed_bytes(args)
+                meta["procedural_codebook_variant_active"] = True
+                meta["procedural_codebook_seed_hex"] = (
+                    procedural_seed_bytes.hex()
+                )
+                meta["procedural_codebook_generator_kind"] = (
+                    args.procedural_codebook_generator_kind
+                )
+                meta["procedural_codebook_null_exploit_control"] = bool(
+                    args.procedural_codebook_null_exploit_control
+                )
+                meta["predicted_band_validation_status"] = (
+                    "pending_post_training"
+                )
+                meta["canonical_equation_id"] = (
+                    "procedural_codebook_from_seed_compression_savings_v1"
+                )
+                meta["canonical_equation_context"] = (
+                    "comma2k19_ood_derived_basis_replacement"
+                )
             ema_state_torch = dict(ema_state_loaded)
             bin_bytes = pack_archive(
                 book,
@@ -1601,6 +1920,19 @@ def _full_main(args: argparse.Namespace) -> int:
                 output_width=renderer_cfg.output_width,
                 per_pair_bytes=args.per_pair_bytes,
             )
+            # WAVE-3-DP1-DISPATCH-READY-EXTENSION 2026-05-20 — apply
+            # procedural codebook replacement post pack_archive. The variant
+            # module's compose_with_procedural_codebook swaps codebook_blob
+            # bytes for brotli(seed) and rewrites the DP1 header
+            # codebook_len field. Renderer / residual / meta sections are
+            # preserved byte-for-byte.
+            if procedural_seed_bytes is not None:
+                bin_bytes = _apply_procedural_codebook_replacement(
+                    args=args,
+                    canonical_archive_bytes=bin_bytes,
+                    seed_bytes=procedural_seed_bytes,
+                    output_dir=output_dir,
+                )
             (output_dir / "0.bin").write_bytes(bin_bytes)
             payload_0bin_bytes = len(bin_bytes)
             payload_0bin_sha = _sha256_bytes(bin_bytes)

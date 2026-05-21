@@ -45475,6 +45475,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_dp1_dispatch_ready_extension_20260520",
+      "name": "DP1 dispatch-ready extension",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_pretrained_driving_prior.py +7 argparse flags + _resolve_procedural_seed_bytes + _apply_procedural_codebook_replacement; src/tac/substrates/pretrained_driving_prior/procedural_codebook_inflate.py NEW 408 LOC canonical helper; src/tac/substrates/pretrained_driving_prior/inflate.py +14 LOC routing through parse_archive_procedural_aware; src/tac/substrates/pretrained_driving_prior/tests/test_dispatch_ready_extension.py NEW 23 tests all PASS; 229/229 DP1 substrate regression PASS"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "23 dedicated tests + 8 sister catalog gates verified clean (#205 #220 #240 #272 #295 #324 #328 #344); routing through parse_archive_procedural_aware + provenance manifest emit + Catalog 323 canonical Provenance + Catalog 324 pending_post_training; Catalog 272 byte-mutation smoke PASSES across all 4 codebook sections via sha256 per-section seed cascade"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_dp1_dispatch_ready_extension_landed_20260520.md memory + .omx/research/dp1_dispatch_ready_extension_landed_20260520.md research artifact"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "WAVE-3 OP-ROUTABLES #2+#3 of dp1_paired_smoke_dispatch_pre_authorization_checklist_20260520; trainer extension + inflate runtime extension closes 2-of-3 prerequisites for first paired Modal T4 smoke on canonical equation #26"
     }
   ],
   "level_rules": {
@@ -45484,5 +45525,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-20T23:49:16Z"
+  "updated_at": "2026-05-21T00:30:13Z"
 }

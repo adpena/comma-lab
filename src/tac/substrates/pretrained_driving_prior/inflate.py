@@ -34,6 +34,15 @@ from tac.substrates.pretrained_driving_prior.archive import (
     DrivingPriorArchive,
     parse_archive,
 )
+# WAVE-3-DP1-DISPATCH-READY-EXTENSION 2026-05-20 — procedural-codebook
+# variant detection sister helper per Catalog #328 inflate.py LOC budget
+# (helper lives in a separate module so this file stays close to budget).
+# When meta_blob declares procedural_codebook_variant_active=True the
+# canonical 4-array DashcamCodebook is re-derived from the operator-supplied
+# seed via tac.procedural_codebook_generator.derive_codebook_from_seed.
+from tac.substrates.pretrained_driving_prior.procedural_codebook_inflate import (
+    parse_archive_procedural_aware,
+)
 
 
 def _build_renderer_from_state_dict(
@@ -142,7 +151,12 @@ def inflate_one_video(
     codebook bytes affect the inflated frames rather than serving as parse-only
     provenance.
     """
-    arc: DrivingPriorArchive = parse_archive(archive_bytes)
+    # WAVE-3-DP1-DISPATCH-READY-EXTENSION 2026-05-20 — route through the
+    # procedural-aware parser. For canonical archives this delegates to
+    # parse_archive; for procedural variants it re-derives the codebook
+    # from meta["procedural_codebook_seed_hex"] via
+    # tac.procedural_codebook_generator.derive_codebook_from_seed.
+    arc: DrivingPriorArchive = parse_archive_procedural_aware(archive_bytes)
     render_device = select_inflate_device(device)
     renderer = _build_renderer_from_state_dict(
         arc.renderer_state_dict,
