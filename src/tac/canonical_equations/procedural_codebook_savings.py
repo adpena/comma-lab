@@ -121,6 +121,130 @@ _EXCLUDED_CONTEXTS = (
 # codebook substitution per memo §4.
 _DEFAULT_CONTEXT = "intermediate_transform_quantizer"
 
+# Residual-hybrid context tokens — STRUCTURALLY DISTINCT from the
+# equation's mathematical predicate (codebook REPLACEMENT savings:
+# `ΔS = -25 * (N_codebook - K_seed) / 37_545_489`). Residual-hybrid
+# stacking-extension contexts encode a (predictor, residual) pair where
+# the seed PREDICTS the empirical bytes + a residual stream encodes the
+# (empirical - predictor) delta. The mathematical operation is
+# fundamentally different (ADDS bytes via residual encoding rather than
+# REPLACING bytes via direct substitution); the equation #26 prediction
+# `ΔS = -25 * (N - K) / 37_545_489` does NOT apply because empirical
+# bytes are NOT removed from the archive (they are reconstructed at
+# inflate time as `predictor(K_seed) + residual`).
+#
+# Pair #1 (DWT detail subbands + dense_streams residual; 2026-05-20
+# commit debbc5833) measured residual_zscore = 38.8 (predicted -0.00200
+# vs empirical +0.036805); pair #2 (fec6 null-byte + SRL1 residual;
+# 2026-05-20 commit a986efa99) measured residual_zscore = 101.18
+# (predicted -0.00109 vs empirical +0.054055). Both falsifications were
+# IMPLEMENTATION-LEVEL (canonical equation misapplied to a context the
+# equation does not predict for), NOT PARADIGM-LEVEL refutations of the
+# rescue paradigm.
+_RESIDUAL_HYBRID_CONTEXT_PATTERNS = (
+    "_residual_correction_",
+    "_srl1_correction_",
+    "_residual_hybrid_",
+    "_predictor_plus_residual_",
+    "_seed_plus_residual_",
+    "_procedural_predictor_residual_",
+    "_dense_streams_residual_correction_",
+    "_sparse_packet_ir_srl1_correction_",
+)
+
+
+def is_residual_hybrid_context(context: str | None) -> bool:
+    """Return True if ``context`` matches a residual-hybrid pattern.
+
+    Per WAVE-3-MAGIC-CODEC-PAIR-1-2-ENGINEERING-FIX 2026-05-20 +
+    Catalog #359 (`check_no_canonical_equation_misapplication_to_residual_hybrid_contexts`).
+    Residual-hybrid contexts are STRUCTURALLY DISTINCT from canonical
+    equation #26's mathematical predicate (codebook REPLACEMENT savings);
+    matching one of the canonical patterns in
+    :data:`_RESIDUAL_HYBRID_CONTEXT_PATTERNS` indicates the caller is
+    mis-applying equation #26 to a (predictor, residual) stacking
+    extension that ADDS bytes via residual encoding rather than REMOVES
+    bytes via direct substitution.
+
+    Args:
+        context: a canonical context token (string). ``None`` / empty
+            returns False (no detection possible without a context tag).
+
+    Returns:
+        True if ``context`` matches any residual-hybrid pattern; False
+        otherwise.
+    """
+    if context is None or not str(context).strip():
+        return False
+    ctx = str(context).strip().lower()
+    return any(pat in ctx for pat in _RESIDUAL_HYBRID_CONTEXT_PATTERNS)
+
+
+def refuse_residual_hybrid_context_misapplication(
+    context: str | None,
+    *,
+    raise_on_residual_hybrid: bool = True,
+) -> bool:
+    """Refuse canonical equation #26 misapplication to residual-hybrid contexts.
+
+    Per Catalog #359. Residual-hybrid stacking-extension contexts
+    (predictor + residual encoding) are STRUCTURALLY DISTINCT from the
+    equation's REPLACEMENT-savings predicate. Calling
+    `update_equation_with_empirical_anchor("procedural_codebook_from_seed_compression_savings_v1", ...)`
+    with an anchor whose `inputs["in_domain_context"]` matches a
+    residual-hybrid pattern is forbidden because the equation's
+    prediction `ΔS = -25 * (N - K) / 37545489` does not apply.
+
+    The empirical falsifications at zscore=38.8 (pair #1) and zscore=101
+    (pair #2) are IMPLEMENTATION-LEVEL falsifications of the equation
+    misapplication, NOT paradigm-level refutations of the residual-
+    correction stacking paradigm. Per CLAUDE.md "Forbidden premature
+    KILL without research exhaustion": the residual-correction stacking
+    paradigm is DEFERRED-PENDING-CORRECT-CANONICAL-EQUATION (a NEW
+    sister equation `procedural_predictor_plus_residual_correction_savings_v1`
+    is the canonical research path forward).
+
+    Args:
+        context: a canonical context token (string).
+        raise_on_residual_hybrid: when True (default), raises
+            :class:`DomainOfValidityViolation` if the context matches a
+            residual-hybrid pattern. When False, returns ``False``
+            instead so callers can route the candidate to a separate
+            equation (sister design candidate
+            ``procedural_predictor_plus_residual_correction_savings_v1``
+            once landed).
+
+    Returns:
+        True if the context is NOT a residual-hybrid pattern (safe to
+        proceed); False if the context IS a residual-hybrid pattern AND
+        ``raise_on_residual_hybrid=False``.
+
+    Raises:
+        DomainOfValidityViolation: when ``context`` matches a residual-
+            hybrid pattern AND ``raise_on_residual_hybrid=True``.
+    """
+    if not is_residual_hybrid_context(context):
+        return True
+    if not raise_on_residual_hybrid:
+        return False
+    raise DomainOfValidityViolation(
+        f"context={context!r} matches a residual-hybrid pattern "
+        f"({_RESIDUAL_HYBRID_CONTEXT_PATTERNS!r}); canonical equation "
+        "procedural_codebook_from_seed_compression_savings_v1 predicts "
+        "REPLACEMENT-savings (ΔS = -25 * (N_codebook - K_seed) / 37_545_489) "
+        "NOT residual-correction stacking-extension. Pair #1 (commit "
+        "debbc5833; residual_zscore=38.8) and pair #2 (commit a986efa99; "
+        "residual_zscore=101.18) empirically falsified the equation's "
+        "misapplication to residual-hybrid contexts. Per Catalog #359 + "
+        "CLAUDE.md 'Bugs must be permanently fixed AND self-protected "
+        "against' non-negotiable: re-scope the anchor to a NEW sister "
+        "canonical equation (e.g. "
+        "procedural_predictor_plus_residual_correction_savings_v1) whose "
+        "mathematical predicate matches the (predictor, residual) "
+        "stacking extension. See "
+        ".omx/research/magic_codec_pair_1_2_engineering_fix_adversarial_review_20260520.md"
+    )
+
 
 def validate_context_is_in_domain(
     context: str | None = None,

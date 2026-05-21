@@ -5279,6 +5279,21 @@ def preflight_all(
             strict=True, verbose=verbose
         )
 
+        # Catalog #359: refuse canonical equation #26 misapplication to
+        # residual-hybrid stacking-extension contexts per WAVE-3-MAGIC-CODEC-
+        # PAIR-1-2-ENGINEERING-FIX self-protect. STRICT-from-byte-one because
+        # the cutoff exempts pair #1 + pair #2 historical anchors per Catalog
+        # #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE; the gate fires
+        # structurally on FUTURE misapplications.
+        # Memory: feedback_magic_codec_pair_1_2_engineering_fix_re_run_landed_20260520.
+        _parallel.run(
+            "check_no_canonical_equation_misapplication_to_residual_hybrid_contexts",
+            "[catalog-359]",
+            lambda: check_no_canonical_equation_misapplication_to_residual_hybrid_contexts(
+                strict=True, verbose=verbose
+            ),
+        )
+
         # Catalog #348: event-driven retroactive verdict-taint sweep.
         # WARN-ONLY at landing per CLUSTER B routing directive + strict-flip
         # atomicity. Any new preflight gate added to src/tac/preflight.py
@@ -77475,6 +77490,210 @@ def check_recipe_workspace_output_path_canonical_or_modal_aware(
             "#220 (extractor /tmp guard) + #270 (tool scope):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
+    return violations
+
+
+# ============================================================================
+# Catalog #359 - check_no_canonical_equation_misapplication_to_residual_hybrid_contexts
+#
+# WAVE-3-MAGIC-CODEC-PAIR-1-2-ENGINEERING-FIX self-protection 2026-05-20 per
+# operator query *"were there ordering or config or engineering issues"* +
+# *"fix the third slot approved"* + CLAUDE.md "Bugs must be permanently
+# fixed AND self-protected against" non-negotiable.
+#
+# Refuses canonical equation #26 (`procedural_codebook_from_seed_compression_savings_v1`)
+# anchor-append calls whose `inputs["in_domain_context"]` matches a
+# residual-hybrid pattern (predictor + residual encoding). The equation's
+# mathematical predicate is REPLACEMENT savings
+# `ΔS = -25 * (N_codebook - K_seed) / 37_545_489`; residual-hybrid
+# stacking-extension contexts encode (predictor, residual) pairs that ADD
+# bytes via residual encoding rather than REMOVE bytes via direct
+# substitution. The empirical falsifications at pair #1 (residual_zscore=38.8)
+# and pair #2 (residual_zscore=101.18) were IMPLEMENTATION-LEVEL
+# falsifications of the equation misapplication per Catalog #307, NOT
+# PARADIGM-LEVEL refutations of the residual-correction stacking paradigm
+# (which remains DEFERRED-PENDING-NEW-SISTER-EQUATION per CLAUDE.md
+# "Forbidden premature KILL without research exhaustion").
+#
+# Sister of Catalog #344 (canonical-equation-reference enforcement at the
+# memo-finding surface; #359 is the runtime equation-misapplication surface)
+# + Catalog #287 (placeholder-rationale rejection) + Catalog #307 (paradigm
+# vs implementation classification) + Catalog #176 (META-meta: STRICT
+# callsites have CLAUDE.md row) + Catalog #185 (META-meta-meta: Live
+# count: 0 verified empirically).
+#
+# Scope: scans `.omx/state/canonical_equations_registry.jsonl` for
+# `anchor_appended` events on `procedural_codebook_from_seed_compression_savings_v1`
+# whose latest payload contains an anchor with `inputs.in_domain_context`
+# matching `tac.canonical_equations.procedural_codebook_savings.is_residual_hybrid_context`.
+# Anchors with `measurement_utc` BEFORE the cutoff `_CHECK_359_CUTOFF_UTC = "2026-05-21T00:30:00Z"`
+# are exempt. The cutoff is set just AFTER pair #2's anchor (measurement_utc
+# `2026-05-21T00:21:20Z`) so pair #1 + pair #2 historical anchors are preserved per Catalog
+# #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE; the residual-hybrid mis-
+# application is documented historical signal — the gate prevents NEW
+# misapplications).
+#
+# Same-line waiver discipline: anchor body containing a field
+# `_residual_hybrid_misapplication_waiver` with a substantive
+# non-placeholder rationale (≥10 chars; `<rationale>` / `<reason>`
+# literals + short rationales rejected). Reserved for the rare deliberate
+# audit-trail anchor where the operator explicitly documents the
+# misapplication for sister-equation design.
+# ============================================================================
+
+_CHECK_359_CUTOFF_UTC = "2026-05-21T00:30:00Z"
+_CHECK_359_TARGET_EQUATION_ID = "procedural_codebook_from_seed_compression_savings_v1"
+_CHECK_359_REGISTRY_PATH = ".omx/state/canonical_equations_registry.jsonl"
+_CHECK_359_PLACEHOLDERS = ("<rationale>", "<reason>", "<rationale_here>", "<reason_here>", "")
+
+
+def _check_359_parse_utc(value) -> float:
+    """Return UTC epoch seconds for an ISO-Z string; None / invalid → 0.0."""
+    if not isinstance(value, str) or not value:
+        return 0.0
+    try:
+        from datetime import datetime, timezone
+        if value.endswith("Z"):
+            value = value[:-1] + "+00:00"
+        return datetime.fromisoformat(value).timestamp()
+    except Exception:
+        return 0.0
+
+
+def _check_359_validate_waiver(waiver) -> bool:
+    """Return True if waiver is a substantive non-placeholder string ≥10 chars."""
+    if not isinstance(waiver, str):
+        return False
+    stripped = waiver.strip()
+    if not stripped or len(stripped) < 10:
+        return False
+    if stripped.lower() in [p.lower() for p in _CHECK_359_PLACEHOLDERS if p]:
+        return False
+    return True
+
+
+def check_no_canonical_equation_misapplication_to_residual_hybrid_contexts(
+    *,
+    repo_root: "Path | str | None" = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Refuse equation #26 misapplication to residual-hybrid stacking contexts.
+
+    Per Catalog #359. Scans the canonical equations registry for the
+    latest `equation_payload.empirical_anchors` list for equation #26;
+    refuses any anchor whose `inputs.in_domain_context` matches the
+    residual-hybrid pattern set in
+    `tac.canonical_equations.procedural_codebook_savings.is_residual_hybrid_context`
+    AND was written at or after `_CHECK_359_CUTOFF_UTC` AND lacks a
+    substantive `_residual_hybrid_misapplication_waiver` field.
+
+    The cutoff exempts the pair #1 + pair #2 historical anchors (2026-05-20
+    landings) per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE; the
+    gate fires structurally on any FUTURE misapplication.
+    """
+    import json
+    from pathlib import Path as _Path
+
+    if repo_root is None:
+        repo_root = _Path(__file__).resolve().parents[2]
+    else:
+        repo_root = _Path(str(repo_root))
+
+    registry_path = repo_root / _CHECK_359_REGISTRY_PATH
+    violations: list[str] = []
+
+    if not registry_path.exists():
+        return violations
+
+    try:
+        from tac.canonical_equations.procedural_codebook_savings import (
+            is_residual_hybrid_context,
+        )
+    except Exception as exc:
+        violations.append(
+            f"[catalog-359] FAIL: cannot import is_residual_hybrid_context "
+            f"helper ({exc!r}); the residual-hybrid validator is the canonical "
+            f"detector — refusing per fail-closed discipline"
+        )
+        if strict:
+            raise PreflightError("\n".join(violations))
+        return violations
+
+    cutoff_epoch = _check_359_parse_utc(_CHECK_359_CUTOFF_UTC)
+
+    try:
+        rows = []
+        with registry_path.open("r") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    except Exception as exc:
+        violations.append(
+            f"[catalog-359] FAIL: cannot read registry {registry_path}: {exc!r}"
+        )
+        if strict:
+            raise PreflightError("\n".join(violations))
+        return violations
+
+    # Filter to anchor_appended events for the target equation; latest wins
+    # for the anchor list (per Catalog #110 APPEND-ONLY semantics — latest
+    # equation_payload row carries the full anchor list).
+    target_rows = [
+        r for r in rows
+        if r.get("equation_id") == _CHECK_359_TARGET_EQUATION_ID
+        and r.get("event_type") == "anchor_appended"
+    ]
+    if not target_rows:
+        return violations
+
+    latest = target_rows[-1]
+    eq_payload = latest.get("equation_payload", {}) or {}
+    anchors = eq_payload.get("empirical_anchors", []) or []
+
+    for anchor in anchors:
+        if not isinstance(anchor, dict):
+            continue
+        inputs = anchor.get("inputs", {}) or {}
+        ctx = inputs.get("in_domain_context")
+        if not ctx or not is_residual_hybrid_context(ctx):
+            continue
+        # Found a residual-hybrid anchor; check cutoff + waiver
+        anchor_utc = anchor.get("measurement_utc") or ""
+        anchor_epoch = _check_359_parse_utc(anchor_utc)
+        if anchor_epoch < cutoff_epoch:
+            # Pre-cutoff historical anchor; APPEND-ONLY preserved
+            continue
+        waiver = anchor.get("_residual_hybrid_misapplication_waiver")
+        if _check_359_validate_waiver(waiver):
+            continue
+        anchor_id = anchor.get("anchor_id", "<unknown>")
+        violations.append(
+            f"[catalog-359] anchor_id={anchor_id} in_domain_context={ctx!r} "
+            f"matches residual-hybrid pattern but lacks substantive "
+            f"`_residual_hybrid_misapplication_waiver` field; canonical "
+            f"equation procedural_codebook_from_seed_compression_savings_v1 "
+            f"predicts REPLACEMENT savings ΔS = -25 * (N - K) / 37_545_489, "
+            f"NOT residual-correction stacking-extension. Either re-scope "
+            f"the anchor to a NEW sister canonical equation OR carry a "
+            f"non-placeholder `_residual_hybrid_misapplication_waiver` "
+            f"rationale (>=10 chars). See "
+            f".omx/research/magic_codec_pair_1_2_engineering_fix_adversarial_review_20260520.md"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "[catalog-359] Canonical equation #26 misapplication to "
+            "residual-hybrid context(s) per WAVE-3-MAGIC-CODEC-PAIR-1-2-"
+            "ENGINEERING-FIX self-protect:\n  " + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    if verbose and violations:
+        for v in violations:
+            print(v)
     return violations
 
 
