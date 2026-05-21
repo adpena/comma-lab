@@ -5,12 +5,16 @@
 - Re-reviewed the landed MLX scorer-response path after newer main commits.
 - Closed the remaining false-authority gap by requiring explicit GPU research
   allowance before any MLX GPU scorer-response/profile execution.
+- Reconciled the concurrent `main` advance to `a71ef3500`, which also added
+  the MLX scorer batch-invariance audit for GPU batch-shape drift.
 - Updated `.gitignore` for ad hoc MLX scorer cache/response/profile roots so
   local generated artifacts do not leak into staging by accident.
 - Preserved prior Markdown provenance append-only and wrote a successor finding
   documenting that historical GPU-profile rerun commands now need
   `--allow-gpu-research-signal`.
-- Confirmed no untracked files were present at signal-loss audit time.
+- Confirmed no untracked files were present at the initial signal-loss audit;
+  after authoring this summary, only these two Codex memos remained untracked
+  pending exact-file staging.
 - Left unrelated partner dirty files unstaged and untouched.
 
 ## Verification
@@ -30,4 +34,3 @@
 
 Run a future CPU-transfer calibration on the exact target scorer-response window
 before allowing GPU-derived candidates into any paid exact-eval selection queue.
-
