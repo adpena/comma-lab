@@ -45681,6 +45681,88 @@
         }
       },
       "notes": "research_only=true; lane_class=substrate_engineering; reactivation_criteria=symposium_proceed_per_catalog_325_plus_paired_smoke_contest_cuda_plus_contest_cpu_per_claude_md_submission_auth_eval; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=chroma_lut_replacement; predicted_delta_s=-0.000149; bytes_saved_hypothesis=224_after_glv2_lut_explicit_replacement; current_glv1_scaffold_appends_41b_and_is_not_score_eligible; lut_bytes=256; seed_bytes=32; horizon_class=frontier_protecting; per_substrate_symposium_required_per_catalog_325; build_landed_research_only; sister_canonical_pattern_dp1_commit_9cbfa471c_plus_vq_vae_commit_6fea30f22; predicted_band_validation_status=pending_post_training"
+    },
+    {
+      "id": "lane_wave_3_parser_safe_subset_smoke_20260520",
+      "name": "WAVE-3 parser-safe subset smoke for fec6 master-gradient null bytes",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_parser_safe_subset_smoke.py + src/tac/tests/test_parser_safe_subset_smoke.py 12/12 PASS"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/parser_safe_subset_smoke_20260521T014517Z/smoke_result.json [PARSER_SAFE_SUBSET_EMPTY; 0/16292 null bytes parser-safe; fec6 sha 6bae0201]"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_parser_safe_subset_smoke.py 12/12 PASS + git diff --check clean + py_compile clean; non-promotional authority fields asserted"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=frontier_forensics; score_claim=false; promotion_eligible=false; parser_safe_subset_size=0; verdict=PARSER_SAFE_SUBSET_EMPTY; artifact=experiments/results/parser_safe_subset_smoke_20260521T014517Z/smoke_result.json; redirects_null_exploit_from_current_fec6_byte_removal_to_parser_visible_replacement_substrates"
+    },
+    {
+      "id": "lane_atw_v2_procedural_variant_build_design_20260520",
+      "name": "ATW V2 Procedural Variant BUILD Design",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/atw_v2_procedural_variant_build_design_20260520.md DESIGN-ONLY DEFER_PENDING_EVIDENCE; council T1 verdict; 5500 words; all 4 mandatory sections per Catalog #290/#294/#303/#305 + #309 horizon_class + #344 canonical equation cross-ref"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_atw_v2_procedural_variant_build_design_landed_20260520.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -45690,5 +45772,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T01:42:26Z"
+  "updated_at": "2026-05-21T01:49:40Z"
 }
