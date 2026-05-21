@@ -24,6 +24,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     run_mlx_patch_embed_nchw,
     run_mlx_posenet_nchw,
     run_mlx_repmixer_block_nchw,
+    run_mlx_timm_universal_encoder_nchw,
     torch_batchnorm2d_to_mlx,
     torch_conv2d_to_mlx,
     torch_efficientnet_block_to_mlx,
@@ -38,6 +39,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     torch_patch_embed_to_mlx,
     torch_posenet_to_mlx,
     torch_repmixer_block_to_mlx,
+    torch_timm_universal_encoder_to_mlx,
     temporary_mlx_device,
 )
 
@@ -438,6 +440,25 @@ def test_segnet_efficientnet_features_match_torch_on_mlx_cpu() -> None:
     assert max(max_by_feature) < 2.0e-3
 
 
+def test_segnet_timm_universal_encoder_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(103)
+    encoder = _loaded_segnet_encoder()
+    x = torch.randn(1, 3, 64, 80)
+
+    expected = [feature.detach().numpy() for feature in encoder(x)]
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_timm_universal_encoder_nchw(
+            torch_timm_universal_encoder_to_mlx(encoder),
+            x.numpy(),
+        )
+
+    assert [item.shape for item in actual] == [item.shape for item in expected]
+    assert len(actual) == 6
+    np.testing.assert_allclose(actual[0], x.numpy(), atol=0.0, rtol=0.0)
+    max_by_feature = [_max_abs(lhs, rhs) for lhs, rhs in zip(actual, expected, strict=True)]
+    assert max(max_by_feature) < 2.0e-3
+
+
 def _loaded_posenet_stem_block0() -> nn.Module:
     return _loaded_posenet_stem()[0].eval()
 
@@ -479,6 +500,10 @@ def _loaded_segnet_encoder_stage(stage_index: int) -> nn.Module:
 
 
 def _loaded_segnet_encoder_model() -> nn.Module:
+    return _loaded_segnet_encoder().model.eval()
+
+
+def _loaded_segnet_encoder() -> nn.Module:
     import sys
     from pathlib import Path
 
@@ -487,4 +512,4 @@ def _loaded_segnet_encoder_model() -> nn.Module:
 
     segnet = modules.SegNet().eval()
     segnet.load_state_dict(load_file(modules.segnet_sd_path))
-    return segnet.encoder.model.eval()
+    return segnet.encoder.eval()

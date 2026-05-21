@@ -26,7 +26,9 @@ __all__ = [
     "run_mlx_patch_embed_nchw",
     "run_mlx_mobileone_block_nchw",
     "run_mlx_mobileone_stem_nchw",
+    "run_mlx_posenet_nchw",
     "run_mlx_repmixer_block_nchw",
+    "run_mlx_timm_universal_encoder_nchw",
     "run_mlx_fastvit_stage_nchw",
     "run_mlx_fastvit_vision_nchw",
     "torch_batchnorm2d_to_mlx",
@@ -42,9 +44,9 @@ __all__ = [
     "torch_mobileone_block_to_mlx",
     "torch_mobileone_stem_to_mlx",
     "torch_patch_embed_to_mlx",
-    "run_mlx_posenet_nchw",
     "torch_posenet_to_mlx",
     "torch_repmixer_block_to_mlx",
+    "torch_timm_universal_encoder_to_mlx",
     "temporary_mlx_device",
 ]
 
@@ -223,6 +225,22 @@ class MLXEfficientNetFeaturesAdapter:
             if index + 1 in self.stage_out_idx:
                 features.append(out)
         return features
+
+
+class MLXTimmUniversalEncoderAdapter:
+    """MLX adapter for SMP ``TimmUniversalEncoder`` around EfficientNetFeatures."""
+
+    def __init__(self, torch_encoder: Any):
+        if bool(getattr(torch_encoder, "_is_channel_last", False)):
+            raise NotImplementedError("channel-last TimmUniversalEncoder path is not covered")
+        if bool(getattr(torch_encoder, "_is_transformer_style", False)):
+            raise NotImplementedError("transformer-style TimmUniversalEncoder path is not covered")
+        self.prepend_input = not bool(getattr(torch_encoder, "_is_vgg_style", False))
+        self.model = torch_efficientnet_features_to_mlx(torch_encoder.model)
+
+    def __call__(self, x_nhwc: Any) -> list[Any]:
+        features = self.model(x_nhwc)
+        return [x_nhwc] + features if self.prepend_input else features
 
 
 class MLXMobileOneBlockAdapter:
@@ -711,6 +729,12 @@ def torch_efficientnet_features_to_mlx(torch_model: Any) -> MLXEfficientNetFeatu
     return MLXEfficientNetFeaturesAdapter(torch_model)
 
 
+def torch_timm_universal_encoder_to_mlx(torch_encoder: Any) -> MLXTimmUniversalEncoderAdapter:
+    """Convert SMP ``TimmUniversalEncoder`` to MLX."""
+
+    return MLXTimmUniversalEncoderAdapter(torch_encoder)
+
+
 def torch_repmixer_block_to_mlx(torch_block: Any) -> MLXRepMixerBlockAdapter:
     """Convert a timm FastViT ``RepMixerBlock`` to a parity-tested MLX adapter."""
 
@@ -776,6 +800,18 @@ def run_mlx_efficientnet_features_nchw(
     x_nchw: np.ndarray,
 ) -> list[np.ndarray]:
     """Run an EfficientNetFeatures adapter on NCHW input and return NCHW features."""
+
+    import mlx.core as mx
+
+    features = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return [nhwc_to_nchw(_mlx_array_to_numpy(feature)) for feature in features]
+
+
+def run_mlx_timm_universal_encoder_nchw(
+    adapter: MLXTimmUniversalEncoderAdapter,
+    x_nchw: np.ndarray,
+) -> list[np.ndarray]:
+    """Run a TimmUniversalEncoder adapter on NCHW input and return NCHW features."""
 
     import mlx.core as mx
 
