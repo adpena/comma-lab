@@ -89,6 +89,23 @@ from tac.portable_primitives.nn_attention import (
     PortableRepMixer,
     PortableTokenMixer,
 )
+from tac.portable_primitives.nn_fastvit import (
+    FASTVIT_T12_EMBED_DIMS,
+    FASTVIT_T12_LAYERS,
+    FASTVIT_T12_MLP_RATIOS,
+    POSENET_IN_CHANS,
+    POSENET_INPUT_MEAN,
+    POSENET_INPUT_STD,
+    POSENET_SUMMARY_FEATURES,
+    POSENET_VISION_FEATURES,
+    PortableAllNorm,
+    PortableFastViTBlock,
+    PortableFastViTStage,
+    PortableFastViTT12Backbone,
+    PortableHydra,
+    PortablePoseNet,
+    PortableResBlock,
+)
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -109,6 +126,22 @@ __all__ = [
     "PortableMHSA",
     "PortableTokenMixer",
     "PortableRepMixer",
+    # MLX-ARCH-3 FastViT-T12 backbone + PoseNet primitives.
+    "PortableAllNorm",
+    "PortableResBlock",
+    "PortableHydra",
+    "PortableFastViTBlock",
+    "PortableFastViTStage",
+    "PortableFastViTT12Backbone",
+    "PortablePoseNet",
+    "FASTVIT_T12_LAYERS",
+    "FASTVIT_T12_EMBED_DIMS",
+    "FASTVIT_T12_MLP_RATIOS",
+    "POSENET_IN_CHANS",
+    "POSENET_VISION_FEATURES",
+    "POSENET_SUMMARY_FEATURES",
+    "POSENET_INPUT_MEAN",
+    "POSENET_INPUT_STD",
 ]
 
 SCHEMA_VERSION = "portable_primitives.v1"
