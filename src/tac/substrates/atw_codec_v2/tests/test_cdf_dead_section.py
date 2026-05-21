@@ -286,3 +286,36 @@ def test_probe_atw2_cdf_dead_section_cli_archive_zip_compact() -> None:
         assert payload["archive_zip_bytes_saved"] == 2552
         assert payload["inner_proof"]["raw_equal"] is True
         assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materialize_atw2_cdf_compaction_smoke_cli(tmp_path: Path) -> None:
+    out_dir = tmp_path / "atw2-materialized"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "materialize_atw2_cdf_compaction_smoke.py"),
+            "--output-dir",
+            str(out_dir),
+            "--epochs",
+            "1",
+            "--device",
+            "cpu",
+            "--variant",
+            "B",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    payload = json.loads(proc.stdout)
+    assert (out_dir / "materialized_compaction_report.json").is_file()
+    assert (out_dir / "materialized_compaction_report.md").is_file()
+    assert (out_dir / "source" / "archive.zip").is_file()
+    assert (out_dir / "compact" / "archive.zip").is_file()
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["proof"]["archive_zip_bytes_saved"] > 0
+    assert payload["proof"]["inner_proof"]["raw_equal"] is True
+    assert payload["proof"]["inner_proof"]["max_abs_raw_byte_delta"] == 0
