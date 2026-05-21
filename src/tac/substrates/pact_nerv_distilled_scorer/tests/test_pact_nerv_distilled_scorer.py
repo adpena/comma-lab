@@ -59,6 +59,46 @@ def _smoke_meta(cfg: PactNervDistilledScorerConfig) -> dict[str, object]:
     }
 
 
+def _false_authority() -> dict[str, bool]:
+    return {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+
+
+def _scorer_response_dataset() -> dict[str, object]:
+    false_authority = _false_authority()
+    return {
+        "schema": "scorer_response_dataset.v1",
+        **false_authority,
+        "authority": {
+            **false_authority,
+            "evidence_grade": "macOS-CPU advisory response dataset",
+        },
+        "rows": [
+            {
+                "schema": "scorer_response_row.v1",
+                "row_id": "row-a",
+                **false_authority,
+                "authority_source_score_claim": False,
+                "advisory_score_report_derived": 0.25,
+                "delta_vs_baseline_score": 0.01,
+            },
+            {
+                "schema": "scorer_response_row.v1",
+                "row_id": "row-b",
+                **false_authority,
+                "authority_source_score_claim": False,
+                "advisory_score_report_derived": 0.24,
+                "delta_vs_baseline_score": -0.001,
+            },
+        ],
+    }
+
+
 def test_module_import_resolves_canonical_symbols() -> None:
     from tac.substrates import pact_nerv_distilled_scorer as pkg
 
@@ -69,6 +109,64 @@ def test_module_import_resolves_canonical_symbols() -> None:
     assert hasattr(pkg, "parse_archive")
     assert hasattr(pkg, "PactNervDistilledScorerScoreAwareLoss")
     assert hasattr(pkg, "PactNervDistilledScorerArchive")
+    assert pkg.CONSUMES_SCORER_RESPONSE_DATASET is True
+    assert hasattr(pkg, "load_scorer_response_distill_rows")
+
+
+def test_score_aware_loss_consumes_scorer_response_dataset_contract() -> None:
+    from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
+
+    dataset = _scorer_response_dataset()
+    rows = sal.load_scorer_response_distill_rows(dataset, max_rows=1)
+
+    assert sal.CONSUMES_SCORER_RESPONSE_DATASET is True
+    assert sal.SCORER_RESPONSE_DATASET_SCHEMA == "scorer_response_dataset.v1"
+    assert len(rows) == 1
+    assert rows[0]["row_id"] == "row-a"
+
+
+def test_score_aware_loss_rejects_promotional_scorer_response_dataset() -> None:
+    from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
+
+    dataset = _scorer_response_dataset()
+    dataset["score_claim"] = True
+
+    try:
+        sal.load_scorer_response_distill_rows(dataset)
+    except ValueError as exc:
+        assert "score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected promotional scorer-response dataset rejection")
+
+
+def test_score_aware_loss_rejects_legacy_missing_authority_dataset() -> None:
+    from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
+
+    dataset = _scorer_response_dataset()
+    dataset.pop("rank_or_kill_eligible")
+
+    try:
+        sal.load_scorer_response_distill_rows(dataset)
+    except ValueError as exc:
+        assert "rank_or_kill_eligible" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected missing authority rejection")
+
+
+def test_score_aware_loss_rejects_source_score_claim_rows() -> None:
+    from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
+
+    dataset = _scorer_response_dataset()
+    rows = dataset["rows"]
+    assert isinstance(rows, list)
+    rows[0]["authority_source_score_claim"] = True
+
+    try:
+        sal.load_scorer_response_distill_rows(dataset)
+    except ValueError as exc:
+        assert "authority_source_score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected source score-claim row rejection")
 
 
 def test_substrate_forward_produces_unit_interval_rgb() -> None:

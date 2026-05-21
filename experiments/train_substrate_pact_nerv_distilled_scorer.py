@@ -337,6 +337,7 @@ PACT_NERV_DISTILLED_SCORER_SUBSTRATE_CONTRACT = SubstrateContract(
         "catalog_315_optimal_form_before_dispatch_council_pending",
         "catalog_325_per_substrate_symposium_stage_1_dispatch_operator_gated",
         "catalog_6_eval_roundtrip_mandatory_default_patched_in_smoke",
+        "consumes_scorer_response_dataset_nonpromotional",
     ),
     hook_not_applicable_rationale={
         "hook_sensitivity_contribution": (

@@ -17,7 +17,10 @@ CLAUDE.md compliance:
 
 from __future__ import annotations
 
+import math
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import torch
 
@@ -25,6 +28,91 @@ from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
     score_pair_components_dispatch,
 )
+
+
+CONSUMES_SCORER_RESPONSE_DATASET = True
+SCORER_RESPONSE_DATASET_SCHEMA = "scorer_response_dataset.v1"
+SCORER_RESPONSE_ROW_SCHEMA = "scorer_response_row.v1"
+SCORER_RESPONSE_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "ready_for_exact_eval_dispatch",
+    "rank_or_kill_eligible",
+    "promotable",
+)
+
+
+def _require_explicit_false_authority(
+    payload: Mapping[str, Any],
+    *,
+    label: str,
+) -> None:
+    for field in SCORER_RESPONSE_FALSE_AUTHORITY_FIELDS:
+        if field not in payload or payload.get(field) is None:
+            raise ValueError(f"{label} {field} must be explicit false")
+        if payload.get(field) is not False:
+            raise ValueError(f"{label} {field} must be false")
+
+
+def _require_finite_number(value: Any, *, label: str) -> float:
+    try:
+        out = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be finite numeric") from exc
+    if not math.isfinite(out):
+        raise ValueError(f"{label} must be finite numeric")
+    return out
+
+
+def load_scorer_response_distill_rows(
+    dataset: Mapping[str, Any],
+    *,
+    max_rows: int | None = None,
+) -> tuple[Mapping[str, Any], ...]:
+    """Validate LL scorer-response rows before a future distillation trainer consumes them.
+
+    This is a training-data contract only. The rows are advisory response
+    observations for KL-target/curriculum construction; they are not score
+    claims, promotion evidence, or dispatch-ready candidates.
+    """
+
+    if not isinstance(dataset, Mapping):
+        raise ValueError("scorer-response dataset must be a mapping")
+    if dataset.get("schema") != SCORER_RESPONSE_DATASET_SCHEMA:
+        raise ValueError("scorer-response dataset schema mismatch")
+    _require_explicit_false_authority(dataset, label="scorer-response dataset")
+    authority = dataset.get("authority")
+    if not isinstance(authority, Mapping):
+        raise ValueError("scorer-response dataset authority must be a mapping")
+    _require_explicit_false_authority(authority, label="scorer-response dataset authority")
+    rows = dataset.get("rows")
+    if not isinstance(rows, list):
+        raise ValueError("scorer-response dataset rows must be a list")
+    if max_rows is not None and max_rows <= 0:
+        raise ValueError("max_rows must be positive when provided")
+
+    selected_rows = rows if max_rows is None else rows[:max_rows]
+    validated: list[Mapping[str, Any]] = []
+    for index, row in enumerate(selected_rows):
+        if not isinstance(row, Mapping):
+            raise ValueError(f"scorer-response row {index} must be a mapping")
+        if row.get("schema") != SCORER_RESPONSE_ROW_SCHEMA:
+            raise ValueError(f"scorer-response row {index} schema mismatch")
+        _require_explicit_false_authority(row, label=f"scorer-response row {index}")
+        if row.get("authority_source_score_claim") is True:
+            raise ValueError(
+                f"scorer-response row {index} authority_source_score_claim must be false"
+            )
+        _require_finite_number(
+            row.get("advisory_score_report_derived"),
+            label=f"scorer-response row {index} advisory_score_report_derived",
+        )
+        _require_finite_number(
+            row.get("delta_vs_baseline_score"),
+            label=f"scorer-response row {index} delta_vs_baseline_score",
+        )
+        validated.append(row)
+    return tuple(validated)
 
 
 @dataclass(frozen=True)

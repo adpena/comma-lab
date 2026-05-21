@@ -85,8 +85,11 @@ from .archive import (
     parse_archive,
 )
 from .score_aware_loss import (
+    CONSUMES_SCORER_RESPONSE_DATASET,
     PactNervDistilledScorerScoreAwareLoss,
+    SCORER_RESPONSE_DATASET_SCHEMA,
     ScoreAwareLossWeights,
+    load_scorer_response_distill_rows,
 )
 
 __all__ = [
@@ -98,7 +101,10 @@ __all__ = [
     "PactNervDistilledScorerConfig",
     "PactNervDistilledScorerScoreAwareLoss",
     "PactNervDistilledScorerSubstrate",
+    "CONSUMES_SCORER_RESPONSE_DATASET",
+    "SCORER_RESPONSE_DATASET_SCHEMA",
     "ScoreAwareLossWeights",
+    "load_scorer_response_distill_rows",
     "pack_archive",
     "parse_archive",
 ]

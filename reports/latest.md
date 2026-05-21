@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-21T01:05:24Z
+generated_at: 2026-05-21T01:13:16Z
 from_state_hash: canonical_frontier_pointer_20260520T115711Z_plus_wave3_zero_spend_cascade
-regenerated_by: codex:procedural_predictor_residual_equation_20260521
-last_refreshed_at: 2026-05-21T01:05:24Z
-last_refreshed_by: codex:procedural_predictor_residual_equation_20260521
-last_refreshed_head: b9fba656bc8a0d377397631562e2f588b2a01bba
+regenerated_by: codex:pact_nerv_distilled_scorer_ll_dataset_hook_20260521
+last_refreshed_at: 2026-05-21T01:13:16Z
+last_refreshed_by: codex:pact_nerv_distilled_scorer_ll_dataset_hook_20260521
+last_refreshed_head: f39d6f6ce843355381711ec22a80f71c9721ba4d
 last_refreshed_note: |
   Current frontier/status refresh after PR #110, D-3 compliance clearance,
   PR101/FEC6 PacketIR runtime-consumption closure, VQ K=2 diagnostic
@@ -13,8 +13,9 @@ last_refreshed_note: |
   tools/scan_best_anchor_per_axis.py at 2026-05-21T00:09Z; no CPU/CUDA frontier
   score changed. The 2026-05-21 operation notes now include the pair #2
   sparse PacketIR/SRL1 null-byte residual falsification, pair #4 seed-boundary
-  guard, LL authority hardening, and the residual-hybrid sister equation, and
-  are the current routing authority for selector/null-byte follow-on work.
+  guard, LL authority hardening, the residual-hybrid sister equation, and the
+  PACT-NERV-DistilledScorer scorer-response dataset hook, and are the current
+  routing authority for selector/null-byte/scorer-surrogate follow-on work.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-21 UTC
@@ -145,6 +146,16 @@ last_refreshed_note: |
   the corrected formula. This preserves the magic-codec residual paradigm but
   prevents future residual-hybrid work from reusing equation #26's direct
   codebook-replacement savings predicate.
+- **PACT-NERV-DistilledScorer now has a fail-closed LL scorer-response dataset
+  hook**:
+  `.omx/research/pact_nerv_distilled_scorer_ll_dataset_hook_landed_20260521T011316Z_codex.md`
+  wires the PDS substrate to the Codex LL scorer-response surface with
+  `CONSUMES_SCORER_RESPONSE_DATASET = True` and
+  `load_scorer_response_distill_rows(...)`. The loader only accepts
+  `scorer_response_dataset.v1` data with explicit false authority on the
+  dataset, authority block, and rows; source score-claim rows fail closed. This
+  makes the Quantizr/Hinton KL-T=2.0 substrate convergence usable as training
+  signal without promoting advisory rows into contest evidence.
 - **Magic-codec pair #4 procedural-seed orthogonality is closed**:
   `.omx/research/magic_codec_pair_4_procedural_seed_orthogonality_smoke_landed_20260521T004054Z_codex.md`
   tests seed lengths `16/32/64/128/256` across six reversible byte-orderings

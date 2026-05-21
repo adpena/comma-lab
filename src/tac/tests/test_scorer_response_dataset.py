@@ -60,8 +60,14 @@ def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     dataset = build_response_dataset([path], baseline=baseline)
 
     assert dataset["score_claim"] is False
+    assert dataset["rank_or_kill_eligible"] is False
+    assert dataset["promotable"] is False
+    assert dataset["authority"]["rank_or_kill_eligible"] is False
+    assert dataset["authority"]["promotable"] is False
     assert dataset["summary"]["row_count"] == 1
     row = dataset["rows"][0]
+    assert row["rank_or_kill_eligible"] is False
+    assert row["promotable"] is False
     assert row["family"] == "scorer_gradient_sparse_residual"
     assert row["delta_vs_baseline_score"] == 0.25
     expected_rate_delta = 25.0 * 10.0 / CONTEST_UNCOMPRESSED_BYTES
