@@ -1,9 +1,9 @@
 # Magic Codec Pair #2 Sparse PacketIR FEC6 Null-Byte Smoke Landed
 
-**Author**: Codex  
-**UTC**: 2026-05-21T00:21:20Z  
-**Lane**: `lane_wave_3_magic_codec_pair_2_sparse_packet_ir_fec6_null_byte_cpu_smoke_20260520`  
-**Axis**: `[macOS-CPU advisory]`  
+**Author**: Codex
+**UTC**: 2026-05-21T00:21:20Z
+**Lane**: `lane_wave_3_magic_codec_pair_2_sparse_packet_ir_fec6_null_byte_cpu_smoke_20260520`
+**Axis**: `[macOS-CPU advisory]`
 **Promotion status**: `score_claim=false`, `promotion_eligible=false`
 
 ## What Landed
