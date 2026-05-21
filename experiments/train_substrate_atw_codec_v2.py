@@ -483,6 +483,19 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
     archive_path = args.output_dir / "0.bin"
     archive_path.write_bytes(archive_bytes)
+    payload_0bin_sha = _sha256_bytes(archive_bytes)
+    archive_zip_path = args.output_dir / "archive.zip"
+    submission_dir = args.output_dir / "submission"
+    archive_zip_sha: str | None = None
+    archive_zip_bytes: int | None = None
+    archive_zip_built = False
+    if not args.skip_archive_build:
+        _write_runtime(submission_dir)
+        (submission_dir / "0.bin").write_bytes(archive_bytes)
+        _build_archive_zip(archive_zip_path, bin_bytes=archive_bytes)
+        archive_zip_sha = _sha256_file(archive_zip_path)
+        archive_zip_bytes = archive_zip_path.stat().st_size
+        archive_zip_built = True
 
     stats: dict[str, Any] = {
         "substrate_tag": SUBSTRATE_TAG,
@@ -494,6 +507,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "variant_byte": variant_byte,
         "archive_bytes": len(archive_bytes),
         "archive_sha256_first16": _sha256_first16(archive_bytes),
+        "payload_0bin_sha256": payload_0bin_sha,
+        "payload_0bin_path": str(archive_path),
+        "archive_zip_built": archive_zip_built,
+        "archive_zip_path": str(archive_zip_path) if archive_zip_built else None,
+        "archive_zip_bytes": archive_zip_bytes,
+        "archive_zip_sha256": archive_zip_sha,
+        "submission_dir": str(submission_dir) if archive_zip_built else None,
         "model_params": model.num_parameters_breakdown(),
         "kappa_ib": args.kappa_ib,
         "lambda_wz": args.lambda_wz,

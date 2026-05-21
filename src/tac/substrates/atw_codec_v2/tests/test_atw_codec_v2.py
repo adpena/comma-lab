@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -689,6 +690,14 @@ def test_smoke_trainer_runs(tmp_path: Path) -> None:
     assert archive_path.is_file()
     archive_bytes = archive_path.read_bytes()
     assert archive_bytes.startswith(ATW2_MAGIC)
+    archive_zip_path = out_dir / "archive.zip"
+    assert archive_zip_path.is_file()
+    with zipfile.ZipFile(archive_zip_path, "r") as zf:
+        assert zf.namelist() == ["0.bin"]
+        assert zf.read("0.bin") == archive_bytes
+    submission_dir = out_dir / "submission"
+    assert (submission_dir / "inflate.py").is_file()
+    assert (submission_dir / "0.bin").read_bytes() == archive_bytes
     stats_path = out_dir / "smoke_stats.json"
     assert stats_path.is_file()
     stats = json.loads(stats_path.read_text(encoding="utf-8"))
@@ -696,6 +705,11 @@ def test_smoke_trainer_runs(tmp_path: Path) -> None:
     assert stats["atw2_magic_ok"] is True
     assert stats["roundtrip_ok"] is True
     assert stats["variant"] == "B"
+    assert stats["archive_zip_built"] is True
+    assert stats["archive_zip_path"] == str(archive_zip_path)
+    assert stats["archive_zip_bytes"] == archive_zip_path.stat().st_size
+    assert len(stats["archive_zip_sha256"]) == 64
+    assert stats["submission_dir"] == str(submission_dir)
 
 
 def test_smoke_trainer_variant_a_runs(tmp_path: Path) -> None:
