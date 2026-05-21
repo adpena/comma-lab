@@ -34,6 +34,8 @@ __all__ = [
     "torch_mobileone_block_to_mlx",
     "torch_mobileone_stem_to_mlx",
     "torch_patch_embed_to_mlx",
+    "run_mlx_posenet_nchw",
+    "torch_posenet_to_mlx",
     "torch_repmixer_block_to_mlx",
     "temporary_mlx_device",
 ]
@@ -323,6 +325,133 @@ class MLXFastVitVisionAdapter:
         return self.head(out)
 
 
+class MLXAllNormAdapter:
+    """MLX adapter for upstream ``AllNorm`` eval-mode BatchNorm1d scalar affine."""
+
+    def __init__(self, torch_allnorm: Any):
+        import mlx.core as mx
+
+        bn = getattr(torch_allnorm, "bn", None)
+        if bn is None:
+            raise TypeError("AllNorm adapter requires .bn")
+        if getattr(bn, "training", False):
+            raise NotImplementedError("training-mode AllNorm is not covered")
+        weight = _torch_tensor_to_numpy(bn.weight).reshape(())
+        bias = _torch_tensor_to_numpy(bn.bias).reshape(())
+        running_mean = _torch_tensor_to_numpy(bn.running_mean).reshape(())
+        running_var = _torch_tensor_to_numpy(bn.running_var).reshape(())
+        scale = weight / np.sqrt(running_var + float(bn.eps))
+        offset = bias - running_mean * scale
+        self.scale = mx.array(np.float32(scale))
+        self.offset = mx.array(np.float32(offset))
+
+    def __call__(self, x: Any) -> Any:
+        return x * self.scale + self.offset
+
+
+class MLXSequential1dAdapter:
+    """Small eval-mode adapter for upstream dense ``nn.Sequential`` heads."""
+
+    def __init__(self, torch_seq: Any):
+        self.layers = [_torch_dense_child_to_mlx(child) for child in torch_seq]
+
+    def __call__(self, x: Any) -> Any:
+        out = x
+        for layer in self.layers:
+            out = layer(out)
+        return out
+
+
+class MLXResBlockAdapter:
+    """MLX adapter for upstream dense ``ResBlock``."""
+
+    def __init__(self, torch_resblock: Any):
+        self.block_a = MLXSequential1dAdapter(torch_resblock.block_a)
+        block_b_layers = list(torch_resblock.block_b)
+        self.block_b_starts_inplace_relu = (
+            bool(block_b_layers)
+            and _class_path(block_b_layers[0]) == "torch.nn.modules.activation.ReLU"
+            and bool(getattr(block_b_layers[0], "inplace", False))
+        )
+        if self.block_b_starts_inplace_relu:
+            block_b_layers = block_b_layers[1:]
+        self.block_b = MLXSequential1dAdapter(block_b_layers)
+
+    def __call__(self, x: Any) -> Any:
+        a_out = x + self.block_a(x)
+        if self.block_b_starts_inplace_relu:
+            block_b_input = mlx_relu(a_out)
+            return mlx_relu(block_b_input + self.block_b(block_b_input))
+        return mlx_relu(a_out + self.block_b(a_out))
+
+
+class MLXSummarizerAdapter:
+    """MLX adapter for PoseNet ``summarizer``."""
+
+    def __init__(self, torch_summarizer: Any):
+        self.layers = [_torch_dense_child_to_mlx(child) for child in torch_summarizer]
+
+    def __call__(self, x: Any) -> Any:
+        out = x
+        for layer in self.layers:
+            out = layer(out)
+        return out
+
+
+class MLXHydraAdapter:
+    """MLX adapter for upstream PoseNet single-head ``Hydra``."""
+
+    def __init__(self, torch_hydra: Any):
+        self.resblock = MLXResBlockAdapter(torch_hydra.resblock)
+        self.in_layer = {
+            name: torch_linear_to_mlx(layer)
+            for name, layer in torch_hydra.in_layer.items()
+        }
+        self.res_layer = {
+            name: MLXSequential1dAdapter(layer)
+            for name, layer in torch_hydra.res_layer.items()
+        }
+        self.final_layer = {
+            name: torch_linear_to_mlx(layer)
+            for name, layer in torch_hydra.final_layer.items()
+        }
+
+    def __call__(self, x: Any) -> dict[str, Any]:
+        out = self.resblock(x)
+        in_layer = {
+            name: mlx_relu(layer(out))
+            for name, layer in self.in_layer.items()
+        }
+        res_layer = {
+            name: mlx_relu(in_layer[name] + self.res_layer[name](in_layer[name]))
+            for name in in_layer
+        }
+        return {
+            name: self.final_layer[name](res_layer[name])
+            for name in res_layer
+        }
+
+
+class MLXPoseNetAdapter:
+    """MLX adapter for upstream PoseNet through the ``pose`` output head."""
+
+    def __init__(self, torch_posenet: Any):
+        import mlx.core as mx
+
+        mean = _torch_tensor_to_numpy(torch_posenet._mean).reshape(12)
+        std = _torch_tensor_to_numpy(torch_posenet._std).reshape(12)
+        self.mean = mx.array(np.ascontiguousarray(mean.reshape(1, 1, 1, 12)))
+        self.std = mx.array(np.ascontiguousarray(std.reshape(1, 1, 1, 12)))
+        self.vision = torch_fastvit_vision_to_mlx(torch_posenet.vision)
+        self.summarizer = MLXSummarizerAdapter(torch_posenet.summarizer)
+        self.hydra = MLXHydraAdapter(torch_posenet.hydra)
+
+    def __call__(self, x_nhwc: Any) -> dict[str, Any]:
+        vision_out = self.vision((x_nhwc - self.mean) / self.std)
+        summary = self.summarizer(vision_out)
+        return self.hydra(summary)
+
+
 def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
     """Convert a PyTorch ``nn.Conv2d`` layer to MLX ``nn.Conv2d``."""
 
@@ -435,6 +564,12 @@ def torch_fastvit_vision_to_mlx(torch_vision: Any) -> MLXFastVitVisionAdapter:
     return MLXFastVitVisionAdapter(torch_vision)
 
 
+def torch_posenet_to_mlx(torch_posenet: Any) -> MLXPoseNetAdapter:
+    """Convert upstream PoseNet to an eval-mode MLX adapter."""
+
+    return MLXPoseNetAdapter(torch_posenet)
+
+
 def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
     """Run an MLX Conv2d on NCHW input and return NCHW output."""
 
@@ -514,6 +649,15 @@ def run_mlx_fastvit_vision_nchw(adapter: MLXFastVitVisionAdapter, x_nchw: np.nda
     return _mlx_array_to_numpy(adapter(mx.array(nchw_to_nhwc(x_nchw))))
 
 
+def run_mlx_posenet_nchw(adapter: MLXPoseNetAdapter, x_nchw: np.ndarray) -> dict[str, np.ndarray]:
+    """Run a PoseNet adapter on NCHW input and return NumPy output arrays."""
+
+    import mlx.core as mx
+
+    outputs = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return {name: _mlx_array_to_numpy(value) for name, value in outputs.items()}
+
+
 def mlx_gelu_tanh(x: Any) -> Any:
     """MLX implementation of ``torch.nn.functional.gelu(..., approximate='tanh')``."""
 
@@ -587,6 +731,19 @@ def _torch_fastvit_child_to_mlx(child: Any) -> Any:
     if class_path == "timm.models.fastvit.MobileOneBlock":
         return torch_mobileone_block_to_mlx(child)
     raise NotImplementedError(f"unsupported FastViT child module: {class_path}")
+
+
+def _torch_dense_child_to_mlx(child: Any) -> Any:
+    class_path = _class_path(child)
+    if class_path == "torch.nn.modules.linear.Linear":
+        return torch_linear_to_mlx(child)
+    if class_path == "torch.nn.modules.activation.ReLU":
+        return mlx_relu
+    if class_path == "modules.AllNorm":
+        return MLXAllNormAdapter(child)
+    if class_path == "modules.ResBlock":
+        return MLXResBlockAdapter(child)
+    raise NotImplementedError(f"unsupported dense child module: {class_path}")
 
 
 class temporary_mlx_device:
