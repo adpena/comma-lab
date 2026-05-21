@@ -461,6 +461,74 @@ def test_recipe_state_accepts_implemented_research_only_dispatchable_recipe(
     assert "research_only=true false-authority metadata preserved" in message
 
 
+def test_recipe_state_rejects_dp1_full_streamer_without_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    trainer = tmp_path / "train_substrate_pretrained_driving_prior.py"
+    trainer.write_text(
+        "def _full_main(args):\n"
+        "    return 0\n",
+        encoding="utf-8",
+    )
+    _write_recipe(
+        tmp_path,
+        "dp1_streamer_recipe",
+        "schema_version: 1\n"
+        "name: dp1_streamer_recipe\n"
+        "research_only: true\n"
+        "dispatch_enabled: true\n"
+        "env_overrides:\n"
+        "  DPP_RUN_FULL: \"1\"\n"
+        "  DPP_DATASET_NAME: comma2k19\n"
+        "  DPP_USE_STREAMER: \"1\"\n",
+    )
+
+    passed, message = module.check_recipe_status_consistent_with_trainer_state(
+        trainer, "dp1_streamer_recipe"
+    )
+
+    assert passed is False
+    assert "DPP_USE_STREAMER=1" in message
+    assert "no chunk ids" in message
+
+
+def test_recipe_state_accepts_dp1_full_cache_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    trainer = tmp_path / "train_substrate_pretrained_driving_prior.py"
+    trainer.write_text(
+        "def _full_main(args):\n"
+        "    return 0\n",
+        encoding="utf-8",
+    )
+    _write_recipe(
+        tmp_path,
+        "dp1_cache_recipe",
+        "schema_version: 1\n"
+        "name: dp1_cache_recipe\n"
+        "research_only: true\n"
+        "dispatch_enabled: true\n"
+        "env_overrides:\n"
+        "  DPP_RUN_FULL: \"1\"\n"
+        "  DPP_DATASET_NAME: comma2k19\n"
+        "  DPP_USE_STREAMER: \"0\"\n"
+        "  DPP_CACHE_DIR: /root/.cache/tac/comma2k19_chunks\n",
+    )
+
+    passed, message = module.check_recipe_status_consistent_with_trainer_state(
+        trainer, "dp1_cache_recipe"
+    )
+
+    assert passed is True
+    assert "recipe is dispatchable" in message
+
+
 def test_recipe_state_accepts_notimplemented_when_recipe_non_dispatchable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

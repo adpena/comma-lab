@@ -634,6 +634,27 @@ def _recipe_list_has_entries(recipe_text: str, key: str) -> bool:
     return False
 
 
+def _recipe_scalar_value(recipe_text: str, key: str) -> str:
+    """Return a simple YAML scalar value for ``key`` from a recipe body."""
+
+    match = re.search(rf"^\s*{re.escape(key)}:\s*(.*?)\s*(?:#.*)?$", recipe_text, re.M)
+    if not match:
+        return ""
+    value = match.group(1).strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1].strip()
+    return value
+
+
+def _recipe_scalar_truthy(recipe_text: str, key: str) -> bool:
+    return _recipe_scalar_value(recipe_text, key).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def check_recipe_status_consistent_with_trainer_state(
     trainer: Path, recipe: str | None
 ) -> tuple[bool, str]:
@@ -718,6 +739,24 @@ def check_recipe_status_consistent_with_trainer_state(
         if active
     ]
     recipe_non_dispatchable = bool(non_dispatchable_reasons)
+
+    if (
+        trainer.name == "train_substrate_pretrained_driving_prior.py"
+        and _recipe_scalar_truthy(recipe_text, "DPP_RUN_FULL")
+        and (_recipe_scalar_value(recipe_text, "DPP_DATASET_NAME") or "comma2k19")
+        == "comma2k19"
+        and _recipe_scalar_truthy(recipe_text, "DPP_USE_STREAMER")
+    ):
+        return (
+            False,
+            "FAIL: DP1 full-run recipe selects DPP_USE_STREAMER=1 for "
+            "comma2k19, but the current trainer has no recipe/CLI path for "
+            "supplying a Comma2k19LocalStreamer dataset_sha256_manifest or "
+            "explicit chunk_ids. Full training will fail with no chunk ids. "
+            "Set DPP_USE_STREAMER=0 and provide DPP_CACHE_DIR for the "
+            "canonical Comma2k19LocalCache path, or wire a real streamer "
+            "manifest before dispatch.",
+        )
 
     if raises_not_impl and not recipe_non_dispatchable:
         return (
