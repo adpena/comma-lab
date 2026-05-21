@@ -70,3 +70,57 @@ def test_plan_ll_scorer_response_next_cli_accepts_null_byte_matrix(tmp_path: Pat
     assert plan["probes"][0]["probe_id"] == "ll_null_byte_procedural_codebook_candidates"
     assert plan["probes"][0]["null_byte_priority_rows"][0]["priority_weight"] == 0.0108375
     assert "Null-Byte Matrix Priority" in md_out.read_text(encoding="utf-8")
+
+
+def test_plan_ll_scorer_response_next_cli_accepts_pair4_seed_boundary(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    boundary_path = tmp_path / "pair4_boundary.json"
+    json_out = tmp_path / "plan.json"
+    md_out = tmp_path / "plan.md"
+
+    dataset_path.write_text(
+        json.dumps({"schema": "scorer_response_dataset.v1", "summary": {}, "rows": []}),
+        encoding="utf-8",
+    )
+    boundary_path.write_text(
+        json.dumps(
+            {
+                "smoke_label": "wave_3_magic_codec_pair_4_procedural_seed_orthogonality_smoke",
+                "smoke_pair_id": "pair_4_magic_codec_x_procedural_codebook_seed_bytes",
+                "cascade_verdict": "PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES",
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "n_canonical_reversible_ordering_rows": 30,
+                "n_canonical_reversible_ordering_rows_raw_seed_dominates": 30,
+                "min_canonical_reversible_best_nonraw_delta_vs_raw_bytes": 4,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "plan_ll_scorer_response_next.py"),
+            "--dataset",
+            str(dataset_path),
+            "--magic-codec-seed-boundary-smoke",
+            str(boundary_path),
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert "do_not_wrap_procedural_seed_bytes_with_magic_codec" in completed.stdout
+    plan = json.loads(json_out.read_text(encoding="utf-8"))
+    assert plan["magic_codec_seed_boundary"]["boundary_validated_raw_seed_dominates"] is True
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert "do_not_wrap_procedural_seed_bytes_with_magic_codec" in rules
+    assert "do_not_wrap_procedural_seed_bytes_with_magic_codec" in md_out.read_text(encoding="utf-8")

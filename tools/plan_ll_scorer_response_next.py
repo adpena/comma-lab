@@ -41,6 +41,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=16,
         help="Seed budget key K to read from null-byte matrix predicted_delta_s_per_seed_budget.",
     )
+    parser.add_argument(
+        "--magic-codec-seed-boundary-smoke",
+        type=Path,
+        help=(
+            "Optional pair #4 procedural-seed orthogonality smoke JSON. "
+            "When provided, the LL plan refuses magic-codec wrapping of raw "
+            "procedural seed bytes if the boundary is validated."
+        ),
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
     return parser.parse_args(argv)
@@ -55,10 +64,16 @@ def main(argv: list[str] | None = None) -> int:
             if args.null_byte_matrix is None
             else json.loads(args.null_byte_matrix.read_text(encoding="utf-8"))
         )
+        magic_codec_seed_boundary_smoke = (
+            None
+            if args.magic_codec_seed_boundary_smoke is None
+            else json.loads(args.magic_codec_seed_boundary_smoke.read_text(encoding="utf-8"))
+        )
         plan = build_next_probe_plan(
             dataset,
             null_byte_matrix=null_byte_matrix,
             null_byte_seed_budget_k=args.null_byte_seed_budget_k,
+            magic_codec_seed_boundary_smoke=magic_codec_seed_boundary_smoke,
         )
     except (OSError, ValueError, ScorerResponseDatasetError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)

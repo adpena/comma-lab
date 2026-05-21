@@ -359,7 +359,8 @@ def build_null_byte_priority_weights(
     if null_byte_matrix.get("schema") != "null_byte_master_gradient_probe_matrix_v1":
         raise ScorerResponseDatasetError("null-byte matrix schema mismatch")
     for key in ("score_claim", "promotion_eligible", "rank_or_kill_eligible", "promotable"):
-        if null_byte_matrix.get(key) is not False:
+        value = null_byte_matrix.get(key)
+        if value is not None and value is not False:
             raise ScorerResponseDatasetError(f"null-byte matrix {key} must be false")
     if null_byte_matrix.get("axis_tag") != "[predicted]":
         raise ScorerResponseDatasetError("null-byte matrix axis_tag must be [predicted]")
@@ -454,11 +455,70 @@ def build_null_byte_priority_weights(
     }
 
 
+def build_magic_codec_seed_boundary(
+    boundary_smoke: dict[str, Any],
+) -> dict[str, Any]:
+    """Normalize pair #4 procedural-seed boundary evidence for LL planning."""
+
+    if not isinstance(boundary_smoke, dict):
+        raise ScorerResponseDatasetError(
+            "magic-codec seed boundary smoke must be a JSON object"
+        )
+    if boundary_smoke.get("smoke_pair_id") != (
+        "pair_4_magic_codec_x_procedural_codebook_seed_bytes"
+    ):
+        raise ScorerResponseDatasetError(
+            "magic-codec seed boundary smoke has wrong smoke_pair_id"
+        )
+    for key in ("score_claim_valid", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+        if boundary_smoke.get(key) is not False:
+            raise ScorerResponseDatasetError(
+                f"magic-codec seed boundary smoke {key} must be false"
+            )
+    verdict = str(boundary_smoke.get("cascade_verdict") or "")
+    canonical_rows = _as_int(boundary_smoke.get("n_canonical_reversible_ordering_rows"))
+    raw_wins = _as_int(
+        boundary_smoke.get("n_canonical_reversible_ordering_rows_raw_seed_dominates")
+    )
+    min_nonraw_delta = _as_int(
+        boundary_smoke.get("min_canonical_reversible_best_nonraw_delta_vs_raw_bytes")
+    )
+    if canonical_rows is None or canonical_rows <= 0:
+        raise ScorerResponseDatasetError(
+            "magic-codec seed boundary smoke has no canonical ordering rows"
+        )
+    if raw_wins is None:
+        raise ScorerResponseDatasetError(
+            "magic-codec seed boundary smoke missing raw-dominates count"
+        )
+    boundary_validated = (
+        verdict == "PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES"
+        and raw_wins == canonical_rows
+    )
+    return {
+        "schema": "ll_magic_codec_seed_boundary.v1",
+        "producer": TOOL,
+        "source_smoke_label": boundary_smoke.get("smoke_label"),
+        "source_smoke_pair_id": boundary_smoke.get("smoke_pair_id"),
+        "source_cascade_verdict": verdict,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "boundary_validated_raw_seed_dominates": boundary_validated,
+        "n_canonical_reversible_ordering_rows": canonical_rows,
+        "n_canonical_reversible_ordering_rows_raw_seed_dominates": raw_wins,
+        "min_canonical_reversible_best_nonraw_delta_vs_raw_bytes": min_nonraw_delta,
+        "ordering_dimension": boundary_smoke.get("ordering_dimension"),
+        "codec_dimensions": boundary_smoke.get("codec_dimensions"),
+    }
+
+
 def build_next_probe_plan(
     dataset: dict[str, Any],
     *,
     null_byte_matrix: dict[str, Any] | None = None,
     null_byte_seed_budget_k: int = 16,
+    magic_codec_seed_boundary_smoke: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic LL next-probe plan from response economics."""
 
@@ -508,6 +568,24 @@ def build_next_probe_plan(
                 "best_byte_budget_margin": best_margin,
             }
         )
+
+    magic_codec_seed_boundary = None
+    if magic_codec_seed_boundary_smoke is not None:
+        magic_codec_seed_boundary = build_magic_codec_seed_boundary(
+            magic_codec_seed_boundary_smoke
+        )
+        if magic_codec_seed_boundary["boundary_validated_raw_seed_dominates"]:
+            prohibitions.append(
+                {
+                    "rule": "do_not_wrap_procedural_seed_bytes_with_magic_codec",
+                    "reason": (
+                        "pair #4 boundary smoke found raw seed dominates all "
+                        "canonical reversible seed/order rows; route magic_codec "
+                        "to residual streams, not the procedural seed itself"
+                    ),
+                    "boundary": magic_codec_seed_boundary,
+                }
+            )
 
     probes = [
         {
@@ -563,7 +641,9 @@ def build_next_probe_plan(
                 "rationale": (
                     "Use the null-byte master-gradient matrix as the next LL "
                     "training-data harvest prior; highest null-byte budgets get "
-                    "sampled first while remaining fail-closed routing signals."
+                    "sampled first while remaining fail-closed routing signals. "
+                    "If pair #4 seed-boundary evidence is present, keep seeds raw "
+                    "and learn only where residual/runtime streams could exist."
                 ),
                 "input_rows": [],
                 "null_byte_priority_rows": null_byte_priority_weights["priority_rows"],
@@ -585,6 +665,7 @@ def build_next_probe_plan(
         "best_scorer_row": best_scorer,
         "best_byte_budget_margin_row": best_margin,
         "null_byte_priority_weights": null_byte_priority_weights,
+        "magic_codec_seed_boundary": magic_codec_seed_boundary,
         "prohibitions": prohibitions,
         "probes": probes,
     }

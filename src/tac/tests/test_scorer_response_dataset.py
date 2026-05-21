@@ -8,6 +8,7 @@ from tac.optimization.scorer_response_dataset import (
     RATE_SCORE_PER_BYTE,
     ResponseBaseline,
     ScorerResponseDatasetError,
+    build_magic_codec_seed_boundary,
     build_null_byte_priority_weights,
     build_next_probe_plan,
     build_response_dataset,
@@ -186,6 +187,46 @@ def _null_byte_matrix() -> dict:
     }
 
 
+def _pair4_seed_boundary_smoke() -> dict:
+    return {
+        "smoke_label": "wave_3_magic_codec_pair_4_procedural_seed_orthogonality_smoke",
+        "smoke_pair_id": "pair_4_magic_codec_x_procedural_codebook_seed_bytes",
+        "cascade_verdict": "PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES",
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "n_canonical_reversible_ordering_rows": 30,
+        "n_canonical_reversible_ordering_rows_raw_seed_dominates": 30,
+        "min_canonical_reversible_best_nonraw_delta_vs_raw_bytes": 4,
+        "ordering_dimension": {
+            "reversible_free_orderings": ["identity", "reverse"],
+            "non_free_control_orderings": ["sorted_ascending"],
+        },
+        "codec_dimensions": {"raw_seed": True, "brotli_q11_seed_bytes": True},
+    }
+
+
+def test_magic_codec_seed_boundary_normalizes_pair4_smoke() -> None:
+    boundary = build_magic_codec_seed_boundary(_pair4_seed_boundary_smoke())
+
+    assert boundary["schema"] == "ll_magic_codec_seed_boundary.v1"
+    assert boundary["score_claim"] is False
+    assert boundary["boundary_validated_raw_seed_dominates"] is True
+    assert boundary["n_canonical_reversible_ordering_rows"] == 30
+    assert boundary["min_canonical_reversible_best_nonraw_delta_vs_raw_bytes"] == 4
+
+
+def test_magic_codec_seed_boundary_rejects_promotional_smoke() -> None:
+    bad = _pair4_seed_boundary_smoke()
+    bad["promotion_eligible"] = True
+    try:
+        build_magic_codec_seed_boundary(bad)
+    except ScorerResponseDatasetError as exc:
+        assert "promotion_eligible" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected promotional boundary rejection")
+
+
 def test_null_byte_priority_weights_sort_by_predicted_delta() -> None:
     weights = build_null_byte_priority_weights(_null_byte_matrix())
 
@@ -195,6 +236,18 @@ def test_null_byte_priority_weights_sort_by_predicted_delta() -> None:
     assert weights["priority_rows"][0]["priority_weight"] == 0.0002
     assert weights["priority_rows"][0]["priority_weight_units"] == "absolute_predicted_score_delta"
     assert 0.0 < weights["priority_rows"][0]["ll_sampling_weight"] < 1.0
+
+
+def test_null_byte_priority_weights_accept_legacy_missing_false_authority_keys() -> None:
+    matrix = _null_byte_matrix()
+    matrix.pop("promotion_eligible")
+    matrix.pop("rank_or_kill_eligible")
+
+    weights = build_null_byte_priority_weights(matrix)
+
+    assert weights["score_claim"] is False
+    assert weights["promotion_eligible"] is False
+    assert weights["ready_for_exact_eval_dispatch"] is False
 
 
 def test_next_probe_plan_consumes_null_byte_matrix_as_first_probe(tmp_path) -> None:
@@ -216,6 +269,31 @@ def test_next_probe_plan_consumes_null_byte_matrix_as_first_probe(tmp_path) -> N
     assert plan["probes"][1]["probe_id"] == "ll_byte_neutral_decoder_q_response_model"
     assert "CandidateModificationSpec" in plan["probes"][0]["acceptance_gate"]
     assert "Null-Byte Matrix Priority" in render_next_probe_plan_markdown(plan)
+
+
+def test_next_probe_plan_consumes_pair4_seed_boundary_as_prohibition(tmp_path) -> None:
+    path = tmp_path / "overbudget.json"
+    score = 1.0 + RATE_SCORE_PER_BYTE
+    payload = {
+        "schema": "scorer_gradient_sparse_residual_smoke.v1",
+        "candidate": {"advisory_eval": _advisory(score, 103, 0.001, 0.01)},
+        "authority": {"score_claim": False},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    dataset = build_response_dataset([path], baseline=ResponseBaseline(score=1.0, archive_bytes=100))
+
+    plan = build_next_probe_plan(
+        dataset,
+        null_byte_matrix=_null_byte_matrix(),
+        magic_codec_seed_boundary_smoke=_pair4_seed_boundary_smoke(),
+    )
+
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert "do_not_wrap_procedural_seed_bytes_with_magic_codec" in rules
+    assert plan["magic_codec_seed_boundary"]["boundary_validated_raw_seed_dominates"] is True
+    assert "keep seeds raw" in plan["probes"][0]["rationale"]
+    rendered = render_next_probe_plan_markdown(plan)
+    assert "do_not_wrap_procedural_seed_bytes_with_magic_codec" in rendered
 
 
 def test_null_byte_matrix_fail_closed_on_promotional_or_missing_k() -> None:

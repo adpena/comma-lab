@@ -143,6 +143,13 @@ last_refreshed_note: |
   permutation is not free. Verdict:
   `PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES`; keep procedural seeds raw
   and route magic-codec only to residual streams.
+- **LL scorer-response planner now consumes the pair #4 guard**:
+  `.omx/research/ll_scorer_response_pair4_guarded_plan_landed_20260521T004628Z_codex.md`
+  wires the pair #4 boundary smoke into `tools/plan_ll_scorer_response_next.py`
+  via `--magic-codec-seed-boundary-smoke`. The fresh guarded plan adds
+  `do_not_wrap_procedural_seed_bytes_with_magic_codec` alongside the existing
+  sparse-residual widening prohibition, while preserving null-byte priority
+  rows as non-promotional LL training-harvest priors.
 - **Current highest-signal follow-on**: preserve the master-gradient,
   per-frame/per-pair, byte/pixel sensitivity surfaces as routing authority, but
   stop direct FEC6 member-byte substitution attempts unless they change
