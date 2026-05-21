@@ -85,6 +85,69 @@ def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     assert row["holdout_fold"] in {0, 1, 2, 3, 4}
 
 
+def test_build_response_dataset_rejects_source_score_claim_true(tmp_path) -> None:
+    path = tmp_path / "source_score_claim.json"
+    payload = {
+        "schema": "scorer_gradient_sparse_residual_smoke.v1",
+        "candidate": {"advisory_eval": _advisory(1.25, 110, 0.004, 0.010)},
+        "authority": {"score_claim": True},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=1.0, archive_bytes=100),
+    )
+
+    assert dataset["rows"] == []
+    assert dataset["skipped"]
+    assert "source score_claim must be false" in dataset["skipped"][0]["reason"]
+
+
+def test_build_response_dataset_requires_explicit_source_score_claim_false(
+    tmp_path,
+) -> None:
+    path = tmp_path / "missing_source_authority.json"
+    payload = {
+        "schema": "scorer_gradient_sparse_residual_smoke.v1",
+        "candidate": {"advisory_eval": _advisory(1.25, 110, 0.004, 0.010)},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=1.0, archive_bytes=100),
+    )
+
+    assert dataset["rows"] == []
+    assert dataset["skipped"]
+    assert "source score_claim must be explicit false" in dataset["skipped"][0]["reason"]
+
+
+def test_build_response_dataset_rejects_present_optional_authority_true(
+    tmp_path,
+) -> None:
+    path = tmp_path / "ready_true.json"
+    payload = {
+        "schema": "scorer_gradient_sparse_residual_smoke.v1",
+        "candidate": {"advisory_eval": _advisory(1.25, 110, 0.004, 0.010)},
+        "authority": {
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": True,
+        },
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=1.0, archive_bytes=100),
+    )
+
+    assert dataset["rows"] == []
+    assert dataset["skipped"]
+    assert "ready_for_exact_eval_dispatch must be false" in dataset["skipped"][0]["reason"]
+
+
 def _current_response_dataset_payload() -> dict:
     false_authority = {
         "score_claim": False,

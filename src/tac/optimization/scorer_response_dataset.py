@@ -43,6 +43,14 @@ _LEGACY_EXTENDED_FALSE_AUTHORITY_FIELDS = (
     "promotable",
 )
 
+_SOURCE_OPTIONAL_FALSE_AUTHORITY_FIELDS = (
+    "score_claim_valid",
+    "promotion_eligible",
+    "ready_for_exact_eval_dispatch",
+    "rank_or_kill_eligible",
+    "promotable",
+)
+
 
 def _require_explicit_false_authority(
     payload: dict[str, Any],
@@ -61,6 +69,47 @@ def _require_explicit_false_authority(
         if payload.get(key) is not False:
             raise ScorerResponseDatasetError(f"{label} {key} must be false")
     return legacy_missing
+
+
+def _require_source_advisory_authority_false(
+    *,
+    parent_authority: dict[str, Any],
+    candidate_authority: dict[str, Any],
+    label: str,
+) -> None:
+    """Fail closed when advisory source evidence carries score authority.
+
+    Historical scorer-response inputs did not consistently carry every
+    promotion flag, so optional flags may be absent. But a source score claim
+    must be explicit false, and any present authority flag must be false. This
+    prevents LL training-data rows from laundering score-bearing evidence into
+    a non-promotional normalized row.
+    """
+
+    score_claim_values = [
+        value
+        for value in (
+            parent_authority.get("score_claim"),
+            candidate_authority.get("score_claim"),
+        )
+        if value is not None
+    ]
+    if not score_claim_values:
+        raise ScorerResponseDatasetError(
+            f"{label} source score_claim must be explicit false"
+        )
+    if any(value is not False for value in score_claim_values):
+        raise ScorerResponseDatasetError(f"{label} source score_claim must be false")
+
+    for key in _SOURCE_OPTIONAL_FALSE_AUTHORITY_FIELDS:
+        for source_label, authority in (
+            ("parent", parent_authority),
+            ("candidate", candidate_authority),
+        ):
+            if key in authority and authority.get(key) is not False:
+                raise ScorerResponseDatasetError(
+                    f"{label} {source_label} authority {key} must be false"
+                )
 
 
 TOOL = "tac.optimization.scorer_response_dataset"
@@ -343,6 +392,12 @@ def normalize_response_row(
     archive = advisory.get("archive") if isinstance(advisory.get("archive"), dict) else {}
     authority = parent.get("authority") if isinstance(parent.get("authority"), dict) else {}
     candidate_authority = candidate.get("authority") if isinstance(candidate.get("authority"), dict) else {}
+    row_id = f"{path}:{candidate_id}"
+    _require_source_advisory_authority_false(
+        parent_authority=authority,
+        candidate_authority=candidate_authority,
+        label=row_id,
+    )
     terms = _score_terms(archive_bytes=archive_bytes, pose=pose, seg=seg)
     score_value = score if score is not None else terms["recomputed_score_from_report_fields"]
     if score_value is None:
@@ -380,7 +435,6 @@ def normalize_response_row(
             observed_scorer_gain = 0.0
             scorer_gain_shortfall_to_break_even = required_scorer_gain_for_added_bytes
     local = _local_pair_summary(candidate)
-    row_id = f"{path}:{candidate_id}"
     return {
         "schema": ROW_SCHEMA,
         "row_id": row_id,
@@ -394,7 +448,7 @@ def normalize_response_row(
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
-        "authority_source_score_claim": bool(authority.get("score_claim") or candidate_authority.get("score_claim")),
+        "authority_source_score_claim": False,
         "authority_blockers": list(authority.get("promotion_blockers") or candidate_authority.get("promotion_blockers") or advisory.get("blockers") or []),
         "advisory_score_report_derived": score_value,
         "delta_vs_baseline_score": total_delta,
@@ -441,13 +495,17 @@ def build_response_dataset(
             skipped.append({"path": str(path), "reason": str(exc)})
             continue
         for candidate_id, candidate, parent in items:
-            row = normalize_response_row(
-                path=path,
-                candidate_id=candidate_id,
-                candidate=candidate,
-                parent=parent,
-                baseline=baseline,
-            )
+            try:
+                row = normalize_response_row(
+                    path=path,
+                    candidate_id=candidate_id,
+                    candidate=candidate,
+                    parent=parent,
+                    baseline=baseline,
+                )
+            except ScorerResponseDatasetError as exc:
+                skipped.append({"path": str(path), "reason": f"{candidate_id}: {exc}"})
+                continue
             if row is None:
                 skipped.append({"path": str(path), "reason": f"{candidate_id}: no usable advisory row"})
             else:
