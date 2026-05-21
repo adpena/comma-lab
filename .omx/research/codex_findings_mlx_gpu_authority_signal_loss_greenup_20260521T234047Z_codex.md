@@ -115,6 +115,22 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest \
 
 Result: `16 passed in 3.27s`.
 
+Lint greenup:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m ruff check \
+  src/tac/local_acceleration/mlx_batch_invariance.py \
+  src/tac/local_acceleration/mlx_scorer_response.py \
+  tools/audit_mlx_scorer_batch_invariance.py \
+  tools/run_mlx_scorer_response_cache.py \
+  tools/profile_mlx_scorer_response_cache.py \
+  src/tac/tests/test_mlx_batch_invariance.py \
+  src/tac/tests/test_mlx_scorer_response.py \
+  src/tac/tests/test_profile_mlx_scorer_response_cache.py
+```
+
+Result: `All checks passed!`.
+
 Recursive MLX local-acceleration suite:
 
 ```bash
