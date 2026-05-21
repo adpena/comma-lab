@@ -58,6 +58,15 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--call-id",
+        action="append",
+        default=[],
+        help=(
+            "Restrict list/ledger/harvest work to this Modal FunctionCall ID. "
+            "May be passed more than once."
+        ),
+    )
+    parser.add_argument(
         "--repo-root",
         type=Path,
         default=DEFAULT_REPO,
@@ -96,6 +105,35 @@ def _metadata_files(repo_root: Path) -> list[Path]:
         for directory in result_dirs
         if (directory / "modal_metadata.json").exists()
     )
+
+
+def _normalise_call_ids(
+    call_ids: list[str] | set[str] | frozenset[str] | None,
+) -> frozenset[str]:
+    return frozenset(
+        str(call_id).strip()
+        for call_id in (call_ids or [])
+        if str(call_id).strip()
+    )
+
+
+def _metadata_files_for_call_ids(
+    repo_root: Path,
+    *,
+    call_ids: list[str] | set[str] | frozenset[str] | None = None,
+) -> list[Path]:
+    """Return Modal metadata files, optionally narrowed to explicit call IDs."""
+
+    filters = _normalise_call_ids(call_ids)
+    metadata_files = _metadata_files(repo_root)
+    if not filters:
+        return metadata_files
+    filtered: list[Path] = []
+    for mfile in metadata_files:
+        meta = _read_json(mfile) or {}
+        if str(meta.get("call_id") or "") in filters:
+            filtered.append(mfile)
+    return filtered
 
 
 def _safe_harvest_artifact_path(artifacts_dir: Path, relpath: str) -> Path:
@@ -434,11 +472,15 @@ def _append_call_id_ledger_terminal_event(
     )
 
 
-def list_modal_lanes(*, repo_root: Path) -> list[dict[str, Any]]:
+def list_modal_lanes(
+    *,
+    repo_root: Path,
+    call_ids: list[str] | set[str] | frozenset[str] | None = None,
+) -> list[dict[str, Any]]:
     """Return read-only Modal lane metadata for operator status probes."""
 
     rows: list[dict[str, Any]] = []
-    for mfile in _metadata_files(repo_root):
+    for mfile in _metadata_files_for_call_ids(repo_root, call_ids=call_ids):
         meta = _read_json(mfile) or {}
         out_dir = mfile.parent
         artifacts_dir = out_dir / "harvested_artifacts"
@@ -473,6 +515,7 @@ def harvest_modal_calls(
     repo_root: Path,
     summary_output: Path,
     get_timeout_seconds: float,
+    call_ids: list[str] | set[str] | frozenset[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Execute the Modal harvest flow and return the summary rows."""
 
@@ -491,8 +534,11 @@ def harvest_modal_calls(
     )
     from tac.deploy.modal.training_cost import append_modal_training_cost_anchor
 
-    metadata_files = _metadata_files(repo_root)
+    filters = _normalise_call_ids(call_ids)
+    metadata_files = _metadata_files_for_call_ids(repo_root, call_ids=filters)
     print(f"Found {len(metadata_files)} dispatched lanes with modal_metadata.json")
+    if filters:
+        print(f"Restricted to {len(filters)} explicit Modal call_id filter(s)")
     print()
 
     summary: list[dict[str, Any]] = []
@@ -1038,7 +1084,11 @@ def harvest_modal_calls(
     return summary
 
 
-def _print_from_ledger_view(repo_root: Path) -> None:
+def _print_from_ledger_view(
+    repo_root: Path,
+    *,
+    call_ids: list[str] | set[str] | frozenset[str] | None = None,
+) -> None:
     """Catalog #245 — print the canonical ledger view of unharvested call_ids."""
     try:
         from tac.deploy.modal.call_id_ledger import (
@@ -1054,6 +1104,14 @@ def _print_from_ledger_view(repo_root: Path) -> None:
     statuses = latest_status_by_call_id(path=ledger_path)
     print(f"[from-ledger] total call_ids in ledger: {len(statuses)}")
     unharvested = query_unharvested(path=ledger_path)
+    filters = _normalise_call_ids(call_ids)
+    if filters:
+        unharvested = [
+            row
+            for row in unharvested
+            if str(row.get("call_id") or "") in filters
+        ]
+        print(f"[from-ledger] restricted to call_id filters: {len(filters)}")
     print(f"[from-ledger] unharvested call_ids: {len(unharvested)}")
     for row in unharvested[:20]:
         print(
@@ -1069,16 +1127,17 @@ def _print_from_ledger_view(repo_root: Path) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     repo_root = args.repo_root.resolve()
+    call_ids = _normalise_call_ids(args.call_id)
     if args.from_ledger:
         # Catalog #245 canonical ledger consumer surface. Without --execute it
         # remains a read-only status view; with --execute we print the canonical
         # index first, then run the normal harvest path and mirror terminal
         # outcomes back into the ledger.
-        _print_from_ledger_view(repo_root)
+        _print_from_ledger_view(repo_root, call_ids=call_ids)
         if not args.execute:
             return 0
     if not args.execute:
-        _print_plan(list_modal_lanes(repo_root=repo_root))
+        _print_plan(list_modal_lanes(repo_root=repo_root, call_ids=call_ids))
         return 0
     summary_output = args.summary_output
     if summary_output is None:
@@ -1089,6 +1148,7 @@ def main(argv: list[str] | None = None) -> int:
         repo_root=repo_root,
         summary_output=summary_output,
         get_timeout_seconds=args.get_timeout_seconds,
+        call_ids=call_ids,
     )
     return 0
 

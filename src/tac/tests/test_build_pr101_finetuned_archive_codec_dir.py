@@ -218,6 +218,18 @@ def test_harvest_modal_calls_no_execute_is_read_only(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
+    other_lane_dir = tmp_path / "experiments" / "results" / "lane_other_modal"
+    other_lane_dir.mkdir(parents=True)
+    (other_lane_dir / "modal_metadata.json").write_text(
+        json.dumps(
+            {
+                "label": "other_modal_lane",
+                "call_id": "fc-other",
+                "dispatched_at": "2026-05-13T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
 
     proc = subprocess.run(
         [
@@ -225,6 +237,8 @@ def test_harvest_modal_calls_no_execute_is_read_only(tmp_path: Path) -> None:
             str(_HARVEST_SCRIPT_PATH),
             "--repo-root",
             str(tmp_path),
+            "--call-id",
+            "fc-demo",
         ],
         capture_output=True,
         text=True,
@@ -233,7 +247,9 @@ def test_harvest_modal_calls_no_execute_is_read_only(tmp_path: Path) -> None:
 
     assert proc.returncode == 0
     assert "PLAN ONLY: pass --execute" in proc.stdout
+    assert "Found 1 dispatched lanes" in proc.stdout
     assert "demo_modal_lane" in proc.stdout
+    assert "other_modal_lane" not in proc.stdout
     assert not (tmp_path / "experiments" / "results" / "_modal_harvest_summary.json").exists()
 
 
@@ -244,16 +260,23 @@ def test_harvest_modal_calls_from_ledger_execute_runs_harvest(
     mod = _load_harvest_module()
     calls: list[object] = []
 
-    def fake_print_from_ledger_view(repo_root: Path) -> None:
-        calls.append(("ledger_view", repo_root))
+    def fake_print_from_ledger_view(
+        repo_root: Path,
+        *,
+        call_ids: frozenset[str],
+    ) -> None:
+        calls.append(("ledger_view", repo_root, call_ids))
 
     def fake_harvest_modal_calls(
         *,
         repo_root: Path,
         summary_output: Path,
         get_timeout_seconds: float,
+        call_ids: frozenset[str],
     ) -> list[dict[str, object]]:
-        calls.append(("harvest", repo_root, summary_output, get_timeout_seconds))
+        calls.append(
+            ("harvest", repo_root, summary_output, get_timeout_seconds, call_ids)
+        )
         summary_output.parent.mkdir(parents=True, exist_ok=True)
         summary_output.write_text("[]", encoding="utf-8")
         return []
@@ -271,13 +294,16 @@ def test_harvest_modal_calls_from_ledger_execute_runs_harvest(
             "reports/summary.json",
             "--get-timeout-seconds",
             "7",
+            "--call-id",
+            "fc-demo",
         ]
     )
 
     assert rc == 0
-    assert calls[0] == ("ledger_view", tmp_path.resolve())
+    assert calls[0] == ("ledger_view", tmp_path.resolve(), frozenset({"fc-demo"}))
     assert calls[1][0] == "harvest"
     assert calls[1][1] == tmp_path.resolve()
+    assert calls[1][4] == frozenset({"fc-demo"})
     assert calls[1][2] == tmp_path.resolve() / "reports" / "summary.json"
     assert calls[1][3] == 7
 
