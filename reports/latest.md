@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-21T01:13:16Z
+generated_at: 2026-05-21T02:45:14Z
 from_state_hash: canonical_frontier_pointer_20260520T115711Z_plus_wave3_zero_spend_cascade
-regenerated_by: codex:pact_nerv_distilled_scorer_ll_dataset_hook_20260521
-last_refreshed_at: 2026-05-21T01:13:16Z
-last_refreshed_by: codex:pact_nerv_distilled_scorer_ll_dataset_hook_20260521
-last_refreshed_head: f39d6f6ce843355381711ec22a80f71c9721ba4d
+regenerated_by: codex:dp1_procedural_paired_harvest_plan_20260521
+last_refreshed_at: 2026-05-21T02:45:14Z
+last_refreshed_by: codex:dp1_procedural_paired_harvest_plan_20260521
+last_refreshed_head: b93c15afd5fa24ad888200721853b74e2a8f7275
 last_refreshed_note: |
   Current frontier/status refresh after PR #110, D-3 compliance clearance,
   PR101/FEC6 PacketIR runtime-consumption closure, VQ K=2 diagnostic
@@ -14,8 +14,9 @@ last_refreshed_note: |
   score changed. The 2026-05-21 operation notes now include the pair #2
   sparse PacketIR/SRL1 null-byte residual falsification, pair #4 seed-boundary
   guard, LL authority hardening, the residual-hybrid sister equation, and the
-  PACT-NERV-DistilledScorer scorer-response dataset hook, and are the current
-  routing authority for selector/null-byte/scorer-surrogate follow-on work.
+  PACT-NERV-DistilledScorer scorer-response dataset hook. The DP1 procedural
+  paired-harvest planner now binds harvested DP1 training outputs to paired
+  CPU/CUDA exact-eval commands without granting score authority before eval.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-21 UTC
@@ -201,15 +202,28 @@ last_refreshed_note: |
   `15,13,5,9,11,7,1,3` (all odd pair-last SegNet-visible frames); top pairs
   are `7,6,4,2,5,3,1,0`. The artifact emits `11` masked adjustment layers and
   carries both prohibitions through the response policy.
+- **DP1 procedural paired-harvest bridge is now the concrete next gate**:
+  `.omx/research/dp1_procedural_paired_harvest_planner_landed_20260521_codex.md`
+  adds `tools/plan_dp1_procedural_paired_harvest.py` and
+  `tac.optimization.dp1_procedural_paired_harvest_plan`. The planner refuses
+  false authority, requires byte-closed `archive.zip` + `submission/inflate.sh`
+  + manifest/provenance custody, and emits only the real paired dispatcher
+  surface (`tools/dispatch_modal_paired_auth_eval.py`) with
+  `--expected-runtime-tree-sha256 auto` and
+  `--skip-axis-if-promotable-anchor-exists`. Current probe status is correctly
+  blocked on missing harvested DP1 output directories for the baseline and
+  procedural arms; no spend or score claim was attempted.
 - **Current highest-signal follow-on**: preserve the master-gradient,
   per-frame/per-pair, byte/pixel sensitivity surfaces as routing authority, but
   stop direct FEC6 member-byte substitution attempts unless they change
   components or supply a consumed residual/runtime adapter. Next byte-closed
-  candidates should move to DP1 procedural paired-smoke recipe authoring, LL
-  scorer-surrogate/frame-pair planner wiring that consumes the null-byte matrix
-  and per-frame decomposition as prioritization signal, or a new
-  residual-hybrid byte-accounting equation whose predicate matches
-  predictor-plus-residual streams.
+  work should run the operator-gated DP1 baseline + procedural recipes, feed
+  their harvested output dirs into the DP1 paired-harvest planner, and then run
+  the emitted paired CPU/CUDA exact-eval commands. LL scorer-surrogate/frame-
+  pair planner work should continue consuming the null-byte matrix and
+  per-frame decomposition as prioritization signal; residual-hybrid work should
+  keep using the predictor-plus-residual accounting predicate rather than
+  equation #26 direct-replacement savings.
 
 ### Comparison vs public PRs
 
