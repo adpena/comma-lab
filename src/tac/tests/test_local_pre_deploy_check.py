@@ -426,7 +426,39 @@ def test_recipe_state_accepts_implemented_dispatchable_recipe(
     )
 
     assert passed is True
-    assert "contest-CUDA dispatchable" in message
+    assert "recipe is dispatchable" in message
+
+
+def test_recipe_state_accepts_implemented_research_only_dispatchable_recipe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    trainer = tmp_path / "trainer.py"
+    trainer.write_text(
+        "def _full_main(args):\n"
+        "    return 0\n",
+        encoding="utf-8",
+    )
+    _write_recipe(
+        tmp_path,
+        "research_smoke_recipe",
+        "schema_version: 1\n"
+        "name: research_smoke_recipe\n"
+        "research_only: true\n"
+        "dispatch_enabled: true\n"
+        "score_claim: false\n"
+        "promotion_eligible: false\n",
+    )
+
+    passed, message = module.check_recipe_status_consistent_with_trainer_state(
+        trainer, "research_smoke_recipe"
+    )
+
+    assert passed is True
+    assert "dispatchable" in message
+    assert "research_only=true false-authority metadata preserved" in message
 
 
 def test_recipe_state_accepts_notimplemented_when_recipe_non_dispatchable(
@@ -446,7 +478,8 @@ def test_recipe_state_accepts_notimplemented_when_recipe_non_dispatchable(
         "research_recipe",
         "schema_version: 1\n"
         "name: research_recipe\n"
-        "research_only: true\n",
+        "research_only: true\n"
+        "dispatch_enabled: false\n",
     )
 
     passed, message = module.check_recipe_status_consistent_with_trainer_state(
@@ -455,3 +488,31 @@ def test_recipe_state_accepts_notimplemented_when_recipe_non_dispatchable(
 
     assert passed is True
     assert "transparent non-dispatchable" in message
+
+
+def test_recipe_state_rejects_notimplemented_when_only_research_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    trainer = tmp_path / "trainer.py"
+    trainer.write_text(
+        "def _full_main(args):\n"
+        "    raise NotImplementedError('phase gate')\n",
+        encoding="utf-8",
+    )
+    _write_recipe(
+        tmp_path,
+        "research_metadata_only_recipe",
+        "schema_version: 1\n"
+        "name: research_metadata_only_recipe\n"
+        "research_only: true\n",
+    )
+
+    passed, message = module.check_recipe_status_consistent_with_trainer_state(
+        trainer, "research_metadata_only_recipe"
+    )
+
+    assert passed is False
+    assert "not a dispatch refusal" in message

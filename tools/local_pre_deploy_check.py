@@ -589,7 +589,8 @@ def check_full_main_implemented(trainer: Path) -> tuple[bool, str]:
     that raises ``NotImplementedError`` — Modal dispatch reaches the trainer
     but immediately crashes pre-auth-eval. Per CLAUDE.md "Substrate scaffolds
     MUST be COMPLETE or RESEARCH-ONLY" + Catalog #220: such trainers must be
-    tagged ``research_only=true`` in their recipe AND NOT dispatchable.
+    tagged ``research_only=true`` in their recipe AND NOT dispatchable
+    (for example ``dispatch_enabled=false`` or explicit blockers).
     """
     text = trainer.read_text()
     # Match `def _full_main(...)` followed by docstring then `raise NotImplementedError`
@@ -608,7 +609,8 @@ def check_full_main_implemented(trainer: Path) -> tuple[bool, str]:
             False,
             f"FAIL: {trainer.name}:{line_no}: _full_main raises NotImplementedError "
             f"(stub trainer; not dispatchable). Per CLAUDE.md 'Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY' + Catalog #220, "
-            f"tag the recipe with research_only=true OR implement _full_main before dispatch.",
+            f"tag the recipe with research_only=true plus a real non-dispatchable flag "
+            f"(for example dispatch_enabled=false), OR implement _full_main before dispatch.",
         )
     return True, f"PASS: {trainer.name} _full_main appears implemented"
 
@@ -643,10 +645,11 @@ def check_recipe_status_consistent_with_trainer_state(
     - Trainer's _full_main raises NotImplementedError BUT recipe lacks a
       non-dispatchable flag → Modal will reach trainer and crash pre-auth-eval
       ($2-15 per smoke).
-    - Trainer's _full_main is implemented BUT recipe still declares
-      research_only/smoke_only/dispatch_enabled=false/blockers → this harness
-      must not print "Safe to dispatch"; ``operator_authorize.py`` will refuse
-      the same recipe before claim/provider setup.
+    - Trainer's _full_main is implemented BUT recipe still declares a real
+      dispatch refusal (smoke_only direct-dispatch path, dispatch_enabled=false,
+      blockers) → this harness must not print "Safe to dispatch";
+      ``operator_authorize.py`` will refuse the same recipe before
+      claim/provider setup.
 
     Mirrors the canonical Catalog #240 STRICT preflight gate per CLAUDE.md
     "Bugs must be permanently fixed AND self-protected against": one
@@ -686,8 +689,13 @@ def check_recipe_status_consistent_with_trainer_state(
     raises_not_impl = bool(re.search(r"\braise\s+NotImplementedError\b", body))
 
     # Check recipe dispatchability flags. Keep this intentionally aligned with
-    # ``tools.operator_authorize._recipe_dispatch_refusal`` so the pre-deploy
-    # harness cannot claim "Safe to dispatch" for a recipe the actuator refuses.
+    # ``tools.operator_authorize._recipe_dispatch_refusal`` plus
+    # ``_smoke_only_direct_dispatch_refusal`` so the pre-deploy harness cannot
+    # claim "Safe to dispatch" for a recipe the actuator refuses. Important:
+    # ``research_only=true`` is false-authority metadata, not a dispatch
+    # refusal in ``operator_authorize.py``; byte-closed research-smoke recipes
+    # may be dispatchable while still forbidden from making score/promotion
+    # claims.
     smoke_only = bool(re.search(r"^\s*smoke_only:\s*true\b", recipe_text, re.M))
     research_only = bool(
         re.search(r"^\s*research_only:\s*true\b", recipe_text, re.M)
@@ -703,7 +711,6 @@ def check_recipe_status_consistent_with_trainer_state(
         reason
         for reason, active in (
             ("smoke_only=true", smoke_only),
-            ("research_only=true", research_only),
             ("dispatch_enabled=false", dispatch_disabled),
             ("dispatch_blockers", dispatch_blocked),
             ("pre_promotion_blockers", pre_promotion_blocked),
@@ -718,11 +725,12 @@ def check_recipe_status_consistent_with_trainer_state(
             f"FAIL: recipe-vs-trainer-state divergence — "
             f"trainer {trainer.name} `_full_main` raises NotImplementedError "
             f"(Phase 2 council-gated) but recipe {recipe_path.name} lacks "
-            f"research-only flag. Modal dispatch would crash pre-auth-eval, "
+            f"a real non-dispatchable flag. Modal dispatch would crash pre-auth-eval, "
             f"burning $2-15 per smoke (Z3 v2 / Z4 / Z5 bug class). "
-            f"Fix: add `research_only: true` AND `dispatch_blockers: ["
+            f"Fix: add `dispatch_enabled: false` or `dispatch_blockers: ["
             f"phase_2_council_approval_required_to_lift_full_main_NotImplementedError"
-            f"]` to {recipe_path.name} top level. Per Catalog #240 + CLAUDE.md "
+            f"]` to {recipe_path.name} top level; `research_only: true` alone "
+            f"is not a dispatch refusal. Per Catalog #240 + CLAUDE.md "
             f"'Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY'.",
         )
 
@@ -745,7 +753,8 @@ def check_recipe_status_consistent_with_trainer_state(
 
     return True, (
         "PASS: recipe-vs-trainer-state consistent "
-        "(trainer `_full_main` implemented; recipe is contest-CUDA dispatchable)"
+        f"(trainer `_full_main` implemented; recipe is dispatchable"
+        f"{'; research_only=true false-authority metadata preserved' if research_only else ''})"
     )
 
 
