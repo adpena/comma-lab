@@ -508,6 +508,20 @@ def _equation_from_dict(payload: Mapping[str, Any]) -> CanonicalEquation:
     def _prov_from_dict(d: Mapping[str, Any]) -> Provenance:
         kind = ProvenanceKind(d["artifact_kind"])
         grade = ProvenanceEvidenceGrade(d["evidence_grade"])
+        # Per Provenance __post_init__ invariants, CONTEST_ARCHIVE_MEMBER
+        # requires both contest_archive_zip_path AND contest_archive_member_name;
+        # AGGREGATE_OF_PROVENANCES requires composed_from. The previous
+        # implementation dropped these fields silently on registry round-trip,
+        # which broke paired-archive-member anchor appends for any equation
+        # carrying a contest-CUDA or contest-CPU empirical anchor (the
+        # CUDA-first-then-CPU paired-append path hit InvalidProvenanceError
+        # on the round-trip read of the prior payload). Pass-through fixes
+        # the bug class structurally. Empirical anchor: OVERNIGHT-P 2026-05-21
+        # HFV2 sparse pair sidecar paired CUDA+CPU equation registration.
+        composed_raw = d.get("composed_from", ()) or ()
+        composed: tuple[Provenance, ...] = tuple(
+            _prov_from_dict(c) for c in composed_raw if isinstance(c, Mapping)
+        )
         return Provenance(
             artifact_kind=kind,
             source_path=d["source_path"],
@@ -519,6 +533,10 @@ def _equation_from_dict(payload: Mapping[str, Any]) -> CanonicalEquation:
             score_claim_valid=bool(d.get("score_claim_valid", False)),
             captured_at_utc=d["captured_at_utc"],
             canonical_helper_invocation=d.get("canonical_helper_invocation", "unknown"),
+            contest_archive_zip_path=d.get("contest_archive_zip_path", ""),
+            contest_archive_member_name=d.get("contest_archive_member_name", ""),
+            composed_from=composed,
+            rejection_reason=d.get("rejection_reason", ""),
         )
 
     anchors = tuple(
