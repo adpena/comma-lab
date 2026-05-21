@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +23,7 @@ from tac.substrates.atw_codec_v2 import (
 )
 from tac.substrates.atw_codec_v2.cdf_dead_section import (
     analyze_atw2_cdf_section,
+    compact_atw2_cdf_table_in_archive_zip,
     compose_atw2_archive_without_cdf_table,
     mutate_atw2_cdf_table_bytes,
     prove_atw2_cdf_compaction_parity,
@@ -82,6 +85,15 @@ def _make_archive() -> bytes:
         meta,
         variant=1,
     )
+
+
+def _write_stored_archive_zip(path: Path, member_bytes: bytes) -> None:
+    info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    info.external_attr = 0o644 << 16
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(info, member_bytes)
 
 
 def test_analyze_atw2_cdf_section_reports_rate_only_estimate() -> None:
@@ -162,6 +174,48 @@ def test_compact_cdf_sentinel_preserves_current_inflate_raw_output() -> None:
     assert proof.score_claim is False
 
 
+def test_compact_cdf_archive_zip_writes_member_and_reports_zip_savings() -> None:
+    archive = _make_archive()
+    with tempfile.TemporaryDirectory(prefix="atw2-cdf-zip-test-") as tmp:
+        root = Path(tmp)
+        source_zip = root / "source" / "archive.zip"
+        compact_zip = root / "compact" / "archive.zip"
+        _write_stored_archive_zip(source_zip, archive)
+        proof = compact_atw2_cdf_table_in_archive_zip(
+            source_zip,
+            compact_zip,
+            device="cpu",
+        )
+        assert proof.inner_proof.raw_equal is True
+        assert proof.member_name == "0.bin"
+        assert proof.member_compress_type == zipfile.ZIP_STORED
+        assert proof.archive_zip_bytes_saved == 2552
+        assert proof.archive_zip_delta_s_rate_only < 0
+        assert proof.source_archive_zip_sha256 != proof.compact_archive_zip_sha256
+        assert proof.score_claim is False
+        with zipfile.ZipFile(compact_zip, "r") as zf:
+            compact_member = zf.read("0.bin")
+        assert analyze_atw2_cdf_section(compact_member, envelope_bytes=8).cdf_bytes == 8
+        assert parse_archive(compact_member).cdf_table.shape == (5, 256)
+
+
+def test_compact_cdf_archive_zip_refuses_source_overwrite() -> None:
+    archive = _make_archive()
+    with tempfile.TemporaryDirectory(prefix="atw2-cdf-same-path-test-") as tmp:
+        source_zip = Path(tmp) / "archive.zip"
+        _write_stored_archive_zip(source_zip, archive)
+        try:
+            compact_atw2_cdf_table_in_archive_zip(
+                source_zip,
+                source_zip,
+                device="cpu",
+            )
+        except ValueError as exc:
+            assert "must not overwrite" in str(exc)
+        else:
+            raise AssertionError("source archive.zip overwrite was accepted")
+
+
 def test_probe_atw2_cdf_dead_section_cli_synthetic_smoke() -> None:
     proc = subprocess.run(
         [
@@ -202,3 +256,33 @@ def test_probe_atw2_cdf_dead_section_cli_compact_smoke() -> None:
     assert payload["archive_bytes_saved"] == 2552
     assert payload["compact_cdf_bytes"] == 8
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_probe_atw2_cdf_dead_section_cli_archive_zip_compact() -> None:
+    archive = _make_archive()
+    with tempfile.TemporaryDirectory(prefix="atw2-cdf-cli-zip-test-") as tmp:
+        root = Path(tmp)
+        source_zip = root / "source.zip"
+        compact_zip = root / "compact.zip"
+        _write_stored_archive_zip(source_zip, archive)
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / "tools" / "probe_atw2_cdf_dead_section.py"),
+                str(source_zip),
+                "--compact-cdf",
+                "--output-archive-zip",
+                str(compact_zip),
+                "--device",
+                "cpu",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        payload = json.loads(proc.stdout)
+        assert compact_zip.is_file()
+        assert payload["archive_zip_bytes_saved"] == 2552
+        assert payload["inner_proof"]["raw_equal"] is True
+        assert payload["ready_for_exact_eval_dispatch"] is False

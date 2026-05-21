@@ -7,8 +7,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import torch
 
@@ -24,12 +25,13 @@ from tac.substrates.atw_codec_v2 import (  # noqa: E402
 )
 from tac.substrates.atw_codec_v2.cdf_dead_section import (  # noqa: E402
     analyze_atw2_cdf_section,
+    compact_atw2_cdf_table_in_archive_zip,
     prove_atw2_cdf_compaction_parity,
     prove_atw2_cdf_decode_influence,
 )
 
 
-def _read_archive_bytes(path: Path) -> bytes:
+def _read_archive_bytes(path: Path, *, zip_member: str) -> bytes:
     if path.is_dir():
         candidates = [path / "0.bin", path / "x"]
         present = [p for p in candidates if p.is_file()]
@@ -38,6 +40,9 @@ def _read_archive_bytes(path: Path) -> bytes:
                 f"expected exactly one ATW2 member at {candidates[0]} or {candidates[1]}"
             )
         return present[0].read_bytes()
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path, "r") as zf:
+            return zf.read(zip_member)
     return path.read_bytes()
 
 
@@ -95,6 +100,33 @@ def _synthetic_archive_bytes() -> bytes:
     )
 
 
+def _build_inner_payload(
+    archive_bytes: bytes,
+    *,
+    analyze_only: bool,
+    compact_cdf: bool,
+    device: str,
+    mutation_kind: str,
+) -> dict[str, object]:
+    if analyze_only:
+        return analyze_atw2_cdf_section(archive_bytes).to_dict()
+    if compact_cdf:
+        return prove_atw2_cdf_compaction_parity(
+            archive_bytes,
+            device=device,
+        ).to_dict()
+    if mutation_kind not in ("xor_ff", "zero"):
+        raise ValueError(f"unsupported mutation_kind: {mutation_kind!r}")
+    typed_mutation_kind: Literal["xor_ff", "zero"] = (
+        "xor_ff" if mutation_kind == "xor_ff" else "zero"
+    )
+    return prove_atw2_cdf_decode_influence(
+        archive_bytes,
+        mutation_kind=typed_mutation_kind,
+        device=device,
+    ).to_dict()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", nargs="?", type=Path, help="ATW2 0.bin/x or archive_dir")
@@ -107,6 +139,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mutation-kind", choices=("xor_ff", "zero"), default="xor_ff")
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--analyze-only", action="store_true")
+    parser.add_argument("--zip-member", default="0.bin")
+    parser.add_argument(
+        "--output-archive-zip",
+        type=Path,
+        help="Write an archive.zip with --zip-member compacted; requires --compact-cdf.",
+    )
     parser.add_argument(
         "--compact-cdf",
         action="store_true",
@@ -114,26 +152,40 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if args.synthetic_smoke:
+    if args.output_archive_zip is not None and not args.compact_cdf:
+        parser.error("--output-archive-zip requires --compact-cdf")
+    if args.synthetic_smoke and args.output_archive_zip is not None:
+        parser.error("--output-archive-zip requires a source archive.zip path")
+
+    if args.output_archive_zip is not None:
+        if args.archive is None:
+            parser.error("pass a source archive.zip path with --output-archive-zip")
+        payload = compact_atw2_cdf_table_in_archive_zip(
+            args.archive,
+            args.output_archive_zip,
+            member_name=args.zip_member,
+            device=args.device,
+        ).to_dict()
+    elif args.synthetic_smoke:
         archive_bytes = _synthetic_archive_bytes()
+        payload = _build_inner_payload(
+            archive_bytes,
+            analyze_only=args.analyze_only,
+            compact_cdf=args.compact_cdf,
+            device=args.device,
+            mutation_kind=args.mutation_kind,
+        )
     elif args.archive is not None:
-        archive_bytes = _read_archive_bytes(args.archive)
+        archive_bytes = _read_archive_bytes(args.archive, zip_member=args.zip_member)
+        payload = _build_inner_payload(
+            archive_bytes,
+            analyze_only=args.analyze_only,
+            compact_cdf=args.compact_cdf,
+            device=args.device,
+            mutation_kind=args.mutation_kind,
+        )
     else:
         parser.error("pass an ATW2 archive path or --synthetic-smoke")
-
-    if args.analyze_only:
-        payload = analyze_atw2_cdf_section(archive_bytes).to_dict()
-    elif args.compact_cdf:
-        payload = prove_atw2_cdf_compaction_parity(
-            archive_bytes,
-            device=args.device,
-        ).to_dict()
-    else:
-        payload = prove_atw2_cdf_decode_influence(
-            archive_bytes,
-            mutation_kind=args.mutation_kind,
-            device=args.device,
-        ).to_dict()
 
     text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if args.json_output is not None:

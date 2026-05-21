@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import struct
 import tempfile
+import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
@@ -104,6 +105,29 @@ class Atw2CdfCompactionProof:
         return payload
 
 
+@dataclass(frozen=True)
+class Atw2CdfZipCompactionProof:
+    """ZIP-level proof after compacting one ATW2 member's cdf_table_blob."""
+
+    inner_proof: Atw2CdfCompactionProof
+    member_name: str
+    member_compress_type: int
+    source_archive_zip_sha256: str
+    compact_archive_zip_sha256: str
+    source_archive_zip_bytes: int
+    compact_archive_zip_bytes: int
+    archive_zip_bytes_saved: int
+    archive_zip_delta_s_rate_only: float
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    def to_dict(self) -> dict[str, object]:
+        payload = asdict(self)
+        payload["inner_proof"] = self.inner_proof.to_dict()
+        return payload
+
+
 def analyze_atw2_cdf_section(
     archive_bytes: bytes,
     *,
@@ -144,6 +168,22 @@ def analyze_atw2_cdf_section(
     )
 
 
+def _zip_sha256_and_size(path: Path) -> tuple[str, int]:
+    data = path.read_bytes()
+    return hashlib.sha256(data).hexdigest(), len(data)
+
+
+def _copy_zipinfo_for_payload(source: zipfile.ZipInfo) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(source.filename, date_time=source.date_time)
+    info.comment = source.comment
+    info.extra = source.extra
+    info.internal_attr = source.internal_attr
+    info.external_attr = source.external_attr
+    info.create_system = source.create_system
+    info.compress_type = source.compress_type
+    return info
+
+
 def compose_atw2_archive_without_cdf_table(archive_bytes: bytes) -> bytes:
     """Replace the full cdf_table_blob with the compact dead-section sentinel."""
 
@@ -160,6 +200,65 @@ def compose_atw2_archive_without_cdf_table(archive_bytes: bytes) -> bytes:
         + archive_bytes[ATW2_HEADER_SIZE:cdf_start]
         + ATW2_CDF_DEAD_SECTION_SENTINEL
         + archive_bytes[cdf_end:]
+    )
+
+
+def compact_atw2_cdf_table_in_archive_zip(
+    source_archive_zip: Path,
+    output_archive_zip: Path,
+    *,
+    member_name: str = "0.bin",
+    device: str = "cpu",
+) -> Atw2CdfZipCompactionProof:
+    """Write a new archive.zip with one ATW2 member's cdf_table_blob compacted."""
+
+    source_archive_zip = Path(source_archive_zip)
+    output_archive_zip = Path(output_archive_zip)
+    if source_archive_zip.resolve() == output_archive_zip.resolve():
+        raise ValueError("output_archive_zip must not overwrite source_archive_zip")
+    with zipfile.ZipFile(source_archive_zip, "r") as src_zf:
+        matching_infos = [
+            info for info in src_zf.infolist() if info.filename == member_name
+        ]
+        if len(matching_infos) != 1:
+            raise ValueError(
+                f"expected exactly one ZIP member named {member_name!r}; "
+                f"found {len(matching_infos)}"
+            )
+        target_info = matching_infos[0]
+        source_member_bytes = src_zf.read(member_name)
+        inner_proof = prove_atw2_cdf_compaction_parity(
+            source_member_bytes,
+            device=device,
+        )
+        compact_member_bytes = compose_atw2_archive_without_cdf_table(
+            source_member_bytes
+        )
+        output_archive_zip.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(output_archive_zip, "w") as dst_zf:
+            for info in src_zf.infolist():
+                member_bytes = (
+                    compact_member_bytes
+                    if info.filename == member_name
+                    else src_zf.read(info.filename)
+                )
+                out_info = _copy_zipinfo_for_payload(info)
+                dst_zf.writestr(out_info, member_bytes)
+
+    source_sha, source_size = _zip_sha256_and_size(source_archive_zip)
+    compact_sha, compact_size = _zip_sha256_and_size(output_archive_zip)
+    bytes_saved = source_size - compact_size
+    delta_s = -CANONICAL_RATE_MULTIPLIER * bytes_saved / CANONICAL_RATE_DENOM_BYTES
+    return Atw2CdfZipCompactionProof(
+        inner_proof=inner_proof,
+        member_name=member_name,
+        member_compress_type=int(target_info.compress_type),
+        source_archive_zip_sha256=source_sha,
+        compact_archive_zip_sha256=compact_sha,
+        source_archive_zip_bytes=source_size,
+        compact_archive_zip_bytes=compact_size,
+        archive_zip_bytes_saved=bytes_saved,
+        archive_zip_delta_s_rate_only=float(delta_s),
     )
 
 
