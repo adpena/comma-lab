@@ -75,6 +75,7 @@ def export_mlx_state_dict_to_torch_pt(
     substrate_id: str,
     run_id: str,
     overwrite: bool = False,
+    force_float32_names: set[str] | frozenset[str] | tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Serialize an MLX-trained state_dict (numpy intermediary) as a PyTorch .pt file.
 
@@ -87,6 +88,10 @@ def export_mlx_state_dict_to_torch_pt(
         substrate_id: canonical substrate identifier (e.g. "grayscale_lut").
         run_id: canonical run identifier (e.g. UTC timestamp + smoke marker).
         overwrite: if False (default), raise FileExistsError when path exists.
+        force_float32_names: optional explicit tensor-name allowlist to cast to
+            float32. Dtypes are otherwise preserved exactly so integer indices,
+            masks, quantized buffers, and codebook state are not silently
+            corrupted.
 
     Returns:
         Export manifest dict with canonical Provenance fields (per Catalog
@@ -101,17 +106,30 @@ def export_mlx_state_dict_to_torch_pt(
     if not state_dict_np:
         raise ValueError("state_dict_np must contain at least one parameter")
 
+    force_float32 = {str(name) for name in force_float32_names}
+    unknown_force_names = sorted(force_float32 - set(state_dict_np))
+    if unknown_force_names:
+        raise KeyError(f"force_float32_names contains unknown tensors: {unknown_force_names}")
+
     # Convert numpy arrays -> torch tensors (canonical PyTorch layout preserved).
     torch_state: dict[str, torch.Tensor] = {}
     per_tensor_sha: dict[str, str] = {}
+    per_tensor: dict[str, dict[str, Any]] = {}
     for name, arr in state_dict_np.items():
         if not isinstance(arr, np.ndarray):
             raise TypeError(f"value for {name!r} is not numpy array: got {type(arr).__name__}")
-        # Force fp32 for canonical contest-runtime path (Selfcomp + sister
-        # substrates use fp32 weights at inflate time).
-        arr_f32 = arr.astype(np.float32)
-        torch_state[name] = torch.from_numpy(arr_f32.copy())
-        per_tensor_sha[name] = hashlib.sha256(arr_f32.tobytes()).hexdigest()[:16]
+        arr_out = arr.astype(np.float32) if name in force_float32 else arr
+        tensor = torch.from_numpy(np.ascontiguousarray(arr_out).copy())
+        torch_state[name] = tensor
+        tensor_sha = hashlib.sha256(np.ascontiguousarray(arr_out).tobytes()).hexdigest()
+        per_tensor_sha[name] = tensor_sha[:16]
+        per_tensor[name] = {
+            "source_dtype": str(arr.dtype),
+            "export_dtype": str(arr_out.dtype),
+            "shape": [int(x) for x in arr_out.shape],
+            "sha256": tensor_sha,
+            "forced_float32": name in force_float32,
+        }
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(torch_state, out_path)
@@ -125,9 +143,11 @@ def export_mlx_state_dict_to_torch_pt(
         run_id=run_id,
         output_pt_path=str(out_path),
         per_tensor_sha=per_tensor_sha,
+        per_tensor=per_tensor,
         file_sha256=file_sha,
         file_size_bytes=file_size,
         tensor_count=len(state_dict_np),
+        force_float32_names=sorted(force_float32),
     )
 
 
@@ -157,6 +177,8 @@ def build_export_manifest(
     file_sha256: str,
     file_size_bytes: int,
     tensor_count: int,
+    per_tensor: dict[str, dict[str, Any]] | None = None,
+    force_float32_names: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build canonical export manifest with non-promotable markers.
 
@@ -175,6 +197,11 @@ def build_export_manifest(
         "file_size_bytes": file_size_bytes,
         "tensor_count": tensor_count,
         "per_tensor_sha256_prefix": per_tensor_sha,
+        "per_tensor": per_tensor or {},
+        "dtype_policy": {
+            "default": "preserve_numpy_dtype",
+            "force_float32_names": force_float32_names or [],
+        },
         # Canonical Provenance markers per Catalog #287/#323/#192/#1.
         # The exported weights themselves were generated under MLX; routing
         # to CUDA T4 for eval is the promotion path (separate event).
