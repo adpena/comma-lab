@@ -186,6 +186,13 @@ from tac.substrates.atw_codec_v2.archive import (
     parse_archive,
     parse_atw2_archive_bytes,
 )
+from tac.substrates.atw_codec_v2.cdf_dead_section import (
+    Atw2CdfDecodeInfluenceProof,
+    Atw2CdfSectionAnalysis,
+    analyze_atw2_cdf_section,
+    mutate_atw2_cdf_table_bytes,
+    prove_atw2_cdf_decode_influence,
+)
 from tac.substrates.atw_codec_v2.inflate import inflate_one_video, main_cli
 from tac.substrates.atw_codec_v2.score_aware_loss import (
     ATWv2LossOutput,
@@ -229,6 +236,8 @@ __all__ = [
     "RESEARCH_ONLY",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
+    "Atw2CdfDecodeInfluenceProof",
+    "Atw2CdfSectionAnalysis",
     "ATWv2Codec",
     "ATWv2CodecArchive",
     "ATWv2CodecConfig",
@@ -237,9 +246,12 @@ __all__ = [
     "ATWv2ScoreAwareLoss",
     "ATWv2Variant",
     "atw_v2_phase2_gate_status",
+    "analyze_atw2_cdf_section",
     "inflate_one_video",
     "main_cli",
+    "mutate_atw2_cdf_table_bytes",
     "pack_archive",
     "parse_archive",
     "parse_atw2_archive_bytes",
+    "prove_atw2_cdf_decode_influence",
 ]
