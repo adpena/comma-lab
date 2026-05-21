@@ -106,6 +106,19 @@ from tac.portable_primitives.nn_fastvit import (
     PortablePoseNet,
     PortableResBlock,
 )
+from tac.portable_primitives.nn_segnet import (
+    SEGNET_CLASSES,
+    SEGNET_DECODER_CHANNELS,
+    SEGNET_ENCODER_CHANNELS,
+    SEGNET_MODEL_INPUT_HW,
+    SEGNET_MODEL_INPUT_SIZE,
+    PortableConvBnAct2d,
+    PortableMBConvBlock,
+    PortableSegmentationHead,
+    PortableSqueezeExcite,
+    PortableUnetDecoder,
+    PortableUnetDecoderBlock,
+)
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -142,6 +155,18 @@ __all__ = [
     "POSENET_SUMMARY_FEATURES",
     "POSENET_INPUT_MEAN",
     "POSENET_INPUT_STD",
+    # MLX-ARCH-4a SegNet / EfficientNet-B2-UNet primitives.
+    "SEGNET_CLASSES",
+    "SEGNET_ENCODER_CHANNELS",
+    "SEGNET_DECODER_CHANNELS",
+    "SEGNET_MODEL_INPUT_SIZE",
+    "SEGNET_MODEL_INPUT_HW",
+    "PortableConvBnAct2d",
+    "PortableSqueezeExcite",
+    "PortableMBConvBlock",
+    "PortableUnetDecoderBlock",
+    "PortableUnetDecoder",
+    "PortableSegmentationHead",
 ]
 
 SCHEMA_VERSION = "portable_primitives.v1"

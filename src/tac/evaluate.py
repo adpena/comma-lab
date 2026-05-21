@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: MIT
-"""Canonical evaluation for task-aware compression post-filters.
+"""Legacy TAC post-filter proxy evaluation.
 
-ONE evaluation path. Matches the official scorer exactly.
-No hardcoded paths. No ambiguity. Fully portable.
+This helper mirrors the contest component formula for TAC post-filter
+experiments, but it is not the authoritative submission evaluator.  It does
+not execute the byte-closed contest path ``archive.zip -> inflate.sh ->
+inflated/*.raw -> upstream/evaluate.py`` and must not be used for promotion,
+leaderboard, rank/kill, or public score claims.
 
 Usage as library:
     from tac.evaluate import canonical_score
@@ -43,14 +46,17 @@ def canonical_score(
     kernel: int = 3,
     device: str | None = None,
 ) -> ScoreResult:
-    """The ONE canonical evaluation function.
+    """Evaluate a TAC post-filter under the legacy proxy harness.
 
     All paths are explicit parameters — nothing hardcoded.
-    Matches the official evaluate.py exactly:
+    The component definitions mirror the official formula:
     - Hard argmax SegNet disagreement
     - MSE on first 6 PoseNet outputs
     - Rate = archive_size / uncompressed_size
     - Score = 100*seg + sqrt(10*pose) + 25*rate
+
+    This bypasses the official ``inflate.sh``/``upstream/evaluate.py`` custody
+    path, so the return value is proxy evidence only.
     """
     from .architectures import PairAwarePostFilter, build_postfilter
     from .data import build_pairs, decode_archive, decode_video
@@ -258,7 +264,7 @@ if __name__ == "__main__":
     upstream = Path(args.upstream)
     archive = Path(args.archive) if args.archive else upstream.parent / "submissions" / "robust_current" / "archive.zip"
 
-    print("Canonical evaluation")
+    print("Legacy TAC post-filter proxy evaluation (non-authoritative)")
     print(f"  checkpoint: {args.checkpoint}")
     print(f"  archive:    {archive}")
     print(f"  upstream:   {upstream}")
