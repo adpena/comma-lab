@@ -45971,6 +45971,47 @@
         }
       },
       "notes": "planning-only paired CPU/CUDA harvest bridge for DP1 procedural recipes; no spend, no score claim"
+    },
+    {
+      "id": "lane_wave_3_parser_safe_methodology_extension_20260520",
+      "name": "WAVE-3 PARSER-SAFE METHODOLOGY EXTENSION",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_parser_safe_methodology_extension_smoke.py + experiments/results/parser_safe_methodology_extension_smoke_20260521T030815Z/ [macOS-CPU advisory]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/parser_safe_methodology_extension_landed_20260520.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -45980,5 +46021,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T02:50:47Z"
+  "updated_at": "2026-05-21T03:12:16Z"
 }
