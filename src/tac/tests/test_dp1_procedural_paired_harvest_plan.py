@@ -227,8 +227,21 @@ def test_plan_can_include_running_training_call_status(tmp_path: Path) -> None:
     assert plan["training_call_status"]["status"] == "running"
     assert "dp1_training_calls_not_ready_for_harvest" in plan["top_blockers"]
     assert plan["training_call_status"]["ready_for_training_harvest"] is False
+    assert plan["training_harvest_command_ready"] is False
+    harvest_cmd = plan["training_harvest_command"]
+    assert harvest_cmd[:4] == [
+        ".venv/bin/python",
+        "tools/harvest_modal_calls.py",
+        "--from-ledger",
+        "--execute",
+    ]
+    assert harvest_cmd.count("--call-id") == 2
+    assert "fc-base" in harvest_cmd
+    assert "fc-proc" in harvest_cmd
     md = render_markdown(plan)
     assert "Training-call status: `running`" in md
+    assert "Training harvest command ready: `False`" in md
+    assert "tools/harvest_modal_calls.py" in md
     assert "Baseline training call: `fc-base` / `running_or_pending`" in md
 
 
@@ -273,6 +286,8 @@ def test_plan_does_not_add_training_blocker_when_training_calls_ready(
 
     assert plan["training_call_status"]["status"] == "ready_for_training_harvest"
     assert plan["training_call_status"]["ready_for_training_harvest"] is True
+    assert plan["training_harvest_command_ready"] is True
+    assert "tools/harvest_modal_calls.py" in plan["training_harvest_command"]
     assert "dp1_training_calls_not_ready_for_harvest" not in plan["top_blockers"]
     assert "baseline_and_procedural_paired_harvest_not_ready" in plan["top_blockers"]
 

@@ -34,6 +34,7 @@ SCHEMA = "dp1_procedural_paired_harvest_plan_v1"
 TOOL_PATH = "tools/plan_dp1_procedural_paired_harvest.py"
 DEFAULT_OUTPUT_ROOT = "experiments/results/dp1_procedural_paired_harvest"
 ADJUDICATION_TOOL_PATH = "tools/adjudicate_dp1_procedural_paired_harvest.py"
+TRAINING_HARVEST_TOOL_PATH = "tools/harvest_modal_calls.py"
 
 DP1_VARIANT_ORDER = ("baseline", "procedural", "null_control")
 DP1_RECIPE_BASENAMES = {
@@ -533,6 +534,8 @@ def build_dp1_procedural_paired_harvest_plan(
     candidates: list[dict[str, Any]] = []
     top_blockers: list[str] = []
     training_call_status: dict[str, Any] | None = None
+    training_harvest_command: list[str] | None = None
+    training_harvest_command_ready = False
     if poll_training_calls:
         baseline_training_metadata = training_metadata_paths.get("baseline")
         procedural_training_metadata = training_metadata_paths.get("procedural")
@@ -554,6 +557,34 @@ def build_dp1_procedural_paired_harvest_plan(
                 )
             elif not training_call_status.get("ready_for_training_harvest"):
                 top_blockers.append("dp1_training_calls_not_ready_for_harvest")
+            baseline_status = training_call_status.get("baseline")
+            procedural_status = training_call_status.get("procedural")
+            baseline_call_id = (
+                baseline_status.get("call_id")
+                if isinstance(baseline_status, Mapping)
+                else None
+            )
+            procedural_call_id = (
+                procedural_status.get("call_id")
+                if isinstance(procedural_status, Mapping)
+                else None
+            )
+            if baseline_call_id and procedural_call_id:
+                training_harvest_command = [
+                    ".venv/bin/python",
+                    TRAINING_HARVEST_TOOL_PATH,
+                    "--from-ledger",
+                    "--execute",
+                    "--summary-output",
+                    f"{output_root}/training_harvest/modal_training_harvest_summary.json",
+                    "--call-id",
+                    str(baseline_call_id),
+                    "--call-id",
+                    str(procedural_call_id),
+                ]
+                training_harvest_command_ready = bool(
+                    training_call_status.get("ready_for_training_harvest")
+                )
     for variant in variants:
         recipe_path = root / str(recipe_paths[variant])
         expected_name = DP1_RECIPE_BASENAMES[variant]
@@ -649,6 +680,9 @@ def build_dp1_procedural_paired_harvest_plan(
         "all_required_candidates_ready": all_required_ready,
         "top_blockers": sorted(set(top_blockers)),
         "training_call_status": training_call_status,
+        "training_harvest_tool": TRAINING_HARVEST_TOOL_PATH,
+        "training_harvest_command": training_harvest_command,
+        "training_harvest_command_ready": training_harvest_command_ready,
         "candidates": candidates,
         "paired_source_equivalence": paired_source_equivalence,
         "post_harvest_adjudication_command": post_harvest_adjudication_command,
@@ -659,6 +693,7 @@ def build_dp1_procedural_paired_harvest_plan(
             "Run the post-harvest adjudication command only after both variants have recovered CPU and CUDA auth-eval JSON.",
             "Baseline/procedural paired readiness requires matching shared Modal sentinel-file hashes; git heads may differ only when those mounted bytes match.",
             "If training_call_status is present, paired auth eval remains blocked until both training arms are ready for training harvest.",
+            "training_harvest_command is call-id-filtered; run it only after training_harvest_command_ready is true.",
         ],
     }
 
@@ -696,6 +731,7 @@ def render_markdown(plan: Mapping[str, Any]) -> str:
             [
                 f"- Training-call status: `{training_call_status.get('status')}`",
                 f"- Training harvest ready: `{training_call_status.get('ready_for_training_harvest')}`",
+                f"- Training harvest command ready: `{plan.get('training_harvest_command_ready')}`",
                 f"- Baseline training call: `{baseline.get('call_id')}` / `{baseline_poll.get('status')}`",
                 f"- Procedural training call: `{procedural.get('call_id')}` / `{procedural_poll.get('status')}`",
             ]
@@ -742,6 +778,18 @@ def render_markdown(plan: Mapping[str, Any]) -> str:
                 "",
                 "```bash",
                 " ".join(str(part) for part in cmd),
+                "```",
+            ]
+        )
+    training_harvest_cmd = plan.get("training_harvest_command")
+    if training_harvest_cmd:
+        rows.extend(
+            [
+                "",
+                "### training harvest",
+                "",
+                "```bash",
+                " ".join(str(part) for part in training_harvest_cmd),
                 "```",
             ]
         )
