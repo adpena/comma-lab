@@ -150,6 +150,12 @@ last_refreshed_note: |
   `do_not_wrap_procedural_seed_bytes_with_magic_codec` alongside the existing
   sparse-residual widening prohibition, while preserving null-byte priority
   rows as non-promotional LL training-harvest priors.
+- **LL frame/pair curriculum regenerated from the guarded plan**:
+  `.omx/research/ll_frame_pair_curriculum_pair4_guarded_landed_20260521T004853Z_codex.md`
+  records the pair #4 guarded curriculum. Top frames are
+  `15,13,5,9,11,7,1,3` (all odd pair-last SegNet-visible frames); top pairs
+  are `7,6,4,2,5,3,1,0`. The artifact emits `11` masked adjustment layers and
+  carries both prohibitions through the response policy.
 - **Current highest-signal follow-on**: preserve the master-gradient,
   per-frame/per-pair, byte/pixel sensitivity surfaces as routing authority, but
   stop direct FEC6 member-byte substitution attempts unless they change
