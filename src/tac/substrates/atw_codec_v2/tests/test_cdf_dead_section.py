@@ -319,3 +319,42 @@ def test_materialize_atw2_cdf_compaction_smoke_cli(tmp_path: Path) -> None:
     assert payload["proof"]["archive_zip_bytes_saved"] > 0
     assert payload["proof"]["inner_proof"]["raw_equal"] is True
     assert payload["proof"]["inner_proof"]["max_abs_raw_byte_delta"] == 0
+
+
+def test_compact_atw2_cdf_candidates_cli(tmp_path: Path) -> None:
+    archive = _make_archive()
+    input_root = tmp_path / "inputs"
+    source_zip = input_root / "case_a" / "archive.zip"
+    output_dir = tmp_path / "batch-output"
+    _write_stored_archive_zip(source_zip, archive)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "compact_atw2_cdf_candidates.py"),
+            str(input_root),
+            "--output-dir",
+            str(output_dir),
+            "--device",
+            "cpu",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    payload = json.loads(proc.stdout)
+    assert (output_dir / "batch_compaction_report.json").is_file()
+    assert (output_dir / "batch_compaction_report.md").is_file()
+    assert payload["candidates_seen"] == 1
+    assert payload["compacted_count"] == 1
+    assert payload["failure_count"] == 0
+    assert payload["total_archive_zip_bytes_saved"] == 2552
+    row = payload["compacted"][0]
+    assert Path(row["output_archive_zip_path"]).is_file()
+    assert row["source_archive_zip_path"] == str(source_zip)
+    assert row["archive_zip_bytes_saved"] == 2552
+    assert row["raw_equal"] is True
+    assert row["max_abs_raw_byte_delta"] == 0
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
