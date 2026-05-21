@@ -746,6 +746,8 @@ def encode_ranked_no_op_sidecar(
     dims: np.ndarray,
     delta_indices: np.ndarray,
     schema: RankedSidecarSchema,
+    dim_bytes: int | None = None,
+    noop_rank_bytes: int | None = None,
 ) -> bytes:
     """Encode a per-pair sparse correction sidecar.
 
@@ -760,6 +762,11 @@ def encode_ranked_no_op_sidecar(
         be 0 for no-op slots. ``shape == (schema.n_pairs,)``, ``dtype int64``.
     schema:
         :class:`RankedSidecarSchema` declaring vocab/code-length envelope.
+    dim_bytes / noop_rank_bytes:
+        Optional container-width overrides for legacy PacketIR adapters that
+        froze wider framing metadata.  The defaults match the live PR101/FEC6
+        runtime: exact base-``n_dims`` width for dimensions and actual-rank
+        width for no-op positions.
 
     Returns
     -------
@@ -797,9 +804,18 @@ def encode_ranked_no_op_sidecar(
     dim_value = 0
     for i in range(n_valid - 1, -1, -1):
         dim_value = dim_value * schema.n_dims + int(dims[int(valid[i])])
-    # Width: ceil(n_valid * log2(n_dims) / 8) bytes.
-    dim_bits = max(1, n_valid * math.ceil(math.log2(max(schema.n_dims, 2))))
-    dim_bytes = (dim_bits + 7) // 8
+    # Width: ceil(log2(n_dims ** n_valid) / 8) bytes.  PR101 packs the valid
+    # dimensions as a single base-28 integer; using ceil(log2(28)) per symbol
+    # over-allocates 15 bytes at the real 597-valid FEC6 sidecar density.
+    dim_bits = max(1, math.ceil(n_valid * math.log2(max(schema.n_dims, 2))))
+    min_dim_bytes = (dim_bits + 7) // 8
+    if dim_bytes is None:
+        dim_bytes = min_dim_bytes
+    elif dim_bytes < min_dim_bytes:
+        raise ValueError(
+            f"dim_bytes={dim_bytes} is too small for {n_valid} base-{schema.n_dims} dims; "
+            f"minimum is {min_dim_bytes}"
+        )
     dim_blob = dim_value.to_bytes(dim_bytes, "little")
 
     # Choose a canonical Huffman code; the schema-driven code is enforced
@@ -853,11 +869,19 @@ def encode_ranked_no_op_sidecar(
     rank_bytes = (rank_bits + 7) // 8
     length_rank_blob = length_rank.to_bytes(rank_bytes, "little")
 
-    # No-op rank: co-lex combination of the no-op positions.
+    # No-op rank: co-lex combination of the no-op positions.  PR101's
+    # huff_enum sidecar stores the actual rank in the minimal byte width
+    # needed for this packet, not the worst-case width for every C(N, k)
+    # combination.  The real FEC6 sidecar uses 3 bytes for 3 no-op positions.
     noop_rank = _encode_combination_colex(noop_pos.astype(np.int64), schema.n_pairs)
-    noop_total = max(math.comb(schema.n_pairs, noop_count), 1)
-    noop_rank_bits = max(1, math.ceil(math.log2(noop_total)))
-    noop_rank_bytes = (noop_rank_bits + 7) // 8
+    min_noop_rank_bytes = max(1, (int(noop_rank).bit_length() + 7) // 8)
+    if noop_rank_bytes is None:
+        noop_rank_bytes = min_noop_rank_bytes
+    elif noop_rank_bytes < min_noop_rank_bytes:
+        raise ValueError(
+            f"noop_rank_bytes={noop_rank_bytes} is too small for no-op rank "
+            f"{noop_rank}; minimum is {min_noop_rank_bytes}"
+        )
     noop_rank_blob = noop_rank.to_bytes(noop_rank_bytes, "little")
 
     return dim_blob + length_rank_blob + huff_bits + noop_rank_blob

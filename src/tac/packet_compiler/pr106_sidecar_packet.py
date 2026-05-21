@@ -436,11 +436,6 @@ def encode_pr101_ranked_sidecar_payload(
             )
         delta_indices[(deltas == value) & valid] = delta_to_index[value]
 
-    payload = encode_ranked_no_op_sidecar(
-        dims=dims,
-        delta_indices=delta_indices,
-        schema=schema,
-    )
     n_valid = int(valid.sum())
     noop_count = int(schema.n_pairs - n_valid)
     dim_bits = max(1, n_valid * math.ceil(math.log2(max(schema.n_dims, 2))))
@@ -457,6 +452,13 @@ def encode_pr101_ranked_sidecar_payload(
     noop_total = max(math.comb(schema.n_pairs, noop_count), 1)
     noop_rank_bits = max(1, math.ceil(math.log2(noop_total)))
     noop_rank_bytes = (noop_rank_bits + 7) // 8
+    payload = encode_ranked_no_op_sidecar(
+        dims=dims,
+        delta_indices=delta_indices,
+        schema=schema,
+        dim_bytes=dim_bytes,
+        noop_rank_bytes=noop_rank_bytes,
+    )
     framing_meta = struct.pack("<HHBB", noop_count, dim_bytes, rank_bytes, noop_rank_bytes)
     decoded_dims, decoded_delta_indices = _decode_pr101_ranked_sidecar_payload(
         payload,
@@ -2902,6 +2904,9 @@ def mutate_pr106_sidecar_semantic_correction(
             raise ValueError(f"pair_index out of range: {idx} not in [0, {dims.size})")
         if int(dims[idx]) == schema.no_op_sentinel:
             raise ValueError(f"pair_index {idx} is a no-op correction")
+        noop_count, dim_bytes, rank_bytes, noop_rank_bytes = struct.unpack(
+            "<HHBB", ranked_meta
+        )
         old_delta_index = int(delta_indices[idx])
         new_delta_index = (old_delta_index + 1) % len(schema.deltas)
         mutated_delta_indices = delta_indices.copy()
@@ -2910,13 +2915,12 @@ def mutate_pr106_sidecar_semantic_correction(
             dims=dims,
             delta_indices=mutated_delta_indices,
             schema=schema,
+            dim_bytes=int(dim_bytes),
+            noop_rank_bytes=int(noop_rank_bytes),
         )
         mutated_sidecar_payload = mutated_payload
         mutated_framing_meta = packet.framing_meta
         if packet.format_id == PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED:
-            noop_count, dim_bytes, rank_bytes, noop_rank_bytes = struct.unpack(
-                "<HHBB", ranked_meta
-            )
             if int(rank_bytes) != 1:
                 raise ValueError(
                     f"format_id=0x04 rank-elision expects one rank byte; got {rank_bytes}"
@@ -2958,25 +2962,20 @@ def mutate_pr106_sidecar_semantic_correction(
                 raise ValueError(
                     f"format_id=0x{packet.format_id:02X} expanded metadata "
                     "did not match fixed meta"
-                )
+            )
             if exact_radix_format:
-                huff_start = (
-                    PR106_PR101_FIXED_META_DIM_BYTES
-                    + PR106_PR101_FIXED_META_RANK_BYTES
-                )
-                huff_end = -PR106_PR101_FIXED_META_NOOP_RANK_BYTES
+                huff_start = int(dim_bytes) + int(rank_bytes)
+                huff_end = -int(noop_rank_bytes)
                 mutated_sidecar_payload = (
                     _encode_exact_radix_dim_payload(dims, schema=schema)
                     + mutated_payload[huff_start:huff_end]
                     + PR106_PR101_FIXED_META_NOOP_RANK_BYTE
                 )
             else:
+                rank_elided_start = int(dim_bytes) + int(rank_bytes)
                 mutated_sidecar_payload = (
-                    mutated_payload[:PR106_PR101_FIXED_META_DIM_BYTES]
-                    + mutated_payload[
-                        PR106_PR101_FIXED_META_DIM_BYTES
-                        + PR106_PR101_FIXED_META_RANK_BYTES :
-                    ]
+                    mutated_payload[: int(dim_bytes)]
+                    + mutated_payload[rank_elided_start:]
                 )
             if (
                 packet.format_id
@@ -3040,6 +3039,8 @@ def mutate_pr106_sidecar_semantic_correction(
                 dims=dims,
                 delta_indices=mutated_delta_indices,
                 schema=schema,
+                dim_bytes=int.from_bytes(packet.extra_framing_meta[2:4], "little"),
+                noop_rank_bytes=int(packet.extra_framing_meta[5]),
             )
             mutated_packet = PR106SidecarPacket(
                 format_id=packet.format_id,

@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
+import importlib.util
 import json
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +20,14 @@ from tac.packet_compiler import (
     encode_ranked_no_op_sidecar,
     parse_split_brotli_self_delimiting,
     split_brotli_self_delimiting,
+)
+from tac.packet_compiler.pr101_fec6_packetir import (
+    parse_pr101_fec6_packetir_member,
+    read_single_stored_fec6_member_archive,
+)
+from tac.packet_compiler.pr101_fec6_source_anatomy import (
+    PR101_DECODER_BLOB_LEN,
+    PR101_LATENT_BLOB_LEN,
 )
 from tac.packet_compiler.pr101_sidecar_grammar import (
     _build_canonical_huffman_codebook,
@@ -34,15 +44,24 @@ GOLDEN_DIR = (
     / "golden_vectors"
 )
 PR101_DELTAS = (-10, -8, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 8, 10)
+REPO_ROOT = Path(__file__).resolve().parents[3]
+REAL_FEC6_DIR = (
+    REPO_ROOT
+    / "experiments/results/"
+    "pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/"
+    "submission_dir"
+)
+REAL_FEC6_ARCHIVE = REAL_FEC6_DIR / "archive.zip"
 
 
 def _ranked_decode_widths(
     schema: RankedSidecarSchema,
     *,
     noop_count: int,
+    dims: np.ndarray | None = None,
 ) -> tuple[int, int, int]:
     n_valid = schema.n_pairs - noop_count
-    dim_bits = max(1, n_valid * math.ceil(math.log2(max(schema.n_dims, 2))))
+    dim_bits = max(1, math.ceil(n_valid * math.log2(max(schema.n_dims, 2))))
     dim_bytes = (dim_bits + 7) // 8
     total_length_vectors = _huff_length_vector_count(
         0,
@@ -53,9 +72,14 @@ def _ranked_decode_widths(
     )
     rank_bits = max(1, math.ceil(math.log2(max(total_length_vectors, 2))))
     rank_bytes = (rank_bits + 7) // 8
-    noop_total = max(math.comb(schema.n_pairs, noop_count), 1)
-    noop_rank_bits = max(1, math.ceil(math.log2(noop_total)))
-    noop_rank_bytes = (noop_rank_bits + 7) // 8
+    if dims is None:
+        noop_total = max(math.comb(schema.n_pairs, noop_count), 1)
+        noop_rank_bits = max(1, math.ceil(math.log2(noop_total)))
+        noop_rank_bytes = (noop_rank_bits + 7) // 8
+    else:
+        noop_pos = np.where(np.asarray(dims) == schema.no_op_sentinel)[0]
+        noop_rank = _encode_combination_colex(noop_pos.astype(np.int64), schema.n_pairs)
+        noop_rank_bytes = max(1, (int(noop_rank).bit_length() + 7) // 8)
     return dim_bytes, rank_bytes, noop_rank_bytes
 
 
@@ -79,6 +103,7 @@ def test_pr101_ranked_sidecar_round_trips_sparse_corrections() -> None:
     dim_bytes, rank_bytes, noop_rank_bytes = _ranked_decode_widths(
         schema,
         noop_count=noop_count,
+        dims=dims,
     )
 
     decoded_dims, decoded_delta_indices = decode_ranked_no_op_sidecar(
@@ -92,6 +117,108 @@ def test_pr101_ranked_sidecar_round_trips_sparse_corrections() -> None:
 
     np.testing.assert_array_equal(decoded_dims, dims)
     np.testing.assert_array_equal(decoded_delta_indices, delta_indices)
+
+
+def test_pr101_ranked_sidecar_fec6_widths_are_exact_not_legacy_worst_case() -> None:
+    schema = RankedSidecarSchema(
+        n_pairs=600,
+        n_dims=28,
+        deltas=PR101_DELTAS,
+        huff_min_len=2,
+        huff_max_len=8,
+    )
+    rng = np.random.default_rng(seed=20260520)
+    dims = rng.integers(0, schema.n_dims, size=schema.n_pairs, dtype=np.int64)
+    delta_indices = rng.integers(
+        0, len(schema.deltas), size=schema.n_pairs, dtype=np.int64
+    )
+    # Same no-op coordinates as the live PR101/FEC6 sidecar.  This keeps the
+    # rank-width guard permanent even when the experiment archive is absent.
+    noop_pos = np.array([91, 428, 457], dtype=np.int64)
+    dims[noop_pos] = schema.no_op_sentinel
+    delta_indices[noop_pos] = 0
+
+    payload = encode_ranked_no_op_sidecar(
+        dims=dims,
+        delta_indices=delta_indices,
+        schema=schema,
+    )
+    dim_bytes, rank_bytes, noop_rank_bytes = _ranked_decode_widths(
+        schema,
+        noop_count=int(noop_pos.size),
+        dims=dims,
+    )
+
+    assert dim_bytes == 359
+    assert rank_bytes == 5
+    assert noop_rank_bytes == 3
+    assert math.ceil((schema.n_pairs - noop_pos.size) * math.log2(schema.n_dims)) == (
+        359 * 8 - 2
+    )
+    noop_rank = _encode_combination_colex(noop_pos, schema.n_pairs)
+    assert (
+        math.ceil(math.log2(max(math.comb(schema.n_pairs, int(noop_pos.size)), 2)))
+        == 26
+    )
+    assert (int(noop_rank).bit_length() + 7) // 8 == 3
+    decoded_dims, decoded_delta_indices = decode_ranked_no_op_sidecar(
+        payload,
+        schema=schema,
+        dim_bytes=dim_bytes,
+        rank_bytes=rank_bytes,
+        noop_rank_bytes=noop_rank_bytes,
+        noop_count=int(noop_pos.size),
+    )
+
+    np.testing.assert_array_equal(decoded_dims, dims)
+    np.testing.assert_array_equal(decoded_delta_indices, delta_indices)
+
+
+def test_real_pr101_fec6_sidecar_reencodes_byte_identically_if_present() -> None:
+    if not REAL_FEC6_ARCHIVE.exists():
+        pytest.skip(f"missing real PR101/FEC6 archive: {REAL_FEC6_ARCHIVE}")
+
+    member = read_single_stored_fec6_member_archive(REAL_FEC6_ARCHIVE.read_bytes())
+    packet = parse_pr101_fec6_packetir_member(member.payload)
+    sidecar = packet.source_pr101_payload[
+        PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN :
+    ]
+    spec = importlib.util.spec_from_file_location(
+        "pr101_fec6_runtime_codec_sidecar_for_test",
+        REAL_FEC6_DIR / "src" / "codec_sidecar.py",
+    )
+    assert spec is not None and spec.loader is not None
+    runtime_sidecar = importlib.util.module_from_spec(spec)
+    try:
+        sys.modules[spec.name] = runtime_sidecar
+        spec.loader.exec_module(runtime_sidecar)
+    finally:
+        sys.modules.pop(spec.name, None)
+
+    dims, codes = runtime_sidecar._decode_latent_sidecar_vectors(sidecar)
+    schema = RankedSidecarSchema(
+        n_pairs=600,
+        n_dims=28,
+        deltas=PR101_DELTAS,
+        huff_min_len=2,
+        huff_max_len=8,
+        no_op_sentinel=255,
+    )
+    delta_to_index = {delta: index for index, delta in enumerate(PR101_DELTAS)}
+    valid = dims != schema.no_op_sentinel
+    delta_indices = np.zeros(schema.n_pairs, dtype=np.int64)
+    for pair_index, code in enumerate(codes.astype(np.int64)):
+        if valid[pair_index]:
+            delta_indices[pair_index] = delta_to_index[int(code)]
+
+    encoded = encode_ranked_no_op_sidecar(
+        dims=dims.astype(np.int64),
+        delta_indices=delta_indices,
+        schema=schema,
+    )
+
+    assert len(sidecar) == 607
+    assert encoded == sidecar
 
 
 def test_pr101_centered_delta_uint8_round_trip_preserves_quantized_values() -> None:
@@ -434,7 +561,7 @@ class TestRankedNoOpSidecarExtended:
         )
         noop_count = int((dims == schema.no_op_sentinel).sum())
         dim_bytes, rank_bytes, noop_rank_bytes = _ranked_decode_widths(
-            schema, noop_count=noop_count
+            schema, noop_count=noop_count, dims=dims
         )
         out_dims, out_delta_idx = decode_ranked_no_op_sidecar(
             payload,
