@@ -518,3 +518,94 @@ def test_consumer_rejects_sister_excluded_token() -> None:
     )
     assert row["axis_tag"] == "[predicted_domain_violated]"
     assert row["consumer_signal_kind"] == "procedural_codebook_savings_domain_violated"
+
+
+# ---------------------------------------------------------------------------
+# RATIFY-4 / WAVE-3-ATW-V2-CDF-TABLE-BLOB-RECONCILIATION 2026-05-21
+# Catalog #344 NEW EXCLUDED context registration
+# `direct_byte_substitution_on_decode_opaque_raw_sections`.
+# Sister memo: atw_v2_cdf_table_blob_reconciliation_codex_byte_mutation_smoke_falsified_20260521.md §5
+# Codex empirical anchor: commit 057130de4 max_abs_raw_byte_delta=0 across 2,560 bytes
+# ---------------------------------------------------------------------------
+
+
+def test_ratify_4_decode_opaque_excluded_context_present_in_source() -> None:
+    """Source-level `_EXCLUDED_CONTEXTS` includes the RATIFY-4 NEW context."""
+    assert (
+        "direct_byte_substitution_on_decode_opaque_raw_sections"
+        in _EXCLUDED_CONTEXTS
+    )
+
+
+def test_ratify_4_decode_opaque_context_raises_via_canonical_helper() -> None:
+    """The NEW EXCLUDED context refuses canonical equation #26 routing."""
+    with pytest.raises(DomainOfValidityViolation, match="EXPLICITLY excluded"):
+        validate_context_is_in_domain(
+            "direct_byte_substitution_on_decode_opaque_raw_sections"
+        )
+
+
+def test_ratify_4_decode_opaque_context_returns_false_when_raise_false() -> None:
+    """`raise_on_excluded=False` returns False for the NEW EXCLUDED context."""
+    result = validate_context_is_in_domain(
+        "direct_byte_substitution_on_decode_opaque_raw_sections",
+        raise_on_excluded=False,
+    )
+    assert result is False
+
+
+def test_ratify_4_decode_opaque_context_case_insensitive() -> None:
+    """Canonical lowercase comparison applies to the NEW EXCLUDED context."""
+    with pytest.raises(DomainOfValidityViolation):
+        validate_context_is_in_domain(
+            "DIRECT_BYTE_SUBSTITUTION_ON_DECODE_OPAQUE_RAW_SECTIONS"
+        )
+    with pytest.raises(DomainOfValidityViolation):
+        validate_context_is_in_domain(
+            "Direct_Byte_Substitution_On_Decode_Opaque_Raw_Sections"
+        )
+
+
+def test_ratify_4_decode_opaque_context_distinct_from_parser_safe_score_affecting() -> None:
+    """The NEW context is DISTINCT from sister
+    `direct_byte_substitution_on_parser_safe_but_score_affecting_raw_sections`.
+
+    Both refuse equation #26 but for different reasons:
+      * parser_safe_but_score_affecting: bytes ARE consumed at decode time
+        but contribute to score via the canonical scorer's input pipeline
+        (e.g. PR101 magic header).
+      * decode_opaque: bytes are parser-visible (static parse-safe per the
+        canonical helper) but CANNOT influence the rendered frame because
+        the runtime never consumes them (codex byte-mutation smoke
+        max_abs_raw_byte_delta=0 across all mutated bytes).
+    """
+    assert (
+        "direct_byte_substitution_on_parser_safe_but_score_affecting_raw_sections"
+        in _EXCLUDED_CONTEXTS
+    )
+    assert (
+        "direct_byte_substitution_on_decode_opaque_raw_sections"
+        in _EXCLUDED_CONTEXTS
+    )
+    # Verify the two contexts are stored as DISTINCT tuple entries (no
+    # accidental alias / typo collapsing them).
+    decode_opaque_count = sum(
+        1
+        for c in _EXCLUDED_CONTEXTS
+        if c == "direct_byte_substitution_on_decode_opaque_raw_sections"
+    )
+    parser_safe_count = sum(
+        1
+        for c in _EXCLUDED_CONTEXTS
+        if c
+        == "direct_byte_substitution_on_parser_safe_but_score_affecting_raw_sections"
+    )
+    assert decode_opaque_count == 1
+    assert parser_safe_count == 1
+
+
+def test_ratify_4_builder_propagates_new_excluded_context() -> None:
+    """Builder's `domain_of_validity_excluded` list includes RATIFY-4 context."""
+    eq = build_procedural_codebook_from_seed_compression_savings_v1()
+    excluded = eq.domain_of_validity.get("domain_of_validity_excluded", [])
+    assert "direct_byte_substitution_on_decode_opaque_raw_sections" in excluded

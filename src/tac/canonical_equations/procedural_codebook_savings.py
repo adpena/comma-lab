@@ -121,6 +121,39 @@ _EXCLUDED_CONTEXTS = (
     "direct_byte_substitution_on_wavelet_decomposition_coefficients",
     "master_gradient_null_byte_removal_with_constant_reconstruction",
     "master_gradient_null_byte_replacement_with_arbitrary_constant",
+    # WAVE-3 PARSER-SAFE EXTENSION sister refinement (registered to live
+    # canonical equations registry via update_equation_with_domain_refinement
+    # 2026-05-21T01:13:21Z); aggregate verdict MIXED_PARSER_SAFE_BUT_SCORE_
+    # AFFECTING per parser_safe_methodology_extension_landed_20260520.md.
+    "direct_byte_substitution_on_parser_safe_but_score_affecting_raw_sections",
+    # RATIFY-4 / WAVE-3-ATW-V2-CDF-TABLE-BLOB-RECONCILIATION 2026-05-21
+    # (slot 3-r7 reconciliation memo
+    # `atw_v2_cdf_table_blob_reconciliation_codex_byte_mutation_smoke_falsified_20260521.md`
+    # §5 + codex byte-mutation smoke commit `057130de4`
+    # `test_cdf_table_xor_preserves_current_inflate_raw_output`:
+    # max_abs_raw_byte_delta == 0 across all 2,560 cdf_table_blob bytes
+    # mutated). Refuses canonical equation #26 REPLACEMENT savings
+    # prediction for any context where the bytes are parser-visible BUT
+    # the bytes are NOT consumed at decode time per an empirical byte-
+    # mutation smoke. The empirical byte-mutation smoke is the canonical
+    # disambiguator: if max_abs_raw_byte_delta == 0 across all mutated
+    # bytes, the section is decode-opaque + REPLACEMENT paradigm is
+    # structurally a no-op + the right routing is REMOVAL paradigm
+    # (grammar-layer section deletion) OR await a future runtime that
+    # consumes the bytes. Per Catalog #307 paradigm-vs-implementation
+    # classification: IMPLEMENTATION-LEVEL falsification (the specific
+    # bytes-have-decode-influence assumption is falsified) NOT paradigm-
+    # level refutation of canonical equation #26 procedural-substitution
+    # (sister NSCS06 v8 chroma_lut routing remains correct per audit memo
+    # §158 VERIFIED CORRECT). Per CLAUDE.md "Forbidden premature KILL
+    # without research exhaustion": predecessor design memo
+    # (commit 8441b702e) preserved verbatim per Catalog #110/#113
+    # APPEND-ONLY; this EXCLUDED context extincts the bug class
+    # structurally so no future Phase 3 BUILD can register an
+    # implementation-level-falsified anchor that would corrupt canonical
+    # equation #26's predictive posterior (predicted -0.001684 vs
+    # empirical 0.0 = 16x the canonical residual=0 standard).
+    "direct_byte_substitution_on_decode_opaque_raw_sections",
 )
 
 # Default context applied to legacy callers that don't pass an explicit
