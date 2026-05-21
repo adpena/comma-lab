@@ -46,6 +46,24 @@ def _write_recipe(root: Path, *, variant: str, lane_id: str) -> Path:
     return path
 
 
+def _set_recipe_dispatch_enabled(root: Path, *, variant: str, enabled: bool) -> None:
+    names = {
+        "baseline": (
+            "substrate_pretrained_driving_prior_original_baseline_modal_t4_paired_dispatch"
+        ),
+        "procedural": (
+            "substrate_pretrained_driving_prior_procedural_codebook_modal_t4_paired_dispatch"
+        ),
+        "null_control": (
+            "substrate_pretrained_driving_prior_null_exploit_codebook_modal_t4_paired_dispatch"
+        ),
+    }
+    path = root / ".omx" / "operator_authorize_recipes" / f"{names[variant]}.yaml"
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    payload["dispatch_enabled"] = enabled
+    path.write_text(yaml.safe_dump(payload, sort_keys=True), encoding="utf-8")
+
+
 def _write_candidate_output(
     output_dir: Path,
     *,
@@ -169,6 +187,37 @@ def test_ready_plan_emits_real_paired_dispatch_commands(tmp_path: Path) -> None:
         assert row["harvest_commands"]["contest_cpu"].startswith(
             ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir "
         )
+
+
+def test_recipe_dispatch_flip_does_not_block_harvest_plan(tmp_path: Path) -> None:
+    lanes = _write_all_recipes(tmp_path)
+    _set_recipe_dispatch_enabled(tmp_path, variant="baseline", enabled=True)
+    _set_recipe_dispatch_enabled(tmp_path, variant="procedural", enabled=True)
+    baseline_out = tmp_path / "baseline_out"
+    procedural_out = tmp_path / "procedural_out"
+    _write_candidate_output(baseline_out, lane_id=lanes["baseline"])
+    _write_candidate_output(
+        procedural_out,
+        lane_id=lanes["procedural"],
+        procedural=True,
+    )
+
+    plan = build_dp1_procedural_paired_harvest_plan(
+        output_dirs={
+            "baseline": baseline_out,
+            "procedural": procedural_out,
+        },
+        repo_root=tmp_path,
+    )
+
+    assert plan["all_required_candidates_ready"] is True
+    rows = {row["variant"]: row for row in plan["candidates"]}
+    assert rows["baseline"]["recipe_dispatch_enabled"] is True
+    assert rows["procedural"]["recipe_dispatch_enabled"] is True
+    assert all(
+        "recipe_dispatch_enabled_not_false" not in row["blockers"]
+        for row in plan["candidates"]
+    )
 
 
 def test_manifest_score_claim_blocks_dispatch_command(tmp_path: Path) -> None:

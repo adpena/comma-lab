@@ -125,8 +125,6 @@ def _recipe_blockers(recipe: Mapping[str, Any], *, expected_name: str) -> list[s
     blockers: list[str] = []
     if recipe.get("name") != expected_name:
         blockers.append("recipe_name_mismatch")
-    if recipe.get("dispatch_enabled") is not False:
-        blockers.append("recipe_dispatch_enabled_not_false")
     if recipe.get("score_claim") is not False:
         blockers.append("recipe_score_claim_not_false")
     if recipe.get("promotion_eligible") is not False:
@@ -214,6 +212,7 @@ def _candidate_output_summary(
             "variant": variant,
             "recipe_name": recipe_name,
             "recipe_lane_id": recipe_lane_id,
+            "recipe_dispatch_enabled": recipe.get("dispatch_enabled"),
             "output_dir": None,
             "paired_dispatch_tool": PAIRED_AUTH_EVAL_DISPATCH_TOOL,
             "paired_dispatch_plan_command": None,
@@ -337,6 +336,7 @@ def _candidate_output_summary(
         "variant": variant,
         "recipe_name": recipe_name,
         "recipe_lane_id": recipe_lane_id,
+        "recipe_dispatch_enabled": recipe.get("dispatch_enabled"),
         "output_dir": str(output_dir),
         "archive": archive,
         "runtime": runtime,

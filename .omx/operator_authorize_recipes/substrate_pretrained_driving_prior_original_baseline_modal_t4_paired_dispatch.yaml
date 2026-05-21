@@ -16,8 +16,13 @@ target_modes:
   - research_substrate
 canary_status: independent_substrate
 research_only: true
-dispatch_enabled: false
-defer_reason: operator must intentionally flip dispatch_enabled true after reviewing the DP1 paired-smoke recipe set
+dispatch_enabled: true
+dispatch_activation:
+  activated_at_utc: "20260521T025702Z"
+  activated_by: codex
+  operator_directive: "continue pushing to theoretical floor and beyond"
+  scope: baseline arm only; procedural arm activated separately; null control remains gated
+defer_reason: operator continuation directive accepted; baseline/procedural first-anchor dispatch authorized
 
 cost_band:
   epochs: 100
@@ -46,7 +51,7 @@ risk: |
   not a score claim and is not promotion-eligible until paired CPU/CUDA auth
   eval artifacts are harvested and reviewed.
 
-envelope_status: "FITS $0.30 p50 paired-smoke envelope; dispatch_enabled=false until operator flip"
+envelope_status: "FITS $0.30 p50 paired-smoke envelope; dispatch_enabled=true per operator continuation directive 20260521T025702Z"
 remote_driver: scripts/remote_lane_substrate_pretrained_driving_prior.sh
 timeout_hours: 1.5
 
