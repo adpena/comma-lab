@@ -46258,6 +46258,88 @@
         }
       },
       "notes": "research_only=true; substrate_engineering=local_cpu_probe; sister to OVERNIGHT-Y STC 3a; per OVERNIGHT-Y MEDIUM verdict Path A recommendation; canonical equation procedural_predictor_plus_residual_correction_savings_v1 IN-DOMAIN via stc_predictor_plus_residual_selfcomp_tone_map_delta_correction"
+    },
+    {
+      "id": "lane_overnight_ff_t4_grand_council_symposium_full_stack_synthesis_theoretical_floor_cascade_20260521",
+      "name": "OVERNIGHT-FF T4 Grand Council Symposium Full-Stack Synthesis + Theoretical Floor + Cascade",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/t4_grand_council_symposium_full_stack_synthesis_theoretical_floor_cascade_landed_20260521.md + .omx/research/staircase_v3_post_t4_symposium_20260521.md + .omx/research/cascade_graph_post_t4_symposium_20260521.md (commit 7719d4c81; canonical T4 council anchor appended via tac.council_continual_learning.append_council_anchor; deliberation_id=t4_grand_council_symposium_full_stack_synthesis_theoretical_floor_cascade_20260521; PROCEED_WITH_REVISIONS; 25-attendee canonical roster per Catalog #346 validate_complete; mission_contribution=frontier_breaking_enabler; deferred_substrate_retrospective_due_utc=2026-06-20)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/t4_grand_council_symposium_full_stack_synthesis_theoretical_floor_cascade_landed_20260521.md (commit 7719d4c81)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_overnight_oo_local_leverage_audit_mlx_mps_metal_cpu_extension_20260521",
+      "name": "OVERNIGHT-OO local-leverage audit + MLX/MPS/Metal/macOS-CPU canonical extension",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/overnight_oo_local_leverage_audit_mlx_mps_metal_cpu_extension_landed_20260521.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/overnight_oo_local_leverage_audit_mlx_mps_metal_cpu_extension_landed_20260521.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -46267,5 +46349,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T15:47:21Z"
+  "updated_at": "2026-05-21T16:53:50Z"
 }
