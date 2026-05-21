@@ -10,7 +10,10 @@ import numpy as np
 
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
-from tac.local_acceleration.mlx_scorer_response import load_scorer_input_cache
+from tac.local_acceleration.mlx_scorer_response import (
+    build_mlx_scorer_response_payload,
+    load_scorer_input_cache,
+)
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -72,6 +75,64 @@ def test_load_scorer_input_cache_rejects_hash_only_manifest(tmp_path: Path) -> N
         assert "hash-only" in str(exc)
     else:
         raise AssertionError("hash-only cache was accepted")
+
+
+def test_mlx_scorer_response_cli_can_score_deterministic_pair_window(tmp_path: Path) -> None:
+    pair_indices = np.array([[0, 1], [2, 3]], dtype=np.int64)
+    seg = np.zeros((2, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((2, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(tmp_path / "reference", seg=seg, pose=pose, pair_indices=pair_indices)
+    candidate_dir = _write_test_cache(tmp_path / "candidate", seg=seg, pose=pose, pair_indices=pair_indices)
+    output = tmp_path / "mlx_response_window.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1000",
+            "--output",
+            str(output),
+            "--repo-root",
+            str(REPO),
+            "--start-pair",
+            "1",
+            "--max-pairs",
+            "1",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(completed.stdout)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert stdout["n_samples"] == 1
+    assert payload["n_samples"] == 1
+    assert payload["total_cache_pairs"] == 2
+    assert payload["start_pair"] == 1
+    assert payload["max_pairs"] == 1
+    assert payload["pair_window"] == [1, 2]
+    assert payload["avg_posenet_dist"] == 0.0
+    assert payload["avg_segnet_dist"] == 0.0
+
+
+def test_mlx_scorer_response_rejects_invalid_pair_window_before_loading() -> None:
+    try:
+        build_mlx_scorer_response_payload(
+            reference_cache_dir="/does/not/exist/reference",
+            candidate_cache_dir="/does/not/exist/candidate",
+            archive_size_bytes=1,
+            max_pairs=0,
+        )
+    except ValueError as exc:
+        assert "max_pairs must be >= 1" in str(exc)
+    else:
+        raise AssertionError("invalid max_pairs was accepted")
 
 
 def _write_test_cache(

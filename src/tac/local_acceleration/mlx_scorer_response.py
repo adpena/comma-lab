@@ -81,6 +81,8 @@ def build_mlx_scorer_response_payload(
     device_type: str = "cpu",
     components_dir: str | Path | None = None,
     progress_every: int = 0,
+    start_pair: int = 0,
+    max_pairs: int | None = None,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
 
@@ -92,6 +94,10 @@ def build_mlx_scorer_response_payload(
         raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
     if int(progress_every) < 0:
         raise ValueError(f"progress_every must be >= 0, got {progress_every}")
+    if int(start_pair) < 0:
+        raise ValueError(f"start_pair must be >= 0, got {start_pair}")
+    if max_pairs is not None and int(max_pairs) < 1:
+        raise ValueError(f"max_pairs must be >= 1 when set, got {max_pairs}")
 
     reference = load_scorer_input_cache(reference_cache_dir)
     candidate = load_scorer_input_cache(candidate_cache_dir)
@@ -101,28 +107,36 @@ def build_mlx_scorer_response_payload(
     dist = _load_upstream_distortion_net(Path(repo_root).resolve())
     pose_chunks: list[np.ndarray] = []
     seg_chunks: list[np.ndarray] = []
-    pair_count = int(reference.pair_indices.shape[0])
+    total_pair_count = int(reference.pair_indices.shape[0])
+    start = int(start_pair)
+    if start >= total_pair_count:
+        raise ValueError(f"start_pair {start} is outside cache pair count {total_pair_count}")
+    stop_exclusive = total_pair_count if max_pairs is None else min(total_pair_count, start + int(max_pairs))
+    pair_count = stop_exclusive - start
 
     with temporary_mlx_device(device_type):
         adapter = torch_distortion_net_to_mlx(dist)
-        for batch_index, start in enumerate(range(0, pair_count, int(batch_pairs)), start=1):
-            stop = min(pair_count, start + int(batch_pairs))
+        for batch_index, batch_start in enumerate(
+            range(start, stop_exclusive, int(batch_pairs)),
+            start=1,
+        ):
+            stop = min(stop_exclusive, batch_start + int(batch_pairs))
             ref_outputs = run_mlx_distortion_scorer_nchw(
                 adapter,
-                np.asarray(reference.posenet_yuv6_pair[start:stop], dtype=np.float32),
-                np.asarray(reference.segnet_last_rgb[start:stop], dtype=np.float32),
+                np.asarray(reference.posenet_yuv6_pair[batch_start:stop], dtype=np.float32),
+                np.asarray(reference.segnet_last_rgb[batch_start:stop], dtype=np.float32),
             )
             cand_outputs = run_mlx_distortion_scorer_nchw(
                 adapter,
-                np.asarray(candidate.posenet_yuv6_pair[start:stop], dtype=np.float32),
-                np.asarray(candidate.segnet_last_rgb[start:stop], dtype=np.float32),
+                np.asarray(candidate.posenet_yuv6_pair[batch_start:stop], dtype=np.float32),
+                np.asarray(candidate.segnet_last_rgb[batch_start:stop], dtype=np.float32),
             )
             components = scorer_distortion_components_numpy(ref_outputs, cand_outputs)
             pose_chunks.append(components["posenet"])
             seg_chunks.append(components["segnet"])
             if progress_every and batch_index % int(progress_every) == 0:
                 elapsed = time.time() - started
-                done = stop
+                done = stop - start
                 rate = done / elapsed if elapsed > 0 else 0.0
                 print(
                     json.dumps(
@@ -179,6 +193,10 @@ def build_mlx_scorer_response_payload(
         "rate_unscaled": rate_unscaled,
         "score_rate_contribution": rate_contribution,
         "n_samples": pair_count,
+        "total_cache_pairs": total_pair_count,
+        "start_pair": start,
+        "max_pairs": None if max_pairs is None else int(max_pairs),
+        "pair_window": [start, stop_exclusive],
         "batch_pairs": int(batch_pairs),
         "elapsed_seconds": elapsed,
         "components": {

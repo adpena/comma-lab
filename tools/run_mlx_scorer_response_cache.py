@@ -22,6 +22,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=Path("."), type=Path)
     parser.add_argument("--batch-pairs", type=int, default=1)
+    parser.add_argument(
+        "--start-pair",
+        type=int,
+        default=0,
+        help="First non-overlapping scorer pair index to evaluate from the cache.",
+    )
+    parser.add_argument(
+        "--max-pairs",
+        type=int,
+        default=None,
+        help="Optional scorer-pair count cap for cheap profiling/calibration slices.",
+    )
     parser.add_argument("--device", choices=("cpu", "gpu"), default="cpu")
     parser.add_argument(
         "--progress-every",
@@ -49,6 +61,8 @@ def main(argv: list[str] | None = None) -> int:
         device_type=args.device,
         components_dir=args.components_dir,
         progress_every=args.progress_every,
+        start_pair=args.start_pair,
+        max_pairs=args.max_pairs,
     )
     write_mlx_scorer_response_payload(payload, args.output)
     print(
