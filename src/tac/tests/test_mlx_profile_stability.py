@@ -38,6 +38,7 @@ def _profile(*, score_delta: float = 0.0, evidence_grade: str | None = EVIDENCE_
                 "avg_segnet_dist": 0.002,
                 "posenet_sha256": "p" * 64,
                 "segnet_sha256": "s" * 64,
+                "pairs_per_second": 1.0,
             },
             {
                 "device": "cpu",
@@ -49,6 +50,7 @@ def _profile(*, score_delta: float = 0.0, evidence_grade: str | None = EVIDENCE_
                 "avg_segnet_dist": 0.002,
                 "posenet_sha256": "q" * 64,
                 "segnet_sha256": "s" * 64,
+                "pairs_per_second": 2.0,
             },
         ],
     }
@@ -65,6 +67,9 @@ def test_profile_stability_passes_small_metric_drift_with_sha_warning() -> None:
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
     assert "profile_row_posenet_sha256_mismatch:index=1" in manifest["warnings"]
+    assert manifest["selection"]["eligible_row_indices"] == [0, 1]
+    assert manifest["selection"]["recommended_row"]["index"] == 1
+    assert manifest["selection"]["recommended_row"]["batch_pairs"] == 2
 
 
 def test_profile_stability_can_require_component_sha_match() -> None:
@@ -76,6 +81,8 @@ def test_profile_stability_can_require_component_sha_match() -> None:
     assert manifest["passed"] is False
     assert manifest["verdict"] == FAIL_VERDICT
     assert "profile_row_posenet_sha256_mismatch:index=1" in manifest["blockers"]
+    assert manifest["selection"]["eligible_row_indices"] == [0]
+    assert manifest["selection"]["recommended_row"]["index"] == 0
 
 
 def test_profile_stability_fails_metric_drift_and_false_authority() -> None:
@@ -88,6 +95,11 @@ def test_profile_stability_fails_metric_drift_and_false_authority() -> None:
     assert any(
         blocker.startswith("profile_row_score_delta_exceeds_threshold")
         for blocker in manifest["blockers"]
+    )
+    assert manifest["selection"]["eligible_row_indices"] == []
+    assert all(
+        row["reason"] == "global_profile_blockers"
+        for row in manifest["selection"]["rejected_rows"]
     )
 
 
@@ -123,3 +135,4 @@ def test_profile_stability_cli_writes_manifest(tmp_path: Path) -> None:
     payload = json.loads(out_path.read_text(encoding="utf-8"))
     assert payload["passed"] is True
     assert payload["baseline"]["batch_pairs"] == 1
+    assert payload["selection"]["recommended_row"]["batch_pairs"] == 2

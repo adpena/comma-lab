@@ -72,6 +72,7 @@ def build_profile_stability_manifest(
         baseline_batch_pairs=baseline_batch_pairs,
         blockers=blockers,
     )
+    global_blockers = list(blockers)
 
     comparisons: list[dict[str, Any]] = []
     if baseline is not None:
@@ -80,6 +81,11 @@ def build_profile_stability_manifest(
             comparisons.append(comparison)
             blockers.extend(comparison["blockers"])
             warnings.extend(comparison["warnings"])
+    selection = _build_row_selection(
+        rows=normalized_rows,
+        comparisons=comparisons,
+        global_blockers=global_blockers,
+    )
 
     passed = not blockers
     return {
@@ -100,6 +106,7 @@ def build_profile_stability_manifest(
         "candidate_generation_only": True,
         "baseline": baseline,
         "comparisons": comparisons,
+        "selection": selection,
         "profile_summary": {
             "schema_version": profile.get("schema_version"),
             "row_count": len(normalized_rows),
@@ -160,6 +167,11 @@ def _normalize_row(index: int, row: Any, blockers: list[str]) -> dict[str, Any] 
             "avg_segnet_dist": _finite_float(row["avg_segnet_dist"]),
             "posenet_sha256": str(row["posenet_sha256"]),
             "segnet_sha256": str(row["segnet_sha256"]),
+            "pairs_per_second": _optional_finite_float(row.get("pairs_per_second")),
+            "elapsed_seconds": _optional_finite_float(row.get("elapsed_seconds")),
+            "wall_seconds": _optional_finite_float(row.get("wall_seconds")),
+            "repeat_index": _optional_int(row.get("repeat_index")),
+            "start_pair": _optional_int(row.get("start_pair")),
         }
     except (TypeError, ValueError) as exc:
         blockers.append(f"profile_row_invalid:index={index}:error={exc}")
@@ -245,9 +257,93 @@ def _compare_row(
         "index": row["index"],
         "device": row["device"],
         "batch_pairs": row["batch_pairs"],
+        "pairs_per_second": row.get("pairs_per_second"),
         "delta": deltas,
         "blockers": blockers,
         "warnings": warnings,
+    }
+
+
+def _build_row_selection(
+    *,
+    rows: list[dict[str, Any]],
+    comparisons: list[dict[str, Any]],
+    global_blockers: list[str],
+) -> dict[str, Any]:
+    comparisons_by_index = {int(item["index"]): item for item in comparisons}
+    eligible_rows: list[dict[str, Any]] = []
+    rejected_rows: list[dict[str, Any]] = []
+    for row in rows:
+        comparison = comparisons_by_index.get(int(row["index"]))
+        comparison_blockers = [] if comparison is None else list(comparison["blockers"])
+        if global_blockers:
+            rejected_rows.append(
+                {
+                    "index": row["index"],
+                    "device": row["device"],
+                    "batch_pairs": row["batch_pairs"],
+                    "reason": "global_profile_blockers",
+                    "blockers": global_blockers,
+                }
+            )
+        elif comparison_blockers:
+            rejected_rows.append(
+                {
+                    "index": row["index"],
+                    "device": row["device"],
+                    "batch_pairs": row["batch_pairs"],
+                    "reason": "row_stability_blockers",
+                    "blockers": comparison_blockers,
+                }
+            )
+        else:
+            eligible_rows.append(row)
+
+    recommended = _select_fastest_row(eligible_rows)
+    return {
+        "policy": "fastest_row_with_no_stability_blockers",
+        "eligible_row_indices": [int(row["index"]) for row in eligible_rows],
+        "rejected_rows": rejected_rows,
+        "recommended_row": _public_row(recommended) if recommended is not None else None,
+        "recommended_reason": (
+            "fastest eligible row by pairs_per_second"
+            if recommended is not None and recommended.get("pairs_per_second") is not None
+            else "first eligible row; throughput missing"
+            if recommended is not None
+            else "no eligible rows"
+        ),
+    }
+
+
+def _select_fastest_row(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not rows:
+        return None
+    return max(
+        rows,
+        key=lambda row: (
+            float(row["pairs_per_second"])
+            if row.get("pairs_per_second") is not None
+            else float("-inf"),
+            -int(row["index"]),
+        ),
+    )
+
+
+def _public_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "index": row["index"],
+        "device": row["device"],
+        "batch_pairs": row["batch_pairs"],
+        "n_samples": row["n_samples"],
+        "pair_window": row["pair_window"],
+        "canonical_score": row["canonical_score"],
+        "avg_posenet_dist": row["avg_posenet_dist"],
+        "avg_segnet_dist": row["avg_segnet_dist"],
+        "pairs_per_second": row.get("pairs_per_second"),
+        "elapsed_seconds": row.get("elapsed_seconds"),
+        "wall_seconds": row.get("wall_seconds"),
+        "repeat_index": row.get("repeat_index"),
+        "start_pair": row.get("start_pair"),
     }
 
 
@@ -256,3 +352,17 @@ def _finite_float(value: Any) -> float:
     if not math.isfinite(out):
         raise ValueError(f"non-finite float: {value!r}")
     return out
+
+
+def _optional_finite_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return _finite_float(value)
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"expected int, got bool: {value!r}")
+    return int(value)
