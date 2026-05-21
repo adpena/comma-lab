@@ -76,6 +76,13 @@ from tac.portable_primitives.backend import (
     is_pytorch_available,
     resolve_backend,
 )
+from tac.portable_primitives.nn_extended import (
+    PortableAvgPool2d,
+    PortableBatchNorm2d,
+    PortableDepthwiseConv2d,
+    PortableMaxPool2d,
+    silu,
+)
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -84,6 +91,13 @@ __all__ = [
     "is_mlx_available",
     "is_pytorch_available",
     "resolve_backend",
+    # MLX-ARCH-1 extended primitives (foundational ops for FastViT-T12 +
+    # EfficientNet-B2-UNet architecture port).
+    "PortableBatchNorm2d",
+    "PortableDepthwiseConv2d",
+    "PortableMaxPool2d",
+    "PortableAvgPool2d",
+    "silu",
 ]
 
 SCHEMA_VERSION = "portable_primitives.v1"
