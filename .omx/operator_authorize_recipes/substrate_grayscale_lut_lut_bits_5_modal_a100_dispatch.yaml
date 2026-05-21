@@ -1,0 +1,217 @@
+schema_version: 1
+name: substrate_grayscale_lut_lut_bits_5_modal_a100_dispatch
+lane_id: lane_overnight_xx_selfcomp_tier_2_paid_modal_a100_first_anchor_dispatch_20260521
+summary: |
+  Grayscale-LUT analog mask substrate Tier-2 paid Modal A100 first-anchor
+  dispatch at lut_bits=5 per AA HIGH verdict 2026-05-21 (OVERNIGHT-EE-RESUME §13
+  + OVERNIGHT-TT Phase 2 BUILD commit 92a77da47). Sister of canonical
+  substrate_grayscale_lut_modal_a100_dispatch.yaml (lut_bits=8 default) at the
+  lut_bits=5 + paid Modal A100 surface. Companion to
+  substrate_grayscale_lut_lut_bits_5_local_mlx_dispatch.yaml (local-MPS sister)
+  per Catalog #317 ONE-ARG LOCAL-MPS-VS-MODAL switch pattern.
+
+# Per Catalog #316 frontier-pointer + CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA":
+# Modal A100 is Linux x86_64 + NVIDIA = 1:1 contest-compliant for [contest-CUDA] axis.
+# Paired [contest-CPU] sister dispatch (GHA Linux x86_64) required separately for
+# medal-band promotion per "Submission auth eval — BOTH CPU AND CUDA" non-negotiable.
+platform: modal
+gpu: "${MODAL_GPU:-A100}"
+min_vram_gb: 40
+# Catalog #215 (FIX-HARDEN-OPT 2026-05-14 P0): A100 full-run requires matching
+# smoke-phase compute class. Selfcomp grayscale-LUT inherits the canonical sister
+# recipe's min_smoke_gpu pin because the 100-epoch smoke phase needs the same
+# memory + bandwidth profile as the 2000-epoch full run (94K decoder + 600x96x128
+# grayscale field + FiLM embedding).
+min_smoke_gpu: "A100"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+# Per CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first" Rule 2 +
+# operator NON-NEGOTIABLE 2026-05-21 morning ("All are approved on my end") +
+# operator-frontier-override directive 2026-05-21 ("Do option 1 and 3 in parallel"):
+# Tier-2 paid Modal A100 dispatch ENABLED for first contest-axis empirical anchor
+# of Selfcomp paradigm. Sister canonical recipe (lut_bits=8) remains
+# dispatch_enabled=false pending its own canary anchor.
+dispatch_enabled: true
+research_only: false
+council_override_invoked: true
+council_override_rationale: |
+  Operator verbatim 2026-05-21 morning: "All are approved on my end" +
+  2026-05-21 ~18:00Z: "Do option 1 and 3 in parallel". Per Catalog #300
+  "Mission alignment" Consequence 1 operator-frontier-override: bypasses
+  per-substrate symposium discipline (Catalog #325) for this specific
+  first-anchor dispatch. Operator audit trail preserved in
+  feedback_overnight_xx_*landed_*.md landing memo per Catalog #300 +
+  CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council
+  symposium" + "Mission alignment" Consequence 1.
+council_predicted_mission_contribution: frontier_breaking
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 5.50
+  platform_key: modal
+  gpu_key: A100
+
+# Catalog #324 + #343 + #344: predicted score deferred per "Frontier scores are
+# pointer-only" non-negotiable + canonical equation
+# procedural_codebook_from_seed_compression_savings_v1 IN-DOMAIN context per
+# Catalog #344. Empirical anchor pending paid Modal A100 dispatch verdict.
+predicted_band_validation_status: pending_post_training
+predicted_score_target: "TBD — pending lut_bits=5 first contest-CUDA empirical anchor"
+predicted_delta_basis: |
+  Per OVERNIGHT-TT Phase 2 BUILD empirical test (test_lower_lut_bits_smaller_brotli_output):
+  lut_bits=5 brotli output ~30-40% smaller than lut_bits=8 on smooth natural-video
+  grayscale. Canonical 600-pair x 96 x 128 grayscale field at lut_bits=8 = ~2,200,000
+  brotli bytes; at lut_bits=5 ~1,400,000-1,500,000 (33% reduction). Total archive bytes
+  savings ~700,000 -> rate-term reduction = 25 * 700,000 / 37,545,489 = ~0.0047
+  [PREDICTED]. Per Catalog #344 canonical equation
+  procedural_codebook_from_seed_compression_savings_v1 IN-DOMAIN context.
+  AA HIGH verdict reasoning per OVERNIGHT-EE-RESUME §13: lut_bits=5 (32-level)
+  matches STC residual sidecar cover-signal granularity (vs PR #56 cargo-cult
+  lut_bits=4 = 16-level + canonical default lut_bits=8 = 256-level).
+literature_anchor: |
+  Selfcomp / szabolcs-cs PR #56 grayscale-LUT analog mask paradigm
+  (lut_bits=4 cargo-cult; AA HIGH verdict 2026-05-21 recommends lut_bits=5 unwind).
+  Quantizr 0.33 anchor 2026-04-21.
+substrate_tradition: TRADITION_1
+council_phase_5_prediction: "Pending — first contest-axis empirical anchor"
+
+risk: |
+  Tier-2 paid Modal A100 first-anchor dispatch for Selfcomp paradigm at lut_bits=5.
+
+  Architectural risks (inherited from canonical sister recipe + AA HIGH verdict):
+  (a) GRAYSCALE-LUT EXPRESSIVITY CEILING at lut_bits=5 (32 levels): colorization
+      decoder may not have enough capacity to rescue arbitrary RGB content from
+      32-level luminance alone; mitigated by per-pair FiLM embedding (16-dim)
+      which carries the missing chroma/identity information; council default
+      decoder_hidden=48 keeps the post-grayscale decoder large enough.
+  (b) TV REGULARIZER INTERACTION at lower lut_bits: lut_bits=5 quantizes more
+      aggressively than lut_bits=8, so grayscale_tv_weight=0.01 (council default)
+      may over-smooth post-quantization; trainer allows operator override via
+      --grayscale-tv-weight if needed in v2 if v1 anchor shows train/auth-eval gap.
+  (c) AA HIGH VERDICT PREMISE: lut_bits=5 matches STC residual sidecar required
+      cover-signal granularity per design-time + premise-verified (Catalog #229),
+      but the verdict is NOT YET empirically anchored against contest scorer.
+      THIS DISPATCH IS THE EMPIRICAL ANCHOR MECHANISM that validates AA HIGH
+      verdict vs cargo-cult lut_bits=4 + canonical lut_bits=8.
+  (d) FIRST CONTEST-AXIS ANCHOR FOR SELFCOMP PARADIGM: no prior [contest-CUDA]
+      Modal A100 dispatch exists for Selfcomp grayscale_lut substrate (verified
+      via Modal call_id ledger 2026-05-21: 0 prior rows). Cost band $5.50 p50
+      fallback per canonical recipe; envelope_status FITS $10 operator-authorized
+      session budget (1.8x slack).
+
+  Trainer _full_main wires 15 stages including auth eval at stage 12; canonical
+  inflate runtime emits 0.bin + inflate.py + inflate.sh contest-grammar packet.
+  Single-axis [contest-CUDA] acceptable for first anchor; paired [contest-CPU]
+  sister required separately before medal-band promotion per "Submission auth
+  eval — BOTH CPU AND CUDA" non-negotiable.
+envelope_status: |
+  FITS $10 operator-authorized session budget (1.8x slack on $5.50 p50 fallback);
+  paired-env: OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 +
+  OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=10.00.
+
+# Mission alignment per Catalog #300 + CLAUDE.md "Mission alignment":
+mission_predicted_contribution: frontier_breaking
+
+remote_driver: scripts/remote_lane_substrate_grayscale_lut.sh
+timeout_hours: 4.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_grayscale_lut.sh
+  cost_band_trainer: experiments/train_substrate_grayscale_lut.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_grayscale_lut.py
+
+env_overrides:
+  GRAYSCALE_LUT_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  GRAYSCALE_LUT_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  GRAYSCALE_LUT_OUTPUT_DIR: /workspace/pact/lane_substrate_grayscale_lut_results/output
+  GRAYSCALE_LUT_EPOCHS: "2000"
+  GRAYSCALE_LUT_BATCH_SIZE: "16"
+  GRAYSCALE_LUT_UPSTREAM_DIR: /workspace/pact/upstream
+  GRAYSCALE_LUT_DEVICE: cuda
+  # Catalog #151 env-var ladder + OVERNIGHT-TT Phase 2 BUILD: lut_bits=5 per
+  # AA HIGH verdict 2026-05-21 + OVERNIGHT-EE-RESUME §13 op-routable #4.
+  GRAYSCALE_LUT_LUT_BITS: "5"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_grayscale_lut.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_grayscale_lut.py
+  - src/tac/substrates/grayscale_lut/architecture.py
+  - src/tac/substrates/grayscale_lut/archive.py
+  - src/tac/substrates/grayscale_lut/inflate.py
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+
+notes: |
+  OVERNIGHT-XX Tier-2 paid Modal A100 first-anchor dispatch for Selfcomp
+  grayscale_lut paradigm at lut_bits=5 per operator NON-NEGOTIABLE 2026-05-21
+  ("All are approved on my end" + "Do option 1 and 3 in parallel") + AA HIGH
+  verdict cargo-cult unwind from PR #56 lut_bits=4 default.
+
+  ARCHIVE BYTES PREDICTION (entropy reduction at lut_bits=5):
+    Per OVERNIGHT-TT Phase 2 BUILD empirical test
+    (test_lower_lut_bits_smaller_brotli_output) lut_bits=5 brotli output is
+    measurably smaller than lut_bits=8 on smooth natural-video grayscale
+    (typical 30-40% reduction). Canonical 600-pair x 96 x 128 grayscale field
+    at lut_bits=8 = ~2,200,000 brotli bytes. At lut_bits=5: ~1,400,000-1,500,000
+    (33% reduction). Total archive bytes savings ~700,000 -> rate-term
+    reduction = 25 * 700,000 / 37,545,489 = ~0.0047
+    [PREDICTED; per canonical formula per Catalog #344 equation
+    procedural_codebook_from_seed_compression_savings_v1 IN-DOMAIN context].
+
+  WAVE-2 CASCADE GATE: this Tier-2 dispatch's first-anchor empirical (paired
+  with sister canonical lut_bits=8 dispatch and local-MPS lut_bits=5 anchor)
+  unblocks the STC residual sidecar paid Modal smoke per OVERNIGHT-W §5
+  reactivation criteria. STC sidecar requires the lut_bits=5 cover-signal
+  granularity to bypass the AA HIGH verdict premise-failure that blocked
+  STC v1 dispatch.
+
+  Catalog #344 canonical equation references:
+    - procedural_codebook_from_seed_compression_savings_v1 IN-DOMAIN context
+      for the lut_bits=5 vs lut_bits=8 archive bytes savings prediction.
+    - procedural_predictor_plus_residual_correction_savings_v1 IN-DOMAIN per
+      Catalog #359 (downstream STC residual sidecar over this Selfcomp base
+      at lut_bits=5).
+
+  CLAUDE.md non-negotiable acknowledgments:
+  - "Apples-to-apples evidence discipline": score from this dispatch carries
+    [contest-CUDA] axis tag + lut_bits=5 + canonical Provenance per
+    Catalog #287/#323.
+  - "Submission auth eval - BOTH CPU AND CUDA": this Tier-2 dispatch produces
+    [contest-CUDA] only; paired [contest-CPU] GHA Linux x86_64 sister required
+    separately for medal-band promotion per non-negotiable.
+  - "Frontier scores are pointer-only" (Catalog #343): no hardcoded score
+    literals; predicted_band_validation_status: pending_post_training.
+  - "Race-mode rigor inversion + parallel-dispatch first" Rule 2: operator
+    authorization + canonical 4-layer ledger (Catalog #245) + harvest cron
+    per "Modal `.spawn()` HARVEST OR LOSE" non-negotiable.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py or
+  experiments/modal_recover_lane.py. Catalog #339 silent-no-spawn extinction
+  applies: register_dispatched_call_id_fail_closed enforces fail-closed
+  ledger registration.
+
+  Cross-ref:
+    OVERNIGHT-TT Phase 2 BUILD landing memo (commit 92a77da47):
+      .omx/research/overnight_tt_selfcomp_grayscale_lut_phase_2_build_via_local_mlx_landed_20260521.md
+    OVERNIGHT-EE-RESUME L0-L1 promotion design (commit 80eca11a1):
+      .omx/research/overnight_ee_selfcomp_grayscale_lut_l0_l1_promotion_design_per_aa_high_verdict_landed_20260521.md
+    Canonical sister recipe (lut_bits=8 paid Modal A100):
+      .omx/operator_authorize_recipes/substrate_grayscale_lut_modal_a100_dispatch.yaml
+    Local-MPS sister recipe (lut_bits=5 research surface):
+      .omx/operator_authorize_recipes/substrate_grayscale_lut_lut_bits_5_local_mlx_dispatch.yaml
+    OVERNIGHT-W STC residual sidecar cascade (per cascade Week 2 reactivation criteria).

@@ -67,6 +67,12 @@ GRAYSCALE_LUT_EPOCHS="${GRAYSCALE_LUT_EPOCHS:-2000}"
 GRAYSCALE_LUT_BATCH_SIZE="${GRAYSCALE_LUT_BATCH_SIZE:-16}"
 GRAYSCALE_LUT_UPSTREAM_DIR="${GRAYSCALE_LUT_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 GRAYSCALE_LUT_DEVICE="${GRAYSCALE_LUT_DEVICE:-cuda}"
+# Catalog #151 env-var ladder extension 2026-05-21 (OVERNIGHT-XX lane_overnight_xx_selfcomp_tier_2_paid_modal_a100_first_anchor_dispatch_20260521):
+# lut_bits parameterization landed via OVERNIGHT-TT Phase 2 BUILD 2026-05-21 (commit 92a77da47);
+# canonical Modal A100 dispatch now consumes GRAYSCALE_LUT_LUT_BITS env override per AA HIGH
+# verdict (lut_bits=5 = 32-level cargo-cult unwind from PR #56 lut_bits=4 default 16-level).
+# Default 8 preserves byte-stable backward-compat per trainer argparse default.
+GRAYSCALE_LUT_LUT_BITS="${GRAYSCALE_LUT_LUT_BITS:-8}"
 
 DISPATCH_INSTANCE_JOB_ID="${GRAYSCALE_LUT_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${GRAYSCALE_LUT_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -199,6 +205,7 @@ set +e
     --batch-size "$GRAYSCALE_LUT_BATCH_SIZE" \
     --upstream-dir "$GRAYSCALE_LUT_UPSTREAM_DIR" \
     --device "$GRAYSCALE_LUT_DEVICE" \
+    --lut-bits "$GRAYSCALE_LUT_LUT_BITS" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e

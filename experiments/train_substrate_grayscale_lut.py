@@ -82,7 +82,7 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
-from tac.substrates._shared.trainer_skeleton import (
+from tac.substrates._shared.trainer_skeleton import (  # TF32_WAIVED: canonical helper trainer_skeleton.device_or_die imported as _device_or_die_canonical wires TF32 per Catalog #178; substring scan misses aliased import per Catalog #270 protocol
     device_or_die as _device_or_die_canonical,
 )
 from tac.substrates._shared.trainer_skeleton import (
