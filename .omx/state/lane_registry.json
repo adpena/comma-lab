@@ -46632,11 +46632,11 @@
       "id": "lane_codex_adversarial_review_mlx_auth_scorer_20260521",
       "name": "Codex adversarial review MLX auth scorer",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_gpu_authority_signal_loss_greenup_20260521T234047Z_codex.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -46677,5 +46677,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T22:32:05Z"
+  "updated_at": "2026-05-21T23:43:54Z"
 }
