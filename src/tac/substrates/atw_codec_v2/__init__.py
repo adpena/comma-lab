@@ -176,6 +176,7 @@ from tac.substrates.atw_codec_v2.architecture import (
     ATWv2Variant,
 )
 from tac.substrates.atw_codec_v2.archive import (
+    ATW2_CDF_DEAD_SECTION_SENTINEL,
     ATW2_HEADER_FMT,
     ATW2_HEADER_SIZE,
     ATW2_MAGIC,
@@ -187,10 +188,13 @@ from tac.substrates.atw_codec_v2.archive import (
     parse_atw2_archive_bytes,
 )
 from tac.substrates.atw_codec_v2.cdf_dead_section import (
+    Atw2CdfCompactionProof,
     Atw2CdfDecodeInfluenceProof,
     Atw2CdfSectionAnalysis,
     analyze_atw2_cdf_section,
+    compose_atw2_archive_without_cdf_table,
     mutate_atw2_cdf_table_bytes,
+    prove_atw2_cdf_compaction_parity,
     prove_atw2_cdf_decode_influence,
 )
 from tac.substrates.atw_codec_v2.inflate import inflate_one_video, main_cli
@@ -214,6 +218,7 @@ D4_PROBE_NEXT_ACTION = "do_not_dispatch_atw_v2_phase2_from_this_signal"
 
 __all__ = [
     "ATW2_HEADER_FMT",
+    "ATW2_CDF_DEAD_SECTION_SENTINEL",
     "ATW2_HEADER_SIZE",
     "ATW2_MAGIC",
     "ATW2_SCHEMA_VERSION",
@@ -236,6 +241,7 @@ __all__ = [
     "RESEARCH_ONLY",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
+    "Atw2CdfCompactionProof",
     "Atw2CdfDecodeInfluenceProof",
     "Atw2CdfSectionAnalysis",
     "ATWv2Codec",
@@ -247,11 +253,13 @@ __all__ = [
     "ATWv2Variant",
     "atw_v2_phase2_gate_status",
     "analyze_atw2_cdf_section",
+    "compose_atw2_archive_without_cdf_table",
     "inflate_one_video",
     "main_cli",
     "mutate_atw2_cdf_table_bytes",
     "pack_archive",
     "parse_archive",
     "parse_atw2_archive_bytes",
+    "prove_atw2_cdf_compaction_parity",
     "prove_atw2_cdf_decode_influence",
 ]

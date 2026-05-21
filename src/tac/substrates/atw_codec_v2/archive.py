@@ -85,6 +85,9 @@ ATW2_HEADER_FMT: str = "<4sBBHHHHHIIIIIIII"
 ATW2_HEADER_SIZE: int = struct.calcsize(ATW2_HEADER_FMT)
 assert ATW2_HEADER_SIZE == 48, f"header size invariant: expected 48, got {ATW2_HEADER_SIZE}"
 
+ATW2_CDF_DEAD_SECTION_SENTINEL: bytes = b"ACD0\x01\x00\x00\x00"
+"""Typed compact sentinel for the current-runtime dead ``cdf_table_blob``."""
+
 # Deterministic brotli quality (matches sister substrates).
 _BROTLI_QUALITY: int = 9
 
@@ -183,6 +186,23 @@ def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
         sd[key] = torch.from_numpy(arr).reshape(shape).to(torch.float32)
         pos += tensor_bytes
     return sd
+
+
+def _is_compact_cdf_dead_section_blob(blob: bytes) -> bool:
+    return blob == ATW2_CDF_DEAD_SECTION_SENTINEL
+
+
+def _uniform_cdf_table(cdf_classes: int, cdf_symbols: int) -> torch.Tensor:
+    if cdf_classes <= 0 or cdf_symbols <= 0:
+        raise ValueError(
+            f"cdf_classes and cdf_symbols must be positive; got "
+            f"{cdf_classes}, {cdf_symbols}"
+        )
+    return torch.full(
+        (int(cdf_classes), int(cdf_symbols)),
+        1.0 / float(cdf_symbols),
+        dtype=torch.float32,
+    )
 
 
 def _quantize_latents_to_int8(
@@ -424,10 +444,12 @@ def parse_archive(blob: bytes) -> ATWv2CodecArchive:
             f"{expected_class_prior_table_bytes}"
         )
     expected_cdf_table_bytes = cdf_classes * cdf_symbols * 2  # fp16
-    if cdf_table_len != expected_cdf_table_bytes:
+    compact_cdf_bytes = len(ATW2_CDF_DEAD_SECTION_SENTINEL)
+    if cdf_table_len not in (expected_cdf_table_bytes, compact_cdf_bytes):
         raise ValueError(
             f"cdf_table blob: cdf_table_len {cdf_table_len} != "
-            f"cdf_classes*cdf_symbols*2 = {expected_cdf_table_bytes}"
+            f"cdf_classes*cdf_symbols*2 = {expected_cdf_table_bytes} "
+            f"or compact sentinel bytes = {compact_cdf_bytes}"
         )
 
     end_header = ATW2_HEADER_SIZE
@@ -472,9 +494,14 @@ def parse_archive(blob: bytes) -> ATWv2CodecArchive:
         np.frombuffer(class_prior_table_blob, dtype=np.float16).copy()
     ).view(num_pairs, prior_dim).to(torch.float32)
 
-    cdf_table = torch.from_numpy(
-        np.frombuffer(cdf_table_blob, dtype=np.float16).copy()
-    ).view(cdf_classes, cdf_symbols).to(torch.float32)
+    if cdf_table_len == expected_cdf_table_bytes:
+        cdf_table = torch.from_numpy(
+            np.frombuffer(cdf_table_blob, dtype=np.float16).copy()
+        ).view(cdf_classes, cdf_symbols).to(torch.float32)
+    elif _is_compact_cdf_dead_section_blob(cdf_table_blob):
+        cdf_table = _uniform_cdf_table(cdf_classes, cdf_symbols)
+    else:
+        raise ValueError("cdf_table blob has compact length but bad sentinel")
 
     return ATWv2CodecArchive(
         encoder_state_dict=encoder_sd,
@@ -562,10 +589,12 @@ def parse_atw2_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]
             f"num_pairs*prior_dim*2 = {expected_class_prior_table_bytes}"
         )
     expected_cdf_table_bytes = int(cdf_classes) * int(cdf_symbols) * 2
-    if cdf_table_len != expected_cdf_table_bytes:
+    compact_cdf_bytes = len(ATW2_CDF_DEAD_SECTION_SENTINEL)
+    if cdf_table_len not in (expected_cdf_table_bytes, compact_cdf_bytes):
         raise ValueError(
             f"atw2 archive: cdf_table_len {cdf_table_len} != "
-            f"cdf_classes*cdf_symbols*2 = {expected_cdf_table_bytes}"
+            f"cdf_classes*cdf_symbols*2 = {expected_cdf_table_bytes} "
+            f"or compact sentinel bytes = {compact_cdf_bytes}"
         )
     end_header = ATW2_HEADER_SIZE
     end_encoder = end_header + int(encoder_len)
@@ -581,6 +610,10 @@ def parse_atw2_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]
             f"atw2 archive: archive size {len(archive_bytes)} != expected "
             f"{end_meta} from header"
         )
+    if cdf_table_len == compact_cdf_bytes and cdf_table_len != expected_cdf_table_bytes:
+        cdf_blob = archive_bytes[end_class_prior_table:end_cdf_table]
+        if not _is_compact_cdf_dead_section_blob(cdf_blob):
+            raise ValueError("atw2 archive: compact cdf_table_blob has bad sentinel")
     return {
         "atw2_header": (0, ATW2_HEADER_SIZE),
         "encoder_blob": (end_header, int(encoder_len)),
@@ -612,6 +645,7 @@ ATW2_SECTION_ROLES: dict[str, str] = {
 __all__ = [
     "ATW2_HEADER_FMT",
     "ATW2_HEADER_SIZE",
+    "ATW2_CDF_DEAD_SECTION_SENTINEL",
     "ATW2_MAGIC",
     "ATW2_SCHEMA_VERSION",
     "ATW2_SECTION_ROLES",

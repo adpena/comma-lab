@@ -15,12 +15,15 @@ from tac.substrates.atw_codec_v2 import (
     ATWv2Codec,
     ATWv2CodecConfig,
     ATWv2Variant,
+    parse_atw2_archive_bytes,
     pack_archive,
     parse_archive,
 )
 from tac.substrates.atw_codec_v2.cdf_dead_section import (
     analyze_atw2_cdf_section,
+    compose_atw2_archive_without_cdf_table,
     mutate_atw2_cdf_table_bytes,
+    prove_atw2_cdf_compaction_parity,
     prove_atw2_cdf_decode_influence,
 )
 
@@ -106,6 +109,35 @@ def test_mutate_atw2_cdf_table_changes_only_cdf_table() -> None:
     assert parse_archive(mutated).cdf_table.shape == (5, 256)
 
 
+def test_compact_cdf_sentinel_parses_and_saves_bytes() -> None:
+    archive = _make_archive()
+    compact = compose_atw2_archive_without_cdf_table(archive)
+    source_analysis = analyze_atw2_cdf_section(archive)
+    compact_analysis = analyze_atw2_cdf_section(compact, envelope_bytes=8)
+    assert len(archive) - len(compact) == 2552
+    assert compact_analysis.cdf_bytes == 8
+    assert compact_analysis.cdf_classes == source_analysis.cdf_classes
+    assert compact_analysis.cdf_symbols == source_analysis.cdf_symbols
+    parsed = parse_archive(compact)
+    assert parsed.cdf_table.shape == (5, 256)
+    assert float(parsed.cdf_table[0, 0]) == 1.0 / 256.0
+
+
+def test_compact_cdf_bad_sentinel_rejected() -> None:
+    archive = _make_archive()
+    compact = bytearray(compose_atw2_archive_without_cdf_table(archive))
+    section_offset, _ = parse_atw2_archive_bytes(compact)["cdf_table_blob"]
+    compact[section_offset] ^= 0xFF
+    bad = bytes(compact)
+    for parser in (parse_atw2_archive_bytes, parse_archive):
+        try:
+            parser(bad)
+        except ValueError as exc:
+            assert "bad sentinel" in str(exc)
+        else:
+            raise AssertionError("bad compact cdf_table_blob sentinel was accepted")
+
+
 def test_cdf_table_xor_preserves_current_inflate_raw_output() -> None:
     archive = _make_archive()
     proof = prove_atw2_cdf_decode_influence(archive, device="cpu")
@@ -114,6 +146,19 @@ def test_cdf_table_xor_preserves_current_inflate_raw_output() -> None:
     assert proof.mutated_byte_count == 2560
     assert proof.source_archive_sha256 != proof.mutated_archive_sha256
     assert proof.source_raw_sha256 == proof.mutated_raw_sha256
+    assert proof.score_claim is False
+
+
+def test_compact_cdf_sentinel_preserves_current_inflate_raw_output() -> None:
+    archive = _make_archive()
+    proof = prove_atw2_cdf_compaction_parity(archive, device="cpu")
+    assert proof.raw_equal is True
+    assert proof.max_abs_raw_byte_delta == 0
+    assert proof.archive_bytes_saved == 2552
+    assert proof.compact_cdf_bytes == 8
+    assert proof.delta_s_rate_only < 0
+    assert proof.source_archive_sha256 != proof.compact_archive_sha256
+    assert proof.source_raw_sha256 == proof.compact_raw_sha256
     assert proof.score_claim is False
 
 
@@ -136,3 +181,24 @@ def test_probe_atw2_cdf_dead_section_cli_synthetic_smoke() -> None:
     assert payload["analysis"]["cdf_bytes"] == 2560
     assert payload["ready_for_exact_eval_dispatch"] is False
 
+
+def test_probe_atw2_cdf_dead_section_cli_compact_smoke() -> None:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "probe_atw2_cdf_dead_section.py"),
+            "--synthetic-smoke",
+            "--compact-cdf",
+            "--device",
+            "cpu",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    payload = json.loads(proc.stdout)
+    assert payload["raw_equal"] is True
+    assert payload["archive_bytes_saved"] == 2552
+    assert payload["compact_cdf_bytes"] == 8
+    assert payload["ready_for_exact_eval_dispatch"] is False

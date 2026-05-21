@@ -24,6 +24,7 @@ from tac.substrates.atw_codec_v2 import (  # noqa: E402
 )
 from tac.substrates.atw_codec_v2.cdf_dead_section import (  # noqa: E402
     analyze_atw2_cdf_section,
+    prove_atw2_cdf_compaction_parity,
     prove_atw2_cdf_decode_influence,
 )
 
@@ -106,6 +107,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mutation-kind", choices=("xor_ff", "zero"), default="xor_ff")
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--analyze-only", action="store_true")
+    parser.add_argument(
+        "--compact-cdf",
+        action="store_true",
+        help="Replace cdf_table_blob with the compact sentinel and prove raw parity.",
+    )
     args = parser.parse_args(argv)
 
     if args.synthetic_smoke:
@@ -117,6 +123,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.analyze_only:
         payload = analyze_atw2_cdf_section(archive_bytes).to_dict()
+    elif args.compact_cdf:
+        payload = prove_atw2_cdf_compaction_parity(
+            archive_bytes,
+            device=args.device,
+        ).to_dict()
     else:
         payload = prove_atw2_cdf_decode_influence(
             archive_bytes,
@@ -135,4 +146,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
