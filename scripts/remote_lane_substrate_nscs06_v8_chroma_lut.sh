@@ -84,13 +84,22 @@ cd "$WORKSPACE"
 # Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
 rm -f upstream/videos/._*.mkv 2>/dev/null || true
 
-# Stage 0: refuse full-mode dispatch per Catalog #240 + Catalog #325.
-if [ "$NSCS06_V8_TRAINER_MODE" != "smoke" ]; then
-    log "FATAL: NSCS06_V8_TRAINER_MODE=$NSCS06_V8_TRAINER_MODE; only 'smoke' is supported in L0 SCAFFOLD"
-    log "FATAL: per Catalog #240 + Catalog #325 per-substrate symposium pending (window 2026-05-21 -> 2026-06-04)"
-    log "FATAL: trainer's _full_main raises NotImplementedError to mirror the recipe-side dispatch_enabled:false"
+# Stage 0: validate trainer mode. Per OVERNIGHT-V Phase 2 BUILD landing
+# (2026-05-21): the trainer's `_full_main` is now IMPLEMENTED (~440 LOC at
+# experiments/train_substrate_nscs06_v8_chroma_lut.py:565-1003) and the recipe
+# was atomically flipped to `dispatch_enabled: true / NSCS06_V8_TRAINER_MODE:
+# "full"`. The prior L0 SCAFFOLD smoke-only guard was a stale-state-divergence
+# bug class (Catalog #240 sister + Catalog #326 driver-mode anti-pattern); fixed
+# by OVERNIGHT-RR (2026-05-21) per cron 2b6527f6 verdict LOW + rc=22 recurrence
+# diagnosis at QQ call_id fc-01KS5QRXWNVYC54E2Y9Z8KZ4W2 stdout
+# `FATAL: NSCS06_V8_TRAINER_MODE=full; only 'smoke' is supported in L0 SCAFFOLD`.
+# The accepted modes are now {smoke, full}; anything else is FATAL.
+if [ "$NSCS06_V8_TRAINER_MODE" != "smoke" ] && [ "$NSCS06_V8_TRAINER_MODE" != "full" ]; then
+    log "FATAL: NSCS06_V8_TRAINER_MODE=$NSCS06_V8_TRAINER_MODE; only 'smoke' or 'full' accepted"
+    log "FATAL: per OVERNIGHT-V Phase 2 BUILD landing + OVERNIGHT-RR driver atomic-flip 2026-05-21"
     exit 22
 fi
+log "NSCS06_V8_TRAINER_MODE=$NSCS06_V8_TRAINER_MODE accepted"
 
 # Stage 0b: dispatch claim verification (optional in L0 SCAFFOLD; skipped
 # when the recipe is research_only AND no DISPATCH_INSTANCE_JOB_ID is set,
@@ -121,8 +130,18 @@ if [ -f "$WORKSPACE/scripts/remote_archive_only_eval.sh" ]; then
     fi
 fi
 
-# Stage 3: run --smoke trainer.
-log "running v8 chroma-LUT --smoke trainer"
+# Stage 3: run trainer with mode-conditional --smoke flag. Per OVERNIGHT-V
+# Phase 2 BUILD landing + OVERNIGHT-RR driver atomic-flip 2026-05-21:
+# NSCS06_V8_TRAINER_MODE=full -> omit --smoke -> trainer enters _full_main;
+# NSCS06_V8_TRAINER_MODE=smoke -> pass --smoke -> trainer enters _smoke_main.
+# Per CLAUDE.md "Forbidden substrate driver hardcoding smoke=1 / --smoke
+# regardless of dispatch env vars (the driver-mode-mismatch trap)" + Catalog
+# #326 sister discipline + Z6-v2 Wave 2 empirical anchor.
+SMOKE_FLAG=""
+if [ "$NSCS06_V8_TRAINER_MODE" = "smoke" ]; then
+    SMOKE_FLAG="--smoke"
+fi
+log "running v8 chroma-LUT trainer mode=$NSCS06_V8_TRAINER_MODE smoke_flag='$SMOKE_FLAG'"
 export PYTHONPATH="$WORKSPACE/src:$WORKSPACE/upstream:$WORKSPACE${PYTHONPATH:+:$PYTHONPATH}"
 
 set +e
@@ -132,7 +151,7 @@ $PYBIN "$WORKSPACE/experiments/train_substrate_nscs06_v8_chroma_lut.py" \
     --upstream-dir "$NSCS06_V8_UPSTREAM_DIR" \
     --device "$NSCS06_V8_DEVICE" \
     --epochs "$NSCS06_V8_EPOCHS" \
-    --smoke \
+    $SMOKE_FLAG \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 TRAINER_RC=${PIPESTATUS[0]}
 set -e

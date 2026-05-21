@@ -75886,6 +75886,13 @@ _CHECK_326_BUG_CLASS_VERDICTS: frozenset[str] = frozenset({
     "HARDCODES_SMOKE_NO_RECIPE_OPT_OUT",
     "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS",
     "CONSUMES_ENV_UNKNOWN_DEFAULT_BUG_CLASS",
+    # OVERNIGHT-RR 2026-05-21 META-class extension: driver reads env var to
+    # REFUSE non-smoke values (Stage 0 FATAL+exit pattern) rather than to
+    # BRANCH on the value. Anchor: NSCS06 v8 chroma-LUT QQ dispatch rc=22
+    # at fc-01KS5QRXWNVYC54E2Y9Z8KZ4W2 stdout `FATAL: ... only 'smoke' is
+    # supported in L0 SCAFFOLD` (post-OVERNIGHT-V Phase 2 BUILD atomic-flip
+    # violation: trainer + recipe flipped to full but driver was not).
+    "REFUSES_NON_SMOKE_RECIPE_FORCES_FULL_BUG_CLASS",
 })
 _CHECK_326_LINE_WAIVER_PATTERN = re.compile(
     r"# DRIVER_MODE_HARDCODE_OK:(.+?)(?:$|#)", re.MULTILINE

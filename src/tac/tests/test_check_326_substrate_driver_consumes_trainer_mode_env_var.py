@@ -742,3 +742,111 @@ def test_canonical_helper_cli_json_output() -> None:
     assert "verdict_counts" in data
     assert "rows" in data
     assert data.get("empirical_anchor_z6_v2_wave_2_defer", {}).get("date_utc") == "2026-05-18"
+
+
+# --- OVERNIGHT-RR META-class extension regression tests -----------------------
+# Per OVERNIGHT-RR 2026-05-21 NSCS06 v8 chroma-LUT QQ dispatch rc=22 root-cause
+# diagnosis. The driver READS NSCS06_V8_TRAINER_MODE env var (so passes the
+# existing CONSUMES_ENV_MULTI_KEY_DEFAULT_RECIPE_OK verdict path) BUT uses it
+# to REFUSE non-smoke at startup (FATAL + exit 22) rather than to BRANCH on it.
+# Verdict: REFUSES_NON_SMOKE_RECIPE_FORCES_FULL_BUG_CLASS.
+
+
+def test_check_326_overnight_rr_meta_extension_flags_refuses_non_smoke_pattern(
+    tmp_path: Path,
+) -> None:
+    """Synthetic pre-fix v8 driver pattern MUST be flagged with the new
+    OVERNIGHT-RR META-extension verdict.
+    """
+    from tools.audit_substrate_driver_mode_hardcode import audit_all_drivers
+
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    recipes_dir = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipes_dir.mkdir(parents=True)
+
+    (scripts_dir / "remote_lane_substrate_synth_overnight_rr.sh").write_text(
+        textwrap.dedent(
+            """\
+            #!/bin/bash
+            set -euo pipefail
+            SYNTH_OVERNIGHT_RR_TRAINER_MODE="${SYNTH_OVERNIGHT_RR_TRAINER_MODE:-smoke}"
+            if [ "$SYNTH_OVERNIGHT_RR_TRAINER_MODE" != "smoke" ]; then
+                echo "FATAL: only smoke supported"
+                exit 22
+            fi
+            """
+        )
+    )
+    (recipes_dir / "substrate_synth_overnight_rr_modal_t4_dispatch.yaml").write_text(
+        textwrap.dedent(
+            """\
+            name: substrate_synth_overnight_rr_modal_t4_dispatch
+            dispatch_enabled: true
+            research_only: false
+            env_overrides:
+              SYNTH_OVERNIGHT_RR_TRAINER_MODE: "full"
+            """
+        )
+    )
+
+    result = audit_all_drivers(repo_root=tmp_path)
+    assert result["bug_class_count"] == 1
+    assert result["bug_class_drivers"] == ["synth_overnight_rr"]
+    row = result["rows"][0]
+    assert row["verdict"] == "REFUSES_NON_SMOKE_RECIPE_FORCES_FULL_BUG_CLASS"
+    assert "FATAL+exit pattern at startup" in row["explanation"]
+    assert "OVERNIGHT-RR" in row["explanation"]
+    assert row["refuse_per_var"] == {"SYNTH_OVERNIGHT_RR_TRAINER_MODE": True}
+    assert row["unsafe_recipes"] == [
+        ".omx/operator_authorize_recipes/substrate_synth_overnight_rr_modal_t4_dispatch.yaml"
+    ]
+
+
+def test_check_326_overnight_rr_meta_extension_exempts_multi_value_validator(
+    tmp_path: Path,
+) -> None:
+    """The canonical post-fix pattern that validates {smoke, full} with a
+    compound test (``[ != "smoke" ] && [ != "full" ]``) MUST NOT be flagged.
+    """
+    from tools.audit_substrate_driver_mode_hardcode import audit_all_drivers
+
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    recipes_dir = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipes_dir.mkdir(parents=True)
+
+    (scripts_dir / "remote_lane_substrate_synth_canonical.sh").write_text(
+        textwrap.dedent(
+            """\
+            #!/bin/bash
+            set -euo pipefail
+            SYNTH_CANONICAL_TRAINER_MODE="${SYNTH_CANONICAL_TRAINER_MODE:-smoke}"
+            if [ "$SYNTH_CANONICAL_TRAINER_MODE" != "smoke" ] && [ "$SYNTH_CANONICAL_TRAINER_MODE" != "full" ]; then
+                echo "FATAL: only smoke or full accepted"
+                exit 22
+            fi
+            SMOKE_FLAG=""
+            if [ "$SYNTH_CANONICAL_TRAINER_MODE" = "smoke" ]; then
+                SMOKE_FLAG="--smoke"
+            fi
+            """
+        )
+    )
+    (recipes_dir / "substrate_synth_canonical_modal_t4_dispatch.yaml").write_text(
+        textwrap.dedent(
+            """\
+            name: substrate_synth_canonical_modal_t4_dispatch
+            dispatch_enabled: true
+            research_only: false
+            env_overrides:
+              SYNTH_CANONICAL_TRAINER_MODE: "full"
+            """
+        )
+    )
+
+    result = audit_all_drivers(repo_root=tmp_path)
+    assert result["bug_class_count"] == 0, (
+        f"canonical multi-value-validator pattern incorrectly flagged: "
+        f"{result['rows']}"
+    )

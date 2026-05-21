@@ -352,6 +352,58 @@ def _recipe_mode_env_values(recipe_path: Path, env_vars: tuple[str, ...]) -> dic
     return values
 
 
+def _driver_refuses_non_smoke_mode(driver_text: str, env_var: str) -> bool:
+    """Detect the "refuses-non-smoke at startup" anti-pattern.
+
+    OVERNIGHT-RR 2026-05-21 root-cause anchor at NSCS06 v8 chroma-LUT driver
+    Stage 0: ``if [ "$NSCS06_V8_TRAINER_MODE" != "smoke" ]; then ... exit 22; fi``
+
+    The driver READS the env var (so it satisfies ``_driver_consumes_env_mode``)
+    but uses it to REFUSE non-smoke values rather than to BRANCH on the value
+    and route to smoke vs full code paths. When the matching recipe declares
+    ``dispatch_enabled: true`` + ``NSCS06_V8_TRAINER_MODE: full`` the dispatch
+    crashes at rc=22 ~2s with stdout ``FATAL: ... only 'smoke' is supported``.
+
+    The match pattern looks for an ``if [ "$VAR" != "smoke" ]`` OR ``if [
+    "$VAR" != smoke ]`` test followed by an ``exit`` statement within ~10
+    lines (to allow log statements between the test and exit). Quoted /
+    unquoted / single-quoted "smoke" token all accepted.
+    """
+    lines = driver_text.splitlines()
+    # Pattern: if [ "$VAR" != "smoke" ] (or unquoted/single-quoted "smoke")
+    test_pattern_braced = re.compile(
+        rf'if\s+\[\s+["\']?\${{{re.escape(env_var)}}}["\']?\s*!=\s*["\']?smoke["\']?\s*\]'
+    )
+    test_pattern_simple = re.compile(
+        rf'if\s+\[\s+["\']?\${re.escape(env_var)}["\']?\s*!=\s*["\']?smoke["\']?\s*\]'
+    )
+    for i, line in enumerate(lines):
+        stripped = line.split("#", 1)[0]
+        if not (
+            test_pattern_braced.search(stripped)
+            or test_pattern_simple.search(stripped)
+        ):
+            continue
+        # OVERNIGHT-RR refinement: the multi-value validation pattern
+        # ``if [ "$VAR" != "smoke" ] && [ "$VAR" != "full" ]; then ... exit; fi``
+        # is the CANONICAL valid-mode-validator (drivers that accept full mode);
+        # exempt it from the refuse-pattern bug class.
+        if "full" in stripped.lower() and "!=" in stripped:
+            # The test mentions both `smoke` AND `full` with != — this is the
+            # multi-value validator pattern, not the single-smoke-only refuse
+            # pattern. Skip.
+            continue
+        # Found the refuse-test; look ahead ~10 lines for an exit statement
+        for j in range(i + 1, min(i + 11, len(lines))):
+            look = lines[j].split("#", 1)[0]
+            if re.search(r"^\s*exit\s+\d+", look):
+                return True
+            if re.search(r"^\s*fi\s*$", look):
+                # if-block closed without exit; not the refuse pattern
+                break
+    return False
+
+
 def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
     text = _read(driver_path)
     substrate_id = _substrate_id_from_driver(driver_path)
@@ -372,6 +424,60 @@ def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
     )
     consumes_env, env_var = _driver_consumes_env_mode(text)
     env_vars = _driver_mode_env_vars(text)
+
+    # OVERNIGHT-RR 2026-05-21 anchor: driver-refuses-non-smoke-mode bug class.
+    # The driver READS the env var but uses it to REFUSE rather than BRANCH.
+    # Detected by ``if [ "$VAR" != "smoke" ]; then ... exit N; fi`` pattern.
+    # Bug class fires when ANY recipe forces full mode AND does NOT opt out.
+    refuse_per_var: dict[str, bool] = {
+        var: _driver_refuses_non_smoke_mode(text, var) for var in env_vars
+    }
+    any_var_refused = any(refuse_per_var.values())
+    if any_var_refused:
+        unsafe_recipes_refuse = []
+        for rp in recipes:
+            if _recipe_opted_out_of_full_mode(rp):
+                continue
+            rp_env_values = _recipe_mode_env_values(rp, env_vars)
+            rp_env_full = any(
+                _mode_env_value_forces_full(var, value)
+                for var, value in rp_env_values.items()
+            )
+            if rp_env_full:
+                unsafe_recipes_refuse.append(_rel(rp))
+        if unsafe_recipes_refuse:
+            return {
+                "substrate_id": substrate_id,
+                "driver_path": _rel(driver_path),
+                "recipes": recipe_paths_str,
+                "verdict": "REFUSES_NON_SMOKE_RECIPE_FORCES_FULL_BUG_CLASS",
+                "explanation": (
+                    f"Driver refuses non-smoke values for env vars "
+                    f"{[v for v, r in refuse_per_var.items() if r]} via FATAL+exit "
+                    "pattern at startup (Stage 0 mode-refusal); matching recipes "
+                    f"force full mode WITHOUT opt-out: {unsafe_recipes_refuse}. "
+                    "OVERNIGHT-RR 2026-05-21 anchor: NSCS06 v8 chroma-LUT QQ "
+                    "dispatch fc-01KS5QRXWNVYC54E2Y9Z8KZ4W2 rc=22 elapsed=1.7s "
+                    "with stdout `FATAL: ... only 'smoke' is supported in L0 "
+                    "SCAFFOLD`. The trainer's _full_main was Phase 2 BUILD-flipped "
+                    "(OVERNIGHT-V) AND the recipe was atomically flipped, but the "
+                    "driver Stage 0 refuse-guard was not. ACTIVE BUG CLASS — "
+                    "driver must branch on env var to route smoke vs full code "
+                    "paths, not refuse non-smoke. CLAUDE.md `Forbidden substrate "
+                    "driver hardcoding smoke=1 / --smoke regardless of dispatch "
+                    "env vars`."
+                ),
+                "any_recipe_opted_out_of_full_mode": any_recipe_opted_out,
+                "consumes_env_var": env_var,
+                "consumes_env_vars": list(env_vars),
+                "env_var_default_in_driver": (
+                    _driver_env_default_value(text, env_var)
+                    if (consumes_env and env_var)
+                    else None
+                ),
+                "refuse_per_var": refuse_per_var,
+                "unsafe_recipes": unsafe_recipes_refuse,
+            }
 
     if not has_hardcoded and not consumes_env and not has_conditional_smoke:
         verdict = "NO_SMOKE_FLAG"
@@ -540,6 +646,7 @@ def audit_all_drivers(repo_root: Path | None = None) -> dict[str, Any]:
             "HARDCODES_SMOKE_NO_RECIPE_OPT_OUT",
             "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS",
             "CONSUMES_ENV_UNKNOWN_DEFAULT_BUG_CLASS",
+            "REFUSES_NON_SMOKE_RECIPE_FORCES_FULL_BUG_CLASS",
         )
     ]
     return {
