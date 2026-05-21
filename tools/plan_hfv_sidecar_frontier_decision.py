@@ -19,6 +19,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    import claim_lane_dispatch
+except ModuleNotFoundError:  # pragma: no cover - imported as tools.* in tests
+    import tools.claim_lane_dispatch as claim_lane_dispatch
+
 
 HFV_CANDIDATES: tuple[dict[str, Any], ...] = (
     {
@@ -90,6 +95,7 @@ class CandidateAudit:
     paired_dispatch_plan_ready: bool
     paired_dispatch_pair_group_id: str
     paired_dispatch_required_axes: list[str]
+    paired_dispatch_lanes: dict[str, str]
     score_claim: bool
     promotion_eligible: bool
     ready_for_exact_eval_dispatch: bool
@@ -198,6 +204,9 @@ def _audit_candidate(spec: dict[str, Any]) -> CandidateAudit:
     commands = dispatch_plan.get("commands") or {}
     if not commands.get("contest_cpu") or not commands.get("contest_cuda"):
         errors.append("paired dispatch plan is missing CPU or CUDA command")
+    lanes = dispatch_plan.get("lanes") or {}
+    if not isinstance(lanes, dict):
+        lanes = {}
 
     return CandidateAudit(
         candidate_id=str(spec["candidate_id"]),
@@ -226,6 +235,7 @@ def _audit_candidate(spec: dict[str, Any]) -> CandidateAudit:
         paired_dispatch_plan_ready=not any(error.startswith("paired dispatch") for error in errors),
         paired_dispatch_pair_group_id=str(dispatch_plan.get("pair_group_id", "")),
         paired_dispatch_required_axes=required_axes,
+        paired_dispatch_lanes={str(axis): str(lane_id) for axis, lane_id in lanes.items()},
         score_claim=bool(manifest.get("score_claim")),
         promotion_eligible=bool(manifest.get("promotion_eligible")),
         ready_for_exact_eval_dispatch=bool(manifest.get("ready_for_exact_eval_dispatch")),
@@ -248,7 +258,29 @@ def _candidate_ready(candidate: CandidateAudit) -> bool:
     )
 
 
-def build_packet(*, active_claim_count: int | None) -> dict[str, Any]:
+def _active_claim_rows(claims_path: Path) -> list[dict[str, Any]]:
+    if not claims_path.is_file():
+        return []
+    claims = claim_lane_dispatch._parse_claims(claims_path.read_text(encoding="utf-8"))
+    rows: list[dict[str, Any]] = []
+    for claim in claim_lane_dispatch._latest_claims_by_job(claims).values():
+        if claim_lane_dispatch._is_terminal(claim.status):
+            continue
+        rows.append(asdict(claim))
+    return sorted(rows, key=lambda row: (row["lane_id"], row["instance_job_id"]))
+
+
+def _candidate_lane_ids(candidate: CandidateAudit | None) -> set[str]:
+    if candidate is None:
+        return set()
+    return {lane_id for lane_id in candidate.paired_dispatch_lanes.values() if lane_id}
+
+
+def build_packet(
+    *,
+    active_claim_count: int | None,
+    active_claims: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     candidates = [_audit_candidate(spec) for spec in HFV_CANDIDATES]
     ready_candidates = [candidate for candidate in candidates if _candidate_ready(candidate)]
     ranked = sorted(
@@ -261,11 +293,30 @@ def build_packet(*, active_claim_count: int | None) -> dict[str, Any]:
     )
     recommended = ranked[0] if ranked else None
     rate_minimal = byte_ranked[0] if byte_ranked else None
+    active_claims_known = active_claims is not None
+    active_claims = active_claims or []
+    active_claim_count = len(active_claims) if active_claims_known else active_claim_count
+    recommended_lane_ids = _candidate_lane_ids(recommended)
+    same_lane_conflicts = [
+        row for row in active_claims if str(row.get("lane_id") or "") in recommended_lane_ids
+    ]
+    unrelated_active_claims = [
+        row for row in active_claims if str(row.get("lane_id") or "") not in recommended_lane_ids
+    ]
     dispatch_blockers: list[str] = []
-    if active_claim_count is not None and active_claim_count > 0:
+    if same_lane_conflicts:
+        lanes = ",".join(sorted({str(row["lane_id"]) for row in same_lane_conflicts}))
+        dispatch_blockers.append(f"same_lane_active_dispatch_claim_present:{lanes}")
+    elif not active_claims_known and active_claim_count is not None and active_claim_count > 0:
         dispatch_blockers.append(f"active_dispatch_claims_present:{active_claim_count}")
     if not recommended:
         dispatch_blockers.append("no_ready_hfv_candidate")
+    if active_claims_known and unrelated_active_claims:
+        nonblocking_note = (
+            "unrelated active dispatch claims present; no same-lane HFV conflict detected"
+        )
+    else:
+        nonblocking_note = ""
 
     return {
         "schema": "hfv_sidecar_frontier_decision_packet_v1",
@@ -274,8 +325,13 @@ def build_packet(*, active_claim_count: int | None) -> dict[str, Any]:
         "promotion_eligible": False,
         "exact_eval_executed": False,
         "active_dispatch_claim_count": active_claim_count,
+        "active_dispatch_claims_known": active_claims_known,
+        "same_lane_dispatch_conflicts": same_lane_conflicts,
+        "unrelated_active_dispatch_claims": unrelated_active_claims,
         "dispatch_blocked": bool(dispatch_blockers),
         "dispatch_blockers": dispatch_blockers,
+        "nonblocking_dispatch_claim_note": nonblocking_note,
+        "recommended_for_paired_exact_eval": recommended.to_dict() if recommended else None,
         "recommended_for_paired_exact_eval_after_claims_clear": recommended.to_dict() if recommended else None,
         "rate_minimal_if_profile_code_allowed": rate_minimal.to_dict() if rate_minimal else None,
         "policy_interpretation": {
@@ -287,10 +343,10 @@ def build_packet(*, active_claim_count: int | None) -> dict[str, Any]:
         "byte_ranked_candidates": [candidate.to_dict() for candidate in byte_ranked],
         "all_candidate_audits": [candidate.to_dict() for candidate in candidates],
         "recommended_next_action": (
-            "Do not execute while active dispatch claims remain. When the claim "
-            "surface clears, dispatch HFV9 first as the most compliance-defensible "
-            "byte-closed HFV candidate; retain HFV7 as the rate-minimal alternative "
-            "only if runtime-profile interpretation is explicitly accepted."
+            "Dispatch HFV9 first if there is no same-lane active claim conflict; "
+            "unrelated live claims are coordination warnings, not HFV dispatch blockers. "
+            "Retain HFV7 as the rate-minimal alternative only if runtime-profile "
+            "interpretation is explicitly accepted."
         ),
     }
 
@@ -303,6 +359,7 @@ def render_markdown(packet: dict[str, Any]) -> str:
         f"- Generated UTC: {packet['generated_at_utc']}",
         f"- Active dispatch claim count: {packet['active_dispatch_claim_count']}",
         f"- Dispatch blocked: {str(packet['dispatch_blocked']).lower()}",
+        f"- Same-lane conflicts: {len(packet['same_lane_dispatch_conflicts'])}",
         f"- Score claim: {str(packet['score_claim']).lower()}",
         f"- Exact eval executed: {str(packet['exact_eval_executed']).lower()}",
         "",
@@ -314,6 +371,12 @@ def render_markdown(packet: dict[str, Any]) -> str:
         f"- Compliance profile: `{recommended.get('compliance_profile', '')}`",
         "",
         packet["recommended_next_action"],
+        "",
+        "## Dispatch coordination",
+        "",
+        f"- Nonblocking active-claim note: {packet['nonblocking_dispatch_claim_note'] or 'none'}",
+        f"- Same-lane conflicts: {len(packet['same_lane_dispatch_conflicts'])}",
+        f"- Unrelated active claims: {len(packet['unrelated_active_dispatch_claims'])}",
         "",
         "## Ranked candidates",
         "",
@@ -352,6 +415,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--active-claim-count", type=int, default=None)
     parser.add_argument(
+        "--claims-path",
+        type=Path,
+        default=Path(".omx/state/active_lane_dispatch_claims.md"),
+        help=(
+            "Live claim ledger used to distinguish same-lane HFV conflicts from "
+            "unrelated active dispatches. Pass an empty/nonexistent path to fall "
+            "back to --active-claim-count compatibility behavior."
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("experiments/results") / f"hfv_sidecar_frontier_decision_packet_{_utc_stamp()}",
@@ -361,7 +434,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    packet = build_packet(active_claim_count=args.active_claim_count)
+    active_claims = _active_claim_rows(args.claims_path) if args.claims_path.is_file() else None
+    packet = build_packet(
+        active_claim_count=args.active_claim_count,
+        active_claims=active_claims,
+    )
     args.output_dir.mkdir(parents=True, exist_ok=True)
     json_path = args.output_dir / "hfv_sidecar_frontier_decision_packet.json"
     md_path = args.output_dir / "hfv_sidecar_frontier_decision_packet.md"
