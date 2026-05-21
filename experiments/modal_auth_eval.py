@@ -332,6 +332,7 @@ def _collect_artifacts(out_dir: Path, work_dir: Path) -> dict[str, bytes]:
         out_dir / "contest_auth_eval.stderr.log",
         work_dir / "contest_auth_eval.json",
         work_dir / "inflated_outputs_manifest.json",
+        work_dir / "scorer_input_cache_hashes.json",
         work_dir / "provenance.json",
         work_dir / "report.txt",
     ):
@@ -355,6 +356,8 @@ def _run_auth_eval_inner(
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -429,6 +432,8 @@ def _run_auth_eval_inner(
             "inflate_device_policy": inflate_device_policy,
             "inflate_env_overrides": list(inflate_env_overrides),
             "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+            "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
+            "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
         }
     )
     write_json(out_dir / "modal_cuda_preflight.json", preflight)
@@ -573,6 +578,15 @@ def _run_auth_eval_inner(
     ]
     if expected_runtime_tree_sha256:
         cmd.extend(["--expected-runtime-tree-sha256", expected_runtime_tree_sha256])
+    if scorer_input_cache_hashes:
+        cmd.extend(
+            [
+                "--scorer-input-cache-hashes-out",
+                str(work_dir / "scorer_input_cache_hashes.json"),
+                "--scorer-input-cache-hash-batch-pairs",
+                str(int(scorer_input_cache_hash_batch_pairs)),
+            ]
+        )
     for item in inflate_env_overrides:
         cmd.extend(["--inflate-env", item])
     env = {
@@ -681,6 +695,8 @@ def _run_auth_eval_inner(
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "scorer_device": scorer_device,
         "inflate_device_policy": inflate_device_policy,
+        "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
+        "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
         "diagnostic_only": diagnostic_only,
         "validation_errors": validation_errors,
         "score_claim": payload_score_claim,
@@ -742,6 +758,8 @@ def _run_auth_eval_fail_closed(
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
@@ -758,6 +776,8 @@ def _run_auth_eval_fail_closed(
             inflate_device_policy=inflate_device_policy,
             inflate_env_overrides=inflate_env_overrides,
             expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+            scorer_input_cache_hashes=scorer_input_cache_hashes,
+            scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
         )
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
@@ -791,6 +811,8 @@ def run_auth_eval(
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     """Run the canonical CUDA auth eval on Modal T4."""
 
@@ -808,6 +830,8 @@ def run_auth_eval(
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        scorer_input_cache_hashes=scorer_input_cache_hashes,
+        scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
     )
 
 
@@ -830,6 +854,8 @@ def run_auth_eval_a100(
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     """Run CUDA auth eval on Modal A100 as a diagnostic axis."""
 
@@ -847,6 +873,8 @@ def run_auth_eval_a100(
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        scorer_input_cache_hashes=scorer_input_cache_hashes,
+        scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
     )
 
 
@@ -869,6 +897,8 @@ def run_auth_eval_h100(
     inflate_device_policy: str = "auto",
     inflate_env_overrides: tuple[str, ...] = (),
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     """Run CUDA auth eval on Modal H100 as a diagnostic axis."""
 
@@ -886,6 +916,8 @@ def run_auth_eval_h100(
         inflate_device_policy=inflate_device_policy,
         inflate_env_overrides=inflate_env_overrides,
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        scorer_input_cache_hashes=scorer_input_cache_hashes,
+        scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
     )
 
 
@@ -903,6 +935,8 @@ def main(
     inflate_device: str = "auto",
     inflate_env: str = "",
     expected_runtime_tree_sha256: str = "",
+    scorer_input_cache_hashes: bool = False,
+    scorer_input_cache_hash_batch_pairs: int = 8,
     detach: bool = False,
     provider_detach_ack: bool = False,
     lane_id: str = "",
@@ -1010,6 +1044,8 @@ def main(
         "inflate_device_policy": inflate_device_policy,
         "inflate_env_overrides": list(inflate_env_overrides),
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+        "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
+        "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
         "diagnostic_only": diagnostic_only,
         "non_t4_gpu_diagnostic": non_t4_gpu_diagnostic,
         "score_claim": False,
@@ -1062,6 +1098,8 @@ def main(
         inflate_device_policy,
         inflate_env_overrides,
         expected_runtime_tree_sha256,
+        bool(scorer_input_cache_hashes),
+        int(scorer_input_cache_hash_batch_pairs),
     )
     claim_modal_auth_eval_dispatch(
         repo_root=Path.cwd(),
@@ -1104,6 +1142,8 @@ def main(
                 "inflate_device_policy": inflate_device_policy,
                 "inflate_env_overrides": list(inflate_env_overrides),
                 "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+                "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
+                "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
                 "expected_archive_sha256": expected_archive_sha256 or archive_sha256,
                 "lane_id": lane_id,
                 "instance_job_id": instance_job_id,
@@ -1185,6 +1225,8 @@ def main(
     result["inflate_device_policy"] = inflate_device_policy
     result["inflate_env_overrides"] = list(inflate_env_overrides)
     result["expected_runtime_tree_sha256"] = expected_runtime_tree_sha256
+    result["scorer_input_cache_hashes_requested"] = bool(scorer_input_cache_hashes)
+    result["scorer_input_cache_hash_batch_pairs"] = int(scorer_input_cache_hash_batch_pairs)
     result.update(pairing)
     if diagnostic_only:
         result["diagnostic_only"] = True
