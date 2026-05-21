@@ -20,7 +20,10 @@
 ## Verification
 
 - `16 passed in 3.27s` for scorer-response/profiler/profile-stability greenup.
-- `83 passed in 16.78s` for the recursive MLX local-acceleration suite.
+- `ruff check` passed on the MLX batch/scorer-response tools, modules, and
+  tests involved in this review.
+- `87 passed in 16.84s` for the recursive MLX local-acceleration suite,
+  including the new batch-invariance guard.
 
 ## Remaining cautions
 
