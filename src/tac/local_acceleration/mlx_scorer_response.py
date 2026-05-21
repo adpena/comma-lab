@@ -80,6 +80,7 @@ def build_mlx_scorer_response_payload(
     batch_pairs: int = 1,
     device_type: str = "cpu",
     components_dir: str | Path | None = None,
+    progress_every: int = 0,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
 
@@ -89,6 +90,8 @@ def build_mlx_scorer_response_payload(
         raise ValueError(f"batch_pairs must be >= 1, got {batch_pairs}")
     if device_type not in {"cpu", "gpu"}:
         raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+    if int(progress_every) < 0:
+        raise ValueError(f"progress_every must be >= 0, got {progress_every}")
 
     reference = load_scorer_input_cache(reference_cache_dir)
     candidate = load_scorer_input_cache(candidate_cache_dir)
@@ -102,7 +105,7 @@ def build_mlx_scorer_response_payload(
 
     with temporary_mlx_device(device_type):
         adapter = torch_distortion_net_to_mlx(dist)
-        for start in range(0, pair_count, int(batch_pairs)):
+        for batch_index, start in enumerate(range(0, pair_count, int(batch_pairs)), start=1):
             stop = min(pair_count, start + int(batch_pairs))
             ref_outputs = run_mlx_distortion_scorer_nchw(
                 adapter,
@@ -117,6 +120,24 @@ def build_mlx_scorer_response_payload(
             components = scorer_distortion_components_numpy(ref_outputs, cand_outputs)
             pose_chunks.append(components["posenet"])
             seg_chunks.append(components["segnet"])
+            if progress_every and batch_index % int(progress_every) == 0:
+                elapsed = time.time() - started
+                done = stop
+                rate = done / elapsed if elapsed > 0 else 0.0
+                print(
+                    json.dumps(
+                        {
+                            "event": "mlx_scorer_response_progress",
+                            "done_pairs": done,
+                            "total_pairs": pair_count,
+                            "pairs_per_second": rate,
+                            "elapsed_seconds": elapsed,
+                        },
+                        sort_keys=True,
+                    ),
+                    file=sys.stderr,
+                    flush=True,
+                )
 
     pose_distortion = np.concatenate(pose_chunks).astype(np.float32, copy=False)
     seg_distortion = np.concatenate(seg_chunks).astype(np.float32, copy=False)

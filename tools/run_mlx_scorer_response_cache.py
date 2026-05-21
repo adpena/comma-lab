@@ -24,6 +24,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch-pairs", type=int, default=1)
     parser.add_argument("--device", choices=("cpu", "gpu"), default="cpu")
     parser.add_argument(
+        "--progress-every",
+        type=int,
+        default=0,
+        help="Emit JSON progress to stderr every N batches. Disabled by default.",
+    )
+    parser.add_argument(
         "--components-dir",
         type=Path,
         default=None,
@@ -42,6 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         batch_pairs=args.batch_pairs,
         device_type=args.device,
         components_dir=args.components_dir,
+        progress_every=args.progress_every,
     )
     write_mlx_scorer_response_payload(payload, args.output)
     print(
