@@ -19,6 +19,8 @@ __all__ = [
     "run_mlx_batchnorm2d_nchw",
     "run_mlx_conv2d_nchw",
     "run_mlx_efficientnet_block_nchw",
+    "run_mlx_efficientnet_stage_nchw",
+    "run_mlx_efficientnet_stem_nchw",
     "run_mlx_linear",
     "run_mlx_patch_embed_nchw",
     "run_mlx_mobileone_block_nchw",
@@ -30,6 +32,8 @@ __all__ = [
     "torch_conv2d_to_mlx",
     "torch_conv_mlp_to_mlx",
     "torch_efficientnet_block_to_mlx",
+    "torch_efficientnet_stage_to_mlx",
+    "torch_efficientnet_stem_to_mlx",
     "torch_fastvit_stage_to_mlx",
     "torch_fastvit_vision_to_mlx",
     "torch_linear_to_mlx",
@@ -171,6 +175,30 @@ class MLXInvertedResidualAdapter:
         out = self.se(out)
         out = self.bn3(self.conv_pwl(out))
         return out + shortcut if self.has_skip else out
+
+
+class MLXEfficientNetStemAdapter:
+    """MLX adapter for EfficientNet conv stem plus BatchNormAct2d."""
+
+    def __init__(self, torch_efficientnet: Any):
+        self.conv_stem = torch_conv2d_to_mlx(torch_efficientnet.conv_stem)
+        self.bn1 = MLXBatchNormAct2dAdapter(torch_efficientnet.bn1)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        return self.bn1(self.conv_stem(x_nhwc))
+
+
+class MLXEfficientNetStageAdapter:
+    """Sequential MLX adapter for one EfficientNet block stage."""
+
+    def __init__(self, torch_stage: Any):
+        self.blocks = [torch_efficientnet_block_to_mlx(block) for block in torch_stage]
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = x_nhwc
+        for block in self.blocks:
+            out = block(out)
+        return out
 
 
 class MLXMobileOneBlockAdapter:
@@ -641,6 +669,18 @@ def torch_efficientnet_block_to_mlx(torch_block: Any) -> Any:
     raise NotImplementedError(f"unsupported EfficientNet block: {class_path}")
 
 
+def torch_efficientnet_stem_to_mlx(torch_efficientnet: Any) -> MLXEfficientNetStemAdapter:
+    """Convert an EfficientNet feature model stem to MLX."""
+
+    return MLXEfficientNetStemAdapter(torch_efficientnet)
+
+
+def torch_efficientnet_stage_to_mlx(torch_stage: Any) -> MLXEfficientNetStageAdapter:
+    """Convert an EfficientNet block stage to MLX."""
+
+    return MLXEfficientNetStageAdapter(torch_stage)
+
+
 def torch_repmixer_block_to_mlx(torch_block: Any) -> MLXRepMixerBlockAdapter:
     """Convert a timm FastViT ``RepMixerBlock`` to a parity-tested MLX adapter."""
 
@@ -682,6 +722,30 @@ def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
 
 def run_mlx_efficientnet_block_nchw(adapter: Any, x_nchw: np.ndarray) -> np.ndarray:
     """Run an EfficientNet block adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_efficientnet_stem_nchw(
+    adapter: MLXEfficientNetStemAdapter,
+    x_nchw: np.ndarray,
+) -> np.ndarray:
+    """Run an EfficientNet stem adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_efficientnet_stage_nchw(
+    adapter: MLXEfficientNetStageAdapter,
+    x_nchw: np.ndarray,
+) -> np.ndarray:
+    """Run an EfficientNet stage adapter on NCHW input and return NCHW output."""
 
     import mlx.core as mx
 

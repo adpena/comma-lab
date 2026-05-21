@@ -13,6 +13,8 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     run_mlx_batchnorm2d_nchw,
     run_mlx_conv2d_nchw,
     run_mlx_efficientnet_block_nchw,
+    run_mlx_efficientnet_stage_nchw,
+    run_mlx_efficientnet_stem_nchw,
     run_mlx_fastvit_stage_nchw,
     run_mlx_fastvit_vision_nchw,
     run_mlx_linear,
@@ -24,6 +26,8 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     torch_batchnorm2d_to_mlx,
     torch_conv2d_to_mlx,
     torch_efficientnet_block_to_mlx,
+    torch_efficientnet_stage_to_mlx,
+    torch_efficientnet_stem_to_mlx,
     torch_fastvit_stage_to_mlx,
     torch_fastvit_vision_to_mlx,
     torch_linear_to_mlx,
@@ -370,6 +374,50 @@ def test_segnet_inverted_residual_block10_gpu_drift_is_measured() -> None:
     assert 0.0 < drift < 5.0e-2
 
 
+def test_segnet_efficientnet_stem_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(83)
+    model = _loaded_segnet_encoder_model()
+    x = torch.randn(1, 3, 64, 80)
+
+    expected = model.bn1(model.conv_stem(x)).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_efficientnet_stem_nchw(
+            torch_efficientnet_stem_to_mlx(model),
+            x.numpy(),
+        )
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 2.0e-4
+
+
+@pytest.mark.parametrize(
+    "stage_index,input_shape,seed,tolerance",
+    [
+        (0, (1, 32, 8, 10), 89, 3.0e-4),
+        (1, (1, 16, 8, 10), 97, 7.0e-4),
+    ],
+)
+def test_segnet_efficientnet_stages_match_torch_on_mlx_cpu(
+    stage_index: int,
+    input_shape: tuple[int, int, int, int],
+    seed: int,
+    tolerance: float,
+) -> None:
+    torch.manual_seed(seed)
+    stage = _loaded_segnet_encoder_stage(stage_index)
+    x = torch.randn(*input_shape)
+
+    expected = stage(x).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_efficientnet_stage_nchw(
+            torch_efficientnet_stage_to_mlx(stage),
+            x.numpy(),
+        )
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < tolerance
+
+
 def _loaded_posenet_stem_block0() -> nn.Module:
     return _loaded_posenet_stem()[0].eval()
 
@@ -403,6 +451,14 @@ def _loaded_posenet_vision() -> nn.Module:
 
 
 def _loaded_segnet_encoder_block(stage_index: int, block_index: int) -> nn.Module:
+    return _loaded_segnet_encoder_stage(stage_index)[block_index].eval()
+
+
+def _loaded_segnet_encoder_stage(stage_index: int) -> nn.Module:
+    return _loaded_segnet_encoder_model().blocks[stage_index].eval()
+
+
+def _loaded_segnet_encoder_model() -> nn.Module:
     import sys
     from pathlib import Path
 
@@ -411,4 +467,4 @@ def _loaded_segnet_encoder_block(stage_index: int, block_index: int) -> nn.Modul
 
     segnet = modules.SegNet().eval()
     segnet.load_state_dict(load_file(modules.segnet_sd_path))
-    return segnet.encoder.model.blocks[stage_index][block_index].eval()
+    return segnet.encoder.model.eval()
