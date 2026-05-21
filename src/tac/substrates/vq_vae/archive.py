@@ -263,3 +263,43 @@ def parse_archive(blob: bytes) -> VqVaeArchive:
         codebook_size=int(codebook_size),
         embedding_dim=int(embedding_dim),
     )
+
+
+def compose_procedural_archive(
+    original_archive_bytes: bytes,
+    seed_bytes: bytes,
+) -> bytes:
+    """Thin convenience wrapper for VQ-VAE procedural-codebook archive composition.
+
+    Per WAVE-3-VQ-VAE-PROCEDURAL-TRAINER-BUILD 2026-05-20 + sister DP1
+    canonical pattern landing commit ``9cbfa471c``: delegates to
+    :func:`tac.substrates.vq_vae.distillation_procedural_variant.compose_with_procedural_codebook`
+    using canonical defaults (32-byte seed, PCG64, output shape
+    ``(8192,)`` uint8 matching K=512 × D=8 × fp16 codebook footprint).
+
+    Sister of :func:`pack_archive` (canonical builder for the trained-
+    codebook variant). The procedural variant replaces the codebook tensor
+    INSIDE the decoder state_dict with a 32-byte PCG64 seed; indices /
+    meta sections are preserved byte-for-byte from the original archive.
+
+    Args:
+        original_archive_bytes: Existing VQV1 archive bytes (parseable
+            via :func:`parse_archive`).
+        seed_bytes: Procedural seed (8-256 bytes; canonical 32 bytes).
+
+    Returns:
+        Procedural-variant archive bytes with the codebook tensor REMOVED
+        from the decoder state_dict + a procedural seed envelope prepended
+        to the decoder blob.
+    """
+    # Lazy import to avoid cyclic-import friction; the variant module
+    # imports VQV1_HEADER_FMT / VQV1_HEADER_SIZE / VQV1_MAGIC /
+    # VQV1_SCHEMA_VERSION / parse_archive from this module.
+    from tac.substrates.vq_vae.distillation_procedural_variant import (
+        compose_with_procedural_codebook,
+    )
+
+    return compose_with_procedural_codebook(
+        original_archive_bytes=original_archive_bytes,
+        seed_bytes=seed_bytes,
+    )

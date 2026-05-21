@@ -85,20 +85,57 @@ from .architecture import (
 )
 from .archive import (
     VqVaeArchive,
+    compose_procedural_archive,
     pack_archive,
     parse_archive,
+)
+from .distillation_procedural_variant import (
+    CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT,
+    PROCEDURAL_CODEBOOK_BYTES_DEFAULT,
+    PROCEDURAL_CODEBOOK_DTYPE_DEFAULT,
+    PROCEDURAL_SEED_SIZE_BYTES,
+    ProceduralVariantConfig,
+    ProceduralVariantError,
+    compose_with_procedural_codebook,
+    derive_procedural_codebook_replacement,
+    predicted_archive_bytes_saved,
+    predicted_delta_s,
+    verify_procedural_codebook_in_domain,
+    verify_seed_mutation_changes_codebook_bytes,
 )
 from .score_aware_loss import (
     ScoreAwareLossWeights,
     VqVaeScoreAwareLoss,
 )
 
+PROCEDURAL_VARIANT_AVAILABLE: bool = True
+"""Flag set True at scaffold landing (sister of DP1
+``PROCEDURAL_VARIANT_AVAILABLE``). Trainers + cathedral consumers may key
+off this flag to detect that the VQ-VAE procedural codebook replacement
+variant is importable + structurally complete.
+"""
+
+
 __all__ = [
+    "CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT",
+    "PROCEDURAL_CODEBOOK_BYTES_DEFAULT",
+    "PROCEDURAL_CODEBOOK_DTYPE_DEFAULT",
+    "PROCEDURAL_SEED_SIZE_BYTES",
+    "PROCEDURAL_VARIANT_AVAILABLE",
+    "ProceduralVariantConfig",
+    "ProceduralVariantError",
     "ScoreAwareLossWeights",
     "VqVaeArchive",
     "VqVaeConfig",
     "VqVaeScoreAwareLoss",
     "VqVaeSubstrate",
+    "compose_procedural_archive",
+    "compose_with_procedural_codebook",
+    "derive_procedural_codebook_replacement",
     "pack_archive",
     "parse_archive",
+    "predicted_archive_bytes_saved",
+    "predicted_delta_s",
+    "verify_procedural_codebook_in_domain",
+    "verify_seed_mutation_changes_codebook_bytes",
 ]
