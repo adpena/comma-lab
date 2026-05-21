@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Prove dense HFV1 and sparse HFV2 sidecars produce identical inflated frames.
+"""Prove dense HFV1 and sparse foveation sidecars produce identical frames.
 
-The HFV2 sparse sidecar replaces a dense per-frame HFV1 foveation table with a
-pair-sparse table. This tool avoids writing multi-GB raw outputs by replaying
-the PR101/FEC6 inflate path in batches and comparing the dense-HFV1 and
-sparse-HFV2 postprocessed frame tensors before bytes would be written.
+Sparse HFV sidecars replace a dense per-frame HFV1 foveation table with a
+compact equivalent. This tool avoids writing multi-GB raw outputs by replaying
+the PR101/FEC6 inflate path in batches and comparing the dense-HFV1 and sparse
+postprocessed frame tensors before bytes would be written.
 
 It does not run the contest scorer and does not claim a score.
 """
@@ -16,6 +16,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import struct
 import sys
 import tempfile
 import zipfile
@@ -38,6 +39,7 @@ DEFAULT_SPARSE_SUBMISSION_DIR = Path(
     "experiments/results/hfv2_sparse_sidecar_candidate_20260521T070412Z/"
     "submission_dir_hfv2"
 )
+OUTPUT_BASENAME = "sparse_foveation_inflate_parity"
 
 
 @dataclass(frozen=True)
@@ -123,6 +125,32 @@ def _extract_archive(path: Path, target: Path) -> dict[str, bytes]:
         return {info.filename: archive.read(info.filename) for info in archive.infolist()}
 
 
+def _embedded_sidecar_from_wrapped_x(raw: bytes) -> tuple[str, bytes] | None:
+    if len(raw) < 10:
+        raise ValueError("wrapped x payload truncated before header")
+    if raw[:4] != b"FP11":
+        raise ValueError(f"wrapped x magic mismatch: {raw[:4]!r}")
+    pos = 4
+    (source_len,) = struct.unpack_from("<I", raw, pos)
+    pos += 4 + int(source_len)
+    if pos > len(raw):
+        raise ValueError("wrapped x source payload truncated")
+    if pos + 2 > len(raw):
+        raise ValueError("wrapped x selector length missing")
+    (selector_len,) = struct.unpack_from("<H", raw, pos)
+    pos += 2 + int(selector_len)
+    if pos > len(raw):
+        raise ValueError("wrapped x selector payload truncated")
+    if pos == len(raw):
+        return None
+    trailer = raw[pos:]
+    if trailer.startswith(b"HFV2"):
+        return "embedded_foveation_params.hfv2", trailer
+    if trailer.startswith(b"HFV3"):
+        return "embedded_foveation_params.hfv3", trailer
+    raise ValueError(f"unsupported embedded sidecar trailer magic: {trailer[:4]!r}")
+
+
 def _parse_pair_indices(value: str, *, n_pairs: int) -> list[int]:
     indices: set[int] = set()
     for token in value.split(","):
@@ -190,13 +218,20 @@ def build_parity_proof(
         if dense_x is None or sparse_x is None:
             raise ValueError("both archives must contain member x")
         if dense_x != sparse_x:
-            raise ValueError("dense and sparse x payloads differ")
+            embedded = _embedded_sidecar_from_wrapped_x(sparse_x)
+            if embedded is None or not sparse_x.startswith(dense_x):
+                raise ValueError("dense and sparse x payloads differ outside embedded sidecar trailer")
         dense_sidecar = dense_members.get("foveation_params.bin")
-        sparse_sidecar = sparse_members.get("foveation_params.hfv2")
+        sparse_sidecar_name = "foveation_params.hfv2"
+        sparse_sidecar = sparse_members.get(sparse_sidecar_name)
+        if sparse_sidecar is None:
+            embedded = _embedded_sidecar_from_wrapped_x(sparse_x)
+            if embedded is not None:
+                sparse_sidecar_name, sparse_sidecar = embedded
         if dense_sidecar is None:
             raise ValueError("dense archive missing foveation_params.bin")
         if sparse_sidecar is None:
-            raise ValueError("sparse archive missing foveation_params.hfv2")
+            raise ValueError("sparse archive missing external or embedded foveation sidecar")
 
         source_payload, selector_kind, selector_codes, selector_specs = (
             module.parse_pr101_frame_selector_archive(dense_x)
@@ -295,7 +330,7 @@ def build_parity_proof(
     dense_output_sha = dense_hash.hexdigest()
     sparse_output_sha = sparse_hash.hexdigest()
     return Hfv2InflateParityProof(
-        schema="hfv2_sparse_inflate_parity_proof_v1",
+        schema="sparse_foveation_inflate_parity_proof_v2",
         generated_at_utc=_utc_iso(),
         dense_archive=_repo_rel(dense_archive),
         dense_archive_bytes=dense_archive.stat().st_size,
@@ -313,7 +348,7 @@ def build_parity_proof(
         x_payload_sha256=_sha256_bytes(dense_x),
         x_payload_bytes=len(dense_x),
         dense_sidecar_name="foveation_params.bin",
-        sparse_sidecar_name="foveation_params.hfv2",
+        sparse_sidecar_name=sparse_sidecar_name,
         dense_sidecar_sha256=_sha256_bytes(dense_sidecar),
         sparse_sidecar_sha256=_sha256_bytes(sparse_sidecar),
         dense_output_sha256=dense_output_sha,
@@ -329,7 +364,7 @@ def render_markdown(proof: Hfv2InflateParityProof) -> str:
     checked = "all" if len(proof.pair_indices_checked) == proof.pair_count_total else str(len(proof.pair_indices_checked))
     return "\n".join(
         [
-            "# HFV2 Sparse Inflate Parity Proof",
+            "# Sparse Foveation Inflate Parity Proof",
             "",
             f"- Generated UTC: {proof.generated_at_utc}",
             f"- Dense archive: `{proof.dense_archive}`",
@@ -383,8 +418,8 @@ def main(argv: list[str] | None = None) -> int:
         device_arg=args.device,
     )
     payload = json.dumps(proof.to_dict(), indent=2, sort_keys=True) + "\n"
-    (args.output_dir / "hfv2_sparse_inflate_parity.json").write_text(payload, encoding="utf-8")
-    (args.output_dir / "hfv2_sparse_inflate_parity.md").write_text(
+    (args.output_dir / f"{OUTPUT_BASENAME}.json").write_text(payload, encoding="utf-8")
+    (args.output_dir / f"{OUTPUT_BASENAME}.md").write_text(
         render_markdown(proof),
         encoding="utf-8",
     )
