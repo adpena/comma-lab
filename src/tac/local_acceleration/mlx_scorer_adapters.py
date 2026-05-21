@@ -18,6 +18,7 @@ __all__ = [
     "nhwc_to_nchw",
     "run_mlx_batchnorm2d_nchw",
     "run_mlx_conv2d_nchw",
+    "run_mlx_efficientnet_block_nchw",
     "run_mlx_linear",
     "run_mlx_patch_embed_nchw",
     "run_mlx_mobileone_block_nchw",
@@ -28,6 +29,7 @@ __all__ = [
     "torch_batchnorm2d_to_mlx",
     "torch_conv2d_to_mlx",
     "torch_conv_mlp_to_mlx",
+    "torch_efficientnet_block_to_mlx",
     "torch_fastvit_stage_to_mlx",
     "torch_fastvit_vision_to_mlx",
     "torch_linear_to_mlx",
@@ -42,7 +44,7 @@ __all__ = [
 
 
 class MLXConvNormAct2dAdapter:
-    """MLX adapter for timm ``ConvNormAct`` with activation omitted."""
+    """MLX adapter for timm ``ConvNormAct``."""
 
     def __init__(self, torch_module: Any):
         if getattr(torch_module, "aa", None) is not None:
@@ -53,9 +55,23 @@ class MLXConvNormAct2dAdapter:
             raise TypeError("ConvNormAct adapter requires .conv and .bn children")
         self.conv = torch_conv2d_to_mlx(conv)
         self.bn = torch_batchnorm2d_to_mlx(bn)
+        self.activation_path = _class_path(getattr(bn, "act", None))
 
     def __call__(self, x_nhwc: Any) -> Any:
-        return self.bn(self.conv(x_nhwc))
+        return _apply_2d_activation(self.bn(self.conv(x_nhwc)), self.activation_path)
+
+
+class MLXBatchNormAct2dAdapter:
+    """MLX adapter for timm ``BatchNormAct2d``."""
+
+    def __init__(self, torch_bn: Any):
+        if _class_path(getattr(torch_bn, "drop", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("BatchNormAct2d non-identity drop is not covered")
+        self.bn = torch_batchnorm2d_to_mlx(torch_bn)
+        self.activation_path = _class_path(getattr(torch_bn, "act", None))
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        return _apply_2d_activation(self.bn(x_nhwc), self.activation_path)
 
 
 class MLXSEModuleAdapter:
@@ -81,6 +97,80 @@ class MLXSEModuleAdapter:
         x_se = mlx_relu(self.fc1(x_se))
         x_se = self.fc2(x_se)
         return x_nhwc * mlx_sigmoid(x_se)
+
+
+class MLXEfficientNetSqueezeExciteAdapter:
+    """MLX adapter for timm EfficientNet ``SqueezeExcite``."""
+
+    def __init__(self, torch_se: Any):
+        gate_path = _class_path(getattr(torch_se, "gate", None))
+        if gate_path != "torch.nn.modules.activation.Sigmoid":
+            raise NotImplementedError(f"unsupported SqueezeExcite gate: {gate_path}")
+        if _class_path(getattr(torch_se, "act1", None)) != "torch.nn.modules.activation.SiLU":
+            raise NotImplementedError(f"unsupported SqueezeExcite act1: {_class_path(torch_se.act1)}")
+        self.conv_reduce = torch_conv2d_to_mlx(torch_se.conv_reduce)
+        self.conv_expand = torch_conv2d_to_mlx(torch_se.conv_expand)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        import mlx.core as mx
+
+        x_se = mx.mean(x_nhwc, axis=(1, 2), keepdims=True)
+        x_se = mlx_silu(self.conv_reduce(x_se))
+        x_se = self.conv_expand(x_se)
+        return x_nhwc * mlx_sigmoid(x_se)
+
+
+class MLXDepthwiseSeparableConvAdapter:
+    """MLX adapter for timm EfficientNet ``DepthwiseSeparableConv``."""
+
+    def __init__(self, torch_block: Any):
+        if getattr(torch_block, "conv_s2d", None) is not None:
+            raise NotImplementedError("DepthwiseSeparableConv conv_s2d is not covered")
+        if _class_path(getattr(torch_block, "aa", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("DepthwiseSeparableConv anti-alias branch is not covered")
+        if _class_path(getattr(torch_block, "drop_path", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("DepthwiseSeparableConv non-identity DropPath is not covered")
+        self.has_skip = bool(getattr(torch_block, "has_skip", False))
+        self.conv_dw = torch_conv2d_to_mlx(torch_block.conv_dw)
+        self.bn1 = MLXBatchNormAct2dAdapter(torch_block.bn1)
+        self.se = MLXEfficientNetSqueezeExciteAdapter(torch_block.se)
+        self.conv_pw = torch_conv2d_to_mlx(torch_block.conv_pw)
+        self.bn2 = MLXBatchNormAct2dAdapter(torch_block.bn2)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        shortcut = x_nhwc
+        out = self.bn1(self.conv_dw(x_nhwc))
+        out = self.se(out)
+        out = self.bn2(self.conv_pw(out))
+        return out + shortcut if self.has_skip else out
+
+
+class MLXInvertedResidualAdapter:
+    """MLX adapter for timm EfficientNet ``InvertedResidual``."""
+
+    def __init__(self, torch_block: Any):
+        if getattr(torch_block, "conv_s2d", None) is not None:
+            raise NotImplementedError("InvertedResidual conv_s2d is not covered")
+        if _class_path(getattr(torch_block, "aa", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("InvertedResidual anti-alias branch is not covered")
+        if _class_path(getattr(torch_block, "drop_path", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("InvertedResidual non-identity DropPath is not covered")
+        self.has_skip = bool(getattr(torch_block, "has_skip", False))
+        self.conv_pw = torch_conv2d_to_mlx(torch_block.conv_pw)
+        self.bn1 = MLXBatchNormAct2dAdapter(torch_block.bn1)
+        self.conv_dw = torch_conv2d_to_mlx(torch_block.conv_dw)
+        self.bn2 = MLXBatchNormAct2dAdapter(torch_block.bn2)
+        self.se = MLXEfficientNetSqueezeExciteAdapter(torch_block.se)
+        self.conv_pwl = torch_conv2d_to_mlx(torch_block.conv_pwl)
+        self.bn3 = MLXBatchNormAct2dAdapter(torch_block.bn3)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        shortcut = x_nhwc
+        out = self.bn1(self.conv_pw(x_nhwc))
+        out = self.bn2(self.conv_dw(out))
+        out = self.se(out)
+        out = self.bn3(self.conv_pwl(out))
+        return out + shortcut if self.has_skip else out
 
 
 class MLXMobileOneBlockAdapter:
@@ -540,6 +630,17 @@ def torch_conv_mlp_to_mlx(torch_mlp: Any) -> MLXConvMlpAdapter:
     return MLXConvMlpAdapter(torch_mlp)
 
 
+def torch_efficientnet_block_to_mlx(torch_block: Any) -> Any:
+    """Convert a timm EfficientNet block to a parity-tested MLX adapter."""
+
+    class_path = _class_path(torch_block)
+    if class_path == "timm.models._efficientnet_blocks.DepthwiseSeparableConv":
+        return MLXDepthwiseSeparableConvAdapter(torch_block)
+    if class_path == "timm.models._efficientnet_blocks.InvertedResidual":
+        return MLXInvertedResidualAdapter(torch_block)
+    raise NotImplementedError(f"unsupported EfficientNet block: {class_path}")
+
+
 def torch_repmixer_block_to_mlx(torch_block: Any) -> MLXRepMixerBlockAdapter:
     """Convert a timm FastViT ``RepMixerBlock`` to a parity-tested MLX adapter."""
 
@@ -576,6 +677,15 @@ def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
     import mlx.core as mx
 
     out = mlx_conv(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_efficientnet_block_nchw(adapter: Any, x_nchw: np.ndarray) -> np.ndarray:
+    """Run an EfficientNet block adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
     return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 
@@ -674,6 +784,10 @@ def mlx_relu(x: Any) -> Any:
     return mx.maximum(x, 0.0)
 
 
+def mlx_silu(x: Any) -> Any:
+    return x * mlx_sigmoid(x)
+
+
 def mlx_sigmoid(x: Any) -> Any:
     import mlx.core as mx
 
@@ -722,6 +836,14 @@ def _class_path(obj: Any) -> str:
         return ""
     cls = type(obj)
     return f"{cls.__module__}.{cls.__qualname__}"
+
+
+def _apply_2d_activation(x: Any, activation_path: str) -> Any:
+    if activation_path in {"", "torch.nn.modules.linear.Identity"}:
+        return x
+    if activation_path == "torch.nn.modules.activation.SiLU":
+        return mlx_silu(x)
+    raise NotImplementedError(f"unsupported 2D activation: {activation_path}")
 
 
 def _torch_fastvit_child_to_mlx(child: Any) -> Any:

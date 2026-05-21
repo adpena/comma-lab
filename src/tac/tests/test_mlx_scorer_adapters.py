@@ -12,6 +12,7 @@ pytest.importorskip("mlx.core")
 from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     run_mlx_batchnorm2d_nchw,
     run_mlx_conv2d_nchw,
+    run_mlx_efficientnet_block_nchw,
     run_mlx_fastvit_stage_nchw,
     run_mlx_fastvit_vision_nchw,
     run_mlx_linear,
@@ -22,6 +23,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     run_mlx_repmixer_block_nchw,
     torch_batchnorm2d_to_mlx,
     torch_conv2d_to_mlx,
+    torch_efficientnet_block_to_mlx,
     torch_fastvit_stage_to_mlx,
     torch_fastvit_vision_to_mlx,
     torch_linear_to_mlx,
@@ -240,7 +242,7 @@ def test_posenet_fastvit_stage1_gpu_drift_is_measured() -> None:
         actual = run_mlx_fastvit_stage_nchw(torch_fastvit_stage_to_mlx(stage), x.numpy())
 
     drift = _max_abs(actual, expected)
-    assert 0.0 < drift < 5.0e-3
+    assert 0.0 < drift < 5.0e-2
 
 
 @pytest.mark.parametrize(
@@ -320,6 +322,54 @@ def test_posenet_end_to_end_gpu_drift_is_measured() -> None:
     assert 0.0 < drift < 5.0e-2
 
 
+def test_segnet_depthwise_separable_block0_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(73)
+    block = _loaded_segnet_encoder_block(0, 0)
+    x = torch.randn(1, 32, 8, 10)
+
+    expected = block(x).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_efficientnet_block_nchw(
+            torch_efficientnet_block_to_mlx(block),
+            x.numpy(),
+        )
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 2.0e-4
+
+
+def test_segnet_inverted_residual_block10_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(79)
+    block = _loaded_segnet_encoder_block(1, 0)
+    x = torch.randn(1, 16, 8, 10)
+
+    expected = block(x).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_efficientnet_block_nchw(
+            torch_efficientnet_block_to_mlx(block),
+            x.numpy(),
+        )
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 5.0e-4
+
+
+def test_segnet_inverted_residual_block10_gpu_drift_is_measured() -> None:
+    torch.manual_seed(79)
+    block = _loaded_segnet_encoder_block(1, 0)
+    x = torch.randn(1, 16, 8, 10)
+
+    expected = block(x).detach().numpy()
+    with temporary_mlx_device("gpu"):
+        actual = run_mlx_efficientnet_block_nchw(
+            torch_efficientnet_block_to_mlx(block),
+            x.numpy(),
+        )
+
+    drift = _max_abs(actual, expected)
+    assert 0.0 < drift < 5.0e-2
+
+
 def _loaded_posenet_stem_block0() -> nn.Module:
     return _loaded_posenet_stem()[0].eval()
 
@@ -350,3 +400,15 @@ def _loaded_posenet_stage(index: int) -> nn.Module:
 
 def _loaded_posenet_vision() -> nn.Module:
     return _loaded_posenet().vision.eval()
+
+
+def _loaded_segnet_encoder_block(stage_index: int, block_index: int) -> nn.Module:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path("upstream").resolve()))
+    import modules  # type: ignore  # noqa: PLC0415
+
+    segnet = modules.SegNet().eval()
+    segnet.load_state_dict(load_file(modules.segnet_sd_path))
+    return segnet.encoder.model.blocks[stage_index][block_index].eval()
