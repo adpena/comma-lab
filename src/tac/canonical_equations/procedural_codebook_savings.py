@@ -109,10 +109,18 @@ _INCLUDED_CONTEXTS = (
 # Contexts EXPLICITLY excluded — direct byte substitution on transform
 # coefficients (DWT detail subbands / DCT coefficients / etc.) where the
 # uniform-PRNG distributional mismatch (KL=1.638 nats / 3.28σ on the DWT
-# anchor) corrupts the downstream inverse transform.
+# anchor) corrupts the downstream inverse transform. Also includes
+# parser-essential null-gradient regions (PR101 magic header / Huffman
+# table headers / FEC6 format metadata) where the master-gradient
+# correctly reports zero gradient-leverage but the bytes are BIT-ESSENTIAL
+# for inflate parsing (H3_OPAQUE_TO_SCORER smoke commit pending; pair #2
+# META-class at a deeper surface — parser break rather than residual-codec
+# distributional mismatch).
 _EXCLUDED_CONTEXTS = (
     "direct_dwt_detail_subband_byte_substitution",
     "direct_byte_substitution_on_wavelet_decomposition_coefficients",
+    "master_gradient_null_byte_removal_with_constant_reconstruction",
+    "master_gradient_null_byte_replacement_with_arbitrary_constant",
 )
 
 # Default context applied to legacy callers that don't pass an explicit
