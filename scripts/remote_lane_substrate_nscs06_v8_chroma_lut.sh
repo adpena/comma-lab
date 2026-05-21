@@ -62,7 +62,20 @@ NSCS06_V8_VIDEO_PATH="${NSCS06_V8_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 NSCS06_V8_OUTPUT_DIR="${NSCS06_V8_OUTPUT_DIR:-$OUTPUT_DIR}"
 NSCS06_V8_EPOCHS="${NSCS06_V8_EPOCHS:-1}"
 NSCS06_V8_UPSTREAM_DIR="${NSCS06_V8_UPSTREAM_DIR:-$WORKSPACE/upstream}"
-NSCS06_V8_DEVICE="${NSCS06_V8_DEVICE:-cpu}"  # default cpu per L0 SCAFFOLD --smoke
+# OVERNIGHT-BBB FIX 2026-05-21 (cron 5e07de6e verdict MEDIUM diagnosis at
+# fc-01KS5XN8WF9JF15KVX3GPCFAE7 rc=1 elapsed=6.9s):
+# Default flipped cpu -> cuda per OVERNIGHT-V Phase 2 BUILD atomic recipe flip.
+# Pre-fix: stale L0 SCAFFOLD --smoke-only carryover defaulted to cpu, but
+# OVERNIGHT-V flipped NSCS06_V8_TRAINER_MODE smoke->full without atomic device
+# flip; trainer canonical _device_or_die(device=cpu, smoke=False) REFUSED per
+# CLAUDE.md "MPS auth eval is NOISE" + "EMA — non-negotiable" + full-training-
+# needs-CUDA convention; trainer.log: "--device cpu is permitted only with
+# --smoke ... Use --device cuda for promotion-grade training."
+# Sister-comparator: ATW_v2 / Balle / D1 / DPP / Z3 / Z3_G1 / Z4 / Z5 all
+# default _DEVICE to cuda; NSCS06 v8 was the only outlier. Per Catalog #240
+# recipe-vs-trainer-state consistency + Catalog #326 driver-mode-mismatch trap
+# sister class extended to device-mode consistency.
+NSCS06_V8_DEVICE="${NSCS06_V8_DEVICE:-cuda}"  # full-mode atomic flip per OVERNIGHT-BBB; smoke-mode operators may override via env
 
 # Catalog #326 driver-mode env var: explicit precedence over SMOKE_ONLY.
 # Recipe-side `env_overrides` block declares NSCS06_V8_TRAINER_MODE explicitly;

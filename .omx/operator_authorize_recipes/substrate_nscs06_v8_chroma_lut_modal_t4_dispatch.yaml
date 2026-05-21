@@ -125,8 +125,16 @@ required_input_files:
 # env_overrides (per Catalog #326 driver-mode env var explicit declaration):
 # Phase 2 BUILD flip 2026-05-21 (OVERNIGHT-V): MODE: "smoke" -> "full" +
 # SMOKE_ONLY: "1" -> "0" per Catalog #240 atomic recipe-vs-trainer-state flip.
+# OVERNIGHT-BBB ATOMIC FOLLOWUP 2026-05-21 (cron 5e07de6e verdict MEDIUM):
+# DEVICE: "cpu" (driver stale default) -> "cuda" (full-mode requires CUDA per
+# CLAUDE.md "MPS auth eval is NOISE" + "EMA — non-negotiable"). Sister-
+# comparator: 7 substrate drivers default _DEVICE to cuda; NSCS06 v8 alone
+# defaulted cpu. Per Catalog #326 sister discipline extended to device-mode
+# consistency; recipe declares NSCS06_V8_DEVICE explicitly per Catalog #151
+# TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 env_overrides:
   NSCS06_V8_TRAINER_MODE: "full"      # explicit per Catalog #326
+  NSCS06_V8_DEVICE: "cuda"            # explicit per Catalog #326 sister + OVERNIGHT-BBB atomic fix
   NSCS06_V8_EPOCHS: "1"
   SMOKE_ONLY: "0"
 
