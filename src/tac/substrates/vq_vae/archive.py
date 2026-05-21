@@ -46,6 +46,7 @@ import struct
 from dataclasses import dataclass
 
 import brotli  # type: ignore[import-not-found]
+import numpy as np
 import torch
 
 VQV1_MAGIC: bytes = b"VQV1"
@@ -53,6 +54,9 @@ VQV1_MAGIC: bytes = b"VQV1"
 
 VQV1_SCHEMA_VERSION: int = 1
 """Schema version byte. Bump when grammar changes."""
+
+VQV1_PROCEDURAL_DECODER_SENTINEL: bytes = b"VQVP"
+"""Decoder-section sentinel for procedural-codebook VQV1 archives."""
 
 # Header layout: MAGIC(4) + VERSION(1) + 5 u16 (10) + 3 u32 (12) = 27 bytes
 VQV1_HEADER_FMT: str = "<4sBHHHHHIII"
@@ -122,7 +126,93 @@ def _validate_runtime_state_dict(sd: dict[str, torch.Tensor]) -> None:
         )
 
 
-def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
+def _derive_procedural_codebook_tensor(
+    *,
+    seed_bytes: bytes,
+    codebook_size: int,
+    embedding_dim: int,
+    generator_kind: str,
+) -> torch.Tensor:
+    """Derive a bounded fp16 codebook tensor from an in-archive seed."""
+
+    from tac.procedural_codebook_generator import derive_codebook_from_seed
+
+    raw = derive_codebook_from_seed(
+        seed_bytes=seed_bytes,
+        output_shape=(codebook_size, embedding_dim),
+        dtype=np.uint16,
+        generator_kind=generator_kind,
+    )
+    # Map deterministic uint16 values to the same small initialization scale
+    # used by VqVaeSubstrate.__init__. This avoids arbitrary fp16 bit-patterns
+    # such as NaN/Inf while preserving a byte-mutation-traceable codebook.
+    scale = max(float(codebook_size), 1.0)
+    values = ((raw.astype(np.float32) / 65535.0) * 2.0 - 1.0) / scale
+    return torch.from_numpy(values.astype(np.float16, copy=True))
+
+
+def _deserialize_procedural_state_dict(
+    blob: bytes,
+    *,
+    codebook_size: int,
+    embedding_dim: int,
+) -> dict[str, torch.Tensor]:
+    """Deserialize a VQVP procedural decoder section and inject codebook."""
+
+    if len(blob) < 13:
+        raise ValueError("procedural decoder section too short")
+
+    pos = len(VQV1_PROCEDURAL_DECODER_SENTINEL)
+    stored_codebook_size, stored_embedding_dim, generator_kind_tag = struct.unpack(
+        "<HHB", blob[pos : pos + 5]
+    )
+    pos += 5
+    seed_len = struct.unpack("<I", blob[pos : pos + 4])[0]
+    pos += 4
+    if seed_len <= 0 or seed_len > 256:
+        raise ValueError(f"procedural seed length {seed_len} outside [1, 256]")
+    seed_bytes = blob[pos : pos + seed_len]
+    pos += seed_len
+    if len(seed_bytes) != seed_len:
+        raise ValueError("procedural decoder section truncated before seed bytes")
+    if stored_codebook_size != codebook_size or stored_embedding_dim != embedding_dim:
+        raise ValueError(
+            "procedural envelope codebook shape "
+            f"({stored_codebook_size}, {stored_embedding_dim}) does not match "
+            f"VQV1 header ({codebook_size}, {embedding_dim})"
+        )
+    generator_kind_by_tag = {0: "xorshift", 1: "lcg", 2: "pcg64"}
+    try:
+        generator_kind = generator_kind_by_tag[int(generator_kind_tag)]
+    except KeyError as exc:
+        raise ValueError(f"unknown procedural generator tag: {generator_kind_tag}") from exc
+
+    raw = brotli.decompress(blob[pos:])
+    sd = pickle.loads(raw)
+    if not isinstance(sd, dict):
+        raise ValueError("procedural decoder blob did not unpickle to a dict")
+    sd["codebook"] = _derive_procedural_codebook_tensor(
+        seed_bytes=seed_bytes,
+        codebook_size=codebook_size,
+        embedding_dim=embedding_dim,
+        generator_kind=generator_kind,
+    )
+    _validate_runtime_state_dict(sd)
+    return sd
+
+
+def _deserialize_state_dict(
+    blob: bytes,
+    *,
+    codebook_size: int,
+    embedding_dim: int,
+) -> dict[str, torch.Tensor]:
+    if blob.startswith(VQV1_PROCEDURAL_DECODER_SENTINEL):
+        return _deserialize_procedural_state_dict(
+            blob,
+            codebook_size=codebook_size,
+            embedding_dim=embedding_dim,
+        )
     raw = brotli.decompress(blob)
     sd = pickle.loads(raw)
     if not isinstance(sd, dict):
@@ -251,7 +341,11 @@ def parse_archive(blob: bytes) -> VqVaeArchive:
     if pos != len(blob):
         raise ValueError(f"archive size {len(blob)} != expected {pos} from header")
 
-    sd = _deserialize_state_dict(decoder_blob)
+    sd = _deserialize_state_dict(
+        decoder_blob,
+        codebook_size=int(codebook_size),
+        embedding_dim=int(embedding_dim),
+    )
     indices = _unpack_indices_int16(indices_blob, (num_pairs, 2, h_grid, w_grid))
     meta = json.loads(meta_blob.decode("utf-8"))
 

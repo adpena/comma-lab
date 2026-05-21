@@ -613,6 +613,15 @@ def _write_runtime(submission_dir: Path) -> None:
     substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "vq_vae"
     for name in ("architecture.py", "archive.py", "inflate.py"):
         shutil.copy2(substrate_src / name, runtime_pkg / name)
+    procedural_src = REPO_ROOT / "src" / "tac" / "procedural_codebook_generator"
+    procedural_dst = submission_dir / "src" / "tac" / "procedural_codebook_generator"
+    if procedural_dst.exists():
+        shutil.rmtree(procedural_dst)
+    shutil.copytree(
+        procedural_src,
+        procedural_dst,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
     _canon_vendor_shared_inflate_runtime(submission_dir, repo_root=REPO_ROOT)
 
     inflate_sh = (

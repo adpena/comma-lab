@@ -378,9 +378,10 @@ def test_compose_procedural_archive_convenience_wrapper_matches_full_API() -> No
     # Header parses identically.
     h_archive = struct.unpack(VQV1_HEADER_FMT, via_archive_py[:VQV1_HEADER_SIZE])
     h_variant = struct.unpack(VQV1_HEADER_FMT, via_variant_module[:VQV1_HEADER_SIZE])
-    # All scalar header fields match (magic, version, K, D, num_pairs, h_grid,
-    # w_grid, decoder_len, indices_len, meta_len).
-    assert h_archive == h_variant
+    # All scalar header fields except decoder_len match. The decoder-only
+    # pickle may use storage IDs that perturb brotli length across calls.
+    assert h_archive[:7] == h_variant[:7]
+    assert h_archive[8:] == h_variant[8:]
     # Bytes-saved within 16 B (allowing for pickle storage-ID non-determinism).
     assert abs(len(via_archive_py) - len(via_variant_module)) < 16
 
@@ -417,15 +418,35 @@ def test_compose_with_procedural_codebook_byte_mutation_smoke_catalog_272() -> N
     # the indices + meta sections are byte-identical.
     h_a = struct.unpack(VQV1_HEADER_FMT, archive_seed_a[:VQV1_HEADER_SIZE])
     h_b = struct.unpack(VQV1_HEADER_FMT, archive_seed_b[:VQV1_HEADER_SIZE])
-    # decoder section length parity (the seed envelope itself is fixed-size
-    # for a 32-byte seed; the decoder-only blob is identical for both seeds
-    # because the underlying state_dict is the same).
-    assert h_a[7] == h_b[7], "decoder section length changed unexpectedly"
     decoder_a = archive_seed_a[VQV1_HEADER_SIZE : VQV1_HEADER_SIZE + h_a[7]]
     decoder_b = archive_seed_b[VQV1_HEADER_SIZE : VQV1_HEADER_SIZE + h_b[7]]
     assert decoder_a != decoder_b, (
         "decoder section bytes did not change with seed; operational mechanism inert"
     )
+    indices_a = archive_seed_a[
+        VQV1_HEADER_SIZE + h_a[7] : VQV1_HEADER_SIZE + h_a[7] + h_a[8]
+    ]
+    indices_b = archive_seed_b[
+        VQV1_HEADER_SIZE + h_b[7] : VQV1_HEADER_SIZE + h_b[7] + h_b[8]
+    ]
+    assert indices_a == indices_b, "seed mutation unexpectedly changed indices_blob"
+
+
+def test_procedural_archive_parses_and_injects_codebook() -> None:
+    """A composed procedural archive is inflate-readable, not just smaller."""
+    original = _make_synthetic_vqv1_archive_bytes()
+    archive = compose_with_procedural_codebook(
+        original_archive_bytes=original,
+        seed_bytes=_CANONICAL_SEED_32B,
+    )
+    parsed = parse_archive(archive)
+    assert "codebook" in parsed.decoder_state_dict
+    assert tuple(parsed.decoder_state_dict["codebook"].shape) == (
+        parsed.codebook_size,
+        parsed.embedding_dim,
+    )
+    assert torch.isfinite(parsed.decoder_state_dict["codebook"]).all()
+    assert parsed.indices.shape == parse_archive(original).indices.shape
 
 
 # -------------------------------------------------------------------------
