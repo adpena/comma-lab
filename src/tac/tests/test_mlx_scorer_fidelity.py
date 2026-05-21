@@ -10,6 +10,7 @@ from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_scorer_fidelity import (
     FAIL_VERDICT,
+    MLXScorerFidelityThresholds,
     PASS_VERDICT,
     build_mlx_scorer_training_signal_fidelity_manifest,
 )
@@ -108,6 +109,27 @@ def test_mlx_fidelity_fails_false_authority_flags() -> None:
     assert "mlx_payload_attempts_score_claim" in manifest["blockers"]
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
+
+
+def test_mlx_fidelity_requires_mlx_evidence_grade() -> None:
+    manifest = build_mlx_scorer_training_signal_fidelity_manifest(
+        _payload(),
+        _payload(),
+    )
+
+    assert manifest["passed"] is False
+    assert "mlx_evidence_grade_missing" in manifest["blockers"]
+
+
+def test_mlx_fidelity_allow_missing_inflated_identity_does_not_allow_present_mismatch() -> None:
+    manifest = build_mlx_scorer_training_signal_fidelity_manifest(
+        _payload(evidence_grade=EVIDENCE_GRADE_MLX, inflated_sha256="b" * 64),
+        _payload(inflated_sha256="c" * 64),
+        thresholds=MLXScorerFidelityThresholds(require_inflated_output_identity=False),
+    )
+
+    assert manifest["passed"] is False
+    assert "inflated_outputs_aggregate_sha256_identity_present_mismatch" in manifest["blockers"]
 
 
 def test_mlx_fidelity_cli_writes_manifest(tmp_path: Path) -> None:

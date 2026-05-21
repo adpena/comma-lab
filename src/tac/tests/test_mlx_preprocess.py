@@ -234,6 +234,59 @@ def test_full_cache_cli_requires_ack_for_large_eager_tensor_surface(tmp_path: Pa
     assert '"pair_count": 2' in allowed.stdout
 
 
+def test_full_cache_cli_rejects_negative_max_pairs(tmp_path: Path) -> None:
+    h, w = CAMERA_HW
+    raw_path = tmp_path / "0.raw"
+    frames = np.zeros((2, h, w, 3), dtype=np.uint8)
+    raw_path.write_bytes(frames.tobytes())
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache.py"),
+            "--raw",
+            str(raw_path),
+            "--output-dir",
+            str(tmp_path / "cache"),
+            "--max-pairs",
+            "-1",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "--max-pairs must be >= 1" in completed.stderr
+
+
+def test_hash_only_cli_rejects_nonpositive_batch_pairs(tmp_path: Path) -> None:
+    h, w = CAMERA_HW
+    raw_path = tmp_path / "0.raw"
+    frames = np.zeros((2, h, w, 3), dtype=np.uint8)
+    raw_path.write_bytes(frames.tobytes())
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache.py"),
+            "--raw",
+            str(raw_path),
+            "--output-dir",
+            str(tmp_path / "cache"),
+            "--hash-only",
+            "--batch-pairs",
+            "0",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "--batch-pairs must be >= 1" in completed.stderr
+
+
 def test_contest_auth_eval_hash_artifact_updates_provenance(tmp_path: Path) -> None:
     from experiments.contest_auth_eval import _record_scorer_input_cache_hash_artifact
 

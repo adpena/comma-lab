@@ -325,7 +325,10 @@ def write_scorer_input_cache_from_raw_file(
     raw = load_raw_video_memmap(raw_path)
     pair_indices = non_overlapping_pair_indices(raw.shape[0])
     if max_pairs is not None:
-        pair_indices = pair_indices[: int(max_pairs)]
+        max_pairs_int = int(max_pairs)
+        if max_pairs_int < 1:
+            raise ValueError(f"max_pairs must be >= 1, got {max_pairs}")
+        pair_indices = pair_indices[:max_pairs_int]
     frame_indices = pair_indices.reshape(-1)
     pairs = np.asarray(raw[frame_indices]).reshape(len(pair_indices), 2, *raw.shape[1:])
     batch = preprocess_scorer_inputs_from_pairs(

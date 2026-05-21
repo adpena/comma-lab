@@ -244,9 +244,13 @@ def _append_identity_blockers(
     archive = _identity_pair(mlx, auth, _archive_sha256)
     if require_archive_identity and not archive["match"]:
         blockers.append("archive_sha256_identity_mismatch_or_missing")
+    elif not require_archive_identity and _present_mismatch(archive):
+        blockers.append("archive_sha256_identity_present_mismatch")
     inflated = _identity_pair(mlx, auth, _inflated_outputs_aggregate_sha256)
     if require_inflated_output_identity and not inflated["match"]:
         blockers.append("inflated_outputs_aggregate_sha256_identity_mismatch_or_missing")
+    elif not require_inflated_output_identity and _present_mismatch(inflated):
+        blockers.append("inflated_outputs_aggregate_sha256_identity_present_mismatch")
 
 
 def _append_axis_and_authority_blockers(blockers: list[str], mlx: dict[str, Any]) -> None:
@@ -257,7 +261,9 @@ def _append_axis_and_authority_blockers(blockers: list[str], mlx: dict[str, Any]
     if mlx.get("rank_or_kill_eligible") is True:
         blockers.append("mlx_payload_attempts_rank_or_kill_eligibility")
     evidence_grade = mlx.get("evidence_grade")
-    if evidence_grade is not None and evidence_grade != EVIDENCE_GRADE_MLX:
+    if evidence_grade is None:
+        blockers.append("mlx_evidence_grade_missing")
+    elif evidence_grade != EVIDENCE_GRADE_MLX:
         blockers.append(f"mlx_evidence_grade_not_{EVIDENCE_GRADE_MLX}")
 
 
@@ -342,6 +348,12 @@ def _identity_pair(
         "auth_eval": auth_value,
         "match": mlx_value is not None and mlx_value == auth_value,
     }
+
+
+def _present_mismatch(identity: dict[str, Any]) -> bool:
+    lhs = identity.get("mlx")
+    rhs = identity.get("auth_eval")
+    return lhs is not None and rhs is not None and lhs != rhs
 
 
 def _archive_sha256(payload: dict[str, Any]) -> str | None:

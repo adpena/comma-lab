@@ -49,6 +49,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
+    if args.max_pairs is not None and args.max_pairs < 1:
+        raise SystemExit("--max-pairs must be >= 1")
+    if args.batch_pairs < 1:
+        raise SystemExit("--batch-pairs must be >= 1")
     if args.hash_only:
         if args.max_pairs is not None:
             raise SystemExit("--hash-only does not support --max-pairs; hash the full auth surface")
