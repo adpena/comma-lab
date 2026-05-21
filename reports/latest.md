@@ -1,32 +1,26 @@
 <!--
-generated_at: 2026-05-21T02:45:14Z
-from_state_hash: canonical_frontier_pointer_20260520T115711Z_plus_wave3_zero_spend_cascade
-regenerated_by: codex:dp1_procedural_paired_harvest_plan_20260521
-last_refreshed_at: 2026-05-21T02:45:14Z
-last_refreshed_by: codex:dp1_procedural_paired_harvest_plan_20260521
-last_refreshed_head: b93c15afd5fa24ad888200721853b74e2a8f7275
+generated_at: 2026-05-21T23:23:58Z
+from_state_hash: frontier_scan_no_drift_plus_mlx_local_acceleration_20260521T2323Z
+regenerated_by: codex:mlx_local_acceleration_windowing_profiler_20260521
+last_refreshed_at: 2026-05-21T23:23:58Z
+last_refreshed_by: codex:mlx_local_acceleration_windowing_profiler_20260521
+last_refreshed_head: 7362930ed8717b9778cdc2ad7935e77198ff32ec
 last_refreshed_note: |
-  Current frontier/status refresh after PR #110, D-3 compliance clearance,
-  PR101/FEC6 PacketIR runtime-consumption closure, VQ K=2 diagnostic
-  terminalization, and the zero-spend Wave-3 null/procedural/magic-codec
-  cascade. The scanner-derived FRONTIER section below was rechecked with
-  tools/scan_best_anchor_per_axis.py at 2026-05-21T00:09Z; no CPU/CUDA frontier
-  score changed. The 2026-05-21 operation notes now include the pair #2
-  sparse PacketIR/SRL1 null-byte residual falsification, pair #4 seed-boundary
-  guard, LL authority hardening, the residual-hybrid sister equation, and the
-  PACT-NERV-DistilledScorer scorer-response dataset hook. The DP1 procedural
-  paired-harvest planner now binds harvested DP1 training outputs to paired
-  CPU/CUDA exact-eval commands without granting score authority before eval.
+  Current frontier/status refresh after MLX scorer-response full-cache
+  calibration, deterministic pair-windowing, and local profiler landing. The
+  scanner-derived FRONTIER section below was rechecked with
+  tools/scan_best_anchor_per_axis.py --format json at 2026-05-21T23:23Z; no
+  CPU/CUDA frontier score changed. MLX local acceleration remains
+  candidate-generation only until matching CPU/CUDA auth-axis transfer
+  calibration passes.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-21 UTC
 
 > **2026-05-21 refresh note**: the scanner-derived FRONTIER section was
-> rechecked after the Wave-3 cascade; CPU/CUDA leaders are unchanged, but the
-> routing notes now include the null-byte, procedural-codebook, magic-codec,
-> sidecar, and FEC7 selector falsification evidence landed after the prior
-> refresh. Historical roadmap sections below remain retained for context; use
-> `.omx/state/current_focus.md`,
+> rechecked after the MLX local-acceleration landings at head `7362930ed`; the
+> CPU/CUDA leaders are unchanged. Historical roadmap sections below remain
+> retained for context; use `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
 > detailed queue routing.
 
@@ -44,7 +38,7 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-05-21T00:09Z
+### Current best - last rechecked 2026-05-21T23:23Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
@@ -93,6 +87,32 @@ last_refreshed_note: |
   Same-runtime byte polish is below the ~78 charged-byte threshold, so the next
   useful artifact must change Seg/Pose components or add a consumed procedural
   residual layer before paired exact eval.
+
+### 2026-05-21 MLX local-acceleration refresh
+
+- **Frontier unchanged after current scan**:
+  `tools/scan_best_anchor_per_axis.py --format json` was rerun at
+  `2026-05-21T23:23Z`. Drift list is empty; best existing `[contest-CPU]`
+  remains `0.1920513169` and best existing `[contest-CUDA T4]` remains
+  `0.2053300290`.
+- **MLX full-cache local advisory calibration landed**:
+  `.omx/research/codex_findings_mlx_full600_local_advisory_fec6_transfer_calibration_20260521T231339Z_codex.md`
+  records the FEC6 full-600 local MLX response against the matching macOS CPU
+  advisory payload. Corrected archive bytes are `178517`; calibrated local
+  advisory score is `0.19206194316409206`; score delta versus macOS CPU
+  advisory is `6.26282986443405e-07`. This is not a contest score.
+- **MLX deterministic pair-windowing landed**:
+  `.omx/research/codex_findings_mlx_scorer_response_windowing_20260521T232100Z_codex.md`
+  adds `--start-pair` / `--max-pairs` to
+  `tools/run_mlx_scorer_response_cache.py`, enabling deterministic slice-level
+  scorer-response runs without rebuilding full caches.
+- **MLX profiler landed**:
+  `.omx/research/codex_findings_mlx_scorer_response_profiler_20260521T232300Z_codex.md`
+  adds `tools/profile_mlx_scorer_response_cache.py`. A real FEC6 window smoke
+  over pairs `[16, 20]` measured CPU `batch_pairs=2` at
+  `1.1174859826486507` pairs/s versus `0.94424426733706` pairs/s for
+  `batch_pairs=1`; SegNet SHA was identical and PoseNet drift was low-order.
+  The profiler output is candidate-generation only.
 
 ### 2026-05-21 zero-spend cascade refresh
 
