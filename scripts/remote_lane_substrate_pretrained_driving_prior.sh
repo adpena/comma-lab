@@ -39,7 +39,7 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-}"
-LANE_ID="lane_pretrained_driving_prior_lane_scaffold_20260513"
+LANE_ID="${DPP_LANE_ID:-lane_pretrained_driving_prior_lane_scaffold_20260513}"
 TAG="${TAG:-substrate_pretrained_driving_prior}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_pretrained_driving_prior_results}"
 # Catalog #204 cross-driver expansion (2026-05-19): when running on Modal
@@ -92,6 +92,13 @@ DPP_MAX_DISTILLATION_CHUNKS="${DPP_MAX_DISTILLATION_CHUNKS:-8}"
 DPP_MAX_PAIRS="${DPP_MAX_PAIRS:-600}"
 DPP_VAL_PAIR_COUNT="${DPP_VAL_PAIR_COUNT:-64}"
 DPP_VAL_EVERY_EPOCHS="${DPP_VAL_EVERY_EPOCHS:-50}"
+DPP_PROCEDURAL_CODEBOOK_REPLACEMENT="${DPP_PROCEDURAL_CODEBOOK_REPLACEMENT:-0}"
+DPP_PROCEDURAL_CODEBOOK_SEED_HEX="${DPP_PROCEDURAL_CODEBOOK_SEED_HEX:-}"
+DPP_PROCEDURAL_CODEBOOK_GENERATOR_KIND="${DPP_PROCEDURAL_CODEBOOK_GENERATOR_KIND:-pcg64}"
+DPP_PROCEDURAL_CODEBOOK_NULL_EXPLOIT_CONTROL="${DPP_PROCEDURAL_CODEBOOK_NULL_EXPLOIT_CONTROL:-0}"
+DPP_PROCEDURAL_CODEBOOK_VALIDATE_DOMAIN="${DPP_PROCEDURAL_CODEBOOK_VALIDATE_DOMAIN:-1}"
+DPP_PROCEDURAL_VARIANT_PROVENANCE_PATH="${DPP_PROCEDURAL_VARIANT_PROVENANCE_PATH:-}"
+DPP_PROCEDURAL_VARIANT_DISTILLATION_SKIP="${DPP_PROCEDURAL_VARIANT_DISTILLATION_SKIP:-0}"
 # Phase 2 Comma2k19 chunk path (Catalog #209-routed via Comma2k19FrameIterator).
 # Smoke path uses synthetic stub regardless; full path with --dataset-name=comma2k19
 # requires this to be set by the operator-authorize wrapper. Default empty so
@@ -107,6 +114,29 @@ log() { echo "[lane-dpp] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
+
+DPP_PROCEDURAL_ARGS=()
+if [ "$DPP_PROCEDURAL_CODEBOOK_REPLACEMENT" = "1" ]; then
+    DPP_PROCEDURAL_ARGS+=(--enable-procedural-codebook-replacement)
+fi
+if [ -n "$DPP_PROCEDURAL_CODEBOOK_SEED_HEX" ]; then
+    DPP_PROCEDURAL_ARGS+=(--procedural-codebook-seed-hex "$DPP_PROCEDURAL_CODEBOOK_SEED_HEX")
+fi
+if [ -n "$DPP_PROCEDURAL_CODEBOOK_GENERATOR_KIND" ]; then
+    DPP_PROCEDURAL_ARGS+=(--procedural-codebook-generator-kind "$DPP_PROCEDURAL_CODEBOOK_GENERATOR_KIND")
+fi
+if [ "$DPP_PROCEDURAL_CODEBOOK_NULL_EXPLOIT_CONTROL" = "1" ]; then
+    DPP_PROCEDURAL_ARGS+=(--procedural-codebook-null-exploit-control)
+fi
+if [ "$DPP_PROCEDURAL_CODEBOOK_VALIDATE_DOMAIN" = "0" ]; then
+    DPP_PROCEDURAL_ARGS+=(--no-procedural-codebook-validate-domain)
+fi
+if [ -n "$DPP_PROCEDURAL_VARIANT_PROVENANCE_PATH" ]; then
+    DPP_PROCEDURAL_ARGS+=(--procedural-variant-provenance-path "$DPP_PROCEDURAL_VARIANT_PROVENANCE_PATH")
+fi
+if [ "$DPP_PROCEDURAL_VARIANT_DISTILLATION_SKIP" = "1" ]; then
+    DPP_PROCEDURAL_ARGS+=(--procedural-variant-distillation-skip)
+fi
 
 # Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
 rm -f upstream/videos/._*.mkv
@@ -227,7 +257,8 @@ log "Stage 3: smoke distill + pack + parse"
     --device "$DPP_DEVICE" \
     --epochs "$DPP_EPOCHS" \
     --batch-size "$DPP_BATCH_SIZE" \
-    --dataset-name synthetic_test
+    --dataset-name synthetic_test \
+    "${DPP_PROCEDURAL_ARGS[@]}"
 
 # Stage 4: Phase 2 full training (lane_pretrained_driving_prior_phase_2_20260514).
 # Only fires when DPP_RUN_FULL=1 is explicitly set by the operator-authorize
@@ -311,6 +342,7 @@ if [ "$DPP_RUN_FULL" = "1" ]; then
     if [ "$DPP_ADVISORY_CPU_EXPLICITLY_WAIVED" = "1" ]; then
         DPP_FULL_ARGS+=(--advisory-cpu-explicitly-waived)
     fi
+    DPP_FULL_ARGS+=("${DPP_PROCEDURAL_ARGS[@]}")
     "$PYBIN" "$WORKSPACE/experiments/train_substrate_pretrained_driving_prior.py" \
         "${DPP_FULL_ARGS[@]}"
     log "DPP Phase 2 full training complete"

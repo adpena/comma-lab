@@ -45804,6 +45804,132 @@
         }
       },
       "notes": "research_only=true; source_grounded_static_planner; score_claim=false; promotion_eligible=false; ranks DP1 codebook_blob then ATW2 cdf_table_blob; blocks PR101 FEC6 null bytes and current GLV1 false surface"
+    },
+    {
+      "id": "lane_dp1_original_baseline_first_paired_anchor_20260520",
+      "name": "DP1 original baseline first paired anchor",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/dp1_paired_smoke_recipes_landed_20260521_codex.md + baseline paired recipe + remote driver wiring"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "49 focused tests pass incl runtime vendor import; operator_authorize dry-run refuses dispatch_enabled=false; DPP_SKIP_AUTH_EVAL=1 preserves score_claim=false; git diff --check clean"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "operator-gated DP1 paired baseline recipe; dispatch_enabled=false; score_claim=false; promotion_eligible=false",
+      "research_only": true
+    },
+    {
+      "id": "lane_dp1_null_exploit_codebook_replacement_control_paired_smoke_20260520",
+      "name": "DP1 null exploit codebook replacement control paired smoke",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/dp1_paired_smoke_recipes_landed_20260521_codex.md + null-control paired recipe + smoke/full driver wiring"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "49 focused tests pass incl runtime vendor import; operator_authorize dry-run refuses dispatch_enabled=false; DPP_SKIP_AUTH_EVAL=1 preserves score_claim=false; git diff --check clean"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "operator-gated DP1 null-exploit seed control paired-smoke recipe; dispatch_enabled=false; score_claim=false; promotion_eligible=false; fire only after ambiguous procedural residual",
+      "research_only": true
+    },
+    {
+      "id": "lane_dp1_procedural_codebook_replacement_first_paired_smoke_20260520",
+      "name": "DP1 procedural codebook replacement first paired smoke",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/dp1_paired_smoke_recipes_landed_20260521_codex.md + procedural paired recipe + smoke/full driver wiring"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "49 focused tests pass incl runtime vendor import; operator_authorize dry-run refuses dispatch_enabled=false; DPP_SKIP_AUTH_EVAL=1 preserves score_claim=false; git diff --check clean"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "operator-gated DP1 procedural codebook paired-smoke recipe; dispatch_enabled=false; score_claim=false; promotion_eligible=false; first empirical anchor candidate",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -45813,5 +45939,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T02:06:33Z"
+  "updated_at": "2026-05-21T02:33:00Z"
 }

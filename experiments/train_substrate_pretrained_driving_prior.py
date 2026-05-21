@@ -197,6 +197,11 @@ COST_BAND_TOOL: Path = REPO_ROOT / "tools" / "append_cost_band_anchor.py"
 LANE_ID_PHASE_2: str = "lane_pretrained_driving_prior_phase_2_20260514"
 
 
+def _current_lane_id() -> str:
+    """Return the operator-authorized lane id when a recipe supplies one."""
+    return os.environ.get("DPP_LANE_ID", "").strip() or LANE_ID_PHASE_2
+
+
 def build_argparser() -> argparse.ArgumentParser:
     """Build the canonical argparse for the trainer.
 
@@ -612,6 +617,15 @@ def build_argparser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--no-procedural-codebook-validate-domain",
+        dest="procedural_codebook_validate_domain",
+        action="store_false",
+        help=(
+            "Disable canonical equation #26 domain validation for diagnostic "
+            "runs only. Operator recipes leave validation enabled."
+        ),
+    )
+    parser.add_argument(
         "--procedural-variant-provenance-path",
         default="",
         help=(
@@ -643,6 +657,20 @@ def _validate_full_cpu_flags(args: argparse.Namespace) -> None:
             "eligible artifacts; the explicit attestation makes that "
             "operator-visible."
         )
+
+
+def _reject_unimplemented_distillation_skip(args: argparse.Namespace) -> None:
+    """Fail closed until procedural no-distillation training has real semantics."""
+    if not getattr(args, "procedural_variant_distillation_skip", False):
+        return
+    raise SystemExit(
+        "ERROR: --procedural-variant-distillation-skip is reserved, but this "
+        "trainer still needs a concrete DashcamCodebook for prior loss, "
+        "archive packing, and apples-to-apples baseline comparison. The "
+        "operator-gated DP1 procedural recipes leave this flag unset; "
+        "implement a real procedural DashcamCodebook training path before "
+        "enabling it."
+    )
 
 
 def _resolve_procedural_seed_bytes(args: argparse.Namespace) -> bytes:
@@ -794,7 +822,7 @@ def _apply_procedural_codebook_replacement(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "axis_tag": "[predicted]",
-        "lane_id": "lane_dp1_procedural_codebook_replacement_variant_20260520",
+        "lane_id": _current_lane_id(),
         "design_memo": (
             ".omx/research/dp1_procedural_codebook_paired_smoke_pre_dispatch_design_20260520T232120Z.md"
         ),
@@ -1225,6 +1253,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
     `make_synthetic_pair_batch` calls in any non-smoke training path", real
     training MUST use the contest video pyav decode (handled in _full_main).
     """
+    _reject_unimplemented_distillation_skip(args)
+
     from pathlib import Path
 
     from tac.substrates.pretrained_driving_prior import (
@@ -1284,6 +1314,24 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "basis_sha256": book.metadata.get("basis_sha256", ""),
         "num_frames_used": book.metadata.get("num_frames_used", 0),
     }
+    procedural_seed_bytes: bytes | None = None
+    if args.enable_procedural_codebook_replacement:
+        procedural_seed_bytes = _resolve_procedural_seed_bytes(args)
+        meta["procedural_codebook_variant_active"] = True
+        meta["procedural_codebook_seed_hex"] = procedural_seed_bytes.hex()
+        meta["procedural_codebook_generator_kind"] = (
+            args.procedural_codebook_generator_kind
+        )
+        meta["procedural_codebook_null_exploit_control"] = bool(
+            args.procedural_codebook_null_exploit_control
+        )
+        meta["predicted_band_validation_status"] = "pending_post_training"
+        meta["canonical_equation_id"] = (
+            "procedural_codebook_from_seed_compression_savings_v1"
+        )
+        meta["canonical_equation_context"] = (
+            "comma2k19_ood_derived_basis_replacement"
+        )
     packed = pack_archive(
         book,
         renderer.state_dict(),
@@ -1294,13 +1342,26 @@ def _smoke_main(args: argparse.Namespace) -> int:
         output_width=renderer_cfg.output_width,
         per_pair_bytes=per_pair_bytes,
     )
-    parsed = parse_archive(packed)
+    out_dir = Path(args.output_dir)
+    if procedural_seed_bytes is not None:
+        packed = _apply_procedural_codebook_replacement(
+            args=args,
+            canonical_archive_bytes=packed,
+            seed_bytes=procedural_seed_bytes,
+            output_dir=out_dir,
+        )
+        from tac.substrates.pretrained_driving_prior.procedural_codebook_inflate import (
+            parse_archive_procedural_aware,
+        )
+
+        parsed = parse_archive_procedural_aware(packed)
+    else:
+        parsed = parse_archive(packed)
     print(
         f"[dpp-smoke] archive pack/parse roundtrip: {len(packed)} bytes; "
         f"pairs={parsed.num_pairs}; header={28}"
     )
 
-    out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     archive_bin = out_dir / "archive_dir" / "0.bin"
     archive_bin.parent.mkdir(parents=True, exist_ok=True)
@@ -1326,6 +1387,15 @@ def _smoke_main(args: argparse.Namespace) -> int:
     manifest["archive_zip_bytes"] = len(archive_zip_bytes)
     manifest["archive_zip_sha256"] = archive_zip_sha256
     manifest["training_mode"] = "smoke"
+    manifest["procedural_codebook_variant_active"] = bool(
+        args.enable_procedural_codebook_replacement
+    )
+    manifest["procedural_codebook_null_exploit_control"] = bool(
+        args.procedural_codebook_null_exploit_control
+    )
+    manifest["procedural_codebook_generator_kind"] = (
+        args.procedural_codebook_generator_kind
+    )
     manifest["result"] = {
         "training_mode": "smoke",
         "archive_bytes": len(packed),
@@ -1335,6 +1405,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "archive_zip_path": str(archive_zip),
         "archive_bin_path": str(archive_bin),
         "codebook_path": str(codebook_path),
+        "procedural_codebook_variant_active": bool(
+            args.enable_procedural_codebook_replacement
+        ),
     }
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True),
@@ -1387,6 +1460,8 @@ def _full_main(args: argparse.Namespace) -> int:
         when ``DPP_ACTUAL_COST_USD`` is provided (Catalog #175).
     """
     import torch
+
+    _reject_unimplemented_distillation_skip(args)
 
     from tac.differentiable_eval_roundtrip import (
         patch_upstream_yuv6_globally,
@@ -1865,7 +1940,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 "num_hidden_layers": renderer_cfg.num_hidden_layers,
                 "best_val_lagrangian": best_val_lag if math.isfinite(best_val_lag) else None,
                 "best_epoch": best_epoch,
-                "lane_id": LANE_ID_PHASE_2,
+                "lane_id": _current_lane_id(),
                 # Catalog #210 surfaces:
                 "license_tags": book.metadata.get("license_tags", []),
                 "dataset_provenance": book.metadata.get(
@@ -1999,7 +2074,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 result = ContestResult(
                     axis="cuda",
                     hardware_substrate=detected_substrate,
-                    architecture_class=LANE_ID_PHASE_2,
+                    architecture_class=_current_lane_id(),
                     score_value=contest_cuda_score,
                     evidence_tag="[contest-CUDA]",
                     archive_sha256=archive_sha,
@@ -2102,7 +2177,7 @@ def _full_main(args: argparse.Namespace) -> int:
         manifest["cost_band_anchor_appended"] = cost_band_anchor_appended
         manifest["cost_band_anchor_skip_reason"] = cost_band_anchor_skip_reason
         manifest["train_elapsed_sec"] = float(train_elapsed_sec)
-        manifest["lane_id"] = LANE_ID_PHASE_2
+        manifest["lane_id"] = _current_lane_id()
         if contest_cuda_score is not None:
             manifest["evidence_grade"] = "[contest-CUDA]"
             manifest["score_claim"] = True
@@ -2116,7 +2191,7 @@ def _full_main(args: argparse.Namespace) -> int:
             "generated_at": _utc_now_iso(),
             "git_head": _git_head_sha(),
             "trainer": "experiments/train_substrate_pretrained_driving_prior.py",
-            "lane_id": LANE_ID_PHASE_2,
+            "lane_id": _current_lane_id(),
             "args": {
                 k: (str(v) if isinstance(v, Path) else v)
                 for k, v in vars(args).items()
@@ -2200,8 +2275,27 @@ def _write_runtime(submission_dir: Path) -> None:
     substrate_src = (
         REPO_ROOT / "src" / "tac" / "substrates" / "pretrained_driving_prior"
     )
-    for name in ("architecture.py", "archive.py", "codebook.py", "inflate.py"):
+    for name in (
+        "architecture.py",
+        "archive.py",
+        "codebook.py",
+        "inflate.py",
+        "prior_application.py",
+        "procedural_codebook_inflate.py",
+    ):
         shutil.copy2(substrate_src / name, runtime_pkg / name)
+
+    generator_pkg = submission_dir / "src" / "tac" / "procedural_codebook_generator"
+    generator_pkg.mkdir(parents=True, exist_ok=True)
+    (generator_pkg / "__init__.py").write_text("", encoding="utf-8")
+    shutil.copy2(
+        REPO_ROOT
+        / "src"
+        / "tac"
+        / "procedural_codebook_generator"
+        / "seed_derived_codebook.py",
+        generator_pkg / "seed_derived_codebook.py",
+    )
     vendor_shared_inflate_runtime(submission_dir, repo_root=REPO_ROOT)
 
     inflate_sh = (

@@ -77,7 +77,9 @@ import hashlib
 
 import numpy as np
 
-from tac.procedural_codebook_generator import derive_codebook_from_seed
+from tac.procedural_codebook_generator.seed_derived_codebook import (
+    derive_codebook_from_seed,
+)
 from tac.substrates.pretrained_driving_prior.codebook import (
     LANE_CURVATURE_PCA_SHAPE,
     ROAD_PLANE_BASIS_SHAPE,

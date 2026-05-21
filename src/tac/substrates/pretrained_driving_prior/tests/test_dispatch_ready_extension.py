@@ -36,6 +36,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -54,6 +56,7 @@ _apply_procedural_codebook_replacement = (
     _trainer._apply_procedural_codebook_replacement
 )
 _resolve_procedural_seed_bytes = _trainer._resolve_procedural_seed_bytes
+_write_runtime = _trainer._write_runtime
 build_argparser = _trainer.build_argparser
 from tac.substrates.pretrained_driving_prior.archive import pack_archive
 from tac.substrates.pretrained_driving_prior.codebook import (
@@ -318,6 +321,24 @@ def test_apply_procedural_replacement_writes_provenance_json(tmp_path: Path) -> 
     )
     assert payload["seed_size_bytes"] == 32
     assert payload["seed_sha256"] == hashlib.sha256(seed).hexdigest()
+
+
+def test_procedural_provenance_uses_recipe_lane_env(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    canonical = _build_canonical_archive_for_test()
+    args = _make_namespace()
+    seed = _resolve_procedural_seed_bytes(args)
+    monkeypatch.setenv("DPP_LANE_ID", "lane_dp1_recipe_test")
+    _apply_procedural_codebook_replacement(
+        args=args,
+        canonical_archive_bytes=canonical,
+        seed_bytes=seed,
+        output_dir=tmp_path,
+    )
+    payload = json.loads((tmp_path / "procedural_variant_provenance.json").read_text())
+    assert payload["lane_id"] == "lane_dp1_recipe_test"
     assert payload["generator_kind"] == "pcg64"
     assert payload["null_exploit_control"] is False
 
@@ -541,3 +562,40 @@ def test_inflate_py_routes_through_procedural_aware_parser() -> None:
     assert "from tac.substrates.pretrained_driving_prior.procedural_codebook_inflate" in (
         inflate_src
     )
+
+
+def test_write_runtime_vendors_procedural_inflate_dependencies(tmp_path: Path) -> None:
+    submission_dir = tmp_path / "submission"
+    _write_runtime(submission_dir)
+
+    expected = (
+        "src/tac/substrates/pretrained_driving_prior/prior_application.py",
+        "src/tac/substrates/pretrained_driving_prior/procedural_codebook_inflate.py",
+        "src/tac/procedural_codebook_generator/__init__.py",
+        "src/tac/procedural_codebook_generator/seed_derived_codebook.py",
+    )
+    for relpath in expected:
+        assert (submission_dir / relpath).is_file(), relpath
+
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(submission_dir / "src")
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from tac.substrates.pretrained_driving_prior.inflate import "
+                "inflate_one_video; "
+                "from tac.substrates.pretrained_driving_prior."
+                "procedural_codebook_inflate import parse_archive_procedural_aware; "
+                "from tac.procedural_codebook_generator.seed_derived_codebook "
+                "import derive_codebook_from_seed"
+            ),
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr

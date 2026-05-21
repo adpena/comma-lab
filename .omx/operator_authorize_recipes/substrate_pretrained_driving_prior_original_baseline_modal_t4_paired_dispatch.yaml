@@ -1,0 +1,127 @@
+schema_version: 1
+name: substrate_pretrained_driving_prior_original_baseline_modal_t4_paired_dispatch
+lane_id: lane_dp1_original_baseline_first_paired_anchor_20260520
+summary: DP1 original-codebook baseline paired smoke for the procedural-codebook first-anchor comparison.
+
+platform: modal
+gpu: "T4"
+smoke_only: false
+smoke_validation_contract: training_artifact_v1
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+research_only: true
+dispatch_enabled: false
+defer_reason: operator must intentionally flip dispatch_enabled true after reviewing the DP1 paired-smoke recipe set
+
+cost_band:
+  epochs: 100
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: T4
+
+paired_axis:
+  enabled: true
+  cpu_gpu: "CPU"
+  cpu_hand_calibrated_fallback_p50_usd: 0.10
+
+score_claim: false
+promotion_eligible: false
+rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false
+predicted_score_target: null
+predicted_band: [0.175, 0.190]
+predicted_delta: "baseline only; no procedural rate-axis delta"
+predicted_delta_basis: ".omx/research/dp1_procedural_codebook_paired_smoke_pre_dispatch_design_20260520T232120Z.md Section 4 recipe #1"
+
+risk: |
+  Operator-gated baseline recipe. This establishes the original-codebook paired
+  smoke control for the DP1 procedural-codebook first-anchor comparison. It is
+  not a score claim and is not promotion-eligible until paired CPU/CUDA auth
+  eval artifacts are harvested and reviewed.
+
+envelope_status: "FITS $0.30 p50 paired-smoke envelope; dispatch_enabled=false until operator flip"
+remote_driver: scripts/remote_lane_substrate_pretrained_driving_prior.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_pretrained_driving_prior.sh
+  cost_band_trainer: experiments/train_substrate_pretrained_driving_prior.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_pretrained_driving_prior.py
+
+sentinel_files:
+  - scripts/remote_lane_substrate_pretrained_driving_prior.sh
+  - experiments/train_substrate_pretrained_driving_prior.py
+  - src/tac/substrates/pretrained_driving_prior/__init__.py
+  - src/tac/substrates/pretrained_driving_prior/dataset_source.py
+  - src/tac/substrates/pretrained_driving_prior/codebook.py
+  - src/tac/substrates/pretrained_driving_prior/distillation.py
+  - src/tac/substrates/pretrained_driving_prior/local_chunk_cache.py
+  - src/tac/substrates/pretrained_driving_prior/local_chunk_streamer.py
+  - src/tac/substrates/pretrained_driving_prior/log_incremental_feeder.py
+  - src/tac/substrates/pretrained_driving_prior/archive.py
+  - src/tac/substrates/pretrained_driving_prior/inflate.py
+  - src/tac/substrates/pretrained_driving_prior/architecture.py
+  - src/tac/substrates/pretrained_driving_prior/score_aware_loss.py
+  - src/tac/substrates/pretrained_driving_prior/procedural_codebook_inflate.py
+  - src/tac/substrates/pretrained_driving_prior/distillation_procedural_variant.py
+  - src/tac/procedural_codebook_generator/seed_derived_codebook.py
+  - src/tac/canonical_equations/procedural_codebook_savings.py
+
+env_overrides:
+  DPP_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  DPP_LANE_ID: lane_dp1_original_baseline_first_paired_anchor_20260520
+  DPP_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  DPP_OUTPUT_DIR: /modal_results/${INSTANCE_JOB_ID}/output
+  DPP_EPOCHS: "100"
+  DPP_BATCH_SIZE: "1"
+  DPP_UPSTREAM_DIR: /workspace/pact/upstream
+  DPP_DEVICE: cuda
+  DPP_DATASET_NAME: comma2k19
+  DPP_RUN_FULL: "1"
+  DPP_SKIP_AUTH_EVAL: "1"
+  DPP_USE_STREAMER: "1"
+  DPP_ENABLE_AUTOCAST_FP16: "1"
+  DPP_ENABLE_GT_SCORER_CACHE: "1"
+  DPP_ENABLE_TORCH_COMPILE: "0"
+  DPP_MAX_DISTILLATION_FRAMES: "4096"
+  DPP_MAX_DISTILLATION_CHUNKS: "8"
+  DPP_MAX_PAIRS: "600"
+  DPP_VAL_PAIR_COUNT: "64"
+  DPP_VAL_EVERY_EPOCHS: "25"
+  DPP_PROCEDURAL_CODEBOOK_REPLACEMENT: "0"
+  DPP_PROCEDURAL_CODEBOOK_GENERATOR_KIND: "pcg64"
+  DPP_PROCEDURAL_CODEBOOK_NULL_EXPLOIT_CONTROL: "0"
+  DPP_PROCEDURAL_CODEBOOK_VALIDATE_DOMAIN: "1"
+  DALI_DISABLE_NVML: "1"
+  CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+  PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_pretrained_driving_prior.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_pretrained_driving_prior.py
+  - tools/validate_dispatch_required_inputs.py
+  - src/tac/substrates/pretrained_driving_prior/
+
+notes: |
+  Baseline arm for the DP1 procedural-codebook paired smoke. The procedural
+  arm must be evaluated against this baseline before any canonical equation
+  #26 empirical residual is registered. This recipe intentionally skips
+  trainer-inline auth eval so it cannot emit a one-axis score claim; paired
+  CPU/CUDA auth eval remains a separate harvest gate on the emitted archive.
