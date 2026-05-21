@@ -19,15 +19,19 @@ __all__ = [
     "run_mlx_batchnorm2d_nchw",
     "run_mlx_conv2d_nchw",
     "run_mlx_linear",
+    "run_mlx_patch_embed_nchw",
     "run_mlx_mobileone_block_nchw",
     "run_mlx_mobileone_stem_nchw",
     "run_mlx_repmixer_block_nchw",
+    "run_mlx_fastvit_stage_nchw",
     "torch_batchnorm2d_to_mlx",
     "torch_conv2d_to_mlx",
     "torch_conv_mlp_to_mlx",
+    "torch_fastvit_stage_to_mlx",
     "torch_linear_to_mlx",
     "torch_mobileone_block_to_mlx",
     "torch_mobileone_stem_to_mlx",
+    "torch_patch_embed_to_mlx",
     "torch_repmixer_block_to_mlx",
     "temporary_mlx_device",
 ]
@@ -37,6 +41,8 @@ class MLXConvNormAct2dAdapter:
     """MLX adapter for timm ``ConvNormAct`` with activation omitted."""
 
     def __init__(self, torch_module: Any):
+        if getattr(torch_module, "aa", None) is not None:
+            raise NotImplementedError("ConvNormAct anti-alias branch is not covered")
         conv = getattr(torch_module, "conv", None)
         bn = getattr(torch_module, "bn", None)
         if conv is None or bn is None:
@@ -176,6 +182,70 @@ class MLXRepMixerBlockAdapter:
         return out + self.layer_scale(self.mlp(out))
 
 
+class MLXReparamLargeKernelConvAdapter:
+    """MLX adapter for FastViT ``ReparamLargeKernelConv`` before reparam folding."""
+
+    def __init__(self, torch_module: Any):
+        if getattr(torch_module, "reparam_conv", None) is not None:
+            raise NotImplementedError("reparameterized large-kernel conv is not covered yet")
+        if _class_path(getattr(torch_module, "se", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("ReparamLargeKernelConv SE branch is not covered")
+        act_path = _class_path(getattr(torch_module, "act", None))
+        if act_path not in {
+            "torch.nn.modules.linear.Identity",
+            "timm.layers.activations.GELUTanh",
+        }:
+            raise NotImplementedError(f"unsupported ReparamLargeKernelConv activation: {act_path}")
+        self.large_conv = MLXConvNormAct2dAdapter(torch_module.large_conv)
+        self.small_conv = (
+            MLXConvNormAct2dAdapter(torch_module.small_conv)
+            if getattr(torch_module, "small_conv", None) is not None
+            else None
+        )
+        self.use_gelu_tanh = act_path == "timm.layers.activations.GELUTanh"
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = self.large_conv(x_nhwc)
+        if self.small_conv is not None:
+            out = out + self.small_conv(x_nhwc)
+        return mlx_gelu_tanh(out) if self.use_gelu_tanh else out
+
+
+class MLXPatchEmbedAdapter:
+    """Sequential MLX adapter for FastViT ``PatchEmbed``."""
+
+    def __init__(self, torch_patch_embed: Any):
+        self.proj = [_torch_fastvit_child_to_mlx(child) for child in torch_patch_embed.proj]
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = x_nhwc
+        for adapter in self.proj:
+            out = adapter(out)
+        return out
+
+
+class MLXFastVitStageAdapter:
+    """MLX adapter for eval-mode FastViT stages used by upstream PoseNet."""
+
+    def __init__(self, torch_stage: Any):
+        downsample_path = _class_path(getattr(torch_stage, "downsample", None))
+        if downsample_path == "torch.nn.modules.linear.Identity":
+            self.downsample = None
+        elif downsample_path == "timm.models.fastvit.PatchEmbed":
+            self.downsample = torch_patch_embed_to_mlx(torch_stage.downsample)
+        else:
+            raise NotImplementedError(f"unsupported FastVitStage downsample: {downsample_path}")
+        if _class_path(getattr(torch_stage, "pos_emb", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("non-identity FastVitStage positional embedding is not covered")
+        self.blocks = [torch_repmixer_block_to_mlx(block) for block in torch_stage.blocks]
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = x_nhwc if self.downsample is None else self.downsample(x_nhwc)
+        for block in self.blocks:
+            out = block(out)
+        return out
+
+
 def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
     """Convert a PyTorch ``nn.Conv2d`` layer to MLX ``nn.Conv2d``."""
 
@@ -270,6 +340,18 @@ def torch_repmixer_block_to_mlx(torch_block: Any) -> MLXRepMixerBlockAdapter:
     return MLXRepMixerBlockAdapter(torch_block)
 
 
+def torch_patch_embed_to_mlx(torch_patch_embed: Any) -> MLXPatchEmbedAdapter:
+    """Convert a timm FastViT ``PatchEmbed`` to a parity-tested MLX adapter."""
+
+    return MLXPatchEmbedAdapter(torch_patch_embed)
+
+
+def torch_fastvit_stage_to_mlx(torch_stage: Any) -> MLXFastVitStageAdapter:
+    """Convert a timm FastViT stage to a parity-tested MLX adapter."""
+
+    return MLXFastVitStageAdapter(torch_stage)
+
+
 def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
     """Run an MLX Conv2d on NCHW input and return NCHW output."""
 
@@ -314,8 +396,26 @@ def run_mlx_mobileone_stem_nchw(adapter: MLXMobileOneStemAdapter, x_nchw: np.nda
     return nhwc_to_nchw(np.asarray(out))
 
 
+def run_mlx_patch_embed_nchw(adapter: MLXPatchEmbedAdapter, x_nchw: np.ndarray) -> np.ndarray:
+    """Run a FastViT PatchEmbed adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(np.asarray(out))
+
+
 def run_mlx_repmixer_block_nchw(adapter: MLXRepMixerBlockAdapter, x_nchw: np.ndarray) -> np.ndarray:
     """Run a RepMixerBlock adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(np.asarray(out))
+
+
+def run_mlx_fastvit_stage_nchw(adapter: MLXFastVitStageAdapter, x_nchw: np.ndarray) -> np.ndarray:
+    """Run a FastViT stage adapter on NCHW input and return NCHW output."""
 
     import mlx.core as mx
 
@@ -364,6 +464,15 @@ def _class_path(obj: Any) -> str:
         return ""
     cls = type(obj)
     return f"{cls.__module__}.{cls.__qualname__}"
+
+
+def _torch_fastvit_child_to_mlx(child: Any) -> Any:
+    class_path = _class_path(child)
+    if class_path == "timm.models.fastvit.ReparamLargeKernelConv":
+        return MLXReparamLargeKernelConvAdapter(child)
+    if class_path == "timm.models.fastvit.MobileOneBlock":
+        return torch_mobileone_block_to_mlx(child)
+    raise NotImplementedError(f"unsupported FastViT child module: {class_path}")
 
 
 class temporary_mlx_device:
