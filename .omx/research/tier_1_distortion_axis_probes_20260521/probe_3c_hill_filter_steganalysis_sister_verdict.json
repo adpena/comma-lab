@@ -1,0 +1,103 @@
+{
+  "actual_signature": {
+    "ccc_textured_avg_weight": 0.8062214255332947,
+    "ccc_weighted_error": 0.0024987899232655764,
+    "ddd_textured_avg_weight": 0.6259023547172546,
+    "ddd_weighted_error": 0.0024995324201881886,
+    "detail_dynamic_range_log10": 8.113953590393066,
+    "detail_flat_fraction": 0.49999988079071045,
+    "detail_textured_fraction": 0.2499997615814209,
+    "frame_resolution_HxW": [
+      874,
+      1164
+    ],
+    "hill_dynamic_range_log10": 0.5058896541595459,
+    "hill_flat_fraction": 0.49999988079071045,
+    "hill_textured_avg_weight": 1.1249110698699951,
+    "hill_textured_avg_weight_via_var_mask": 0.8644397854804993,
+    "hill_textured_avg_weight_via_wav_mask": 0.8409535884857178,
+    "hill_textured_fraction": 0.24999962747097015,
+    "hill_weighted_error": 0.002499205758795142,
+    "kb_kernel_normalization": "divided_by_4_unit_gain",
+    "l1_window": 3,
+    "l2_window": 15,
+    "n_frames": 8,
+    "sigma_fridrich": 0.015625,
+    "uniform_vs_hill_ratio": 0.9999174585967756,
+    "uniform_weighted_error": 0.002498999470844865,
+    "var_dynamic_range_log10": 9.384507179260254,
+    "var_flat_fraction": 0.49999964237213135,
+    "var_textured_fraction": 0.25
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "candidate uniward_textured_region_undetectability_pose_distortion_savings_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N pending per AAA T4 op-routable; HILL extends UNIWARD via Li-Fridrich-Wang 2014 sharper-tail formulation)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "evidence_grade": "macOS-CPU-advisory",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "hill_canonical_reference": "Li-Tang-Huang-Luo 2014 'A new cost function for spatial image steganography' (HILL filter); KB high-pass kernel per Ker-Bohme 2008 'Revisiting weighted stego-image steganalysis'; CLAUDE.md 'Fridrich inverse steganalysis' section.",
+    "kind": "macos_cpu_advisory",
+    "predecessor_probes": [
+      "tier_1_distortion_uniward_per_pixel_segnet_smoke",
+      "tier_1_distortion_uniward_wavelet_subband_sharper_inversion_smoke"
+    ],
+    "promotable": false,
+    "score_claim_valid": false,
+    "source": "tier_1_distortion_axis_probe_3c_hill_filter_steganalysis_sister"
+  },
+  "catalog_references": [
+    "#344",
+    "#287",
+    "#323",
+    "#192",
+    "#1",
+    "#313",
+    "#307",
+    "#308"
+  ],
+  "delta_vs_ccc_baseline": {
+    "absolute_delta": 0.31868964433670044,
+    "ccc_baseline_textured_avg_weight": 0.8062214255332947,
+    "hill_textured_avg_weight": 1.1249110698699951,
+    "improvement_direction_vs_ccc": "hill_did_not_improve_or_worse",
+    "ratio_hill_over_ccc": 1.39528798695209
+  },
+  "delta_vs_ddd_baseline": {
+    "absolute_delta": 0.4990087151527405,
+    "ddd_passed_threshold_lt_0p5": false,
+    "ddd_textured_avg_weight": 0.6259023547172546,
+    "hill_passed_threshold_lt_0p5": false,
+    "hill_textured_avg_weight": 1.1249110698699951,
+    "improvement_direction_vs_ddd": "hill_did_not_improve_or_worse",
+    "ratio_hill_over_ddd": 1.7972628819684866
+  },
+  "device": "cpu",
+  "elapsed_seconds": 4.453858137130737,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_overnight_eee_hill_filter_steganalysis_sister_tier_1_macos_cpu_advisory_smoke_20260521",
+  "next_action_on_NULL": "DEFER per Catalog #307 IMPLEMENTATION-level falsification; queue multi-scale J-UNIWARD and WOW per DDD's queued alternatives + Catalog #308 reactivation criteria; paradigm INTACT.",
+  "next_action_on_PARTIAL": "Continue sister-probe iteration at $0 per DDD \u00a76.2 + Catalog #308: try multi-scale J-UNIWARD (Holub-Fridrich-Denemark 2014 multi-level) OR WOW (Holub-Fridrich 2012 directional filter banks).",
+  "next_action_on_POSITIVE_FULL": "Operator-routable: Tier-2 paid dispatch on UNIWARD/HILL-weighted per-pixel SegNet loss substrate via Vast.ai 4090 ($0.25/hr) or Lightning T4; estimated cost ~$1-5; predicted \u0394S -0.005 to -0.015 [predicted] per AAA T4 \u00a72.3 + \u00a79 + DDD \u00a76.1; recipe pending per AAA T4 \u00a76.2 op-routable.",
+  "predicted_signature": {
+    "hill_dynamic_range": "log10 > 1.0",
+    "hill_flat_textured_separation": "hill_textured > 10% AND hill_flat > 30%",
+    "hill_textured_suppression": "textured_avg_weight < 0.5 (DDD boundary=0.626; CCC baseline=0.806)",
+    "hill_under_ccc": "hill_textured_avg_weight < ccc_textured_avg_weight (0.806)",
+    "hill_under_ddd": "hill_textured_avg_weight < ddd_textured_avg_weight (0.626)"
+  },
+  "probe_id": "tier_1_distortion_hill_filter_steganalysis_sister_smoke",
+  "probe_name": "HILL filter steganalysis sister",
+  "promotable": false,
+  "recommendation": "DEFER per Catalog #307 IMPLEMENTATION-level falsification: HILL filter cascade did NOT improve on DDD wavelet-subband sharper baseline OR CCC local-variance baseline. Per Catalog #308 reactivation criteria: queue multi-scale J-UNIWARD AND WOW alternative reducers; paradigm INTACT (Fridrich inverse-steganalysis textured-region undetectability per CLAUDE.md); IMPLEMENTATION-level approximation axis needs alternative.",
+  "score_claim": false,
+  "signature_checks": {
+    "hill_dynamic_range_present": false,
+    "hill_flat_textured_separation_present": true,
+    "hill_textured_suppression_present": false,
+    "hill_under_ccc_present": false,
+    "hill_under_ddd_present": false
+  },
+  "sister_canonical_equation_candidate_for_RATIFY_N": "uniward_textured_region_undetectability_pose_distortion_savings_v1",
+  "verdict": "NULL_SIGNAL_DEFER"
+}
