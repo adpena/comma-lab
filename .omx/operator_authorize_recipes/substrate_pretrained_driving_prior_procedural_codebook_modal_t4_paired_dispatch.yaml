@@ -53,9 +53,9 @@ risk: |
   The rate-axis arithmetic is predicted only; score-axis response is unknown
   until paired CPU/CUDA artifacts are harvested.
 
-envelope_status: "FITS $0.30 p50 paired-smoke envelope; dispatch_enabled=true per operator continuation directive 20260521T025702Z"
+envelope_status: "FITS $0.30 p50 paired-smoke envelope; dispatch_enabled=true per operator continuation directive 20260521T025702Z. RATIFY-2 budget reduction 20260521: timeout_hours 1.5h->1.0h (5400s->3600s) per slot 2 honest defer reactivation criteria (commit c553405d2) + operator blanket approval 20260521 #2 of 8."
 remote_driver: scripts/remote_lane_substrate_pretrained_driving_prior.sh
-timeout_hours: 1.5
+timeout_hours: 1.0  # RATIFY-2 20260521: reduced from 1.5h (5400s) per slot 2 reactivation criteria; paired with DPP_EPOCHS "100"->"50" truncation below so Stage 4 Phase 2 fits within 3600s budget.
 
 required_input_files:
   - flag: --video-path
@@ -94,7 +94,7 @@ env_overrides:
   DPP_LANE_ID: lane_dp1_procedural_codebook_replacement_first_paired_smoke_20260520
   DPP_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
   DPP_OUTPUT_DIR: /modal_results/${INSTANCE_JOB_ID}/output
-  DPP_EPOCHS: "100"
+  DPP_EPOCHS: "50"  # RATIFY-2 20260521: truncated from 100 per slot 2 reactivation criteria; pairs with timeout_hours 1.0h above so Stage 4 Phase 2 fits within 3600s budget. Sister parity audit (.omx/research/dp1_paired_smoke_recipes_parity_audit_20260521T045343Z_codex.md) recommended "shorten the DP1 first-anchor recipe runtime or add a cheaper trainer knob".
   DPP_BATCH_SIZE: "1"
   DPP_UPSTREAM_DIR: /workspace/pact/upstream
   DPP_DEVICE: cuda
