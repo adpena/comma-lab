@@ -134,14 +134,24 @@ last_refreshed_note: |
   in-place charged bytes versus `97,473` procedural-plus-SRL1 residual bytes
   (`-81,181` bytes saved, empirical advisory Delta S `+0.054055`, z-score
   `101.18`, `CARGO-CULTED`). This pair should not receive paid eval.
+- **Magic-codec pair #4 procedural-seed orthogonality is closed**:
+  `.omx/research/magic_codec_pair_4_procedural_seed_orthogonality_smoke_landed_20260521T004054Z_codex.md`
+  tests seed lengths `16/32/64/128/256` across six reversible byte-orderings
+  plus non-free ordering controls. Raw seed bytes dominate all `30/30`
+  canonical reversible rows; the best non-raw wrapper is still `+4` bytes.
+  Value-dependent sorted controls are excluded because their inverse
+  permutation is not free. Verdict:
+  `PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES`; keep procedural seeds raw
+  and route magic-codec only to residual streams.
 - **Current highest-signal follow-on**: preserve the master-gradient,
   per-frame/per-pair, byte/pixel sensitivity surfaces as routing authority, but
   stop direct FEC6 member-byte substitution attempts unless they change
   components or supply a consumed residual/runtime adapter. Next byte-closed
-  candidates should move to magic-codec pair #4 orthogonality validation, DP1
-  procedural paired-smoke recipe authoring, or LL scorer-surrogate/frame-pair
-  planner wiring that consumes the null-byte matrix and per-frame decomposition
-  as prioritization signal.
+  candidates should move to DP1 procedural paired-smoke recipe authoring, LL
+  scorer-surrogate/frame-pair planner wiring that consumes the null-byte matrix
+  and per-frame decomposition as prioritization signal, or a new
+  residual-hybrid byte-accounting equation whose predicate matches
+  predictor-plus-residual streams.
 
 ### Comparison vs public PRs
 
