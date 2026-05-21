@@ -45763,6 +45763,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_procedural_replacement_surface_matrix_20260521",
+      "name": "Procedural replacement parser-visible surface matrix",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/procedural_replacement_surfaces.py + tools/plan_procedural_replacement_surfaces.py + src/tac/tests/test_procedural_replacement_surfaces.py + .omx/research/procedural_replacement_surface_matrix_landed_20260521_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "22/22 focused tests pass; py_compile clean; git diff --check clean; CLI JSON emission valid; non-promotional authority flags asserted"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; source_grounded_static_planner; score_claim=false; promotion_eligible=false; ranks DP1 codebook_blob then ATW2 cdf_table_blob; blocks PR101 FEC6 null bytes and current GLV1 false surface"
     }
   ],
   "level_rules": {
@@ -45772,5 +45813,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T01:54:31Z"
+  "updated_at": "2026-05-21T02:06:33Z"
 }
