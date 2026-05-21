@@ -153,6 +153,47 @@ def test_score_aware_loss_rejects_legacy_missing_authority_dataset() -> None:
         raise AssertionError("expected missing authority rejection")
 
 
+def test_score_aware_loss_accepts_legacy_extended_authority_only_with_flag() -> None:
+    from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
+
+    dataset = _scorer_response_dataset()
+    dataset.pop("rank_or_kill_eligible")
+    dataset.pop("promotable")
+    authority = dataset["authority"]
+    assert isinstance(authority, dict)
+    authority.pop("rank_or_kill_eligible")
+    authority.pop("promotable")
+    rows = dataset["rows"]
+    assert isinstance(rows, list)
+    for row in rows:
+        row.pop("rank_or_kill_eligible")
+        row.pop("promotable")
+
+    loaded = sal.load_scorer_response_distill_rows(
+        dataset,
+        allow_legacy_missing_authority=True,
+    )
+
+    assert len(loaded) == 2
+
+
+def test_score_aware_loss_still_rejects_legacy_missing_core_authority_with_flag() -> None:
+    from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
+
+    dataset = _scorer_response_dataset()
+    dataset.pop("score_claim")
+
+    try:
+        sal.load_scorer_response_distill_rows(
+            dataset,
+            allow_legacy_missing_authority=True,
+        )
+    except ValueError as exc:
+        assert "score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected missing core authority rejection")
+
+
 def test_score_aware_loss_rejects_source_score_claim_rows() -> None:
     from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
 

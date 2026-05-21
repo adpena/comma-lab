@@ -49,6 +49,12 @@ carry finite numeric `advisory_score_report_derived` and
 usable for surrogate/curriculum construction while preventing false contest
 authority.
 
+Post-landing compatibility check: the historical PR110 scorer-response dataset
+under `experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/`
+predates `rank_or_kill_eligible` and `promotable`. The loader remains strict by
+default, but `allow_legacy_missing_authority=True` accepts only those two
+historical missing extended fields; missing core fields still fail closed.
+
 ## Files
 
 - `src/tac/substrates/pact_nerv_distilled_scorer/score_aware_loss.py`
@@ -67,6 +73,17 @@ authority.
 
 .venv/bin/python -m py_compile src/tac/substrates/pact_nerv_distilled_scorer/score_aware_loss.py src/tac/substrates/pact_nerv_distilled_scorer/__init__.py src/tac/optimization/scorer_response_dataset.py experiments/train_substrate_pact_nerv_distilled_scorer.py
 passed
+```
+
+Additional compatibility check:
+
+```text
+load_scorer_response_distill_rows(
+    historical_pr110_dataset,
+    max_rows=3,
+    allow_legacy_missing_authority=True,
+)
+OK: 3 rows
 ```
 
 ## Next Action

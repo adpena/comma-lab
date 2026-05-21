@@ -33,12 +33,18 @@ from tac.substrates.score_aware_common import (
 CONSUMES_SCORER_RESPONSE_DATASET = True
 SCORER_RESPONSE_DATASET_SCHEMA = "scorer_response_dataset.v1"
 SCORER_RESPONSE_ROW_SCHEMA = "scorer_response_row.v1"
-SCORER_RESPONSE_FALSE_AUTHORITY_FIELDS = (
+SCORER_RESPONSE_CORE_FALSE_AUTHORITY_FIELDS = (
     "score_claim",
     "promotion_eligible",
     "ready_for_exact_eval_dispatch",
+)
+SCORER_RESPONSE_LEGACY_EXTENDED_FALSE_AUTHORITY_FIELDS = (
     "rank_or_kill_eligible",
     "promotable",
+)
+SCORER_RESPONSE_FALSE_AUTHORITY_FIELDS = (
+    SCORER_RESPONSE_CORE_FALSE_AUTHORITY_FIELDS
+    + SCORER_RESPONSE_LEGACY_EXTENDED_FALSE_AUTHORITY_FIELDS
 )
 
 
@@ -46,9 +52,17 @@ def _require_explicit_false_authority(
     payload: Mapping[str, Any],
     *,
     label: str,
+    allow_legacy_missing_authority: bool = False,
 ) -> None:
-    for field in SCORER_RESPONSE_FALSE_AUTHORITY_FIELDS:
+    for field in SCORER_RESPONSE_CORE_FALSE_AUTHORITY_FIELDS:
         if field not in payload or payload.get(field) is None:
+            raise ValueError(f"{label} {field} must be explicit false")
+        if payload.get(field) is not False:
+            raise ValueError(f"{label} {field} must be false")
+    for field in SCORER_RESPONSE_LEGACY_EXTENDED_FALSE_AUTHORITY_FIELDS:
+        if field not in payload or payload.get(field) is None:
+            if allow_legacy_missing_authority:
+                continue
             raise ValueError(f"{label} {field} must be explicit false")
         if payload.get(field) is not False:
             raise ValueError(f"{label} {field} must be false")
@@ -68,6 +82,7 @@ def load_scorer_response_distill_rows(
     dataset: Mapping[str, Any],
     *,
     max_rows: int | None = None,
+    allow_legacy_missing_authority: bool = False,
 ) -> tuple[Mapping[str, Any], ...]:
     """Validate LL scorer-response rows before a future distillation trainer consumes them.
 
@@ -80,11 +95,19 @@ def load_scorer_response_distill_rows(
         raise ValueError("scorer-response dataset must be a mapping")
     if dataset.get("schema") != SCORER_RESPONSE_DATASET_SCHEMA:
         raise ValueError("scorer-response dataset schema mismatch")
-    _require_explicit_false_authority(dataset, label="scorer-response dataset")
+    _require_explicit_false_authority(
+        dataset,
+        label="scorer-response dataset",
+        allow_legacy_missing_authority=allow_legacy_missing_authority,
+    )
     authority = dataset.get("authority")
     if not isinstance(authority, Mapping):
         raise ValueError("scorer-response dataset authority must be a mapping")
-    _require_explicit_false_authority(authority, label="scorer-response dataset authority")
+    _require_explicit_false_authority(
+        authority,
+        label="scorer-response dataset authority",
+        allow_legacy_missing_authority=allow_legacy_missing_authority,
+    )
     rows = dataset.get("rows")
     if not isinstance(rows, list):
         raise ValueError("scorer-response dataset rows must be a list")
@@ -98,7 +121,11 @@ def load_scorer_response_distill_rows(
             raise ValueError(f"scorer-response row {index} must be a mapping")
         if row.get("schema") != SCORER_RESPONSE_ROW_SCHEMA:
             raise ValueError(f"scorer-response row {index} schema mismatch")
-        _require_explicit_false_authority(row, label=f"scorer-response row {index}")
+        _require_explicit_false_authority(
+            row,
+            label=f"scorer-response row {index}",
+            allow_legacy_missing_authority=allow_legacy_missing_authority,
+        )
         if row.get("authority_source_score_claim") is True:
             raise ValueError(
                 f"scorer-response row {index} authority_source_score_claim must be false"
