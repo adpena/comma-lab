@@ -265,3 +265,46 @@ def parse_archive(blob: bytes) -> GrayscaleLutArchive:
         output_height=int(output_height),
         output_width=int(output_width),
     )
+
+
+def compose_procedural_archive(
+    original_archive_bytes: bytes,
+    seed_bytes: bytes,
+) -> bytes:
+    """Thin convenience wrapper for grayscale_lut procedural-LUT archive composition.
+
+    Per WAVE-3-GRAYSCALE-LUT-PROCEDURAL-TRAINER-BUILD 2026-05-20 + sister
+    DP1 canonical pattern landing commit ``9cbfa471c`` + sister VQ-VAE
+    canonical pattern landing commit ``6fea30f22``: delegates to
+    :func:`tac.substrates.grayscale_lut.distillation_procedural_variant.compose_with_procedural_lut`
+    using canonical defaults (32-byte seed, PCG64, 256-byte chroma LUT
+    target matching the canonical ``chroma_lut_replacement`` context per
+    canonical equation #26 ``_INCLUDED_CONTEXTS``).
+
+    Sister of :func:`pack_archive` (canonical builder for the trained
+    grayscale_lut variant). The procedural variant appends a sentinel-
+    prefixed seed envelope to the existing GLV1 archive; a future
+    LUT-aware grayscale_lut variant will REPLACE in-archive chroma LUT
+    bytes with the envelope (matching the canonical DP1 + VQ-VAE
+    REPLACE-IN-PLACE pattern).
+
+    Args:
+        original_archive_bytes: Existing GLV1 archive bytes (parseable
+            via :func:`parse_archive`).
+        seed_bytes: Procedural seed (8-256 bytes; canonical 32 bytes).
+
+    Returns:
+        Procedural-variant archive bytes with the canonical GLV1
+        sections preserved + the procedural seed envelope appended.
+    """
+    # Lazy import to avoid cyclic-import friction; the variant module
+    # imports GLV1_HEADER_FMT / GLV1_HEADER_SIZE / GLV1_MAGIC /
+    # GLV1_SCHEMA_VERSION / parse_archive from this module.
+    from tac.substrates.grayscale_lut.distillation_procedural_variant import (
+        compose_with_procedural_lut,
+    )
+
+    return compose_with_procedural_lut(
+        original_archive_bytes=original_archive_bytes,
+        seed_bytes=seed_bytes,
+    )

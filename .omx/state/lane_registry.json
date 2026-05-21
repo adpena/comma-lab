@@ -45599,6 +45599,88 @@
       },
       "notes": "research_only=true lane_class=substrate_engineering horizon_class=frontier_protecting canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1 score_improvement_mechanism_status=DESIGN_ONLY archive_bytes_added=0 design_memo_only",
       "research_only": true
+    },
+    {
+      "id": "lane_wave_3_pact_nerv_distilled_scorer_x_codex_ll_integration_design_20260520",
+      "name": "PACT-NERV-DistilledScorer \u00d7 Codex LL \u00d7 #523 Integration Design",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/pact_nerv_distilled_scorer_x_codex_ll_integration_design_20260520.md commit f39d6f6ce 535 LOC design memo + canonical sister-coordination contract"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_pact_nerv_distilled_scorer_x_codex_ll_integration_design_landed_20260520.md (external memory; per CLAUDE.md memory file convention)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_grayscale_lut_procedural_codebook_replacement_variant_20260520",
+      "name": "Grayscale-LUT procedural chroma-LUT replacement variant (L0 SCAFFOLD; canonical equation #26 chroma_lut_replacement context)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/grayscale_lut/distillation_procedural_variant.py 564 LOC + tests/test_procedural_variant.py 26/26 PASS + sister regression 35/35 PASS + Catalog #272 byte-mutation smoke 32/32 distinct + canonical equation #26 predicted_delta_s=-0.000149 verified [predicted][canonical_equation_26_chroma_lut_replacement_in_domain_context]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/substrates/grayscale_lut/distillation_procedural_variant.py 0 violations across check_no_mps_fallback_default + check_substrate_signal_axis_destruction_has_reversibility_probe + check_no_docstring_overstatement_without_evidence_tag + check_no_score_claim_without_canonical_provenance + check_no_phantom_wyner_ziv_savings_from_research_sidecar [empirical:.venv/bin/python -m tac.preflight --scope dev preflight_gates_smoke_2026-05-21T01:25:00Z]"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; lane_class=substrate_engineering; reactivation_criteria=symposium_proceed_per_catalog_325_plus_paired_smoke_contest_cuda_plus_contest_cpu_per_claude_md_submission_auth_eval; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=chroma_lut_replacement; predicted_delta_s=-0.000149; bytes_saved=224; lut_bytes=256; seed_bytes=32; horizon_class=frontier_protecting; per_substrate_symposium_required_per_catalog_325; build_commit_pending; sister_canonical_pattern_dp1_commit_9cbfa471c_plus_vq_vae_commit_6fea30f22; predicted_band_validation_status=pending_post_training"
     }
   ],
   "level_rules": {
@@ -45608,5 +45690,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T01:08:36Z"
+  "updated_at": "2026-05-21T01:25:22Z"
 }

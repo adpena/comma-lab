@@ -84,20 +84,62 @@ from .architecture import (
 )
 from .archive import (
     GrayscaleLutArchive,
+    compose_procedural_archive,
     pack_archive,
     parse_archive,
+)
+from .distillation_procedural_variant import (
+    CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT,
+    PROCEDURAL_LUT_BYTES_DEFAULT,
+    PROCEDURAL_LUT_DTYPE_DEFAULT,
+    PROCEDURAL_LUT_SENTINEL,
+    PROCEDURAL_SEED_SIZE_BYTES,
+    ProceduralVariantConfig,
+    ProceduralVariantError,
+    compose_with_procedural_lut,
+    derive_procedural_lut_replacement,
+    predicted_archive_bytes_saved,
+    predicted_delta_s,
+    verify_procedural_lut_in_domain,
+    verify_seed_mutation_changes_lut_bytes,
 )
 from .score_aware_loss import (
     GrayscaleLutScoreAwareLoss,
     ScoreAwareLossWeights,
 )
 
+PROCEDURAL_VARIANT_AVAILABLE: bool = True
+"""Flag set True at scaffold landing (sister of DP1 + VQ-VAE
+``PROCEDURAL_VARIANT_AVAILABLE``). Trainers + cathedral consumers may key
+off this flag to detect that the grayscale_lut procedural chroma-LUT
+replacement variant is importable + structurally complete.
+
+Per WAVE-3-GRAYSCALE-LUT-PROCEDURAL-TRAINER-BUILD 2026-05-20 + PR101/PR106
+BUILD DESIGN landing commit ``086d3ac1d`` Top-3 #1 PIVOT.
+"""
+
+
 __all__ = [
+    "CANONICAL_EQUATION_26_IN_DOMAIN_CONTEXT",
     "GrayscaleLutArchive",
     "GrayscaleLutConfig",
     "GrayscaleLutScoreAwareLoss",
     "GrayscaleLutSubstrate",
+    "PROCEDURAL_LUT_BYTES_DEFAULT",
+    "PROCEDURAL_LUT_DTYPE_DEFAULT",
+    "PROCEDURAL_LUT_SENTINEL",
+    "PROCEDURAL_SEED_SIZE_BYTES",
+    "PROCEDURAL_VARIANT_AVAILABLE",
+    "ProceduralVariantConfig",
+    "ProceduralVariantError",
     "ScoreAwareLossWeights",
+    "compose_procedural_archive",
+    "compose_with_procedural_lut",
+    "derive_procedural_lut_replacement",
     "pack_archive",
     "parse_archive",
+    "predicted_archive_bytes_saved",
+    "predicted_delta_s",
+    "verify_procedural_lut_in_domain",
+    "verify_seed_mutation_changes_lut_bytes",
 ]
