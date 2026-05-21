@@ -1,17 +1,18 @@
 <!--
-generated_at: 2026-05-21T00:09:34Z
+generated_at: 2026-05-21T00:25:23Z
 from_state_hash: canonical_frontier_pointer_20260520T115711Z_plus_wave3_zero_spend_cascade
-regenerated_by: codex:fec7_selector_entropy_profile_and_wave3_refresh_20260521
-last_refreshed_at: 2026-05-21T00:09:34Z
-last_refreshed_by: codex:fec7_selector_entropy_profile_and_wave3_refresh_20260521
-last_refreshed_head: eaa0ad789eb153019c2634292bb21d918a9980e4
+regenerated_by: codex:magic_codec_pair2_null_byte_smoke_refresh_20260521
+last_refreshed_at: 2026-05-21T00:25:23Z
+last_refreshed_by: codex:magic_codec_pair2_null_byte_smoke_refresh_20260521
+last_refreshed_head: 4f35a8289d19c3eca2b2cd82230035cebbef2324
 last_refreshed_note: |
   Current frontier/status refresh after PR #110, D-3 compliance clearance,
   PR101/FEC6 PacketIR runtime-consumption closure, VQ K=2 diagnostic
   terminalization, and the zero-spend Wave-3 null/procedural/magic-codec
   cascade. The scanner-derived FRONTIER section below was rechecked with
   tools/scan_best_anchor_per_axis.py at 2026-05-21T00:09Z; no CPU/CUDA frontier
-  score changed. The newer 2026-05-21 operation notes are now the current
+  score changed. The 2026-05-21 operation notes now include the pair #2
+  sparse PacketIR/SRL1 null-byte residual falsification and are the current
   routing authority for selector/null-byte follow-on work.
 -->
 
@@ -125,12 +126,22 @@ last_refreshed_note: |
   procedural-plus-dense-stream residuals at `187,054` bytes (`+55,275` bytes;
   empirical score-direction regression), so that pair is not the next paid
   path.
-- **Current highest-signal follow-on**: continue the free local pair #2 probe
-  from `.omx/research/wave_3_end_of_day_cascade_reconciliation_operator_brief_20260520.md`:
-  sparse PacketIR/SRL1 on fec6 null-byte residuals. If that also fails, the next
-  byte-closed frontier candidate should move to DP1 procedural paired-smoke
-  recipe authoring or a DWT-HNeRV rescope path rather than further FEC6 selector
-  entropy polish.
+- **Magic-codec pair #2 sparse PacketIR/SRL1 on FEC6 null-byte residuals is
+  falsified**:
+  `.omx/research/magic_codec_pair_2_sparse_packet_ir_fec6_null_byte_smoke_landed_20260521T002120Z_codex.md`
+  corrects the key interpretation bug (`null byte` = master-gradient-null
+  position, not literal `0x00`) and records the full-scale result: `16,292`
+  in-place charged bytes versus `97,473` procedural-plus-SRL1 residual bytes
+  (`-81,181` bytes saved, empirical advisory Delta S `+0.054055`, z-score
+  `101.18`, `CARGO-CULTED`). This pair should not receive paid eval.
+- **Current highest-signal follow-on**: preserve the master-gradient,
+  per-frame/per-pair, byte/pixel sensitivity surfaces as routing authority, but
+  stop direct FEC6 member-byte substitution attempts unless they change
+  components or supply a consumed residual/runtime adapter. Next byte-closed
+  candidates should move to magic-codec pair #4 orthogonality validation, DP1
+  procedural paired-smoke recipe authoring, or LL scorer-surrogate/frame-pair
+  planner wiring that consumes the null-byte matrix and per-frame decomposition
+  as prioritization signal.
 
 ### Comparison vs public PRs
 
