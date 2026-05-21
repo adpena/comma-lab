@@ -122,6 +122,128 @@ def _json_false_authority_blockers(payload: Mapping[str, Any], *, source: str) -
     return blockers
 
 
+def _modal_metadata_path(output_dir: Path) -> Path | None:
+    for candidate in (
+        output_dir / "modal_metadata.json",
+        output_dir.parent / "modal_metadata.json",
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _modal_metadata_summary(
+    *,
+    output_dir: Path,
+    repo_root: Path,
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    metadata_path = _modal_metadata_path(output_dir)
+    summary: dict[str, Any] = {
+        "path": str(metadata_path) if metadata_path else None,
+        "exists": metadata_path is not None,
+    }
+    if metadata_path is None:
+        blockers.append("modal_training_metadata_missing")
+        return summary, blockers, warnings
+
+    payload = _read_json(metadata_path)
+    sentinels = payload.get("sentinel_files_local_sha256")
+    if not isinstance(sentinels, Mapping) or not sentinels:
+        blockers.append("modal_training_metadata_sentinel_hashes_missing")
+        sentinels = {}
+    summary.update(
+        {
+            "path": _repo_rel(metadata_path, repo_root),
+            "metadata_schema": payload.get("metadata_schema"),
+            "lane_id": payload.get("lane_id"),
+            "label": payload.get("label"),
+            "call_id": payload.get("call_id"),
+            "mounted_code_git_head": payload.get("mounted_code_git_head"),
+            "mounted_code_git_branch": payload.get("mounted_code_git_branch"),
+            "require_clean_head": payload.get("require_clean_head"),
+            "sentinel_files_local_sha256": {
+                str(key): str(value) for key, value in sentinels.items()
+            },
+        }
+    )
+    if payload.get("working_tree_dirty") is True:
+        warnings.append("modal_training_metadata_working_tree_dirty")
+    return summary, blockers, warnings
+
+
+def _paired_source_equivalence(
+    candidates: list[dict[str, Any]],
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    rows = {row.get("variant"): row for row in candidates}
+    baseline = rows.get("baseline")
+    procedural = rows.get("procedural")
+    blockers: list[str] = []
+    warnings: list[str] = []
+    summary: dict[str, Any] = {
+        "checked": False,
+        "shared_sentinel_count": 0,
+        "mismatched_sentinel_files": [],
+    }
+    if not isinstance(baseline, Mapping) or not isinstance(procedural, Mapping):
+        blockers.append("paired_candidate_rows_missing")
+        return summary, blockers, warnings
+
+    baseline_meta = baseline.get("modal_training_metadata")
+    procedural_meta = procedural.get("modal_training_metadata")
+    if not isinstance(baseline_meta, Mapping) or not isinstance(procedural_meta, Mapping):
+        blockers.append("paired_candidate_modal_metadata_missing")
+        return summary, blockers, warnings
+
+    baseline_sentinels = baseline_meta.get("sentinel_files_local_sha256")
+    procedural_sentinels = procedural_meta.get("sentinel_files_local_sha256")
+    if not isinstance(baseline_sentinels, Mapping) or not isinstance(
+        procedural_sentinels, Mapping
+    ):
+        blockers.append("paired_candidate_sentinel_hash_maps_missing")
+        return summary, blockers, warnings
+
+    shared = sorted(set(baseline_sentinels) & set(procedural_sentinels))
+    baseline_only = sorted(set(baseline_sentinels) - set(procedural_sentinels))
+    procedural_only = sorted(set(procedural_sentinels) - set(baseline_sentinels))
+    mismatches = [
+        rel
+        for rel in shared
+        if baseline_sentinels.get(rel) != procedural_sentinels.get(rel)
+    ]
+    summary.update(
+        {
+            "checked": True,
+            "shared_sentinel_count": len(shared),
+            "baseline_only_sentinel_files": baseline_only,
+            "procedural_only_sentinel_files": procedural_only,
+            "mismatched_sentinel_files": mismatches,
+            "baseline_mounted_code_git_head": baseline_meta.get(
+                "mounted_code_git_head"
+            ),
+            "procedural_mounted_code_git_head": procedural_meta.get(
+                "mounted_code_git_head"
+            ),
+        }
+    )
+    if not shared:
+        blockers.append("paired_candidate_sentinel_files_no_overlap")
+    if mismatches:
+        blockers.append("paired_candidate_sentinel_sha256_mismatch")
+    if baseline_only or procedural_only:
+        warnings.append("paired_candidate_sentinel_file_sets_differ")
+    if (
+        baseline_meta.get("mounted_code_git_head")
+        and procedural_meta.get("mounted_code_git_head")
+        and baseline_meta.get("mounted_code_git_head")
+        != procedural_meta.get("mounted_code_git_head")
+        and not mismatches
+    ):
+        warnings.append("paired_candidate_git_heads_differ_sentinel_hashes_match")
+    return summary, blockers, warnings
+
+
 def _recipe_blockers(recipe: Mapping[str, Any], *, expected_name: str) -> list[str]:
     blockers: list[str] = []
     if recipe.get("name") != expected_name:
@@ -236,6 +358,12 @@ def _candidate_output_summary(
     blockers.extend(archive_blockers)
     runtime, runtime_blockers = _runtime_summary(output_dir / "submission")
     blockers.extend(runtime_blockers)
+    metadata, metadata_blockers, metadata_warnings = _modal_metadata_summary(
+        output_dir=output_dir,
+        repo_root=repo_root,
+    )
+    blockers.extend(metadata_blockers)
+    warnings.extend(metadata_warnings)
 
     manifest_path = output_dir / "manifest.json"
     provenance_path = output_dir / "provenance.json"
@@ -341,6 +469,7 @@ def _candidate_output_summary(
         "output_dir": str(output_dir),
         "archive": archive,
         "runtime": runtime,
+        "modal_training_metadata": metadata,
         "manifest": {
             "path": str(manifest_path),
             "exists": manifest_path.is_file(),
@@ -431,7 +560,18 @@ def build_dp1_procedural_paired_harvest_plan(
         for row in candidates
         if row["variant"] in {"baseline", "procedural"}
     }
-    all_required_ready = all(required_ready.get(v, False) for v in ("baseline", "procedural"))
+    paired_source_equivalence, paired_source_blockers, paired_source_warnings = (
+        _paired_source_equivalence(candidates)
+    )
+    top_blockers.extend(paired_source_blockers)
+    for row in candidates:
+        if row["variant"] in {"baseline", "procedural"}:
+            row["warnings"] = sorted(
+                set(row.get("warnings") or []) | set(paired_source_warnings)
+            )
+    all_required_ready = all(
+        required_ready.get(v, False) for v in ("baseline", "procedural")
+    ) and not paired_source_blockers
     if not all_required_ready:
         top_blockers.append("baseline_and_procedural_paired_harvest_not_ready")
 
@@ -481,12 +621,14 @@ def build_dp1_procedural_paired_harvest_plan(
         "all_required_candidates_ready": all_required_ready,
         "top_blockers": sorted(set(top_blockers)),
         "candidates": candidates,
+        "paired_source_equivalence": paired_source_equivalence,
         "post_harvest_adjudication_command": post_harvest_adjudication_command,
         "notes": [
             "DP1 training recipes force DPP_SKIP_AUTH_EVAL=1; score-bearing evidence starts only after this paired Modal auth-eval plan is executed and harvested.",
             "The optional null_control arm is a disambiguator; baseline and procedural are the required first-anchor pair.",
             "Per-axis commands are intentionally routed through tools/dispatch_modal_paired_auth_eval.py, never through single-axis Modal wrappers.",
             "Run the post-harvest adjudication command only after both variants have recovered CPU and CUDA auth-eval JSON.",
+            "Baseline/procedural paired readiness requires matching shared Modal sentinel-file hashes; git heads may differ only when those mounted bytes match.",
         ],
     }
 

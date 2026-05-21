@@ -115,6 +115,37 @@ def _write_candidate_output(
             json.dumps(procedural_payload, sort_keys=True),
             encoding="utf-8",
         )
+    _write_modal_metadata(output_dir, lane_id=lane_id)
+
+
+def _write_modal_metadata(
+    output_dir: Path,
+    *,
+    lane_id: str,
+    sentinels: dict[str, str] | None = None,
+    head: str = "a" * 40,
+) -> None:
+    payload = {
+        "metadata_schema": "modal_train_lane_dispatch_metadata_v2_catalog166",
+        "lane_id": lane_id,
+        "label": f"{lane_id}_label",
+        "call_id": f"fc-{lane_id}",
+        "mounted_code_git_head": head,
+        "mounted_code_git_branch": "main",
+        "require_clean_head": True,
+        "working_tree_dirty": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "sentinel_files_local_sha256": sentinels
+        or {
+            "experiments/modal_train_lane.py": "1" * 64,
+            "tools/operator_authorize.py": "2" * 64,
+            "scripts/remote_lane_substrate_pretrained_driving_prior.sh": "3" * 64,
+        },
+    }
+    (output_dir / "modal_metadata.json").write_text(
+        json.dumps(payload, sort_keys=True), encoding="utf-8"
+    )
 
 
 def _write_all_recipes(root: Path) -> dict[str, str]:
@@ -167,6 +198,9 @@ def test_ready_plan_emits_real_paired_dispatch_commands(tmp_path: Path) -> None:
     assert plan["all_required_candidates_ready"] is True
     assert plan["score_claim"] is False
     assert plan["dispatch_attempted"] is False
+    assert plan["paired_source_equivalence"]["checked"] is True
+    assert plan["paired_source_equivalence"]["shared_sentinel_count"] == 3
+    assert plan["paired_source_equivalence"]["mismatched_sentinel_files"] == []
     adjudication_cmd = plan["post_harvest_adjudication_command"]
     assert adjudication_cmd[:2] == [
         ".venv/bin/python",
@@ -226,6 +260,43 @@ def test_recipe_dispatch_flip_does_not_block_harvest_plan(tmp_path: Path) -> Non
         "recipe_dispatch_enabled_not_false" not in row["blockers"]
         for row in plan["candidates"]
     )
+
+
+def test_paired_harvest_blocks_sentinel_hash_mismatch(tmp_path: Path) -> None:
+    lanes = _write_all_recipes(tmp_path)
+    baseline_out = tmp_path / "baseline_out"
+    procedural_out = tmp_path / "procedural_out"
+    _write_candidate_output(baseline_out, lane_id=lanes["baseline"])
+    _write_candidate_output(
+        procedural_out,
+        lane_id=lanes["procedural"],
+        procedural=True,
+    )
+    _write_modal_metadata(
+        procedural_out,
+        lane_id=lanes["procedural"],
+        sentinels={
+            "experiments/modal_train_lane.py": "1" * 64,
+            "tools/operator_authorize.py": "f" * 64,
+            "scripts/remote_lane_substrate_pretrained_driving_prior.sh": "3" * 64,
+        },
+        head="b" * 40,
+    )
+
+    plan = build_dp1_procedural_paired_harvest_plan(
+        output_dirs={
+            "baseline": baseline_out,
+            "procedural": procedural_out,
+        },
+        repo_root=tmp_path,
+    )
+
+    assert plan["all_required_candidates_ready"] is False
+    assert "paired_candidate_sentinel_sha256_mismatch" in plan["top_blockers"]
+    assert plan["post_harvest_adjudication_command"] is None
+    assert plan["paired_source_equivalence"]["mismatched_sentinel_files"] == [
+        "tools/operator_authorize.py"
+    ]
 
 
 def test_manifest_score_claim_blocks_dispatch_command(tmp_path: Path) -> None:
