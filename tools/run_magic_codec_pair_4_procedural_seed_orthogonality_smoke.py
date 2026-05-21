@@ -448,6 +448,11 @@ def run_smoke(
         )
         for c in canonical_cases
     )
+    best_nonraw_delta_s = (
+        CANONICAL_RATE_MULTIPLIER
+        * float(min_nonraw_delta)
+        / CANONICAL_RATE_DENOM_BYTES
+    )
     if all_canonical_raw_dominates:
         cascade_verdict = "PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES"
         recommendation = (
@@ -504,11 +509,19 @@ def run_smoke(
         ),
         "predicted_delta_s_pair_4": PAIR_4_PREDICTED_DELTA_S,
         "empirical_delta_s_pair_4": 0.0 if all_canonical_raw_dominates else None,
+        "empirical_delta_s_pair_4_interpretation": (
+            "selected raw-fallback delta; best non-raw wrapper delta is reported "
+            "separately as a positive rate regression"
+        ),
+        "best_nonraw_rate_regression_delta_s_pair_4": best_nonraw_delta_s,
         "cascade_verdict": cascade_verdict,
         "recommendation": recommendation,
+        "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
         "axis_tag": "[byte-budget local smoke only]",
         "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
         "evidence_grade": "local_byte_budget_smoke_advisory",
@@ -535,6 +548,9 @@ def emit_markdown_report(result: dict[str, Any], md_path: Path) -> None:
         f"* `recommendation`: {result['recommendation']}",
         f"* `predicted_delta_s_pair_4`: `{result['predicted_delta_s_pair_4']}`",
         f"* `empirical_delta_s_pair_4`: `{result['empirical_delta_s_pair_4']}`",
+        f"* `empirical_delta_s_pair_4_interpretation`: {result['empirical_delta_s_pair_4_interpretation']}",
+        f"* `best_nonraw_rate_regression_delta_s_pair_4`: `{result['best_nonraw_rate_regression_delta_s_pair_4']}`",
+        f"* `score_claim`: `{result['score_claim']}`",
         f"* `score_claim_valid`: `{result['score_claim_valid']}`",
         f"* `promotion_eligible`: `{result['promotion_eligible']}`",
         "",

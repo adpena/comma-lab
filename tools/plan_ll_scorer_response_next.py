@@ -42,6 +42,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Seed budget key K to read from null-byte matrix predicted_delta_s_per_seed_budget.",
     )
     parser.add_argument(
+        "--allow-legacy-null-byte-matrix-missing-authority",
+        action="store_true",
+        help=(
+            "Accept historical null-byte matrices that predate explicit false "
+            "authority fields. Future matrices should not use this flag."
+        ),
+    )
+    parser.add_argument(
         "--magic-codec-seed-boundary-smoke",
         type=Path,
         help=(
@@ -73,6 +81,9 @@ def main(argv: list[str] | None = None) -> int:
             dataset,
             null_byte_matrix=null_byte_matrix,
             null_byte_seed_budget_k=args.null_byte_seed_budget_k,
+            allow_legacy_null_byte_matrix_missing_authority=(
+                args.allow_legacy_null_byte_matrix_missing_authority
+            ),
             magic_codec_seed_boundary_smoke=magic_codec_seed_boundary_smoke,
         )
     except (OSError, ValueError, ScorerResponseDatasetError) as exc:

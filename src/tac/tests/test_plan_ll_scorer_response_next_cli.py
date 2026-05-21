@@ -25,6 +25,7 @@ def test_plan_ll_scorer_response_next_cli_accepts_null_byte_matrix(tmp_path: Pat
                 "schema": "null_byte_master_gradient_probe_matrix_v1",
                 "score_claim": False,
                 "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
                 "rank_or_kill_eligible": False,
                 "promotable": False,
                 "axis_tag": "[predicted]",
@@ -72,6 +73,89 @@ def test_plan_ll_scorer_response_next_cli_accepts_null_byte_matrix(tmp_path: Pat
     assert "Null-Byte Matrix Priority" in md_out.read_text(encoding="utf-8")
 
 
+def test_plan_ll_scorer_response_next_cli_accepts_legacy_null_byte_matrix_only_with_flag(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    matrix_path = tmp_path / "null_byte_matrix.json"
+    json_out = tmp_path / "plan.json"
+
+    dataset_path.write_text(
+        json.dumps({"schema": "scorer_response_dataset.v1", "summary": {}, "rows": []}),
+        encoding="utf-8",
+    )
+    matrix_path.write_text(
+        json.dumps(
+            {
+                "schema": "null_byte_master_gradient_probe_matrix_v1",
+                "score_claim": False,
+                "promotable": False,
+                "axis_tag": "[predicted]",
+                "n_anchors_probed_ok": 1,
+                "top5_replacement_candidates": [
+                    {
+                        "substrate_label": "legacy_fec6",
+                        "codec_family": "hnerv_family",
+                        "scored_archive_sha256": "a" * 64,
+                        "axis": "[contest-CUDA]",
+                        "anchor_index": 1,
+                        "n_null_bytes": 16292,
+                        "null_fraction": 0.091,
+                        "predicted_delta_s_per_seed_budget": {"K=16": -0.0108375},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rejected = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "plan_ll_scorer_response_next.py"),
+            "--dataset",
+            str(dataset_path),
+            "--null-byte-matrix",
+            str(matrix_path),
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+    )
+    assert rejected.returncode == 2
+    assert "promotion_eligible must be explicit false" in rejected.stderr
+
+    accepted = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "plan_ll_scorer_response_next.py"),
+            "--dataset",
+            str(dataset_path),
+            "--null-byte-matrix",
+            str(matrix_path),
+            "--allow-legacy-null-byte-matrix-missing-authority",
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert "ll_null_byte_procedural_codebook_candidates" in accepted.stdout
+    plan = json.loads(json_out.read_text(encoding="utf-8"))
+    assert set(
+        plan["null_byte_priority_weights"]["legacy_missing_authority_fields_accepted"]
+    ) == {
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+    }
+
+
 def test_plan_ll_scorer_response_next_cli_accepts_pair4_seed_boundary(tmp_path: Path) -> None:
     dataset_path = tmp_path / "dataset.json"
     boundary_path = tmp_path / "pair4_boundary.json"
@@ -88,9 +172,12 @@ def test_plan_ll_scorer_response_next_cli_accepts_pair4_seed_boundary(tmp_path: 
                 "smoke_label": "wave_3_magic_codec_pair_4_procedural_seed_orthogonality_smoke",
                 "smoke_pair_id": "pair_4_magic_codec_x_procedural_codebook_seed_bytes",
                 "cascade_verdict": "PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES",
+                "score_claim": False,
                 "score_claim_valid": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
                 "n_canonical_reversible_ordering_rows": 30,
                 "n_canonical_reversible_ordering_rows_raw_seed_dominates": 30,
                 "min_canonical_reversible_best_nonraw_delta_vs_raw_bytes": 4,

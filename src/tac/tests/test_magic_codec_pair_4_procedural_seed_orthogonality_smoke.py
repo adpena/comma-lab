@@ -107,9 +107,14 @@ def test_run_smoke_pair4_boundary_validated_on_canonical_seed_rows():
     assert result["n_canonical_reversible_ordering_rows_raw_seed_dominates"] == 12
     assert result["min_canonical_reversible_best_nonraw_delta_vs_raw_bytes"] == 4
     assert result["empirical_delta_s_pair_4"] == 0.0
+    assert "selected raw-fallback delta" in result["empirical_delta_s_pair_4_interpretation"]
+    assert result["best_nonraw_rate_regression_delta_s_pair_4"] > 0.0
+    assert result["score_claim"] is False
     assert result["score_claim_valid"] is False
     assert result["promotion_eligible"] is False
     assert result["ready_for_exact_eval_dispatch"] is False
+    assert result["rank_or_kill_eligible"] is False
+    assert result["promotable"] is False
 
 
 def test_main_writes_json_and_markdown(tmp_path):
@@ -131,6 +136,8 @@ def test_main_writes_json_and_markdown(tmp_path):
     payload = json.loads(json_path.read_text())
     assert payload["cascade_verdict"] == "PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES"
     assert payload["n_canonical_reversible_ordering_rows"] == 12
+    assert payload["score_claim"] is False
+    assert payload["best_nonraw_rate_regression_delta_s_pair_4"] > 0.0
     assert "ordering_dimension" in payload
     assert "codec_dimensions" in payload
     assert "raw seed is the rate floor" in md_path.read_text()

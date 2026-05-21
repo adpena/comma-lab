@@ -21,6 +21,36 @@ from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BY
 SCHEMA = "scorer_response_dataset.v1"
 ROW_SCHEMA = "scorer_response_row.v1"
 NULL_BYTE_PRIORITY_SCHEMA = "ll_null_byte_priority_weights.v1"
+
+
+_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "ready_for_exact_eval_dispatch",
+    "rank_or_kill_eligible",
+    "promotable",
+)
+
+
+def _require_explicit_false_authority(
+    payload: dict[str, Any],
+    *,
+    label: str,
+    fields: tuple[str, ...] = _FALSE_AUTHORITY_FIELDS,
+    allow_legacy_missing_authority: bool = False,
+) -> list[str]:
+    legacy_missing: list[str] = []
+    for key in fields:
+        if key not in payload or payload.get(key) is None:
+            if allow_legacy_missing_authority:
+                legacy_missing.append(key)
+                continue
+            raise ScorerResponseDatasetError(f"{label} {key} must be explicit false")
+        if payload.get(key) is not False:
+            raise ScorerResponseDatasetError(f"{label} {key} must be false")
+    return legacy_missing
+
+
 TOOL = "tac.optimization.scorer_response_dataset"
 RATE_SCORE_PER_BYTE = 25.0 / CONTEST_UNCOMPRESSED_BYTES
 
@@ -343,6 +373,7 @@ def build_null_byte_priority_weights(
     *,
     max_candidates: int = 8,
     seed_budget_k: int = 16,
+    allow_legacy_missing_authority: bool = False,
 ) -> dict[str, Any]:
     """Turn a null-byte matrix into fail-closed LL sampling priorities.
 
@@ -358,10 +389,11 @@ def build_null_byte_priority_weights(
         raise ScorerResponseDatasetError("seed_budget_k must be positive")
     if null_byte_matrix.get("schema") != "null_byte_master_gradient_probe_matrix_v1":
         raise ScorerResponseDatasetError("null-byte matrix schema mismatch")
-    for key in ("score_claim", "promotion_eligible", "rank_or_kill_eligible", "promotable"):
-        value = null_byte_matrix.get(key)
-        if value is not None and value is not False:
-            raise ScorerResponseDatasetError(f"null-byte matrix {key} must be false")
+    legacy_missing_authority_fields = _require_explicit_false_authority(
+        null_byte_matrix,
+        label="null-byte matrix",
+        allow_legacy_missing_authority=allow_legacy_missing_authority,
+    )
     if null_byte_matrix.get("axis_tag") != "[predicted]":
         raise ScorerResponseDatasetError("null-byte matrix axis_tag must be [predicted]")
 
@@ -418,6 +450,8 @@ def build_null_byte_priority_weights(
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
             }
         )
 
@@ -446,10 +480,16 @@ def build_null_byte_priority_weights(
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "legacy_missing_authority_fields_accepted": legacy_missing_authority_fields,
         "summary": {
             "candidate_count": len(priority_rows),
             "source_n_anchors_probed_ok": null_byte_matrix.get("n_anchors_probed_ok"),
             "max_candidates": max_candidates,
+            "legacy_missing_authority_field_count": len(
+                legacy_missing_authority_fields
+            ),
         },
         "priority_rows": priority_rows,
     }
@@ -470,11 +510,18 @@ def build_magic_codec_seed_boundary(
         raise ScorerResponseDatasetError(
             "magic-codec seed boundary smoke has wrong smoke_pair_id"
         )
-    for key in ("score_claim_valid", "promotion_eligible", "ready_for_exact_eval_dispatch"):
-        if boundary_smoke.get(key) is not False:
-            raise ScorerResponseDatasetError(
-                f"magic-codec seed boundary smoke {key} must be false"
-            )
+    _require_explicit_false_authority(
+        boundary_smoke,
+        label="magic-codec seed boundary smoke",
+        fields=(
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "ready_for_exact_eval_dispatch",
+            "rank_or_kill_eligible",
+            "promotable",
+        ),
+    )
     verdict = str(boundary_smoke.get("cascade_verdict") or "")
     canonical_rows = _as_int(boundary_smoke.get("n_canonical_reversible_ordering_rows"))
     raw_wins = _as_int(
@@ -502,8 +549,11 @@ def build_magic_codec_seed_boundary(
         "source_smoke_pair_id": boundary_smoke.get("smoke_pair_id"),
         "source_cascade_verdict": verdict,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
         "boundary_validated_raw_seed_dominates": boundary_validated,
         "n_canonical_reversible_ordering_rows": canonical_rows,
         "n_canonical_reversible_ordering_rows_raw_seed_dominates": raw_wins,
@@ -518,6 +568,7 @@ def build_next_probe_plan(
     *,
     null_byte_matrix: dict[str, Any] | None = None,
     null_byte_seed_budget_k: int = 16,
+    allow_legacy_null_byte_matrix_missing_authority: bool = False,
     magic_codec_seed_boundary_smoke: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic LL next-probe plan from response economics."""
@@ -629,6 +680,7 @@ def build_next_probe_plan(
         null_byte_priority_weights = build_null_byte_priority_weights(
             null_byte_matrix,
             seed_budget_k=null_byte_seed_budget_k,
+            allow_legacy_missing_authority=allow_legacy_null_byte_matrix_missing_authority,
         )
         for probe in probes:
             probe["priority"] = int(probe["priority"]) + 1
@@ -660,6 +712,8 @@ def build_next_probe_plan(
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
         "dataset_summary": dataset.get("summary"),
         "best_total_row": best_total,
         "best_scorer_row": best_scorer,
@@ -822,6 +876,12 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
     null_priority = plan.get("null_byte_priority_weights")
     if isinstance(null_priority, dict):
         lines.extend(["## Null-Byte Matrix Priority", ""])
+        legacy_missing = null_priority.get("legacy_missing_authority_fields_accepted")
+        if legacy_missing:
+            lines.append(
+                "- Legacy missing authority fields accepted: "
+                f"`{legacy_missing}`"
+            )
         for row in null_priority.get("priority_rows", [])[:8]:
             if not isinstance(row, dict):
                 continue

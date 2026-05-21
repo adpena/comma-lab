@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-21T00:25:23Z
+generated_at: 2026-05-21T00:58:29Z
 from_state_hash: canonical_frontier_pointer_20260520T115711Z_plus_wave3_zero_spend_cascade
-regenerated_by: codex:magic_codec_pair2_null_byte_smoke_refresh_20260521
-last_refreshed_at: 2026-05-21T00:25:23Z
-last_refreshed_by: codex:magic_codec_pair2_null_byte_smoke_refresh_20260521
-last_refreshed_head: 4f35a8289d19c3eca2b2cd82230035cebbef2324
+regenerated_by: codex:ll_pair4_authority_hardening_20260521
+last_refreshed_at: 2026-05-21T00:58:29Z
+last_refreshed_by: codex:ll_pair4_authority_hardening_20260521
+last_refreshed_head: 3e97ee75100f58a69b4ccf14e8b7a033b3ec0252
 last_refreshed_note: |
   Current frontier/status refresh after PR #110, D-3 compliance clearance,
   PR101/FEC6 PacketIR runtime-consumption closure, VQ K=2 diagnostic
@@ -12,8 +12,9 @@ last_refreshed_note: |
   cascade. The scanner-derived FRONTIER section below was rechecked with
   tools/scan_best_anchor_per_axis.py at 2026-05-21T00:09Z; no CPU/CUDA frontier
   score changed. The 2026-05-21 operation notes now include the pair #2
-  sparse PacketIR/SRL1 null-byte residual falsification and are the current
-  routing authority for selector/null-byte follow-on work.
+  sparse PacketIR/SRL1 null-byte residual falsification, pair #4 seed-boundary
+  guard, and LL authority hardening, and are the current routing authority for
+  selector/null-byte follow-on work.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-21 UTC
@@ -150,6 +151,15 @@ last_refreshed_note: |
   `do_not_wrap_procedural_seed_bytes_with_magic_codec` alongside the existing
   sparse-residual widening prohibition, while preserving null-byte priority
   rows as non-promotional LL training-harvest priors.
+- **LL pair #4 authority boundary hardened after adversarial review**:
+  `.omx/research/ll_pair4_authority_hardening_landed_20260521T005829Z_codex.md`
+  makes pair #4 seed-boundary and null-byte-matrix consumers require explicit
+  false authority fields by default. The historical null-byte matrix can still
+  be consumed only with
+  `--allow-legacy-null-byte-matrix-missing-authority`, and the regenerated plan
+  records the accepted missing authority fields. Pair #4 empirical result is
+  unchanged: raw procedural seed bytes dominate `30/30` canonical reversible
+  rows, while the best non-raw wrapper remains a `+4` byte regression.
 - **LL frame/pair curriculum regenerated from the guarded plan**:
   `.omx/research/ll_frame_pair_curriculum_pair4_guarded_landed_20260521T004853Z_codex.md`
   records the pair #4 guarded curriculum. Top frames are

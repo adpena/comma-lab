@@ -158,6 +158,7 @@ def _null_byte_matrix() -> dict:
         "schema": "null_byte_master_gradient_probe_matrix_v1",
         "score_claim": False,
         "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
         "axis_tag": "[predicted]",
@@ -192,9 +193,12 @@ def _pair4_seed_boundary_smoke() -> dict:
         "smoke_label": "wave_3_magic_codec_pair_4_procedural_seed_orthogonality_smoke",
         "smoke_pair_id": "pair_4_magic_codec_x_procedural_codebook_seed_bytes",
         "cascade_verdict": "PAIR_4_BOUNDARY_VALIDATED_RAW_SEED_DOMINATES",
+        "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
         "n_canonical_reversible_ordering_rows": 30,
         "n_canonical_reversible_ordering_rows_raw_seed_dominates": 30,
         "min_canonical_reversible_best_nonraw_delta_vs_raw_bytes": 4,
@@ -211,6 +215,9 @@ def test_magic_codec_seed_boundary_normalizes_pair4_smoke() -> None:
 
     assert boundary["schema"] == "ll_magic_codec_seed_boundary.v1"
     assert boundary["score_claim"] is False
+    assert boundary["score_claim_valid"] is False
+    assert boundary["rank_or_kill_eligible"] is False
+    assert boundary["promotable"] is False
     assert boundary["boundary_validated_raw_seed_dominates"] is True
     assert boundary["n_canonical_reversible_ordering_rows"] == 30
     assert boundary["min_canonical_reversible_best_nonraw_delta_vs_raw_bytes"] == 4
@@ -226,11 +233,22 @@ def test_magic_codec_seed_boundary_rejects_promotional_smoke() -> None:
     else:  # pragma: no cover
         raise AssertionError("expected promotional boundary rejection")
 
+    score_claim = _pair4_seed_boundary_smoke()
+    score_claim["score_claim"] = True
+    try:
+        build_magic_codec_seed_boundary(score_claim)
+    except ScorerResponseDatasetError as exc:
+        assert "score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected score-claim boundary rejection")
+
 
 def test_null_byte_priority_weights_sort_by_predicted_delta() -> None:
     weights = build_null_byte_priority_weights(_null_byte_matrix())
 
     assert weights["score_claim"] is False
+    assert weights["rank_or_kill_eligible"] is False
+    assert weights["promotable"] is False
     assert weights["summary"]["candidate_count"] == 2
     assert weights["priority_rows"][0]["substrate_label"] == "larger_null_budget"
     assert weights["priority_rows"][0]["priority_weight"] == 0.0002
@@ -238,16 +256,38 @@ def test_null_byte_priority_weights_sort_by_predicted_delta() -> None:
     assert 0.0 < weights["priority_rows"][0]["ll_sampling_weight"] < 1.0
 
 
-def test_null_byte_priority_weights_accept_legacy_missing_false_authority_keys() -> None:
+def test_null_byte_priority_weights_reject_legacy_missing_false_authority_keys_by_default() -> None:
     matrix = _null_byte_matrix()
     matrix.pop("promotion_eligible")
     matrix.pop("rank_or_kill_eligible")
 
-    weights = build_null_byte_priority_weights(matrix)
+    try:
+        build_null_byte_priority_weights(matrix)
+    except ScorerResponseDatasetError as exc:
+        assert "must be explicit false" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected missing authority rejection")
+
+
+def test_null_byte_priority_weights_accept_legacy_missing_false_authority_keys_with_flag() -> None:
+    matrix = _null_byte_matrix()
+    matrix.pop("promotion_eligible")
+    matrix.pop("rank_or_kill_eligible")
+    matrix.pop("ready_for_exact_eval_dispatch")
+
+    weights = build_null_byte_priority_weights(
+        matrix,
+        allow_legacy_missing_authority=True,
+    )
 
     assert weights["score_claim"] is False
     assert weights["promotion_eligible"] is False
     assert weights["ready_for_exact_eval_dispatch"] is False
+    assert set(weights["legacy_missing_authority_fields_accepted"]) == {
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+    }
 
 
 def test_next_probe_plan_consumes_null_byte_matrix_as_first_probe(tmp_path) -> None:
@@ -305,6 +345,18 @@ def test_null_byte_matrix_fail_closed_on_promotional_or_missing_k() -> None:
         assert "score_claim" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected promotional matrix rejection")
+
+    missing_authority = _null_byte_matrix()
+    missing_authority.pop("ready_for_exact_eval_dispatch")
+    try:
+        build_next_probe_plan(
+            {"schema": "scorer_response_dataset.v1", "summary": {}, "rows": []},
+            null_byte_matrix=missing_authority,
+        )
+    except ScorerResponseDatasetError as exc:
+        assert "ready_for_exact_eval_dispatch" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected missing ready_for_exact_eval_dispatch rejection")
 
     missing_k = _null_byte_matrix()
     missing_k["top5_replacement_candidates"][0]["predicted_delta_s_per_seed_budget"] = {"K=32": -0.1}
