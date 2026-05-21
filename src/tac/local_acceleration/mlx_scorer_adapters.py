@@ -19,11 +19,91 @@ __all__ = [
     "run_mlx_batchnorm2d_nchw",
     "run_mlx_conv2d_nchw",
     "run_mlx_linear",
+    "run_mlx_mobileone_block_nchw",
+    "run_mlx_mobileone_stem_nchw",
     "torch_batchnorm2d_to_mlx",
     "torch_conv2d_to_mlx",
     "torch_linear_to_mlx",
+    "torch_mobileone_block_to_mlx",
+    "torch_mobileone_stem_to_mlx",
     "temporary_mlx_device",
 ]
+
+
+class MLXConvNormAct2dAdapter:
+    """MLX adapter for timm ``ConvNormAct`` with activation omitted."""
+
+    def __init__(self, torch_module: Any):
+        conv = getattr(torch_module, "conv", None)
+        bn = getattr(torch_module, "bn", None)
+        if conv is None or bn is None:
+            raise TypeError("ConvNormAct adapter requires .conv and .bn children")
+        self.conv = torch_conv2d_to_mlx(conv)
+        self.bn = torch_batchnorm2d_to_mlx(bn)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        return self.bn(self.conv(x_nhwc))
+
+
+class MLXMobileOneBlockAdapter:
+    """MLX adapter for upstream PoseNet stem ``MobileOneBlock`` in eval mode."""
+
+    def __init__(self, torch_block: Any):
+        if getattr(torch_block, "reparam_conv", None) is not None:
+            raise NotImplementedError("reparameterized MobileOneBlock is not covered yet")
+        se = getattr(torch_block, "se", None)
+        if se is not None and _class_path(se) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("MobileOne SqueezeExcite branch is not covered yet")
+        self.identity = (
+            torch_batchnorm2d_to_mlx(torch_block.identity)
+            if getattr(torch_block, "identity", None) is not None
+            else None
+        )
+        self.conv_scale = (
+            MLXConvNormAct2dAdapter(torch_block.conv_scale)
+            if getattr(torch_block, "conv_scale", None) is not None
+            else None
+        )
+        self.conv_kxk = [
+            MLXConvNormAct2dAdapter(branch)
+            for branch in (getattr(torch_block, "conv_kxk", None) or [])
+        ]
+        self.use_gelu_tanh = _class_path(getattr(torch_block, "act", None)) == (
+            "timm.layers.activations.GELUTanh"
+        )
+        if not self.use_gelu_tanh and _class_path(getattr(torch_block, "act", None)) != (
+            "torch.nn.modules.linear.Identity"
+        ):
+            raise NotImplementedError(f"unsupported MobileOne activation: {_class_path(torch_block.act)}")
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        import mlx.core as mx
+
+        out = None
+        if self.identity is not None:
+            out = self.identity(x_nhwc)
+        if self.conv_scale is not None:
+            branch = self.conv_scale(x_nhwc)
+            out = branch if out is None else out + branch
+        for branch_adapter in self.conv_kxk:
+            branch = branch_adapter(x_nhwc)
+            out = branch if out is None else out + branch
+        if out is None:
+            out = mx.zeros_like(x_nhwc)
+        return mlx_gelu_tanh(out) if self.use_gelu_tanh else out
+
+
+class MLXMobileOneStemAdapter:
+    """Sequential adapter for the upstream PoseNet FastViT stem."""
+
+    def __init__(self, torch_stem: Any):
+        self.blocks = [torch_mobileone_block_to_mlx(block) for block in torch_stem]
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = x_nhwc
+        for block in self.blocks:
+            out = block(out)
+        return out
 
 
 def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
@@ -96,6 +176,18 @@ def torch_linear_to_mlx(torch_linear: Any) -> Any:
     return linear
 
 
+def torch_mobileone_block_to_mlx(torch_block: Any) -> MLXMobileOneBlockAdapter:
+    """Convert a timm FastViT ``MobileOneBlock`` to a parity-tested MLX adapter."""
+
+    return MLXMobileOneBlockAdapter(torch_block)
+
+
+def torch_mobileone_stem_to_mlx(torch_stem: Any) -> MLXMobileOneStemAdapter:
+    """Convert the upstream PoseNet FastViT stem to a sequential MLX adapter."""
+
+    return MLXMobileOneStemAdapter(torch_stem)
+
+
 def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
     """Run an MLX Conv2d on NCHW input and return NCHW output."""
 
@@ -122,6 +214,34 @@ def run_mlx_linear(mlx_linear: Any, x: np.ndarray) -> np.ndarray:
     return np.asarray(mlx_linear(mx.array(np.ascontiguousarray(x))))
 
 
+def run_mlx_mobileone_block_nchw(adapter: MLXMobileOneBlockAdapter, x_nchw: np.ndarray) -> np.ndarray:
+    """Run a MobileOneBlock adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(np.asarray(out))
+
+
+def run_mlx_mobileone_stem_nchw(adapter: MLXMobileOneStemAdapter, x_nchw: np.ndarray) -> np.ndarray:
+    """Run a MobileOne stem adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(np.asarray(out))
+
+
+def mlx_gelu_tanh(x: Any) -> Any:
+    """MLX implementation of ``torch.nn.functional.gelu(..., approximate='tanh')``."""
+
+    import mlx.core as mx
+
+    return 0.5 * x * (
+        1.0 + mx.tanh(0.7978845608028654 * (x + 0.044715 * mx.power(x, 3)))
+    )
+
+
 def nchw_to_nhwc(x: np.ndarray) -> np.ndarray:
     arr = np.asarray(x)
     if arr.ndim != 4:
@@ -146,6 +266,13 @@ def _pair(value: Any) -> tuple[int, int]:
             raise ValueError(f"expected pair, got {value!r}")
         return int(value[0]), int(value[1])
     return int(value), int(value)
+
+
+def _class_path(obj: Any) -> str:
+    if obj is None:
+        return ""
+    cls = type(obj)
+    return f"{cls.__module__}.{cls.__qualname__}"
 
 
 class temporary_mlx_device:
