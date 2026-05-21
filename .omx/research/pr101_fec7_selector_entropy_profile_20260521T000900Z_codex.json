@@ -1,0 +1,261 @@
+{
+  "alphabet_size": 16,
+  "best_charged_candidate": {
+    "charged_model_bytes": 16,
+    "description": "one PR103 merged range stream over 16 selector symbols",
+    "meets_target_saving": false,
+    "metadata_bytes": 8,
+    "name": "fec7_global_pr103_range_u8_hist",
+    "notes": [],
+    "payload_bytes": 268,
+    "payload_sha256": "05d1a6102662e6dbdab93c9a08f6fca63a1d64cb295130d649a7054ddc501610",
+    "range_stream_bytes": 244,
+    "saving_vs_fec6_selector_bytes": -19,
+    "target_saving_bytes": 78,
+    "zero_model_entropy_bytes": 241
+  },
+  "best_charged_candidate_archive_bytes_estimate": 178536,
+  "best_fec7_payload_sha256": "05d1a6102662e6dbdab93c9a08f6fca63a1d64cb295130d649a7054ddc501610",
+  "can_meet_target_with_charged_fec7_prototype": false,
+  "charged_archive_delta_bytes_estimate": 19,
+  "charged_candidates": [
+    {
+      "charged_model_bytes": 16,
+      "description": "one PR103 merged range stream over 16 selector symbols",
+      "meets_target_saving": false,
+      "metadata_bytes": 8,
+      "name": "fec7_global_pr103_range_u8_hist",
+      "notes": [],
+      "payload_bytes": 268,
+      "payload_sha256": "05d1a6102662e6dbdab93c9a08f6fca63a1d64cb295130d649a7054ddc501610",
+      "range_stream_bytes": 244,
+      "saving_vs_fec6_selector_bytes": -19,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 241
+    },
+    {
+      "charged_model_bytes": 19,
+      "description": "PR103 merged range stream over none mask plus non-none symbols",
+      "meets_target_saving": false,
+      "metadata_bytes": 12,
+      "name": "fec7_split_none_pr103_range",
+      "notes": [],
+      "payload_bytes": 274,
+      "payload_sha256": "c4f7fd9ad7bba9f50d6927eb27aa70a5b3b01afe30f6b3def50d63906be11a71",
+      "range_stream_bytes": 243,
+      "saving_vs_fec6_selector_bytes": -25,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 241
+    },
+    {
+      "charged_model_bytes": 32,
+      "description": "PR84 adaptive-context range stream with charged pair_index_mod_2 cdf table",
+      "meets_target_saving": false,
+      "metadata_bytes": 9,
+      "name": "fec7_pairmod2_pr84_context_range",
+      "notes": [
+        "context model is charged; hardcoding it in runtime would be source-embedded selector payload, not a byte-closed archive"
+      ],
+      "payload_bytes": 281,
+      "payload_sha256": "478d66c0c238b53d2f523b74c53db03774565b3699f661efbbbcdf4d296a9650",
+      "range_stream_bytes": 240,
+      "saving_vs_fec6_selector_bytes": -32,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 239
+    },
+    {
+      "charged_model_bytes": 64,
+      "description": "PR84 adaptive-context range stream with charged pair_index_mod_4 cdf table",
+      "meets_target_saving": false,
+      "metadata_bytes": 9,
+      "name": "fec7_pairmod4_pr84_context_range",
+      "notes": [
+        "context model is charged; hardcoding it in runtime would be source-embedded selector payload, not a byte-closed archive"
+      ],
+      "payload_bytes": 313,
+      "payload_sha256": "01bd27758046ba8d9e4bdf3c3d47286ae1ece8c3899d7235e34cc048f2f36e47",
+      "range_stream_bytes": 240,
+      "saving_vs_fec6_selector_bytes": -64,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 237
+    },
+    {
+      "charged_model_bytes": 128,
+      "description": "PR84 adaptive-context range stream with charged pair_index_mod_8 cdf table",
+      "meets_target_saving": false,
+      "metadata_bytes": 9,
+      "name": "fec7_pairmod8_pr84_context_range",
+      "notes": [
+        "context model is charged; hardcoding it in runtime would be source-embedded selector payload, not a byte-closed archive"
+      ],
+      "payload_bytes": 369,
+      "payload_sha256": "8b6c0d378fa168388d688df3818820176b68473935a582a185ccf0450a07c736",
+      "range_stream_bytes": 232,
+      "saving_vs_fec6_selector_bytes": -120,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 232
+    },
+    {
+      "charged_model_bytes": 256,
+      "description": "PR84 adaptive-context range stream with charged pair_index_mod_16 cdf table",
+      "meets_target_saving": false,
+      "metadata_bytes": 9,
+      "name": "fec7_pairmod16_pr84_context_range",
+      "notes": [
+        "context model is charged; hardcoding it in runtime would be source-embedded selector payload, not a byte-closed archive"
+      ],
+      "payload_bytes": 489,
+      "payload_sha256": "cb8bdda5cd5065b36f0d41bd501a51e093bc95c62f2623dc8a7138b112486123",
+      "range_stream_bytes": 224,
+      "saving_vs_fec6_selector_bytes": -240,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 221
+    },
+    {
+      "charged_model_bytes": 400,
+      "description": "PR84 adaptive-context range stream with charged pair_index_mod_25 cdf table",
+      "meets_target_saving": false,
+      "metadata_bytes": 9,
+      "name": "fec7_pairmod25_pr84_context_range",
+      "notes": [
+        "context model is charged; hardcoding it in runtime would be source-embedded selector payload, not a byte-closed archive"
+      ],
+      "payload_bytes": 621,
+      "payload_sha256": "1f17fe3c81689ede81205d95834719c9d4c939207252f170c4f545bc5b6b193c",
+      "range_stream_bytes": 212,
+      "saving_vs_fec6_selector_bytes": -372,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 209
+    },
+    {
+      "charged_model_bytes": 800,
+      "description": "PR84 adaptive-context range stream with charged pair_index_mod_50 cdf table",
+      "meets_target_saving": false,
+      "metadata_bytes": 9,
+      "name": "fec7_pairmod50_pr84_context_range",
+      "notes": [
+        "context model is charged; hardcoding it in runtime would be source-embedded selector payload, not a byte-closed archive"
+      ],
+      "payload_bytes": 997,
+      "payload_sha256": "3a83a019a28c18d7b1d959bc9387e31eb0b7c6e5ce8cdfb5cffd2a8a5be9bc70",
+      "range_stream_bytes": 188,
+      "saving_vs_fec6_selector_bytes": -748,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 186
+    },
+    {
+      "charged_model_bytes": 1600,
+      "description": "PR84 adaptive-context range stream with charged pair_index_mod_100 cdf table",
+      "meets_target_saving": false,
+      "metadata_bytes": 9,
+      "name": "fec7_pairmod100_pr84_context_range",
+      "notes": [
+        "context model is charged; hardcoding it in runtime would be source-embedded selector payload, not a byte-closed archive"
+      ],
+      "payload_bytes": 1757,
+      "payload_sha256": "c897370a0e9f77cf307a884e056bb173245c393514e9386ac05c324646ec014f",
+      "range_stream_bytes": 148,
+      "saving_vs_fec6_selector_bytes": -1508,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 148
+    }
+  ],
+  "dispatch_attempted": false,
+  "explicit_blocker": {
+    "blocked": true,
+    "reactivation_criteria": "Reopen only with a selector model whose charged model plus range stream is at least target_saving_bytes smaller than FEC6, or with a compliance-reviewed runtime prior that is not source-embedded selector data.",
+    "reason": "FEC6 selector bytes are already near the global entropy floor; tested byte-closed FEC7 range/adaptive prototypes charge their model bytes and do not approach the required saving."
+  },
+  "fec6_selector": {
+    "charged_archive_bytes_equal_selector_payload_delta": true,
+    "payload_bytes": 249,
+    "payload_sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca",
+    "reason": "archive member is stored; replacing the selector payload changes the wrapper and ZIP size by the same byte delta",
+    "wire_format": "FEC6_fixed_huffman_k16_archive_charged_compact_palette"
+  },
+  "fec6_selector_payload_bytes": 249,
+  "global_entropy_floor_bytes": 241,
+  "global_entropy_floor_saving_vs_fec6_bytes": 8,
+  "parser_section_manifest_gate": {
+    "blockers": [],
+    "dispatch_attempted": false,
+    "name": "parser-section gate",
+    "ready": true,
+    "score_claim": false
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr101_fec7_selector_entropy_profile.v1",
+  "score_claim": false,
+  "selector_code_count": 600,
+  "selector_histogram": {
+    "0": 134,
+    "1": 35,
+    "10": 7,
+    "11": 16,
+    "12": 6,
+    "13": 92,
+    "14": 17,
+    "15": 1,
+    "2": 129,
+    "3": 9,
+    "4": 25,
+    "5": 13,
+    "6": 11,
+    "7": 71,
+    "8": 10,
+    "9": 24
+  },
+  "source_archive": {
+    "bytes": 178517,
+    "member_bytes": 178417,
+    "member_name": "x",
+    "member_sha256": "f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd",
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+  },
+  "target_saving_bytes": 78,
+  "theoretical_context_lower_bounds": [
+    {
+      "byte_closed": false,
+      "context_mod": 100,
+      "saving_vs_fec6_if_model_free": 101,
+      "zero_model_entropy_bytes": 148
+    },
+    {
+      "byte_closed": false,
+      "context_mod": 50,
+      "saving_vs_fec6_if_model_free": 63,
+      "zero_model_entropy_bytes": 186
+    },
+    {
+      "byte_closed": false,
+      "context_mod": 25,
+      "saving_vs_fec6_if_model_free": 40,
+      "zero_model_entropy_bytes": 209
+    },
+    {
+      "byte_closed": false,
+      "context_mod": 16,
+      "saving_vs_fec6_if_model_free": 28,
+      "zero_model_entropy_bytes": 221
+    },
+    {
+      "byte_closed": false,
+      "context_mod": 8,
+      "saving_vs_fec6_if_model_free": 17,
+      "zero_model_entropy_bytes": 232
+    },
+    {
+      "byte_closed": false,
+      "context_mod": 4,
+      "saving_vs_fec6_if_model_free": 12,
+      "zero_model_entropy_bytes": 237
+    },
+    {
+      "byte_closed": false,
+      "context_mod": 2,
+      "saving_vs_fec6_if_model_free": 10,
+      "zero_model_entropy_bytes": 239
+    }
+  ]
+}

@@ -1,24 +1,28 @@
 <!--
-generated_at: 2026-05-20T12:11:33Z
-from_state_hash: canonical_frontier_pointer_20260520T115711Z
-regenerated_by: codex:vq_k2_terminalize_and_frontier_refresh_20260520
-last_refreshed_at: 2026-05-20T12:11:33Z
-last_refreshed_by: codex:vq_k2_terminalize_and_frontier_refresh_20260520
-last_refreshed_head: local_dirty_worktree
+generated_at: 2026-05-21T00:09:34Z
+from_state_hash: canonical_frontier_pointer_20260520T115711Z_plus_wave3_zero_spend_cascade
+regenerated_by: codex:fec7_selector_entropy_profile_and_wave3_refresh_20260521
+last_refreshed_at: 2026-05-21T00:09:34Z
+last_refreshed_by: codex:fec7_selector_entropy_profile_and_wave3_refresh_20260521
+last_refreshed_head: eaa0ad789eb153019c2634292bb21d918a9980e4
 last_refreshed_note: |
   Current frontier/status refresh after PR #110, D-3 compliance clearance,
-  PR101/FEC6 PacketIR runtime-consumption closure, and VQ K=2 diagnostic
-  terminalization. The scanner-derived FRONTIER section below is current as of
-  canonical_frontier_pointer.json refreshed at 2026-05-20T11:57:11Z. Later
-  historical sections remain useful context, but the FRONTIER and 2026-05-20
-  operation notes are the current authority.
+  PR101/FEC6 PacketIR runtime-consumption closure, VQ K=2 diagnostic
+  terminalization, and the zero-spend Wave-3 null/procedural/magic-codec
+  cascade. The scanner-derived FRONTIER section below was rechecked with
+  tools/scan_best_anchor_per_axis.py at 2026-05-21T00:09Z; no CPU/CUDA frontier
+  score changed. The newer 2026-05-21 operation notes are now the current
+  routing authority for selector/null-byte follow-on work.
 -->
 
-# Comma Lab - Current Frontier Snapshot - 2026-05-20
+# Comma Lab - Current Frontier Snapshot - 2026-05-21 UTC
 
-> **2026-05-20 refresh note**: the scanner-derived FRONTIER section and
-> operations notes are current. Historical roadmap sections below remain
-> retained for context; use `.omx/state/current_focus.md`,
+> **2026-05-21 refresh note**: the scanner-derived FRONTIER section was
+> rechecked after the Wave-3 cascade; CPU/CUDA leaders are unchanged, but the
+> routing notes now include the null-byte, procedural-codebook, magic-codec,
+> sidecar, and FEC7 selector falsification evidence landed after the prior
+> refresh. Historical roadmap sections below remain retained for context; use
+> `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
 > detailed queue routing.
 
@@ -36,7 +40,7 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last regenerated 2026-05-20T12:11Z
+### Current best - last rechecked 2026-05-21T00:09Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
@@ -86,6 +90,48 @@ last_refreshed_note: |
   useful artifact must change Seg/Pose components or add a consumed procedural
   residual layer before paired exact eval.
 
+### 2026-05-21 zero-spend cascade refresh
+
+- **Frontier unchanged after scan**: `tools/scan_best_anchor_per_axis.py`
+  scanned `222` anchors (`202` qualifying). Best existing `[contest-CPU]`
+  remains `0.1920513169` at archive SHA
+  `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`;
+  best `[contest-CUDA T4]` remains `0.2053300290` at archive SHA
+  `9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4`.
+- **Null-byte matrix surfaced a real but not-yet-materialized budget**:
+  `.omx/research/null_byte_matrix_across_11_anchors_20260520.md` records
+  `16,292` fec6 frontier null-space bytes (`9.131%`) at the master-gradient
+  surface. This is candidate routing signal only; runtime-consumed deletion or
+  procedural reconstruction still needs a byte-closed adapter.
+- **Simple selector-seed adapter is closed for now**:
+  `.omx/research/pr101_seeded_selector_adapter_probe_20260520T232000Z_codex.md`
+  and `.omx/research/pr101_seeded_selector_adapter_profile_20260520T232000Z_codex.md`
+  show the best charged seed/residual selector candidate is `326` bytes, a
+  `-77` byte regression versus the live `249` byte FEC6 selector.
+- **FEC7 selector entropy replacement is closed for now**:
+  `.omx/research/pr101_fec7_selector_entropy_profile_20260521T000900Z_codex.md`
+  shows a `241` byte zero-overhead global entropy floor, but the best charged
+  FEC7 prototype is `268` bytes (`-19` byte saving versus FEC6). It does not
+  meet the `78` charged-byte materiality threshold.
+- **Sidecar-only grammar re-encode is closed for now**:
+  `.omx/research/pr101_fec6_sidecar_reencode_probe_20260520T235543Z_codex.md`
+  proves the live PR101/FEC6 sidecar re-encodes byte-identically at `607` bytes
+  after correcting the exact dim/no-op rank width semantics. Byte movement
+  needs a semantic/runtime adapter or a newly produced residual stream, not
+  post-hoc wrapping of the current sidecar.
+- **Magic-codec DWT detail residual rescue path is falsified**:
+  `.omx/research/magic_codec_dense_streams_dwt_residual_smoke_landed_20260520.md`
+  records direct empirical detail-subband brotli at `131,779` bytes versus
+  procedural-plus-dense-stream residuals at `187,054` bytes (`+55,275` bytes;
+  empirical score-direction regression), so that pair is not the next paid
+  path.
+- **Current highest-signal follow-on**: continue the free local pair #2 probe
+  from `.omx/research/wave_3_end_of_day_cascade_reconciliation_operator_brief_20260520.md`:
+  sparse PacketIR/SRL1 on fec6 null-byte residuals. If that also fails, the next
+  byte-closed frontier candidate should move to DP1 procedural paired-smoke
+  recipe authoring or a DWT-HNeRV rescope path rather than further FEC6 selector
+  entropy polish.
+
 ### Comparison vs public PRs
 
 - **PR101 GOLD** (`qpose14_qzs3_filmq9g_slsb1_r55`): 0.193 `[contest-CPU]` → **we beat by 0.00095 on CPU axis** with `6bae0201`.
@@ -118,7 +164,7 @@ Evidence report: `experiments/results/g1_cpu_axis_re_rank_20260518T214250Z/repor
 | pr103 | 0.1948697174 | `7d1e46331a04` | `pr103_global_combo_mid32_latent_hi_brotli_retune_exact_cpu` |
 | other | 0.1928475774 | `87ec7ca5f2f3` | `hnerv_ft_microcodec` |
 
-**G1 verdict:** `current_frontier_remains_cpu_optimal`; delta vs current CPU frontier = `+0.0000000000` (CPU-axis delta, not a frontier score citation). The probe scanned 194 canonical anchors, including 55 qualifying CPU anchors from the live `accepted_anchor_history` posterior plus dispatch-claim surfaces. This does not retire CPU-axis-specific optimization as a class; it closes the zero-cost existing-anchor rerank probe and leaves any future G1 improvement dependent on new paired Linux x86_64 CPU anchors.
+**G1 verdict:** `current_frontier_remains_cpu_optimal`; delta vs current CPU frontier = `+0.0000000000` (CPU-axis delta, not a frontier score citation). The 2026-05-21 recheck scanned 222 canonical anchors, including 67 qualifying CPU anchors from the live `accepted_anchor_history` posterior plus dispatch-claim surfaces. This does not retire CPU-axis-specific optimization as a class; it closes the zero-cost existing-anchor rerank probe and leaves any future G1 improvement dependent on new paired Linux x86_64 CPU anchors.
 
 ### ASYMPTOTIC PURSUIT pivot (2026-05-17)
 
