@@ -112,7 +112,8 @@ PROCEDURAL_VARIANT_AVAILABLE: bool = True
 """Flag set True at scaffold landing (sister of DP1 + VQ-VAE
 ``PROCEDURAL_VARIANT_AVAILABLE``). Trainers + cathedral consumers may key
 off this flag to detect that the grayscale_lut procedural chroma-LUT
-replacement variant is importable + structurally complete.
+envelope scaffold is importable. This is not a score-eligible replacement
+archive until a LUT-explicit GLV2 grammar and inflate consumer land.
 
 Per WAVE-3-GRAYSCALE-LUT-PROCEDURAL-TRAINER-BUILD 2026-05-20 + PR101/PR106
 BUILD DESIGN landing commit ``086d3ac1d`` Top-3 #1 PIVOT.

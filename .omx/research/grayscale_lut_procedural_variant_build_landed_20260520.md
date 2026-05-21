@@ -20,7 +20,7 @@ BUILD landed the 3rd canonical PROCEDURAL VARIANT module — `tac.substrates.gra
    - Forked: archive grammar (GLPV sentinel envelope is grayscale_lut-unique; DP1 replaces dp1_codebook section, VQ-VAE prepends VQVP inside decoder_blob — neither pattern fits the current GLV1 grammar which lacks a dedicated chroma_lut section).
    - Adopted canonical: ProceduralVariantConfig dataclass shape; PROCEDURAL_SEED_SIZE_BYTES=32 constant; PCG64 default generator_kind; `derive_codebook_from_seed` helper; `verify_*_in_domain` slot-3-aware pattern with fallback set; `verify_seed_mutation_changes_*_bytes` Catalog #272 invariant; `predicted_archive_bytes_saved` + `predicted_delta_s` canonical equation #26 closed-form.
    - Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode": forks were principled (architectural reality of current substrate) not cargo-culted.
-6. **STACK-OF-STACKS-COMPOSABILITY** — Procedural variant is structurally additive over the canonical GLV1 archive (compose function preserves all original bytes byte-for-byte + appends envelope; sister `parse_archive` on the GLV1 prefix still returns canonical archive structure). Future LUT-aware variant lands as GLV2 schema bump per the design memo §honest disclosure.
+6. **STACK-OF-STACKS-COMPOSABILITY** — Procedural variant is structurally additive over the canonical GLV1 archive (compose function preserves all original bytes byte-for-byte + appends envelope; sister `parse_archive` on the GLV1 prefix still returns canonical archive structure, while `parse_archive` correctly rejects the appended scaffold archive as non-GLV1). Future LUT-aware variant lands as GLV2 schema bump per the design memo §honest disclosure.
 7. **DETERMINISTIC REPRODUCIBILITY** — `derive_procedural_lut_replacement` is deterministic per seed + generator_kind + shape + dtype; envelope encoding is byte-stable; brotli quality 9 fixed; sorted-keys pattern inherited from DP1/VQ-VAE sister discipline.
 8. **EXTREME OPTIMIZATION + PERFORMANCE** — Smallest ΔS per substrate in the 5-substrate procedural matrix (-0.000149 vs DP1 -0.002706 vs VQ-VAE -0.005434) but strongest IN-DOMAIN fit confidence: `chroma_lut_replacement` is the canonical equation #26 anchor context per the DOMAIN REFINEMENT commit. The structural value is the IN-DOMAIN confidence multiplier, not absolute byte savings.
 9. **OPTIMAL MINIMAL CONTEST SCORE** — Per Catalog #324, `predicted_band_validation_status=pending_post_training`; the predicted ΔS is HYPOTHESIS not score claim. Operator-routed per-substrate symposium per Catalog #325 + paired-smoke contest-CUDA + contest-CPU per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" are required gates before promotion.
@@ -82,7 +82,7 @@ Sister regression of DP1 + VQ-VAE substrates not run by this subagent (out of sc
 
 * **Hook #1 sensitivity-map** = N/A (variant is single archive-build path; no per-tensor sensitivity contribution).
 * **Hook #2 Pareto constraint** = ACTIVE via `procedural_codebook_savings_v1` predicted ΔS contribution to rate-axis Pareto polytope. Smallest per-substrate ΔS in the 5-substrate procedural matrix; strongest IN-DOMAIN confidence.
-* **Hook #3 bit-allocator** = ACTIVE (32-byte seed slot replaces 256-byte LUT slot when GLV2 lands; bit-allocator's per-tensor importance changes).
+* **Hook #3 bit-allocator** = PLANNED (32-byte seed slot replaces 256-byte LUT slot only when GLV2 lands; current GLV1 scaffold appends bytes and is not score-eligible).
 * **Hook #4 cathedral autopilot dispatch** = ACTIVE via sister consumer `tac.cathedral_consumers.procedural_codebook_generator_consumer` (auto-discovered per Catalog #335).
 * **Hook #5 continual-learning posterior** = ACTIVE (first empirical anchor via `update_equation_with_empirical_anchor` post-paired-smoke).
 * **Hook #6 probe-disambiguator** = ACTIVE (PROCEDURAL vs canonical chroma LUT contrast IS the probe disambiguator for whether the grayscale_lut substrate's chroma-axis rate can be procedurally substituted within the canonical equation #26 IN-DOMAIN context).
@@ -112,7 +112,9 @@ Sister regression of DP1 + VQ-VAE substrates not run by this subagent (out of sc
 
 ## Blockers
 
-None. All 26 dedicated tests pass; 35/35 sister regression pass; 0 new catalog violations from my work. Module is L1 SCAFFOLD per impl_complete + strict_preflight gates marked.
+No blocker to committing as `research_only=true` scaffold. All 26 dedicated tests pass; 35/35 sister regression pass; 0 new catalog violations from my work. Module is L1 SCAFFOLD per impl_complete + strict_preflight gates marked.
+
+Score/promotion blocker remains explicit: current GLV1 has no chroma-LUT section, so the compose function APPENDS the envelope and increases bytes by 41 B for a 32 B seed. A score-eligible archive requires GLV2 LUT-explicit grammar + inflate consumer before the `-0.000149` rate-axis hypothesis can be tested.
 
 The compose function APPENDS the envelope rather than REPLACING (current GLV1 grammar lacks chroma_lut section; honest L0 scaffold disclosure). A future LUT-aware variant lands at GLV2 schema bump + the compose function flips to REPLACE-IN-PLACE matching the canonical DP1 + VQ-VAE pattern. This is documented in the module docstring under "Architectural note" + the compose function docstring.
 

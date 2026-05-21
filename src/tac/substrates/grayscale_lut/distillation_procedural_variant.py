@@ -18,12 +18,14 @@ match per CANONICAL EQUATION #26 DOMAIN REFINEMENT commit ``8d8a7c6c5``:
 a 256-byte (uint8) per-class chroma table that maps each grayscale level
 or class index to a chroma offset.
 
-This module is the **L0 SCAFFOLD procedural variant** of the grayscale_lut
-substrate's chroma-LUT bytes. The canonical LUT in the chroma_lut_replacement
-context is 256 bytes (uint8 indexed by grayscale level / class index). This
-variant REPLACES that LUT with a deterministic 32-byte PCG64 seed; the
-inflate runtime re-derives the LUT bytes via
-:func:`tac.procedural_codebook_generator.derive_codebook_from_seed`.
+This module is the **L0 SCAFFOLD procedural-envelope variant** for the
+grayscale_lut substrate's future chroma-LUT bytes. The canonical LUT in the
+``chroma_lut_replacement`` context is 256 bytes (uint8 indexed by grayscale
+level / class index). Once a LUT-explicit GLV2 archive exists, that LUT can be
+replaced by a deterministic 32-byte PCG64 seed and the inflate runtime can
+re-derive the LUT bytes via
+:func:`tac.procedural_codebook_generator.derive_codebook_from_seed`. The
+current GLV1 scaffold does not remove bytes; it appends a seed envelope.
 
 **Predicted ΔS = -0.000149** per canonical equation #26 closed form:
 ``-25 * (256 - 32) / 37_545_489``. The savings is structurally smaller
@@ -52,8 +54,10 @@ that LUT-aware inflate variants detect via the ``GLPV`` sentinel
 Q4 STRUCTURALLY COMPLIANT verdict; sister DP1 + VQ-VAE BUILD landing
 memos):
 
-1. Seed bytes live INSIDE archive ``0.bin`` (~32 B canonical replaces
-   ~256 B chroma LUT slot); the contest rate term charges
+1. Seed bytes live INSIDE archive ``0.bin``. In the future LUT-explicit GLV2
+   target, ~32 B seed bytes replace a ~256 B chroma LUT slot; in the current
+   GLV1 scaffold they are appended as a non-promotional envelope. The contest
+   rate term charges
    ``25 * archive_bytes / 37_545_489`` per ``upstream/evaluate.py:63``.
 2. Derivation routine ``derive_codebook_from_seed`` lives in inflate.py
    (legitimate "external library / tool" per upstream README).
@@ -64,10 +68,11 @@ memos):
    NOT *payload smuggling*.
 
 **Catalog #220 substrate L1+ scaffold operational mechanism**: the
-``compose_with_procedural_lut`` API emits archive bytes whose chroma-LUT
-section IS structurally consumed by inflate (the seed is inverted at
-parse-time to re-derive the LUT bytes byte-for-byte identical to the
-original LUT for the inflate-time consumer).
+``compose_with_procedural_lut`` API emits a byte-stable GLPV seed envelope
+after a parseable GLV1 prefix. The current GLV1 inflate path does not consume
+that envelope; a future LUT-aware GLV2 inflate path must consume it at
+parse-time and re-derive the LUT bytes byte-for-byte for the inflate-time
+consumer before this becomes score-eligible.
 
 **Catalog #240 recipe-vs-trainer-state consistency**: the variant is
 ``research_only=True`` until the operator-routed per-substrate symposium
@@ -100,8 +105,8 @@ predicted ΔS computation IS the canonical equation #26 closed-form
 * hook #2 Pareto constraint = ACTIVE via procedural_codebook_savings_v1
   predicted ΔS contribution to rate-axis Pareto polytope (smallest
   per-substrate ΔS but strongest IN-DOMAIN fit confidence)
-* hook #3 bit-allocator = ACTIVE (32-byte seed slot replaces ~256 B
-  chroma LUT slot; bit-allocator's per-tensor importance changes)
+* hook #3 bit-allocator = PLANNED (32-byte seed slot replaces ~256 B
+  chroma LUT slot only after the LUT-explicit GLV2 grammar lands)
 * hook #4 cathedral autopilot dispatch = ACTIVE via sister consumer
   ``tac.cathedral_consumers.procedural_codebook_generator_consumer``
   (auto-discovered per Catalog #335)
@@ -195,9 +200,10 @@ PROCEDURAL_SEED_SIZE_BYTES: int = 32
 """Canonical procedural-variant seed size in bytes.
 
 Per 5-substrate matrix design + DP1 BUILD + VQ-VAE BUILD canonical
-patterns: 32-byte PCG64 seed replaces the canonical 256-byte chroma LUT
-slot. The ``32`` constant is the ``K_seed`` term in the canonical
-equation #26 closed form:
+patterns: a 32-byte PCG64 seed is the future replacement payload for the
+canonical 256-byte chroma LUT slot. In current GLV1 scaffolding it is only an
+appended envelope payload. The ``32`` constant is the ``K_seed`` term in the
+canonical equation #26 closed form:
 
     predicted_delta_s = -25 * (256 - 32) / 37_545_489 = -0.000149
 """
@@ -540,17 +546,18 @@ def compose_with_procedural_lut(
     dtype: np.dtype = PROCEDURAL_LUT_DTYPE_DEFAULT,
     generator_kind: str = DEFAULT_GENERATOR_KIND,
 ) -> bytes:
-    """Compose a grayscale_lut archive whose chroma LUT is REPLACED by a procedural seed.
+    """Compose a GLV1 scaffold archive with an appended procedural-LUT seed envelope.
 
     Sister of :func:`tac.substrates.pretrained_driving_prior.distillation_procedural_variant.compose_with_procedural_codebook`
     (canonical DP1 BUILD pattern; commit ``9cbfa471c``) +
     :func:`tac.substrates.vq_vae.distillation_procedural_variant.compose_with_procedural_codebook`
     (canonical VQ-VAE BUILD pattern; commit ``6fea30f22``).
 
-    Takes an existing GLV1 archive + a 32-byte seed; emits a NEW archive
-    whose chroma LUT bytes are REPLACED by a sentinel-prefixed seed
-    envelope appended to the GLV1 archive tail (the seed is re-derived at
-    inflate time via :func:`derive_procedural_lut_replacement`).
+    Takes an existing GLV1 archive + a 32-byte seed; emits a NEW archive with
+    a sentinel-prefixed seed envelope appended to the GLV1 archive tail. The
+    current GLV1 inflate path does not consume that envelope. A future
+    LUT-aware GLV2 inflate path can re-derive the LUT at inflate time via
+    :func:`derive_procedural_lut_replacement`.
 
     **Architectural note** (honest disclosure): the current grayscale_lut
     substrate (``architecture.py``) uses a FiLM-conditioned RGB decoder

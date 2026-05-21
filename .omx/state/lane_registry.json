@@ -45680,7 +45680,7 @@
           "evidence": ""
         }
       },
-      "notes": "research_only=true; lane_class=substrate_engineering; reactivation_criteria=symposium_proceed_per_catalog_325_plus_paired_smoke_contest_cuda_plus_contest_cpu_per_claude_md_submission_auth_eval; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=chroma_lut_replacement; predicted_delta_s=-0.000149; bytes_saved=224; lut_bytes=256; seed_bytes=32; horizon_class=frontier_protecting; per_substrate_symposium_required_per_catalog_325; build_commit_pending; sister_canonical_pattern_dp1_commit_9cbfa471c_plus_vq_vae_commit_6fea30f22; predicted_band_validation_status=pending_post_training"
+      "notes": "research_only=true; lane_class=substrate_engineering; reactivation_criteria=symposium_proceed_per_catalog_325_plus_paired_smoke_contest_cuda_plus_contest_cpu_per_claude_md_submission_auth_eval; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=chroma_lut_replacement; predicted_delta_s=-0.000149; bytes_saved_hypothesis=224_after_glv2_lut_explicit_replacement; current_glv1_scaffold_appends_41b_and_is_not_score_eligible; lut_bytes=256; seed_bytes=32; horizon_class=frontier_protecting; per_substrate_symposium_required_per_catalog_325; build_landed_research_only; sister_canonical_pattern_dp1_commit_9cbfa471c_plus_vq_vae_commit_6fea30f22; predicted_band_validation_status=pending_post_training"
     }
   ],
   "level_rules": {
@@ -45690,5 +45690,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T01:25:22Z"
+  "updated_at": "2026-05-21T01:36:09Z"
 }

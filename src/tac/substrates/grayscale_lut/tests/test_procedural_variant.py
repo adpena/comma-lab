@@ -270,6 +270,7 @@ def test_compose_with_procedural_lut_extends_archive_with_envelope() -> None:
     new = compose_with_procedural_lut(original, seed)
     # Envelope is appended; new archive is strictly longer.
     assert len(new) > len(original)
+    assert len(new) == len(original) + 4 + 2 + 1 + 2 + len(seed)
     # Original GLV1 bytes preserved as the prefix.
     assert new.startswith(original)
     # Envelope starts with the canonical sentinel.
@@ -296,16 +297,13 @@ def test_compose_with_procedural_lut_preserves_original_archive_parse() -> None:
     original = _make_synthetic_glv1_archive_bytes()
     seed = bytes(range(32))
     new = compose_with_procedural_lut(original, seed)
-    # The original archive prefix still parses (current inflate is GLV1-aware
-    # only; the appended envelope is invisible to canonical parser).
+    # The original archive prefix still parses; current GLV1 parse/inflate is
+    # deliberately strict and refuses the appended non-promotional envelope.
     arc_original = parse_archive(original)
-    # Sister: the canonical parser ignores the appended bytes (the envelope
-    # would surface as "trailing bytes" if the parser were stricter; per the
-    # current parse_archive contract, it asserts pos == len(blob) so we
-    # cannot reparse the composed archive as canonical GLV1 directly).
-    # Test passes when the original bytes are still valid GLV1.
     assert arc_original.num_pairs == 4
     assert arc_original.schema_version == 1
+    with pytest.raises(ValueError, match="archive size"):
+        parse_archive(new)
 
 
 def test_compose_procedural_archive_convenience_wrapper_matches_full_API() -> None:
