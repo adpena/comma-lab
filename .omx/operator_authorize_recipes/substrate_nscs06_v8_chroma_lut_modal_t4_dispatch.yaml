@@ -99,6 +99,29 @@ lane_script: scripts/remote_lane_substrate_nscs06_v8_chroma_lut.sh
 remote_driver: scripts/remote_lane_substrate_nscs06_v8_chroma_lut.sh
 trainer_path: experiments/train_substrate_nscs06_v8_chroma_lut.py
 
+# Canonical fields read by tac.deploy.dispatch_protocol._trainer_path per
+# Catalog #270 dispatch optimization protocol + Catalog #240 recipe-vs-trainer-
+# state consistency. OVERNIGHT-V Phase 2 BUILD landed `trainer_path` (top-level)
+# which the local pre-deploy harness reads correctly, but the runtime
+# dispatch_protocol gate reads `modal.cost_band_trainer` OR
+# `required_input_files_trainer`. OVERNIGHT-DD 2026-05-21 adds the canonical
+# fields to unblock Phase 4 paired CPU+CUDA Modal T4 dispatch per operator
+# blanket approval 2026-05-21 "All are approved on my end". Per CLAUDE.md
+# "Strict-flip atomicity rule": all 3 wiring surfaces (lane_script + trainer
+# path + required_input_files) are coherent now.
+modal:
+  lane_script: scripts/remote_lane_substrate_nscs06_v8_chroma_lut.sh
+  cost_band_trainer: experiments/train_substrate_nscs06_v8_chroma_lut.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_nscs06_v8_chroma_lut.py
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
 # env_overrides (per Catalog #326 driver-mode env var explicit declaration):
 # Phase 2 BUILD flip 2026-05-21 (OVERNIGHT-V): MODE: "smoke" -> "full" +
 # SMOKE_ONLY: "1" -> "0" per Catalog #240 atomic recipe-vs-trainer-state flip.
