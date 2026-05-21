@@ -190,6 +190,50 @@ def test_hash_only_cli_writes_no_tensor_payloads(tmp_path: Path) -> None:
     assert len(manifest["array_sha256"]["posenet_yuv6_pair"]) == 64
 
 
+def test_full_cache_cli_requires_ack_for_large_eager_tensor_surface(tmp_path: Path) -> None:
+    h, w = CAMERA_HW
+    raw_path = tmp_path / "0.raw"
+    frames = np.zeros((4, h, w, 3), dtype=np.uint8)
+    raw_path.write_bytes(frames.tobytes())
+
+    blocked = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache.py"),
+            "--raw",
+            str(raw_path),
+            "--output-dir",
+            str(tmp_path / "blocked"),
+            "--large-cache-pair-threshold",
+            "1",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert blocked.returncode != 0
+    assert "refusing eager full MLX scorer-input tensor cache" in blocked.stderr
+
+    allowed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache.py"),
+            "--raw",
+            str(raw_path),
+            "--output-dir",
+            str(tmp_path / "allowed"),
+            "--large-cache-pair-threshold",
+            "1",
+            "--allow-large-tensor-cache",
+        ],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert '"pair_count": 2' in allowed.stdout
+
+
 def test_contest_auth_eval_hash_artifact_updates_provenance(tmp_path: Path) -> None:
     from experiments.contest_auth_eval import _record_scorer_input_cache_hash_artifact
 

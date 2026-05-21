@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 
 from tac.local_acceleration.mlx_preprocess import (
+    load_raw_video_memmap,
+    non_overlapping_pair_indices,
     write_scorer_input_cache_from_raw_file,
     write_scorer_input_cache_hash_manifest_from_raw_file,
 )
@@ -21,6 +23,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--archive-sha256")
     parser.add_argument("--inflated-outputs-aggregate-sha256")
     parser.add_argument("--max-pairs", type=int, default=None)
+    parser.add_argument(
+        "--allow-large-tensor-cache",
+        action="store_true",
+        help=(
+            "Allow eager full .npy tensor cache writes for large raw surfaces. "
+            "Without this flag, large surfaces fail closed; use --hash-only for "
+            "auth-axis identity artifacts."
+        ),
+    )
+    parser.add_argument(
+        "--large-cache-pair-threshold",
+        type=int,
+        default=64,
+        help="Maximum eager full-cache pair count allowed without --allow-large-tensor-cache.",
+    )
     parser.add_argument(
         "--hash-only",
         action="store_true",
@@ -43,6 +60,12 @@ def main(argv: list[str] | None = None) -> int:
             batch_pairs=args.batch_pairs,
         )
     else:
+        _refuse_unacknowledged_large_tensor_cache(
+            args.raw,
+            max_pairs=args.max_pairs,
+            threshold=args.large_cache_pair_threshold,
+            allow_large_tensor_cache=args.allow_large_tensor_cache,
+        )
         manifest = write_scorer_input_cache_from_raw_file(
             args.raw,
             args.output_dir,
@@ -62,6 +85,26 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0
+
+
+def _refuse_unacknowledged_large_tensor_cache(
+    raw_path: Path,
+    *,
+    max_pairs: int | None,
+    threshold: int,
+    allow_large_tensor_cache: bool,
+) -> None:
+    if threshold < 1:
+        raise SystemExit("--large-cache-pair-threshold must be >= 1")
+    raw = load_raw_video_memmap(raw_path)
+    total_pairs = int(len(non_overlapping_pair_indices(raw.shape[0])))
+    requested_pairs = min(total_pairs, int(max_pairs)) if max_pairs is not None else total_pairs
+    if requested_pairs > threshold and not allow_large_tensor_cache:
+        raise SystemExit(
+            "refusing eager full MLX scorer-input tensor cache for "
+            f"{requested_pairs} pairs (> threshold {threshold}); use --hash-only "
+            "for auth-axis identity or pass --allow-large-tensor-cache explicitly"
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover
