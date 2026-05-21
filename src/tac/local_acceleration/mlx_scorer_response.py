@@ -1,0 +1,364 @@
+# SPDX-License-Identifier: MIT
+"""Run MLX scorer responses from fixed scorer-input caches.
+
+This module is intentionally non-authoritative.  It consumes NumPy scorer-input
+caches whose identity can be audited against auth-eval provenance, runs the
+local MLX PoseNet/SegNet adapters, and writes a JSON payload that downstream
+fidelity gates can compare against contest CPU/CUDA evaluator outputs.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.local_acceleration.mlx_scorer_adapters import (
+    run_mlx_distortion_scorer_nchw,
+    scorer_distortion_components_numpy,
+    temporary_mlx_device,
+    torch_distortion_net_to_mlx,
+)
+
+SCHEMA_VERSION = "mlx_scorer_response.v1"
+
+
+@dataclass(frozen=True)
+class ScorerInputCache:
+    """Loaded fixed scorer-input cache."""
+
+    root: Path
+    manifest: dict[str, Any]
+    segnet_last_rgb: np.ndarray
+    posenet_yuv6_pair: np.ndarray
+    pair_indices: np.ndarray
+
+
+def load_scorer_input_cache(cache_dir: str | Path, *, mmap_mode: str | None = "r") -> ScorerInputCache:
+    """Load a full tensor scorer-input cache and validate basic shape contracts."""
+
+    root = Path(cache_dir)
+    manifest_path = root / "manifest.json"
+    manifest = _load_json_object(manifest_path)
+    if manifest.get("hash_only") is True:
+        raise ValueError(f"cache is hash-only and has no tensors: {manifest_path}")
+
+    seg_path = root / "segnet_last_rgb.npy"
+    pose_path = root / "posenet_yuv6_pair.npy"
+    pair_path = root / "pair_indices.npy"
+    missing = [str(path) for path in (seg_path, pose_path, pair_path) if not path.exists()]
+    if missing:
+        raise FileNotFoundError(f"missing scorer-input cache arrays: {missing}")
+
+    seg = np.load(seg_path, mmap_mode=mmap_mode)
+    pose = np.load(pose_path, mmap_mode=mmap_mode)
+    pairs = np.load(pair_path, mmap_mode=mmap_mode)
+    _validate_cache_shapes(manifest, seg, pose, pairs)
+    return ScorerInputCache(
+        root=root,
+        manifest=manifest,
+        segnet_last_rgb=seg,
+        posenet_yuv6_pair=pose,
+        pair_indices=pairs,
+    )
+
+
+def build_mlx_scorer_response_payload(
+    *,
+    reference_cache_dir: str | Path,
+    candidate_cache_dir: str | Path,
+    archive_size_bytes: int,
+    repo_root: str | Path = ".",
+    batch_pairs: int = 1,
+    device_type: str = "cpu",
+    components_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
+
+    if int(archive_size_bytes) < 0:
+        raise ValueError(f"archive_size_bytes must be non-negative, got {archive_size_bytes}")
+    if int(batch_pairs) < 1:
+        raise ValueError(f"batch_pairs must be >= 1, got {batch_pairs}")
+    if device_type not in {"cpu", "gpu"}:
+        raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+
+    reference = load_scorer_input_cache(reference_cache_dir)
+    candidate = load_scorer_input_cache(candidate_cache_dir)
+    _validate_cache_pairing(reference, candidate)
+
+    started = time.time()
+    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    pose_chunks: list[np.ndarray] = []
+    seg_chunks: list[np.ndarray] = []
+    pair_count = int(reference.pair_indices.shape[0])
+
+    with temporary_mlx_device(device_type):
+        adapter = torch_distortion_net_to_mlx(dist)
+        for start in range(0, pair_count, int(batch_pairs)):
+            stop = min(pair_count, start + int(batch_pairs))
+            ref_outputs = run_mlx_distortion_scorer_nchw(
+                adapter,
+                np.asarray(reference.posenet_yuv6_pair[start:stop], dtype=np.float32),
+                np.asarray(reference.segnet_last_rgb[start:stop], dtype=np.float32),
+            )
+            cand_outputs = run_mlx_distortion_scorer_nchw(
+                adapter,
+                np.asarray(candidate.posenet_yuv6_pair[start:stop], dtype=np.float32),
+                np.asarray(candidate.segnet_last_rgb[start:stop], dtype=np.float32),
+            )
+            components = scorer_distortion_components_numpy(ref_outputs, cand_outputs)
+            pose_chunks.append(components["posenet"])
+            seg_chunks.append(components["segnet"])
+
+    pose_distortion = np.concatenate(pose_chunks).astype(np.float32, copy=False)
+    seg_distortion = np.concatenate(seg_chunks).astype(np.float32, copy=False)
+    pose_avg = float(np.mean(pose_distortion, dtype=np.float64))
+    seg_avg = float(np.mean(seg_distortion, dtype=np.float64))
+    archive_bytes = int(archive_size_bytes)
+    rate_unscaled = archive_bytes / ORIGINAL_VIDEO_BYTES
+    rate_contribution = 25.0 * rate_unscaled
+    score = contest_formula_score(
+        seg_dist=seg_avg,
+        pose_dist=pose_avg,
+        archive_bytes=archive_bytes,
+    )
+
+    artifacts = _write_component_artifacts(
+        components_dir,
+        pose_distortion=pose_distortion,
+        seg_distortion=seg_distortion,
+    )
+    elapsed = time.time() - started
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "hardware_substrate": f"MLX {device_type}",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "canonical_score": score,
+        "score_recomputed_from_components": score,
+        "canonical_score_source": "score_recomputed_from_components",
+        "avg_posenet_dist": pose_avg,
+        "avg_segnet_dist": seg_avg,
+        "archive_size_bytes": archive_bytes,
+        "rate_unscaled": rate_unscaled,
+        "score_rate_contribution": rate_contribution,
+        "n_samples": pair_count,
+        "batch_pairs": int(batch_pairs),
+        "elapsed_seconds": elapsed,
+        "components": {
+            "posenet_shape": list(pose_distortion.shape),
+            "segnet_shape": list(seg_distortion.shape),
+            "posenet_sha256": _array_sha256(pose_distortion),
+            "segnet_sha256": _array_sha256(seg_distortion),
+            "artifacts": artifacts,
+        },
+        "cache_identity": {
+            "reference": _cache_identity(reference),
+            "candidate": _cache_identity(candidate),
+            "pair_indices_equal": True,
+        },
+        "archive_sha256": _manifest_string(candidate.manifest, "archive_sha256"),
+        "inflated_outputs_aggregate_sha256": _manifest_string(
+            candidate.manifest,
+            "inflated_outputs_aggregate_sha256",
+        ),
+        "raw_sha256": _manifest_string(candidate.manifest, "raw_sha256"),
+        "device_contract": {
+            "allowed_uses": [
+                "local_mlx_training_gradient_shaping",
+                "local_sweep_reranking_after_passing_transfer_calibration",
+                "candidate_generation_prior",
+                "signal_exposure",
+                "prepaid_dispatch_spend_filter",
+            ],
+            "forbidden_uses": [
+                "auth_eval",
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+                "leaderboard_claim",
+                "replacement_for_cuda_t4_or_linux_x86_64_eval",
+            ],
+        },
+    }
+
+
+def write_mlx_scorer_response_payload(payload: dict[str, Any], output: str | Path) -> None:
+    """Write a scorer-response JSON payload."""
+
+    path = Path(output)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(_jsonable(payload), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _load_upstream_distortion_net(repo_root: Path) -> Any:
+    upstream_dir = repo_root / "upstream"
+    if not upstream_dir.is_dir():
+        raise FileNotFoundError(f"missing upstream directory: {upstream_dir}")
+    old_path = list(sys.path)
+    try:
+        if str(upstream_dir) not in sys.path:
+            sys.path.insert(0, str(upstream_dir))
+        import modules  # type: ignore[import-not-found]
+        import torch
+
+        dist = modules.DistortionNet().eval()
+        dist.load_state_dicts(
+            modules.posenet_sd_path,
+            modules.segnet_sd_path,
+            torch.device("cpu"),
+        )
+        return dist.eval()
+    finally:
+        sys.path[:] = old_path
+
+
+def _validate_cache_shapes(
+    manifest: dict[str, Any],
+    seg: np.ndarray,
+    pose: np.ndarray,
+    pairs: np.ndarray,
+) -> None:
+    if seg.ndim != 4 or pose.ndim != 4 or pairs.ndim != 2 or pairs.shape[1] != 2:
+        raise ValueError(
+            "expected segnet_last_rgb rank-4, posenet_yuv6_pair rank-4, "
+            f"and pair_indices shape (N, 2); got {seg.shape}, {pose.shape}, {pairs.shape}"
+        )
+    if seg.shape[0] != pose.shape[0] or seg.shape[0] != pairs.shape[0]:
+        raise ValueError(
+            "cache pair counts disagree: "
+            f"seg={seg.shape[0]} pose={pose.shape[0]} pair_indices={pairs.shape[0]}"
+        )
+    for manifest_key, actual_shape in (
+        ("segnet_last_rgb_shape", seg.shape),
+        ("posenet_yuv6_pair_shape", pose.shape),
+        ("pair_indices_shape", pairs.shape),
+    ):
+        expected_shape = manifest.get(manifest_key)
+        if expected_shape is not None and list(actual_shape) != list(expected_shape):
+            raise ValueError(
+                f"{manifest_key} mismatch: manifest={expected_shape} actual={list(actual_shape)}"
+            )
+
+
+def _validate_cache_pairing(reference: ScorerInputCache, candidate: ScorerInputCache) -> None:
+    if reference.segnet_last_rgb.shape != candidate.segnet_last_rgb.shape:
+        raise ValueError(
+            "reference/candidate segnet shape mismatch: "
+            f"{reference.segnet_last_rgb.shape} vs {candidate.segnet_last_rgb.shape}"
+        )
+    if reference.posenet_yuv6_pair.shape != candidate.posenet_yuv6_pair.shape:
+        raise ValueError(
+            "reference/candidate posenet shape mismatch: "
+            f"{reference.posenet_yuv6_pair.shape} vs {candidate.posenet_yuv6_pair.shape}"
+        )
+    if not np.array_equal(reference.pair_indices, candidate.pair_indices):
+        raise ValueError("reference/candidate pair_indices differ")
+
+
+def _write_component_artifacts(
+    components_dir: str | Path | None,
+    *,
+    pose_distortion: np.ndarray,
+    seg_distortion: np.ndarray,
+) -> dict[str, Any]:
+    if components_dir is None:
+        return {}
+    out = Path(components_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    pose_path = out / "posenet_distortion.npy"
+    seg_path = out / "segnet_distortion.npy"
+    np.save(pose_path, pose_distortion)
+    np.save(seg_path, seg_distortion)
+    return {
+        "posenet_distortion": _artifact_record(pose_path),
+        "segnet_distortion": _artifact_record(seg_path),
+    }
+
+
+def _cache_identity(cache: ScorerInputCache) -> dict[str, Any]:
+    manifest = cache.manifest
+    return {
+        "path": str(cache.root),
+        "archive_sha256": _manifest_string(manifest, "archive_sha256"),
+        "inflated_outputs_aggregate_sha256": _manifest_string(
+            manifest,
+            "inflated_outputs_aggregate_sha256",
+        ),
+        "raw_sha256": _manifest_string(manifest, "raw_sha256"),
+        "array_sha256": manifest.get("array_sha256"),
+        "pair_count": int(cache.pair_indices.shape[0]),
+    }
+
+
+def _artifact_record(path: Path) -> dict[str, Any]:
+    return {
+        "path": str(path),
+        "bytes": path.stat().st_size,
+        "sha256": _file_sha256(path),
+    }
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"expected JSON object: {path}")
+    return payload
+
+
+def _array_sha256(arr: np.ndarray) -> str:
+    contiguous = np.ascontiguousarray(arr)
+    h = hashlib.sha256()
+    h.update(str(contiguous.dtype).encode("utf-8"))
+    h.update(json.dumps(list(contiguous.shape), separators=(",", ":")).encode("utf-8"))
+    h.update(contiguous.tobytes())
+    return h.hexdigest()
+
+
+def _file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _manifest_string(manifest: dict[str, Any], key: str) -> str | None:
+    value = manifest.get(key)
+    return value if isinstance(value, str) and value else None
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(v) for v in value]
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
+__all__ = [
+    "SCHEMA_VERSION",
+    "ScorerInputCache",
+    "build_mlx_scorer_response_payload",
+    "load_scorer_input_cache",
+    "write_mlx_scorer_response_payload",
+]
