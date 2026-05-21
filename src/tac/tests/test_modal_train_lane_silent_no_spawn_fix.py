@@ -227,6 +227,16 @@ def test_modal_train_lane_no_legacy_silent_swallow_around_register() -> None:
     )
 
 
+def test_modal_train_lane_threads_caller_agent_into_call_id_ledger() -> None:
+    """Modal call-id ledger rows must preserve the caller's agent string."""
+    source = (REPO_ROOT / "experiments" / "modal_train_lane.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'agent: str = "claude:modal_train_lane"' in source
+    assert "agent=agent" in source
+    assert 'agent="claude"' not in source
+
+
 # ----------------------------------------------------------------------------
 # tools/operator_authorize.py sister-mitigation verification
 # ----------------------------------------------------------------------------
@@ -238,6 +248,15 @@ def test_operator_authorize_has_ledger_poll_helper() -> None:
         encoding="utf-8"
     )
     assert "_poll_ledger_for_dispatched_call" in source
+
+
+def test_operator_authorize_threads_agent_to_modal_train_lane() -> None:
+    """The operator-authorize --agent value must reach modal_train_lane.py."""
+    source = (REPO_ROOT / "tools" / "operator_authorize.py").read_text(
+        encoding="utf-8"
+    )
+    assert re.search(r'"--agent",\s*agent,', source)
+    assert "agent=args.agent" in source
     assert "_extract_modal_call_id_from_output" in source
 
 

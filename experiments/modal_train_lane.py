@@ -59,6 +59,42 @@ KNOWN_LANE_IDS = {
     "scripts/remote_lane_t1_balle_endtoend.sh": "t1_balle_128k_endtoend",
     "scripts/remote_lane_scpp_stage1.sh": "lane_scpp_stage1_smoke_anchor",
 }
+MODAL_TRAINING_ARTIFACT_EXTENSIONS = (
+    ".bin",
+    ".zip",
+    ".pt",
+    ".mkv",
+    ".json",
+    ".log",
+    ".safetensors",
+)
+
+
+def modal_training_artifact_relative_path(
+    fp: Path,
+    *,
+    workspace: Path,
+    volume_dir: Path,
+) -> Path:
+    """Return the recovery-tree path for a Modal training artifact."""
+
+    try:
+        return fp.relative_to(workspace)
+    except ValueError:
+        pass
+    try:
+        return fp.relative_to(volume_dir)
+    except ValueError:
+        return Path(fp.name)
+
+
+def modal_training_artifact_should_collect(rel: Path) -> bool:
+    """Return whether a Modal training artifact belongs in the recovery payload."""
+
+    if rel.suffix.lower() in MODAL_TRAINING_ARTIFACT_EXTENSIONS:
+        return True
+    parts = rel.parts
+    return len(parts) >= 3 and parts[0] == "output" and parts[1] == "submission"
 
 # Image with all deps. ffmpeg-master (with in_primaries support) is pulled
 # at build time via the same BtbN nightly that setup_full.sh uses on Vast.ai.
@@ -908,7 +944,6 @@ def _run_lane_inner(
     # Scan the WHOLE workspace for these extensions to avoid silent loss.
     artifacts: dict[str, bytes] = {}
     skipped_large: list[tuple[str, int]] = []
-    extensions = (".bin", ".zip", ".pt", ".mkv", ".json", ".log", ".safetensors")
     # Top-level dirs to scan (avoid scanning src/ scripts/ etc.)
     scan_roots = [
         workspace / "results",
@@ -931,12 +966,15 @@ def _run_lane_inner(
             continue
         files = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
         for fp in files:
-            if not fp.is_file() or fp.suffix.lower() not in extensions:
+            if not fp.is_file():
                 continue
-            try:
-                rel = fp.relative_to(workspace)
-            except ValueError:
-                rel = Path(fp.name)
+            rel = modal_training_artifact_relative_path(
+                fp,
+                workspace=workspace,
+                volume_dir=volume_dir,
+            )
+            if not modal_training_artifact_should_collect(rel):
+                continue
             rel_str = str(rel)
             if rel_str in artifacts:
                 continue
@@ -1503,7 +1541,14 @@ def _active_claim_exists(repo_root, *, lane_id: str, instance_job_id: str) -> bo
     return False
 
 
-def _ensure_dispatch_claim(repo_root, *, lane_id: str, label: str, gpu: str) -> None:
+def _ensure_dispatch_claim(
+    repo_root,
+    *,
+    lane_id: str,
+    label: str,
+    gpu: str,
+    agent: str,
+) -> None:
     import subprocess
     import sys
 
@@ -1520,7 +1565,7 @@ def _ensure_dispatch_claim(repo_root, *, lane_id: str, label: str, gpu: str) -> 
         "--instance-job-id",
         label,
         "--agent",
-        "codex:modal_train_lane",
+        agent,
         "--predicted-eta-utc",
         _compact_stamp(),
         "--status",
@@ -1558,6 +1603,7 @@ def main(
     cost_band_all_flags_on: bool = False,
     require_clean_head: bool = False,
     sentinel_files: str = "",
+    agent: str = "claude:modal_train_lane",
 ):
     """Dispatch a lane training run on Modal.
 
@@ -1690,6 +1736,7 @@ def main(
         lane_id=resolved_lane_id,
         label=label,
         gpu=gpu,
+        agent=agent,
     )
     claims_path = repo_root / ".omx/state/active_lane_dispatch_claims.md"
     if not claims_path.is_file():
@@ -1961,7 +2008,7 @@ def main(
             gpu=gpu,
             max_seconds=max_seconds,
             mounted_code_git_head=mounted_code_git_head,
-            agent="claude",
+            agent=agent,
             upstream_snapshot_sha256=upstream_sha,
         )
         print(

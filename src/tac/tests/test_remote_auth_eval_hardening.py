@@ -1406,6 +1406,60 @@ def test_modal_recover_closes_terminal_claim_on_artifact_materialization_failure
     assert terminal_calls[0]["status"] == "failed_modal_training_invalid_artifacts"
 
 
+def test_modal_recover_terminal_ledger_metadata_uses_recovered_lane_id(
+    tmp_path: Path,
+) -> None:
+    path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
+    spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    out_dir = tmp_path / "lane_job_modal"
+    out_dir.mkdir()
+    (out_dir / "modal_metadata.json").write_text(
+        json.dumps(
+            {
+                "call_id": "fc-recovered",
+                "lane_id": "lane_dp1_canonical",
+                "label": "dp1_timestamped_label",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    metadata = mod.modal_terminal_ledger_metadata(
+        out_dir=out_dir,
+        call_id="fc-fallback",
+        label="timestamped_label",
+    )
+
+    assert metadata["call_id"] == "fc-recovered"
+    assert metadata["lane_id"] == "lane_dp1_canonical"
+    assert metadata["label"] == "dp1_timestamped_label"
+    assert metadata["platform"] == "modal"
+
+
+def test_modal_recover_terminal_ledger_metadata_falls_back_without_metadata(
+    tmp_path: Path,
+) -> None:
+    path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
+    spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    metadata = mod.modal_terminal_ledger_metadata(
+        out_dir=tmp_path,
+        call_id="fc-fallback",
+        label="timestamped_label",
+    )
+
+    assert metadata["call_id"] == "fc-fallback"
+    assert metadata["lane_id"] == "timestamped_label"
+    assert metadata["label"] == "timestamped_label"
+
+
 def test_modal_recover_labels_non_cuda_scores_advisory() -> None:
     path = REPO_ROOT / "experiments" / "modal_recover_lane.py"
     spec = importlib.util.spec_from_file_location("_modal_recover_lane", path)

@@ -117,6 +117,18 @@ def test_modal_train_lane_returns_experiments_results_artifacts() -> None:
     assert 'workspace / "experiments" / "results"' in text
 
 
+def test_modal_train_lane_preserves_volume_output_submission_runtime_paths() -> None:
+    text = SOURCE.read_text()
+
+    assert "modal_training_artifact_relative_path" in text
+    assert "fp.relative_to(volume_dir)" in text
+    assert "modal_training_artifact_should_collect" in text
+    assert 'parts[0] == "output" and parts[1] == "submission"' in text
+    assert "MODAL_TRAINING_ARTIFACT_EXTENSIONS" in text
+    assert 'rel = modal_training_artifact_relative_path(' in text
+    assert "modal_training_artifact_should_collect(rel)" in text
+
+
 def test_modal_train_lane_image_carries_hard_entropy_runtime_deps() -> None:
     text = SOURCE.read_text()
 

@@ -254,6 +254,42 @@ def _print_terminal_claim_summary(manifest: dict | None) -> None:
         )
 
 
+def modal_terminal_ledger_metadata(
+    *,
+    out_dir: Path,
+    call_id: str,
+    label: str | None,
+) -> dict:
+    """Build terminal Modal call-ledger metadata from recovered dispatch metadata."""
+
+    fallback_label = label or call_id
+    metadata = {
+        "call_id": call_id,
+        "lane_id": fallback_label,
+        "label": fallback_label,
+        "platform": "modal",
+    }
+    metadata_path = out_dir / "modal_metadata.json"
+    if not metadata_path.is_file():
+        return metadata
+    try:
+        recovered = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except Exception:
+        return metadata
+    if not isinstance(recovered, dict):
+        return metadata
+    lane_id = str(recovered.get("lane_id") or "").strip()
+    recovered_label = str(recovered.get("label") or "").strip()
+    recovered_call_id = str(recovered.get("call_id") or "").strip()
+    if lane_id:
+        metadata["lane_id"] = lane_id
+    if recovered_label:
+        metadata["label"] = recovered_label
+    if recovered_call_id:
+        metadata["call_id"] = recovered_call_id
+    return metadata
+
+
 def recover_one(label: str | None, call_id: str | None) -> int:
     import modal
 
@@ -357,12 +393,11 @@ def recover_one(label: str | None, call_id: str | None) -> int:
         )
         append_terminal_call_id_ledger_event(
             repo_root=REPO_ROOT,
-            metadata={
-                "call_id": call_id,
-                "lane_id": label or call_id,
-                "label": label or call_id,
-                "platform": "modal",
-            },
+            metadata=modal_terminal_ledger_metadata(
+                out_dir=out_dir,
+                call_id=call_id,
+                label=label,
+            ),
             harvested=failure,
             terminal_claim=None,
             agent="codex:modal_recover_lane",
@@ -404,12 +439,11 @@ def recover_one(label: str | None, call_id: str | None) -> int:
     )
     append_terminal_call_id_ledger_event(
         repo_root=REPO_ROOT,
-        metadata={
-            "call_id": call_id,
-            "lane_id": label or call_id,
-            "label": label or call_id,
-            "platform": "modal",
-        },
+        metadata=modal_terminal_ledger_metadata(
+            out_dir=out_dir,
+            call_id=call_id,
+            label=label,
+        ),
         harvested={key: value for key, value in result.items() if key != "artifacts"},
         terminal_claim=None,
         agent="codex:modal_recover_lane",

@@ -1761,6 +1761,7 @@ def _dispatch_modal(
     instance_job_id: str,
     env_overrides: str,
     *,
+    agent: str = "claude:operator_authorize",
     timeout_hours_override: float | None = None,
     cost_band_epochs_override: int | None = None,
 ) -> int:
@@ -1798,6 +1799,8 @@ def _dispatch_modal(
         f"{timeout_hours}",
         "--env-overrides",
         env_overrides,
+        "--agent",
+        agent,
     ]
     # Catalog #202: paired-env-var bypass of `--require-clean-head` for
     # trusted sentinel-clean dispatches. The bypass helper raises
@@ -2787,6 +2790,7 @@ def _run_dispatch(
     recipe: Recipe,
     instance_job_id: str,
     *,
+    agent: str = "claude:operator_authorize",
     timeout_hours_override: float | None = None,
     cost_band_epochs_override: int | None = None,
 ) -> int:
@@ -2807,6 +2811,7 @@ def _run_dispatch(
             recipe,
             instance_job_id,
             env_overrides,
+            agent=agent,
             timeout_hours_override=timeout_hours_override,
             cost_band_epochs_override=cost_band_epochs_override,
         )
@@ -3179,11 +3184,12 @@ def main(argv: list[str] | None = None) -> int:
             args.timeout_hours_override is None
             and args.cost_band_epochs_override is None
         ):
-            rc = _run_dispatch(recipe, instance_job_id)
+            rc = _run_dispatch(recipe, instance_job_id, agent=args.agent)
         else:
             rc = _run_dispatch(
                 recipe,
                 instance_job_id,
+                agent=args.agent,
                 timeout_hours_override=args.timeout_hours_override,
                 cost_band_epochs_override=args.cost_band_epochs_override,
             )
