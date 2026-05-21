@@ -83,6 +83,12 @@ from tac.portable_primitives.nn_extended import (
     PortableMaxPool2d,
     silu,
 )
+from tac.portable_primitives.nn_attention import (
+    PortableLayerScale,
+    PortableMHSA,
+    PortableRepMixer,
+    PortableTokenMixer,
+)
 
 __all__ = [
     "SCHEMA_VERSION",
@@ -98,6 +104,11 @@ __all__ = [
     "PortableMaxPool2d",
     "PortableAvgPool2d",
     "silu",
+    # MLX-ARCH-2 attention primitives (FastViT-T12 stages 1-4 building blocks).
+    "PortableLayerScale",
+    "PortableMHSA",
+    "PortableTokenMixer",
+    "PortableRepMixer",
 ]
 
 SCHEMA_VERSION = "portable_primitives.v1"
