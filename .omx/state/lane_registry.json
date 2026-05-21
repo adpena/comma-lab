@@ -46012,6 +46012,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_wave_3_nscs06_v8_chroma_lut_substrate_build_20260521",
+      "name": "NSCS06 v8 chroma-LUT substrate L0 SCAFFOLD",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "L0 SCAFFOLD; 49/49 tests pass; CH08 v1 inline-LUT + v2 procedural-seed pack/parse + inflate roundtrips verified; empirical bytes-saved = 4064 matches canonical equation #26 prediction"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "No new STRICT preflight gates introduced; existing gates (Catalog #205 device-fork + Catalog #244 NVML block + Catalog #240 recipe-vs-trainer-state consistency + Catalog #287 placeholder rejection + Catalog #290/#294/#296/#303/#305/#309/#324/#325 design-memo discipline) all SATISFIED at L0 SCAFFOLD landing per design + symposium memos"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/nscs06_v8_chroma_lut_design_20260521.md + .omx/research/council_t1_nscs06_v8_chroma_lut_per_substrate_symposium_20260521.md (per-substrate symposium per Catalog #325)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; substrate_engineering exception per HNeRV L7; canonical equation #26 IN-DOMAIN context nscs06_v8_chroma_lut; per-substrate symposium per Catalog #325 pending window 2026-05-21 -> 2026-06-04; lane_class=substrate_engineering"
     }
   ],
   "level_rules": {
@@ -46021,5 +46062,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T03:12:16Z"
+  "updated_at": "2026-05-21T05:30:47Z"
 }

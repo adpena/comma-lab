@@ -1,0 +1,109 @@
+schema_version: 1
+name: substrate_nscs06_v8_chroma_lut_modal_t4_dispatch
+lane_id: lane_wave_3_nscs06_v8_chroma_lut_substrate_build_20260521
+summary: |
+  nscs06 v8 chroma-LUT substrate L0 SCAFFOLD dispatch on Modal T4.
+  CASCADE COMPRESSION symposium commit d125af6c3 PRIORITY 3 (Daubechies + Mallat
+  multi-scale partition discovery framing; 2nd IN-DOMAIN procedural-variant
+  substrate after grayscale_lut). HONEST CASCADE-MORTALITY ASSESSMENT commit
+  d884dd6aa Rank 2. Canonical equation #26 IN-DOMAIN context
+  ``nscs06_v8_chroma_lut`` predicted ΔS = -0.002706 [prediction;
+  canonical-equation-26-grounded; per-substrate-symposium-pending].
+
+  L0 SCAFFOLD pending Catalog #325 per-substrate symposium PROCEED verdict
+  (target window: 2026-05-21 -> 2026-06-04). Pre-symposium dispatch BLOCKED.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+# Per Catalog #215: T4 substrates need T4 smoke. v8 has NO scorer hot loop
+# (closed-form LUT derivation at compress); T4 is more than sufficient.
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+dispatch_enabled: false
+research_only: true
+
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" +
+# Catalog #240 recipe-vs-trainer-state consistency: this recipe is
+# research_only:true + dispatch_enabled:false BECAUSE the trainer's
+# _full_main raises NotImplementedError pending the Catalog #325
+# per-substrate symposium PROCEED verdict.
+dispatch_blockers:
+  - per_substrate_symposium_pending_per_catalog_325_window_20260521_to_20260604
+  - canonical_equation_26_predicted_band_post_training_tier_c_validation_required_per_catalog_324
+  - paired_cuda_plus_cpu_anchor_required_per_claude_md_submission_auth_eval_both_cpu_and_cuda
+
+reactivation_criteria:
+  - per_substrate_symposium_per_catalog_325_lands_PROCEED_verdict_within_window_2026_05_21_to_2026_06_04
+  - tier_c_density_post_training_validation_per_catalog_324_confirms_within_class_or_across_class_classification
+  - distinguishing_feature_byte_mutation_smoke_per_catalog_272_passes_on_first_paired_smoke_archive
+  - canonical_equation_26_in_domain_context_membership_per_catalog_344_remains_valid
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_delta: "-0.002706 [prediction; canonical-equation-26-grounded; per-substrate-symposium-pending]"
+predicted_delta_basis: |
+  Canonical equation #26 closed form:
+    predicted_delta_s = -25 * (4096 - 32) / 37_545_489 ≈ -0.002706
+
+  Per ``src/tac/canonical_equations/procedural_codebook_savings.py``
+  ``_INCLUDED_CONTEXTS['nscs06_v8_chroma_lut']`` + sister rationale at
+  ``_NSCS06_V8_BYTES_SAVED = 4096 - 32 = 4064``. The PCG64-deterministic
+  procedural seed REPLACES the canonical 4096-byte chroma LUT slot
+  (16 levels x 5 SegNet classes x 3 RGB anchors + reserved padding) with
+  a 32-byte seed; the inflate runtime re-derives the LUT bytes
+  deterministically via ``tac.procedural_codebook_generator.derive_codebook_from_seed``.
+
+  EMPIRICAL CONFIRMATION (pack/parse roundtrip on synthetic config):
+    v1 inline-LUT archive: 4251 bytes
+    v2 procedural-seed archive: 187 bytes
+    empirical savings: 4064 bytes (= predicted_archive_bytes_saved per
+    canonical equation #26)
+
+predicted_band_validation_status: pending_post_training
+predicted_band_validation_reactivation_criterion: |
+  post-training Tier-C re-measurement on landed paired smoke archive sha via
+  tools/mdl_scorer_conditional_ablation.py --tier c. Per Catalog #324:
+  predicted-band is REGISTERED HYPOTHESIS pending empirical validation.
+
+# Per CLAUDE.md "Submission auth eval - BOTH CPU AND CUDA" + Catalog #324:
+# pre-empirical predicted band MUST be validated post-training before any
+# promotion. The 14-day per-substrate symposium window per Catalog #325
+# gates the first paired smoke.
+
+# Catalog #244 NVML/Modal/CUDA env hygiene block auto-emitted in the
+# remote driver (scripts/remote_lane_substrate_nscs06_v8_chroma_lut.sh).
+# Catalog #163 canonical sentinel REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1
+# honored before sourcing scripts/remote_archive_only_eval.sh.
+
+# Trainer + driver wiring:
+lane_script: scripts/remote_lane_substrate_nscs06_v8_chroma_lut.sh
+remote_driver: scripts/remote_lane_substrate_nscs06_v8_chroma_lut.sh
+trainer_path: experiments/train_substrate_nscs06_v8_chroma_lut.py
+
+# env_overrides (per Catalog #326 driver-mode env var explicit declaration):
+env_overrides:
+  NSCS06_V8_TRAINER_MODE: "smoke"     # explicit per Catalog #326
+  NSCS06_V8_EPOCHS: "1"
+  SMOKE_ONLY: "1"
+
+# Catalog #325 symposium memo cross-reference
+per_substrate_symposium_memo: .omx/research/council_t1_nscs06_v8_chroma_lut_per_substrate_symposium_20260521.md
+per_substrate_symposium_verdict: PROCEED_WITH_REVISIONS
+per_substrate_symposium_window_start_utc: 2026-05-21T00:00:00Z
+per_substrate_symposium_window_end_utc: 2026-06-04T00:00:00Z
+
+# Catalog #344 canonical equation cross-reference
+canonical_equation_in_domain_context: nscs06_v8_chroma_lut
+canonical_equation_registry_path: .omx/state/canonical_equations_registry.jsonl
+canonical_equation_id: procedural_codebook_from_seed_compression_savings_v1
