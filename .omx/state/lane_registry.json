@@ -45557,6 +45557,48 @@
         }
       },
       "notes": "research_only=true; reactivation_criteria=symposium_proceed_per_catalog_325; canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1; substrate_context=intermediate_transform_quantizer; predicted_delta_s=-0.005434; bytes_saved=8160; lane_class=substrate_engineering"
+    },
+    {
+      "id": "lane_wave_3_pr101_pr106_procedural_variant_build_design_20260520",
+      "name": "WAVE-3 PR101+PR106 procedural variant build design (cascade-sequencing #3); recommends grayscale_lut pivot after PR101 lc_v2_clone NOT-CANDIDATE + PR106 OUT-OF-SCOPE audit verdicts",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/pr101_pr106_procedural_variant_build_design_20260520.md (design memo only; research_only=true cascade-sequencing-#3 BUILD candidate audit + grayscale_lut pivot)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_pr101_pr106_procedural_variant_build_design_landed_20260520.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true lane_class=substrate_engineering horizon_class=frontier_protecting canonical_equation_id=procedural_codebook_from_seed_compression_savings_v1 score_improvement_mechanism_status=DESIGN_ONLY archive_bytes_added=0 design_memo_only",
+      "research_only": true
     }
   ],
   "level_rules": {
@@ -45566,5 +45608,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T00:46:20Z"
+  "updated_at": "2026-05-21T01:08:36Z"
 }
