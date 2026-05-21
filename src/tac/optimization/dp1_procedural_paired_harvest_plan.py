@@ -17,7 +17,7 @@ import stat
 import zipfile
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 try:
     import yaml  # type: ignore[import-untyped]
@@ -28,6 +28,7 @@ from tac.deploy.modal.paired_dispatch import (
     PAIRED_AUTH_EVAL_DISPATCH_TOOL,
     paired_auth_eval_dispatch_command_template,
 )
+from tac.optimization.dp1_live_modal_status import build_dp1_modal_call_status
 
 SCHEMA = "dp1_procedural_paired_harvest_plan_v1"
 TOOL_PATH = "tools/plan_dp1_procedural_paired_harvest.py"
@@ -512,6 +513,10 @@ def build_dp1_procedural_paired_harvest_plan(
     *,
     output_dirs: Mapping[str, str | Path | None],
     recipe_paths: Mapping[str, str | Path] | None = None,
+    training_metadata_paths: Mapping[str, str | Path | None] | None = None,
+    poll_training_calls: bool = False,
+    modal_poll_timeout_seconds: float = 2.0,
+    function_call_from_id: Callable[[str], Any] | None = None,
     repo_root: str | Path = ".",
     output_root: str = DEFAULT_OUTPUT_ROOT,
     include_null_control: bool = False,
@@ -520,12 +525,35 @@ def build_dp1_procedural_paired_harvest_plan(
 
     root = Path(repo_root).resolve()
     recipe_paths = recipe_paths or DP1_RECIPE_PATHS
+    training_metadata_paths = training_metadata_paths or {}
     variants = ["baseline", "procedural"]
     if include_null_control or output_dirs.get("null_control"):
         variants.append("null_control")
 
     candidates: list[dict[str, Any]] = []
     top_blockers: list[str] = []
+    training_call_status: dict[str, Any] | None = None
+    if poll_training_calls:
+        baseline_training_metadata = training_metadata_paths.get("baseline")
+        procedural_training_metadata = training_metadata_paths.get("procedural")
+        if not baseline_training_metadata or not procedural_training_metadata:
+            top_blockers.append("dp1_training_metadata_paths_missing")
+        else:
+            training_call_status = build_dp1_modal_call_status(
+                baseline_metadata=root / str(baseline_training_metadata),
+                procedural_metadata=root / str(procedural_training_metadata),
+                repo_root=root,
+                timeout_seconds=modal_poll_timeout_seconds,
+                function_call_from_id=function_call_from_id,
+            )
+            if training_call_status.get("status") == "needs_attention":
+                top_blockers.append("dp1_training_calls_need_attention")
+                top_blockers.extend(
+                    f"training_call_{blocker}"
+                    for blocker in training_call_status.get("blockers", [])
+                )
+            elif not training_call_status.get("ready_for_training_harvest"):
+                top_blockers.append("dp1_training_calls_not_ready_for_harvest")
     for variant in variants:
         recipe_path = root / str(recipe_paths[variant])
         expected_name = DP1_RECIPE_BASENAMES[variant]
@@ -620,6 +648,7 @@ def build_dp1_procedural_paired_harvest_plan(
         "adjudication_required": True,
         "all_required_candidates_ready": all_required_ready,
         "top_blockers": sorted(set(top_blockers)),
+        "training_call_status": training_call_status,
         "candidates": candidates,
         "paired_source_equivalence": paired_source_equivalence,
         "post_harvest_adjudication_command": post_harvest_adjudication_command,
@@ -629,6 +658,7 @@ def build_dp1_procedural_paired_harvest_plan(
             "Per-axis commands are intentionally routed through tools/dispatch_modal_paired_auth_eval.py, never through single-axis Modal wrappers.",
             "Run the post-harvest adjudication command only after both variants have recovered CPU and CUDA auth-eval JSON.",
             "Baseline/procedural paired readiness requires matching shared Modal sentinel-file hashes; git heads may differ only when those mounted bytes match.",
+            "If training_call_status is present, paired auth eval remains blocked until both training arms are ready for training harvest.",
         ],
     }
 
@@ -641,10 +671,42 @@ def render_markdown(plan: Mapping[str, Any]) -> str:
         f"- Paired dispatch tool: `{plan.get('paired_dispatch_tool')}`",
         f"- Required candidates ready: `{plan.get('all_required_candidates_ready')}`",
         f"- Top blockers: `{', '.join(plan.get('top_blockers') or []) or 'none'}`",
-        "",
-        "| variant | status | archive bytes | archive sha256 | blockers |",
-        "|---|---|---:|---|---|",
     ]
+    training_call_status = plan.get("training_call_status")
+    if isinstance(training_call_status, Mapping):
+        baseline = (
+            training_call_status.get("baseline")
+            if isinstance(training_call_status.get("baseline"), Mapping)
+            else {}
+        )
+        procedural = (
+            training_call_status.get("procedural")
+            if isinstance(training_call_status.get("procedural"), Mapping)
+            else {}
+        )
+        baseline_poll = (
+            baseline.get("poll") if isinstance(baseline.get("poll"), Mapping) else {}
+        )
+        procedural_poll = (
+            procedural.get("poll")
+            if isinstance(procedural.get("poll"), Mapping)
+            else {}
+        )
+        rows.extend(
+            [
+                f"- Training-call status: `{training_call_status.get('status')}`",
+                f"- Training harvest ready: `{training_call_status.get('ready_for_training_harvest')}`",
+                f"- Baseline training call: `{baseline.get('call_id')}` / `{baseline_poll.get('status')}`",
+                f"- Procedural training call: `{procedural.get('call_id')}` / `{procedural_poll.get('status')}`",
+            ]
+        )
+    rows.extend(
+        [
+            "",
+            "| variant | status | archive bytes | archive sha256 | blockers |",
+            "|---|---|---:|---|---|",
+        ]
+    )
     for row in plan.get("candidates", []):
         if not isinstance(row, Mapping):
             continue

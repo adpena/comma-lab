@@ -148,6 +148,26 @@ def _write_modal_metadata(
     )
 
 
+def _write_training_metadata(path: Path, *, variant: str, call_id: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "call_id": call_id,
+        "label": f"dp1_{variant}",
+        "lane_id": f"lane_{variant}",
+        "live_volume": "comma-train-lane-results",
+        "live_volume_prefix": f"dp1_{variant}/",
+        "dispatched_at": "2026-05-21T03:16:00",
+        "max_seconds": 5400,
+        "mounted_code_git_head": "a" * 40,
+        "mounted_code_git_branch": "main",
+        "working_tree_dirty": False,
+        "working_tree_dirty_paths_count": 0,
+        "sentinel_files_local_sha256": {"a.py": "0" * 64},
+    }
+    path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    return path
+
+
 def _write_all_recipes(root: Path) -> dict[str, str]:
     lanes = {
         "baseline": "lane_dp1_original_baseline_first_paired_anchor_20260520",
@@ -174,6 +194,87 @@ def test_plan_blocks_before_candidate_outputs_exist(tmp_path: Path) -> None:
     statuses = {row["variant"]: row["status"] for row in plan["candidates"]}
     assert statuses == {"baseline": "blocked", "procedural": "blocked"}
     assert all(row["paired_dispatch_plan_command"] is None for row in plan["candidates"])
+
+
+def test_plan_can_include_running_training_call_status(tmp_path: Path) -> None:
+    _write_all_recipes(tmp_path)
+    baseline_meta = _write_training_metadata(
+        tmp_path / "baseline_modal" / "modal_metadata.json",
+        variant="baseline",
+        call_id="fc-base",
+    )
+    procedural_meta = _write_training_metadata(
+        tmp_path / "procedural_modal" / "modal_metadata.json",
+        variant="procedural",
+        call_id="fc-proc",
+    )
+
+    class _RunningCall:
+        def get(self, timeout: float | None = None) -> dict:
+            raise TimeoutError
+
+    plan = build_dp1_procedural_paired_harvest_plan(
+        output_dirs={},
+        training_metadata_paths={
+            "baseline": baseline_meta,
+            "procedural": procedural_meta,
+        },
+        poll_training_calls=True,
+        repo_root=tmp_path,
+        function_call_from_id=lambda _call_id: _RunningCall(),
+    )
+
+    assert plan["training_call_status"]["status"] == "running"
+    assert "dp1_training_calls_not_ready_for_harvest" in plan["top_blockers"]
+    assert plan["training_call_status"]["ready_for_training_harvest"] is False
+    md = render_markdown(plan)
+    assert "Training-call status: `running`" in md
+    assert "Baseline training call: `fc-base` / `running_or_pending`" in md
+
+
+def test_plan_does_not_add_training_blocker_when_training_calls_ready(
+    tmp_path: Path,
+) -> None:
+    _write_all_recipes(tmp_path)
+    baseline_meta = _write_training_metadata(
+        tmp_path / "baseline_modal" / "modal_metadata.json",
+        variant="baseline",
+        call_id="fc-base",
+    )
+    procedural_meta = _write_training_metadata(
+        tmp_path / "procedural_modal" / "modal_metadata.json",
+        variant="procedural",
+        call_id="fc-proc",
+    )
+
+    class _FinishedCall:
+        def __init__(self, call_id: str) -> None:
+            self.call_id = call_id
+
+        def get(self, timeout: float | None = None) -> dict:
+            return {
+                "returncode": 0,
+                "elapsed_seconds": 12.0,
+                "timed_out": False,
+                "artifacts": {f"{self.call_id}/archive.zip": b"zip"},
+                "stdout_tail": "finished",
+            }
+
+    plan = build_dp1_procedural_paired_harvest_plan(
+        output_dirs={},
+        training_metadata_paths={
+            "baseline": baseline_meta,
+            "procedural": procedural_meta,
+        },
+        poll_training_calls=True,
+        repo_root=tmp_path,
+        function_call_from_id=_FinishedCall,
+    )
+
+    assert plan["training_call_status"]["status"] == "ready_for_training_harvest"
+    assert plan["training_call_status"]["ready_for_training_harvest"] is True
+    assert "dp1_training_calls_not_ready_for_harvest" not in plan["top_blockers"]
+    assert "baseline_and_procedural_paired_harvest_not_ready" in plan["top_blockers"]
 
 
 def test_ready_plan_emits_real_paired_dispatch_commands(tmp_path: Path) -> None:

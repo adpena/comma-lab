@@ -26,6 +26,22 @@ def main() -> int:
     parser.add_argument("--baseline-output-dir", type=Path)
     parser.add_argument("--procedural-output-dir", type=Path)
     parser.add_argument("--null-control-output-dir", type=Path)
+    parser.add_argument("--baseline-training-metadata", type=Path)
+    parser.add_argument("--procedural-training-metadata", type=Path)
+    parser.add_argument(
+        "--poll-training-calls",
+        action="store_true",
+        help=(
+            "Also poll the baseline/procedural Modal training call IDs from "
+            "metadata and block paired auth eval until both are harvest-ready."
+        ),
+    )
+    parser.add_argument(
+        "--get-timeout-seconds",
+        type=float,
+        default=2.0,
+        help="Short Modal FunctionCall.get timeout for --poll-training-calls.",
+    )
     parser.add_argument(
         "--include-null-control",
         action="store_true",
@@ -46,6 +62,12 @@ def main() -> int:
             "procedural": args.procedural_output_dir,
             "null_control": args.null_control_output_dir,
         },
+        training_metadata_paths={
+            "baseline": args.baseline_training_metadata,
+            "procedural": args.procedural_training_metadata,
+        },
+        poll_training_calls=args.poll_training_calls,
+        modal_poll_timeout_seconds=args.get_timeout_seconds,
         repo_root=REPO_ROOT,
         output_root=args.output_root,
         include_null_control=args.include_null_control,
