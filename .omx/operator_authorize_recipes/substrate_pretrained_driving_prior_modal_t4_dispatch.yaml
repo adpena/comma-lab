@@ -39,6 +39,8 @@ cost_band:
 
 predicted_score_target: null
 predicted_band: [0.175, 0.190]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Replace this planning band only after harvested DP1 training artifacts and post-training Tier-C density / exact-score review."
 smoke_score_band: [0.050, 5.000]
 predicted_delta: "Δ contest-CPU [-0.005, -0.012] per pretrained_driving_prior literature-prediction; the contest scorer was ALREADY trained on driving data so the prior is partially redundant"
 predicted_delta_basis: ".omx/research/expert_team_hardware_physics_future_alien_tech_20260513.md#L378 (rank 3 candidate)"

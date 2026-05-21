@@ -42,6 +42,8 @@ rank_or_kill_eligible: false
 ready_for_exact_eval_dispatch: false
 predicted_score_target: null
 predicted_band: [-0.005000, 0.000500]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Replace this planning band only after paired DP1 baseline/procedural training-output harvest and post-training Tier-C density / exact-score review."
 predicted_delta: "-0.002706 rate-axis-only before frame-response residual"
 predicted_delta_basis: "procedural_codebook_from_seed_compression_savings_v1: -25 * (4096 - 32) / 37545489"
 

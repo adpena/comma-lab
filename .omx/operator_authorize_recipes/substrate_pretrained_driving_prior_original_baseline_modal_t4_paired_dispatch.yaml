@@ -42,6 +42,8 @@ rank_or_kill_eligible: false
 ready_for_exact_eval_dispatch: false
 predicted_score_target: null
 predicted_band: [0.175, 0.190]
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Replace this planning band only after paired DP1 baseline/procedural training-output harvest and post-training Tier-C density / exact-score review."
 predicted_delta: "baseline only; no procedural rate-axis delta"
 predicted_delta_basis: ".omx/research/dp1_procedural_codebook_paired_smoke_pre_dispatch_design_20260520T232120Z.md Section 4 recipe #1"
 
