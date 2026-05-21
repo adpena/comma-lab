@@ -1,0 +1,83 @@
+{
+  "actual_signature": {
+    "baseline_textured_avg_weight": 0.8062214255332947,
+    "baseline_weighted_error": 0.0024987899232655764,
+    "detail_dynamic_range_log10": 8.113953590393066,
+    "detail_flat_fraction": 0.49999988079071045,
+    "detail_textured_fraction": 0.2499997615814209,
+    "frame_resolution_HxW": [
+      874,
+      1164
+    ],
+    "n_frames": 8,
+    "sharper_textured_avg_weight": 0.6259023547172546,
+    "sharper_textured_avg_weight_via_var_mask": 0.7681930661201477,
+    "sharper_weighted_error": 0.0024995324201881886,
+    "sigma_fridrich": 0.015625,
+    "uniform_vs_sharper_ratio": 0.9997867803837953,
+    "uniform_weighted_error": 0.002498999470844865,
+    "var_dynamic_range_log10": 9.384507179260254,
+    "var_flat_fraction": 0.49999964237213135,
+    "var_textured_fraction": 0.25,
+    "wavelet_name": "db8"
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "candidate uniward_textured_region_undetectability_pose_distortion_savings_v1 (Catalog #344 FORMALIZATION_PENDING; RATIFY-N pending per AAA T4 op-routable)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "evidence_grade": "macOS-CPU-advisory",
+    "fridrich_canonical_reference": "Holub-Fridrich-Denemark 2014 'Universal Distortion Function for Steganography in an Arbitrary Domain' (UNIWARD); CLAUDE.md 'Fridrich inverse steganalysis' section.",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "kind": "macos_cpu_advisory",
+    "predecessor_probe": "tier_1_distortion_uniward_per_pixel_segnet_smoke",
+    "promotable": false,
+    "score_claim_valid": false,
+    "source": "tier_1_distortion_axis_probe_3b_uniward_wavelet_subband_sharper_inversion"
+  },
+  "catalog_references": [
+    "#344",
+    "#287",
+    "#323",
+    "#192",
+    "#1",
+    "#313",
+    "#307",
+    "#308"
+  ],
+  "delta_vs_ccc_baseline": {
+    "absolute_delta": -0.18031907081604004,
+    "ccc_baseline_textured_avg_weight": 0.8062214255332947,
+    "ccc_passed_threshold_lt_0p5": false,
+    "improvement_direction": "sharper_lower_is_better",
+    "ratio_sharper_over_baseline": 0.7763405125375282,
+    "sharper_passed_threshold_lt_0p5": false,
+    "sharper_textured_avg_weight": 0.6259023547172546
+  },
+  "device": "cpu",
+  "elapsed_seconds": 2.211315155029297,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_overnight_ddd_uniward_sharper_inversion_follow_on_tier_1_macos_cpu_advisory_smoke_20260521",
+  "next_action_on_NULL": "DEFER per Catalog #307 IMPLEMENTATION-level falsification; queue HILL and WOW alternative reducers per Catalog #308 reactivation criteria.",
+  "next_action_on_PARTIAL": "Continue sister-probe iteration at $0: try multi-scale (J-UNIWARD) wavelet decomposition OR HILL filter cost map per Catalog #308.",
+  "next_action_on_POSITIVE_SHARPER": "Operator-routable: Tier-2 paid dispatch on UNIWARD-weighted per-pixel SegNet loss substrate via Vast.ai 4090 ($0.25/hr) or Lightning T4; estimated cost ~$1-5; predicted \u0394S -0.005 to -0.015 [predicted] per AAA T4 \u00a72.3 + \u00a79; recipe pending per AAA T4 \u00a76.2 op-routable.",
+  "predicted_signature": {
+    "detail_dynamic_range": "log10 > 1.0",
+    "detail_flat_textured_separation": "detail_textured > 10% AND detail_flat > 30%",
+    "sharper_textured_suppression": "textured_avg_weight < 0.5 (CCC baseline=0.806)",
+    "sharper_under_baseline": "sharper_textured_avg_weight < baseline_textured_avg_weight"
+  },
+  "probe_id": "tier_1_distortion_uniward_wavelet_subband_sharper_inversion_smoke",
+  "probe_name": "UNIWARD wavelet-subband sharper inversion",
+  "promotable": false,
+  "recommendation": "PARTIAL: sharper inversion improves on CCC baseline (0.6259 < 0.8062) but still above 0.5 threshold. Per CLAUDE.md 'Forbidden premature KILL': DEFER-PENDING-FURTHER-INVERSION-REFINEMENT; iterate sister probe with multi-scale wavelet decomposition (J-UNIWARD multi-level) OR HILL/WOW filter-based cost map per Catalog #308 alternative reducer.",
+  "score_claim": false,
+  "signature_checks": {
+    "detail_dynamic_range_present": true,
+    "detail_flat_textured_separation_present": true,
+    "sharper_textured_suppression_present": false,
+    "sharper_under_baseline_present": true
+  },
+  "sister_canonical_equation_candidate_for_RATIFY_N": "uniward_textured_region_undetectability_pose_distortion_savings_v1",
+  "verdict": "POSITIVE_SIGNAL_SHARPER_PARTIAL"
+}
