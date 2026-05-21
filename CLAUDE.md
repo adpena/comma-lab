@@ -754,6 +754,48 @@ The operator floated "skills or MCP tools" as the orchestration mechanism. **Do 
 
 If a behavior should be automatic across all sessions, write it as a CLAUDE.md non-negotiable. The skill-vs-rule decision: **skills are user-invocable patterns; rules are agent-binding contracts.** The coherence problem is solved by RULES, not skills.
 
+### Cross-agent sister convergence patterns (canonical META-pattern; 2026-05-21 worked example)
+
+**Source:** convergent multi-subagent session 2026-05-21 — 7 sister convergence patterns observed across 4 distinct structural variants in a single ~6-hour window; documented in slot 3-r5 STAND DOWN memo `149bdc6a1` + slot 3-r6 Catalog #359 cross-reference audit `a4ad7027b` + slot 3-r7 ATW V2 reconciliation memo `265431dfe` + slot 2-r reverse-directive issuance `7ea60e91f`.
+
+Cross-agent sister-coherence (claude ↔ codex working on disjoint surfaces in the same session) is structurally extincted via the existing structural-extinction surfaces enumerated in "Anti-duplication primitive" and "Mandatory wire-in" above. The 4 distinct convergence pattern variants documented here are canonical worked examples that future subagents can recognize proactively rather than discovering post-hoc when a sister gate fires.
+
+#### 4 distinct convergence pattern variants
+
+1. **STAND_DOWN pattern**: claude subagent spawned → codex sister already landed equivalent work → claude STAND_DOWN per Catalog #340 sister-coherence → audit memo documents convergence; ZERO duplicate work. Canonical example: slot 3-r5 (`149bdc6a1`) — claude lane `lane_wave_3_vq_vae_indices_blob_procedural_variant_extension_20260520` verified sister codex `77081f991` covered complete TaskCreate #1154 scope; stood down without any commits to sister-owned files.
+
+2. **COMPLEMENTARY pattern**: codex sister lands OPERATIONAL module (executable code + tests + CLI) + claude lands DESIGN SPEC (design memo + canonical equation routing + paradigm classification) + claude lands RATIFICATION (audit memo verifying sister routing correctness across structural surfaces) = 3-surface canonical ratification. Canonical example: canonical equation `procedural_predictor_plus_residual_correction_savings_v1` instantiation — codex `77081f991` lands `src/tac/substrates/vq_vae/indices_procedural_variant.py` operational module + claude slot 3-r6 (`a4ad7027b`) lands audit memo verifying codex's residual-hybrid routing correctness across 3 surfaces (module imports + callsite context strings + canonical equation registry anchors).
+
+3. **SUPERSESSION pattern**: codex sister landings cover scope that claude subagent was queued for; queued TaskCreate marked completed-by-sister; sister-coherence preserved. Canonical examples: NULL-BYTE PROBE MATRIX + PAIR #4 ORTHOGONALITY SMOKE — sister codex landings covered the scope claude was queued for; claude TaskCreate marked completed-by-sister per the canonical task status ledger (Catalog #331).
+
+4. **CODEX-EMPIRICAL-FALSIFICATION-OF-CLAUDE-DESIGN pattern** (NEW today): codex empirical anchor (byte-mutation smoke / parity probe / structural verification) FALSIFIES claude design memo core assumption; APPEND-ONLY reconciliation memo documents implementation-level falsification per Catalog #307 paradigm-vs-implementation classification + proposes paradigm reclassification + (optionally) proposes NEW canonical equation EXCLUDED context per Catalog #344 operator-decision protocol. Canonical example: slot 3-r7 ATW V2 cdf_table_blob (`265431dfe`) — codex byte-mutation smoke `057130de4` empirically proves `max_abs_raw_byte_delta=0` across all 2,560 cdf_table_blob bytes mutated; claude design memo `8441b702e` REPLACEMENT paradigm routing via canonical equation #26 IN-DOMAIN context `atw_v2_codec_quantizer_lut` is IMPLEMENTATION-LEVEL FALSIFIED; APPEND-ONLY reconciliation memo `265431dfe` documents falsification + proposes REMOVAL paradigm reclassification + proposes NEW canonical equation #26 EXCLUDED context `direct_byte_substitution_on_decode_opaque_raw_sections` per Catalog #344 operator-decision protocol.
+
+#### Canonical structural extinction surfaces (8+ Catalog gates)
+
+The 4 pattern variants are structurally extincted via the following Catalog gates working in concert (the gates are the canonical enforcement; the variants are canonical worked-example references):
+
+- **Catalog #340** `check_subagent_commit_serializer_invokes_sister_checkpoint_guard` — edit-time staging-surface PREVENT (all 4 variants).
+- **Catalog #110 + #113** APPEND-ONLY HISTORICAL_PROVENANCE discipline — no mutation of sister memos (all 4 variants; especially Variant 4).
+- **Catalog #117 / #157 / #174** canonical serializer + pre-pre-lock hash + mandatory `--expected-content-sha256` — commit-time fcntl-locked arbitration (Variant 1).
+- **Catalog #335** `check_cathedral_consumer_directory_package_exposes_canonical_contract` — auto-discovery of sister-landed cathedral consumers (Variant 2).
+- **Catalog #344** `check_empirical_finding_memo_references_canonical_equation` — canonical equation evolution discipline + operator-decision protocol for adding NEW IN-DOMAIN / EXCLUDED contexts (Variants 2 + 4).
+- **Catalog #359** `check_no_canonical_equation_misapplication_to_residual_hybrid_contexts` — STRICT preflight refusal of canonical equation #26 misapplication (Variant 2).
+- **Catalog #105 + #139 + #272** byte-mutation smoke gates — sister codex empirical falsification mechanism (Variant 4).
+- **Catalog #307** `check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification` — forces RATIFY-FALSIFICATION-OF-THE-SPECIFIC-IMPLEMENTATION verdict structure (Variant 4).
+- **Catalog #331** `check_canonical_task_status_no_dangling_transitions` — canonical task status ledger transition discipline (Variant 3).
+- **Catalog #333** `check_codex_inbox_open_questions_have_response_or_default_within_deadline` — codex-to-Claude inbox bidirectional channel (Variant 1 SOURCE-DIRECTION).
+
+#### Worked-example chain canonical reference
+
+- `7ea60e91f` — claude reverse codex-routing-directive issuance (slot 2-r; UPSTREAM Variant 1 source)
+- `77081f991` — codex sister VQ-VAE indices_blob procedural variant scaffold landing (per directive #4; COMPLEMENTARY Variant 2)
+- `149bdc6a1` — claude STAND_DOWN memo (slot 3-r5; STAND_DOWN Variant 1)
+- `a4ad7027b` — claude Catalog #359 cross-reference audit (slot 3-r6; verifies sister routing correctness; COMPLEMENTARY Variant 2)
+- `057130de4` — codex ATW2 CDF dead-section parity probe (byte-mutation smoke; COMPLEMENTARY Variant 2)
+- `265431dfe` — claude APPEND-ONLY reconciliation memo (slot 3-r7; codex empirical smoke falsifies claude design memo; CODEX-EMPIRICAL-FALSIFICATION-OF-CLAUDE-DESIGN Variant 4)
+
+Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" non-negotiable: the structural-extinction surfaces (the 10 Catalog gates above) are the canonical enforcement; this section is the operator-facing canonical worked-example reference. A future subagent that violates the convergence pattern is structurally refused by the gates; the gates fire at edit-time / commit-time / dispatch-time without requiring subagent awareness of the 4 variants. The marginal value of this section is in pattern-recognition (subagent recognizes convergence opportunity proactively rather than discovering it post-hoc when a sister gate fires).
+
 ### Concrete enforcement
 
 - New STRICT preflight check planned: `check_subagent_landing_has_solver_wire_in` — refuses any landing memo that doesn't declare all 6 wire-in hooks (or `research_only=true`).
