@@ -105,6 +105,10 @@ from tac.canonical_equations.bayesian_posterior_update import (
     compute_predicted_band_from_posterior,
     update_equation_with_anchor_via_conjugate_prior,
 )
+from tac.canonical_equations.scorer_input_cache_hash_identity import (
+    build_scorer_input_cache_hash_identity_v1,
+    scorer_input_cache_hash_identity,
+)
 
 __all__ = [
     # Contract
@@ -155,4 +159,6 @@ __all__ = [
     "bootstrap_posterior_from_anchor_residuals",
     "compute_predicted_band_from_posterior",
     "update_equation_with_anchor_via_conjugate_prior",
+    "build_scorer_input_cache_hash_identity_v1",
+    "scorer_input_cache_hash_identity",
 ]

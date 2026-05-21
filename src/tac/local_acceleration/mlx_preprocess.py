@@ -18,7 +18,9 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import hashlib
 import json
+import platform
 from pathlib import Path
+import sys
 from typing import Any
 
 import numpy as np
@@ -41,6 +43,7 @@ __all__ = [
 
 SCHEMA_VERSION = "mlx_scorer_input_cache.v1"
 HASH_MANIFEST_SCHEMA_VERSION = "mlx_scorer_input_cache_hashes.v1"
+ARRAY_HASH_DOMAIN = "_array_sha256(dtype_string + json_shape + contiguous_bytes)"
 SEQ_LEN = 2
 CAMERA_SIZE = (1164, 874)  # upstream frame_utils.py: (W, H)
 CAMERA_HW = (874, 1164)
@@ -178,6 +181,8 @@ def write_scorer_input_cache(
         "archive_sha256": archive_sha256,
         "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
         "raw_sha256": raw_sha256,
+        "hash_domain": ARRAY_HASH_DOMAIN,
+        "producer_environment": _producer_environment(),
         "artifacts": {
             "segnet_last_rgb": _artifact_record(seg_path),
             "posenet_yuv6_pair": _artifact_record(pose_path),
@@ -258,7 +263,7 @@ def write_scorer_input_cache_hash_manifest_from_raw_file(
         "schema_version": HASH_MANIFEST_SCHEMA_VERSION,
         "source": str(raw_path),
         "hash_only": True,
-        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "hash_domain": ARRAY_HASH_DOMAIN,
         "streaming_batch_pairs": int(batch_pairs),
         "frame_shape_hwc": [int(raw.shape[1]), int(raw.shape[2]), int(raw.shape[3])],
         "seq_len": SEQ_LEN,
@@ -269,6 +274,7 @@ def write_scorer_input_cache_hash_manifest_from_raw_file(
         "archive_sha256": archive_sha256,
         "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
         "raw_sha256": _file_sha256(raw_path),
+        "producer_environment": _producer_environment(),
         "artifacts": {},
         "omitted_artifacts_reason": "hash_only_manifest_no_tensor_payloads_written",
         "array_sha256": {
@@ -370,6 +376,23 @@ def _array_sha256(arr: np.ndarray) -> str:
     h.update(json.dumps(list(contiguous.shape), separators=(",", ":")).encode("utf-8"))
     h.update(contiguous.tobytes())
     return h.hexdigest()
+
+
+def _producer_environment() -> dict[str, Any]:
+    env: dict[str, Any] = {
+        "python_version": sys.version.split()[0],
+        "platform_system": platform.system(),
+        "platform_machine": platform.machine(),
+        "numpy_version": np.__version__,
+    }
+    try:
+        import torch
+
+        env["torch_version"] = str(torch.__version__)
+    except Exception as exc:  # pragma: no cover - only exercised in torch-free envs.
+        env["torch_version"] = None
+        env["torch_import_error"] = f"{type(exc).__name__}: {exc}"
+    return env
 
 
 class _StreamingArraySha256:

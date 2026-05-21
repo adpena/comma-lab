@@ -69,6 +69,8 @@ def test_write_scorer_input_cache_is_non_authoritative(tmp_path: Path) -> None:
     assert (tmp_path / "pair_indices.npy").exists()
     saved = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert saved["archive_sha256"] == "a" * 64
+    assert saved["hash_domain"] == "_array_sha256(dtype_string + json_shape + contiguous_bytes)"
+    assert saved["producer_environment"]["numpy_version"] == np.__version__
     assert len(saved["array_sha256"]["segnet_last_rgb"]) == 64
 
 
@@ -146,6 +148,8 @@ def test_hash_only_manifest_matches_full_cache_hashes(tmp_path: Path) -> None:
     saved_hash_manifest = json.loads(hash_manifest_path.read_text(encoding="utf-8"))
 
     assert hash_manifest["hash_only"] is True
+    assert hash_manifest["hash_domain"] == "_array_sha256(dtype_string + json_shape + contiguous_bytes)"
+    assert hash_manifest["producer_environment"]["numpy_version"] == np.__version__
     assert saved_hash_manifest["artifacts"] == {}
     assert hash_manifest["array_sha256"] == full_manifest["array_sha256"]
 

@@ -21,6 +21,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--auth-eval", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--expected-pair-count", type=int, default=None)
+    parser.add_argument(
+        "--reference-cache-manifest",
+        type=Path,
+        default=None,
+        help=(
+            "Independent scorer-input hash manifest from the auth-side raw surface. "
+            "Required when the auth-eval JSON predates scorer_input_cache_hash_manifest provenance."
+        ),
+    )
     return parser
 
 
@@ -30,6 +39,11 @@ def main(argv: list[str] | None = None) -> int:
         load_json_object(args.cache_manifest),
         load_json_object(args.auth_eval),
         expected_pair_count=args.expected_pair_count,
+        reference_cache_manifest=(
+            load_json_object(args.reference_cache_manifest)
+            if args.reference_cache_manifest is not None
+            else None
+        ),
     )
     write_cache_audit(audit, args.output)
     print(json.dumps({"passed": audit["passed"], "verdict": audit["verdict"]}, sort_keys=True))

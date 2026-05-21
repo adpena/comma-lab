@@ -14,6 +14,12 @@ from tac.local_acceleration.mlx_cache_audit import (
 )
 
 REPO = Path(__file__).resolve().parents[3]
+HASH_DOMAIN = "_array_sha256(dtype_string + json_shape + contiguous_bytes)"
+ARRAY_HASHES = {
+    "segnet_last_rgb": "s" * 64,
+    "posenet_yuv6_pair": "p" * 64,
+    "pair_indices": "i" * 64,
+}
 
 
 def _cache(*, aggregate: str = "b" * 64, pair_count: int = 600) -> dict[str, object]:
@@ -22,9 +28,12 @@ def _cache(*, aggregate: str = "b" * 64, pair_count: int = 600) -> dict[str, obj
         "archive_sha256": "a" * 64,
         "inflated_outputs_aggregate_sha256": aggregate,
         "raw_sha256": "r" * 64,
+        "hash_domain": HASH_DOMAIN,
         "pair_count": pair_count,
         "segnet_last_rgb_shape": [pair_count, 3, 384, 512],
         "posenet_yuv6_pair_shape": [pair_count, 12, 192, 256],
+        "pair_indices_shape": [pair_count, 2],
+        "array_sha256": dict(ARRAY_HASHES),
         "score_claim": False,
         "promotion_eligible": False,
     }
@@ -60,8 +69,48 @@ def _auth(*, aggregate: str = "b" * 64, n_samples: int = 600) -> dict[str, objec
     }
 
 
+def _auth_with_scorer_input_hash(
+    *,
+    array_hashes: dict[str, str] | None = None,
+) -> dict[str, object]:
+    auth = _auth()
+    provenance = auth["provenance"]
+    assert isinstance(provenance, dict)
+    provenance["scorer_input_cache_hash_manifest"] = {
+        "payload": {
+            "schema_version": "mlx_scorer_input_cache_hashes.v1",
+            "hash_domain": HASH_DOMAIN,
+            "raw_sha256": "r" * 64,
+            "pair_count": 600,
+            "segnet_last_rgb_shape": [600, 3, 384, 512],
+            "posenet_yuv6_pair_shape": [600, 12, 192, 256],
+            "pair_indices_shape": [600, 2],
+            "array_sha256": dict(array_hashes or ARRAY_HASHES),
+        }
+    }
+    return auth
+
+
+def _reference_manifest(*, array_hashes: dict[str, str] | None = None) -> dict[str, object]:
+    return {
+        "schema_version": "mlx_scorer_input_cache_hashes.v1",
+        "archive_sha256": "a" * 64,
+        "inflated_outputs_aggregate_sha256": "b" * 64,
+        "raw_sha256": "r" * 64,
+        "hash_domain": HASH_DOMAIN,
+        "pair_count": 600,
+        "segnet_last_rgb_shape": [600, 3, 384, 512],
+        "posenet_yuv6_pair_shape": [600, 12, 192, 256],
+        "pair_indices_shape": [600, 2],
+        "array_sha256": dict(array_hashes or ARRAY_HASHES),
+    }
+
+
 def test_cache_audit_passes_matching_identity() -> None:
-    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), _auth())
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        _cache(),
+        _auth_with_scorer_input_hash(),
+    )
     assert audit["passed"] is True
     assert audit["verdict"] == PASS_VERDICT
     assert audit["score_claim"] is False
@@ -70,7 +119,10 @@ def test_cache_audit_passes_matching_identity() -> None:
 
 
 def test_cache_audit_fails_inflated_aggregate_mismatch() -> None:
-    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(aggregate="c" * 64), _auth())
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        _cache(aggregate="c" * 64),
+        _auth_with_scorer_input_hash(),
+    )
     assert audit["passed"] is False
     assert audit["verdict"] == FAIL_VERDICT
     assert "inflated_outputs_aggregate_sha256_mismatch_or_missing" in audit["blockers"]
@@ -78,7 +130,10 @@ def test_cache_audit_fails_inflated_aggregate_mismatch() -> None:
 
 
 def test_cache_audit_fails_pair_count_mismatch() -> None:
-    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(pair_count=16), _auth())
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        _cache(pair_count=16),
+        _auth_with_scorer_input_hash(),
+    )
     assert audit["passed"] is False
     assert "cache_pair_count_mismatch:cache=16:expected=600" in audit["blockers"]
 
@@ -89,6 +144,8 @@ def test_cache_audit_cli_writes_output(tmp_path: Path) -> None:
     out_path = tmp_path / "audit.json"
     cache_path.write_text(json.dumps(_cache()), encoding="utf-8")
     auth_path.write_text(json.dumps(_auth()), encoding="utf-8")
+    reference_path = tmp_path / "reference.json"
+    reference_path.write_text(json.dumps(_reference_manifest()), encoding="utf-8")
 
     completed = subprocess.run(
         [
@@ -100,6 +157,8 @@ def test_cache_audit_cli_writes_output(tmp_path: Path) -> None:
             str(auth_path),
             "--output",
             str(out_path),
+            "--reference-cache-manifest",
+            str(reference_path),
         ],
         check=True,
         text=True,
@@ -109,3 +168,47 @@ def test_cache_audit_cli_writes_output(tmp_path: Path) -> None:
     assert '"passed": true' in completed.stdout
     payload = json.loads(out_path.read_text(encoding="utf-8"))
     assert payload["passed"] is True
+
+
+def test_cache_audit_uses_canonical_equation_for_scorer_input_hashes() -> None:
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        _cache(),
+        _auth_with_scorer_input_hash(),
+    )
+
+    assert audit["passed"] is True
+    assert audit["canonical_equation"]["equation_id"] == "scorer_input_cache_hash_identity_v1"
+    assert audit["canonical_equation"]["identity_residual"] == 0
+
+
+def test_cache_audit_fails_scorer_input_hash_mismatch_when_auth_provides_hashes() -> None:
+    cache = _cache()
+    cache["array_sha256"] = {**ARRAY_HASHES, "segnet_last_rgb": "x" * 64}
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        cache,
+        _auth_with_scorer_input_hash(),
+    )
+
+    assert audit["passed"] is False
+    assert "scorer_input_array_sha256_mismatch:segnet_last_rgb" in audit["blockers"]
+    assert audit["canonical_equation"]["identity_residual"] == 1
+
+
+def test_cache_audit_fails_without_auth_or_reference_scorer_input_hashes() -> None:
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), _auth())
+
+    assert audit["passed"] is False
+    assert "auth_scorer_input_array_sha256_missing:segnet_last_rgb" in audit["blockers"]
+    assert "auth_scorer_input_array_sha256_missing:posenet_yuv6_pair" in audit["blockers"]
+    assert "auth_scorer_input_array_sha256_missing:pair_indices" in audit["blockers"]
+
+
+def test_cache_audit_accepts_independent_reference_hash_manifest() -> None:
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        _cache(),
+        _auth(),
+        reference_cache_manifest=_reference_manifest(),
+    )
+
+    assert audit["passed"] is True
+    assert audit["auth_eval"]["scorer_input_hash_reference_source"] == "reference_cache_manifest"

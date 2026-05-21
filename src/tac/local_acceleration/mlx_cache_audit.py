@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.auth_eval_schema import eval_metric_summary
+from tac.canonical_equations.scorer_input_cache_hash_identity import (
+    scorer_input_cache_hash_identity,
+)
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 __all__ = [
@@ -25,6 +28,7 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
     auth_eval_payload: dict[str, Any],
     *,
     expected_pair_count: int | None = None,
+    reference_cache_manifest: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return pass/fail custody audit for a cache and auth-eval JSON."""
 
@@ -37,6 +41,38 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
     cache_pair_count = _int(cache_manifest.get("pair_count"))
     auth_n_samples = _int(metrics.get("n_samples"))
     expected = expected_pair_count if expected_pair_count is not None else auth_n_samples
+    auth_raw_sha = _first_raw_file_sha256(auth_eval_payload)
+    auth_hash_manifest = _auth_scorer_input_hash_manifest_payload(auth_eval_payload)
+    hash_reference = auth_hash_manifest or reference_cache_manifest or {}
+    hash_reference_source = (
+        "auth_eval_provenance"
+        if auth_hash_manifest
+        else "reference_cache_manifest"
+        if reference_cache_manifest
+        else "missing"
+    )
+    auth_scorer_input_hashes = _hash_mapping(hash_reference.get("array_sha256"))
+    auth_shapes = _shape_mapping(hash_reference)
+    auth_hash_domain = _manifest_hash_domain(hash_reference)
+    if auth_raw_sha is None:
+        auth_raw_sha = _string(hash_reference.get("raw_sha256"))
+
+    identity = scorer_input_cache_hash_identity(
+        cache_archive_sha256=cache_archive_sha,
+        auth_archive_sha256=auth_archive_sha,
+        cache_inflated_outputs_aggregate_sha256=cache_inflated_sha,
+        auth_inflated_outputs_aggregate_sha256=auth_inflated_sha,
+        cache_raw_sha256=_string(cache_manifest.get("raw_sha256")),
+        auth_raw_sha256=auth_raw_sha,
+        cache_pair_count=cache_pair_count,
+        auth_n_samples=auth_n_samples,
+        cache_hash_domain=_manifest_hash_domain(cache_manifest),
+        auth_hash_domain=auth_hash_domain,
+        cache_array_sha256=_hash_mapping(cache_manifest.get("array_sha256")),
+        auth_scorer_input_array_sha256=auth_scorer_input_hashes,
+        cache_shapes=_shape_mapping(cache_manifest),
+        auth_shapes=auth_shapes,
+    )
 
     if not cache_archive_sha or cache_archive_sha != auth_archive_sha:
         blockers.append("archive_sha256_mismatch_or_missing")
@@ -48,8 +84,25 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
         blockers.append(f"cache_pair_count_mismatch:cache={cache_pair_count}:expected={expected}")
     if auth_n_samples is None:
         blockers.append("auth_eval_n_samples_missing")
+    if reference_cache_manifest is not None:
+        ref_archive_sha = _string(reference_cache_manifest.get("archive_sha256"))
+        ref_inflated_sha = _string(
+            reference_cache_manifest.get("inflated_outputs_aggregate_sha256")
+        )
+        ref_pair_count = _int(reference_cache_manifest.get("pair_count"))
+        if ref_archive_sha and auth_archive_sha and ref_archive_sha != auth_archive_sha:
+            blockers.append("reference_archive_sha256_mismatch_with_auth_eval")
+        if ref_inflated_sha and auth_inflated_sha and ref_inflated_sha != auth_inflated_sha:
+            blockers.append("reference_inflated_outputs_aggregate_sha256_mismatch_with_auth_eval")
+        if ref_pair_count is not None and auth_n_samples is not None and ref_pair_count != auth_n_samples:
+            blockers.append(
+                f"reference_pair_count_mismatch:reference={ref_pair_count}:auth={auth_n_samples}"
+            )
     if cache_manifest.get("score_claim") is True or cache_manifest.get("promotion_eligible") is True:
         blockers.append("cache_manifest_attempts_score_authority")
+    for blocker in identity["blockers"]:
+        if blocker not in blockers:
+            blockers.append(blocker)
 
     passed = not blockers
     return {
@@ -73,10 +126,11 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
             "artifacts": cache_manifest.get("artifacts"),
             "array_sha256": cache_manifest.get("array_sha256"),
         },
+        "canonical_equation": identity,
         "auth_eval": {
             "archive_sha256": auth_archive_sha,
             "inflated_outputs_aggregate_sha256": auth_inflated_sha,
-            "raw_file_sha256": _first_raw_file_sha256(auth_eval_payload),
+            "raw_file_sha256": auth_raw_sha,
             "n_samples": auth_n_samples,
             "score": metrics.get("score"),
             "pose_avg": metrics.get("pose_avg"),
@@ -85,6 +139,10 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
             "evidence_grade": auth_eval_payload.get("evidence_grade"),
             "score_axis": auth_eval_payload.get("score_axis"),
             "lane_tag": auth_eval_payload.get("lane_tag"),
+            "scorer_input_hash_reference_source": hash_reference_source,
+            "scorer_input_hash_domain": auth_hash_domain,
+            "scorer_input_array_sha256": auth_scorer_input_hashes,
+            "scorer_input_shapes": auth_shapes,
         },
         "allowed_use": (
             [
@@ -151,6 +209,56 @@ def _first_raw_file_sha256(payload: dict[str, Any]) -> str | None:
     if not isinstance(first, dict):
         return None
     return _string(first.get("sha256"))
+
+
+def _auth_scorer_input_hash_manifest_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        return {}
+    manifest = provenance.get("scorer_input_cache_hash_manifest")
+    if not isinstance(manifest, dict):
+        return {}
+    payload_obj = manifest.get("payload")
+    if not isinstance(payload_obj, dict):
+        return {}
+    return payload_obj
+
+
+def _manifest_hash_domain(payload: dict[str, Any]) -> str | None:
+    value = _string(payload.get("hash_domain"))
+    if value:
+        return value
+    if payload.get("schema_version") == "mlx_scorer_input_cache.v1":
+        return "_array_sha256(dtype_string + json_shape + contiguous_bytes)"
+    return None
+
+
+def _shape_mapping(payload: dict[str, Any]) -> dict[str, list[int]]:
+    out: dict[str, list[int]] = {}
+    for name in ("segnet_last_rgb", "posenet_yuv6_pair", "pair_indices"):
+        shape = payload.get(f"{name}_shape")
+        if not isinstance(shape, list):
+            continue
+        dims: list[int] = []
+        valid = True
+        for dim in shape:
+            if isinstance(dim, bool) or not isinstance(dim, int):
+                valid = False
+                break
+            dims.append(int(dim))
+        if valid:
+            out[name] = dims
+    return out
+
+
+def _hash_mapping(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, raw in value.items():
+        if isinstance(key, str) and isinstance(raw, str) and raw.strip():
+            out[key] = raw.strip().lower()
+    return out
 
 
 def _string(value: Any) -> str | None:
