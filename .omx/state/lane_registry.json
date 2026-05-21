@@ -46053,6 +46053,47 @@
         }
       },
       "notes": "research_only=true; substrate_engineering exception per HNeRV L7; canonical equation #26 IN-DOMAIN context nscs06_v8_chroma_lut; per-substrate symposium per Catalog #325 pending window 2026-05-21 -> 2026-06-04; lane_class=substrate_engineering"
+    },
+    {
+      "id": "lane_overnight_c_hf_dataset_comma_video_segnet_image_level_600pairs_prep_20260521",
+      "name": "OVERNIGHT-C HF dataset prep premise verification",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -46062,5 +46103,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T05:30:47Z"
+  "updated_at": "2026-05-21T07:06:43Z"
 }
