@@ -148,6 +148,35 @@ def test_build_response_dataset_rejects_present_optional_authority_true(
     assert "ready_for_exact_eval_dispatch must be false" in dataset["skipped"][0]["reason"]
 
 
+def test_build_response_dataset_distilled_vs_direct_rows_are_opt_in(tmp_path) -> None:
+    path = tmp_path / "distilled_vs_direct.json"
+    payload = {
+        "schema": "distilled_vs_direct_scorer_paired_smoke.v1",
+        "producer": "pact_nerv_distilled_scorer_stage1",
+        "smoke_kind": "distilled_vs_direct_scorer_paired_smoke",
+        "candidate": {
+            "candidate_id": "pds_stage1_smoke",
+            "advisory_eval": _advisory(0.99, 99, 0.003, 0.009),
+            "summary": {"component": "distilled_scorer"},
+        },
+        "authority": {"score_claim": False},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    baseline = ResponseBaseline(score=1.0, archive_bytes=100)
+
+    skipped = build_response_dataset([path], baseline=baseline)
+    included = build_response_dataset(
+        [path],
+        baseline=baseline,
+        include_distilled_vs_direct_rows=True,
+    )
+
+    assert skipped["rows"] == []
+    assert "requires include_distilled_vs_direct_rows" in skipped["skipped"][0]["reason"]
+    assert included["rows"][0]["family"] == "distilled_vs_direct_scorer_paired_smoke"
+    assert included["rows"][0]["candidate_id"] == "pds_stage1_smoke"
+
+
 def _current_response_dataset_payload() -> dict:
     false_authority = {
         "score_claim": False,

@@ -319,7 +319,16 @@ def _candidate_items(path: Path, payload: dict[str, Any]) -> list[tuple[str, dic
 def _family_for(path: Path, parent: dict[str, Any], candidate: dict[str, Any]) -> str:
     producer = str(parent.get("producer") or candidate.get("producer") or "")
     schema = str(parent.get("schema") or candidate.get("schema") or "")
-    source = f"{producer} {schema} {path}".lower()
+    smoke_kind = str(
+        parent.get("smoke_kind")
+        or candidate.get("smoke_kind")
+        or parent.get("probe_kind")
+        or candidate.get("probe_kind")
+        or ""
+    )
+    source = f"{producer} {schema} {smoke_kind} {path}".lower()
+    if "distilled_vs_direct_scorer_paired_smoke" in source:
+        return "distilled_vs_direct_scorer_paired_smoke"
     if "scorer_gradient" in source:
         return "scorer_gradient_sparse_residual"
     if "sparse_residual" in source:
@@ -484,6 +493,7 @@ def build_response_dataset(
     paths: list[Path],
     *,
     baseline: ResponseBaseline | None = None,
+    include_distilled_vs_direct_rows: bool = False,
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     skipped: list[dict[str, str]] = []
@@ -495,6 +505,21 @@ def build_response_dataset(
             skipped.append({"path": str(path), "reason": str(exc)})
             continue
         for candidate_id, candidate, parent in items:
+            family = _family_for(path, parent, candidate)
+            if (
+                family == "distilled_vs_direct_scorer_paired_smoke"
+                and not include_distilled_vs_direct_rows
+            ):
+                skipped.append(
+                    {
+                        "path": str(path),
+                        "reason": (
+                            f"{candidate_id}: distilled_vs_direct_scorer_paired_smoke "
+                            "requires include_distilled_vs_direct_rows"
+                        ),
+                    }
+                )
+                continue
             try:
                 row = normalize_response_row(
                     path=path,

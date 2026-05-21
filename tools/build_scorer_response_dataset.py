@@ -53,6 +53,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--baseline-archive-bytes", type=int, required=True)
     parser.add_argument("--baseline-pose", type=float)
     parser.add_argument("--baseline-seg", type=float)
+    parser.add_argument(
+        "--include-distilled-vs-direct-rows",
+        action="store_true",
+        help=(
+            "Opt in to PACT-NERV-DistilledScorer paired-smoke rows with "
+            "family=distilled_vs_direct_scorer_paired_smoke."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -68,7 +76,11 @@ def main(argv: list[str] | None = None) -> int:
         avg_segnet_dist=args.baseline_seg,
     )
     try:
-        dataset = build_response_dataset(_expand_inputs(args.input), baseline=baseline)
+        dataset = build_response_dataset(
+            _expand_inputs(args.input),
+            baseline=baseline,
+            include_distilled_vs_direct_rows=args.include_distilled_vs_direct_rows,
+        )
     except ScorerResponseDatasetError as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
         return 2
