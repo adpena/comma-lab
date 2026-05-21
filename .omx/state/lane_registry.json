@@ -46135,6 +46135,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_overnight_x1_build_sensitivity_weighted_foveation_params_generator_20260521",
+      "name": "OVERNIGHT-X1 Builder 1: sensitivity-weighted foveation_params generator",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit 349fdaf95; 1090 LOC builder + 477 LOC tests; canonical PR101-scale fixture sha e00a352f74954dcfb639c240b2bb077ccf4d8a7ff92e2d54b448c10b55c93e8b at 24016 bytes; 23/23 tests pass; Carmack MVP-first /bin/zsh budget compliance"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/build_sensitivity_weighted_foveation_params_generator_landed_20260521.md commit 349fdaf95"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Builder 1 of 2 per OVERNIGHT-S DEFER reactivation criteria; consumes exploit #2 + #3 outputs; emits per-frame 5-tuples; sister OVERNIGHT-X2 builds recoder; Carmack MVP-first per CLAUDE.md amendment be125b878"
+    },
+    {
+      "id": "lane_overnight_y_stc_3a_a1_residual_entropy_probe_build_local_cpu_run_20260521",
+      "name": "OVERNIGHT-Y STC 3a A1 residual entropy probe build + local CPU run",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/probe_stc_3a_a1_residual_entropy.py + src/tac/tests/test_probe_stc_3a_a1_residual_entropy.py (29/29 pass); empirical run 8 pairs landed MEDIUM verdict"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/probe_stc_3a_a1_residual_entropy_built_and_run_landed_20260521.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_overnight_aa_stc_3b_selfcomp_tone_map_delta_entropy_probe_build_local_cpu_run_20260521",
+      "name": "OVERNIGHT-AA STC 3b Selfcomp tone-map-delta entropy probe",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/probe_stc_3b_selfcomp_tone_map_delta_entropy.py + src/tac/tests/test_probe_stc_3b_selfcomp_tone_map_delta_entropy.py (33/33 pass) + .omx/research/probe_stc_3b_selfcomp_tone_map_delta_entropy_built_and_run_landed_20260521.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/probe_stc_3b_selfcomp_tone_map_delta_entropy_built_and_run_landed_20260521.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; substrate_engineering=local_cpu_probe; sister to OVERNIGHT-Y STC 3a; per OVERNIGHT-Y MEDIUM verdict Path A recommendation; canonical equation procedural_predictor_plus_residual_correction_savings_v1 IN-DOMAIN via stc_predictor_plus_residual_selfcomp_tone_map_delta_correction"
     }
   ],
   "level_rules": {
@@ -46144,5 +46267,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T14:28:23Z"
+  "updated_at": "2026-05-21T15:47:21Z"
 }
