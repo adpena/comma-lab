@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from tac.optimization.dp1_live_modal_status import (
@@ -107,6 +109,25 @@ def _metadata(path: Path, *, variant: str, call_id: str) -> Path:
     return path
 
 
+def _ledger(path: Path, *, call_id: str, written_at_utc: str, max_seconds: int) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "call_id": call_id,
+                "event_type": "dispatched",
+                "status": "dispatched",
+                "written_at_utc": written_at_utc,
+                "max_seconds": max_seconds,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_build_dp1_modal_call_status_reports_running_on_short_poll_timeout(
     tmp_path: Path,
 ) -> None:
@@ -134,6 +155,107 @@ def test_build_dp1_modal_call_status_reports_running_on_short_poll_timeout(
     assert status["score_claim"] is False
     assert status["baseline"]["poll"]["status"] == "running_or_pending"
     assert "keep polling" in status["next_action"]
+
+
+def test_build_dp1_modal_call_status_reports_ledger_budget_for_running_calls(
+    tmp_path: Path,
+) -> None:
+    baseline = _metadata(tmp_path / "baseline.json", variant="baseline", call_id="fc-base")
+    procedural = _metadata(
+        tmp_path / "procedural.json",
+        variant="procedural",
+        call_id="fc-proc",
+    )
+    ledger = tmp_path / ".omx" / "state" / "modal_call_id_ledger.jsonl"
+    _ledger(
+        ledger,
+        call_id="fc-base",
+        written_at_utc="2026-05-21T03:16:00Z",
+        max_seconds=5400,
+    )
+    with ledger.open("a", encoding="utf-8") as fh:
+        fh.write(
+            json.dumps(
+                {
+                    "call_id": "fc-proc",
+                    "event_type": "dispatched",
+                    "status": "dispatched",
+                    "written_at_utc": "2026-05-21T03:19:00Z",
+                    "max_seconds": 5400,
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
+
+    class _RunningCall:
+        def get(self, timeout: float | None = None) -> dict:
+            raise TimeoutError
+
+    status = build_dp1_modal_call_status(
+        baseline_metadata=baseline,
+        procedural_metadata=procedural,
+        repo_root=tmp_path,
+        call_id_ledger_path=ledger,
+        now_utc=datetime(2026, 5, 21, 4, 16, tzinfo=UTC),
+        function_call_from_id=lambda _call_id: _RunningCall(),
+    )
+
+    assert status["status"] == "running"
+    assert "baseline_modal_call_exceeded_max_seconds" not in status["blockers"]
+    assert status["baseline"]["budget"]["elapsed_since_registration_seconds"] == 3600.0
+    assert status["baseline"]["budget"]["seconds_until_max"] == 1800.0
+    assert status["baseline"]["budget"]["max_seconds_exceeded"] is False
+
+
+def test_build_dp1_modal_call_status_blocks_overdue_running_calls(
+    tmp_path: Path,
+) -> None:
+    baseline = _metadata(tmp_path / "baseline.json", variant="baseline", call_id="fc-base")
+    procedural = _metadata(
+        tmp_path / "procedural.json",
+        variant="procedural",
+        call_id="fc-proc",
+    )
+    ledger = tmp_path / ".omx" / "state" / "modal_call_id_ledger.jsonl"
+    _ledger(
+        ledger,
+        call_id="fc-base",
+        written_at_utc="2026-05-21T03:16:00Z",
+        max_seconds=120,
+    )
+    with ledger.open("a", encoding="utf-8") as fh:
+        fh.write(
+            json.dumps(
+                {
+                    "call_id": "fc-proc",
+                    "event_type": "dispatched",
+                    "status": "dispatched",
+                    "written_at_utc": "2026-05-21T03:19:00Z",
+                    "max_seconds": 120,
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
+
+    class _RunningCall:
+        def get(self, timeout: float | None = None) -> dict:
+            raise TimeoutError
+
+    status = build_dp1_modal_call_status(
+        baseline_metadata=baseline,
+        procedural_metadata=procedural,
+        repo_root=tmp_path,
+        call_id_ledger_path=ledger,
+        now_utc=datetime(2026, 5, 21, 4, 16, tzinfo=UTC),
+        function_call_from_id=lambda _call_id: _RunningCall(),
+    )
+
+    assert status["status"] == "needs_attention"
+    assert "baseline_modal_call_exceeded_max_seconds" in status["blockers"]
+    assert "procedural_modal_call_exceeded_max_seconds" in status["blockers"]
+    assert status["baseline"]["budget"]["max_seconds_exceeded"] is True
 
 
 def test_build_dp1_modal_call_status_reports_ready_for_training_harvest(

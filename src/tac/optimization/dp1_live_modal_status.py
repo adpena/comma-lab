@@ -47,6 +47,84 @@ def _repo_rel(path: Path, repo_root: Path) -> str:
         return str(path)
 
 
+def _parse_utc_datetime(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _load_call_id_budget(
+    *,
+    call_id: str,
+    ledger_path: Path,
+    now_utc: datetime | None = None,
+) -> dict[str, Any]:
+    """Return dispatch age/max_seconds budget from the Modal call-id ledger."""
+
+    if not call_id or not ledger_path.is_file():
+        return {
+            "schema": "dp1_modal_call_budget_v1",
+            "call_id": call_id,
+            "ledger_path": str(ledger_path),
+            "found": False,
+        }
+    rows: list[Mapping[str, Any]] = []
+    for line in ledger_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, Mapping) and payload.get("call_id") == call_id:
+            rows.append(payload)
+    dispatch_rows = [row for row in rows if row.get("event_type") == "dispatched"]
+    if not dispatch_rows:
+        return {
+            "schema": "dp1_modal_call_budget_v1",
+            "call_id": call_id,
+            "ledger_path": str(ledger_path),
+            "found": False,
+        }
+    row = dispatch_rows[-1]
+    registered_at = _parse_utc_datetime(row.get("written_at_utc")) or _parse_utc_datetime(
+        row.get("dispatched_at_utc")
+    )
+    max_seconds = row.get("max_seconds")
+    now = (now_utc or datetime.now(UTC)).astimezone(UTC)
+    elapsed: float | None = None
+    seconds_until_max: float | None = None
+    max_seconds_exceeded = False
+    if registered_at is not None:
+        elapsed = max(0.0, (now - registered_at).total_seconds())
+        if isinstance(max_seconds, int | float) and not isinstance(max_seconds, bool):
+            seconds_until_max = float(max_seconds) - elapsed
+            max_seconds_exceeded = seconds_until_max < 0
+    return {
+        "schema": "dp1_modal_call_budget_v1",
+        "call_id": call_id,
+        "ledger_path": str(ledger_path),
+        "found": True,
+        "status": row.get("status"),
+        "event_type": row.get("event_type"),
+        "registered_at_utc": registered_at.isoformat() if registered_at else None,
+        "checked_at_utc": now.isoformat(),
+        "max_seconds": max_seconds,
+        "elapsed_since_registration_seconds": elapsed,
+        "seconds_until_max": seconds_until_max,
+        "max_seconds_exceeded": max_seconds_exceeded,
+    }
+
+
 def parse_dp1_live_modal_log(
     path: str | Path,
     *,
@@ -328,25 +406,38 @@ def build_dp1_modal_call_status(
     procedural_metadata: str | Path,
     repo_root: str | Path = ".",
     timeout_seconds: float = 2.0,
+    call_id_ledger_path: str | Path | None = None,
+    now_utc: datetime | None = None,
     function_call_from_id: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
     """Return paired DP1 Modal call status from local metadata files."""
 
+    root = Path(repo_root).resolve()
+    ledger_path = (
+        Path(call_id_ledger_path)
+        if call_id_ledger_path is not None
+        else root / ".omx" / "state" / "modal_call_id_ledger.jsonl"
+    )
     baseline = parse_dp1_modal_metadata(
         baseline_metadata,
         variant="baseline",
-        repo_root=repo_root,
+        repo_root=root,
     )
     procedural = parse_dp1_modal_metadata(
         procedural_metadata,
         variant="procedural",
-        repo_root=repo_root,
+        repo_root=root,
     )
     for row in (baseline, procedural):
         row["poll"] = poll_modal_call_status(
             str(row.get("call_id") or ""),
             timeout_seconds=timeout_seconds,
             function_call_from_id=function_call_from_id,
+        )
+        row["budget"] = _load_call_id_budget(
+            call_id=str(row.get("call_id") or ""),
+            ledger_path=ledger_path,
+            now_utc=now_utc,
         )
 
     blockers: list[str] = []
@@ -358,6 +449,16 @@ def build_dp1_modal_call_status(
         blockers.append("baseline_poll_error")
     if procedural["poll"]["status"] == "poll_error":
         blockers.append("procedural_poll_error")
+    if (
+        baseline["poll"]["status"] == "running_or_pending"
+        and baseline.get("budget", {}).get("max_seconds_exceeded") is True
+    ):
+        blockers.append("baseline_modal_call_exceeded_max_seconds")
+    if (
+        procedural["poll"]["status"] == "running_or_pending"
+        and procedural.get("budget", {}).get("max_seconds_exceeded") is True
+    ):
+        blockers.append("procedural_modal_call_exceeded_max_seconds")
     if (
         baseline["poll"]["status"] == "finished"
         and baseline["poll"].get("returncode") not in {0, None}
@@ -423,18 +524,29 @@ def render_markdown(status: Mapping[str, Any]) -> str:
             f"- Blockers: `{', '.join(status.get('blockers') or []) or 'none'}`",
             f"- Ready for training harvest: `{status.get('ready_for_training_harvest')}`",
             "",
-            "| variant | call id | poll status | rc | artifacts |",
-            "|---|---|---:|---:|---:|",
+            "| variant | call id | poll status | rc | artifacts | elapsed s | remaining s |",
+            "|---|---|---:|---:|---:|---:|---:|",
         ]
         for row in (baseline, procedural):
             poll = row.get("poll") if isinstance(row.get("poll"), Mapping) else {}
+            budget = row.get("budget") if isinstance(row.get("budget"), Mapping) else {}
+            elapsed = budget.get("elapsed_since_registration_seconds")
+            remaining = budget.get("seconds_until_max")
             rows.append(
-                "| {variant} | `{call_id}` | `{status}` | `{rc}` | `{artifacts}` |".format(
+                "| {variant} | `{call_id}` | `{status}` | `{rc}` | `{artifacts}` | `{elapsed}` | `{remaining}` |".format(
                     variant=row.get("variant"),
                     call_id=row.get("call_id"),
                     status=poll.get("status"),
                     rc=poll.get("returncode", ""),
                     artifacts=poll.get("artifact_count", ""),
+                    elapsed=(
+                        f"{float(elapsed):.1f}" if isinstance(elapsed, int | float) else ""
+                    ),
+                    remaining=(
+                        f"{float(remaining):.1f}"
+                        if isinstance(remaining, int | float)
+                        else ""
+                    ),
                 )
             )
         rows.extend(["", f"- Next action: {status.get('next_action')}"])
