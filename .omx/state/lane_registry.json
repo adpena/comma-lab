@@ -46058,11 +46058,11 @@
       "id": "lane_overnight_c_hf_dataset_comma_video_segnet_image_level_600pairs_prep_20260521",
       "name": "OVERNIGHT-C HF dataset prep premise verification",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/overnight_c_hf_dataset_premise_falsification_landed_20260521.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -46085,8 +46085,49 @@
           "evidence": ""
         },
         "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/overnight_c_hf_dataset_premise_falsification_landed_20260521.md"
+        },
+        "deploy_runbook": {
           "status": false,
           "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_overnight_v_nscs06_v8_phase_2_build_full_main_atomic_recipe_flip_paired_dispatch_20260521",
+      "name": "OVERNIGHT-V NSCS06 v8 Phase 2 BUILD _full_main + recipe flip + paired dispatch",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "trainer experiments/train_substrate_nscs06_v8_chroma_lut.py + recipe .omx/operator_authorize_recipes/substrate_nscs06_v8_chroma_lut_modal_t4_dispatch.yaml; per OVERNIGHT-A Phase 2 T2 DESIGN 10-stage decomposition + RATIFY-3 helpers wired; 105/105 tests pass; local pre-deploy harness 9/9 PASS"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/nscs06_v8_phase_2_build_full_main_atomic_recipe_flip_paired_dispatch_landed_20260521.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -46103,5 +46144,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T07:06:43Z"
+  "updated_at": "2026-05-21T14:28:23Z"
 }

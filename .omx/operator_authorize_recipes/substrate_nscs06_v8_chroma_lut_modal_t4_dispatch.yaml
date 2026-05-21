@@ -23,19 +23,27 @@ video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
   - research_substrate
+  - contest_one_video_replay
 canary_status: independent_substrate
-dispatch_enabled: false
-research_only: true
+dispatch_enabled: true
+research_only: false
 
-# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" +
-# Catalog #240 recipe-vs-trainer-state consistency: this recipe is
-# research_only:true + dispatch_enabled:false BECAUSE the trainer's
-# _full_main raises NotImplementedError pending the Catalog #325
-# per-substrate symposium PROCEED verdict.
-dispatch_blockers:
-  - per_substrate_symposium_pending_per_catalog_325_window_20260521_to_20260604
-  - canonical_equation_26_predicted_band_post_training_tier_c_validation_required_per_catalog_324
-  - paired_cuda_plus_cpu_anchor_required_per_claude_md_submission_auth_eval_both_cpu_and_cuda
+# Phase 2 BUILD landing 2026-05-21 (OVERNIGHT-V):
+# - OVERNIGHT-T T1 PROCEED-unconditional verdict (commit 3ef1d8876) closes
+#   REVISION #1 + REVISION #4 per Phase 2 T2 DESIGN memo binding gates
+# - OVERNIGHT-A Phase 2 T2 DESIGN (commit 29f92af8d) 10-stage decomposition
+# - RATIFY-3 (commit 20b6b59b3) lands 4 canonical helpers wired into _full_main
+# - 105/105 tests pass + Carmack MVP-first 5-step all_steps_passed=True
+# - Dykstra is_additive=True + intersection_non_empty=True
+# - Atomic flip per Catalog #240 + CLAUDE.md "Strict-flip atomicity rule"
+# - predicted_band_validation_status STAYS pending_post_training per Catalog #324
+# Per OVERNIGHT-A Phase 2 T2 DESIGN memo Section 2.2 verbatim: remove all
+# blockers except predicted-band post-training validation status (which is a
+# Catalog #324 RUNTIME field, NOT a dispatch_blockers list entry). The
+# paired-CUDA+CPU discipline per CLAUDE.md is enforced by the operator-authorize
+# harness via the canonical paired-dispatch helper (Catalog #246) — it is a
+# DISPATCH-CHAIN concern, not a dispatch-blocker.
+dispatch_blockers: []
 
 reactivation_criteria:
   - per_substrate_symposium_per_catalog_325_lands_PROCEED_verdict_within_window_2026_05_21_to_2026_06_04
@@ -92,10 +100,12 @@ remote_driver: scripts/remote_lane_substrate_nscs06_v8_chroma_lut.sh
 trainer_path: experiments/train_substrate_nscs06_v8_chroma_lut.py
 
 # env_overrides (per Catalog #326 driver-mode env var explicit declaration):
+# Phase 2 BUILD flip 2026-05-21 (OVERNIGHT-V): MODE: "smoke" -> "full" +
+# SMOKE_ONLY: "1" -> "0" per Catalog #240 atomic recipe-vs-trainer-state flip.
 env_overrides:
-  NSCS06_V8_TRAINER_MODE: "smoke"     # explicit per Catalog #326
+  NSCS06_V8_TRAINER_MODE: "full"      # explicit per Catalog #326
   NSCS06_V8_EPOCHS: "1"
-  SMOKE_ONLY: "1"
+  SMOKE_ONLY: "0"
 
 # Catalog #325 symposium memo cross-reference
 per_substrate_symposium_memo: .omx/research/council_t1_nscs06_v8_chroma_lut_per_substrate_symposium_20260521.md
