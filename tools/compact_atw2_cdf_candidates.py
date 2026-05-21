@@ -42,6 +42,9 @@ class Atw2CdfBatchCompactionRow:
     source_archive_zip_path: str
     output_archive_zip_path: str
     member_name: str
+    num_pairs: int
+    candidate_class: str
+    full_candidate: bool
     source_archive_zip_bytes: int
     output_archive_zip_bytes: int
     archive_zip_bytes_saved: int
@@ -73,7 +76,11 @@ class Atw2CdfBatchCompactionReport:
     roots: list[str]
     output_dir: str
     scan_report: dict[str, object]
+    scan_candidates_found: int
     candidates_seen: int
+    full_candidates_seen: int
+    non_full_candidates_seen: int
+    skipped_non_full_candidate_count: int
     compacted_count: int
     failure_count: int
     total_archive_zip_bytes_saved: int
@@ -119,13 +126,20 @@ def compact_scan_candidates(
     max_candidates: int | None,
     device: str,
     keep_going: bool,
+    full_candidate_only: bool,
 ) -> Atw2CdfBatchCompactionReport:
     scan = scan_atw2_cdf_candidates(
         roots,
         member_names=member_names,
         max_archives=max_archives,
     )
-    candidates = scan.candidates
+    scan_candidates = scan.candidates
+    skipped_non_full = 0
+    if full_candidate_only:
+        candidates = [candidate for candidate in scan_candidates if candidate.full_candidate]
+        skipped_non_full = len(scan_candidates) - len(candidates)
+    else:
+        candidates = list(scan_candidates)
     if max_candidates is not None:
         candidates = candidates[: max(0, max_candidates)]
 
@@ -164,6 +178,9 @@ def compact_scan_candidates(
                 source_archive_zip_path=str(source_zip),
                 output_archive_zip_path=str(out_zip),
                 member_name=proof.member_name,
+                num_pairs=candidate.num_pairs,
+                candidate_class=candidate.candidate_class,
+                full_candidate=candidate.full_candidate,
                 source_archive_zip_bytes=proof.source_archive_zip_bytes,
                 output_archive_zip_bytes=proof.compact_archive_zip_bytes,
                 archive_zip_bytes_saved=proof.archive_zip_bytes_saved,
@@ -185,7 +202,13 @@ def compact_scan_candidates(
         roots=[str(root) for root in roots],
         output_dir=str(output_dir),
         scan_report=scan.to_dict(),
+        scan_candidates_found=len(scan_candidates),
         candidates_seen=len(candidates),
+        full_candidates_seen=sum(1 for candidate in candidates if candidate.full_candidate),
+        non_full_candidates_seen=sum(
+            1 for candidate in candidates if not candidate.full_candidate
+        ),
+        skipped_non_full_candidate_count=skipped_non_full,
         compacted_count=len(compacted),
         failure_count=len(failures),
         total_archive_zip_bytes_saved=total_saved,
@@ -200,7 +223,11 @@ def render_markdown(report: Atw2CdfBatchCompactionReport) -> str:
         "",
         f"- Generated UTC: {report.generated_at_utc}",
         f"- Roots: {', '.join(f'`{root}`' for root in report.roots)}",
+        f"- Scan candidates found: {report.scan_candidates_found}",
         f"- Candidates seen: {report.candidates_seen}",
+        f"- Full candidates seen: {report.full_candidates_seen}",
+        f"- Non-full candidates seen: {report.non_full_candidates_seen}",
+        f"- Skipped non-full candidates: {report.skipped_non_full_candidate_count}",
         f"- Compacted: {report.compacted_count}",
         f"- Failures: {report.failure_count}",
         f"- Total ZIP bytes saved: {report.total_archive_zip_bytes_saved}",
@@ -214,14 +241,16 @@ def render_markdown(report: Atw2CdfBatchCompactionReport) -> str:
             [
                 "## Compacted",
                 "",
-                "| index | source | output | saved bytes | raw equal | max raw delta |",
-                "|---:|---|---|---:|---:|---:|",
+                "| index | class | pairs | source | output | saved bytes | raw equal | max raw delta |",
+                "|---:|---|---:|---|---|---:|---:|---:|",
             ]
         )
         for row in report.compacted:
             lines.append(
                 "| "
                 f"{row.index} | "
+                f"{row.candidate_class} | "
+                f"{row.num_pairs} | "
                 f"`{row.source_archive_zip_path}` | "
                 f"`{row.output_archive_zip_path}` | "
                 f"{row.archive_zip_bytes_saved} | "
@@ -279,6 +308,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--keep-going", action="store_true")
     parser.add_argument(
+        "--full-candidate-only",
+        action="store_true",
+        help="Compact only ATW2 payloads whose parsed latent pair count is >= 600.",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Remove an existing output directory before running.",
@@ -302,6 +336,7 @@ def main(argv: list[str] | None = None) -> int:
         max_candidates=args.max_candidates,
         device=args.device,
         keep_going=args.keep_going,
+        full_candidate_only=args.full_candidate_only,
     )
     _write_report(report, output_dir)
     sys.stdout.write(json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n")

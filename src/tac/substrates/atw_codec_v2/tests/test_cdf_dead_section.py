@@ -345,16 +345,64 @@ def test_compact_atw2_cdf_candidates_cli(tmp_path: Path) -> None:
     payload = json.loads(proc.stdout)
     assert (output_dir / "batch_compaction_report.json").is_file()
     assert (output_dir / "batch_compaction_report.md").is_file()
+    assert payload["scan_candidates_found"] == 1
     assert payload["candidates_seen"] == 1
+    assert payload["full_candidates_seen"] == 0
+    assert payload["non_full_candidates_seen"] == 1
+    assert payload["skipped_non_full_candidate_count"] == 0
     assert payload["compacted_count"] == 1
     assert payload["failure_count"] == 0
     assert payload["total_archive_zip_bytes_saved"] == 2552
     row = payload["compacted"][0]
     assert Path(row["output_archive_zip_path"]).is_file()
     assert row["source_archive_zip_path"] == str(source_zip)
+    assert row["num_pairs"] == 4
+    assert row["candidate_class"] == "smoke_or_small_candidate"
+    assert row["full_candidate"] is False
     assert row["archive_zip_bytes_saved"] == 2552
     assert row["raw_equal"] is True
     assert row["max_abs_raw_byte_delta"] == 0
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_compact_atw2_cdf_candidates_cli_full_candidate_only_skips_smoke(
+    tmp_path: Path,
+) -> None:
+    archive = _make_archive()
+    input_root = tmp_path / "inputs"
+    source_zip = input_root / "case_a" / "archive.zip"
+    output_dir = tmp_path / "full-only-output"
+    _write_stored_archive_zip(source_zip, archive)
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "compact_atw2_cdf_candidates.py"),
+            str(input_root),
+            "--output-dir",
+            str(output_dir),
+            "--device",
+            "cpu",
+            "--full-candidate-only",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    payload = json.loads(proc.stdout)
+    assert payload["scan_candidates_found"] == 1
+    assert payload["candidates_seen"] == 0
+    assert payload["full_candidates_seen"] == 0
+    assert payload["non_full_candidates_seen"] == 0
+    assert payload["skipped_non_full_candidate_count"] == 1
+    assert payload["compacted_count"] == 0
+    assert payload["failure_count"] == 0
+    assert payload["total_archive_zip_bytes_saved"] == 0
+    assert payload["scan_report"]["candidates"][0]["num_pairs"] == 4
+    assert (
+        payload["scan_report"]["candidates"][0]["candidate_class"]
+        == "smoke_or_small_candidate"
+    )
+    assert payload["scan_report"]["candidates"][0]["full_candidate"] is False

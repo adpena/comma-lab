@@ -25,6 +25,9 @@ if str(REPO_ROOT / "src") not in sys.path:
 from tac.substrates.atw_codec_v2.cdf_dead_section import (  # noqa: E402
     analyze_atw2_cdf_section,
 )
+from tac.substrates.atw_codec_v2.archive import parse_archive  # noqa: E402
+
+FULL_CANDIDATE_MIN_PAIRS = 600
 
 
 @dataclass(frozen=True)
@@ -35,6 +38,9 @@ class Atw2CdfCandidateRow:
     member_name: str
     member_bytes: int
     member_compress_type: int
+    num_pairs: int
+    candidate_class: str
+    full_candidate: bool
     cdf_offset: int
     cdf_bytes: int
     cdf_classes: int
@@ -110,8 +116,16 @@ def scan_atw2_cdf_candidates(
                     member_bytes = zf.read(member_name)
                     try:
                         analysis = analyze_atw2_cdf_section(member_bytes)
+                        parsed = parse_archive(member_bytes)
                     except (ValueError, struct.error, json.JSONDecodeError, UnicodeError):
                         continue
+                    num_pairs = int(parsed.latent_residual.shape[0])
+                    full_candidate = num_pairs >= FULL_CANDIDATE_MIN_PAIRS
+                    candidate_class = (
+                        "full_candidate"
+                        if full_candidate
+                        else "smoke_or_small_candidate"
+                    )
                     archive_size = archive_path.stat().st_size
                     candidates.append(
                         Atw2CdfCandidateRow(
@@ -121,6 +135,9 @@ def scan_atw2_cdf_candidates(
                             member_name=member_name,
                             member_bytes=len(member_bytes),
                             member_compress_type=int(info.compress_type),
+                            num_pairs=num_pairs,
+                            candidate_class=candidate_class,
+                            full_candidate=full_candidate,
                             cdf_offset=analysis.cdf_offset,
                             cdf_bytes=analysis.cdf_bytes,
                             cdf_classes=analysis.cdf_classes,
@@ -182,8 +199,8 @@ def render_markdown(report: Atw2CdfScanReport) -> str:
         [
             "## Candidates",
             "",
-            "| archive_zip_path | member | zip bytes | member bytes | cdf bytes | conservative bytes saved | rate-only delta |",
-            "|---|---:|---:|---:|---:|---:|---:|",
+            "| archive_zip_path | member | class | pairs | zip bytes | member bytes | cdf bytes | conservative bytes saved | rate-only delta |",
+            "|---|---:|---|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for row in report.candidates:
@@ -191,6 +208,8 @@ def render_markdown(report: Atw2CdfScanReport) -> str:
             "| "
             f"`{row.archive_zip_path}` | "
             f"`{row.member_name}` | "
+            f"{row.candidate_class} | "
+            f"{row.num_pairs} | "
             f"{row.archive_zip_bytes} | "
             f"{row.member_bytes} | "
             f"{row.cdf_bytes} | "
