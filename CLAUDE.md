@@ -61,6 +61,26 @@ Translation table when the loop fires:
 - Task #309 ("HIGH-THROUGHPUT DISPATCH agent: parallel GPU orchestration") sat **pending** the entire May 4 race window. That task class is a NON-NEGOTIABLE priority-1 — if a similar task exists in any backlog, it must be claimed before any new validation-gate work.
 - Any PR that adds a new ranking/predictor/sanity-gate primitive MUST link to the parallel-actuator file that consumes its output. If no such consumer exists, the PR description must explicitly state "actuator deferred — no race window currently active" with the operator's signoff on the deferral.
 
+## Carmack MVP-first phasing — NON-NEGOTIABLE
+
+**Source:** CASCADE COMPRESSION T3 symposium (`d125af6c3`) revision #2 + APPARATUS META-BUGS T3 symposium §8 cross-symposium consistency + consolidating T3 symposium `council_t3_carmack_mvp_first_elevation_symposium_20260521` + 5 distinct empirical vindication anchors (NSCS06 v6→v7 / ATW V2 byte-mutation / DP1 paired-smoke / VQ-VAE BUILD / CASCADE COMPRESSION 4x cascade) producing ~$4-16 paid GPU + ~$400-800 LOC + 3-4 weeks engineering saved at $0 + ~15 min wall-clock.
+
+Every paid GPU dispatch >$0.30 MUST be preceded by an MVP-first phasing 5-step recipe:
+
+1. **FREE local macOS-CPU smoke first** — every paid GPU dispatch >$0.30 MUST be preceded by an empirical anchor at $0 cost on the smallest faithful local-CPU surface that exercises the cargo-culted assumption.
+2. **The smoke MUST falsifiably challenge the cargo-cult** — predict a measurable signature (e.g., zscore, KL, ΔS band) that distinguishes the cargo-cult assumption from the alternative; refusal verdict at empirical residual > 2σ.
+3. **Emit canonical equation anchor + Catalog #344 reference** — anchor the smoke result against a registered canonical equation; FORMALIZATION_PENDING waiver if the equation is not yet registered.
+4. **Land verdict in same commit batch** as the smoke landing memo — supersession marker on parent design memo per CLAUDE.md "Sister-supersession respect" non-negotiable (or `# NO_SUPERSESSION_NEEDED:<rationale>` waiver).
+5. **Re-route operator priority queue** within ~1h of empirical landing per CLAUDE.md "Downstream-surface latency discipline" non-negotiable (or `# DOWNSTREAM_SURFACE_LATENCY_PENDING_OK:<rationale>` waiver).
+
+Burden-of-proof shifts to "why we would NOT free-smoke-first?" — any cascade design memo proposing paid-dispatch-first MUST carry explicit `# PAID_DISPATCH_FIRST_WAIVED:<rationale>` waiver with substantive non-placeholder rationale (placeholder rejected per Catalog #287 sister discipline).
+
+Sister of CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first" (when leaderboard moves, rigor compresses; MVP-first phasing is the rigor cadence DURING non-race-mode); together they bind:
+- PRE-leader-shift: MVP-first phasing (rigor maximizes information per paid dollar)
+- POST-leader-shift: parallel-dispatch (velocity maximizes shipping rate)
+
+Cross-reference: CASCADE COMPRESSION T3 symposium `d125af6c3` rev #2 + APPARATUS META-BUGS T3 symposium §12.5 + consolidating T3 symposium `council_t3_carmack_mvp_first_elevation_symposium_20260521`.
+
 ## Long-burn score-lowering campaign default — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 When the operator says aggressive score lowering, no meat left on the bone, no
