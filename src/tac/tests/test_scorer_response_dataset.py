@@ -12,6 +12,7 @@ from tac.optimization.scorer_response_dataset import (
     build_null_byte_priority_weights,
     build_next_probe_plan,
     build_response_dataset,
+    normalize_legacy_response_dataset_authority,
     render_next_probe_plan_markdown,
     render_markdown,
 )
@@ -82,6 +83,91 @@ def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     assert row["local_pose_delta_sum"] == -0.25
     assert row["target_raw_sha256"] == "c" * 64
     assert row["holdout_fold"] in {0, 1, 2, 3, 4}
+
+
+def _current_response_dataset_payload() -> dict:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    return {
+        "schema": "scorer_response_dataset.v1",
+        "producer": "test",
+        **false_authority,
+        "authority": {
+            **false_authority,
+            "evidence_grade": "macOS-CPU advisory response dataset",
+        },
+        "summary": {"row_count": 1},
+        "rows": [
+            {
+                "schema": "scorer_response_row.v1",
+                "row_id": "row-a",
+                **false_authority,
+                "authority_source_score_claim": False,
+                "advisory_score_report_derived": 1.0,
+                "delta_vs_baseline_score": 0.0,
+            }
+        ],
+    }
+
+
+def test_normalize_legacy_response_dataset_authority_backfills_extended_fields_only() -> None:
+    payload = _current_response_dataset_payload()
+    payload.pop("rank_or_kill_eligible")
+    payload.pop("promotable")
+    payload["authority"].pop("rank_or_kill_eligible")
+    payload["authority"].pop("promotable")
+    payload["rows"][0].pop("rank_or_kill_eligible")
+    payload["rows"][0].pop("promotable")
+
+    normalized = normalize_legacy_response_dataset_authority(
+        payload,
+        source_label="historical_pr110",
+    )
+
+    assert normalized["rank_or_kill_eligible"] is False
+    assert normalized["promotable"] is False
+    assert normalized["authority"]["rank_or_kill_eligible"] is False
+    assert normalized["rows"][0]["promotable"] is False
+    metadata = normalized["authority_normalization"]
+    assert metadata["score_claim"] is False
+    assert metadata["source_label"] == "historical_pr110"
+    assert metadata["backfilled_missing_false_field_count"] == 6
+    assert {
+        (item["label"], item["field"])
+        for item in metadata["backfilled_missing_false_fields"]
+    } == {
+        ("scorer-response dataset", "rank_or_kill_eligible"),
+        ("scorer-response dataset", "promotable"),
+        ("scorer-response dataset authority", "rank_or_kill_eligible"),
+        ("scorer-response dataset authority", "promotable"),
+        ("scorer-response row 0", "rank_or_kill_eligible"),
+        ("scorer-response row 0", "promotable"),
+    }
+
+
+def test_normalize_legacy_response_dataset_authority_refuses_core_or_source_ambiguity() -> None:
+    missing_core = _current_response_dataset_payload()
+    missing_core.pop("score_claim")
+    try:
+        normalize_legacy_response_dataset_authority(missing_core)
+    except ScorerResponseDatasetError as exc:
+        assert "score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected missing core authority rejection")
+
+    source_claim = _current_response_dataset_payload()
+    source_claim["rows"][0]["authority_source_score_claim"] = "true"
+    try:
+        normalize_legacy_response_dataset_authority(source_claim)
+    except ScorerResponseDatasetError as exc:
+        assert "authority_source_score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected source score-claim rejection")
 
 
 def test_build_response_dataset_normalizes_candidate_list_and_correlations(tmp_path) -> None:

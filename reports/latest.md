@@ -160,6 +160,16 @@ last_refreshed_note: |
   PR110 datasets missing only the later `rank_or_kill_eligible`/`promotable`
   fields require an explicit legacy flag and still fail closed on missing core
   authority or source-score-claim ambiguity.
+- **Legacy LL scorer-response datasets now have an explicit-authority
+  normalization path**:
+  `.omx/research/scorer_response_dataset_explicit_authority_normalizer_landed_20260521T012921Z_codex.md`
+  adds `tools/normalize_scorer_response_dataset_authority.py` and
+  `normalize_legacy_response_dataset_authority(...)`. The normalizer only
+  backfills historical missing `rank_or_kill_eligible`/`promotable` fields as
+  false; missing core authority or ambiguous source-score authority still
+  fails closed. The historical PR110 scorer-response dataset was normalized to
+  an explicit-authority JSON artifact and strict-loaded by the PDS hook without
+  legacy flags.
 - **Magic-codec pair #4 procedural-seed orthogonality is closed**:
   `.omx/research/magic_codec_pair_4_procedural_seed_orthogonality_smoke_landed_20260521T004054Z_codex.md`
   tests seed lengths `16/32/64/128/256` across six reversible byte-orderings

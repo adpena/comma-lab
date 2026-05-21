@@ -9,6 +9,7 @@ held-out response surface instead of trusting a single local gradient.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import math
@@ -27,6 +28,17 @@ _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
     "promotion_eligible",
     "ready_for_exact_eval_dispatch",
+    "rank_or_kill_eligible",
+    "promotable",
+)
+
+_CORE_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "ready_for_exact_eval_dispatch",
+)
+
+_LEGACY_EXTENDED_FALSE_AUTHORITY_FIELDS = (
     "rank_or_kill_eligible",
     "promotable",
 )
@@ -57,6 +69,99 @@ RATE_SCORE_PER_BYTE = 25.0 / CONTEST_UNCOMPRESSED_BYTES
 
 class ScorerResponseDatasetError(ValueError):
     """Raised when scorer-response artifacts cannot be normalized."""
+
+
+def _validate_core_false_authority(payload: dict[str, Any], *, label: str) -> None:
+    for key in _CORE_FALSE_AUTHORITY_FIELDS:
+        if key not in payload or payload.get(key) is None:
+            raise ScorerResponseDatasetError(f"{label} {key} must be explicit false")
+        if payload.get(key) is not False:
+            raise ScorerResponseDatasetError(f"{label} {key} must be false")
+
+
+def _backfill_extended_false_authority(
+    payload: dict[str, Any],
+    *,
+    label: str,
+    repairs: list[dict[str, str]],
+) -> None:
+    for key in _LEGACY_EXTENDED_FALSE_AUTHORITY_FIELDS:
+        if key not in payload or payload.get(key) is None:
+            payload[key] = False
+            repairs.append({"label": label, "field": key})
+            continue
+        if payload.get(key) is not False:
+            raise ScorerResponseDatasetError(f"{label} {key} must be false")
+
+
+def normalize_legacy_response_dataset_authority(
+    dataset: dict[str, Any],
+    *,
+    source_label: str | None = None,
+) -> dict[str, Any]:
+    """Backfill old scorer-response datasets to the current false-authority shape.
+
+    Only the historical extended fields ``rank_or_kill_eligible`` and
+    ``promotable`` may be inserted as explicit ``False``. Core authority fields
+    and row-level source-score authority must already be present and false.
+    """
+
+    if not isinstance(dataset, dict):
+        raise ScorerResponseDatasetError("scorer-response dataset must be a JSON object")
+    if dataset.get("schema") != SCHEMA:
+        raise ScorerResponseDatasetError("scorer-response dataset schema mismatch")
+    normalized = copy.deepcopy(dataset)
+    repairs: list[dict[str, str]] = []
+
+    _validate_core_false_authority(normalized, label="scorer-response dataset")
+    _backfill_extended_false_authority(
+        normalized,
+        label="scorer-response dataset",
+        repairs=repairs,
+    )
+    authority = normalized.get("authority")
+    if not isinstance(authority, dict):
+        raise ScorerResponseDatasetError("scorer-response dataset authority must be a JSON object")
+    _validate_core_false_authority(authority, label="scorer-response dataset authority")
+    _backfill_extended_false_authority(
+        authority,
+        label="scorer-response dataset authority",
+        repairs=repairs,
+    )
+
+    rows = normalized.get("rows")
+    if not isinstance(rows, list):
+        raise ScorerResponseDatasetError("scorer-response dataset rows must be a list")
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ScorerResponseDatasetError(f"scorer-response row {index} must be a JSON object")
+        if row.get("schema") != ROW_SCHEMA:
+            raise ScorerResponseDatasetError(f"scorer-response row {index} schema mismatch")
+        label = f"scorer-response row {index}"
+        _validate_core_false_authority(row, label=label)
+        _backfill_extended_false_authority(row, label=label, repairs=repairs)
+        if "authority_source_score_claim" not in row or row.get("authority_source_score_claim") is None:
+            raise ScorerResponseDatasetError(
+                f"{label} authority_source_score_claim must be explicit false"
+            )
+        if row.get("authority_source_score_claim") is not False:
+            raise ScorerResponseDatasetError(
+                f"{label} authority_source_score_claim must be false"
+            )
+
+    normalized["authority_normalization"] = {
+        "schema": "scorer_response_dataset_authority_normalization.v1",
+        "producer": TOOL,
+        "source_label": source_label,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "backfilled_missing_false_fields": repairs,
+        "backfilled_missing_false_field_count": len(repairs),
+    }
+    return normalized
 
 
 @dataclass(frozen=True)
