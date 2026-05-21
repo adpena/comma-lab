@@ -9,16 +9,20 @@ import json
 from pathlib import Path
 
 from tac.local_acceleration.mlx_preprocess import (
+    count_video_pairs,
     load_raw_video_memmap,
     non_overlapping_pair_indices,
     write_scorer_input_cache_from_raw_file,
+    write_scorer_input_cache_from_video_file,
     write_scorer_input_cache_hash_manifest_from_raw_file,
 )
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--raw", required=True, type=Path, help="Inflated RGB .raw file.")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--raw", type=Path, help="Inflated RGB .raw file.")
+    source.add_argument("--video", type=Path, help="Upstream-format ground-truth video file.")
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--archive-sha256")
     parser.add_argument("--inflated-outputs-aggregate-sha256")
@@ -54,6 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.batch_pairs < 1:
         raise SystemExit("--batch-pairs must be >= 1")
     if args.hash_only:
+        if args.video is not None:
+            raise SystemExit("--hash-only currently supports --raw only")
         if args.max_pairs is not None:
             raise SystemExit("--hash-only does not support --max-pairs; hash the full auth surface")
         manifest = write_scorer_input_cache_hash_manifest_from_raw_file(
@@ -65,18 +71,29 @@ def main(argv: list[str] | None = None) -> int:
         )
     else:
         _refuse_unacknowledged_large_tensor_cache(
-            args.raw,
+            raw_path=args.raw,
+            video_path=args.video,
             max_pairs=args.max_pairs,
             threshold=args.large_cache_pair_threshold,
             allow_large_tensor_cache=args.allow_large_tensor_cache,
         )
-        manifest = write_scorer_input_cache_from_raw_file(
-            args.raw,
-            args.output_dir,
-            archive_sha256=args.archive_sha256,
-            inflated_outputs_aggregate_sha256=args.inflated_outputs_aggregate_sha256,
-            max_pairs=args.max_pairs,
-        )
+        if args.raw is not None:
+            manifest = write_scorer_input_cache_from_raw_file(
+                args.raw,
+                args.output_dir,
+                archive_sha256=args.archive_sha256,
+                inflated_outputs_aggregate_sha256=args.inflated_outputs_aggregate_sha256,
+                max_pairs=args.max_pairs,
+            )
+        else:
+            manifest = write_scorer_input_cache_from_video_file(
+                args.video,
+                args.output_dir,
+                archive_sha256=args.archive_sha256,
+                inflated_outputs_aggregate_sha256=args.inflated_outputs_aggregate_sha256,
+                max_pairs=args.max_pairs,
+                batch_pairs=args.batch_pairs,
+            )
     print(
         json.dumps(
             {
@@ -92,17 +109,23 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _refuse_unacknowledged_large_tensor_cache(
-    raw_path: Path,
     *,
+    raw_path: Path | None,
+    video_path: Path | None,
     max_pairs: int | None,
     threshold: int,
     allow_large_tensor_cache: bool,
 ) -> None:
     if threshold < 1:
         raise SystemExit("--large-cache-pair-threshold must be >= 1")
-    raw = load_raw_video_memmap(raw_path)
-    total_pairs = int(len(non_overlapping_pair_indices(raw.shape[0])))
-    requested_pairs = min(total_pairs, int(max_pairs)) if max_pairs is not None else total_pairs
+    if raw_path is not None:
+        raw = load_raw_video_memmap(raw_path)
+        total_pairs = len(non_overlapping_pair_indices(raw.shape[0]))
+        requested_pairs = min(total_pairs, int(max_pairs)) if max_pairs is not None else total_pairs
+    elif video_path is not None:
+        requested_pairs = int(max_pairs) if max_pairs is not None else count_video_pairs(video_path)
+    else:
+        raise SystemExit("one of --raw or --video is required")
     if requested_pairs > threshold and not allow_large_tensor_cache:
         raise SystemExit(
             "refusing eager full MLX scorer-input tensor cache for "

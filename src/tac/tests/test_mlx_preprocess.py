@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tac.local_acceleration.mlx_preprocess import (
     CAMERA_HW,
@@ -188,6 +189,39 @@ def test_hash_only_cli_writes_no_tensor_payloads(tmp_path: Path) -> None:
     assert not (out_dir / "segnet_last_rgb.npy").exists()
     assert not (out_dir / "posenet_yuv6_pair.npy").exists()
     assert len(manifest["array_sha256"]["posenet_yuv6_pair"]) == 64
+
+
+def test_video_cli_smoke_on_upstream_video_with_pair_cap(tmp_path: Path) -> None:
+    video_path = REPO / "upstream" / "videos" / "0.mkv"
+    if not video_path.exists():
+        pytest.skip("upstream video fixture is not available")
+    out_dir = tmp_path / "video_cache"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache.py"),
+            "--video",
+            str(video_path),
+            "--output-dir",
+            str(out_dir),
+            "--max-pairs",
+            "1",
+            "--batch-pairs",
+            "1",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"pair_count": 1' in completed.stdout
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["source_kind"] == "video"
+    assert manifest["pair_count"] == 1
+    assert len(manifest["source_video_sha256"]) == 64
+    assert manifest["segnet_last_rgb_shape"] == [1, 3, *SEGNET_INPUT_HW]
+    assert manifest["posenet_yuv6_pair_shape"] == [1, 12, *YUV6_INPUT_HW]
 
 
 def test_full_cache_cli_requires_ack_for_large_eager_tensor_surface(tmp_path: Path) -> None:
