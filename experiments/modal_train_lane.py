@@ -981,7 +981,32 @@ def _run_lane_inner(
             try:
                 st = fp.stat()
                 size = st.st_size
-                if st.st_mtime < artifact_mtime_floor:
+                # OVERNIGHT-GG vendor-stub fix 2026-05-21: files under
+                # output/submission/ are part of the trainer's atomic
+                # submission emission. shutil.copy2 preserves source mtime,
+                # so vendored .py module bodies (architecture.py / archive.py /
+                # codebook.py / inflate.py / prior_application.py /
+                # procedural_codebook_inflate.py / _shared/inflate_runtime.py /
+                # seed_derived_codebook.py) inherit the OLD mtime from
+                # /tmp/pact/src/tac/... (copied via copytree at lane start
+                # with symlinks=True preserving local-repo mtimes). The
+                # mtime_floor was designed to filter STALE pre-existing
+                # artifacts from prior runs, NOT to filter freshly-vendored
+                # module bodies that are part of the SUBMISSION packet. Per
+                # Catalog #146 inflate runtime contract: the submission_dir
+                # is a unit — drop any of its files and the contest auth_eval
+                # fails ModuleNotFoundError. Bypass the mtime_floor for the
+                # submission_dir specifically. Empirical anchor: OVERNIGHT-CC
+                # 99d06f967 4 paired Modal auth_eval rc=1 in ~3s each because
+                # 8 DP1 vendored .py modules were silently dropped by this
+                # filter; OVERNIGHT-GG 2026-05-21 root-cause fix.
+                rel_parts = rel.parts
+                under_submission = (
+                    len(rel_parts) >= 3
+                    and rel_parts[0] == "output"
+                    and rel_parts[1] == "submission"
+                )
+                if not under_submission and st.st_mtime < artifact_mtime_floor:
                     continue
                 # 500MB threshold — covers final .bin (~300KB) AND mid-training
                 # .pt checkpoints (50-200MB) AND large .mkv masks. Anything
@@ -1639,8 +1664,44 @@ def main(
 
     os.chdir(repo_root)
 
+    # Catalog #360 sister of #339: register pre-spawn FATAL paths in the
+    # canonical ledger so silent-no-spawn dispatches (STC v2 5-consecutive
+    # anchor per OVERNIGHT-J) become structurally observable. We resolve a
+    # provisional lane_id BEFORE the first FATAL path so the helper has
+    # context for the synthetic call_id. Subsequent FATALs overwrite this
+    # binding once a richer lane_id is derived.
+    resolved_lane_id = _infer_lane_id(lane_script, lane_id) if (repo_root / lane_script).exists() else (lane_id or "unresolved")
+
+    def _pre_spawn_fatal(reason: str, *, line_no: int, helper_source: str | None = None) -> None:
+        """Catalog #360 inline helper — observability-then-exit pattern.
+
+        Writes a pre_spawn_fatal event to the canonical ledger BEFORE
+        sys.exit(2) fires so the harvester + operator dashboard can
+        distinguish silent-no-spawn from successful dispatch. Per CLAUDE.md
+        "Bugs must be permanently fixed AND self-protected against" +
+        the OVERNIGHT-J STC v2 5th consecutive silent-no-spawn anchor.
+        """
+        try:
+            from tac.deploy.modal.call_id_ledger import register_pre_spawn_fatal
+            register_pre_spawn_fatal(
+                label=label,
+                lane_id=resolved_lane_id,
+                fatal_reason=reason,
+                exit_code=2,
+                sys_exit_line_number=line_no,
+                sys_exit_helper_source=helper_source,
+                gpu=gpu,
+                agent=agent,
+            )
+        except Exception as exc:
+            # Catalog #360 helper is fail-OPEN, but defensive double-guard
+            # ensures the FATAL exit is never blocked by observability.
+            print(f"[Catalog #360] pre_spawn_fatal observability failed (non-blocking): {type(exc).__name__}: {exc}", file=sys.stderr)
+
     if not (repo_root / lane_script).exists():
-        print(f"FATAL: lane script not found: {lane_script}", file=sys.stderr)
+        reason = f"FATAL: lane script not found: {lane_script}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1644, helper_source="lane_script_existence_check")
         sys.exit(2)
     resolved_lane_id = _infer_lane_id(lane_script, lane_id)
 
@@ -1662,22 +1723,27 @@ def main(
     elif gpu in ("H100", "H100-80GB"):
         fn = run_lane_training_h100
     else:
-        print(
-            f"FATAL: unsupported gpu '{gpu}'. Use CPU, T4, A10G, A100, or H100.",
-            file=sys.stderr,
-        )
+        reason = f"FATAL: unsupported gpu '{gpu}'. Use CPU, T4, A10G, A100, or H100."
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1730, helper_source="gpu_validation")
         sys.exit(2)
 
     cost_band_anchor = None
     if cost_band_trainer or cost_band_epochs or cost_band_batch_size or cost_band_all_flags_on:
         if not cost_band_trainer:
-            print("FATAL: --cost-band-trainer is required when recording a cost-band anchor.", file=sys.stderr)
+            reason = "FATAL: --cost-band-trainer is required when recording a cost-band anchor."
+            print(reason, file=sys.stderr)
+            _pre_spawn_fatal(reason, line_no=1736, helper_source="cost_band_trainer_validation")
             sys.exit(2)
         if cost_band_epochs <= 0:
-            print("FATAL: --cost-band-epochs must be positive when recording a cost-band anchor.", file=sys.stderr)
+            reason = "FATAL: --cost-band-epochs must be positive when recording a cost-band anchor."
+            print(reason, file=sys.stderr)
+            _pre_spawn_fatal(reason, line_no=1739, helper_source="cost_band_epochs_validation")
             sys.exit(2)
         if cost_band_batch_size <= 0:
-            print("FATAL: --cost-band-batch-size must be positive when recording a cost-band anchor.", file=sys.stderr)
+            reason = "FATAL: --cost-band-batch-size must be positive when recording a cost-band anchor."
+            print(reason, file=sys.stderr)
+            _pre_spawn_fatal(reason, line_no=1742, helper_source="cost_band_batch_size_validation")
             sys.exit(2)
         cost_band_anchor = {
             "schema": "modal_training_cost_anchor_metadata_v1",
@@ -1700,11 +1766,12 @@ def main(
     mounted_code_git_head = _git_value(repo_root, "rev-parse", "HEAD")
     mounted_code_git_branch = _git_value(repo_root, "branch", "--show-current")
     if mounted_code_git_head == "unknown" or mounted_code_git_branch == "unknown":
-        print(
+        reason = (
             "FATAL: unable to resolve mounted git custody for Modal training "
-            f"(head={mounted_code_git_head!r}, branch={mounted_code_git_branch!r})",
-            file=sys.stderr,
+            f"(head={mounted_code_git_head!r}, branch={mounted_code_git_branch!r})"
         )
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1708, helper_source="git_custody_resolution")
         sys.exit(2)
 
     # Catalog #166: working-tree dirty-tree summary + optional fail-closed.
@@ -1717,10 +1784,9 @@ def main(
     # operator override).
     dirty_tree = _git_dirty_tree_summary(repo_root)
     if require_clean_head and dirty_tree["dirty"]:
-        print(
-            _format_dx_polish_actionable_fatal(dirty_tree, mounted_code_git_head),
-            file=sys.stderr,
-        )
+        reason = _format_dx_polish_actionable_fatal(dirty_tree, mounted_code_git_head)
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason[:1000], line_no=1786, helper_source="require_clean_head_dirty_tree")
         sys.exit(2)
     if dirty_tree["dirty"]:
         print(
@@ -1740,10 +1806,9 @@ def main(
     )
     claims_path = repo_root / ".omx/state/active_lane_dispatch_claims.md"
     if not claims_path.is_file():
-        print(
-            f"FATAL: dispatch claims ledger missing: {claims_path}",
-            file=sys.stderr,
-        )
+        reason = f"FATAL: dispatch claims ledger missing: {claims_path}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1747, helper_source="active_lane_dispatch_claims_missing")
         sys.exit(2)
     claim_ledger_bytes = claims_path.read_bytes()
 
@@ -1777,7 +1842,9 @@ def main(
             repo_root,
         )
     except RuntimeError as exc:
-        print(f"FATAL: {exc}", file=sys.stderr)
+        reason = f"FATAL: {exc}"
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1781, helper_source="_normalize_trainer_module_path")
         sys.exit(2)
     derived_trainer_module_path = _derive_trainer_module_path(lane_script, repo_root)
     if (
@@ -1785,13 +1852,14 @@ def main(
         and derived_trainer_module_path is not None
         and explicit_trainer_module_path != derived_trainer_module_path.resolve()
     ):
-        print(
+        reason = (
             "FATAL: explicit --trainer-module-path conflicts with lane_script "
             "derived trainer module: "
             f"explicit={explicit_trainer_module_path.relative_to(repo_root)} "
-            f"derived={derived_trainer_module_path.relative_to(repo_root)}",
-            file=sys.stderr,
+            f"derived={derived_trainer_module_path.relative_to(repo_root)}"
         )
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1795, helper_source="trainer_module_path_conflict")
         sys.exit(2)
     trainer_module_path_resolved = (
         explicit_trainer_module_path or derived_trainer_module_path
@@ -1805,15 +1873,16 @@ def main(
     else:
         trainer_metadata_source = "none"
     if substrate_id_from_lane is not None and trainer_module_path_resolved is None:
-        print(
+        reason = (
             f"FATAL: substrate lane_script {lane_script!r} implies canonical "
             "trainer module "
             f"experiments/train_substrate_{substrate_id_from_lane}.py, but "
             "that file does not exist. Refusing Modal dispatch because "
             "trainer-side TIER_1_EXTRA_MOUNT_PATHS / required_input_file "
-            "metadata cannot be consumed.",
-            file=sys.stderr,
+            "metadata cannot be consumed."
         )
+        print(reason, file=sys.stderr)
+        _pre_spawn_fatal(reason, line_no=1817, helper_source="substrate_trainer_module_missing")
         sys.exit(2)
     if trainer_module_path_resolved is not None:
         print(
@@ -1829,12 +1898,13 @@ def main(
                 fail_on_missing_paths=True,
             )
         except RuntimeError as exc:
-            print(
+            reason = (
                 f"FATAL: {exc}. Refusing Modal dispatch because "
                 "substrate-named lane scripts must consume trainer-side "
-                "TIER_1_EXTRA_MOUNT_PATHS / required_input_file metadata.",
-                file=sys.stderr,
+                "TIER_1_EXTRA_MOUNT_PATHS / required_input_file metadata."
             )
+            print(reason, file=sys.stderr)
+            _pre_spawn_fatal(reason, line_no=1838, helper_source="_collect_trainer_extra_mount_payload")
             sys.exit(2)
         if trainer_extra_mount_payload:
             print(

@@ -2741,6 +2741,23 @@ def preflight_all(
         check_modal_dispatcher_registers_call_id_before_successful_exit(
             strict=True, verbose=verbose,
         )
+        # 2026-05-21 Catalog #360 - PRE-SPAWN-FATAL-OBSERVABILITY-EXTINCTION.
+        # Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable +
+        # OVERNIGHT-J STC v2 5th consecutive silent-no-spawn anchor (per
+        # `.omx/research/stc_v2_ratify_or_defer_path_b_dispatch_landed_20260521.md`).
+        # Sister of Catalog #339 at the PRE-spawn surface. Where #339
+        # catches silent-swallow registration failures AFTER fn.spawn(),
+        # #360 catches the upstream silent-no-spawn pattern: sys.exit(2)
+        # FATAL paths in main() that fire BEFORE fn.spawn() leave Modal
+        # in "stopped/0 tasks" state with NO canonical-ledger row and NO
+        # recovery dump. STRICT-from-byte-one per "Strict-flip atomicity
+        # rule" (live count: 0 at landing — fix routes every HIGH-RISK
+        # sys.exit through `_pre_spawn_fatal(...)` -> canonical ledger
+        # `pre_spawn_fatal` event before exit). Memory:
+        # feedback_overnight_hh_comprehensive_bug_audit_fix_cascade_landed_20260521.md.
+        check_modal_dispatcher_pre_spawn_fatal_observability(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -3614,6 +3631,17 @@ def preflight_all(
         # fixed AND self-protected against" non-negotiable. Live count at
         # landing: 0.
         check_modal_dispatch_verifies_worker_source_matches_head(
+            strict=True, verbose=verbose,
+        )
+        # Catalog #361 - check_modal_artifact_filter_preserves_submission_dir
+        # OVERNIGHT-CC 99d06f967 4 paired DP1 auth_eval Modal dispatches
+        # rc=1 ModuleNotFoundError because shutil.copy2-vendored .py module
+        # bodies under output/submission/ were silently dropped by the
+        # harvester's mtime_floor filter. OVERNIGHT-GG META-fix bypasses
+        # mtime_floor for `output/submission/` paths (the trainer's atomic
+        # submission packet per Catalog #146). STRICT @ 0 per CLAUDE.md
+        # "Bugs must be permanently fixed AND self-protected against".
+        check_modal_artifact_filter_preserves_submission_dir(
             strict=True, verbose=verbose,
         )
         # Catalog #203 - check_modal_training_image_includes_hard_runtime_deps
@@ -47385,6 +47413,180 @@ def _check_203_python_string_literals(path: Path) -> tuple[set[str], str | None]
     return literals, None
 
 
+# ============================================================================
+# Catalog #361 - check_modal_artifact_filter_preserves_submission_dir
+# ============================================================================
+# Empirical anchor 2026-05-21: OVERNIGHT-CC 99d06f967 4 paired Modal
+# auth_eval dispatches (fc-01KS5KW2EZBYYKV8DP1H8T0X2D + sister CPU/CUDA
+# arms) all returned rc=1 in ~3s with the SAME ModuleNotFoundError:
+# `tac.substrates.pretrained_driving_prior.inflate`. Root cause
+# (OVERNIGHT-GG diagnosis 2026-05-21): the DP1 trainer's `_write_runtime`
+# correctly invoked `shutil.copy2` to vendor 8 module bodies into
+# `output/submission/src/tac/.../`. The files DID land on disk. However,
+# `experiments/modal_train_lane.py`'s harvester silently DROPPED them
+# via `mtime_floor = time.time() - 5.0`: shutil.copy2 preserves source
+# mtime, and the source files at `/tmp/pact/src/tac/...` carry the
+# local-repo mtime (days/weeks old) propagated through Modal's
+# `copytree(symlinks=True)` mount staging. By contrast, write_text /
+# write_bytes produce current-mtime files (which passed the floor),
+# explaining why empty __init__.py stubs DID make it but the
+# shutil.copy2-vendored bodies did not.
+#
+# The mtime_floor's purpose is to filter STALE pre-existing artifacts
+# from prior runs. It is WRONG to apply to `output/submission/` —
+# that subtree is the trainer's atomic submission emission per
+# Catalog #146. Dropping any of its files breaks the contest
+# auth_eval with ModuleNotFoundError before the dispatch produces
+# any score. This gate refuses regressions that remove the bypass.
+#
+# Acceptance:
+#   (a) The harvester loop contains the canonical `under_submission`
+#       guard + the bypass condition `if not under_submission and
+#       st.st_mtime < artifact_mtime_floor`.
+#   (b) File-level waiver `# CATALOG_361_HARVESTER_FILTER_WAIVED:
+#       <rationale>` in the file's first 80 lines (placeholder
+#       `<rationale>` / `<reason>` literals rejected).
+#
+# Sister of Catalog #166 (Modal worker source-parity ledger; same
+# META infrastructure surface) + Catalog #245 (canonical call_id
+# ledger) + Catalog #295 (submission inflate runtime self-containment
+# at the `submissions/*/inflate.py` permanent surface; #361 is the
+# `experiments/results/**/output/submission/` trainer-emitted DERIVED
+# surface) + Catalog #146 (inflate runtime contract) + Catalog #339
+# (silent-no-spawn extinction — same META self-protection pattern).
+#
+# Companion defense-in-depth: `tac.substrates._shared.trainer_skeleton.
+# vendor_module_with_fresh_mtime` combines shutil.copy2 + os.utime(dst,
+# None) so vendored bodies inherit current mtime, making them robust
+# against this filter even WITHOUT the META-layer fix. Substrate
+# trainers SHOULD route through the canonical helper instead of bare
+# shutil.copy2.
+#
+# STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed
+# AND self-protected against" — the META-layer fix lands in
+# `experiments/modal_train_lane.py` in the same commit batch; live
+# count at landing: 0.
+# ============================================================================
+
+
+_CHECK_361_TARGET_RELPATH = "experiments/modal_train_lane.py"
+_CHECK_361_WAIVER_TOKEN = "CATALOG_361_HARVESTER_FILTER_WAIVED:"
+_CHECK_361_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+# Canonical bypass tokens that MUST coexist in the harvester loop.
+_CHECK_361_REQUIRED_TOKENS = (
+    "artifact_mtime_floor",
+    "under_submission",
+    'parts[0] == "output"',
+    'parts[1] == "submission"',
+    "if not under_submission and st.st_mtime < artifact_mtime_floor",
+)
+
+
+def check_modal_artifact_filter_preserves_submission_dir(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #361. Refuse Modal harvester regression that drops
+    `output/submission/` files based on mtime.
+
+    Empirical anchor: OVERNIGHT-CC 99d06f967 (2026-05-21) — 4 paired
+    DP1 auth_eval Modal dispatches all returned rc=1 ModuleNotFoundError
+    because 8 vendored .py module bodies were silently dropped by
+    `experiments/modal_train_lane.py`'s artifact harvester. Root cause:
+    shutil.copy2 preserves source mtime; old local-repo mtimes
+    propagated through Modal copytree(symlinks=True) failed the
+    `artifact_mtime_floor = time.time() - 5.0` check. Canonical fix
+    bypasses the mtime_floor for files under `output/submission/`
+    specifically (that subtree is the atomic trainer-emitted submission
+    packet per Catalog #146).
+
+    Returns:
+        List of violation messages. Empty list = clean.
+    """
+
+    root = repo_root if repo_root is not None else REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = Path(root) / _CHECK_361_TARGET_RELPATH
+    violations: list[str] = []
+
+    if not target.is_file():
+        if verbose:
+            print(f"  [catalog-361] target absent ({target}); skip")
+        return violations
+
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        msg = (
+            f"[catalog-361] read error on {_CHECK_361_TARGET_RELPATH}: "
+            f"{exc!s}; treat as violation per fail-closed discipline."
+        )
+        violations.append(msg)
+        if strict:
+            raise PreflightError(msg)
+        return violations
+
+    # File-level waiver in first 80 lines.
+    header_lines = text.splitlines()[:80]
+    for ln in header_lines:
+        idx = ln.find(_CHECK_361_WAIVER_TOKEN)
+        if idx < 0:
+            continue
+        rationale = ln[idx + len(_CHECK_361_WAIVER_TOKEN):].strip()
+        rationale = rationale.rstrip("#)/ \t").strip()
+        if not rationale or len(rationale) < 4:
+            break
+        if rationale.lower() in tuple(
+            p.lower() for p in _CHECK_361_WAIVER_PLACEHOLDERS
+        ):
+            break
+        if verbose:
+            print(f"  [catalog-361] file-level waiver accepted: {rationale!r}")
+        return violations  # waived
+
+    missing: list[str] = []
+    for tok in _CHECK_361_REQUIRED_TOKENS:
+        if tok not in text:
+            missing.append(tok)
+    if missing:
+        msg = (
+            f"[catalog-361] {_CHECK_361_TARGET_RELPATH}: harvester filter "
+            f"missing canonical bypass token(s) for output/submission/ "
+            f"subtree: {missing!r}. The mtime_floor MUST NOT drop files "
+            "under output/submission/ — that subtree is the atomic "
+            "trainer-emitted submission packet per Catalog #146 inflate "
+            "runtime contract. Empirical anchor: OVERNIGHT-CC 99d06f967 "
+            "4 paired DP1 auth_eval rc=1 ModuleNotFoundError because 8 "
+            "vendored .py module bodies (architecture.py + archive.py + "
+            "codebook.py + inflate.py + prior_application.py + "
+            "procedural_codebook_inflate.py + seed_derived_codebook.py + "
+            "_shared/inflate_runtime.py) were silently dropped by the "
+            "mtime_floor filter — shutil.copy2 preserves source mtime; "
+            "old local-repo mtimes propagated through Modal "
+            "copytree(symlinks=True) mount staging failed the "
+            "artifact_mtime_floor check. Canonical fix: add "
+            "`under_submission` guard that bypasses mtime_floor for "
+            "`output/submission/` paths. Sister of Catalog #166 + #245 + "
+            "#295 + #339; companion defense-in-depth in "
+            "tac.substrates._shared.trainer_skeleton.vendor_module_with_"
+            "fresh_mtime."
+        )
+        violations.append(msg)
+        if strict:
+            raise PreflightError(msg)
+
+    if verbose:
+        print(
+            f"  [catalog-361] {_CHECK_361_TARGET_RELPATH}: "
+            f"{len(violations)} violation(s) "
+            f"(0 = canonical bypass present)"
+        )
+    return violations
+
+
 def check_modal_training_image_includes_hard_runtime_deps(
     *,
     repo_root: Path | None = None,
@@ -76150,6 +76352,250 @@ def check_modal_dispatcher_registers_call_id_before_successful_exit(
             f"{len(violations)} silent-no-spawn violation(s) (Catalog #339 — "
             "SILENT-NO-SPAWN-STRUCTURAL-EXTINCTION; 2026-05-19 anchor); "
             "first 3:\n  " + "\n  ".join(violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #360 - check_modal_dispatcher_pre_spawn_fatal_observability
+#
+# PRE-SPAWN-FATAL-OBSERVABILITY-EXTINCTION self-protection 2026-05-21 per
+# OVERNIGHT-J STC v2 5th consecutive silent-no-spawn anchor (see
+# `.omx/research/stc_v2_ratify_or_defer_path_b_dispatch_landed_20260521.md`).
+#
+# Sister of Catalog #339 (post-spawn registration fail-closed). Where #339
+# catches silent-swallow registration failures AFTER fn.spawn() returns,
+# #360 catches the upstream silent-no-spawn pattern: sys.exit(2) FATAL
+# paths in main() that fire BEFORE fn.spawn() leave Modal in "stopped/0
+# tasks" state with NO canonical-ledger row and NO recovery dump.
+#
+# The fix is to route every sys.exit(2) inside main() (upstream of
+# fn.spawn()) through `register_pre_spawn_fatal(...)` from
+# `tac.deploy.modal.call_id_ledger`, which writes a structured
+# `pre_spawn_fatal` event to the canonical ledger BEFORE sys.exit fires.
+#
+# This gate AST-scans `experiments/modal_train_lane.py` for sys.exit(2)
+# calls inside the @app.local_entrypoint() main() function that are NOT
+# preceded by a `register_pre_spawn_fatal` (or `_pre_spawn_fatal` inline
+# wrapper) call. Each unwrapped sys.exit is a silent-no-spawn bug class.
+#
+# Same-line waiver `# PRE_SPAWN_FATAL_OBSERVABILITY_OK:<rationale>` for
+# the rare deliberate fail-fast case (e.g. an sys.exit AFTER fn.spawn).
+# Placeholder rationale rejected per Catalog #287 sister discipline.
+# ============================================================================
+
+_CHECK_360_TARGET_RELPATH = "experiments/modal_train_lane.py"
+_CHECK_360_OBSERVABILITY_HELPER_NAMES = frozenset(
+    {
+        "register_pre_spawn_fatal",
+        "_pre_spawn_fatal",  # inline wrapper alias in modal_train_lane.py
+    }
+)
+_CHECK_360_WAIVER_RE = re.compile(
+    r"#\s*PRE_SPAWN_FATAL_OBSERVABILITY_OK\s*:\s*(?P<rationale>[^\n]+)"
+)
+_CHECK_360_WAIVER_PLACEHOLDERS = frozenset({"<rationale>", "<reason>", ""})
+
+
+def _check_360_waiver_on_line(line_text: str) -> bool:
+    """Return True if ``line_text`` carries a valid Catalog #360 waiver."""
+    match = _CHECK_360_WAIVER_RE.search(line_text)
+    if not match:
+        return False
+    rationale = match.group("rationale").strip()
+    if rationale in _CHECK_360_WAIVER_PLACEHOLDERS:
+        return False
+    if len(rationale) < 4:
+        return False
+    return True
+
+
+def check_modal_dispatcher_pre_spawn_fatal_observability(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #360 — refuse pre-spawn silent-no-spawn pattern in modal_train_lane.py.
+
+    Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" + "Bugs must be
+    permanently fixed AND self-protected against" non-negotiables.
+
+    The gate AST-scans ``experiments/modal_train_lane.py`` for the
+    ``@app.local_entrypoint()`` ``main()`` function and refuses any state
+    where a ``sys.exit(...)`` call inside main() is NOT immediately
+    preceded by a ``register_pre_spawn_fatal`` (or ``_pre_spawn_fatal``)
+    observability call. Each unwrapped sys.exit produces a silent-no-spawn
+    pattern from Modal's perspective (app stops with 0 tasks; no canonical
+    ledger row; no recovery dump).
+
+    Sister of Catalog #339 (post-spawn registration fail-closed). Together
+    they extinct the silent-no-spawn bug class at BOTH surfaces:
+    - #339: post-spawn registration silent-swallow
+    - #360: pre-spawn sys.exit silent-no-spawn
+
+    Same-line waiver: ``# PRE_SPAWN_FATAL_OBSERVABILITY_OK:<rationale>`` on
+    the ``sys.exit`` line (rationale >= 4 chars; placeholder rejected).
+
+    The acceptance check looks for a ``_pre_spawn_fatal(...)`` or
+    ``register_pre_spawn_fatal(...)`` Call statement in the SAME enclosing
+    block (typically a try/except handler OR `if` body) as the sys.exit
+    call, AT OR BEFORE the sys.exit line number.
+    """
+
+    import ast
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    target = root / _CHECK_360_TARGET_RELPATH
+    violations: list[str] = []
+
+    if not target.is_file():
+        if verbose:
+            print(f"  [catalog-360] OK ({_CHECK_360_TARGET_RELPATH} not present)")
+        return violations
+
+    try:
+        source = target.read_text(encoding="utf-8")
+    except Exception as exc:
+        violations.append(
+            f"[Catalog #360] cannot read {_CHECK_360_TARGET_RELPATH}: {exc}"
+        )
+        if strict:
+            raise PreflightError(violations[0])
+        return violations
+
+    try:
+        tree = ast.parse(source, filename=str(target))
+    except SyntaxError as exc:
+        violations.append(
+            f"[Catalog #360] {_CHECK_360_TARGET_RELPATH} SyntaxError: {exc}"
+        )
+        if strict:
+            raise PreflightError(violations[0])
+        return violations
+
+    source_lines = source.splitlines()
+
+    # Find the @app.local_entrypoint() main() FunctionDef.
+    main_fn = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == "main":
+            for decorator in node.decorator_list:
+                if (
+                    isinstance(decorator, ast.Call)
+                    and isinstance(decorator.func, ast.Attribute)
+                    and decorator.func.attr == "local_entrypoint"
+                ):
+                    main_fn = node
+                    break
+            if main_fn is not None:
+                break
+
+    if main_fn is None:
+        # No local_entrypoint main() — gate is N/A (e.g. dispatcher refactored).
+        if verbose:
+            print(
+                f"  [catalog-360] OK ({_CHECK_360_TARGET_RELPATH} has no "
+                "@app.local_entrypoint() main() function)"
+            )
+        return violations
+
+    # Find the fn.spawn(...) call line number; sys.exit AFTER this line is
+    # NOT a pre-spawn silent-no-spawn (it's post-spawn and Catalog #339 covers).
+    spawn_line = None
+    for node in ast.walk(main_fn):
+        if isinstance(node, ast.Call):
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr == "spawn"
+            ):
+                spawn_line = node.lineno
+                break
+
+    # Walk every sys.exit / SystemExit call inside main() upstream of spawn.
+    for node in ast.walk(main_fn):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        is_sys_exit = (
+            isinstance(func, ast.Attribute)
+            and isinstance(func.value, ast.Name)
+            and func.value.id == "sys"
+            and func.attr == "exit"
+        )
+        is_bare_exit = (
+            isinstance(func, ast.Name)
+            and func.id in ("exit", "quit")
+        )
+        if not (is_sys_exit or is_bare_exit):
+            continue
+        # Only care about sys.exit upstream of fn.spawn (or if no spawn found,
+        # ALL sys.exit calls qualify — defensive).
+        if spawn_line is not None and node.lineno > spawn_line:
+            continue
+
+        # Check the sys.exit line itself for waiver.
+        line_text = source_lines[node.lineno - 1] if 0 < node.lineno <= len(source_lines) else ""
+        if _check_360_waiver_on_line(line_text):
+            continue
+
+        # Look for the observability helper call in the SAME block (preceding
+        # statements within the enclosing function body, up to 10 lines above).
+        observability_present = False
+        scan_start = max(0, node.lineno - 11)
+        scan_end = node.lineno - 1
+        for i in range(scan_start, scan_end):
+            window_line = source_lines[i] if i < len(source_lines) else ""
+            if any(
+                helper in window_line
+                for helper in _CHECK_360_OBSERVABILITY_HELPER_NAMES
+            ):
+                # Match must be a Call (not an import / def)
+                stripped = window_line.lstrip()
+                if (
+                    stripped.startswith(("import ", "from ", "def "))
+                    or "register_pre_spawn_fatal" in stripped
+                    and "(" not in stripped
+                ):
+                    continue
+                # Skip if helper is on the same line as `def _pre_spawn_fatal(`
+                if "def _pre_spawn_fatal" in window_line or "def register_pre_spawn_fatal" in window_line:
+                    continue
+                observability_present = True
+                break
+
+        if not observability_present:
+            violations.append(
+                f"[Catalog #360] {_CHECK_360_TARGET_RELPATH}:{node.lineno}: "
+                f"sys.exit upstream of fn.spawn (line {spawn_line}) is NOT "
+                "preceded by a _pre_spawn_fatal(...) / register_pre_spawn_fatal(...) "
+                "observability call. This produces a silent-no-spawn pattern "
+                "from Modal's perspective (app stops with 0 tasks; no canonical "
+                "ledger row). Wrap the sys.exit with the inline _pre_spawn_fatal "
+                "helper OR add `# PRE_SPAWN_FATAL_OBSERVABILITY_OK:<rationale>` "
+                "waiver on the sys.exit line. Per Catalog #360 + OVERNIGHT-J "
+                "STC v2 5th consecutive silent-no-spawn anchor."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-360] WARN: {len(violations)} pre-spawn silent-no-spawn "
+                f"violation(s) in {_CHECK_360_TARGET_RELPATH} (strict={strict})"
+            )
+        else:
+            print(f"  [catalog-360] OK ({_CHECK_360_TARGET_RELPATH} scanned)")
+
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_dispatcher_pre_spawn_fatal_observability: "
+            f"{len(violations)} pre-spawn silent-no-spawn violation(s) "
+            "(Catalog #360 — PRE-SPAWN-FATAL-OBSERVABILITY-EXTINCTION; "
+            "2026-05-21 OVERNIGHT-J STC v2 5th anchor); first 3:\n  "
+            + "\n  ".join(violations[:3])
         )
     return violations
 

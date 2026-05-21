@@ -328,6 +328,16 @@ def vendor_shared_inflate_runtime(
     substrate runtime importing ``tac.substrates._shared.inflate_runtime`` must
     call this helper from its trainer ``_write_runtime`` path, otherwise local
     source-tree tests pass while contest auth eval fails with an import error.
+
+    OVERNIGHT-GG vendor-stub fix 2026-05-21: explicit ``os.utime(dst, None)``
+    after the copy refreshes the destination mtime to the current time. This
+    is a defense-in-depth against any mtime-based harvester filter (sister of
+    the META fix in ``experiments/modal_train_lane.py`` that bypasses the
+    mtime_floor for ``output/submission/`` paths). ``shutil.copy2`` preserves
+    the source's mtime, which is the old local-repo mtime carried through
+    Modal's ``copytree(symlinks=True)`` mount staging. The OVERNIGHT-CC
+    99d06f967 incident proved this is a real failure mode: 8 vendored .py
+    modules dropped by harvester → ModuleNotFoundError on Modal worker re-fire.
     """
 
     root = repo_root if repo_root is not None else REPO_ROOT
@@ -337,7 +347,38 @@ def vendor_shared_inflate_runtime(
     shared_dst = submission_dir / "src" / "tac" / "substrates" / "_shared"
     shared_dst.mkdir(parents=True, exist_ok=True)
     (shared_dst / "__init__.py").write_text("", encoding="utf-8")
-    shutil.copy2(shared_src, shared_dst / "inflate_runtime.py")
+    dst_file = shared_dst / "inflate_runtime.py"
+    shutil.copy2(shared_src, dst_file)
+    # OVERNIGHT-GG defense-in-depth: refresh mtime to current time so
+    # mtime-based harvester filters cannot silently drop the vendored body.
+    os.utime(dst_file, None)
+
+
+def vendor_module_with_fresh_mtime(
+    src_path: Path,
+    dst_path: Path,
+) -> None:
+    """Copy a substrate module body with current-time mtime stamping.
+
+    Canonical helper for substrate trainer ``_write_runtime`` paths that
+    vendor module bodies via ``shutil.copy2``. The default ``shutil.copy2``
+    preserves the source's mtime, which can collide with the Modal
+    harvester's ``mtime_floor`` filter (set at lane start; source files
+    from ``copytree(symlinks=True)`` retain old local-repo mtimes). This
+    helper combines ``shutil.copy2`` (data + metadata) with explicit
+    ``os.utime(dst, None)`` to ensure the destination's mtime reflects
+    the vendor-emission time, making it robust against the
+    ``output/submission/`` harvester filter regardless of whether the
+    META layer fix (Catalog #360 in ``experiments/modal_train_lane.py``)
+    is in place.
+
+    Source: OVERNIGHT-GG bug class fix 2026-05-21 per OVERNIGHT-CC
+    99d06f967 IMPLEMENTATION-LEVEL falsification (Catalog #307).
+    """
+
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src_path, dst_path)
+    os.utime(dst_path, None)
 
 
 def detect_hardware_substrate(

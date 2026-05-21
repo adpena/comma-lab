@@ -2254,6 +2254,7 @@ def _write_runtime(submission_dir: Path) -> None:
     archive bytes deterministically on a clean GPU host.
     """
     from tac.substrates._shared.trainer_skeleton import (
+        vendor_module_with_fresh_mtime,
         vendor_shared_inflate_runtime,
     )
 
@@ -2283,12 +2284,18 @@ def _write_runtime(submission_dir: Path) -> None:
         "prior_application.py",
         "procedural_codebook_inflate.py",
     ):
-        shutil.copy2(substrate_src / name, runtime_pkg / name)
+        # OVERNIGHT-GG vendor-stub fix 2026-05-21: use canonical helper
+        # vendor_module_with_fresh_mtime which combines shutil.copy2 +
+        # os.utime(dst, None) so the vendored body has current mtime and
+        # cannot be silently dropped by Modal harvester's mtime_floor
+        # filter. Empirical anchor: OVERNIGHT-CC 99d06f967 4 paired
+        # auth_eval failed because 6 vendored .py modules dropped here.
+        vendor_module_with_fresh_mtime(substrate_src / name, runtime_pkg / name)
 
     generator_pkg = submission_dir / "src" / "tac" / "procedural_codebook_generator"
     generator_pkg.mkdir(parents=True, exist_ok=True)
     (generator_pkg / "__init__.py").write_text("", encoding="utf-8")
-    shutil.copy2(
+    vendor_module_with_fresh_mtime(
         REPO_ROOT
         / "src"
         / "tac"
