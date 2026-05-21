@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shlex
 import shutil
 import struct
 import sys
@@ -26,6 +27,8 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from tac.deploy.modal.paired_dispatch import paired_auth_eval_dispatch_command_template
 
 CONTEST_DENOM_BYTES = 37_545_489
 RATE_MULTIPLIER = 25.0
@@ -81,6 +84,12 @@ class Hfv2SparseManifest:
     bytes_delta_vs_baseline_archive: int
     rate_delta_vs_dense_archive: float
     rate_delta_vs_baseline_archive: float
+    target_modes: list[str]
+    dispatch_blockers: list[str]
+    paired_auth_eval_required: bool
+    paired_auth_eval_plan_ready: bool
+    paired_modal_auth_eval_plan_command_template_not_run: list[str]
+    paired_modal_auth_eval_execute_command_template_after_claim_surface_clear: list[str]
     score_claim: bool = False
     promotion_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
@@ -324,6 +333,8 @@ def _write_generated_archive_manifest(
     hfv2_raw: bytes,
     sparse_pairs: list[tuple[int, tuple[float, float, float, float, float]]],
     row_parity_exact: bool,
+    paired_plan_cmd: list[str],
+    paired_execute_cmd: list[str],
 ) -> Path:
     manifest_path = submission_dir / "archive_manifest.json"
     prior_schema = None
@@ -354,6 +365,16 @@ def _write_generated_archive_manifest(
         "sparse_pair_count": len(sparse_pairs),
         "sparse_pairs": [pair_index for pair_index, _row in sparse_pairs],
         "row_parity_exact": row_parity_exact,
+        "target_modes": ["contest_exact_eval"],
+        "dispatch_blockers": [
+            "exact_contest_cpu_eval_missing",
+            "exact_contest_cuda_eval_missing",
+            "lane_dispatch_claim_required_before_execute",
+        ],
+        "paired_auth_eval_required": True,
+        "paired_auth_eval_plan_ready": row_parity_exact,
+        "paired_modal_auth_eval_plan_command_template_not_run": paired_plan_cmd,
+        "paired_modal_auth_eval_execute_command_template_after_claim_surface_clear": paired_execute_cmd,
         "source_submission_dir": _repo_rel(source_submission_dir),
         "source_submission_manifest_schema": prior_schema,
         "score_claim": False,
@@ -408,6 +429,35 @@ def build_candidate(
     )
     submission_archive = submission_dir / "archive.zip"
     shutil.copy2(archive_path, submission_archive)
+    lane_id_base = "hfv2_pair_sparse_pr101_hfv1_sidecar_exact_eval"
+    paired_plan_cmd = paired_auth_eval_dispatch_command_template(
+        archive_path=_repo_rel(submission_archive),
+        submission_dir=_repo_rel(submission_dir),
+        lane_id_base=lane_id_base,
+        archive_sha256=_sha256_file(submission_archive),
+        execute=False,
+        label=lane_id_base,
+        run_id=f"hfv2_pair_sparse_pr101_{_sha256_file(submission_archive)[:12]}",
+        claim_agent="codex:hfv2_sparse_sidecar",
+        claim_notes=(
+            "HFV2 pair-sparse sidecar candidate; score_claim=false until paired "
+            "contest CPU/CUDA exact eval harvest."
+        ),
+    )
+    paired_execute_cmd = paired_auth_eval_dispatch_command_template(
+        archive_path=_repo_rel(submission_archive),
+        submission_dir=_repo_rel(submission_dir),
+        lane_id_base=lane_id_base,
+        archive_sha256=_sha256_file(submission_archive),
+        execute=True,
+        label=lane_id_base,
+        run_id=f"hfv2_pair_sparse_pr101_{_sha256_file(submission_archive)[:12]}",
+        claim_agent="codex:hfv2_sparse_sidecar",
+        claim_notes=(
+            "HFV2 pair-sparse sidecar candidate; score_claim=false until paired "
+            "contest CPU/CUDA exact eval harvest."
+        ),
+    )
     generated_archive_manifest = _write_generated_archive_manifest(
         submission_dir=submission_dir,
         archive_path=submission_archive,
@@ -418,6 +468,8 @@ def build_candidate(
         hfv2_raw=hfv2_raw,
         sparse_pairs=sparse_pairs,
         row_parity_exact=row_parity_exact,
+        paired_plan_cmd=paired_plan_cmd,
+        paired_execute_cmd=paired_execute_cmd,
     )
     manifest = Hfv2SparseManifest(
         schema="hfv1_to_hfv2_sparse_sidecar_candidate_v1",
@@ -450,6 +502,16 @@ def build_candidate(
         bytes_delta_vs_baseline_archive=archive_path.stat().st_size - baseline_archive.stat().st_size,
         rate_delta_vs_dense_archive=_rate_delta(archive_path.stat().st_size - dense_archive.stat().st_size),
         rate_delta_vs_baseline_archive=_rate_delta(archive_path.stat().st_size - baseline_archive.stat().st_size),
+        target_modes=["contest_exact_eval"],
+        dispatch_blockers=[
+            "exact_contest_cpu_eval_missing",
+            "exact_contest_cuda_eval_missing",
+            "lane_dispatch_claim_required_before_execute",
+        ],
+        paired_auth_eval_required=True,
+        paired_auth_eval_plan_ready=row_parity_exact,
+        paired_modal_auth_eval_plan_command_template_not_run=paired_plan_cmd,
+        paired_modal_auth_eval_execute_command_template_after_claim_surface_clear=paired_execute_cmd,
     )
     return manifest
 
@@ -474,6 +536,22 @@ def render_markdown(manifest: Hfv2SparseManifest) -> str:
             f"- Sparse HFV2 payload bytes: {manifest.output_hfv2_payload_bytes}",
             f"- Sparse pair count: {manifest.sparse_pair_count}",
             f"- Row parity exact: {str(manifest.row_parity_exact).lower()}",
+            f"- Paired auth eval plan ready: {str(manifest.paired_auth_eval_plan_ready).lower()}",
+            "",
+            "Plan command:",
+            "",
+            "```bash",
+            shlex.join(manifest.paired_modal_auth_eval_plan_command_template_not_run),
+            "```",
+            "",
+            "Execute command after claim surface clears:",
+            "",
+            "```bash",
+            shlex.join(
+                manifest.paired_modal_auth_eval_execute_command_template_after_claim_surface_clear
+            ),
+            "```",
+            "",
             "- Score claim: false",
             "- Promotion eligible: false",
             "- Ready for exact eval dispatch: false",
