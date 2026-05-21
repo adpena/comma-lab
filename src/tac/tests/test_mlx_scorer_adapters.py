@@ -13,6 +13,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     run_mlx_batchnorm2d_nchw,
     run_mlx_conv2d_nchw,
     run_mlx_efficientnet_block_nchw,
+    run_mlx_efficientnet_features_nchw,
     run_mlx_efficientnet_stage_nchw,
     run_mlx_efficientnet_stem_nchw,
     run_mlx_fastvit_stage_nchw,
@@ -26,6 +27,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     torch_batchnorm2d_to_mlx,
     torch_conv2d_to_mlx,
     torch_efficientnet_block_to_mlx,
+    torch_efficientnet_features_to_mlx,
     torch_efficientnet_stage_to_mlx,
     torch_efficientnet_stem_to_mlx,
     torch_fastvit_stage_to_mlx,
@@ -416,6 +418,24 @@ def test_segnet_efficientnet_stages_match_torch_on_mlx_cpu(
 
     assert actual.shape == expected.shape
     assert _max_abs(actual, expected) < tolerance
+
+
+def test_segnet_efficientnet_features_match_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(101)
+    model = _loaded_segnet_encoder_model()
+    x = torch.randn(1, 3, 64, 80)
+
+    expected = [feature.detach().numpy() for feature in model(x)]
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_efficientnet_features_nchw(
+            torch_efficientnet_features_to_mlx(model),
+            x.numpy(),
+        )
+
+    assert [item.shape for item in actual] == [item.shape for item in expected]
+    assert len(actual) == 5
+    max_by_feature = [_max_abs(lhs, rhs) for lhs, rhs in zip(actual, expected, strict=True)]
+    assert max(max_by_feature) < 2.0e-3
 
 
 def _loaded_posenet_stem_block0() -> nn.Module:

@@ -19,6 +19,7 @@ __all__ = [
     "run_mlx_batchnorm2d_nchw",
     "run_mlx_conv2d_nchw",
     "run_mlx_efficientnet_block_nchw",
+    "run_mlx_efficientnet_features_nchw",
     "run_mlx_efficientnet_stage_nchw",
     "run_mlx_efficientnet_stem_nchw",
     "run_mlx_linear",
@@ -32,6 +33,7 @@ __all__ = [
     "torch_conv2d_to_mlx",
     "torch_conv_mlp_to_mlx",
     "torch_efficientnet_block_to_mlx",
+    "torch_efficientnet_features_to_mlx",
     "torch_efficientnet_stage_to_mlx",
     "torch_efficientnet_stem_to_mlx",
     "torch_fastvit_stage_to_mlx",
@@ -199,6 +201,28 @@ class MLXEfficientNetStageAdapter:
         for block in self.blocks:
             out = block(out)
         return out
+
+
+class MLXEfficientNetFeaturesAdapter:
+    """MLX adapter for timm ``EfficientNetFeatures`` feature-list output."""
+
+    def __init__(self, torch_model: Any):
+        if getattr(torch_model, "feature_hooks", None) is not None:
+            raise NotImplementedError("EfficientNet feature_hooks path is not covered")
+        self.stage_out_idx = set(getattr(torch_model, "_stage_out_idx", {}))
+        self.stem = torch_efficientnet_stem_to_mlx(torch_model)
+        self.stages = [torch_efficientnet_stage_to_mlx(stage) for stage in torch_model.blocks]
+
+    def __call__(self, x_nhwc: Any) -> list[Any]:
+        out = self.stem(x_nhwc)
+        features = []
+        if 0 in self.stage_out_idx:
+            features.append(out)
+        for index, stage in enumerate(self.stages):
+            out = stage(out)
+            if index + 1 in self.stage_out_idx:
+                features.append(out)
+        return features
 
 
 class MLXMobileOneBlockAdapter:
@@ -681,6 +705,12 @@ def torch_efficientnet_stage_to_mlx(torch_stage: Any) -> MLXEfficientNetStageAda
     return MLXEfficientNetStageAdapter(torch_stage)
 
 
+def torch_efficientnet_features_to_mlx(torch_model: Any) -> MLXEfficientNetFeaturesAdapter:
+    """Convert a timm ``EfficientNetFeatures`` model to MLX."""
+
+    return MLXEfficientNetFeaturesAdapter(torch_model)
+
+
 def torch_repmixer_block_to_mlx(torch_block: Any) -> MLXRepMixerBlockAdapter:
     """Convert a timm FastViT ``RepMixerBlock`` to a parity-tested MLX adapter."""
 
@@ -739,6 +769,18 @@ def run_mlx_efficientnet_stem_nchw(
 
     out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
     return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_efficientnet_features_nchw(
+    adapter: MLXEfficientNetFeaturesAdapter,
+    x_nchw: np.ndarray,
+) -> list[np.ndarray]:
+    """Run an EfficientNetFeatures adapter on NCHW input and return NCHW features."""
+
+    import mlx.core as mx
+
+    features = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return [nhwc_to_nchw(_mlx_array_to_numpy(feature)) for feature in features]
 
 
 def run_mlx_efficientnet_stage_nchw(
