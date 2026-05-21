@@ -32,6 +32,7 @@ from tac.deploy.modal.paired_dispatch import (
 SCHEMA = "dp1_procedural_paired_harvest_plan_v1"
 TOOL_PATH = "tools/plan_dp1_procedural_paired_harvest.py"
 DEFAULT_OUTPUT_ROOT = "experiments/results/dp1_procedural_paired_harvest"
+ADJUDICATION_TOOL_PATH = "tools/adjudicate_dp1_procedural_paired_harvest.py"
 
 DP1_VARIANT_ORDER = ("baseline", "procedural", "null_control")
 DP1_RECIPE_BASENAMES = {
@@ -434,9 +435,38 @@ def build_dp1_procedural_paired_harvest_plan(
     if not all_required_ready:
         top_blockers.append("baseline_and_procedural_paired_harvest_not_ready")
 
+    rows_by_variant = {row["variant"]: row for row in candidates}
+    post_harvest_adjudication_command: list[str] | None = None
+    if all_required_ready:
+        baseline = rows_by_variant["baseline"]
+        procedural = rows_by_variant["procedural"]
+        baseline_axes = baseline["paired_dispatch_output_dirs"]
+        procedural_axes = procedural["paired_dispatch_output_dirs"]
+        post_harvest_adjudication_command = [
+            ".venv/bin/python",
+            ADJUDICATION_TOOL_PATH,
+            "--baseline-output-dir",
+            str(baseline["output_dir"]),
+            "--procedural-output-dir",
+            str(procedural["output_dir"]),
+            "--baseline-cpu-dir",
+            str(baseline_axes["contest_cpu"]),
+            "--baseline-cuda-dir",
+            str(baseline_axes["contest_cuda"]),
+            "--procedural-cpu-dir",
+            str(procedural_axes["contest_cpu"]),
+            "--procedural-cuda-dir",
+            str(procedural_axes["contest_cuda"]),
+            "--json-out",
+            f"{output_root}/adjudication/dp1_procedural_paired_adjudication.json",
+            "--md-out",
+            f"{output_root}/adjudication/dp1_procedural_paired_adjudication.md",
+        ]
+
     return {
         "schema": SCHEMA,
         "tool": TOOL_PATH,
+        "adjudication_tool": ADJUDICATION_TOOL_PATH,
         "repo_root": str(root),
         "paired_dispatch_tool": PAIRED_AUTH_EVAL_DISPATCH_TOOL,
         "required_axes": ["contest_cpu", "contest_cuda"],
@@ -451,10 +481,12 @@ def build_dp1_procedural_paired_harvest_plan(
         "all_required_candidates_ready": all_required_ready,
         "top_blockers": sorted(set(top_blockers)),
         "candidates": candidates,
+        "post_harvest_adjudication_command": post_harvest_adjudication_command,
         "notes": [
             "DP1 training recipes force DPP_SKIP_AUTH_EVAL=1; score-bearing evidence starts only after this paired Modal auth-eval plan is executed and harvested.",
             "The optional null_control arm is a disambiguator; baseline and procedural are the required first-anchor pair.",
             "Per-axis commands are intentionally routed through tools/dispatch_modal_paired_auth_eval.py, never through single-axis Modal wrappers.",
+            "Run the post-harvest adjudication command only after both variants have recovered CPU and CUDA auth-eval JSON.",
         ],
     }
 
@@ -509,6 +541,18 @@ def render_markdown(plan: Mapping[str, Any]) -> str:
                 "```",
             ]
         )
+    adjudication_cmd = plan.get("post_harvest_adjudication_command")
+    if adjudication_cmd:
+        rows.extend(
+            [
+                "",
+                "### post-harvest adjudication",
+                "",
+                "```bash",
+                " ".join(str(part) for part in adjudication_cmd),
+                "```",
+            ]
+        )
     return "\n".join(rows) + "\n"
 
 
@@ -517,6 +561,7 @@ __all__ = [
     "DP1_RECIPE_PATHS",
     "SCHEMA",
     "TOOL_PATH",
+    "ADJUDICATION_TOOL_PATH",
     "build_dp1_procedural_paired_harvest_plan",
     "render_markdown",
 ]

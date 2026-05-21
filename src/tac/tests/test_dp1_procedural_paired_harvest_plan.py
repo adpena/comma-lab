@@ -167,6 +167,14 @@ def test_ready_plan_emits_real_paired_dispatch_commands(tmp_path: Path) -> None:
     assert plan["all_required_candidates_ready"] is True
     assert plan["score_claim"] is False
     assert plan["dispatch_attempted"] is False
+    adjudication_cmd = plan["post_harvest_adjudication_command"]
+    assert adjudication_cmd[:2] == [
+        ".venv/bin/python",
+        "tools/adjudicate_dp1_procedural_paired_harvest.py",
+    ]
+    assert "--baseline-cpu-dir" in adjudication_cmd
+    assert "--procedural-cuda-dir" in adjudication_cmd
+    assert "--json-out" in adjudication_cmd
     for row in plan["candidates"]:
         assert row["status"] == "ready_for_paired_dispatch_plan"
         cmd = row["paired_dispatch_plan_command"]
@@ -335,4 +343,5 @@ def test_markdown_renders_blockers_and_commands(tmp_path: Path) -> None:
 
     assert "# DP1 Procedural Paired-Harvest Plan" in md
     assert "tools/dispatch_modal_paired_auth_eval.py" in md
+    assert "tools/adjudicate_dp1_procedural_paired_harvest.py" in md
     assert "| baseline | ready_for_paired_dispatch_plan |" in md
