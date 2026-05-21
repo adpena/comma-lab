@@ -1,0 +1,77 @@
+{
+  "schema_version": "mlx_contest_grade_pv_pr101_ground_truth_v1_20260521",
+  "lane_id": "lane_overnight_zz_mlx_contest_grade_pv_via_pr101_ground_truth_20260521",
+  "subagent_id": "zz-mlx-pv-pr101",
+  "carmack_mvp_first_step_1": "FREE_local_CPU_MLX_primitive_PV_via_WW_canonical_primitives",
+  "carmack_mvp_first_step_2_cargo_cult_to_challenge": "MLX_inherits_MPS_Catalog_1_noise_uniformly_across_all_surfaces",
+  "carmack_mvp_first_step_2_falsifying_signature_pred": "MLX_via_WW_primitives_matches_PyTorch_CPU_within_5e-3_on_canonical_preprocess",
+  "scope_decision": "MVP_FIRST_PRIMITIVE_LEVEL_PV_NOT_FULL_ARCHITECTURE_PORT",
+  "scope_rationale": "Faithful FastViT-T12 (timm) + EfficientNet-B2 (smp.Unet) MLX port is multi-week effort. WW primitives cover Linear/Conv2d/LayerNorm + bilinear/GELU/ReLU/Sigmoid/Softmax/Matmul ONLY. Contest scorers need RepMixer (FastViT) + MBConv-SE (EfficientNet) + UNet decoder + BatchNorm + DepthwiseConv + SE-attention + LayerScale + cond-pos-encoding. Per Carmack MVP-first 5-step Step 1, the FREE PV that produces signal WITHIN scope is the WW-primitive-on-canonical-PR101-preprocess micro-PV. Per CLAUDE.md 'Forbidden premature KILL' the LOW verdict at architecture level is DEFER not KILL; MLX paradigm INTACT pending the multi-week port.",
+  "pr101_canonical_anchors": {
+    "archive_sha": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "archive_bytes": 178258,
+    "leaderboard_score_contest_cuda": 0.193,
+    "score_source": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/pr_metadata.json",
+    "video_source": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/videos/0.mkv"
+  },
+  "primitive_level_pv": {
+    "mlx_backend_route": "WW_portable_primitives_bilinear_upsample_pytorch_reference_impl",
+    "frame_pair_shape": [
+      1,
+      2,
+      3,
+      874,
+      1164
+    ],
+    "pytorch_cpu_seconds": 0.377504825592041,
+    "mlx_seconds": 0.029384136199951172,
+    "deltas_per_component": {
+      "seg_preprocess": {
+        "max_abs_delta": 0.0,
+        "rms_delta": 0.0,
+        "relative_rms_delta_pct": 0.0,
+        "shape": "(1, 3, 384, 512)",
+        "pt_rms": 33.61510467529297
+      },
+      "pose_preprocess_resized": {
+        "max_abs_delta": 0.0,
+        "rms_delta": 0.0,
+        "relative_rms_delta_pct": 0.0,
+        "shape": "(2, 3, 384, 512)",
+        "pt_rms": 33.4737548828125
+      }
+    },
+    "max_abs_delta_overall": 0.0,
+    "relative_rms_delta_pct_max": 0.0,
+    "thresholds": {
+      "ww_fp32_epsilon": 1e-05,
+      "operator_contest_grade_threshold": 0.005
+    },
+    "primitive_level_verdict": "PRIMITIVE_CONTRACT_PASSES_FP32_EPSILON",
+    "contest_grade_at_primitive_level": "PRIMITIVE_LEVEL_CONTEST_GRADE"
+  },
+  "architecture_level_pv": {
+    "verdict": "DEFER_PENDING_FULL_FASTVIT_EFFICIENTNET_B2_MLX_PORT_MULTI_WEEK",
+    "blocker": "FastViT_T12_and_EfficientNet_B2_not_in_WW_primitive_scope",
+    "remediation_path": "operator_routable_1_multi_week_full_arch_port_via_extended_ww_primitive_set"
+  },
+  "canonical_provenance": {
+    "evidence_grade": "macOS-MLX-research-signal",
+    "evidence_tag": "[macOS-MLX research-signal]",
+    "score_claim": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "non_promotable_blockers": [
+      "macos_mlx_research_signal_not_score_evidence_per_catalog_1",
+      "primitive_level_only_not_architecture_level_pv",
+      "requires_paired_linux_x86_64_nvidia_for_promotion"
+    ]
+  },
+  "catalog_compliance": {
+    "catalog_1_mps_fallback_default": "PRESERVED \u2014 MLX inherits non-promotable status",
+    "catalog_192_macos_advisory": "PRESERVED \u2014 evidence_grade=macOS-MLX-research-signal",
+    "catalog_287_evidence_tags": "PRESERVED \u2014 [macOS-MLX research-signal] on every claim",
+    "catalog_316_frontier_pointer": "PRESERVED \u2014 no hardcoded current-frontier score literals",
+    "catalog_323_canonical_provenance": "PRESERVED \u2014 all PV results carry canonical Provenance"
+  }
+}
