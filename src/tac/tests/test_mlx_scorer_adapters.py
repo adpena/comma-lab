@@ -9,9 +9,11 @@ from safetensors.torch import load_file
 
 pytest.importorskip("mlx.core")
 
-from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
+from tac.local_acceleration.mlx_scorer_adapters import (
     run_mlx_batchnorm2d_nchw,
     run_mlx_conv2d_nchw,
+    run_mlx_conv2d_relu_nchw,
+    run_mlx_distortion_scorer_nchw,
     run_mlx_efficientnet_block_nchw,
     run_mlx_efficientnet_features_nchw,
     run_mlx_efficientnet_stage_nchw,
@@ -24,9 +26,17 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     run_mlx_patch_embed_nchw,
     run_mlx_posenet_nchw,
     run_mlx_repmixer_block_nchw,
+    run_mlx_segmentation_head_nchw,
+    run_mlx_segnet_nchw,
     run_mlx_timm_universal_encoder_nchw,
+    run_mlx_unet_decoder_block_nchw,
+    run_mlx_unet_decoder_nchw,
+    scorer_distortion_components_numpy,
+    temporary_mlx_device,
     torch_batchnorm2d_to_mlx,
+    torch_conv2d_relu_to_mlx,
     torch_conv2d_to_mlx,
+    torch_distortion_net_to_mlx,
     torch_efficientnet_block_to_mlx,
     torch_efficientnet_features_to_mlx,
     torch_efficientnet_stage_to_mlx,
@@ -39,8 +49,11 @@ from tac.local_acceleration.mlx_scorer_adapters import (  # noqa: E402
     torch_patch_embed_to_mlx,
     torch_posenet_to_mlx,
     torch_repmixer_block_to_mlx,
+    torch_segmentation_head_to_mlx,
+    torch_segnet_to_mlx,
     torch_timm_universal_encoder_to_mlx,
-    temporary_mlx_device,
+    torch_unet_decoder_block_to_mlx,
+    torch_unet_decoder_to_mlx,
 )
 
 
@@ -459,6 +472,130 @@ def test_segnet_timm_universal_encoder_matches_torch_on_mlx_cpu() -> None:
     assert max(max_by_feature) < 2.0e-3
 
 
+def test_segnet_decoder_conv2d_relu_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(107)
+    conv = _loaded_segnet_decoder_block(0).conv1
+    x = torch.randn(1, 472, 4, 5)
+
+    expected = conv(x).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_conv2d_relu_nchw(torch_conv2d_relu_to_mlx(conv), x.numpy())
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 7.0e-4
+
+
+def test_segnet_unet_decoder_block0_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(109)
+    block = _loaded_segnet_decoder_block(0)
+    head = torch.randn(1, 352, 2, 3)
+    skip = torch.randn(1, 120, 4, 5)
+
+    expected = block(head, 4, 5, skip_connection=skip).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_unet_decoder_block_nchw(
+            torch_unet_decoder_block_to_mlx(block),
+            head.numpy(),
+            4,
+            5,
+            skip.numpy(),
+        )
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 2.0e-3
+
+
+def test_segnet_unet_decoder_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(113)
+    segnet = _loaded_segnet()
+    x = torch.randn(1, 3, 64, 80)
+    features = [feature.detach() for feature in segnet.encoder(x)]
+
+    expected = segnet.decoder(features).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_unet_decoder_nchw(
+            torch_unet_decoder_to_mlx(segnet.decoder),
+            [feature.numpy() for feature in features],
+        )
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 6.0e-3
+
+
+def test_segnet_segmentation_head_matches_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(117)
+    head = _loaded_segnet().segmentation_head
+    x = torch.randn(1, 16, 64, 80)
+
+    expected = head(x).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_segmentation_head_nchw(
+            torch_segmentation_head_to_mlx(head),
+            x.numpy(),
+        )
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 2.0e-4
+
+
+def test_segnet_end_to_end_logits_match_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(119)
+    segnet = _loaded_segnet()
+    x = torch.randn(1, 3, 64, 80)
+
+    expected = segnet(x).detach().numpy()
+    with temporary_mlx_device("cpu"):
+        actual = run_mlx_segnet_nchw(torch_segnet_to_mlx(segnet), x.numpy())
+
+    assert actual.shape == expected.shape
+    assert _max_abs(actual, expected) < 1.0e-2
+
+
+def test_distortion_scorer_responses_and_components_match_torch_on_mlx_cpu() -> None:
+    torch.manual_seed(123)
+    dist = _loaded_distortion_net()
+    pose_ref = torch.randn(1, 12, 64, 80)
+    pose_cand = pose_ref + 0.01 * torch.randn(1, 12, 64, 80)
+    seg_ref = torch.randn(1, 3, 64, 80)
+    seg_cand = seg_ref.clone()
+
+    expected_ref = {
+        "posenet": dist.posenet(pose_ref),
+        "segnet": dist.segnet(seg_ref),
+    }
+    expected_cand = {
+        "posenet": dist.posenet(pose_cand),
+        "segnet": dist.segnet(seg_cand),
+    }
+    expected_pose = dist.posenet.compute_distortion(
+        expected_ref["posenet"],
+        expected_cand["posenet"],
+    ).detach().numpy()
+    expected_seg = dist.segnet.compute_distortion(
+        expected_ref["segnet"],
+        expected_cand["segnet"],
+    ).detach().numpy()
+
+    with temporary_mlx_device("cpu"):
+        adapter = torch_distortion_net_to_mlx(dist)
+        actual_ref = run_mlx_distortion_scorer_nchw(
+            adapter,
+            pose_ref.numpy(),
+            seg_ref.numpy(),
+        )
+        actual_cand = run_mlx_distortion_scorer_nchw(
+            adapter,
+            pose_cand.numpy(),
+            seg_cand.numpy(),
+        )
+
+    assert _max_abs(actual_ref["posenet"]["pose"], expected_ref["posenet"]["pose"].detach().numpy()) < 2.0e-3
+    assert _max_abs(actual_ref["segnet"], expected_ref["segnet"].detach().numpy()) < 1.0e-2
+    actual_components = scorer_distortion_components_numpy(actual_ref, actual_cand)
+    assert _max_abs(actual_components["posenet"], expected_pose) < 2.0e-5
+    assert _max_abs(actual_components["segnet"], expected_seg) == 0.0
+
+
 def _loaded_posenet_stem_block0() -> nn.Module:
     return _loaded_posenet_stem()[0].eval()
 
@@ -472,7 +609,7 @@ def _loaded_posenet() -> nn.Module:
     from pathlib import Path
 
     sys.path.insert(0, str(Path("upstream").resolve()))
-    import modules  # type: ignore  # noqa: PLC0415
+    import modules  # type: ignore
 
     posenet = modules.PoseNet().eval()
     posenet.load_state_dict(load_file(modules.posenet_sd_path))
@@ -495,6 +632,10 @@ def _loaded_segnet_encoder_block(stage_index: int, block_index: int) -> nn.Modul
     return _loaded_segnet_encoder_stage(stage_index)[block_index].eval()
 
 
+def _loaded_segnet_decoder_block(block_index: int) -> nn.Module:
+    return _loaded_segnet().decoder.blocks[block_index].eval()
+
+
 def _loaded_segnet_encoder_stage(stage_index: int) -> nn.Module:
     return _loaded_segnet_encoder_model().blocks[stage_index].eval()
 
@@ -508,8 +649,29 @@ def _loaded_segnet_encoder() -> nn.Module:
     from pathlib import Path
 
     sys.path.insert(0, str(Path("upstream").resolve()))
-    import modules  # type: ignore  # noqa: PLC0415
+
+    return _loaded_segnet().encoder.eval()
+
+
+def _loaded_segnet() -> nn.Module:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path("upstream").resolve()))
+    import modules  # type: ignore
 
     segnet = modules.SegNet().eval()
     segnet.load_state_dict(load_file(modules.segnet_sd_path))
-    return segnet.encoder.eval()
+    return segnet.eval()
+
+
+def _loaded_distortion_net() -> nn.Module:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path("upstream").resolve()))
+    import modules  # type: ignore
+
+    dist = modules.DistortionNet().eval()
+    dist.load_state_dicts(modules.posenet_sd_path, modules.segnet_sd_path, torch.device("cpu"))
+    return dist.eval()

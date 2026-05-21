@@ -18,22 +18,32 @@ __all__ = [
     "nhwc_to_nchw",
     "run_mlx_batchnorm2d_nchw",
     "run_mlx_conv2d_nchw",
+    "run_mlx_conv2d_relu_nchw",
+    "run_mlx_distortion_scorer_nchw",
     "run_mlx_efficientnet_block_nchw",
     "run_mlx_efficientnet_features_nchw",
     "run_mlx_efficientnet_stage_nchw",
     "run_mlx_efficientnet_stem_nchw",
-    "run_mlx_linear",
-    "run_mlx_patch_embed_nchw",
-    "run_mlx_mobileone_block_nchw",
-    "run_mlx_mobileone_stem_nchw",
-    "run_mlx_posenet_nchw",
-    "run_mlx_repmixer_block_nchw",
-    "run_mlx_timm_universal_encoder_nchw",
     "run_mlx_fastvit_stage_nchw",
     "run_mlx_fastvit_vision_nchw",
+    "run_mlx_linear",
+    "run_mlx_mobileone_block_nchw",
+    "run_mlx_mobileone_stem_nchw",
+    "run_mlx_patch_embed_nchw",
+    "run_mlx_posenet_nchw",
+    "run_mlx_repmixer_block_nchw",
+    "run_mlx_segmentation_head_nchw",
+    "run_mlx_segnet_nchw",
+    "run_mlx_timm_universal_encoder_nchw",
+    "run_mlx_unet_decoder_block_nchw",
+    "run_mlx_unet_decoder_nchw",
+    "scorer_distortion_components_numpy",
+    "temporary_mlx_device",
     "torch_batchnorm2d_to_mlx",
+    "torch_conv2d_relu_to_mlx",
     "torch_conv2d_to_mlx",
     "torch_conv_mlp_to_mlx",
+    "torch_distortion_net_to_mlx",
     "torch_efficientnet_block_to_mlx",
     "torch_efficientnet_features_to_mlx",
     "torch_efficientnet_stage_to_mlx",
@@ -46,9 +56,32 @@ __all__ = [
     "torch_patch_embed_to_mlx",
     "torch_posenet_to_mlx",
     "torch_repmixer_block_to_mlx",
+    "torch_segmentation_head_to_mlx",
+    "torch_segnet_to_mlx",
     "torch_timm_universal_encoder_to_mlx",
-    "temporary_mlx_device",
+    "torch_unet_decoder_block_to_mlx",
+    "torch_unet_decoder_to_mlx",
 ]
+
+
+class MLXConv2dReLUAdapter:
+    """MLX adapter for SMP ``Conv2dReLU`` blocks."""
+
+    def __init__(self, torch_block: Any):
+        children = list(torch_block)
+        if len(children) != 3:
+            raise NotImplementedError(f"Conv2dReLU expected 3 children, got {len(children)}")
+        if _class_path(children[0]) != "torch.nn.modules.conv.Conv2d":
+            raise NotImplementedError(f"unsupported Conv2dReLU conv: {_class_path(children[0])}")
+        if _class_path(children[1]) != "torch.nn.modules.batchnorm.BatchNorm2d":
+            raise NotImplementedError(f"unsupported Conv2dReLU norm: {_class_path(children[1])}")
+        if _class_path(children[2]) != "torch.nn.modules.activation.ReLU":
+            raise NotImplementedError(f"unsupported Conv2dReLU activation: {_class_path(children[2])}")
+        self.conv = torch_conv2d_to_mlx(children[0])
+        self.bn = torch_batchnorm2d_to_mlx(children[1])
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        return mlx_relu(self.bn(self.conv(x_nhwc)))
 
 
 class MLXConvNormAct2dAdapter:
@@ -240,7 +273,113 @@ class MLXTimmUniversalEncoderAdapter:
 
     def __call__(self, x_nhwc: Any) -> list[Any]:
         features = self.model(x_nhwc)
-        return [x_nhwc] + features if self.prepend_input else features
+        return [x_nhwc, *features] if self.prepend_input else features
+
+
+class MLXUnetDecoderBlockAdapter:
+    """MLX adapter for SMP ``UnetDecoderBlock``."""
+
+    def __init__(self, torch_block: Any):
+        interpolation_mode = getattr(torch_block, "interpolation_mode", None)
+        if interpolation_mode != "nearest":
+            raise NotImplementedError(f"unsupported UnetDecoderBlock interpolation: {interpolation_mode!r}")
+        if _class_path(getattr(torch_block.attention1, "attention", None)) != (
+            "torch.nn.modules.linear.Identity"
+        ):
+            raise NotImplementedError("UnetDecoderBlock attention1 is not identity")
+        if _class_path(getattr(torch_block.attention2, "attention", None)) != (
+            "torch.nn.modules.linear.Identity"
+        ):
+            raise NotImplementedError("UnetDecoderBlock attention2 is not identity")
+        self.conv1 = torch_conv2d_relu_to_mlx(torch_block.conv1)
+        self.conv2 = torch_conv2d_relu_to_mlx(torch_block.conv2)
+
+    def __call__(
+        self,
+        feature_map_nhwc: Any,
+        target_height: int,
+        target_width: int,
+        skip_connection_nhwc: Any | None = None,
+    ) -> Any:
+        import mlx.core as mx
+
+        out = mlx_interpolate_nearest_size(feature_map_nhwc, target_height, target_width)
+        if skip_connection_nhwc is not None:
+            out = mx.concatenate([out, skip_connection_nhwc], axis=-1)
+        out = self.conv1(out)
+        return self.conv2(out)
+
+
+class MLXUnetDecoderAdapter:
+    """MLX adapter for SMP ``UnetDecoder`` feature-list contract."""
+
+    def __init__(self, torch_decoder: Any):
+        if _class_path(getattr(torch_decoder, "center", None)) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("UnetDecoder non-identity center is not covered")
+        self.blocks = [torch_unet_decoder_block_to_mlx(block) for block in torch_decoder.blocks]
+
+    def __call__(self, features_nhwc: list[Any]) -> Any:
+        spatial_shapes = [(int(feature.shape[1]), int(feature.shape[2])) for feature in features_nhwc]
+        spatial_shapes = spatial_shapes[::-1]
+        features = features_nhwc[1:]
+        features = features[::-1]
+        out = features[0]
+        skip_connections = features[1:]
+        for index, decoder_block in enumerate(self.blocks):
+            target_height, target_width = spatial_shapes[index + 1]
+            skip_connection = (
+                skip_connections[index] if index < len(skip_connections) else None
+            )
+            out = decoder_block(out, target_height, target_width, skip_connection)
+        return out
+
+
+class MLXSegmentationHeadAdapter:
+    """MLX adapter for SMP ``SegmentationHead`` without activation."""
+
+    def __init__(self, torch_head: Any):
+        children = list(torch_head)
+        if len(children) != 3:
+            raise NotImplementedError(f"SegmentationHead expected 3 children, got {len(children)}")
+        if _class_path(children[0]) != "torch.nn.modules.conv.Conv2d":
+            raise NotImplementedError(f"unsupported SegmentationHead conv: {_class_path(children[0])}")
+        if _class_path(children[1]) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("SegmentationHead upsampling is not identity")
+        activation = getattr(children[2], "activation", None)
+        if _class_path(activation) != "torch.nn.modules.linear.Identity":
+            raise NotImplementedError("SegmentationHead activation is not identity")
+        self.conv = torch_conv2d_to_mlx(children[0])
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        return self.conv(x_nhwc)
+
+
+class MLXSegNetAdapter:
+    """MLX adapter for upstream ``SegNet`` through raw segmentation logits."""
+
+    def __init__(self, torch_segnet: Any):
+        self.encoder = torch_timm_universal_encoder_to_mlx(torch_segnet.encoder)
+        self.decoder = torch_unet_decoder_to_mlx(torch_segnet.decoder)
+        self.segmentation_head = torch_segmentation_head_to_mlx(torch_segnet.segmentation_head)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        features = self.encoder(x_nhwc)
+        decoder_output = self.decoder(features)
+        return self.segmentation_head(decoder_output)
+
+
+class MLXDistortionScorerAdapter:
+    """MLX adapter for upstream ``DistortionNet`` on fixed scorer-input tensors."""
+
+    def __init__(self, torch_distortion_net: Any):
+        self.posenet = torch_posenet_to_mlx(torch_distortion_net.posenet)
+        self.segnet = torch_segnet_to_mlx(torch_distortion_net.segnet)
+
+    def __call__(self, posenet_yuv6_pair_nhwc: Any, segnet_last_rgb_nhwc: Any) -> dict[str, Any]:
+        return {
+            "posenet": self.posenet(posenet_yuv6_pair_nhwc),
+            "segnet": self.segnet(segnet_last_rgb_nhwc),
+        }
 
 
 class MLXMobileOneBlockAdapter:
@@ -664,6 +803,12 @@ def torch_batchnorm2d_to_mlx(torch_bn: Any) -> Any:
     return bn
 
 
+def torch_conv2d_relu_to_mlx(torch_block: Any) -> MLXConv2dReLUAdapter:
+    """Convert an SMP ``Conv2dReLU`` block to MLX."""
+
+    return MLXConv2dReLUAdapter(torch_block)
+
+
 def torch_linear_to_mlx(torch_linear: Any) -> Any:
     """Convert PyTorch ``nn.Linear`` to MLX ``nn.Linear``."""
 
@@ -735,6 +880,36 @@ def torch_timm_universal_encoder_to_mlx(torch_encoder: Any) -> MLXTimmUniversalE
     return MLXTimmUniversalEncoderAdapter(torch_encoder)
 
 
+def torch_unet_decoder_block_to_mlx(torch_block: Any) -> MLXUnetDecoderBlockAdapter:
+    """Convert an SMP ``UnetDecoderBlock`` to MLX."""
+
+    return MLXUnetDecoderBlockAdapter(torch_block)
+
+
+def torch_unet_decoder_to_mlx(torch_decoder: Any) -> MLXUnetDecoderAdapter:
+    """Convert an SMP ``UnetDecoder`` to MLX."""
+
+    return MLXUnetDecoderAdapter(torch_decoder)
+
+
+def torch_segmentation_head_to_mlx(torch_head: Any) -> MLXSegmentationHeadAdapter:
+    """Convert an SMP ``SegmentationHead`` to MLX."""
+
+    return MLXSegmentationHeadAdapter(torch_head)
+
+
+def torch_segnet_to_mlx(torch_segnet: Any) -> MLXSegNetAdapter:
+    """Convert upstream ``SegNet`` to an eval-mode MLX adapter."""
+
+    return MLXSegNetAdapter(torch_segnet)
+
+
+def torch_distortion_net_to_mlx(torch_distortion_net: Any) -> MLXDistortionScorerAdapter:
+    """Convert upstream ``DistortionNet`` to MLX for fixed scorer-input tensors."""
+
+    return MLXDistortionScorerAdapter(torch_distortion_net)
+
+
 def torch_repmixer_block_to_mlx(torch_block: Any) -> MLXRepMixerBlockAdapter:
     """Convert a timm FastViT ``RepMixerBlock`` to a parity-tested MLX adapter."""
 
@@ -771,6 +946,15 @@ def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
     import mlx.core as mx
 
     out = mlx_conv(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_conv2d_relu_nchw(adapter: MLXConv2dReLUAdapter, x_nchw: np.ndarray) -> np.ndarray:
+    """Run an SMP Conv2dReLU adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
     return nhwc_to_nchw(_mlx_array_to_numpy(out))
 
 
@@ -817,6 +1001,87 @@ def run_mlx_timm_universal_encoder_nchw(
 
     features = adapter(mx.array(nchw_to_nhwc(x_nchw)))
     return [nhwc_to_nchw(_mlx_array_to_numpy(feature)) for feature in features]
+
+
+def run_mlx_unet_decoder_block_nchw(
+    adapter: MLXUnetDecoderBlockAdapter,
+    feature_map_nchw: np.ndarray,
+    target_height: int,
+    target_width: int,
+    skip_connection_nchw: np.ndarray | None = None,
+) -> np.ndarray:
+    """Run a UnetDecoderBlock adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    skip = (
+        mx.array(nchw_to_nhwc(skip_connection_nchw))
+        if skip_connection_nchw is not None
+        else None
+    )
+    out = adapter(
+        mx.array(nchw_to_nhwc(feature_map_nchw)),
+        target_height,
+        target_width,
+        skip,
+    )
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_unet_decoder_nchw(
+    adapter: MLXUnetDecoderAdapter,
+    features_nchw: list[np.ndarray],
+) -> np.ndarray:
+    """Run a UnetDecoder adapter on NCHW features and return NCHW output."""
+
+    import mlx.core as mx
+
+    features = [mx.array(nchw_to_nhwc(feature)) for feature in features_nchw]
+    out = adapter(features)
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_segmentation_head_nchw(
+    adapter: MLXSegmentationHeadAdapter,
+    x_nchw: np.ndarray,
+) -> np.ndarray:
+    """Run a SegmentationHead adapter on NCHW input and return NCHW logits."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_segnet_nchw(adapter: MLXSegNetAdapter, x_nchw: np.ndarray) -> np.ndarray:
+    """Run a SegNet adapter on NCHW input and return NCHW logits."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(_mlx_array_to_numpy(out))
+
+
+def run_mlx_distortion_scorer_nchw(
+    adapter: MLXDistortionScorerAdapter,
+    posenet_yuv6_pair_nchw: np.ndarray,
+    segnet_last_rgb_nchw: np.ndarray,
+) -> dict[str, Any]:
+    """Run PoseNet+SegNet MLX responses on fixed scorer-input tensors."""
+
+    import mlx.core as mx
+
+    outputs = adapter(
+        mx.array(nchw_to_nhwc(posenet_yuv6_pair_nchw)),
+        mx.array(nchw_to_nhwc(segnet_last_rgb_nchw)),
+    )
+    return {
+        "posenet": {
+            name: _mlx_array_to_numpy(value)
+            for name, value in outputs["posenet"].items()
+        },
+        "segnet": nhwc_to_nchw(_mlx_array_to_numpy(outputs["segnet"])),
+    }
 
 
 def run_mlx_efficientnet_stage_nchw(
@@ -934,6 +1199,49 @@ def mlx_sigmoid(x: Any) -> Any:
     import mlx.core as mx
 
     return 1.0 / (1.0 + mx.exp(-x))
+
+
+def scorer_distortion_components_numpy(
+    reference_outputs: dict[str, Any],
+    candidate_outputs: dict[str, Any],
+) -> dict[str, np.ndarray]:
+    """Compute upstream PoseNet and SegNet distortion components from NumPy outputs."""
+
+    reference_pose = np.asarray(reference_outputs["posenet"]["pose"], dtype=np.float32)
+    candidate_pose = np.asarray(candidate_outputs["posenet"]["pose"], dtype=np.float32)
+    pose_diff = reference_pose[..., :6] - candidate_pose[..., :6]
+    pose_axes = tuple(range(1, pose_diff.ndim))
+    pose_distortion = np.mean(np.square(pose_diff), axis=pose_axes, dtype=np.float32)
+
+    reference_seg = np.asarray(reference_outputs["segnet"], dtype=np.float32)
+    candidate_seg = np.asarray(candidate_outputs["segnet"], dtype=np.float32)
+    seg_diff = np.argmax(reference_seg, axis=1) != np.argmax(candidate_seg, axis=1)
+    seg_axes = tuple(range(1, seg_diff.ndim))
+    seg_distortion = np.mean(seg_diff.astype(np.float32), axis=seg_axes, dtype=np.float32)
+
+    return {
+        "posenet": np.asarray(pose_distortion, dtype=np.float32),
+        "segnet": np.asarray(seg_distortion, dtype=np.float32),
+    }
+
+
+def mlx_interpolate_nearest_size(x_nhwc: Any, target_height: int, target_width: int) -> Any:
+    """Match ``torch.nn.functional.interpolate(..., size=..., mode='nearest')``."""
+
+    import mlx.core as mx
+
+    in_height = int(x_nhwc.shape[1])
+    in_width = int(x_nhwc.shape[2])
+    if in_height == target_height and in_width == target_width:
+        return x_nhwc
+    if in_height <= 0 or in_width <= 0 or target_height <= 0 or target_width <= 0:
+        raise ValueError(
+            "nearest interpolation requires positive input and target dimensions"
+        )
+    y_idx = mx.floor(mx.arange(target_height, dtype=mx.float32) * in_height / target_height).astype(mx.int32)
+    x_idx = mx.floor(mx.arange(target_width, dtype=mx.float32) * in_width / target_width).astype(mx.int32)
+    out = mx.take(x_nhwc, y_idx, axis=1)
+    return mx.take(out, x_idx, axis=2)
 
 
 def nchw_to_nhwc(x: np.ndarray) -> np.ndarray:
