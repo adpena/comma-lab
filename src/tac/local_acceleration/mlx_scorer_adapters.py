@@ -21,11 +21,14 @@ __all__ = [
     "run_mlx_linear",
     "run_mlx_mobileone_block_nchw",
     "run_mlx_mobileone_stem_nchw",
+    "run_mlx_repmixer_block_nchw",
     "torch_batchnorm2d_to_mlx",
     "torch_conv2d_to_mlx",
+    "torch_conv_mlp_to_mlx",
     "torch_linear_to_mlx",
     "torch_mobileone_block_to_mlx",
     "torch_mobileone_stem_to_mlx",
+    "torch_repmixer_block_to_mlx",
     "temporary_mlx_device",
 ]
 
@@ -104,6 +107,73 @@ class MLXMobileOneStemAdapter:
         for block in self.blocks:
             out = block(out)
         return out
+
+
+class MLXLayerScale2dAdapter:
+    """MLX adapter for timm ``LayerScale2d`` on NHWC tensors."""
+
+    def __init__(self, torch_layer_scale: Any):
+        import mlx.core as mx
+
+        gamma = getattr(torch_layer_scale, "gamma", None)
+        if gamma is None:
+            raise TypeError("LayerScale2d adapter requires .gamma")
+        gamma_np = _torch_tensor_to_numpy(gamma).reshape(-1)
+        self.gamma = mx.array(np.ascontiguousarray(gamma_np.reshape(1, 1, 1, -1)))
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        return x_nhwc * self.gamma
+
+
+class MLXConvMlpAdapter:
+    """MLX adapter for eval-mode FastViT ``ConvMlp``."""
+
+    def __init__(self, torch_mlp: Any):
+        drop = getattr(torch_mlp, "drop", None)
+        if drop is not None and getattr(drop, "training", False):
+            raise NotImplementedError("training-mode ConvMlp dropout is not covered")
+        if _class_path(getattr(torch_mlp, "act", None)) != "timm.layers.activations.GELUTanh":
+            raise NotImplementedError(f"unsupported ConvMlp activation: {_class_path(torch_mlp.act)}")
+        self.conv = MLXConvNormAct2dAdapter(torch_mlp.conv)
+        self.fc1 = torch_conv2d_to_mlx(torch_mlp.fc1)
+        self.fc2 = torch_conv2d_to_mlx(torch_mlp.fc2)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = self.conv(x_nhwc)
+        out = self.fc1(out)
+        out = mlx_gelu_tanh(out)
+        return self.fc2(out)
+
+
+class MLXRepMixerAdapter:
+    """MLX adapter for eval-mode FastViT ``RepMixer``."""
+
+    def __init__(self, torch_repmixer: Any):
+        if getattr(torch_repmixer, "reparam_conv", None) is not None:
+            raise NotImplementedError("reparameterized RepMixer is not covered yet")
+        self.norm = torch_mobileone_block_to_mlx(torch_repmixer.norm)
+        self.mixer = torch_mobileone_block_to_mlx(torch_repmixer.mixer)
+        self.layer_scale = MLXLayerScale2dAdapter(torch_repmixer.layer_scale)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        return x_nhwc + self.layer_scale(self.mixer(x_nhwc) - self.norm(x_nhwc))
+
+
+class MLXRepMixerBlockAdapter:
+    """MLX adapter for the first PoseNet FastViT ``RepMixerBlock`` family."""
+
+    def __init__(self, torch_block: Any):
+        if _class_path(getattr(torch_block, "drop_path", None)) != (
+            "torch.nn.modules.linear.Identity"
+        ):
+            raise NotImplementedError("non-identity DropPath is not covered")
+        self.token_mixer = MLXRepMixerAdapter(torch_block.token_mixer)
+        self.mlp = torch_conv_mlp_to_mlx(torch_block.mlp)
+        self.layer_scale = MLXLayerScale2dAdapter(torch_block.layer_scale)
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        out = self.token_mixer(x_nhwc)
+        return out + self.layer_scale(self.mlp(out))
 
 
 def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
@@ -188,6 +258,18 @@ def torch_mobileone_stem_to_mlx(torch_stem: Any) -> MLXMobileOneStemAdapter:
     return MLXMobileOneStemAdapter(torch_stem)
 
 
+def torch_conv_mlp_to_mlx(torch_mlp: Any) -> MLXConvMlpAdapter:
+    """Convert a timm FastViT ``ConvMlp`` to a parity-tested MLX adapter."""
+
+    return MLXConvMlpAdapter(torch_mlp)
+
+
+def torch_repmixer_block_to_mlx(torch_block: Any) -> MLXRepMixerBlockAdapter:
+    """Convert a timm FastViT ``RepMixerBlock`` to a parity-tested MLX adapter."""
+
+    return MLXRepMixerBlockAdapter(torch_block)
+
+
 def run_mlx_conv2d_nchw(mlx_conv: Any, x_nchw: np.ndarray) -> np.ndarray:
     """Run an MLX Conv2d on NCHW input and return NCHW output."""
 
@@ -225,6 +307,15 @@ def run_mlx_mobileone_block_nchw(adapter: MLXMobileOneBlockAdapter, x_nchw: np.n
 
 def run_mlx_mobileone_stem_nchw(adapter: MLXMobileOneStemAdapter, x_nchw: np.ndarray) -> np.ndarray:
     """Run a MobileOne stem adapter on NCHW input and return NCHW output."""
+
+    import mlx.core as mx
+
+    out = adapter(mx.array(nchw_to_nhwc(x_nchw)))
+    return nhwc_to_nchw(np.asarray(out))
+
+
+def run_mlx_repmixer_block_nchw(adapter: MLXRepMixerBlockAdapter, x_nchw: np.ndarray) -> np.ndarray:
+    """Run a RepMixerBlock adapter on NCHW input and return NCHW output."""
 
     import mlx.core as mx
 
