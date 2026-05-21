@@ -22,6 +22,7 @@ from tac.optimization.scorer_response_dataset import (  # noqa: E402
     ResponseBaseline,
     ScorerResponseDatasetError,
     build_response_dataset,
+    build_scorer_response_consumer_routing,
     render_markdown,
 )
 
@@ -49,6 +50,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--input", action="append", default=[], help="JSON path or glob; may repeat")
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
+    parser.add_argument(
+        "--consumer-routing-json-out",
+        type=Path,
+        help=(
+            "Optional observability artifact that routes emitted rows through "
+            "CONSUMES_SCORER_RESPONSE_DATASET cathedral consumers."
+        ),
+    )
     parser.add_argument("--baseline-score", type=float, required=True)
     parser.add_argument("--baseline-archive-bytes", type=int, required=True)
     parser.add_argument("--baseline-pose", type=float)
@@ -89,11 +98,28 @@ def main(argv: list[str] | None = None) -> int:
     if args.md_out is not None:
         args.md_out.parent.mkdir(parents=True, exist_ok=True)
         args.md_out.write_text(render_markdown(dataset), encoding="utf-8")
+    consumer_routing_out = None
+    consumer_routing_summary = None
+    if args.consumer_routing_json_out is not None:
+        routing = build_scorer_response_consumer_routing(dataset)
+        args.consumer_routing_json_out.parent.mkdir(parents=True, exist_ok=True)
+        args.consumer_routing_json_out.write_text(
+            json.dumps(routing, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        consumer_routing_out = str(args.consumer_routing_json_out)
+        consumer_routing_summary = {
+            "consumer_count": routing["consumer_count"],
+            "row_count": routing["row_count"],
+            "verdict_count": routing["verdict_count"],
+        }
     print(
         json.dumps(
             {
                 "json_out": str(args.json_out),
                 "md_out": None if args.md_out is None else str(args.md_out),
+                "consumer_routing_json_out": consumer_routing_out,
+                "consumer_routing_summary": consumer_routing_summary,
                 "summary": dataset["summary"],
                 "score_claim": False,
             },

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+from types import SimpleNamespace
 
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 from tac.optimization.scorer_response_dataset import (
@@ -12,6 +13,7 @@ from tac.optimization.scorer_response_dataset import (
     build_null_byte_priority_weights,
     build_next_probe_plan,
     build_response_dataset,
+    build_scorer_response_consumer_routing,
     normalize_legacy_response_dataset_authority,
     render_next_probe_plan_markdown,
     render_markdown,
@@ -175,6 +177,62 @@ def test_build_response_dataset_distilled_vs_direct_rows_are_opt_in(tmp_path) ->
     assert "requires include_distilled_vs_direct_rows" in skipped["skipped"][0]["reason"]
     assert included["rows"][0]["family"] == "distilled_vs_direct_scorer_paired_smoke"
     assert included["rows"][0]["candidate_id"] == "pds_stage1_smoke"
+
+
+def test_scorer_response_consumer_routing_invokes_opt_in_consumers(tmp_path) -> None:
+    path = tmp_path / "distilled_vs_direct.json"
+    payload = {
+        "schema": "distilled_vs_direct_scorer_paired_smoke.v1",
+        "producer": "pact_nerv_distilled_scorer_stage1",
+        "smoke_kind": "distilled_vs_direct_scorer_paired_smoke",
+        "candidate": {
+            "candidate_id": "pds_stage1_smoke",
+            "advisory_eval": _advisory(0.99, 99, 0.003, 0.009),
+        },
+        "authority": {"score_claim": False},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=1.0, archive_bytes=100),
+        include_distilled_vs_direct_rows=True,
+    )
+
+    def _consume_candidate(row: dict) -> dict:
+        assert row["family"] == "distilled_vs_direct_scorer_paired_smoke"
+        return {
+            "consumer_signal_kind": "unit_distilled_route",
+            "predicted_delta_adjustment": 0.0,
+            "axis_tag": "[predicted]",
+            "rationale": "unit route",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+        }
+
+    consumer = SimpleNamespace(
+        __name__="unit.consumer",
+        CONSUMER_NAME="unit_distilled_consumer",
+        CONSUMER_VERSION="0.1",
+        CONSUMES_SCORER_RESPONSE_DATASET=True,
+        consume_candidate=_consume_candidate,
+    )
+    routing = build_scorer_response_consumer_routing(
+        dataset,
+        consumer_modules=[consumer],
+    )
+
+    assert routing["schema"] == "scorer_response_dataset_consumer_routing.v1"
+    assert routing["score_claim"] is False
+    assert routing["score_claim_valid"] is False
+    assert routing["consumer_count"] == 1
+    assert routing["verdict_count"] == 1
+    assert routing["verdicts"][0]["consumer_signal_kind"] == "unit_distilled_route"
+    assert routing["verdicts"][0]["score_claim"] is False
+    assert routing["verdicts"][0]["promotable"] is False
 
 
 def _current_response_dataset_payload() -> dict:

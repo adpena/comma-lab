@@ -41,6 +41,7 @@ def test_build_scorer_response_dataset_cli_distilled_rows_are_opt_in(
 ) -> None:
     smoke = tmp_path / "distilled_vs_direct.json"
     json_out = tmp_path / "dataset.json"
+    routing_out = tmp_path / "routing.json"
     _write_distilled_vs_direct_smoke(smoke)
 
     base_cmd = [
@@ -54,11 +55,16 @@ def test_build_scorer_response_dataset_cli_distilled_rows_are_opt_in(
         "1.0",
         "--baseline-archive-bytes",
         "100",
+        "--consumer-routing-json-out",
+        str(routing_out),
     ]
     subprocess.run(base_cmd, cwd=REPO_ROOT, check=True, text=True, capture_output=True)
     skipped = json.loads(json_out.read_text(encoding="utf-8"))
     assert skipped["rows"] == []
     assert "requires include_distilled_vs_direct_rows" in skipped["skipped"][0]["reason"]
+    skipped_routing = json.loads(routing_out.read_text(encoding="utf-8"))
+    assert skipped_routing["row_count"] == 0
+    assert skipped_routing["score_claim"] is False
 
     subprocess.run(
         base_cmd + ["--include-distilled-vs-direct-rows"],
@@ -72,3 +78,11 @@ def test_build_scorer_response_dataset_cli_distilled_rows_are_opt_in(
     assert included["summary"]["family_counts"] == {
         "distilled_vs_direct_scorer_paired_smoke": 1
     }
+    included_routing = json.loads(routing_out.read_text(encoding="utf-8"))
+    assert included_routing["schema"] == "scorer_response_dataset_consumer_routing.v1"
+    assert included_routing["row_count"] == 1
+    assert included_routing["score_claim_valid"] is False
+    assert any(
+        verdict["consumer_name"] == "distilled_scorer_surrogate_canonical_equation_consumer"
+        for verdict in included_routing["verdicts"]
+    )

@@ -11,17 +11,20 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import importlib
+import importlib.util
 import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 
 SCHEMA = "scorer_response_dataset.v1"
 ROW_SCHEMA = "scorer_response_row.v1"
 NULL_BYTE_PRIORITY_SCHEMA = "ll_null_byte_priority_weights.v1"
+CONSUMER_ROUTING_SCHEMA = "scorer_response_dataset_consumer_routing.v1"
 
 
 _FALSE_AUTHORITY_FIELDS = (
@@ -559,6 +562,132 @@ def build_response_dataset(
         "feature_correlations": feature_correlations(rows),
         "rows": rows,
         "skipped": skipped,
+    }
+
+
+def build_scorer_response_consumer_routing(
+    dataset: dict[str, Any],
+    *,
+    consumer_modules: Iterable[Any] | None = None,
+) -> dict[str, Any]:
+    """Route scorer-response rows through opt-in cathedral consumers.
+
+    This is an observability-only bridge. It calls only consumers declaring
+    ``CONSUMES_SCORER_RESPONSE_DATASET = True`` and records their
+    non-promotional verdicts; it does not mutate the dataset, dispatch work, or
+    create score authority.
+    """
+
+    rows = dataset.get("rows")
+    if not isinstance(rows, list):
+        raise ScorerResponseDatasetError("dataset rows[] missing")
+    modules = (
+        list(consumer_modules)
+        if consumer_modules is not None
+        else _discover_scorer_response_consumer_modules()
+    )
+    verdicts: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        row_id = str(row.get("row_id") or row.get("candidate_id") or row_index)
+        for mod in modules:
+            if not getattr(mod, "CONSUMES_SCORER_RESPONSE_DATASET", False):
+                continue
+            verdicts.append(_invoke_scorer_response_consumer(mod, row, row_id=row_id))
+
+    return {
+        "schema": CONSUMER_ROUTING_SCHEMA,
+        "producer": TOOL,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "dataset_schema": dataset.get("schema"),
+        "dataset_summary": dataset.get("summary"),
+        "row_count": len([row for row in rows if isinstance(row, dict)]),
+        "consumer_count": len(
+            [mod for mod in modules if getattr(mod, "CONSUMES_SCORER_RESPONSE_DATASET", False)]
+        ),
+        "verdict_count": len(verdicts),
+        "verdicts": verdicts,
+    }
+
+
+def _discover_scorer_response_consumer_modules() -> list[Any]:
+    try:
+        spec = importlib.util.find_spec("tools.cathedral_autopilot_autonomous_loop")
+        if spec is None:
+            return []
+        loop_module = importlib.import_module("tools.cathedral_autopilot_autonomous_loop")
+        discover = getattr(loop_module, "discover_compliant_consumer_modules", None)
+        if not callable(discover):
+            return []
+        modules = discover()
+    except Exception:  # noqa: BLE001 - observability-only discovery
+        return []
+    return [
+        mod
+        for mod in modules
+        if getattr(mod, "CONSUMES_SCORER_RESPONSE_DATASET", False)
+    ]
+
+
+def _invoke_scorer_response_consumer(
+    module: Any,
+    row: dict[str, Any],
+    *,
+    row_id: str,
+) -> dict[str, Any]:
+    module_name = getattr(module, "__name__", "<unknown>")
+    consumer_name = str(getattr(module, "CONSUMER_NAME", module_name))
+    try:
+        hook = getattr(module, "consume_candidate")
+        verdict = hook(dict(row))
+    except Exception as exc:  # noqa: BLE001 - consumer boundary
+        return {
+            "consumer_module": module_name,
+            "consumer_name": consumer_name,
+            "row_id": row_id,
+            "error": f"{type(exc).__name__}: {exc}",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+        }
+    if not isinstance(verdict, dict):
+        return {
+            "consumer_module": module_name,
+            "consumer_name": consumer_name,
+            "row_id": row_id,
+            "error": f"consume_candidate returned {type(verdict).__name__}, expected dict",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+        }
+    return {
+        "consumer_module": module_name,
+        "consumer_name": consumer_name,
+        "consumer_version": str(getattr(module, "CONSUMER_VERSION", "unknown")),
+        "row_id": row_id,
+        "consumer_signal_kind": verdict.get("consumer_signal_kind"),
+        "predicted_delta_adjustment": _as_float(verdict.get("predicted_delta_adjustment")) or 0.0,
+        "axis_tag": str(verdict.get("axis_tag", "[predicted]")),
+        "rationale": str(verdict.get("rationale", ""))[:512],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "raw_verdict": verdict,
     }
 
 
