@@ -5,6 +5,7 @@ from pathlib import Path
 
 from tac.optimization.dp1_live_modal_status import (
     build_dp1_live_modal_status,
+    build_dp1_modal_call_status,
     parse_dp1_live_modal_log,
     render_markdown,
 )
@@ -81,3 +82,93 @@ def test_build_dp1_live_modal_status_reports_finished_when_both_return_zero(
 
     assert status["status"] == "finished"
     assert status["blockers"] == []
+
+
+def _metadata(path: Path, *, variant: str, call_id: str) -> Path:
+    path.write_text(
+        """{
+  "call_id": "%s",
+  "label": "dp1_%s",
+  "lane_id": "lane_%s",
+  "live_volume": "comma-train-lane-results",
+  "live_volume_prefix": "dp1_%s/",
+  "dispatched_at": "2026-05-21T03:16:00",
+  "max_seconds": 5400,
+  "mounted_code_git_head": "abc123",
+  "mounted_code_git_branch": "main",
+  "working_tree_dirty": false,
+  "working_tree_dirty_paths_count": 0,
+  "sentinel_files_local_sha256": {"a.py": "0"}
+}
+"""
+        % (call_id, variant, variant, variant),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_build_dp1_modal_call_status_reports_running_on_short_poll_timeout(
+    tmp_path: Path,
+) -> None:
+    baseline = _metadata(tmp_path / "baseline.json", variant="baseline", call_id="fc-base")
+    procedural = _metadata(
+        tmp_path / "procedural.json",
+        variant="procedural",
+        call_id="fc-proc",
+    )
+
+    class _RunningCall:
+        def get(self, timeout: float | None = None) -> dict:
+            raise TimeoutError
+
+    status = build_dp1_modal_call_status(
+        baseline_metadata=baseline,
+        procedural_metadata=procedural,
+        repo_root=tmp_path,
+        function_call_from_id=lambda _call_id: _RunningCall(),
+    )
+
+    assert status["schema"] == "dp1_live_modal_call_status_v1"
+    assert status["status"] == "running"
+    assert status["ready_for_training_harvest"] is False
+    assert status["score_claim"] is False
+    assert status["baseline"]["poll"]["status"] == "running_or_pending"
+    assert "keep polling" in status["next_action"]
+
+
+def test_build_dp1_modal_call_status_reports_ready_for_training_harvest(
+    tmp_path: Path,
+) -> None:
+    baseline = _metadata(tmp_path / "baseline.json", variant="baseline", call_id="fc-base")
+    procedural = _metadata(
+        tmp_path / "procedural.json",
+        variant="procedural",
+        call_id="fc-proc",
+    )
+
+    class _FinishedCall:
+        def __init__(self, call_id: str) -> None:
+            self.call_id = call_id
+
+        def get(self, timeout: float | None = None) -> dict:
+            return {
+                "returncode": 0,
+                "elapsed_seconds": 12.5,
+                "timed_out": False,
+                "artifacts": {f"{self.call_id}/archive.zip": b"zip"},
+                "stdout_tail": "finished",
+            }
+
+    status = build_dp1_modal_call_status(
+        baseline_metadata=baseline,
+        procedural_metadata=procedural,
+        repo_root=tmp_path,
+        function_call_from_id=_FinishedCall,
+    )
+
+    assert status["status"] == "ready_for_training_harvest"
+    assert status["blockers"] == []
+    assert status["ready_for_training_harvest"] is True
+    assert status["ready_for_exact_eval_dispatch"] is False
+    assert status["baseline"]["poll"]["artifact_count"] == 1
+    assert "run tools/harvest_modal_calls.py" in render_markdown(status)

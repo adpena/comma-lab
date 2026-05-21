@@ -7,10 +7,12 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SCHEMA = "dp1_live_modal_status_v1"
+MODAL_CALL_STATUS_SCHEMA = "dp1_live_modal_call_status_v1"
 TOOL_PATH = "tools/inspect_dp1_live_modal_status.py"
 
 _STAGE_RE = re.compile(
@@ -189,11 +191,255 @@ def build_dp1_live_modal_status(
     }
 
 
+def parse_dp1_modal_metadata(
+    path: str | Path,
+    *,
+    variant: str,
+    repo_root: str | Path = ".",
+) -> dict[str, Any]:
+    """Return the DP1 dispatch metadata fields needed for live Modal polling."""
+
+    root = Path(repo_root).resolve()
+    metadata_path = Path(path).resolve()
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"{metadata_path} did not contain a JSON object")
+    call_id = str(payload.get("call_id") or "").strip()
+    sentinels = payload.get("sentinel_files_local_sha256")
+    return {
+        "schema": "dp1_modal_metadata_summary_v1",
+        "variant": variant,
+        "metadata_path": _repo_rel(metadata_path, root),
+        "metadata_sha256": _sha256_file(metadata_path),
+        "label": payload.get("label"),
+        "lane_id": payload.get("lane_id"),
+        "call_id": call_id,
+        "live_volume": payload.get("live_volume"),
+        "live_volume_prefix": payload.get("live_volume_prefix"),
+        "dispatched_at": payload.get("dispatched_at"),
+        "max_seconds": payload.get("max_seconds"),
+        "mounted_code_git_head": payload.get("mounted_code_git_head"),
+        "mounted_code_git_branch": payload.get("mounted_code_git_branch"),
+        "working_tree_dirty": payload.get("working_tree_dirty"),
+        "working_tree_dirty_paths_count": payload.get("working_tree_dirty_paths_count"),
+        "sentinel_file_count": len(sentinels) if isinstance(sentinels, Mapping) else 0,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+    }
+
+
+def poll_modal_call_status(
+    call_id: str,
+    *,
+    timeout_seconds: float = 2.0,
+    function_call_from_id: Callable[[str], Any] | None = None,
+) -> dict[str, Any]:
+    """Poll one Modal FunctionCall without harvesting artifacts.
+
+    A timeout means Modal has not returned a result within the short poll
+    window. This function intentionally does not write artifacts, update
+    ledgers, or grant score authority; the canonical harvester remains the
+    terminal-result owner.
+    """
+
+    checked_at = datetime.now(UTC).isoformat()
+    if not call_id:
+        return {
+            "schema": "dp1_modal_call_poll_v1",
+            "checked_at_utc": checked_at,
+            "call_id": call_id,
+            "status": "missing_call_id",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+        }
+    if function_call_from_id is None:
+        from modal.functions import FunctionCall  # type: ignore[import-untyped]
+
+        function_call_from_id = FunctionCall.from_id
+    try:
+        result = function_call_from_id(call_id).get(timeout=timeout_seconds)
+    except TimeoutError as exc:
+        return {
+            "schema": "dp1_modal_call_poll_v1",
+            "checked_at_utc": checked_at,
+            "call_id": call_id,
+            "status": "running_or_pending",
+            "exception_type": type(exc).__name__,
+            "detail": str(exc)[:500],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+        }
+    except Exception as exc:  # noqa: BLE001 - external Modal boundary
+        return {
+            "schema": "dp1_modal_call_poll_v1",
+            "checked_at_utc": checked_at,
+            "call_id": call_id,
+            "status": "poll_error",
+            "exception_type": type(exc).__name__,
+            "detail": str(exc)[:500],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+        }
+    if not isinstance(result, Mapping):
+        return {
+            "schema": "dp1_modal_call_poll_v1",
+            "checked_at_utc": checked_at,
+            "call_id": call_id,
+            "status": "finished_non_dict",
+            "result_type": type(result).__name__,
+            "result_repr": repr(result)[:500],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+        }
+    artifacts = result.get("artifacts")
+    artifact_keys = sorted(str(key) for key in artifacts) if isinstance(artifacts, Mapping) else []
+    stdout_tail = str(result.get("stdout_tail") or "")
+    return {
+        "schema": "dp1_modal_call_poll_v1",
+        "checked_at_utc": checked_at,
+        "call_id": call_id,
+        "status": "finished",
+        "returncode": result.get("returncode"),
+        "elapsed_seconds": result.get("elapsed_seconds"),
+        "timed_out": result.get("timed_out"),
+        "artifact_count": len(artifact_keys),
+        "artifact_keys": artifact_keys,
+        "stdout_tail": stdout_tail[-1000:],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+    }
+
+
+def build_dp1_modal_call_status(
+    *,
+    baseline_metadata: str | Path,
+    procedural_metadata: str | Path,
+    repo_root: str | Path = ".",
+    timeout_seconds: float = 2.0,
+    function_call_from_id: Callable[[str], Any] | None = None,
+) -> dict[str, Any]:
+    """Return paired DP1 Modal call status from local metadata files."""
+
+    baseline = parse_dp1_modal_metadata(
+        baseline_metadata,
+        variant="baseline",
+        repo_root=repo_root,
+    )
+    procedural = parse_dp1_modal_metadata(
+        procedural_metadata,
+        variant="procedural",
+        repo_root=repo_root,
+    )
+    for row in (baseline, procedural):
+        row["poll"] = poll_modal_call_status(
+            str(row.get("call_id") or ""),
+            timeout_seconds=timeout_seconds,
+            function_call_from_id=function_call_from_id,
+        )
+
+    blockers: list[str] = []
+    if baseline["poll"]["status"] == "missing_call_id":
+        blockers.append("baseline_missing_call_id")
+    if procedural["poll"]["status"] == "missing_call_id":
+        blockers.append("procedural_missing_call_id")
+    if baseline["poll"]["status"] == "poll_error":
+        blockers.append("baseline_poll_error")
+    if procedural["poll"]["status"] == "poll_error":
+        blockers.append("procedural_poll_error")
+    if (
+        baseline["poll"]["status"] == "finished"
+        and baseline["poll"].get("returncode") not in {0, None}
+    ):
+        blockers.append("baseline_finished_nonzero")
+    if (
+        procedural["poll"]["status"] == "finished"
+        and procedural["poll"].get("returncode") not in {0, None}
+    ):
+        blockers.append("procedural_finished_nonzero")
+
+    baseline_finished_ok = (
+        baseline["poll"]["status"] == "finished"
+        and baseline["poll"].get("returncode") == 0
+    )
+    procedural_finished_ok = (
+        procedural["poll"]["status"] == "finished"
+        and procedural["poll"].get("returncode") == 0
+    )
+    ready_for_training_harvest = bool(
+        baseline_finished_ok and procedural_finished_ok and not blockers
+    )
+    if ready_for_training_harvest:
+        status = "ready_for_training_harvest"
+    elif blockers:
+        status = "needs_attention"
+    else:
+        status = "running"
+
+    return {
+        "schema": MODAL_CALL_STATUS_SCHEMA,
+        "producer": TOOL_PATH,
+        "checked_at_utc": datetime.now(UTC).isoformat(),
+        "status": status,
+        "blockers": blockers,
+        "ready_for_training_harvest": ready_for_training_harvest,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "baseline": baseline,
+        "procedural": procedural,
+        "next_action": (
+            "run tools/harvest_modal_calls.py --execute for the two call_ids, then "
+            "feed harvested archive/runtime dirs into tools/plan_dp1_procedural_paired_harvest.py"
+            if ready_for_training_harvest
+            else "keep polling; do not dispatch paired auth eval until both training arms harvest cleanly"
+        ),
+    }
+
+
 def render_markdown(status: Mapping[str, Any]) -> str:
     baseline = status.get("baseline") if isinstance(status.get("baseline"), Mapping) else {}
     procedural = (
         status.get("procedural") if isinstance(status.get("procedural"), Mapping) else {}
     )
+    if status.get("schema") == MODAL_CALL_STATUS_SCHEMA:
+        rows = [
+            "# DP1 Modal Call Status",
+            "",
+            f"- Schema: `{status.get('schema')}`",
+            f"- Status: `{status.get('status')}`",
+            f"- Blockers: `{', '.join(status.get('blockers') or []) or 'none'}`",
+            f"- Ready for training harvest: `{status.get('ready_for_training_harvest')}`",
+            "",
+            "| variant | call id | poll status | rc | artifacts |",
+            "|---|---|---:|---:|---:|",
+        ]
+        for row in (baseline, procedural):
+            poll = row.get("poll") if isinstance(row.get("poll"), Mapping) else {}
+            rows.append(
+                "| {variant} | `{call_id}` | `{status}` | `{rc}` | `{artifacts}` |".format(
+                    variant=row.get("variant"),
+                    call_id=row.get("call_id"),
+                    status=poll.get("status"),
+                    rc=poll.get("returncode", ""),
+                    artifacts=poll.get("artifact_count", ""),
+                )
+            )
+        rows.extend(["", f"- Next action: {status.get('next_action')}"])
+        return "\n".join(rows) + "\n"
+
     rows = [
         "# DP1 Live Modal Status",
         "",
@@ -240,9 +486,13 @@ def write_json(path: str | Path, payload: Mapping[str, Any]) -> None:
 
 __all__ = [
     "SCHEMA",
+    "MODAL_CALL_STATUS_SCHEMA",
     "TOOL_PATH",
     "build_dp1_live_modal_status",
+    "build_dp1_modal_call_status",
     "parse_dp1_live_modal_log",
+    "parse_dp1_modal_metadata",
+    "poll_modal_call_status",
     "render_markdown",
     "write_json",
 ]
