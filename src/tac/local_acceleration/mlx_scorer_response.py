@@ -29,6 +29,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (
 )
 
 SCHEMA_VERSION = "mlx_scorer_response.v1"
+GPU_RESEARCH_SIGNAL_BLOCKER = "mlx_gpu_scorer_response_requires_explicit_research_signal_allowance"
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,7 @@ def build_mlx_scorer_response_payload(
     progress_every: int = 0,
     start_pair: int = 0,
     max_pairs: int | None = None,
+    allow_gpu_research_signal: bool = False,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
 
@@ -92,6 +94,12 @@ def build_mlx_scorer_response_payload(
         raise ValueError(f"batch_pairs must be >= 1, got {batch_pairs}")
     if device_type not in {"cpu", "gpu"}:
         raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+    if device_type == "gpu" and not allow_gpu_research_signal:
+        raise ValueError(
+            f"{GPU_RESEARCH_SIGNAL_BLOCKER}: device_type='gpu' is local MLX "
+            "prescreen signal only; pass allow_gpu_research_signal=True after "
+            "recording CPU-transfer calibration or a research-only rationale"
+        )
     if int(progress_every) < 0:
         raise ValueError(f"progress_every must be >= 0, got {progress_every}")
     if int(start_pair) < 0:
@@ -178,6 +186,7 @@ def build_mlx_scorer_response_payload(
         "evidence_tag": EVIDENCE_TAG_MLX,
         "score_axis": EVIDENCE_TAG_MLX,
         "hardware_substrate": f"MLX {device_type}",
+        "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -218,6 +227,8 @@ def build_mlx_scorer_response_payload(
         ),
         "raw_sha256": _manifest_string(candidate.manifest, "raw_sha256"),
         "device_contract": {
+            "gpu_research_signal_blocker": GPU_RESEARCH_SIGNAL_BLOCKER,
+            "gpu_research_signal_required": device_type == "gpu",
             "allowed_uses": [
                 "local_mlx_training_gradient_shaping",
                 "local_sweep_reranking_after_passing_transfer_calibration",
@@ -395,6 +406,7 @@ def _jsonable(value: Any) -> Any:
 
 
 __all__ = [
+    "GPU_RESEARCH_SIGNAL_BLOCKER",
     "SCHEMA_VERSION",
     "ScorerInputCache",
     "build_mlx_scorer_response_payload",

@@ -65,6 +65,15 @@ experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20
 !experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src/codec_sidecar.py
 !experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/deterministic_packet_compiler_manifest.json
 !experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packetir_candidate_queue.json
+# MLX scorer-input tensor caches and response/profile outputs are large local
+# acceleration artifacts by default. Preserve durable signal in .omx/research/
+# memos or compact tracked manifests, not ad hoc cache roots.
+mlx_scorer_input_cache*/
+mlx_scorer_response*/
+mlx_scorer_response_profile*/
+reports/mlx_scorer_input_cache*/
+reports/mlx_scorer_response*/
+reports/mlx_scorer_response_profile*/
 outputs/
 
 # Local Claude scheduler locks contain machine/session PIDs and must not churn.

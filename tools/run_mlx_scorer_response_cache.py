@@ -36,6 +36,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--device", choices=("cpu", "gpu"), default="cpu")
     parser.add_argument(
+        "--allow-gpu-research-signal",
+        action="store_true",
+        help=(
+            "Permit --device gpu as local MLX prescreen signal only. GPU output "
+            "remains non-authoritative and must be CPU-transfer-calibrated before "
+            "it can influence dispatch selection."
+        ),
+    )
+    parser.add_argument(
         "--progress-every",
         type=int,
         default=0,
@@ -63,6 +72,7 @@ def main(argv: list[str] | None = None) -> int:
         progress_every=args.progress_every,
         start_pair=args.start_pair,
         max_pairs=args.max_pairs,
+        allow_gpu_research_signal=args.allow_gpu_research_signal,
     )
     write_mlx_scorer_response_payload(payload, args.output)
     print(

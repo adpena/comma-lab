@@ -26,6 +26,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--start-pair", type=int, default=0)
     parser.add_argument("--max-pairs", type=int, default=4)
     parser.add_argument("--repeat", type=int, default=1)
+    parser.add_argument(
+        "--allow-gpu-research-signal",
+        action="store_true",
+        help=(
+            "Permit gpu entries in --devices as local MLX prescreen/profiling "
+            "signal only. GPU rows remain non-authoritative and require CPU "
+            "transfer checks before they can affect exact-eval dispatch choices."
+        ),
+    )
     return parser
 
 
@@ -41,6 +50,7 @@ def main(argv: list[str] | None = None) -> int:
         start_pair=args.start_pair,
         max_pairs=args.max_pairs,
         repeat=args.repeat,
+        allow_gpu_research_signal=args.allow_gpu_research_signal,
     )
     write_profile_payload(profile, args.output)
     print(
@@ -68,6 +78,7 @@ def build_profile_payload(
     start_pair: int,
     max_pairs: int,
     repeat: int = 1,
+    allow_gpu_research_signal: bool = False,
 ) -> dict[str, Any]:
     if int(max_pairs) < 1:
         raise ValueError(f"max_pairs must be >= 1, got {max_pairs}")
@@ -75,6 +86,12 @@ def build_profile_payload(
         raise ValueError(f"start_pair must be >= 0, got {start_pair}")
     if int(repeat) < 1:
         raise ValueError(f"repeat must be >= 1, got {repeat}")
+    if "gpu" in device_values and not allow_gpu_research_signal:
+        raise ValueError(
+            "--devices gpu requires --allow-gpu-research-signal; MLX GPU scorer "
+            "responses are profiling/prescreen signal only and are not "
+            "CPU-transfer-stable by default"
+        )
 
     rows: list[dict[str, Any]] = []
     for device in device_values:
@@ -90,6 +107,7 @@ def build_profile_payload(
                     device_type=device,
                     start_pair=start_pair,
                     max_pairs=max_pairs,
+                    allow_gpu_research_signal=allow_gpu_research_signal,
                 )
                 wall_seconds = time.time() - started
                 n_samples = int(payload["n_samples"])
@@ -132,6 +150,7 @@ def build_profile_payload(
         "batch_pairs_values": list(batch_pairs_values),
         "device_values": list(device_values),
         "repeat": int(repeat),
+        "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
         "rows": rows,
         "best": best,
         "authority_status": (

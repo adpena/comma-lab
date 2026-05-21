@@ -29,7 +29,10 @@ def test_parse_device_csv_rejects_unknown_device() -> None:
 
 
 def test_profile_payload_is_non_authoritative_and_selects_best(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen_allowances: list[bool] = []
+
     def fake_response(**kwargs):
+        seen_allowances.append(bool(kwargs["allow_gpu_research_signal"]))
         batch_pairs = int(kwargs["batch_pairs"])
         elapsed = 4.0 / batch_pairs
         return {
@@ -66,3 +69,59 @@ def test_profile_payload_is_non_authoritative_and_selects_best(monkeypatch: pyte
     assert payload["rows"][0]["pair_window"] == [8, 12]
     assert payload["best"]["batch_pairs"] == 2
     assert payload["best"]["pairs_per_second"] == 2.0
+    assert payload["gpu_research_signal_allowed"] is False
+    assert seen_allowances == [False, False]
+
+
+def test_profile_payload_rejects_gpu_without_explicit_research_allowance() -> None:
+    with pytest.raises(ValueError, match="--allow-gpu-research-signal"):
+        profiler.build_profile_payload(
+            reference_cache_dir="/tmp/ref",
+            candidate_cache_dir="/tmp/cand",
+            archive_size_bytes=123,
+            repo_root=REPO,
+            batch_pairs_values=[1],
+            device_values=["gpu"],
+            start_pair=0,
+            max_pairs=1,
+        )
+
+
+def test_profile_payload_passes_explicit_gpu_research_allowance(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen_allowances: list[bool] = []
+
+    def fake_response(**kwargs):
+        seen_allowances.append(bool(kwargs["allow_gpu_research_signal"]))
+        return {
+            "n_samples": 1,
+            "start_pair": kwargs["start_pair"],
+            "pair_window": [kwargs["start_pair"], kwargs["start_pair"] + kwargs["max_pairs"]],
+            "elapsed_seconds": 1.0,
+            "canonical_score": 0.2,
+            "avg_posenet_dist": 0.001,
+            "avg_segnet_dist": 0.002,
+            "components": {
+                "posenet_sha256": "p" * 64,
+                "segnet_sha256": "s" * 64,
+            },
+        }
+
+    monkeypatch.setattr(profiler, "build_mlx_scorer_response_payload", fake_response)
+
+    payload = profiler.build_profile_payload(
+        reference_cache_dir="/tmp/ref",
+        candidate_cache_dir="/tmp/cand",
+        archive_size_bytes=123,
+        repo_root=REPO,
+        batch_pairs_values=[1],
+        device_values=["gpu"],
+        start_pair=0,
+        max_pairs=1,
+        allow_gpu_research_signal=True,
+    )
+
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["device_values"] == ["gpu"]
+    assert payload["gpu_research_signal_allowed"] is True
+    assert seen_allowances == [True]
