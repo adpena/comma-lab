@@ -1,0 +1,82 @@
+{
+  "actual_signature": {
+    "composed_savings_estimate": 0.007563665419925475,
+    "composition_alpha": 0.03353172577918276,
+    "pair_cluster_diversity": 0.375,
+    "per_class_entropy_nats": 1.6094024181365967,
+    "per_class_max_weight": 0.20170679688453674,
+    "singleton_savings_sum": 0.6767023090074148,
+    "top_k_byte_fraction": 0.09999551212287808
+  },
+  "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+  "archive_size_bytes": 178258,
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "sister of #818 BUCKET-C producer-consumer loop per Cable D + Catalog #354/#356",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "evidence_grade": "macOS-CPU-advisory",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "kind": "macos_cpu_advisory",
+    "promotable": false,
+    "score_claim_valid": false,
+    "source": "tier_1_distortion_axis_probe_2_bit_allocator_composition"
+  },
+  "catalog_references": [
+    "#354",
+    "#356",
+    "#357",
+    "#287",
+    "#323",
+    "#192",
+    "#1",
+    "#318",
+    "#313"
+  ],
+  "device": "cpu",
+  "elapsed_seconds": 0.02841782569885254,
+  "evidence_grade": "macOS-CPU-advisory",
+  "exploit_summary": {
+    "exploit_3_top_k_byte_count": 17825,
+    "exploit_3_top_k_byte_fraction": 0.09999551212287808,
+    "exploit_5_per_class_weights": [
+      0.1968793123960495,
+      0.20004506409168243,
+      0.20014645159244537,
+      0.20170679688453674,
+      0.20122236013412476
+    ],
+    "exploit_9_pair_cluster_assignments": [
+      0,
+      1,
+      2,
+      2,
+      1,
+      0,
+      0,
+      0
+    ],
+    "exploit_9_unique_clusters": 3
+  },
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "important_caveat": "Per Catalog #318 STRICT gate: this probe uses a hash-based PROXY for master-gradient, NOT contest-score derivatives. The bit-allocator COMPOSITION MECHANISM is tested; authoritative per-byte sensitivity REQUIRES real master-gradient extraction via Cable D consumers + grammar-aware operator + ZIP CRC reconstruction per Catalog #318.",
+  "lane_id": "lane_overnight_ccc_tier_1_distortion_axis_4_probes_macos_cpu_advisory_smoke_20260521",
+  "next_action_on_POSITIVE": "Operator-routable: paid master-gradient extraction on contest CUDA archive via Cable D consumers + grammar-aware operator (Catalog #318); predicted composition_alpha >= 1.0 + \u0394S -0.005 to -0.020 [predicted]; estimated cost ~$2-5.",
+  "predicted_signature": {
+    "composition_alpha_super_additive": "> 1.0 (exploits compose super-additively)",
+    "pair_cluster_diversity_nontrivial": "> 0.3 (multi-cluster present)",
+    "per_class_entropy_non_uniform": "< 1.5 nats (< ln(5)=1.609 uniform)",
+    "top_k_byte_fraction_concentrated": "< 0.5 (high-leverage subset structure)"
+  },
+  "probe_id": "tier_1_distortion_bit_allocator_composition_smoke",
+  "probe_name": "Bit-allocator composition (exploits #3 + #5 + #9)",
+  "promotable": false,
+  "recommendation": "DEFER: bit-allocator composition lacks measurable structure on the proxy master-gradient. Per CLAUDE.md 'Forbidden premature KILL': DEFER-PENDING-REAL-MASTER-GRADIENT-EXTRACTION via canonical helper; the proxy is hash-based, not contest-score derivative. Reactivation = paid master-gradient extraction against contest CUDA archive via Cable D consumers.",
+  "score_claim": false,
+  "signature_checks": {
+    "alpha_super_additive": false,
+    "pair_cluster_nontrivial": true,
+    "per_class_non_uniform": false,
+    "top_k_concentrated": true
+  },
+  "verdict": "PARTIAL_OR_NULL_SIGNAL"
+}

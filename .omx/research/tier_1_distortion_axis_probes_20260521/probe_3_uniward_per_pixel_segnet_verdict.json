@@ -1,0 +1,60 @@
+{
+  "actual_signature": {
+    "frame_resolution_HxW": [
+      874,
+      1164
+    ],
+    "n_frames": 8,
+    "predicted_distortion_admission_fraction": 0.25,
+    "textured_avg_weight": 0.8062214255332947,
+    "uniform_vs_uniward_ratio": 1.0000838596223465,
+    "uniform_weighted_error": 0.002498999470844865,
+    "uniward_weighted_error": 0.0024987899232655764,
+    "var_dynamic_range_log10": 9.384507179260254,
+    "var_flat_fraction": 0.49999964237213135,
+    "var_textured_fraction": 0.25
+  },
+  "axis_tag": "[macOS-CPU advisory]",
+  "canonical_equation_reference": "candidate uniward_textured_region_undetectability_pose_distortion_savings_v1 (Catalog #344 RATIFY-N pending per AAA T4 op-routable)",
+  "canonical_provenance": {
+    "axis_tag": "[macOS-CPU advisory]",
+    "evidence_grade": "macOS-CPU-advisory",
+    "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+    "kind": "macos_cpu_advisory",
+    "promotable": false,
+    "score_claim_valid": false,
+    "source": "tier_1_distortion_axis_probe_3_uniward_per_pixel_segnet"
+  },
+  "catalog_references": [
+    "#344",
+    "#287",
+    "#323",
+    "#192",
+    "#1",
+    "#313"
+  ],
+  "device": "cpu",
+  "elapsed_seconds": 1.2135486602783203,
+  "evidence_grade": "macOS-CPU-advisory",
+  "hardware_substrate": "darwin_arm64_m5_max_macos_cpu_advisory",
+  "lane_id": "lane_overnight_ccc_tier_1_distortion_axis_4_probes_macos_cpu_advisory_smoke_20260521",
+  "next_action_on_POSITIVE": "Operator-routable: Tier-2 paid dispatch on UNIWARD-weighted per-pixel SegNet loss substrate via Vast.ai 4090 or Lightning T4; estimated cost ~$1-5; predicted \u0394S -0.005 to -0.015 [predicted].",
+  "predicted_signature": {
+    "flat_textured_separation": "textured > 10% AND flat > 30%",
+    "predicted_savings": "proportional to fraction of textured pixels admitting distortion budget",
+    "uniward_textured_suppression": "textured avg weight < 0.5 (UNIWARD redistribution)",
+    "variance_dynamic_range_log10": "> 1.0 (>10x range; flat vs textured separation)"
+  },
+  "probe_id": "tier_1_distortion_uniward_per_pixel_segnet_smoke",
+  "probe_name": "UNIWARD per-pixel SegNet loss",
+  "promotable": false,
+  "recommendation": "PARTIAL: variance dynamic range present but textured-fraction insufficient. Per CLAUDE.md 'Forbidden premature KILL': DEFER-PENDING-FRAME-DIVERSITY-AUDIT; sample more diverse frames across full 600-pair contest video before Tier-2 dispatch.",
+  "score_claim": false,
+  "signature_checks": {
+    "flat_textured_separation_present": true,
+    "uniward_textured_suppression_present": false,
+    "variance_dynamic_range_present": true
+  },
+  "sister_canonical_equation_candidate_for_RATIFY_N": "uniward_textured_region_undetectability_pose_distortion_savings_v1",
+  "verdict": "POSITIVE_SIGNAL_PARTIAL"
+}
