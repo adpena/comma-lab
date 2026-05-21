@@ -78,6 +78,17 @@ def _require_finite_number(value: Any, *, label: str) -> float:
     return out
 
 
+def _require_explicit_false_source_score_claim(
+    row: Mapping[str, Any],
+    *,
+    label: str,
+) -> None:
+    if "authority_source_score_claim" not in row or row.get("authority_source_score_claim") is None:
+        raise ValueError(f"{label} authority_source_score_claim must be explicit false")
+    if row.get("authority_source_score_claim") is not False:
+        raise ValueError(f"{label} authority_source_score_claim must be false")
+
+
 def load_scorer_response_distill_rows(
     dataset: Mapping[str, Any],
     *,
@@ -126,10 +137,10 @@ def load_scorer_response_distill_rows(
             label=f"scorer-response row {index}",
             allow_legacy_missing_authority=allow_legacy_missing_authority,
         )
-        if row.get("authority_source_score_claim") is True:
-            raise ValueError(
-                f"scorer-response row {index} authority_source_score_claim must be false"
-            )
+        _require_explicit_false_source_score_claim(
+            row,
+            label=f"scorer-response row {index}",
+        )
         _require_finite_number(
             row.get("advisory_score_report_derived"),
             label=f"scorer-response row {index} advisory_score_report_derived",

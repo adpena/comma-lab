@@ -43,8 +43,9 @@ dataset, the dataset `authority` block, and every consumed row:
 - `rank_or_kill_eligible`
 - `promotable`
 
-Rows with `authority_source_score_claim = true` are refused. Rows must also
-carry finite numeric `advisory_score_report_derived` and
+Rows must also carry `authority_source_score_claim = false` explicitly; missing
+or non-boolean source-score-claim fields are refused. Rows must also carry
+finite numeric `advisory_score_report_derived` and
 `delta_vs_baseline_score` fields. This keeps advisory response observations
 usable for surrogate/curriculum construction while preventing false contest
 authority.

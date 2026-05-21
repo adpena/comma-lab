@@ -153,12 +153,13 @@ last_refreshed_note: |
   `CONSUMES_SCORER_RESPONSE_DATASET = True` and
   `load_scorer_response_distill_rows(...)`. The loader only accepts
   `scorer_response_dataset.v1` data with explicit false authority on the
-  dataset, authority block, and rows; source score-claim rows fail closed. This
-  makes the Quantizr/Hinton KL-T=2.0 substrate convergence usable as training
-  signal without promoting advisory rows into contest evidence. Historical
+  dataset, authority block, and rows; row-level
+  `authority_source_score_claim` must also be explicit false. This provides
+  fail-closed plumbing for future Quantizr/Hinton KL-T=2.0 training-signal use;
+  empirical usefulness remains gated by paired smoke / Stage 1 work. Historical
   PR110 datasets missing only the later `rank_or_kill_eligible`/`promotable`
   fields require an explicit legacy flag and still fail closed on missing core
-  authority.
+  authority or source-score-claim ambiguity.
 - **Magic-codec pair #4 procedural-seed orthogonality is closed**:
   `.omx/research/magic_codec_pair_4_procedural_seed_orthogonality_smoke_landed_20260521T004054Z_codex.md`
   tests seed lengths `16/32/64/128/256` across six reversible byte-orderings

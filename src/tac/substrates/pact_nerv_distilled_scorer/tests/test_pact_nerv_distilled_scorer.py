@@ -210,6 +210,39 @@ def test_score_aware_loss_rejects_source_score_claim_rows() -> None:
         raise AssertionError("expected source score-claim row rejection")
 
 
+def test_score_aware_loss_rejects_missing_source_score_claim_rows() -> None:
+    from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
+
+    dataset = _scorer_response_dataset()
+    rows = dataset["rows"]
+    assert isinstance(rows, list)
+    rows[0].pop("authority_source_score_claim")
+
+    try:
+        sal.load_scorer_response_distill_rows(dataset)
+    except ValueError as exc:
+        assert "authority_source_score_claim" in str(exc)
+        assert "explicit false" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected missing source score-claim row rejection")
+
+
+def test_score_aware_loss_rejects_non_bool_source_score_claim_rows() -> None:
+    from tac.substrates.pact_nerv_distilled_scorer import score_aware_loss as sal
+
+    dataset = _scorer_response_dataset()
+    rows = dataset["rows"]
+    assert isinstance(rows, list)
+    rows[0]["authority_source_score_claim"] = "true"
+
+    try:
+        sal.load_scorer_response_distill_rows(dataset)
+    except ValueError as exc:
+        assert "authority_source_score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected non-bool source score-claim row rejection")
+
+
 def test_substrate_forward_produces_unit_interval_rgb() -> None:
     """L5 compliance: substrate is a full RGB renderer (not a mask codec)."""
     cfg = _smoke_cfg()
