@@ -1,0 +1,180 @@
+schema_version: 1
+name: substrate_grayscale_lut_lut_bits_5_local_mlx_dispatch
+lane_id: lane_overnight_tt_selfcomp_grayscale_lut_phase_2_build_via_local_mlx_tier_1_recommended_20260521
+summary: |
+  Grayscale-LUT lut_bits=5 variant for local MLX/MPS dispatch per AA HIGH
+  verdict 2026-05-21 + OVERNIGHT-EE-RESUME §13 op-routable #4 + OVERNIGHT-TT
+  Phase 2 BUILD. Sister of substrate_grayscale_lut_modal_a100_dispatch.yaml
+  (canonical paid Modal A100 recipe) at the lut_bits=5 + local-MLX surface.
+
+# Per Catalog #317 sister + CLAUDE.md "ONE-ARG LOCAL-MPS VS MODAL DISPATCH SWITCH"
+# 2026-05-17: local-MPS (and MLX-future) is the canonical local-pre-paid-dispatch
+# substrate per operator directive 2026-05-21 + Carmack MVP-first 5-step.
+platform: local-mps
+gpu: "MPS"
+min_vram_gb: 0  # Unified memory on Apple Silicon; M5 Max has 128GB available
+# Catalog #215: smoke-class matches dispatch-class (local-MPS smoke = local-MPS full).
+min_smoke_gpu: "MPS"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+  - contest_one_video_replay
+canary_status: independent_substrate
+# Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #1 + #192: local-MPS results
+# are [macOS-MPS research-signal] NON-PROMOTABLE; paid Linux x86_64 + NVIDIA
+# follow-on required for promotion. dispatch_enabled remains FALSE until
+# operator approves local-MPS dispatch surface activation.
+dispatch_enabled: false
+research_only: true
+defer_reason: |
+  Phase 2 BUILD landed lut_bits parameterization (5/6/7/8) + sister tests
+  9/9 PASS + local CPU smoke @ lut_bits=5 GREEN per OVERNIGHT-TT 2026-05-21.
+  Dispatch deferred until: (a) operator approves local-MPS first-anchor
+  dispatch (full epochs on M5 Max MPS); (b) Tier-2 paid Modal A100 follow-on
+  for [contest-CUDA] promotion (operator-routable per OVERNIGHT-EE-RESUME §13
+  Tier-2 fallback). This recipe is the canonical lut_bits=5 dispatch surface
+  for both local-MPS exec AND the future paid Modal A100 follow-on (sister
+  recipe will copy this + flip platform: modal + dispatch_enabled: true).
+dispatch_blockers:
+  - operator_local_mps_dispatch_surface_activation_pending
+  - paired_paid_modal_a100_followon_for_contest_cuda_promotion_pending
+  - empirical_anchor_for_lut_bits_5_vs_lut_bits_8_archive_bytes_savings_pending
+
+cost_band:
+  epochs: 2000
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.00  # local execution, no paid cost
+  platform_key: local
+  gpu_key: MPS
+
+# Predicted band per AA HIGH verdict reasoning: lut_bits=5 reduces grayscale
+# brotli output ~30-40% vs lut_bits=8 (entropy reduction); naive expectation
+# = total archive bytes ~70-80% of lut_bits=8 (decoder + embedding bytes
+# unchanged). Per CLAUDE.md "Frontier scores are pointer-only" Catalog #343:
+# no hardcoded literal predicted_score — paired post-training Tier-C
+# validation required per Catalog #324.
+predicted_band_validation_status: pending_post_training
+predicted_score_target: "TBD — pending lut_bits=5 first-anchor empirical"
+predicted_delta_basis: |
+  OVERNIGHT-EE-RESUME §13 AA HIGH verdict: lut_bits=5 (32-level) matches STC
+  residual sidecar required cover-signal granularity vs PR #56 cargo-cult
+  lut_bits=4 (16-level). Empirical anchor pending paid Modal A100 dispatch.
+literature_anchor: |
+  Selfcomp / szabolcs-cs PR #56 grayscale-LUT analog mask paradigm (lut_bits=4
+  cargo-cult; AA HIGH verdict 2026-05-21 recommends lut_bits=5 unwind).
+  Quantizr 0.33 anchor 2026-04-21.
+substrate_tradition: TRADITION_1
+
+# Mission alignment per Catalog #300 + CLAUDE.md "Mission alignment":
+mission_predicted_contribution: frontier_breaking_enabler
+
+risk: |
+  Phase 2 BUILD landed lut_bits parameterization; local MPS dispatch first-
+  anchor risks:
+  (a) MPS-specific gradient drift (per Catalog #1 "MPS auth eval is NOISE"):
+      training-loop loss may diverge between MPS and CUDA paths. Mitigation:
+      [macOS-MPS research-signal] axis tag NON-PROMOTABLE; paired paid Modal
+      A100 follow-on for [contest-CUDA] promotion.
+  (b) lut_bits=5 EXPRESSIVITY CEILING: 32 levels may not preserve enough
+      grayscale resolution for natural-video chroma reconstruction (paired
+      with FiLM embedding compensation). Mitigation: AA HIGH verdict
+      empirical anchor required to validate vs cargo-cult lut_bits=4 +
+      canonical lut_bits=8 archive bytes savings + scorer impact.
+  (c) PR #56 cargo-cult-unwind RISK: AA HIGH verdict is design-time + premise-
+      verified (Catalog #229) but not empirically anchored against contest
+      scorer. Mitigation: this recipe IS the empirical anchor mechanism.
+
+envelope_status: "ZERO paid GPU; local M5 Max MPS execution per Carmack MVP-first."
+
+# Local-MPS dispatch driver (sister of remote_lane_substrate_grayscale_lut.sh
+# for Modal dispatch surface; local-MPS dispatch via operator_authorize.py
+# --target local-mps per Catalog #317).
+remote_driver: scripts/remote_lane_substrate_grayscale_lut.sh
+timeout_hours: 8.0  # local MPS full epochs may take longer than CUDA A100
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_grayscale_lut.sh
+  cost_band_trainer: experiments/train_substrate_grayscale_lut.py
+  cost_band_epochs: 2000
+  cost_band_batch_size: 16
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_grayscale_lut.py
+
+env_overrides:
+  GRAYSCALE_LUT_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  GRAYSCALE_LUT_VIDEO_PATH: upstream/videos/0.mkv
+  GRAYSCALE_LUT_OUTPUT_DIR: experiments/results/grayscale_lut_lut_bits_5_local_mps_${INSTANCE_JOB_ID}/output
+  GRAYSCALE_LUT_EPOCHS: "2000"
+  GRAYSCALE_LUT_BATCH_SIZE: "16"
+  GRAYSCALE_LUT_UPSTREAM_DIR: upstream
+  # Per Catalog #317 sister + #1 + #192: local-MPS surface non-promotable by
+  # construction; promotable via paired paid Modal A100 sister recipe only.
+  GRAYSCALE_LUT_DEVICE: mps
+  GRAYSCALE_LUT_LUT_BITS: "5"
+
+dependencies:
+  - scripts/remote_lane_substrate_grayscale_lut.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_grayscale_lut.py
+  - src/tac/substrates/grayscale_lut/architecture.py
+  - src/tac/substrates/grayscale_lut/archive.py
+  - src/tac/substrates/grayscale_lut/inflate.py
+
+notes: |
+  OVERNIGHT-TT Phase 2 BUILD 2026-05-21 + AA HIGH verdict cargo-cult unwind:
+  lut_bits=5 (32-level analog grayscale tone-map) matches STC residual
+  sidecar required cover-signal granularity per OVERNIGHT-EE-RESUME §13
+  op-routable #4. Sister of canonical
+  substrate_grayscale_lut_modal_a100_dispatch.yaml at the lut_bits=5 +
+  local-MPS surface.
+
+  ARCHIVE BYTES PREDICTION (entropy reduction):
+    Per OVERNIGHT-TT empirical test (test_lower_lut_bits_smaller_brotli_output):
+    lut_bits=5 brotli output is measurably smaller than lut_bits=8 on
+    smooth natural-video grayscale (typical 30-40% reduction). On the
+    canonical 600-pair x 96 x 128 grayscale field at lut_bits=8 the
+    brotli-compressed output is ~2,200,000 bytes (per canonical recipe
+    notes). At lut_bits=5 the predicted compressed bytes are
+    ~1,400,000-1,500,000 (33% reduction). Total archive bytes savings
+    ~700,000 -> rate-term reduction = 25 * 700,000 / 37,545,489 = ~0.0047
+    [PREDICTED; per canonical formula per Catalog #344 equation
+    procedural_codebook_from_seed_compression_savings_v1 IN-DOMAIN context].
+
+  WAVE-2 CASCADE GATE: this recipe's first-anchor empirical (paired with
+  the canonical lut_bits=8 recipe) unblocks the STC residual sidecar paid
+  Modal smoke per OVERNIGHT-W §5 reactivation criteria. STC sidecar
+  requires the lut_bits=5 cover-signal granularity to bypass the AA HIGH
+  verdict premise-failure that blocked STC v1 dispatch.
+
+  Catalog #344 canonical equation reference:
+  procedural_predictor_plus_residual_correction_savings_v1 IN-DOMAIN per
+  Catalog #359 (downstream STC residual sidecar over this Selfcomp base
+  at lut_bits=5).
+
+  CLAUDE.md non-negotiable acknowledgments:
+  - "MPS auth eval is NOISE" (Catalog #1): MPS training produces
+    [macOS-MPS research-signal] NON-PROMOTABLE per Catalog #192 + #317;
+    paired paid Modal A100 follow-on for [contest-CUDA] promotion.
+  - "Submission auth eval - BOTH CPU AND CUDA": this recipe is research
+    surface only; submission packets require paired contest-axis dispatches
+    via the canonical recipe.
+  - "Apples-to-apples evidence discipline": every score from local MPS
+    carries [macOS-MPS] axis tag + lut_bits=5 + canonical Provenance per
+    Catalog #287/#323.
+  - "Frontier scores are pointer-only" (Catalog #343): no hardcoded score
+    literals; predicted_band_validation_status: pending_post_training.
+
+  Cross-ref:
+    OVERNIGHT-EE-RESUME landing memo (commit 80eca11a1):
+      .omx/research/overnight_ee_selfcomp_grayscale_lut_l0_l1_promotion_design_per_aa_high_verdict_landed_20260521.md
+    OVERNIGHT-OO local-leverage infrastructure (commit 6e77d37ec):
+      .omx/research/overnight_oo_local_leverage_audit_mlx_mps_metal_cpu_extension_landed_20260521.md
+    OVERNIGHT-W STC residual sidecar cascade (per cascade Week 2 reactivation criteria).
+    Canonical Modal recipe (sister):
+      .omx/operator_authorize_recipes/substrate_grayscale_lut_modal_a100_dispatch.yaml

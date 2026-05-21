@@ -285,6 +285,19 @@ def _build_parser() -> argparse.ArgumentParser:
         default=16,
         help="Per-pair embedding dimensionality for FiLM conditioning.",
     )
+    p.add_argument(
+        "--lut-bits",
+        type=int,
+        default=8,
+        help=(
+            "Bit-depth of the grayscale tone-map LUT (1-8; default 8 = "
+            "byte-stable uint8 backward-compat). Per AA HIGH verdict "
+            "2026-05-21 + OVERNIGHT-EE-RESUME §13: lut_bits=5 (32-level) "
+            "matches STC residual sidecar cover-signal granularity; lut_bits=4 "
+            "was PR #56 cargo-cult. Lower lut_bits = smaller brotli output "
+            "via entropy reduction (NO archive schema bump; GLV1 preserved)."
+        ),
+    )
 
     # ---- Lagrangian weights (score-aware) ----
     p.add_argument(
@@ -649,6 +662,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         num_pairs=4,
         output_height=24,
         output_width=32,
+        lut_bits=args.lut_bits,
     )
     device = _device_or_die(args.device, smoke=True)
     model = GrayscaleLutSubstrate(cfg).to(device)
@@ -755,6 +769,7 @@ def _full_main(args: argparse.Namespace) -> int:
             num_pairs=n_pairs,
             output_height=EVAL_HW[0],
             output_width=EVAL_HW[1],
+            lut_bits=args.lut_bits,
         )
         model = GrayscaleLutSubstrate(cfg).to(device)
         print(f"[full] grayscale_lut params: {model.num_parameters():,}")
@@ -950,6 +965,11 @@ def _full_main(args: argparse.Namespace) -> int:
             meta = {
                 "decoder_hidden": cfg.decoder_hidden,
                 "decoder_blocks": cfg.decoder_blocks,
+                # OVERNIGHT-TT Phase 2 BUILD 2026-05-21 + AA HIGH verdict:
+                # lut_bits surfaced in meta for observability + downstream STC
+                # sidecar consumers; archive bytes preserve uint8 schema per
+                # Catalog #110/#113 (GLV1 unchanged), so meta key is observability-only.
+                "lut_bits": cfg.lut_bits,
             }
             bin_bytes = pack_archive(
                 decoder_sd,

@@ -60,7 +60,24 @@ _PAIRS = _NUM_FRAMES // 2  # 600 pairs
 
 @dataclass(frozen=True)
 class GrayscaleLutConfig:
-    """Static design-time parameters for grayscale_lut (L0 SKETCH)."""
+    """Static design-time parameters for grayscale_lut (L1 SCAFFOLD; OVERNIGHT-TT lut_bits 2026-05-21).
+
+    Per OVERNIGHT-EE-RESUME §13 op-routable #4 AA HIGH verdict + OVERNIGHT-TT
+    Tier-1 RECOMMENDED Phase 2 BUILD 2026-05-21: ``lut_bits`` parameterizes
+    the analog grayscale tone-map granularity. Default 8 (full uint8) is
+    byte-stable backward-compat per Catalog #110/#113 HISTORICAL_PROVENANCE
+    APPEND-ONLY discipline; lut_bits=5 produces 32-level grayscale matching
+    the STC sidecar required cover-signal granularity (AA HIGH verdict
+    cargo-cult unwind — canonical PR #56 cargo-culted 4-bit when 5-bit better
+    matches AV1-grayscale + STC residual sidecar joint optimum).
+
+    Lower lut_bits = (a) smaller brotli output (entropy reduction; lut_bits=5
+    typically achieves 30-40% smaller compressed grayscale vs uint8); (b)
+    matching cover-signal granularity for downstream STC residual sidecar
+    stacking per WAVE-2 cascade; (c) NO archive schema version bump (GLV1
+    preserved; the field stays uint8 but with only 2^lut_bits distinct
+    levels, brotli auto-exploits the reduced entropy).
+    """
 
     grayscale_downsample: int = 4
     """Spatial downsample factor for the analog grayscale stream (H/4 x W/4)."""
@@ -80,6 +97,15 @@ class GrayscaleLutConfig:
     output_height: int = _CONTEST_H
     output_width: int = _CONTEST_W
 
+    lut_bits: int = 8
+    """Bit-depth of the grayscale tone-map LUT (1-8; default 8 = byte-stable backward compat).
+
+    Per AA HIGH verdict 2026-05-21: lut_bits=5 (32-level quantization)
+    matches STC residual sidecar required cover-signal granularity.
+    lut_bits=4 was the PR #56 cargo-cult (16-level); empirical-anchor
+    pending paid Modal A100 dispatch per Tier-2 follow-on.
+    """
+
     def __post_init__(self) -> None:
         if self.grayscale_downsample <= 0:
             raise ValueError("grayscale_downsample must be positive")
@@ -91,6 +117,11 @@ class GrayscaleLutConfig:
             raise ValueError("num_pairs must be positive")
         if self.output_height % self.grayscale_downsample or self.output_width % self.grayscale_downsample:
             raise ValueError("output dimensions must be divisible by grayscale_downsample")
+        if self.lut_bits < 1 or self.lut_bits > 8:
+            raise ValueError(
+                f"lut_bits must be in [1, 8] (default 8 = byte-stable; AA HIGH "
+                f"verdict recommends 5); got {self.lut_bits}"
+            )
 
 
 class _FiLMBlock(nn.Module):
@@ -191,12 +222,36 @@ class GrayscaleLutSubstrate(nn.Module):
     def quantize_grayscale_for_archive(self) -> torch.Tensor:
         """Quantize grayscale parameter to uint8 for archive export.
 
+        Per OVERNIGHT-TT Phase 2 BUILD 2026-05-21 + AA HIGH verdict:
+        ``lut_bits`` parameterizes the tone-map granularity. lut_bits=8
+        (default) preserves the canonical uint8 byte-stable backward-compat
+        path. lut_bits<8 quantizes to 2^lut_bits distinct levels then
+        scales back to span [0, 255] uint8 — brotli auto-exploits the
+        reduced entropy (typically 30-40% smaller compressed grayscale
+        at lut_bits=5 vs uint8).
+
+        The output dtype is always uint8 (GLV1 schema preserved per
+        Catalog #110/#113); the actual information is `lut_bits` bits per
+        pixel because only 2^lut_bits distinct values appear.
+
         Returns:
             ``(num_pairs, 1, H/D, W/D)`` uint8 tensor of quantized grayscale.
         """
         # Clamp to [0, 1] and scale to [0, 255]
         with torch.no_grad():
-            q = (self.grayscale.detach().clamp(0.0, 1.0) * 255.0).round()
+            if self.cfg.lut_bits >= 8:
+                # Byte-stable backward compat path (canonical uint8 quantization)
+                q = (self.grayscale.detach().clamp(0.0, 1.0) * 255.0).round()
+            else:
+                # lut_bits < 8: quantize to 2^lut_bits levels then rescale to uint8 span.
+                # Level count: 2^lut_bits. Level spacing: 255 / (2^lut_bits - 1).
+                # Round to nearest level, then encode as the nearest level's uint8 value.
+                levels = 2 ** self.cfg.lut_bits
+                clamped = self.grayscale.detach().clamp(0.0, 1.0)
+                # Quantize to [0, levels-1] integer indices
+                indices = (clamped * (levels - 1)).round()
+                # Map back to [0, 255] uint8 span (level_i -> 255 * i / (levels - 1))
+                q = (indices * 255.0 / (levels - 1)).round()
         return q.to(torch.uint8)
 
     def runtime_state_dict_for_archive(self) -> dict[str, torch.Tensor]:
