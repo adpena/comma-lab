@@ -146,6 +146,16 @@ EVENT_HARVESTED = "harvested"
 EVENT_FAILED = "failed"
 EVENT_STALE = "stale"
 EVENT_MANUALLY_TERMINATED = "manually_terminated"
+# Catalog #360 sister of #339: a pre-spawn FATAL in `main()` that calls
+# `sys.exit()` BEFORE `fn.spawn()` produces a silent-no-spawn pattern from
+# Modal's perspective (app initialized, no task fired, app stopped). The
+# canonical helper `register_pre_spawn_fatal` writes this event so the
+# harvester + operator dashboard can distinguish silent-no-spawn from
+# successful dispatch. Per CLAUDE.md "Bugs must be permanently fixed AND
+# self-protected against" + the OVERNIGHT-J STC v2 5th consecutive silent-
+# no-spawn anchor. The synthetic call_id format is
+# `pre_spawn_fatal_<label>_<utc_compact>` since no Modal call_id exists yet.
+EVENT_PRE_SPAWN_FATAL = "pre_spawn_fatal"
 
 VALID_EVENT_TYPES = frozenset(
     {
@@ -154,6 +164,7 @@ VALID_EVENT_TYPES = frozenset(
         EVENT_FAILED,
         EVENT_STALE,
         EVENT_MANUALLY_TERMINATED,
+        EVENT_PRE_SPAWN_FATAL,
     }
 )
 
@@ -163,13 +174,15 @@ STATUS_HARVESTED = EVENT_HARVESTED
 STATUS_FAILED = EVENT_FAILED
 STATUS_STALE = EVENT_STALE
 STATUS_MANUALLY_TERMINATED = EVENT_MANUALLY_TERMINATED
+STATUS_PRE_SPAWN_FATAL = EVENT_PRE_SPAWN_FATAL
 
 VALID_STATUSES = VALID_EVENT_TYPES
 
 # Terminal statuses (no further events expected). A call_id whose latest row
 # carries one of these is "harvested or otherwise resolved" for the purpose of
-# ``query_unharvested``.
-TERMINAL_STATUSES = frozenset({STATUS_HARVESTED, STATUS_FAILED, STATUS_STALE, STATUS_MANUALLY_TERMINATED})
+# ``query_unharvested``. Pre-spawn-fatal is terminal: no spawn ever happened,
+# no further events to expect.
+TERMINAL_STATUSES = frozenset({STATUS_HARVESTED, STATUS_FAILED, STATUS_STALE, STATUS_MANUALLY_TERMINATED, STATUS_PRE_SPAWN_FATAL})
 
 
 class CallIdLedgerCorruptError(RuntimeError):
@@ -1487,6 +1500,197 @@ def register_dispatched_call_id_fail_closed(
                 "Modal dashboard."
             )
         raise LedgerRegistrationFailedError(msg) from exc
+
+
+def register_pre_spawn_fatal(
+    *,
+    label: str,
+    lane_id: str,
+    fatal_reason: str,
+    exit_code: int = 2,
+    sys_exit_line_number: int | None = None,
+    sys_exit_helper_source: str | None = None,
+    write_last_resort_dump: bool = True,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Catalog #360 sister of #339 — pre-spawn FATAL observability helper.
+
+    The OVERNIGHT-J STC v2 5th consecutive silent-no-spawn anchor (per
+    `.omx/research/stc_v2_ratify_or_defer_path_b_dispatch_landed_20260521.md`)
+    proved that the upstream-of-``fn.spawn()`` ``sys.exit(2)`` paths in
+    ``experiments/modal_train_lane.py::main`` produce a silent-no-spawn
+    pattern: Modal app initializes (creates mounts + functions), the
+    ``@app.local_entrypoint()`` ``main()`` then calls ``sys.exit(2)``
+    BEFORE ``fn.spawn()`` queues a task, and Modal sees a clean exit with
+    zero tasks. The app goes to "stopped" state with no row in the
+    canonical ledger and no recovery dump.
+
+    This helper extincts that structural bug class by writing a
+    ``pre_spawn_fatal`` event to the canonical ledger BEFORE the caller
+    calls ``sys.exit(exit_code)``. The harvester + operator dashboard +
+    cost-band reconciliation surface can then distinguish:
+
+    - silent-no-spawn from cleanly-dispatched-but-failed (Catalog #339)
+    - operational/environmental fatal from substrate paradigm falsification
+    - which specific ``sys.exit(2)`` path fired (line + helper source)
+
+    Per Carmack MVP-first 5-step + CLAUDE.md "Bugs must be permanently
+    fixed AND self-protected against" + "Modal `.spawn()` HARVEST OR LOSE"
+    non-negotiables. Sister of Catalog #339 (post-spawn registration
+    fail-closed); together they extinct the silent-no-spawn bug class at
+    BOTH the pre-spawn AND post-spawn surfaces.
+
+    Args:
+        label: same label argument the caller would have passed to fn.spawn().
+            Used to build the synthetic call_id (since no Modal call_id
+            exists yet).
+        lane_id: dispatch lane id per Catalog #126.
+        fatal_reason: human-readable FATAL message (typically the same string
+            the caller prints to stderr before sys.exit).
+        exit_code: the sys.exit code the caller will use (default 2 matches
+            modal_train_lane.py FATAL paths).
+        sys_exit_line_number: optional source line number where the
+            sys.exit(...) is about to fire. Helps the harvester correlate
+            failure pattern to specific upstream check.
+        sys_exit_helper_source: optional helper module/path that triggered
+            the FATAL (e.g. "_collect_trainer_extra_mount_payload").
+        write_last_resort_dump: best-effort tmp-dump fallback if canonical
+            append fails. Mirrors Catalog #339's last-resort dump pattern.
+        **kwargs: additional metadata fields (gpu, mounted_code_git_head,
+            agent, etc.) forwarded to the canonical ledger row.
+
+    Returns:
+        The appended record (or the last-resort-dump record on canonical
+        append failure). The caller should ALWAYS proceed to sys.exit()
+        after invoking this helper.
+
+    Raises:
+        Nothing — this helper is intentionally fail-OPEN (best-effort
+        observability) so it cannot block the FATAL exit it's instrumenting.
+        Failure modes are surfaced via last-resort tmp-dump + a printed
+        warning to stderr (NOT a raise) so the caller's sys.exit() flow
+        is preserved.
+    """
+    import sys as _sys
+
+    # Synthetic call_id: no Modal call_id exists yet (fn.spawn never ran).
+    # Format: `pre_spawn_fatal_<label_first_64>_<utc_compact>` so the row
+    # is uniquely identifiable across multiple pre-spawn fatals on the
+    # same label (e.g. STC v2's 5 consecutive fatals would produce 5 rows).
+    utc_compact = _dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    label_token = label[:64].replace("/", "_").replace(" ", "_")
+    synthetic_call_id = f"pre_spawn_fatal_{label_token}_{utc_compact}"
+
+    record_extras: dict[str, Any] = {
+        "fatal_reason": fatal_reason[:1000],
+        "exit_code": int(exit_code),
+        "sys_exit_line_number": sys_exit_line_number,
+        "sys_exit_helper_source": sys_exit_helper_source,
+        # Mark the row as NEVER-SPAWNED so the harvester does not attempt
+        # to poll Modal for a result. Per CLAUDE.md "Forbidden empirical-
+        # claim-without-evidence-tag" — score_claim=False structurally.
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "modal_call_id_actually_exists": False,
+        "evidence_grade": "[pre_spawn_fatal_diagnostic]",
+    }
+    # Allow caller to forward additional context fields (gpu, head, etc.).
+    record_extras.update(kwargs)
+
+    # Construct the record directly with EVENT_PRE_SPAWN_FATAL semantics.
+    # We do NOT route through register_dispatched_call_id() because that
+    # helper hardcodes event_type=EVENT_DISPATCHED + status=STATUS_DISPATCHED
+    # and reserves those keys (they cannot be overridden via extras).
+    record: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "event_type": EVENT_PRE_SPAWN_FATAL,
+        "call_id": synthetic_call_id,
+        "lane_id": lane_id,
+        "label": label,
+        "platform": kwargs.get("platform", "modal"),
+        "gpu": kwargs.get("gpu", "T4"),
+        "expected_cost_usd": kwargs.get("expected_cost_usd"),
+        "expected_axis": kwargs.get("expected_axis", "cuda"),
+        "recipe": kwargs.get("recipe"),
+        "dispatched_at_utc": _now_iso(),
+        "harvested_at_utc": None,
+        "status": STATUS_PRE_SPAWN_FATAL,
+        "rc": int(exit_code),
+        "elapsed_seconds": None,
+        "cost_actual_usd": 0.0,  # pre-spawn = zero paid cost
+        "score": None,
+        "score_axis": None,
+        "archive_sha256": None,
+        "archive_bytes": None,
+        "max_seconds": kwargs.get("max_seconds"),
+        "mounted_code_git_head": kwargs.get("mounted_code_git_head"),
+        "agent": kwargs.get("agent", "claude"),
+        "subagent_id": kwargs.get("subagent_id"),
+        "session_id": kwargs.get("session_id"),
+        "upstream_snapshot_sha256": kwargs.get("upstream_snapshot_sha256"),
+        "written_at_utc": _now_iso(),
+        "written_pid": os.getpid(),
+        "written_host": socket.gethostname(),
+        # Catalog #360-specific observability fields. Keys do not collide
+        # with the canonical schema because they are pre-spawn-fatal sub-
+        # surface only; harvester + dashboard consumers detect via
+        # event_type=EVENT_PRE_SPAWN_FATAL.
+        "fatal_reason": record_extras["fatal_reason"],
+        "exit_code": record_extras["exit_code"],
+        "sys_exit_line_number": record_extras["sys_exit_line_number"],
+        "sys_exit_helper_source": record_extras["sys_exit_helper_source"],
+        "evidence_grade": record_extras["evidence_grade"],
+        "modal_call_id_actually_exists": record_extras["modal_call_id_actually_exists"],
+        "score_claim": record_extras["score_claim"],
+        "promotion_eligible": record_extras["promotion_eligible"],
+        "rank_or_kill_eligible": record_extras["rank_or_kill_eligible"],
+    }
+    try:
+        return _append_event_locked(record)
+    except Exception as exc:
+        # Fail-OPEN: best-effort tmp-dump, but never raise. The caller's
+        # sys.exit() flow must not be blocked by observability machinery.
+        last_resort_path: Path | None = None
+        if write_last_resort_dump:
+            record = {
+                "schema_version": SCHEMA_VERSION,
+                "event_type": EVENT_PRE_SPAWN_FATAL,
+                "call_id": synthetic_call_id,
+                "lane_id": lane_id,
+                "label": label,
+                "status": STATUS_PRE_SPAWN_FATAL,
+                "dispatched_at_utc": _now_iso(),
+                "_recovery_reason": (
+                    f"pre_spawn_fatal_canonical_append_failed:{type(exc).__name__}:{str(exc)[:200]}"
+                ),
+                **record_extras,
+            }
+            try:
+                last_resort_path = _write_last_resort_tmp_ledger_dump(record)
+            except Exception:  # pragma: no cover -- truly catastrophic
+                last_resort_path = None
+        print(
+            f"[Catalog #360] pre-spawn-fatal observability write failed: "
+            f"{type(exc).__name__}: {exc}. "
+            + (
+                f"Last-resort dump at {last_resort_path}."
+                if last_resort_path is not None
+                else "Last-resort dump ALSO failed. The pre-spawn fatal will be "
+                "INVISIBLE to the harvester. Operator must manually correlate "
+                "the Modal app id (printed before sys.exit) to this dispatch."
+            ),
+            file=_sys.stderr,
+        )
+        # Return synthetic record so callers can still log/print it locally.
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "event_type": EVENT_PRE_SPAWN_FATAL,
+            "call_id": synthetic_call_id,
+            "label": label,
+            "lane_id": lane_id,
+            **record_extras,
+        }
 
 
 def poll_ledger_for_call_id(
