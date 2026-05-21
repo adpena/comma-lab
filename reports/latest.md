@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-21T00:58:29Z
+generated_at: 2026-05-21T01:05:24Z
 from_state_hash: canonical_frontier_pointer_20260520T115711Z_plus_wave3_zero_spend_cascade
-regenerated_by: codex:ll_pair4_authority_hardening_20260521
-last_refreshed_at: 2026-05-21T00:58:29Z
-last_refreshed_by: codex:ll_pair4_authority_hardening_20260521
-last_refreshed_head: 3e97ee75100f58a69b4ccf14e8b7a033b3ec0252
+regenerated_by: codex:procedural_predictor_residual_equation_20260521
+last_refreshed_at: 2026-05-21T01:05:24Z
+last_refreshed_by: codex:procedural_predictor_residual_equation_20260521
+last_refreshed_head: b9fba656bc8a0d377397631562e2f588b2a01bba
 last_refreshed_note: |
   Current frontier/status refresh after PR #110, D-3 compliance clearance,
   PR101/FEC6 PacketIR runtime-consumption closure, VQ K=2 diagnostic
@@ -13,8 +13,8 @@ last_refreshed_note: |
   tools/scan_best_anchor_per_axis.py at 2026-05-21T00:09Z; no CPU/CUDA frontier
   score changed. The 2026-05-21 operation notes now include the pair #2
   sparse PacketIR/SRL1 null-byte residual falsification, pair #4 seed-boundary
-  guard, and LL authority hardening, and are the current routing authority for
-  selector/null-byte follow-on work.
+  guard, LL authority hardening, and the residual-hybrid sister equation, and
+  are the current routing authority for selector/null-byte follow-on work.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-21 UTC
@@ -135,6 +135,16 @@ last_refreshed_note: |
   in-place charged bytes versus `97,473` procedural-plus-SRL1 residual bytes
   (`-81,181` bytes saved, empirical advisory Delta S `+0.054055`, z-score
   `101.18`, `CARGO-CULTED`). This pair should not receive paid eval.
+- **Residual-hybrid magic-codec accounting is now separated from replacement
+  savings**:
+  `.omx/research/procedural_predictor_residual_savings_equation_landed_20260521T010524Z_codex.md`
+  registers canonical equation
+  `procedural_predictor_plus_residual_correction_savings_v1`. It uses
+  `Delta S_rate = 25 * (K_predictor + R_residual + H_envelope - N_original) / 37,545,489`
+  and carries the pair #1 and pair #2 smokes as zero-residual anchors under
+  the corrected formula. This preserves the magic-codec residual paradigm but
+  prevents future residual-hybrid work from reusing equation #26's direct
+  codebook-replacement savings predicate.
 - **Magic-codec pair #4 procedural-seed orthogonality is closed**:
   `.omx/research/magic_codec_pair_4_procedural_seed_orthogonality_smoke_landed_20260521T004054Z_codex.md`
   tests seed lengths `16/32/64/128/256` across six reversible byte-orderings

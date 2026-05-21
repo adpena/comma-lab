@@ -90,6 +90,11 @@ from tac.canonical_equations.builtins import (
     build_all_initial_equations,
     populate_initial_equations,
 )
+from tac.canonical_equations.procedural_predictor_residual_savings import (
+    build_procedural_predictor_plus_residual_correction_savings_v1,
+    predict_procedural_predictor_plus_residual_correction_savings,
+    validate_residual_hybrid_context,
+)
 from tac.canonical_equations.bayesian_posterior_update import (
     BayesianPosterior,
     DEFAULT_NIG_PRIOR,
@@ -138,6 +143,9 @@ __all__ = [
     # Initial population
     "build_all_initial_equations",
     "populate_initial_equations",
+    "build_procedural_predictor_plus_residual_correction_savings_v1",
+    "predict_procedural_predictor_plus_residual_correction_savings",
+    "validate_residual_hybrid_context",
     # Bayesian posterior update (SLOT MG-2, Catalog #350)
     "BayesianPosterior",
     "DEFAULT_NIG_PRIOR",
