@@ -20,6 +20,11 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.optimization.decoder_q_surface_objective import (  # noqa: E402
+    build_surface_objective,
+    sort_atoms_for_surface_objective,
+    summarize_candidate_surface_proxy,
+)
 from tac.optimization.fec6_decoder_mutations import (  # noqa: E402
     DecoderQMutation,
     Fec6DecoderMutationError,
@@ -30,11 +35,6 @@ from tac.optimization.fec6_decoder_mutations import (  # noqa: E402
     replace_fec6_decoder_blob,
     sha256_bytes,
     write_stored_archive,
-)
-from tac.optimization.decoder_q_surface_objective import (  # noqa: E402
-    build_surface_objective,
-    sort_atoms_for_surface_objective,
-    summarize_candidate_surface_proxy,
 )
 
 
@@ -150,13 +150,130 @@ def _atom(row: dict[str, Any], advisory: dict[str, Any] | None) -> dict[str, Any
     }
 
 
+def _signed_calibration_maps(
+    signed_calibration: dict[str, Any] | None,
+) -> dict[str, dict[tuple[str, int, int], list[dict[str, Any]]]]:
+    if signed_calibration is None:
+        return {"same": {}, "inverse": {}}
+    if signed_calibration.get("schema") != "decoder_q_surface_sign_calibration_labels.v1":
+        raise SystemExit("decoder-q signed calibration schema mismatch")
+    for authority_field in (
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "promotable",
+    ):
+        if signed_calibration.get(authority_field) is not False:
+            raise SystemExit(
+                f"decoder-q signed calibration {authority_field} must be false"
+            )
+    labels = signed_calibration.get("labels")
+    if not isinstance(labels, list):
+        raise SystemExit("decoder-q signed calibration labels[] missing")
+    same: dict[tuple[str, int, int], list[dict[str, Any]]] = defaultdict(list)
+    inverse: dict[tuple[str, int, int], list[dict[str, Any]]] = defaultdict(list)
+    for label in labels:
+        if not isinstance(label, dict):
+            continue
+        for authority_field in (
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "ready_for_exact_eval_dispatch",
+            "rank_or_kill_eligible",
+            "promotable",
+        ):
+            if label.get(authority_field) is not False:
+                raise SystemExit(
+                    "decoder-q signed calibration label "
+                    f"{authority_field} must be false"
+                )
+        observed_sign = label.get("observed_score_delta_sign")
+        try:
+            observed_sign_i = int(observed_sign)
+        except (TypeError, ValueError):
+            continue
+        atom_keys = label.get("atom_mutation_keys")
+        if not isinstance(atom_keys, list):
+            continue
+        for atom_key in atom_keys:
+            if not isinstance(atom_key, dict):
+                continue
+            tensor_name = atom_key.get("tensor_name")
+            q_offset = atom_key.get("q_offset")
+            delta = atom_key.get("delta")
+            try:
+                key = (str(tensor_name), int(q_offset), int(delta))
+            except (TypeError, ValueError):
+                continue
+            same[key].append(label)
+            if observed_sign_i > 0:
+                inverse[(key[0], key[1], -key[2])].append(label)
+    return {"same": same, "inverse": inverse}
+
+
+def _attach_signed_calibration(
+    atom: dict[str, Any],
+    calibration_maps: dict[str, dict[tuple[str, int, int], list[dict[str, Any]]]],
+) -> dict[str, Any]:
+    mutation = atom["mutation"]
+    key = (
+        str(mutation["tensor_name"]),
+        int(mutation["q_offset"]),
+        int(mutation["delta"]),
+    )
+    same = calibration_maps["same"].get(key, [])
+    inverse = calibration_maps["inverse"].get(key, [])
+    if not same and not inverse:
+        return atom
+    same_regressions = [
+        label for label in same if int(label.get("observed_score_delta_sign") or 0) > 0
+    ]
+    same_improvements = [
+        label for label in same if int(label.get("observed_score_delta_sign") or 0) < 0
+    ]
+    boost = 1.0
+    if inverse:
+        boost *= 4.0
+    if same_improvements:
+        boost *= 2.0
+    if same_regressions:
+        boost *= 0.1
+    annotated = dict(atom)
+    annotated["signed_calibration"] = {
+        "schema": "decoder_q_signed_calibration_atom_annotation.v1",
+        "same_sign_observation_count": len(same),
+        "same_sign_regression_count": len(same_regressions),
+        "same_sign_improvement_count": len(same_improvements),
+        "inverse_of_regressing_candidate_count": len(inverse),
+        "priority_multiplier": boost,
+        "score_claim": False,
+    }
+    return annotated
+
+
+def _calibration_multiplier(atom: dict[str, Any]) -> float:
+    calibration = atom.get("signed_calibration")
+    if not isinstance(calibration, dict):
+        return 1.0
+    try:
+        return float(calibration.get("priority_multiplier", 1.0))
+    except (TypeError, ValueError):
+        return 1.0
+
+
 def _rank_atoms(
     rows: list[dict[str, Any]],
     advisory_by_key: dict[tuple[str, int, int], dict[str, Any]],
     *,
     surface_objective: dict[str, Any] | None = None,
+    signed_calibration: dict[str, Any] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     atoms = [_atom(row, advisory_by_key.get(_mutation_key(row))) for row in rows]
+    calibration_maps = _signed_calibration_maps(signed_calibration)
+    atoms = [_attach_signed_calibration(atom, calibration_maps) for atom in atoms]
 
     def improved(atom: dict[str, Any]) -> bool:
         advisory = atom.get("advisory")
@@ -191,19 +308,37 @@ def _rank_atoms(
             sign = 1 if int(atom["mutation"]["delta"]) > 0 else -1
             if -sign in bad_signs and atom.get("advisory") is None:
                 sign_inverted.append(atom)
+    sign_inverted.extend(
+        atom
+        for atom in atoms
+        if atom.get("advisory") is None
+        and (
+            atom.get("signed_calibration", {}).get("inverse_of_regressing_candidate_count", 0)
+            if isinstance(atom.get("signed_calibration"), dict)
+            else 0
+        )
+        > 0
+    )
+    sign_inverted_by_id: dict[str, dict[str, Any]] = {}
+    for atom in sign_inverted:
+        sign_inverted_by_id.setdefault(str(atom["candidate_id"]), atom)
+    sign_inverted = list(sign_inverted_by_id.values())
 
     unmeasured = [atom for atom in atoms if atom.get("advisory") is None]
     good = [atom for atom in atoms if improved(atom)]
     bad = [atom for atom in atoms if measured_bad(atom)]
     bias = [atom for atom in atoms if str(atom["mutation"]["tensor_name"]).endswith(".bias")]
 
-    score_sort = lambda atom: (
-        -float(atom["target_mass"]),
-        abs(int(atom["mutation"]["delta"])),
-        str(atom["mutation"]["tensor_name"]),
-        int(atom["mutation"]["q_offset"]),
-        int(atom["mutation"]["delta"]),
-    )
+    def score_sort(atom: dict[str, Any]) -> tuple[float, float, int, str, int, int]:
+        return (
+            -_calibration_multiplier(atom),
+            -float(atom["target_mass"]),
+            abs(int(atom["mutation"]["delta"])),
+            str(atom["mutation"]["tensor_name"]),
+            int(atom["mutation"]["q_offset"]),
+            int(atom["mutation"]["delta"]),
+        )
+
     for bucket in (unmeasured, good, bad, bias, sign_inverted):
         bucket.sort(key=score_sort)
 
@@ -220,10 +355,22 @@ def _rank_atoms(
     if not negative_control:
         negative_control = atoms[-8:]
 
+    def ordered_unique(*buckets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for bucket in buckets:
+            for atom in bucket:
+                candidate_id = str(atom["candidate_id"])
+                if candidate_id in seen:
+                    continue
+                seen.add(candidate_id)
+                out.append(atom)
+        return out
+
     ranked = {
-        "seg_heavy": good + unmeasured,
-        "sign_inverted_from_bad": sign_inverted + unmeasured,
-        "mixed_tradeoff": mixed + unmeasured,
+        "seg_heavy": ordered_unique(good, unmeasured),
+        "sign_inverted_from_bad": ordered_unique(sign_inverted, unmeasured),
+        "mixed_tradeoff": ordered_unique(mixed, unmeasured),
         "bias_only": bias,
         "negative_control": negative_control,
     }
@@ -344,9 +491,15 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
     advisory_summary = _read_json(args.advisory_summary.resolve()) if args.advisory_summary and args.advisory_summary.is_file() else None
     response_surface = _read_json(args.decoder_q_response_surface.resolve()) if args.decoder_q_response_surface and args.decoder_q_response_surface.is_file() else None
     surface_objective = build_surface_objective(response_surface) if response_surface is not None else None
+    signed_calibration = _read_json(args.decoder_q_signed_calibration.resolve()) if args.decoder_q_signed_calibration and args.decoder_q_signed_calibration.is_file() else None
     rows = _fixed_rows(feasibility)
     advisory_by_key = _advisory_by_key(advisory_summary, args.baseline_score)
-    ranked = _rank_atoms(rows, advisory_by_key, surface_objective=surface_objective)
+    ranked = _rank_atoms(
+        rows,
+        advisory_by_key,
+        surface_objective=surface_objective,
+        signed_calibration=signed_calibration,
+    )
     budgets = _parse_csv_ints(args.edit_budgets)
     requested_buckets = [part.strip() for part in args.buckets.split(",") if part.strip()]
     member_bytes = args.archive_bin.resolve().read_bytes()
@@ -403,6 +556,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
             "feasibility": str(args.feasibility.resolve()),
             "advisory_summary": str(args.advisory_summary.resolve()) if args.advisory_summary else None,
             "decoder_q_response_surface": str(args.decoder_q_response_surface.resolve()) if args.decoder_q_response_surface else None,
+            "decoder_q_signed_calibration": str(args.decoder_q_signed_calibration.resolve()) if args.decoder_q_signed_calibration else None,
             "baseline_score": args.baseline_score,
             "edit_budgets": budgets,
             "buckets": requested_buckets,
@@ -411,6 +565,11 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
         },
         "ranked_atom_counts": {bucket: len(atoms) for bucket, atoms in ranked.items()},
         "response_surface_objective": surface_objective,
+        "decoder_q_signed_calibration_summary": (
+            signed_calibration.get("summary")
+            if isinstance(signed_calibration, dict)
+            else None
+        ),
         "summary": {
             "single_fixed_atom_count": len(rows),
             "advisory_measurement_count": len(advisory_by_key),
@@ -434,6 +593,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--feasibility", type=Path, required=True)
     parser.add_argument("--advisory-summary", type=Path)
     parser.add_argument("--decoder-q-response-surface", type=Path)
+    parser.add_argument("--decoder-q-signed-calibration", type=Path)
     parser.add_argument("--baseline-score", type=float)
     parser.add_argument("--expected-member-sha256")
     parser.add_argument("--edit-budgets", default="1,2,4,8,16")

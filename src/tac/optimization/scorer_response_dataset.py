@@ -34,6 +34,7 @@ VALIDATION_GATE_SCHEMA = "scorer_response_dataset_validation_gate.v1"
 MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
 MLX_TORCH_PARITY_SWEEP_SCHEMA = "mlx_scorer_torch_parity_sweep.v1"
 MLX_SCORE_CALIBRATION_SCHEMA = "mlx_score_calibration.v1"
+DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
 
 DEFAULT_RESPONSE_PREDICTION_FIELDS = (
     "predicted_delta_vs_baseline_score",
@@ -2448,6 +2449,7 @@ def build_decoder_q_surface_advisory_gate(advisory_batch: dict[str, Any]) -> dic
                     "response_surface_objective"
                 ),
             )
+        manifest_atoms = _decoder_q_manifest_atom_keys(manifest)
         inputs = advisory_batch.get("inputs")
         if not isinstance(inputs, dict):
             inputs = {}
@@ -2486,6 +2488,20 @@ def build_decoder_q_surface_advisory_gate(advisory_batch: dict[str, Any]) -> dic
                 "archive_size_bytes": _as_int(advisory.get("archive_size_bytes")),
                 "changed_frame_count": _as_int(_get_path(row, ("raw_comparison", "changed_frame_count"))),
                 "changed_byte_count": _as_int(_get_path(row, ("raw_comparison", "byte_delta_summary", "changed_byte_count"))),
+                "atom_mutation_keys": manifest_atoms,
+                "atom_mutation_key_count": len(manifest_atoms),
+                "surface_objective_strategy": _get_path(
+                    manifest,
+                    ("response_surface_objective", "strategy"),
+                ),
+                "surface_objective_preferred_direction": _get_path(
+                    manifest,
+                    ("response_surface_objective", "preferred_direction"),
+                ),
+                "surface_objective_dominant_axis": _get_path(
+                    manifest,
+                    ("response_surface_objective", "dominant_axis"),
+                ),
                 "surface_proxy_priority": _as_float(
                     _get_path(manifest, ("response_surface_objective", "proxy_priority_sum"))
                 ),
@@ -2544,6 +2560,9 @@ def build_decoder_q_surface_advisory_gate(advisory_batch: dict[str, Any]) -> dic
         blockers.append("decoder_q_surface_advisory_best_delta_missing")
 
     status = "strict_pass" if not blockers else "blocked"
+    signed_calibration_labels = _decoder_q_surface_sign_calibration_labels(
+        surface_records
+    )
     return {
         "schema": "ll_decoder_q_surface_advisory_gate.v1",
         "producer": TOOL,
@@ -2567,14 +2586,165 @@ def build_decoder_q_surface_advisory_gate(advisory_batch: dict[str, Any]) -> dic
             "regressing_surface_guided_candidate_count": len(regressing_surface_records),
             "best_surface_guided_candidate_id": None if best_record is None else best_record.get("candidate_id"),
             "best_surface_guided_delta_vs_baseline_score": None if best_record is None else best_record.get("delta_vs_baseline_score"),
+            "signed_calibration_label_count": signed_calibration_labels["summary"][
+                "label_count"
+            ],
+            "signed_calibration_sign_mismatch_count": signed_calibration_labels[
+                "summary"
+            ]["sign_mismatch_count"],
         },
         "surface_guided_records": surface_records,
+        "signed_calibration_labels": signed_calibration_labels,
         "blockers": blockers,
         "allowed_use": (
             "decoder_q_response_surface_exact_eval_spend_filter"
             if not blockers
             else "blocked_until_surface_guided_advisory_candidate_improves"
         ),
+    }
+
+
+def _decoder_q_manifest_atom_keys(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    atoms = manifest.get("atoms")
+    if not isinstance(atoms, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for atom in atoms:
+        if not isinstance(atom, dict):
+            continue
+        mutation = atom.get("mutation")
+        if not isinstance(mutation, dict):
+            continue
+        tensor_name = mutation.get("tensor_name")
+        q_offset = _as_int(mutation.get("q_offset"))
+        delta = _as_int(mutation.get("delta"))
+        if tensor_name is None or q_offset is None or delta is None:
+            continue
+        out.append(
+            {
+                "tensor_name": str(tensor_name),
+                "q_offset": q_offset,
+                "delta": delta,
+            }
+        )
+    return out
+
+
+def _score_delta_sign(value: float | None, *, eps: float = 1.0e-12) -> int | None:
+    if value is None:
+        return None
+    if value < -eps:
+        return -1
+    if value > eps:
+        return 1
+    return 0
+
+
+def _decoder_q_surface_sign_calibration_labels(
+    surface_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Preserve advisory sign outcomes for future decoder-q planning.
+
+    A response-surface-guided candidate is only selected because the local
+    surface predicts that it should be spend-worthy. Therefore its expected
+    advisory sign is improvement (negative score delta). Regressions are not
+    score authority; they are signed calibration labels for future local
+    planning and exact-eval spend filters.
+    """
+
+    labels: list[dict[str, Any]] = []
+    for record in surface_records:
+        if record.get("fixed_length_runtime_compatible") is not True:
+            continue
+        if record.get("advisory_success") is not True:
+            continue
+        observed_delta = _as_float(record.get("delta_vs_baseline_score"))
+        observed_sign = _score_delta_sign(observed_delta)
+        if observed_sign is None:
+            continue
+        expected_sign = -1
+        sign_matches = observed_sign == expected_sign
+        label_kind = (
+            "surface_guided_improved"
+            if observed_sign < 0
+            else (
+                "surface_guided_regressed"
+                if observed_sign > 0
+                else "surface_guided_neutral"
+            )
+        )
+        labels.append(
+            {
+                "schema": "decoder_q_surface_sign_calibration_label.v1",
+                "candidate_id": record.get("candidate_id"),
+                "bucket": record.get("bucket"),
+                "edit_budget": record.get("edit_budget"),
+                "expected_score_delta_sign": expected_sign,
+                "observed_score_delta_sign": observed_sign,
+                "sign_matches_expectation": sign_matches,
+                "label_kind": label_kind,
+                "observed_delta_vs_baseline_score": observed_delta,
+                "canonical_score": record.get("canonical_score"),
+                "avg_segnet_dist": record.get("avg_segnet_dist"),
+                "avg_posenet_dist": record.get("avg_posenet_dist"),
+                "surface_objective_strategy": record.get("surface_objective_strategy"),
+                "surface_objective_preferred_direction": record.get(
+                    "surface_objective_preferred_direction"
+                ),
+                "surface_objective_dominant_axis": record.get(
+                    "surface_objective_dominant_axis"
+                ),
+                "surface_proxy_priority": record.get("surface_proxy_priority"),
+                "atom_mutation_keys": record.get("atom_mutation_keys") or [],
+                "recommended_atom_action": (
+                    "suppress_same_sign_try_inverse"
+                    if observed_sign > 0
+                    else (
+                        "preserve_or_expand_same_sign"
+                        if observed_sign < 0
+                        else "treat_as_low_priority_neutral"
+                    )
+                ),
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+            }
+        )
+    mismatch_count = len(
+        [label for label in labels if label["sign_matches_expectation"] is False]
+    )
+    regressed_count = len(
+        [label for label in labels if label["label_kind"] == "surface_guided_regressed"]
+    )
+    improved_count = len(
+        [label for label in labels if label["label_kind"] == "surface_guided_improved"]
+    )
+    neutral_count = len(
+        [label for label in labels if label["label_kind"] == "surface_guided_neutral"]
+    )
+    return {
+        "schema": DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA,
+        "producer": TOOL,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "allowed_use": "local_decoder_q_sign_calibration_only",
+        "forbidden_use": "score_claim_or_rank_or_kill_or_promotion",
+        "summary": {
+            "label_count": len(labels),
+            "sign_mismatch_count": mismatch_count,
+            "regressed_label_count": regressed_count,
+            "improved_label_count": improved_count,
+            "neutral_label_count": neutral_count,
+            "all_labels_regressed": bool(labels) and regressed_count == len(labels),
+        },
+        "labels": labels,
     }
 
 

@@ -1362,6 +1362,16 @@ def test_decoder_q_surface_advisory_gate_blocks_all_regressing_surface_candidate
         "decoder_q_surface_advisory_surface_guided_all_non_improving"
         in gate["blockers"]
     )
+    labels = gate["signed_calibration_labels"]
+    assert labels["schema"] == "decoder_q_surface_sign_calibration_labels.v1"
+    assert labels["score_claim"] is False
+    assert labels["summary"]["label_count"] == 3
+    assert labels["summary"]["sign_mismatch_count"] == 3
+    assert labels["summary"]["all_labels_regressed"] is True
+    assert labels["labels"][0]["recommended_atom_action"] == "suppress_same_sign_try_inverse"
+    assert labels["labels"][0]["atom_mutation_keys"] == [
+        {"tensor_name": "decoder.weight", "q_offset": 0, "delta": 1}
+    ]
 
 
 def test_next_probe_plan_repairs_decoder_q_surface_after_advisory_regression() -> None:
@@ -1512,6 +1522,15 @@ def _decoder_q_surface_advisory_batch(*, deltas: tuple[float, ...]) -> dict:
                 "mutation_manifest": {
                     "bucket": "response_surface_guided",
                     "edit_budget": index + 1,
+                    "atoms": [
+                        {
+                            "mutation": {
+                                "tensor_name": "decoder.weight",
+                                "q_offset": index,
+                                "delta": 1,
+                            }
+                        }
+                    ],
                     "fixed_length_runtime_compatible": True,
                     "length_delta": 0,
                     "score_claim": False,
@@ -1522,6 +1541,9 @@ def _decoder_q_surface_advisory_batch(*, deltas: tuple[float, ...]) -> dict:
                     "promotable": False,
                     "response_surface_objective": {
                         "proxy_priority_sum": float(index + 1),
+                        "strategy": "suppress_or_invert_regressions_first",
+                        "preferred_direction": "suppress",
+                        "dominant_axis": "seg",
                         "score_claim": False,
                         "score_claim_valid": False,
                         "promotion_eligible": False,
