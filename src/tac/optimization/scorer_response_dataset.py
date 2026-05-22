@@ -15,9 +15,10 @@ import importlib
 import importlib.util
 import json
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 
@@ -626,7 +627,7 @@ def _discover_scorer_response_consumer_modules() -> list[Any]:
         if not callable(discover):
             return []
         modules = discover()
-    except Exception:  # noqa: BLE001 - observability-only discovery
+    except Exception:
         return []
     return [
         mod
@@ -644,9 +645,9 @@ def _invoke_scorer_response_consumer(
     module_name = getattr(module, "__name__", "<unknown>")
     consumer_name = str(getattr(module, "CONSUMER_NAME", module_name))
     try:
-        hook = getattr(module, "consume_candidate")
+        hook = module.consume_candidate
         verdict = hook(dict(row))
-    except Exception as exc:  # noqa: BLE001 - consumer boundary
+    except Exception as exc:
         return {
             "consumer_module": module_name,
             "consumer_name": consumer_name,
@@ -1069,22 +1070,26 @@ def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 best = {"row_id": row["row_id"], "family": row["family"], "delta_vs_baseline_score": delta}
             if worst is None or delta > worst["delta_vs_baseline_score"]:
                 worst = {"row_id": row["row_id"], "family": row["family"], "delta_vs_baseline_score": delta}
-        if isinstance(scorer_delta, (int, float)):
-            if best_scorer is None or scorer_delta < best_scorer["scorer_delta_vs_baseline"]:
-                best_scorer = {
-                    "row_id": row["row_id"],
-                    "family": row["family"],
-                    "scorer_delta_vs_baseline": scorer_delta,
-                    "break_even_added_bytes_from_scorer_gain": row.get("break_even_added_bytes_from_scorer_gain"),
-                }
+        if isinstance(scorer_delta, (int, float)) and (
+            best_scorer is None
+            or scorer_delta < best_scorer["scorer_delta_vs_baseline"]
+        ):
+            best_scorer = {
+                "row_id": row["row_id"],
+                "family": row["family"],
+                "scorer_delta_vs_baseline": scorer_delta,
+                "break_even_added_bytes_from_scorer_gain": row.get("break_even_added_bytes_from_scorer_gain"),
+            }
         margin = row.get("byte_budget_margin_vs_break_even")
-        if isinstance(margin, (int, float)):
-            if best_margin is None or margin > best_margin["byte_budget_margin_vs_break_even"]:
-                best_margin = {
-                    "row_id": row["row_id"],
-                    "family": row["family"],
-                    "byte_budget_margin_vs_break_even": margin,
-                }
+        if isinstance(margin, (int, float)) and (
+            best_margin is None
+            or margin > best_margin["byte_budget_margin_vs_break_even"]
+        ):
+            best_margin = {
+                "row_id": row["row_id"],
+                "family": row["family"],
+                "byte_budget_margin_vs_break_even": margin,
+            }
     return {
         "row_count": len(rows),
         "family_counts": by_family,
@@ -1215,6 +1220,17 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
                 f"weight={float(row.get('ll_sampling_weight', 0.0)):.6g}"
             )
         lines.append("")
+    mlx_plan = plan.get("mlx_scorer_response_execution_plan")
+    if isinstance(mlx_plan, dict):
+        execution = mlx_plan.get("recommended_execution")
+        if isinstance(execution, dict):
+            lines.extend(["## MLX Execution Recommendation", ""])
+            lines.append(f"- Score claim: `{mlx_plan.get('score_claim')}`")
+            lines.append(f"- Device: `{execution.get('device')}`")
+            lines.append(f"- Batch pairs: `{execution.get('batch_pairs')}`")
+            lines.append(f"- Pair window: `{execution.get('pair_window')}`")
+            lines.append(f"- Response output: `{execution.get('response_output')}`")
+            lines.append("")
     lines.extend(["## Prohibitions", ""])
     for item in plan.get("prohibitions", []):
         lines.append(f"- `{item['rule']}`: {item['reason']}")

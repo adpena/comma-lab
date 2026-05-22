@@ -70,6 +70,7 @@ def test_profile_stability_passes_small_metric_drift_with_sha_warning() -> None:
     assert manifest["selection"]["eligible_row_indices"] == [0, 1]
     assert manifest["selection"]["recommended_row"]["index"] == 1
     assert manifest["selection"]["recommended_row"]["batch_pairs"] == 2
+    assert manifest["profile_summary"]["archive_size_bytes"] is None
 
 
 def test_profile_stability_can_require_component_sha_match() -> None:

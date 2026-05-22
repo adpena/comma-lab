@@ -17,6 +17,10 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.local_acceleration.mlx_execution_plan import (  # noqa: E402
+    MLXExecutionPlanError,
+    build_mlx_scorer_response_execution_plan,
+)
 from tac.optimization.scorer_response_dataset import (  # noqa: E402
     ScorerResponseDatasetError,
     build_next_probe_plan,
@@ -58,6 +62,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "procedural seed bytes if the boundary is validated."
         ),
     )
+    parser.add_argument(
+        "--mlx-profile-stability",
+        type=Path,
+        help=(
+            "Optional MLX profile-stability manifest. When provided, attach a "
+            "non-authoritative local scorer-response execution recommendation "
+            "for harvesting the next LL rows."
+        ),
+    )
+    parser.add_argument(
+        "--mlx-archive-size-bytes",
+        type=int,
+        help=(
+            "Archive byte count for the MLX execution recommendation when the "
+            "stability manifest predates profile_summary.archive_size_bytes."
+        ),
+    )
+    parser.add_argument("--mlx-response-output", type=Path)
+    parser.add_argument("--mlx-components-dir", type=Path)
+    parser.add_argument("--mlx-progress-every", type=int, default=0)
+    parser.add_argument(
+        "--allow-mlx-gpu-research-signal",
+        action="store_true",
+        help=(
+            "Permit a selected MLX GPU row as research signal in the attached "
+            "execution plan. The plan remains non-authoritative."
+        ),
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
     return parser.parse_args(argv)
@@ -86,7 +118,22 @@ def main(argv: list[str] | None = None) -> int:
             ),
             magic_codec_seed_boundary_smoke=magic_codec_seed_boundary_smoke,
         )
-    except (OSError, ValueError, ScorerResponseDatasetError) as exc:
+        if args.mlx_profile_stability is not None:
+            mlx_profile_stability = json.loads(args.mlx_profile_stability.read_text(encoding="utf-8"))
+            if not isinstance(mlx_profile_stability, dict):
+                raise MLXExecutionPlanError("MLX profile-stability payload must be an object")
+            plan["mlx_scorer_response_execution_plan"] = (
+                build_mlx_scorer_response_execution_plan(
+                    mlx_profile_stability,
+                    archive_size_bytes=args.mlx_archive_size_bytes,
+                    repo_root=REPO_ROOT,
+                    response_output=args.mlx_response_output,
+                    components_dir=args.mlx_components_dir,
+                    progress_every=args.mlx_progress_every,
+                    allow_gpu_research_signal=args.allow_mlx_gpu_research_signal,
+                )
+            )
+    except (OSError, ValueError, ScorerResponseDatasetError, MLXExecutionPlanError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
         return 2
     args.json_out.parent.mkdir(parents=True, exist_ok=True)

@@ -112,6 +112,7 @@ def build_profile_stability_manifest(
             "row_count": len(normalized_rows),
             "reference_cache_dir": profile.get("reference_cache_dir"),
             "candidate_cache_dir": profile.get("candidate_cache_dir"),
+            "archive_size_bytes": profile.get("archive_size_bytes"),
             "start_pair": profile.get("start_pair"),
             "max_pairs": profile.get("max_pairs"),
         },
