@@ -2188,6 +2188,83 @@ def test_validate_scorer_response_dataset_cli_writes_gate(tmp_path) -> None:
     assert "Scorer Response Validation Gate" in md_out.read_text(encoding="utf-8")
 
 
+def test_validate_scorer_response_dataset_cli_require_pass_blocks_after_writes(
+    tmp_path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(
+        json.dumps(_validation_dataset(families=("mlx_scorer_response",), rows_per_fold=10)),
+        encoding="utf-8",
+    )
+    json_out = tmp_path / "gate.json"
+    md_out = tmp_path / "gate.md"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "validate_scorer_response_dataset.py"),
+            "--dataset",
+            str(dataset_path),
+            "--require-pass",
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    stdout_payload = json.loads(completed.stdout)
+    assert stdout_payload["passed"] is False
+    gate = json.loads(json_out.read_text(encoding="utf-8"))
+    assert gate["status"] == "blocked"
+    assert "no_prediction_fields_present" in gate["blockers"]
+    assert "Scorer Response Validation Gate" in md_out.read_text(encoding="utf-8")
+
+
+def test_validate_scorer_response_dataset_cli_require_pass_allows_passed_gate(
+    tmp_path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(
+        json.dumps(
+            _validation_dataset(
+                families=("mlx_scorer_response", "decoder_q"),
+                rows_per_fold=5,
+                include_prediction=True,
+            )
+        ),
+        encoding="utf-8",
+    )
+    json_out = tmp_path / "gate.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "validate_scorer_response_dataset.py"),
+            "--dataset",
+            str(dataset_path),
+            "--require-pass",
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout_payload = json.loads(completed.stdout)
+    assert stdout_payload["passed"] is True
+    gate = json.loads(json_out.read_text(encoding="utf-8"))
+    assert gate["status"] == "passed"
+    assert gate["blockers"] == []
+
+
 def test_merge_scorer_response_datasets_preserves_false_authority() -> None:
     mlx = _validation_dataset(families=("mlx_scorer_response",), rows_per_fold=1)
     decoder_q = _validation_dataset(families=("decoder_q",), rows_per_fold=1)

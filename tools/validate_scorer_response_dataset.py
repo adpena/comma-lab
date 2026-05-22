@@ -66,6 +66,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "one score axis/target scale."
         ),
     )
+    parser.add_argument(
+        "--require-pass",
+        action="store_true",
+        help=(
+            "After writing validation outputs, exit nonzero unless the validation "
+            "gate passed. Use this for CI/automation; omit it for report-only runs."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -98,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
                 "json_out": str(args.json_out),
                 "md_out": None if args.md_out is None else str(args.md_out),
                 "status": gate["status"],
+                "passed": gate["passed"],
                 "blockers": gate["blockers"],
                 "score_claim": False,
             },
@@ -105,6 +114,8 @@ def main(argv: list[str] | None = None) -> int:
             sort_keys=True,
         )
     )
+    if args.require_pass and gate.get("passed") is not True:
+        return 2
     return 0
 
 
