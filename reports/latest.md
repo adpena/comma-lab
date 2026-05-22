@@ -184,6 +184,17 @@ last_refreshed_note: |
   `-0.0020326847010743165 [macOS-MLX research-signal]`. Those windows may feed
   local byte-closed candidate construction, but every promoted candidate still
   requires claimed exact CPU/CUDA auth eval.
+- **OOF selector hardening landed**:
+  `.omx/research/codex_findings_mlx_oof_selector_gate_20260522T131934Z_codex.md`
+  records the expanded grouped OOF pass. Overall validation still passes
+  (`r=0.32517898715374266`), but decoder-q candidate-family utility fails
+  (`r=-0.0756861363816352`, zero negative decoder-q predictions, top-8 overlap
+  `0/8`). Automation now records `prediction_spend_triage_usable=false` and
+  the planner emits `do_not_use_oof_predictions_for_spend_triage_selection`.
+  Observed strict-gated MLX windows remain usable as candidate-generation
+  inputs only: the top-32 selector has `148` eligible rows above the calibrated
+  MLX gap, `32` selected rows, and `0/32` prediction agreement, so OOF
+  predictions are explicitly not the selector yet.
 - **Grayscale LUT timeout recovery produced archive bytes**:
   `.omx/research/codex_findings_grayscale_lut_export_recovery_20260522T123316Z_codex.md`
   records local export-only recovery from the Modal A100 `best.pt`. The

@@ -46,6 +46,8 @@ from tac.optimization.scorer_response_family_delta import (
     render_family_delta_markdown,
 )
 from tac.optimization.scorer_response_prediction import (
+    EXPANDED_FEATURE_SET,
+    OOF_MODEL_SELECTION_SCHEMA,
     STRUCTURED_FEATURE_SET,
     attach_out_of_fold_linear_predictions,
 )
@@ -607,6 +609,24 @@ def test_build_response_dataset_accepts_direct_mlx_scorer_response_payload(tmp_p
     assert row["source_batch_pairs"] == 2
     assert row["source_pair_window"] == [16, 20]
     assert row["source_posenet_sha256"] == "p" * 64
+
+
+def test_build_response_dataset_preserves_zero_source_start_pair(tmp_path) -> None:
+    path = tmp_path / "mlx_response_pair_zero.json"
+    payload = _mlx_response_payload()
+    payload["start_pair"] = 0
+    payload["pair_window"] = [0, 1]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+
+    assert dataset["summary"]["row_count"] == 1
+    row = dataset["rows"][0]
+    assert row["source_start_pair"] == 0
+    assert row["source_pair_window"] == [0, 1]
 
 
 def test_build_response_dataset_honors_explicit_mlx_response_family(tmp_path) -> None:
@@ -2494,6 +2514,112 @@ def test_out_of_fold_linear_predictions_can_satisfy_validation_gate() -> None:
     assert predicted["prediction_fit"]["feature_set"] == "pair_family_archive_linear_v1"
     assert gate["status"] == "passed"
     assert gate["passing_prediction_fields"] == ["ll_predicted_delta_vs_baseline_score"]
+
+
+def test_validation_gate_surfaces_control_masked_candidate_family_failure() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_fec6_auth_parent", "mlx_decoder_q"),
+        rows_per_fold=120,
+    )
+    for row in dataset["rows"]:
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        if row["family"] == "mlx_fec6_auth_parent":
+            value = float(fold * 120 + offset)
+            row["delta_vs_baseline_score"] = value
+            row["predicted_delta_vs_baseline_score"] = value
+        else:
+            observed = -0.001 if offset % 2 == 0 else 0.001
+            row["delta_vs_baseline_score"] = observed
+            row["predicted_delta_vs_baseline_score"] = 0.0005
+
+    gate = build_scorer_response_validation_gate(dataset)
+    evaluation = next(
+        item
+        for item in gate["prediction_evaluations"]
+        if item["field"] == "predicted_delta_vs_baseline_score"
+    )
+    candidate_metrics = evaluation["candidate_family_metrics"]["mlx_decoder_q"]
+
+    assert gate["status"] == "passed"
+    assert gate["prediction_spend_triage_usable"] is False
+    assert gate["spend_triage_usable_prediction_fields"] == []
+    assert evaluation["candidate_family_spend_triage_usable"] is False
+    assert candidate_metrics["negative_prediction_count"] == 0
+    assert candidate_metrics["spend_triage_usable"] is False
+
+
+def test_validation_gate_marks_candidate_family_spend_triage_usable_when_real_signal() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_fec6_auth_parent", "mlx_decoder_q"),
+        rows_per_fold=12,
+    )
+    for row in dataset["rows"]:
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        pair_start = fold * 12 + offset
+        value = (
+            0.01 + 0.0001 * pair_start
+            if row["family"] == "mlx_fec6_auth_parent"
+            else -0.002 + 0.00008 * pair_start
+        )
+        row["delta_vs_baseline_score"] = value
+        row["predicted_delta_vs_baseline_score"] = value
+
+    gate = build_scorer_response_validation_gate(dataset)
+    evaluation = next(
+        item
+        for item in gate["prediction_evaluations"]
+        if item["field"] == "predicted_delta_vs_baseline_score"
+    )
+    candidate_metrics = evaluation["candidate_family_metrics"]["mlx_decoder_q"]
+
+    assert gate["status"] == "passed"
+    assert gate["prediction_spend_triage_usable"] is True
+    assert gate["spend_triage_usable_prediction_fields"] == [
+        "predicted_delta_vs_baseline_score"
+    ]
+    assert evaluation["candidate_family_spend_triage_usable"] is True
+    assert candidate_metrics["overall_pearson_r"] == pytest.approx(1.0)
+    assert candidate_metrics["top_k"]["8"]["overlap_count"] == 8
+
+
+def test_expanded_oof_predictions_support_group_hash_folds_without_authority() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_fec6_auth_parent", "mlx_decoder_q"),
+        rows_per_fold=16,
+    )
+    expected_group_folds: dict[int, int] = {}
+    for row in dataset["rows"]:
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        pair_start = fold * 16 + offset
+        row["source_pair_window"] = [pair_start, pair_start + 1]
+        row["delta_vs_baseline_score"] = (
+            0.1 * math.sin(pair_start / 5.0)
+            + (0.002 if row["family"] == "mlx_decoder_q" else 0.0)
+        )
+
+    predicted = attach_out_of_fold_linear_predictions(
+        dataset,
+        model_family="expanded",
+        fold_strategy="group_hash",
+        n_folds=5,
+    )
+    for row in predicted["rows"]:
+        pair_start = row["source_pair_window"][0]
+        if pair_start in expected_group_folds:
+            assert row["holdout_fold"] == expected_group_folds[pair_start]
+        else:
+            expected_group_folds[pair_start] = row["holdout_fold"]
+
+    assert predicted["score_claim"] is False
+    assert predicted["prediction_fit"]["score_claim"] is False
+    assert predicted["prediction_fit"]["schema"] == OOF_MODEL_SELECTION_SCHEMA
+    assert predicted["prediction_fit"]["feature_set"] == EXPANDED_FEATURE_SET
+    assert predicted["prediction_fit"]["model_family"] == "expanded"
+    assert predicted["prediction_fit"]["fold_strategy"] == "group_hash"
+    assert "candidate_family_metrics" in predicted["prediction_fit"]
 
 
 def test_structural_features_feed_oof_predictions_without_authority() -> None:

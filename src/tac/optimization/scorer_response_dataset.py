@@ -67,6 +67,10 @@ DEFAULT_RESPONSE_PREDICTION_FIELDS = (
     "expected_delta_vs_baseline_score",
     "expected_scorer_delta_vs_baseline",
 )
+PREDICTION_CANDIDATE_FAMILY_TOP_K = (8, 16, 32)
+PREDICTION_CANDIDATE_FAMILY_MIN_PEARSON_R = 0.2
+PREDICTION_CANDIDATE_FAMILY_MIN_TOP_K_OVERLAP = 1
+PREDICTION_CANDIDATE_FAMILY_MIN_NEGATIVE_PREDICTIONS = 1
 
 
 _FALSE_AUTHORITY_FIELDS = (
@@ -382,6 +386,19 @@ def _as_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _mean(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return float(sum(values) / len(values))
 
 
 def _score_terms(*, archive_bytes: int | None, pose: float | None, seg: float | None) -> dict[str, float | None]:
@@ -1009,12 +1026,12 @@ def normalize_response_row(
         "source_evidence_grade": parent.get("evidence_grade") or authority.get("evidence_grade"),
         "source_evidence_tag": parent.get("evidence_tag"),
         "source_hardware_substrate": parent.get("hardware_substrate"),
-        "source_batch_pairs": _as_int(parent.get("batch_pairs") or candidate.get("batch_pairs")),
-        "source_n_samples": _as_int(parent.get("n_samples") or candidate.get("n_samples")),
-        "source_pair_window": parent.get("pair_window") or candidate.get("pair_window"),
-        "source_start_pair": _as_int(parent.get("start_pair") or candidate.get("start_pair")),
-        "source_max_pairs": _as_int(parent.get("max_pairs") or candidate.get("max_pairs")),
-        "source_elapsed_seconds": _as_float(parent.get("elapsed_seconds") or candidate.get("elapsed_seconds")),
+        "source_batch_pairs": _as_int(_first_present(parent.get("batch_pairs"), candidate.get("batch_pairs"))),
+        "source_n_samples": _as_int(_first_present(parent.get("n_samples"), candidate.get("n_samples"))),
+        "source_pair_window": _first_present(parent.get("pair_window"), candidate.get("pair_window")),
+        "source_start_pair": _as_int(_first_present(parent.get("start_pair"), candidate.get("start_pair"))),
+        "source_max_pairs": _as_int(_first_present(parent.get("max_pairs"), candidate.get("max_pairs"))),
+        "source_elapsed_seconds": _as_float(_first_present(parent.get("elapsed_seconds"), candidate.get("elapsed_seconds"))),
         "source_inflated_outputs_aggregate_sha256": (
             parent.get("inflated_outputs_aggregate_sha256")
             or _get_path(
@@ -3499,6 +3516,11 @@ def build_scorer_response_validation_gate(
         item for item in prediction_evaluations if item["present_pair_count"] > 0
     ]
     passing_predictions = [item for item in prediction_evaluations if item["passed"] is True]
+    spend_triage_usable_predictions = [
+        item
+        for item in passing_predictions
+        if item.get("candidate_family_spend_triage_usable") is True
+    ]
 
     blockers: list[str] = []
     if len(rows) < min_rows:
@@ -3540,6 +3562,9 @@ def build_scorer_response_validation_gate(
         "requires_exact_eval_before_promotion": True,
         "status": status,
         "passed": status == "passed",
+        "prediction_spend_triage_usable": (
+            status == "passed" and bool(spend_triage_usable_predictions)
+        ),
         "blockers": blockers,
         "allowed_use": (
             "local_ll_surrogate_training_gate"
@@ -3561,6 +3586,15 @@ def build_scorer_response_validation_gate(
             "min_prediction_pairs_per_fold": int(min_prediction_pairs_per_fold),
             "min_pearson_r": float(min_pearson_r),
             "require_single_axis": bool(require_single_axis),
+            "candidate_family_min_pearson_r": (
+                PREDICTION_CANDIDATE_FAMILY_MIN_PEARSON_R
+            ),
+            "candidate_family_min_top_k_overlap": (
+                PREDICTION_CANDIDATE_FAMILY_MIN_TOP_K_OVERLAP
+            ),
+            "candidate_family_min_negative_predictions": (
+                PREDICTION_CANDIDATE_FAMILY_MIN_NEGATIVE_PREDICTIONS
+            ),
         },
         "coverage": {
             "row_count": len(rows),
@@ -3576,6 +3610,9 @@ def build_scorer_response_validation_gate(
         },
         "prediction_evaluations": prediction_evaluations,
         "passing_prediction_fields": [item["field"] for item in passing_predictions],
+        "spend_triage_usable_prediction_fields": [
+            item["field"] for item in spend_triage_usable_predictions
+        ],
     }
 
 
@@ -3628,14 +3665,145 @@ def _evaluate_prediction_field(
         xs_all.extend(xs)
         ys_all.extend(ys)
     overall = _pearson(xs_all, ys_all)
+    family_metrics = _candidate_family_prediction_metrics(
+        rows=rows,
+        field=field,
+        target=target,
+    )
+    candidate_family_spend_triage_usable = any(
+        metric.get("spend_triage_usable") is True for metric in family_metrics.values()
+    )
     return {
         "field": field,
         "target": target,
         "present_pair_count": len(xs_all),
         "overall_pearson_r": overall,
         "folds": per_fold,
+        "candidate_family_metrics": family_metrics,
+        "candidate_family_spend_triage_usable": candidate_family_spend_triage_usable,
         "passed": bool(per_fold) and all(item["passed"] for item in per_fold),
     }
+
+
+def _candidate_family_prediction_metrics(
+    *,
+    rows: list[dict[str, Any]],
+    field: str,
+    target: str,
+) -> dict[str, dict[str, Any]]:
+    families = sorted({str(row.get("family") or "unknown") for row in rows})
+    out: dict[str, dict[str, Any]] = {}
+    for family in families:
+        family_rows = [
+            row for row in rows if str(row.get("family") or "unknown") == family
+        ]
+        xs_all: list[float] = []
+        ys_all: list[float] = []
+        fold_metrics: list[dict[str, Any]] = []
+        folds = sorted(
+            {
+                fold
+                for row in family_rows
+                if (fold := _as_int(row.get("holdout_fold"))) is not None
+            }
+        )
+        for fold in folds:
+            xs: list[float] = []
+            ys: list[float] = []
+            for row in family_rows:
+                if _as_int(row.get("holdout_fold")) != fold:
+                    continue
+                pred = _as_float(row.get(field))
+                observed = _as_float(row.get(target))
+                if pred is None or observed is None:
+                    continue
+                xs.append(pred)
+                ys.append(observed)
+            fold_metrics.append(
+                {
+                    "fold": fold,
+                    "n": len(xs),
+                    "pearson_r": _pearson(xs, ys),
+                }
+            )
+            xs_all.extend(xs)
+            ys_all.extend(ys)
+        overall = _pearson(xs_all, ys_all)
+        negative_prediction_count = sum(1 for value in xs_all if value < 0.0)
+        observed_improvement_count = sum(1 for value in ys_all if value < 0.0)
+        top_k = _candidate_family_top_k_metrics(
+            family_rows,
+            field=field,
+            target=target,
+        )
+        top8 = top_k.get("8", {})
+        top8_mean = _as_float(top8.get("mean_observed_delta_in_predicted_top_k"))
+        top8_overlap = int(top8.get("overlap_count") or 0)
+        spend_triage_usable = (
+            len(xs_all) >= max(PREDICTION_CANDIDATE_FAMILY_TOP_K[0], 3)
+            and overall is not None
+            and overall >= PREDICTION_CANDIDATE_FAMILY_MIN_PEARSON_R
+            and negative_prediction_count
+            >= PREDICTION_CANDIDATE_FAMILY_MIN_NEGATIVE_PREDICTIONS
+            and observed_improvement_count > 0
+            and top8_overlap >= PREDICTION_CANDIDATE_FAMILY_MIN_TOP_K_OVERLAP
+            and top8_mean is not None
+            and top8_mean < 0.0
+        )
+        out[family] = {
+            "family": family,
+            "n": len(xs_all),
+            "overall_pearson_r": overall,
+            "folds": fold_metrics,
+            "negative_prediction_count": negative_prediction_count,
+            "observed_improvement_count": observed_improvement_count,
+            "top_k": top_k,
+            "spend_triage_usable": spend_triage_usable,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+        }
+    return out
+
+
+def _candidate_family_top_k_metrics(
+    rows: list[dict[str, Any]],
+    *,
+    field: str,
+    target: str,
+) -> dict[str, dict[str, Any]]:
+    pairs: list[tuple[str, float, float]] = []
+    for row in rows:
+        pred = _as_float(row.get(field))
+        observed = _as_float(row.get(target))
+        if pred is None or observed is None:
+            continue
+        pairs.append((str(row.get("row_id")), pred, observed))
+    by_prediction = sorted(pairs, key=lambda item: (item[1], item[0]))
+    by_observed = sorted(pairs, key=lambda item: (item[2], item[0]))
+    out: dict[str, dict[str, Any]] = {}
+    for k in PREDICTION_CANDIDATE_FAMILY_TOP_K:
+        limit = min(k, len(pairs))
+        predicted_ids = {item[0] for item in by_prediction[:limit]}
+        observed_ids = {item[0] for item in by_observed[:limit]}
+        observed_in_predicted = [item[2] for item in by_prediction[:limit]]
+        out[str(k)] = {
+            "k": k,
+            "effective_k": limit,
+            "overlap_count": len(predicted_ids & observed_ids),
+            "overlap_fraction": (
+                None if limit == 0 else len(predicted_ids & observed_ids) / limit
+            ),
+            "mean_observed_delta_in_predicted_top_k": _mean(
+                observed_in_predicted
+            ),
+            "best_observed_delta_in_predicted_top_k": (
+                None if not observed_in_predicted else min(observed_in_predicted)
+            ),
+        }
+    return out
 
 
 def _blocked_response_validation_gate(reason: str, *, row_count: int) -> dict[str, Any]:
@@ -3747,6 +3915,26 @@ def build_next_probe_plan(
                 ),
                 "gate_status": response_validation_gate["status"],
                 "blockers": response_validation_gate["blockers"],
+            }
+        )
+    elif response_validation_gate.get("prediction_spend_triage_usable") is not True:
+        prohibitions.append(
+            {
+                "rule": "do_not_use_oof_predictions_for_spend_triage_selection",
+                "reason": (
+                    "overall held-out response correlation passed, but no "
+                    "candidate family had usable spend-triage prediction "
+                    "metrics; route selection through observed strict-gated "
+                    "MLX rows or add stronger pre-response features"
+                ),
+                "passing_prediction_fields": response_validation_gate.get(
+                    "passing_prediction_fields"
+                ),
+                "spend_triage_usable_prediction_fields": (
+                    response_validation_gate.get(
+                        "spend_triage_usable_prediction_fields"
+                    )
+                ),
             }
         )
 
@@ -4690,6 +4878,7 @@ def render_validation_gate_markdown(gate: dict[str, Any]) -> str:
         "",
         f"- Status: `{gate.get('status')}`",
         f"- Allowed use: `{gate.get('allowed_use')}`",
+        f"- Prediction spend-triage usable: `{gate.get('prediction_spend_triage_usable')}`",
         f"- Blockers: `{gate.get('blockers')}`",
         "",
     ]
@@ -4722,6 +4911,7 @@ def render_validation_gate_markdown(gate: dict[str, Any]) -> str:
             "- "
             f"`{item.get('field')}` n={item.get('present_pair_count')} "
             f"overall_r={item.get('overall_pearson_r')} "
+            f"candidate_spend_triage={item.get('candidate_family_spend_triage_usable')} "
             f"passed={item.get('passed')}"
         )
     lines.append("")

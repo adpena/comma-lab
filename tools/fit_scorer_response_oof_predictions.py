@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Attach out-of-fold linear predictions to a scorer-response dataset."""
+"""Attach out-of-fold predictions to a scorer-response dataset."""
 
 from __future__ import annotations
 
@@ -22,7 +22,9 @@ from tac.optimization.scorer_response_dataset import (  # noqa: E402
     render_markdown,
 )
 from tac.optimization.scorer_response_prediction import (  # noqa: E402
+    DECLARED_FOLD_STRATEGY,
     DEFAULT_PREDICTION_FIELD,
+    LINEAR_MODEL_FAMILY,
     attach_out_of_fold_linear_predictions,
 )
 
@@ -35,7 +37,43 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--target", default="delta_vs_baseline_score")
     parser.add_argument("--prediction-field", default=DEFAULT_PREDICTION_FIELD)
     parser.add_argument("--ridge-lambda", type=float, default=1.0e-4)
+    parser.add_argument(
+        "--model-family",
+        choices=("linear", "expanded"),
+        default=LINEAR_MODEL_FAMILY,
+        help=(
+            "linear preserves the historical ridge design; expanded performs "
+            "nested OOF model selection over richer pair-local bases."
+        ),
+    )
+    parser.add_argument(
+        "--ridge-lambdas",
+        help=(
+            "Comma-separated ridge strengths for expanded model selection. "
+            "Defaults to the canonical expanded grid."
+        ),
+    )
+    parser.add_argument(
+        "--fold-strategy",
+        choices=("declared", "group_hash"),
+        default=DECLARED_FOLD_STRATEGY,
+        help=(
+            "declared uses existing holdout_fold rows; group_hash rewrites folds "
+            "by a deterministic fold key to prevent sibling row leakage."
+        ),
+    )
+    parser.add_argument("--fold-key", default="source_start_pair")
+    parser.add_argument("--n-folds", type=int, default=5)
     return parser.parse_args(argv)
+
+
+def _parse_ridge_lambdas(value: str | None) -> tuple[float, ...] | None:
+    if value is None:
+        return None
+    out = tuple(float(item.strip()) for item in value.split(",") if item.strip())
+    if not out:
+        raise ScorerResponseDatasetError("at least one ridge lambda is required")
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,6 +87,11 @@ def main(argv: list[str] | None = None) -> int:
             target=args.target,
             prediction_field=args.prediction_field,
             ridge_lambda=args.ridge_lambda,
+            model_family=args.model_family,
+            ridge_lambdas=_parse_ridge_lambdas(args.ridge_lambdas),
+            fold_strategy=args.fold_strategy,
+            fold_key=args.fold_key,
+            n_folds=args.n_folds,
         )
     except (OSError, ValueError, ScorerResponseDatasetError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
