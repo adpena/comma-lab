@@ -324,11 +324,11 @@ last_refreshed_note: |
   `[327, 376, 320, 378, 296, 430, 167, 151]`,
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
   for `pairset_drop_one_rank021_pair0371`. After rank023, rank024, rank018,
-  rank017, rank016, rank025, rank015, rank001, rank002, rank003, and rank004
+  rank017, rank016, rank025, rank015, rank001, rank002, rank003, rank004, and rank005
   local
   observe-only results, the original top-8 action summary is exhausted. A
   widened top-32 canonicalization artifact now exposes the next unobserved
-  candidate, `pairset_drop_one_rank005_pair0467`, for the same local-first
+  candidate, `pairset_drop_one_rank006_pair0544`, for the same local-first
   custody gate. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
@@ -352,9 +352,9 @@ last_refreshed_note: |
   `src/comma_lab/scheduler/experiment_queue.py`, and
   `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with rank023,
   rank024, rank018, rank017, rank016, rank025, rank015, rank001, rank002,
-  rank003, and rank004 now
+  rank003, rank004, and rank005 now
   local-advisory-observed with matching eureka records; the checked-in queue is
-  routed to rank005/pair0467. Completed-local skip detection now requires both
+  routed to rank006/pair0544. Completed-local skip detection now requires both
   local advisory custody and a matching drift/eureka record, and a positive
   eureka signal with `recommended_action=dispatch_exact_auth_anchor` fails
   closed instead of being skipped by the local-first rerouter.
@@ -393,6 +393,8 @@ last_refreshed_note: |
   observe-only.
   Rank004 repeated the same local and drift-projected score band and is also
   observe-only.
+  Rank005 repeated the same local and drift-projected score band and is also
+  observe-only.
   Rank023's eureka artifact is
   `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank023_pair0440_20260522T203717Z.json`;
   rank024's eureka artifact is
@@ -404,7 +406,9 @@ last_refreshed_note: |
   rank003's eureka artifact is
   `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank003_pair0479_20260522T230637Z.json`;
   rank004's eureka artifact is
-  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank004_pair0098_20260522T231911Z.json`.
+  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank004_pair0098_20260522T231911Z.json`;
+  rank005's eureka artifact is
+  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank005_pair0467_20260522T233322Z.json`.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
