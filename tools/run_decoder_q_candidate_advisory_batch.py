@@ -24,6 +24,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tools.run_decoder_q_candidate_inflate_controls import (  # noqa: E402
+    FALSE_AUTHORITY,
     _compare_raws,
     _extract_single_member,
     _run_inflate,
@@ -216,9 +217,7 @@ def _run_one(candidate_dir: Path, args: argparse.Namespace) -> dict[str, Any]:
         "advisory_eval": advisory,
         "cleanup": cleanup,
         "blockers": blockers,
-        "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
     }
     _write_json(out_dir / "advisory_candidate_manifest.json", row)
     return row
@@ -292,11 +291,10 @@ def run_batch(args: argparse.Namespace) -> dict[str, Any]:
         },
         "candidates": rows,
         "authority": {
-            "score_claim": False,
-            "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
             "notes": "macOS raw-output advisory component response; exact contest eval still required.",
         },
+        **FALSE_AUTHORITY,
     }
 
 

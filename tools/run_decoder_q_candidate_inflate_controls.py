@@ -26,6 +26,15 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+FALSE_AUTHORITY: dict[str, bool] = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "promotion_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "rank_or_kill_eligible": False,
+    "promotable": False,
+}
+
 
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
@@ -331,9 +340,7 @@ def run_controls(args: argparse.Namespace) -> dict[str, Any]:
             "raw_comparison": comparison,
             "cleanup": cleanup if inflate["returncode"] == 0 and comparison is not None else None,
             "blockers": blockers,
-            "score_claim": False,
-            "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
         }
         _write_json(out_dir / "inflate_control_manifest.json", row)
         rows.append(row)
@@ -368,11 +375,10 @@ def run_controls(args: argparse.Namespace) -> dict[str, Any]:
         },
         "candidates": rows,
         "authority": {
-            "score_claim": False,
-            "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
             "notes": "Official inflate/raw visibility control only; component response and exact eval still required.",
         },
+        **FALSE_AUTHORITY,
     }
 
 

@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,6 +37,15 @@ from tac.optimization.fec6_decoder_mutations import (  # noqa: E402
     sha256_bytes,
     write_stored_archive,
 )
+
+FALSE_AUTHORITY: dict[str, bool] = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "promotion_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "rank_or_kill_eligible": False,
+    "promotable": False,
+}
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -450,9 +460,7 @@ def _materialize_candidate(
         "length_delta": decoder_len - len(prepared.decoder_blob),
         "mutated_decoder_sha256": sha256_bytes(decoder_blob),
         "fixed_length_runtime_compatible": fixed_length,
-        "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
     }
     surface_proxy = summarize_candidate_surface_proxy(atoms, surface_objective)
     if surface_proxy is not None:
@@ -540,11 +548,48 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
                         "bucket": bucket,
                         "edit_budget": int(budget),
                         "error": str(exc),
-                        "score_claim": False,
-                        "promotion_eligible": False,
-                        "ready_for_exact_eval_dispatch": False,
+                        **FALSE_AUTHORITY,
                     }
                 )
+    deduped_candidates: list[dict[str, Any]] = []
+    duplicate_aliases: list[dict[str, Any]] = []
+    seen_fixed_by_archive_sha: dict[str, dict[str, Any]] = {}
+    seen_any_by_decoder_sha: dict[str, dict[str, Any]] = {}
+    for row in candidates:
+        decoder_sha = row.get("mutated_decoder_sha256")
+        archive_sha = row.get("archive_zip_sha256")
+        dedupe_key = archive_sha if row.get("fixed_length_runtime_compatible") else decoder_sha
+        duplicate_of = None
+        if isinstance(archive_sha, str) and archive_sha in seen_fixed_by_archive_sha:
+            duplicate_of = seen_fixed_by_archive_sha[archive_sha]
+        elif isinstance(decoder_sha, str) and decoder_sha in seen_any_by_decoder_sha:
+            duplicate_of = seen_any_by_decoder_sha[decoder_sha]
+        if duplicate_of is not None:
+            duplicate_aliases.append(
+                {
+                    "candidate_id": row.get("candidate_id"),
+                    "bucket": row.get("bucket"),
+                    "edit_budget": row.get("edit_budget"),
+                    "edit_count": row.get("edit_count"),
+                    "duplicate_of_candidate_id": duplicate_of.get("candidate_id"),
+                    "dedupe_key": dedupe_key,
+                    "mutated_decoder_sha256": decoder_sha,
+                    "archive_zip_sha256": archive_sha,
+                    **FALSE_AUTHORITY,
+                }
+            )
+            archive_bin_path = row.get("archive_bin_path")
+            if isinstance(archive_bin_path, str):
+                candidate_dir = Path(archive_bin_path).parent
+                if candidate_dir.is_dir():
+                    shutil.rmtree(candidate_dir)
+            continue
+        deduped_candidates.append(row)
+        if isinstance(decoder_sha, str):
+            seen_any_by_decoder_sha[decoder_sha] = row
+        if isinstance(archive_sha, str):
+            seen_fixed_by_archive_sha[archive_sha] = row
+    candidates = deduped_candidates
     fixed = [row for row in candidates if row.get("fixed_length_runtime_compatible")]
     return {
         "schema": "fec6_decoder_q_signed_waterbucket_v1",
@@ -576,14 +621,16 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
             "candidate_count": len(candidates),
             "fixed_length_candidate_count": len(fixed),
             "nonfixed_candidate_count": len(candidates) - len(fixed),
+            "duplicate_alias_count": len(duplicate_aliases),
+            "unique_fixed_archive_count": len(seen_fixed_by_archive_sha),
         },
         "waterbucket_candidates": candidates,
+        "duplicate_waterbucket_aliases": duplicate_aliases,
         "authority": {
-            "score_claim": False,
-            "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
             "notes": "Multi-edit q candidates are exact-runtime compatible only when fixed_length_runtime_compatible=true; official inflate/advisory/exact eval still required.",
         },
+        **FALSE_AUTHORITY,
     }
 
 

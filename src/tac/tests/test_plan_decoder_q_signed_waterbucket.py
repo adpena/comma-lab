@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from tools.plan_decoder_q_signed_waterbucket import _rank_atoms
+from tools.plan_decoder_q_signed_waterbucket import (
+    FALSE_AUTHORITY as WATERBUCKET_FALSE_AUTHORITY,
+)
+from tools.plan_decoder_q_signed_waterbucket import (
+    _rank_atoms,
+)
+from tools.run_decoder_q_candidate_inflate_controls import (
+    FALSE_AUTHORITY as CONTROL_FALSE_AUTHORITY,
+)
 
 
 def _rows() -> list[dict]:
@@ -97,3 +105,16 @@ def test_signed_calibration_refuses_promotable_payload() -> None:
         assert "promotable must be false" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("promotable signed calibration payload was accepted")
+
+
+def test_waterbucket_false_authority_contract_is_complete() -> None:
+    expected = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    assert expected == WATERBUCKET_FALSE_AUTHORITY
+    assert expected == CONTROL_FALSE_AUTHORITY
