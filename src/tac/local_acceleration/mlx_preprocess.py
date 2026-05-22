@@ -154,6 +154,7 @@ def preprocess_scorer_inputs_from_pairs(
         "evidence_grade": EVIDENCE_GRADE_MLX,
         "evidence_tag": EVIDENCE_TAG_MLX,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "promotable": False,
         "rank_or_kill_eligible": False,

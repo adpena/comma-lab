@@ -415,7 +415,9 @@ def _finalize_cache_after_audit(
         "auth_eval_dir": str(auth_dir),
         "auth_eval_path": str(auth_eval_path),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }

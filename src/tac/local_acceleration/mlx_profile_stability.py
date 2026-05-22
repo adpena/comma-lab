@@ -362,6 +362,8 @@ def _public_row(row: dict[str, Any]) -> dict[str, Any]:
         "canonical_score": row["canonical_score"],
         "avg_posenet_dist": row["avg_posenet_dist"],
         "avg_segnet_dist": row["avg_segnet_dist"],
+        "posenet_sha256": row["posenet_sha256"],
+        "segnet_sha256": row["segnet_sha256"],
         "pairs_per_second": row.get("pairs_per_second"),
         "elapsed_seconds": row.get("elapsed_seconds"),
         "wall_seconds": row.get("wall_seconds"),

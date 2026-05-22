@@ -36,6 +36,7 @@ GATE_SET_VERSION = "mlx_scorer_production_gate_set.v2.cache_auth_torch_profile"
 PASS_VERDICT = "PASS_MLX_SCORER_PRODUCTION_CONTRACT"
 FAIL_VERDICT = "FAIL_MLX_SCORER_PRODUCTION_CONTRACT"
 ADVISORY_VERDICT = "ADVISORY_MLX_SCORER_DEV_CONTRACT"
+MAX_ALLOWED_TORCH_PARITY_ARGMAX_DIFF_PIXELS = 1
 
 AUTHORITY_FALSE_FIELDS = (
     "score_claim",
@@ -65,6 +66,7 @@ def build_mlx_scorer_production_contract_manifest(
     *,
     cache_auth_audit: dict[str, Any] | None = None,
     torch_parity: dict[str, Any] | None = None,
+    reference_torch_parity: dict[str, Any] | None = None,
     profile_stability: dict[str, Any] | None = None,
     batch_invariance: dict[str, Any] | None = None,
     score_calibration: dict[str, Any] | None = None,
@@ -93,6 +95,8 @@ def build_mlx_scorer_production_contract_manifest(
         require_cache_identity=require_cache_identity,
     )
     response_batch_pairs = _safe_int(response_payload.get("batch_pairs"))
+    if response_batch_pairs is not None and response_batch_pairs != 1:
+        blockers.append("response_non_singleton_batch_pairs_not_production_supported")
     batch_invariance_required = bool(
         require_batch_invariance
         and (response_batch_pairs is None or response_batch_pairs > 1)
@@ -119,6 +123,20 @@ def build_mlx_scorer_production_contract_manifest(
         _check_torch_parity_manifest(
             torch_parity,
             response_payload=response_payload,
+            cache_side="candidate",
+            blockers=blockers,
+        )
+    if reference_torch_parity is None:
+        missing = "reference_torch_parity_manifest_not_supplied"
+        if require_torch_parity:
+            blockers.append(missing)
+        else:
+            warnings.append(missing)
+    else:
+        _check_torch_parity_manifest(
+            reference_torch_parity,
+            response_payload=response_payload,
+            cache_side="reference",
             blockers=blockers,
         )
     if profile_stability is None:
@@ -157,7 +175,11 @@ def build_mlx_scorer_production_contract_manifest(
         if require_score_calibration:
             blockers.append(missing)
     else:
-        _check_score_calibration_gate_manifest(score_calibration, blockers=blockers)
+        _check_score_calibration_gate_manifest(
+            score_calibration,
+            response_payload=response_payload,
+            blockers=blockers,
+        )
 
     strict_gate_policy = bool(
         require_cache_identity
@@ -216,6 +238,7 @@ def build_mlx_scorer_production_contract_manifest(
             "cache_identity": bool(require_cache_identity),
             "cache_auth_audit": bool(require_cache_auth_audit),
             "torch_parity": bool(require_torch_parity),
+            "reference_torch_parity": bool(require_torch_parity),
             "profile_stability": bool(require_profile_stability),
             "batch_invariance": batch_invariance_required,
             "batch_invariance_policy_requested": bool(require_batch_invariance),
@@ -360,6 +383,16 @@ def _check_cache_identity(payload: dict[str, Any], *, blockers: list[str]) -> No
             for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
                 if not _is_sha256(str(array_hashes.get(key, ""))):
                     blockers.append(f"response_cache_identity_{side}_array_sha256_{key}_invalid")
+        audit = item.get("auth_eval_identity_audit")
+        if side == "candidate":
+            if not isinstance(audit, dict):
+                blockers.append("response_cache_identity_candidate_audit_missing")
+            else:
+                for field in AUTHORITY_FALSE_FIELDS:
+                    if audit.get(field) is not False:
+                        blockers.append(
+                            f"response_cache_identity_candidate_audit_{field}_not_false"
+                        )
 
 
 def _check_optional_gate_manifest(
@@ -498,8 +531,12 @@ def _check_torch_parity_manifest(
     manifest: dict[str, Any],
     *,
     response_payload: dict[str, Any],
+    cache_side: str = "candidate",
     blockers: list[str],
 ) -> None:
+    if cache_side not in {"candidate", "reference"}:
+        blockers.append(f"torch_parity_cache_side_invalid:{cache_side!r}")
+        return
     if not isinstance(manifest, dict):
         blockers.append("torch_parity_manifest_not_object")
         return
@@ -526,51 +563,67 @@ def _check_torch_parity_manifest(
         blockers.append("torch_parity_evidence_tag_not_mlx_research_signal")
     if manifest.get("score_axis") != EVIDENCE_TAG_MLX:
         blockers.append("torch_parity_score_axis_not_mlx_research_signal")
+    _check_torch_parity_thresholds(manifest, blockers=blockers)
     cache_identity = manifest.get("cache_identity")
     if not isinstance(cache_identity, dict):
         blockers.append("torch_parity_cache_identity_missing")
         return
     parity_archive = cache_identity.get("archive_sha256")
-    if not _is_sha256(str(parity_archive)):
+    expected = _response_cache_side(response_payload, cache_side)
+    archive_required = cache_side == "candidate" or expected.get("archive_sha256") is not None
+    if archive_required and not _is_sha256(str(parity_archive)):
         blockers.append("torch_parity_cache_identity_archive_sha256_invalid")
-    expected_archives = {
-        value
-        for value in (
-            response_payload.get("archive_sha256"),
-            _response_cache_side(response_payload, "candidate").get("archive_sha256"),
-            _response_cache_side(response_payload, "reference").get("archive_sha256"),
+    expected_archive = expected.get("archive_sha256")
+    if (
+        expected_archive is not None
+        and parity_archive is not None
+        and (
+            not _is_sha256(str(parity_archive))
+            or str(parity_archive) != str(expected_archive)
         )
-        if _is_sha256(str(value))
-    }
-    if parity_archive is not None and expected_archives and parity_archive not in expected_archives:
+    ):
         blockers.append("torch_parity_cache_identity_archive_sha256_mismatch")
-    candidate = _response_cache_side(response_payload, "candidate")
     _check_cache_path_match(
-        candidate.get("path"),
+        expected.get("path"),
         cache_identity.get("path") or manifest.get("cache_dir"),
         "torch_parity_cache_dir_mismatch",
         blockers,
     )
     _check_int_match(
-        candidate.get("pair_count"),
+        expected.get("pair_count"),
         cache_identity.get("pair_count") or manifest.get("total_pair_count"),
         "torch_parity_pair_count_mismatch",
         blockers,
     )
-    _require_hash_match(
-        candidate.get("inflated_outputs_aggregate_sha256"),
-        cache_identity.get("inflated_outputs_aggregate_sha256"),
-        "torch_parity_inflated_outputs_aggregate_sha256_mismatch",
-        blockers,
-    )
-    _require_hash_match(
-        candidate.get("raw_sha256"),
-        cache_identity.get("raw_sha256"),
-        "torch_parity_raw_sha256_mismatch",
-        blockers,
-    )
+    if cache_side == "candidate":
+        _require_hash_match(
+            expected.get("inflated_outputs_aggregate_sha256"),
+            cache_identity.get("inflated_outputs_aggregate_sha256"),
+            "torch_parity_inflated_outputs_aggregate_sha256_mismatch",
+            blockers,
+        )
+        _require_hash_match(
+            expected.get("raw_sha256"),
+            cache_identity.get("raw_sha256"),
+            "torch_parity_raw_sha256_mismatch",
+            blockers,
+        )
+    else:
+        _check_hash_match(
+            expected.get("inflated_outputs_aggregate_sha256"),
+            cache_identity.get("inflated_outputs_aggregate_sha256"),
+            "torch_parity_inflated_outputs_aggregate_sha256_mismatch",
+            blockers,
+        )
+        _check_hash_match(
+            expected.get("raw_sha256"),
+            cache_identity.get("raw_sha256"),
+            "torch_parity_raw_sha256_mismatch",
+            blockers,
+        )
     response_window = _pair_window(response_payload)
     covered_window = _pair_window({"pair_window": manifest.get("covered_pair_window")})
+    response_batch_pairs = _safe_int(response_payload.get("batch_pairs"))
     if response_window is not None:
         if covered_window is None:
             blockers.append("torch_parity_covered_pair_window_missing")
@@ -582,17 +635,165 @@ def _check_torch_parity_manifest(
                 "torch_parity_window_does_not_cover_response:"
                 f"response={response_window}:covered={covered_window}"
             )
+    _check_torch_parity_batch_shape(
+        manifest,
+        schema_version=schema_version,
+        response_window=response_window,
+        response_batch_pairs=response_batch_pairs,
+        blockers=blockers,
+    )
     if not cache_identity.get("hash_domain"):
         blockers.append("torch_parity_cache_identity_hash_domain_missing")
     if not _hash_mapping(cache_identity.get("array_sha256")):
         blockers.append("torch_parity_cache_identity_array_sha256_missing")
+    else:
+        _require_array_hash_mapping_match(
+            expected.get("array_sha256"),
+            cache_identity.get("array_sha256"),
+            "torch_parity_cache_identity_array_sha256_mismatch",
+            blockers,
+        )
     if not _shape_mapping(cache_identity):
         blockers.append("torch_parity_cache_identity_shapes_missing")
+    else:
+        _require_cache_shape_mapping_match(
+            expected,
+            cache_identity,
+            "torch_parity_cache_identity_shapes_mismatch",
+            blockers,
+        )
+
+
+def _check_torch_parity_batch_shape(
+    manifest: dict[str, Any],
+    *,
+    schema_version: Any,
+    response_window: list[int] | None,
+    response_batch_pairs: int | None,
+    blockers: list[str],
+) -> None:
+    if response_batch_pairs is None:
+        blockers.append("torch_parity_response_batch_pairs_invalid")
+        return
+    if schema_version == TORCH_PARITY_SWEEP_SCHEMA_VERSION:
+        window_pairs = _safe_int(manifest.get("window_pairs"))
+        stride_pairs = _safe_int(manifest.get("stride_pairs"))
+        if window_pairs is None:
+            blockers.append("torch_parity_window_pairs_missing")
+        elif window_pairs != response_batch_pairs:
+            blockers.append(
+                "torch_parity_window_pairs_mismatch:"
+                f"response_batch_pairs={response_batch_pairs}:parity_window_pairs={window_pairs}"
+            )
+        if stride_pairs is None:
+            blockers.append("torch_parity_stride_pairs_missing")
+        elif stride_pairs != response_batch_pairs:
+            blockers.append(
+                "torch_parity_stride_pairs_mismatch:"
+                f"response_batch_pairs={response_batch_pairs}:parity_stride_pairs={stride_pairs}"
+            )
+        if response_window is not None:
+            _check_torch_parity_sweep_tiles_response(
+                manifest,
+                response_window=response_window,
+                response_batch_pairs=response_batch_pairs,
+                blockers=blockers,
+            )
+        return
+
+    if schema_version == TORCH_PARITY_SCHEMA_VERSION:
+        parity_window = _pair_window(manifest)
+        if parity_window is None:
+            blockers.append("torch_parity_pair_window_missing")
+            return
+        parity_pairs = parity_window[1] - parity_window[0]
+        if parity_pairs != response_batch_pairs:
+            blockers.append(
+                "torch_parity_window_pairs_mismatch:"
+                f"response_batch_pairs={response_batch_pairs}:parity_window_pairs={parity_pairs}"
+            )
+
+
+def _check_torch_parity_thresholds(
+    manifest: dict[str, Any],
+    *,
+    blockers: list[str],
+) -> None:
+    thresholds = manifest.get("thresholds")
+    if not isinstance(thresholds, dict):
+        blockers.append("torch_parity_thresholds_missing")
+        return
+    argmax = _safe_int(thresholds.get("max_segnet_argmax_diff_pixels"))
+    if argmax is None:
+        blockers.append("torch_parity_threshold_max_segnet_argmax_diff_pixels_missing")
+    elif argmax > MAX_ALLOWED_TORCH_PARITY_ARGMAX_DIFF_PIXELS:
+        blockers.append(
+            "torch_parity_threshold_max_segnet_argmax_diff_pixels_too_loose:"
+            f"{argmax}>{MAX_ALLOWED_TORCH_PARITY_ARGMAX_DIFF_PIXELS}"
+        )
+    for key, limit in (
+        ("max_posenet_output_abs_delta", 2.0e-3),
+        ("max_segnet_logit_abs_delta", 1.0e-2),
+        ("max_posenet_component_abs_delta", 2.0e-5),
+    ):
+        value = thresholds.get(key)
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            blockers.append(f"torch_parity_threshold_{key}_invalid")
+            continue
+        if not math.isfinite(parsed) or parsed > limit:
+            blockers.append(f"torch_parity_threshold_{key}_too_loose:{parsed}>{limit}")
+
+
+def _check_torch_parity_sweep_tiles_response(
+    manifest: dict[str, Any],
+    *,
+    response_window: list[int],
+    response_batch_pairs: int,
+    blockers: list[str],
+) -> None:
+    rows = manifest.get("rows")
+    if not isinstance(rows, list) or not rows:
+        blockers.append("torch_parity_sweep_rows_missing")
+        return
+    expected_start = response_window[0]
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            blockers.append(f"torch_parity_sweep_row_not_object:index={index}")
+            continue
+        window = _pair_window(row)
+        if window is None:
+            blockers.append(f"torch_parity_sweep_row_pair_window_invalid:index={index}")
+            continue
+        if window[0] != expected_start:
+            blockers.append(
+                "torch_parity_sweep_rows_not_contiguous:"
+                f"index={index}:expected_start={expected_start}:window={window}"
+            )
+        width = window[1] - window[0]
+        if width < 1 or width > response_batch_pairs:
+            blockers.append(
+                "torch_parity_sweep_row_width_invalid:"
+                f"index={index}:width={width}:response_batch_pairs={response_batch_pairs}"
+            )
+        if window[1] > response_window[1]:
+            blockers.append(
+                "torch_parity_sweep_row_exceeds_response:"
+                f"index={index}:response={response_window}:window={window}"
+            )
+        expected_start = window[1]
+    if expected_start != response_window[1]:
+        blockers.append(
+            "torch_parity_sweep_rows_do_not_cover_response_end:"
+            f"expected_end={response_window[1]}:actual_end={expected_start}"
+        )
 
 
 def _check_score_calibration_gate_manifest(
     manifest: dict[str, Any],
     *,
+    response_payload: dict[str, Any],
     blockers: list[str],
 ) -> None:
     if not isinstance(manifest, dict):
@@ -629,6 +830,95 @@ def _check_score_calibration_gate_manifest(
             blockers.append("score_calibration_uncertainty_missing")
     else:
         blockers.append("score_calibration_summary_missing")
+    _check_score_calibration_response_binding(
+        manifest,
+        response_payload=response_payload,
+        blockers=blockers,
+    )
+
+
+def _check_score_calibration_response_binding(
+    manifest: dict[str, Any],
+    *,
+    response_payload: dict[str, Any],
+    blockers: list[str],
+) -> None:
+    rows = manifest.get("rows")
+    if not isinstance(rows, list) or not rows:
+        blockers.append("score_calibration_rows_missing")
+        return
+    matches = [
+        row for row in rows if _score_calibration_row_matches_response(row, response_payload)
+    ]
+    if not matches:
+        blockers.append("score_calibration_no_row_matches_response_identity")
+
+
+def _score_calibration_row_matches_response(
+    row: Any,
+    response_payload: dict[str, Any],
+) -> bool:
+    if not isinstance(row, dict):
+        return False
+    if row.get("archive_sha256") != response_payload.get("archive_sha256"):
+        return False
+    if row.get("inflated_outputs_aggregate_sha256") != response_payload.get(
+        "inflated_outputs_aggregate_sha256"
+    ):
+        return False
+    for key in ("n_samples", "batch_pairs"):
+        if _safe_int(row.get(key)) != _safe_int(response_payload.get(key)):
+            return False
+    if _pair_window({"pair_window": row.get("pair_window")}) != _pair_window(response_payload):
+        return False
+    if row.get("response_family") != response_payload.get("response_family"):
+        return False
+    try:
+        if not math.isclose(
+            float(row.get("mlx_score")),
+            float(response_payload.get("canonical_score")),
+            rel_tol=0.0,
+            abs_tol=1.0e-12,
+        ):
+            return False
+        if not math.isclose(
+            float(row.get("mlx_avg_posenet_dist")),
+            float(response_payload.get("avg_posenet_dist")),
+            rel_tol=0.0,
+            abs_tol=1.0e-12,
+        ):
+            return False
+        if not math.isclose(
+            float(row.get("mlx_avg_segnet_dist")),
+            float(response_payload.get("avg_segnet_dist")),
+            rel_tol=0.0,
+            abs_tol=1.0e-12,
+        ):
+            return False
+    except (TypeError, ValueError):
+        return False
+    components = response_payload.get("components")
+    row_components = row.get("mlx_components")
+    if not isinstance(components, dict) or not isinstance(row_components, dict):
+        return False
+    if row_components.get("posenet_sha256") != components.get("posenet_sha256"):
+        return False
+    if row_components.get("segnet_sha256") != components.get("segnet_sha256"):
+        return False
+    for side in ("candidate", "reference"):
+        response_side = _response_cache_side(response_payload, side)
+        row_side = row.get(f"{side}_cache_identity")
+        if not isinstance(row_side, dict):
+            return False
+        if row_side.get("hash_domain") != response_side.get("hash_domain"):
+            return False
+        if _hash_mapping(row_side.get("array_sha256")) != _hash_mapping(
+            response_side.get("array_sha256")
+        ):
+            return False
+        if _shape_mapping(row_side) != _shape_mapping(response_side):
+            return False
+    return True
 
 
 def _check_profile_stability_manifest(
@@ -651,6 +941,9 @@ def _check_profile_stability_manifest(
     if not isinstance(summary, dict):
         blockers.append("profile_stability_summary_missing")
         return
+    row_count = _safe_int(summary.get("row_count"))
+    if row_count is None or row_count < 2:
+        blockers.append("profile_stability_row_count_lt_2")
     _check_int_match(
         response_payload.get("archive_size_bytes"),
         summary.get("archive_size_bytes"),
@@ -680,6 +973,65 @@ def _check_profile_stability_manifest(
         "profile_stability_reference_cache_dir_mismatch",
         blockers,
     )
+    selection = manifest.get("selection")
+    if not isinstance(selection, dict):
+        blockers.append("profile_stability_selection_missing")
+        return
+    recommended = selection.get("recommended_row")
+    if not isinstance(recommended, dict):
+        blockers.append("profile_stability_recommended_row_missing")
+        return
+    response_device = _response_device(response_payload)
+    response_batch_pairs = _safe_int(response_payload.get("batch_pairs"))
+    recommended_device = str(recommended.get("device") or "").lower()
+    recommended_batch_pairs = _safe_int(recommended.get("batch_pairs"))
+    if recommended_device != response_device:
+        blockers.append(
+            "profile_stability_recommended_device_mismatch:"
+            f"response={response_device}:profile={recommended_device}"
+        )
+    if recommended_batch_pairs != response_batch_pairs:
+        blockers.append(
+            "profile_stability_recommended_batch_pairs_mismatch:"
+            f"response={response_batch_pairs}:profile={recommended_batch_pairs}"
+        )
+    _check_float_match(
+        response_payload.get("canonical_score"),
+        recommended.get("canonical_score"),
+        "profile_stability_recommended_score_mismatch",
+        blockers,
+        abs_tol=1.0e-12,
+    )
+    _check_float_match(
+        response_payload.get("avg_posenet_dist"),
+        recommended.get("avg_posenet_dist"),
+        "profile_stability_recommended_posenet_avg_mismatch",
+        blockers,
+        abs_tol=1.0e-12,
+    )
+    _check_float_match(
+        response_payload.get("avg_segnet_dist"),
+        recommended.get("avg_segnet_dist"),
+        "profile_stability_recommended_segnet_avg_mismatch",
+        blockers,
+        abs_tol=1.0e-12,
+    )
+    components = response_payload.get("components")
+    if not isinstance(components, dict):
+        blockers.append("profile_stability_response_components_missing")
+    else:
+        _require_hash_match(
+            components.get("posenet_sha256"),
+            recommended.get("posenet_sha256"),
+            "profile_stability_recommended_posenet_sha256_mismatch",
+            blockers,
+        )
+        _require_hash_match(
+            components.get("segnet_sha256"),
+            recommended.get("segnet_sha256"),
+            "profile_stability_recommended_segnet_sha256_mismatch",
+            blockers,
+        )
 
 
 def _check_batch_invariance_gate_manifest(
@@ -793,6 +1145,27 @@ def _check_int_match(lhs: Any, rhs: Any, blocker: str, blockers: list[str]) -> N
         blockers.append(blocker)
 
 
+def _check_float_match(
+    lhs: Any,
+    rhs: Any,
+    blocker: str,
+    blockers: list[str],
+    *,
+    abs_tol: float,
+) -> None:
+    try:
+        left = float(lhs)
+        right = float(rhs)
+    except (TypeError, ValueError):
+        blockers.append(blocker)
+        return
+    if not math.isfinite(left) or not math.isfinite(right):
+        blockers.append(blocker)
+        return
+    if not math.isclose(left, right, rel_tol=0.0, abs_tol=abs_tol):
+        blockers.append(blocker)
+
+
 def _check_cache_path_match(lhs: Any, rhs: Any, blocker: str, blockers: list[str]) -> None:
     if not lhs or not rhs:
         blockers.append(blocker)
@@ -827,6 +1200,22 @@ def _hash_mapping(value: Any) -> dict[str, str]:
     return out if len(out) == 3 else {}
 
 
+def _require_array_hash_mapping_match(
+    lhs: Any,
+    rhs: Any,
+    blocker: str,
+    blockers: list[str],
+) -> None:
+    left = _hash_mapping(lhs)
+    right = _hash_mapping(rhs)
+    if not left or not right:
+        blockers.append(blocker)
+        return
+    for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+        if left.get(key) != right.get(key):
+            blockers.append(f"{blocker}:{key}")
+
+
 def _shape_mapping(value: dict[str, Any]) -> dict[str, list[Any]]:
     out: dict[str, list[Any]] = {}
     for key in ("pair_indices_shape", "posenet_yuv6_pair_shape", "segnet_last_rgb_shape"):
@@ -834,6 +1223,22 @@ def _shape_mapping(value: dict[str, Any]) -> dict[str, list[Any]]:
         if isinstance(item, list) and item:
             out[key] = item
     return out if len(out) == 3 else {}
+
+
+def _require_cache_shape_mapping_match(
+    lhs: dict[str, Any],
+    rhs: dict[str, Any],
+    blocker: str,
+    blockers: list[str],
+) -> None:
+    left = _shape_mapping(lhs)
+    right = _shape_mapping(rhs)
+    if not left or not right:
+        blockers.append(blocker)
+        return
+    for key in ("pair_indices_shape", "posenet_yuv6_pair_shape", "segnet_last_rgb_shape"):
+        if list(left.get(key, [])) != list(right.get(key, [])):
+            blockers.append(f"{blocker}:{key}")
 
 
 def _shape_mapping_from_auth_summary(value: Any) -> dict[str, list[Any]]:

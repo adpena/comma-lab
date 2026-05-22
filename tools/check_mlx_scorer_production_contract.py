@@ -21,6 +21,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--cache-auth-audit", type=Path, default=None)
     parser.add_argument("--torch-parity", type=Path, default=None)
+    parser.add_argument("--reference-torch-parity", type=Path, default=None)
     parser.add_argument("--profile-stability", type=Path, default=None)
     parser.add_argument("--batch-invariance", type=Path, default=None)
     parser.add_argument("--score-calibration", type=Path, default=None)
@@ -70,6 +71,11 @@ def main(argv: list[str] | None = None) -> int:
         torch_parity=(
             load_json_object(args.torch_parity)
             if args.torch_parity is not None
+            else None
+        ),
+        reference_torch_parity=(
+            load_json_object(args.reference_torch_parity)
+            if args.reference_torch_parity is not None
             else None
         ),
         profile_stability=(

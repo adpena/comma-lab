@@ -132,6 +132,11 @@ def _normalize_row(row: dict[str, Any], *, repo_root: Path, index: int) -> dict[
     )
     local_cpu_score = _optional_float(row.get("local_cpu_score"))
     mlx_score = _finite_float(mlx_response.get("canonical_score"), "mlx_response.canonical_score")
+    components = mlx_response.get("components")
+    if not isinstance(components, dict):
+        raise ValueError(f"MLX response {mlx_response_path} components missing")
+    candidate_identity = _response_candidate_cache_identity(mlx_response)
+    reference_identity = _response_cache_identity(mlx_response, "reference")
 
     out: dict[str, Any] = {
         "index": index,
@@ -142,6 +147,8 @@ def _normalize_row(row: dict[str, Any], *, repo_root: Path, index: int) -> dict[
         "archive_size_bytes": mlx_archive_size_bytes,
         "n_samples": int(mlx_response.get("n_samples")),
         "batch_pairs": int(mlx_response.get("batch_pairs")),
+        "pair_window": _required_pair_window(mlx_response.get("pair_window"), mlx_response_path),
+        "response_family": mlx_response.get("response_family"),
         "mlx_response_path": str(mlx_response_path),
         "mlx_score": mlx_score,
         "mlx_avg_posenet_dist": _finite_float(
@@ -153,6 +160,20 @@ def _normalize_row(row: dict[str, Any], *, repo_root: Path, index: int) -> dict[
         "mlx_batch_shape_research_signal_allowed": bool(
             mlx_response.get("batch_shape_research_signal_allowed")
         ),
+        "mlx_components": {
+            "posenet_sha256": _required_sha256(
+                components.get("posenet_sha256"),
+                f"{mlx_response_path}:components.posenet_sha256",
+            ),
+            "segnet_sha256": _required_sha256(
+                components.get("segnet_sha256"),
+                f"{mlx_response_path}:components.segnet_sha256",
+            ),
+            "posenet_shape": components.get("posenet_shape"),
+            "segnet_shape": components.get("segnet_shape"),
+        },
+        "candidate_cache_identity": _public_cache_identity(candidate_identity),
+        "reference_cache_identity": _public_cache_identity(reference_identity),
     }
     if cpu_score is not None:
         out["cpu_score"] = cpu_score
@@ -325,13 +346,44 @@ def _require_mlx_response_false_authority(payload: dict[str, Any], path: Path) -
 
 
 def _response_candidate_cache_identity(payload: dict[str, Any]) -> dict[str, Any]:
+    return _response_cache_identity(payload, "candidate")
+
+
+def _response_cache_identity(payload: dict[str, Any], side: str) -> dict[str, Any]:
     cache_identity = payload.get("cache_identity")
     if not isinstance(cache_identity, dict):
         raise ValueError("MLX response cache_identity is missing")
-    candidate = cache_identity.get("candidate")
-    if not isinstance(candidate, dict):
-        raise ValueError("MLX response candidate cache_identity is missing")
-    return candidate
+    item = cache_identity.get(side)
+    if not isinstance(item, dict):
+        raise ValueError(f"MLX response {side} cache_identity is missing")
+    return item
+
+
+def _public_cache_identity(identity: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "path": identity.get("path"),
+        "archive_sha256": identity.get("archive_sha256"),
+        "inflated_outputs_aggregate_sha256": identity.get("inflated_outputs_aggregate_sha256"),
+        "raw_sha256": identity.get("raw_sha256"),
+        "pair_count": identity.get("pair_count"),
+        "hash_domain": identity.get("hash_domain"),
+        "array_sha256": identity.get("array_sha256"),
+        "segnet_last_rgb_shape": identity.get("segnet_last_rgb_shape"),
+        "posenet_yuv6_pair_shape": identity.get("posenet_yuv6_pair_shape"),
+        "pair_indices_shape": identity.get("pair_indices_shape"),
+        "eligible_for_local_mlx_transfer_calibration": identity.get(
+            "eligible_for_local_mlx_transfer_calibration"
+        ),
+    }
+
+
+def _required_pair_window(value: Any, path: Path) -> list[int]:
+    if not isinstance(value, list) or len(value) != 2:
+        raise ValueError(f"MLX response {path} pair_window missing")
+    try:
+        return [int(value[0]), int(value[1])]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"MLX response {path} pair_window invalid") from exc
 
 
 def _auth_archive_sha256(payload: dict[str, Any]) -> str | None:

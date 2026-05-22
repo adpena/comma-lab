@@ -81,7 +81,9 @@ def _stamp_cache_manifest(
         "identity_residual": audit.get("identity_residual"),
         "auth_eval_path": str(auth_eval.resolve()),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
