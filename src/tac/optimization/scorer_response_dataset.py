@@ -43,6 +43,10 @@ VALIDATION_GATE_SCHEMA = "scorer_response_dataset_validation_gate.v1"
 MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
 MLX_TORCH_PARITY_SWEEP_SCHEMA = "mlx_scorer_torch_parity_sweep.v1"
 MLX_SCORE_CALIBRATION_SCHEMA = "mlx_score_calibration.v1"
+MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA = "mlx_scorer_production_contract_bundle.v1"
+MLX_PRODUCTION_CONTRACT_BUNDLE_PASS_VERDICT = (
+    "PASS_MLX_SCORER_PRODUCTION_CONTRACT_BUNDLE"
+)
 LL_MLX_PRODUCTION_CONTRACT_GATE_SCHEMA = "ll_mlx_production_contract_gate.v1"
 DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
 
@@ -599,6 +603,7 @@ def _mlx_scorer_response_candidate_item(
         "schema": MLX_SCORER_RESPONSE_SCHEMA,
         "schema_version": payload.get("schema_version"),
         "producer": "tac.local_acceleration.mlx_scorer_response",
+        "run_id": payload.get("run_id"),
         "authority": authority,
         "evidence_grade": payload.get("evidence_grade"),
         "evidence_tag": payload.get("evidence_tag"),
@@ -814,6 +819,7 @@ def normalize_response_row(
         "component": summary.get("component") or cand_summary.get("component"),
         "pair_indices": summary.get("pair_indices") or cand_summary.get("pair_indices"),
         "source_schema": parent.get("schema") or parent.get("schema_version"),
+        "source_run_id": parent.get("run_id") or candidate.get("run_id"),
         "source_evidence_grade": parent.get("evidence_grade") or authority.get("evidence_grade"),
         "source_evidence_tag": parent.get("evidence_tag"),
         "source_hardware_substrate": parent.get("hardware_substrate"),
@@ -1767,6 +1773,33 @@ def _mlx_contract_row_identity_blockers(
                 blockers.append(
                     f"mlx_production_contract_row_{field}_mismatch:{row_id}"
                 )
+        rich_checks = (
+            ("response_run_id", row.get("source_run_id"), response_summary.get("response_run_id")),
+            (
+                "candidate_cache_array_sha256",
+                row.get("source_candidate_cache_array_sha256"),
+                response_summary.get("candidate_cache_array_sha256"),
+            ),
+            (
+                "reference_cache_array_sha256",
+                row.get("source_reference_cache_array_sha256"),
+                response_summary.get("reference_cache_array_sha256"),
+            ),
+            ("posenet_sha256", row.get("source_posenet_sha256"), response_summary.get("posenet_sha256")),
+            ("segnet_sha256", row.get("source_segnet_sha256"), response_summary.get("segnet_sha256")),
+        )
+        for field, actual, expected in rich_checks:
+            if actual is None:
+                continue
+            if expected is None:
+                blockers.append(
+                    f"mlx_production_contract_row_{field}_missing:{row_id}"
+                )
+                continue
+            if actual != expected:
+                blockers.append(
+                    f"mlx_production_contract_row_{field}_mismatch:{row_id}"
+                )
     return blockers
 
 
@@ -1775,6 +1808,197 @@ def _is_mlx_scorer_response_row(row: Any) -> bool:
         row.get("family") == "mlx_scorer_response"
         or row.get("source_schema") == MLX_SCORER_RESPONSE_SCHEMA
     )
+
+
+def _mlx_contract_summary_identity_key(
+    summary: dict[str, Any],
+) -> tuple[Any, ...] | None:
+    batch_pairs = _as_int(summary.get("batch_pairs"))
+    n_samples = _as_int(summary.get("n_samples"))
+    pair_window = summary.get("pair_window")
+    if not isinstance(pair_window, list):
+        return None
+    values = (
+        summary.get("archive_sha256"),
+        summary.get("inflated_outputs_aggregate_sha256"),
+        batch_pairs,
+        n_samples,
+        tuple(pair_window),
+    )
+    if any(value is None for value in values):
+        return None
+    return values
+
+
+def _mlx_row_identity_key(row: dict[str, Any]) -> tuple[Any, ...] | None:
+    batch_pairs = _as_int(row.get("source_batch_pairs"))
+    n_samples = _as_int(row.get("source_n_samples"))
+    pair_window = row.get("source_pair_window")
+    if not isinstance(pair_window, list):
+        return None
+    values = (
+        row.get("archive_sha256"),
+        row.get("source_inflated_outputs_aggregate_sha256"),
+        batch_pairs,
+        n_samples,
+        tuple(pair_window),
+    )
+    if any(value is None for value in values):
+        return None
+    return values
+
+
+def _build_mlx_production_contract_bundle_gate(
+    bundle: dict[str, Any],
+    *,
+    rows: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    row_list = None if rows is None else list(rows)
+    _require_explicit_false_authority(
+        bundle,
+        label="MLX production contract bundle",
+        fields=(
+            "score_authority",
+            "contest_authority",
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "ready_for_exact_eval_dispatch",
+            "rank_or_kill_eligible",
+            "promotable",
+        ),
+    )
+    if bundle.get("candidate_generation_only") is not True:
+        raise ScorerResponseDatasetError(
+            "MLX production contract bundle candidate_generation_only must be true"
+        )
+    if bundle.get("requires_exact_eval_before_promotion") is not True:
+        raise ScorerResponseDatasetError(
+            "MLX production contract bundle requires_exact_eval_before_promotion must be true"
+        )
+    if bundle.get("evidence_grade") != EVIDENCE_GRADE_MLX:
+        raise ScorerResponseDatasetError(
+            "MLX production contract bundle evidence_grade mismatch"
+        )
+    if bundle.get("evidence_tag") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError(
+            "MLX production contract bundle evidence_tag mismatch"
+        )
+    if bundle.get("score_axis") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError(
+            "MLX production contract bundle score_axis mismatch"
+        )
+    contracts = bundle.get("contracts")
+    if not isinstance(contracts, list):
+        raise ScorerResponseDatasetError(
+            "MLX production contract bundle contracts must be a list"
+        )
+
+    blockers: list[str] = []
+    if bundle.get("passed") is not True:
+        blockers.append("mlx_production_contract_bundle_not_passed")
+    if bundle.get("verdict") != MLX_PRODUCTION_CONTRACT_BUNDLE_PASS_VERDICT:
+        blockers.append("mlx_production_contract_bundle_verdict_not_pass")
+    child_summaries: list[dict[str, Any]] = []
+    contracts_by_identity: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for index, contract in enumerate(contracts):
+        if not isinstance(contract, dict):
+            blockers.append(f"mlx_production_contract_bundle_child_not_object:{index}")
+            continue
+        gate = build_mlx_production_contract_gate(contract)
+        summary = gate.get("summary") if isinstance(gate.get("summary"), dict) else {}
+        child_summary = {
+            "index": index,
+            "status": gate.get("status"),
+            "source_run_id": gate.get("source_run_id"),
+            "source_verdict": gate.get("source_verdict"),
+            "blockers": list(gate.get("blockers") or []),
+            "summary": summary,
+        }
+        child_summaries.append(child_summary)
+        if gate.get("status") != "strict_pass":
+            blockers.append(f"mlx_production_contract_bundle_child_blocked:{index}")
+            continue
+        identity_key = _mlx_contract_summary_identity_key(summary)
+        if identity_key is None:
+            blockers.append(f"mlx_production_contract_bundle_child_identity_missing:{index}")
+            continue
+        contracts_by_identity.setdefault(identity_key, []).append(
+            {
+                "index": index,
+                "gate": gate,
+                "summary": summary,
+            }
+        )
+
+    matched_row_ids: list[str] = []
+    unmatched_row_ids: list[str] = []
+    if row_list is not None:
+        for row in row_list:
+            row_id = str(row.get("row_id") or "<unknown>")
+            identity_key = _mlx_row_identity_key(row)
+            if identity_key is None:
+                unmatched_row_ids.append(row_id)
+                blockers.append(f"mlx_production_contract_bundle_row_identity_missing:{row_id}")
+                continue
+            matching_contracts = contracts_by_identity.get(identity_key, [])
+            if not matching_contracts:
+                unmatched_row_ids.append(row_id)
+                blockers.append(f"mlx_production_contract_bundle_row_unmatched:{row_id}")
+                continue
+            detail_blocker_sets = [
+                _mlx_contract_row_identity_blockers(item["summary"], [row])
+                for item in matching_contracts
+            ]
+            if not any(not detail_blockers for detail_blockers in detail_blocker_sets):
+                unmatched_row_ids.append(row_id)
+                blockers.append(
+                    f"mlx_production_contract_bundle_row_detail_mismatch:{row_id}"
+                )
+                for detail_blockers in detail_blocker_sets:
+                    blockers.extend(detail_blockers)
+                continue
+            matched_row_ids.append(row_id)
+
+    status = "strict_pass" if not blockers else "blocked"
+    return {
+        "schema": LL_MLX_PRODUCTION_CONTRACT_GATE_SCHEMA,
+        "producer": TOOL,
+        "source_schema": MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA,
+        "source_run_id": bundle.get("run_id"),
+        "source_verdict": bundle.get("verdict"),
+        "source_passed": bundle.get("passed") is True,
+        "status": status,
+        "mlx_production_signal_allowed": status == "strict_pass",
+        "mlx_spend_triage_allowed": status == "strict_pass",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "summary": {
+            "contract_count": len(contracts),
+            "strict_contract_count": sum(
+                1 for item in child_summaries if item.get("status") == "strict_pass"
+            ),
+            "row_count": 0 if row_list is None else len(row_list),
+            "matched_row_count": len(matched_row_ids),
+            "unmatched_row_ids": unmatched_row_ids[:8],
+            "child_contracts": child_summaries[:8],
+        },
+        "blockers": blockers,
+        "allowed_use": (
+            "local_exact_eval_spend_triage_filter_after_strict_production_contract_bundle"
+            if not blockers
+            else "blocked_until_every_mlx_row_has_matching_strict_production_contract"
+        ),
+    }
 
 
 def build_mlx_production_contract_gate(
@@ -1792,6 +2016,8 @@ def build_mlx_production_contract_gate(
     if not isinstance(contract, dict):
         raise ScorerResponseDatasetError("MLX production contract must be a JSON object")
     source_schema = contract.get("schema_version") or contract.get("schema")
+    if source_schema == MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA:
+        return _build_mlx_production_contract_bundle_gate(contract, rows=rows)
     if source_schema != MLX_PRODUCTION_CONTRACT_SCHEMA:
         raise ScorerResponseDatasetError("MLX production contract schema mismatch")
     _require_explicit_false_authority(
@@ -1890,10 +2116,19 @@ def build_mlx_production_contract_gate(
                 "inflated_outputs_aggregate_sha256"
             ),
             "response_schema_version": response_summary.get("schema_version"),
+            "response_run_id": response_summary.get("response_run_id"),
             "hardware_substrate": response_summary.get("hardware_substrate"),
             "batch_pairs": _as_int(response_summary.get("batch_pairs")),
             "n_samples": _as_int(response_summary.get("n_samples")),
             "pair_window": response_summary.get("pair_window"),
+            "candidate_cache_array_sha256": response_summary.get(
+                "candidate_cache_array_sha256"
+            ),
+            "reference_cache_array_sha256": response_summary.get(
+                "reference_cache_array_sha256"
+            ),
+            "posenet_sha256": response_summary.get("posenet_sha256"),
+            "segnet_sha256": response_summary.get("segnet_sha256"),
             "required_gates": dict(required_gates),
             "warnings": list(contract.get("warnings") or []),
         },
@@ -3301,16 +3536,22 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
         lines.extend(["## MLX Production Contract Gate", ""])
         lines.append(f"- Status: `{mlx_production_gate.get('status')}`")
         lines.append(f"- Source verdict: `{mlx_production_gate.get('source_verdict')}`")
-        lines.append(f"- Batch pairs: `{gate_summary.get('batch_pairs')}`")
-        lines.append(f"- Pair window: `{gate_summary.get('pair_window')}`")
-        lines.append(
-            "- Archive SHA-256: "
-            f"`{gate_summary.get('archive_sha256')}`"
-        )
-        lines.append(
-            "- Inflated aggregate SHA-256: "
-            f"`{gate_summary.get('inflated_outputs_aggregate_sha256')}`"
-        )
+        if mlx_production_gate.get("source_schema") == MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA:
+            lines.append(f"- Contracts: `{gate_summary.get('contract_count')}`")
+            lines.append(f"- Strict contracts: `{gate_summary.get('strict_contract_count')}`")
+            lines.append(f"- Rows covered: `{gate_summary.get('matched_row_count')}`")
+            lines.append(f"- Unmatched rows: `{gate_summary.get('unmatched_row_ids')}`")
+        else:
+            lines.append(f"- Batch pairs: `{gate_summary.get('batch_pairs')}`")
+            lines.append(f"- Pair window: `{gate_summary.get('pair_window')}`")
+            lines.append(
+                "- Archive SHA-256: "
+                f"`{gate_summary.get('archive_sha256')}`"
+            )
+            lines.append(
+                "- Inflated aggregate SHA-256: "
+                f"`{gate_summary.get('inflated_outputs_aggregate_sha256')}`"
+            )
         lines.append(f"- Blockers: `{mlx_production_gate.get('blockers')}`")
         lines.append("")
     decoder_q_surface_gate = plan.get("decoder_q_surface_advisory_gate")

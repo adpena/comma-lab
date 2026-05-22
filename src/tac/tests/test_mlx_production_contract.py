@@ -43,6 +43,18 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
     assert manifest["required_gates"]["cache_auth_audit"] is True
     assert manifest["required_gates"]["torch_parity"] is True
     assert manifest["required_gates"]["profile_stability"] is True
+    assert manifest["response_summary"]["candidate_cache_array_sha256"] == {
+        "pair_indices": "9" * 64,
+        "posenet_yuv6_pair": "a" * 64,
+        "segnet_last_rgb": "b" * 64,
+    }
+    assert manifest["response_summary"]["reference_cache_array_sha256"] == {
+        "pair_indices": "6" * 64,
+        "posenet_yuv6_pair": "7" * 64,
+        "segnet_last_rgb": "8" * 64,
+    }
+    assert manifest["response_summary"]["posenet_sha256"] == "a" * 64
+    assert manifest["response_summary"]["segnet_sha256"] == "b" * 64
     assert manifest["required_gates"]["batch_invariance"] is False
     assert manifest["required_gates"]["batch_invariance_policy_requested"] is True
 

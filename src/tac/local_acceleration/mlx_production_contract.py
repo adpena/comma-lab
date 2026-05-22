@@ -225,6 +225,7 @@ def build_mlx_scorer_production_contract_manifest(
         "evidence_tag": EVIDENCE_TAG_MLX,
         "response_summary": {
             "schema_version": response_payload.get("schema_version"),
+            "response_run_id": response_payload.get("run_id"),
             "hardware_substrate": response_payload.get("hardware_substrate"),
             "batch_pairs": response_payload.get("batch_pairs"),
             "n_samples": response_payload.get("n_samples"),
@@ -232,6 +233,22 @@ def build_mlx_scorer_production_contract_manifest(
             "archive_sha256": response_payload.get("archive_sha256"),
             "inflated_outputs_aggregate_sha256": response_payload.get(
                 "inflated_outputs_aggregate_sha256"
+            ),
+            "candidate_cache_array_sha256": _response_cache_array_sha256(
+                response_payload,
+                side="candidate",
+            ),
+            "reference_cache_array_sha256": _response_cache_array_sha256(
+                response_payload,
+                side="reference",
+            ),
+            "posenet_sha256": _response_component_sha256(
+                response_payload,
+                key="posenet_sha256",
+            ),
+            "segnet_sha256": _response_component_sha256(
+                response_payload,
+                key="segnet_sha256",
             ),
         },
         "required_gates": {
@@ -347,6 +364,34 @@ def _check_response_payload(
         _check_cache_identity(payload, blockers=blockers)
     elif "cache_identity" not in payload:
         warnings.append("response_cache_identity_not_checked")
+
+
+def _response_cache_array_sha256(
+    payload: dict[str, Any],
+    *,
+    side: str,
+) -> dict[str, Any] | None:
+    identity = payload.get("cache_identity")
+    if not isinstance(identity, dict):
+        return None
+    item = identity.get(side)
+    if not isinstance(item, dict):
+        return None
+    array_hashes = item.get("array_sha256")
+    if isinstance(array_hashes, dict):
+        return dict(array_hashes)
+    return None
+
+
+def _response_component_sha256(
+    payload: dict[str, Any],
+    *,
+    key: str,
+) -> Any:
+    components = payload.get("components")
+    if not isinstance(components, dict):
+        return None
+    return components.get(key)
 
 
 def _check_cache_identity(payload: dict[str, Any], *, blockers: list[str]) -> None:

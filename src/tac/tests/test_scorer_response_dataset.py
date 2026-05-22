@@ -280,6 +280,112 @@ def _mlx_production_contract_payload(*, passed: bool = True) -> dict:
     }
 
 
+def _mlx_production_contract_for_window(
+    *,
+    run_id: str,
+    pair_window: list[int],
+    archive_sha256: str = "a" * 64,
+    inflated_outputs_aggregate_sha256: str = "e" * 64,
+    response_run_id: str | None = None,
+    candidate_cache_array_sha256: dict | None = None,
+    reference_cache_array_sha256: dict | None = None,
+    posenet_sha256: str | None = None,
+    segnet_sha256: str | None = None,
+    passed: bool = True,
+) -> dict:
+    payload = json.loads(json.dumps(_mlx_production_contract_payload(passed=passed)))
+    payload["run_id"] = run_id
+    payload["response_summary"]["pair_window"] = pair_window
+    payload["response_summary"]["archive_sha256"] = archive_sha256
+    payload["response_summary"]["inflated_outputs_aggregate_sha256"] = (
+        inflated_outputs_aggregate_sha256
+    )
+    if response_run_id is not None:
+        payload["response_summary"]["response_run_id"] = response_run_id
+    if candidate_cache_array_sha256 is not None:
+        payload["response_summary"]["candidate_cache_array_sha256"] = (
+            candidate_cache_array_sha256
+        )
+    if reference_cache_array_sha256 is not None:
+        payload["response_summary"]["reference_cache_array_sha256"] = (
+            reference_cache_array_sha256
+        )
+    if posenet_sha256 is not None:
+        payload["response_summary"]["posenet_sha256"] = posenet_sha256
+    if segnet_sha256 is not None:
+        payload["response_summary"]["segnet_sha256"] = segnet_sha256
+    return payload
+
+
+def _mlx_production_contract_bundle(*contracts: dict) -> dict:
+    return {
+        "schema": "mlx_scorer_production_contract_bundle.v1",
+        "producer": "unit-test",
+        "run_id": "unit-bundle",
+        "passed": True,
+        "verdict": "PASS_MLX_SCORER_PRODUCTION_CONTRACT_BUNDLE",
+        "score_authority": False,
+        "contest_authority": False,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "contracts": list(contracts),
+    }
+
+
+def _mlx_response_row(
+    *,
+    row_id: str,
+    pair_window: list[int],
+    archive_sha256: str = "a" * 64,
+    inflated_outputs_aggregate_sha256: str = "e" * 64,
+    source_run_id: str | None = None,
+    candidate_cache_array_sha256: dict | None = None,
+    reference_cache_array_sha256: dict | None = None,
+    posenet_sha256: str | None = None,
+    segnet_sha256: str | None = None,
+) -> dict:
+    row = {
+        "schema": "scorer_response_row.v1",
+        "row_id": row_id,
+        "family": "mlx_scorer_response",
+        "delta_vs_baseline_score": 1.0e-6,
+        "scorer_delta_vs_baseline": 1.0e-6,
+        "byte_budget_margin_vs_break_even": None,
+        "archive_sha256": archive_sha256,
+        "source_inflated_outputs_aggregate_sha256": (
+            inflated_outputs_aggregate_sha256
+        ),
+        "source_batch_pairs": 1,
+        "source_n_samples": 600,
+        "source_pair_window": pair_window,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    if source_run_id is not None:
+        row["source_run_id"] = source_run_id
+    if candidate_cache_array_sha256 is not None:
+        row["source_candidate_cache_array_sha256"] = candidate_cache_array_sha256
+    if reference_cache_array_sha256 is not None:
+        row["source_reference_cache_array_sha256"] = reference_cache_array_sha256
+    if posenet_sha256 is not None:
+        row["source_posenet_sha256"] = posenet_sha256
+    if segnet_sha256 is not None:
+        row["source_segnet_sha256"] = segnet_sha256
+    return row
+
+
 def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     path = tmp_path / "scorer_gradient.json"
     payload = {
@@ -532,6 +638,162 @@ def test_mlx_production_contract_gate_blocks_row_identity_mismatch() -> None:
     assert "mlx_production_contract_row_archive_sha256_mismatch:mlx-row-1" in gate[
         "blockers"
     ]
+
+
+def test_mlx_production_contract_bundle_gate_requires_every_mlx_row_match() -> None:
+    gate = build_mlx_production_contract_gate(
+        _mlx_production_contract_bundle(
+            _mlx_production_contract_for_window(
+                run_id="window-0-600",
+                pair_window=[0, 600],
+            ),
+            _mlx_production_contract_for_window(
+                run_id="window-600-1200",
+                pair_window=[600, 1200],
+            ),
+        ),
+        rows=[
+            _mlx_response_row(row_id="mlx-row-1", pair_window=[0, 600]),
+            _mlx_response_row(row_id="mlx-row-2", pair_window=[600, 1200]),
+        ],
+    )
+
+    assert gate["source_schema"] == "mlx_scorer_production_contract_bundle.v1"
+    assert gate["status"] == "strict_pass"
+    assert gate["mlx_spend_triage_allowed"] is True
+    assert gate["summary"]["contract_count"] == 2
+    assert gate["summary"]["strict_contract_count"] == 2
+    assert gate["summary"]["row_count"] == 2
+    assert gate["summary"]["matched_row_count"] == 2
+    assert gate["summary"]["unmatched_row_ids"] == []
+
+
+def test_mlx_production_contract_bundle_gate_blocks_uncovered_mlx_row() -> None:
+    gate = build_mlx_production_contract_gate(
+        _mlx_production_contract_bundle(
+            _mlx_production_contract_for_window(
+                run_id="window-0-600",
+                pair_window=[0, 600],
+            ),
+        ),
+        rows=[
+            _mlx_response_row(row_id="mlx-row-1", pair_window=[0, 600]),
+            _mlx_response_row(row_id="mlx-row-2", pair_window=[600, 1200]),
+        ],
+    )
+
+    assert gate["status"] == "blocked"
+    assert gate["mlx_spend_triage_allowed"] is False
+    assert "mlx-row-2" in gate["summary"]["unmatched_row_ids"]
+    assert "mlx_production_contract_bundle_row_unmatched:mlx-row-2" in gate[
+        "blockers"
+    ]
+
+
+def test_mlx_production_contract_bundle_gate_blocks_failed_bundle_verdict() -> None:
+    bundle = _mlx_production_contract_bundle(
+        _mlx_production_contract_for_window(
+            run_id="window-0-600",
+            pair_window=[0, 600],
+        ),
+    )
+    bundle["passed"] = False
+    bundle["verdict"] = "FAIL_MLX_SCORER_PRODUCTION_CONTRACT_BUNDLE"
+
+    gate = build_mlx_production_contract_gate(
+        bundle,
+        rows=[_mlx_response_row(row_id="mlx-row-1", pair_window=[0, 600])],
+    )
+
+    assert gate["status"] == "blocked"
+    assert gate["source_passed"] is False
+    assert "mlx_production_contract_bundle_not_passed" in gate["blockers"]
+    assert "mlx_production_contract_bundle_verdict_not_pass" in gate["blockers"]
+
+
+def test_mlx_production_contract_bundle_gate_blocks_cache_detail_mismatch() -> None:
+    contract_cache = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    row_cache = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "3" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+
+    gate = build_mlx_production_contract_gate(
+        _mlx_production_contract_bundle(
+            _mlx_production_contract_for_window(
+                run_id="window-0-600",
+                pair_window=[0, 600],
+                response_run_id="response-a",
+                candidate_cache_array_sha256=contract_cache,
+                reference_cache_array_sha256=contract_cache,
+                posenet_sha256="p" * 64,
+                segnet_sha256="s" * 64,
+            ),
+        ),
+        rows=[
+            _mlx_response_row(
+                row_id="mlx-row-1",
+                pair_window=[0, 600],
+                source_run_id="response-a",
+                candidate_cache_array_sha256=row_cache,
+                reference_cache_array_sha256=contract_cache,
+                posenet_sha256="p" * 64,
+                segnet_sha256="s" * 64,
+            )
+        ],
+    )
+
+    assert gate["status"] == "blocked"
+    assert "mlx_production_contract_bundle_row_detail_mismatch:mlx-row-1" in gate[
+        "blockers"
+    ]
+    assert (
+        "mlx_production_contract_row_candidate_cache_array_sha256_mismatch:mlx-row-1"
+        in gate["blockers"]
+    )
+
+
+def test_next_probe_plan_accepts_mlx_production_contract_bundle() -> None:
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 2},
+            "rows": [
+                _mlx_response_row(row_id="mlx-row-1", pair_window=[0, 600]),
+                _mlx_response_row(row_id="mlx-row-2", pair_window=[600, 1200]),
+            ],
+        },
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+        mlx_production_contract=_mlx_production_contract_bundle(
+            _mlx_production_contract_for_window(
+                run_id="window-0-600",
+                pair_window=[0, 600],
+            ),
+            _mlx_production_contract_for_window(
+                run_id="window-600-1200",
+                pair_window=[600, 1200],
+            ),
+        ),
+    )
+
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert plan["mlx_production_contract_gate"]["status"] == "strict_pass"
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
+        not in rules
+    )
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_failed_production_contract"
+        not in rules
+    )
+    assert plan["probes"][0]["probe_id"] == "ll_mlx_cpu_stable_response_harvest"
+    assert plan["probes"][0]["input_rows"] == ["mlx-row-1", "mlx-row-2"]
 
 
 def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:

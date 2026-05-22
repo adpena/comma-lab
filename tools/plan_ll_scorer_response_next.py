@@ -17,11 +17,14 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX  # noqa: E402
 from tac.local_acceleration.mlx_execution_plan import (  # noqa: E402
     MLXExecutionPlanError,
     build_mlx_scorer_response_execution_plan,
 )
 from tac.optimization.scorer_response_dataset import (  # noqa: E402
+    MLX_PRODUCTION_CONTRACT_BUNDLE_PASS_VERDICT,
+    MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA,
     ScorerResponseDatasetError,
     build_next_probe_plan,
     render_next_probe_plan_markdown,
@@ -110,11 +113,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--mlx-production-contract",
+        action="append",
         type=Path,
         help=(
-            "Optional strict MLX production-contract manifest. Exact-eval spend "
-            "triage from MLX rows is blocked unless this gate is attached and "
-            "passes, even when parity and score calibration are present."
+            "Optional strict MLX production-contract manifest. May repeat to "
+            "build a per-row contract bundle. Exact-eval spend triage from MLX "
+            "rows is blocked unless every row is covered by a strict pass."
         ),
     )
     parser.add_argument(
@@ -193,11 +197,36 @@ def main(argv: list[str] | None = None) -> int:
             if args.mlx_score_calibration is None
             else json.loads(args.mlx_score_calibration.read_text(encoding="utf-8"))
         )
-        mlx_production_contract = (
-            None
-            if args.mlx_production_contract is None
-            else json.loads(args.mlx_production_contract.read_text(encoding="utf-8"))
-        )
+        mlx_production_contracts = [
+            json.loads(path.read_text(encoding="utf-8"))
+            for path in (args.mlx_production_contract or [])
+        ]
+        if not mlx_production_contracts:
+            mlx_production_contract = None
+        elif len(mlx_production_contracts) == 1:
+            mlx_production_contract = mlx_production_contracts[0]
+        else:
+            mlx_production_contract = {
+                "schema": MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA,
+                "producer": "tools.plan_ll_scorer_response_next",
+                "run_id": "cli_bundle",
+                "passed": True,
+                "verdict": MLX_PRODUCTION_CONTRACT_BUNDLE_PASS_VERDICT,
+                "score_authority": False,
+                "contest_authority": False,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "promotable": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "candidate_generation_only": True,
+                "requires_exact_eval_before_promotion": True,
+                "score_axis": EVIDENCE_TAG_MLX,
+                "evidence_grade": EVIDENCE_GRADE_MLX,
+                "evidence_tag": EVIDENCE_TAG_MLX,
+                "contracts": mlx_production_contracts,
+            }
         plan = build_next_probe_plan(
             dataset,
             null_byte_matrix=null_byte_matrix,
