@@ -22,6 +22,7 @@ from tac.optimization.scorer_response_dataset import (
     ScorerResponseDatasetError,
     build_decoder_q_surface_advisory_gate,
     build_magic_codec_seed_boundary,
+    build_mlx_parent_production_contract_plan,
     build_mlx_production_contract_gate,
     build_mlx_score_calibration_gate,
     build_mlx_torch_parity_sweep_gate,
@@ -35,6 +36,7 @@ from tac.optimization.scorer_response_dataset import (
     normalize_legacy_response_dataset_authority,
     refresh_mlx_scorer_response_source_identity,
     render_markdown,
+    render_mlx_parent_production_contract_plan_markdown,
     render_next_probe_plan_markdown,
     render_validation_gate_markdown,
 )
@@ -397,6 +399,32 @@ def _attach_mlx_identity_to_rows(dataset: dict) -> dict:
         row["source_n_samples"] = 600
         row["source_pair_window"] = [0, 600]
     return dataset
+
+
+def _response_dataset_with_rows(rows: list[dict]) -> dict:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    normalized_rows = []
+    for row in rows:
+        item = dict(row)
+        item.setdefault("authority_source_score_claim", False)
+        normalized_rows.append(item)
+    return {
+        "schema": "scorer_response_dataset.v1",
+        "producer": "test",
+        **false_authority,
+        "authority": {
+            **false_authority,
+            "evidence_grade": "macOS-CPU advisory response dataset",
+        },
+        "summary": {"row_count": len(normalized_rows)},
+        "rows": normalized_rows,
+    }
 
 
 def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
@@ -775,6 +803,153 @@ def test_mlx_production_contract_bundle_gate_parent_window_requires_cache_identi
     assert gate["summary"]["unmatched_row_count"] == 1
     assert "mlx_production_contract_bundle_row_unmatched:mlx-row-1" in gate[
         "blockers"
+    ]
+
+
+def test_mlx_parent_production_contract_plan_groups_required_parent_contracts() -> None:
+    cache_a = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    cache_b = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "3" * 64,
+        "segnet_last_rgb": "4" * 64,
+    }
+    dataset = _response_dataset_with_rows(
+        [
+            _mlx_response_row(
+                row_id="fec6-218",
+                pair_window=[218, 219],
+                archive_sha256="a" * 64,
+                candidate_cache_array_sha256=cache_a,
+                reference_cache_array_sha256=cache_a,
+            ),
+            _mlx_response_row(
+                row_id="fec6-219",
+                pair_window=[219, 220],
+                archive_sha256="a" * 64,
+                candidate_cache_array_sha256=cache_a,
+                reference_cache_array_sha256=cache_a,
+            ),
+            _mlx_response_row(
+                row_id="decoderq-218",
+                pair_window=[218, 219],
+                archive_sha256="b" * 64,
+                candidate_cache_array_sha256=cache_b,
+                reference_cache_array_sha256=cache_a,
+            ),
+        ]
+    )
+
+    plan = build_mlx_parent_production_contract_plan(dataset)
+
+    assert plan["score_claim"] is False
+    assert plan["mlx_exact_eval_spend_triage_allowed"] is False
+    assert plan["status"] == "blocked"
+    assert plan["summary"]["mlx_row_count"] == 3
+    assert plan["summary"]["required_parent_contract_count"] == 2
+    assert plan["summary"]["covered_parent_contract_group_count"] == 0
+    assert plan["summary"]["missing_parent_contract_group_count"] == 2
+    windows = {
+        tuple(group["required_parent_pair_window"])
+        for group in plan["required_parent_contracts"]
+    }
+    assert windows == {(218, 220), (218, 219)}
+    assert all(
+        group["status"] == "blocked_missing_strict_parent_contract"
+        for group in plan["required_parent_contracts"]
+    )
+    rendered = render_mlx_parent_production_contract_plan_markdown(plan)
+    assert "- Spend triage authority: `False`" in rendered
+    assert "- Required parent contracts: `2`" in rendered
+
+
+def test_mlx_parent_production_contract_plan_accepts_supplied_parent_bundle() -> None:
+    cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    dataset = _response_dataset_with_rows(
+        [
+            _mlx_response_row(
+                row_id="mlx-row-1",
+                pair_window=[218, 219],
+                candidate_cache_array_sha256=cache_hashes,
+                reference_cache_array_sha256=cache_hashes,
+            )
+        ]
+    )
+
+    plan = build_mlx_parent_production_contract_plan(
+        dataset,
+        production_contract=_mlx_production_contract_bundle(
+            _mlx_production_contract_for_window(
+                run_id="parent-0-300",
+                pair_window=[0, 300],
+                candidate_cache_array_sha256=cache_hashes,
+                reference_cache_array_sha256=cache_hashes,
+            )
+        ),
+    )
+
+    assert plan["status"] == "strict_pass"
+    assert plan["mlx_exact_eval_spend_triage_allowed"] is False
+    assert plan["summary"]["required_parent_contract_count"] == 1
+    assert plan["summary"]["covered_parent_contract_group_count"] == 1
+    assert plan["summary"]["missing_parent_contract_group_count"] == 0
+    assert plan["required_parent_contracts"][0]["status"] == "covered_by_supplied_contract"
+    assert plan["required_parent_contracts"][0]["coverage"]["contract_index"] == 0
+
+
+def test_mlx_parent_production_contract_plan_discovers_parent_response_candidate(
+    tmp_path,
+) -> None:
+    cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    run_dir = tmp_path / "run"
+    windows_dir = run_dir / "candidate_windows"
+    windows_dir.mkdir(parents=True)
+    source_path = windows_dir / "candidate_0218_0219.json"
+    source_path.write_text("{}", encoding="utf-8")
+    parent_path = run_dir / "candidate_parent_0000_0300.json"
+    parent_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "mlx_scorer_response.v1",
+                "archive_sha256": "a" * 64,
+                "inflated_outputs_aggregate_sha256": "e" * 64,
+                "batch_pairs": 1,
+                "pair_window": [0, 300],
+                "cache_identity": {
+                    "candidate": {"array_sha256": cache_hashes},
+                    "reference": {"array_sha256": cache_hashes},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    row = _mlx_response_row(
+        row_id="mlx-row-1",
+        pair_window=[218, 219],
+        candidate_cache_array_sha256=cache_hashes,
+        reference_cache_array_sha256=cache_hashes,
+    )
+    row["source_path"] = str(source_path)
+
+    plan = build_mlx_parent_production_contract_plan(
+        _response_dataset_with_rows([row]),
+        repo_root=tmp_path,
+    )
+
+    assert plan["status"] == "blocked"
+    assert plan["required_parent_contracts"][0]["source_parent_response_candidates"] == [
+        "run/candidate_parent_0000_0300.json"
     ]
 
 

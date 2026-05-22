@@ -52,6 +52,9 @@ MLX_SCORE_CALIBRATION_SCHEMA = "mlx_score_calibration.v1"
 LL_MLX_PRODUCTION_CONTRACT_GATE_SCHEMA = "ll_mlx_production_contract_gate.v1"
 DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
 SOURCE_IDENTITY_REFRESH_SCHEMA = "scorer_response_source_identity_refresh.v1"
+MLX_PARENT_PRODUCTION_CONTRACT_PLAN_SCHEMA = (
+    "mlx_parent_production_contract_plan.v1"
+)
 
 DEFAULT_RESPONSE_PREDICTION_FIELDS = (
     "predicted_delta_vs_baseline_score",
@@ -2347,6 +2350,408 @@ def build_mlx_production_contract_gate(
             else "blocked_until_strict_mlx_production_contract_passes"
         ),
     }
+
+
+def _canonical_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _mlx_parent_contract_group_key(row: dict[str, Any]) -> tuple[Any, ...] | None:
+    batch_pairs = _as_int(row.get("source_batch_pairs"))
+    candidate_cache = row.get("source_candidate_cache_array_sha256")
+    reference_cache = row.get("source_reference_cache_array_sha256")
+    values = (
+        row.get("archive_sha256"),
+        row.get("source_inflated_outputs_aggregate_sha256"),
+        batch_pairs,
+        _canonical_json(candidate_cache) if isinstance(candidate_cache, dict) else None,
+        _canonical_json(reference_cache) if isinstance(reference_cache, dict) else None,
+    )
+    if any(value is None for value in values):
+        return None
+    return values
+
+
+def _valid_pair_window(value: Any) -> list[int] | None:
+    if not (isinstance(value, list) and len(value) == 2):
+        return None
+    start = _as_int(value[0])
+    stop = _as_int(value[1])
+    if start is None or stop is None or start >= stop:
+        return None
+    return [start, stop]
+
+
+def _contract_summary_covers_parent_group(
+    summary: dict[str, Any],
+    group: dict[str, Any],
+) -> bool:
+    required_window = group.get("required_parent_pair_window")
+    if not _pair_window_contains(summary.get("pair_window"), required_window):
+        return False
+    checks = (
+        (summary.get("archive_sha256"), group.get("archive_sha256")),
+        (
+            summary.get("inflated_outputs_aggregate_sha256"),
+            group.get("inflated_outputs_aggregate_sha256"),
+        ),
+        (_as_int(summary.get("batch_pairs")), _as_int(group.get("source_batch_pairs"))),
+        (
+            summary.get("candidate_cache_array_sha256"),
+            group.get("candidate_cache_array_sha256"),
+        ),
+        (
+            summary.get("reference_cache_array_sha256"),
+            group.get("reference_cache_array_sha256"),
+        ),
+    )
+    return all(expected is not None and expected == actual for expected, actual in checks)
+
+
+def _source_parent_response_candidates_for_group(
+    group: dict[str, Any],
+    *,
+    repo_root: Path | None,
+) -> list[str]:
+    if repo_root is None:
+        return []
+    source_paths = group.get("source_paths_sample")
+    if not isinstance(source_paths, list):
+        return []
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for source in source_paths:
+        if not isinstance(source, str) or not source:
+            continue
+        source_path = Path(source)
+        if not source_path.is_absolute():
+            source_path = repo_root / source_path
+        search_root = source_path.parent.parent if source_path.parent.name == "candidate_windows" else source_path.parent
+        if not search_root.exists():
+            continue
+        for path in sorted(search_root.glob("*parent*.json")):
+            try:
+                payload = _load_json(path)
+            except (OSError, json.JSONDecodeError, ScorerResponseDatasetError):
+                continue
+            if payload.get("schema_version") != MLX_SCORER_RESPONSE_SCHEMA:
+                continue
+            summary = {
+                "archive_sha256": payload.get("archive_sha256"),
+                "inflated_outputs_aggregate_sha256": (
+                    payload.get("inflated_outputs_aggregate_sha256")
+                    or _get_path(
+                        payload,
+                        (
+                            "cache_identity",
+                            "candidate",
+                            "inflated_outputs_aggregate_sha256",
+                        ),
+                    )
+                ),
+                "batch_pairs": _as_int(payload.get("batch_pairs")),
+                "pair_window": payload.get("pair_window"),
+                "candidate_cache_array_sha256": _get_path(
+                    payload,
+                    ("cache_identity", "candidate", "array_sha256"),
+                ),
+                "reference_cache_array_sha256": _get_path(
+                    payload,
+                    ("cache_identity", "reference", "array_sha256"),
+                ),
+            }
+            if not _contract_summary_covers_parent_group(summary, group):
+                continue
+            display = path.relative_to(repo_root) if path.is_relative_to(repo_root) else path
+            text = str(display)
+            if text not in seen:
+                seen.add(text)
+                candidates.append(text)
+    return candidates[:8]
+
+
+def _strict_contract_summaries_from_payload(
+    contract: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None, list[str]]:
+    if contract is None:
+        return [], None, []
+    schema = contract.get("schema_version") or contract.get("schema")
+    strict_summaries: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    source_gate: dict[str, Any] | None = None
+    if schema == MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA:
+        try:
+            source_gate = build_mlx_production_contract_gate(contract)
+        except ScorerResponseDatasetError as exc:
+            return [], None, [f"production_contract_bundle_invalid:{exc}"]
+        contracts = contract.get("contracts")
+        if not isinstance(contracts, list):
+            return [], source_gate, ["production_contract_bundle_contracts_missing"]
+        for index, child in enumerate(contracts):
+            if not isinstance(child, dict):
+                blockers.append(f"production_contract_bundle_child_not_object:{index}")
+                continue
+            try:
+                gate = build_mlx_production_contract_gate(child)
+            except ScorerResponseDatasetError as exc:
+                blockers.append(f"production_contract_bundle_child_invalid:{index}:{exc}")
+                continue
+            if gate.get("status") != "strict_pass":
+                continue
+            summary = gate.get("summary")
+            if isinstance(summary, dict):
+                strict_summaries.append(
+                    {
+                        "contract_index": index,
+                        "source_run_id": gate.get("source_run_id"),
+                        "source_verdict": gate.get("source_verdict"),
+                        "summary": summary,
+                    }
+                )
+        return strict_summaries, source_gate, blockers
+    if schema == MLX_PRODUCTION_CONTRACT_SCHEMA:
+        try:
+            source_gate = build_mlx_production_contract_gate(contract)
+        except ScorerResponseDatasetError as exc:
+            return [], None, [f"production_contract_invalid:{exc}"]
+        if source_gate.get("status") == "strict_pass":
+            summary = source_gate.get("summary")
+            if isinstance(summary, dict):
+                strict_summaries.append(
+                    {
+                        "contract_index": 0,
+                        "source_run_id": source_gate.get("source_run_id"),
+                        "source_verdict": source_gate.get("source_verdict"),
+                        "summary": summary,
+                    }
+                )
+        return strict_summaries, source_gate, blockers
+    return [], None, ["production_contract_schema_mismatch"]
+
+
+def build_mlx_parent_production_contract_plan(
+    dataset: dict[str, Any],
+    *,
+    production_contract: dict[str, Any] | None = None,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    """Plan the strict parent-window MLX contracts needed by a dataset.
+
+    The plan is non-authoritative. It only inventories which parent response
+    contracts are required before MLX rows may be used for exact-eval spend
+    triage through the effective gate.
+    """
+
+    normalized = normalize_legacy_response_dataset_authority(dataset)
+    rows = normalized.get("rows")
+    if not isinstance(rows, list):
+        raise ScorerResponseDatasetError("dataset rows[] missing")
+    mlx_rows = [row for row in rows if _is_mlx_scorer_response_row(row)]
+    strict_contract_summaries, source_gate, source_blockers = (
+        _strict_contract_summaries_from_payload(production_contract)
+    )
+
+    groups_by_key: dict[tuple[Any, ...], dict[str, Any]] = {}
+    blockers: list[str] = list(source_blockers)
+    for row in mlx_rows:
+        row_id = str(row.get("row_id") or "<unknown>")
+        key = _mlx_parent_contract_group_key(row)
+        window = _valid_pair_window(row.get("source_pair_window"))
+        if key is None:
+            blockers.append(f"mlx_parent_contract_row_identity_missing:{row_id}")
+            continue
+        if window is None:
+            blockers.append(f"mlx_parent_contract_row_pair_window_invalid:{row_id}")
+            continue
+        group = groups_by_key.get(key)
+        if group is None:
+            group_id = hashlib.sha256(_canonical_json(key).encode("utf-8")).hexdigest()[:16]
+            group = {
+                "group_id": f"mlx_parent_contract_{group_id}",
+                "status": "blocked_missing_strict_parent_contract",
+                "archive_sha256": row.get("archive_sha256"),
+                "inflated_outputs_aggregate_sha256": row.get(
+                    "source_inflated_outputs_aggregate_sha256"
+                ),
+                "source_batch_pairs": _as_int(row.get("source_batch_pairs")),
+                "candidate_cache_array_sha256": row.get(
+                    "source_candidate_cache_array_sha256"
+                ),
+                "reference_cache_array_sha256": row.get(
+                    "source_reference_cache_array_sha256"
+                ),
+                "required_parent_pair_window": [window[0], window[1]],
+                "row_count": 0,
+                "families": {},
+                "row_ids_sample": [],
+                "source_paths_sample": [],
+                "blockers": [],
+                "coverage": {
+                    "covered_by_supplied_contract": False,
+                    "contract_index": None,
+                    "source_run_id": None,
+                },
+            }
+            groups_by_key[key] = group
+        required_window = group["required_parent_pair_window"]
+        required_window[0] = min(required_window[0], window[0])
+        required_window[1] = max(required_window[1], window[1])
+        group["row_count"] += 1
+        family = str(row.get("family") or row.get("source_schema") or "unknown")
+        group["families"][family] = group["families"].get(family, 0) + 1
+        if len(group["row_ids_sample"]) < 8:
+            group["row_ids_sample"].append(row_id)
+        source_path = row.get("source_path")
+        if (
+            isinstance(source_path, str)
+            and source_path
+            and len(group["source_paths_sample"]) < 8
+            and source_path not in group["source_paths_sample"]
+        ):
+            group["source_paths_sample"].append(source_path)
+
+    groups = sorted(groups_by_key.values(), key=lambda item: item["group_id"])
+    for group in groups:
+        group["source_parent_response_candidates"] = (
+            _source_parent_response_candidates_for_group(group, repo_root=repo_root)
+        )
+        matching_contract = next(
+            (
+                item
+                for item in strict_contract_summaries
+                if _contract_summary_covers_parent_group(item["summary"], group)
+            ),
+            None,
+        )
+        if matching_contract is None:
+            blocker = f"mlx_parent_contract_group_uncovered:{group['group_id']}"
+            group["blockers"].append(blocker)
+            blockers.append(blocker)
+            continue
+        group["status"] = "covered_by_supplied_contract"
+        group["coverage"] = {
+            "covered_by_supplied_contract": True,
+            "contract_index": matching_contract["contract_index"],
+            "source_run_id": matching_contract["source_run_id"],
+        }
+
+    covered_group_count = sum(
+        1 for group in groups if group["status"] == "covered_by_supplied_contract"
+    )
+    status = "strict_pass" if groups and not blockers else "blocked"
+    if not mlx_rows:
+        blockers.append("no_mlx_scorer_response_rows")
+        status = "blocked"
+    source_gate_summary = (
+        source_gate.get("summary")
+        if isinstance(source_gate, dict) and isinstance(source_gate.get("summary"), dict)
+        else {}
+    )
+    return {
+        "schema": MLX_PARENT_PRODUCTION_CONTRACT_PLAN_SCHEMA,
+        "producer": TOOL,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "status": status,
+        "mlx_exact_eval_spend_triage_allowed": False,
+        "authority_status": (
+            "Planner output is an inventory only; MLX rows remain blocked until "
+            "the effective MLX spend-triage gate receives strict production "
+            "contract coverage and exact eval remains required before promotion."
+        ),
+        "summary": {
+            "mlx_row_count": len(mlx_rows),
+            "required_parent_contract_count": len(groups),
+            "covered_parent_contract_group_count": covered_group_count,
+            "missing_parent_contract_group_count": len(groups) - covered_group_count,
+            "strict_supplied_contract_count": len(strict_contract_summaries),
+            "production_contract_gate_status": (
+                None if source_gate is None else source_gate.get("status")
+            ),
+            "production_contract_gate_source_schema": (
+                None if source_gate is None else source_gate.get("source_schema")
+            ),
+            "production_contract_gate_row_count": source_gate_summary.get("row_count"),
+            "production_contract_gate_matched_row_count": source_gate_summary.get(
+                "matched_row_count"
+            ),
+            "production_contract_gate_unmatched_row_count": source_gate_summary.get(
+                "unmatched_row_count"
+            ),
+        },
+        "required_parent_contracts": groups,
+        "blockers": blockers,
+        "allowed_use": (
+            "contract_build_queue_planning_only"
+            if status == "blocked"
+            else "contract_coverage_inventory_only_use_effective_gate_for_spend_triage"
+        ),
+    }
+
+
+def render_mlx_parent_production_contract_plan_markdown(plan: dict[str, Any]) -> str:
+    lines = [
+        "# MLX Parent Production Contract Plan",
+        "",
+        "## Authority",
+        "",
+        "- Score claim: `False`",
+        "- Promotion eligible: `False`",
+        "- Ready for exact-eval dispatch: `False`",
+        "- Rank/kill eligible: `False`",
+        "- Spend triage authority: `False`",
+        "",
+        "## Summary",
+        "",
+    ]
+    summary = plan.get("summary") if isinstance(plan.get("summary"), dict) else {}
+    lines.extend(
+        [
+            f"- Status: `{plan.get('status')}`",
+            f"- MLX rows: `{summary.get('mlx_row_count')}`",
+            f"- Required parent contracts: `{summary.get('required_parent_contract_count')}`",
+            f"- Covered parent groups: `{summary.get('covered_parent_contract_group_count')}`",
+            f"- Missing parent groups: `{summary.get('missing_parent_contract_group_count')}`",
+            f"- Strict supplied contracts: `{summary.get('strict_supplied_contract_count')}`",
+            f"- Production contract gate: `{summary.get('production_contract_gate_status')}`",
+            f"- Blockers: `{plan.get('blockers')}`",
+            "",
+            "## Required Parent Contracts",
+            "",
+        ]
+    )
+    for group in plan.get("required_parent_contracts", []):
+        lines.extend(
+            [
+                f"### {group.get('group_id')}",
+                "",
+                f"- Status: `{group.get('status')}`",
+                f"- Rows: `{group.get('row_count')}`",
+                f"- Families: `{group.get('families')}`",
+                f"- Pair window required: `{group.get('required_parent_pair_window')}`",
+                f"- Archive SHA-256: `{group.get('archive_sha256')}`",
+                "- Inflated aggregate SHA-256: "
+                f"`{group.get('inflated_outputs_aggregate_sha256')}`",
+                "- Candidate cache arrays: "
+                f"`{group.get('candidate_cache_array_sha256')}`",
+                "- Reference cache arrays: "
+                f"`{group.get('reference_cache_array_sha256')}`",
+                f"- Parent response candidates: `{group.get('source_parent_response_candidates')}`",
+                f"- Row sample: `{group.get('row_ids_sample')}`",
+                f"- Blockers: `{group.get('blockers')}`",
+                "",
+            ]
+        )
+    return "\n".join(lines)
 
 
 def build_effective_mlx_spend_triage_gate(
