@@ -1,27 +1,28 @@
 <!--
-generated_at: 2026-05-22T14:32:09Z
-from_state_hash: frontier_scan_no_drift_plus_decoder_q_selective_runtime_materialization_20260522T1424Z
-regenerated_by: codex:decoder_q_selective_runtime_materialization_20260522
-last_refreshed_at: 2026-05-22T14:32:09Z
-last_refreshed_by: codex:decoder_q_selective_runtime_materialization_20260522
-last_refreshed_head: 9bc56608f
+generated_at: 2026-05-22T14:35:30Z
+from_state_hash: frontier_scan_no_drift_plus_decoder_q_selective_runtime_top32_locality_20260522T1435Z
+regenerated_by: codex:decoder_q_selective_runtime_top32_locality_20260522
+last_refreshed_at: 2026-05-22T14:35:30Z
+last_refreshed_by: codex:decoder_q_selective_runtime_top32_locality_20260522
+last_refreshed_head: 2293f9f56
 last_refreshed_note: |
   Current frontier/status refresh after the 2026-05-22 decoder-q selective
-  runtime packet materialization pass. The scanner-derived FRONTIER section
-  remains unchanged from the 2026-05-22T09:27Z drift check. MLX remains
-  non-authoritative local research signal: calibrated spend triage is allowed
-  only through the composed effective gate and still requires exact CPU/CUDA
-  auth eval before any score, promotion, rank, kill, or dispatch-readiness
-  claim. The DQS1 trailer materialization is byte-closed local-substrate work,
-  not score evidence.
+  runtime packet materialization and top32 raw-locality pass. The scanner-derived
+  FRONTIER section remains unchanged from the 2026-05-22T09:27Z drift check. MLX
+  remains non-authoritative local research signal: calibrated spend triage is
+  allowed only through the composed effective gate and still requires exact
+  CPU/CUDA auth eval before any score, promotion, rank, kill, or
+  dispatch-readiness claim. The DQS1 trailer materialization and locality
+  controls are byte-closed local-substrate evidence, not score authority.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
 
 > **2026-05-22 refresh note**: the scanner-derived FRONTIER section remains
 > unchanged from the 09:27Z drift check. Decoder-q selective runtime now has a
-> byte-closed DQS1 trailer materialization and locality-control harness, but it
-> still carries no score, promotion, rank/kill, or dispatch-readiness authority.
+> byte-closed DQS1 trailer materialization, manifest/archive-tail custody checks,
+> and singleton/top32 raw-output locality controls, but it still carries no
+> score, promotion, rank/kill, or dispatch-readiness authority.
 > Historical roadmap sections below remain retained for context; use `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
 > detailed queue routing.
@@ -97,7 +98,7 @@ last_refreshed_note: |
   `score_claim=false` and `ready_for_exact_eval_dispatch=false` until exact
   CPU/CUDA auth eval passes.
 - Decoder-q selective packet planning and materialization now have L0 byte
-  accounting for the same bridge. Singleton pair `[501, 502]` maps to frames
+  accounting for the same bridge. Singleton pair `501` maps to frames
   `[1002, 1003]` under `pair_all_frames` with a charged `DQS1` payload of `13`
   bytes and estimated rate-score delta `0.000008656166390588228`; top32 maps to
   `64` affected frames with a charged `DQS1` payload of `75` bytes and
@@ -105,8 +106,8 @@ last_refreshed_note: |
   `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/decoder_q_selective_runtime_packet_plan_singleton_pair501.json`
   and
   `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/decoder_q_selective_runtime_packet_plan_top32.json`.
-  The top32 materialized local packet is
-  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/decoder_q_selective_runtime_trailer_top32/archive.zip`
+  The canonical top32 materialized local packet is
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32/submission_dir/archive.zip`
   with archive SHA-256
   `3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59`,
   member `x` length `178492`, and `+75` bytes versus FEC6.
@@ -116,8 +117,10 @@ last_refreshed_note: |
   `d99cf5d5f735249a66bea6a8ed02bd45d44abbf9e79e20cfa801756cb95d0654`
   equals the parent, and all mismatch counts are `0`.
   Control artifact:
-  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_controls_fullbatch.json`.
-  Local scorer smoke also passed on `[macOS-CPU advisory]`: canonical score
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_candidate_append_tail_top32/locality_controls_top32.json`.
+  The stale-path local scorer smoke has the same archive SHA and raw-output SHA
+  as the canonical top32 locality output; as `[macOS-CPU advisory]` only, it
+  reported canonical score
   `0.1920602563025898`, archive bytes `178592`, PoseNet distortion
   `0.00002943`, SegNet distortion `0.00055988`, rate `0.004756683286239793`,
   artifact
