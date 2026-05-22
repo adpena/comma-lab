@@ -83,12 +83,6 @@ def _calibrated_min_gap(
     plan: dict[str, Any],
     explicit_min_observed_gain: float | None,
 ) -> float:
-    if explicit_min_observed_gain is not None:
-        if not math.isfinite(explicit_min_observed_gain) or explicit_min_observed_gain < 0:
-            raise MLXEffectiveSpendTriageSelectionError(
-                "min_observed_gain must be finite and non-negative"
-            )
-        return float(explicit_min_observed_gain)
     calibration_gate = _require_gate(plan, "mlx_score_calibration_gate")
     summary = calibration_gate.get("summary")
     if not isinstance(summary, dict):
@@ -100,6 +94,17 @@ def _calibrated_min_gap(
         raise MLXEffectiveSpendTriageSelectionError(
             "recommended_min_mlx_gap_for_spend_triage missing"
         )
+    if explicit_min_observed_gain is not None:
+        if not math.isfinite(explicit_min_observed_gain) or explicit_min_observed_gain < 0:
+            raise MLXEffectiveSpendTriageSelectionError(
+                "min_observed_gain must be finite and non-negative"
+            )
+        if explicit_min_observed_gain < min_gap:
+            raise MLXEffectiveSpendTriageSelectionError(
+                "min_observed_gain cannot lower calibrated safety gap: "
+                f"explicit={explicit_min_observed_gain}:calibrated={min_gap}"
+            )
+        return float(explicit_min_observed_gain)
     return min_gap
 
 

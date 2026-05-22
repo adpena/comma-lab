@@ -45,8 +45,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--min-observed-gain",
         type=float,
         help=(
-            "Override the score-calibration recommended minimum MLX gap. "
-            "Default reads the strict score-calibration gate."
+            "Raise the score-calibration recommended minimum MLX gap. "
+            "Lower values fail closed; default reads the strict score-calibration gate."
         ),
     )
     parser.add_argument("--prediction-field", default=DEFAULT_PREDICTION_FIELD)

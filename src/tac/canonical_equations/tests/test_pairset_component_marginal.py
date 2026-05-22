@@ -70,3 +70,15 @@ def test_build_pairset_component_marginal_canonical_equation():
         "codex_findings_dqs1_pairset_observation_feedback_20260522T164706Z_codex.md"
     )
     assert "tac.optimization.cross_family_candidate_portfolio" in equation.canonical_consumers
+    assert (
+        "tac.optimization.cross_family_candidate_portfolio._component_marginal_action_prior"
+        in equation.canonical_consumers
+    )
+    assert (
+        "tac.optimization.cross_family_candidate_portfolio._operator_action_priority"
+        in equation.canonical_consumers
+    )
+    assert (
+        "tools/canonicalize_pairset_component_marginal_signal.py"
+        in equation.canonical_producers
+    )

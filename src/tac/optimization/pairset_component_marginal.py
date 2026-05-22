@@ -214,6 +214,8 @@ def canonical_signal_refs() -> dict[str, Any]:
             ],
             "cathedral_autopilot": [
                 "operator_action_queue_pairset_candidate_feedback",
+                "tac.optimization.cross_family_candidate_portfolio._component_marginal_action_prior",
+                "tac.optimization.cross_family_candidate_portfolio._operator_action_priority",
             ],
             "continual_learning": [
                 "exact_axis_component_marginal_empirical_anchors",

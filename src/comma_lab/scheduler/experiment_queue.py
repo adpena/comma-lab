@@ -16,6 +16,7 @@ STATE_SCHEMA = "experiment_queue_state.v1"
 
 CONTROL_MODES = {"running", "paused", "frozen"}
 STEP_STATUSES = {"queued", "running", "succeeded", "failed", "blocked", "skipped"}
+BLOCKING_ORPHAN_STATUSES = {"queued", "running", "blocked"}
 LOCAL_RESOURCE_KINDS = {"local_cpu", "local_mlx", "local_mps", "local"}
 CLOUD_RESOURCE_KINDS = {"cloud_cpu", "cloud_gpu", "modal_cpu", "modal_gpu", "cuda_auth"}
 KNOWN_RESOURCE_KINDS = LOCAL_RESOURCE_KINDS | CLOUD_RESOURCE_KINDS
@@ -236,6 +237,25 @@ def load_queue_definition(path: str | Path) -> dict[str, Any]:
 
 def default_state_path(repo_root: str | Path, queue_id: str) -> Path:
     return Path(repo_root) / ".omx" / "state" / f"experiment_queue_{queue_id}.sqlite"
+
+
+def assert_canonical_state_for_execution(
+    repo_root: str | Path,
+    queue_id: str,
+    state_path: str | Path,
+    *,
+    allow_noncanonical_state: bool = False,
+) -> None:
+    if allow_noncanonical_state:
+        return
+    canonical = default_state_path(repo_root, queue_id).resolve()
+    actual = Path(state_path).resolve()
+    if actual != canonical:
+        raise ExperimentQueueError(
+            "executing an experiment queue with a noncanonical state path can duplicate "
+            f"default-state workers for queue {queue_id!r}; use {canonical} or pass "
+            "--noncanonical-state-rationale with an explicit collision-risk rationale"
+        )
 
 
 def connect_state(path: str | Path) -> sqlite3.Connection:
@@ -495,6 +515,39 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
         expected = condition.get("equals")
         payload = json.loads((repo_root / rel_path).read_text())
         return _json_pointer(payload, key) == expected
+    if condition_type == "json_false_authority":
+        rel_path = _require_text(condition.get("path"), "postcondition.path")
+        payload = json.loads((repo_root / rel_path).read_text())
+        if not isinstance(payload, Mapping):
+            return False
+        required_false = _string_list(
+            condition.get("required_false", ["score_claim", "promotion_eligible", "rank_or_kill_eligible"]),
+            "postcondition.required_false",
+        )
+        for key in required_false:
+            if _json_pointer(payload, key) is not False:
+                return False
+        false_or_missing = _string_list(
+            condition.get(
+                "false_or_missing",
+                ["ready_for_exact_eval_dispatch", "dispatch_attempted", "gpu_launched"],
+            ),
+            "postcondition.false_or_missing",
+        )
+        for key in false_or_missing:
+            try:
+                value = _json_pointer(payload, key)
+            except ExperimentQueueError:
+                continue
+            if value is not False:
+                return False
+        axis_key = condition.get("axis_key")
+        if axis_key is not None:
+            actual_axis = _json_pointer(payload, _require_text(axis_key, "postcondition.axis_key"))
+            expected_axis = _require_text(condition.get("axis_equals"), "postcondition.axis_equals")
+            if actual_axis != expected_axis:
+                return False
+        return True
     raise ExperimentQueueError(f"unsupported postcondition type: {condition_type!r}")
 
 
@@ -683,6 +736,114 @@ def run_ready_step(
     return {"executed": True, "succeeded": succeeded, **event}
 
 
+def _active_step_keys(queue: Mapping[str, Any]) -> set[tuple[str, str]]:
+    return {
+        (str(experiment["id"]), str(step["id"]))
+        for experiment in queue["experiments"]
+        for step in experiment["steps"]
+    }
+
+
+def orphaned_step_rows(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> list[sqlite3.Row]:
+    queue_id = str(queue["queue_id"])
+    active_keys = _active_step_keys(queue)
+    rows = conn.execute(
+        """
+        SELECT experiment_id, step_id, status, attempts, updated_at_utc, last_event_json
+        FROM step_state WHERE queue_id = ?
+        ORDER BY experiment_id, step_id
+        """,
+        (queue_id,),
+    ).fetchall()
+    return [
+        row
+        for row in rows
+        if (str(row["experiment_id"]), str(row["step_id"])) not in active_keys
+    ]
+
+
+def assert_no_orphaned_steps_for_execution(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    *,
+    allow_orphaned_state: bool = False,
+) -> None:
+    if allow_orphaned_state:
+        return
+    orphaned = [
+        row
+        for row in orphaned_step_rows(conn, queue)
+        if str(row["status"]) in BLOCKING_ORPHAN_STATUSES
+    ]
+    if orphaned:
+        preview = ", ".join(
+            f"{row['experiment_id']}.{row['step_id']}={row['status']}" for row in orphaned[:5]
+        )
+        suffix = "" if len(orphaned) <= 5 else f", ... +{len(orphaned) - 5} more"
+        raise ExperimentQueueError(
+            f"queue {queue['queue_id']!r} state has {len(orphaned)} orphaned step row(s): "
+            f"{preview}{suffix}; use a fresh canonical state, explicitly rewind/retire stale rows, "
+            "or pass --orphaned-state-rationale for an isolated audited run"
+        )
+
+
+def retire_orphaned_steps(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    *,
+    reason: str,
+) -> list[dict[str, Any]]:
+    queue_id = str(queue["queue_id"])
+    retired: list[dict[str, Any]] = []
+    now = _utc_now()
+    for row in orphaned_step_rows(conn, queue):
+        status = str(row["status"])
+        if status not in BLOCKING_ORPHAN_STATUSES:
+            continue
+        if status == "running":
+            raise ExperimentQueueError(
+                f"refusing to retire running orphaned step "
+                f"{row['experiment_id']}.{row['step_id']}"
+            )
+        event = {
+            "reason": reason,
+            "previous_status": status,
+            "orphaned_by_queue_definition": str(queue_id),
+        }
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'skipped', updated_at_utc = ?, last_event_json = ?
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            (
+                now,
+                _json_text(event),
+                queue_id,
+                row["experiment_id"],
+                row["step_id"],
+            ),
+        )
+        append_event(
+            conn,
+            queue_id=queue_id,
+            experiment_id=str(row["experiment_id"]),
+            step_id=str(row["step_id"]),
+            event_type="step_retired_orphan",
+            payload=event,
+        )
+        retired.append(
+            {
+                "experiment_id": str(row["experiment_id"]),
+                "step_id": str(row["step_id"]),
+                "previous_status": status,
+                "new_status": "skipped",
+            }
+        )
+    conn.commit()
+    return retired
+
+
 def run_queue_worker(
     conn: sqlite3.Connection,
     queue: Mapping[str, Any],
@@ -693,6 +854,9 @@ def run_queue_worker(
     idle_sleep_seconds: float = 5.0,
     max_idle_cycles: int = 1,
     allow_cloud: bool = False,
+    allow_orphaned_state: bool = False,
+    orphaned_state_rationale: str | None = None,
+    noncanonical_state_rationale: str | None = None,
     log_root: str | Path | None = None,
     stop_requested: Callable[[], bool] | None = None,
     reload_queue: Callable[[], Mapping[str, Any]] | None = None,
@@ -721,9 +885,11 @@ def run_queue_worker(
                 f"reloaded queue_id changed from {queue_id!r} to {refreshed['queue_id']!r}"
             )
         initialize_queue_state(conn, refreshed)
+        assert_no_orphaned_steps_for_execution(conn, refreshed, allow_orphaned_state=allow_orphaned_state)
         active_queue = refreshed
         return active_queue
 
+    assert_no_orphaned_steps_for_execution(conn, active_queue, allow_orphaned_state=allow_orphaned_state)
     started_at = _utc_now()
     append_event(
         conn,
@@ -737,6 +903,9 @@ def run_queue_worker(
             "max_idle_cycles": max_idle_cycles,
             "idle_sleep_seconds": idle_sleep_seconds,
             "allow_cloud": allow_cloud,
+            "allow_orphaned_state": allow_orphaned_state,
+            "orphaned_state_rationale": orphaned_state_rationale,
+            "noncanonical_state_rationale": noncanonical_state_rationale,
         },
     )
     conn.commit()
@@ -769,6 +938,8 @@ def run_queue_worker(
             "queue_id": queue_id,
             "execute": False,
             "allow_cloud": allow_cloud,
+            "orphaned_state_rationale": orphaned_state_rationale,
+            "noncanonical_state_rationale": noncanonical_state_rationale,
             "started_at_utc": started_at,
             "stop_reason": "dry_run",
             "steps_started": 0,
@@ -873,6 +1044,8 @@ def run_queue_worker(
         "queue_id": queue_id,
         "execute": True,
         "allow_cloud": allow_cloud,
+        "orphaned_state_rationale": orphaned_state_rationale,
+        "noncanonical_state_rationale": noncanonical_state_rationale,
         "started_at_utc": started_at,
         "stop_reason": stop_reason,
         "steps_started": steps_started,
@@ -951,11 +1124,7 @@ def rewind_step(
 
 def queue_summary(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[str, Any]:
     queue_id = str(queue["queue_id"])
-    active_keys = {
-        (str(experiment["id"]), str(step["id"]))
-        for experiment in queue["experiments"]
-        for step in experiment["steps"]
-    }
+    active_keys = _active_step_keys(queue)
     rows = conn.execute(
         """
         SELECT experiment_id, step_id, status, attempts, updated_at_utc, last_event_json
@@ -1013,13 +1182,17 @@ def queue_summary(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[st
 __all__ = [
     "ExperimentQueueError",
     "ReadyStep",
+    "assert_canonical_state_for_execution",
+    "assert_no_orphaned_steps_for_execution",
     "connect_state",
     "default_state_path",
     "initialize_queue_state",
     "load_queue_definition",
     "normalize_queue_definition",
+    "orphaned_step_rows",
     "queue_summary",
     "ready_steps",
+    "retire_orphaned_steps",
     "rewind_step",
     "run_queue_worker",
     "run_ready_step",

@@ -328,11 +328,14 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tac.optimization.cross_family_candidate_portfolio",
+            "tac.optimization.cross_family_candidate_portfolio._component_marginal_action_prior",
+            "tac.optimization.cross_family_candidate_portfolio._operator_action_priority",
             "tac.xray.pairset_component_marginal",
             "tac.master_gradient_consumers",
         ),
         canonical_producers=(
             "tools/plan_cross_family_candidate_portfolio.py",
+            "tools/canonicalize_pairset_component_marginal_signal.py",
             "tools/recover_modal_auth_eval.py",
         ),
         provenance=_predicted_provenance(),

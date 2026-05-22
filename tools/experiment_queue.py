@@ -25,17 +25,22 @@ ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     ExperimentQueueError,
+    assert_canonical_state_for_execution,
+    assert_no_orphaned_steps_for_execution,
     connect_state,
     default_state_path,
     initialize_queue_state,
     load_queue_definition,
     queue_summary,
     ready_steps,
+    retire_orphaned_steps,
     rewind_step,
     run_queue_worker,
     run_ready_step,
     set_control_mode,
 )
+
+_PLACEHOLDER_RATIONALES = {"", "n/a", "na", "none", "test", "true", "yes", "because"}
 
 
 def _json_print(payload: object) -> None:
@@ -46,6 +51,15 @@ def _load(args: argparse.Namespace) -> tuple[dict, Path]:
     queue = load_queue_definition(args.queue)
     state = Path(args.state) if args.state else default_state_path(REPO_ROOT, queue["queue_id"])
     return queue, state
+
+
+def _rationale_text(value: str | None, *, label: str) -> str | None:
+    if value is None:
+        return None
+    text = value.strip()
+    if len(text) < 12 or text.lower() in _PLACEHOLDER_RATIONALES:
+        raise ExperimentQueueError(f"{label} must be a specific non-placeholder rationale")
+    return text
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
@@ -90,8 +104,29 @@ def cmd_next(args: argparse.Namespace) -> int:
 
 def cmd_run_once(args: argparse.Namespace) -> int:
     queue, state = _load(args)
+    noncanonical_rationale = _rationale_text(
+        args.noncanonical_state_rationale,
+        label="--noncanonical-state-rationale",
+    )
+    orphaned_rationale = _rationale_text(
+        args.orphaned_state_rationale,
+        label="--orphaned-state-rationale",
+    )
+    if args.execute:
+        assert_canonical_state_for_execution(
+            REPO_ROOT,
+            queue["queue_id"],
+            state,
+            allow_noncanonical_state=noncanonical_rationale is not None,
+        )
     with connect_state(state) as conn:
         initialize_queue_state(conn, queue)
+        if args.execute:
+            assert_no_orphaned_steps_for_execution(
+                conn,
+                queue,
+                allow_orphaned_state=orphaned_rationale is not None,
+            )
         ready = ready_steps(conn, queue, allow_cloud=args.allow_cloud)
         if not ready:
             _json_print({"state": str(state), "executed": False, "reason": "no_ready_steps"})
@@ -110,6 +145,21 @@ def cmd_run_once(args: argparse.Namespace) -> int:
 
 def cmd_run_worker(args: argparse.Namespace) -> int:
     queue, state = _load(args)
+    noncanonical_rationale = _rationale_text(
+        args.noncanonical_state_rationale,
+        label="--noncanonical-state-rationale",
+    )
+    orphaned_rationale = _rationale_text(
+        args.orphaned_state_rationale,
+        label="--orphaned-state-rationale",
+    )
+    if args.execute:
+        assert_canonical_state_for_execution(
+            REPO_ROOT,
+            queue["queue_id"],
+            state,
+            allow_noncanonical_state=noncanonical_rationale is not None,
+        )
     stop_signals: list[int] = []
     previous_sigint = signal.getsignal(signal.SIGINT)
     previous_sigterm = signal.getsignal(signal.SIGTERM)
@@ -132,6 +182,9 @@ def cmd_run_worker(args: argparse.Namespace) -> int:
                 idle_sleep_seconds=args.idle_sleep_seconds,
                 max_idle_cycles=args.max_idle_cycles,
                 allow_cloud=args.allow_cloud,
+                allow_orphaned_state=orphaned_rationale is not None,
+                orphaned_state_rationale=orphaned_rationale,
+                noncanonical_state_rationale=noncanonical_rationale,
                 log_root=args.log_root,
                 stop_requested=lambda: bool(stop_signals),
                 reload_queue=None
@@ -180,6 +233,16 @@ def cmd_rewind(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_retire_orphans(args: argparse.Namespace) -> int:
+    queue, state = _load(args)
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        retired = retire_orphaned_steps(conn, queue, reason=args.reason)
+        summary = queue_summary(conn, queue)
+    _json_print({"state": str(state), "retired_steps": retired, **summary})
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", required=True, help="queue definition JSON or JSON-compatible YAML")
@@ -202,6 +265,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp = sub.add_parser("run-once")
     sp.add_argument("--execute", action="store_true", help="actually run the selected command")
     sp.add_argument("--allow-cloud", action="store_true", help="include cloud resource steps")
+    sp.add_argument(
+        "--noncanonical-state-rationale",
+        default=None,
+        help="specific audit rationale allowing execute mode with a noncanonical --state path",
+    )
+    sp.add_argument(
+        "--orphaned-state-rationale",
+        default=None,
+        help="specific audit rationale allowing execute mode when SQLite retains blocking orphans",
+    )
     sp.add_argument("--log-root", default=None, help="override command log root")
     sp.set_defaults(func=cmd_run_once)
 
@@ -212,6 +285,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     sp.add_argument("--execute", action="store_true", help="actually run selected commands")
     sp.add_argument("--allow-cloud", action="store_true", help="include cloud resource steps")
+    sp.add_argument(
+        "--noncanonical-state-rationale",
+        default=None,
+        help="specific audit rationale allowing execute mode with a noncanonical --state path",
+    )
+    sp.add_argument(
+        "--orphaned-state-rationale",
+        default=None,
+        help="specific audit rationale allowing execute mode when SQLite retains blocking orphans",
+    )
     sp.add_argument("--log-root", default=None, help="override command log root")
     sp.add_argument("--max-steps", type=int, default=1, help="maximum steps to start")
     sp.add_argument(
@@ -248,6 +331,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="rewind only the target step; default also rewinds dependent steps",
     )
     sp.set_defaults(func=cmd_rewind)
+
+    sp = sub.add_parser("retire-orphans")
+    sp.add_argument("--reason", required=True)
+    sp.set_defaults(func=cmd_retire_orphans)
 
     return parser.parse_args(argv)
 

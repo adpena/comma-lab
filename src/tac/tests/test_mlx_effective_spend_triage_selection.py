@@ -172,6 +172,29 @@ def test_selection_can_require_negative_predictions_when_requested() -> None:
     assert selection["selected_rows"][0]["row_id"] == "second"
 
 
+def test_selection_min_observed_gain_can_only_raise_calibrated_gap() -> None:
+    with pytest.raises(
+        MLXEffectiveSpendTriageSelectionError,
+        match="cannot lower calibrated safety gap",
+    ):
+        build_mlx_effective_spend_triage_selection(
+            _dataset(),
+            _plan(),
+            top_k=4,
+            min_observed_gain=0.000001,
+        )
+
+    selection = build_mlx_effective_spend_triage_selection(
+        _dataset(),
+        _plan(),
+        top_k=4,
+        min_observed_gain=0.0015,
+    )
+
+    assert selection["selection_policy"]["min_observed_gain"] == pytest.approx(0.0015)
+    assert [row["row_id"] for row in selection["selected_rows"]] == ["best"]
+
+
 def test_selection_blocks_non_oof_or_failed_effective_gate() -> None:
     with pytest.raises(MLXEffectiveSpendTriageSelectionError, match="must be strict_pass"):
         build_mlx_effective_spend_triage_selection(
@@ -310,4 +333,37 @@ def test_selection_cli_rejects_family_without_effective_gate(tmp_path: Path) -> 
     assert completed.returncode == 2
     assert "selected families lack family-level spend-triage gate" in completed.stderr
     assert "mlx_fec6_auth_parent" in completed.stderr
+    assert not json_out.exists()
+
+
+def test_selection_cli_rejects_min_observed_gain_below_calibration(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    plan_path = tmp_path / "plan.json"
+    json_out = tmp_path / "selection.json"
+    dataset_path.write_text(json.dumps(_dataset()), encoding="utf-8")
+    plan_path.write_text(json.dumps(_plan()), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "select_mlx_effective_spend_triage_candidates.py"),
+            "--dataset",
+            str(dataset_path),
+            "--plan",
+            str(plan_path),
+            "--min-observed-gain",
+            "0.000001",
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert "cannot lower calibrated safety gap" in completed.stderr
     assert not json_out.exists()

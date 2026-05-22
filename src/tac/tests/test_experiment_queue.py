@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -8,11 +10,15 @@ import pytest
 
 from src.comma_lab.scheduler.experiment_queue import (
     ExperimentQueueError,
+    assert_canonical_state_for_execution,
+    assert_no_orphaned_steps_for_execution,
     connect_state,
+    default_state_path,
     initialize_queue_state,
     normalize_queue_definition,
     queue_summary,
     ready_steps,
+    retire_orphaned_steps,
     rewind_step,
     run_queue_worker,
     run_ready_step,
@@ -372,6 +378,235 @@ def test_experiment_queue_worker_records_failure_telemetry(tmp_path: Path) -> No
         ]
         assert "step_failed" in events
         assert "worker_step_failed" in events
+
+
+def test_experiment_queue_execute_requires_canonical_state_path(tmp_path: Path) -> None:
+    canonical = default_state_path(tmp_path, "unit_queue")
+    assert_canonical_state_for_execution(tmp_path, "unit_queue", canonical)
+    assert_canonical_state_for_execution(
+        tmp_path,
+        "unit_queue",
+        tmp_path / "isolated.sqlite",
+        allow_noncanonical_state=True,
+    )
+
+    with pytest.raises(ExperimentQueueError, match="noncanonical state path"):
+        assert_canonical_state_for_execution(tmp_path, "unit_queue", tmp_path / "isolated.sqlite")
+
+
+def test_experiment_queue_worker_refuses_orphaned_reroute_state(tmp_path: Path) -> None:
+    first_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "reroute_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "old_candidate",
+                    "steps": [{"id": "plan", "command": [sys.executable, "-c", "print('old')"]}],
+                }
+            ],
+        }
+    )
+    second_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "reroute_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "new_candidate",
+                    "steps": [{"id": "plan", "command": [sys.executable, "-c", "print('new')"]}],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, first_queue)
+        initialize_queue_state(conn, second_queue)
+
+        with pytest.raises(ExperimentQueueError, match="orphaned step"):
+            assert_no_orphaned_steps_for_execution(conn, second_queue)
+        assert_no_orphaned_steps_for_execution(conn, second_queue, allow_orphaned_state=True)
+
+        with pytest.raises(ExperimentQueueError, match="orphaned step"):
+            run_queue_worker(
+                conn,
+                second_queue,
+                repo_root=tmp_path,
+                execute=False,
+                max_steps=1,
+                idle_sleep_seconds=0,
+                max_idle_cycles=0,
+            )
+
+
+def test_experiment_queue_can_retire_blocking_orphaned_steps(tmp_path: Path) -> None:
+    first_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "reroute_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "old_candidate",
+                    "steps": [{"id": "plan", "command": [sys.executable, "-c", "print('old')"]}],
+                }
+            ],
+        }
+    )
+    second_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "reroute_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "new_candidate",
+                    "steps": [{"id": "plan", "command": [sys.executable, "-c", "print('new')"]}],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, first_queue)
+        initialize_queue_state(conn, second_queue)
+        retired = retire_orphaned_steps(conn, second_queue, reason="rerouted")
+
+        assert retired == [
+            {
+                "experiment_id": "old_candidate",
+                "step_id": "plan",
+                "previous_status": "queued",
+                "new_status": "skipped",
+            }
+        ]
+        assert_no_orphaned_steps_for_execution(conn, second_queue)
+        summary = queue_summary(conn, second_queue)
+        assert summary["orphaned_steps"][0]["status"] == "skipped"
+
+
+def test_experiment_queue_false_authority_postcondition_blocks_leaks(tmp_path: Path) -> None:
+    advisory = tmp_path / "advisory.json"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "authority_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "candidate",
+                    "steps": [
+                        {
+                            "id": "local_advisory",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import json, pathlib; "
+                                    f"pathlib.Path({str(advisory)!r}).write_text("
+                                    "json.dumps({"
+                                    "'score_claim': False, "
+                                    "'promotion_eligible': 'true', "
+                                    "'rank_or_kill_eligible': False, "
+                                    "'ready_for_exact_eval_dispatch': 1, "
+                                    "'score_axis': 'contest_cpu'"
+                                    "}))"
+                                ),
+                            ],
+                            "postconditions": [
+                                {
+                                    "type": "json_false_authority",
+                                    "path": advisory.name,
+                                    "required_false": [
+                                        "score_claim",
+                                        "promotion_eligible",
+                                        "rank_or_kill_eligible",
+                                    ],
+                                    "false_or_missing": ["ready_for_exact_eval_dispatch"],
+                                    "axis_key": "score_axis",
+                                    "axis_equals": "cpu_advisory",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = run_ready_step(
+            conn,
+            queue,
+            ready_steps(conn, queue)[0],
+            repo_root=tmp_path,
+            execute=True,
+            log_root=tmp_path / "logs",
+        )
+
+    assert result["succeeded"] is False
+    assert result["failed_postconditions"][0]["type"] == "json_false_authority"
+
+
+def test_experiment_queue_cli_requires_noncanonical_state_rationale(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "cli_noncanonical",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "steps": [
+                            {
+                                "id": "noop",
+                                "command": [sys.executable, "-c", "print('noop')"],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+    )
+    cmd = [
+        sys.executable,
+        str(repo_root / "tools" / "experiment_queue.py"),
+        "--queue",
+        str(queue_path),
+        "--state",
+        str(tmp_path / "isolated.sqlite"),
+        "run-worker",
+        "--execute",
+        "--max-steps",
+        "0",
+        "--idle-sleep-seconds",
+        "0",
+        "--max-idle-cycles",
+        "0",
+    ]
+
+    refused = subprocess.run(cmd, cwd=repo_root, text=True, capture_output=True, check=False)
+    assert refused.returncode == 2
+    assert "noncanonical state path" in refused.stderr
+
+    allowed = subprocess.run(
+        [*cmd, "--noncanonical-state-rationale", "isolated cli unit test state"],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert allowed.returncode == 0, allowed.stderr
+    assert "isolated cli unit test state" in allowed.stdout
 
 
 def test_experiment_queue_worker_stops_cleanly_between_steps(tmp_path: Path) -> None:

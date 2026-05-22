@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -302,6 +303,48 @@ def test_mlx_score_calibration_rejects_same_archive_wrong_inflated_surface(
         raise AssertionError("wrong inflated-surface auth payload was accepted")
 
 
+def test_mlx_score_calibration_rejects_missing_exact_eval_custody_fields(
+    tmp_path: Path,
+) -> None:
+    row = _row(tmp_path, "bad", mlx_score=0.2, cpu_score=0.2, cuda_score=0.3)
+    cpu_path = tmp_path / row["cpu_auth_eval_path"]
+    payload = json.loads(cpu_path.read_text(encoding="utf-8"))
+    for key in (
+        "runtime_tree_sha256",
+        "inflate_device",
+        "eval_device",
+        "auth_eval_command",
+        "log_path",
+        "artifact_path",
+        "artifact_sha256",
+        "inflated_outputs_manifest_path",
+        "inflated_outputs_manifest_sha256",
+    ):
+        payload.pop(key, None)
+    manifest = payload["provenance"]["inflated_output_manifest"]
+    manifest.pop("path", None)
+    manifest.pop("sha256", None)
+    payload["provenance"]["inflate_runtime_manifest"].pop("runtime_tree_sha256", None)
+    payload["provenance"].pop("device", None)
+    cpu_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    try:
+        build_mlx_score_calibration_manifest([row], repo_root=tmp_path)
+    except ValueError as exc:
+        message = str(exc)
+        assert "cpu_auth_eval_custody_runtime_tree_sha_invalid" in message
+        assert "cpu_auth_eval_custody_inflate_device_missing" in message
+        assert "cpu_auth_eval_custody_eval_device_missing" in message
+        assert "cpu_auth_eval_custody_auth_eval_command_missing" in message
+        assert "cpu_auth_eval_custody_log_path_missing" in message
+        assert "cpu_auth_eval_custody_artifact_path_missing" in message
+        assert "cpu_auth_eval_custody_artifact_sha_invalid" in message
+        assert "cpu_auth_eval_custody_inflated_outputs_manifest_path_missing" in message
+        assert "cpu_auth_eval_custody_inflated_outputs_manifest_sha_invalid" in message
+    else:  # pragma: no cover
+        raise AssertionError("auth payload with missing exact custody was accepted")
+
+
 def test_mlx_score_calibration_rejects_incomplete_mlx_authority_tags(
     tmp_path: Path,
 ) -> None:
@@ -501,11 +544,27 @@ def _row(
         encoding="utf-8",
     )
     cpu_path.write_text(
-        json.dumps(_auth_eval_payload("cpu", cpu_score, archive_size)),
+        json.dumps(
+            _auth_eval_payload(
+                "cpu",
+                cpu_score,
+                archive_size,
+                tmp_path=tmp_path,
+                label=label,
+            )
+        ),
         encoding="utf-8",
     )
     cuda_path.write_text(
-        json.dumps(_auth_eval_payload("cuda", cuda_score, archive_size)),
+        json.dumps(
+            _auth_eval_payload(
+                "cuda",
+                cuda_score,
+                archive_size,
+                tmp_path=tmp_path,
+                label=label,
+            )
+        ),
         encoding="utf-8",
     )
     return {
@@ -516,7 +575,14 @@ def _row(
     }
 
 
-def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
+def _auth_eval_payload(
+    axis: str,
+    score: float,
+    archive_size: int,
+    *,
+    tmp_path: Path,
+    label: str,
+) -> dict:
     pose = 0.0
     rate_score = 25.0 * archive_size / ORIGINAL_VIDEO_BYTES
     seg = (float(score) - rate_score) / 100.0
@@ -525,6 +591,39 @@ def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
         pose_dist=pose,
         archive_bytes=archive_size,
     )
+    aggregate_sha256 = "b" * 64
+    manifest_path = tmp_path / f"{label}_{axis}_inflated_outputs_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "contest_auth_eval_inflated_output_manifest_v1",
+                "aggregate_sha256": aggregate_sha256,
+                "raw_file_count": 1,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest_sha256 = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+    log_path = tmp_path / f"{label}_{axis}_auth_eval.log"
+    log_path.write_text("ok\n", encoding="utf-8")
+    artifact_path = tmp_path / f"{label}_{axis}_exact_eval_artifact.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "axis": f"contest_{axis}",
+                "canonical_score": canonical_score,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    artifact_sha256 = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+    inflate_device = "cpu" if axis == "cpu" else "auto"
+    eval_device = "cpu" if axis == "cpu" else "cuda"
+    hardware = "Linux x86_64 CPU" if axis == "cpu" else "Modal T4 CUDA"
     payload = {
         "canonical_score": canonical_score,
         "canonical_score_source": "score_recomputed_from_components",
@@ -532,7 +631,21 @@ def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
         "avg_posenet_dist": pose,
         "archive_size_bytes": archive_size,
         "archive_sha256": "a" * 64,
-        "inflated_outputs_aggregate_sha256": "b" * 64,
+        "runtime_tree_sha256": "9" * 64,
+        "inflated_outputs_aggregate_sha256": aggregate_sha256,
+        "raw_output_aggregate_sha256": aggregate_sha256,
+        "inflated_outputs_manifest_path": manifest_path.name,
+        "inflated_outputs_manifest_sha256": manifest_sha256,
+        "hardware": hardware,
+        "inflate_device": inflate_device,
+        "eval_device": eval_device,
+        "auth_eval_command": (
+            "python experiments/contest_auth_eval.py "
+            f"--device {eval_device} --inflate-device {inflate_device}"
+        ),
+        "log_path": log_path.name,
+        "artifact_path": artifact_path.name,
+        "artifact_sha256": artifact_sha256,
         "score_rate_contribution": rate_score,
         "rate_unscaled": archive_size / ORIGINAL_VIDEO_BYTES,
         "n_samples": 600,
@@ -555,8 +668,13 @@ def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
                     "platform_system": "Linux",
                     "platform_machine": "x86_64",
                     "archive_sha256": "a" * 64,
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "9" * 64,
+                    },
                     "inflated_output_manifest": {
-                        "payload": {"aggregate_sha256": "b" * 64}
+                        "path": manifest_path.name,
+                        "sha256": manifest_sha256,
+                        "payload": {"aggregate_sha256": aggregate_sha256},
                     },
                 },
             }
@@ -573,8 +691,13 @@ def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
                     "device": "cuda",
                     "gpu_t4_match": True,
                     "archive_sha256": "a" * 64,
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "9" * 64,
+                    },
                     "inflated_output_manifest": {
-                        "payload": {"aggregate_sha256": "b" * 64}
+                        "path": manifest_path.name,
+                        "sha256": manifest_sha256,
+                        "payload": {"aggregate_sha256": aggregate_sha256},
                     },
                 },
             }

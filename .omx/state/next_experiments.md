@@ -18,10 +18,13 @@ architecture-lock/TT5L custody artifacts.
 ## Active Anchor
 
 - Canonical scanner-derived best CPU anchor:
-  `0.19202894881608987`
+  `0.19202828295713675`
   `[contest-CPU; Linux x86_64 1:1]`, archive
-  `e12f5cfe93f9dbf624549466cda62d00a01e10bee8d1e0ea8a635af69247908a`,
-  lane `lane_dqs1_top32_gap_uleb_selective_decoderq_exact_cpu_20260522`.
+  `7a0da5d0fc327cba3f7d1387a544fd5ce5f05bc56ecc8e12cd5097141672f4fe`,
+  lane `lane_dqs1_pairset_drop_one_rank021_pair0371_selective_decoderq_exact_cpu_20260522`.
+  Refresh from `reports/latest.md` and
+  `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
+  frontier source of truth.
 - Canonical scanner-derived best CUDA anchor:
   `0.20533002902019143`
   `[contest-CUDA T4]`, archive
@@ -54,11 +57,12 @@ architecture-lock/TT5L custody artifacts.
 - Portability task: implement and verify full-weight PyTorch -> NumPy -> MLX
   state/intermediate trace parity for the canonical scorer path. MLX GPU/batch
   remains research-only until batch invariance passes against CPU-stable rows.
-- DQS1 continuation: compact `sorted_gap_uleb` top32 is exact `[contest-CPU]`
-  frontier at `0.19202894881608987` and exact `[contest-CUDA T4]` recovered at
-  `0.22619043540195719`. Raw-u16 top32 is superseded on CPU. Next work is
-  subset/Pareto search and sign-calibrated response modeling, not another
-  unbounded exact replay of the same top32 row.
+- DQS1 continuation: rank021/pair0371 is the exact `[contest-CPU]` frontier at
+  `0.19202828295713675`; compact `sorted_gap_uleb` top32 is superseded on CPU
+  at `0.19202894881608987` and its exact `[contest-CUDA T4]` recovery
+  `0.22619043540195719` is not a CUDA frontier. Next work is subset/Pareto
+  search and sign-calibrated response modeling, not another unbounded exact
+  replay of the same top32 row.
 
 ### 1. Rule #6 A1 Ballé Hyperprior Bolt-On
 

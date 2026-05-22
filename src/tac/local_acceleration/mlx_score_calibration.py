@@ -14,6 +14,10 @@ from tac.auth_eval_schema import (
     eval_metric_summary,
     required_contest_auth_axis_payload_blockers,
 )
+from tac.exact_eval_custody import (
+    extract_runtime_tree_sha256,
+    validate_exact_eval_evidence,
+)
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 SCHEMA_VERSION = "mlx_score_calibration.v1"
@@ -278,6 +282,18 @@ def _score_from_auth_eval_payload(
             f"{axis}_auth_eval_score_axis_mismatch:"
             f"expected={expected_score_axis}:actual={payload.get('score_axis')}"
         )
+    exact_custody = _auth_axis_exact_eval_custody_validation(
+        payload,
+        metrics,
+        path,
+        axis=axis,
+        expected_score_axis=expected_score_axis,
+        expected_archive_sha256=expected_archive_sha256,
+    )
+    blockers.extend(
+        f"{axis}_auth_eval_custody_{blocker}"
+        for blocker in exact_custody.blockers
+    )
     actual_archive_sha256 = _auth_archive_sha256(payload)
     if actual_archive_sha256 != expected_archive_sha256:
         blockers.append(
@@ -307,6 +323,168 @@ def _score_from_auth_eval_payload(
     if score is None:
         raise ValueError(f"auth eval payload has no canonical score: {path}")
     return _finite_float(score, f"{path}:score")
+
+
+def _auth_axis_exact_eval_custody_validation(
+    payload: dict[str, Any],
+    metrics: dict[str, Any],
+    path: Path,
+    *,
+    axis: str,
+    expected_score_axis: str,
+    expected_archive_sha256: str,
+):
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+    inflated_manifest = _auth_inflated_output_manifest(payload)
+    command = _auth_eval_command(payload, provenance)
+    evidence = {
+        "axis": _optional_str(payload.get("score_axis")) or expected_score_axis,
+        "archive_sha256": _auth_archive_sha256(payload),
+        "runtime_tree_sha256": extract_runtime_tree_sha256(payload),
+        "score": metrics.get("score"),
+        "seg_dist": metrics.get("seg_avg"),
+        "pose_dist": metrics.get("pose_avg"),
+        "archive_bytes": metrics.get("archive_size_bytes"),
+        "n_samples": metrics.get("n_samples"),
+        "hardware": _auth_hardware(payload, provenance, expected_score_axis),
+        "inflate_device": _auth_inflate_device(payload, provenance, command),
+        "eval_device": _auth_eval_device(payload, provenance, command),
+        "auth_eval_command": command,
+        "log_path": _first_text(
+            payload.get("log_path"),
+            payload.get("auth_eval_log_path"),
+            provenance.get("log_path"),
+            provenance.get("auth_eval_log_path"),
+        ),
+        "artifact_path": _first_text(
+            payload.get("artifact_path"),
+            payload.get("exact_eval_artifact_path"),
+            payload.get("auth_eval_artifact_path"),
+            provenance.get("artifact_path"),
+            provenance.get("exact_eval_artifact_path"),
+            provenance.get("auth_eval_artifact_path"),
+        ),
+        "artifact_sha256": _first_text(
+            payload.get("artifact_sha256"),
+            payload.get("exact_eval_artifact_sha256"),
+            payload.get("auth_eval_artifact_sha256"),
+            provenance.get("artifact_sha256"),
+            provenance.get("exact_eval_artifact_sha256"),
+            provenance.get("auth_eval_artifact_sha256"),
+        ),
+        "inflated_outputs_manifest_path": _first_text(
+            payload.get("inflated_outputs_manifest_path"),
+            payload.get("inflated_output_manifest_path"),
+            inflated_manifest.get("path"),
+        ),
+        "inflated_outputs_manifest_sha256": _first_text(
+            payload.get("inflated_outputs_manifest_sha256"),
+            payload.get("inflated_output_manifest_sha256"),
+            inflated_manifest.get("sha256"),
+        ),
+        "raw_output_aggregate_sha256": _auth_inflated_outputs_aggregate_sha256(payload),
+    }
+    return validate_exact_eval_evidence(
+        evidence,
+        expected_axis=expected_score_axis,
+        expected_archive_sha256=expected_archive_sha256,
+        require_artifact_path=True,
+        require_artifact_sha256=True,
+        require_devices=True,
+        require_inflated_outputs_manifest=True,
+        require_raw_output_aggregate_sha256=True,
+        artifact_base_dir=path.parent,
+        annotation_prefix=f"{axis}_auth_eval_custody",
+    )
+
+
+def _auth_inflated_output_manifest(payload: dict[str, Any]) -> dict[str, Any]:
+    manifest = payload.get("inflated_output_manifest")
+    if isinstance(manifest, dict):
+        return manifest
+    manifest = payload.get("inflated_outputs_manifest")
+    if isinstance(manifest, dict):
+        return manifest
+    provenance = payload.get("provenance")
+    if isinstance(provenance, dict):
+        manifest = provenance.get("inflated_output_manifest")
+        if isinstance(manifest, dict):
+            return manifest
+        manifest = provenance.get("inflated_outputs_manifest")
+        if isinstance(manifest, dict):
+            return manifest
+    return {}
+
+
+def _auth_eval_command(payload: dict[str, Any], provenance: dict[str, Any]) -> str:
+    return _command_text(
+        _first_present(
+            payload.get("auth_eval_command"),
+            payload.get("command"),
+            payload.get("sys_argv"),
+            provenance.get("auth_eval_command"),
+            provenance.get("command"),
+            provenance.get("sys_argv"),
+        )
+    )
+
+
+def _auth_hardware(
+    payload: dict[str, Any],
+    provenance: dict[str, Any],
+    expected_score_axis: str,
+) -> str:
+    direct = _first_text(
+        payload.get("hardware"),
+        payload.get("hardware_substrate"),
+        provenance.get("hardware"),
+        provenance.get("hardware_substrate"),
+        payload.get("gpu_model"),
+        provenance.get("gpu_model"),
+    )
+    if direct:
+        return direct
+    system = _first_text(payload.get("platform_system"), provenance.get("platform_system"))
+    machine = _first_text(payload.get("platform_machine"), provenance.get("platform_machine"))
+    if expected_score_axis == "contest_cpu" and system and machine:
+        return f"{system} {machine} cpu"
+    if expected_score_axis == "contest_cuda" and (
+        payload.get("gpu_t4_match") is True or provenance.get("gpu_t4_match") is True
+    ):
+        return "T4 CUDA"
+    return ""
+
+
+def _auth_inflate_device(
+    payload: dict[str, Any],
+    provenance: dict[str, Any],
+    command: str,
+) -> str:
+    return _first_text(
+        payload.get("inflate_device"),
+        payload.get("inflate_device_policy"),
+        provenance.get("inflate_device"),
+        provenance.get("inflate_device_policy"),
+        _command_flag_value(command, "--inflate-device"),
+    )
+
+
+def _auth_eval_device(
+    payload: dict[str, Any],
+    provenance: dict[str, Any],
+    command: str,
+) -> str:
+    return _first_text(
+        payload.get("eval_device"),
+        payload.get("actual_device"),
+        payload.get("device"),
+        provenance.get("eval_device"),
+        provenance.get("actual_device"),
+        provenance.get("device"),
+        _command_flag_value(command, "--device"),
+    )
 
 
 def _require_mlx_response_false_authority(payload: dict[str, Any], path: Path) -> None:
@@ -811,6 +989,43 @@ def _order(left: Any, right: Any) -> int:
     left_f = _finite_float(left, "left")
     right_f = _finite_float(right, "right")
     return (left_f > right_f) - (left_f < right_f)
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        return value
+    return None
+
+
+def _first_text(*values: Any) -> str:
+    value = _first_present(*values)
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return " ".join(str(item) for item in value).strip()
+    return str(value).strip()
+
+
+def _command_text(value: Any) -> str:
+    if isinstance(value, list):
+        return " ".join(str(item) for item in value).strip()
+    return str(value or "").strip()
+
+
+def _command_flag_value(command: str, flag: str) -> str:
+    parts = command.split()
+    for idx, part in enumerate(parts[:-1]):
+        if part == flag:
+            return parts[idx + 1]
+    prefix = f"{flag}="
+    for part in parts:
+        if part.startswith(prefix):
+            return part[len(prefix) :]
+    return ""
 
 
 def _finite_float(value: Any, label: str) -> float:
