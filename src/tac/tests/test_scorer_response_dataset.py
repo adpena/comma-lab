@@ -10,22 +10,23 @@ from types import SimpleNamespace
 import numpy as np
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 from tac.optimization.decoder_q_response_surface import (
     build_decoder_q_response_surface,
     render_decoder_q_response_surface_markdown,
 )
-from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 from tac.optimization.scorer_response_dataset import (
     RATE_SCORE_PER_BYTE,
     ResponseBaseline,
     ScorerResponseDatasetError,
     build_magic_codec_seed_boundary,
+    build_mlx_score_calibration_gate,
     build_mlx_torch_parity_sweep_gate,
     build_next_probe_plan,
     build_null_byte_priority_weights,
     build_response_dataset,
-    build_scorer_response_validation_gate,
     build_scorer_response_consumer_routing,
+    build_scorer_response_validation_gate,
     build_windowed_mlx_response_dataset,
     merge_scorer_response_datasets,
     normalize_legacy_response_dataset_authority,
@@ -33,13 +34,13 @@ from tac.optimization.scorer_response_dataset import (
     render_next_probe_plan_markdown,
     render_validation_gate_markdown,
 )
-from tac.optimization.scorer_response_prediction import (
-    STRUCTURED_FEATURE_SET,
-    attach_out_of_fold_linear_predictions,
-)
 from tac.optimization.scorer_response_family_delta import (
     build_family_delta,
     render_family_delta_markdown,
+)
+from tac.optimization.scorer_response_prediction import (
+    STRUCTURED_FEATURE_SET,
+    attach_out_of_fold_linear_predictions,
 )
 from tac.optimization.scorer_response_structural_features import (
     attach_structural_features,
@@ -188,6 +189,41 @@ def _mlx_parity_sweep_payload(*, passed: bool = True) -> dict:
     }
 
 
+def _mlx_score_calibration_payload(*, uncertain_count: int = 0) -> dict:
+    certified_count = 1 if uncertain_count == 0 else 0
+    return {
+        "schema_version": "mlx_score_calibration.v1",
+        "run_id": "unit",
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "candidate_generation_only": True,
+        "decision_policy": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "decision_safety_factor": 5.0,
+            "calibration_uncertainty_basis": "mlx_minus_cpu_max_abs",
+            "calibration_uncertainty_score": 1.0e-5,
+            "recommended_min_mlx_gap_for_spend_triage": 5.0e-5,
+            "allowed_use": "local_spend_triage_only",
+            "forbidden_use": "score_claim_or_rank_or_kill_or_promotion",
+        },
+        "summary": {
+            "mlx_spend_triage_pairwise_certified_count": certified_count,
+            "mlx_spend_triage_pairwise_uncertain_count": uncertain_count,
+            "mlx_spend_triage_pairwise_total_count": certified_count + uncertain_count,
+            "recommended_min_mlx_gap_for_spend_triage": 5.0e-5,
+            "calibration_uncertainty_score": 1.0e-5,
+        },
+    }
+
+
 def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     path = tmp_path / "scorer_gradient.json"
     payload = {
@@ -330,6 +366,9 @@ def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
     assert plan["mlx_torch_parity_sweep_gate"]["status"] == "strict_pass"
     assert plan["probes"][0]["probe_id"] == "ll_mlx_cpu_stable_response_harvest"
     assert plan["probes"][0]["input_rows"] == ["mlx-row-1"]
+    assert {
+        item["rule"] for item in plan["prohibitions"]
+    } >= {"do_not_use_mlx_rows_for_exact_eval_spend_triage_without_score_calibration"}
 
 
 def test_mlx_torch_parity_sweep_gate_blocks_failed_strict_sweep() -> None:
@@ -341,6 +380,15 @@ def test_mlx_torch_parity_sweep_gate_blocks_failed_strict_sweep() -> None:
     assert gate["summary"]["failed_windows"] == 1
     assert gate["summary"]["segnet_argmax_diff_pixels_max"] == 1.0
     assert gate["failed_rows"][0]["pair_window"] == [156, 160]
+
+
+def test_mlx_score_calibration_gate_passes_certified_decision_band() -> None:
+    gate = build_mlx_score_calibration_gate(_mlx_score_calibration_payload())
+
+    assert gate["score_claim"] is False
+    assert gate["status"] == "strict_pass"
+    assert gate["mlx_spend_triage_allowed"] is True
+    assert gate["summary"]["recommended_min_mlx_gap_for_spend_triage"] == 5.0e-5
 
 
 def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:
@@ -376,6 +424,87 @@ def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:
     assert "ll_mlx_cpu_stable_response_harvest" not in {
         probe["probe_id"] for probe in plan["probes"]
     }
+    assert "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_score_calibration" in rules
+
+
+def test_next_probe_plan_attaches_passing_mlx_score_calibration_gate() -> None:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 1},
+            "rows": [
+                {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": "mlx-row-1",
+                    "family": "mlx_scorer_response",
+                    "delta_vs_baseline_score": 1.0e-6,
+                    "scorer_delta_vs_baseline": 1.0e-6,
+                    "byte_budget_margin_vs_break_even": None,
+                    **false_authority,
+                }
+            ],
+        },
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+    )
+
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_score_calibration" not in rules
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_uncertain_calibration"
+        not in rules
+    )
+    assert plan["mlx_score_calibration_gate"]["status"] == "strict_pass"
+    assert (
+        plan["probes"][0]["mlx_score_calibration_gate"]["summary"][
+            "recommended_min_mlx_gap_for_spend_triage"
+        ]
+        == 5.0e-5
+    )
+
+
+def test_next_probe_plan_blocks_uncertain_mlx_score_calibration_gate() -> None:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 1},
+            "rows": [
+                {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": "mlx-row-1",
+                    "family": "mlx_scorer_response",
+                    "delta_vs_baseline_score": 1.0e-6,
+                    "scorer_delta_vs_baseline": 1.0e-6,
+                    "byte_budget_margin_vs_break_even": None,
+                    **false_authority,
+                }
+            ],
+        },
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(uncertain_count=1),
+    )
+
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_uncertain_calibration"
+        in rules
+    )
+    assert plan["mlx_score_calibration_gate"]["status"] == "blocked"
+    assert plan["mlx_score_calibration_gate"]["mlx_spend_triage_allowed"] is False
 
 
 def test_next_probe_plan_blocks_failed_mlx_parity_sweep_without_override() -> None:
@@ -902,7 +1031,7 @@ def _validation_dataset(
         },
         "summary": {
             "row_count": len(rows),
-            "family_counts": {family: rows_per_fold * 5 for family in families},
+            "family_counts": dict.fromkeys(families, rows_per_fold * 5),
         },
         "rows": rows,
     }

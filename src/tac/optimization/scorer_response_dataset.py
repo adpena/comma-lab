@@ -30,6 +30,7 @@ CONSUMER_ROUTING_SCHEMA = "scorer_response_dataset_consumer_routing.v1"
 VALIDATION_GATE_SCHEMA = "scorer_response_dataset_validation_gate.v1"
 MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
 MLX_TORCH_PARITY_SWEEP_SCHEMA = "mlx_scorer_torch_parity_sweep.v1"
+MLX_SCORE_CALIBRATION_SCHEMA = "mlx_score_calibration.v1"
 
 DEFAULT_RESPONSE_PREDICTION_FIELDS = (
     "predicted_delta_vs_baseline_score",
@@ -1511,6 +1512,127 @@ def build_mlx_torch_parity_sweep_gate(
     }
 
 
+def build_mlx_score_calibration_gate(calibration: dict[str, Any]) -> dict[str, Any]:
+    """Normalize MLX score-calibration evidence for spend-triage gating.
+
+    The gate may allow local MLX pairwise ordering to filter exact-eval spend,
+    but it never creates score, rank, or promotion authority.
+    """
+
+    if not isinstance(calibration, dict):
+        raise ScorerResponseDatasetError("MLX score calibration must be a JSON object")
+    source_schema = calibration.get("schema_version") or calibration.get("schema")
+    if source_schema != MLX_SCORE_CALIBRATION_SCHEMA:
+        raise ScorerResponseDatasetError("MLX score calibration schema mismatch")
+    _require_explicit_false_authority(
+        calibration,
+        label="MLX score calibration",
+        fields=(
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "ready_for_exact_eval_dispatch",
+            "rank_or_kill_eligible",
+        ),
+    )
+    if calibration.get("candidate_generation_only") is not True:
+        raise ScorerResponseDatasetError(
+            "MLX score calibration candidate_generation_only must be true"
+        )
+    if calibration.get("evidence_grade") != EVIDENCE_GRADE_MLX:
+        raise ScorerResponseDatasetError("MLX score calibration evidence_grade mismatch")
+    if calibration.get("evidence_tag") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError("MLX score calibration evidence_tag mismatch")
+
+    decision_policy = calibration.get("decision_policy")
+    if not isinstance(decision_policy, dict):
+        raise ScorerResponseDatasetError("MLX score calibration decision_policy missing")
+    _require_explicit_false_authority(
+        decision_policy,
+        label="MLX score calibration decision_policy",
+        fields=(
+            "score_claim",
+            "promotion_eligible",
+            "ready_for_exact_eval_dispatch",
+            "rank_or_kill_eligible",
+        ),
+    )
+    if decision_policy.get("allowed_use") != "local_spend_triage_only":
+        raise ScorerResponseDatasetError(
+            "MLX score calibration decision_policy allowed_use mismatch"
+        )
+    if decision_policy.get("forbidden_use") != "score_claim_or_rank_or_kill_or_promotion":
+        raise ScorerResponseDatasetError(
+            "MLX score calibration decision_policy forbidden_use mismatch"
+        )
+
+    summary = calibration.get("summary")
+    if not isinstance(summary, dict):
+        raise ScorerResponseDatasetError("MLX score calibration summary missing")
+    uncertain_count = _as_int(summary.get("mlx_spend_triage_pairwise_uncertain_count"))
+    certified_count = _as_int(summary.get("mlx_spend_triage_pairwise_certified_count"))
+    total_count = _as_int(summary.get("mlx_spend_triage_pairwise_total_count"))
+    min_gap = _as_float(summary.get("recommended_min_mlx_gap_for_spend_triage"))
+    uncertainty = _as_float(summary.get("calibration_uncertainty_score"))
+    if min_gap is None:
+        min_gap = _as_float(decision_policy.get("recommended_min_mlx_gap_for_spend_triage"))
+    if uncertainty is None:
+        uncertainty = _as_float(decision_policy.get("calibration_uncertainty_score"))
+
+    blockers: list[str] = []
+    if uncertain_count is None:
+        blockers.append("mlx_score_calibration_uncertain_count_missing")
+    elif uncertain_count > 0:
+        blockers.append("mlx_score_calibration_has_uncertain_pairwise_decisions")
+    if certified_count is None or certified_count <= 0:
+        blockers.append("mlx_score_calibration_has_no_certified_pairwise_decisions")
+    if total_count is None or total_count <= 0:
+        blockers.append("mlx_score_calibration_pairwise_total_missing")
+    if min_gap is None or min_gap <= 0.0:
+        blockers.append("mlx_score_calibration_min_gap_missing_or_nonpositive")
+    if uncertainty is None or uncertainty < 0.0:
+        blockers.append("mlx_score_calibration_uncertainty_missing_or_negative")
+
+    status = "strict_pass" if not blockers else "blocked"
+    return {
+        "schema": "ll_mlx_score_calibration_gate.v1",
+        "producer": TOOL,
+        "source_schema": source_schema,
+        "source_run_id": calibration.get("run_id"),
+        "status": status,
+        "mlx_spend_triage_allowed": status == "strict_pass",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "summary": {
+            "certified_pairwise_count": certified_count,
+            "uncertain_pairwise_count": uncertain_count,
+            "total_pairwise_count": total_count,
+            "recommended_min_mlx_gap_for_spend_triage": min_gap,
+            "calibration_uncertainty_score": uncertainty,
+            "decision_safety_factor": _as_float(
+                decision_policy.get("decision_safety_factor")
+            ),
+            "calibration_uncertainty_basis": decision_policy.get(
+                "calibration_uncertainty_basis"
+            ),
+        },
+        "blockers": blockers,
+        "allowed_use": (
+            "local_exact_eval_spend_triage_filter"
+            if not blockers
+            else "blocked_until_calibration_pairwise_decisions_are_certified"
+        ),
+    }
+
+
 def build_scorer_response_validation_gate(
     dataset: dict[str, Any],
     *,
@@ -1755,6 +1877,7 @@ def build_next_probe_plan(
     magic_codec_seed_boundary_smoke: dict[str, Any] | None = None,
     mlx_torch_parity_sweep: dict[str, Any] | None = None,
     allow_mlx_parity_research_signal_override: bool = False,
+    mlx_score_calibration: dict[str, Any] | None = None,
     decoder_q_response_surface: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic LL next-probe plan from response economics."""
@@ -1851,6 +1974,11 @@ def build_next_probe_plan(
                 allow_mlx_parity_research_signal_override
             ),
         )
+    mlx_score_calibration_gate = None
+    if mlx_score_calibration is not None:
+        mlx_score_calibration_gate = build_mlx_score_calibration_gate(
+            mlx_score_calibration
+        )
 
     probes = [
         {
@@ -1895,6 +2023,30 @@ def build_next_probe_plan(
         if isinstance(row, dict) and row.get("family") == "mlx_scorer_response"
     ][:8]
     if mlx_rows:
+        if mlx_score_calibration_gate is None:
+            prohibitions.append(
+                {
+                    "rule": "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_score_calibration",
+                    "reason": (
+                        "MLX rows may train local response models, but exact-eval "
+                        "spend filtering requires an attached MLX score-calibration "
+                        "decision-band manifest"
+                    ),
+                    "input_rows": mlx_rows,
+                }
+            )
+        elif not mlx_score_calibration_gate["mlx_spend_triage_allowed"]:
+            prohibitions.append(
+                {
+                    "rule": "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_uncertain_calibration",
+                    "reason": (
+                        "the attached MLX score-calibration manifest has uncertain "
+                        "or invalid pairwise decision bands"
+                    ),
+                    "gate": mlx_score_calibration_gate,
+                    "input_rows": mlx_rows,
+                }
+            )
         if mlx_torch_parity_sweep_gate is None:
             prohibitions.append(
                 {
@@ -1976,10 +2128,12 @@ def build_next_probe_plan(
                     ),
                     "input_rows": mlx_rows,
                     "mlx_torch_parity_gate": mlx_torch_parity_sweep_gate,
+                    "mlx_score_calibration_gate": mlx_score_calibration_gate,
                     "acceptance_gate": (
                         ">=50 MLX rows across stable CPU windows/families, all "
                         "score_claim=false, with parity-gated held-out "
-                        "correlation before any exact-eval dispatch selection"
+                        "correlation and calibrated score-gap decision bands before "
+                        "any exact-eval dispatch selection"
                     ),
                 },
             )
@@ -2060,6 +2214,7 @@ def build_next_probe_plan(
         "null_byte_priority_weights": null_byte_priority_weights,
         "magic_codec_seed_boundary": magic_codec_seed_boundary,
         "mlx_torch_parity_sweep_gate": mlx_torch_parity_sweep_gate,
+        "mlx_score_calibration_gate": mlx_score_calibration_gate,
         "decoder_q_response_surface_summary": decoder_q_response_surface_summary,
         "prohibitions": prohibitions,
         "probes": probes,
@@ -2367,6 +2522,29 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
             f"`{gate_summary.get('segnet_argmax_diff_fraction_max')}`"
         )
         lines.append(f"- Blockers: `{mlx_gate.get('blockers')}`")
+        lines.append("")
+    mlx_calibration_gate = plan.get("mlx_score_calibration_gate")
+    if isinstance(mlx_calibration_gate, dict):
+        gate_summary = (
+            mlx_calibration_gate.get("summary")
+            if isinstance(mlx_calibration_gate.get("summary"), dict)
+            else {}
+        )
+        lines.extend(["## MLX Score Calibration Gate", ""])
+        lines.append(f"- Status: `{mlx_calibration_gate.get('status')}`")
+        lines.append(
+            "- Certified pairwise decisions: "
+            f"`{gate_summary.get('certified_pairwise_count')}`"
+        )
+        lines.append(
+            "- Uncertain pairwise decisions: "
+            f"`{gate_summary.get('uncertain_pairwise_count')}`"
+        )
+        lines.append(
+            "- Min MLX gap for spend triage: "
+            f"`{gate_summary.get('recommended_min_mlx_gap_for_spend_triage')}`"
+        )
+        lines.append(f"- Blockers: `{mlx_calibration_gate.get('blockers')}`")
         lines.append("")
     lines.extend(["## Prohibitions", ""])
     for item in plan.get("prohibitions", []):

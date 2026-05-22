@@ -90,6 +90,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--mlx-score-calibration",
+        type=Path,
+        help=(
+            "Optional MLX score-calibration manifest. When provided, the LL plan "
+            "can distinguish local training use from calibrated exact-eval spend "
+            "triage; absent or blocked calibration forbids MLX-based spend filtering."
+        ),
+    )
+    parser.add_argument(
         "--mlx-archive-size-bytes",
         type=int,
         help=(
@@ -155,6 +164,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.mlx_torch_parity_sweep is None
             else json.loads(args.mlx_torch_parity_sweep.read_text(encoding="utf-8"))
         )
+        mlx_score_calibration = (
+            None
+            if args.mlx_score_calibration is None
+            else json.loads(args.mlx_score_calibration.read_text(encoding="utf-8"))
+        )
         plan = build_next_probe_plan(
             dataset,
             null_byte_matrix=null_byte_matrix,
@@ -168,6 +182,7 @@ def main(argv: list[str] | None = None) -> int:
             allow_mlx_parity_research_signal_override=(
                 args.allow_mlx_parity_research_signal_override
             ),
+            mlx_score_calibration=mlx_score_calibration,
         )
         if args.mlx_profile_stability is not None:
             mlx_profile_stability = json.loads(args.mlx_profile_stability.read_text(encoding="utf-8"))
