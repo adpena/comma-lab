@@ -428,6 +428,34 @@ def test_build_windowed_mlx_response_dataset_uses_matching_window_baseline(tmp_p
     assert row["added_archive_bytes"] == 10
 
 
+def test_build_windowed_mlx_response_dataset_accepts_reference_cache_baseline_identity(
+    tmp_path,
+) -> None:
+    baseline = _mlx_response_payload()
+    baseline["canonical_score"] = 0.9
+    baseline["score_recomputed_from_components"] = 0.9
+    baseline["archive_sha256"] = None
+    baseline["inflated_outputs_aggregate_sha256"] = None
+    baseline["raw_sha256"] = None
+    baseline["cache_identity"]["candidate"]["archive_sha256"] = None
+    baseline["cache_identity"]["candidate"]["inflated_outputs_aggregate_sha256"] = None
+    baseline["cache_identity"]["candidate"]["raw_sha256"] = None
+    baseline_path = tmp_path / "baseline_reference_cache.json"
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    candidate = _mlx_response_payload()
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    dataset = build_windowed_mlx_response_dataset(
+        candidate_paths=[candidate_path],
+        baseline_paths=[baseline_path],
+    )
+
+    assert dataset["summary"]["row_count"] == 1
+    assert dataset["skipped"] == []
+
+
 def test_build_windowed_mlx_response_dataset_skips_missing_window_baseline(tmp_path) -> None:
     baseline = _mlx_response_payload()
     baseline_path = tmp_path / "baseline.json"

@@ -337,7 +337,12 @@ def _false_authority_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _require_mlx_response_false_authority(payload: dict[str, Any], *, label: str) -> None:
+def _require_mlx_response_false_authority(
+    payload: dict[str, Any],
+    *,
+    label: str,
+    allow_candidate_array_identity: bool = False,
+) -> None:
     for field in (
         "score_claim",
         "score_claim_valid",
@@ -406,7 +411,9 @@ def _require_mlx_response_false_authority(payload: dict[str, Any], *, label: str
             _is_sha256(str(array_hashes.get(key, "")))
             for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb")
         )
-        if side == "candidate" and not archive_hashes_valid:
+        if side == "candidate" and not archive_hashes_valid and not (
+            allow_candidate_array_identity and array_hashes_valid
+        ):
             raise ScorerResponseDatasetError(
                 f"{label} cache_identity.{side} archive/raw hashes must be sha256"
             )
@@ -795,7 +802,11 @@ def build_windowed_mlx_response_dataset(
         try:
             payload = _load_json(path)
             label = f"baseline {path}"
-            _require_mlx_response_false_authority(payload, label=label)
+            _require_mlx_response_false_authority(
+                payload,
+                label=label,
+                allow_candidate_array_identity=True,
+            )
             key = _mlx_response_window_key(payload, label=label)
             if key in baseline_by_window or key in duplicate_baseline_windows:
                 duplicate_baseline_windows.add(key)
