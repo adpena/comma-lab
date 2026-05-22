@@ -52,6 +52,8 @@ def test_mlx_segnet_stage0_se_trace_schema_and_authority(tmp_path: Path) -> None
     output = next(row for row in manifest["rows"] if row["name"] == "se.output_multiply")
     assert output["native_mlx_vs_torch"]["shape_match"] is True
     assert output["forced_torch_input_mlx_vs_torch"]["shape_match"] is True
+    conv_reduce = next(row for row in manifest["rows"] if row["name"] == "se.conv_reduce")
+    assert conv_reduce["forced_torch_input_mlx_vs_torch"]["max_abs_delta"] < 1.0e-4
 
 
 def test_mlx_segnet_stage0_se_trace_cli_rejects_gpu_without_allowance(

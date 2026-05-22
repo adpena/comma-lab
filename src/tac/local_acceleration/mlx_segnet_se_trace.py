@@ -164,6 +164,7 @@ def _torch_stage0_se_trace(
     with torch.inference_mode():
         pooled = x.mean((2, 3), keepdim=True)
         conv_reduce = se.conv_reduce(pooled)
+        conv_reduce_raw = conv_reduce.clone()
         act1 = se.act1(conv_reduce)
         conv_expand = se.conv_expand(act1)
         gate = se.gate(conv_expand)
@@ -171,7 +172,7 @@ def _torch_stage0_se_trace(
     return {
         "se.input": _torch_to_numpy(x),
         "se.pool": _torch_to_numpy(pooled),
-        "se.conv_reduce": _torch_to_numpy(conv_reduce),
+        "se.conv_reduce": _torch_to_numpy(conv_reduce_raw),
         "se.act1_silu": _torch_to_numpy(act1),
         "se.conv_expand": _torch_to_numpy(conv_expand),
         "se.gate_sigmoid": _torch_to_numpy(gate),
