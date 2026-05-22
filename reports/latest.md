@@ -85,6 +85,17 @@ last_refreshed_note: |
 - Current decoder-q first probe is
   `ll_decoder_q_surface_sign_calibration_repair`, not exact CUDA dispatch.
   Treat the advisory-negative batch as labeled sign-calibration data.
+- The strict full-600 MLX decoder-q selector now has a bridge work order:
+  `decoder_q_selective_window_bridge_plan.v1` at
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/decoder_q_selective_window_bridge_plan_top32.json`
+  (SHA-256
+  `f98e3017e8568bf36b304b5c053b6c7b4afc0e7ece8ef6d3f927849114765202`).
+  It maps the top 32 observed MLX singleton windows to the existing
+  `d1f1e56e042692f2` materialized decoder-q mutation, but remains
+  `blocked_missing_decoder_q_selective_runtime_grammar`,
+  `score_claim=false`, and `ready_for_exact_eval_dispatch=false` until a
+  byte-closed selective runtime grammar, official inflate controls, and exact
+  CPU/CUDA auth eval exist.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
