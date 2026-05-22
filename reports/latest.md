@@ -169,8 +169,15 @@ last_refreshed_note: |
   eval also passed, but regressed to `0.19205830234226182`; component
   decomposition versus the compact DQS1 top32 CPU frontier was PoseNet `+0.0`,
   SegNet `+0.00004600000000001131`, rate
-  `-0.000016646473828055286`. The refreshed portfolio now recommends
-  `pairset_diversity_k008` as the next fresh local-control candidate.
+  `-0.000016646473828055286`. The next candidate,
+  `pairset_diversity_k008` (`d18812203b765e63ac925677088bd7abe6c3e30b2daf5584033ab29adc216a06`,
+  `178536` bytes, pairs `[26, 109, 229, 296, 378, 459, 501, 588]`), also
+  passed locality controls and exact Modal `[contest-CPU]` eval. It scored
+  `0.19204896820121495`, still a regression versus compact DQS1 top32 by
+  `+0.000020019385125080724`; component deltas were PoseNet `+0.0`, SegNet
+  `+0.00003600000000000825`, rate `-0.000015980614874927523`. The refreshed
+  portfolio now recommends `pairset_diversity_k012` as the next fresh
+  local-control candidate.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
