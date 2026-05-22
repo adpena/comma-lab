@@ -37,6 +37,7 @@ BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER = (
 CANDIDATE_CACHE_TRANSFER_BLOCKER = (
     "mlx_scorer_response_candidate_cache_requires_passing_auth_identity_audit"
 )
+CACHE_INTEGRITY_BLOCKER = "mlx_scorer_input_cache_integrity_failed"
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class ScorerInputCache:
     segnet_last_rgb: np.ndarray
     posenet_yuv6_pair: np.ndarray
     pair_indices: np.ndarray
+    cache_integrity: dict[str, Any]
 
 
 def load_scorer_input_cache(cache_dir: str | Path, *, mmap_mode: str | None = "r") -> ScorerInputCache:
@@ -70,12 +72,20 @@ def load_scorer_input_cache(cache_dir: str | Path, *, mmap_mode: str | None = "r
     pose = np.load(pose_path, mmap_mode=mmap_mode)
     pairs = np.load(pair_path, mmap_mode=mmap_mode)
     _validate_cache_shapes(manifest, seg, pose, pairs)
+    cache_integrity = _verify_cache_integrity(
+        root=root,
+        manifest=manifest,
+        seg=seg,
+        pose=pose,
+        pairs=pairs,
+    )
     return ScorerInputCache(
         root=root,
         manifest=manifest,
         segnet_last_rgb=seg,
         posenet_yuv6_pair=pose,
         pair_indices=pairs,
+        cache_integrity=cache_integrity,
     )
 
 
@@ -255,6 +265,10 @@ def build_mlx_scorer_response_payload(
             "candidate": _cache_identity(candidate),
             "pair_indices_equal": True,
         },
+        "cache_integrity": {
+            "reference": reference.cache_integrity,
+            "candidate": candidate.cache_integrity,
+        },
         "archive_sha256": _manifest_string(candidate.manifest, "archive_sha256"),
         "inflated_outputs_aggregate_sha256": _manifest_string(
             candidate.manifest,
@@ -350,6 +364,79 @@ def _validate_cache_shapes(
             )
 
 
+def _verify_cache_integrity(
+    *,
+    root: Path,
+    manifest: dict[str, Any],
+    seg: np.ndarray,
+    pose: np.ndarray,
+    pairs: np.ndarray,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    array_actual = {
+        "segnet_last_rgb": _array_sha256(seg),
+        "posenet_yuv6_pair": _array_sha256(pose),
+        "pair_indices": _array_sha256(pairs),
+    }
+    artifact_paths = {
+        "segnet_last_rgb": root / "segnet_last_rgb.npy",
+        "posenet_yuv6_pair": root / "posenet_yuv6_pair.npy",
+        "pair_indices": root / "pair_indices.npy",
+    }
+    artifact_actual = {
+        key: {
+            "bytes": path.stat().st_size,
+            "sha256": _file_sha256(path),
+        }
+        for key, path in artifact_paths.items()
+    }
+
+    expected_array = manifest.get("array_sha256")
+    if not isinstance(expected_array, dict):
+        blockers.append("array_sha256_missing")
+        expected_array = {}
+    for key, actual in array_actual.items():
+        expected = expected_array.get(key)
+        if expected is None:
+            blockers.append(f"array_sha256_{key}_missing")
+        elif expected != actual:
+            blockers.append(f"array_sha256_{key}_mismatch")
+
+    expected_artifacts = manifest.get("artifacts")
+    if not isinstance(expected_artifacts, dict):
+        blockers.append("artifacts_missing")
+        expected_artifacts = {}
+    for key, actual in artifact_actual.items():
+        expected = expected_artifacts.get(key)
+        if not isinstance(expected, dict):
+            blockers.append(f"artifact_{key}_missing")
+            continue
+        if expected.get("bytes") != actual["bytes"]:
+            blockers.append(f"artifact_{key}_bytes_mismatch")
+        if expected.get("sha256") != actual["sha256"]:
+            blockers.append(f"artifact_{key}_sha256_mismatch")
+
+    hash_domain = manifest.get("hash_domain")
+    if not isinstance(hash_domain, str) or not hash_domain:
+        blockers.append("hash_domain_missing")
+
+    result = {
+        "passed": not blockers,
+        "blockers": blockers,
+        "hash_domain": hash_domain,
+        "array_sha256": array_actual,
+        "artifact_sha256": {
+            key: value["sha256"] for key, value in artifact_actual.items()
+        },
+        "artifact_bytes": {
+            key: value["bytes"] for key, value in artifact_actual.items()
+        },
+    }
+    if blockers:
+        raise ValueError(f"{CACHE_INTEGRITY_BLOCKER}: {blockers}")
+    return result
+
+
 def _validate_cache_pairing(reference: ScorerInputCache, candidate: ScorerInputCache) -> None:
     if reference.segnet_last_rgb.shape != candidate.segnet_last_rgb.shape:
         raise ValueError(
@@ -430,6 +517,7 @@ def _cache_identity(cache: ScorerInputCache) -> dict[str, Any]:
             manifest.get("eligible_for_local_mlx_transfer_calibration")
         ),
         "auth_eval_identity_audit": manifest.get("auth_eval_identity_audit"),
+        "cache_integrity": cache.cache_integrity,
     }
 
 
@@ -497,6 +585,7 @@ def _jsonable(value: Any) -> Any:
 
 
 __all__ = [
+    "CACHE_INTEGRITY_BLOCKER",
     "CANDIDATE_CACHE_TRANSFER_BLOCKER",
     "GPU_BATCH_SHAPE_BLOCKER",
     "GPU_RESEARCH_SIGNAL_BLOCKER",

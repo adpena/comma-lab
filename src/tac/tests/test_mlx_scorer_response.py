@@ -12,6 +12,7 @@ from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
 from tac.local_acceleration.mlx_scorer_response import (
     BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER,
+    CACHE_INTEGRITY_BLOCKER,
     CANDIDATE_CACHE_TRANSFER_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
     build_mlx_scorer_response_payload,
@@ -62,6 +63,9 @@ def test_mlx_scorer_response_cache_cli_is_non_authoritative(tmp_path: Path) -> N
     assert payload["avg_segnet_dist"] == 0.0
     assert abs(payload["canonical_score"] - expected_rate_score) < 1.0e-12
     assert payload["cache_identity"]["pair_indices_equal"] is True
+    assert payload["cache_integrity"]["reference"]["passed"] is True
+    assert payload["cache_integrity"]["candidate"]["passed"] is True
+    assert payload["cache_identity"]["candidate"]["cache_integrity"]["passed"] is True
 
 
 def test_load_scorer_input_cache_rejects_hash_only_manifest(tmp_path: Path) -> None:
@@ -120,6 +124,52 @@ def test_mlx_scorer_response_cli_rejects_unaudited_candidate_cache(tmp_path: Pat
 
     assert completed.returncode == 2
     assert CANDIDATE_CACHE_TRANSFER_BLOCKER in completed.stderr
+
+
+def test_mlx_scorer_response_cli_rejects_mutated_cache_after_manifest_stamp(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(
+        tmp_path / "reference",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    candidate_dir = _write_test_cache(
+        tmp_path / "candidate",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    np.save(candidate_dir / "segnet_last_rgb.npy", np.ones_like(seg))
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1",
+            "--output",
+            str(tmp_path / "mlx_response.json"),
+            "--repo-root",
+            str(REPO),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert CACHE_INTEGRITY_BLOCKER in completed.stderr
+    assert "array_sha256_segnet_last_rgb_mismatch" in completed.stderr
+    assert "artifact_segnet_last_rgb_sha256_mismatch" in completed.stderr
 
 
 def test_mlx_scorer_response_cli_can_score_deterministic_pair_window(tmp_path: Path) -> None:
