@@ -233,6 +233,11 @@ def build_parity_proof(
         sparse_sidecar_name = "foveation_params.hfv2"
         sparse_sidecar = sparse_members.get(sparse_sidecar_name)
         if sparse_sidecar is None:
+            sparse_bin = sparse_members.get("foveation_params.bin")
+            if sparse_bin is not None and sparse_bin.startswith(b"HFV2"):
+                sparse_sidecar_name = "foveation_params.bin"
+                sparse_sidecar = sparse_bin
+        if sparse_sidecar is None:
             embedded = _embedded_sidecar_from_wrapped_x(sparse_x)
             if embedded is not None:
                 sparse_sidecar_name, sparse_sidecar = embedded

@@ -5,12 +5,18 @@
 HFV1 stores one five-float foveation row per frame. The current PR101 HFV1
 candidate archives carry 1,200 rows even when only a small set of paired frames
 differs from the identity row. This tool builds a deterministic candidate with
-an exact pair-sparse ``foveation_params.hfv2`` sidecar and a generated runtime
-copy that decodes HFV2 without changing decoder math.
+an exact pair-sparse ``foveation_params.bin`` sidecar (HFV2 magic) and a
+generated runtime copy that decodes either HFV1 or HFV2 via in-file magic-byte
+dispatch (canonical `.bin` filename per
+``_KNOWN_ARCHIVE_SUFFIXES`` whitelist - see OVERNIGHT-M sister memo
+``feedback_overnight_m_hfv2_sparse_sidecar_paired_smoke_landed_20260521.md``
+for the integration bug class this build extincts).
 
 It writes artifacts only under ``experiments/results`` and does not run exact
 eval or claim a score.
 """
+
+# ruff: noqa: E402
 
 from __future__ import annotations
 
@@ -27,6 +33,10 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from tac.deploy.modal.paired_dispatch import paired_auth_eval_dispatch_command_template
 
@@ -209,20 +219,25 @@ def _decode_hfv2_rows(raw: bytes) -> list[tuple[float, float, float, float, floa
 
 
 def _patch_inflate_py(source: str) -> str:
-    if "HFV2_MAGIC" in source:
+    dispatch_sentinel = 'raise ValueError(f"foveation_params.bin unknown magic: {magic!r}")'
+    default_row_sentinel = "return row_by_frame.get(int(frame_index), default_row)"
+    if dispatch_sentinel in source and default_row_sentinel in source:
         return source
-    source = source.replace(
-        'HFV1_MAGIC = b"HFV1"\n',
-        'HFV1_MAGIC = b"HFV1"\nHFV2_MAGIC = b"HFV2"\n',
-    )
-    source = source.replace(
-        "HFV1_ROW_STRUCT = struct.Struct(\"<fffff\")\n",
-        "HFV1_ROW_STRUCT = struct.Struct(\"<fffff\")\n"
-        "HFV2_HEADER_STRUCT = struct.Struct(\"<4sIIIfffffH\")\n"
-        "HFV2_PAIR_ROW_STRUCT = struct.Struct(\"<Hfffff\")\n",
-    )
+    if "HFV2_MAGIC" not in source:
+        source = source.replace(
+            'HFV1_MAGIC = b"HFV1"\n',
+            'HFV1_MAGIC = b"HFV1"\nHFV2_MAGIC = b"HFV2"\n',
+        )
+    if "HFV2_HEADER_STRUCT" not in source:
+        source = source.replace(
+            "HFV1_ROW_STRUCT = struct.Struct(\"<fffff\")\n",
+            "HFV1_ROW_STRUCT = struct.Struct(\"<fffff\")\n"
+            "HFV2_HEADER_STRUCT = struct.Struct(\"<4sIIIfffffH\")\n"
+            "HFV2_PAIR_ROW_STRUCT = struct.Struct(\"<Hfffff\")\n",
+        )
     marker = "\n\ndef load_foveation_sidecar(src_bin: Path) -> dict[str, object] | None:\n"
-    insert = r'''
+    if "def load_hfv2_sparse_params(" not in source:
+        insert = r'''
 
 def load_hfv2_sparse_params(params_path: Path) -> dict[str, object]:
     if not params_path.is_file():
@@ -261,22 +276,74 @@ def load_hfv2_sparse_params(params_path: Path) -> dict[str, object]:
         "pair_count": pair_count,
     }
 '''
-    source = source.replace(marker, insert + marker)
-    source = source.replace(
+        source = source.replace(marker, insert + marker)
+    # OVERNIGHT-N: dispatch on magic bytes (HFV1 vs HFV2) instead of filename
+    # since both share canonical `foveation_params.bin` per
+    # _KNOWN_ARCHIVE_SUFFIXES whitelist. Magic-byte dispatch is the canonical
+    # Carmack pattern: the data tells you what it is.
+    new_dispatch = (
         "def load_foveation_sidecar(src_bin: Path) -> dict[str, object] | None:\n"
-        "    hfv1 = src_bin.with_name(\"foveation_params.bin\")\n",
+        "    fov = src_bin.with_name(\"foveation_params.bin\")\n"
+        "    if fov.is_file():\n"
+        "        magic = fov.read_bytes()[:4]\n"
+        "        if magic == HFV2_MAGIC:\n"
+        "            return load_hfv2_sparse_params(fov)\n"
+        "        if magic == HFV1_MAGIC:\n"
+        "            return load_hfv1_params(fov)\n"
+        "        raise ValueError(f\"foveation_params.bin unknown magic: {magic!r}\")\n"
+    )
+    old_dispatches = (
+        "def load_foveation_sidecar(src_bin: Path) -> dict[str, object] | None:\n"
+        "    hfv1 = src_bin.with_name(\"foveation_params.bin\")\n"
+        "    if hfv1.is_file():\n"
+        "        return load_hfv1_params(hfv1)\n",
         "def load_foveation_sidecar(src_bin: Path) -> dict[str, object] | None:\n"
         "    hfv2 = src_bin.with_name(\"foveation_params.hfv2\")\n"
         "    if hfv2.is_file():\n"
         "        return load_hfv2_sparse_params(hfv2)\n"
-        "    hfv1 = src_bin.with_name(\"foveation_params.bin\")\n",
+        "    hfv1 = src_bin.with_name(\"foveation_params.bin\")\n"
+        "    if hfv1.is_file():\n"
+        "        return load_hfv1_params(hfv1)\n",
     )
-    source = source.replace(
-        '    if params.get("source_format") == "LFV1_sparse":\n',
-        '    if params.get("source_format") in {"LFV1_sparse", "HFV2_pair_sparse"}:\n',
+    for old_dispatch in old_dispatches:
+        source = source.replace(old_dispatch, new_dispatch)
+    old_lfv1_sparse_block = (
+        '    if params.get("source_format") == "LFV1_sparse":\n'
+        "        row_by_frame = params.get(\"row_by_frame\")\n"
+        "        if not isinstance(row_by_frame, dict):\n"
+        "            raise ValueError(\"LFV1 sparse params missing row_by_frame\")\n"
+        "        return row_by_frame.get(int(frame_index))\n"
     )
+    old_combined_sparse_block = (
+        '    if params.get("source_format") in {"LFV1_sparse", "HFV2_pair_sparse"}:\n'
+        "        row_by_frame = params.get(\"row_by_frame\")\n"
+        "        if not isinstance(row_by_frame, dict):\n"
+        "            raise ValueError(\"LFV1 sparse params missing row_by_frame\")\n"
+        "        return row_by_frame.get(int(frame_index))\n"
+    )
+    new_sparse_block = (
+        '    if params.get("source_format") == "LFV1_sparse":\n'
+        "        row_by_frame = params.get(\"row_by_frame\")\n"
+        "        if not isinstance(row_by_frame, dict):\n"
+        "            raise ValueError(\"LFV1 sparse params missing row_by_frame\")\n"
+        "        return row_by_frame.get(int(frame_index))\n"
+        '    if params.get("source_format") == "HFV2_pair_sparse":\n'
+        "        row_by_frame = params.get(\"row_by_frame\")\n"
+        "        if not isinstance(row_by_frame, dict):\n"
+        "            raise ValueError(\"HFV2 sparse params missing row_by_frame\")\n"
+        "        default_row = params.get(\"default_row\")\n"
+        "        if not isinstance(default_row, tuple) or len(default_row) != 5:\n"
+        "            raise ValueError(\"HFV2 sparse params missing default_row\")\n"
+        "        return row_by_frame.get(int(frame_index), default_row)\n"
+    )
+    source = source.replace(old_lfv1_sparse_block, new_sparse_block)
+    source = source.replace(old_combined_sparse_block, new_sparse_block)
     if "load_hfv2_sparse_params" not in source:
         raise ValueError("failed to patch inflate.py with HFV2 decoder")
+    if dispatch_sentinel not in source:
+        raise ValueError("failed to patch inflate.py with HFV2 magic-byte .bin dispatch")
+    if default_row_sentinel not in source:
+        raise ValueError("failed to patch inflate.py with HFV2 default-row lookup")
     return source
 
 
@@ -322,6 +389,19 @@ def _write_stored_zip(path: Path, members: list[tuple[str, bytes]]) -> None:
             archive.writestr(info, payload)
 
 
+def _validate_hfv2_archive_members(path: Path) -> None:
+    with zipfile.ZipFile(path) as archive:
+        emitted_members = [info.filename for info in archive.infolist()]
+    expected_members = ["foveation_params.bin", "x"]
+    if emitted_members != expected_members:
+        raise ValueError(
+            f"HFV2 archive member order mismatch: got {emitted_members}, expected {expected_members}"
+        )
+    from experiments.contest_auth_eval import _validate_archive_members
+
+    _validate_archive_members(emitted_members)
+
+
 def _write_generated_archive_manifest(
     *,
     submission_dir: Path,
@@ -351,7 +431,7 @@ def _write_generated_archive_manifest(
         "archive_bytes": archive_path.stat().st_size,
         "archive_sha256": _sha256_file(archive_path),
         "members": _zip_member_records(archive_path),
-        "member_shape": "two_member_pr101_source_payload_plus_hfv2_exact_pair_sparse_foveation_sidecar",
+        "member_shape": "two_member_pr101_source_payload_plus_hfv2_magic_pair_sparse_foveation_bin_sidecar",
         "source_dense_archive": _repo_rel(dense_archive),
         "source_dense_archive_bytes": dense_archive.stat().st_size,
         "source_dense_archive_sha256": _sha256_file(dense_archive),
@@ -416,13 +496,24 @@ def build_candidate(
         raise ValueError("HFV2 row parity check failed")
 
     archive_path = output_dir / "archive.zip"
+    # Catalog #205 + OVERNIGHT-N: canonical `.bin` suffix per
+    # `_KNOWN_ARCHIVE_SUFFIXES` whitelist at experiments/contest_auth_eval.py:867.
+    # Magic-byte dispatch in inflate.py distinguishes HFV1 (legacy dense) vs
+    # HFV2 (new sparse) WITHOUT requiring a new file extension. Sister memo:
+    # feedback_overnight_m_hfv2_sparse_sidecar_paired_smoke_landed_20260521.md.
     _write_stored_zip(
         archive_path,
         [
-            ("foveation_params.hfv2", hfv2_raw),
+            ("foveation_params.bin", hfv2_raw),
             ("x", x_payload),
         ],
     )
+    # OVERNIGHT-M STRUCTURAL recommendation #3 + Carmack MVP-first FREE local
+    # CPU check: run the canonical archive-validator on the newly emitted
+    # archive BEFORE incurring any paid-GPU spend. Fails fast at build time
+    # if a future whitelist mismatch is introduced rather than at Modal
+    # dispatch time (~$0.40 wasted per occurrence in OVERNIGHT-M).
+    _validate_hfv2_archive_members(archive_path)
     submission_dir = _copy_runtime_with_hfv2(
         source_submission_dir,
         output_dir / "submission_dir_hfv2",
