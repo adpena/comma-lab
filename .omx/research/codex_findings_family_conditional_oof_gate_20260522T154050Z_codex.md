@@ -32,6 +32,12 @@ family gate before using OOF predictions for spend triage. A blocked
 new features, or exact-axis calibration instead of inheriting aggregate OOF
 confidence.
 
+The effective MLX spend-triage path now enforces this instead of merely
+surfacing it. `build_next_probe_plan(..., required_spend_triage_families=...)`
+passes the required family list into the validation gate, and
+`mlx_effective_spend_triage_selection` refuses selected families absent from
+the effective gate's `spend_triage_allowed_families`.
+
 ## Prefix K028 Exact CPU Calibration
 
 The pending DQS1 `prefix_k028` Modal CPU exact eval recovered while this gate
@@ -66,6 +72,12 @@ allowed use is local candidate generation and replanning only; exact-eval
 dispatch still requires materialization, archive custody, and the normal lane
 claim / auth-eval gate.
 
+Exact contest-axis observation rows now require a local auth-eval JSON source
+artifact. The observation validator checks `score_axis`, `evidence_grade`,
+`score_claim_valid=true`, archive SHA-256, inflated aggregate SHA-256, and
+canonical score agreement before preserving `[contest-CPU]` or `[contest-CUDA]`
+labels.
+
 The current DQS1 pair-set acquisition artifact is ignored rebuildable state:
 
 - JSON:
@@ -82,14 +94,14 @@ non-authoritative selector score, descriptor bytes, and diversity.
 ## Verification
 
 ```bash
-.venv/bin/python -m pytest src/tac/tests/test_mlx_score_calibration.py src/tac/tests/test_scorer_response_dataset.py src/tac/tests/test_decoder_q_pairset_acquisition.py src/tac/tests/test_mlx_dynamic_sweep_observations.py -q
-ruff check src/tac/local_acceleration/mlx_score_calibration.py src/tac/optimization/scorer_response_dataset.py src/tac/optimization/decoder_q_pairset_acquisition.py src/tac/optimization/mlx_dynamic_sweep_observations.py src/tac/tests/test_mlx_score_calibration.py src/tac/tests/test_scorer_response_dataset.py src/tac/tests/test_decoder_q_pairset_acquisition.py src/tac/tests/test_mlx_dynamic_sweep_observations.py tools/validate_scorer_response_dataset.py tools/plan_decoder_q_pairset_acquisition.py tools/append_mlx_dynamic_sweep_observation.py
+.venv/bin/python -m pytest src/tac/tests/test_mlx_score_calibration.py src/tac/tests/test_scorer_response_dataset.py src/tac/tests/test_decoder_q_pairset_acquisition.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_mlx_effective_spend_triage_selection.py src/tac/tests/test_plan_ll_scorer_response_next_cli.py -q
+ruff check src/tac/local_acceleration/mlx_score_calibration.py src/tac/optimization/scorer_response_dataset.py src/tac/optimization/decoder_q_pairset_acquisition.py src/tac/optimization/mlx_dynamic_sweep_observations.py src/tac/optimization/mlx_effective_spend_triage_selection.py src/tac/tests/test_mlx_score_calibration.py src/tac/tests/test_scorer_response_dataset.py src/tac/tests/test_decoder_q_pairset_acquisition.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_mlx_effective_spend_triage_selection.py src/tac/tests/test_plan_ll_scorer_response_next_cli.py tools/validate_scorer_response_dataset.py tools/plan_decoder_q_pairset_acquisition.py tools/append_mlx_dynamic_sweep_observation.py tools/plan_ll_scorer_response_next.py
 .venv/bin/python tools/scan_best_anchor_per_axis.py --format json
 ```
 
 Results:
 
-- `127 passed`
+- `144 passed`
 - Ruff passed
 - Frontier scanner reported no drift
 

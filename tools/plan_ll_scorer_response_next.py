@@ -167,6 +167,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "must not proceed from constituent MLX gates alone."
         ),
     )
+    parser.add_argument(
+        "--required-spend-triage-family",
+        action="append",
+        default=[],
+        help=(
+            "Require this exact scorer-response family to strict-pass its own "
+            "OOF spend-triage gate before the effective MLX gate can pass. May repeat."
+        ),
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
     return parser.parse_args(argv)
@@ -237,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             mlx_score_calibration=mlx_score_calibration,
             mlx_production_contract=mlx_production_contract,
+            required_spend_triage_families=args.required_spend_triage_family,
             decoder_q_surface_advisory_batch=decoder_q_surface_advisory_batch,
         )
         if args.mlx_profile_stability is not None:

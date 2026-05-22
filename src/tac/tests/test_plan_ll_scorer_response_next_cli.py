@@ -57,10 +57,15 @@ def _validated_mlx_dataset() -> dict:
         "promotable": False,
     }
     rows = []
-    for family_index, family in enumerate(("mlx_scorer_response", "decoder_q")):
+    for family in ("mlx_scorer_response", "decoder_q"):
         for fold in range(5):
             for offset in range(5):
-                value = float(family_index * 100 + fold * 5 + offset)
+                pair_rank = fold * 5 + offset
+                value = (
+                    -0.002 - 0.00001 * pair_rank
+                    if family == "mlx_scorer_response"
+                    else float(100 + pair_rank)
+                )
                 row = {
                     "schema": "scorer_response_row.v1",
                     "row_id": f"{family}-{fold}-{offset}",
@@ -670,6 +675,8 @@ def test_plan_ll_scorer_response_next_cli_requires_effective_mlx_gate_blocks(
             str(calibration_path),
             "--mlx-production-contract",
             str(production_path),
+            "--required-spend-triage-family",
+            "mlx_scorer_response",
             "--require-effective-mlx-spend-triage",
             "--json-out",
             str(json_out),
@@ -724,6 +731,8 @@ def test_plan_ll_scorer_response_next_cli_requires_effective_mlx_gate_passes(
             str(calibration_path),
             "--mlx-production-contract",
             str(production_path),
+            "--required-spend-triage-family",
+            "mlx_scorer_response",
             "--require-effective-mlx-spend-triage",
             "--json-out",
             str(json_out),

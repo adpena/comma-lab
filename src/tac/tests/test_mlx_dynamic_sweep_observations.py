@@ -102,6 +102,28 @@ def test_summary_preserves_exact_axis_evidence_labels(tmp_path: Path) -> None:
     exact["observed_axis"] = "contest_cpu"
     exact["evidence_tag"] = "[contest-CPU]"
     exact["evidence_grade"] = "contest-CPU"
+    exact["observed_score_or_delta"] = 0.123456
+    auth_eval = tmp_path / "contest_auth_eval.json"
+    auth_eval.write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cpu",
+                "evidence_grade": "contest-CPU",
+                "score_claim_valid": True,
+                "canonical_score": 0.123456,
+                "provenance": {
+                    "archive_sha256": exact["archive_sha256"],
+                    "inflated_output_manifest": {
+                        "payload": {
+                            "aggregate_sha256": exact["raw_output_or_cache_sha256"],
+                        },
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    exact["source_artifact_path"] = str(auth_eval)
 
     append_observation_row(exact, output_path=output)
     summary = summarize_observation_file(output)
@@ -110,6 +132,40 @@ def test_summary_preserves_exact_axis_evidence_labels(tmp_path: Path) -> None:
     assert summary["evidence_tag"] == "[contest-CPU]"
     assert summary["evidence_grades"] == ["contest-CPU"]
     assert summary["evidence_tags"] == ["[contest-CPU]"]
+
+
+def test_exact_axis_observation_requires_strict_auth_source(tmp_path: Path) -> None:
+    exact = _base_row()
+    exact["observed_axis"] = "contest_cpu"
+    exact["evidence_tag"] = "[contest-CPU]"
+    exact["evidence_grade"] = "contest-CPU"
+
+    with pytest.raises(MLXDynamicSweepObservationError, match="source_artifact_path"):
+        append_observation_row(exact, output_path=tmp_path / "observations.jsonl")
+
+    bad = tmp_path / "bad_auth.json"
+    bad.write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cpu",
+                "evidence_grade": "contest-CPU",
+                "score_claim_valid": True,
+                "canonical_score": exact["observed_score_or_delta"],
+                "provenance": {
+                    "archive_sha256": "9" * 64,
+                    "inflated_output_manifest": {
+                        "payload": {
+                            "aggregate_sha256": exact["raw_output_or_cache_sha256"],
+                        },
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    exact["source_artifact_path"] = str(bad)
+    with pytest.raises(MLXDynamicSweepObservationError, match="archive_sha256 mismatch"):
+        append_observation_row(exact, output_path=tmp_path / "observations.jsonl")
 
 
 @pytest.mark.parametrize(

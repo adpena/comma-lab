@@ -142,6 +142,30 @@ def _validate_plan_for_selection(plan: dict[str, Any]) -> dict[str, Any]:
     return effective_gate
 
 
+def _gate_allowed_families(effective_gate: dict[str, Any]) -> set[str]:
+    raw = effective_gate.get("spend_triage_allowed_families")
+    if not isinstance(raw, list):
+        summary = effective_gate.get("summary")
+        raw = (
+            summary.get("spend_triage_allowed_families")
+            if isinstance(summary, dict)
+            else None
+        )
+    allowed = {str(family) for family in raw or [] if str(family).strip()}
+    if not allowed:
+        raise MLXEffectiveSpendTriageSelectionError(
+            "effective gate has no family-level spend-triage allowed families"
+        )
+    blocked = effective_gate.get("spend_triage_blocked_families")
+    blocked_set = {str(family) for family in blocked or [] if str(family).strip()}
+    overlap = allowed & blocked_set
+    if overlap:
+        raise MLXEffectiveSpendTriageSelectionError(
+            "effective gate family allow/block overlap: " + ", ".join(sorted(overlap))
+        )
+    return allowed
+
+
 def _validate_dataset(dataset: dict[str, Any]) -> list[dict[str, Any]]:
     if dataset.get("schema") != "scorer_response_dataset.v1":
         raise MLXEffectiveSpendTriageSelectionError("dataset schema mismatch")
@@ -299,9 +323,20 @@ def build_mlx_effective_spend_triage_selection(
         raise MLXEffectiveSpendTriageSelectionError("top_k must be positive")
     effective_gate = _validate_plan_for_selection(plan)
     rows = _validate_dataset(dataset)
-    selected_families = None if families is None else set(families)
+    gate_allowed_families = _gate_allowed_families(effective_gate)
+    selected_families = (
+        set(gate_allowed_families)
+        if families is None
+        else {str(family) for family in families}
+    )
     if selected_families is not None and not selected_families:
         raise MLXEffectiveSpendTriageSelectionError("families cannot be empty")
+    forbidden_families = selected_families - gate_allowed_families
+    if forbidden_families:
+        raise MLXEffectiveSpendTriageSelectionError(
+            "selected families lack family-level spend-triage gate: "
+            + ", ".join(sorted(forbidden_families))
+        )
     calibrated_gap = _calibrated_min_gap(plan, min_observed_gain)
 
     eligible: list[dict[str, Any]] = []
@@ -392,7 +427,8 @@ def build_mlx_effective_spend_triage_selection(
         },
         "selection_policy": {
             "top_k": top_k,
-            "families": None if selected_families is None else sorted(selected_families),
+            "families": sorted(selected_families),
+            "gate_spend_triage_allowed_families": sorted(gate_allowed_families),
             "min_observed_gain": calibrated_gap,
             "prediction_field": prediction_field,
             "require_prediction_negative": require_prediction_negative,

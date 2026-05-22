@@ -92,6 +92,12 @@ def _plan(*, effective_status: str = "strict_pass") -> dict:
             **authority,
             "status": "passed",
             "passed": True,
+            "prediction_spend_triage_usable": True,
+            "required_spend_triage_families": ["mlx_decoder_q"],
+            "required_family_spend_triage_passed": True,
+            "required_family_spend_triage_blockers": [],
+            "spend_triage_allowed_families": ["mlx_decoder_q"],
+            "spend_triage_blocked_families": ["mlx_fec6_auth_parent"],
         },
         "mlx_torch_parity_sweep_gate": {
             **authority,
@@ -117,6 +123,12 @@ def _plan(*, effective_status: str = "strict_pass") -> dict:
             "status": effective_status,
             "candidate_generation_only": True,
             "mlx_exact_eval_spend_triage_allowed": effective_status == "strict_pass",
+            "family_spend_triage_gate_enforced": True,
+            "required_spend_triage_families": ["mlx_decoder_q"],
+            "spend_triage_allowed_families": ["mlx_decoder_q"],
+            "spend_triage_blocked_families": ["mlx_fec6_auth_parent"],
+            "mlx_families": ["mlx_decoder_q"],
+            "mlx_families_without_spend_triage_gate": [],
             "allowed_use": (
                 "local_exact_eval_spend_triage_filter_after_all_mlx_and_dataset_gates"
             ),
@@ -165,6 +177,18 @@ def test_selection_blocks_non_oof_or_failed_effective_gate() -> None:
         build_mlx_effective_spend_triage_selection(
             _dataset(),
             _plan(effective_status="blocked"),
+        )
+
+
+def test_selection_blocks_family_without_effective_family_gate() -> None:
+    with pytest.raises(
+        MLXEffectiveSpendTriageSelectionError,
+        match="selected families lack family-level spend-triage gate",
+    ):
+        build_mlx_effective_spend_triage_selection(
+            _dataset(),
+            _plan(),
+            families=["mlx_fec6_auth_parent"],
         )
 
 

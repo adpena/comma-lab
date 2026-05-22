@@ -1410,12 +1410,17 @@ def test_next_probe_plan_effective_mlx_spend_triage_gate_passes_only_after_datas
             include_prediction=True,
         )
     )
+    for index, row in enumerate(dataset["rows"]):
+        value = -float(index + 1) / 1000.0
+        row["delta_vs_baseline_score"] = value
+        row["predicted_delta_vs_baseline_score"] = value
 
     plan = build_next_probe_plan(
         dataset,
         mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
         mlx_score_calibration=_mlx_score_calibration_payload(),
         mlx_production_contract=_mlx_production_contract_payload(),
+        required_spend_triage_families=("mlx_scorer_response",),
     )
 
     assert plan["response_validation_gate"]["status"] == "passed"
@@ -1426,6 +1431,10 @@ def test_next_probe_plan_effective_mlx_spend_triage_gate_passes_only_after_datas
     assert gate["status"] == "strict_pass"
     assert gate["mlx_exact_eval_spend_triage_allowed"] is True
     assert gate["blockers"] == []
+    assert gate["family_spend_triage_gate_enforced"] is True
+    assert gate["required_spend_triage_families"] == ["mlx_scorer_response"]
+    assert gate["spend_triage_allowed_families"] == ["mlx_scorer_response"]
+    assert gate["mlx_families_without_spend_triage_gate"] == []
     assert gate["summary"]["mlx_row_count"] == 25
     assert gate["summary"]["production_contract_row_count"] == 25
     assert gate["summary"]["production_contract_matched_row_count"] == 25

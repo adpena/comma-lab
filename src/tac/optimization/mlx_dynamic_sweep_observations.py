@@ -56,6 +56,14 @@ REQUIRED_COMPONENT_DELTAS = (
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+_CONTEST_AXIS_BY_GRADE = {
+    "contest-CPU": "contest_cpu",
+    "[contest-CPU]": "contest_cpu",
+    "contest_cpu": "contest_cpu",
+    "contest-CUDA": "contest_cuda",
+    "[contest-CUDA]": "contest_cuda",
+    "contest_cuda": "contest_cuda",
+}
 
 
 class MLXDynamicSweepObservationError(ValueError):
@@ -175,6 +183,117 @@ def _source_artifact_from_payload(row: Mapping[str, Any]) -> tuple[str | None, s
     return path_text, sha_text
 
 
+def _contest_axis_from_row(row: Mapping[str, Any]) -> str | None:
+    axes = {
+        _CONTEST_AXIS_BY_GRADE.get(str(row.get("observed_axis") or "")),
+        _CONTEST_AXIS_BY_GRADE.get(str(row.get("evidence_grade") or "")),
+        _CONTEST_AXIS_BY_GRADE.get(str(row.get("evidence_tag") or "")),
+    }
+    axes.discard(None)
+    if not axes:
+        return None
+    if len(axes) != 1:
+        raise MLXDynamicSweepObservationError(
+            "contest-axis observation labels disagree across observed_axis/evidence_grade/evidence_tag"
+        )
+    return next(iter(axes))
+
+
+def _payload_archive_sha256(payload: Mapping[str, Any]) -> str | None:
+    provenance = payload.get("provenance")
+    value = payload.get("archive_sha256")
+    if value is None and isinstance(provenance, Mapping):
+        value = provenance.get("archive_sha256")
+    return _optional_sha256(value, label="source auth archive_sha256")
+
+
+def _payload_inflated_aggregate_sha256(payload: Mapping[str, Any]) -> str | None:
+    provenance = payload.get("provenance")
+    if isinstance(provenance, Mapping):
+        manifest = provenance.get("inflated_output_manifest")
+        if isinstance(manifest, Mapping):
+            manifest_payload = manifest.get("payload")
+            if isinstance(manifest_payload, Mapping):
+                value = manifest_payload.get("aggregate_sha256")
+                if value is not None:
+                    return _optional_sha256(
+                        value,
+                        label="source auth inflated aggregate_sha256",
+                    )
+    value = payload.get("inflated_outputs_aggregate_sha256")
+    return _optional_sha256(value, label="source auth inflated aggregate_sha256")
+
+
+def _payload_auth_score(payload: Mapping[str, Any]) -> float | None:
+    for key in (
+        "canonical_score",
+        "score_recomputed_from_components",
+        "score",
+        "final_score",
+    ):
+        value = payload.get(key)
+        if value is not None:
+            return _as_finite_float(value, label=f"source auth {key}")
+    return None
+
+
+def _validate_contest_auth_source(normalized: dict[str, Any]) -> None:
+    contest_axis = _contest_axis_from_row(normalized)
+    if contest_axis is None:
+        return
+    source_path = normalized.get("source_artifact_path")
+    if not source_path:
+        raise MLXDynamicSweepObservationError(
+            "contest-axis observation requires local source_artifact_path"
+        )
+    path = Path(str(source_path))
+    if not path.is_file():
+        raise MLXDynamicSweepObservationError(
+            "contest-axis observation source_artifact_path must be locally readable"
+        )
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise MLXDynamicSweepObservationError(
+            "contest-axis source artifact must be auth-eval JSON"
+        ) from exc
+    if not isinstance(payload, Mapping):
+        raise MLXDynamicSweepObservationError(
+            "contest-axis source artifact must be a JSON object"
+        )
+    payload_axis = str(payload.get("score_axis") or "")
+    if payload_axis != contest_axis:
+        raise MLXDynamicSweepObservationError(
+            f"contest-axis source score_axis mismatch: {payload_axis!r} != {contest_axis!r}"
+        )
+    payload_grade = str(payload.get("evidence_grade") or "")
+    if _CONTEST_AXIS_BY_GRADE.get(payload_grade) != contest_axis:
+        raise MLXDynamicSweepObservationError(
+            "contest-axis source evidence_grade mismatch"
+        )
+    if payload.get("score_claim_valid") is not True:
+        raise MLXDynamicSweepObservationError(
+            "contest-axis source auth eval must have score_claim_valid=true"
+        )
+    archive_sha = _payload_archive_sha256(payload)
+    if archive_sha != normalized["archive_sha256"]:
+        raise MLXDynamicSweepObservationError(
+            "contest-axis source archive_sha256 mismatch"
+        )
+    aggregate_sha = _payload_inflated_aggregate_sha256(payload)
+    if aggregate_sha != normalized["raw_output_or_cache_sha256"]:
+        raise MLXDynamicSweepObservationError(
+            "contest-axis source inflated aggregate SHA mismatch"
+        )
+    score = _payload_auth_score(payload)
+    if score is not None:
+        observed = float(normalized["observed_score_or_delta"])
+        if abs(score - observed) > 1.0e-12:
+            raise MLXDynamicSweepObservationError(
+                "contest-axis source score does not match observed_score_or_delta"
+            )
+
+
 def build_observation_row(
     *,
     candidate_id: str,
@@ -273,6 +392,7 @@ def normalize_observation_row(row: Mapping[str, Any]) -> dict[str, Any]:
             "sha256": source_sha,
         }
     )
+    _validate_contest_auth_source(normalized)
 
     passthrough_keys = (
         "notes",
