@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
+
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 from tac.optimization.scorer_response_dataset import (
@@ -28,7 +30,11 @@ from tac.optimization.scorer_response_dataset import (
     render_validation_gate_markdown,
 )
 from tac.optimization.scorer_response_prediction import (
+    STRUCTURED_FEATURE_SET,
     attach_out_of_fold_linear_predictions,
+)
+from tac.optimization.scorer_response_structural_features import (
+    attach_structural_features,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -460,6 +466,13 @@ def test_build_windowed_mlx_response_dataset_uses_matching_window_baseline(tmp_p
     assert row["family"] == "mlx_scorer_response"
     assert row["window_baseline_source_path"] == str(baseline_path)
     assert row["window_baseline_key"] == "start=16:max=4:window=16-20"
+    assert row["window_baseline_score"] == 0.9
+    assert row["window_baseline_archive_bytes"] == 100
+    assert row["window_baseline_avg_posenet_dist"] == 0.004
+    assert row["window_baseline_avg_segnet_dist"] == 0.010
+    assert math.isclose(row["window_baseline_pose_term"], math.sqrt(0.04))
+    assert row["window_baseline_seg_term"] == 1.0
+    assert row["window_baseline_scorer_term"] == 1.2
     assert row["delta_vs_baseline_score"] == 0.0000010000000000287557
     assert row["added_archive_bytes"] == 10
 
@@ -995,6 +1008,74 @@ def test_out_of_fold_linear_predictions_can_satisfy_validation_gate() -> None:
     assert predicted["prediction_fit"]["feature_set"] == "pair_family_archive_linear_v1"
     assert gate["status"] == "passed"
     assert gate["passing_prediction_fields"] == ["ll_predicted_delta_vs_baseline_score"]
+
+
+def test_structural_features_feed_oof_predictions_without_authority() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response", "mlx_decoder_q"),
+        rows_per_fold=8,
+    )
+    frame_axis = np.zeros((16, 3), dtype=np.float64)
+    for pair in range(8):
+        frame_axis[2 * pair, 1] = float(pair + 1)
+        frame_axis[2 * pair + 1, 0] = float(10 + pair)
+        frame_axis[2 * pair + 1, 1] = float(pair + 1)
+    frame_decomposition = {
+        "schema": "per_frame_decomposition_segnet_per_frame_posenet_per_pair_v1",
+        "axis_labels": ["seg", "pose", "rate"],
+    }
+    mutation_manifest = {
+        "archive_bin_bytes": 200,
+        "mutation_row": {
+            "mutation_id": "unit-decoder-q",
+            "mutation": {
+                "delta": 1,
+                "q_offset": 0,
+                "tensor_name": "rgb_1.weight",
+            },
+            "op3v3_target_evidence": {
+                "score_impact_abs_sum": 0.25,
+                "axis_share": {"seg": 0.75, "pose": 0.25, "rate": 0.0},
+                "top_byte_count": 4,
+                "approx_compressed_range": {"start": 20, "length": 10},
+            },
+        },
+    }
+    for row in dataset["rows"]:
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        pair_start = fold * 8 + offset
+        row["source_pair_window"] = [pair_start, pair_start + 1]
+
+    enriched = attach_structural_features(
+        dataset,
+        frame_axis_l1=frame_axis,
+        frame_decomposition=frame_decomposition,
+        decoder_q_mutation_manifest=mutation_manifest,
+    )
+    for row in enriched["rows"]:
+        family_offset = 0.002 if row["family"] == "mlx_decoder_q" else 0.0
+        row["delta_vs_baseline_score"] = (
+            0.1
+            + 0.0005 * row["diagnostic_total_pair_l1"]
+            + family_offset
+        )
+
+    predicted = attach_out_of_fold_linear_predictions(enriched)
+    gate = build_scorer_response_validation_gate(predicted)
+
+    decoder_row = next(row for row in predicted["rows"] if row["family"] == "mlx_decoder_q")
+    baseline_row = next(row for row in predicted["rows"] if row["family"] == "mlx_scorer_response")
+    assert predicted["score_claim"] is False
+    assert predicted["structural_features"]["score_claim"] is False
+    assert predicted["structural_features"]["feature_write_counts"]["decoder_q_score_impact_abs_sum"] == 80
+    assert predicted["structural_features"]["feature_nonzero_counts"]["decoder_q_score_impact_abs_sum"] == 40
+    assert predicted["prediction_fit"]["feature_set"] == STRUCTURED_FEATURE_SET
+    assert "diagnostic_total_pair_l1" in predicted["prediction_fit"]["feature_names"]
+    assert "decoder_q_score_impact_abs_sum" in predicted["prediction_fit"]["feature_names"]
+    assert decoder_row["decoder_q_score_impact_abs_sum"] == 0.25
+    assert baseline_row["decoder_q_score_impact_abs_sum"] == 0.0
+    assert gate["status"] == "passed"
 
 
 def test_scorer_response_validation_gate_blocks_mixed_axis_targets() -> None:

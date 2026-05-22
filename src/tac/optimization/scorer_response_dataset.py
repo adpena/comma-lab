@@ -905,8 +905,21 @@ def build_windowed_mlx_response_dataset(
         for row in partial.get("rows", []):
             if not isinstance(row, dict):
                 continue
+            baseline_terms = _score_terms(
+                archive_bytes=baseline.archive_bytes,
+                pose=baseline.avg_posenet_dist,
+                seg=baseline.avg_segnet_dist,
+            )
             row["window_baseline_source_path"] = baseline_sources[key]
             row["window_baseline_key"] = key
+            row["window_baseline_score"] = baseline.score
+            row["window_baseline_archive_bytes"] = baseline.archive_bytes
+            row["window_baseline_avg_posenet_dist"] = baseline.avg_posenet_dist
+            row["window_baseline_avg_segnet_dist"] = baseline.avg_segnet_dist
+            row["window_baseline_pose_term"] = baseline_terms["pose_term"]
+            row["window_baseline_seg_term"] = baseline_terms["seg_term"]
+            row["window_baseline_scorer_term"] = baseline_terms["scorer_term"]
+            row["window_baseline_rate_term"] = baseline_terms["rate_term"]
             rows.append(row)
 
     rows.sort(
@@ -2098,6 +2111,18 @@ def feature_correlations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         "n_kept",
         "local_pose_delta_sum",
         "local_seg_delta_sum",
+        "window_baseline_score",
+        "window_baseline_avg_posenet_dist",
+        "window_baseline_avg_segnet_dist",
+        "window_baseline_pose_term",
+        "window_baseline_seg_term",
+        "window_baseline_scorer_term",
+        "diagnostic_seg_last_l1",
+        "diagnostic_pose_pair_l1",
+        "diagnostic_total_pair_l1",
+        "decoder_q_score_impact_abs_sum",
+        "decoder_q_axis_share_seg",
+        "decoder_q_top_byte_count",
     )
     out: list[dict[str, Any]] = []
     for target in ("delta_vs_baseline_score", "scorer_delta_vs_baseline"):

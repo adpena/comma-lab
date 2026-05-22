@@ -18,6 +18,33 @@ from tac.optimization.scorer_response_dataset import (
 
 OOF_PREDICTION_SCHEMA = "scorer_response_oof_linear_predictions.v1"
 DEFAULT_PREDICTION_FIELD = "ll_predicted_delta_vs_baseline_score"
+BASE_FEATURE_SET = "pair_family_archive_linear_v1"
+STRUCTURED_FEATURE_SET = "pair_family_archive_linear_plus_allowlisted_structural_v1"
+
+EXTRA_NUMERIC_FEATURE_FIELDS = (
+    "diagnostic_cycle_pair_index_norm",
+    "diagnostic_seg_last_l1",
+    "diagnostic_pose_pair_l1",
+    "diagnostic_rate_pair_l1",
+    "diagnostic_total_pair_l1",
+    "diagnostic_seg_share",
+    "diagnostic_pose_share",
+    "window_baseline_score",
+    "window_baseline_avg_posenet_dist",
+    "window_baseline_avg_segnet_dist",
+    "window_baseline_pose_term",
+    "window_baseline_seg_term",
+    "window_baseline_scorer_term",
+    "decoder_q_delta",
+    "decoder_q_q_offset",
+    "decoder_q_score_impact_abs_sum",
+    "decoder_q_axis_share_seg",
+    "decoder_q_axis_share_pose",
+    "decoder_q_axis_share_rate",
+    "decoder_q_top_byte_count",
+    "decoder_q_approx_compressed_start_norm",
+    "decoder_q_approx_compressed_length_norm",
+)
 
 
 def attach_out_of_fold_linear_predictions(
@@ -31,9 +58,9 @@ def attach_out_of_fold_linear_predictions(
 
     The fit leaves out each row's declared ``holdout_fold`` before writing that
     row's prediction. Features are limited to row metadata known before scorer
-    response measurement: pair position, archive bytes, and family labels.
-    Outcome fields such as observed score, pose, seg, or scorer deltas are not
-    used as features.
+    response measurement: pair position, archive bytes, family labels, and
+    explicitly allowlisted structural priors when present. Outcome fields such
+    as observed score, pose, seg, or scorer deltas are not used as features.
     """
 
     if not prediction_field:
@@ -88,7 +115,11 @@ def attach_out_of_fold_linear_predictions(
         "target": target,
         "prediction_field": prediction_field,
         "ridge_lambda": float(ridge_lambda),
-        "feature_set": "pair_family_archive_linear_v1",
+        "feature_set": (
+            STRUCTURED_FEATURE_SET
+            if any(name in feature_names for name in EXTRA_NUMERIC_FEATURE_FIELDS)
+            else BASE_FEATURE_SET
+        ),
         "feature_names": feature_names,
         "folds": fold_summaries,
         "score_claim": False,
@@ -109,6 +140,17 @@ def _design_matrix(rows: list[dict[str, Any]]) -> tuple[list[str], np.ndarray]:
         for row in rows
     ]
     max_archive = max(max(archive_values), 1.0)
+    extra_features = _active_extra_numeric_features(rows)
+    extra_max_abs = {
+        name: max(
+            [
+                abs(_optional_float(row.get(name), default=0.0) or 0.0)
+                for row in rows
+            ]
+            + [1.0]
+        )
+        for name in extra_features
+    }
 
     feature_names = [
         "intercept",
@@ -120,6 +162,7 @@ def _design_matrix(rows: list[dict[str, Any]]) -> tuple[list[str], np.ndarray]:
     ]
     feature_names.extend(f"family={family}" for family in families)
     feature_names.extend(f"family={family}:pair_start_norm" for family in families)
+    feature_names.extend(extra_features)
 
     matrix: list[list[float]] = []
     for row, start, archive_bytes in zip(rows, starts, archive_values, strict=True):
@@ -135,8 +178,28 @@ def _design_matrix(rows: list[dict[str, Any]]) -> tuple[list[str], np.ndarray]:
         ]
         family_one_hot = [1.0 if family == item else 0.0 for item in families]
         family_interactions = [value * x for value in family_one_hot]
-        matrix.append(base + family_one_hot + family_interactions)
+        extra_values = [
+            (_optional_float(row.get(name), default=0.0) or 0.0) / extra_max_abs[name]
+            for name in extra_features
+        ]
+        matrix.append(base + family_one_hot + family_interactions + extra_values)
     return feature_names, np.asarray(matrix, dtype=np.float64)
+
+
+def _active_extra_numeric_features(rows: list[dict[str, Any]]) -> list[str]:
+    active: list[str] = []
+    for name in EXTRA_NUMERIC_FEATURE_FIELDS:
+        values = [
+            _optional_float(row.get(name), default=None)
+            for row in rows
+            if row.get(name) is not None
+        ]
+        finite_values = [value for value in values if value is not None]
+        if not finite_values:
+            continue
+        if any(abs(value) > 0.0 for value in finite_values):
+            active.append(name)
+    return active
 
 
 def _fit_ridge(x: np.ndarray, y: np.ndarray, *, ridge_lambda: float) -> np.ndarray:
@@ -185,7 +248,10 @@ def _optional_float(value: Any, *, default: float | None) -> float | None:
 
 
 __all__ = [
+    "BASE_FEATURE_SET",
     "DEFAULT_PREDICTION_FIELD",
+    "EXTRA_NUMERIC_FEATURE_FIELDS",
     "OOF_PREDICTION_SCHEMA",
+    "STRUCTURED_FEATURE_SET",
     "attach_out_of_fold_linear_predictions",
 ]
