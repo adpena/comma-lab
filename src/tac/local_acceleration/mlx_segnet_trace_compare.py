@@ -7,7 +7,19 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.local_acceleration.mlx_scorer_response import GPU_RESEARCH_SIGNAL_BLOCKER
+
 SCHEMA_VERSION = "mlx_segnet_layer_trace_comparison.v1"
+TRACE_SCHEMA_VERSION = "mlx_segnet_layer_trace.v1"
+
+AUTHORITY_FALSE_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+)
 
 
 class MLXSegNetTraceComparisonError(ValueError):
@@ -33,8 +45,8 @@ def compare_mlx_segnet_layer_traces(
 
     if top_k <= 0:
         raise MLXSegNetTraceComparisonError("top_k must be positive")
-    _require_trace_manifest(baseline, label=baseline_label)
-    _require_trace_manifest(candidate, label=candidate_label)
+    baseline_contract = _require_trace_manifest(baseline, label=baseline_label)
+    candidate_contract = _require_trace_manifest(candidate, label=candidate_label)
     baseline_rows = _rows_by_name(baseline, label=baseline_label)
     candidate_rows = _rows_by_name(candidate, label=candidate_label)
     common_names = sorted(set(baseline_rows) & set(candidate_rows))
@@ -82,6 +94,12 @@ def compare_mlx_segnet_layer_traces(
         "baseline_label": baseline_label,
         "candidate_label": candidate_label,
         "verdict": verdict,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "evidence_semantics": (
+            "diagnostic_pytorch_vs_mlx_segnet_layer_trace_comparison_only"
+        ),
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -89,6 +107,35 @@ def compare_mlx_segnet_layer_traces(
         "rank_or_kill_eligible": False,
         "candidate_generation_only": True,
         "requires_exact_eval_before_promotion": True,
+        "baseline_device_type": baseline_contract["device_type"],
+        "candidate_device_type": candidate_contract["device_type"],
+        "baseline_gpu_research_signal_allowed": baseline_contract[
+            "gpu_research_signal_allowed"
+        ],
+        "candidate_gpu_research_signal_allowed": candidate_contract[
+            "gpu_research_signal_allowed"
+        ],
+        "baseline_evidence_grade": baseline_contract["evidence_grade"],
+        "candidate_evidence_grade": candidate_contract["evidence_grade"],
+        "baseline_evidence_tag": baseline_contract["evidence_tag"],
+        "candidate_evidence_tag": candidate_contract["evidence_tag"],
+        "device_contract": {
+            "baseline_device_type": baseline_contract["device_type"],
+            "candidate_device_type": candidate_contract["device_type"],
+            "gpu_research_signal_blocker": GPU_RESEARCH_SIGNAL_BLOCKER,
+            "gpu_research_signal_required": (
+                baseline_contract["device_type"] == "gpu"
+                or candidate_contract["device_type"] == "gpu"
+            ),
+            "forbidden_uses": [
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+                "ready_for_exact_eval_dispatch",
+                "replacement_for_cpu_or_cuda_auth_eval",
+            ],
+            "required_false_authority_fields": list(AUTHORITY_FALSE_FIELDS),
+        },
         "baseline_pair_window": baseline.get("pair_window"),
         "candidate_pair_window": candidate.get("pair_window"),
         "baseline_trace_count": len(baseline_rows),
@@ -108,6 +155,11 @@ def compare_mlx_segnet_layer_traces(
         "worsened_rows_top": worsened,
         "improved_rows_top": improved,
         "rows": comparison_rows,
+        "authority_status": (
+            "MLX SegNet trace comparisons are local diagnostic implementation "
+            "evidence only; paired contest CPU/CUDA auth eval remains required "
+            "for score claims, promotion, rank/kill, and dispatch readiness."
+        ),
     }
 
 
@@ -117,14 +169,58 @@ def write_trace_comparison(comparison: dict[str, Any], path: str | Path) -> None
     out.write_text(json.dumps(comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _require_trace_manifest(payload: dict[str, Any], *, label: str) -> None:
-    if payload.get("schema_version") != "mlx_segnet_layer_trace.v1":
+def _require_trace_manifest(payload: dict[str, Any], *, label: str) -> dict[str, Any]:
+    if payload.get("schema_version") != TRACE_SCHEMA_VERSION:
         raise MLXSegNetTraceComparisonError(f"{label}: schema_version mismatch")
-    if payload.get("score_claim") is not False:
-        raise MLXSegNetTraceComparisonError(f"{label}: score_claim must be false")
+    for field in AUTHORITY_FALSE_FIELDS:
+        if payload.get(field) is not False:
+            raise MLXSegNetTraceComparisonError(f"{label}: {field} must be false")
+    if payload.get("candidate_generation_only") is not True:
+        raise MLXSegNetTraceComparisonError(
+            f"{label}: candidate_generation_only must be true"
+        )
+    if payload.get("requires_exact_eval_before_promotion") is not True:
+        raise MLXSegNetTraceComparisonError(
+            f"{label}: requires_exact_eval_before_promotion must be true"
+        )
+    evidence_grade = payload.get("evidence_grade")
+    evidence_tag = payload.get("evidence_tag")
+    score_axis = payload.get("score_axis")
+    if evidence_grade != EVIDENCE_GRADE_MLX:
+        raise MLXSegNetTraceComparisonError(
+            f"{label}: evidence_grade must be {EVIDENCE_GRADE_MLX!r}"
+        )
+    if evidence_tag != EVIDENCE_TAG_MLX:
+        raise MLXSegNetTraceComparisonError(
+            f"{label}: evidence_tag must be {EVIDENCE_TAG_MLX!r}"
+        )
+    if score_axis != EVIDENCE_TAG_MLX:
+        raise MLXSegNetTraceComparisonError(
+            f"{label}: score_axis must be {EVIDENCE_TAG_MLX!r}"
+        )
+    device_type = payload.get("device_type")
+    if device_type not in {"cpu", "gpu"}:
+        raise MLXSegNetTraceComparisonError(
+            f"{label}: device_type must be 'cpu' or 'gpu'"
+        )
+    gpu_research_signal_allowed = payload.get("gpu_research_signal_allowed")
+    if not isinstance(gpu_research_signal_allowed, bool):
+        raise MLXSegNetTraceComparisonError(
+            f"{label}: gpu_research_signal_allowed must be a bool"
+        )
+    if device_type == "gpu" and gpu_research_signal_allowed is not True:
+        raise MLXSegNetTraceComparisonError(
+            f"{label}: {GPU_RESEARCH_SIGNAL_BLOCKER}"
+        )
     rows = payload.get("rows")
     if not isinstance(rows, list):
         raise MLXSegNetTraceComparisonError(f"{label}: rows must be a list")
+    return {
+        "device_type": device_type,
+        "gpu_research_signal_allowed": gpu_research_signal_allowed,
+        "evidence_grade": evidence_grade,
+        "evidence_tag": evidence_tag,
+    }
 
 
 def _rows_by_name(payload: dict[str, Any], *, label: str) -> dict[str, dict[str, Any]]:
