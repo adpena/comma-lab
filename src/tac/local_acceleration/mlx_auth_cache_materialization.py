@@ -291,8 +291,19 @@ def _recommended_commands(*, action: str, cache_audit_path: str | None) -> list[
         )
     if action == _RAW_OR_TENSOR_ACTION:
         commands.append(
-            "recover or export the Modal/Linux auth raw surface, then rebuild "
-            "tools/build_mlx_scorer_input_cache.py from that raw/tensor source"
+            ".venv/bin/python experiments/contest_auth_eval.py --archive <archive.zip> "
+            "--inflate-sh <submission_dir/inflate.sh> --upstream-dir upstream "
+            "--work-dir <local_or_persistent_auth_work_dir> --keep-work-dir "
+            "--scorer-input-cache-tensors-out-dir scorer_input_cache_tensors "
+            "--scorer-input-cache-tensor-batch-pairs 8 "
+            "--allow-large-scorer-input-cache-tensor-export"
+        )
+        commands.append(
+            ".venv/bin/python tools/build_mlx_scorer_input_cache.py --raw "
+            "<modal_linux_auth_raw_or_recovered_raw> --output-dir <local_cache_dir> "
+            "--archive-sha256 <auth_archive_sha256> "
+            "--inflated-outputs-aggregate-sha256 <auth_inflated_outputs_aggregate_sha256> "
+            "--allow-large-tensor-cache --batch-pairs 8"
         )
         commands.append(
             "rerun tools/audit_mlx_scorer_input_cache.py and require "

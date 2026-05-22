@@ -81,6 +81,10 @@ def test_materialization_plan_classifies_same_archive_auth_surface_mismatch() ->
     assert surfaces["scorer_input_surface"]["array_sha256"]["segnet_last_rgb"]["match"] is False
     assert surfaces["scorer_input_surface"]["array_sha256"]["posenet_yuv6_pair"]["match"] is False
     assert plan["required_artifacts"][0]["expected_raw_sha256"] == "d" * 64
+    recommended = "\n".join(plan["recommended_commands"])
+    assert "--scorer-input-cache-tensors-out-dir" in recommended
+    assert "--allow-large-scorer-input-cache-tensor-export" in recommended
+    assert "tools/build_mlx_scorer_input_cache.py --raw" in recommended
 
 
 def test_materialization_plan_requests_hash_export_when_auth_hashes_missing() -> None:
