@@ -2411,6 +2411,234 @@ def _contract_summary_covers_parent_group(
     return all(expected is not None and expected == actual for expected, actual in checks)
 
 
+def _cache_auth_audit_summaries(
+    cache_auth_audits: Iterable[dict[str, Any]] | None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    if cache_auth_audits is None:
+        return [], []
+    summaries: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for index, audit in enumerate(cache_auth_audits):
+        if not isinstance(audit, dict):
+            blockers.append(f"cache_auth_audit_not_object:{index}")
+            continue
+        source_path = audit.get("_source_path")
+        prefix = f"cache_auth_audit_invalid:{index}"
+        if audit.get("schema_version") != "mlx_scorer_input_cache_auth_eval_audit.v1":
+            blockers.append(f"{prefix}:schema_version")
+            continue
+        for field in _FALSE_AUTHORITY_FIELDS:
+            value = audit.get(field)
+            if value is None and field in _LEGACY_EXTENDED_FALSE_AUTHORITY_FIELDS:
+                continue
+            if value is not False:
+                blockers.append(f"{prefix}:{field}_not_false")
+        cache = audit.get("cache")
+        if not isinstance(cache, dict):
+            blockers.append(f"{prefix}:cache_missing")
+            continue
+        auth_eval = audit.get("auth_eval")
+        if not isinstance(auth_eval, dict):
+            blockers.append(f"{prefix}:auth_eval_missing")
+            continue
+        cache_archive_sha256 = cache.get("archive_sha256")
+        cache_inflated_sha256 = cache.get("inflated_outputs_aggregate_sha256")
+        cache_raw_sha256 = cache.get("raw_sha256")
+        cache_array_sha256 = cache.get("array_sha256")
+        auth_archive_sha256 = auth_eval.get("archive_sha256")
+        auth_inflated_sha256 = auth_eval.get("inflated_outputs_aggregate_sha256")
+        auth_raw_sha256 = auth_eval.get("raw_file_sha256")
+        auth_array_sha256 = auth_eval.get("scorer_input_array_sha256")
+        if not isinstance(auth_archive_sha256, str) or not auth_archive_sha256:
+            blockers.append(f"{prefix}:auth_archive_sha256_missing")
+            continue
+        if not isinstance(auth_inflated_sha256, str) or not auth_inflated_sha256:
+            blockers.append(f"{prefix}:auth_inflated_outputs_aggregate_sha256_missing")
+            continue
+        if not isinstance(auth_raw_sha256, str) or not auth_raw_sha256:
+            blockers.append(f"{prefix}:auth_raw_sha256_missing")
+            continue
+        if not auth_eval.get("scorer_input_hash_domain"):
+            blockers.append(f"{prefix}:auth_hash_domain_missing")
+            continue
+        if _as_int(auth_eval.get("n_samples")) is None:
+            blockers.append(f"{prefix}:auth_n_samples_missing")
+            continue
+        if not isinstance(auth_array_sha256, dict):
+            blockers.append(f"{prefix}:auth_scorer_input_array_sha256_missing")
+            continue
+        missing_hashes = [
+            key
+            for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb")
+            if not isinstance(auth_array_sha256.get(key), str)
+            or not auth_array_sha256.get(key)
+        ]
+        if missing_hashes:
+            blockers.append(
+                f"{prefix}:auth_scorer_input_array_sha256_missing:"
+                + ",".join(missing_hashes)
+            )
+            continue
+        summaries.append(
+            {
+                "index": index,
+                "source_path": source_path if isinstance(source_path, str) else None,
+                "audit_passed": audit.get("passed") is True,
+                "audit_verdict": audit.get("verdict"),
+                "identity_residual": audit.get("identity_residual"),
+                "cache_identity": {
+                    "archive_sha256": (
+                        cache_archive_sha256
+                        if isinstance(cache_archive_sha256, str)
+                        else None
+                    ),
+                    "inflated_outputs_aggregate_sha256": (
+                        cache_inflated_sha256
+                        if isinstance(cache_inflated_sha256, str)
+                        else None
+                    ),
+                    "raw_sha256": (
+                        cache_raw_sha256 if isinstance(cache_raw_sha256, str) else None
+                    ),
+                    "pair_count": _as_int(cache.get("pair_count")),
+                    "candidate_cache_array_sha256": (
+                        dict(cache_array_sha256)
+                        if isinstance(cache_array_sha256, dict)
+                        else None
+                    ),
+                },
+                "auth_identity": {
+                    "archive_sha256": auth_archive_sha256,
+                    "inflated_outputs_aggregate_sha256": auth_inflated_sha256,
+                    "raw_sha256": auth_raw_sha256,
+                    "pair_count": _as_int(auth_eval.get("n_samples")),
+                    "candidate_cache_array_sha256": dict(auth_array_sha256),
+                    "hash_domain": auth_eval.get("scorer_input_hash_domain"),
+                },
+            }
+        )
+    return summaries, blockers
+
+
+def _cache_auth_audit_coverage_for_group(
+    group: dict[str, Any],
+    audit_summaries: list[dict[str, Any]],
+) -> dict[str, Any]:
+    same_archive = [
+        summary
+        for summary in audit_summaries
+        if summary.get("auth_identity", {}).get("archive_sha256")
+        == group.get("archive_sha256")
+        or summary.get("cache_identity", {}).get("archive_sha256")
+        == group.get("archive_sha256")
+    ]
+    if not same_archive:
+        return {
+            "status": "not_supplied_for_archive",
+            "matched": False,
+            "source_path": None,
+            "blockers": [],
+            "mismatches": [],
+        }
+
+    best_mismatches: list[str] | None = None
+    best_summary: dict[str, Any] | None = None
+    for summary in same_archive:
+        auth_identity = summary.get("auth_identity")
+        if not isinstance(auth_identity, dict):
+            continue
+        mismatches: list[str] = []
+        if (
+            group.get("inflated_outputs_aggregate_sha256")
+            and auth_identity.get("inflated_outputs_aggregate_sha256")
+            and group.get("inflated_outputs_aggregate_sha256")
+            != auth_identity.get("inflated_outputs_aggregate_sha256")
+        ):
+            mismatches.append("inflated_outputs_aggregate_sha256")
+        if (
+            group.get("raw_sha256")
+            and auth_identity.get("raw_sha256")
+            and group.get("raw_sha256") != auth_identity.get("raw_sha256")
+        ):
+            mismatches.append("raw_sha256")
+        group_arrays = group.get("candidate_cache_array_sha256")
+        audit_arrays = auth_identity.get("candidate_cache_array_sha256")
+        if isinstance(group_arrays, dict) and isinstance(audit_arrays, dict):
+            for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+                if (
+                    group_arrays.get(key)
+                    and audit_arrays.get(key)
+                    and group_arrays.get(key) != audit_arrays.get(key)
+                ):
+                    mismatches.append(f"candidate_cache_array_sha256.{key}")
+        if not mismatches:
+            return {
+                "status": "matched_same_archive_identity",
+                "matched": True,
+                "source_path": summary.get("source_path"),
+                "audit_index": summary.get("index"),
+                "audit_passed": summary.get("audit_passed"),
+                "audit_verdict": summary.get("audit_verdict"),
+                "blockers": [],
+                "mismatches": [],
+                "audit_identity": {
+                    "archive_sha256": auth_identity.get("archive_sha256"),
+                    "inflated_outputs_aggregate_sha256": auth_identity.get(
+                        "inflated_outputs_aggregate_sha256"
+                    ),
+                    "raw_sha256": auth_identity.get("raw_sha256"),
+                    "candidate_cache_array_sha256": auth_identity.get(
+                        "candidate_cache_array_sha256"
+                    ),
+                    "pair_count": auth_identity.get("pair_count"),
+                },
+            }
+        if best_mismatches is None or len(mismatches) < len(best_mismatches):
+            best_mismatches = mismatches
+            best_summary = summary
+
+    mismatches = best_mismatches or []
+    blockers = []
+    for field in mismatches:
+        if field.startswith("candidate_cache_array_sha256."):
+            blockers.append(
+                "mlx_parent_contract_auth_cache_candidate_array_sha256_mismatch:"
+                f"{group['group_id']}:{field.rsplit('.', 1)[-1]}"
+            )
+        else:
+            blockers.append(
+                "mlx_parent_contract_auth_cache_auth_identity_mismatch:"
+                f"{group['group_id']}:{field}"
+            )
+    best_auth_identity = (
+        best_summary.get("auth_identity")
+        if isinstance(best_summary, dict)
+        and isinstance(best_summary.get("auth_identity"), dict)
+        else {}
+    )
+    return {
+        "status": "mismatched_same_archive_identity",
+        "matched": False,
+        "source_path": None if best_summary is None else best_summary.get("source_path"),
+        "audit_index": None if best_summary is None else best_summary.get("index"),
+        "audit_passed": None if best_summary is None else best_summary.get("audit_passed"),
+        "audit_verdict": None if best_summary is None else best_summary.get("audit_verdict"),
+        "blockers": blockers,
+        "mismatches": mismatches,
+        "audit_identity": {
+            "archive_sha256": best_auth_identity.get("archive_sha256"),
+            "inflated_outputs_aggregate_sha256": best_auth_identity.get(
+                "inflated_outputs_aggregate_sha256"
+            ),
+            "raw_sha256": best_auth_identity.get("raw_sha256"),
+            "candidate_cache_array_sha256": best_auth_identity.get(
+                "candidate_cache_array_sha256"
+            ),
+            "pair_count": best_auth_identity.get("pair_count"),
+        },
+    }
+
+
 def _source_parent_response_candidates_for_group(
     group: dict[str, Any],
     *,
@@ -2557,6 +2785,7 @@ def build_mlx_parent_production_contract_plan(
     dataset: dict[str, Any],
     *,
     production_contract: dict[str, Any] | None = None,
+    cache_auth_audits: Iterable[dict[str, Any]] | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     """Plan the strict parent-window MLX contracts needed by a dataset.
@@ -2574,9 +2803,12 @@ def build_mlx_parent_production_contract_plan(
     strict_contract_summaries, source_gate, source_blockers = (
         _strict_contract_summaries_from_payload(production_contract)
     )
+    cache_auth_audit_summaries, cache_auth_audit_blockers = (
+        _cache_auth_audit_summaries(cache_auth_audits)
+    )
 
     groups_by_key: dict[tuple[Any, ...], dict[str, Any]] = {}
-    blockers: list[str] = list(source_blockers)
+    blockers: list[str] = [*source_blockers, *cache_auth_audit_blockers]
     for row in mlx_rows:
         row_id = str(row.get("row_id") or "<unknown>")
         key = _mlx_parent_contract_group_key(row)
@@ -2597,6 +2829,7 @@ def build_mlx_parent_production_contract_plan(
                 "inflated_outputs_aggregate_sha256": row.get(
                     "source_inflated_outputs_aggregate_sha256"
                 ),
+                "raw_sha256": row.get("raw_sha256"),
                 "source_batch_pairs": _as_int(row.get("source_batch_pairs")),
                 "candidate_cache_array_sha256": row.get(
                     "source_candidate_cache_array_sha256"
@@ -2617,6 +2850,14 @@ def build_mlx_parent_production_contract_plan(
                 },
             }
             groups_by_key[key] = group
+        row_raw_sha = row.get("raw_sha256")
+        if isinstance(row_raw_sha, str) and row_raw_sha:
+            if not group.get("raw_sha256"):
+                group["raw_sha256"] = row_raw_sha
+            elif group.get("raw_sha256") != row_raw_sha:
+                blocker = f"mlx_parent_contract_row_raw_sha256_mismatch:{row_id}"
+                group["blockers"].append(blocker)
+                blockers.append(blocker)
         required_window = group["required_parent_pair_window"]
         required_window[0] = min(required_window[0], window[0])
         required_window[1] = max(required_window[1], window[1])
@@ -2636,6 +2877,14 @@ def build_mlx_parent_production_contract_plan(
 
     groups = sorted(groups_by_key.values(), key=lambda item: item["group_id"])
     for group in groups:
+        cache_auth_coverage = _cache_auth_audit_coverage_for_group(
+            group,
+            cache_auth_audit_summaries,
+        )
+        group["cache_auth_audit_coverage"] = cache_auth_coverage
+        for blocker in cache_auth_coverage.get("blockers") or []:
+            group["blockers"].append(blocker)
+            blockers.append(blocker)
         parent_candidates, parent_contract_probes = (
             _source_parent_response_candidates_for_group(group, repo_root=repo_root)
         )
@@ -2663,6 +2912,23 @@ def build_mlx_parent_production_contract_plan(
 
     covered_group_count = sum(
         1 for group in groups if group["status"] == "covered_by_supplied_contract"
+    )
+    auth_audit_matched_group_count = sum(
+        1
+        for group in groups
+        if group.get("cache_auth_audit_coverage", {}).get("matched") is True
+    )
+    auth_audit_mismatched_group_count = sum(
+        1
+        for group in groups
+        if group.get("cache_auth_audit_coverage", {}).get("status")
+        == "mismatched_same_archive_identity"
+    )
+    auth_audit_missing_group_count = sum(
+        1
+        for group in groups
+        if group.get("cache_auth_audit_coverage", {}).get("status")
+        == "not_supplied_for_archive"
     )
     status = "strict_pass" if groups and not blockers else "blocked"
     if not mlx_rows:
@@ -2713,6 +2979,10 @@ def build_mlx_parent_production_contract_plan(
             "production_contract_gate_unmatched_row_count": source_gate_summary.get(
                 "unmatched_row_count"
             ),
+            "cache_auth_audit_count": len(cache_auth_audit_summaries),
+            "cache_auth_audit_matched_group_count": auth_audit_matched_group_count,
+            "cache_auth_audit_mismatched_group_count": auth_audit_mismatched_group_count,
+            "cache_auth_audit_missing_group_count": auth_audit_missing_group_count,
         },
         "required_parent_contracts": groups,
         "blockers": blockers,
@@ -2749,6 +3019,13 @@ def render_mlx_parent_production_contract_plan_markdown(plan: dict[str, Any]) ->
             f"- Missing parent groups: `{summary.get('missing_parent_contract_group_count')}`",
             f"- Strict supplied contracts: `{summary.get('strict_supplied_contract_count')}`",
             f"- Production contract gate: `{summary.get('production_contract_gate_status')}`",
+            f"- Cache/auth audits supplied: `{summary.get('cache_auth_audit_count')}`",
+            "- Cache/auth matched groups: "
+            f"`{summary.get('cache_auth_audit_matched_group_count')}`",
+            "- Cache/auth mismatched groups: "
+            f"`{summary.get('cache_auth_audit_mismatched_group_count')}`",
+            "- Cache/auth missing groups: "
+            f"`{summary.get('cache_auth_audit_missing_group_count')}`",
             f"- Blockers: `{plan.get('blockers')}`",
             "",
             "## Required Parent Contracts",
@@ -2767,10 +3044,13 @@ def render_mlx_parent_production_contract_plan_markdown(plan: dict[str, Any]) ->
                 f"- Archive SHA-256: `{group.get('archive_sha256')}`",
                 "- Inflated aggregate SHA-256: "
                 f"`{group.get('inflated_outputs_aggregate_sha256')}`",
+                f"- Raw SHA-256: `{group.get('raw_sha256')}`",
                 "- Candidate cache arrays: "
                 f"`{group.get('candidate_cache_array_sha256')}`",
                 "- Reference cache arrays: "
                 f"`{group.get('reference_cache_array_sha256')}`",
+                "- Cache/auth audit coverage: "
+                f"`{group.get('cache_auth_audit_coverage')}`",
                 f"- Parent response candidates: `{group.get('source_parent_response_candidates')}`",
                 "- Parent response contract probes: "
                 f"`{group.get('source_parent_response_contract_probes')}`",

@@ -32,6 +32,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="Optional strict MLX production contract or bundle JSON to check coverage.",
     )
+    parser.add_argument(
+        "--cache-auth-audit",
+        "--auth-cache-audit",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Optional cache/auth audit JSON. Repeat to make "
+            "the plan flag parent groups whose local cache identity disagrees "
+            "with a known auth-axis cache for the same archive."
+        ),
+    )
     parser.add_argument("--json-out", required=True, type=Path)
     parser.add_argument("--md-out", type=Path)
     parser.add_argument(
@@ -63,9 +75,15 @@ def main(argv: list[str] | None = None) -> int:
             if args.production_contract is None
             else _load_json_object(args.production_contract)
         )
+        cache_auth_audits = []
+        for path in args.cache_auth_audit:
+            payload = _load_json_object(path)
+            payload["_source_path"] = str(path)
+            cache_auth_audits.append(payload)
         plan = build_mlx_parent_production_contract_plan(
             _load_json_object(args.dataset),
             production_contract=production_contract,
+            cache_auth_audits=cache_auth_audits,
             repo_root=args.repo_root,
         )
     except (OSError, json.JSONDecodeError, ValueError, ScorerResponseDatasetError) as exc:
@@ -100,6 +118,10 @@ def main(argv: list[str] | None = None) -> int:
                     "missing_parent_contract_group_count"
                 ],
                 "blocker_count": len(plan["blockers"]),
+                "cache_auth_audit_count": plan["summary"]["cache_auth_audit_count"],
+                "cache_auth_audit_mismatched_group_count": plan["summary"][
+                    "cache_auth_audit_mismatched_group_count"
+                ],
             },
             indent=2,
             sort_keys=True,

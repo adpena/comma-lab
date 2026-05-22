@@ -350,6 +350,7 @@ def _mlx_response_row(
     pair_window: list[int],
     archive_sha256: str = "a" * 64,
     inflated_outputs_aggregate_sha256: str = "e" * 64,
+    raw_sha256: str | None = None,
     source_run_id: str | None = None,
     candidate_cache_array_sha256: dict | None = None,
     reference_cache_array_sha256: dict | None = None,
@@ -378,6 +379,8 @@ def _mlx_response_row(
     }
     if source_run_id is not None:
         row["source_run_id"] = source_run_id
+    if raw_sha256 is not None:
+        row["raw_sha256"] = raw_sha256
     if candidate_cache_array_sha256 is not None:
         row["source_candidate_cache_array_sha256"] = candidate_cache_array_sha256
     if reference_cache_array_sha256 is not None:
@@ -387,6 +390,68 @@ def _mlx_response_row(
     if segnet_sha256 is not None:
         row["source_segnet_sha256"] = segnet_sha256
     return row
+
+
+def _mlx_cache_auth_audit_payload(
+    *,
+    archive_sha256: str = "a" * 64,
+    inflated_outputs_aggregate_sha256: str = "e" * 64,
+    raw_sha256: str = "r" * 64,
+    candidate_cache_array_sha256: dict | None = None,
+    passed: bool = True,
+) -> dict:
+    cache_hashes = candidate_cache_array_sha256 or {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    return {
+        "schema_version": "mlx_scorer_input_cache_auth_eval_audit.v1",
+        "verdict": (
+            "PASS_CACHE_AUTH_EVAL_IDENTITY"
+            if passed
+            else "FAIL_CACHE_AUTH_EVAL_IDENTITY"
+        ),
+        "passed": passed,
+        "blockers": [],
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "eligible_for_local_mlx_transfer_calibration": True,
+        "identity_residual": 0,
+        "allowed_use": ["local_mlx_training_transfer_calibration"],
+        "cache": {
+            "archive_sha256": archive_sha256,
+            "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
+            "raw_sha256": raw_sha256,
+            "pair_count": 600,
+            "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+            "array_sha256": cache_hashes,
+        },
+        "auth_eval": {
+            "archive_sha256": archive_sha256,
+            "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
+            "raw_file_sha256": raw_sha256,
+            "n_samples": 600,
+            "scorer_input_hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+            "scorer_input_array_sha256": cache_hashes,
+        },
+        "canonical_equation": {
+            "equation_id": "scorer_input_cache_hash_identity_v1",
+            "verdict": "PASS_SCORER_INPUT_CACHE_IDENTITY",
+            "eligible_for_local_mlx_transfer_calibration": True,
+            "identity_residual": 0,
+            "score_claim": False,
+            "hash_domain": {"matches": True},
+            "compared_scorer_input_hashes": {},
+            "compared_scorer_input_shapes": {},
+        },
+    }
 
 
 def _attach_mlx_identity_to_rows(dataset: dict) -> dict:
@@ -902,6 +967,180 @@ def test_mlx_parent_production_contract_plan_accepts_supplied_parent_bundle() ->
     assert plan["summary"]["missing_parent_contract_group_count"] == 0
     assert plan["required_parent_contracts"][0]["status"] == "covered_by_supplied_contract"
     assert plan["required_parent_contracts"][0]["coverage"]["contract_index"] == 0
+
+
+def test_mlx_parent_production_contract_plan_flags_auth_cache_mismatch() -> None:
+    local_cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    auth_cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "3" * 64,
+        "segnet_last_rgb": "4" * 64,
+    }
+    dataset = _response_dataset_with_rows(
+        [
+            _mlx_response_row(
+                row_id="mlx-row-1",
+                pair_window=[0, 1],
+                archive_sha256="a" * 64,
+                inflated_outputs_aggregate_sha256="d" * 64,
+                raw_sha256="r" * 64,
+                candidate_cache_array_sha256=local_cache_hashes,
+                reference_cache_array_sha256=local_cache_hashes,
+            )
+        ]
+    )
+
+    plan = build_mlx_parent_production_contract_plan(
+        dataset,
+        cache_auth_audits=[
+            _mlx_cache_auth_audit_payload(
+                archive_sha256="a" * 64,
+                inflated_outputs_aggregate_sha256="e" * 64,
+                raw_sha256="s" * 64,
+                candidate_cache_array_sha256=auth_cache_hashes,
+            )
+        ],
+    )
+
+    group = plan["required_parent_contracts"][0]
+    assert plan["status"] == "blocked"
+    assert plan["summary"]["cache_auth_audit_count"] == 1
+    assert plan["summary"]["cache_auth_audit_mismatched_group_count"] == 1
+    assert group["cache_auth_audit_coverage"]["status"] == (
+        "mismatched_same_archive_identity"
+    )
+    assert group["cache_auth_audit_coverage"]["mismatches"] == [
+        "inflated_outputs_aggregate_sha256",
+        "raw_sha256",
+        "candidate_cache_array_sha256.posenet_yuv6_pair",
+        "candidate_cache_array_sha256.segnet_last_rgb",
+    ]
+    assert (
+        "mlx_parent_contract_auth_cache_auth_identity_mismatch:"
+        f"{group['group_id']}:inflated_outputs_aggregate_sha256"
+    ) in group["blockers"]
+    assert (
+        "mlx_parent_contract_auth_cache_candidate_array_sha256_mismatch:"
+        f"{group['group_id']}:segnet_last_rgb"
+    ) in group["blockers"]
+
+
+def test_mlx_parent_production_contract_plan_uses_failed_auth_audit_truth() -> None:
+    local_cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    auth_cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "3" * 64,
+        "segnet_last_rgb": "4" * 64,
+    }
+    dataset = _response_dataset_with_rows(
+        [
+            _mlx_response_row(
+                row_id="mlx-row-1",
+                pair_window=[0, 1],
+                archive_sha256="a" * 64,
+                inflated_outputs_aggregate_sha256="d" * 64,
+                raw_sha256="r" * 64,
+                candidate_cache_array_sha256=local_cache_hashes,
+                reference_cache_array_sha256=auth_cache_hashes,
+            )
+        ]
+    )
+
+    plan = build_mlx_parent_production_contract_plan(
+        dataset,
+        cache_auth_audits=[
+            _mlx_cache_auth_audit_payload(
+                archive_sha256="a" * 64,
+                inflated_outputs_aggregate_sha256="e" * 64,
+                raw_sha256="r" * 64,
+                candidate_cache_array_sha256=auth_cache_hashes,
+                passed=False,
+            )
+        ],
+    )
+
+    group = plan["required_parent_contracts"][0]
+    assert group["cache_auth_audit_coverage"]["audit_passed"] is False
+    assert group["cache_auth_audit_coverage"]["audit_verdict"] == (
+        "FAIL_CACHE_AUTH_EVAL_IDENTITY"
+    )
+    assert group["cache_auth_audit_coverage"]["mismatches"] == [
+        "inflated_outputs_aggregate_sha256",
+        "candidate_cache_array_sha256.posenet_yuv6_pair",
+        "candidate_cache_array_sha256.segnet_last_rgb",
+    ]
+    assert all("reference" not in blocker for blocker in group["blockers"])
+
+
+def test_mlx_parent_production_contract_plan_marks_matching_auth_cache() -> None:
+    cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    dataset = _response_dataset_with_rows(
+        [
+            _mlx_response_row(
+                row_id="mlx-row-1",
+                pair_window=[0, 1],
+                archive_sha256="a" * 64,
+                inflated_outputs_aggregate_sha256="e" * 64,
+                raw_sha256="r" * 64,
+                candidate_cache_array_sha256=cache_hashes,
+                reference_cache_array_sha256=cache_hashes,
+            )
+        ]
+    )
+
+    plan = build_mlx_parent_production_contract_plan(
+        dataset,
+        cache_auth_audits=[
+            _mlx_cache_auth_audit_payload(candidate_cache_array_sha256=cache_hashes)
+        ],
+    )
+
+    group = plan["required_parent_contracts"][0]
+    assert plan["summary"]["cache_auth_audit_matched_group_count"] == 1
+    assert group["cache_auth_audit_coverage"]["status"] == (
+        "matched_same_archive_identity"
+    )
+    assert group["cache_auth_audit_coverage"]["blockers"] == []
+    assert "mlx_parent_contract_group_uncovered:" + group["group_id"] in plan["blockers"]
+
+
+def test_mlx_parent_production_contract_plan_blocks_unusable_auth_audit() -> None:
+    cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    audit = _mlx_cache_auth_audit_payload(candidate_cache_array_sha256=cache_hashes)
+    del audit["auth_eval"]["scorer_input_hash_domain"]
+
+    plan = build_mlx_parent_production_contract_plan(
+        _response_dataset_with_rows(
+            [
+                _mlx_response_row(
+                    row_id="mlx-row-1",
+                    pair_window=[0, 1],
+                    candidate_cache_array_sha256=cache_hashes,
+                    reference_cache_array_sha256=cache_hashes,
+                )
+            ]
+        ),
+        cache_auth_audits=[audit],
+    )
+
+    assert "cache_auth_audit_invalid:0:auth_hash_domain_missing" in plan["blockers"]
+    assert plan["summary"]["cache_auth_audit_count"] == 0
 
 
 def test_mlx_parent_production_contract_plan_discovers_parent_response_candidate(
