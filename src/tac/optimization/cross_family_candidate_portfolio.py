@@ -1,0 +1,847 @@
+# SPDX-License-Identifier: MIT
+"""Cross-family exact-eval portfolio planner.
+
+This module is planning-only. It composes local MLX triage, DQS1 pairset
+acquisition, byte-closed outside-class manifests, and manual candidate rows into
+one Bayesian design queue while preserving false-authority boundaries.
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Iterable, Mapping, Sequence
+from pathlib import Path
+from typing import Any
+
+from tac.optimization.bayesian_experimental_design import (
+    BayesianExperimentalDesignError,
+    rank_exact_eval_candidates,
+)
+from tac.repo_io import json_text, repo_relative, sha256_file
+
+SCHEMA = "cross_family_candidate_portfolio.v1"
+ROW_SCHEMA = "cross_family_candidate_portfolio_row.v1"
+TOOL = "tac.optimization.cross_family_candidate_portfolio"
+
+DEFAULT_EXPECTED_IMPROVEMENT_WEIGHT = 1.0
+DEFAULT_INFORMATION_GAIN_WEIGHT = 0.01
+DEFAULT_MLX_VARIANCE_FLOOR = 1e-8
+DEFAULT_PAIRSET_VARIANCE = 2.5e-8
+DEFAULT_OUTSIDE_CLASS_VARIANCE = 1e-3
+
+FALSE_AUTHORITY: dict[str, bool] = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "promotable": False,
+    "dispatch_attempted": False,
+    "gpu_launched": False,
+}
+
+DEFAULT_FAMILY_BELIEFS: dict[str, dict[str, float]] = {
+    "decoder_q_selective_dqs1": {
+        "prior_score_variance": 2.5e-8,
+        "observation_noise_variance": 1e-8,
+    },
+    "fec6_decoder_q": {
+        "prior_score_variance": 1e-7,
+        "observation_noise_variance": 2.5e-8,
+    },
+    "hfv1_foveation": {
+        "prior_score_variance": 1e-4,
+        "observation_noise_variance": 2.5e-5,
+    },
+    "hfv2_sparse_sidecar": {
+        "prior_score_variance": DEFAULT_OUTSIDE_CLASS_VARIANCE,
+        "observation_noise_variance": 1e-4,
+    },
+    "hnerv_wave": {
+        "prior_score_variance": 5e-4,
+        "observation_noise_variance": 1e-4,
+    },
+    "mlx_decoder_q": {
+        "prior_score_variance": 6e-6,
+        "observation_noise_variance": 4e-6,
+    },
+    "pr106_format0d": {
+        "prior_score_variance": 1e-4,
+        "observation_noise_variance": 2.5e-5,
+    },
+    "score_surface_stack": {
+        "prior_score_variance": 2.5e-4,
+        "observation_noise_variance": 5e-5,
+    },
+}
+
+
+class CrossFamilyCandidatePortfolioError(ValueError):
+    """Raised when portfolio inputs are invalid or would blur authority."""
+
+
+def _finite_float(value: Any, *, label: str) -> float:
+    if isinstance(value, bool):
+        raise CrossFamilyCandidatePortfolioError(f"{label} must be numeric")
+    try:
+        out = float(value)
+    except (TypeError, ValueError) as exc:
+        raise CrossFamilyCandidatePortfolioError(f"{label} must be numeric") from exc
+    if not math.isfinite(out):
+        raise CrossFamilyCandidatePortfolioError(f"{label} must be finite")
+    return out
+
+
+def _require_false_authority(payload: Mapping[str, Any], *, label: str) -> None:
+    for key in FALSE_AUTHORITY:
+        if key in payload and payload.get(key) is not False:
+            raise CrossFamilyCandidatePortfolioError(f"{label} {key} must be false")
+
+
+def _source_artifact(path: Path, *, repo_root: Path | None = None) -> dict[str, Any]:
+    exists = path.is_file()
+    return {
+        "path": repo_relative(path, repo_root or Path.cwd()),
+        "exists": exists,
+        "sha256": sha256_file(path) if exists else "",
+        "size_bytes": path.stat().st_size if exists else None,
+    }
+
+
+def _source_key(path: Path) -> str:
+    stem = path.stem.replace("-", "_")
+    return stem or "source"
+
+
+def source_artifacts_from_paths(
+    paths: Mapping[str, Path | Sequence[Path] | None],
+    *,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    """Return deterministic source metadata for planner inputs."""
+
+    out: dict[str, Any] = {}
+    for key, value in paths.items():
+        if value is None:
+            continue
+        if isinstance(value, Path):
+            out[key] = _source_artifact(value, repo_root=repo_root)
+            continue
+        out[key] = [_source_artifact(path, repo_root=repo_root) for path in value]
+    return out
+
+
+def _merge_family_beliefs(
+    candidates: Sequence[Mapping[str, Any]],
+    family_beliefs: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None,
+) -> dict[str, dict[str, float]]:
+    merged: dict[str, dict[str, float]] = {
+        family: dict(values) for family, values in DEFAULT_FAMILY_BELIEFS.items()
+    }
+    if isinstance(family_beliefs, Mapping):
+        for family, raw in family_beliefs.items():
+            values = raw if isinstance(raw, Mapping) else {"prior_score_variance": raw}
+            merged[str(family)] = {
+                "prior_score_variance": _finite_float(
+                    values.get("prior_score_variance", values.get("prior_variance", 1.0)),
+                    label=f"{family}.prior_score_variance",
+                ),
+                "observation_noise_variance": _finite_float(
+                    values.get(
+                        "observation_noise_variance",
+                        values.get("noise_variance", 1e-4),
+                    ),
+                    label=f"{family}.observation_noise_variance",
+                ),
+            }
+    elif family_beliefs is not None:
+        for row in family_beliefs:
+            family = str(row.get("family_id") or row.get("family") or "")
+            if not family:
+                raise CrossFamilyCandidatePortfolioError("family belief missing family_id")
+            merged[family] = {
+                "prior_score_variance": _finite_float(
+                    row.get("prior_score_variance", row.get("prior_variance", 1.0)),
+                    label=f"{family}.prior_score_variance",
+                ),
+                "observation_noise_variance": _finite_float(
+                    row.get("observation_noise_variance", row.get("noise_variance", 1e-4)),
+                    label=f"{family}.observation_noise_variance",
+                ),
+            }
+    for candidate in candidates:
+        family = str(candidate.get("family") or candidate.get("family_id") or "unknown")
+        if family not in merged:
+            variance = _finite_float(
+                candidate.get("predicted_score_variance", DEFAULT_OUTSIDE_CLASS_VARIANCE),
+                label=f"{family}.predicted_score_variance",
+            )
+            merged[family] = {
+                "prior_score_variance": max(variance, DEFAULT_MLX_VARIANCE_FLOOR),
+                "observation_noise_variance": max(variance * 0.25, 1e-8),
+            }
+    return dict(sorted(merged.items()))
+
+
+def _candidate(
+    *,
+    candidate_id: str,
+    family: str,
+    predicted_score_mean: float,
+    predicted_score_variance: float,
+    source_kind: str,
+    source_rank: int | None = None,
+    source_artifact_path: str | None = None,
+    exact_archive_custody: Mapping[str, Any] | None = None,
+    family_couplings: Mapping[str, float] | None = None,
+    source_dispatch_blockers: Sequence[Any] | None = None,
+    source_metadata: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    if not candidate_id:
+        raise CrossFamilyCandidatePortfolioError("candidate_id must be non-empty")
+    if not family:
+        raise CrossFamilyCandidatePortfolioError(f"{candidate_id}: family must be non-empty")
+    variance = _finite_float(
+        predicted_score_variance,
+        label=f"{candidate_id}.predicted_score_variance",
+    )
+    if variance < 0.0:
+        raise CrossFamilyCandidatePortfolioError(
+            f"{candidate_id}.predicted_score_variance must be non-negative"
+        )
+    row = {
+        "candidate_id": candidate_id,
+        "family": family,
+        "predicted_score_mean": _finite_float(
+            predicted_score_mean,
+            label=f"{candidate_id}.predicted_score_mean",
+        ),
+        "predicted_score_variance": variance,
+        "source_kind": source_kind,
+        "source_rank": source_rank,
+        "source_artifact_path": source_artifact_path,
+        "candidate_generation_only": True,
+        **FALSE_AUTHORITY,
+    }
+    if exact_archive_custody is not None:
+        row["exact_archive_custody"] = dict(exact_archive_custody)
+    if family_couplings:
+        row["family_couplings"] = {
+            str(key): _finite_float(value, label=f"{candidate_id}.family_couplings.{key}")
+            for key, value in family_couplings.items()
+        }
+    if source_dispatch_blockers:
+        row["source_dispatch_blockers"] = sorted(
+            {str(blocker) for blocker in source_dispatch_blockers if str(blocker)}
+        )
+    if source_metadata:
+        row["source_metadata"] = dict(source_metadata)
+    return row
+
+
+def _mlx_candidate_rows(
+    selection: Mapping[str, Any],
+    *,
+    incumbent_score: float,
+    source_artifact_path: str | None,
+) -> list[dict[str, Any]]:
+    if selection.get("schema") != "mlx_effective_spend_triage_candidate_selection.v1":
+        raise CrossFamilyCandidatePortfolioError("MLX selection schema mismatch")
+    _require_false_authority(selection, label="MLX selection")
+    selected_rows = selection.get("selected_rows")
+    if not isinstance(selected_rows, list):
+        raise CrossFamilyCandidatePortfolioError("MLX selection selected_rows[] missing")
+    out: list[dict[str, Any]] = []
+    for index, row in enumerate(selected_rows):
+        if not isinstance(row, Mapping):
+            raise CrossFamilyCandidatePortfolioError(f"MLX selected row {index} must be object")
+        _require_false_authority(row, label=f"MLX selected row {index}")
+        candidate_id = str(row.get("candidate_id") or row.get("row_id") or f"mlx_row_{index:04d}")
+        family = str(row.get("family") or "mlx_decoder_q")
+        observed_delta = _finite_float(
+            row.get("observed_delta_vs_baseline_score"),
+            label=f"{candidate_id}.observed_delta_vs_baseline_score",
+        )
+        predicted_delta = row.get("predicted_delta_vs_baseline_score")
+        disagreement = 0.0
+        if predicted_delta is not None:
+            disagreement = abs(
+                observed_delta
+                - _finite_float(
+                    predicted_delta,
+                    label=f"{candidate_id}.predicted_delta_vs_baseline_score",
+                )
+            )
+        calibrated_gap = abs(
+            _finite_float(
+                row.get("calibrated_min_mlx_gap_for_spend_triage", 0.0),
+                label=f"{candidate_id}.calibrated_min_mlx_gap_for_spend_triage",
+            )
+        )
+        variance = max(
+            DEFAULT_MLX_VARIANCE_FLOOR,
+            disagreement * disagreement,
+            calibrated_gap * calibrated_gap,
+        )
+        out.append(
+            _candidate(
+                candidate_id=candidate_id,
+                family=family,
+                predicted_score_mean=incumbent_score + observed_delta,
+                predicted_score_variance=variance,
+                source_kind="mlx_effective_spend_triage_selection",
+                source_rank=int(row.get("rank", index + 1)),
+                source_artifact_path=source_artifact_path,
+                family_couplings={
+                    "decoder_q_selective_dqs1": 0.7,
+                    "fec6_decoder_q": 0.55,
+                    "score_surface_stack": 0.35,
+                },
+                source_metadata={
+                    "selection_basis": row.get("selection_basis"),
+                    "pair_indices": row.get("pair_indices"),
+                    "observed_delta_vs_baseline_score": observed_delta,
+                    "predicted_delta_vs_baseline_score": predicted_delta,
+                    "byte_budget_margin_vs_break_even": row.get(
+                        "byte_budget_margin_vs_break_even"
+                    ),
+                    "requires_exact_auth_eval_before_score_claim": row.get(
+                        "requires_exact_auth_eval_before_score_claim"
+                    ),
+                },
+            )
+        )
+    return out
+
+
+def _pairset_candidate_rows(
+    acquisition: Mapping[str, Any],
+    *,
+    source_artifact_path: str | None,
+) -> list[dict[str, Any]]:
+    if acquisition.get("schema") != "decoder_q_pairset_acquisition.v1":
+        raise CrossFamilyCandidatePortfolioError("pairset acquisition schema mismatch")
+    _require_false_authority(acquisition, label="pairset acquisition")
+    candidates = acquisition.get("candidates")
+    if not isinstance(candidates, list):
+        raise CrossFamilyCandidatePortfolioError("pairset acquisition candidates[] missing")
+    out: list[dict[str, Any]] = []
+    for index, row in enumerate(candidates):
+        if not isinstance(row, Mapping):
+            raise CrossFamilyCandidatePortfolioError(f"pairset candidate {index} must be object")
+        _require_false_authority(row, label=f"pairset candidate {index}")
+        candidate_id = str(row.get("acquisition_id") or row.get("selector_id") or f"pairset_{index:04d}")
+        predicted = row.get("predicted_score_mean")
+        estimate = row.get("exact_cpu_calibrated_estimate")
+        if predicted is None and isinstance(estimate, Mapping):
+            predicted = estimate.get("predicted_score")
+        if predicted is None:
+            raise CrossFamilyCandidatePortfolioError(
+                f"{candidate_id}: pairset predicted_score_mean missing"
+            )
+        out.append(
+            _candidate(
+                candidate_id=candidate_id,
+                family="decoder_q_selective_dqs1",
+                predicted_score_mean=_finite_float(
+                    predicted,
+                    label=f"{candidate_id}.predicted_score_mean",
+                ),
+                predicted_score_variance=_finite_float(
+                    row.get("predicted_score_variance", DEFAULT_PAIRSET_VARIANCE),
+                    label=f"{candidate_id}.predicted_score_variance",
+                ),
+                source_kind="decoder_q_pairset_acquisition",
+                source_rank=int(row.get("acquisition_rank", index + 1)),
+                source_artifact_path=source_artifact_path,
+                family_couplings={
+                    "fec6_decoder_q": 0.9,
+                    "mlx_decoder_q": 0.7,
+                    "score_surface_stack": 0.3,
+                },
+                source_metadata={
+                    "selector_kind": row.get("selector_kind"),
+                    "selected_pair_count": row.get("selected_pair_count"),
+                    "selected_pair_indices": row.get("selected_pair_indices"),
+                    "payload_bytes": row.get("payload_bytes"),
+                    "rate_delta": row.get("rate_delta"),
+                    "predicted_score_source": row.get("predicted_score_source"),
+                },
+            )
+        )
+    return out
+
+
+def _hfv2_candidate_rows(
+    manifest: Mapping[str, Any],
+    *,
+    incumbent_score: float,
+    source_artifact_path: str | None,
+) -> list[dict[str, Any]]:
+    if manifest.get("schema") != "hfv1_to_hfv2_sparse_sidecar_candidate_v1":
+        raise CrossFamilyCandidatePortfolioError("HFV2 manifest schema mismatch")
+    _require_false_authority(manifest, label="HFV2 manifest")
+    archive_path = str(
+        manifest.get("output_submission_archive")
+        or manifest.get("output_archive")
+        or ""
+    )
+    archive_sha = str(manifest.get("output_archive_sha256") or "")
+    archive_size = manifest.get("output_archive_bytes")
+    if not archive_path or not archive_sha or archive_size is None:
+        raise CrossFamilyCandidatePortfolioError("HFV2 manifest missing output archive custody")
+    predicted = manifest.get("predicted_score_mean")
+    if predicted is None:
+        predicted = incumbent_score + max(
+            0.0,
+            _finite_float(
+                manifest.get("rate_delta_vs_baseline_archive", 0.0),
+                label="HFV2 rate_delta_vs_baseline_archive",
+            ),
+        )
+    return [
+        _candidate(
+            candidate_id=str(manifest.get("candidate_id") or "hfv2_sparse_sidecar_magic_bin"),
+            family="hfv2_sparse_sidecar",
+            predicted_score_mean=_finite_float(
+                predicted,
+                label="HFV2 predicted_score_mean",
+            ),
+            predicted_score_variance=_finite_float(
+                manifest.get("predicted_score_variance", DEFAULT_OUTSIDE_CLASS_VARIANCE),
+                label="HFV2 predicted_score_variance",
+            ),
+            source_kind="hfv2_sparse_sidecar_manifest",
+            source_rank=1,
+            source_artifact_path=source_artifact_path,
+            exact_archive_custody={
+                "archive_path": archive_path,
+                "archive_sha256": archive_sha,
+                "archive_size_bytes": int(archive_size),
+            },
+            family_couplings={
+                "hfv1_foveation": 0.85,
+                "pr106_format0d": 0.4,
+                "hnerv_wave": 0.25,
+                "score_surface_stack": 0.2,
+            },
+            source_dispatch_blockers=(
+                manifest.get("dispatch_blockers")
+                if isinstance(manifest.get("dispatch_blockers"), Sequence)
+                and not isinstance(manifest.get("dispatch_blockers"), str)
+                else None
+            ),
+            source_metadata={
+                "sparse_pair_count": manifest.get("sparse_pair_count"),
+                "bytes_delta_vs_baseline_archive": manifest.get(
+                    "bytes_delta_vs_baseline_archive"
+                ),
+                "row_parity_exact": manifest.get("row_parity_exact"),
+                "dispatch_blockers": manifest.get("dispatch_blockers"),
+                "target_modes": manifest.get("target_modes"),
+            },
+        )
+    ]
+
+
+def _manual_candidate_rows(
+    manual_candidates: Sequence[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for index, row in enumerate(manual_candidates or ()):
+        _require_false_authority(row, label=f"manual candidate {index}")
+        candidate_id = str(row.get("candidate_id") or row.get("id") or "")
+        family = str(row.get("family") or row.get("family_id") or "")
+        if not candidate_id or not family:
+            raise CrossFamilyCandidatePortfolioError(
+                f"manual candidate {index} missing candidate_id or family"
+            )
+        out.append(
+            _candidate(
+                candidate_id=candidate_id,
+                family=family,
+                predicted_score_mean=_finite_float(
+                    row.get("predicted_score_mean", row.get("score_mean")),
+                    label=f"{candidate_id}.predicted_score_mean",
+                ),
+                predicted_score_variance=_finite_float(
+                    row.get("predicted_score_variance", row.get("score_variance", 1e-6)),
+                    label=f"{candidate_id}.predicted_score_variance",
+                ),
+                source_kind=str(row.get("source_kind") or "manual_candidate"),
+                source_rank=(
+                    int(row["source_rank"])
+                    if row.get("source_rank") is not None
+                    else None
+                ),
+                source_artifact_path=(
+                    str(row["source_artifact_path"])
+                    if row.get("source_artifact_path")
+                    else None
+                ),
+                exact_archive_custody=(
+                    row.get("exact_archive_custody")
+                    if isinstance(row.get("exact_archive_custody"), Mapping)
+                    else None
+                ),
+                family_couplings=(
+                    row.get("family_couplings")
+                    if isinstance(row.get("family_couplings"), Mapping)
+                    else None
+                ),
+                source_metadata=(
+                    row.get("source_metadata")
+                    if isinstance(row.get("source_metadata"), Mapping)
+                    else None
+                ),
+            )
+        )
+    return out
+
+
+def _enforce_portfolio_false_authority(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    required_blockers = {
+        "portfolio_planning_only_requires_separate_lane_claim",
+        "auth_axis_gate_required_before_dispatch",
+        "score_claim_requires_contest_auth_eval",
+    }
+    for row in rows:
+        portfolio_row = dict(row)
+        source_ready = bool(portfolio_row.get("ready_for_exact_eval_dispatch"))
+        source_blockers = set(portfolio_row.get("dispatch_blockers") or [])
+        source_blockers.update(portfolio_row.get("source_dispatch_blockers") or [])
+        portfolio_row["schema"] = ROW_SCHEMA
+        portfolio_row["bayesian_ready_for_exact_eval_dispatch"] = source_ready
+        portfolio_row["exact_archive_custody_ready"] = bool(
+            isinstance(portfolio_row.get("exact_archive_custody"), Mapping)
+            and portfolio_row["exact_archive_custody"].get("verified") is True
+        )
+        portfolio_row.update(FALSE_AUTHORITY)
+        portfolio_row["ready_for_exact_eval_dispatch"] = False
+        portfolio_row["dispatch_blockers"] = sorted(source_blockers | required_blockers)
+        portfolio_row["operator_note"] = "portfolio_rank_only_no_dispatch"
+        out.append(portfolio_row)
+    return out
+
+
+def _operator_action_for_row(row: Mapping[str, Any]) -> str:
+    source_kind = str(row.get("source_kind") or "")
+    blockers = set(row.get("source_dispatch_blockers") or [])
+    if source_kind == "decoder_q_pairset_acquisition":
+        return "materialize_pairset_archive_and_run_local_controls"
+    if source_kind == "mlx_effective_spend_triage_selection":
+        return "materialize_mlx_selected_window_archive_and_run_controls"
+    if source_kind == "hfv2_sparse_sidecar_manifest" and blockers:
+        return "hold_or_refresh_current_runtime_anchor_only_if_deliberately_needed"
+    if source_kind == "hfv2_sparse_sidecar_manifest":
+        return "run_local_controls_before_any_auth_axis_spend"
+    return "manual_review_before_materialization_or_dispatch"
+
+
+def _operator_action_priority(row: Mapping[str, Any]) -> tuple[int, int, float, str]:
+    source_kind = str(row.get("source_kind") or "")
+    source_blocked = bool(row.get("source_dispatch_blockers"))
+    if source_kind == "decoder_q_pairset_acquisition":
+        base = 10
+    elif source_kind == "mlx_effective_spend_triage_selection":
+        base = 20
+    elif source_kind == "hfv2_sparse_sidecar_manifest":
+        base = 80 if source_blocked else 30
+    else:
+        base = 40
+    source_rank = row.get("source_rank")
+    rank_value = int(source_rank) if source_rank is not None else 999_999
+    return (
+        base,
+        rank_value,
+        -float(row.get("acquisition_value", 0.0)),
+        str(row.get("candidate_id") or ""),
+    )
+
+
+def _build_operator_action_rows(
+    ranked_rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in ranked_rows:
+        action_row = dict(row)
+        action_row["operator_next_action"] = _operator_action_for_row(action_row)
+        action_row["operator_action_priority"] = list(_operator_action_priority(action_row))
+        rows.append(action_row)
+    rows.sort(key=_operator_action_priority)
+    for index, row in enumerate(rows, start=1):
+        row["operator_action_rank"] = index
+    return rows
+
+
+def build_cross_family_candidate_portfolio(
+    *,
+    incumbent_score: float,
+    mlx_selections: Sequence[Mapping[str, Any]] | None = None,
+    pairset_acquisitions: Sequence[Mapping[str, Any]] | None = None,
+    hfv2_manifests: Sequence[Mapping[str, Any]] | None = None,
+    manual_candidates: Sequence[Mapping[str, Any]] | None = None,
+    family_beliefs: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None = None,
+    source_artifacts: Mapping[str, Any] | None = None,
+    source_artifact_paths: Mapping[str, Sequence[str | None]] | None = None,
+    top_k: int | None = 32,
+    expected_improvement_weight: float = DEFAULT_EXPECTED_IMPROVEMENT_WEIGHT,
+    information_gain_weight: float = DEFAULT_INFORMATION_GAIN_WEIGHT,
+) -> dict[str, Any]:
+    """Build a false-authority ranked cross-family candidate portfolio."""
+
+    incumbent = _finite_float(incumbent_score, label="incumbent_score")
+    if incumbent < 0.0:
+        raise CrossFamilyCandidatePortfolioError("incumbent_score must be non-negative")
+    if top_k is not None and int(top_k) <= 0:
+        raise CrossFamilyCandidatePortfolioError("top_k must be positive")
+
+    source_paths = source_artifact_paths or {}
+    candidates: list[dict[str, Any]] = []
+    for index, selection in enumerate(mlx_selections or ()):
+        path_list = source_paths.get("mlx_selections", ())
+        path = path_list[index] if index < len(path_list) else None
+        candidates.extend(
+            _mlx_candidate_rows(
+                selection,
+                incumbent_score=incumbent,
+                source_artifact_path=path,
+            )
+        )
+    for index, acquisition in enumerate(pairset_acquisitions or ()):
+        path_list = source_paths.get("pairset_acquisitions", ())
+        path = path_list[index] if index < len(path_list) else None
+        candidates.extend(
+            _pairset_candidate_rows(acquisition, source_artifact_path=path)
+        )
+    for index, manifest in enumerate(hfv2_manifests or ()):
+        path_list = source_paths.get("hfv2_manifests", ())
+        path = path_list[index] if index < len(path_list) else None
+        candidates.extend(
+            _hfv2_candidate_rows(
+                manifest,
+                incumbent_score=incumbent,
+                source_artifact_path=path,
+            )
+        )
+    candidates.extend(_manual_candidate_rows(manual_candidates))
+
+    if not candidates:
+        raise CrossFamilyCandidatePortfolioError("no candidates supplied")
+
+    beliefs = _merge_family_beliefs(candidates, family_beliefs)
+    try:
+        ranked = rank_exact_eval_candidates(
+            candidates,
+            incumbent_score=incumbent,
+            family_beliefs=beliefs,
+            source=TOOL,
+            expected_improvement_weight=expected_improvement_weight,
+            information_gain_weight=information_gain_weight,
+            top_k=top_k,
+        )
+    except BayesianExperimentalDesignError as exc:
+        raise CrossFamilyCandidatePortfolioError(str(exc)) from exc
+
+    candidates_by_id = {row["candidate_id"]: row for row in candidates}
+    ranked_rows = _enforce_portfolio_false_authority(ranked["rows"])
+    for row in ranked_rows:
+        source_row = candidates_by_id.get(str(row["candidate_id"]), {})
+        for key in (
+            "source_kind",
+            "source_rank",
+            "source_artifact_path",
+            "source_dispatch_blockers",
+            "source_metadata",
+        ):
+            if key in source_row:
+                row[key] = source_row[key]
+        if row.get("source_dispatch_blockers"):
+            row["dispatch_blockers"] = sorted(
+                set(row.get("dispatch_blockers") or [])
+                | set(row.get("source_dispatch_blockers") or [])
+            )
+        row["operator_next_action"] = _operator_action_for_row(row)
+        row["operator_action_priority"] = list(_operator_action_priority(row))
+    operator_action_rows = _build_operator_action_rows(ranked_rows)
+
+    source_counts: dict[str, int] = {}
+    for candidate in candidates:
+        kind = str(candidate["source_kind"])
+        source_counts[kind] = source_counts.get(kind, 0) + 1
+
+    custody_ready_count = sum(
+        1 for row in ranked_rows if row.get("exact_archive_custody_ready") is True
+    )
+    aggregate_blockers = sorted(
+        {
+            blocker
+            for row in ranked_rows
+            for blocker in row.get("dispatch_blockers", [])
+        }
+        | {
+            "portfolio_planning_only_requires_separate_lane_claim",
+            "exact_eval_dispatch_requires_claimed_operator_action",
+        }
+    )
+    materialization_required_count = sum(
+        1
+        for row in ranked_rows
+        if isinstance(row.get("exact_archive_custody"), Mapping)
+        and row["exact_archive_custody"].get("verified") is not True
+    )
+    return {
+        "schema": SCHEMA,
+        "producer": TOOL,
+        **FALSE_AUTHORITY,
+        "candidate_generation_only": True,
+        "allowed_use": (
+            "cross_family_exact_eval_spend_triage_planning_only_no_score_or_dispatch_authority"
+        ),
+        "incumbent_exact_cuda_score": round(incumbent, 12),
+        "cross_family_policy": {
+            "cross_family": True,
+            "cross_paradigm": True,
+            "outside_class_allowed": True,
+            "exact_eval_candidate_queue_requires_separate_claim": True,
+            "ranker_ready_flag_is_advisory_until_portfolio_gate": True,
+            **FALSE_AUTHORITY,
+        },
+        "acquisition_weights": {
+            "expected_improvement": round(float(expected_improvement_weight), 12),
+            "expected_information_gain": round(float(information_gain_weight), 12),
+        },
+        "family_prior_policy": {
+            "default_family_beliefs_are_weak_planning_priors": True,
+            "caller_family_beliefs_override_defaults": family_beliefs is not None,
+        },
+        "source_artifacts": dict(source_artifacts or {}),
+        "portfolio_summary": {
+            "candidate_count_before_top_k": len(candidates),
+            "ranked_candidate_count": len(ranked_rows),
+            "operator_action_candidate_count": len(operator_action_rows),
+            "recommended_next_candidate_id": (
+                operator_action_rows[0]["candidate_id"] if operator_action_rows else None
+            ),
+            "recommended_next_action": (
+                operator_action_rows[0]["operator_next_action"]
+                if operator_action_rows
+                else None
+            ),
+            "candidate_archive_custody_ready_count": custody_ready_count,
+            "materialization_required_count": materialization_required_count,
+            "source_counts": dict(sorted(source_counts.items())),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "dispatch_blockers": aggregate_blockers,
+        "bayesian_ranker_payload": {
+            key: ranked[key]
+            for key in (
+                "schema_version",
+                "tool",
+                "source",
+                "acquisition_formula",
+                "expected_improvement_formula",
+                "information_gain_formula",
+                "family_beliefs",
+                "dispatch_blockers",
+            )
+        },
+        "ranked_rows": ranked_rows,
+        "operator_action_rows": operator_action_rows,
+    }
+
+
+def render_cross_family_candidate_portfolio_markdown(
+    portfolio: Mapping[str, Any],
+) -> str:
+    """Render a compact operator-facing portfolio report."""
+
+    summary = portfolio.get("portfolio_summary") if isinstance(portfolio, Mapping) else {}
+    if not isinstance(summary, Mapping):
+        summary = {}
+    lines = [
+        "# Cross-Family Candidate Portfolio",
+        "",
+        f"- Schema: `{portfolio.get('schema')}`",
+        f"- Incumbent exact CUDA score: `{portfolio.get('incumbent_exact_cuda_score')}`",
+        f"- Score claim: `{portfolio.get('score_claim')}`",
+        f"- Ready for exact eval dispatch: `{portfolio.get('ready_for_exact_eval_dispatch')}`",
+        f"- Ranked candidates: `{summary.get('ranked_candidate_count')}`",
+        f"- Recommended next candidate: `{summary.get('recommended_next_candidate_id')}`",
+        f"- Recommended next action: `{summary.get('recommended_next_action')}`",
+        f"- Custody-ready archives: `{summary.get('candidate_archive_custody_ready_count')}`",
+        "",
+        "## Operator Action Queue",
+        "",
+        "| action rank | bayes rank | candidate | family | source | action | acquisition | archive ready |",
+        "|---:|---:|---|---|---|---|---:|---|",
+    ]
+    for row in portfolio.get("operator_action_rows", [])[:32]:
+        if not isinstance(row, Mapping):
+            continue
+        lines.append(
+            "| {action_rank} | {rank} | `{candidate}` | `{family}` | `{source}` | "
+            "`{action}` | {acq:.12g} | `{ready}` |".format(
+                action_rank=row.get("operator_action_rank"),
+                rank=row.get("rank"),
+                candidate=row.get("candidate_id"),
+                family=row.get("family_id"),
+                source=row.get("source_kind"),
+                action=row.get("operator_next_action"),
+                acq=float(row.get("acquisition_value", 0.0)),
+                ready=row.get("exact_archive_custody_ready"),
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Bayesian Rank",
+            "",
+        "| rank | candidate | family | source | acquisition | mean | variance | archive ready |",
+        "|---:|---|---|---|---:|---:|---:|---|",
+        ]
+    )
+    for row in portfolio.get("ranked_rows", []):
+        if not isinstance(row, Mapping):
+            continue
+        lines.append(
+            "| {rank} | `{candidate}` | `{family}` | `{source}` | {acq:.12g} | "
+            "{mean:.12g} | {variance:.12g} | `{ready}` |".format(
+                rank=row.get("rank"),
+                candidate=row.get("candidate_id"),
+                family=row.get("family_id"),
+                source=row.get("source_kind"),
+                acq=float(row.get("acquisition_value", 0.0)),
+                mean=float(row.get("predicted_score_mean", 0.0)),
+                variance=float(row.get("predicted_score_variance", 0.0)),
+                ready=row.get("exact_archive_custody_ready"),
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Dispatch Blockers",
+            "",
+        ]
+    )
+    for blocker in portfolio.get("dispatch_blockers", []):
+        lines.append(f"- `{blocker}`")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_json(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json_text(payload), encoding="utf-8")
+
+
+__all__ = [
+    "CrossFamilyCandidatePortfolioError",
+    "build_cross_family_candidate_portfolio",
+    "render_cross_family_candidate_portfolio_markdown",
+    "source_artifacts_from_paths",
+    "write_json",
+]
