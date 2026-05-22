@@ -200,6 +200,44 @@ observation-aware portfolio is:
 - New recommended candidate: `pairset_diversity_k016`
 - New recommended action: `materialize_pairset_archive_and_run_local_controls`
 
+`pairset_diversity_k016` was also materialized, locality-checked, dispatched
+CPU-first, and recovered cleanly. It improves over k012 but remains a
+regression versus compact DQS1 top32.
+
+- Locality report:
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k016_materialization_20260522T171859Z/locality_controls.json`
+- Archive SHA-256:
+  `408247c02d8c316562492f8247a0ede0711ef05b65729edb5b6cef8c79d230bc`
+- Archive bytes: `178544`
+- Selected pairs:
+  `[26, 68, 109, 134, 167, 242, 259, 320, 376, 412, 440, 467, 492, 501, 544, 588]`
+- Selected frame mismatch count: `0`
+- Unselected frame mismatch count: `0`
+- Modal result:
+  `experiments/results/modal_auth_eval_cpu/dqs1_pairset_diversity_k016_selective_decoderq_cpu_20260522T171859Z/contest_auth_eval.json`
+- Modal call id:
+  `fc-01KS8BAYCXTYEXS13FABSDDR2E`
+- Exact score:
+  `0.19204229507283993` `[contest-CPU]`
+- Delta versus compact DQS1 top32 CPU frontier:
+  `+0.000013346256750063068`
+- Component deltas: PoseNet `+0.0`, SegNet
+  `+0.000024000000000010124`, rate `-0.000010653743249947056`
+- Runtime tree SHA-256:
+  `3565b57b547af74cc1b63887e60f9c0b0fbf63514890ea764b2a67c6df1a68ac`
+- Inflated aggregate SHA-256:
+  `05e6fef94492bcdfea0e1229164691bc282c006facff891b443fdc73f397dcf9`
+
+The observation ledger now has `6` exact CPU calibration rows:
+`prefix_k028`, `pairset_diversity_k002`, `pairset_diversity_k004`,
+`pairset_diversity_k008`, `pairset_diversity_k012`, and
+`pairset_diversity_k016`. The latest refreshed observation-aware portfolio is:
+
+- `experiments/results/cross_family_candidate_portfolio_20260522T172900Z_observed_pairsets_k016/portfolio.json`
+- `experiments/results/cross_family_candidate_portfolio_20260522T172900Z_observed_pairsets_k016/portfolio.md`
+- New recommended candidate: `pairset_diversity_k024`
+- New recommended action: `materialize_pairset_archive_and_run_local_controls`
+
 ## Verification
 
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py -q`
@@ -214,6 +252,8 @@ observation-aware portfolio is:
 - `tools/recover_modal_auth_eval.py` on k008 Modal CPU call `fc-01KS8A13JRWMBKK8BC1B4GKY6M`
 - `tools/run_decoder_q_selective_runtime_locality_controls.py` on k012
 - `tools/recover_modal_auth_eval.py` on k012 Modal CPU call `fc-01KS8APGE4NYE8GB3Q27A711D8`
+- `tools/run_decoder_q_selective_runtime_locality_controls.py` on k016
+- `tools/recover_modal_auth_eval.py` on k016 Modal CPU call `fc-01KS8BAYCXTYEXS13FABSDDR2E`
 
 ## Authority
 
@@ -225,4 +265,6 @@ observation-aware portfolio is:
 - k008 now has exact `[contest-CPU]` evidence only, not CUDA promotion
   evidence.
 - k012 now has exact `[contest-CPU]` evidence only, not CUDA promotion
+  evidence.
+- k016 now has exact `[contest-CPU]` evidence only, not CUDA promotion
   evidence.
