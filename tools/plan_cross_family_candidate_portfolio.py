@@ -25,6 +25,9 @@ from tac.optimization.cross_family_candidate_portfolio import (  # noqa: E402
     source_artifacts_from_paths,
     write_json,
 )
+from tac.optimization.mlx_dynamic_sweep_observations import (  # noqa: E402
+    load_observation_rows,
+)
 from tac.repo_io import read_json  # noqa: E402
 
 
@@ -69,6 +72,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="Optional family belief JSON object/list overriding weak defaults.",
     )
+    parser.add_argument(
+        "--observation-jsonl",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Append-only mlx_dynamic_sweep_observation.v1 JSONL. Exact-axis "
+            "same-candidate observations demote repeat operator actions."
+        ),
+    )
+    parser.add_argument(
+        "--incumbent-score-by-axis",
+        action="append",
+        default=[],
+        metavar="AXIS=SCORE",
+        help=(
+            "Optional exact-axis incumbent baseline, e.g. contest_cpu=0.19203. "
+            "contest_cuda defaults to --incumbent-score."
+        ),
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
     parser.add_argument("--top-k", type=int, default=32)
@@ -110,6 +133,28 @@ def _manual_candidates(paths: list[Path]) -> list[dict[str, Any]]:
     return out
 
 
+def _axis_scores(values: list[str]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for value in values:
+        if "=" not in value:
+            raise CrossFamilyCandidatePortfolioError(
+                "--incumbent-score-by-axis must use AXIS=SCORE"
+            )
+        axis, raw_score = value.split("=", 1)
+        axis = axis.strip()
+        if not axis:
+            raise CrossFamilyCandidatePortfolioError(
+                "--incumbent-score-by-axis axis must be non-empty"
+            )
+        try:
+            out[axis] = float(raw_score)
+        except ValueError as exc:
+            raise CrossFamilyCandidatePortfolioError(
+                f"--incumbent-score-by-axis {axis} score must be numeric"
+            ) from exc
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
@@ -120,16 +165,24 @@ def main(argv: list[str] | None = None) -> int:
                 "hfv2_manifests": args.hfv2_manifest,
                 "manual_candidate_json": args.candidate_json,
                 "family_beliefs": args.family_beliefs,
+                "observation_jsonl": args.observation_jsonl,
             },
             repo_root=REPO_ROOT,
         )
         family_beliefs = read_json(args.family_beliefs) if args.family_beliefs else None
+        observations = [
+            row
+            for path in args.observation_jsonl
+            for row in load_observation_rows(path)
+        ]
         portfolio = build_cross_family_candidate_portfolio(
             incumbent_score=args.incumbent_score,
             mlx_selections=_json_objects(args.mlx_selection),
             pairset_acquisitions=_json_objects(args.pairset_acquisition),
             hfv2_manifests=_json_objects(args.hfv2_manifest),
             manual_candidates=_manual_candidates(args.candidate_json),
+            observations=observations,
+            incumbent_scores_by_axis=_axis_scores(args.incumbent_score_by_axis),
             family_beliefs=family_beliefs,
             source_artifacts=source_artifacts,
             source_artifact_paths={

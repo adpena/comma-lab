@@ -17,6 +17,10 @@ from tac.optimization.bayesian_experimental_design import (
     BayesianExperimentalDesignError,
     rank_exact_eval_candidates,
 )
+from tac.optimization.mlx_dynamic_sweep_observations import (
+    normalize_observation_row,
+    summarize_observations,
+)
 from tac.repo_io import json_text, repo_relative, sha256_file
 
 SCHEMA = "cross_family_candidate_portfolio.v1"
@@ -28,6 +32,14 @@ DEFAULT_INFORMATION_GAIN_WEIGHT = 0.01
 DEFAULT_MLX_VARIANCE_FLOOR = 1e-8
 DEFAULT_PAIRSET_VARIANCE = 2.5e-8
 DEFAULT_OUTSIDE_CLASS_VARIANCE = 1e-3
+_EXACT_AXIS_ALIASES = {
+    "contest_cpu": "contest_cpu",
+    "contest-CPU": "contest_cpu",
+    "[contest-CPU]": "contest_cpu",
+    "contest_cuda": "contest_cuda",
+    "contest-CUDA": "contest_cuda",
+    "[contest-CUDA]": "contest_cuda",
+}
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -499,6 +511,126 @@ def _manual_candidate_rows(
     return out
 
 
+def _normalize_observations(
+    observations: Sequence[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    return [normalize_observation_row(row) for row in observations or ()]
+
+
+def _exact_observation_axis(row: Mapping[str, Any]) -> str | None:
+    axes = {
+        _EXACT_AXIS_ALIASES.get(str(row.get("observed_axis") or "")),
+        _EXACT_AXIS_ALIASES.get(str(row.get("evidence_grade") or "")),
+        _EXACT_AXIS_ALIASES.get(str(row.get("evidence_tag") or "")),
+    }
+    axes.discard(None)
+    if not axes:
+        return None
+    if len(axes) != 1:
+        raise CrossFamilyCandidatePortfolioError(
+            "observation exact-axis labels disagree across observed_axis/evidence_grade/evidence_tag"
+        )
+    return next(iter(axes))
+
+
+def _observation_axis_is_exact(row: Mapping[str, Any]) -> bool:
+    return _exact_observation_axis(row) is not None
+
+
+def _normalize_incumbent_scores_by_axis(
+    incumbent_score: float,
+    incumbent_scores_by_axis: Mapping[str, Any] | None,
+) -> dict[str, float]:
+    scores = {"contest_cuda": _finite_float(incumbent_score, label="incumbent_score")}
+    for key, value in (incumbent_scores_by_axis or {}).items():
+        axis = _EXACT_AXIS_ALIASES.get(str(key))
+        if axis is None:
+            raise CrossFamilyCandidatePortfolioError(
+                f"unsupported incumbent score axis: {key!r}"
+            )
+        score = _finite_float(value, label=f"incumbent_scores_by_axis.{axis}")
+        if score < 0.0:
+            raise CrossFamilyCandidatePortfolioError(
+                f"incumbent_scores_by_axis.{axis} must be non-negative"
+            )
+        scores[axis] = score
+    return scores
+
+
+def _apply_observation_feedback(
+    candidates: Sequence[Mapping[str, Any]],
+    observations: Sequence[Mapping[str, Any]],
+    *,
+    incumbent_scores_by_axis: Mapping[str, float],
+) -> list[dict[str, Any]]:
+    """Attach exact-axis observation feedback without granting authority."""
+
+    by_candidate: dict[str, list[Mapping[str, Any]]] = {}
+    for row in observations:
+        by_candidate.setdefault(str(row.get("candidate_id") or ""), []).append(row)
+
+    out: list[dict[str, Any]] = []
+    for candidate in candidates:
+        row = dict(candidate)
+        matching = [
+            obs
+            for obs in by_candidate.get(str(row.get("candidate_id") or ""), [])
+            if _observation_axis_is_exact(obs)
+        ]
+        if not matching:
+            out.append(row)
+            continue
+        matching.sort(key=lambda obs: str(obs.get("observed_at_utc") or ""))
+        latest = matching[-1]
+        observed_axis = _exact_observation_axis(latest)
+        if observed_axis is None:
+            out.append(row)
+            continue
+        observed_score = _finite_float(
+            latest.get("observed_score_or_delta"),
+            label=f"{row.get('candidate_id')}.observed_score_or_delta",
+        )
+        axis_baseline = incumbent_scores_by_axis.get(observed_axis)
+        observation_feedback: dict[str, Any] = {
+            "candidate_id": latest.get("candidate_id"),
+            "observed_axis": observed_axis,
+            "evidence_grade": latest.get("evidence_grade"),
+            "latest_observed_at_utc": latest.get("observed_at_utc"),
+            "observed_score": observed_score,
+            "source_artifact_path": latest.get("source_artifact_path"),
+            "source_artifact_sha256": latest.get("source_artifact_sha256"),
+            **FALSE_AUTHORITY,
+        }
+        if axis_baseline is None:
+            status = "observed_exact_axis_without_axis_baseline"
+            observation_feedback["axis_baseline_available"] = False
+        else:
+            observed_delta = observed_score - axis_baseline
+            status = (
+                "observed_exact_axis_regressed_vs_axis_baseline"
+                if observed_delta >= 0.0
+                else "observed_exact_axis_improved_vs_axis_baseline"
+            )
+            observation_feedback.update(
+                {
+                    "axis_baseline_available": True,
+                    "axis_baseline_score": axis_baseline,
+                    "observed_delta_vs_axis_baseline": observed_delta,
+                }
+            )
+        observation_feedback["status"] = status
+        source_metadata = dict(row.get("source_metadata") or {})
+        source_metadata["observation_feedback"] = observation_feedback
+        row["source_metadata"] = source_metadata
+        blockers = set(row.get("source_dispatch_blockers") or [])
+        blockers.add(f"candidate_already_observed_{observed_axis}_do_not_repeat_same_axis")
+        if status == "observed_exact_axis_regressed_vs_axis_baseline":
+            blockers.add(f"candidate_observed_{observed_axis}_regressed_vs_axis_baseline")
+        row["source_dispatch_blockers"] = sorted(blockers)
+        out.append(row)
+    return out
+
+
 def _enforce_portfolio_false_authority(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     required_blockers = {
@@ -542,6 +674,11 @@ def _operator_action_for_row(row: Mapping[str, Any]) -> str:
 def _operator_action_priority(row: Mapping[str, Any]) -> tuple[int, int, float, str]:
     source_kind = str(row.get("source_kind") or "")
     source_blocked = bool(row.get("source_dispatch_blockers"))
+    observed_feedback = (
+        row.get("source_metadata", {}).get("observation_feedback")
+        if isinstance(row.get("source_metadata"), Mapping)
+        else None
+    )
     if source_kind == "decoder_q_pairset_acquisition":
         base = 10
     elif source_kind == "mlx_effective_spend_triage_selection":
@@ -550,6 +687,12 @@ def _operator_action_priority(row: Mapping[str, Any]) -> tuple[int, int, float, 
         base = 80 if source_blocked else 30
     else:
         base = 40
+    if isinstance(observed_feedback, Mapping):
+        status = str(observed_feedback.get("status") or "")
+        if status == "observed_exact_axis_improved_vs_axis_baseline":
+            base -= 5
+        else:
+            base += 100
     source_rank = row.get("source_rank")
     rank_value = int(source_rank) if source_rank is not None else 999_999
     return (
@@ -582,6 +725,8 @@ def build_cross_family_candidate_portfolio(
     pairset_acquisitions: Sequence[Mapping[str, Any]] | None = None,
     hfv2_manifests: Sequence[Mapping[str, Any]] | None = None,
     manual_candidates: Sequence[Mapping[str, Any]] | None = None,
+    observations: Sequence[Mapping[str, Any]] | None = None,
+    incumbent_scores_by_axis: Mapping[str, Any] | None = None,
     family_beliefs: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None = None,
     source_artifacts: Mapping[str, Any] | None = None,
     source_artifact_paths: Mapping[str, Sequence[str | None]] | None = None,
@@ -629,6 +774,16 @@ def build_cross_family_candidate_portfolio(
 
     if not candidates:
         raise CrossFamilyCandidatePortfolioError("no candidates supplied")
+    normalized_observations = _normalize_observations(observations)
+    axis_incumbents = _normalize_incumbent_scores_by_axis(
+        incumbent,
+        incumbent_scores_by_axis,
+    )
+    candidates = _apply_observation_feedback(
+        candidates,
+        normalized_observations,
+        incumbent_scores_by_axis=axis_incumbents,
+    )
 
     beliefs = _merge_family_beliefs(candidates, family_beliefs)
     try:
@@ -717,6 +872,15 @@ def build_cross_family_candidate_portfolio(
             "caller_family_beliefs_override_defaults": family_beliefs is not None,
         },
         "source_artifacts": dict(source_artifacts or {}),
+        "incumbent_scores_by_axis": {
+            axis: round(score, 12) for axis, score in sorted(axis_incumbents.items())
+        },
+        "observation_feedback": {
+            **summarize_observations(normalized_observations),
+            "candidate_suppression_policy": (
+                "exact-axis same-candidate observations demote repeat operator actions"
+            ),
+        },
         "portfolio_summary": {
             "candidate_count_before_top_k": len(candidates),
             "ranked_candidate_count": len(ranked_rows),
@@ -732,6 +896,14 @@ def build_cross_family_candidate_portfolio(
             "candidate_archive_custody_ready_count": custody_ready_count,
             "materialization_required_count": materialization_required_count,
             "source_counts": dict(sorted(source_counts.items())),
+            "observation_row_count": len(normalized_observations),
+            "observed_candidate_count": len(
+                {
+                    str(row.get("candidate_id") or "")
+                    for row in normalized_observations
+                    if _observation_axis_is_exact(row)
+                }
+            ),
             "score_claim": False,
             "ready_for_exact_eval_dispatch": False,
         },

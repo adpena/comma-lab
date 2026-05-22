@@ -94,6 +94,50 @@ def _hfv2_manifest(archive: Path) -> dict[str, object]:
     }
 
 
+def _contest_observation(tmp_path: Path, *, score: float = 0.193) -> dict[str, object]:
+    source = tmp_path / "contest_auth_eval.json"
+    archive_sha = "a" * 64
+    raw_sha = "b" * 64
+    source.write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cpu",
+                "evidence_grade": "contest-CPU",
+                "score_claim_valid": True,
+                "canonical_score": score,
+                "provenance": {
+                    "archive_sha256": archive_sha,
+                    "inflated_output_manifest": {
+                        "payload": {"aggregate_sha256": raw_sha}
+                    },
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "schema": "mlx_dynamic_sweep_observation.v1",
+        "candidate_id": "pairset_diversity_k002",
+        "sweep_config_id": "contest_cpu_exact_candidate",
+        "optimization_pass_id": "exact_cpu_calibration",
+        "family": "decoder_q_pairset_diversity",
+        "observed_axis": "contest_cpu",
+        "evidence_tag": "[contest-CPU]",
+        "evidence_grade": "contest-CPU",
+        "observed_score_or_delta": score,
+        "archive_sha256": archive_sha,
+        "runtime_sha256": "c" * 64,
+        "raw_output_or_cache_sha256": raw_sha,
+        "component_deltas": {
+            "segnet_delta": 0.0001,
+            "posenet_delta": 0.0,
+            "rate_delta": -0.00001,
+        },
+        "source_artifact_path": source.as_posix(),
+    }
+
+
 def test_portfolio_fuses_mlx_pairset_and_outside_class_without_authority(
     tmp_path: Path,
 ) -> None:
@@ -142,6 +186,71 @@ def test_portfolio_fuses_mlx_pairset_and_outside_class_without_authority(
     assert portfolio["operator_action_rows"][0]["operator_action_rank"] == 1
     hfv2 = next(row for row in portfolio["ranked_rows"] if row["family_id"] == "hfv2_sparse_sidecar")
     assert "exact_contest_cpu_eval_missing" in hfv2["dispatch_blockers"]
+
+
+def test_portfolio_demotes_already_observed_exact_axis_candidate(
+    tmp_path: Path,
+) -> None:
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.192051316881,
+        mlx_selections=[_mlx_selection()],
+        pairset_acquisitions=[_pairset_acquisition()],
+        hfv2_manifests=[_hfv2_manifest(tmp_path / "archive.zip")],
+        observations=[_contest_observation(tmp_path)],
+        incumbent_scores_by_axis={"contest_cpu": 0.192051316881},
+        top_k=8,
+    )
+
+    assert portfolio["portfolio_summary"]["observation_row_count"] == 1
+    assert portfolio["portfolio_summary"]["observed_candidate_count"] == 1
+    assert portfolio["portfolio_summary"]["recommended_next_candidate_id"] != (
+        "pairset_diversity_k002"
+    )
+    assert portfolio["operator_action_rows"][0]["source_kind"] == (
+        "mlx_effective_spend_triage_selection"
+    )
+    pairset = next(
+        row
+        for row in portfolio["operator_action_rows"]
+        if row["candidate_id"] == "pairset_diversity_k002"
+    )
+    assert pairset["source_metadata"]["observation_feedback"]["status"] == (
+        "observed_exact_axis_regressed_vs_axis_baseline"
+    )
+    assert (
+        "candidate_already_observed_contest_cpu_do_not_repeat_same_axis"
+        in pairset["dispatch_blockers"]
+    )
+    assert (
+        "candidate_observed_contest_cpu_regressed_vs_axis_baseline"
+        in pairset["dispatch_blockers"]
+    )
+
+
+def test_portfolio_does_not_compare_cpu_observation_to_cuda_incumbent(
+    tmp_path: Path,
+) -> None:
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.191,
+        mlx_selections=[_mlx_selection()],
+        pairset_acquisitions=[_pairset_acquisition()],
+        observations=[_contest_observation(tmp_path, score=0.193)],
+        top_k=8,
+    )
+
+    pairset = next(
+        row
+        for row in portfolio["operator_action_rows"]
+        if row["candidate_id"] == "pairset_diversity_k002"
+    )
+    feedback = pairset["source_metadata"]["observation_feedback"]
+    assert feedback["status"] == "observed_exact_axis_without_axis_baseline"
+    assert feedback["axis_baseline_available"] is False
+    assert "observed_delta_vs_axis_baseline" not in feedback
+    assert (
+        "candidate_observed_contest_cpu_regressed_vs_axis_baseline"
+        not in pairset["dispatch_blockers"]
+    )
 
 
 def test_portfolio_preserves_custody_readiness_as_advisory_only(
