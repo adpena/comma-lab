@@ -48,6 +48,57 @@ def _mlx_dataset_two_windows() -> dict:
     return payload
 
 
+def _validated_mlx_dataset() -> dict:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    rows = []
+    for family_index, family in enumerate(("mlx_scorer_response", "decoder_q")):
+        for fold in range(5):
+            for offset in range(5):
+                value = float(family_index * 100 + fold * 5 + offset)
+                row = {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": f"{family}-{fold}-{offset}",
+                    "family": family,
+                    "axis": "[macOS-MLX research-signal]",
+                    "holdout_fold": fold,
+                    "delta_vs_baseline_score": value,
+                    "scorer_delta_vs_baseline": value,
+                    "predicted_delta_vs_baseline_score": value,
+                    "byte_budget_margin_vs_break_even": None,
+                    "authority_source_score_claim": False,
+                    **false_authority,
+                }
+                if family == "mlx_scorer_response":
+                    row.update(
+                        {
+                            "archive_sha256": "a" * 64,
+                            "source_inflated_outputs_aggregate_sha256": "e" * 64,
+                            "source_batch_pairs": 1,
+                            "source_n_samples": 600,
+                            "source_pair_window": [0, 600],
+                        }
+                    )
+                rows.append(row)
+    return {
+        "schema": "scorer_response_dataset.v1",
+        "summary": {"row_count": len(rows)},
+        "authority": {
+            **false_authority,
+            "evidence_grade": "macOS-MLX-research-signal",
+            "evidence_tag": "[macOS-MLX research-signal]",
+            "score_axis": "[macOS-MLX research-signal]",
+        },
+        **false_authority,
+        "rows": rows,
+    }
+
+
 def _failed_mlx_parity_sweep() -> dict:
     return {
         "schema_version": "mlx_scorer_torch_parity_sweep.v1",
@@ -585,6 +636,118 @@ def test_plan_ll_scorer_response_next_cli_accepts_mlx_contract_bundle(
         not in rules
     )
     assert "MLX Production Contract Gate" in md_out.read_text(encoding="utf-8")
+
+
+def test_plan_ll_scorer_response_next_cli_requires_effective_mlx_gate_blocks(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    parity_path = tmp_path / "parity.json"
+    calibration_path = tmp_path / "calibration.json"
+    production_path = tmp_path / "production_contract.json"
+    json_out = tmp_path / "plan.json"
+    md_out = tmp_path / "plan.md"
+    dataset_path.write_text(json.dumps(_mlx_dataset()), encoding="utf-8")
+    parity_path.write_text(json.dumps(_passing_mlx_parity_sweep()), encoding="utf-8")
+    calibration_path.write_text(
+        json.dumps(_passing_mlx_score_calibration()),
+        encoding="utf-8",
+    )
+    production_path.write_text(
+        json.dumps(_passing_mlx_production_contract()),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "plan_ll_scorer_response_next.py"),
+            "--dataset",
+            str(dataset_path),
+            "--mlx-torch-parity-sweep",
+            str(parity_path),
+            "--mlx-score-calibration",
+            str(calibration_path),
+            "--mlx-production-contract",
+            str(production_path),
+            "--require-effective-mlx-spend-triage",
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    stdout_payload = json.loads(completed.stdout)
+    assert stdout_payload["effective_mlx_spend_triage_allowed"] is False
+    plan = json.loads(json_out.read_text(encoding="utf-8"))
+    gate = plan["effective_mlx_spend_triage_gate"]
+    assert gate["status"] == "blocked"
+    assert "response_validation_gate_not_passed" in gate["blockers"]
+    assert "Effective MLX Spend Triage Gate" in md_out.read_text(encoding="utf-8")
+
+
+def test_plan_ll_scorer_response_next_cli_requires_effective_mlx_gate_passes(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    parity_path = tmp_path / "parity.json"
+    calibration_path = tmp_path / "calibration.json"
+    production_path = tmp_path / "production_contract.json"
+    json_out = tmp_path / "plan.json"
+    md_out = tmp_path / "plan.md"
+    dataset_path.write_text(json.dumps(_validated_mlx_dataset()), encoding="utf-8")
+    parity_path.write_text(json.dumps(_passing_mlx_parity_sweep()), encoding="utf-8")
+    calibration_path.write_text(
+        json.dumps(_passing_mlx_score_calibration()),
+        encoding="utf-8",
+    )
+    production_path.write_text(
+        json.dumps(_passing_mlx_production_contract()),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "plan_ll_scorer_response_next.py"),
+            "--dataset",
+            str(dataset_path),
+            "--mlx-torch-parity-sweep",
+            str(parity_path),
+            "--mlx-score-calibration",
+            str(calibration_path),
+            "--mlx-production-contract",
+            str(production_path),
+            "--require-effective-mlx-spend-triage",
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout_payload = json.loads(completed.stdout)
+    assert stdout_payload["effective_mlx_spend_triage_allowed"] is True
+    assert (
+        stdout_payload["effective_mlx_spend_triage_gate"][
+            "mlx_exact_eval_spend_triage_allowed"
+        ]
+        is True
+    )
+    plan = json.loads(json_out.read_text(encoding="utf-8"))
+    gate = plan["effective_mlx_spend_triage_gate"]
+    assert gate["status"] == "strict_pass"
+    assert gate["mlx_exact_eval_spend_triage_allowed"] is True
 
 
 def test_plan_ll_scorer_response_next_cli_blocks_uncovered_mlx_contract_bundle_row(

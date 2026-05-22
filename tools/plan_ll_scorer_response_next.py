@@ -158,6 +158,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "rank, claim, or dispatch exact eval."
         ),
     )
+    parser.add_argument(
+        "--require-effective-mlx-spend-triage",
+        action="store_true",
+        help=(
+            "After writing the plan, exit nonzero unless the composed effective "
+            "MLX spend-triage gate is a strict pass. This is for automation that "
+            "must not proceed from constituent MLX gates alone."
+        ),
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
     return parser.parse_args(argv)
@@ -256,9 +265,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.md_out is not None:
         args.md_out.parent.mkdir(parents=True, exist_ok=True)
         args.md_out.write_text(render_next_probe_plan_markdown(plan), encoding="utf-8")
+    effective_gate = plan.get("effective_mlx_spend_triage_gate")
+    effective_mlx_spend_triage_allowed = (
+        isinstance(effective_gate, dict)
+        and effective_gate.get("mlx_exact_eval_spend_triage_allowed") is True
+    )
     print(
         json.dumps(
             {
+                "effective_mlx_spend_triage_allowed": effective_mlx_spend_triage_allowed,
+                "effective_mlx_spend_triage_gate": effective_gate,
                 "json_out": str(args.json_out),
                 "md_out": None if args.md_out is None else str(args.md_out),
                 "prohibitions": plan["prohibitions"],
@@ -269,6 +285,8 @@ def main(argv: list[str] | None = None) -> int:
             sort_keys=True,
         )
     )
+    if args.require_effective_mlx_spend_triage and not effective_mlx_spend_triage_allowed:
+        return 2
     return 0
 
 
