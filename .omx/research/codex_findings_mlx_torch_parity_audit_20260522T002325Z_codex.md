@@ -70,6 +70,22 @@ Result:
 - SegNet logit max abs delta: `0.0002993345260620117`
 - SegNet argmax diff pixels: `0`
 
+Second command:
+
+```bash
+.venv/bin/python tools/audit_mlx_scorer_torch_parity.py --cache-dir experiments/results/mlx_scorer_input_cache_fec6_pr101_20260521T205900Z_pairs16 --output experiments/results/mlx_scorer_torch_parity_fec6_pr101_pairs16_20260522T002325Z_window0_16.json --repo-root . --device cpu --start-pair 0 --max-pairs 16 --run-id fec6_pr101_pairs16_window0_16
+```
+
+Result:
+
+- verdict: `PASS_MLX_TORCH_SCORER_PARITY`
+- pair_window: `[0, 16]`
+- n_samples: `16`
+- PoseNet output max abs delta: `7.62939453125e-06`
+- PoseNet component abs max: `9.70575442932331e-12`
+- SegNet logit max abs delta: `0.0007464885711669922`
+- SegNet argmax diff pixels: `0`
+
 ## Remaining work
 
 Run this audit across the FEC6 full-600 scorer-input cache and record the per-window delta distribution. If CPU parity is stable, the next frontier-moving build is to route MLX-local scorer-response training through this parity gate plus the existing fidelity gate before exact-eval dispatch selection.
