@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import tac.local_acceleration.mlx_preprocess as mlx_preprocess
 from tac.local_acceleration.mlx_preprocess import (
     CAMERA_HW,
     SEGNET_INPUT_HW,
@@ -17,6 +18,7 @@ from tac.local_acceleration.mlx_preprocess import (
     non_overlapping_pair_indices,
     preprocess_scorer_inputs_from_pairs,
     write_scorer_input_cache,
+    write_scorer_input_cache_from_raw_file,
     write_scorer_input_cache_hash_manifest_from_raw_file,
 )
 
@@ -138,6 +140,8 @@ def test_raw_memmap_and_cli_smoke_on_default_contest_shape(tmp_path: Path) -> No
             "a" * 64,
             "--inflated-outputs-aggregate-sha256",
             "b" * 64,
+            "--batch-pairs",
+            "1",
         ],
         check=True,
         text=True,
@@ -146,6 +150,8 @@ def test_raw_memmap_and_cli_smoke_on_default_contest_shape(tmp_path: Path) -> No
 
     assert '"pair_count": 1' in completed.stdout
     manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["source_kind"] == "raw"
+    assert manifest["streaming_batch_pairs"] == 1
     assert manifest["pair_count"] == 1
     assert manifest["segnet_last_rgb_shape"] == [1, 3, *SEGNET_INPUT_HW]
     assert manifest["posenet_yuv6_pair_shape"] == [1, 12, *YUV6_INPUT_HW]
@@ -193,6 +199,52 @@ def test_hash_only_manifest_matches_full_cache_hashes(tmp_path: Path) -> None:
     assert hash_manifest["producer_environment"]["numpy_version"] == np.__version__
     assert saved_hash_manifest["artifacts"] == {}
     assert hash_manifest["array_sha256"] == full_manifest["array_sha256"]
+
+
+def test_raw_full_cache_hashes_streamed_without_full_float_array_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    h, w = CAMERA_HW
+    raw_path = tmp_path / "0.raw"
+    frames = np.arange(4 * h * w * 3, dtype=np.uint32)
+    frames = (frames % 251).astype(np.uint8).reshape(4, h, w, 3)
+    raw_path.write_bytes(frames.tobytes())
+
+    original_array_sha256 = mlx_preprocess._array_sha256
+
+    def guarded_array_sha256(arr: np.ndarray) -> str:
+        if np.asarray(arr).dtype == np.float32:
+            raise AssertionError("float scorer tensor hash must be streamed")
+        return original_array_sha256(arr)
+
+    monkeypatch.setattr(mlx_preprocess, "_array_sha256", guarded_array_sha256)
+
+    manifest = write_scorer_input_cache_from_raw_file(
+        raw_path,
+        tmp_path / "cache",
+        archive_sha256="a" * 64,
+        inflated_outputs_aggregate_sha256="b" * 64,
+        batch_pairs=1,
+    )
+
+    assert manifest["pair_count"] == 2
+    assert len(manifest["array_sha256"]["segnet_last_rgb"]) == 64
+    assert len(manifest["array_sha256"]["posenet_yuv6_pair"]) == 64
+
+
+def test_raw_full_cache_rejects_unbounded_batch_working_set(tmp_path: Path) -> None:
+    h, w = CAMERA_HW
+    raw_path = tmp_path / "0.raw"
+    frames = np.zeros((2, h, w, 3), dtype=np.uint8)
+    raw_path.write_bytes(frames.tobytes())
+
+    with pytest.raises(ValueError, match="batch_pairs working set is too large"):
+        write_scorer_input_cache_from_raw_file(
+            raw_path,
+            tmp_path / "cache",
+            batch_pairs=600,
+        )
 
 
 def test_hash_only_cli_writes_no_tensor_payloads(tmp_path: Path) -> None:
@@ -287,7 +339,7 @@ def test_full_cache_cli_requires_ack_for_large_eager_tensor_surface(tmp_path: Pa
     )
 
     assert blocked.returncode != 0
-    assert "refusing eager full MLX scorer-input tensor cache" in blocked.stderr
+    assert "refusing full MLX scorer-input tensor cache" in blocked.stderr
 
     allowed = subprocess.run(
         [
@@ -300,12 +352,16 @@ def test_full_cache_cli_requires_ack_for_large_eager_tensor_surface(tmp_path: Pa
             "--large-cache-pair-threshold",
             "1",
             "--allow-large-tensor-cache",
+            "--batch-pairs",
+            "1",
         ],
         text=True,
         capture_output=True,
         check=True,
     )
     assert '"pair_count": 2' in allowed.stdout
+    allowed_manifest = json.loads((tmp_path / "allowed" / "manifest.json").read_text())
+    assert allowed_manifest["streaming_batch_pairs"] == 1
 
 
 def test_full_cache_cli_rejects_negative_max_pairs(tmp_path: Path) -> None:
@@ -396,3 +452,70 @@ def test_contest_auth_eval_hash_artifact_updates_provenance(tmp_path: Path) -> N
     assert saved["hash_only"] is True
     provenance = json.loads((work_dir / "provenance.json").read_text())
     assert provenance["scorer_input_cache_hash_manifest"]["payload"]["video_name"] == "0.mkv"
+
+    with pytest.raises(RuntimeError, match="must be inside contest_auth_eval work_dir"):
+        _record_scorer_input_cache_hash_artifact(
+            prov,
+            work_dir,
+            inflated,
+            video_names,
+            {"aggregate_sha256": "b" * 64},
+            tmp_path / "outside_hashes.json",
+            batch_pairs=1,
+        )
+
+
+def test_contest_auth_eval_tensor_artifact_is_guarded_and_updates_provenance(
+    tmp_path: Path,
+) -> None:
+    from experiments.contest_auth_eval import _record_scorer_input_cache_tensor_artifact
+
+    h, w = CAMERA_HW
+    inflated = tmp_path / "inflated"
+    inflated.mkdir()
+    raw_path = inflated / "0.raw"
+    frames = np.zeros((4, h, w, 3), dtype=np.uint8)
+    frames[1::2, ...] = 255
+    raw_path.write_bytes(frames.tobytes())
+    video_names = tmp_path / "videos.txt"
+    video_names.write_text("0.mkv\n", encoding="utf-8")
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    (work_dir / "provenance.json").write_text("{}\n", encoding="utf-8")
+
+    prov = {"archive_sha256": "a" * 64}
+    with pytest.raises(RuntimeError, match="refusing full scorer-input tensor cache export"):
+        _record_scorer_input_cache_tensor_artifact(
+            prov,
+            work_dir,
+            inflated,
+            video_names,
+            {"aggregate_sha256": "b" * 64},
+            Path("tensor_cache"),
+            batch_pairs=1,
+            allow_large_tensor_export=False,
+            large_pair_threshold=1,
+        )
+
+    manifest = _record_scorer_input_cache_tensor_artifact(
+        prov,
+        work_dir,
+        inflated,
+        video_names,
+        {"aggregate_sha256": "b" * 64},
+        Path("tensor_cache"),
+        batch_pairs=1,
+        allow_large_tensor_export=True,
+        large_pair_threshold=1,
+    )
+
+    assert manifest["pair_count"] == 2
+    assert manifest["streaming_batch_pairs"] == 1
+    assert manifest["large_tensor_export_acknowledged"] is True
+    assert manifest["returned_via_modal_artifacts"] is False
+    assert (work_dir / "tensor_cache" / "segnet_last_rgb.npy").exists()
+    assert (work_dir / "tensor_cache" / "posenet_yuv6_pair.npy").exists()
+    provenance = json.loads((work_dir / "provenance.json").read_text())
+    payload = provenance["scorer_input_cache_tensor_manifest"]["payload"]
+    assert payload["video_name"] == "0.mkv"
+    assert payload["promotable"] is False

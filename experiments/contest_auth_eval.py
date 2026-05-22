@@ -730,7 +730,11 @@ def _record_scorer_input_cache_hash_artifact(
         write_scorer_input_cache_hash_manifest_from_raw_file,
     )
 
-    target = output_path if output_path.is_absolute() else work_dir / output_path
+    target = _resolve_auth_artifact_output_under_work_dir(
+        work_dir,
+        output_path,
+        label="scorer-input hash artifact",
+    )
     manifest = write_scorer_input_cache_hash_manifest_from_raw_file(
         raw_path,
         target,
@@ -750,6 +754,105 @@ def _record_scorer_input_cache_hash_artifact(
     with open(work_dir / "provenance.json", "w") as f:
         json.dump(prov, f, indent=2)
     return manifest
+
+
+def _record_scorer_input_cache_tensor_artifact(
+    prov: dict,
+    work_dir: Path,
+    inflated_dir: Path,
+    video_names_file: Path,
+    inflated_manifest: dict,
+    output_dir: Path,
+    *,
+    batch_pairs: int,
+    allow_large_tensor_export: bool,
+    large_pair_threshold: int,
+) -> dict:
+    """Write full scorer-input tensor cache for explicit local/volume export."""
+
+    if batch_pairs < 1:
+        raise RuntimeError("scorer-input tensor batch_pairs must be >= 1")
+    if large_pair_threshold < 1:
+        raise RuntimeError("scorer-input tensor large_pair_threshold must be >= 1")
+
+    raw_paths: list[tuple[str, Path]] = []
+    for name in [n.strip() for n in video_names_file.read_text().splitlines() if n.strip()]:
+        raw_paths.append((name, inflated_dir / Path(name).with_suffix(".raw")))
+    if len(raw_paths) != 1:
+        raise RuntimeError(
+            "scorer-input tensor artifact currently expects exactly one raw file; "
+            f"got {len(raw_paths)} from {video_names_file}"
+        )
+    video_name, raw_path = raw_paths[0]
+    if not raw_path.is_file():
+        raise RuntimeError(f"scorer-input tensor raw file missing: {raw_path}")
+
+    from tac.local_acceleration.mlx_preprocess import (
+        load_raw_video_memmap,
+        non_overlapping_pair_indices,
+        write_scorer_input_cache_from_raw_file,
+    )
+
+    raw = load_raw_video_memmap(raw_path)
+    pair_count = len(non_overlapping_pair_indices(raw.shape[0]))
+    if pair_count > large_pair_threshold and not allow_large_tensor_export:
+        raise RuntimeError(
+            "refusing full scorer-input tensor cache export for "
+            f"{pair_count} pairs (> threshold {large_pair_threshold}); pass "
+            "--allow-large-scorer-input-cache-tensor-export or use "
+            "--scorer-input-cache-hashes-out for compact identity only"
+        )
+
+    target = _resolve_auth_artifact_output_under_work_dir(
+        work_dir,
+        output_dir,
+        label="scorer-input tensor cache directory",
+    )
+    manifest = write_scorer_input_cache_from_raw_file(
+        raw_path,
+        target,
+        archive_sha256=str(prov.get("archive_sha256") or ""),
+        inflated_outputs_aggregate_sha256=str(
+            inflated_manifest.get("aggregate_sha256") or ""
+        ),
+        batch_pairs=batch_pairs,
+    )
+    manifest["video_name"] = video_name
+    manifest["large_tensor_export_acknowledged"] = bool(allow_large_tensor_export)
+    manifest["returned_via_modal_artifacts"] = False
+    manifest_path = target / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    prov["scorer_input_cache_tensor_manifest"] = {
+        "path": str(manifest_path),
+        "sha256": _sha256(manifest_path, prefix=0),
+        "tensor_cache_dir": str(target),
+        "tensor_payload_returned_via_modal_artifacts": False,
+        "payload": manifest,
+    }
+    with open(work_dir / "provenance.json", "w") as f:
+        json.dump(prov, f, indent=2)
+    return manifest
+
+
+def _resolve_auth_artifact_output_under_work_dir(
+    work_dir: Path,
+    output_path: Path,
+    *,
+    label: str,
+) -> Path:
+    """Resolve auth-side MLX artifact paths without escaping eval custody."""
+
+    work_root = work_dir.resolve()
+    target = output_path if output_path.is_absolute() else work_root / output_path
+    resolved = target.resolve(strict=False)
+    try:
+        resolved.relative_to(work_root)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"{label} must be inside contest_auth_eval work_dir: "
+            f"work_dir={work_root} output={resolved}"
+        ) from exc
+    return resolved
 
 
 def _validate_expected_runtime_tree(prov: dict, expected_runtime_tree_sha256: str | None) -> None:
@@ -1673,9 +1776,44 @@ def main() -> int:
         default=8,
         help="Batch size for --scorer-input-cache-hashes-out streaming preprocessing.",
     )
+    parser.add_argument(
+        "--scorer-input-cache-tensors-out-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Optional directory for full scorer-input NumPy tensor cache export "
+            "from the inflated raw surface. Intended for local runs or explicitly "
+            "mounted auth environments; tensor payloads are not returned through "
+            "Modal result artifacts."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-cache-tensor-batch-pairs",
+        type=int,
+        default=8,
+        help="Batch size for --scorer-input-cache-tensors-out-dir preprocessing.",
+    )
+    parser.add_argument(
+        "--scorer-input-cache-tensor-large-pair-threshold",
+        type=int,
+        default=64,
+        help=(
+            "Maximum pair count allowed for full tensor export without explicit "
+            "--allow-large-scorer-input-cache-tensor-export acknowledgement."
+        ),
+    )
+    parser.add_argument(
+        "--allow-large-scorer-input-cache-tensor-export",
+        action="store_true",
+        help="Explicitly acknowledge full scorer-input tensor export for large surfaces.",
+    )
     args = parser.parse_args()
     if args.scorer_input_cache_hash_batch_pairs < 1:
         raise SystemExit("--scorer-input-cache-hash-batch-pairs must be >= 1")
+    if args.scorer_input_cache_tensor_batch_pairs < 1:
+        raise SystemExit("--scorer-input-cache-tensor-batch-pairs must be >= 1")
+    if args.scorer_input_cache_tensor_large_pair_threshold < 1:
+        raise SystemExit("--scorer-input-cache-tensor-large-pair-threshold must be >= 1")
 
     # Resolve required paths
     archive = args.archive.resolve()
@@ -1793,6 +1931,18 @@ def main() -> int:
                 inflated_manifest,
                 args.scorer_input_cache_hashes_out,
                 batch_pairs=args.scorer_input_cache_hash_batch_pairs,
+            )
+        if args.scorer_input_cache_tensors_out_dir is not None:
+            _record_scorer_input_cache_tensor_artifact(
+                prov,
+                work_dir,
+                inflated,
+                video_names_file,
+                inflated_manifest,
+                args.scorer_input_cache_tensors_out_dir,
+                batch_pairs=args.scorer_input_cache_tensor_batch_pairs,
+                allow_large_tensor_export=args.allow_large_scorer_input_cache_tensor_export,
+                large_pair_threshold=args.scorer_input_cache_tensor_large_pair_threshold,
             )
 
         # Stage 3: run upstream/evaluate.py on submission_dir = work_dir

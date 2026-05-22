@@ -31,7 +31,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--allow-large-tensor-cache",
         action="store_true",
         help=(
-            "Allow eager full .npy tensor cache writes for large raw surfaces. "
+            "Allow full .npy tensor cache writes for large raw surfaces. "
             "Without this flag, large surfaces fail closed; use --hash-only for "
             "auth-axis identity artifacts."
         ),
@@ -84,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
                 archive_sha256=args.archive_sha256,
                 inflated_outputs_aggregate_sha256=args.inflated_outputs_aggregate_sha256,
                 max_pairs=args.max_pairs,
+                batch_pairs=args.batch_pairs,
             )
         else:
             manifest = write_scorer_input_cache_from_video_file(
@@ -128,7 +129,7 @@ def _refuse_unacknowledged_large_tensor_cache(
         raise SystemExit("one of --raw or --video is required")
     if requested_pairs > threshold and not allow_large_tensor_cache:
         raise SystemExit(
-            "refusing eager full MLX scorer-input tensor cache for "
+            "refusing full MLX scorer-input tensor cache for "
             f"{requested_pairs} pairs (> threshold {threshold}); use --hash-only "
             "for auth-axis identity or pass --allow-large-tensor-cache explicitly"
         )

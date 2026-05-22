@@ -52,6 +52,7 @@ CAMERA_HW = (874, 1164)
 SEGNET_INPUT_SIZE = (512, 384)  # (W, H)
 SEGNET_INPUT_HW = (384, 512)
 YUV6_INPUT_HW = (192, 256)
+DEFAULT_MAX_SCORER_CACHE_BATCH_BYTES = 2 * 1024 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -329,9 +330,14 @@ def write_scorer_input_cache_from_raw_file(
     archive_sha256: str | None = None,
     inflated_outputs_aggregate_sha256: str | None = None,
     max_pairs: int | None = None,
+    batch_pairs: int = 8,
 ) -> dict[str, Any]:
     """Build a scorer-input cache from one inflated contest ``.raw`` file."""
 
+    if batch_pairs <= 0:
+        raise ValueError(f"batch_pairs must be positive, got {batch_pairs}")
+    _validate_scorer_cache_batch_working_set(batch_pairs)
+    raw_path = Path(raw_path)
     raw = load_raw_video_memmap(raw_path)
     pair_indices = non_overlapping_pair_indices(raw.shape[0])
     if max_pairs is not None:
@@ -339,20 +345,106 @@ def write_scorer_input_cache_from_raw_file(
         if max_pairs_int < 1:
             raise ValueError(f"max_pairs must be >= 1, got {max_pairs}")
         pair_indices = pair_indices[:max_pairs_int]
-    frame_indices = pair_indices.reshape(-1)
-    pairs = np.asarray(raw[frame_indices]).reshape(len(pair_indices), 2, *raw.shape[1:])
-    batch = preprocess_scorer_inputs_from_pairs(
-        pairs,
-        pair_indices=pair_indices,
-        source=str(raw_path),
+    pair_count = len(pair_indices)
+    if pair_count < 1:
+        raise ValueError(f"raw file has no complete frame pairs: {raw_path}")
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    seg_path = out / "segnet_last_rgb.npy"
+    pose_path = out / "posenet_yuv6_pair.npy"
+    pair_path = out / "pair_indices.npy"
+
+    seg_mm = np.lib.format.open_memmap(
+        seg_path,
+        mode="w+",
+        dtype=np.float32,
+        shape=(pair_count, 3, *SEGNET_INPUT_HW),
     )
-    return write_scorer_input_cache(
-        batch,
-        output_dir,
-        archive_sha256=archive_sha256,
-        inflated_outputs_aggregate_sha256=inflated_outputs_aggregate_sha256,
-        raw_sha256=_file_sha256(raw_path),
+    pose_mm = np.lib.format.open_memmap(
+        pose_path,
+        mode="w+",
+        dtype=np.float32,
+        shape=(pair_count, 12, *YUV6_INPUT_HW),
     )
+    np.save(pair_path, pair_indices)
+    seg_hash = _StreamingArraySha256(tuple(seg_mm.shape), np.dtype("float32"))
+    pose_hash = _StreamingArraySha256(tuple(pose_mm.shape), np.dtype("float32"))
+
+    for start in range(0, pair_count, int(batch_pairs)):
+        chunk_indices = pair_indices[start : start + int(batch_pairs)]
+        frame_indices = chunk_indices.reshape(-1)
+        pairs = np.asarray(raw[frame_indices]).reshape(
+            len(chunk_indices), SEQ_LEN, *raw.shape[1:]
+        )
+        batch = preprocess_scorer_inputs_from_pairs(
+            pairs,
+            pair_indices=chunk_indices,
+            source=str(raw_path),
+        )
+        end = start + len(chunk_indices)
+        seg_mm[start:end] = batch.segnet_last_rgb
+        pose_mm[start:end] = batch.posenet_yuv6_pair
+        seg_hash.update(batch.segnet_last_rgb)
+        pose_hash.update(batch.posenet_yuv6_pair)
+
+    seg_mm.flush()
+    pose_mm.flush()
+
+    manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "source": str(raw_path),
+        "source_kind": "raw",
+        "streaming_batch_pairs": int(batch_pairs),
+        "frame_shape_hwc": [int(raw.shape[1]), int(raw.shape[2]), int(raw.shape[3])],
+        "seq_len": SEQ_LEN,
+        "pair_count": pair_count,
+        "segnet_last_rgb_shape": list(seg_mm.shape),
+        "posenet_yuv6_pair_shape": list(pose_mm.shape),
+        "pair_indices_shape": list(pair_indices.shape),
+        "archive_sha256": archive_sha256,
+        "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
+        "raw_sha256": _file_sha256(raw_path),
+        "hash_domain": ARRAY_HASH_DOMAIN,
+        "producer_environment": _producer_environment(),
+        "artifacts": {
+            "segnet_last_rgb": _artifact_record(seg_path),
+            "posenet_yuv6_pair": _artifact_record(pose_path),
+            "pair_indices": _artifact_record(pair_path),
+        },
+        "array_sha256": {
+            "segnet_last_rgb": seg_hash.hexdigest(),
+            "posenet_yuv6_pair": pose_hash.hexdigest(),
+            "pair_indices": _array_sha256(pair_indices),
+        },
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "device_contract": {
+            "allowed_uses": [
+                "local_mlx_training",
+                "scorer_surrogate_calibration",
+                "prepaid_dispatch_spend_filter_after_score_calibration",
+                "cross_backend_tensor_parity",
+            ],
+            "forbidden_uses": [
+                "auth_eval",
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+                "leaderboard_claim",
+            ],
+        },
+    }
+    (out / "manifest.json").write_text(
+        json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def write_scorer_input_cache_from_video_file(
@@ -373,6 +465,7 @@ def write_scorer_input_cache_from_video_file(
 
     if batch_pairs <= 0:
         raise ValueError(f"batch_pairs must be positive, got {batch_pairs}")
+    _validate_scorer_cache_batch_working_set(batch_pairs)
     video_path = Path(video_path)
     if max_pairs is not None:
         max_pairs_int = int(max_pairs)
@@ -404,6 +497,8 @@ def write_scorer_input_cache_from_video_file(
     )
     pair_indices = non_overlapping_pair_indices(pair_count * SEQ_LEN)
     np.save(pair_path, pair_indices)
+    seg_hash = _StreamingArraySha256(tuple(seg_mm.shape), np.dtype("float32"))
+    pose_hash = _StreamingArraySha256(tuple(pose_mm.shape), np.dtype("float32"))
 
     written = 0
     for pairs in _iter_video_pair_chunks(video_path, max_pairs=pair_count, batch_pairs=batch_pairs):
@@ -416,6 +511,8 @@ def write_scorer_input_cache_from_video_file(
         )
         seg_mm[written : written + chunk_count] = batch.segnet_last_rgb
         pose_mm[written : written + chunk_count] = batch.posenet_yuv6_pair
+        seg_hash.update(batch.segnet_last_rgb)
+        pose_hash.update(batch.posenet_yuv6_pair)
         written += chunk_count
 
     if written != pair_count:
@@ -445,8 +542,8 @@ def write_scorer_input_cache_from_video_file(
             "pair_indices": _artifact_record(pair_path),
         },
         "array_sha256": {
-            "segnet_last_rgb": _array_sha256(seg_mm),
-            "posenet_yuv6_pair": _array_sha256(pose_mm),
+            "segnet_last_rgb": seg_hash.hexdigest(),
+            "posenet_yuv6_pair": pose_hash.hexdigest(),
             "pair_indices": _array_sha256(pair_indices),
         },
         "evidence_grade": EVIDENCE_GRADE_MLX,
@@ -517,6 +614,24 @@ def _video_frame_count(video_path: Path) -> int:
         return sum(1 for _ in container.decode(stream))
     finally:
         container.close()
+
+
+def _validate_scorer_cache_batch_working_set(
+    batch_pairs: int,
+    *,
+    max_working_set_bytes: int = DEFAULT_MAX_SCORER_CACHE_BATCH_BYTES,
+) -> None:
+    pair_count = int(batch_pairs)
+    raw_bytes = pair_count * SEQ_LEN * CAMERA_HW[0] * CAMERA_HW[1] * 3
+    seg_bytes = pair_count * 3 * SEGNET_INPUT_HW[0] * SEGNET_INPUT_HW[1] * 4
+    pose_bytes = pair_count * 12 * YUV6_INPUT_HW[0] * YUV6_INPUT_HW[1] * 4
+    estimated_bytes = raw_bytes + seg_bytes + pose_bytes
+    if estimated_bytes > int(max_working_set_bytes):
+        raise ValueError(
+            "batch_pairs working set is too large for bounded scorer-cache materialization: "
+            f"batch_pairs={batch_pairs} estimated_bytes={estimated_bytes} "
+            f"max_bytes={max_working_set_bytes}"
+        )
 
 
 def _iter_video_pair_chunks(
