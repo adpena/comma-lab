@@ -111,6 +111,33 @@ def _auth_with_scorer_input_hash(
     return auth
 
 
+def _auth_with_scorer_input_tensor_manifest(
+    *,
+    array_hashes: dict[str, str] | None = None,
+) -> dict[str, object]:
+    auth = _auth()
+    provenance = auth["provenance"]
+    assert isinstance(provenance, dict)
+    provenance["scorer_input_cache_tensor_manifest"] = {
+        "payload": {
+            "schema_version": "mlx_scorer_input_cache.v1",
+            "archive_sha256": "a" * 64,
+            "inflated_outputs_aggregate_sha256": "b" * 64,
+            "raw_sha256": "r" * 64,
+            "hash_domain": HASH_DOMAIN,
+            "pair_count": 600,
+            "segnet_last_rgb_shape": [600, 3, 384, 512],
+            "posenet_yuv6_pair_shape": [600, 12, 192, 256],
+            "pair_indices_shape": [600, 2],
+            "array_sha256": dict(array_hashes or ARRAY_HASHES),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "promotable": False,
+        }
+    }
+    return auth
+
+
 def _reference_manifest(*, array_hashes: dict[str, str] | None = None) -> dict[str, object]:
     return {
         "schema_version": "mlx_scorer_input_cache_hashes.v1",
@@ -260,6 +287,17 @@ def test_cache_audit_uses_canonical_equation_for_scorer_input_hashes() -> None:
 
     assert audit["passed"] is True
     assert audit["canonical_equation"]["equation_id"] == "scorer_input_cache_hash_identity_v1"
+    assert audit["canonical_equation"]["identity_residual"] == 0
+
+
+def test_cache_audit_accepts_auth_eval_tensor_manifest() -> None:
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        _cache(),
+        _auth_with_scorer_input_tensor_manifest(),
+    )
+
+    assert audit["passed"] is True
+    assert audit["auth_eval"]["scorer_input_hash_reference_source"] == "auth_eval_provenance"
     assert audit["canonical_equation"]["identity_residual"] == 0
 
 

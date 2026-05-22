@@ -48,7 +48,7 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
     auth_n_samples = _int(metrics.get("n_samples"))
     expected = expected_pair_count if expected_pair_count is not None else auth_n_samples
     auth_raw_sha = _first_raw_file_sha256(auth_eval_payload)
-    auth_hash_manifest = _auth_scorer_input_hash_manifest_payload(auth_eval_payload)
+    auth_hash_manifest = _auth_scorer_input_manifest_payload(auth_eval_payload)
     hash_reference = auth_hash_manifest or reference_cache_manifest or {}
     hash_reference_source = (
         "auth_eval_provenance"
@@ -309,17 +309,18 @@ def _first_raw_file_sha256(payload: dict[str, Any]) -> str | None:
     return _string(first.get("sha256"))
 
 
-def _auth_scorer_input_hash_manifest_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def _auth_scorer_input_manifest_payload(payload: dict[str, Any]) -> dict[str, Any]:
     provenance = payload.get("provenance")
     if not isinstance(provenance, dict):
         return {}
-    manifest = provenance.get("scorer_input_cache_hash_manifest")
-    if not isinstance(manifest, dict):
-        return {}
-    payload_obj = manifest.get("payload")
-    if not isinstance(payload_obj, dict):
-        return {}
-    return payload_obj
+    for key in ("scorer_input_cache_hash_manifest", "scorer_input_cache_tensor_manifest"):
+        manifest = provenance.get(key)
+        if not isinstance(manifest, dict):
+            continue
+        payload_obj = manifest.get("payload")
+        if isinstance(payload_obj, dict):
+            return payload_obj
+    return {}
 
 
 def _manifest_hash_domain(payload: dict[str, Any]) -> str | None:
