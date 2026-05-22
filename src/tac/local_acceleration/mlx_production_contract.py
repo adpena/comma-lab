@@ -234,6 +234,14 @@ def build_mlx_scorer_production_contract_manifest(
             "batch_pairs": response_payload.get("batch_pairs"),
             "n_samples": response_payload.get("n_samples"),
             "pair_window": response_payload.get("pair_window"),
+            "archive_size_bytes": response_payload.get("archive_size_bytes"),
+            "canonical_score": response_payload.get("canonical_score"),
+            "score_recomputed_from_components": response_payload.get(
+                "score_recomputed_from_components"
+            ),
+            "avg_posenet_dist": response_payload.get("avg_posenet_dist"),
+            "avg_segnet_dist": response_payload.get("avg_segnet_dist"),
+            "score_formula_recompute": _response_score_formula_summary(response_payload),
             "archive_sha256": response_payload.get("archive_sha256"),
             "inflated_outputs_aggregate_sha256": response_payload.get(
                 "inflated_outputs_aggregate_sha256"
@@ -421,7 +429,7 @@ def _check_response_payload(
             blockers.append("response_canonical_score_recompute_mismatch")
     except (TypeError, ValueError):
         pass
-    _check_response_formula_recompute(payload, archive_size_bytes, blockers)
+    _check_response_formula_recompute(payload, blockers)
 
     components = payload.get("components")
     if not isinstance(components, dict):
@@ -1433,27 +1441,62 @@ def _check_component_shape(
 
 def _check_response_formula_recompute(
     payload: dict[str, Any],
-    archive_size_bytes: int | None,
     blockers: list[str],
 ) -> None:
+    summary = _response_score_formula_summary(payload)
+    blocker = summary.get("blocker")
+    if blocker:
+        blockers.append(str(blocker))
+
+
+def _response_score_formula_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    archive_size_bytes = _safe_int(payload.get("archive_size_bytes"))
     if archive_size_bytes is None:
-        return
+        return {
+            "passed": False,
+            "blocker": "response_archive_size_bytes_invalid",
+        }
     try:
-        expected = contest_formula_score(
-            seg_dist=float(payload.get("avg_segnet_dist")),
-            pose_dist=float(payload.get("avg_posenet_dist")),
-            archive_bytes=archive_size_bytes,
-        )
+        seg_dist = float(payload.get("avg_segnet_dist"))
+        pose_dist = float(payload.get("avg_posenet_dist"))
         actual = float(payload.get("score_recomputed_from_components"))
     except (TypeError, ValueError):
-        return
-    if not math.isfinite(expected) or not math.isfinite(actual):
-        return
-    if not math.isclose(actual, expected, rel_tol=0.0, abs_tol=1.0e-12):
-        blockers.append(
-            "response_score_formula_recompute_mismatch:"
-            f"actual={actual}:expected={expected}"
-        )
+        return {
+            "passed": False,
+            "blocker": "response_score_formula_inputs_invalid",
+        }
+    if not (
+        math.isfinite(seg_dist)
+        and math.isfinite(pose_dist)
+        and math.isfinite(actual)
+    ):
+        return {
+            "passed": False,
+            "blocker": "response_score_formula_inputs_non_finite",
+        }
+    expected = contest_formula_score(
+        seg_dist=seg_dist,
+        pose_dist=pose_dist,
+        archive_bytes=archive_size_bytes,
+    )
+    abs_delta = abs(actual - expected)
+    passed = bool(math.isclose(actual, expected, rel_tol=0.0, abs_tol=1.0e-12))
+    blocker = None if passed else (
+        "response_score_formula_recompute_mismatch:"
+        f"actual={actual}:expected={expected}"
+    )
+    return {
+        "passed": passed,
+        "blocker": blocker,
+        "archive_size_bytes": archive_size_bytes,
+        "avg_segnet_dist": seg_dist,
+        "avg_posenet_dist": pose_dist,
+        "actual_score": actual,
+        "expected_score": expected,
+        "abs_delta": abs_delta,
+        "abs_tolerance": 1.0e-12,
+        "formula": "contest_formula_score(seg_dist, pose_dist, archive_size_bytes)",
+    }
 
 
 def _finite_float_field(payload: dict[str, Any], key: str, blockers: list[str]) -> None:

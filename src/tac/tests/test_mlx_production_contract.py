@@ -47,6 +47,16 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
     assert manifest["required_gates"]["cache_auth_audit"] is True
     assert manifest["required_gates"]["torch_parity"] is True
     assert manifest["required_gates"]["profile_stability"] is True
+    assert manifest["response_summary"]["archive_size_bytes"] == 123
+    assert manifest["response_summary"]["canonical_score"] == _fixture_score()
+    assert manifest["response_summary"]["avg_posenet_dist"] == 0.0
+    assert manifest["response_summary"]["avg_segnet_dist"] == 0.0
+    formula = manifest["response_summary"]["score_formula_recompute"]
+    assert formula["passed"] is True
+    assert formula["blocker"] is None
+    assert formula["expected_score"] == _fixture_score()
+    assert formula["actual_score"] == _fixture_score()
+    assert formula["abs_delta"] == 0.0
     assert manifest["response_summary"]["candidate_cache_array_sha256"] == {
         "pair_indices": "9" * 64,
         "posenet_yuv6_pair": "a" * 64,
