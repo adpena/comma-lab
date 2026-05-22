@@ -24,6 +24,8 @@ eval artifact passes the existing strict gates.
   `lane_dqs1_pairset_drop_one_rank020_pair0430_local_first_20260522`
 - Registered current queue lane:
   `lane_dqs1_pairset_drop_one_rank022_pair0167_local_first_20260522`
+- Registered current queue lane after rank022 exact observation:
+  `lane_dqs1_pairset_drop_one_rank019_pair0151_local_first_20260522`
 
 ## Contract
 
@@ -42,8 +44,8 @@ eval artifact passes the existing strict gates.
 
 ## Current DQS1 Use
 
-The checked-in queue now encodes the current next rank022/pair0167 local-first
-flow:
+The checked-in queue now encodes the current next rank019/pair0151 local-first
+flow after rank022/pair0167 exact CPU observation:
 
 1. Plan selective packet.
 2. Materialize submission directory.

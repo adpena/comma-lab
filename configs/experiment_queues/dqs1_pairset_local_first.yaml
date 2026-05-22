@@ -13,9 +13,9 @@
   },
   "experiments": [
     {
-      "id": "pairset_drop_one_rank022_pair0167",
-      "priority": 22,
-      "lane_id": "lane_dqs1_pairset_drop_one_rank022_pair0167_local_first_20260522",
+      "id": "pairset_drop_one_rank019_pair0151",
+      "priority": 19,
+      "lane_id": "lane_dqs1_pairset_drop_one_rank019_pair0151_local_first_20260522",
       "tags": ["dqs1", "pairset", "local-first", "no-score-authority"],
       "steps": [
         {
@@ -28,19 +28,19 @@
             "--base-archive",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_rank022_pair0167.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_rank019_pair0151.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_rank022_pair0167.md",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_rank019_pair0151.md",
             "--frame-policy",
             "pair_all_frames",
             "--selected-pairs",
-            "26,59,68,98,109,112,134,151,229,242,257,259,296,320,327,371,376,378,412,430,440,459,467,479,492,496,501,520,544,555,588"
+            "26,59,68,98,109,112,134,167,229,242,257,259,296,320,327,371,376,378,412,430,440,459,467,479,492,496,501,520,544,555,588"
           ],
           "resources": {"kind": "local_cpu"},
           "postconditions": [
             {
               "type": "json_equals",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_rank022_pair0167.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_rank019_pair0151.json",
               "key": "score_claim",
               "equals": false
             }
@@ -53,22 +53,22 @@
             ".venv/bin/python",
             "tools/materialize_decoder_q_selective_runtime_candidate.py",
             "--plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_rank022_pair0167.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_rank019_pair0151.json",
             "--base-submission-dir",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
             "--output-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/submission_dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/submission_dir",
             "--frame-policy",
             "pair_all_frames",
             "--manifest-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/materialization_manifest.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/materialization_manifest.json",
             "--force"
           ],
           "resources": {"kind": "local_cpu"},
           "postconditions": [
             {
               "type": "json_equals",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/materialization_manifest.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/materialization_manifest.json",
               "key": "score_claim",
               "equals": false
             }
@@ -86,23 +86,23 @@
             "--global-mutated-archive",
             "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
             "--selective-submission-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/submission_dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/submission_dir",
             "--selected-pairs",
-            "26,59,68,98,109,112,134,151,229,242,257,259,296,320,327,371,376,378,412,430,440,459,467,479,492,496,501,520,544,555,588",
+            "26,59,68,98,109,112,134,167,229,242,257,259,296,320,327,371,376,378,412,430,440,459,467,479,492,496,501,520,544,555,588",
             "--frame-policy",
             "pair_all_frames",
             "--timeout-seconds",
             "600",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/locality_work",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/locality_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/locality_controls.json"
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/locality_controls.json"
           ],
           "resources": {"kind": "local_cpu"},
           "postconditions": [
             {
               "type": "json_equals",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/locality_controls.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/locality_controls.json",
               "key": "locality_controls_passed",
               "equals": true
             }
@@ -116,9 +116,9 @@
             ".venv/bin/python",
             "experiments/contest_auth_eval.py",
             "--archive",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/submission_dir/archive.zip",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/submission_dir/archive.zip",
             "--inflate-sh",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/submission_dir/inflate.sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/submission_dir/inflate.sh",
             "--upstream-dir",
             "upstream",
             "--video-names-file",
@@ -126,9 +126,9 @@
             "--device",
             "cpu",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/local_cpu_advisory_work",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/local_cpu_advisory_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/local_cpu_advisory.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/local_cpu_advisory.json",
             "--inflate-timeout",
             "600",
             "--evaluate-timeout",
@@ -139,7 +139,7 @@
           "postconditions": [
             {
               "type": "json_equals",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank022_pair0167/local_cpu_advisory.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank019_pair0151/local_cpu_advisory.json",
               "key": "score_claim",
               "equals": false
             }
