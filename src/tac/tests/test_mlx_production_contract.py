@@ -94,6 +94,32 @@ def test_mlx_production_contract_rejects_gpu_non_singleton_batch() -> None:
     assert GPU_BATCH_SHAPE_BLOCKER in manifest["blockers"]
 
 
+def test_mlx_production_contract_rejects_multi_pair_batch_invariance_mismatch() -> None:
+    payload = _response_payload(device="cpu", batch_pairs=4)
+
+    manifest = build_mlx_scorer_production_contract_manifest(
+        payload,
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(device="cpu", batch_pairs=2),
+    )
+
+    assert manifest["passed"] is False
+    assert "batch_invariance_batch_pairs_mismatch:response=4:gate=2" in manifest["blockers"]
+
+
+def test_mlx_production_contract_rejects_multi_pair_batch_invariance_device_mismatch() -> None:
+    payload = _response_payload(device="cpu", batch_pairs=4)
+
+    manifest = build_mlx_scorer_production_contract_manifest(
+        payload,
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(device="gpu", batch_pairs=4),
+    )
+
+    assert manifest["passed"] is False
+    assert "batch_invariance_device_type_mismatch:response=cpu:gate=gpu" in manifest["blockers"]
+
+
 def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
     response_path = tmp_path / "response.json"
     stability_path = tmp_path / "stability.json"
@@ -196,10 +222,12 @@ def _profile_stability(*, passed: bool = True) -> dict:
     }
 
 
-def _batch_invariance(*, passed: bool = True) -> dict:
+def _batch_invariance(*, passed: bool = True, device: str = "cpu", batch_pairs: int = 1) -> dict:
     return {
         "schema_version": "mlx_scorer_batch_invariance.v1",
         "passed": passed,
+        "device_type": device,
+        "batch_pairs": batch_pairs,
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,

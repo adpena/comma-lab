@@ -87,12 +87,12 @@ def build_mlx_scorer_production_contract_manifest(
         else:
             warnings.append(missing)
     else:
-        _check_optional_gate_manifest(
+        _check_batch_invariance_gate_manifest(
             batch_invariance,
             blockers=blockers,
             warnings=warnings,
-            schema_prefix="mlx_scorer_batch_invariance",
-            label="batch_invariance",
+            response_device=_response_device(response_payload),
+            response_batch_pairs=_safe_int(response_payload.get("batch_pairs")),
         )
 
     passed = not blockers
@@ -275,6 +275,45 @@ def _check_optional_gate_manifest(
         blockers.append(f"{label}_not_passing")
 
 
+def _check_batch_invariance_gate_manifest(
+    manifest: dict[str, Any],
+    *,
+    blockers: list[str],
+    warnings: list[str],
+    response_device: str,
+    response_batch_pairs: int | None,
+) -> None:
+    _check_optional_gate_manifest(
+        manifest,
+        blockers=blockers,
+        warnings=warnings,
+        schema_prefix="mlx_scorer_batch_invariance",
+        label="batch_invariance",
+    )
+    if not isinstance(manifest, dict):
+        return
+    if response_batch_pairs is None or response_batch_pairs <= 1:
+        return
+
+    gate_device = str(manifest.get("device_type") or "").lower()
+    if not gate_device:
+        blockers.append("batch_invariance_device_type_missing")
+    elif gate_device != response_device:
+        blockers.append(
+            "batch_invariance_device_type_mismatch:"
+            f"response={response_device}:gate={gate_device}"
+        )
+
+    gate_batch_pairs = _safe_int(manifest.get("batch_pairs"))
+    if gate_batch_pairs is None:
+        blockers.append("batch_invariance_batch_pairs_invalid")
+    elif gate_batch_pairs != response_batch_pairs:
+        blockers.append(
+            "batch_invariance_batch_pairs_mismatch:"
+            f"response={response_batch_pairs}:gate={gate_batch_pairs}"
+        )
+
+
 def _response_device(payload: dict[str, Any]) -> str:
     hardware = str(payload.get("hardware_substrate") or "")
     parts = hardware.strip().split()
@@ -292,6 +331,15 @@ def _int_field(payload: dict[str, Any], key: str, blockers: list[str]) -> int | 
         return int(value)
     except (TypeError, ValueError):
         blockers.append(f"response_{key}_invalid")
+        return None
+
+
+def _safe_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
         return None
 
 
