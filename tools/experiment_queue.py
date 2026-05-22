@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import signal
 import sys
 from pathlib import Path
 
@@ -31,6 +32,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     queue_summary,
     ready_steps,
     rewind_step,
+    run_queue_worker,
     run_ready_step,
     set_control_mode,
 )
@@ -106,6 +108,50 @@ def cmd_run_once(args: argparse.Namespace) -> int:
     return 0 if not result.get("executed") or result.get("succeeded") else 2
 
 
+def cmd_run_worker(args: argparse.Namespace) -> int:
+    queue, state = _load(args)
+    stop_signals: list[int] = []
+    previous_sigint = signal.getsignal(signal.SIGINT)
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+
+    def _request_stop(signum: int, _frame: object) -> None:
+        if signum not in stop_signals:
+            stop_signals.append(signum)
+
+    signal.signal(signal.SIGINT, _request_stop)
+    signal.signal(signal.SIGTERM, _request_stop)
+    try:
+        with connect_state(state) as conn:
+            initialize_queue_state(conn, queue)
+            result = run_queue_worker(
+                conn,
+                queue,
+                repo_root=REPO_ROOT,
+                execute=args.execute,
+                max_steps=args.max_steps,
+                idle_sleep_seconds=args.idle_sleep_seconds,
+                max_idle_cycles=args.max_idle_cycles,
+                allow_cloud=args.allow_cloud,
+                log_root=args.log_root,
+                stop_requested=lambda: bool(stop_signals),
+                reload_queue=None
+                if args.no_reload_definition
+                else lambda: load_queue_definition(args.queue),
+            )
+    finally:
+        signal.signal(signal.SIGINT, previous_sigint)
+        signal.signal(signal.SIGTERM, previous_sigterm)
+
+    _json_print(
+        {
+            "state": str(state),
+            "stop_signals": [signal.Signals(signum).name for signum in stop_signals],
+            **result,
+        }
+    )
+    return 2 if result.get("failure_count", 0) else 0
+
+
 def cmd_control(args: argparse.Namespace) -> int:
     queue, state = _load(args)
     with connect_state(state) as conn:
@@ -158,6 +204,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp.add_argument("--allow-cloud", action="store_true", help="include cloud resource steps")
     sp.add_argument("--log-root", default=None, help="override command log root")
     sp.set_defaults(func=cmd_run_once)
+
+    sp = sub.add_parser(
+        "run-worker",
+        aliases=["run-loop"],
+        help="execute ready steps in a bounded worker loop",
+    )
+    sp.add_argument("--execute", action="store_true", help="actually run selected commands")
+    sp.add_argument("--allow-cloud", action="store_true", help="include cloud resource steps")
+    sp.add_argument("--log-root", default=None, help="override command log root")
+    sp.add_argument("--max-steps", type=int, default=1, help="maximum steps to start")
+    sp.add_argument(
+        "--no-reload-definition",
+        action="store_true",
+        help="pin the queue definition loaded at startup instead of rereading between steps",
+    )
+    sp.add_argument(
+        "--idle-sleep-seconds",
+        type=float,
+        default=5.0,
+        help="sleep between idle polls before the idle limit is reached",
+    )
+    sp.add_argument(
+        "--max-idle-cycles",
+        type=int,
+        default=1,
+        help="maximum no-ready-step polls before stopping",
+    )
+    sp.set_defaults(func=cmd_run_worker)
 
     sp = sub.add_parser("control")
     sp.add_argument("mode", choices=["running", "paused", "frozen"])

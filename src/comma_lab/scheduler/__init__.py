@@ -9,6 +9,7 @@ from .experiment_queue import (
     queue_summary,
     ready_steps,
     rewind_step,
+    run_queue_worker,
     run_ready_step,
     set_control_mode,
 )
@@ -46,6 +47,7 @@ __all__ = [
     "queue_summary",
     "ready_steps",
     "rewind_step",
+    "run_queue_worker",
     "run_ready_step",
     "set_control_mode",
 ]

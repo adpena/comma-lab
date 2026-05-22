@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-22T19:54:00Z
-from_state_hash: frontier_scan_dqs1_pairset_rank022_observed_hardened_20260522T1954Z
-regenerated_by: codex:dqs1_pairset_rank022_exact_cpu_observed_20260522
-last_refreshed_at: 2026-05-22T19:54:00Z
-last_refreshed_by: codex:dqs1_pairset_rank022_exact_cpu_observed_20260522
-last_refreshed_head: 90d02ae1
+generated_at: 2026-05-22T20:11:00Z
+from_state_hash: frontier_scan_dqs1_pairset_rank019_observed_hardened_20260522T2011Z
+regenerated_by: codex:dqs1_pairset_rank019_exact_cpu_observed_20260522
+last_refreshed_at: 2026-05-22T20:11:00Z
+last_refreshed_by: codex:dqs1_pairset_rank019_exact_cpu_observed_20260522
+last_refreshed_head: d49171d7
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
@@ -12,10 +12,10 @@ last_refreshed_note: |
   by the pairset drop-one rank021 DQS1 archive at 0.19202828295713675. MLX
   remains non-authoritative local research signal. The compact gap-ULEB packet
   passed raw-output locality and exact Modal recovery on both CPU and CUDA; CPU
-  improves the frontier, CUDA regresses. Drop-one rank022/pair0167 has now
+  improves the frontier, CUDA regresses. Drop-one rank019/pair0151 has now
   passed locality and exact Modal CPU eval and regressed to the same
-  SegNet-penalized one-byte class as rank010/rank013/rank020/rank026/rank027/rank031,
-  so the next pairset component-marginal candidate is rank019/pair0151 after
+  SegNet-penalized one-byte class as rank010/rank013/rank020/rank022/rank026/rank027/rank031,
+  so the next pairset component-marginal candidate is rank023/pair0440 after
   protected-pair identity hardening.
 -->
 
@@ -254,13 +254,18 @@ last_refreshed_note: |
   `178559` bytes) also passed locality and exact Modal `[contest-CPU]` eval
   and regressed to `0.19202928295713673` with the same response class:
   PoseNet `+0.0`, SegNet `+0.000001`, rate `-0.00000066585895312`.
+  Follow-up `pairset_drop_one_rank019_pair0151`
+  (`846f19ba010b79e3c9c47627ff8754a2dd07bb0f10047ad4896c468e802701c6`,
+  `178559` bytes) also passed locality and exact Modal `[contest-CPU]` eval
+  and regressed to `0.19202928295713673` with the same response class:
+  PoseNet `+0.0`, SegNet `+0.000001`, rate `-0.00000066585895312`.
   The refreshed identity-verified, selector-scoped portfolio now includes the
   component marginal model from `cross_family_candidate_portfolio.v1`: CPU-safe
   observed drop pair `[371]`, CPU-protected observed drop pairs
-  `[327, 376, 320, 378, 296, 430, 167]`,
+  `[327, 376, 320, 378, 296, 430, 167, 151]`,
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
   for `pairset_drop_one_rank021_pair0371`. The current recommended fresh
-  local-control candidate is `pairset_drop_one_rank019_pair0151`. The response
+  local-control candidate is `pairset_drop_one_rank023_pair0440`. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
   selected-pair identity matching before fitting. The operator-action prior now
@@ -272,16 +277,16 @@ last_refreshed_note: |
   now the fail-closed helper
   `tools/canonicalize_pairset_component_marginal_signal.py`; its latest
   planning-only output is
-  `experiments/results/cross_family_candidate_portfolio/20260522T195400Z_pairset_component_rank022_observed_hardened/portfolio.json`
+  `experiments/results/cross_family_candidate_portfolio/20260522T201100Z_pairset_component_rank019_observed_hardened/portfolio.json`
   (SHA-256
-  `7c380e1c866c8039b32b84e684c496f9e25fcfb1f8188ee3546505b2b2143e95`),
+  `66dbcd3588d1f19f844cdd73f2b3656b811ce0ff9b0b187efd47b22041a5f267`),
   ignored by `.gitignore` under `experiments/results/*`.
 - Local-first experiment orchestration now has a reusable SQLite-backed queue
   substrate: `tools/experiment_queue.py`,
   `src/comma_lab/scheduler/experiment_queue.py`, and
-  `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with the rank022
+  `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with the rank019
   target now exact-eval-observed and the next candidate routed to
-  rank019/pair0151. Queue commands are argv
+  rank023/pair0440. Queue commands are argv
   lists, state and telemetry live in SQLite, cloud resources are hidden unless
   explicitly allowed, controls support `running`/`paused`/`frozen`, and
   rewinds can cascade through dependent steps. Generated queue state and logs

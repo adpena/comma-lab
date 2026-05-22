@@ -5,7 +5,7 @@ import os
 import sqlite3
 import subprocess
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,6 +18,7 @@ CONTROL_MODES = {"running", "paused", "frozen"}
 STEP_STATUSES = {"queued", "running", "succeeded", "failed", "blocked", "skipped"}
 LOCAL_RESOURCE_KINDS = {"local_cpu", "local_mlx", "local_mps", "local"}
 CLOUD_RESOURCE_KINDS = {"cloud_cpu", "cloud_gpu", "modal_cpu", "modal_gpu", "cuda_auth"}
+KNOWN_RESOURCE_KINDS = LOCAL_RESOURCE_KINDS | CLOUD_RESOURCE_KINDS
 
 
 class ExperimentQueueError(ValueError):
@@ -82,6 +83,16 @@ def _non_negative_int(value: object, label: str, *, default: int = 0) -> int:
     return value
 
 
+def _resource_kind_value(value: object, label: str) -> str:
+    kind = _require_text(value, label)
+    if kind in KNOWN_RESOURCE_KINDS or kind.startswith("cloud_"):
+        return kind
+    raise ExperimentQueueError(
+        f"{label} unsupported resource kind {kind!r}; known kinds are "
+        f"{sorted(KNOWN_RESOURCE_KINDS)}"
+    )
+
+
 def _load_json_compatible(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text())
@@ -107,7 +118,10 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
         raise ExperimentQueueError(f"{step_id}.command must be a non-empty argv list")
     command_items = [_require_text(item, f"{step_id}.command[{idx}]") for idx, item in enumerate(command)]
     resources = _optional_mapping(raw.get("resources"), f"{step_id}.resources")
-    resource_kind = _require_text(resources.get("kind", "local_cpu"), f"{step_id}.resources.kind")
+    resource_kind = _resource_kind_value(
+        resources.get("kind", "local_cpu"),
+        f"{step_id}.resources.kind",
+    )
     requires = _string_list(raw.get("requires"), f"{step_id}.requires")
     postconditions = raw.get("postconditions", [])
     if not isinstance(postconditions, list):
@@ -142,7 +156,7 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
     max_concurrency = _optional_mapping(controls.get("max_concurrency"), "controls.max_concurrency")
     normalized_concurrency: dict[str, int] = {}
     for key, value in max_concurrency.items():
-        normalized_concurrency[_require_text(key, "controls.max_concurrency key")] = _non_negative_int(
+        normalized_concurrency[_resource_kind_value(key, "controls.max_concurrency key")] = _non_negative_int(
             value,
             f"controls.max_concurrency.{key}",
             default=1,
@@ -175,7 +189,19 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
         ]
         if len(steps) != len(raw_steps):
             raise ExperimentQueueError(f"{experiment_id}.steps must contain only objects")
-        step_ids = {step["id"] for step in steps}
+        seen_step_ids: set[str] = set()
+        duplicate_step_ids: set[str] = set()
+        for step in steps:
+            step_id = str(step["id"])
+            if step_id in seen_step_ids:
+                duplicate_step_ids.add(step_id)
+            seen_step_ids.add(step_id)
+        step_ids = seen_step_ids
+        if duplicate_step_ids:
+            duplicates = sorted(duplicate_step_ids)
+            raise ExperimentQueueError(
+                f"{experiment_id}.steps contains duplicate step id(s): {duplicates}"
+            )
         for step in steps:
             unknown = sorted(set(step["requires"]) - step_ids)
             if unknown:
@@ -503,6 +529,62 @@ def _set_step_status(
     )
 
 
+def _claim_step_running(
+    conn: sqlite3.Connection,
+    *,
+    queue_id: str,
+    experiment_id: str,
+    step_id: str,
+    event: Mapping[str, Any],
+) -> str | None:
+    cursor = conn.execute(
+        """
+        UPDATE step_state
+        SET status = 'running',
+            attempts = attempts + 1,
+            updated_at_utc = ?,
+            last_event_json = ?
+        WHERE queue_id = ?
+          AND experiment_id = ?
+          AND step_id = ?
+          AND status = 'queued'
+          AND COALESCE(
+            (SELECT mode FROM queue_controls WHERE queue_controls.queue_id = ?),
+            'running'
+          ) = 'running'
+        """,
+        (_utc_now(), _json_text(dict(event)), queue_id, experiment_id, step_id, queue_id),
+    )
+    if cursor.rowcount != 1:
+        mode = control_mode(conn, queue_id)
+        reason = "control_not_running" if mode != "running" else "not_queued"
+        refused_event = {**dict(event), "claim_refused_reason": reason, "control_mode": mode}
+        append_event(
+            conn,
+            queue_id=queue_id,
+            experiment_id=experiment_id,
+            step_id=step_id,
+            event_type=(
+                "step_claim_refused_control_not_running"
+                if reason == "control_not_running"
+                else "step_claim_refused"
+            ),
+            payload=refused_event,
+        )
+        conn.commit()
+        return reason
+    append_event(
+        conn,
+        queue_id=queue_id,
+        experiment_id=experiment_id,
+        step_id=step_id,
+        event_type="step_running",
+        payload=event,
+    )
+    conn.commit()
+    return None
+
+
 def run_ready_step(
     conn: sqlite3.Connection,
     queue: Mapping[str, Any],
@@ -523,16 +605,22 @@ def run_ready_step(
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / f"{ts}.log"
 
-    _set_step_status(
+    running_event = {"command": list(ready.command), "log_path": str(log_path)}
+    claim_refused_reason = _claim_step_running(
         conn,
         queue_id=ready.queue_id,
         experiment_id=ready.experiment_id,
         step_id=ready.step_id,
-        status="running",
-        event={"command": list(ready.command), "log_path": str(log_path)},
-        increment_attempts=True,
+        event=running_event,
     )
-    conn.commit()
+    if claim_refused_reason:
+        return {
+            "executed": False,
+            "claim_refused": True,
+            "claim_refused_reason": claim_refused_reason,
+            "ready_step": ready.to_dict(),
+            **running_event,
+        }
 
     start = time.monotonic()
     returncode = 0
@@ -593,6 +681,208 @@ def run_ready_step(
     )
     conn.commit()
     return {"executed": True, "succeeded": succeeded, **event}
+
+
+def run_queue_worker(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+    execute: bool,
+    max_steps: int,
+    idle_sleep_seconds: float = 5.0,
+    max_idle_cycles: int = 1,
+    allow_cloud: bool = False,
+    log_root: str | Path | None = None,
+    stop_requested: Callable[[], bool] | None = None,
+    reload_queue: Callable[[], Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps < 0:
+        raise ExperimentQueueError("max_steps must be a non-negative integer")
+    if (
+        isinstance(max_idle_cycles, bool)
+        or not isinstance(max_idle_cycles, int)
+        or max_idle_cycles < 0
+    ):
+        raise ExperimentQueueError("max_idle_cycles must be a non-negative integer")
+    if idle_sleep_seconds < 0:
+        raise ExperimentQueueError("idle_sleep_seconds must be non-negative")
+
+    queue_id = str(queue["queue_id"])
+    active_queue: Mapping[str, Any] = queue
+
+    def _active_queue() -> Mapping[str, Any]:
+        nonlocal active_queue
+        if reload_queue is None:
+            return active_queue
+        refreshed = reload_queue()
+        if str(refreshed["queue_id"]) != queue_id:
+            raise ExperimentQueueError(
+                f"reloaded queue_id changed from {queue_id!r} to {refreshed['queue_id']!r}"
+            )
+        initialize_queue_state(conn, refreshed)
+        active_queue = refreshed
+        return active_queue
+
+    started_at = _utc_now()
+    append_event(
+        conn,
+        queue_id=queue_id,
+        experiment_id=None,
+        step_id=None,
+        event_type="worker_started",
+        payload={
+            "execute": execute,
+            "max_steps": max_steps,
+            "max_idle_cycles": max_idle_cycles,
+            "idle_sleep_seconds": idle_sleep_seconds,
+            "allow_cloud": allow_cloud,
+        },
+    )
+    conn.commit()
+
+    if not execute:
+        planned = [
+            step.to_dict()
+            for step in ready_steps(conn, _active_queue(), allow_cloud=allow_cloud)
+        ]
+        selected = planned[:max_steps] if max_steps else []
+        append_event(
+            conn,
+            queue_id=queue_id,
+            experiment_id=None,
+            step_id=None,
+            event_type="worker_planned",
+            payload={"selected_steps": selected, "ready_step_count": len(planned)},
+        )
+        append_event(
+            conn,
+            queue_id=queue_id,
+            experiment_id=None,
+            step_id=None,
+            event_type="worker_stopped",
+            payload={"stop_reason": "dry_run", "steps_started": 0},
+        )
+        conn.commit()
+        return {
+            "schema": "experiment_queue_worker_result.v1",
+            "queue_id": queue_id,
+            "execute": False,
+            "allow_cloud": allow_cloud,
+            "started_at_utc": started_at,
+            "stop_reason": "dry_run",
+            "steps_started": 0,
+            "success_count": 0,
+            "failure_count": 0,
+            "claim_refused_count": 0,
+            "idle_cycles": 0,
+            "planned_steps": selected,
+            "step_results": [],
+        }
+
+    step_results: list[dict[str, Any]] = []
+    steps_started = 0
+    success_count = 0
+    failure_count = 0
+    claim_refused_count = 0
+    idle_cycles = 0
+    stop_reason = "max_steps_reached"
+
+    while steps_started < max_steps:
+        if stop_requested is not None and stop_requested():
+            stop_reason = "stop_requested"
+            append_event(
+                conn,
+                queue_id=queue_id,
+                experiment_id=None,
+                step_id=None,
+                event_type="worker_stop_requested",
+                payload={"steps_started": steps_started},
+            )
+            conn.commit()
+            break
+
+        ready = ready_steps(conn, _active_queue(), allow_cloud=allow_cloud)
+        if not ready:
+            idle_cycles += 1
+            append_event(
+                conn,
+                queue_id=queue_id,
+                experiment_id=None,
+                step_id=None,
+                event_type="worker_idle",
+                payload={"idle_cycle": idle_cycles, "max_idle_cycles": max_idle_cycles},
+            )
+            conn.commit()
+            if idle_cycles >= max_idle_cycles:
+                stop_reason = "idle_limit_reached"
+                break
+            time.sleep(idle_sleep_seconds)
+            continue
+
+        idle_cycles = 0
+        ready_step = ready[0]
+        result = run_ready_step(
+            conn,
+            active_queue,
+            ready_step,
+            repo_root=repo_root,
+            execute=True,
+            log_root=log_root,
+        )
+        step_result = {"ready_step": ready_step.to_dict(), **result}
+        step_results.append(step_result)
+        if result.get("claim_refused"):
+            claim_refused_count += 1
+            continue
+
+        steps_started += 1
+        if result.get("succeeded"):
+            success_count += 1
+            continue
+
+        failure_count += 1
+        append_event(
+            conn,
+            queue_id=queue_id,
+            experiment_id=ready_step.experiment_id,
+            step_id=ready_step.step_id,
+            event_type="worker_step_failed",
+            payload=step_result,
+        )
+        conn.commit()
+
+    append_event(
+        conn,
+        queue_id=queue_id,
+        experiment_id=None,
+        step_id=None,
+        event_type="worker_stopped",
+        payload={
+            "stop_reason": stop_reason,
+            "steps_started": steps_started,
+            "success_count": success_count,
+            "failure_count": failure_count,
+            "claim_refused_count": claim_refused_count,
+            "idle_cycles": idle_cycles,
+        },
+    )
+    conn.commit()
+    return {
+        "schema": "experiment_queue_worker_result.v1",
+        "queue_id": queue_id,
+        "execute": True,
+        "allow_cloud": allow_cloud,
+        "started_at_utc": started_at,
+        "stop_reason": stop_reason,
+        "steps_started": steps_started,
+        "success_count": success_count,
+        "failure_count": failure_count,
+        "claim_refused_count": claim_refused_count,
+        "idle_cycles": idle_cycles,
+        "planned_steps": [],
+        "step_results": step_results,
+    }
 
 
 def _downstream_step_ids(
@@ -661,6 +951,11 @@ def rewind_step(
 
 def queue_summary(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[str, Any]:
     queue_id = str(queue["queue_id"])
+    active_keys = {
+        (str(experiment["id"]), str(step["id"]))
+        for experiment in queue["experiments"]
+        for step in experiment["steps"]
+    }
     rows = conn.execute(
         """
         SELECT experiment_id, step_id, status, attempts, updated_at_utc, last_event_json
@@ -669,14 +964,25 @@ def queue_summary(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[st
         """,
         (queue_id,),
     ).fetchall()
+    active_rows = [
+        row
+        for row in rows
+        if (str(row["experiment_id"]), str(row["step_id"])) in active_keys
+    ]
+    orphaned_rows = [
+        row
+        for row in rows
+        if (str(row["experiment_id"]), str(row["step_id"])) not in active_keys
+    ]
     by_status: dict[str, int] = {}
-    for row in rows:
+    for row in active_rows:
         by_status[str(row["status"])] = by_status.get(str(row["status"]), 0) + 1
     return {
         "schema": "experiment_queue_summary.v1",
         "queue_id": queue_id,
         "mode": control_mode(conn, queue_id),
-        "step_count": len(rows),
+        "step_count": len(active_rows),
+        "orphaned_step_count": len(orphaned_rows),
         "status_counts": by_status,
         "ready_steps": [step.to_dict() for step in ready_steps(conn, queue)],
         "steps": [
@@ -688,7 +994,18 @@ def queue_summary(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[st
                 "updated_at_utc": row["updated_at_utc"],
                 "last_event": json.loads(row["last_event_json"]) if row["last_event_json"] else None,
             }
-            for row in rows
+            for row in active_rows
+        ],
+        "orphaned_steps": [
+            {
+                "experiment_id": row["experiment_id"],
+                "step_id": row["step_id"],
+                "status": row["status"],
+                "attempts": row["attempts"],
+                "updated_at_utc": row["updated_at_utc"],
+                "last_event": json.loads(row["last_event_json"]) if row["last_event_json"] else None,
+            }
+            for row in orphaned_rows
         ],
     }
 
@@ -704,6 +1021,7 @@ __all__ = [
     "queue_summary",
     "ready_steps",
     "rewind_step",
+    "run_queue_worker",
     "run_ready_step",
     "set_control_mode",
 ]

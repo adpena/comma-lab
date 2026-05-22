@@ -26,6 +26,8 @@ eval artifact passes the existing strict gates.
   `lane_dqs1_pairset_drop_one_rank022_pair0167_local_first_20260522`
 - Registered current queue lane after rank022 exact observation:
   `lane_dqs1_pairset_drop_one_rank019_pair0151_local_first_20260522`
+- Registered current queue lane after rank019 exact observation:
+  `lane_dqs1_pairset_drop_one_rank023_pair0440_local_first_20260522`
 
 ## Contract
 
@@ -41,11 +43,17 @@ eval artifact passes the existing strict gates.
   stale downstream success state cannot survive a dependency reset.
 - Timeout, execution, and postcondition failures mark steps `failed` with
   telemetry instead of leaving durable state stuck at `running`.
+- `run-worker --execute --max-steps N` now runs bounded local loops with
+  SIGINT/SIGTERM stop requests, queue-definition reload between steps, and
+  append-only worker telemetry.
+- Queue summaries count only steps present in the current queue definition and
+  report rerouted/stale SQLite rows separately as `orphaned_steps`, so a
+  rank019-to-rank023 reroute cannot inflate the active pending count.
 
 ## Current DQS1 Use
 
-The checked-in queue now encodes the current next rank019/pair0151 local-first
-flow after rank022/pair0167 exact CPU observation:
+The checked-in queue now encodes the current next rank023/pair0440 local-first
+flow after rank019/pair0151 exact CPU observation:
 
 1. Plan selective packet.
 2. Materialize submission directory.
@@ -71,6 +79,7 @@ unless anchored.
 
 ## Verification
 
+- `.venv/bin/python tools/experiment_queue.py --queue configs/experiment_queues/dqs1_pairset_local_first.yaml status`
 - `.venv/bin/ruff check src/comma_lab/scheduler/experiment_queue.py tools/experiment_queue.py src/comma_lab/scheduler/__init__.py src/tac/tests/test_experiment_queue.py src/tac/canonical_equations/pairset_component_marginal.py src/tac/canonical_equations/tests/test_pairset_component_marginal.py`
 - `.venv/bin/python -m pytest src/tac/tests/test_experiment_queue.py -q`
 - `.venv/bin/python tools/experiment_queue.py --queue configs/experiment_queues/dqs1_pairset_local_first.yaml validate`
@@ -80,8 +89,7 @@ unless anchored.
 
 - Add a queue step generator that consumes the latest component-marginal action
   summary and writes the next candidate queue definition without hand editing.
-- Add concurrent worker mode with bounded resource pools and SIGINT-safe state
-  transitions.
+- Add concurrent worker mode with bounded resource pools.
 - Add first-class postcondition types for SHA-256 equality, score-axis schema
   validation, and required false-authority payloads.
 - Add telemetry export for dashboards: pending/running/failed/succeeded counts,
