@@ -60,6 +60,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
+    parser.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help="Write an empty dataset instead of failing when no usable candidate rows survive.",
+    )
     return parser.parse_args(argv)
 
 
@@ -78,6 +83,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ScorerResponseDatasetError as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
+        return 2
+    row_count = int(dataset.get("summary", {}).get("row_count") or 0)
+    if row_count == 0 and not args.allow_empty:
+        print("FATAL: no usable MLX window response rows produced", file=sys.stderr)
         return 2
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
     args.json_out.write_text(json.dumps(dataset, indent=2, sort_keys=True) + "\n", encoding="utf-8")

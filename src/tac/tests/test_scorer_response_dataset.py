@@ -266,6 +266,31 @@ def test_build_windowed_mlx_response_dataset_skips_missing_window_baseline(tmp_p
     assert "no matching baseline window" in dataset["skipped"][0]["reason"]
 
 
+def test_build_windowed_mlx_response_dataset_rejects_duplicate_baseline_window(
+    tmp_path,
+) -> None:
+    baseline_a = _mlx_response_payload()
+    baseline_a_path = tmp_path / "baseline_a.json"
+    baseline_a_path.write_text(json.dumps(baseline_a), encoding="utf-8")
+    baseline_b = _mlx_response_payload()
+    baseline_b["canonical_score"] = 0.91
+    baseline_b["score_recomputed_from_components"] = 0.91
+    baseline_b_path = tmp_path / "baseline_b.json"
+    baseline_b_path.write_text(json.dumps(baseline_b), encoding="utf-8")
+
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(_mlx_response_payload()), encoding="utf-8")
+
+    dataset = build_windowed_mlx_response_dataset(
+        candidate_paths=[candidate_path],
+        baseline_paths=[baseline_a_path, baseline_b_path],
+    )
+
+    assert dataset["rows"] == []
+    assert any("duplicate baseline window" in item["reason"] for item in dataset["skipped"])
+    assert any("ambiguous duplicate baseline window" in item["reason"] for item in dataset["skipped"])
+
+
 def test_build_mlx_window_response_dataset_cli(tmp_path) -> None:
     baseline = _mlx_response_payload()
     baseline["canonical_score"] = 0.9
@@ -304,6 +329,38 @@ def test_build_mlx_window_response_dataset_cli(tmp_path) -> None:
     assert "mlx_scorer_response" in md_out.read_text(encoding="utf-8")
 
 
+def test_build_mlx_window_response_dataset_cli_fails_empty_by_default(tmp_path) -> None:
+    baseline = _mlx_response_payload()
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    candidate = _mlx_response_payload()
+    candidate["start_pair"] = 20
+    candidate["pair_window"] = [20, 24]
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_window_response_dataset.py"),
+            "--candidate-response",
+            str(candidate_path),
+            "--baseline-response",
+            str(baseline_path),
+            "--json-out",
+            str(tmp_path / "dataset.json"),
+        ],
+        cwd=REPO,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert "no usable MLX window response rows produced" in completed.stderr
+
+
 def test_build_response_dataset_rejects_mlx_scorer_response_false_authority_breach(
     tmp_path,
 ) -> None:
@@ -321,7 +378,7 @@ def test_build_response_dataset_rejects_mlx_scorer_response_false_authority_brea
     assert "score_claim must be explicit false" in dataset["skipped"][0]["reason"]
 
 
-def test_build_response_dataset_accepts_mlx_response_without_optional_exact_eval_flag(
+def test_build_response_dataset_rejects_mlx_response_without_exact_eval_flag(
     tmp_path,
 ) -> None:
     path = tmp_path / "mlx_response.json"
@@ -334,8 +391,8 @@ def test_build_response_dataset_accepts_mlx_response_without_optional_exact_eval
         baseline=ResponseBaseline(score=0.9, archive_bytes=100),
     )
 
-    assert dataset["summary"]["row_count"] == 1
-    assert dataset["rows"][0]["score_claim"] is False
+    assert dataset["rows"] == []
+    assert "requires_exact_eval_before_promotion must be true" in dataset["skipped"][0]["reason"]
 
 
 def test_build_response_dataset_rejects_mlx_scorer_response_missing_cache_identity(

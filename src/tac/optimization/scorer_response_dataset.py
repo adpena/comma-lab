@@ -350,10 +350,7 @@ def _require_mlx_response_false_authority(payload: dict[str, Any], *, label: str
         raise ScorerResponseDatasetError(f"{label} promotable must be false")
     if payload.get("candidate_generation_only") is not True:
         raise ScorerResponseDatasetError(f"{label} candidate_generation_only must be true")
-    if (
-        "requires_exact_eval_before_promotion" in payload
-        and payload.get("requires_exact_eval_before_promotion") is not True
-    ):
+    if payload.get("requires_exact_eval_before_promotion") is not True:
         raise ScorerResponseDatasetError(
             f"{label} requires_exact_eval_before_promotion must be true"
         )
@@ -791,6 +788,7 @@ def build_windowed_mlx_response_dataset(
 
     baseline_by_window: dict[str, ResponseBaseline] = {}
     baseline_sources: dict[str, str] = {}
+    duplicate_baseline_windows: set[str] = set()
     skipped: list[dict[str, str]] = []
     for path in baseline_paths:
         try:
@@ -798,6 +796,17 @@ def build_windowed_mlx_response_dataset(
             label = f"baseline {path}"
             _require_mlx_response_false_authority(payload, label=label)
             key = _mlx_response_window_key(payload, label=label)
+            if key in baseline_by_window or key in duplicate_baseline_windows:
+                duplicate_baseline_windows.add(key)
+                baseline_by_window.pop(key, None)
+                baseline_sources.pop(key, None)
+                skipped.append(
+                    {
+                        "path": str(path),
+                        "reason": f"baseline: duplicate baseline window {key}",
+                    }
+                )
+                continue
             baseline_by_window[key] = ResponseBaseline(
                 score=float(payload["canonical_score"]),
                 archive_bytes=int(payload["archive_size_bytes"]),
@@ -813,6 +822,14 @@ def build_windowed_mlx_response_dataset(
         try:
             payload = _load_json(path)
             key = _mlx_response_window_key(payload, label=f"candidate {path}")
+            if key in duplicate_baseline_windows:
+                skipped.append(
+                    {
+                        "path": str(path),
+                        "reason": f"candidate: ambiguous duplicate baseline window {key}",
+                    }
+                )
+                continue
             baseline = baseline_by_window.get(key)
             if baseline is None:
                 skipped.append(
