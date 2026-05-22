@@ -216,11 +216,23 @@ last_refreshed_note: |
   passed locality and exact Modal `[contest-CPU]` eval and is the new CPU
   frontier at `0.19202828295713675`, improving compact DQS1 top32 by
   `-0.0000006658589531138848`; component deltas were PoseNet `+0.0`, SegNet
-  `+0.0`, rate `-0.0000006658589531221714`. The refreshed identity-verified,
-  selector-scoped observation-response portfolio now recommends
-  `pairset_drop_one_rank010_pair0376` as the next fresh local-control
-  candidate. The response model is active only for `diversity_spaced` rows, caps
-  regression-only extrapolation at the best observed score, and requires
+  `+0.0`, rate `-0.0000006658589531221714`. Its exact Modal
+  `[contest-CUDA T4]` replay scored `0.22619176954300405`, regressing versus
+  compact DQS1 top32 CUDA by `+0.00000133414104686`; the same one-byte rate
+  saving was outweighed by a `+0.000002` SegNet-contribution shift on CUDA.
+  Follow-up `pairset_drop_one_rank010_pair0376`
+  (`1533283b3e4f6ad10a2eb736a098df739f0b161d0385df56b89ba94d190a8237`,
+  `178559` bytes) also passed exact Modal `[contest-CPU]` eval and regressed
+  to `0.19202928295713673`, matching the rank013 one-byte-drop response class:
+  PoseNet `+0.0`, SegNet `+0.000001`, rate `-0.00000066585895312`.
+  The refreshed identity-verified, selector-scoped portfolio now includes the
+  component marginal model from `cross_family_candidate_portfolio.v1`: CPU-safe
+  observed drop pair `[371]`, CPU-protected observed drop pairs `[327, 376]`,
+  CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
+  for `pairset_drop_one_rank021_pair0371`. The current recommended fresh
+  local-control candidate is `pairset_drop_one_rank026_pair0320`. The response
+  model remains planning-only, active only for `diversity_spaced` count rows,
+  caps regression-only extrapolation at the best observed score, and requires
   selected-pair identity matching before fitting.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)

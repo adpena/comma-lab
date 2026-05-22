@@ -398,6 +398,55 @@ portfolio is:
 - New recommended candidate: `pairset_drop_one_rank010_pair0376`
 - New recommended action: `materialize_pairset_archive_and_run_local_controls`
 
+The next harvested results changed this from a one-off interpretation into a
+component marginal model consumed by the portfolio planner.
+
+- `pairset_drop_one_rank021_pair0371` exact `[contest-CUDA T4]` replay:
+  `experiments/results/modal_auth_eval/dqs1_pairset_drop_one_rank021_pair0371_selective_decoderq_cuda_20260522T1816Z/contest_auth_eval.json`
+- Exact CUDA score: `0.22619176954300405`
+- Delta versus compact DQS1 top32 CUDA:
+  `+0.00000133414104686`
+- Component deltas versus compact DQS1 top32 CUDA: PoseNet `+0.0`, SegNet
+  `+0.000002`, rate `-0.00000066585895312`
+- CUDA inflated aggregate SHA-256:
+  `8d09f5082e42d69205c3f4ad118af892cdf654d8e2a9395d2fb775aa30a44166`
+- CUDA runtime tree SHA-256:
+  `6b6e385bfc1368a34c058392a5dc0b0f3eb42c1f340f262845b3dea4dd5fb5f1`
+- `pairset_drop_one_rank010_pair0376` exact `[contest-CPU]` replay:
+  `experiments/results/modal_auth_eval_cpu/dqs1_pairset_drop_one_rank010_pair0376_selective_decoderq_cpu_20260522T182154Z/contest_auth_eval.json`
+- Exact CPU score: `0.19202928295713673`
+- Delta versus current rank021 CPU frontier:
+  `+0.0000010000000000`
+- Component deltas versus compact DQS1 top32 CPU: PoseNet `+0.0`,
+  SegNet `+0.000001`, rate `-0.00000066585895312`
+- Rank010 archive SHA-256:
+  `1533283b3e4f6ad10a2eb736a098df739f0b161d0385df56b89ba94d190a8237`
+- Rank010 inflated aggregate SHA-256:
+  `8c13092466131b70228ee09993f2f5b29ac2d3f146bf44be200eecbf91d05e7e`
+
+Canonicalization/wire-in:
+
+- Commit `130f09683` added `pairset_component_marginal_model.v1` to
+  `tac.optimization.cross_family_candidate_portfolio`.
+- The model consumes exact-axis observations with selected-pair identity,
+  component deltas, and acquisition operations.
+- Current generated portfolio:
+  `experiments/results/cross_family_candidate_portfolio/20260522T183100Z_observed_pairsets_rank010_cuda_feedback/portfolio.json`
+- Current action summary:
+  `experiments/results/cross_family_candidate_portfolio/20260522T183100Z_observed_pairsets_rank010_cuda_feedback/action_summary.json`
+- Portfolio SHA-256:
+  `35c59bc87e577615e604ac95b6e5a13b9d7a1ce5fea6383f4006ba9b488644f4`
+- Action summary SHA-256:
+  `766b4497c26ce8785b8cd971b10c497351d6e67265bf244502d021d7a167ee13`
+- Component marginal summary: CPU-safe observed drop pair `[371]`;
+  CPU-protected observed drop pairs `[327, 376]`; CUDA-protected observed drop
+  pair `[371]`; cross-axis transfer diagnostic present for
+  `pairset_drop_one_rank021_pair0371`.
+- New recommended candidate:
+  `pairset_drop_one_rank026_pair0320`
+- New recommended action:
+  `materialize_pairset_archive_and_run_local_controls`
+
 ## Verification
 
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py -q`
@@ -422,6 +471,9 @@ portfolio is:
 - `tools/recover_modal_auth_eval.py` on drop-two r028/r021 Modal CPU call `fc-01KS8DZ3GCDWECP5P80DDGPBG1`
 - `tools/run_decoder_q_selective_runtime_locality_controls.py` on drop-one rank021 pair0371
 - `tools/recover_modal_auth_eval.py` on drop-one rank021 pair0371 Modal CPU call `fc-01KS8E07E7MJVKXCQ0WW26WQZH`
+- `tools/recover_modal_auth_eval.py` on drop-one rank021 pair0371 Modal CUDA call `fc-01KS8ERK4DVX1EBGVHP80H4QRW`
+- `tools/recover_modal_auth_eval.py` on drop-one rank010 pair0376 Modal CPU call `fc-01KS8EY13VWJZD0QDND9ER6G34`
+- `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_decoder_q_pairset_acquisition.py -q`
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_mlx_dynamic_sweep_observations.py -q`
 - `.venv/bin/python -m pytest src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py -q`
 - `.venv/bin/ruff check src/tac/optimization/cross_family_candidate_portfolio.py src/tac/optimization/mlx_dynamic_sweep_observations.py tools/plan_cross_family_candidate_portfolio.py src/tac/tests/test_cross_family_candidate_portfolio.py`
@@ -446,5 +498,8 @@ portfolio is:
   CUDA promotion evidence.
 - drop-two r028/r021 now has exact `[contest-CPU]` evidence only, not CUDA
   promotion evidence.
-- drop-one rank021 pair0371 now has exact `[contest-CPU]` evidence only, not
-  CUDA promotion evidence.
+- drop-one rank021 pair0371 now has exact `[contest-CPU]` and
+  `[contest-CUDA T4]` evidence. It remains CPU-frontier only; the CUDA replay
+  regressed, so there is no CUDA promotion evidence.
+- drop-one rank010 pair0376 has exact `[contest-CPU]` evidence only and
+  regressed versus the current rank021 CPU frontier.
