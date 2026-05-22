@@ -1,9 +1,9 @@
 <!--
-generated_at: 2026-05-22T20:25:00Z
-from_state_hash: frontier_scan_dqs1_pairset_rank019_append_only_hardened_20260522T2025Z
-regenerated_by: codex:dqs1_rank019_queue_worker_drift_hardened_20260522
-last_refreshed_at: 2026-05-22T20:25:00Z
-last_refreshed_by: codex:dqs1_rank019_queue_worker_drift_hardened_20260522
+generated_at: 2026-05-22T20:37:00Z
+from_state_hash: frontier_scan_dqs1_pairset_rank023_local_advisory_20260522T2037Z
+regenerated_by: codex:dqs1_rank023_local_advisory_observe_only_20260522
+last_refreshed_at: 2026-05-22T20:37:00Z
+last_refreshed_by: codex:dqs1_rank023_local_advisory_observe_only_20260522
 last_refreshed_head: d49171d7
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
@@ -14,9 +14,10 @@ last_refreshed_note: |
   passed raw-output locality and exact Modal recovery on both CPU and CUDA; CPU
   improves the frontier, CUDA regresses. Drop-one rank019/pair0151 has now
   passed locality and exact Modal CPU eval and regressed to the same
-  SegNet-penalized one-byte class as rank010/rank013/rank020/rank022/rank026/rank027/rank031,
-  so the next pairset component-marginal candidate is rank023/pair0440 after
-  protected-pair identity hardening.
+  SegNet-penalized one-byte class as rank010/rank013/rank020/rank022/rank026/rank027/rank031.
+  Rank023/pair0440 completed local plan/materialize/locality/advisory and is
+  observe-only by drift/eureka calibration, so the checked-in local-first queue
+  now routes rank024/pair0112.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
@@ -259,13 +260,21 @@ last_refreshed_note: |
   `178559` bytes) also passed locality and exact Modal `[contest-CPU]` eval
   and regressed to `0.19202928295713673` with the same response class:
   PoseNet `+0.0`, SegNet `+0.000001`, rate `-0.00000066585895312`.
+  Local-first follow-up `pairset_drop_one_rank023_pair0440`
+  (`fab595af500cbf5cc4383c8a4224da98f9caec05a18c61c2fcfa66490fe53aa6`,
+  `178559` bytes) passed plan/materialize/locality controls and macOS CPU
+  advisory eval at `0.19203928295713674` with `score_claim=false`. The
+  calibrated point projection is `0.19202928295713673`, the conservative
+  projection is `0.19203228295713673`, and the eureka margin is
+  `-0.000004`, so it is observe-only and not an exact-eval spend trigger.
   The refreshed identity-verified, selector-scoped portfolio now includes the
   component marginal model from `cross_family_candidate_portfolio.v1`: CPU-safe
   observed drop pair `[371]`, CPU-protected observed drop pairs
   `[327, 376, 320, 378, 296, 430, 167, 151]`,
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
-  for `pairset_drop_one_rank021_pair0371`. The current recommended fresh
-  local-control candidate is `pairset_drop_one_rank023_pair0440`. The response
+  for `pairset_drop_one_rank021_pair0371`. After rank023's local observe-only
+  result, the current checked-in fresh local-control candidate is
+  `pairset_drop_one_rank024_pair0112`. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
   selected-pair identity matching before fitting. The operator-action prior now
@@ -284,9 +293,9 @@ last_refreshed_note: |
 - Local-first experiment orchestration now has a reusable SQLite-backed queue
   substrate: `tools/experiment_queue.py`,
   `src/comma_lab/scheduler/experiment_queue.py`, and
-  `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with the rank019
-  target now exact-eval-observed and the next candidate routed to
-  rank023/pair0440. Queue commands are argv
+  `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with the rank023
+  target now local-advisory-observed and the next candidate routed to
+  rank024/pair0112. Queue commands are argv
   lists, state and telemetry live in SQLite, cloud resources are hidden unless
   explicitly allowed, controls support `running`/`paused`/`frozen`, and
   rewinds can cascade through dependent steps. `run-worker` now supports bounded
@@ -306,7 +315,8 @@ last_refreshed_note: |
   calibration JSON from embedded anchors, and emits JSON-safe empty
   calibrations with false-authority blockers. Outside this trust region, older
   MPS/nonlocal/different-substrate rows remain out-of-class and must be
-  separately calibrated or widened.
+  separately calibrated or widened. Rank023's eureka artifact is
+  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank023_pair0440_20260522T203717Z.json`.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
