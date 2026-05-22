@@ -243,9 +243,28 @@ def _check_cache_identity(payload: dict[str, Any], *, blockers: list[str]) -> No
         if not isinstance(item, dict):
             blockers.append(f"response_cache_identity_{side}_missing")
             continue
+        archive_hashes_valid = all(
+            _is_sha256(str(item.get(key, "")))
+            for key in ("archive_sha256", "inflated_outputs_aggregate_sha256", "raw_sha256")
+        )
+        array_hashes = item.get("array_sha256")
+        array_hashes_valid = isinstance(array_hashes, dict) and all(
+            _is_sha256(str(array_hashes.get(key, "")))
+            for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb")
+        )
+        if side == "candidate" and not archive_hashes_valid:
+            blockers.append(f"response_cache_identity_{side}_archive_raw_hashes_invalid")
+        if side == "reference" and not archive_hashes_valid and not array_hashes_valid:
+            blockers.append(f"response_cache_identity_{side}_hash_identity_invalid")
         for key in ("archive_sha256", "inflated_outputs_aggregate_sha256", "raw_sha256"):
+            if item.get(key) is None:
+                continue
             if not _is_sha256(str(item.get(key, ""))):
                 blockers.append(f"response_cache_identity_{side}_{key}_invalid")
+        if isinstance(array_hashes, dict):
+            for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+                if not _is_sha256(str(array_hashes.get(key, ""))):
+                    blockers.append(f"response_cache_identity_{side}_array_sha256_{key}_invalid")
 
 
 def _check_optional_gate_manifest(

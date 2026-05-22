@@ -81,6 +81,27 @@ def test_mlx_production_contract_rejects_false_authority() -> None:
     assert "response_promotion_eligible_not_false" in manifest["blockers"]
 
 
+def test_mlx_production_contract_accepts_reference_array_hash_identity() -> None:
+    payload = _response_payload()
+    reference = payload["cache_identity"]["reference"]
+    reference["archive_sha256"] = None
+    reference["inflated_outputs_aggregate_sha256"] = None
+    reference["raw_sha256"] = None
+    reference["array_sha256"] = {
+        "pair_indices": "3" * 64,
+        "posenet_yuv6_pair": "4" * 64,
+        "segnet_last_rgb": "5" * 64,
+    }
+
+    manifest = build_mlx_scorer_production_contract_manifest(
+        payload,
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+    )
+
+    assert manifest["passed"] is True
+
+
 def test_mlx_production_contract_rejects_gpu_non_singleton_batch() -> None:
     payload = _response_payload(device="gpu", batch_pairs=2)
 
