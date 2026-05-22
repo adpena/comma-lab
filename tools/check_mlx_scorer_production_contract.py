@@ -19,13 +19,26 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--response", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--cache-auth-audit", type=Path, default=None)
+    parser.add_argument("--torch-parity", type=Path, default=None)
     parser.add_argument("--profile-stability", type=Path, default=None)
     parser.add_argument("--batch-invariance", type=Path, default=None)
+    parser.add_argument("--score-calibration", type=Path, default=None)
     parser.add_argument("--run-id", default=None)
     parser.add_argument(
         "--no-require-cache-identity",
         action="store_true",
         help="Do not fail if cache identity custody fields are absent.",
+    )
+    parser.add_argument(
+        "--no-require-cache-auth-audit",
+        action="store_true",
+        help="Advisory/dev mode only: do not fail if cache/auth audit is absent.",
+    )
+    parser.add_argument(
+        "--no-require-torch-parity",
+        action="store_true",
+        help="Advisory/dev mode only: do not fail if PyTorch-vs-MLX parity is absent.",
     )
     parser.add_argument(
         "--no-require-profile-stability",
@@ -37,6 +50,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Advisory/dev mode only: do not fail if batch-invariance gate is absent.",
     )
+    parser.add_argument(
+        "--require-score-calibration",
+        action="store_true",
+        help="Require strict auth-axis MLX score calibration for spend-triage use.",
+    )
     return parser
 
 
@@ -44,6 +62,16 @@ def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
     manifest = build_mlx_scorer_production_contract_manifest(
         load_json_object(args.response),
+        cache_auth_audit=(
+            load_json_object(args.cache_auth_audit)
+            if args.cache_auth_audit is not None
+            else None
+        ),
+        torch_parity=(
+            load_json_object(args.torch_parity)
+            if args.torch_parity is not None
+            else None
+        ),
         profile_stability=(
             load_json_object(args.profile_stability)
             if args.profile_stability is not None
@@ -54,10 +82,18 @@ def main(argv: list[str] | None = None) -> int:
             if args.batch_invariance is not None
             else None
         ),
+        score_calibration=(
+            load_json_object(args.score_calibration)
+            if args.score_calibration is not None
+            else None
+        ),
         run_id=args.run_id,
         require_cache_identity=not args.no_require_cache_identity,
+        require_cache_auth_audit=not args.no_require_cache_auth_audit,
+        require_torch_parity=not args.no_require_torch_parity,
         require_profile_stability=not args.no_require_profile_stability,
         require_batch_invariance=not args.no_require_batch_invariance,
+        require_score_calibration=bool(args.require_score_calibration),
     )
     write_production_contract_manifest(manifest, args.output)
     print(json.dumps({"passed": manifest["passed"], "verdict": manifest["verdict"]}, sort_keys=True))
