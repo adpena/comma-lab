@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import subprocess
@@ -454,14 +455,31 @@ def _mlx_cache_auth_audit_payload(
     }
 
 
-def _attach_auth_audit_to_mlx_response(payload: dict) -> dict:
+def _attach_auth_audit_to_mlx_response(payload: dict, tmp_path: Path) -> dict:
     candidate = payload["cache_identity"]["candidate"]
+    candidate_arrays = candidate["array_sha256"]
+    audit_payload = _mlx_cache_auth_audit_payload(
+        archive_sha256=candidate["archive_sha256"],
+        inflated_outputs_aggregate_sha256=candidate[
+            "inflated_outputs_aggregate_sha256"
+        ],
+        raw_sha256=candidate["raw_sha256"],
+        candidate_cache_array_sha256=candidate_arrays,
+    )
+    audit_path = tmp_path / f"audit_{len(list(tmp_path.glob('audit_*.json'))):04d}.json"
+    audit_path.write_text(
+        json.dumps(audit_payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    audit_sha256 = hashlib.sha256(audit_path.read_bytes()).hexdigest()
     candidate["eligible_for_local_mlx_transfer_calibration"] = True
     candidate["auth_eval_identity_audit"] = {
         "schema_version": "mlx_scorer_input_cache_auth_eval_audit.v1",
         "verdict": "PASS_CACHE_AUTH_EVAL_IDENTITY",
         "passed": True,
         "identity_residual": 0,
+        "path": str(audit_path),
+        "sha256": audit_sha256,
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -1798,13 +1816,13 @@ def test_build_windowed_mlx_response_dataset_accepts_reference_cache_baseline_id
 def test_build_windowed_mlx_response_dataset_requires_auth_audited_reference_match(
     tmp_path,
 ) -> None:
-    baseline = _attach_auth_audit_to_mlx_response(_mlx_response_payload())
+    baseline = _attach_auth_audit_to_mlx_response(_mlx_response_payload(), tmp_path)
     baseline["canonical_score"] = 0.9
     baseline["score_recomputed_from_components"] = 0.9
     baseline_path = tmp_path / "baseline.json"
     baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
 
-    candidate = _attach_auth_audit_to_mlx_response(_mlx_response_payload())
+    candidate = _attach_auth_audit_to_mlx_response(_mlx_response_payload(), tmp_path)
     candidate["cache_identity"]["reference"]["array_sha256"]["segnet_last_rgb"] = (
         "9" * 64
     )
@@ -1827,7 +1845,7 @@ def test_build_windowed_mlx_response_dataset_requires_auth_audited_reference_mat
 def test_build_windowed_mlx_response_dataset_requires_passing_auth_audit(
     tmp_path,
 ) -> None:
-    baseline = _attach_auth_audit_to_mlx_response(_mlx_response_payload())
+    baseline = _attach_auth_audit_to_mlx_response(_mlx_response_payload(), tmp_path)
     baseline["canonical_score"] = 0.9
     baseline["score_recomputed_from_components"] = 0.9
     baseline_path = tmp_path / "baseline.json"
@@ -1846,6 +1864,36 @@ def test_build_windowed_mlx_response_dataset_requires_passing_auth_audit(
     assert dataset["rows"] == []
     assert any(
         "not eligible for local MLX transfer calibration" in item["reason"]
+        for item in dataset["skipped"]
+    )
+
+
+def test_build_windowed_mlx_response_dataset_rejects_copied_audit_stamp(
+    tmp_path,
+) -> None:
+    baseline = _attach_auth_audit_to_mlx_response(_mlx_response_payload(), tmp_path)
+    baseline["canonical_score"] = 0.9
+    baseline["score_recomputed_from_components"] = 0.9
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    candidate = _attach_auth_audit_to_mlx_response(_mlx_response_payload(), tmp_path)
+    candidate["cache_identity"]["candidate"]["array_sha256"]["posenet_yuv6_pair"] = (
+        "8" * 64
+    )
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    dataset = build_windowed_mlx_response_dataset(
+        candidate_paths=[candidate_path],
+        baseline_paths=[baseline_path],
+        require_auth_audited_windows=True,
+    )
+
+    assert dataset["rows"] == []
+    assert any(
+        "candidate cache arrays do not match dereferenced auth audit cache arrays"
+        in item["reason"]
         for item in dataset["skipped"]
     )
 
@@ -2015,6 +2063,44 @@ def test_build_mlx_window_response_dataset_cli_fails_empty_by_default(tmp_path) 
 
     assert completed.returncode == 2
     assert "no usable MLX window response rows produced" in completed.stderr
+
+
+def test_build_mlx_window_response_dataset_cli_enforces_row_count_and_skips(
+    tmp_path,
+) -> None:
+    baseline = _mlx_response_payload()
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    candidate = _mlx_response_payload()
+    candidate["start_pair"] = 20
+    candidate["pair_window"] = [20, 24]
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_window_response_dataset.py"),
+            "--candidate-response",
+            str(candidate_path),
+            "--baseline-response",
+            str(baseline_path),
+            "--allow-empty",
+            "--expected-row-count",
+            "1",
+            "--require-no-skipped",
+            "--json-out",
+            str(tmp_path / "dataset.json"),
+        ],
+        cwd=REPO,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert "row count mismatch" in completed.stderr
 
 
 def test_build_response_dataset_rejects_mlx_scorer_response_false_authority_breach(

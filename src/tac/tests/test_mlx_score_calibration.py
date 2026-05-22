@@ -278,6 +278,43 @@ def test_mlx_score_calibration_cli(tmp_path: Path) -> None:
     )
 
 
+def test_mlx_score_calibration_cli_rejects_partial_full_auth_rows(
+    tmp_path: Path,
+) -> None:
+    rows = [_row(tmp_path, "a", mlx_score=0.2, cpu_score=0.201, cuda_score=0.201)]
+    input_path = tmp_path / "rows.json"
+    output_path = tmp_path / "calibration.json"
+    input_path.write_text(
+        json.dumps(
+            {
+                "run_id": "partial",
+                "strict_full_calibration": False,
+                "rows": rows,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "calibrate_mlx_scorer_response_scores.py"),
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert "strict_full_calibration=false" in completed.stderr
+
+
 def _row(
     tmp_path: Path,
     label: str,

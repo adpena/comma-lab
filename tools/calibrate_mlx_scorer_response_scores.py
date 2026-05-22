@@ -36,6 +36,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "authority."
         ),
     )
+    parser.add_argument(
+        "--allow-partial-full-auth-calibration",
+        action="store_true",
+        help=(
+            "Permit an input payload marked strict_full_calibration=false. "
+            "Without this explicit research override, planner-produced partial "
+            "MLX/full-auth calibration rows fail closed."
+        ),
+    )
     return parser
 
 
@@ -46,6 +55,14 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(payload, dict):
             rows = payload.get("rows")
             run_id = args.run_id or payload.get("run_id")
+            if (
+                payload.get("strict_full_calibration") is False
+                and not args.allow_partial_full_auth_calibration
+            ):
+                raise ValueError(
+                    "input strict_full_calibration=false requires "
+                    "--allow-partial-full-auth-calibration"
+                )
         else:
             rows = payload
             run_id = args.run_id

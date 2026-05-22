@@ -66,6 +66,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Write an empty dataset instead of failing when no usable candidate rows survive.",
     )
     parser.add_argument(
+        "--expected-row-count",
+        type=int,
+        help="Fail unless the generated dataset has exactly this many rows.",
+    )
+    parser.add_argument(
+        "--require-no-skipped",
+        action="store_true",
+        help="Fail if any candidate or baseline window was skipped.",
+    )
+    parser.add_argument(
         "--require-auth-audited-windows",
         action="store_true",
         help=(
@@ -96,6 +106,20 @@ def main(argv: list[str] | None = None) -> int:
     row_count = int(dataset.get("summary", {}).get("row_count") or 0)
     if row_count == 0 and not args.allow_empty:
         print("FATAL: no usable MLX window response rows produced", file=sys.stderr)
+        return 2
+    if args.expected_row_count is not None and row_count != args.expected_row_count:
+        print(
+            "FATAL: MLX window response row count mismatch: "
+            f"expected={args.expected_row_count}:actual={row_count}",
+            file=sys.stderr,
+        )
+        return 2
+    skipped_count = len(dataset.get("skipped") or [])
+    if args.require_no_skipped and skipped_count:
+        print(
+            f"FATAL: MLX window response dataset has skipped rows: {skipped_count}",
+            file=sys.stderr,
+        )
         return 2
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
     args.json_out.write_text(json.dumps(dataset, indent=2, sort_keys=True) + "\n", encoding="utf-8")

@@ -164,11 +164,11 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
     rebuilt_dataset_md = out_root / "candidate_same_axis_window_response_dataset.md"
     dataset_for_contract = args.dataset if args.skip_dataset_rebuild else rebuilt_dataset
     baseline_window_paths = _expand_existing_paths(args.baseline_window_response)
-    expected_baseline_window_count = _expected_baseline_window_count(
-        args.dataset,
-        candidate_family=args.candidate_family,
-        fallback=args.max_pairs,
+    existing_candidate_window_paths = _expand_existing_paths(
+        args.existing_candidate_window_response
     )
+    expected_baseline_window_count = args.max_pairs
+    expected_dataset_row_count = args.max_pairs + len(existing_candidate_window_paths)
     candidate_parity = out_root / f"candidate_torch_parity_sweep_cpu_singleton_pairs{args.start_pair}_{args.max_pairs}.json"
     reference_parity = out_root / f"reference_torch_parity_sweep_cpu_singleton_pairs{args.start_pair}_{args.max_pairs}.json"
     profile = out_root / f"candidate_profile_cpu_singleton_pairs{args.start_pair}_{args.max_pairs}_repeat2.json"
@@ -329,6 +329,9 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
             dataset_command.extend(["--baseline-response", baseline])
         dataset_command.extend(
             [
+                "--expected-row-count",
+                str(expected_dataset_row_count),
+                "--require-no-skipped",
                 "--json-out",
                 str(rebuilt_dataset),
                 "--md-out",
@@ -439,6 +442,11 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
         )
     )
     strict_full_calibration = args.start_pair == 0 and args.max_pairs == 600
+    baseline_full_sample_ok = (
+        not strict_full_calibration
+        or args.allow_partial_full_auth_calibration
+        or _is_full_sample_mlx_response(args.baseline_mlx_response, expected_samples=600)
+    )
     calibration_input = _calibration_rows_payload(
         args=args,
         parent_response=parent_response,
@@ -452,6 +460,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
             "ready": auth_eval_path.is_file()
             and parent_response.is_file()
             and bool(args.baseline_mlx_response and args.baseline_cpu_auth_eval)
+            and baseline_full_sample_ok
             and (strict_full_calibration or args.allow_partial_full_auth_calibration),
             "requires": ["run_parent_response", "recover_modal_call"],
             "write_json_path": str(calibration_rows),
@@ -474,7 +483,12 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
                 str(args.repo_root),
                 "--run-id",
                 f"{run_id}_score_calibration",
-            ],
+            ]
+            + (
+                ["--allow-partial-full-auth-calibration"]
+                if args.allow_partial_full_auth_calibration
+                else []
+            ),
             ready=calibration_rows.is_file(),
             requires=["write_score_calibration_rows"],
         )
@@ -591,6 +605,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
         downloaded_tensor_files=list(downloaded_tensor_files.values()),
         strict_full_calibration=strict_full_calibration
         or args.allow_partial_full_auth_calibration,
+        baseline_mlx_response_full_sample=baseline_full_sample_ok,
     )
     return {
         "schema_version": "mlx_parent_contract_closure_plan.v1",
@@ -603,6 +618,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
         "archive_size_bytes": archive_size,
         "pair_window": [args.start_pair, args.start_pair + args.max_pairs],
         "strict_full_auth_calibration": strict_full_calibration,
+        "baseline_mlx_response_full_sample": baseline_full_sample_ok,
         "tensor_volume_run_id": volume_run_id,
         "tensor_volume_cache_path": volume_cache_path,
         "downloaded_cache_dir": str(downloaded_cache_dir),
@@ -621,6 +637,8 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "baseline_window_existing_count": len(baseline_window_paths),
         "expected_baseline_window_count": expected_baseline_window_count,
+        "existing_candidate_window_existing_count": len(existing_candidate_window_paths),
+        "expected_dataset_row_count": expected_dataset_row_count,
         "candidate_contract": str(contract),
         "bundle": str(bundle),
         "steps": steps,
@@ -666,37 +684,18 @@ def _expand_existing_paths(patterns: list[str]) -> list[Path]:
     return paths
 
 
-def _expected_baseline_window_count(
-    dataset_path: Path,
-    *,
-    candidate_family: str,
-    fallback: int,
-) -> int:
-    """Infer baseline-window coverage from the legacy dataset when available.
-
-    A full auth-axis parent response can span 600 pairs while the closure target
-    dataset has only 300 rows for the candidate family. Requiring baseline
-    windows for the whole auth response dead-ends that valid flow; requiring the
-    legacy candidate-family row count preserves fail-closed coverage.
-    """
-
-    if fallback < 1:
-        return 1
-    if not dataset_path.is_file():
-        return fallback
+def _is_full_sample_mlx_response(path: Path | None, *, expected_samples: int) -> bool:
+    if path is None or not path.is_file():
+        return False
     try:
-        payload = json.loads(dataset_path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return fallback
-    rows = payload.get("rows") if isinstance(payload, dict) else None
-    if not isinstance(rows, list):
-        return fallback
-    count = sum(
-        1
-        for row in rows
-        if isinstance(row, dict) and row.get("family") == candidate_family
-    )
-    return count if count > 0 else fallback
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("n_samples") != expected_samples:
+        return False
+    return payload.get("pair_window") == [0, expected_samples]
 
 
 def _calibration_rows_payload(
@@ -748,6 +747,7 @@ def _first_blocker(
     dataset_for_contract: Path,
     downloaded_tensor_files: list[Path],
     strict_full_calibration: bool,
+    baseline_mlx_response_full_sample: bool,
 ) -> str | None:
     if not auth_eval_path.is_file():
         return "modal_auth_eval_not_recovered"
@@ -774,6 +774,8 @@ def _first_blocker(
         return "dataset_missing"
     if not strict_full_calibration:
         return "partial_mlx_full_auth_calibration_forbidden"
+    if not baseline_mlx_response_full_sample:
+        return "baseline_mlx_response_not_full_sample"
     if not contract.is_file():
         return "strict_parent_contract_missing"
     return None

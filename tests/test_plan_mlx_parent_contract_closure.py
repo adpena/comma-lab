@@ -182,6 +182,10 @@ def test_plan_mlx_parent_contract_closure_uses_rebuilt_dataset_for_bundle(
         "{}",
         encoding="utf-8",
     )
+    (output_root / "candidate_parent_0000_0001.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
     (output_root / "candidate_windows_index.json").write_text(
         "{}",
         encoding="utf-8",
@@ -214,6 +218,8 @@ def test_plan_mlx_parent_contract_closure_uses_rebuilt_dataset_for_bundle(
             str(output_root),
             "--dataset",
             str(legacy_dataset),
+            "--max-pairs",
+            "1",
             "--existing-candidate-window-response",
             str(existing_candidate_window.parent / "*.json"),
             "--baseline-window-response",
@@ -233,8 +239,11 @@ def test_plan_mlx_parent_contract_closure_uses_rebuilt_dataset_for_bundle(
     assert plan["existing_candidate_window_responses"] == [
         str(existing_candidate_window.parent / "*.json")
     ]
+    assert plan["expected_dataset_row_count"] == 2
     rebuild = _step(plan, "build_rebuilt_dataset")
     assert str(existing_candidate_window.parent / "*.json") in rebuild["shell"]
+    assert "--expected-row-count 2" in rebuild["shell"]
+    assert "--require-no-skipped" in rebuild["shell"]
     bundle = _step(plan, "build_contract_bundle")
     refresh = _step(plan, "refresh_parent_plan")
     assert str(rebuilt_dataset) in bundle["shell"]
@@ -310,7 +319,7 @@ def test_plan_mlx_parent_contract_closure_calibration_waits_for_parent_response(
     assert _step(plan, "write_score_calibration_rows")["ready"] is False
 
 
-def test_plan_mlx_parent_contract_closure_derives_baseline_coverage_from_dataset(
+def test_plan_mlx_parent_contract_closure_ignores_partial_legacy_dataset_coverage(
     tmp_path: Path,
 ) -> None:
     auth_dir = _ready_auth_dir(tmp_path)
@@ -362,9 +371,9 @@ def test_plan_mlx_parent_contract_closure_derives_baseline_coverage_from_dataset
 
     plan = json.loads(out_json.read_text(encoding="utf-8"))
     assert plan["baseline_window_existing_count"] == 300
-    assert plan["expected_baseline_window_count"] == 300
-    assert plan["next_blocker"] == "same_axis_dataset_not_rebuilt"
-    assert _step(plan, "build_rebuilt_dataset")["ready"] is True
+    assert plan["expected_baseline_window_count"] == 600
+    assert plan["next_blocker"] == "baseline_window_response_coverage_incomplete"
+    assert _step(plan, "build_rebuilt_dataset")["ready"] is False
 
 
 def test_plan_mlx_parent_contract_closure_blocks_incomplete_baseline_coverage(

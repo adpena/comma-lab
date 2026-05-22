@@ -684,6 +684,101 @@ def _require_auth_audited_mlx_window(payload: dict[str, Any], *, label: str) -> 
         raise ScorerResponseDatasetError(
             f"{label} candidate cache auth_eval_identity_audit residual must be 0"
         )
+    audit_payload = _load_auth_eval_identity_audit_payload(audit, label=label)
+    candidate_arrays = _candidate_array_identity(payload, label=label)
+    cache_arrays = _array_hashes_from_mapping(
+        audit_payload.get("cache"),
+        label=f"{label} auth_eval_identity_audit.cache",
+    )
+    auth_arrays = _array_hashes_from_mapping(
+        audit_payload.get("auth_eval"),
+        key="scorer_input_array_sha256",
+        label=f"{label} auth_eval_identity_audit.auth_eval",
+    )
+    if candidate_arrays != cache_arrays:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache arrays do not match dereferenced auth audit cache arrays"
+        )
+    if candidate_arrays != auth_arrays:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache arrays do not match dereferenced auth audit auth arrays"
+        )
+
+
+def _load_auth_eval_identity_audit_payload(
+    audit_stamp: dict[str, Any],
+    *,
+    label: str,
+) -> dict[str, Any]:
+    path_value = audit_stamp.get("path")
+    if not isinstance(path_value, str) or not path_value:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit.path missing"
+        )
+    audit_path = Path(path_value)
+    try:
+        payload = _load_json(audit_path)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit.path unreadable: {exc}"
+        ) from exc
+    expected_sha = audit_stamp.get("sha256")
+    if not _is_sha256(str(expected_sha or "")):
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit.sha256 missing"
+        )
+    actual_sha = hashlib.sha256(audit_path.read_bytes()).hexdigest()
+    if actual_sha != expected_sha:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit.sha256 mismatch"
+        )
+    if payload.get("schema_version") != "mlx_scorer_input_cache_auth_eval_audit.v1":
+        raise ScorerResponseDatasetError(
+            f"{label} dereferenced auth audit schema_version mismatch"
+        )
+    if payload.get("passed") is not True:
+        raise ScorerResponseDatasetError(f"{label} dereferenced auth audit did not pass")
+    if payload.get("verdict") != "PASS_CACHE_AUTH_EVAL_IDENTITY":
+        raise ScorerResponseDatasetError(
+            f"{label} dereferenced auth audit verdict mismatch"
+        )
+    if payload.get("identity_residual") != 0:
+        raise ScorerResponseDatasetError(
+            f"{label} dereferenced auth audit identity_residual must be 0"
+        )
+    for field in (
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "promotable",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if payload.get(field) is not False:
+            raise ScorerResponseDatasetError(
+                f"{label} dereferenced auth audit {field} must be false"
+            )
+    return payload
+
+
+def _array_hashes_from_mapping(
+    value: Any,
+    *,
+    label: str,
+    key: str = "array_sha256",
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ScorerResponseDatasetError(f"{label} must be an object")
+    arrays = value.get(key)
+    if not isinstance(arrays, dict):
+        raise ScorerResponseDatasetError(f"{label}.{key} must be an object")
+    result: dict[str, str] = {}
+    for item in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+        hash_value = str(arrays.get(item, ""))
+        if not _is_sha256(hash_value):
+            raise ScorerResponseDatasetError(f"{label}.{key}.{item} must be sha256")
+        result[item] = hash_value
+    return result
 
 
 def _reference_array_identity(payload: dict[str, Any], *, label: str) -> dict[str, str]:
