@@ -360,6 +360,48 @@ def test_cache_audit_accepts_auth_eval_tensor_manifest() -> None:
     assert audit["identity_residual"] == 0
 
 
+def test_cache_audit_rejects_stale_auth_eval_tensor_manifest_archive_identity() -> None:
+    auth = _auth_with_scorer_input_tensor_manifest()
+    provenance = auth["provenance"]
+    assert isinstance(provenance, dict)
+    manifest = provenance["scorer_input_cache_tensor_manifest"]
+    assert isinstance(manifest, dict)
+    payload = manifest["payload"]
+    assert isinstance(payload, dict)
+    payload["archive_sha256"] = "z" * 64
+
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), auth)
+
+    assert audit["passed"] is False
+    assert audit["eligible_for_local_mlx_transfer_calibration"] is False
+    assert audit["canonical_equation"]["eligible_for_local_mlx_transfer_calibration"] is True
+    assert (
+        "auth_scorer_input_manifest_archive_sha256_mismatch_with_auth_eval"
+        in audit["blockers"]
+    )
+
+
+def test_cache_audit_rejects_auth_eval_hash_manifest_pair_count_mismatch() -> None:
+    auth = _auth_with_scorer_input_hash()
+    provenance = auth["provenance"]
+    assert isinstance(provenance, dict)
+    manifest = provenance["scorer_input_cache_hash_manifest"]
+    assert isinstance(manifest, dict)
+    payload = manifest["payload"]
+    assert isinstance(payload, dict)
+    payload["pair_count"] = 16
+
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), auth)
+
+    assert audit["passed"] is False
+    assert audit["eligible_for_local_mlx_transfer_calibration"] is False
+    assert audit["canonical_equation"]["eligible_for_local_mlx_transfer_calibration"] is True
+    assert (
+        "auth_scorer_input_manifest_pair_count_mismatch:manifest=16:auth=600"
+        in audit["blockers"]
+    )
+
+
 def test_cache_audit_fails_scorer_input_hash_mismatch_when_auth_provides_hashes() -> None:
     cache = _cache()
     cache["array_sha256"] = {**ARRAY_HASHES, "segnet_last_rgb": "x" * 64}

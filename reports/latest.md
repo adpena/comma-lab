@@ -271,6 +271,26 @@ last_refreshed_note: |
   (SHA-256
   `1cf36ec8780f24ed57c20b45ecb674aff55dc3a337ab7833860291c13c339b23`),
   ignored by `.gitignore` under `experiments/results/*`.
+- Local-first experiment orchestration now has a reusable SQLite-backed queue
+  substrate: `tools/experiment_queue.py`,
+  `src/comma_lab/scheduler/experiment_queue.py`, and
+  `configs/experiment_queues/dqs1_pairset_local_first.yaml`, currently
+  targeting the rank022/pair0167 follow-up candidate. Queue commands are argv
+  lists, state and telemetry live in SQLite, cloud resources are hidden unless
+  explicitly allowed, controls support `running`/`paused`/`frozen`, and
+  rewinds can cascade through dependent steps. Generated queue state and logs
+  are ignored; durable evidence belongs in `.omx/research/` and report
+  surfaces.
+- Local macOS CPU vs Linux contest-CPU drift for DQS1/FEC6-like same-archive
+  rows is now calibrated as a false-authority eureka trigger, not a score
+  claim. Five stable-core anchors show local minus contest score deltas of
+  `+0.000010`, `+0.000010`, `+0.000010`, `+0.000012`, and `+0.000011`,
+  all from SegNet-only distortion drift with identical rate and PoseNet. The
+  calibration artifact is
+  `.omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json`;
+  the helper is `tools/calibrate_local_cpu_contest_drift.py`. Outside this
+  trust region, older MPS/nonlocal/different-substrate rows remain
+  out-of-class and must be separately calibrated or widened.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 

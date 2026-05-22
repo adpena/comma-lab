@@ -98,6 +98,15 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
         blockers.append(f"cache_pair_count_mismatch:cache={cache_pair_count}:expected={expected}")
     if auth_n_samples is None:
         blockers.append("auth_eval_n_samples_missing")
+    if auth_hash_manifest:
+        _append_auth_scorer_input_manifest_blockers(
+            blockers,
+            auth_hash_manifest,
+            auth_archive_sha=auth_archive_sha,
+            auth_inflated_sha=auth_inflated_sha,
+            auth_raw_sha=auth_raw_sha,
+            auth_n_samples=auth_n_samples,
+        )
     if reference_cache_manifest is not None:
         ref_archive_sha = _string(reference_cache_manifest.get("archive_sha256"))
         ref_inflated_sha = _string(
@@ -273,6 +282,56 @@ def _append_reference_cache_manifest_blockers(
     if pair_count is not None and auth_n_samples is not None and pair_count != auth_n_samples:
         blockers.append(
             f"reference_pair_count_mismatch:reference={pair_count}:auth={auth_n_samples}"
+        )
+
+
+def _append_auth_scorer_input_manifest_blockers(
+    blockers: list[str],
+    manifest: dict[str, Any],
+    *,
+    auth_archive_sha: str | None,
+    auth_inflated_sha: str | None,
+    auth_raw_sha: str | None,
+    auth_n_samples: int | None,
+) -> None:
+    schema = _string(manifest.get("schema_version"))
+    require_full_cache_identity = schema == "mlx_scorer_input_cache.v1"
+    manifest_archive_sha = _string(manifest.get("archive_sha256"))
+    manifest_inflated_sha = _string(manifest.get("inflated_outputs_aggregate_sha256"))
+    manifest_raw_sha = _string(manifest.get("raw_sha256"))
+    manifest_pair_count = _int(manifest.get("pair_count"))
+
+    if require_full_cache_identity and not manifest_archive_sha:
+        blockers.append("auth_scorer_input_manifest_archive_sha256_missing")
+    if manifest_archive_sha and auth_archive_sha and manifest_archive_sha != auth_archive_sha:
+        blockers.append("auth_scorer_input_manifest_archive_sha256_mismatch_with_auth_eval")
+
+    if require_full_cache_identity and not manifest_inflated_sha:
+        blockers.append("auth_scorer_input_manifest_inflated_outputs_aggregate_sha256_missing")
+    if (
+        manifest_inflated_sha
+        and auth_inflated_sha
+        and manifest_inflated_sha != auth_inflated_sha
+    ):
+        blockers.append(
+            "auth_scorer_input_manifest_inflated_outputs_aggregate_sha256_mismatch_with_auth_eval"
+        )
+
+    if require_full_cache_identity and not manifest_raw_sha:
+        blockers.append("auth_scorer_input_manifest_raw_sha256_missing")
+    if manifest_raw_sha and auth_raw_sha and manifest_raw_sha != auth_raw_sha:
+        blockers.append("auth_scorer_input_manifest_raw_sha256_mismatch_with_auth_eval")
+
+    if require_full_cache_identity and manifest_pair_count is None:
+        blockers.append("auth_scorer_input_manifest_pair_count_missing")
+    if (
+        manifest_pair_count is not None
+        and auth_n_samples is not None
+        and manifest_pair_count != auth_n_samples
+    ):
+        blockers.append(
+            "auth_scorer_input_manifest_pair_count_mismatch:"
+            f"manifest={manifest_pair_count}:auth={auth_n_samples}"
         )
 
 

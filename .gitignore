@@ -36,6 +36,11 @@ workspace/upstream_snapshot.json
 !.omx/state/active_lane_dispatch_claims.md
 .omx/state/vastai_active_instances.json
 .omx/state/instance_setup_first_seen.json
+.omx/state/experiment_queue*.sqlite
+.omx/state/experiment_queue*.db
+.omx/state/experiment_queue_logs/
+experiments/queue_state*.sqlite
+experiments/queue_state*.db
 
 # Large binary files (GitHub 100MB limit)
 *.raw

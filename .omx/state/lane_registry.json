@@ -47611,6 +47611,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_dqs1_pairset_drop_one_rank020_pair0430_local_first_20260522",
+      "name": "DQS1 rank020 pair0430 local-first experiment queue",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Declarative SQLite-backed queue lane for local CPU/MLX-first materialization, locality controls, and advisory eval before any cloud anchoring."
+    },
+    {
+      "id": "lane_dqs1_pairset_drop_one_rank022_pair0167_local_first_20260522",
+      "name": "DQS1 rank022 pair0167 local-first experiment queue",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "configs/experiment_queues/dqs1_pairset_local_first.yaml"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_experiment_queue.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Current declarative SQLite-backed queue lane for next component-marginal candidate rank022/pair0167 with local-first controls before any cloud anchoring."
     }
   ],
   "level_rules": {
@@ -47620,5 +47702,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-22T19:20:19Z"
+  "updated_at": "2026-05-22T19:52:44Z"
 }
