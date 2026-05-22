@@ -155,7 +155,7 @@ class MLXEfficientNetSqueezeExciteAdapter:
     def __call__(self, x_nhwc: Any) -> Any:
         import mlx.core as mx
 
-        x_se = mx.mean(x_nhwc, axis=(1, 2), keepdims=True)
+        x_se = mx.mean(mx.mean(x_nhwc, axis=2, keepdims=True), axis=1, keepdims=True)
         x_se = mlx_silu(self.conv_reduce(x_se))
         x_se = self.conv_expand(x_se)
         return x_nhwc * mlx_sigmoid(x_se)
