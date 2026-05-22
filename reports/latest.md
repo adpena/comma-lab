@@ -1,9 +1,9 @@
 <!--
-generated_at: 2026-05-22T20:11:00Z
-from_state_hash: frontier_scan_dqs1_pairset_rank019_observed_hardened_20260522T2011Z
-regenerated_by: codex:dqs1_pairset_rank019_exact_cpu_observed_20260522
-last_refreshed_at: 2026-05-22T20:11:00Z
-last_refreshed_by: codex:dqs1_pairset_rank019_exact_cpu_observed_20260522
+generated_at: 2026-05-22T20:25:00Z
+from_state_hash: frontier_scan_dqs1_pairset_rank019_append_only_hardened_20260522T2025Z
+regenerated_by: codex:dqs1_rank019_queue_worker_drift_hardened_20260522
+last_refreshed_at: 2026-05-22T20:25:00Z
+last_refreshed_by: codex:dqs1_rank019_queue_worker_drift_hardened_20260522
 last_refreshed_head: d49171d7
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
@@ -277,7 +277,7 @@ last_refreshed_note: |
   now the fail-closed helper
   `tools/canonicalize_pairset_component_marginal_signal.py`; its latest
   planning-only output is
-  `experiments/results/cross_family_candidate_portfolio/20260522T201100Z_pairset_component_rank019_observed_hardened/portfolio.json`
+  `experiments/results/cross_family_candidate_portfolio/20260522T202400Z_pairset_component_rank019_append_only_hardened/portfolio.json`
   (SHA-256
   `66dbcd3588d1f19f844cdd73f2b3656b811ce0ff9b0b187efd47b22041a5f267`),
   ignored by `.gitignore` under `experiments/results/*`.
@@ -289,9 +289,11 @@ last_refreshed_note: |
   rank023/pair0440. Queue commands are argv
   lists, state and telemetry live in SQLite, cloud resources are hidden unless
   explicitly allowed, controls support `running`/`paused`/`frozen`, and
-  rewinds can cascade through dependent steps. Generated queue state and logs
-  are ignored; durable evidence belongs in `.omx/research/` and report
-  surfaces.
+  rewinds can cascade through dependent steps. `run-worker` now supports bounded
+  local loops with reload and signal-safe stops; stale ready steps cannot bypass
+  pause/freeze controls, unknown resource kinds and duplicate step ids fail
+  closed, and generated queue state, logs, and SQLite sidecars are ignored.
+  Durable evidence belongs in `.omx/research/` and report surfaces.
 - Local macOS CPU vs Linux contest-CPU drift for DQS1/FEC6-like same-archive
   rows is now calibrated as a false-authority eureka trigger, not a score
   claim. Five stable-core anchors show local minus contest score deltas of
@@ -299,9 +301,12 @@ last_refreshed_note: |
   all from SegNet-only distortion drift with identical rate and PoseNet. The
   calibration artifact is
   `.omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json`;
-  the helper is `tools/calibrate_local_cpu_contest_drift.py`. Outside this
-  trust region, older MPS/nonlocal/different-substrate rows remain
-  out-of-class and must be separately calibrated or widened.
+  the helper is `tools/calibrate_local_cpu_contest_drift.py`. The calibration
+  path now rejects out-of-class anchors before fitting, recomputes loaded
+  calibration JSON from embedded anchors, and emits JSON-safe empty
+  calibrations with false-authority blockers. Outside this trust region, older
+  MPS/nonlocal/different-substrate rows remain out-of-class and must be
+  separately calibrated or widened.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 

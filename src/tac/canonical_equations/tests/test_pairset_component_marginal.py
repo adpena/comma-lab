@@ -55,4 +55,18 @@ def test_build_pairset_component_marginal_canonical_equation():
         "dqs1_pair0167_drop_one_component_cpu_penalty_20260522",
         "dqs1_pair0151_drop_one_component_cpu_penalty_20260522",
     }
+    source_by_anchor = {
+        anchor.anchor_id: anchor.source_artifact for anchor in equation.empirical_anchors
+    }
+    assert source_by_anchor[
+        "dqs1_pair0151_drop_one_component_cpu_penalty_20260522"
+    ].endswith(
+        "codex_findings_dqs1_rank019_queue_worker_drift_hardening_"
+        "20260522T201951Z_codex.md"
+    )
+    assert source_by_anchor[
+        "dqs1_pair0167_drop_one_component_cpu_penalty_20260522"
+    ].endswith(
+        "codex_findings_dqs1_pairset_observation_feedback_20260522T164706Z_codex.md"
+    )
     assert "tac.optimization.cross_family_candidate_portfolio" in equation.canonical_consumers

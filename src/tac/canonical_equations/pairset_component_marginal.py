@@ -19,9 +19,13 @@ from tac.provenance.builders import (
     build_provenance_for_research_sidecar,
 )
 
-_FINDINGS_MEMO = (
+_OBSERVATION_FEEDBACK_MEMO = (
     ".omx/research/codex_findings_dqs1_pairset_observation_feedback_"
     "20260522T164706Z_codex.md"
+)
+_RANK019_HARDENING_MEMO = (
+    ".omx/research/codex_findings_dqs1_rank019_queue_worker_drift_hardening_"
+    "20260522T201951Z_codex.md"
 )
 _PREDICTED_PLACEHOLDER_SHA = "0" * 64
 
@@ -60,9 +64,14 @@ def _predicted_provenance():
     )
 
 
-def _anchor_provenance(axis: str, hardware_substrate: str):
+def _anchor_provenance(
+    axis: str,
+    hardware_substrate: str,
+    *,
+    sidecar_path: str = _OBSERVATION_FEEDBACK_MEMO,
+):
     return build_provenance_for_research_sidecar(
-        sidecar_path=_FINDINGS_MEMO,
+        sidecar_path=sidecar_path,
         reactivation_criteria=(
             "pairset_component_marginal_score_decomposition_empirical_anchor"
         ),
@@ -116,7 +125,7 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         predicted_output={"score_delta": cpu_predicted},
         empirical_output={"observed_delta_vs_axis_baseline": cpu_empirical},
         residual=abs(cpu_predicted - cpu_empirical),
-        source_artifact=_FINDINGS_MEMO,
+        source_artifact=_OBSERVATION_FEEDBACK_MEMO,
         measurement_method="dqs1_drop_one_pair0371_contest_cpu_component_delta",
         provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
     )
@@ -134,7 +143,7 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         predicted_output={"score_delta": cuda_predicted},
         empirical_output={"observed_delta_vs_axis_baseline": cuda_empirical},
         residual=abs(cuda_predicted - cuda_empirical),
-        source_artifact=_FINDINGS_MEMO,
+        source_artifact=_OBSERVATION_FEEDBACK_MEMO,
         measurement_method="dqs1_drop_one_pair0371_contest_cuda_t4_component_delta",
         provenance=_anchor_provenance("[contest-CUDA T4]", "linux_x86_64_t4"),
     )
@@ -152,7 +161,7 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         predicted_output={"score_delta": cpu_penalty_predicted},
         empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
         residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
-        source_artifact=_FINDINGS_MEMO,
+        source_artifact=_OBSERVATION_FEEDBACK_MEMO,
         measurement_method="dqs1_drop_one_pair0320_contest_cpu_component_delta",
         provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
     )
@@ -170,7 +179,7 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         predicted_output={"score_delta": cpu_penalty_predicted},
         empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
         residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
-        source_artifact=_FINDINGS_MEMO,
+        source_artifact=_OBSERVATION_FEEDBACK_MEMO,
         measurement_method="dqs1_drop_one_pair0378_contest_cpu_component_delta",
         provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
     )
@@ -188,7 +197,7 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         predicted_output={"score_delta": cpu_penalty_predicted},
         empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
         residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
-        source_artifact=_FINDINGS_MEMO,
+        source_artifact=_OBSERVATION_FEEDBACK_MEMO,
         measurement_method="dqs1_drop_one_pair0296_contest_cpu_component_delta",
         provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
     )
@@ -206,7 +215,7 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         predicted_output={"score_delta": cpu_penalty_predicted},
         empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
         residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
-        source_artifact=_FINDINGS_MEMO,
+        source_artifact=_OBSERVATION_FEEDBACK_MEMO,
         measurement_method="dqs1_drop_one_pair0430_contest_cpu_component_delta",
         provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
     )
@@ -224,7 +233,7 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         predicted_output={"score_delta": cpu_penalty_predicted},
         empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
         residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
-        source_artifact=_FINDINGS_MEMO,
+        source_artifact=_OBSERVATION_FEEDBACK_MEMO,
         measurement_method="dqs1_drop_one_pair0167_contest_cpu_component_delta",
         provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
     )
@@ -242,9 +251,13 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         predicted_output={"score_delta": cpu_penalty_predicted},
         empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
         residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
-        source_artifact=_FINDINGS_MEMO,
+        source_artifact=_RANK019_HARDENING_MEMO,
         measurement_method="dqs1_drop_one_pair0151_contest_cpu_component_delta",
-        provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
+        provenance=_anchor_provenance(
+            "[contest-CPU]",
+            "linux_x86_64_cpu",
+            sidecar_path=_RANK019_HARDENING_MEMO,
+        ),
     )
     return CanonicalEquation(
         equation_id=PAIRSET_COMPONENT_MARGINAL_SCORE_DECOMPOSITION_EQUATION_ID,
