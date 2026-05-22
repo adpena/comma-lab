@@ -1936,6 +1936,60 @@ def _mlx_contract_row_identity_blockers(
     return blockers
 
 
+def _pair_window_contains(parent: Any, child: Any) -> bool:
+    if not (
+        isinstance(parent, list)
+        and isinstance(child, list)
+        and len(parent) == 2
+        and len(child) == 2
+    ):
+        return False
+    parent_start = _as_int(parent[0])
+    parent_stop = _as_int(parent[1])
+    child_start = _as_int(child[0])
+    child_stop = _as_int(child[1])
+    if None in (parent_start, parent_stop, child_start, child_stop):
+        return False
+    return parent_start <= child_start and child_stop <= parent_stop
+
+
+def _mlx_contract_summary_covers_row_window(
+    summary: dict[str, Any],
+    row: dict[str, Any],
+) -> bool:
+    """Return true when a strict parent-window contract covers a child row.
+
+    This is intentionally narrower than exact identity matching. It requires
+    archive/inflated identity, batch shape, full scorer-input cache array
+    hashes, and pair-window containment. It does not compare response component
+    hashes because a parent response's full distortion-vector hash cannot equal
+    a child singleton-window response's slice hash.
+    """
+
+    if not _pair_window_contains(
+        summary.get("pair_window"),
+        row.get("source_pair_window"),
+    ):
+        return False
+    checks = (
+        (summary.get("archive_sha256"), row.get("archive_sha256")),
+        (
+            summary.get("inflated_outputs_aggregate_sha256"),
+            row.get("source_inflated_outputs_aggregate_sha256"),
+        ),
+        (_as_int(summary.get("batch_pairs")), _as_int(row.get("source_batch_pairs"))),
+        (
+            summary.get("candidate_cache_array_sha256"),
+            row.get("source_candidate_cache_array_sha256"),
+        ),
+        (
+            summary.get("reference_cache_array_sha256"),
+            row.get("source_reference_cache_array_sha256"),
+        ),
+    )
+    return all(expected is not None and expected == actual for expected, actual in checks)
+
+
 def _is_mlx_scorer_response_row(row: Any) -> bool:
     return isinstance(row, dict) and (
         row.get("family") == "mlx_scorer_response"
@@ -2034,6 +2088,7 @@ def _build_mlx_production_contract_bundle_gate(
         blockers.append("mlx_production_contract_bundle_verdict_not_pass")
     child_summaries: list[dict[str, Any]] = []
     contracts_by_identity: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    strict_contracts: list[dict[str, Any]] = []
     for index, contract in enumerate(contracts):
         if not isinstance(contract, dict):
             blockers.append(f"mlx_production_contract_bundle_child_not_object:{index}")
@@ -2052,6 +2107,13 @@ def _build_mlx_production_contract_bundle_gate(
         if gate.get("status") != "strict_pass":
             blockers.append(f"mlx_production_contract_bundle_child_blocked:{index}")
             continue
+        strict_contracts.append(
+            {
+                "index": index,
+                "gate": gate,
+                "summary": summary,
+            }
+        )
         identity_key = _mlx_contract_summary_identity_key(summary)
         if identity_key is None:
             blockers.append(f"mlx_production_contract_bundle_child_identity_missing:{index}")
@@ -2065,6 +2127,7 @@ def _build_mlx_production_contract_bundle_gate(
         )
 
     matched_row_ids: list[str] = []
+    parent_window_matched_row_ids: list[str] = []
     unmatched_row_ids: list[str] = []
     if row_list is not None:
         for row in row_list:
@@ -2076,8 +2139,17 @@ def _build_mlx_production_contract_bundle_gate(
                 continue
             matching_contracts = contracts_by_identity.get(identity_key, [])
             if not matching_contracts:
-                unmatched_row_ids.append(row_id)
-                blockers.append(f"mlx_production_contract_bundle_row_unmatched:{row_id}")
+                parent_matches = [
+                    item
+                    for item in strict_contracts
+                    if _mlx_contract_summary_covers_row_window(item["summary"], row)
+                ]
+                if not parent_matches:
+                    unmatched_row_ids.append(row_id)
+                    blockers.append(f"mlx_production_contract_bundle_row_unmatched:{row_id}")
+                    continue
+                matched_row_ids.append(row_id)
+                parent_window_matched_row_ids.append(row_id)
                 continue
             detail_blocker_sets = [
                 _mlx_contract_row_identity_blockers(item["summary"], [row])
@@ -2122,6 +2194,8 @@ def _build_mlx_production_contract_bundle_gate(
             ),
             "row_count": 0 if row_list is None else len(row_list),
             "matched_row_count": len(matched_row_ids),
+            "parent_window_matched_row_count": len(parent_window_matched_row_ids),
+            "parent_window_matched_row_ids": parent_window_matched_row_ids[:8],
             "unmatched_row_count": len(unmatched_row_ids),
             "unmatched_row_ids": unmatched_row_ids[:8],
             "child_contracts": child_summaries[:8],
@@ -2402,6 +2476,9 @@ def build_effective_mlx_spend_triage_gate(
             ),
             "production_contract_row_count": production_row_count,
             "production_contract_matched_row_count": production_matched_row_count,
+            "production_contract_parent_window_matched_row_count": (
+                production_summary.get("parent_window_matched_row_count")
+            ),
             "production_contract_unmatched_row_count": production_unmatched_row_count,
             "production_contract_unmatched_row_ids_sample": (
                 production_unmatched_row_ids
@@ -3883,6 +3960,10 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
         lines.append(
             "- Production contract matched rows: "
             f"`{gate_summary.get('production_contract_matched_row_count')}`"
+        )
+        lines.append(
+            "- Production contract parent-window matched rows: "
+            f"`{gate_summary.get('production_contract_parent_window_matched_row_count')}`"
         )
         lines.append(
             "- Production contract unmatched rows: "

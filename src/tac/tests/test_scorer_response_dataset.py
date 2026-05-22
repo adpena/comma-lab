@@ -703,6 +703,81 @@ def test_mlx_production_contract_bundle_gate_blocks_uncovered_mlx_row() -> None:
     ]
 
 
+def test_mlx_production_contract_bundle_gate_parent_window_covers_child_rows() -> None:
+    cache_hashes = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    gate = build_mlx_production_contract_gate(
+        _mlx_production_contract_bundle(
+            _mlx_production_contract_for_window(
+                run_id="window-0-600",
+                pair_window=[0, 600],
+                candidate_cache_array_sha256=cache_hashes,
+                reference_cache_array_sha256=cache_hashes,
+                posenet_sha256="p" * 64,
+                segnet_sha256="s" * 64,
+            ),
+        ),
+        rows=[
+            _mlx_response_row(
+                row_id="mlx-row-1",
+                pair_window=[218, 219],
+                candidate_cache_array_sha256=cache_hashes,
+                reference_cache_array_sha256=cache_hashes,
+                posenet_sha256="a" * 64,
+                segnet_sha256="b" * 64,
+            )
+        ],
+    )
+
+    assert gate["status"] == "strict_pass"
+    assert gate["summary"]["row_count"] == 1
+    assert gate["summary"]["matched_row_count"] == 1
+    assert gate["summary"]["parent_window_matched_row_count"] == 1
+    assert gate["summary"]["unmatched_row_count"] == 0
+
+
+def test_mlx_production_contract_bundle_gate_parent_window_requires_cache_identity() -> None:
+    contract_cache = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "1" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    row_cache = {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "3" * 64,
+        "segnet_last_rgb": "2" * 64,
+    }
+    gate = build_mlx_production_contract_gate(
+        _mlx_production_contract_bundle(
+            _mlx_production_contract_for_window(
+                run_id="window-0-600",
+                pair_window=[0, 600],
+                candidate_cache_array_sha256=contract_cache,
+                reference_cache_array_sha256=contract_cache,
+            ),
+        ),
+        rows=[
+            _mlx_response_row(
+                row_id="mlx-row-1",
+                pair_window=[218, 219],
+                candidate_cache_array_sha256=row_cache,
+                reference_cache_array_sha256=contract_cache,
+            )
+        ],
+    )
+
+    assert gate["status"] == "blocked"
+    assert gate["summary"]["matched_row_count"] == 0
+    assert gate["summary"]["parent_window_matched_row_count"] == 0
+    assert gate["summary"]["unmatched_row_count"] == 1
+    assert "mlx_production_contract_bundle_row_unmatched:mlx-row-1" in gate[
+        "blockers"
+    ]
+
+
 def test_mlx_production_contract_bundle_gate_blocks_failed_bundle_verdict() -> None:
     bundle = _mlx_production_contract_bundle(
         _mlx_production_contract_for_window(
