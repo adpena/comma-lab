@@ -27,6 +27,8 @@ def _payload(
     pose_avg: float = 0.00029137,
     n_samples: int = 600,
     evidence_grade: str | None = None,
+    evidence_tag: str | None = None,
+    score_axis: str | None = None,
     score_claim: bool = False,
 ) -> dict[str, object]:
     score = contest_formula_score(
@@ -49,15 +51,34 @@ def _payload(
     }
     if evidence_grade is not None:
         payload["evidence_grade"] = evidence_grade
-        payload["evidence_tag"] = EVIDENCE_TAG_MLX
-        payload["score_axis"] = EVIDENCE_TAG_MLX
+    if evidence_tag is not None:
+        payload["evidence_tag"] = evidence_tag
+    if score_axis is not None:
+        payload["score_axis"] = score_axis
     return payload
+
+
+def _mlx_payload(**kwargs: object) -> dict[str, object]:
+    return _payload(
+        evidence_grade=EVIDENCE_GRADE_MLX,
+        evidence_tag=EVIDENCE_TAG_MLX,
+        score_axis=EVIDENCE_TAG_MLX,
+        **kwargs,
+    )
+
+
+def _auth_payload(**kwargs: object) -> dict[str, object]:
+    return _payload(
+        evidence_grade="contest-CPU",
+        score_axis="contest_cpu",
+        **kwargs,
+    )
 
 
 def test_mlx_fidelity_passes_near_exact_byte_closed_signal() -> None:
     manifest = build_mlx_scorer_training_signal_fidelity_manifest(
-        _payload(evidence_grade=EVIDENCE_GRADE_MLX),
-        _payload(),
+        _mlx_payload(),
+        _auth_payload(),
         run_id="fixture",
     )
 
@@ -69,15 +90,20 @@ def test_mlx_fidelity_passes_near_exact_byte_closed_signal() -> None:
     assert manifest["rank_or_kill_eligible"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["candidate_generation_only"] is True
-    assert "prepaid_dispatch_spend_filter" in manifest["device_contract"]["allowed_uses"]
+    assert (
+        "prepaid_dispatch_spend_filter_after_score_calibration"
+        in manifest["device_contract"]["allowed_uses"]
+    )
+    assert manifest["auth_eval_contract"]["evidence_grade"] == "contest-CPU"
+    assert manifest["auth_eval_contract"]["score_axis"] == "contest_cpu"
     assert manifest["byte_closure"]["archive_sha256"]["match"] is True
     assert manifest["signal_exposure"]["tightest_failed_axis"] is None
 
 
 def test_mlx_fidelity_fails_archive_identity_mismatch() -> None:
     manifest = build_mlx_scorer_training_signal_fidelity_manifest(
-        _payload(archive_sha256="c" * 64, evidence_grade=EVIDENCE_GRADE_MLX),
-        _payload(),
+        _mlx_payload(archive_sha256="c" * 64),
+        _auth_payload(),
     )
 
     assert manifest["passed"] is False
@@ -87,8 +113,8 @@ def test_mlx_fidelity_fails_archive_identity_mismatch() -> None:
 
 def test_mlx_fidelity_fails_seg_axis_drift() -> None:
     manifest = build_mlx_scorer_training_signal_fidelity_manifest(
-        _payload(seg_avg=0.00057029, evidence_grade=EVIDENCE_GRADE_MLX),
-        _payload(),
+        _mlx_payload(seg_avg=0.00057029),
+        _auth_payload(),
     )
 
     assert manifest["passed"] is False
@@ -102,8 +128,8 @@ def test_mlx_fidelity_fails_seg_axis_drift() -> None:
 
 def test_mlx_fidelity_fails_false_authority_flags() -> None:
     manifest = build_mlx_scorer_training_signal_fidelity_manifest(
-        _payload(evidence_grade=EVIDENCE_GRADE_MLX, score_claim=True),
-        _payload(),
+        _mlx_payload(score_claim=True),
+        _auth_payload(),
     )
 
     assert manifest["passed"] is False
@@ -115,7 +141,7 @@ def test_mlx_fidelity_fails_false_authority_flags() -> None:
 def test_mlx_fidelity_requires_mlx_evidence_grade() -> None:
     manifest = build_mlx_scorer_training_signal_fidelity_manifest(
         _payload(),
-        _payload(),
+        _auth_payload(),
     )
 
     assert manifest["passed"] is False
@@ -123,13 +149,13 @@ def test_mlx_fidelity_requires_mlx_evidence_grade() -> None:
 
 
 def test_mlx_fidelity_requires_mlx_axis_tags() -> None:
-    mlx_payload = _payload(evidence_grade=EVIDENCE_GRADE_MLX)
+    mlx_payload = _mlx_payload()
     mlx_payload["evidence_tag"] = "[contest-CUDA]"
     mlx_payload["score_axis"] = "[contest-CUDA]"
 
     manifest = build_mlx_scorer_training_signal_fidelity_manifest(
         mlx_payload,
-        _payload(),
+        _auth_payload(),
     )
 
     assert manifest["passed"] is False
@@ -139,8 +165,8 @@ def test_mlx_fidelity_requires_mlx_axis_tags() -> None:
 
 def test_mlx_fidelity_allow_missing_inflated_identity_does_not_allow_present_mismatch() -> None:
     manifest = build_mlx_scorer_training_signal_fidelity_manifest(
-        _payload(evidence_grade=EVIDENCE_GRADE_MLX, inflated_sha256="b" * 64),
-        _payload(inflated_sha256="c" * 64),
+        _mlx_payload(inflated_sha256="b" * 64),
+        _auth_payload(inflated_sha256="c" * 64),
         thresholds=MLXScorerFidelityThresholds(require_inflated_output_identity=False),
     )
 
@@ -148,12 +174,32 @@ def test_mlx_fidelity_allow_missing_inflated_identity_does_not_allow_present_mis
     assert "inflated_outputs_aggregate_sha256_identity_present_mismatch" in manifest["blockers"]
 
 
+def test_mlx_fidelity_requires_auth_eval_contest_axis() -> None:
+    manifest = build_mlx_scorer_training_signal_fidelity_manifest(
+        _mlx_payload(),
+        _payload(evidence_grade="B", score_axis="diagnostic_cuda"),
+    )
+
+    assert manifest["passed"] is False
+    assert "auth_eval_evidence_grade_not_contest_cpu_or_cuda" in manifest["blockers"]
+
+
+def test_mlx_fidelity_requires_auth_eval_axis_matches_grade() -> None:
+    manifest = build_mlx_scorer_training_signal_fidelity_manifest(
+        _mlx_payload(),
+        _payload(evidence_grade="contest-CUDA", score_axis="contest_cpu"),
+    )
+
+    assert manifest["passed"] is False
+    assert "auth_eval_score_axis_not_contest_cuda" in manifest["blockers"]
+
+
 def test_mlx_fidelity_cli_writes_manifest(tmp_path: Path) -> None:
     mlx_path = tmp_path / "mlx.json"
     auth_path = tmp_path / "auth.json"
     out_path = tmp_path / "manifest.json"
-    mlx_path.write_text(json.dumps(_payload(evidence_grade=EVIDENCE_GRADE_MLX)), encoding="utf-8")
-    auth_path.write_text(json.dumps(_payload()), encoding="utf-8")
+    mlx_path.write_text(json.dumps(_mlx_payload()), encoding="utf-8")
+    auth_path.write_text(json.dumps(_auth_payload()), encoding="utf-8")
 
     completed = subprocess.run(
         [

@@ -38,6 +38,10 @@ __all__ = [
 SCHEMA_VERSION = "mlx_scorer_training_signal_fidelity.v1"
 PASS_VERDICT = "PASS_TRAINING_SIGNAL_FIDELITY"
 FAIL_VERDICT = "FAIL_TRAINING_SIGNAL_FIDELITY"
+AUTH_EVAL_AXIS_BY_GRADE = {
+    "contest-CPU": "contest_cpu",
+    "contest-CUDA": "contest_cuda",
+}
 
 
 @dataclass(frozen=True)
@@ -115,6 +119,7 @@ def build_mlx_scorer_training_signal_fidelity_manifest(
         require_inflated_output_identity=limits.require_inflated_output_identity,
     )
     _append_axis_and_authority_blockers(blockers, mlx)
+    _append_auth_eval_authority_blockers(blockers, auth)
     _append_sample_blockers(blockers, mlx_metrics, auth_metrics, limits.expected_n_samples)
 
     deltas = _component_deltas(mlx_metrics, auth_metrics)
@@ -139,10 +144,10 @@ def build_mlx_scorer_training_signal_fidelity_manifest(
         "device_contract": {
             "allowed_uses": [
                 "local_mlx_training_gradient_shaping",
-                "local_sweep_reranking_after_passing_transfer_calibration",
+                "local_sweep_reranking_after_transfer_and_score_calibration",
                 "candidate_generation_prior",
                 "signal_exposure",
-                "prepaid_dispatch_spend_filter",
+                "prepaid_dispatch_spend_filter_after_score_calibration",
             ],
             "forbidden_uses": [
                 "auth_eval",
@@ -165,6 +170,11 @@ def build_mlx_scorer_training_signal_fidelity_manifest(
             "inflated_outputs_aggregate_sha256": _identity_pair(
                 mlx, auth, _inflated_outputs_aggregate_sha256
             ),
+        },
+        "auth_eval_contract": {
+            "evidence_grade": auth.get("evidence_grade"),
+            "score_axis": auth.get("score_axis"),
+            "accepted_grade_axis_pairs": dict(AUTH_EVAL_AXIS_BY_GRADE),
         },
         "axis_metrics": {
             "mlx": mlx_metrics,
@@ -275,6 +285,17 @@ def _append_axis_and_authority_blockers(blockers: list[str], mlx: dict[str, Any]
         blockers.append("mlx_score_axis_missing")
     elif score_axis != EVIDENCE_TAG_MLX:
         blockers.append(f"mlx_score_axis_not_{EVIDENCE_TAG_MLX}")
+
+
+def _append_auth_eval_authority_blockers(blockers: list[str], auth: dict[str, Any]) -> None:
+    evidence_grade = auth.get("evidence_grade")
+    expected_axis = AUTH_EVAL_AXIS_BY_GRADE.get(evidence_grade)
+    if expected_axis is None:
+        blockers.append("auth_eval_evidence_grade_not_contest_cpu_or_cuda")
+        return
+    score_axis = auth.get("score_axis")
+    if score_axis != expected_axis:
+        blockers.append(f"auth_eval_score_axis_not_{expected_axis}")
 
 
 def _append_sample_blockers(
