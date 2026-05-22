@@ -164,7 +164,7 @@ env_overrides:
   RUDIN_FLOOR_OUTPUT_DIR: /workspace/pact/lane_substrate_rudin_floor_interpretable_ml_results/output
   RUDIN_FLOOR_EPOCHS: "8"
   RUDIN_FLOOR_SEED: "0"
-  RUDIN_FLOOR_DEVICE: "cpu"
+  RUDIN_FLOOR_DEVICE: "cuda"
   LOCAL_CUDA_WORKER: "1"
   SMOKE_ONLY: "0"
   # Dispatch is enabled at recipe level. The trainer still gates score

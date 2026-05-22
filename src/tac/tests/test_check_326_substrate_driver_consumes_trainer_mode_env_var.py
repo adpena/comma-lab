@@ -850,3 +850,89 @@ def test_check_326_overnight_rr_meta_extension_exempts_multi_value_validator(
         f"canonical multi-value-validator pattern incorrectly flagged: "
         f"{result['rows']}"
     )
+
+
+def test_check_326_flags_full_mode_driver_default_cpu_device(
+    tmp_path: Path,
+) -> None:
+    """Full trainer mode plus driver-default ``--device cpu`` is a pre-dispatch bug."""
+    from tools.audit_substrate_driver_mode_hardcode import audit_all_drivers
+
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    recipes_dir = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipes_dir.mkdir(parents=True)
+
+    (scripts_dir / "remote_lane_substrate_synth_device_cpu.sh").write_text(
+        textwrap.dedent(
+            """\
+            #!/bin/bash
+            set -euo pipefail
+            SYNTH_DEVICE_TRAINER_MODE="${SYNTH_DEVICE_TRAINER_MODE:-smoke}"
+            SYNTH_DEVICE_DEVICE="${SYNTH_DEVICE_DEVICE:-cpu}"
+            SMOKE_FLAG=""
+            if [ "$SYNTH_DEVICE_TRAINER_MODE" = "smoke" ]; then
+                SMOKE_FLAG="--smoke"
+            fi
+            python experiments/train_substrate_synth.py --device "$SYNTH_DEVICE_DEVICE" $SMOKE_FLAG
+            """
+        )
+    )
+    (recipes_dir / "substrate_synth_device_cpu_modal_t4_dispatch.yaml").write_text(
+        textwrap.dedent(
+            """\
+            name: substrate_synth_device_cpu_modal_t4_dispatch
+            dispatch_enabled: true
+            research_only: false
+            env_overrides:
+              SYNTH_DEVICE_TRAINER_MODE: "full"
+            """
+        )
+    )
+
+    result = audit_all_drivers(repo_root=tmp_path)
+    assert result["bug_class_count"] == 1
+    row = result["rows"][0]
+    assert row["verdict"] == "FULL_MODE_DEVICE_CPU_BUG_CLASS"
+    assert row["unsafe_recipes"][0]["device_env_var"] == "SYNTH_DEVICE_DEVICE"
+    assert row["unsafe_recipes"][0]["effective_device"] == "cpu"
+
+
+def test_check_326_flags_full_mode_recipe_cpu_device_override(
+    tmp_path: Path,
+) -> None:
+    """A recipe-side CPU override is also unsafe even if driver defaults to CUDA."""
+    from tools.audit_substrate_driver_mode_hardcode import audit_all_drivers
+
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    recipes_dir = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipes_dir.mkdir(parents=True)
+
+    (scripts_dir / "remote_lane_substrate_synth_recipe_cpu.sh").write_text(
+        textwrap.dedent(
+            """\
+            #!/bin/bash
+            set -euo pipefail
+            SYNTH_RECIPE_TRAINER_MODE="${SYNTH_RECIPE_TRAINER_MODE:-smoke}"
+            SYNTH_RECIPE_DEVICE="${SYNTH_RECIPE_DEVICE:-cuda}"
+            python experiments/train_substrate_synth.py --device "$SYNTH_RECIPE_DEVICE"
+            """
+        )
+    )
+    (recipes_dir / "substrate_synth_recipe_cpu_modal_t4_dispatch.yaml").write_text(
+        textwrap.dedent(
+            """\
+            name: substrate_synth_recipe_cpu_modal_t4_dispatch
+            dispatch_enabled: true
+            research_only: false
+            env_overrides:
+              SYNTH_RECIPE_TRAINER_MODE: "full"
+              SYNTH_RECIPE_DEVICE: "cpu"
+            """
+        )
+    )
+
+    result = audit_all_drivers(repo_root=tmp_path)
+    assert result["bug_class_count"] == 1
+    assert result["rows"][0]["verdict"] == "FULL_MODE_DEVICE_CPU_BUG_CLASS"

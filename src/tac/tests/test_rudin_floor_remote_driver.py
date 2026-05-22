@@ -62,3 +62,12 @@ def test_rudin_remote_driver_terminalizes_claim_on_all_exit_paths() -> None:
         'remote_driver_terminal rc=$rc',
     ):
         assert required in claim_block
+
+
+def test_rudin_full_dispatch_defaults_to_cuda_device() -> None:
+    """Full Modal dispatch must not late-fail through the CPU device guard."""
+
+    text = REMOTE_DRIVER.read_text(encoding="utf-8")
+
+    assert 'RUDIN_FLOOR_DEVICE="${RUDIN_FLOOR_DEVICE:-cuda}"' in text
+    assert "--device \"$RUDIN_FLOOR_DEVICE\"" in text

@@ -117,6 +117,18 @@ REQUIRED_MODAL_ENV_TOKENS = (
     "CUBLAS_WORKSPACE_CONFIG",
     "PYTORCH_CUDA_ALLOC_CONF",
 )
+_MODE_ENV_SUFFIXES = (
+    "TRAINER_MODE",
+    "DISPATCH_MODE",
+    "RUN_MODE",
+    "SMOKE_MODE",
+    "FULL_MODE",
+    "MODE_FULL",
+    "SMOKE_ONLY",
+)
+_DEVICE_ARG_ENV_RE = re.compile(
+    r"--device\s+(?:[\"']?\$\{?([A-Z0-9_]*DEVICE[A-Z0-9_]*)\}?[\"']?)"
+)
 
 
 class DispatchProtocolError(RuntimeError):
@@ -216,6 +228,98 @@ def _resolve_env_fallback(value: Any) -> str:
     if match:
         return match.group(1)
     return text
+
+
+def _env_overrides(raw_recipe: Mapping[str, Any]) -> Mapping[str, Any]:
+    env = raw_recipe.get("env_overrides")
+    return env if isinstance(env, Mapping) else {}
+
+
+def _mode_value_forces_full(env_var: str, value: Any) -> bool:
+    low = _clean_env_text(value).lower()
+    if not low:
+        return False
+    if "smoke" in env_var.lower():
+        return low in {"0", "false", "no", "off", "full"}
+    return low in {"full", "0", "false", "no", "off"}
+
+
+def _clean_env_text(value: Any) -> str:
+    return str(value or "").strip().strip('"').strip("'")
+
+
+def _mode_prefix(env_var: str) -> str:
+    for suffix in _MODE_ENV_SUFFIXES:
+        if env_var.endswith(suffix):
+            return env_var[: -len(suffix)]
+    return ""
+
+
+def _driver_device_env_vars(driver_text: str) -> tuple[str, ...]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for match in _DEVICE_ARG_ENV_RE.finditer(driver_text):
+        var = match.group(1)
+        if var in seen:
+            continue
+        seen.add(var)
+        ordered.append(var)
+    return tuple(ordered)
+
+
+def _driver_env_default_value(driver_text: str, env_var: str) -> str | None:
+    pattern = re.compile(
+        rf'^\s*{re.escape(env_var)}\s*=\s*["\']?\$\{{{re.escape(env_var)}:-([^}}]*)\}}',
+        re.MULTILINE,
+    )
+    match = pattern.search(driver_text)
+    if not match:
+        return None
+    value = match.group(1).strip().strip('"').strip("'")
+    return value or None
+
+
+def _full_mode_device_cpu_blockers(
+    raw_recipe: Mapping[str, Any],
+    *,
+    remote_driver: Path | None,
+) -> list[str]:
+    env = _env_overrides(raw_recipe)
+    full_modes = {
+        str(key): value
+        for key, value in env.items()
+        if any(str(key).endswith(suffix) for suffix in _MODE_ENV_SUFFIXES)
+        and _mode_value_forces_full(str(key), value)
+    }
+    if not full_modes:
+        return []
+    driver_text = _read_text(remote_driver)
+    device_vars = _driver_device_env_vars(driver_text)
+    if not device_vars:
+        return []
+    full_prefixes = {_mode_prefix(var) for var in full_modes}
+    blockers: list[str] = []
+    for device_var in device_vars:
+        device_prefix = (
+            device_var[: -len("DEVICE")] if device_var.endswith("DEVICE") else ""
+        )
+        if full_prefixes and "" not in full_prefixes and device_prefix not in full_prefixes:
+            continue
+        effective_device = env.get(device_var)
+        if effective_device is None:
+            effective_device = _driver_env_default_value(driver_text, device_var)
+        if _clean_env_text(effective_device).lower() != "cpu":
+            continue
+        mode_pairs = ",".join(
+            f"{var}={_clean_env_text(value)}"
+            for var, value in sorted(full_modes.items())
+            if _mode_prefix(var) in {"", device_prefix}
+        )
+        blockers.append(
+            "full_mode_device_cpu_bug_class:"
+            f"{mode_pairs or 'full_mode'}:{device_var}=cpu"
+        )
+    return blockers
 
 
 def _read_text(path: Path | None) -> str:
@@ -500,6 +604,9 @@ def _tier2_hardware_correctness(
                 + ",".join(missing)
                 + f":{rel}"
             )
+    blockers.extend(
+        _full_mode_device_cpu_blockers(raw_recipe, remote_driver=remote_driver)
+    )
     return _tier("tier2_hardware_correctness", blockers)
 
 

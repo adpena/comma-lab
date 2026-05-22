@@ -89,8 +89,62 @@ def _write_substrate_trainer(trainer_path: Path) -> None:
     )
 
 
+def _write_substrate_driver_with_mode_device(
+    driver_path: Path,
+    *,
+    device_default: str = "cuda",
+) -> None:
+    """Write a Modal substrate driver with trainer mode and device env vars."""
+
+    driver_path.parent.mkdir(parents=True, exist_ok=True)
+    driver_path.write_text(
+        "\n".join(
+            [
+                "#!/bin/bash",
+                "set -euo pipefail",
+                'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"',
+                'export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"',
+                'export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"',
+                'SYNTH_TRAINER_MODE="${SYNTH_TRAINER_MODE:-smoke}"',
+                f'SYNTH_DEVICE="${{SYNTH_DEVICE:-{device_default}}}"',
+                'SMOKE_FLAG=""',
+                'if [ "$SYNTH_TRAINER_MODE" = "smoke" ]; then',
+                '    SMOKE_FLAG="--smoke"',
+                "fi",
+                'python experiments/train_substrate_alpha.py --device "$SYNTH_DEVICE" $SMOKE_FLAG',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _blockers(report) -> str:
     return "\n".join(report.blockers)
+
+
+def _substrate_recipe(*, device: str = "cuda") -> dict:
+    return {
+        "name": "full_mode_device_test",
+        "lane_id": "lane_full_mode_device_20260522",
+        "dispatch_enabled": True,
+        "dispatch_kind": "substrate",
+        "platform": "modal",
+        "gpu": "T4",
+        "min_vram_gb": 16,
+        "min_smoke_gpu": "T4",
+        "video_input_strategy": "shared_volume_no_contention_expected",
+        "pyav_decode_strategy": "cpu_thread_async_upload",
+        "target_modes": ["research_substrate"],
+        "canary_status": "independent_substrate",
+        "cost_band": {"epochs": 1, "gpu_key": "T4"},
+        "remote_driver": "scripts/remote_lane_substrate_alpha.sh",
+        "required_input_files_trainer": "experiments/train_substrate_alpha.py",
+        "env_overrides": {
+            "SYNTH_TRAINER_MODE": "full",
+            "SYNTH_DEVICE": device,
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +162,58 @@ def test_is_tool_dispatch_returns_false_for_substrate_trainer(tmp_path: Path) ->
     trainer = tmp_path / "experiments" / "train_substrate_alpha.py"
     _write_substrate_trainer(trainer)
     assert is_tool_dispatch({}, trainer_path=trainer, repo_root=tmp_path) is False
+
+
+def test_substrate_full_mode_refuses_cpu_device_before_dispatch(
+    tmp_path: Path,
+) -> None:
+    trainer = tmp_path / "experiments" / "train_substrate_alpha.py"
+    _write_substrate_trainer(trainer)
+    driver = tmp_path / "scripts" / "remote_lane_substrate_alpha.sh"
+    _write_substrate_driver_with_mode_device(driver)
+
+    report = evaluate_dispatch_protocol_complete(
+        _substrate_recipe(device="cpu"),
+        repo_root=tmp_path,
+    )
+
+    assert report.dispatch_protocol_complete is False
+    assert "full_mode_device_cpu_bug_class" in _blockers(report)
+
+
+def test_substrate_full_mode_allows_cuda_device(
+    tmp_path: Path,
+) -> None:
+    trainer = tmp_path / "experiments" / "train_substrate_alpha.py"
+    _write_substrate_trainer(trainer)
+    driver = tmp_path / "scripts" / "remote_lane_substrate_alpha.sh"
+    _write_substrate_driver_with_mode_device(driver)
+
+    report = evaluate_dispatch_protocol_complete(
+        _substrate_recipe(device="cuda"),
+        repo_root=tmp_path,
+    )
+
+    assert report.dispatch_protocol_complete is True, _blockers(report)
+
+
+def test_substrate_full_mode_refuses_driver_default_cpu_device(
+    tmp_path: Path,
+) -> None:
+    trainer = tmp_path / "experiments" / "train_substrate_alpha.py"
+    _write_substrate_trainer(trainer)
+    driver = tmp_path / "scripts" / "remote_lane_substrate_alpha.sh"
+    _write_substrate_driver_with_mode_device(driver, device_default="cpu")
+    recipe = _substrate_recipe(device="cuda")
+    recipe["env_overrides"].pop("SYNTH_DEVICE")
+
+    report = evaluate_dispatch_protocol_complete(
+        recipe,
+        repo_root=tmp_path,
+    )
+
+    assert report.dispatch_protocol_complete is False
+    assert "full_mode_device_cpu_bug_class" in _blockers(report)
 
 
 def test_is_tool_dispatch_returns_true_when_dispatch_kind_tool_explicit(

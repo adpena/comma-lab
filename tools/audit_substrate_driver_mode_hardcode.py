@@ -92,6 +92,9 @@ _MODE_ENV_TOKEN_RE = re.compile(
     + "|".join(re.escape(token) for token in _MODE_ENV_TOKENS)
     + r")[A-Z0-9_]*)\b"
 )
+_DEVICE_ARG_ENV_RE = re.compile(
+    r"--device\s+(?:[\"']?\$\{?([A-Z0-9_]*DEVICE[A-Z0-9_]*)\}?[\"']?)"
+)
 # Recipe-side opt-out markers (driver hardcoded --smoke is acceptable IF
 # the recipe explicitly opts out of full-mode dispatch)
 _RECIPE_OPT_OUT_TOKENS = (
@@ -267,6 +270,98 @@ def _driver_env_default_value(driver_text: str, env_var: str) -> str | None:
     return None
 
 
+def _driver_device_env_vars(driver_text: str) -> tuple[str, ...]:
+    """Return shell env vars passed to trainer ``--device`` flags."""
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for match in _DEVICE_ARG_ENV_RE.finditer(driver_text):
+        var = match.group(1)
+        if var in seen:
+            continue
+        seen.add(var)
+        ordered.append(var)
+    return tuple(ordered)
+
+
+def _mode_prefix(env_var: str) -> str:
+    for suffix in (
+        "TRAINER_MODE",
+        "DISPATCH_MODE",
+        "RUN_MODE",
+        "SMOKE_MODE",
+        "FULL_MODE",
+        "MODE_FULL",
+        "SMOKE_ONLY",
+    ):
+        if env_var.endswith(suffix):
+            return env_var[: -len(suffix)]
+    return ""
+
+
+def _device_value_is_cpu(value: str | None) -> bool:
+    return (value or "").strip().strip('"').strip("'").lower() == "cpu"
+
+
+def _full_mode_cpu_device_unsafe_recipes(
+    *,
+    recipes: list[Path],
+    driver_text: str,
+    env_vars: tuple[str, ...],
+    repo_root: Path,
+) -> list[dict[str, Any]]:
+    """Find recipes whose full trainer mode resolves to ``--device cpu``.
+
+    This is the NSCS06 v8 rc=1 sister class after the rc=22 mode-refusal fix:
+    the driver honored ``TRAINER_MODE=full`` but still sent ``--device cpu`` to
+    the trainer. Full-mode CPU is a late trainer refusal and should be caught
+    before provider spend.
+    """
+
+    device_vars = _driver_device_env_vars(driver_text)
+    if not device_vars:
+        return []
+
+    def _rel(p: Path) -> str:
+        try:
+            return str(p.relative_to(repo_root))
+        except ValueError:
+            return str(p)
+
+    unsafe: list[dict[str, Any]] = []
+    for rp in recipes:
+        if _recipe_opted_out_of_full_mode(rp):
+            continue
+        rp_env_values = _recipe_mode_env_values(rp, env_vars)
+        full_mode_vars = {
+            var: value
+            for var, value in rp_env_values.items()
+            if _mode_env_value_forces_full(var, value)
+        }
+        if not full_mode_vars:
+            continue
+        full_prefixes = {_mode_prefix(var) for var in full_mode_vars}
+        for device_var in device_vars:
+            device_prefix = device_var[: -len("DEVICE")] if device_var.endswith("DEVICE") else ""
+            if full_prefixes and "" not in full_prefixes and device_prefix not in full_prefixes:
+                continue
+            effective_device = (
+                _recipe_sets_env_var(rp, device_var)
+                or _driver_env_default_value(driver_text, device_var)
+            )
+            if not _device_value_is_cpu(effective_device):
+                continue
+            unsafe.append(
+                {
+                    "recipe": _rel(rp),
+                    "mode_env_values_in_recipe": full_mode_vars,
+                    "device_env_var": device_var,
+                    "effective_device": effective_device,
+                }
+            )
+    return unsafe
+
+
 def _driver_env_empty_branch_default_value(driver_text: str, env_var: str) -> str | None:
     """Detect shell branches like ``elif [ -z "$VAR" ]; then VAR="1"``."""
 
@@ -432,6 +527,33 @@ def _classify_driver(driver_path: Path, repo_root: Path) -> dict[str, Any]:
     refuse_per_var: dict[str, bool] = {
         var: _driver_refuses_non_smoke_mode(text, var) for var in env_vars
     }
+    full_mode_cpu_unsafe = _full_mode_cpu_device_unsafe_recipes(
+        recipes=recipes,
+        driver_text=text,
+        env_vars=env_vars,
+        repo_root=repo_root,
+    )
+    if full_mode_cpu_unsafe:
+        return {
+            "substrate_id": substrate_id,
+            "driver_path": _rel(driver_path),
+            "recipes": recipe_paths_str,
+            "verdict": "FULL_MODE_DEVICE_CPU_BUG_CLASS",
+            "explanation": (
+                "Driver/recipe resolves trainer full mode to --device cpu. "
+                "NSCS06 v8 rc=1 anchor: after the rc=22 mode-refusal fix, "
+                "TRAINER_MODE=full reached the trainer but failed late at "
+                "device_or_die because full-mode CPU is non-promotional and "
+                "not a valid paid-dispatch substrate. Device must resolve to "
+                "cuda for full mode, or the recipe must opt out as smoke-only/"
+                "research-only/dispatch-disabled."
+            ),
+            "any_recipe_opted_out_of_full_mode": any_recipe_opted_out,
+            "consumes_env_var": env_var,
+            "consumes_env_vars": list(env_vars),
+            "device_env_vars": list(_driver_device_env_vars(text)),
+            "unsafe_recipes": full_mode_cpu_unsafe,
+        }
     any_var_refused = any(refuse_per_var.values())
     if any_var_refused:
         unsafe_recipes_refuse = []
@@ -647,6 +769,7 @@ def audit_all_drivers(repo_root: Path | None = None) -> dict[str, Any]:
             "CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS",
             "CONSUMES_ENV_UNKNOWN_DEFAULT_BUG_CLASS",
             "REFUSES_NON_SMOKE_RECIPE_FORCES_FULL_BUG_CLASS",
+            "FULL_MODE_DEVICE_CPU_BUG_CLASS",
         )
     ]
     return {

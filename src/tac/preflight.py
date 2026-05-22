@@ -75893,6 +75893,10 @@ _CHECK_326_BUG_CLASS_VERDICTS: frozenset[str] = frozenset({
     # supported in L0 SCAFFOLD` (post-OVERNIGHT-V Phase 2 BUILD atomic-flip
     # violation: trainer + recipe flipped to full but driver was not).
     "REFUSES_NON_SMOKE_RECIPE_FORCES_FULL_BUG_CLASS",
+    # NSCS06 v8 rc=1 sister class after the rc=22 fix: driver honors full mode
+    # but resolves trainer `--device cpu`, so the paid dispatch reaches the
+    # trainer only to die at device_or_die. Catch before provider spend.
+    "FULL_MODE_DEVICE_CPU_BUG_CLASS",
 })
 _CHECK_326_LINE_WAIVER_PATTERN = re.compile(
     r"# DRIVER_MODE_HARDCODE_OK:(.+?)(?:$|#)", re.MULTILINE
@@ -75960,6 +75964,9 @@ def check_substrate_driver_consumes_trainer_mode_env_var(
     Bug-class verdicts refused:
     - `HARDCODES_SMOKE_NO_RECIPE_OPT_OUT`
     - `CONSUMES_ENV_DEFAULTS_SMOKE_BUG_CLASS`
+    - `CONSUMES_ENV_UNKNOWN_DEFAULT_BUG_CLASS`
+    - `REFUSES_NON_SMOKE_RECIPE_FORCES_FULL_BUG_CLASS`
+    - `FULL_MODE_DEVICE_CPU_BUG_CLASS`
 
     Per CLAUDE.md "Forbidden substrate driver hardcoding smoke=1 / --smoke
     regardless of dispatch env vars" FORBIDDEN PATTERN + Catalog #270 sister.
