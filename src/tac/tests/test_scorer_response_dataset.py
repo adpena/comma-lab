@@ -19,6 +19,7 @@ from tac.optimization.scorer_response_dataset import (
     RATE_SCORE_PER_BYTE,
     ResponseBaseline,
     ScorerResponseDatasetError,
+    build_decoder_q_surface_advisory_gate,
     build_magic_codec_seed_boundary,
     build_mlx_score_calibration_gate,
     build_mlx_torch_parity_sweep_gate,
@@ -1330,6 +1331,235 @@ def test_next_probe_plan_can_prioritize_decoder_q_response_surface() -> None:
     assert plan["probes"][0]["probe_id"] == "ll_decoder_q_window_signed_response_surface"
     assert plan["probes"][0]["response_surface_summary"]["suppress_harm_sum"] == 0.05
     assert plan["probes"][0]["top_preserve_windows"] == [{"match_key_value": "1"}]
+    assert "do_not_dispatch_decoder_q_response_surface_without_advisory_sign_calibration" in {
+        item["rule"] for item in plan["prohibitions"]
+    }
+
+
+def test_decoder_q_surface_advisory_gate_blocks_all_regressing_surface_candidates() -> None:
+    gate = build_decoder_q_surface_advisory_gate(
+        _decoder_q_surface_advisory_batch(deltas=(0.00043, 0.00048, 0.00053))
+    )
+
+    assert gate["score_claim"] is False
+    assert gate["status"] == "blocked"
+    assert gate["decoder_q_surface_exact_eval_allowed"] is False
+    assert gate["summary"]["surface_guided_candidate_count"] == 3
+    assert gate["summary"]["improving_surface_guided_candidate_count"] == 0
+    assert (
+        "decoder_q_surface_advisory_surface_guided_all_non_improving"
+        in gate["blockers"]
+    )
+
+
+def test_next_probe_plan_repairs_decoder_q_surface_after_advisory_regression() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response", "mlx_decoder_q"),
+        rows_per_fold=5,
+        include_prediction=True,
+    )
+    surface = _decoder_q_surface_payload()
+
+    plan = build_next_probe_plan(
+        dataset,
+        decoder_q_response_surface=surface,
+        decoder_q_surface_advisory_batch=_decoder_q_surface_advisory_batch(
+            deltas=(0.00043, 0.00048, 0.00053),
+        ),
+    )
+
+    assert plan["decoder_q_surface_advisory_gate"]["status"] == "blocked"
+    assert plan["probes"][0]["probe_id"] == "ll_decoder_q_surface_sign_calibration_repair"
+    assert "do_not_dispatch_decoder_q_response_surface_after_advisory_regression" in {
+        item["rule"] for item in plan["prohibitions"]
+    }
+
+
+def test_next_probe_plan_allows_decoder_q_surface_after_advisory_improvement() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response", "mlx_decoder_q"),
+        rows_per_fold=5,
+        include_prediction=True,
+    )
+    surface = _decoder_q_surface_payload()
+
+    plan = build_next_probe_plan(
+        dataset,
+        decoder_q_response_surface=surface,
+        decoder_q_surface_advisory_batch=_decoder_q_surface_advisory_batch(
+            deltas=(-0.00010, 0.00002, 0.00003),
+        ),
+    )
+
+    assert plan["decoder_q_surface_advisory_gate"]["status"] == "strict_pass"
+    assert plan["probes"][0]["probe_id"] == "ll_decoder_q_window_signed_response_surface"
+    assert "do_not_dispatch_decoder_q_response_surface_after_advisory_regression" not in {
+        item["rule"] for item in plan["prohibitions"]
+    }
+
+
+def test_decoder_q_surface_advisory_gate_blocks_non_fixed_surface_candidates() -> None:
+    batch = _decoder_q_surface_advisory_batch(deltas=(-0.00010,))
+    manifest = batch["candidates"][0]["mutation_manifest"]
+    manifest["fixed_length_runtime_compatible"] = False
+    manifest["length_delta"] = 8
+
+    gate = build_decoder_q_surface_advisory_gate(batch)
+
+    assert gate["status"] == "blocked"
+    assert gate["summary"]["fixed_length_surface_guided_candidate_count"] == 0
+    assert (
+        "decoder_q_surface_advisory_has_no_fixed_length_surface_guided_candidates"
+        in gate["blockers"]
+    )
+
+
+def test_decoder_q_surface_advisory_gate_blocks_stale_delta_sign() -> None:
+    batch = _decoder_q_surface_advisory_batch(deltas=(-0.00010,))
+    batch["candidates"][0]["advisory_eval"]["canonical_score"] = (
+        batch["inputs"]["baseline_score"] + 0.00020
+    )
+
+    gate = build_decoder_q_surface_advisory_gate(batch)
+
+    assert gate["status"] == "blocked"
+    assert math.isclose(
+        gate["summary"]["best_surface_guided_delta_vs_baseline_score"],
+        0.00020,
+    )
+    assert "decoder_q_surface_advisory_delta_mismatch" in gate["blockers"]
+
+
+def test_decoder_q_surface_advisory_gate_rejects_wrong_producer_and_nested_authority() -> None:
+    wrong_producer = _decoder_q_surface_advisory_batch(deltas=(-0.00010,))
+    wrong_producer["producer"] = "unit-test"
+    try:
+        build_decoder_q_surface_advisory_gate(wrong_producer)
+    except ScorerResponseDatasetError as exc:
+        assert "producer" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("wrong producer was accepted")
+
+    nested_claim = _decoder_q_surface_advisory_batch(deltas=(-0.00010,))
+    nested_claim["candidates"][0]["advisory_eval"]["score_claim"] = True
+    try:
+        build_decoder_q_surface_advisory_gate(nested_claim)
+    except ScorerResponseDatasetError as exc:
+        assert "score_claim" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("nested advisory score claim was accepted")
+
+    nested_objective_claim = _decoder_q_surface_advisory_batch(deltas=(-0.00010,))
+    nested_objective_claim["candidates"][0]["mutation_manifest"]["response_surface_objective"][
+        "ready_for_exact_eval_dispatch"
+    ] = True
+    try:
+        build_decoder_q_surface_advisory_gate(nested_objective_claim)
+    except ScorerResponseDatasetError as exc:
+        assert "ready_for_exact_eval_dispatch" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("nested objective dispatch authority was accepted")
+
+
+def _decoder_q_surface_payload() -> dict:
+    return {
+        "schema": "decoder_q_response_surface_plan.v1",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "summary": {
+            "matched_count": 10,
+            "preserve_candidate_effect_count": 3,
+            "suppress_or_invert_candidate_effect_count": 7,
+            "neutral_or_uncertain_count": 0,
+            "preserve_gain_sum": 0.01,
+            "suppress_harm_sum": 0.05,
+            "axis_dominance_counts": {"seg": 10},
+        },
+        "top_preserve_windows": [{"match_key_value": "1"}],
+        "top_suppress_windows": [{"match_key_value": "2"}],
+    }
+
+
+def _decoder_q_surface_advisory_batch(*, deltas: tuple[float, ...]) -> dict:
+    baseline = 0.19206142414659494
+    candidates = []
+    for index, delta in enumerate(deltas):
+        candidates.append(
+            {
+                "candidate_id": f"surface-{index}",
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "promotable": False,
+                "delta_vs_baseline_score": delta,
+                "mutation_manifest": {
+                    "bucket": "response_surface_guided",
+                    "edit_budget": index + 1,
+                    "fixed_length_runtime_compatible": True,
+                    "length_delta": 0,
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "rank_or_kill_eligible": False,
+                    "promotable": False,
+                    "response_surface_objective": {
+                        "proxy_priority_sum": float(index + 1),
+                        "score_claim": False,
+                        "score_claim_valid": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                        "rank_or_kill_eligible": False,
+                        "promotable": False,
+                    },
+                },
+                "raw_comparison": {
+                    "changed_frame_count": 600,
+                    "byte_delta_summary": {"changed_byte_count": 1000 + index},
+                },
+                "advisory_eval": {
+                    "returncode": 0,
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "rank_or_kill_eligible": False,
+                    "promotable": False,
+                    "canonical_score": baseline + delta,
+                    "avg_segnet_dist": 0.00056,
+                    "avg_posenet_dist": 0.000029,
+                    "archive_size_bytes": 178517,
+                },
+            }
+        )
+    best = min(candidates, key=lambda row: row["delta_vs_baseline_score"])
+    return {
+        "schema": "fec6_decoder_q_candidate_advisory_batch_v1",
+        "producer": "tools/run_decoder_q_candidate_advisory_batch.py",
+        "authority": {
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+        },
+        "inputs": {"baseline_score": baseline},
+        "summary": {
+            "candidate_count": len(candidates),
+            "advisory_success_count": len(candidates),
+            "visible_change_count": len(candidates),
+            "best_candidate_id": best["candidate_id"],
+            "best_score": baseline + best["delta_vs_baseline_score"],
+            "best_delta_vs_baseline_score": best["delta_vs_baseline_score"],
+        },
+        "candidates": candidates,
+    }
 
 
 def test_scorer_response_validation_gate_blocks_mixed_axis_targets() -> None:

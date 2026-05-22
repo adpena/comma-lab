@@ -1879,6 +1879,7 @@ def build_next_probe_plan(
     allow_mlx_parity_research_signal_override: bool = False,
     mlx_score_calibration: dict[str, Any] | None = None,
     decoder_q_response_surface: dict[str, Any] | None = None,
+    decoder_q_surface_advisory_batch: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic LL next-probe plan from response economics."""
 
@@ -2169,34 +2170,92 @@ def build_next_probe_plan(
         )
 
     decoder_q_response_surface_summary = None
+    decoder_q_surface_advisory_gate = None
+    if decoder_q_surface_advisory_batch is not None:
+        decoder_q_surface_advisory_gate = build_decoder_q_surface_advisory_gate(
+            decoder_q_surface_advisory_batch
+        )
     if decoder_q_response_surface is not None:
         decoder_q_response_surface_summary = _validate_decoder_q_response_surface(
             decoder_q_response_surface
         )
+        if decoder_q_surface_advisory_gate is None:
+            prohibitions.append(
+                {
+                    "rule": "do_not_dispatch_decoder_q_response_surface_without_advisory_sign_calibration",
+                    "reason": (
+                        "decoder-q response surfaces are planning priors only; "
+                        "exact-eval spend requires an advisory batch proving at "
+                        "least one surface-guided fixed-length candidate improves"
+                    ),
+                    "response_surface_summary": decoder_q_response_surface_summary,
+                }
+            )
+        elif not decoder_q_surface_advisory_gate["decoder_q_surface_exact_eval_allowed"]:
+            prohibitions.append(
+                {
+                    "rule": "do_not_dispatch_decoder_q_response_surface_after_advisory_regression",
+                    "reason": (
+                        "the attached decoder-q surface advisory batch did not "
+                        "produce an improving surface-guided candidate"
+                    ),
+                    "gate": decoder_q_surface_advisory_gate,
+                }
+            )
         for probe in probes:
             probe["priority"] = int(probe["priority"]) + 1
-        probes.insert(
-            0,
-            {
-                "probe_id": "ll_decoder_q_window_signed_response_surface",
-                "priority": 1,
-                "class": "byte_neutral_representation_mutation",
-                "rationale": (
-                    "Matched MLX family deltas show decoder-q response is "
-                    "window-signed; preserve improving windows and suppress "
-                    "or invert regressing windows before exact-eval spend."
-                ),
-                "input_rows": [],
-                "response_surface_summary": decoder_q_response_surface_summary,
-                "top_preserve_windows": decoder_q_response_surface.get("top_preserve_windows", [])[:8],
-                "top_suppress_windows": decoder_q_response_surface.get("top_suppress_windows", [])[:8],
-                "acceptance_gate": (
-                    "new decoder-q candidate improves matched local response "
-                    "surface and remains byte-neutral/fixed-length before "
-                    "official inflate and exact CUDA eval"
-                ),
-            },
-        )
+        if (
+            decoder_q_surface_advisory_gate is not None
+            and not decoder_q_surface_advisory_gate["decoder_q_surface_exact_eval_allowed"]
+        ):
+            probes.insert(
+                0,
+                {
+                    "probe_id": "ll_decoder_q_surface_sign_calibration_repair",
+                    "priority": 1,
+                    "class": "sign_calibration",
+                    "rationale": (
+                        "The response surface found high-leverage decoder-q atoms, "
+                        "but advisory scoring showed the current suppress/invert "
+                        "direction worsens score; learn a signed calibration before "
+                        "materializing more exact-eval candidates."
+                    ),
+                    "input_rows": [],
+                    "response_surface_summary": decoder_q_response_surface_summary,
+                    "decoder_q_surface_advisory_gate": decoder_q_surface_advisory_gate,
+                    "acceptance_gate": (
+                        "surface-guided candidates must include at least one "
+                        "advisory-improving fixed-length archive before exact CUDA "
+                        "dispatch selection"
+                    ),
+                },
+            )
+        else:
+            probes.insert(
+                0,
+                {
+                    "probe_id": "ll_decoder_q_window_signed_response_surface",
+                    "priority": 1,
+                    "class": "byte_neutral_representation_mutation",
+                    "rationale": (
+                        "Matched MLX family deltas show decoder-q response is "
+                        "window-signed; preserve improving windows and suppress "
+                        "or invert regressing ones, with advisory sign calibration "
+                        "required before exact-eval spend."
+                    ),
+                    "input_rows": [],
+                    "response_surface_summary": decoder_q_response_surface_summary,
+                    "decoder_q_surface_advisory_gate": decoder_q_surface_advisory_gate,
+                    "top_preserve_windows": decoder_q_response_surface.get("top_preserve_windows", [])[:8],
+                    "top_suppress_windows": decoder_q_response_surface.get("top_suppress_windows", [])[:8],
+                    "acceptance_gate": (
+                        "new decoder-q candidate improves matched local response "
+                        "surface, remains byte-neutral/fixed-length, passes official "
+                        "inflate, and has an advisory-improving sign-calibration "
+                        "batch before exact CUDA eval"
+                    ),
+                },
+            )
 
     return {
         "schema": "ll_scorer_response_next_probe_plan.v1",
@@ -2216,6 +2275,7 @@ def build_next_probe_plan(
         "mlx_torch_parity_sweep_gate": mlx_torch_parity_sweep_gate,
         "mlx_score_calibration_gate": mlx_score_calibration_gate,
         "decoder_q_response_surface_summary": decoder_q_response_surface_summary,
+        "decoder_q_surface_advisory_gate": decoder_q_surface_advisory_gate,
         "prohibitions": prohibitions,
         "probes": probes,
     }
@@ -2252,6 +2312,196 @@ def _validate_decoder_q_response_surface(payload: dict[str, Any]) -> dict[str, A
         "rank_or_kill_eligible": False,
         "promotable": False,
     }
+
+
+def build_decoder_q_surface_advisory_gate(advisory_batch: dict[str, Any]) -> dict[str, Any]:
+    """Gate decoder-q response-surface spend against measured advisory signs."""
+
+    if not isinstance(advisory_batch, dict):
+        raise ScorerResponseDatasetError("decoder-q surface advisory batch must be a JSON object")
+    if advisory_batch.get("schema") != "fec6_decoder_q_candidate_advisory_batch_v1":
+        raise ScorerResponseDatasetError("decoder-q surface advisory batch schema mismatch")
+    if advisory_batch.get("producer") != "tools/run_decoder_q_candidate_advisory_batch.py":
+        raise ScorerResponseDatasetError("decoder-q surface advisory batch producer mismatch")
+    authority = advisory_batch.get("authority")
+    if not isinstance(authority, dict):
+        raise ScorerResponseDatasetError("decoder-q surface advisory batch authority missing")
+    _validate_core_false_authority(
+        authority,
+        label="decoder-q surface advisory batch authority",
+    )
+
+    candidates = advisory_batch.get("candidates")
+    if not isinstance(candidates, list):
+        raise ScorerResponseDatasetError("decoder-q surface advisory batch candidates[] missing")
+
+    records: list[dict[str, Any]] = []
+    for index, row in enumerate(candidates):
+        if not isinstance(row, dict):
+            raise ScorerResponseDatasetError(
+                f"decoder-q surface advisory candidate {index} must be an object"
+            )
+        _validate_core_false_authority(
+            row,
+            label=f"decoder-q surface advisory candidate {index}",
+        )
+        manifest = row.get("mutation_manifest")
+        if not isinstance(manifest, dict):
+            manifest = {}
+        _require_present_false_authority(
+            manifest,
+            label=f"decoder-q surface advisory candidate {index} manifest",
+        )
+        advisory = row.get("advisory_eval")
+        if not isinstance(advisory, dict):
+            advisory = {}
+        _require_present_false_authority(
+            advisory,
+            label=f"decoder-q surface advisory candidate {index} advisory_eval",
+        )
+        surface_objective = manifest.get("response_surface_objective")
+        if isinstance(surface_objective, dict):
+            _require_present_false_authority(
+                surface_objective,
+                label=(
+                    f"decoder-q surface advisory candidate {index} "
+                    "response_surface_objective"
+                ),
+            )
+        inputs = advisory_batch.get("inputs")
+        if not isinstance(inputs, dict):
+            inputs = {}
+        baseline = _as_float(inputs.get("baseline_score"))
+        score = _as_float(advisory.get("canonical_score"))
+        reported_delta = _as_float(row.get("delta_vs_baseline_score"))
+        recomputed_delta = score - baseline if baseline is not None and score is not None else None
+        delta_consistent = (
+            reported_delta is None
+            or recomputed_delta is None
+            or abs(reported_delta - recomputed_delta) <= 1.0e-12
+        )
+        delta = recomputed_delta if recomputed_delta is not None else reported_delta
+        if delta is None:
+            summary = advisory_batch.get("summary") if isinstance(advisory_batch.get("summary"), dict) else {}
+            if row.get("candidate_id") == summary.get("best_candidate_id"):
+                delta = _as_float(summary.get("best_delta_vs_baseline_score"))
+        length_delta = _as_int(manifest.get("length_delta"))
+        records.append(
+            {
+                "candidate_id": row.get("candidate_id"),
+                "bucket": manifest.get("bucket"),
+                "edit_budget": manifest.get("edit_budget"),
+                "fixed_length_runtime_compatible": (
+                    manifest.get("fixed_length_runtime_compatible") is True
+                    and length_delta == 0
+                ),
+                "advisory_success": advisory.get("returncode") == 0,
+                "delta_vs_baseline_score": delta,
+                "reported_delta_vs_baseline_score": reported_delta,
+                "recomputed_delta_vs_baseline_score": recomputed_delta,
+                "delta_consistent": delta_consistent,
+                "canonical_score": _as_float(advisory.get("canonical_score")),
+                "avg_segnet_dist": _as_float(advisory.get("avg_segnet_dist")),
+                "avg_posenet_dist": _as_float(advisory.get("avg_posenet_dist")),
+                "archive_size_bytes": _as_int(advisory.get("archive_size_bytes")),
+                "changed_frame_count": _as_int(_get_path(row, ("raw_comparison", "changed_frame_count"))),
+                "changed_byte_count": _as_int(_get_path(row, ("raw_comparison", "byte_delta_summary", "changed_byte_count"))),
+                "surface_proxy_priority": _as_float(
+                    _get_path(manifest, ("response_surface_objective", "proxy_priority_sum"))
+                ),
+            }
+        )
+
+    surface_records = [
+        record
+        for record in records
+        if record.get("bucket") == "response_surface_guided"
+    ]
+    fixed_surface_records = [
+        record
+        for record in surface_records
+        if record.get("fixed_length_runtime_compatible") is True
+    ]
+    successful_surface_records = [
+        record
+        for record in fixed_surface_records
+        if record.get("advisory_success") is True
+    ]
+    improving_surface_records = [
+        record
+        for record in successful_surface_records
+        if (record.get("delta_vs_baseline_score") is not None and float(record["delta_vs_baseline_score"]) < 0.0)
+    ]
+    regressing_surface_records = [
+        record
+        for record in successful_surface_records
+        if (record.get("delta_vs_baseline_score") is not None and float(record["delta_vs_baseline_score"]) >= 0.0)
+    ]
+    best_record = min(
+        (
+            record
+            for record in successful_surface_records
+            if record.get("delta_vs_baseline_score") is not None
+        ),
+        key=lambda record: float(record["delta_vs_baseline_score"]),
+        default=None,
+    )
+
+    blockers: list[str] = []
+    if not records:
+        blockers.append("decoder_q_surface_advisory_batch_empty")
+    if not surface_records:
+        blockers.append("decoder_q_surface_advisory_has_no_surface_guided_candidates")
+    if surface_records and not fixed_surface_records:
+        blockers.append("decoder_q_surface_advisory_has_no_fixed_length_surface_guided_candidates")
+    if not successful_surface_records:
+        blockers.append("decoder_q_surface_advisory_has_no_successful_surface_guided_candidates")
+    if any(record.get("delta_consistent") is False for record in surface_records):
+        blockers.append("decoder_q_surface_advisory_delta_mismatch")
+    if successful_surface_records and not improving_surface_records:
+        blockers.append("decoder_q_surface_advisory_surface_guided_all_non_improving")
+    if best_record is None:
+        blockers.append("decoder_q_surface_advisory_best_delta_missing")
+
+    status = "strict_pass" if not blockers else "blocked"
+    return {
+        "schema": "ll_decoder_q_surface_advisory_gate.v1",
+        "producer": TOOL,
+        "source_schema": advisory_batch.get("schema"),
+        "status": status,
+        "decoder_q_surface_exact_eval_allowed": status == "strict_pass",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "summary": {
+            "candidate_count": len(records),
+            "surface_guided_candidate_count": len(surface_records),
+            "fixed_length_surface_guided_candidate_count": len(fixed_surface_records),
+            "successful_surface_guided_candidate_count": len(successful_surface_records),
+            "improving_surface_guided_candidate_count": len(improving_surface_records),
+            "regressing_surface_guided_candidate_count": len(regressing_surface_records),
+            "best_surface_guided_candidate_id": None if best_record is None else best_record.get("candidate_id"),
+            "best_surface_guided_delta_vs_baseline_score": None if best_record is None else best_record.get("delta_vs_baseline_score"),
+        },
+        "surface_guided_records": surface_records,
+        "blockers": blockers,
+        "allowed_use": (
+            "decoder_q_response_surface_exact_eval_spend_filter"
+            if not blockers
+            else "blocked_until_surface_guided_advisory_candidate_improves"
+        ),
+    }
+
+
+def _require_present_false_authority(payload: dict[str, Any], *, label: str) -> None:
+    for key in ("score_claim", *_SOURCE_OPTIONAL_FALSE_AUTHORITY_FIELDS):
+        if key in payload and payload.get(key) is not False:
+            raise ScorerResponseDatasetError(f"{label} {key} must be false")
 
 
 def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -2545,6 +2795,29 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
             f"`{gate_summary.get('recommended_min_mlx_gap_for_spend_triage')}`"
         )
         lines.append(f"- Blockers: `{mlx_calibration_gate.get('blockers')}`")
+        lines.append("")
+    decoder_q_surface_gate = plan.get("decoder_q_surface_advisory_gate")
+    if isinstance(decoder_q_surface_gate, dict):
+        gate_summary = (
+            decoder_q_surface_gate.get("summary")
+            if isinstance(decoder_q_surface_gate.get("summary"), dict)
+            else {}
+        )
+        lines.extend(["## Decoder-Q Surface Advisory Gate", ""])
+        lines.append(f"- Status: `{decoder_q_surface_gate.get('status')}`")
+        lines.append(
+            "- Surface-guided candidates: "
+            f"`{gate_summary.get('surface_guided_candidate_count')}`"
+        )
+        lines.append(
+            "- Improving surface-guided candidates: "
+            f"`{gate_summary.get('improving_surface_guided_candidate_count')}`"
+        )
+        lines.append(
+            "- Best surface-guided delta: "
+            f"`{gate_summary.get('best_surface_guided_delta_vs_baseline_score')}`"
+        )
+        lines.append(f"- Blockers: `{decoder_q_surface_gate.get('blockers')}`")
         lines.append("")
     lines.extend(["## Prohibitions", ""])
     for item in plan.get("prohibitions", []):

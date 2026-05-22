@@ -72,6 +72,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--decoder-q-surface-advisory-batch",
+        type=Path,
+        help=(
+            "Optional tools/run_decoder_q_candidate_advisory_batch.py JSON output "
+            "for candidates generated from the decoder-q response surface. When "
+            "provided, exact-eval spend routing is blocked unless at least one "
+            "surface-guided candidate improves advisory score."
+        ),
+    )
+    parser.add_argument(
         "--mlx-torch-parity-sweep",
         type=Path,
         help=(
@@ -159,6 +169,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.decoder_q_response_surface is None
             else json.loads(args.decoder_q_response_surface.read_text(encoding="utf-8"))
         )
+        decoder_q_surface_advisory_batch = (
+            None
+            if args.decoder_q_surface_advisory_batch is None
+            else json.loads(args.decoder_q_surface_advisory_batch.read_text(encoding="utf-8"))
+        )
         mlx_torch_parity_sweep = (
             None
             if args.mlx_torch_parity_sweep is None
@@ -183,6 +198,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.allow_mlx_parity_research_signal_override
             ),
             mlx_score_calibration=mlx_score_calibration,
+            decoder_q_surface_advisory_batch=decoder_q_surface_advisory_batch,
         )
         if args.mlx_profile_stability is not None:
             mlx_profile_stability = json.loads(args.mlx_profile_stability.read_text(encoding="utf-8"))
