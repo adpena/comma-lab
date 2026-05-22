@@ -175,8 +175,15 @@ last_refreshed_note: |
   passed locality controls and exact Modal `[contest-CPU]` eval. It scored
   `0.19204896820121495`, still a regression versus compact DQS1 top32 by
   `+0.000020019385125080724`; component deltas were PoseNet `+0.0`, SegNet
-  `+0.00003600000000000825`, rate `-0.000015980614874927523`. The refreshed
-  portfolio now recommends `pairset_diversity_k012` as the next fresh
+  `+0.00003600000000000825`, rate `-0.000015980614874927523`.
+  `pairset_diversity_k012` (`afa6be3d8a71226810e4c93b707daf778c4cbe751fd4df28206d70d4e61b2d56`,
+  `178540` bytes, pairs
+  `[26, 98, 134, 167, 257, 320, 376, 430, 467, 492, 520, 588]`) passed the
+  same locality controls and exact Modal `[contest-CPU]` eval. It scored
+  `0.1920486316370274`, still a regression versus compact DQS1 top32 by
+  `+0.000019682820937533263`; component deltas were PoseNet `+0.0`, SegNet
+  `+0.00003300000000000525`, rate `-0.000013317179062439082`. The refreshed
+  portfolio now recommends `pairset_diversity_k016` as the next fresh
   local-control candidate.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
