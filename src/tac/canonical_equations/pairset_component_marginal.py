@@ -89,12 +89,18 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         posenet_delta=0.0,
         rate_delta=-0.00000066585895312,
     )
+    cpu_penalty_predicted = pairset_component_marginal_score_delta(
+        segnet_delta=0.000001,
+        posenet_delta=0.0,
+        rate_delta=-0.00000066585895312,
+    )
     cuda_predicted = pairset_component_marginal_score_delta(
         segnet_delta=0.000002,
         posenet_delta=0.0,
         rate_delta=-0.00000066585895312,
     )
     cpu_empirical = -0.00000066585895312
+    cpu_penalty_empirical = 0.00000033414104686
     cuda_empirical = 0.00000133414104686
     cpu_anchor = EmpiricalAnchor(
         anchor_id="dqs1_pair0371_drop_one_component_cpu_20260522",
@@ -132,6 +138,42 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         measurement_method="dqs1_drop_one_pair0371_contest_cuda_t4_component_delta",
         provenance=_anchor_provenance("[contest-CUDA T4]", "linux_x86_64_t4"),
     )
+    rank026_cpu_penalty_anchor = EmpiricalAnchor(
+        anchor_id="dqs1_pair0320_drop_one_component_cpu_penalty_20260522",
+        measurement_utc="2026-05-22T18:41:57Z",
+        inputs={
+            "candidate_id": "pairset_drop_one_rank026_pair0320",
+            "pair_index": 320,
+            "axis": "[contest-CPU]",
+            "segnet_delta": 0.000001,
+            "posenet_delta": 0.0,
+            "rate_delta": -0.00000066585895312,
+        },
+        predicted_output={"score_delta": cpu_penalty_predicted},
+        empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
+        residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
+        source_artifact=_FINDINGS_MEMO,
+        measurement_method="dqs1_drop_one_pair0320_contest_cpu_component_delta",
+        provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
+    )
+    rank027_cpu_penalty_anchor = EmpiricalAnchor(
+        anchor_id="dqs1_pair0378_drop_one_component_cpu_penalty_20260522",
+        measurement_utc="2026-05-22T19:07:00Z",
+        inputs={
+            "candidate_id": "pairset_drop_one_rank027_pair0378",
+            "pair_index": 378,
+            "axis": "[contest-CPU]",
+            "segnet_delta": 0.000001,
+            "posenet_delta": 0.0,
+            "rate_delta": -0.00000066585895312,
+        },
+        predicted_output={"score_delta": cpu_penalty_predicted},
+        empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
+        residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
+        source_artifact=_FINDINGS_MEMO,
+        measurement_method="dqs1_drop_one_pair0378_contest_cpu_component_delta",
+        provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
+    )
     return CanonicalEquation(
         equation_id=PAIRSET_COMPONENT_MARGINAL_SCORE_DECOMPOSITION_EQUATION_ID,
         name="Pairset component marginal score decomposition",
@@ -165,12 +207,23 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
             "archive_byte_delta": "float_archive_bytes",
         },
         units_out={"score_delta": "float_score_units_negative_is_better"},
-        empirical_anchors=(cpu_anchor, cuda_anchor),
+        empirical_anchors=(
+            cpu_anchor,
+            cuda_anchor,
+            rank026_cpu_penalty_anchor,
+            rank027_cpu_penalty_anchor,
+        ),
         predicted_vs_empirical_residual={
             cpu_anchor.measurement_method: cpu_anchor.residual,
             cuda_anchor.measurement_method: cuda_anchor.residual,
+            rank026_cpu_penalty_anchor.measurement_method: (
+                rank026_cpu_penalty_anchor.residual
+            ),
+            rank027_cpu_penalty_anchor.measurement_method: (
+                rank027_cpu_penalty_anchor.residual
+            ),
         },
-        last_calibration_utc="2026-05-22T18:25:46Z",
+        last_calibration_utc="2026-05-22T19:07:00Z",
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tac.optimization.cross_family_candidate_portfolio",

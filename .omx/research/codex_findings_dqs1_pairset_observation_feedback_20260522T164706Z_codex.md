@@ -434,6 +434,15 @@ component marginal model consumed by the portfolio planner.
   `bf6c2135ce874c7a99b727af76cdbf0dc31deca128b5ee462334dde460731296`
 - Rank026 inflated aggregate SHA-256:
   `d8f43d23d84ca3b7631a7a5109d95f8f1472b903b91fedf50f8176949f1377d2`
+- Follow-up rank027/pair0378 exact CPU result: `0.19202928295713673`
+  (`contest-CPU`, Modal Linux x86_64 CPU), also a regression versus rank021.
+- Rank027 archive SHA-256:
+  `328ce4271c4d83579f1c155d01e25b2e7d945251148e8d999e57ee5b9f4ab10c`
+- Rank027 inflated aggregate SHA-256:
+  `8a564372154226f569896218e4a5714ad53d20cd09727706a6915473980d92d4`
+- Rank027 component deltas versus compact DQS1 top32 CPU: PoseNet `+0.0`,
+  SegNet `+0.000001`, rate `-0.00000066585895312`; it joins the
+  SegNet-penalized one-byte-drop response class.
 
 Canonicalization/wire-in:
 
@@ -453,21 +462,24 @@ Canonicalization/wire-in:
 - The model consumes exact-axis observations with selected-pair identity,
   component deltas, and acquisition operations.
 - Current helper-generated portfolio:
-  `experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper/portfolio.json`
+  `experiments/results/cross_family_candidate_portfolio/20260522T190900Z_pairset_component_rank027_observed/portfolio.json`
 - Current helper-generated action summary:
-  `experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper/action_summary.json`
+  `experiments/results/cross_family_candidate_portfolio/20260522T190900Z_pairset_component_rank027_observed/action_summary.json`
 - Portfolio SHA-256:
-  `30ef27382e9b2bcbece1e589ebf6a2fc8d6506cdc1d0e3838bd00a88af670829`
+  `86892d6262993c8ae7b8d9953b90f4ffafaeb800c0e9f68540c4004d1fc9e28c`
 - Action summary SHA-256:
-  `034aca3d7c9a45bf02fc2c89393051f425e8c86f62d24b2755c5c3d9c8796415`
+  `43707204b9a954864e422a8d47f9d44ea7eed71351adfc52b0acf6a60579b9d4`
 - Component marginal summary: CPU-safe observed drop pair `[371]`;
-  CPU-protected observed drop pairs `[327, 376, 320]`; CUDA-protected observed
-  drop pair `[371]`; cross-axis transfer diagnostic present for
-  `pairset_drop_one_rank021_pair0371`.
+  CPU-protected observed drop pairs `[327, 376, 320, 378]`;
+  CUDA-protected observed drop pair `[371]`; cross-axis transfer diagnostic
+  present for `pairset_drop_one_rank021_pair0371`.
 - New recommended candidate:
-  `pairset_drop_one_rank027_pair0378`
+  `pairset_drop_one_rank031_pair0296`
 - New recommended action:
   `materialize_pairset_archive_and_run_local_controls`
+- The canonical equation now carries four empirical anchors: the rank021 CPU
+  safe one-byte class, rank021 CUDA regression class, and CPU SegNet-penalized
+  one-byte classes for rank026/pair0320 and rank027/pair0378.
 - The regenerated portfolio contains `canonical_signal_refs` pointing this
   exact-axis component ledger to xray primitive `pairset_component_marginal`,
   canonical equation `pairset_component_marginal_score_decomposition_v1`, and
@@ -508,6 +520,11 @@ Canonicalization/wire-in:
 - `.venv/bin/ruff check src/tac/tests/test_pairset_component_marginal.py src/tac/xray/tests/test_pairset_component_marginal.py src/tac/canonical_equations/tests/test_pairset_component_marginal.py src/tac/optimization/pairset_component_marginal.py src/tac/canonical_equations/pairset_component_marginal.py src/tac/xray/pairset_component_marginal.py`
 - `.venv/bin/python tools/plan_cross_family_candidate_portfolio.py --incumbent-score 0.205330029 --incumbent-score-by-axis contest_cpu=0.19202828295713675 --pairset-acquisition experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition_dense_tail_20260522T1812Z.json --observation-jsonl experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl --json-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/portfolio.json --md-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/portfolio.md --summary-json-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/action_summary.json --top-k 32 --top-actions 8`
 - `.venv/bin/python tools/canonicalize_pairset_component_marginal_signal.py --incumbent-score 0.205330029 --incumbent-score-by-axis contest_cpu=0.19202828295713675 --pairset-acquisition experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition_dense_tail_20260522T1812Z.json --observation-jsonl experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl --output-dir experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper --top-k 32 --top-actions 8`
+- `.venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/modal_auth_eval_cpu/dqs1_pairset_drop_one_rank027_pair0378_selective_decoderq_cpu_20260522T190033Z --timeout-s 240`
+- `.venv/bin/python tools/append_mlx_dynamic_sweep_observation.py --jsonl experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl --candidate-id pairset_drop_one_rank027_pair0378 --sweep-config-id contest_cpu_exact_candidate --optimization-pass-id exact_cpu_calibration --family decoder_q_pairset_drop_one --observed-axis contest_cpu --evidence-grade contest-CPU --evidence-tag '[contest-CPU]' --observed-score-or-delta 0.19202928295713673 --archive-sha256 328ce4271c4d83579f1c155d01e25b2e7d945251148e8d999e57ee5b9f4ab10c --runtime-sha256 334a1d9c376310d9eb6d2be4754d40122a88f22d9bfd4d66a0ef4b86d6bc6ea9 --raw-output-or-cache-sha256 8a564372154226f569896218e4a5714ad53d20cd09727706a6915473980d92d4 --segnet-delta 0.000001 --posenet-delta 0.0 --rate-delta -0.00000066585895312 --source-artifact experiments/results/modal_auth_eval_cpu/dqs1_pairset_drop_one_rank027_pair0378_selective_decoderq_cpu_20260522T190033Z/contest_auth_eval.json --run-id dqs1_pairset_drop_one_rank027_pair0378_cpu_20260522T190033Z --selected-pair-indices 26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,412,430,440,459,467,479,492,496,501,520,544,555,588`
+- `.venv/bin/python tools/canonicalize_pairset_component_marginal_signal.py --incumbent-score 0.205330029 --incumbent-score-by-axis contest_cpu=0.19202828295713675 --pairset-acquisition experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition_dense_tail_20260522T1812Z.json --observation-jsonl experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl --output-dir experiments/results/cross_family_candidate_portfolio/20260522T190900Z_pairset_component_rank027_observed --top-k 32 --top-actions 8`
+- `.venv/bin/python -m pytest src/tac/canonical_equations/tests/test_pairset_component_marginal.py src/tac/canonical_equations/tests/test_canonical_equations_initial_population.py -q`
+- `.venv/bin/ruff check src/tac/canonical_equations/pairset_component_marginal.py src/tac/canonical_equations/tests/test_pairset_component_marginal.py`
 - `.venv/bin/python -m pytest src/tac/tests/test_canonicalize_pairset_component_marginal_signal_cli.py -q`
 - `.venv/bin/ruff check tools/canonicalize_pairset_component_marginal_signal.py src/tac/tests/test_canonicalize_pairset_component_marginal_signal_cli.py`
 - `git check-ignore -v experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper/portfolio.json`
@@ -542,4 +559,6 @@ Canonicalization/wire-in:
 - drop-one rank010 pair0376 has exact `[contest-CPU]` evidence only and
   regressed versus the current rank021 CPU frontier.
 - drop-one rank026 pair0320 has exact `[contest-CPU]` evidence only and
+  regressed versus the current rank021 CPU frontier.
+- drop-one rank027 pair0378 has exact `[contest-CPU]` evidence only and
   regressed versus the current rank021 CPU frontier.

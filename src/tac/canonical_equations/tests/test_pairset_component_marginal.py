@@ -42,5 +42,12 @@ def test_pairset_component_marginal_equation_has_false_authority_payload():
 def test_build_pairset_component_marginal_canonical_equation():
     equation = build_pairset_component_marginal_score_decomposition_v1()
     assert equation.equation_id == "pairset_component_marginal_score_decomposition_v1"
-    assert len(equation.empirical_anchors) == 2
+    assert len(equation.empirical_anchors) == 4
+    assert {
+        anchor.anchor_id for anchor in equation.empirical_anchors
+    } >= {
+        "dqs1_pair0371_drop_one_component_cpu_20260522",
+        "dqs1_pair0320_drop_one_component_cpu_penalty_20260522",
+        "dqs1_pair0378_drop_one_component_cpu_penalty_20260522",
+    }
     assert "tac.optimization.cross_family_candidate_portfolio" in equation.canonical_consumers

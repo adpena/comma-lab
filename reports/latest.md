@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-22T19:00:13Z
-from_state_hash: frontier_scan_dqs1_pairset_component_marginal_helper_20260522T1900Z
-regenerated_by: codex:dqs1_pairset_component_marginal_helper_20260522
-last_refreshed_at: 2026-05-22T19:00:13Z
-last_refreshed_by: codex:dqs1_pairset_component_marginal_helper_20260522
-last_refreshed_head: 7ba157a6
+generated_at: 2026-05-22T19:09:00Z
+from_state_hash: frontier_scan_dqs1_pairset_rank027_observed_20260522T1909Z
+regenerated_by: codex:dqs1_pairset_rank027_exact_cpu_observed_20260522
+last_refreshed_at: 2026-05-22T19:09:00Z
+last_refreshed_by: codex:dqs1_pairset_rank027_exact_cpu_observed_20260522
+last_refreshed_head: c4d53c6c
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
@@ -12,7 +12,10 @@ last_refreshed_note: |
   by the pairset drop-one rank021 DQS1 archive at 0.19202828295713675. MLX
   remains non-authoritative local research signal. The compact gap-ULEB packet
   passed raw-output locality and exact Modal recovery on both CPU and CUDA; CPU
-  improves the frontier, CUDA regresses.
+  improves the frontier, CUDA regresses. Drop-one rank027/pair0378 has now
+  passed locality and exact Modal CPU eval and regressed to the same
+  SegNet-penalized one-byte class as rank010/rank013/rank026, so the next
+  pairset component-marginal candidate is rank031/pair0296.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
@@ -230,13 +233,18 @@ last_refreshed_note: |
   `178559` bytes) also passed locality and exact Modal `[contest-CPU]` eval
   and regressed to `0.19202928295713673` with the same response class:
   PoseNet `+0.0`, SegNet `+0.000001`, rate `-0.00000066585895312`.
+  Follow-up `pairset_drop_one_rank027_pair0378`
+  (`328ce4271c4d83579f1c155d01e25b2e7d945251148e8d999e57ee5b9f4ab10c`,
+  `178559` bytes) also passed locality and exact Modal `[contest-CPU]` eval
+  and regressed to `0.19202928295713673` with the same response class:
+  PoseNet `+0.0`, SegNet `+0.000001`, rate `-0.00000066585895312`.
   The refreshed identity-verified, selector-scoped portfolio now includes the
   component marginal model from `cross_family_candidate_portfolio.v1`: CPU-safe
   observed drop pair `[371]`, CPU-protected observed drop pairs
-  `[327, 376, 320]`,
+  `[327, 376, 320, 378]`,
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
   for `pairset_drop_one_rank021_pair0371`. The current recommended fresh
-  local-control candidate is `pairset_drop_one_rank027_pair0378`. The response
+  local-control candidate is `pairset_drop_one_rank031_pair0296`. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
   selected-pair identity matching before fitting. The regenerated portfolio
@@ -247,9 +255,9 @@ last_refreshed_note: |
   now the fail-closed helper
   `tools/canonicalize_pairset_component_marginal_signal.py`; its latest
   planning-only output is
-  `experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper/portfolio.json`
+  `experiments/results/cross_family_candidate_portfolio/20260522T190900Z_pairset_component_rank027_observed/portfolio.json`
   (SHA-256
-  `30ef27382e9b2bcbece1e589ebf6a2fc8d6506cdc1d0e3838bd00a88af670829`),
+  `86892d6262993c8ae7b8d9953b90f4ffafaeb800c0e9f68540c4004d1fc9e28c`),
   ignored by `.gitignore` under `experiments/results/*`.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
