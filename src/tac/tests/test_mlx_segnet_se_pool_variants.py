@@ -43,6 +43,7 @@ def test_mlx_segnet_stage0_se_pool_variants_schema_and_authority(tmp_path: Path)
     assert [row["variant"] for row in manifest["rows"]] == list(POOL_VARIANTS)
     for row in manifest["rows"]:
         assert row["pool_delta"]["shape_match"] is True
+        assert row["conv_expand_delta"]["shape_match"] is True
         assert row["output_delta"]["shape_match"] is True
     assert manifest["best_pool_variant"]["variant"] in POOL_VARIANTS
     assert manifest["best_output_variant"]["variant"] in POOL_VARIANTS

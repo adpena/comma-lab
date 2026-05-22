@@ -182,6 +182,10 @@ def _pool_variant_row(
             torch_trace["se.act1_silu"],
             _mlx_nchw(act1),
         ),
+        "conv_expand_delta": _array_delta_summary(
+            torch_trace["se.conv_expand"],
+            _mlx_nchw(conv_expand),
+        ),
         "gate_sigmoid_delta": _array_delta_summary(
             torch_trace["se.gate_sigmoid"],
             _mlx_nchw(gate),
