@@ -1,0 +1,49 @@
+{
+  "allowed_use": "primitive_level_mlx_yuv6_parity_only",
+  "blockers": [],
+  "candidate_generation_only": true,
+  "comparator": {
+    "channel_axis": -3,
+    "dtype": "float32",
+    "mlx_function": "tac.local_acceleration.mlx_yuv6_primitive_parity.mlx_rgb_to_yuv6",
+    "upstream_function": "upstream/frame_utils.py::rgb_to_yuv6"
+  },
+  "deltas": {
+    "max_abs_delta": 0.0,
+    "mean_abs_delta": 0.0,
+    "relative_rms_delta": 0.0,
+    "rms_delta": 0.0
+  },
+  "dispatch_attempted": false,
+  "epsilon": 1e-05,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "gpu_launched": false,
+  "input_sha256": "385b35e33daefd27e006470303594b53851bb58a293f94cc2d49d6c68d6e675c",
+  "input_shape": [
+    3,
+    3,
+    384,
+    512
+  ],
+  "mlx_output_sha256": "b5e86b986bbc4c1ccde24654b2909a8c61de1da80b01fd075c634bdc1eb5d025",
+  "output_shape": [
+    3,
+    6,
+    192,
+    256
+  ],
+  "passed": true,
+  "producer": "tac.local_acceleration.mlx_yuv6_primitive_parity",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requires_exact_eval_before_promotion": true,
+  "run_id": "mlx_yuv6_primitive_parity_20260522T162118Z",
+  "schema_version": "mlx_yuv6_primitive_parity.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "upstream_output_sha256": "b5e86b986bbc4c1ccde24654b2909a8c61de1da80b01fd075c634bdc1eb5d025",
+  "verdict": "PASS_MLX_YUV6_PRIMITIVE_PARITY"
+}
