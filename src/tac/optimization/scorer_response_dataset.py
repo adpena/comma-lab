@@ -350,7 +350,10 @@ def _require_mlx_response_false_authority(payload: dict[str, Any], *, label: str
         raise ScorerResponseDatasetError(f"{label} promotable must be false")
     if payload.get("candidate_generation_only") is not True:
         raise ScorerResponseDatasetError(f"{label} candidate_generation_only must be true")
-    if payload.get("requires_exact_eval_before_promotion") is not True:
+    if (
+        "requires_exact_eval_before_promotion" in payload
+        and payload.get("requires_exact_eval_before_promotion") is not True
+    ):
         raise ScorerResponseDatasetError(
             f"{label} requires_exact_eval_before_promotion must be true"
         )
@@ -493,6 +496,24 @@ def _mlx_scorer_response_candidate_item(
         "device_contract": payload.get("device_contract"),
     }
     return candidate_id, candidate, parent
+
+
+def _mlx_response_window_key(payload: dict[str, Any], *, label: str) -> str:
+    if payload.get("schema_version") != MLX_SCORER_RESPONSE_SCHEMA:
+        raise ScorerResponseDatasetError(
+            f"{label} schema_version must be {MLX_SCORER_RESPONSE_SCHEMA}"
+        )
+    pair_window = payload.get("pair_window")
+    if not isinstance(pair_window, list) or len(pair_window) != 2:
+        raise ScorerResponseDatasetError(f"{label} pair_window must be length-2 list")
+    start = _as_int(payload.get("start_pair"))
+    max_pairs = _as_int(payload.get("max_pairs"))
+    batch_pairs = _as_int(payload.get("batch_pairs"))
+    if start is None or max_pairs is None or batch_pairs is None:
+        raise ScorerResponseDatasetError(
+            f"{label} start_pair/max_pairs/batch_pairs must be integers"
+        )
+    return f"start={start}:max={max_pairs}:window={pair_window[0]}-{pair_window[1]}"
 
 
 def _family_for(path: Path, parent: dict[str, Any], candidate: dict[str, Any]) -> str:
@@ -748,6 +769,107 @@ def build_response_dataset(
             "notes": "Rows are report-rounded advisory observations for surrogate fitting and ranking only.",
         },
         "baseline": None if baseline is None else baseline.as_dict(),
+        "summary": summarize_rows(rows),
+        "feature_correlations": feature_correlations(rows),
+        "rows": rows,
+        "skipped": skipped,
+    }
+
+
+def build_windowed_mlx_response_dataset(
+    *,
+    candidate_paths: list[Path],
+    baseline_paths: list[Path],
+) -> dict[str, Any]:
+    """Build response rows with one MLX baseline per scorer-pair window.
+
+    Direct MLX scorer-response rows are usually harvested on slices of the
+    video. A single global baseline would make those deltas meaningless, so this
+    helper matches each candidate response to a baseline response with the same
+    scorer-pair window and then emits the normal non-promotional dataset shape.
+    """
+
+    baseline_by_window: dict[str, ResponseBaseline] = {}
+    baseline_sources: dict[str, str] = {}
+    skipped: list[dict[str, str]] = []
+    for path in baseline_paths:
+        try:
+            payload = _load_json(path)
+            label = f"baseline {path}"
+            _require_mlx_response_false_authority(payload, label=label)
+            key = _mlx_response_window_key(payload, label=label)
+            baseline_by_window[key] = ResponseBaseline(
+                score=float(payload["canonical_score"]),
+                archive_bytes=int(payload["archive_size_bytes"]),
+                avg_posenet_dist=_as_float(payload.get("avg_posenet_dist")),
+                avg_segnet_dist=_as_float(payload.get("avg_segnet_dist")),
+            )
+            baseline_sources[key] = str(path)
+        except (OSError, json.JSONDecodeError, ScorerResponseDatasetError, KeyError, ValueError) as exc:
+            skipped.append({"path": str(path), "reason": f"baseline: {exc}"})
+
+    rows: list[dict[str, Any]] = []
+    for path in candidate_paths:
+        try:
+            payload = _load_json(path)
+            key = _mlx_response_window_key(payload, label=f"candidate {path}")
+            baseline = baseline_by_window.get(key)
+            if baseline is None:
+                skipped.append(
+                    {
+                        "path": str(path),
+                        "reason": f"candidate: no matching baseline window {key}",
+                    }
+                )
+                continue
+            partial = build_response_dataset([path], baseline=baseline)
+        except (OSError, json.JSONDecodeError, ScorerResponseDatasetError) as exc:
+            skipped.append({"path": str(path), "reason": f"candidate: {exc}"})
+            continue
+        for item in partial.get("skipped", []):
+            if isinstance(item, dict):
+                skipped.append({"path": str(item.get("path", path)), "reason": str(item.get("reason"))})
+        for row in partial.get("rows", []):
+            if not isinstance(row, dict):
+                continue
+            row["window_baseline_source_path"] = baseline_sources[key]
+            row["window_baseline_key"] = key
+            rows.append(row)
+
+    rows.sort(
+        key=lambda row: (
+            row["family"],
+            row["delta_vs_baseline_score"]
+            if row["delta_vs_baseline_score"] is not None
+            else 1e9,
+            row["row_id"],
+        )
+    )
+    return {
+        "schema": SCHEMA,
+        "producer": TOOL,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "authority": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+            "evidence_grade": EVIDENCE_GRADE_MLX,
+            "notes": (
+                "Rows are local MLX scorer-response observations paired with "
+                "same-window MLX baselines for surrogate fitting and ranking only."
+            ),
+        },
+        "baseline": {
+            "mode": "per_window_mlx_response",
+            "window_count": len(baseline_by_window),
+            "window_sources": baseline_sources,
+        },
         "summary": summarize_rows(rows),
         "feature_correlations": feature_correlations(rows),
         "rows": rows,
