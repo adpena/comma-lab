@@ -33,6 +33,9 @@ def test_plan_mlx_parent_contract_closure_blocks_until_recovered(tmp_path: Path)
     baseline_response.write_text("{}", encoding="utf-8")
     baseline_auth = tmp_path / "baseline_auth.json"
     baseline_auth.write_text("{}", encoding="utf-8")
+    baseline_window = tmp_path / "baseline_windows" / "window_0000.json"
+    baseline_window.parent.mkdir()
+    baseline_window.write_text("{}", encoding="utf-8")
     out_json = tmp_path / "plan.json"
     out_md = tmp_path / "plan.md"
 
@@ -52,6 +55,8 @@ def test_plan_mlx_parent_contract_closure_blocks_until_recovered(tmp_path: Path)
             str(baseline_response),
             "--baseline-cpu-auth-eval",
             str(baseline_auth),
+            "--baseline-window-response",
+            str(baseline_window.parent / "*.json"),
             "--json-out",
             str(out_json),
             "--md-out",
@@ -68,10 +73,17 @@ def test_plan_mlx_parent_contract_closure_blocks_until_recovered(tmp_path: Path)
     assert plan["next_blocker"] == "modal_auth_eval_not_recovered"
     assert plan["score_claim"] is False
     recover = _step(plan, "recover_modal_call")
-    download = _step(plan, "download_tensor_volume")
+    prepare_download = _step(plan, "prepare_tensor_download_dir")
+    download_manifest = _step(plan, "download_tensor_manifest_json")
+    split_windows = _step(plan, "split_parent_windows")
+    rebuild_dataset = _step(plan, "build_rebuilt_dataset")
     assert recover["ready"] is True
-    assert download["ready"] is False
-    assert "unit_tensor_run/" in download["shell"]
+    assert prepare_download["ready"] is False
+    assert download_manifest["ready"] is False
+    assert split_windows["requires"] == ["run_parent_response"]
+    assert rebuild_dataset["requires"] == ["split_parent_windows"]
+    assert str(baseline_window.parent / "*.json") in rebuild_dataset["shell"]
+    assert "unit_tensor_run/scorer_input_cache_tensors/manifest.json" in download_manifest["shell"]
     assert "tools/recover_modal_auth_eval.py" in out_md.read_text(encoding="utf-8")
 
 
@@ -97,9 +109,15 @@ def test_plan_mlx_parent_contract_closure_advances_to_materialization_blocker(
     reference_cache = tmp_path / "reference_cache"
     reference_cache.mkdir()
     output_root = tmp_path / "closure"
-    (output_root / "modal_tensor_volume_download" / "scorer_input_cache_tensors").mkdir(
-        parents=True
-    )
+    downloaded_cache = output_root / "modal_tensor_volume_download" / "scorer_input_cache_tensors"
+    downloaded_cache.mkdir(parents=True)
+    for name in (
+        "manifest.json",
+        "pair_indices.npy",
+        "posenet_yuv6_pair.npy",
+        "segnet_last_rgb.npy",
+    ):
+        (downloaded_cache / name).write_text("placeholder", encoding="utf-8")
     out_json = tmp_path / "plan.json"
 
     subprocess.run(
@@ -124,8 +142,95 @@ def test_plan_mlx_parent_contract_closure_advances_to_materialization_blocker(
 
     plan = json.loads(out_json.read_text(encoding="utf-8"))
     assert plan["next_blocker"] == "downloaded_tensor_cache_not_materialized"
-    assert _step(plan, "download_tensor_volume")["ready"] is True
+    assert _step(plan, "download_tensor_manifest_json")["ready"] is True
     assert _step(plan, "materialize_downloaded_cache")["ready"] is True
+
+
+def test_plan_mlx_parent_contract_closure_uses_rebuilt_dataset_for_bundle(
+    tmp_path: Path,
+) -> None:
+    auth_dir = tmp_path / "modal_auth"
+    auth_dir.mkdir()
+    (auth_dir / "modal_cpu_auth_eval_local_request.json").write_text(
+        json.dumps(
+            {
+                "archive_size_bytes": 178_517,
+                "scorer_input_cache_tensor_volume_run_id": "unit_tensor_run",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (auth_dir / "contest_auth_eval.json").write_text("{}", encoding="utf-8")
+    (auth_dir / "scorer_input_cache_tensor_volume_manifest.json").write_text(
+        json.dumps({"schema_version": "modal_auth_eval_tensor_volume_manifest.v1"}),
+        encoding="utf-8",
+    )
+    reference_cache = tmp_path / "reference_cache"
+    reference_cache.mkdir()
+    output_root = tmp_path / "closure"
+    downloaded_cache = output_root / "modal_tensor_volume_download" / "scorer_input_cache_tensors"
+    downloaded_cache.mkdir(parents=True)
+    for name in (
+        "manifest.json",
+        "pair_indices.npy",
+        "posenet_yuv6_pair.npy",
+        "segnet_last_rgb.npy",
+    ):
+        (downloaded_cache / name).write_text("placeholder", encoding="utf-8")
+    (output_root / "candidate_cache").mkdir(parents=True)
+    (output_root / "candidate_parent_0000_0600.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    (output_root / "candidate_windows_index.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    rebuilt_dataset = output_root / "candidate_same_axis_window_response_dataset.json"
+    rebuilt_dataset.write_text("{}", encoding="utf-8")
+    (output_root / "candidate_parent_contract_strict_v1.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    legacy_dataset = tmp_path / "legacy_dataset.json"
+    legacy_dataset.write_text("{}", encoding="utf-8")
+    baseline_window = tmp_path / "baseline_windows" / "window_0000.json"
+    baseline_window.parent.mkdir()
+    baseline_window.write_text("{}", encoding="utf-8")
+    out_json = tmp_path / "plan.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "plan_mlx_parent_contract_closure.py"),
+            "--auth-eval-dir",
+            str(auth_dir),
+            "--reference-cache-dir",
+            str(reference_cache),
+            "--output-root",
+            str(output_root),
+            "--dataset",
+            str(legacy_dataset),
+            "--baseline-window-response",
+            str(baseline_window.parent / "*.json"),
+            "--json-out",
+            str(out_json),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    plan = json.loads(out_json.read_text(encoding="utf-8"))
+    assert plan["dataset_rebuild_enabled"] is True
+    assert plan["legacy_dataset"] == str(legacy_dataset)
+    assert plan["dataset_for_contract"] == str(rebuilt_dataset)
+    bundle = _step(plan, "build_contract_bundle")
+    refresh = _step(plan, "refresh_parent_plan")
+    assert str(rebuilt_dataset) in bundle["shell"]
+    assert str(rebuilt_dataset) in refresh["shell"]
+    assert str(legacy_dataset) not in bundle["shell"]
+    assert str(legacy_dataset) not in refresh["shell"]
 
 
 def _step(plan: dict, step_id: str) -> dict:
