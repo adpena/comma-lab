@@ -447,5 +447,7 @@ def test_cache_audit_rejects_forged_contest_cpu_auth_eval_custody() -> None:
     audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), bad_auth)
 
     assert audit["passed"] is False
+    assert audit["eligible_for_local_mlx_transfer_calibration"] is False
+    assert audit["canonical_equation"]["eligible_for_local_mlx_transfer_calibration"] is True
     assert "contest_cpu_platform_system_not_linux" in audit["blockers"]
     assert "contest_cpu_platform_machine_not_x86_64" in audit["blockers"]

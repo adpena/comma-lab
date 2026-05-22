@@ -137,6 +137,9 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
             blockers.append(blocker)
 
     passed = not blockers
+    transfer_eligible = bool(
+        passed and identity.get("eligible_for_local_mlx_transfer_calibration")
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "verdict": PASS_VERDICT if passed else FAIL_VERDICT,
@@ -150,9 +153,7 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
         "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
-        "eligible_for_local_mlx_transfer_calibration": bool(
-            identity.get("eligible_for_local_mlx_transfer_calibration")
-        ),
+        "eligible_for_local_mlx_transfer_calibration": transfer_eligible,
         "identity_residual": identity.get("identity_residual"),
         "cache": {
             "archive_sha256": cache_archive_sha,
