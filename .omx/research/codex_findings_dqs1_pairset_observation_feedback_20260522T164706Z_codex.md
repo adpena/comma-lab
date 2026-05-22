@@ -120,7 +120,8 @@ The observation ledger now has `3` exact CPU calibration rows:
 `prefix_k028`, `pairset_diversity_k002`, and `pairset_diversity_k004`.
 The refreshed observation-aware portfolio is:
 
-- `experiments/results/cross_family_candidate_portfolio_20260522T165500Z_observed_pairsets/portfolio.json`
+- `experiments/results/cross_family_candidate_portfolio_20260522T165500Z_k004_observed/portfolio.json`
+- `experiments/results/cross_family_candidate_portfolio_20260522T165500Z_k004_observed/portfolio.md`
 - New recommended candidate: `pairset_diversity_k008`
 - New recommended action: `materialize_pairset_archive_and_run_local_controls`
 
