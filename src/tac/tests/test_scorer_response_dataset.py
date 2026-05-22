@@ -2534,6 +2534,10 @@ def test_validation_gate_surfaces_control_masked_candidate_family_failure() -> N
             row["predicted_delta_vs_baseline_score"] = 0.0005
 
     gate = build_scorer_response_validation_gate(dataset)
+    required_gate = build_scorer_response_validation_gate(
+        dataset,
+        required_spend_triage_families=("mlx_decoder_q",),
+    )
     evaluation = next(
         item
         for item in gate["prediction_evaluations"]
@@ -2544,6 +2548,19 @@ def test_validation_gate_surfaces_control_masked_candidate_family_failure() -> N
     assert gate["status"] == "passed"
     assert gate["prediction_spend_triage_usable"] is False
     assert gate["spend_triage_usable_prediction_fields"] == []
+    assert "mlx_decoder_q" in gate["spend_triage_blocked_families"]
+    assert gate["family_spend_triage_gates"]["mlx_decoder_q"]["status"] == "blocked"
+    assert gate["family_spend_triage_gates"]["mlx_decoder_q"][
+        "spend_triage_usable"
+    ] is False
+    assert gate["family_spend_triage_gates"]["mlx_decoder_q"]["score_claim"] is False
+    assert required_gate["status"] == "passed"
+    assert required_gate["prediction_spend_triage_usable"] is False
+    assert required_gate["required_spend_triage_families"] == ["mlx_decoder_q"]
+    assert required_gate["required_family_spend_triage_passed"] is False
+    assert required_gate["required_family_spend_triage_blockers"] == [
+        "required_family_oof_gate_blocked:mlx_decoder_q"
+    ]
     assert evaluation["candidate_family_spend_triage_usable"] is False
     assert candidate_metrics["negative_prediction_count"] == 0
     assert candidate_metrics["spend_triage_usable"] is False
@@ -2566,7 +2583,10 @@ def test_validation_gate_marks_candidate_family_spend_triage_usable_when_real_si
         row["delta_vs_baseline_score"] = value
         row["predicted_delta_vs_baseline_score"] = value
 
-    gate = build_scorer_response_validation_gate(dataset)
+    gate = build_scorer_response_validation_gate(
+        dataset,
+        required_spend_triage_families=("mlx_decoder_q",),
+    )
     evaluation = next(
         item
         for item in gate["prediction_evaluations"]
@@ -2576,6 +2596,14 @@ def test_validation_gate_marks_candidate_family_spend_triage_usable_when_real_si
 
     assert gate["status"] == "passed"
     assert gate["prediction_spend_triage_usable"] is True
+    assert gate["required_family_spend_triage_passed"] is True
+    assert gate["required_family_spend_triage_blockers"] == []
+    assert gate["spend_triage_allowed_families"] == ["mlx_decoder_q"]
+    assert "mlx_decoder_q" in gate["spend_triage_usable_families"]
+    assert gate["family_spend_triage_gates"]["mlx_decoder_q"]["status"] == "strict_pass"
+    assert gate["family_spend_triage_gates"]["mlx_decoder_q"][
+        "usable_prediction_fields"
+    ] == ["predicted_delta_vs_baseline_score"]
     assert gate["spend_triage_usable_prediction_fields"] == [
         "predicted_delta_vs_baseline_score"
     ]
@@ -3189,6 +3217,58 @@ def test_validate_scorer_response_dataset_cli_require_pass_allows_passed_gate(
     gate = json.loads(json_out.read_text(encoding="utf-8"))
     assert gate["status"] == "passed"
     assert gate["blockers"] == []
+
+
+def test_validate_scorer_response_dataset_cli_require_pass_blocks_required_family(
+    tmp_path,
+) -> None:
+    dataset = _validation_dataset(
+        families=("mlx_fec6_auth_parent", "mlx_decoder_q"),
+        rows_per_fold=120,
+    )
+    for row in dataset["rows"]:
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        if row["family"] == "mlx_fec6_auth_parent":
+            value = float(fold * 120 + offset)
+            row["delta_vs_baseline_score"] = value
+            row["predicted_delta_vs_baseline_score"] = value
+        else:
+            row["delta_vs_baseline_score"] = -0.001 if offset % 2 == 0 else 0.001
+            row["predicted_delta_vs_baseline_score"] = 0.0005
+
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(json.dumps(dataset), encoding="utf-8")
+    json_out = tmp_path / "gate.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "validate_scorer_response_dataset.py"),
+            "--dataset",
+            str(dataset_path),
+            "--require-pass",
+            "--required-spend-triage-family",
+            "mlx_decoder_q",
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    stdout_payload = json.loads(completed.stdout)
+    assert stdout_payload["passed"] is True
+    assert stdout_payload["required_family_spend_triage_passed"] is False
+    assert stdout_payload["required_family_spend_triage_blockers"] == [
+        "required_family_oof_gate_blocked:mlx_decoder_q"
+    ]
+    gate = json.loads(json_out.read_text(encoding="utf-8"))
+    assert gate["status"] == "passed"
+    assert gate["prediction_spend_triage_usable"] is False
 
 
 def test_merge_scorer_response_datasets_preserves_false_authority() -> None:

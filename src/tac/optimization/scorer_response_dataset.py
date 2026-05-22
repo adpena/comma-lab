@@ -3333,11 +3333,48 @@ def build_effective_mlx_spend_triage_gate(
             return []
         return list(value[:limit])
 
+    def _string_list(value: Any) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item) for item in value if str(item).strip()]
+
     blockers: list[str] = []
     if not mlx_rows:
         blockers.append("no_mlx_rows")
     if response_validation_gate.get("passed") is not True:
         blockers.append("response_validation_gate_not_passed")
+    if response_validation_gate.get("prediction_spend_triage_usable") is not True:
+        blockers.append("response_validation_prediction_spend_triage_not_usable")
+    required_spend_triage_families = _string_list(
+        response_validation_gate.get("required_spend_triage_families")
+    )
+    spend_triage_allowed_families = _string_list(
+        response_validation_gate.get("spend_triage_allowed_families")
+    )
+    spend_triage_blocked_families = _string_list(
+        response_validation_gate.get("spend_triage_blocked_families")
+    )
+    if (
+        required_spend_triage_families
+        and response_validation_gate.get("required_family_spend_triage_passed") is not True
+    ):
+        blockers.append("response_validation_required_family_spend_triage_not_passed")
+    if not spend_triage_allowed_families:
+        blockers.append("response_validation_no_family_spend_triage_allowed")
+    mlx_families = sorted(
+        {
+            str(row.get("family"))
+            for row in mlx_rows
+            if isinstance(row, dict) and row.get("family") is not None
+        }
+    )
+    mlx_families_without_gate = sorted(
+        family
+        for family in mlx_families
+        if family not in set(spend_triage_allowed_families)
+    )
+    if mlx_families_without_gate:
+        blockers.append("mlx_rows_include_family_without_spend_triage_gate")
     if (
         mlx_torch_parity_sweep_gate is None
         or mlx_torch_parity_sweep_gate.get("status") != "strict_pass"
@@ -3388,6 +3425,12 @@ def build_effective_mlx_spend_triage_gate(
         "evidence_grade": EVIDENCE_GRADE_MLX,
         "evidence_tag": EVIDENCE_TAG_MLX,
         "score_axis": EVIDENCE_TAG_MLX,
+        "family_spend_triage_gate_enforced": True,
+        "required_spend_triage_families": required_spend_triage_families,
+        "spend_triage_allowed_families": spend_triage_allowed_families,
+        "spend_triage_blocked_families": spend_triage_blocked_families,
+        "mlx_families": mlx_families,
+        "mlx_families_without_spend_triage_gate": mlx_families_without_gate,
         "status": status,
         "mlx_exact_eval_spend_triage_allowed": status == "strict_pass",
         "blockers": blockers,
@@ -3395,6 +3438,20 @@ def build_effective_mlx_spend_triage_gate(
         "summary": {
             "mlx_row_count": len(mlx_rows),
             "response_validation_status": response_validation_gate.get("status"),
+            "response_prediction_spend_triage_usable": response_validation_gate.get(
+                "prediction_spend_triage_usable"
+            ),
+            "required_spend_triage_families": required_spend_triage_families,
+            "required_family_spend_triage_passed": response_validation_gate.get(
+                "required_family_spend_triage_passed"
+            ),
+            "required_family_spend_triage_blockers": _string_list(
+                response_validation_gate.get("required_family_spend_triage_blockers")
+            ),
+            "spend_triage_allowed_families": spend_triage_allowed_families,
+            "spend_triage_blocked_families": spend_triage_blocked_families,
+            "mlx_families": mlx_families,
+            "mlx_families_without_spend_triage_gate": mlx_families_without_gate,
             "torch_parity_status": (
                 None
                 if mlx_torch_parity_sweep_gate is None
@@ -3449,6 +3506,7 @@ def build_scorer_response_validation_gate(
     min_rows: int = 50,
     min_families: int = 2,
     required_folds: Iterable[int] = range(5),
+    required_spend_triage_families: Iterable[str] = (),
     target: str = "delta_vs_baseline_score",
     prediction_fields: Iterable[str] = DEFAULT_RESPONSE_PREDICTION_FIELDS,
     min_prediction_pairs_per_fold: int = 3,
@@ -3474,6 +3532,13 @@ def build_scorer_response_validation_gate(
     folds_required = sorted({int(fold) for fold in required_folds})
     if not folds_required:
         raise ScorerResponseDatasetError("required_folds must be non-empty")
+    required_families = sorted(
+        {
+            family.strip()
+            for family in (str(value) for value in required_spend_triage_families)
+            if family.strip()
+        }
+    )
 
     normalized = normalize_legacy_response_dataset_authority(dataset)
     rows = normalized["rows"]
@@ -3521,6 +3586,33 @@ def build_scorer_response_validation_gate(
         for item in passing_predictions
         if item.get("candidate_family_spend_triage_usable") is True
     ]
+    family_spend_triage_gates = _family_spend_triage_gates(
+        family_counts=family_counts,
+        prediction_evaluations=prediction_evaluations,
+        passing_predictions=passing_predictions,
+    )
+    spend_triage_usable_families = [
+        family
+        for family, gate in family_spend_triage_gates.items()
+        if gate.get("spend_triage_usable") is True
+    ]
+    spend_triage_blocked_families = [
+        family
+        for family, gate in family_spend_triage_gates.items()
+        if gate.get("spend_triage_usable") is not True
+    ]
+    required_family_spend_triage_blockers: list[str] = []
+    for family in required_families:
+        family_gate = family_spend_triage_gates.get(family)
+        if family_gate is None:
+            required_family_spend_triage_blockers.append(
+                f"required_family_oof_gate_missing:{family}"
+            )
+        elif family_gate.get("spend_triage_usable") is not True:
+            required_family_spend_triage_blockers.append(
+                f"required_family_oof_gate_blocked:{family}"
+            )
+    required_family_spend_triage_passed = not required_family_spend_triage_blockers
 
     blockers: list[str] = []
     if len(rows) < min_rows:
@@ -3564,6 +3656,7 @@ def build_scorer_response_validation_gate(
         "passed": status == "passed",
         "prediction_spend_triage_usable": (
             status == "passed" and bool(spend_triage_usable_predictions)
+            and required_family_spend_triage_passed
         ),
         "blockers": blockers,
         "allowed_use": (
@@ -3581,6 +3674,7 @@ def build_scorer_response_validation_gate(
             "min_rows": int(min_rows),
             "min_families": int(min_families),
             "required_folds": folds_required,
+            "required_spend_triage_families": required_families,
             "target": target,
             "prediction_fields": [str(field) for field in prediction_fields],
             "min_prediction_pairs_per_fold": int(min_prediction_pairs_per_fold),
@@ -3607,8 +3701,23 @@ def build_scorer_response_validation_gate(
                 family: {str(fold): fold_count_for_family(rows, family, fold) for fold in folds_required}
                 for family in sorted(family_counts)
             },
+            "spend_triage_usable_families": spend_triage_usable_families,
+            "spend_triage_blocked_families": spend_triage_blocked_families,
         },
         "prediction_evaluations": prediction_evaluations,
+        "family_spend_triage_gates": family_spend_triage_gates,
+        "required_spend_triage_families": required_families,
+        "required_family_spend_triage_passed": required_family_spend_triage_passed,
+        "required_family_spend_triage_blockers": (
+            required_family_spend_triage_blockers
+        ),
+        "spend_triage_allowed_families": (
+            required_families
+            if required_families and required_family_spend_triage_passed
+            else spend_triage_usable_families
+        ),
+        "spend_triage_usable_families": spend_triage_usable_families,
+        "spend_triage_blocked_families": spend_triage_blocked_families,
         "passing_prediction_fields": [item["field"] for item in passing_predictions],
         "spend_triage_usable_prediction_fields": [
             item["field"] for item in spend_triage_usable_predictions
@@ -3683,6 +3792,67 @@ def _evaluate_prediction_field(
         "candidate_family_spend_triage_usable": candidate_family_spend_triage_usable,
         "passed": bool(per_fold) and all(item["passed"] for item in per_fold),
     }
+
+
+def _family_spend_triage_gates(
+    *,
+    family_counts: dict[str, int],
+    prediction_evaluations: list[dict[str, Any]],
+    passing_predictions: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    passing_fields = {str(item.get("field")) for item in passing_predictions}
+    out: dict[str, dict[str, Any]] = {}
+    for family in sorted(family_counts):
+        usable_fields: list[str] = []
+        blocked_fields: list[str] = []
+        field_metrics: dict[str, dict[str, Any]] = {}
+        for evaluation in prediction_evaluations:
+            field = str(evaluation.get("field"))
+            metrics_by_family = evaluation.get("candidate_family_metrics")
+            metrics = (
+                metrics_by_family.get(family)
+                if isinstance(metrics_by_family, dict)
+                else None
+            )
+            if not isinstance(metrics, dict):
+                continue
+            field_metrics[field] = metrics
+            if metrics.get("spend_triage_usable") is True and field in passing_fields:
+                usable_fields.append(field)
+            else:
+                blocked_fields.append(field)
+        blockers: list[str] = []
+        if not field_metrics:
+            blockers.append("family_has_no_prediction_metrics")
+        if not usable_fields:
+            blockers.append("family_has_no_spend_triage_usable_prediction_field")
+        out[family] = {
+            "schema": "scorer_response_family_spend_triage_gate.v1",
+            "family": family,
+            "status": "strict_pass" if not blockers else "blocked",
+            "spend_triage_usable": not blockers,
+            "usable_prediction_fields": usable_fields,
+            "blocked_prediction_fields": blocked_fields,
+            "blockers": blockers,
+            "field_metrics": field_metrics,
+            "allowed_use": (
+                "family_local_spend_triage_candidate_generation"
+                if not blockers
+                else "blocked_until_family_level_oof_metrics_pass"
+            ),
+            "not_allowed_uses": [
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+                "exact_eval_dispatch_selection_without_family_gate",
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+        }
+    return out
 
 
 def _candidate_family_prediction_metrics(
@@ -3846,6 +4016,7 @@ def build_next_probe_plan(
     allow_mlx_parity_research_signal_override: bool = False,
     mlx_score_calibration: dict[str, Any] | None = None,
     mlx_production_contract: dict[str, Any] | None = None,
+    required_spend_triage_families: Iterable[str] = (),
     decoder_q_response_surface: dict[str, Any] | None = None,
     decoder_q_surface_advisory_batch: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -3856,7 +4027,10 @@ def build_next_probe_plan(
         raise ScorerResponseDatasetError("dataset rows[] missing")
     dataset_authority = dataset.get("authority") if isinstance(dataset.get("authority"), dict) else {}
     try:
-        response_validation_gate = build_scorer_response_validation_gate(dataset)
+        response_validation_gate = build_scorer_response_validation_gate(
+            dataset,
+            required_spend_triage_families=required_spend_triage_families,
+        )
     except ScorerResponseDatasetError as exc:
         response_validation_gate = _blocked_response_validation_gate(
             str(exc),
@@ -4879,6 +5053,10 @@ def render_validation_gate_markdown(gate: dict[str, Any]) -> str:
         f"- Status: `{gate.get('status')}`",
         f"- Allowed use: `{gate.get('allowed_use')}`",
         f"- Prediction spend-triage usable: `{gate.get('prediction_spend_triage_usable')}`",
+        f"- Required spend-triage families: `{gate.get('required_spend_triage_families')}`",
+        f"- Required family blockers: `{gate.get('required_family_spend_triage_blockers')}`",
+        f"- Spend-triage usable families: `{gate.get('spend_triage_usable_families')}`",
+        f"- Spend-triage blocked families: `{gate.get('spend_triage_blocked_families')}`",
         f"- Blockers: `{gate.get('blockers')}`",
         "",
     ]

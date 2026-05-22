@@ -18,6 +18,8 @@ from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 SCHEMA_VERSION = "mlx_score_calibration.v1"
 DEFAULT_DECISION_SAFETY_FACTOR = 5.0
+MIN_AXIS_ROWS_FOR_SPEND_TRIAGE = 3
+MIN_AXIS_PAIRWISE_COMPARISONS_FOR_SPEND_TRIAGE = 3
 STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE = (
     "local_spend_triage_only_after_strict_auth_axis_calibration"
 )
@@ -461,10 +463,13 @@ def _build_summary(rows: list[dict[str, Any]], pairwise: list[dict[str, Any]]) -
     for axis in ("cpu", "cuda"):
         match_key = f"mlx_matches_{axis}"
         comparable = [item for item in pairwise if match_key in item]
+        rows_with_axis = [row for row in rows if row.get(f"{axis}_score") is not None]
+        summary[f"{axis}_auth_axis_row_count"] = len(rows_with_axis)
         summary[f"mlx_{axis}_pairwise_comparison_count"] = len(comparable)
         summary[f"mlx_{axis}_rank_inversions"] = sum(
             1 for item in comparable if item[match_key] is not True
         )
+    summary["planning_advisory_dual_axis_summary"] = _build_dual_axis_summary(rows)
     return summary
 
 
@@ -472,24 +477,29 @@ def _build_decision_policy(
     summary: dict[str, Any],
     safety_factor: float,
 ) -> dict[str, Any]:
-    cpu_error = summary.get("mlx_minus_cpu_max_abs")
-    cuda_error = summary.get("cuda_minus_mlx_max_abs")
-    available_errors = [
-        float(value)
-        for value in (cpu_error, cuda_error)
-        if value is not None and math.isfinite(float(value))
-    ]
-    calibration_uncertainty_score = max(available_errors) if available_errors else None
+    axis_policies = {
+        axis: _build_axis_decision_policy(summary, axis, safety_factor)
+        for axis in ("cpu", "cuda")
+    }
+    cuda_policy = axis_policies["cuda"]
+    calibration_uncertainty_score = cuda_policy.get("calibration_uncertainty_score")
     min_gap = (
-        None
-        if calibration_uncertainty_score is None
-        else calibration_uncertainty_score * safety_factor
+        cuda_policy.get("min_gap_for_spend_triage")
+        if cuda_policy.get("spend_triage_allowed") is True
+        else None
     )
-    basis = "mlx_minus_cpu_max_abs"
-    if cuda_error is not None and cpu_error is None:
-        basis = "cuda_minus_mlx_max_abs"
-    elif cuda_error is not None and cpu_error is not None:
-        basis = "max(mlx_minus_cpu_max_abs, cuda_minus_mlx_max_abs)"
+    blockers: list[str] = []
+    warnings: list[str] = []
+    for axis, policy in axis_policies.items():
+        warnings.extend(str(item) for item in policy.get("warnings", []))
+        if axis == "cuda":
+            blockers.extend(str(item) for item in policy.get("blockers", []))
+    cpu_policy = axis_policies["cpu"]
+    if (
+        cpu_policy.get("has_strict_auth_axis_calibration") is True
+        and cuda_policy.get("has_strict_auth_axis_calibration") is not True
+    ):
+        blockers.append("cpu_only_calibration_cannot_authorize_cuda_routing")
     return {
         "score_claim": False,
         "promotion_eligible": False,
@@ -497,14 +507,21 @@ def _build_decision_policy(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "decision_safety_factor": safety_factor,
-        "calibration_uncertainty_basis": basis if available_errors else None,
+        "axis_decision_policies": axis_policies,
+        "calibration_uncertainty_basis": (
+            cuda_policy.get("calibration_uncertainty_basis")
+            if cuda_policy.get("spend_triage_allowed") is True
+            else None
+        ),
         "calibration_uncertainty_score": calibration_uncertainty_score,
         "recommended_min_mlx_gap_for_spend_triage": min_gap,
         "allowed_use": (
             STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE
-            if available_errors
-            else "diagnostic_only_auth_axis_calibration_missing"
+            if cuda_policy.get("spend_triage_allowed") is True
+            else "diagnostic_only_cuda_auth_axis_calibration_missing_or_insufficient"
         ),
+        "blockers": sorted(set(blockers)),
+        "warnings": sorted(set(warnings)),
         "forbidden_use": "score_claim_or_rank_or_kill_or_promotion",
     }
 
@@ -514,9 +531,34 @@ def _attach_decision_certification(
     decision_policy: dict[str, Any],
 ) -> None:
     min_gap = decision_policy.get("recommended_min_mlx_gap_for_spend_triage")
+    axis_policies = decision_policy.get("axis_decision_policies")
+    if not isinstance(axis_policies, dict):
+        axis_policies = {}
     for item in pairwise:
+        for axis in ("cpu", "cuda"):
+            policy = axis_policies.get(axis)
+            if not isinstance(policy, dict):
+                policy = {}
+            axis_gap_key = f"{axis}_score_gap_abs"
+            if axis_gap_key not in item:
+                continue
+            axis_min_gap = policy.get("min_gap_for_spend_triage")
+            axis_gap = _finite_float(item[axis_gap_key], f"pairwise.{axis_gap_key}")
+            axis_certified = (
+                policy.get("spend_triage_allowed") is True
+                and axis_min_gap is not None
+                and axis_gap >= float(axis_min_gap)
+            )
+            item[f"mlx_{axis}_spend_triage_decision_certified"] = axis_certified
+            item[f"mlx_{axis}_spend_triage_uncertain"] = not axis_certified
+            item[f"mlx_{axis}_spend_triage_min_gap"] = axis_min_gap
         gap = _finite_float(item["mlx_score_gap_abs"], "pairwise.mlx_score_gap_abs")
-        certified = min_gap is not None and gap >= float(min_gap)
+        certified = (
+            min_gap is not None
+            and "cuda_score_gap_abs" in item
+            and gap >= float(min_gap)
+            and axis_policies.get("cuda", {}).get("spend_triage_allowed") is True
+        )
         item["mlx_spend_triage_decision_certified"] = certified
         item["mlx_spend_triage_uncertain"] = not certified
         item["mlx_spend_triage_min_gap"] = min_gap
@@ -537,9 +579,222 @@ def _attach_decision_summary(
     summary["recommended_min_mlx_gap_for_spend_triage"] = decision_policy.get(
         "recommended_min_mlx_gap_for_spend_triage"
     )
+    axis_policies = decision_policy.get("axis_decision_policies")
+    if isinstance(axis_policies, dict):
+        summary["axis_specific_min_gap_for_spend_triage"] = {
+            axis: (
+                policy.get("min_gap_for_spend_triage")
+                if isinstance(policy, dict)
+                else None
+            )
+            for axis, policy in axis_policies.items()
+        }
+        summary["axis_calibration"] = axis_policies
+        for axis in ("cpu", "cuda"):
+            axis_certified = [
+                item
+                for item in pairwise
+                if item.get(f"mlx_{axis}_spend_triage_decision_certified") is True
+            ]
+            axis_uncertain = [
+                item for item in pairwise if item.get(f"mlx_{axis}_spend_triage_uncertain") is True
+            ]
+            summary[f"mlx_{axis}_spend_triage_pairwise_certified_count"] = len(
+                axis_certified
+            )
+            summary[f"mlx_{axis}_spend_triage_pairwise_uncertain_count"] = len(
+                axis_uncertain
+            )
     summary["calibration_uncertainty_score"] = decision_policy.get(
         "calibration_uncertainty_score"
     )
+
+
+def _build_axis_decision_policy(
+    summary: dict[str, Any],
+    axis: str,
+    safety_factor: float,
+) -> dict[str, Any]:
+    error_key = {
+        "cpu": "mlx_minus_cpu_max_abs",
+        "cuda": "cuda_minus_mlx_max_abs",
+    }[axis]
+    row_count = int(summary.get(f"{axis}_auth_axis_row_count") or 0)
+    pairwise_count = int(summary.get(f"mlx_{axis}_pairwise_comparison_count") or 0)
+    raw_error = summary.get(error_key)
+    calibration_uncertainty_score = (
+        None
+        if raw_error is None
+        else _finite_float(raw_error, f"summary.{error_key}")
+    )
+    min_gap = (
+        None
+        if calibration_uncertainty_score is None
+        else calibration_uncertainty_score * safety_factor
+    )
+    has_calibration = calibration_uncertainty_score is not None
+    sample_scarce = has_calibration and (
+        row_count < MIN_AXIS_ROWS_FOR_SPEND_TRIAGE
+        or pairwise_count < MIN_AXIS_PAIRWISE_COMPARISONS_FOR_SPEND_TRIAGE
+    )
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if not has_calibration:
+        blockers.append(f"{axis}_auth_axis_calibration_missing")
+    elif sample_scarce:
+        blockers.append(f"{axis}_auth_axis_calibration_sample_scarce")
+        warnings.append(
+            f"{axis}_auth_axis_calibration_sample_scarce:"
+            f"rows={row_count}:pairwise={pairwise_count}:"
+            f"min_rows={MIN_AXIS_ROWS_FOR_SPEND_TRIAGE}:"
+            f"min_pairwise={MIN_AXIS_PAIRWISE_COMPARISONS_FOR_SPEND_TRIAGE}"
+        )
+    allowed = has_calibration and not sample_scarce
+    return {
+        "auth_axis": f"contest_{axis}",
+        "has_strict_auth_axis_calibration": has_calibration,
+        "spend_triage_allowed": allowed,
+        "row_count": row_count,
+        "pairwise_comparison_count": pairwise_count,
+        "rank_inversions_vs_mlx": int(summary.get(f"mlx_{axis}_rank_inversions") or 0),
+        "sample_scarce": bool(sample_scarce),
+        "min_rows_for_spend_triage": MIN_AXIS_ROWS_FOR_SPEND_TRIAGE,
+        "min_pairwise_comparisons_for_spend_triage": (
+            MIN_AXIS_PAIRWISE_COMPARISONS_FOR_SPEND_TRIAGE
+        ),
+        "calibration_uncertainty_basis": error_key if has_calibration else None,
+        "calibration_uncertainty_score": calibration_uncertainty_score,
+        "min_gap_for_spend_triage": min_gap,
+        "recommended_min_mlx_gap_for_spend_triage": min_gap,
+        "allowed_use": (
+            f"local_spend_triage_only_after_strict_{axis}_auth_axis_calibration"
+            if allowed
+            else f"diagnostic_only_{axis}_auth_axis_calibration_missing_or_insufficient"
+        ),
+        "blockers": blockers,
+        "warnings": warnings,
+    }
+
+
+def _build_dual_axis_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    rows_with_both = [
+        row
+        for row in rows
+        if row.get("cpu_score") is not None and row.get("cuda_score") is not None
+    ]
+    groups_by_key: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in rows_with_both:
+        family = str(row.get("response_family") or "unknown_family")
+        archive_sha256 = str(row.get("archive_sha256") or "unknown_archive")
+        groups_by_key.setdefault((family, archive_sha256), []).append(row)
+    groups = [
+        _summarize_cpu_cuda_group(
+            group_rows,
+            response_family=family,
+            archive_sha256=archive_sha256,
+        )
+        for (family, archive_sha256), group_rows in sorted(groups_by_key.items())
+    ]
+    overall = _summarize_cpu_cuda_group(
+        rows_with_both,
+        response_family="all",
+        archive_sha256="all",
+    )
+    return {
+        "schema": "mlx_cpu_cuda_dual_axis_planning_summary.v1",
+        "advisory_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "row_count_with_both_axes": len(rows_with_both),
+        "sample_scarcity_thresholds": {
+            "min_rows": MIN_AXIS_ROWS_FOR_SPEND_TRIAGE,
+            "min_pairwise_comparisons": MIN_AXIS_PAIRWISE_COMPARISONS_FOR_SPEND_TRIAGE,
+        },
+        "overall": overall,
+        "groups": groups,
+    }
+
+
+def _summarize_cpu_cuda_group(
+    rows: list[dict[str, Any]],
+    *,
+    response_family: str,
+    archive_sha256: str,
+) -> dict[str, Any]:
+    row_count = len(rows)
+    pairwise_count = 0
+    cpu_improvement_count = 0
+    cuda_regression_count = 0
+    cuda_non_improvement_count = 0
+    cuda_confirms_count = 0
+    for i, left in enumerate(rows):
+        for right in rows[i + 1 :]:
+            pairwise_count += 1
+            cpu_order = _order(left.get("cpu_score"), right.get("cpu_score"))
+            cuda_order = _order(left.get("cuda_score"), right.get("cuda_score"))
+            if cpu_order == 0:
+                continue
+            cpu_improvement_count += 1
+            if cuda_order == cpu_order:
+                cuda_confirms_count += 1
+            else:
+                cuda_non_improvement_count += 1
+                if cuda_order == -cpu_order:
+                    cuda_regression_count += 1
+    sample_scarce = (
+        row_count < MIN_AXIS_ROWS_FOR_SPEND_TRIAGE
+        or pairwise_count < MIN_AXIS_PAIRWISE_COMPARISONS_FOR_SPEND_TRIAGE
+    )
+    out: dict[str, Any] = {
+        "response_family": response_family,
+        "archive_sha256": archive_sha256,
+        "row_count": row_count,
+        "pairwise_comparison_count": pairwise_count,
+        "cpu_improvement_comparison_count": cpu_improvement_count,
+        "cuda_confirms_cpu_improvement_count": cuda_confirms_count,
+        "cuda_non_improvement_given_cpu_improvement_count": cuda_non_improvement_count,
+        "cuda_regression_given_cpu_improvement_count": cuda_regression_count,
+        "p_cuda_regression_given_cpu_improvement_empirical": (
+            None
+            if cpu_improvement_count == 0
+            else cuda_regression_count / cpu_improvement_count
+        ),
+        "p_cuda_regression_given_cpu_improvement_conservative_count_based": (
+            1.0
+            if cpu_improvement_count == 0
+            else (cuda_regression_count + 1) / (cpu_improvement_count + 2)
+        ),
+        "sample_scarce": sample_scarce,
+        "warnings": [],
+    }
+    if sample_scarce:
+        out["warnings"].append(
+            "dual_axis_cpu_cuda_sample_scarce_fail_closed:"
+            f"rows={row_count}:pairwise={pairwise_count}:"
+            f"min_rows={MIN_AXIS_ROWS_FOR_SPEND_TRIAGE}:"
+            f"min_pairwise={MIN_AXIS_PAIRWISE_COMPARISONS_FOR_SPEND_TRIAGE}"
+        )
+    _attach_observation_stats(
+        out,
+        "cuda_minus_cpu",
+        [float(row["cuda_minus_cpu"]) for row in rows if row.get("cuda_minus_cpu") is not None],
+    )
+    return out
+
+
+def _attach_observation_stats(
+    summary: dict[str, Any],
+    key: str,
+    values: list[float],
+) -> None:
+    if not values:
+        return
+    summary[f"{key}_mean"] = sum(values) / len(values)
+    summary[f"{key}_min"] = min(values)
+    summary[f"{key}_max"] = max(values)
+    summary[f"{key}_max_abs"] = max(abs(value) for value in values)
 
 
 def _attach_delta_stats(summary: dict[str, Any], rows: list[dict[str, Any]], key: str) -> None:
@@ -596,6 +851,8 @@ def _required_sha256(value: Any, label: str) -> str:
 
 __all__ = [
     "DEFAULT_DECISION_SAFETY_FACTOR",
+    "MIN_AXIS_PAIRWISE_COMPARISONS_FOR_SPEND_TRIAGE",
+    "MIN_AXIS_ROWS_FOR_SPEND_TRIAGE",
     "SCHEMA_VERSION",
     "STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE",
     "build_mlx_score_calibration_manifest",

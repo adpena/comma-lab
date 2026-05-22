@@ -59,6 +59,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-prediction-pairs-per-fold", type=int, default=3)
     parser.add_argument("--min-pearson-r", type=float, default=0.2)
     parser.add_argument(
+        "--required-spend-triage-family",
+        action="append",
+        default=[],
+        help=(
+            "Require this exact response family to strict-pass its own OOF "
+            "spend-triage gate. May repeat."
+        ),
+    )
+    parser.add_argument(
         "--allow-mixed-axis-targets",
         action="store_true",
         help=(
@@ -90,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
             prediction_fields=args.prediction_fields,
             min_prediction_pairs_per_fold=args.min_prediction_pairs_per_fold,
             min_pearson_r=args.min_pearson_r,
+            required_spend_triage_families=args.required_spend_triage_family,
             require_single_axis=not args.allow_mixed_axis_targets,
         )
     except (OSError, ValueError, ScorerResponseDatasetError) as exc:
@@ -107,6 +117,15 @@ def main(argv: list[str] | None = None) -> int:
                 "md_out": None if args.md_out is None else str(args.md_out),
                 "status": gate["status"],
                 "passed": gate["passed"],
+                "prediction_spend_triage_usable": gate[
+                    "prediction_spend_triage_usable"
+                ],
+                "required_family_spend_triage_passed": gate[
+                    "required_family_spend_triage_passed"
+                ],
+                "required_family_spend_triage_blockers": gate[
+                    "required_family_spend_triage_blockers"
+                ],
                 "blockers": gate["blockers"],
                 "score_claim": False,
             },
@@ -115,6 +134,12 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     if args.require_pass and gate.get("passed") is not True:
+        return 2
+    if (
+        args.require_pass
+        and args.required_spend_triage_family
+        and gate.get("required_family_spend_triage_passed") is not True
+    ):
         return 2
     return 0
 

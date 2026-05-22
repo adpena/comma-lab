@@ -21,6 +21,7 @@ def test_mlx_score_calibration_preserves_order_and_false_authority(tmp_path: Pat
     rows = [
         _row(tmp_path, "a", mlx_score=0.2, cpu_score=0.201, cuda_score=0.201),
         _row(tmp_path, "b", mlx_score=0.3, cpu_score=0.301, cuda_score=0.301),
+        _row(tmp_path, "c", mlx_score=0.4, cpu_score=0.401, cuda_score=0.401),
     ]
 
     manifest = build_mlx_score_calibration_manifest(rows, repo_root=tmp_path, run_id="unit")
@@ -33,11 +34,19 @@ def test_mlx_score_calibration_preserves_order_and_false_authority(tmp_path: Pat
     assert manifest["summary"]["mlx_cpu_rank_inversions"] == 0
     assert manifest["summary"]["mlx_cuda_rank_inversions"] == 0
     assert manifest["summary"]["mlx_minus_cpu_max_abs"] == pytest.approx(0.001)
+    assert manifest["summary"]["axis_specific_min_gap_for_spend_triage"][
+        "cpu"
+    ] == pytest.approx(0.001 * 5.0)
+    assert manifest["summary"]["axis_specific_min_gap_for_spend_triage"][
+        "cuda"
+    ] == pytest.approx(0.001 * 5.0)
     assert manifest["decision_policy"][
         "recommended_min_mlx_gap_for_spend_triage"
     ] == pytest.approx(0.001 * 5.0)
-    assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 1
+    assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 3
     assert manifest["pairwise_order"][0]["mlx_spend_triage_decision_certified"] is True
+    assert manifest["pairwise_order"][0]["mlx_cpu_spend_triage_decision_certified"] is True
+    assert manifest["pairwise_order"][0]["mlx_cuda_spend_triage_decision_certified"] is True
     assert manifest["rows"][0]["mlx_rank"] == 1
     assert manifest["rows"][0]["cpu_rank"] == 1
     assert manifest["rows"][0]["cuda_rank"] == 1
@@ -59,6 +68,7 @@ def test_mlx_score_calibration_marks_close_pairs_uncertain(tmp_path: Path) -> No
     rows = [
         _row(tmp_path, "a", mlx_score=0.200, cpu_score=0.201, cuda_score=0.201),
         _row(tmp_path, "b", mlx_score=0.203, cpu_score=0.204, cuda_score=0.204),
+        _row(tmp_path, "c", mlx_score=0.204, cpu_score=0.205, cuda_score=0.205),
     ]
 
     manifest = build_mlx_score_calibration_manifest(rows, repo_root=tmp_path)
@@ -68,9 +78,89 @@ def test_mlx_score_calibration_marks_close_pairs_uncertain(tmp_path: Path) -> No
         0.001 * 5.0
     )
     assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 0
-    assert manifest["summary"]["mlx_spend_triage_pairwise_uncertain_count"] == 1
+    assert manifest["summary"]["mlx_spend_triage_pairwise_uncertain_count"] == 3
     assert manifest["pairwise_order"][0]["mlx_spend_triage_uncertain"] is True
     assert manifest["pairwise_order"][0]["mlx_matches_cpu"] is True
+
+
+def test_mlx_score_calibration_reports_dual_axis_discordance_without_conflation(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        _row(tmp_path, "a", mlx_score=0.20, cpu_score=0.201, cuda_score=0.31),
+        _row(tmp_path, "b", mlx_score=0.25, cpu_score=0.251, cuda_score=0.26),
+        _row(tmp_path, "c", mlx_score=0.30, cpu_score=0.301, cuda_score=0.36),
+    ]
+
+    manifest = build_mlx_score_calibration_manifest(rows, repo_root=tmp_path)
+
+    summary = manifest["summary"]
+    axis_min_gap = summary["axis_specific_min_gap_for_spend_triage"]
+    assert axis_min_gap["cpu"] == pytest.approx(0.001 * 5.0)
+    assert axis_min_gap["cuda"] == pytest.approx(0.11 * 5.0)
+    assert manifest["decision_policy"][
+        "recommended_min_mlx_gap_for_spend_triage"
+    ] == pytest.approx(axis_min_gap["cuda"])
+    assert summary["mlx_cpu_rank_inversions"] == 0
+    assert summary["mlx_cuda_rank_inversions"] == 1
+    dual = summary["planning_advisory_dual_axis_summary"]["overall"]
+    assert dual["cuda_regression_given_cpu_improvement_count"] == 1
+    assert dual["cpu_improvement_comparison_count"] == 3
+    assert dual["p_cuda_regression_given_cpu_improvement_empirical"] == pytest.approx(1 / 3)
+    assert dual[
+        "p_cuda_regression_given_cpu_improvement_conservative_count_based"
+    ] == pytest.approx(2 / 5)
+    assert dual["sample_scarce"] is False
+
+
+def test_mlx_score_calibration_cpu_only_does_not_authorize_cuda_routing(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        _row(tmp_path, "a", mlx_score=0.20, cpu_score=0.201, cuda_score=0.301),
+        _row(tmp_path, "b", mlx_score=0.30, cpu_score=0.301, cuda_score=0.401),
+        _row(tmp_path, "c", mlx_score=0.40, cpu_score=0.401, cuda_score=0.501),
+    ]
+    for row in rows:
+        row.pop("cuda_auth_eval_path")
+
+    manifest = build_mlx_score_calibration_manifest(rows, repo_root=tmp_path)
+
+    decision = manifest["decision_policy"]
+    assert decision["recommended_min_mlx_gap_for_spend_triage"] is None
+    assert decision["allowed_use"] == (
+        "diagnostic_only_cuda_auth_axis_calibration_missing_or_insufficient"
+    )
+    assert "cpu_only_calibration_cannot_authorize_cuda_routing" in decision["blockers"]
+    assert decision["axis_decision_policies"]["cpu"]["spend_triage_allowed"] is True
+    assert decision["axis_decision_policies"]["cuda"]["spend_triage_allowed"] is False
+    assert manifest["summary"]["axis_specific_min_gap_for_spend_triage"][
+        "cpu"
+    ] == pytest.approx(0.001 * 5.0)
+    assert manifest["summary"]["axis_specific_min_gap_for_spend_triage"]["cuda"] is None
+    assert manifest["summary"]["mlx_cpu_spend_triage_pairwise_certified_count"] == 3
+    assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 0
+
+
+def test_mlx_score_calibration_sample_scarcity_fails_closed_and_warns(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        _row(tmp_path, "a", mlx_score=0.2, cpu_score=0.201, cuda_score=0.201),
+        _row(tmp_path, "b", mlx_score=0.3, cpu_score=0.301, cuda_score=0.301),
+    ]
+
+    manifest = build_mlx_score_calibration_manifest(rows, repo_root=tmp_path)
+
+    decision = manifest["decision_policy"]
+    assert decision["recommended_min_mlx_gap_for_spend_triage"] is None
+    assert "cuda_auth_axis_calibration_sample_scarce" in decision["blockers"]
+    assert any("cuda_auth_axis_calibration_sample_scarce" in item for item in decision["warnings"])
+    assert decision["axis_decision_policies"]["cuda"]["sample_scarce"] is True
+    dual = manifest["summary"]["planning_advisory_dual_axis_summary"]["overall"]
+    assert dual["sample_scarce"] is True
+    assert any("dual_axis_cpu_cuda_sample_scarce_fail_closed" in item for item in dual["warnings"])
+    assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 0
 
 
 def test_mlx_score_calibration_rejects_authoritative_mlx_response(tmp_path: Path) -> None:
@@ -112,8 +202,9 @@ def test_mlx_score_calibration_accepts_matching_direct_scalar_with_strict_payloa
     assert manifest["rows"][0]["cpu_score"] == pytest.approx(0.201)
     assert manifest["rows"][0]["cpu_source"] == row["cpu_auth_eval_path"]
     assert manifest["decision_policy"]["allowed_use"] == (
-        "local_spend_triage_only_after_strict_auth_axis_calibration"
+        "diagnostic_only_cuda_auth_axis_calibration_missing_or_insufficient"
     )
+    assert "cuda_auth_axis_calibration_sample_scarce" in manifest["decision_policy"]["blockers"]
     assert manifest["decision_policy"]["score_claim"] is False
 
 
@@ -136,6 +227,7 @@ def test_mlx_score_calibration_rejects_non_auth_payload(tmp_path: Path) -> None:
     cpu_path = tmp_path / row["cpu_auth_eval_path"]
     payload = json.loads(cpu_path.read_text(encoding="utf-8"))
     payload["evidence_grade"] = "macOS-MLX"
+    payload["score_axis"] = "macOS-MLX"
     payload["score_claim_valid"] = False
     cpu_path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -248,6 +340,7 @@ def test_mlx_score_calibration_cli(tmp_path: Path) -> None:
     rows = [
         _row(tmp_path, "a", mlx_score=0.2, cpu_score=0.201, cuda_score=0.201),
         _row(tmp_path, "b", mlx_score=0.3, cpu_score=0.301, cuda_score=0.301),
+        _row(tmp_path, "c", mlx_score=0.4, cpu_score=0.401, cuda_score=0.401),
     ]
     input_path = tmp_path / "rows.json"
     output_path = tmp_path / "calibration.json"
