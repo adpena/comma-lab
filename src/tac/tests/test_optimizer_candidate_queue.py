@@ -9,6 +9,7 @@ from tac.optimization.optimizer_training_signal_bridge import (
     validate_optimizer_training_signal_wire_in,
 )
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
+from tac.optimizer import candidate_queue as candidate_queue_module
 from tac.optimizer.candidate_queue import QUEUE_SCHEMA, build_candidate_queue
 
 
@@ -105,6 +106,96 @@ def test_a1_rollup_merges_m5_ranking_without_dispatch_overclaim(tmp_path: Path) 
     assert best["predicted_contest_cpu_gha"] == 0.19279
     assert "macos_cpu_is_not_contest_cuda_evidence" in best["dispatch_blockers"]
     assert "requires_exact_eval_readiness_gate" in best["dispatch_blockers"]
+
+
+def test_candidate_queue_identity_preserves_distinct_representation_families(
+    tmp_path: Path,
+) -> None:
+    def manifest(
+        *,
+        path: Path,
+        candidate_family: str,
+        representation_family: str,
+        substrate_family: str,
+        score: float,
+    ) -> Path:
+        return _write_json(
+            path,
+            {
+                "schema": "representation_training_probe_manifest_v1",
+                "candidate_id": "seed17",
+                "candidate_family": candidate_family,
+                "representation_family": representation_family,
+                "substrate_family": substrate_family,
+                "param_schema": "representation_training_manifest_params_v1",
+                "results": [
+                    {
+                        "stage_index": 1,
+                        "stage_module": "smoke",
+                        "epochs_run": 1,
+                        "best_score": score,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        )
+
+    hnerv = manifest(
+        path=tmp_path / "hnerv_manifest.json",
+        candidate_family="hnerv_optimizer_probe",
+        representation_family="hnerv",
+        substrate_family="nerv_family",
+        score=0.199,
+    )
+    siren = manifest(
+        path=tmp_path / "siren_manifest.json",
+        candidate_family="siren_optimizer_probe",
+        representation_family="siren",
+        substrate_family="non_nerv_learned",
+        score=0.198,
+    )
+
+    queue = build_candidate_queue([hnerv, siren], repo_root=tmp_path, top_k=10)
+
+    assert queue["n_candidates"] == 2
+    assert queue["top_k_count"] == 2
+    assert {row["candidate_family"] for row in queue["top_k"]} == {
+        "hnerv_optimizer_probe",
+        "siren_optimizer_probe",
+    }
+
+
+def test_merge_candidate_or_preserves_score_affecting_booleans() -> None:
+    merged = candidate_queue_module._merge_candidate(
+        {
+            "candidate_id": "same",
+            "score_affecting_payload_changed": False,
+            "charged_bits_changed": False,
+            "score_affecting_runtime_changed": False,
+        },
+        {
+            "candidate_id": "same",
+            "score_affecting_payload_changed": True,
+            "charged_bits_changed": True,
+            "score_affecting_runtime_changed": True,
+        },
+    )
+    reversed_merge = candidate_queue_module._merge_candidate(
+        merged,
+        {
+            "candidate_id": "same",
+            "score_affecting_payload_changed": False,
+            "charged_bits_changed": False,
+            "score_affecting_runtime_changed": False,
+        },
+    )
+
+    assert reversed_merge["score_affecting_payload_changed"] is True
+    assert reversed_merge["charged_bits_changed"] is True
+    assert reversed_merge["score_affecting_runtime_changed"] is True
 
 
 def test_codec_search_report_rows_are_payload_planning_not_archive_dispatch(

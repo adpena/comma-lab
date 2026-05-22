@@ -42,6 +42,13 @@ CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS: tuple[str, ...] = (
     "promotable",
 )
 
+CONTEST_AUTH_SCORE_AXES: frozenset[str] = frozenset(
+    {
+        "contest-cpu",
+        "contest-cuda",
+    }
+)
+
 PROXY_TARGET_MODES = ["contest_exact_eval_planning"]
 PROXY_DEPLOYMENT_TARGET = "desktop_research"
 
@@ -116,6 +123,26 @@ def validate_proxy_candidate(row: Mapping[str, Any]) -> list[str]:
     return violations
 
 
+def _normalized_axis(value: Any) -> str:
+    return (
+        str(value or "")
+        .strip()
+        .strip("[]")
+        .lower()
+        .replace("_", "-")
+        .replace(" ", "-")
+    )
+
+
+def auth_bridge_score_rankable(bridge: Mapping[str, Any]) -> bool:
+    """Return true only for comparable contest-axis auth bridge scores."""
+
+    return (
+        bridge.get("score_comparable") is True
+        and _normalized_axis(bridge.get("score_axis")) in CONTEST_AUTH_SCORE_AXES
+    )
+
+
 def truthy_authority_field_violations(
     payload: Mapping[str, Any],
     *,
@@ -130,10 +157,23 @@ def truthy_authority_field_violations(
     exact-eval authority flag into downstream queues.
     """
 
+    field_set = set(fields)
+    root = prefix.rstrip(".")
     violations: list[str] = []
-    for key in fields:
-        if payload.get(key) is True:
-            violations.append(f"{prefix}{key}=true")
+
+    def visit(value: Any, path: str) -> None:
+        if isinstance(value, Mapping):
+            for key, inner in value.items():
+                key_text = str(key)
+                next_path = f"{path}.{key_text}" if path else key_text
+                if key_text in field_set and inner is True:
+                    violations.append(f"{next_path}=true")
+                visit(inner, next_path)
+        elif isinstance(value, list | tuple):
+            for index, inner in enumerate(value):
+                visit(inner, f"{path}[{index}]")
+
+    visit(payload, root)
     return violations
 
 
@@ -152,11 +192,13 @@ def require_no_truthy_authority_fields(
 
 __all__ = [
     "CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS",
+    "CONTEST_AUTH_SCORE_AXES",
     "PROXY_DEPLOYMENT_TARGET",
     "PROXY_DISPATCH_BLOCKERS",
     "PROXY_FALSE_AUTHORITY_FIELDS",
     "PROXY_TARGET_MODES",
     "apply_proxy_evidence_boundary",
+    "auth_bridge_score_rankable",
     "ordered_unique",
     "proxy_authority_fields",
     "require_no_truthy_authority_fields",

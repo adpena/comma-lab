@@ -9,6 +9,7 @@ import pytest
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
 from tac.optimization.representation_training_probe_integration import (
     CANDIDATE_PAYLOAD_SCHEMA,
+    PLAN_SCHEMA,
     RepresentationTrainingProbeIntegrationError,
     adapt_representation_training_manifest_to_candidate,
     validate_representation_training_manifest,
@@ -108,8 +109,12 @@ def test_generic_representation_training_manifest_is_substrate_agnostic_proxy(
     assert row["candidate_family"] == "siren_wavelet_hybrid_optimizer_probe"
     assert row["representation_family"] == "siren_wavelet_hybrid"
     assert row["substrate_family"] == "non_nerv_learned_plus_signal_processing"
-    assert row["rank_score"] == 0.199
-    assert row["rank_score_field"] == "auth_eval_bridge_or_training_best_score_not_authority"
+    assert row["rank_score"] == 0.198
+    assert row["rank_score_field"] == "training_best_score_proxy_not_authority"
+    assert row["auth_eval_bridge_score"] is None
+    assert row["advisory_auth_eval_bridge_score"] == 0.199
+    assert row["auth_eval_bridge_score_axis"] == "macOS-MLX research-signal"
+    assert row["auth_eval_bridge_score_comparable"] is False
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["rank_or_kill_eligible"] is False
@@ -160,6 +165,31 @@ def test_candidate_queue_accepts_generic_representation_training_manifest(
     assert queue["dispatch_ready_count"] == 0
     assert row["candidate_id"] == "siren_wavelet_hybrid_training_smoke_seed17"
     assert row["candidate_family"] == "siren_wavelet_hybrid_optimizer_probe"
+    assert row["rank_score"] == 0.198
+    assert row["rank_score_field"] == "training_best_score_proxy_not_authority"
+    assert row["auth_eval_bridge_score"] is None
+    assert row["advisory_auth_eval_bridge_score"] == 0.199
     assert "representation_training_probe_is_proxy_signal" in row["dispatch_blockers"]
     assert row["consumer_payload"]["schema"] == CANDIDATE_PAYLOAD_SCHEMA
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_accepts_generic_representation_training_plan_schema(
+    tmp_path: Path,
+) -> None:
+    payload = _manifest()
+    payload["schema"] = PLAN_SCHEMA
+    manifest = tmp_path / "representation_training_plan.json"
+    manifest.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert queue["dispatch_ready_count"] == 0
+    assert row["candidate_id"] == "siren_wavelet_hybrid_training_smoke_seed17"
+    assert row["rank_score"] == 0.198
+    assert row["advisory_auth_eval_bridge_score"] == 0.199
     assert validate_proxy_candidate(row) == []

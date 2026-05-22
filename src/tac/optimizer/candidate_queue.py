@@ -18,6 +18,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.optimization.pr95_muon_local_training_integration import (
+    PLAN_SCHEMA as PR95_LOCAL_TRAINING_PLAN_SCHEMA,
+)
+from tac.optimization.pr95_muon_local_training_integration import (
     SCHEMA as PR95_LOCAL_TRAINING_SCHEMA,
 )
 from tac.optimization.pr95_muon_local_training_integration import (
@@ -28,6 +31,9 @@ from tac.optimization.proxy_candidate_contract import (
     PROXY_DISPATCH_BLOCKERS,
     PROXY_TARGET_MODES,
     apply_proxy_evidence_boundary,
+)
+from tac.optimization.representation_training_probe_integration import (
+    PLAN_SCHEMA as REPRESENTATION_TRAINING_PLAN_SCHEMA,
 )
 from tac.optimization.representation_training_probe_integration import (
     SCHEMA as REPRESENTATION_TRAINING_SCHEMA,
@@ -41,6 +47,19 @@ TOOL_NAME = "tools/build_optimizer_candidate_queue.py"
 PLANNING_TARGET_MODES = list(PROXY_TARGET_MODES)
 PLANNING_DEPLOYMENT_TARGET = PROXY_DEPLOYMENT_TARGET
 BASE_DISPATCH_BLOCKERS = list(PROXY_DISPATCH_BLOCKERS)
+CANDIDATE_IDENTITY_FIELDS: tuple[str, ...] = (
+    "candidate_family",
+    "representation_family",
+    "substrate_family",
+    "param_schema",
+)
+SCORE_AFFECTING_BOOLEAN_FIELDS: frozenset[str] = frozenset(
+    {
+        "score_affecting_payload_changed",
+        "charged_bits_changed",
+        "score_affecting_runtime_changed",
+    }
+)
 
 
 def _utc_now() -> str:
@@ -129,6 +148,11 @@ def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> dict
     for key, value in incoming.items():
         if key == "source_paths" or key == "dispatch_blockers":
             merged[key] = _ordered_unique([*merged.get(key, []), *value])
+        elif key in SCORE_AFFECTING_BOOLEAN_FIELDS:
+            if merged.get(key) is True or value is True:
+                merged[key] = True
+            elif key not in merged and value is False:
+                merged[key] = False
         elif key in {"rank_score", "predicted_contest_cpu_gha", "fitness"}:
             old = _as_float(merged.get(key))
             new = _as_float(value)
@@ -144,6 +168,21 @@ def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> dict
         ):
             merged[key] = value
     return merged
+
+
+def _candidate_identity_key(row: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return the merge key for one candidate queue row.
+
+    ``candidate_id`` alone is not globally unique once generic representation
+    training manifests enter the queue; distinct substrate families may reuse a
+    human-readable id such as ``seed17``.  Legacy rows keep merging when these
+    family/schema fields are absent or identical.
+    """
+
+    return tuple(
+        [str(row.get("candidate_id") or "")]
+        + [str(row.get(field) or "") for field in CANDIDATE_IDENTITY_FIELDS]
+    )
 
 
 def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
@@ -856,7 +895,7 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str,
             source_path=path,
             repo_root=repo_root,
         )
-    if schema == PR95_LOCAL_TRAINING_SCHEMA:
+    if schema in {PR95_LOCAL_TRAINING_SCHEMA, PR95_LOCAL_TRAINING_PLAN_SCHEMA}:
         return schema, [
             adapt_pr95_local_training_manifest_to_candidate(
                 payload,
@@ -864,7 +903,7 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str,
                 repo_root=repo_root,
             )
         ]
-    if schema == REPRESENTATION_TRAINING_SCHEMA:
+    if schema in {REPRESENTATION_TRAINING_SCHEMA, REPRESENTATION_TRAINING_PLAN_SCHEMA}:
         return schema, [
             adapt_representation_training_manifest_to_candidate(
                 payload,
@@ -910,7 +949,7 @@ def build_candidate_queue(
     repo_root: Path,
     top_k: int | None = None,
 ) -> dict[str, Any]:
-    merged: dict[str, dict[str, Any]] = {}
+    merged: dict[tuple[str, ...], dict[str, Any]] = {}
     source_schemas: list[dict[str, str]] = []
     for path in source_paths:
         schema, rows = extract_candidates_from_source(path, repo_root=repo_root)
@@ -919,10 +958,11 @@ def build_candidate_queue(
             cid = str(row.get("candidate_id") or "")
             if not cid:
                 continue
-            if cid in merged:
-                merged[cid] = _merge_candidate(merged[cid], row)
+            identity_key = _candidate_identity_key(row)
+            if identity_key in merged:
+                merged[identity_key] = _merge_candidate(merged[identity_key], row)
             else:
-                merged[cid] = row
+                merged[identity_key] = row
 
     sorted_rows = sorted(merged.values(), key=_candidate_sort_key)
     if top_k is not None:

@@ -32,6 +32,7 @@ DEFAULT_UPSTREAM_DIR = "upstream"
 DEFAULT_VIDEO_NAMES_FILE = "upstream/public_test_video_names.txt"
 DEFAULT_FRAME_POLICY = "pair_all_frames"
 SAFE_OPERATOR_ACTION = "materialize_pairset_archive_and_run_local_controls"
+LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA = "local_cpu_contest_drift_eureka_signal.v1"
 
 _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
@@ -286,7 +287,79 @@ def _candidate_completed_locally(
     if expected_archive_path.stat().st_size != archive_size:
         return False
     digest = sha256(expected_archive_path.read_bytes()).hexdigest()
-    return digest == archive_sha
+    if digest != archive_sha:
+        return False
+    return _candidate_eureka_signal_recorded(
+        repo_root=repo_root,
+        candidate_id=candidate_id,
+        advisory_path=advisory_path,
+        advisory=advisory,
+        archive_sha=archive_sha,
+        local_score=score,
+    )
+
+
+def _candidate_eureka_signal_recorded(
+    *,
+    repo_root: Path,
+    candidate_id: str,
+    advisory_path: Path,
+    advisory: dict[str, Any],
+    archive_sha: str,
+    local_score: float,
+) -> bool:
+    research_root = repo_root / ".omx" / "research"
+    if not research_root.exists():
+        return False
+    expected_advisory = advisory_path.resolve(strict=False)
+    for signal_path in sorted(
+        research_root.glob(f"local_cpu_contest_drift_eureka_{candidate_id}_*.json"),
+        reverse=True,
+    ):
+        try:
+            signal = _json_load(signal_path)
+            _require_false_authority(signal, label=f"{candidate_id} eureka signal")
+        except ExperimentQueueError:
+            continue
+        if signal.get("schema") != LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA:
+            continue
+        if signal.get("candidate_id") != candidate_id:
+            continue
+        if signal.get("candidate_archive_sha256") != archive_sha:
+            continue
+        try:
+            signal_local_score = float(signal.get("local_score"))
+        except (TypeError, ValueError):
+            continue
+        if not math.isclose(signal_local_score, local_score, rel_tol=0.0, abs_tol=1e-15):
+            continue
+        source_artifact = signal.get("source_artifact")
+        if not isinstance(source_artifact, str) or not source_artifact.strip():
+            continue
+        source_path = Path(source_artifact)
+        if not source_path.is_absolute():
+            source_path = repo_root / source_path
+        if source_path.resolve(strict=False) != expected_advisory:
+            continue
+        if signal.get("local_axis") not in {
+            advisory.get("evidence_grade"),
+            advisory.get("score_axis"),
+            "[macOS-CPU advisory]",
+            "macOS-CPU advisory",
+            "cpu_advisory",
+        }:
+            continue
+        if signal.get("target_axis") != "contest-CPU":
+            continue
+        if signal.get("eureka_trigger") not in {True, False}:
+            continue
+        if signal.get("recommended_action") not in {
+            "observe_only",
+            "dispatch_exact_auth_anchor",
+        }:
+            continue
+        return True
+    return False
 
 
 def _lane_date_from_summary_path(action_summary_path: Path) -> str:

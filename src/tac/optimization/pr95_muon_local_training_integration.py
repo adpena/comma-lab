@@ -17,7 +17,10 @@ from typing import Any
 from tac.optimization.optimizer_training_signal_bridge import (
     build_optimizer_training_signal_wire_in,
 )
-from tac.optimization.proxy_candidate_contract import apply_proxy_evidence_boundary
+from tac.optimization.proxy_candidate_contract import (
+    apply_proxy_evidence_boundary,
+    auth_bridge_score_rankable,
+)
 
 SCHEMA = "pr95_local_training_probe_manifest_v1"
 PLAN_SCHEMA = "pr95_local_training_probe_plan_v1"
@@ -162,7 +165,17 @@ def adapt_pr95_local_training_manifest_to_candidate(
     device = str(payload.get("device_selected") or payload.get("device_requested") or "unknown")
     has_archive = bool(archive_zip.get("sha256") and archive_zip.get("bytes"))
     has_auth_bridge = bool(bridge.get("ok") is True and bridge.get("auth_eval_json_sha256"))
-    rank_score = auth_score if auth_score is not None else best_score
+    rankable_auth_score = (
+        auth_score if auth_score is not None and auth_bridge_score_rankable(bridge) else None
+    )
+    rank_score = rankable_auth_score if rankable_auth_score is not None else best_score
+    rank_score_field = (
+        "contest_auth_eval_bridge_score_not_authority"
+        if rankable_auth_score is not None
+        else "training_best_score_proxy_not_authority"
+        if best_score is not None
+        else "no_rank_score_noncomparable_auth_bridge"
+    )
     candidate_id = str(
         payload.get("candidate_id")
         or f"pr95_muon_hnerv_local_{device}_stages{stage_count}_seed{seed or 'unknown'}"
@@ -250,10 +263,13 @@ def adapt_pr95_local_training_manifest_to_candidate(
         "candidate_params": optimizer_params,
         "op_params": optimizer_params,
         "rank_score": rank_score,
-        "rank_score_field": "auth_eval_bridge_or_training_best_score_not_authority",
+        "rank_score_field": rank_score_field,
         "training_best_score": best_score,
         "training_latest_score": latest_score,
-        "auth_eval_bridge_score": auth_score,
+        "auth_eval_bridge_score": rankable_auth_score,
+        "advisory_auth_eval_bridge_score": auth_score if rankable_auth_score is None else None,
+        "auth_eval_bridge_score_axis": bridge.get("score_axis"),
+        "auth_eval_bridge_score_comparable": bridge.get("score_comparable"),
         "stage_count": stage_count,
         "stage_modules": stages,
         "device_selected": device,

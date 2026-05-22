@@ -99,3 +99,21 @@ def test_cathedral_consumer_payload_rejects_rank_or_promote_authority() -> None:
                 {"consumer_payload": {key: True}},
                 context="fixture",
             )
+
+
+def test_cathedral_consumer_payload_rejects_nested_authority() -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"optimizer_recipe\.ready_for_exact_eval_dispatch=true",
+    ):
+        _coerce_consumer_payload(
+            {
+                "consumer_payload": {
+                    "optimizer_recipe": {
+                        "id": "unsafe",
+                        "ready_for_exact_eval_dispatch": True,
+                    }
+                }
+            },
+            context="fixture",
+        )

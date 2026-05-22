@@ -86,17 +86,24 @@ def _write_summary(repo: Path) -> Path:
     return summary
 
 
-def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: Path) -> None:
-    summary = _write_summary(tmp_path)
-    completed = tmp_path / "results" / "materialized" / "drop_rank023_pair0440"
+def _write_completed_local_advisory(
+    repo: Path,
+    *,
+    candidate_id: str = "pairset_drop_one_rank023_pair0440",
+    score: float = 0.2,
+) -> tuple[Path, Path, str]:
+    completed = repo / "results" / "materialized" / candidate_slug(candidate_id)
     archive = completed / "submission_dir" / "archive.zip"
     archive.parent.mkdir(parents=True)
     archive.write_bytes(b"archive")
-    (completed / "local_cpu_advisory.json").write_text(
+    advisory = completed / "local_cpu_advisory.json"
+    archive_sha = sha256(archive.read_bytes()).hexdigest()
+    advisory.write_text(
         json.dumps(
             {
                 **_false_authority(),
-                "canonical_score": 0.2,
+                "canonical_score": score,
+                "evidence_grade": "[macOS-CPU advisory]",
                 "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
                 "archive_size_bytes": archive.stat().st_size,
                 "n_samples": 600,
@@ -107,11 +114,58 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
                 "score_axis": "cpu_advisory",
                 "provenance": {
                     "archive_path": str(archive),
-                    "archive_sha256": sha256(archive.read_bytes()).hexdigest(),
+                    "archive_sha256": archive_sha,
                     "archive_size_bytes": archive.stat().st_size,
                 },
             }
         )
+    )
+    return advisory, archive, archive_sha
+
+
+def _write_eureka_signal(
+    repo: Path,
+    *,
+    candidate_id: str,
+    advisory: Path,
+    archive_sha: str,
+    local_score: float = 0.2,
+) -> Path:
+    signal = (
+        repo
+        / ".omx"
+        / "research"
+        / f"local_cpu_contest_drift_eureka_{candidate_id}_20260522T000000Z.json"
+    )
+    signal.parent.mkdir(parents=True)
+    signal.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "local_cpu_contest_drift_eureka_signal.v1",
+                "candidate_id": candidate_id,
+                "candidate_archive_sha256": archive_sha,
+                "local_axis": "macOS-CPU advisory",
+                "target_axis": "contest-CPU",
+                "local_score": local_score,
+                "auth_frontier_score": 0.192028,
+                "eureka_trigger": False,
+                "recommended_action": "observe_only",
+                "source_artifact": str(advisory),
+            }
+        )
+    )
+    return signal
+
+
+def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: Path) -> None:
+    summary = _write_summary(tmp_path)
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
     )
 
     result = build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
@@ -132,6 +186,17 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
         for step in experiment["steps"]
         for condition in step["postconditions"]
     )
+
+
+def test_dqs1_queue_builder_does_not_skip_without_eureka_signal(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    _write_completed_local_advisory(tmp_path)
+
+    result = build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
+
+    assert result.selection.candidate_id == "pairset_drop_one_rank023_pair0440"
 
 
 def test_dqs1_queue_builder_does_not_skip_partial_local_advisory(

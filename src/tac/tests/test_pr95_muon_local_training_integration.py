@@ -8,6 +8,7 @@ import pytest
 
 from tac.optimization.pr95_muon_local_training_integration import (
     CANDIDATE_PAYLOAD_SCHEMA,
+    PLAN_SCHEMA,
     PR95MuonLocalTrainingIntegrationError,
     adapt_pr95_local_training_manifest_to_candidate,
     validate_pr95_local_training_manifest,
@@ -88,6 +89,12 @@ def test_pr95_manifest_adapter_stamps_false_authority(tmp_path: Path) -> None:
     assert row["promotion_eligible"] is False
     assert row["rank_or_kill_eligible"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["rank_score"] == 0.193
+    assert row["rank_score_field"] == "training_best_score_proxy_not_authority"
+    assert row["auth_eval_bridge_score"] is None
+    assert row["advisory_auth_eval_bridge_score"] == 0.194
+    assert row["auth_eval_bridge_score_axis"] == "macOS-CPU advisory"
+    assert row["auth_eval_bridge_score_comparable"] is False
     assert row["score_affecting_payload_changed"] is False
     assert row["charged_bits_changed"] is False
     assert validate_proxy_candidate(row) == []
@@ -139,8 +146,30 @@ def test_candidate_queue_accepts_pr95_local_training_manifest_as_planning_only(
 
     assert queue["dispatch_ready_count"] == 0
     assert row["candidate_family"] == "pr95_hnerv_muon_training_probe"
-    assert row["rank_score"] == 0.194
-    assert row["rank_score_field"] == "auth_eval_bridge_or_training_best_score_not_authority"
+    assert row["rank_score"] == 0.193
+    assert row["rank_score_field"] == "training_best_score_proxy_not_authority"
+    assert row["auth_eval_bridge_score"] is None
+    assert row["advisory_auth_eval_bridge_score"] == 0.194
     assert row["consumer_payload"]["schema"] == CANDIDATE_PAYLOAD_SCHEMA
     assert "pr95_local_training_probe_is_proxy_signal" in row["dispatch_blockers"]
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_accepts_pr95_local_training_plan_schema_as_planning_only(
+    tmp_path: Path,
+) -> None:
+    payload = _manifest()
+    payload["schema"] = PLAN_SCHEMA
+    manifest = tmp_path / "pr95_plan.json"
+    manifest.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["candidate_family"] == "pr95_hnerv_muon_training_probe"
+    assert row["rank_score"] == 0.193
+    assert row["advisory_auth_eval_bridge_score"] == 0.194
     assert validate_proxy_candidate(row) == []

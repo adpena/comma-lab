@@ -19,7 +19,10 @@ from tac.optimization.optimizer_training_signal_bridge import (
     build_optimizer_training_signal_wire_in,
     ordered_unique,
 )
-from tac.optimization.proxy_candidate_contract import apply_proxy_evidence_boundary
+from tac.optimization.proxy_candidate_contract import (
+    apply_proxy_evidence_boundary,
+    auth_bridge_score_rankable,
+)
 
 SCHEMA = "representation_training_probe_manifest_v1"
 PLAN_SCHEMA = "representation_training_probe_plan_v1"
@@ -261,7 +264,17 @@ def adapt_representation_training_manifest_to_candidate(
     profile = str(payload.get("profile") or "representation_training_probe")
     param_schema = str(payload.get("param_schema") or "representation_training_manifest_params_v1")
     params = _candidate_params(payload)
-    rank_score = auth_score if auth_score is not None else best_score
+    rankable_auth_score = (
+        auth_score if auth_score is not None and auth_bridge_score_rankable(bridge) else None
+    )
+    rank_score = rankable_auth_score if rankable_auth_score is not None else best_score
+    rank_score_field = (
+        "contest_auth_eval_bridge_score_not_authority"
+        if rankable_auth_score is not None
+        else "training_best_score_proxy_not_authority"
+        if best_score is not None
+        else "no_rank_score_noncomparable_auth_bridge"
+    )
     optimizer_recipe = _mapping(payload.get("optimizer_recipe"))
     scheduler_recipe = _mapping(payload.get("scheduler_recipe"))
     training_recipe = _mapping(payload.get("training_recipe"))
@@ -333,10 +346,13 @@ def adapt_representation_training_manifest_to_candidate(
         "candidate_params": params,
         "op_params": params,
         "rank_score": rank_score,
-        "rank_score_field": "auth_eval_bridge_or_training_best_score_not_authority",
+        "rank_score_field": rank_score_field,
         "training_best_score": best_score,
         "training_latest_score": latest_score,
-        "auth_eval_bridge_score": auth_score,
+        "auth_eval_bridge_score": rankable_auth_score,
+        "advisory_auth_eval_bridge_score": auth_score if rankable_auth_score is None else None,
+        "auth_eval_bridge_score_axis": bridge.get("score_axis"),
+        "auth_eval_bridge_score_comparable": bridge.get("score_comparable"),
         "stage_count": stage_count,
         "stage_modules": stages,
         "device_selected": payload.get("device_selected") or payload.get("device_requested"),

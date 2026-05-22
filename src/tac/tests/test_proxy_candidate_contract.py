@@ -42,6 +42,31 @@ def test_consumer_payload_authority_validator_rejects_truthy_fields() -> None:
         require_no_truthy_authority_fields(payload, context="fixture")
 
 
+def test_consumer_payload_authority_validator_recurses_into_nested_payloads() -> None:
+    payload = {
+        "optimizer_recipe": {
+            "id": "unsafe",
+            "ready_for_exact_eval_dispatch": True,
+        },
+        "candidate_payloads": [
+            {"promotable": True},
+            {"domain_payload": {"ok": True}},
+        ],
+    }
+
+    violations = truthy_authority_field_violations(payload)
+
+    assert violations == [
+        "optimizer_recipe.ready_for_exact_eval_dispatch=true",
+        "candidate_payloads[0].promotable=true",
+    ]
+    with pytest.raises(
+        ValueError,
+        match=r"optimizer_recipe\.ready_for_exact_eval_dispatch=true",
+    ):
+        require_no_truthy_authority_fields(payload, context="fixture")
+
+
 def test_consumer_payload_authority_validator_allows_false_or_missing() -> None:
     require_no_truthy_authority_fields(
         {
