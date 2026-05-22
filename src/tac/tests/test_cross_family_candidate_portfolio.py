@@ -549,6 +549,16 @@ def test_portfolio_builds_component_marginal_model_and_axis_transfer_diagnostics
             ),
             _contest_observation(
                 tmp_path,
+                candidate_id="pairset_drop_one_rank004_pair0376",
+                score=0.19202928,
+                archive_char="1",
+                raw_char="2",
+                selected_pair_indices=[101, 327, 371],
+                segnet_delta=0.000001,
+                rate_delta=-0.00000066585895312,
+            ),
+            _contest_observation(
+                tmp_path,
                 candidate_id="pairset_drop_one_rank003_pair0371",
                 score=0.22619177,
                 archive_char="f",
@@ -582,7 +592,7 @@ def test_portfolio_builds_component_marginal_model_and_axis_transfer_diagnostics
     assert model["axes"] == ["contest_cpu", "contest_cuda"]
     cpu_model = model["axis_models"]["contest_cpu"]
     assert cpu_model["safe_drop_pair_indices"] == [371]
-    assert cpu_model["protected_drop_pair_indices"] == [327]
+    assert cpu_model["protected_drop_pair_indices"] == [327, 376]
     cpu_payload = cpu_model["drop_one_pair_marginals"][0][
         "component_score_delta_payload"
     ]
@@ -601,15 +611,37 @@ def test_portfolio_builds_component_marginal_model_and_axis_transfer_diagnostics
     feedback = unobserved["source_metadata"]["component_marginal_model"]
     assert feedback["active"] is True
     nearest_cpu = feedback["nearest_drop_one_evidence_by_axis"]["contest_cpu"]
-    assert nearest_cpu["source_pair_index"] == 371
+    assert nearest_cpu["source_pair_index"] == 376
     assert nearest_cpu["source_component_marginal_status"] == (
-        "rate_credit_exceeds_scorer_penalty"
+        "scorer_penalty_exceeds_rate_credit"
+    )
+    action_prior = feedback["component_marginal_action_prior"]
+    assert action_prior["schema"] == "pairset_component_marginal_action_prior.v1"
+    assert action_prior["primary_axis"] == "contest_cpu"
+    assert action_prior["primary_axis_expected_net_component_delta"] > 0.0
+    assert action_prior["primary_axis_expected_component_marginal_status"] == (
+        "scorer_penalty_expected_to_exceed_rate_credit"
+    )
+    assert "scorer_penalty_exceeds_rate_credit" in (
+        action_prior["axis_priors"]["contest_cpu"][
+            "same_pair_observed_component_marginal_statuses"
+        ]
+    )
+    assert "component_marginal_exact_axis_protected_pair" in (
+        action_prior["planning_blockers"]
+    )
+    assert "component_marginal_exact_axis_protected_pair" in (
+        unobserved["source_dispatch_blockers"]
     )
     assert (
         "tac.master_gradient_consumers.per_pair_difficulty_atlas"
         in feedback["canonical_signal_refs"]["master_gradient_consumers"]
     )
     assert feedback["score_claim"] is False
+    assert (
+        portfolio["operator_action_rows"][0]["candidate_id"]
+        != "pairset_drop_one_rank004_pair0376"
+    )
 
 
 def test_portfolio_preserves_custody_readiness_as_advisory_only(

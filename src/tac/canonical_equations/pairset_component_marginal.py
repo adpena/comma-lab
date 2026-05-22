@@ -174,6 +174,24 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
         measurement_method="dqs1_drop_one_pair0378_contest_cpu_component_delta",
         provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
     )
+    rank031_cpu_penalty_anchor = EmpiricalAnchor(
+        anchor_id="dqs1_pair0296_drop_one_component_cpu_penalty_20260522",
+        measurement_utc="2026-05-22T19:23:06Z",
+        inputs={
+            "candidate_id": "pairset_drop_one_rank031_pair0296",
+            "pair_index": 296,
+            "axis": "[contest-CPU]",
+            "segnet_delta": 0.000001,
+            "posenet_delta": 0.0,
+            "rate_delta": -0.00000066585895312,
+        },
+        predicted_output={"score_delta": cpu_penalty_predicted},
+        empirical_output={"observed_delta_vs_axis_baseline": cpu_penalty_empirical},
+        residual=abs(cpu_penalty_predicted - cpu_penalty_empirical),
+        source_artifact=_FINDINGS_MEMO,
+        measurement_method="dqs1_drop_one_pair0296_contest_cpu_component_delta",
+        provenance=_anchor_provenance("[contest-CPU]", "linux_x86_64_cpu"),
+    )
     return CanonicalEquation(
         equation_id=PAIRSET_COMPONENT_MARGINAL_SCORE_DECOMPOSITION_EQUATION_ID,
         name="Pairset component marginal score decomposition",
@@ -212,6 +230,7 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
             cuda_anchor,
             rank026_cpu_penalty_anchor,
             rank027_cpu_penalty_anchor,
+            rank031_cpu_penalty_anchor,
         ),
         predicted_vs_empirical_residual={
             cpu_anchor.measurement_method: cpu_anchor.residual,
@@ -222,8 +241,11 @@ def build_pairset_component_marginal_score_decomposition_v1() -> CanonicalEquati
             rank027_cpu_penalty_anchor.measurement_method: (
                 rank027_cpu_penalty_anchor.residual
             ),
+            rank031_cpu_penalty_anchor.measurement_method: (
+                rank031_cpu_penalty_anchor.residual
+            ),
         },
-        last_calibration_utc="2026-05-22T19:07:00Z",
+        last_calibration_utc="2026-05-22T19:23:06Z",
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
         canonical_consumers=(
             "tac.optimization.cross_family_candidate_portfolio",

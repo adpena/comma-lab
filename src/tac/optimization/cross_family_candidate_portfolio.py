@@ -958,6 +958,134 @@ def _nearest_drop_one_marginal(
     }
 
 
+def _component_delta_status_from_net_delta(delta: float) -> str:
+    if delta < 0.0:
+        return "rate_credit_expected_to_exceed_scorer_penalty"
+    if delta > 0.0:
+        return "scorer_penalty_expected_to_exceed_rate_credit"
+    return "rate_credit_expected_to_tie_scorer_penalty"
+
+
+def _axis_component_marginal_action_prior(
+    axis_model: Mapping[str, Any],
+    *,
+    dropped_pair_index: int,
+    dropped_pair_rank: int,
+) -> dict[str, Any] | None:
+    rows = axis_model.get("drop_one_pair_marginals")
+    if not isinstance(rows, list) or not rows:
+        return None
+    weighted_sum = 0.0
+    weight_total = 0.0
+    evidence_rows: list[dict[str, Any]] = []
+    exact_status = None
+    same_pair_observed_statuses: list[str] = []
+    for raw in rows:
+        if not isinstance(raw, Mapping):
+            continue
+        rank = int(raw.get("dropped_pair_rank", 0))
+        pair = int(raw.get("pair_index", 0))
+        rank_distance = abs(rank - dropped_pair_rank)
+        pair_index_distance = abs(pair - dropped_pair_index)
+        net_delta = _finite_float(
+            raw.get("net_component_delta"),
+            label=f"{raw.get('candidate_id')}.net_component_delta",
+        )
+        weight = 1.0 / (1.0 + float(rank_distance))
+        weighted_sum += weight * net_delta
+        weight_total += weight
+        status = str(raw.get("component_marginal_status") or "")
+        if rank_distance == 0 and pair_index_distance == 0:
+            exact_status = status
+        if pair_index_distance == 0 and status:
+            same_pair_observed_statuses.append(status)
+        evidence_rows.append(
+            {
+                "source_candidate_id": raw.get("candidate_id"),
+                "source_pair_index": pair,
+                "source_dropped_pair_rank": rank,
+                "rank_distance": rank_distance,
+                "pair_index_distance": pair_index_distance,
+                "source_net_component_delta": net_delta,
+                "source_component_marginal_status": status,
+                **FALSE_AUTHORITY,
+            }
+        )
+    if weight_total <= 0.0:
+        return None
+    expected_delta = weighted_sum / weight_total
+    return {
+        "axis": axis_model.get("axis"),
+        "evidence_count": len(evidence_rows),
+        "weighting": "inverse_1_plus_rank_distance",
+        "expected_net_component_delta": expected_delta,
+        "expected_component_marginal_status": _component_delta_status_from_net_delta(
+            expected_delta
+        ),
+        "exact_observed_component_marginal_status": exact_status,
+        "same_pair_observed_component_marginal_statuses": sorted(
+            set(same_pair_observed_statuses)
+        ),
+        "evidence_rows": sorted(
+            evidence_rows,
+            key=lambda row: (
+                int(row["rank_distance"]),
+                int(row["pair_index_distance"]),
+                str(row.get("source_candidate_id") or ""),
+            ),
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _component_marginal_action_prior(
+    axis_models: Mapping[str, Any],
+    *,
+    dropped_pair_index: int,
+    dropped_pair_rank: int,
+) -> dict[str, Any] | None:
+    by_axis = {
+        str(axis): _axis_component_marginal_action_prior(
+            axis_model,
+            dropped_pair_index=dropped_pair_index,
+            dropped_pair_rank=dropped_pair_rank,
+        )
+        for axis, axis_model in axis_models.items()
+        if isinstance(axis_model, Mapping)
+    }
+    by_axis = {axis: value for axis, value in by_axis.items() if value is not None}
+    if not by_axis:
+        return None
+    primary_axis = "contest_cpu" if "contest_cpu" in by_axis else sorted(by_axis)[0]
+    primary = by_axis[primary_axis]
+    blockers: list[str] = []
+    primary_statuses = set(
+        primary.get("same_pair_observed_component_marginal_statuses") or []
+    )
+    if (
+        primary.get("exact_observed_component_marginal_status")
+        == "scorer_penalty_exceeds_rate_credit"
+        or "scorer_penalty_exceeds_rate_credit" in primary_statuses
+    ):
+        blockers.append("component_marginal_exact_axis_protected_pair")
+    return {
+        "schema": "pairset_component_marginal_action_prior.v1",
+        "primary_axis": primary_axis,
+        "primary_axis_expected_net_component_delta": primary[
+            "expected_net_component_delta"
+        ],
+        "primary_axis_expected_component_marginal_status": primary[
+            "expected_component_marginal_status"
+        ],
+        "axis_priors": by_axis,
+        "planning_blockers": blockers,
+        "allowed_use": (
+            "operator_action_sorting_only_requires_local_controls_and_exact_auth_axis_anchor"
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
 def _apply_pairset_component_marginal_feedback(
     candidates: Sequence[Mapping[str, Any]],
     component_model: Mapping[str, Any],
@@ -989,6 +1117,11 @@ def _apply_pairset_component_marginal_feedback(
             if isinstance(axis_model, Mapping)
         }
         nearest = {axis: value for axis, value in nearest.items() if value is not None}
+        action_prior = _component_marginal_action_prior(
+            axis_models,
+            dropped_pair_index=dropped_pair,
+            dropped_pair_rank=dropped_rank,
+        )
         metadata = dict(row.get("source_metadata") or {})
         metadata["component_marginal_model"] = {
             "schema": "pairset_component_marginal_candidate_feedback.v1",
@@ -997,12 +1130,18 @@ def _apply_pairset_component_marginal_feedback(
             "dropped_pair_index": dropped_pair,
             "dropped_pair_rank": dropped_rank,
             "nearest_drop_one_evidence_by_axis": nearest,
+            "component_marginal_action_prior": action_prior,
             "canonical_signal_refs": component_model.get("canonical_signal_refs"),
             "allowed_use": (
                 "candidate_planning_signal_only_requires_exact_axis_materialization"
             ),
             **FALSE_AUTHORITY,
         }
+        if action_prior is not None:
+            blockers = set(row.get("source_dispatch_blockers") or [])
+            blockers.update(action_prior.get("planning_blockers") or [])
+            if blockers:
+                row["source_dispatch_blockers"] = sorted(blockers)
         row["source_metadata"] = metadata
         updated.append(row)
     return updated
@@ -1393,7 +1532,26 @@ def _operator_action_for_row(row: Mapping[str, Any]) -> str:
     return "manual_review_before_materialization_or_dispatch"
 
 
-def _operator_action_priority(row: Mapping[str, Any]) -> tuple[int, int, float, str]:
+def _component_marginal_priority_value(row: Mapping[str, Any]) -> float | None:
+    metadata = row.get("source_metadata")
+    if not isinstance(metadata, Mapping):
+        return None
+    feedback = metadata.get("component_marginal_model")
+    if not isinstance(feedback, Mapping):
+        return None
+    action_prior = feedback.get("component_marginal_action_prior")
+    if not isinstance(action_prior, Mapping):
+        return None
+    value = action_prior.get("primary_axis_expected_net_component_delta")
+    if value is None:
+        return None
+    return _finite_float(
+        value,
+        label=f"{row.get('candidate_id')}.component_marginal_priority",
+    )
+
+
+def _operator_action_priority(row: Mapping[str, Any]) -> tuple[Any, ...]:
     source_kind = str(row.get("source_kind") or "")
     source_blocked = bool(row.get("source_dispatch_blockers"))
     observed_feedback = (
@@ -1415,20 +1573,34 @@ def _operator_action_priority(row: Mapping[str, Any]) -> tuple[int, int, float, 
             base -= 5
         else:
             base += 100
+    if source_kind == "decoder_q_pairset_acquisition" and source_blocked:
+        base += 50
     source_rank = row.get("source_rank")
     rank_value = int(source_rank) if source_rank is not None else 999_999
     acquisition_value = -float(row.get("acquisition_value", 0.0))
+    component_priority = _component_marginal_priority_value(row)
+    if source_kind == "decoder_q_pairset_acquisition" and component_priority is not None:
+        return (
+            base,
+            0,
+            component_priority,
+            rank_value,
+            acquisition_value,
+            str(row.get("candidate_id") or ""),
+        )
     if source_kind == "decoder_q_pairset_acquisition" and str(row.get("prediction_source") or "") == (
         "exact_pairset_observation_response_model_planning_prior"
     ):
         return (
             base,
+            1,
             acquisition_value,
             rank_value,
             str(row.get("candidate_id") or ""),
         )
     return (
         base,
+        1,
         rank_value,
         acquisition_value,
         str(row.get("candidate_id") or ""),
