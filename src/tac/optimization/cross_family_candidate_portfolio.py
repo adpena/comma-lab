@@ -378,6 +378,8 @@ def _pairset_candidate_rows(
                     "selected_pair_indices": row.get("selected_pair_indices"),
                     "payload_bytes": row.get("payload_bytes"),
                     "rate_delta": row.get("rate_delta"),
+                    "acquisition_operation": row.get("acquisition_operation"),
+                    "acquisition_score": row.get("acquisition_score"),
                     "predicted_score_source": row.get("predicted_score_source"),
                 },
             )
@@ -616,6 +618,379 @@ def _candidate_selected_pair_indices(row: Mapping[str, Any]) -> list[int] | None
             ) from exc
         out.append(parsed)
     return out
+
+
+def _candidate_acquisition_operation(row: Mapping[str, Any]) -> dict[str, Any] | None:
+    metadata = row.get("source_metadata")
+    raw = row.get("acquisition_operation")
+    if raw is None and isinstance(metadata, Mapping):
+        raw = metadata.get("acquisition_operation")
+    if not isinstance(raw, Mapping):
+        return None
+    return dict(raw)
+
+
+def _observation_component_deltas(row: Mapping[str, Any]) -> dict[str, float] | None:
+    raw = row.get("component_deltas", row.get("component_axis_deltas"))
+    source: Mapping[str, Any] = raw if isinstance(raw, Mapping) else row
+    out: dict[str, float] = {}
+    for key in ("segnet_delta", "posenet_delta", "rate_delta"):
+        value = source.get(key, row.get(key))
+        if value is None:
+            return None
+        out[key] = _finite_float(value, label=f"{row.get('candidate_id')}.{key}")
+    return out
+
+
+def _component_net_delta(component_deltas: Mapping[str, float]) -> float:
+    return (
+        float(component_deltas.get("segnet_delta", 0.0))
+        + float(component_deltas.get("posenet_delta", 0.0))
+        + float(component_deltas.get("rate_delta", 0.0))
+    )
+
+
+def _score_delta_status(delta: float | None) -> str:
+    if delta is None:
+        return "axis_baseline_missing"
+    if delta < 0.0:
+        return "improves_vs_axis_baseline"
+    if delta > 0.0:
+        return "regresses_vs_axis_baseline"
+    return "ties_axis_baseline"
+
+
+def _component_marginal_status(component_deltas: Mapping[str, float]) -> str:
+    scorer_penalty = float(component_deltas.get("segnet_delta", 0.0)) + float(
+        component_deltas.get("posenet_delta", 0.0)
+    )
+    rate_credit = -float(component_deltas.get("rate_delta", 0.0))
+    if scorer_penalty < rate_credit:
+        return "rate_credit_exceeds_scorer_penalty"
+    if scorer_penalty > rate_credit:
+        return "scorer_penalty_exceeds_rate_credit"
+    return "rate_credit_ties_scorer_penalty"
+
+
+def _transfer_status(axis_statuses: Mapping[str, str]) -> str:
+    cpu = axis_statuses.get("contest_cpu")
+    cuda = axis_statuses.get("contest_cuda")
+    if cpu == "improves_vs_axis_baseline" and cuda == "regresses_vs_axis_baseline":
+        return "cpu_improves_cuda_regresses"
+    if cpu == "regresses_vs_axis_baseline" and cuda == "improves_vs_axis_baseline":
+        return "cpu_regresses_cuda_improves"
+    if cpu == cuda and cpu is not None:
+        return f"same_status_{cpu}"
+    if cpu is None or cuda is None:
+        return "single_axis_only"
+    return "mixed_axis_status"
+
+
+def _build_pairset_component_marginal_model(
+    candidates: Sequence[Mapping[str, Any]],
+    observations: Sequence[Mapping[str, Any]],
+    *,
+    incumbent_scores_by_axis: Mapping[str, float],
+) -> dict[str, Any]:
+    """Canonicalize pair/frame component deltas for future acquisition logic."""
+
+    candidates_by_id = {
+        str(row.get("candidate_id") or ""): row
+        for row in candidates
+        if str(row.get("source_kind") or "") == "decoder_q_pairset_acquisition"
+    }
+    identity_counts = {
+        "candidate_id_match_count": 0,
+        "selected_pair_indices_missing_candidate_count": 0,
+        "selected_pair_indices_verified_count": 0,
+        "selected_pair_indices_missing_observation_count": 0,
+        "selected_pair_indices_mismatch_count": 0,
+    }
+    training_rows: list[dict[str, Any]] = []
+    for observation in observations:
+        axis = _exact_observation_axis(observation)
+        if axis is None:
+            continue
+        candidate_id = str(observation.get("candidate_id") or "")
+        candidate = candidates_by_id.get(candidate_id)
+        if candidate is None:
+            continue
+        identity_counts["candidate_id_match_count"] += 1
+        observed_indices = _candidate_selected_pair_indices(observation)
+        candidate_indices = _candidate_selected_pair_indices(candidate)
+        if candidate_indices is None:
+            identity_counts["selected_pair_indices_missing_candidate_count"] += 1
+            continue
+        if observed_indices is None:
+            identity_counts["selected_pair_indices_missing_observation_count"] += 1
+            continue
+        if observed_indices != candidate_indices:
+            identity_counts["selected_pair_indices_mismatch_count"] += 1
+            continue
+        operation = _candidate_acquisition_operation(candidate)
+        component_deltas = _observation_component_deltas(observation)
+        if operation is None or component_deltas is None:
+            continue
+        identity_counts["selected_pair_indices_verified_count"] += 1
+        observed_score = _finite_float(
+            observation.get("observed_score_or_delta"),
+            label=f"{candidate_id}.observed_score_or_delta",
+        )
+        baseline = incumbent_scores_by_axis.get(axis)
+        observed_delta = None if baseline is None else observed_score - baseline
+        training_rows.append(
+            {
+                "candidate_id": candidate_id,
+                "axis": axis,
+                "selector_kind": _candidate_selector_kind(candidate),
+                "selected_pair_count": _candidate_selected_pair_count(candidate),
+                "selected_pair_indices": observed_indices,
+                "operation": operation,
+                "component_deltas": component_deltas,
+                "net_component_delta": _component_net_delta(component_deltas),
+                "component_marginal_status": _component_marginal_status(
+                    component_deltas
+                ),
+                "observed_score": observed_score,
+                "axis_baseline_score": baseline,
+                "observed_delta_vs_axis_baseline": observed_delta,
+                "score_delta_status": _score_delta_status(observed_delta),
+                "observed_at_utc": observation.get("observed_at_utc"),
+            }
+        )
+
+    base = {
+        "schema": "pairset_component_marginal_model.v1",
+        "active": bool(training_rows),
+        "training_row_count": len(training_rows),
+        "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+        "identity_counts": dict(sorted(identity_counts.items())),
+        **FALSE_AUTHORITY,
+        "allowed_use": "component_marginal_planning_signal_only_no_score_or_dispatch_authority",
+    }
+    if not training_rows:
+        return {
+            **base,
+            "active": False,
+            "inactive_reason": "no_exact_pairset_observations_with_component_deltas",
+        }
+
+    axis_models: dict[str, dict[str, Any]] = {}
+    rows_by_axis: dict[str, list[dict[str, Any]]] = {}
+    rows_by_candidate: dict[str, list[dict[str, Any]]] = {}
+    for row in training_rows:
+        rows_by_axis.setdefault(str(row["axis"]), []).append(row)
+        rows_by_candidate.setdefault(str(row["candidate_id"]), []).append(row)
+
+    for axis, axis_rows in sorted(rows_by_axis.items()):
+        drop_one_rows = [
+            row
+            for row in axis_rows
+            if str(row["operation"].get("op") or "") == "drop_one"
+        ]
+        drop_one_marginals: list[dict[str, Any]] = []
+        for row in drop_one_rows:
+            operation = row["operation"]
+            pair = int(operation["dropped_pair_index"])
+            rank = int(operation["dropped_pair_rank"])
+            component_deltas = dict(row["component_deltas"])
+            scorer_penalty = component_deltas["segnet_delta"] + component_deltas["posenet_delta"]
+            rate_credit = -component_deltas["rate_delta"]
+            drop_one_marginals.append(
+                {
+                    "pair_index": pair,
+                    "dropped_pair_rank": rank,
+                    "candidate_id": row["candidate_id"],
+                    "observed_score": row["observed_score"],
+                    "axis_baseline_score": row["axis_baseline_score"],
+                    "observed_delta_vs_axis_baseline": row[
+                        "observed_delta_vs_axis_baseline"
+                    ],
+                    "component_deltas": component_deltas,
+                    "scorer_penalty": scorer_penalty,
+                    "rate_credit": rate_credit,
+                    "net_component_delta": row["net_component_delta"],
+                    "score_delta_status": row["score_delta_status"],
+                    "component_marginal_status": row["component_marginal_status"],
+                    **FALSE_AUTHORITY,
+                }
+            )
+        drop_two_rows = [
+            row
+            for row in axis_rows
+            if str(row["operation"].get("op") or "") == "drop_two"
+        ]
+        axis_models[axis] = {
+            "axis": axis,
+            "training_row_count": len(axis_rows),
+            "drop_one_training_row_count": len(drop_one_rows),
+            "drop_two_training_row_count": len(drop_two_rows),
+            "drop_one_pair_marginals": sorted(
+                drop_one_marginals,
+                key=lambda row: (
+                    float(row["net_component_delta"]),
+                    int(row["dropped_pair_rank"]),
+                    int(row["pair_index"]),
+                ),
+            ),
+            "drop_two_interactions": [
+                {
+                    "candidate_id": row["candidate_id"],
+                    "dropped_pair_indices": row["operation"].get(
+                        "dropped_pair_indices"
+                    ),
+                    "dropped_pair_ranks": row["operation"].get("dropped_pair_ranks"),
+                    "observed_score": row["observed_score"],
+                    "axis_baseline_score": row["axis_baseline_score"],
+                    "observed_delta_vs_axis_baseline": row[
+                        "observed_delta_vs_axis_baseline"
+                    ],
+                    "component_deltas": row["component_deltas"],
+                    "net_component_delta": row["net_component_delta"],
+                    "score_delta_status": row["score_delta_status"],
+                    "component_marginal_status": row["component_marginal_status"],
+                    **FALSE_AUTHORITY,
+                }
+                for row in drop_two_rows
+            ],
+            "safe_drop_pair_indices": [
+                int(row["pair_index"])
+                for row in drop_one_marginals
+                if row["component_marginal_status"]
+                == "rate_credit_exceeds_scorer_penalty"
+            ],
+            "protected_drop_pair_indices": [
+                int(row["pair_index"])
+                for row in drop_one_marginals
+                if row["component_marginal_status"]
+                == "scorer_penalty_exceeds_rate_credit"
+            ],
+            **FALSE_AUTHORITY,
+        }
+
+    cross_axis: list[dict[str, Any]] = []
+    for candidate_id, candidate_rows in sorted(rows_by_candidate.items()):
+        axes = sorted({str(row["axis"]) for row in candidate_rows})
+        if len(axes) < 2:
+            continue
+        by_axis = {str(row["axis"]): row for row in candidate_rows}
+        axis_statuses = {
+            axis: str(by_axis[axis]["score_delta_status"])
+            for axis in axes
+        }
+        cross_axis.append(
+            {
+                "candidate_id": candidate_id,
+                "axes": axes,
+                "axis_statuses": axis_statuses,
+                "transfer_status": _transfer_status(axis_statuses),
+                "component_deltas_by_axis": {
+                    axis: by_axis[axis]["component_deltas"]
+                    for axis in axes
+                },
+                "observed_delta_vs_axis_baseline_by_axis": {
+                    axis: by_axis[axis]["observed_delta_vs_axis_baseline"]
+                    for axis in axes
+                },
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    return {
+        **base,
+        "active": True,
+        "model_kind": "exact_axis_component_marginal_ledger",
+        "axes": sorted(axis_models),
+        "axis_models": axis_models,
+        "cross_axis_transfer_diagnostics": cross_axis,
+    }
+
+
+def _nearest_drop_one_marginal(
+    axis_model: Mapping[str, Any],
+    *,
+    dropped_pair_index: int,
+    dropped_pair_rank: int,
+) -> dict[str, Any] | None:
+    rows = axis_model.get("drop_one_pair_marginals")
+    if not isinstance(rows, list) or not rows:
+        return None
+    candidates = [row for row in rows if isinstance(row, Mapping)]
+    if not candidates:
+        return None
+    nearest = min(
+        candidates,
+        key=lambda row: (
+            abs(int(row.get("dropped_pair_rank", 0)) - dropped_pair_rank),
+            abs(int(row.get("pair_index", 0)) - dropped_pair_index),
+            str(row.get("candidate_id") or ""),
+        ),
+    )
+    return {
+        "axis": axis_model.get("axis"),
+        "source_candidate_id": nearest.get("candidate_id"),
+        "source_pair_index": nearest.get("pair_index"),
+        "source_dropped_pair_rank": nearest.get("dropped_pair_rank"),
+        "rank_distance": abs(
+            int(nearest.get("dropped_pair_rank", 0)) - dropped_pair_rank
+        ),
+        "pair_index_distance": abs(
+            int(nearest.get("pair_index", 0)) - dropped_pair_index
+        ),
+        "source_net_component_delta": nearest.get("net_component_delta"),
+        "source_component_marginal_status": nearest.get("component_marginal_status"),
+        "source_score_delta_status": nearest.get("score_delta_status"),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _apply_pairset_component_marginal_feedback(
+    candidates: Sequence[Mapping[str, Any]],
+    component_model: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if component_model.get("active") is not True:
+        return [dict(row) for row in candidates]
+    axis_models = component_model.get("axis_models")
+    if not isinstance(axis_models, Mapping):
+        return [dict(row) for row in candidates]
+    updated: list[dict[str, Any]] = []
+    for candidate in candidates:
+        row = dict(candidate)
+        if str(row.get("source_kind") or "") != "decoder_q_pairset_acquisition":
+            updated.append(row)
+            continue
+        operation = _candidate_acquisition_operation(row)
+        if not operation or str(operation.get("op") or "") != "drop_one":
+            updated.append(row)
+            continue
+        dropped_pair = int(operation["dropped_pair_index"])
+        dropped_rank = int(operation["dropped_pair_rank"])
+        nearest = {
+            axis: _nearest_drop_one_marginal(
+                axis_model,
+                dropped_pair_index=dropped_pair,
+                dropped_pair_rank=dropped_rank,
+            )
+            for axis, axis_model in axis_models.items()
+            if isinstance(axis_model, Mapping)
+        }
+        nearest = {axis: value for axis, value in nearest.items() if value is not None}
+        metadata = dict(row.get("source_metadata") or {})
+        metadata["component_marginal_model"] = {
+            "schema": "pairset_component_marginal_candidate_feedback.v1",
+            "active": True,
+            "model_kind": component_model.get("model_kind"),
+            "dropped_pair_index": dropped_pair,
+            "dropped_pair_rank": dropped_rank,
+            "nearest_drop_one_evidence_by_axis": nearest,
+            "allowed_use": (
+                "candidate_planning_signal_only_requires_exact_axis_materialization"
+            ),
+            **FALSE_AUTHORITY,
+        }
+        row["source_metadata"] = metadata
+        updated.append(row)
+    return updated
 
 
 def _fit_line(xs: Sequence[float], ys: Sequence[float]) -> dict[str, float] | None:
@@ -1126,6 +1501,15 @@ def build_cross_family_candidate_portfolio(
         normalized_observations,
         incumbent_scores_by_axis=axis_incumbents,
     )
+    pairset_component_marginal_model = _build_pairset_component_marginal_model(
+        candidates,
+        normalized_observations,
+        incumbent_scores_by_axis=axis_incumbents,
+    )
+    candidates = _apply_pairset_component_marginal_feedback(
+        candidates,
+        pairset_component_marginal_model,
+    )
     candidates = _apply_observation_feedback(
         candidates,
         normalized_observations,
@@ -1229,6 +1613,7 @@ def build_cross_family_candidate_portfolio(
                 "exact-axis same-candidate observations demote repeat operator actions"
             ),
             "pairset_observation_response_model": pairset_observation_response_model,
+            "pairset_component_marginal_model": pairset_component_marginal_model,
         },
         "portfolio_summary": {
             "candidate_count_before_top_k": len(candidates),

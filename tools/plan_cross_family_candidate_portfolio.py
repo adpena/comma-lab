@@ -222,6 +222,21 @@ def _pairset_observation_response_model(
     }
 
 
+def _pairset_component_marginal_model(
+    portfolio: Mapping[str, Any],
+) -> dict[str, Any]:
+    feedback = _mapping(portfolio.get("observation_feedback"))
+    model = feedback.get("pairset_component_marginal_model")
+    if isinstance(model, Mapping):
+        return dict(model)
+    return {
+        "schema": "pairset_component_marginal_model.v1",
+        "active": False,
+        "inactive_reason": "missing_from_portfolio",
+        **_false_authority_payload(),
+    }
+
+
 def _top_operator_actions(
     portfolio: Mapping[str, Any],
     *,
@@ -273,6 +288,7 @@ def _build_action_summary(
     summary_json_out: Path | None,
 ) -> dict[str, Any]:
     model = _pairset_observation_response_model(portfolio)
+    component_model = _pairset_component_marginal_model(portfolio)
     return {
         "schema": ACTION_SUMMARY_SCHEMA,
         "producer": Path(__file__).name,
@@ -284,6 +300,7 @@ def _build_action_summary(
         ),
         "portfolio_summary": dict(_mapping(portfolio.get("portfolio_summary"))),
         "pairset_observation_response_model": model,
+        "pairset_component_marginal_model": component_model,
         "top_action_limit": top_actions,
         "top_operator_actions": _top_operator_actions(
             portfolio,
@@ -311,6 +328,7 @@ def _require_active_pairset_observation_model(summary: Mapping[str, Any]) -> Non
 
 def _render_action_summary_markdown(summary: Mapping[str, Any]) -> str:
     model = _mapping(summary.get("pairset_observation_response_model"))
+    component_model = _mapping(summary.get("pairset_component_marginal_model"))
     lines = [
         "## CLI Action Summary",
         "",
@@ -331,6 +349,18 @@ def _render_action_summary_markdown(summary: Mapping[str, Any]) -> str:
         f"- Score claim: `{model.get('score_claim')}`",
         "- Ready for exact eval dispatch: "
         f"`{model.get('ready_for_exact_eval_dispatch')}`",
+        "",
+        "### Component Marginal Model",
+        "",
+        f"- Active: `{component_model.get('active')}`",
+        f"- Axes: `{component_model.get('axes')}`",
+        f"- Training rows: `{component_model.get('training_row_count')}`",
+        "- Cross-axis diagnostics: "
+        f"`{len(component_model.get('cross_axis_transfer_diagnostics') or [])}`",
+        f"- Allowed use: `{component_model.get('allowed_use')}`",
+        f"- Score claim: `{component_model.get('score_claim')}`",
+        "- Ready for exact eval dispatch: "
+        f"`{component_model.get('ready_for_exact_eval_dispatch')}`",
         "",
         "### Top Next Actions",
         "",
@@ -447,6 +477,9 @@ def main(argv: list[str] | None = None) -> int:
                 "ready_for_exact_eval_dispatch": False,
                 "pairset_observation_response_model": action_summary[
                     "pairset_observation_response_model"
+                ],
+                "pairset_component_marginal_model": action_summary[
+                    "pairset_component_marginal_model"
                 ],
                 "top_operator_actions": action_summary["top_operator_actions"],
             },

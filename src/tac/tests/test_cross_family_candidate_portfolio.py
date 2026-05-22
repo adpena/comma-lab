@@ -102,15 +102,21 @@ def _contest_observation(
     archive_char: str = "a",
     raw_char: str = "b",
     selected_pair_indices: list[int] | None = None,
+    segnet_delta: float = 0.0001,
+    posenet_delta: float = 0.0,
+    rate_delta: float = -0.00001,
+    axis: str = "contest_cpu",
+    evidence_grade: str = "contest-CPU",
+    evidence_tag: str = "[contest-CPU]",
 ) -> dict[str, object]:
-    source = tmp_path / f"{candidate_id}_contest_auth_eval.json"
+    source = tmp_path / f"{candidate_id}_{axis}_{archive_char}_contest_auth_eval.json"
     archive_sha = archive_char * 64
     raw_sha = raw_char * 64
     source.write_text(
         json.dumps(
             {
-                "score_axis": "contest_cpu",
-                "evidence_grade": "contest-CPU",
+                "score_axis": axis,
+                "evidence_grade": evidence_grade,
                 "score_claim_valid": True,
                 "canonical_score": score,
                 "provenance": {
@@ -130,23 +136,108 @@ def _contest_observation(
         "sweep_config_id": "contest_cpu_exact_candidate",
         "optimization_pass_id": "exact_cpu_calibration",
         "family": "decoder_q_pairset_diversity",
-        "observed_axis": "contest_cpu",
-        "evidence_tag": "[contest-CPU]",
-        "evidence_grade": "contest-CPU",
+        "observed_axis": axis,
+        "evidence_tag": evidence_tag,
+        "evidence_grade": evidence_grade,
         "observed_score_or_delta": score,
         "archive_sha256": archive_sha,
         "runtime_sha256": "c" * 64,
         "raw_output_or_cache_sha256": raw_sha,
         "component_deltas": {
-            "segnet_delta": 0.0001,
-            "posenet_delta": 0.0,
-            "rate_delta": -0.00001,
+            "segnet_delta": segnet_delta,
+            "posenet_delta": posenet_delta,
+            "rate_delta": rate_delta,
         },
         "source_artifact_path": source.as_posix(),
     }
     if selected_pair_indices is not None:
         row["selected_pair_indices"] = selected_pair_indices
     return row
+
+
+def _pairset_acquisition_with_component_candidates() -> dict[str, object]:
+    base_pairs = [101, 327, 371, 376]
+    return {
+        "schema": "decoder_q_pairset_acquisition.v1",
+        **_false_authority(),
+        "dispatch_attempted": False,
+        "candidates": [
+            {
+                "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                **_false_authority(),
+                "dispatch_attempted": False,
+                "acquisition_id": "pairset_drop_one_rank002_pair0327",
+                "acquisition_rank": 1,
+                "selector_kind": "drop_one_from_best",
+                "selected_pair_count": 3,
+                "selected_pair_indices": [101, 371, 376],
+                "payload_bytes": 40,
+                "rate_delta": 0.00001,
+                "acquisition_score": 0.5,
+                "acquisition_operation": {
+                    "op": "drop_one",
+                    "dropped_pair_index": 327,
+                    "dropped_pair_rank": 2,
+                },
+                "predicted_score_mean": 0.195,
+                "predicted_score_source": "source_selector_inherited_non_authoritative",
+            },
+            {
+                "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                **_false_authority(),
+                "dispatch_attempted": False,
+                "acquisition_id": "pairset_drop_one_rank003_pair0371",
+                "acquisition_rank": 2,
+                "selector_kind": "drop_one_from_best",
+                "selected_pair_count": 3,
+                "selected_pair_indices": [101, 327, 376],
+                "payload_bytes": 40,
+                "rate_delta": 0.00001,
+                "acquisition_score": 0.5,
+                "acquisition_operation": {
+                    "op": "drop_one",
+                    "dropped_pair_index": 371,
+                    "dropped_pair_rank": 3,
+                },
+                "predicted_score_mean": 0.195,
+                "predicted_score_source": "source_selector_inherited_non_authoritative",
+            },
+            {
+                "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                **_false_authority(),
+                "dispatch_attempted": False,
+                "acquisition_id": "pairset_drop_one_rank004_pair0376",
+                "acquisition_rank": 3,
+                "selector_kind": "drop_one_from_best",
+                "selected_pair_count": 3,
+                "selected_pair_indices": [101, 327, 371],
+                "payload_bytes": 40,
+                "rate_delta": 0.00001,
+                "acquisition_score": 0.5,
+                "acquisition_operation": {
+                    "op": "drop_one",
+                    "dropped_pair_index": 376,
+                    "dropped_pair_rank": 4,
+                },
+                "predicted_score_mean": 0.195,
+                "predicted_score_source": "source_selector_inherited_non_authoritative",
+            },
+            {
+                "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                **_false_authority(),
+                "dispatch_attempted": False,
+                "acquisition_id": "pairset_prefix_k004",
+                "acquisition_rank": 4,
+                "selector_kind": "prefix_variant",
+                "selected_pair_count": 4,
+                "selected_pair_indices": base_pairs,
+                "payload_bytes": 41,
+                "rate_delta": 0.000011,
+                "predicted_score_mean": 0.195,
+                "predicted_score_source": "source_selector_inherited_non_authoritative",
+            },
+        ],
+    }
 
 
 def _pairset_acquisition_with_response_candidates() -> dict[str, object]:
@@ -427,6 +518,82 @@ def test_pairset_response_model_requires_selected_pair_identity(tmp_path: Path) 
         if row["candidate_id"] == "pairset_diversity_k008"
     )
     assert "prediction_source" not in unobserved
+
+
+def test_portfolio_builds_component_marginal_model_and_axis_transfer_diagnostics(
+    tmp_path: Path,
+) -> None:
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.226190435402,
+        pairset_acquisitions=[_pairset_acquisition_with_component_candidates()],
+        observations=[
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank002_pair0327",
+                score=0.19202928,
+                archive_char="a",
+                raw_char="b",
+                selected_pair_indices=[101, 371, 376],
+                segnet_delta=0.000001,
+                rate_delta=-0.00000066585895312,
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank003_pair0371",
+                score=0.19202828,
+                archive_char="d",
+                raw_char="e",
+                selected_pair_indices=[101, 327, 376],
+                segnet_delta=0.0,
+                rate_delta=-0.00000066585895312,
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank003_pair0371",
+                score=0.22619177,
+                archive_char="f",
+                raw_char="0",
+                selected_pair_indices=[101, 327, 376],
+                segnet_delta=0.000002,
+                rate_delta=-0.00000066585895312,
+                axis="contest_cuda",
+                evidence_grade="contest-CUDA",
+                evidence_tag="[contest-CUDA]",
+            ),
+        ],
+        incumbent_scores_by_axis={
+            "contest_cpu": 0.192028948816,
+            "contest_cuda": 0.226190435402,
+        },
+        top_k=8,
+    )
+
+    model = portfolio["observation_feedback"]["pairset_component_marginal_model"]
+    assert model["active"] is True
+    assert model["score_claim"] is False
+    assert model["ready_for_exact_eval_dispatch"] is False
+    assert model["axes"] == ["contest_cpu", "contest_cuda"]
+    cpu_model = model["axis_models"]["contest_cpu"]
+    assert cpu_model["safe_drop_pair_indices"] == [371]
+    assert cpu_model["protected_drop_pair_indices"] == [327]
+    transfer = model["cross_axis_transfer_diagnostics"][0]
+    assert transfer["candidate_id"] == "pairset_drop_one_rank003_pair0371"
+    assert transfer["transfer_status"] == "cpu_improves_cuda_regresses"
+    assert transfer["score_claim"] is False
+
+    unobserved = next(
+        row
+        for row in portfolio["ranked_rows"]
+        if row["candidate_id"] == "pairset_drop_one_rank004_pair0376"
+    )
+    feedback = unobserved["source_metadata"]["component_marginal_model"]
+    assert feedback["active"] is True
+    nearest_cpu = feedback["nearest_drop_one_evidence_by_axis"]["contest_cpu"]
+    assert nearest_cpu["source_pair_index"] == 371
+    assert nearest_cpu["source_component_marginal_status"] == (
+        "rate_credit_exceeds_scorer_penalty"
+    )
+    assert feedback["score_claim"] is False
 
 
 def test_portfolio_preserves_custody_readiness_as_advisory_only(
