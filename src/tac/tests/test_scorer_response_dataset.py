@@ -18,11 +18,13 @@ from tac.optimization.scorer_response_dataset import (
     build_next_probe_plan,
     build_null_byte_priority_weights,
     build_response_dataset,
+    build_scorer_response_validation_gate,
     build_scorer_response_consumer_routing,
     build_windowed_mlx_response_dataset,
     normalize_legacy_response_dataset_authority,
     render_markdown,
     render_next_probe_plan_markdown,
+    render_validation_gate_markdown,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -800,6 +802,53 @@ def _current_response_dataset_payload() -> dict:
     }
 
 
+def _validation_dataset(
+    *,
+    families: tuple[str, ...],
+    rows_per_fold: int,
+    include_prediction: bool = False,
+) -> dict:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    rows = []
+    for family_index, family in enumerate(families):
+        for fold in range(5):
+            for offset in range(rows_per_fold):
+                value = float(family_index * 100 + fold * rows_per_fold + offset)
+                row = {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": f"{family}-{fold}-{offset}",
+                    **false_authority,
+                    "authority_source_score_claim": False,
+                    "family": family,
+                    "holdout_fold": fold,
+                    "delta_vs_baseline_score": value,
+                    "scorer_delta_vs_baseline": value,
+                }
+                if include_prediction:
+                    row["predicted_delta_vs_baseline_score"] = value
+                rows.append(row)
+    return {
+        "schema": "scorer_response_dataset.v1",
+        "producer": "test",
+        **false_authority,
+        "authority": {
+            **false_authority,
+            "evidence_grade": "macOS-CPU advisory response dataset",
+        },
+        "summary": {
+            "row_count": len(rows),
+            "family_counts": {family: rows_per_fold * 5 for family in families},
+        },
+        "rows": rows,
+    }
+
+
 def test_normalize_legacy_response_dataset_authority_backfills_extended_fields_only() -> None:
     payload = _current_response_dataset_payload()
     payload.pop("rank_or_kill_eligible")
@@ -853,6 +902,71 @@ def test_normalize_legacy_response_dataset_authority_refuses_core_or_source_ambi
         assert "authority_source_score_claim" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected source score-claim rejection")
+
+
+def test_scorer_response_validation_gate_blocks_single_family_without_predictions() -> None:
+    dataset = _validation_dataset(families=("mlx_scorer_response",), rows_per_fold=10)
+
+    gate = build_scorer_response_validation_gate(dataset)
+
+    assert gate["score_claim"] is False
+    assert gate["status"] == "blocked"
+    assert "family_count_below_min:1<2" in gate["blockers"]
+    assert "families_with_required_folds_below_min:1<2" in gate["blockers"]
+    assert "no_prediction_fields_present" in gate["blockers"]
+    assert gate["coverage"]["row_count"] == 50
+    assert "Scorer Response Validation Gate" in render_validation_gate_markdown(gate)
+
+
+def test_scorer_response_validation_gate_passes_family_diverse_heldout_predictions() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response", "decoder_q"),
+        rows_per_fold=5,
+        include_prediction=True,
+    )
+
+    gate = build_scorer_response_validation_gate(dataset)
+
+    assert gate["status"] == "passed"
+    assert gate["blockers"] == []
+    assert set(gate["coverage"]["families_with_required_folds"]) == {
+        "decoder_q",
+        "mlx_scorer_response",
+    }
+    assert gate["passing_prediction_fields"] == ["predicted_delta_vs_baseline_score"]
+
+
+def test_validate_scorer_response_dataset_cli_writes_gate(tmp_path) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(
+        json.dumps(_validation_dataset(families=("mlx_scorer_response",), rows_per_fold=10)),
+        encoding="utf-8",
+    )
+    json_out = tmp_path / "gate.json"
+    md_out = tmp_path / "gate.md"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "validate_scorer_response_dataset.py"),
+            "--dataset",
+            str(dataset_path),
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"score_claim": false' in completed.stdout
+    gate = json.loads(json_out.read_text(encoding="utf-8"))
+    assert gate["status"] == "blocked"
+    assert "no_prediction_fields_present" in gate["blockers"]
+    assert "Scorer Response Validation Gate" in md_out.read_text(encoding="utf-8")
 
 
 def test_build_response_dataset_normalizes_candidate_list_and_correlations(tmp_path) -> None:

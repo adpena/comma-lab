@@ -27,8 +27,18 @@ SCHEMA = "scorer_response_dataset.v1"
 ROW_SCHEMA = "scorer_response_row.v1"
 NULL_BYTE_PRIORITY_SCHEMA = "ll_null_byte_priority_weights.v1"
 CONSUMER_ROUTING_SCHEMA = "scorer_response_dataset_consumer_routing.v1"
+VALIDATION_GATE_SCHEMA = "scorer_response_dataset_validation_gate.v1"
 MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
 MLX_TORCH_PARITY_SWEEP_SCHEMA = "mlx_scorer_torch_parity_sweep.v1"
+
+DEFAULT_RESPONSE_PREDICTION_FIELDS = (
+    "predicted_delta_vs_baseline_score",
+    "predicted_scorer_delta_vs_baseline",
+    "ll_predicted_delta_vs_baseline_score",
+    "ll_predicted_scorer_delta_vs_baseline",
+    "expected_delta_vs_baseline_score",
+    "expected_scorer_delta_vs_baseline",
+)
 
 
 _FALSE_AUTHORITY_FIELDS = (
@@ -1384,6 +1394,230 @@ def build_mlx_torch_parity_sweep_gate(
     }
 
 
+def build_scorer_response_validation_gate(
+    dataset: dict[str, Any],
+    *,
+    min_rows: int = 50,
+    min_families: int = 2,
+    required_folds: Iterable[int] = range(5),
+    target: str = "delta_vs_baseline_score",
+    prediction_fields: Iterable[str] = DEFAULT_RESPONSE_PREDICTION_FIELDS,
+    min_prediction_pairs_per_fold: int = 3,
+    min_pearson_r: float = 0.2,
+) -> dict[str, Any]:
+    """Validate whether a response dataset is ready for LL held-out use.
+
+    This is a fail-closed research-signal gate. A pass means the dataset has
+    enough rows, family diversity, fold coverage, and at least one explicit
+    prediction field with held-out correlation against the requested target.
+    It never creates score authority or exact-eval dispatch eligibility.
+    """
+
+    if min_rows <= 0:
+        raise ScorerResponseDatasetError("min_rows must be positive")
+    if min_families <= 0:
+        raise ScorerResponseDatasetError("min_families must be positive")
+    if min_prediction_pairs_per_fold <= 1:
+        raise ScorerResponseDatasetError("min_prediction_pairs_per_fold must be > 1")
+    if not math.isfinite(min_pearson_r):
+        raise ScorerResponseDatasetError("min_pearson_r must be finite")
+    folds_required = sorted({int(fold) for fold in required_folds})
+    if not folds_required:
+        raise ScorerResponseDatasetError("required_folds must be non-empty")
+
+    normalized = normalize_legacy_response_dataset_authority(dataset)
+    rows = normalized["rows"]
+    family_counts: dict[str, int] = {}
+    family_folds: dict[str, set[int]] = {}
+    fold_counts: dict[int, int] = {}
+    for row in rows:
+        family = str(row.get("family") or "unknown")
+        family_counts[family] = family_counts.get(family, 0) + 1
+        fold = _as_int(row.get("holdout_fold"))
+        if fold is None:
+            continue
+        fold_counts[fold] = fold_counts.get(fold, 0) + 1
+        family_folds.setdefault(family, set()).add(fold)
+
+    required_set = set(folds_required)
+    global_folds_present = {fold for fold in fold_counts if fold in required_set}
+    missing_global_folds = sorted(required_set - global_folds_present)
+    families_with_required_folds = sorted(
+        family
+        for family, folds in family_folds.items()
+        if required_set.issubset(folds)
+    )
+
+    prediction_evaluations = [
+        _evaluate_prediction_field(
+            rows=rows,
+            field=str(field),
+            target=target,
+            required_folds=folds_required,
+            min_prediction_pairs_per_fold=min_prediction_pairs_per_fold,
+            min_pearson_r=min_pearson_r,
+        )
+        for field in prediction_fields
+    ]
+    prediction_evaluations = [
+        item for item in prediction_evaluations if item["present_pair_count"] > 0
+    ]
+    passing_predictions = [item for item in prediction_evaluations if item["passed"] is True]
+
+    blockers: list[str] = []
+    if len(rows) < min_rows:
+        blockers.append(f"row_count_below_min:{len(rows)}<{min_rows}")
+    if len(family_counts) < min_families:
+        blockers.append(f"family_count_below_min:{len(family_counts)}<{min_families}")
+    if len(families_with_required_folds) < min_families:
+        blockers.append(
+            "families_with_required_folds_below_min:"
+            f"{len(families_with_required_folds)}<{min_families}"
+        )
+    if missing_global_folds:
+        blockers.append(f"missing_global_holdout_folds:{missing_global_folds}")
+    if not prediction_evaluations:
+        blockers.append("no_prediction_fields_present")
+    elif not passing_predictions:
+        blockers.append("no_prediction_field_passed_heldout_correlation")
+
+    status = "passed" if not blockers else "blocked"
+    return {
+        "schema": VALIDATION_GATE_SCHEMA,
+        "producer": TOOL,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "status": status,
+        "passed": status == "passed",
+        "blockers": blockers,
+        "allowed_use": (
+            "local_ll_surrogate_training_gate"
+            if status == "passed"
+            else "blocked_until_family_diversity_and_heldout_correlation"
+        ),
+        "not_allowed_uses": [
+            "score_claim",
+            "promotion",
+            "rank_or_kill",
+            "exact_eval_dispatch_selection_without_cuda_confirmation",
+        ],
+        "thresholds": {
+            "min_rows": int(min_rows),
+            "min_families": int(min_families),
+            "required_folds": folds_required,
+            "target": target,
+            "prediction_fields": [str(field) for field in prediction_fields],
+            "min_prediction_pairs_per_fold": int(min_prediction_pairs_per_fold),
+            "min_pearson_r": float(min_pearson_r),
+        },
+        "coverage": {
+            "row_count": len(rows),
+            "family_counts": family_counts,
+            "fold_counts": {str(k): v for k, v in sorted(fold_counts.items())},
+            "missing_global_folds": missing_global_folds,
+            "families_with_required_folds": families_with_required_folds,
+            "family_fold_counts": {
+                family: {str(fold): fold_count_for_family(rows, family, fold) for fold in folds_required}
+                for family in sorted(family_counts)
+            },
+        },
+        "prediction_evaluations": prediction_evaluations,
+        "passing_prediction_fields": [item["field"] for item in passing_predictions],
+    }
+
+
+def fold_count_for_family(rows: list[dict[str, Any]], family: str, fold: int) -> int:
+    return sum(
+        1
+        for row in rows
+        if str(row.get("family") or "unknown") == family and _as_int(row.get("holdout_fold")) == fold
+    )
+
+
+def _evaluate_prediction_field(
+    *,
+    rows: list[dict[str, Any]],
+    field: str,
+    target: str,
+    required_folds: list[int],
+    min_prediction_pairs_per_fold: int,
+    min_pearson_r: float,
+) -> dict[str, Any]:
+    xs_all: list[float] = []
+    ys_all: list[float] = []
+    per_fold: list[dict[str, Any]] = []
+    for fold in required_folds:
+        xs: list[float] = []
+        ys: list[float] = []
+        for row in rows:
+            if _as_int(row.get("holdout_fold")) != fold:
+                continue
+            pred = _as_float(row.get(field))
+            observed = _as_float(row.get(target))
+            if pred is None or observed is None:
+                continue
+            xs.append(pred)
+            ys.append(observed)
+        corr = _pearson(xs, ys)
+        passed = (
+            corr is not None
+            and len(xs) >= min_prediction_pairs_per_fold
+            and corr >= min_pearson_r
+        )
+        per_fold.append(
+            {
+                "fold": fold,
+                "n": len(xs),
+                "pearson_r": corr,
+                "passed": passed,
+            }
+        )
+        xs_all.extend(xs)
+        ys_all.extend(ys)
+    overall = _pearson(xs_all, ys_all)
+    return {
+        "field": field,
+        "target": target,
+        "present_pair_count": len(xs_all),
+        "overall_pearson_r": overall,
+        "folds": per_fold,
+        "passed": bool(per_fold) and all(item["passed"] for item in per_fold),
+    }
+
+
+def _blocked_response_validation_gate(reason: str, *, row_count: int) -> dict[str, Any]:
+    return {
+        "schema": VALIDATION_GATE_SCHEMA,
+        "producer": TOOL,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "status": "blocked",
+        "passed": False,
+        "blockers": [f"dataset_validation_error:{reason}"],
+        "allowed_use": "blocked_until_dataset_authority_contract_valid",
+        "not_allowed_uses": [
+            "score_claim",
+            "promotion",
+            "rank_or_kill",
+            "exact_eval_dispatch_selection_without_cuda_confirmation",
+        ],
+        "thresholds": {},
+        "coverage": {"row_count": row_count},
+        "prediction_evaluations": [],
+        "passing_prediction_fields": [],
+    }
+
+
 def build_next_probe_plan(
     dataset: dict[str, Any],
     *,
@@ -1399,6 +1633,13 @@ def build_next_probe_plan(
     rows = dataset.get("rows")
     if not isinstance(rows, list):
         raise ScorerResponseDatasetError("dataset rows[] missing")
+    try:
+        response_validation_gate = build_scorer_response_validation_gate(dataset)
+    except ScorerResponseDatasetError as exc:
+        response_validation_gate = _blocked_response_validation_gate(
+            str(exc),
+            row_count=len(rows),
+        )
     best_total = None
     best_scorer = None
     best_margin = None
@@ -1440,6 +1681,18 @@ def build_next_probe_plan(
                 "rule": "do_not_widen_coordinate_sparse_residual_sidecar",
                 "reason": "observed scorer gains cannot pay for current residual payload bytes",
                 "best_byte_budget_margin": best_margin,
+            }
+        )
+    if not response_validation_gate["passed"]:
+        prohibitions.append(
+            {
+                "rule": "do_not_use_response_dataset_for_exact_eval_selection",
+                "reason": (
+                    "response dataset has not passed family-diverse held-out "
+                    "correlation validation"
+                ),
+                "gate_status": response_validation_gate["status"],
+                "blockers": response_validation_gate["blockers"],
             }
         )
 
@@ -1644,6 +1897,7 @@ def build_next_probe_plan(
         "best_total_row": best_total,
         "best_scorer_row": best_scorer,
         "best_byte_budget_margin_row": best_margin,
+        "response_validation_gate": response_validation_gate,
         "null_byte_priority_weights": null_byte_priority_weights,
         "magic_codec_seed_boundary": magic_codec_seed_boundary,
         "mlx_torch_parity_sweep_gate": mlx_torch_parity_sweep_gate,
@@ -1794,6 +2048,48 @@ def render_markdown(dataset: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_validation_gate_markdown(gate: dict[str, Any]) -> str:
+    coverage = gate.get("coverage") if isinstance(gate.get("coverage"), dict) else {}
+    thresholds = gate.get("thresholds") if isinstance(gate.get("thresholds"), dict) else {}
+    lines = [
+        "# Scorer Response Validation Gate",
+        "",
+        f"- Status: `{gate.get('status')}`",
+        f"- Score claim: `{gate.get('score_claim')}`",
+        f"- Allowed use: `{gate.get('allowed_use')}`",
+        f"- Blockers: `{gate.get('blockers')}`",
+        "",
+        "## Thresholds",
+        "",
+        f"- Min rows: `{thresholds.get('min_rows')}`",
+        f"- Min families: `{thresholds.get('min_families')}`",
+        f"- Required folds: `{thresholds.get('required_folds')}`",
+        f"- Target: `{thresholds.get('target')}`",
+        f"- Min Pearson r: `{thresholds.get('min_pearson_r')}`",
+        "",
+        "## Coverage",
+        "",
+        f"- Rows: `{coverage.get('row_count')}`",
+        f"- Family counts: `{coverage.get('family_counts')}`",
+        f"- Fold counts: `{coverage.get('fold_counts')}`",
+        f"- Families with required folds: `{coverage.get('families_with_required_folds')}`",
+        "",
+        "## Prediction Fields",
+        "",
+    ]
+    for item in gate.get("prediction_evaluations", []):
+        if not isinstance(item, dict):
+            continue
+        lines.append(
+            "- "
+            f"`{item.get('field')}` n={item.get('present_pair_count')} "
+            f"overall_r={item.get('overall_pearson_r')} "
+            f"passed={item.get('passed')}"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
     lines = [
         "# LL Scorer Response Next-Probe Plan",
@@ -1804,6 +2100,19 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
         f"- Best byte-budget margin row: `{plan.get('best_byte_budget_margin_row')}`",
         "",
     ]
+    validation_gate = plan.get("response_validation_gate")
+    if isinstance(validation_gate, dict):
+        coverage = (
+            validation_gate.get("coverage")
+            if isinstance(validation_gate.get("coverage"), dict)
+            else {}
+        )
+        lines.extend(["## Response Validation Gate", ""])
+        lines.append(f"- Status: `{validation_gate.get('status')}`")
+        lines.append(f"- Rows: `{coverage.get('row_count')}`")
+        lines.append(f"- Families: `{coverage.get('family_counts')}`")
+        lines.append(f"- Blockers: `{validation_gate.get('blockers')}`")
+        lines.append("")
     null_priority = plan.get("null_byte_priority_weights")
     if isinstance(null_priority, dict):
         lines.extend(["## Null-Byte Matrix Priority", ""])
