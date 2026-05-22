@@ -27,6 +27,9 @@ from tac.optimization.scorer_response_dataset import (
     render_next_probe_plan_markdown,
     render_validation_gate_markdown,
 )
+from tac.optimization.scorer_response_prediction import (
+    attach_out_of_fold_linear_predictions,
+)
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -969,6 +972,29 @@ def test_scorer_response_validation_gate_passes_family_diverse_heldout_predictio
         "mlx_scorer_response",
     }
     assert gate["passing_prediction_fields"] == ["predicted_delta_vs_baseline_score"]
+
+
+def test_out_of_fold_linear_predictions_can_satisfy_validation_gate() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response", "mlx_decoder_q"),
+        rows_per_fold=8,
+    )
+    for row in dataset["rows"]:
+        family_offset = 0.002 if row["family"] == "mlx_decoder_q" else 0.0
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        pair_start = fold * 8 + offset
+        row["source_pair_window"] = [pair_start, pair_start + 1]
+        row["delta_vs_baseline_score"] = 0.1 + 0.003 * pair_start + family_offset
+
+    predicted = attach_out_of_fold_linear_predictions(dataset)
+    gate = build_scorer_response_validation_gate(predicted)
+
+    assert predicted["score_claim"] is False
+    assert predicted["prediction_fit"]["score_claim"] is False
+    assert predicted["prediction_fit"]["feature_set"] == "pair_family_archive_linear_v1"
+    assert gate["status"] == "passed"
+    assert gate["passing_prediction_fields"] == ["ll_predicted_delta_vs_baseline_score"]
 
 
 def test_scorer_response_validation_gate_blocks_mixed_axis_targets() -> None:
