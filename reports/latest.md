@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-22T15:02:28Z
-from_state_hash: frontier_scan_dqs1_gap_uleb_exact_cpu_cuda_20260522T1502Z
-regenerated_by: codex:dqs1_gap_uleb_exact_cpu_recovery_20260522
-last_refreshed_at: 2026-05-22T15:02:28Z
-last_refreshed_by: codex:dqs1_exact_recovery_and_gap_uleb_20260522
-last_refreshed_head: a12c231f9
+generated_at: 2026-05-22T18:17:25Z
+from_state_hash: frontier_scan_dqs1_pairset_drop_one_rank021_exact_cpu_20260522T1817Z
+regenerated_by: codex:dqs1_pairset_drop_one_rank021_exact_cpu_recovery_20260522
+last_refreshed_at: 2026-05-22T18:17:25Z
+last_refreshed_by: codex:dqs1_pairset_drop_one_rank021_exact_cpu_recovery_20260522
+last_refreshed_head: b792915f1
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
@@ -42,7 +42,7 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-05-22T15:02Z
+### Current best - last rechecked 2026-05-22T18:17Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
