@@ -20,12 +20,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 
 SCHEMA = "scorer_response_dataset.v1"
 ROW_SCHEMA = "scorer_response_row.v1"
 NULL_BYTE_PRIORITY_SCHEMA = "ll_null_byte_priority_weights.v1"
 CONSUMER_ROUTING_SCHEMA = "scorer_response_dataset_consumer_routing.v1"
+MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
 
 
 _FALSE_AUTHORITY_FIELDS = (
@@ -301,6 +303,8 @@ def _score_terms(*, archive_bytes: int | None, pose: float | None, seg: float | 
 
 
 def _candidate_items(path: Path, payload: dict[str, Any]) -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    if payload.get("schema_version") == MLX_SCORER_RESPONSE_SCHEMA:
+        return [_mlx_scorer_response_candidate_item(path, payload)]
     if isinstance(payload.get("candidates"), list):
         out: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
         for index, candidate in enumerate(payload["candidates"]):
@@ -320,6 +324,177 @@ def _candidate_items(path: Path, payload: dict[str, Any]) -> list[tuple[str, dic
     raise ScorerResponseDatasetError(f"{path}: no candidate or candidates[] payload found")
 
 
+def _false_authority_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "score_claim": payload.get("score_claim"),
+        "score_claim_valid": payload.get("score_claim_valid"),
+        "promotion_eligible": payload.get("promotion_eligible"),
+        "ready_for_exact_eval_dispatch": payload.get("ready_for_exact_eval_dispatch"),
+        "rank_or_kill_eligible": payload.get("rank_or_kill_eligible"),
+        "promotable": payload.get("promotable", False),
+        "evidence_grade": payload.get("evidence_grade"),
+    }
+
+
+def _require_mlx_response_false_authority(payload: dict[str, Any], *, label: str) -> None:
+    for field in (
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+    ):
+        if payload.get(field) is not False:
+            raise ScorerResponseDatasetError(f"{label} {field} must be explicit false")
+    if payload.get("promotable", False) is not False:
+        raise ScorerResponseDatasetError(f"{label} promotable must be false")
+    if payload.get("candidate_generation_only") is not True:
+        raise ScorerResponseDatasetError(f"{label} candidate_generation_only must be true")
+    if payload.get("requires_exact_eval_before_promotion") is not True:
+        raise ScorerResponseDatasetError(
+            f"{label} requires_exact_eval_before_promotion must be true"
+        )
+    if payload.get("evidence_grade") != EVIDENCE_GRADE_MLX:
+        raise ScorerResponseDatasetError(
+            f"{label} evidence_grade must be {EVIDENCE_GRADE_MLX}"
+        )
+    if payload.get("evidence_tag") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError(f"{label} evidence_tag must be {EVIDENCE_TAG_MLX}")
+    if payload.get("score_axis") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError(f"{label} score_axis must be {EVIDENCE_TAG_MLX}")
+    if payload.get("canonical_score_source") != "score_recomputed_from_components":
+        raise ScorerResponseDatasetError(
+            f"{label} canonical_score_source must be score_recomputed_from_components"
+        )
+    _require_mlx_finite(payload, "canonical_score", label=label)
+    _require_mlx_finite(payload, "score_recomputed_from_components", label=label)
+    _require_mlx_finite(payload, "avg_posenet_dist", label=label)
+    _require_mlx_finite(payload, "avg_segnet_dist", label=label)
+    if not math.isclose(
+        float(payload["canonical_score"]),
+        float(payload["score_recomputed_from_components"]),
+        rel_tol=0.0,
+        abs_tol=1.0e-12,
+    ):
+        raise ScorerResponseDatasetError(
+            f"{label} canonical_score must match score_recomputed_from_components"
+        )
+    device_contract = payload.get("device_contract")
+    if not isinstance(device_contract, dict):
+        raise ScorerResponseDatasetError(f"{label} device_contract must be an object")
+    forbidden = device_contract.get("forbidden_uses")
+    if not isinstance(forbidden, list) or "score_claim" not in forbidden:
+        raise ScorerResponseDatasetError(
+            f"{label} device_contract.forbidden_uses must include score_claim"
+        )
+    cache_identity = payload.get("cache_identity")
+    if not isinstance(cache_identity, dict):
+        raise ScorerResponseDatasetError(f"{label} cache_identity must be an object")
+    if cache_identity.get("pair_indices_equal") is not True:
+        raise ScorerResponseDatasetError(f"{label} cache_identity.pair_indices_equal must be true")
+    for side in ("reference", "candidate"):
+        item = cache_identity.get(side)
+        if not isinstance(item, dict):
+            raise ScorerResponseDatasetError(f"{label} cache_identity.{side} must be an object")
+        archive_hashes_valid = all(
+            _is_sha256(str(item.get(key, "")))
+            for key in ("archive_sha256", "inflated_outputs_aggregate_sha256", "raw_sha256")
+        )
+        array_hashes = item.get("array_sha256")
+        array_hashes_valid = isinstance(array_hashes, dict) and all(
+            _is_sha256(str(array_hashes.get(key, "")))
+            for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb")
+        )
+        if side == "candidate" and not archive_hashes_valid:
+            raise ScorerResponseDatasetError(
+                f"{label} cache_identity.{side} archive/raw hashes must be sha256"
+            )
+        if side == "reference" and not archive_hashes_valid and not array_hashes_valid:
+            raise ScorerResponseDatasetError(
+                f"{label} cache_identity.{side} must include archive/raw hashes or array_sha256"
+            )
+        for key in ("archive_sha256", "inflated_outputs_aggregate_sha256", "raw_sha256"):
+            if item.get(key) is None:
+                continue
+            if not _is_sha256(str(item.get(key, ""))):
+                raise ScorerResponseDatasetError(
+                    f"{label} cache_identity.{side}.{key} must be sha256"
+                )
+        if isinstance(array_hashes, dict):
+            for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+                if not _is_sha256(str(array_hashes.get(key, ""))):
+                    raise ScorerResponseDatasetError(
+                        f"{label} cache_identity.{side}.array_sha256.{key} must be sha256"
+                    )
+
+
+def _require_mlx_finite(payload: dict[str, Any], key: str, *, label: str) -> None:
+    if _as_float(payload.get(key)) is None:
+        raise ScorerResponseDatasetError(f"{label} {key} must be finite")
+
+
+def _is_sha256(value: str) -> bool:
+    return len(value) == 64 and all(ch in "0123456789abcdefABCDEF" for ch in value)
+
+
+def _mlx_scorer_response_candidate_item(
+    path: Path,
+    payload: dict[str, Any],
+) -> tuple[str, dict[str, Any], dict[str, Any]]:
+    label = f"{path}:mlx_scorer_response"
+    _require_mlx_response_false_authority(payload, label=label)
+    candidate_id = str(
+        payload.get("run_id")
+        or f"mlx_pairs_{payload.get('start_pair')}_{payload.get('max_pairs')}_{payload.get('batch_pairs')}"
+        or path.stem
+    )
+    authority = _false_authority_from_payload(payload)
+    archive = {
+        "sha256": payload.get("archive_sha256"),
+        "bytes": payload.get("archive_size_bytes"),
+    }
+    raw_sha = payload.get("raw_sha256")
+    advisory = {
+        "canonical_score": payload.get("canonical_score"),
+        "archive_size_bytes": payload.get("archive_size_bytes"),
+        "avg_posenet_dist": payload.get("avg_posenet_dist"),
+        "avg_segnet_dist": payload.get("avg_segnet_dist"),
+        "axis": payload.get("score_axis") or payload.get("evidence_tag"),
+        "archive": archive,
+        "raw": {"sha256": raw_sha},
+        "cache_key": {"raw_sha256": raw_sha},
+        "blockers": [],
+    }
+    candidate = {
+        "candidate_id": candidate_id,
+        "advisory_eval": advisory,
+        "authority": authority,
+        "summary": {
+            "component": "mlx_scorer_response",
+            "pair_indices": payload.get("pair_window"),
+        },
+    }
+    parent = {
+        "schema": MLX_SCORER_RESPONSE_SCHEMA,
+        "schema_version": payload.get("schema_version"),
+        "producer": "tac.local_acceleration.mlx_scorer_response",
+        "authority": authority,
+        "evidence_grade": payload.get("evidence_grade"),
+        "evidence_tag": payload.get("evidence_tag"),
+        "hardware_substrate": payload.get("hardware_substrate"),
+        "batch_pairs": payload.get("batch_pairs"),
+        "n_samples": payload.get("n_samples"),
+        "pair_window": payload.get("pair_window"),
+        "start_pair": payload.get("start_pair"),
+        "max_pairs": payload.get("max_pairs"),
+        "elapsed_seconds": payload.get("elapsed_seconds"),
+        "components": payload.get("components"),
+        "cache_identity": payload.get("cache_identity"),
+        "device_contract": payload.get("device_contract"),
+    }
+    return candidate_id, candidate, parent
+
+
 def _family_for(path: Path, parent: dict[str, Any], candidate: dict[str, Any]) -> str:
     producer = str(parent.get("producer") or candidate.get("producer") or "")
     schema = str(parent.get("schema") or candidate.get("schema") or "")
@@ -331,6 +506,8 @@ def _family_for(path: Path, parent: dict[str, Any], candidate: dict[str, Any]) -
         or ""
     )
     source = f"{producer} {schema} {smoke_kind} {path}".lower()
+    if "mlx_scorer_response" in source:
+        return "mlx_scorer_response"
     if "distilled_vs_direct_scorer_paired_smoke" in source:
         return "distilled_vs_direct_scorer_paired_smoke"
     if "scorer_gradient" in source:
@@ -488,6 +665,18 @@ def normalize_response_row(
         "n_kept": _as_int(summary.get("n_kept") or cand_summary.get("n_kept") or plan.get("n_kept")),
         "component": summary.get("component") or cand_summary.get("component"),
         "pair_indices": summary.get("pair_indices") or cand_summary.get("pair_indices"),
+        "source_schema": parent.get("schema") or parent.get("schema_version"),
+        "source_evidence_grade": parent.get("evidence_grade") or authority.get("evidence_grade"),
+        "source_evidence_tag": parent.get("evidence_tag"),
+        "source_hardware_substrate": parent.get("hardware_substrate"),
+        "source_batch_pairs": _as_int(parent.get("batch_pairs") or candidate.get("batch_pairs")),
+        "source_n_samples": _as_int(parent.get("n_samples") or candidate.get("n_samples")),
+        "source_pair_window": parent.get("pair_window") or candidate.get("pair_window"),
+        "source_start_pair": _as_int(parent.get("start_pair") or candidate.get("start_pair")),
+        "source_max_pairs": _as_int(parent.get("max_pairs") or candidate.get("max_pairs")),
+        "source_elapsed_seconds": _as_float(parent.get("elapsed_seconds") or candidate.get("elapsed_seconds")),
+        "source_posenet_sha256": _get_path(parent, ("components", "posenet_sha256")),
+        "source_segnet_sha256": _get_path(parent, ("components", "segnet_sha256")),
         "target_raw_sha256": _get_path(candidate, ("inputs", "target_raw_sha256")),
         **local,
     }
@@ -999,6 +1188,33 @@ def build_next_probe_plan(
             "acceptance_gate": ">=50 rows with at least two families containing held-out folds 0..4",
         },
     ]
+    mlx_rows = [
+        row.get("row_id")
+        for row in rows
+        if isinstance(row, dict) and row.get("family") == "mlx_scorer_response"
+    ][:8]
+    if mlx_rows:
+        for probe in probes:
+            probe["priority"] = int(probe["priority"]) + 1
+        probes.insert(
+            0,
+            {
+                "probe_id": "ll_mlx_cpu_stable_response_harvest",
+                "priority": 1,
+                "class": "surrogate_training_data",
+                "rationale": (
+                    "Direct MLX scorer-response rows are now normalized as "
+                    "non-authoritative local signal; expand stable CPU windows "
+                    "before using MLX rows for surrogate fitting or spend filters."
+                ),
+                "input_rows": mlx_rows,
+                "acceptance_gate": (
+                    ">=50 MLX rows across stable CPU windows/families, all "
+                    "score_claim=false, with held-out correlation before any "
+                    "exact-eval dispatch selection"
+                ),
+            },
+        )
     null_byte_priority_weights = None
     if null_byte_matrix is not None:
         null_byte_priority_weights = build_null_byte_priority_weights(

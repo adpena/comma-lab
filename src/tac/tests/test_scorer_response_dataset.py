@@ -4,19 +4,20 @@ import json
 import math
 from types import SimpleNamespace
 
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 from tac.optimization.scorer_response_dataset import (
     RATE_SCORE_PER_BYTE,
     ResponseBaseline,
     ScorerResponseDatasetError,
     build_magic_codec_seed_boundary,
-    build_null_byte_priority_weights,
     build_next_probe_plan,
+    build_null_byte_priority_weights,
     build_response_dataset,
     build_scorer_response_consumer_routing,
     normalize_legacy_response_dataset_authority,
-    render_next_probe_plan_markdown,
     render_markdown,
+    render_next_probe_plan_markdown,
 )
 
 
@@ -29,6 +30,73 @@ def _advisory(score: float, archive_bytes: int, pose: float, seg: float) -> dict
         "axis": "[macOS-CPU advisory test]",
         "archive": {"sha256": "a" * 64, "bytes": archive_bytes},
         "raw": {"sha256": "b" * 64},
+    }
+
+
+def _mlx_response_payload() -> dict:
+    return {
+        "schema_version": "mlx_scorer_response.v1",
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "hardware_substrate": {"device_type": "cpu"},
+        "batch_pairs": 2,
+        "start_pair": 16,
+        "max_pairs": 4,
+        "n_samples": 4,
+        "pair_window": [16, 20],
+        "elapsed_seconds": 3.0,
+        "canonical_score": 0.900001,
+        "score_recomputed_from_components": 0.900001,
+        "canonical_score_source": "score_recomputed_from_components",
+        "archive_size_bytes": 110,
+        "avg_posenet_dist": 0.004,
+        "avg_segnet_dist": 0.010,
+        "archive_sha256": "a" * 64,
+        "raw_sha256": "b" * 64,
+        "components": {
+            "posenet_sha256": "p" * 64,
+            "segnet_sha256": "s" * 64,
+        },
+        "cache_identity": {
+            "pair_indices_equal": True,
+            "reference": {
+                "archive_sha256": None,
+                "inflated_outputs_aggregate_sha256": None,
+                "raw_sha256": None,
+                "array_sha256": {
+                    "pair_indices": "0" * 64,
+                    "posenet_yuv6_pair": "1" * 64,
+                    "segnet_last_rgb": "2" * 64,
+                },
+            },
+            "candidate": {
+                "archive_sha256": "a" * 64,
+                "inflated_outputs_aggregate_sha256": "e" * 64,
+                "raw_sha256": "b" * 64,
+                "array_sha256": {
+                    "pair_indices": "0" * 64,
+                    "posenet_yuv6_pair": "3" * 64,
+                    "segnet_last_rgb": "4" * 64,
+                },
+            },
+        },
+        "device_contract": {
+            "forbidden_uses": [
+                "auth_eval",
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+            ],
+            "allowed_uses": ["local_mlx_training_gradient_shaping"],
+        },
     }
 
 
@@ -85,6 +153,97 @@ def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     assert row["local_pose_delta_sum"] == -0.25
     assert row["target_raw_sha256"] == "c" * 64
     assert row["holdout_fold"] in {0, 1, 2, 3, 4}
+
+
+def test_build_response_dataset_accepts_direct_mlx_scorer_response_payload(tmp_path) -> None:
+    path = tmp_path / "mlx_response.json"
+    path.write_text(json.dumps(_mlx_response_payload()), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+
+    assert dataset["score_claim"] is False
+    assert dataset["summary"]["family_counts"]["mlx_scorer_response"] == 1
+    row = dataset["rows"][0]
+    assert row["family"] == "mlx_scorer_response"
+    assert row["axis"] == EVIDENCE_TAG_MLX
+    assert row["authority_source_score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["advisory_score_report_derived"] == 0.900001
+    assert row["archive_bytes"] == 110
+    assert row["added_archive_bytes"] == 10
+    assert row["source_schema"] == "mlx_scorer_response.v1"
+    assert row["source_evidence_grade"] == EVIDENCE_GRADE_MLX
+    assert row["source_batch_pairs"] == 2
+    assert row["source_pair_window"] == [16, 20]
+    assert row["source_posenet_sha256"] == "p" * 64
+
+
+def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 1},
+            "rows": [
+                {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": "mlx-row-1",
+                    "family": "mlx_scorer_response",
+                    "delta_vs_baseline_score": 1.0e-6,
+                    "scorer_delta_vs_baseline": 1.0e-6,
+                    "byte_budget_margin_vs_break_even": None,
+                    **false_authority,
+                }
+            ],
+        }
+    )
+
+    assert plan["score_claim"] is False
+    assert plan["probes"][0]["probe_id"] == "ll_mlx_cpu_stable_response_harvest"
+    assert plan["probes"][0]["input_rows"] == ["mlx-row-1"]
+
+
+def test_build_response_dataset_rejects_mlx_scorer_response_false_authority_breach(
+    tmp_path,
+) -> None:
+    path = tmp_path / "mlx_response.json"
+    payload = _mlx_response_payload()
+    payload["score_claim"] = True
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+
+    assert dataset["rows"] == []
+    assert "score_claim must be explicit false" in dataset["skipped"][0]["reason"]
+
+
+def test_build_response_dataset_rejects_mlx_scorer_response_missing_cache_identity(
+    tmp_path,
+) -> None:
+    path = tmp_path / "mlx_response.json"
+    payload = _mlx_response_payload()
+    payload.pop("cache_identity")
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+
+    assert dataset["rows"] == []
+    assert "cache_identity must be an object" in dataset["skipped"][0]["reason"]
 
 
 def test_build_response_dataset_rejects_source_score_claim_true(tmp_path) -> None:
