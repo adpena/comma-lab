@@ -175,6 +175,39 @@ build, eval, guard, or dispatch decision.
 Avoid narrative-only loops. If blocked, record the blocker as an artifact or
 guardrail, choose the next highest-EV unblocked action, and continue.
 
+## Results Must Become System Intelligence — NON-NEGOTIABLE
+
+Operator standing directive 2026-05-22: "Instead of doing ad hoc analysis
+against the results, canonicalize and model and wire up and integrate and make
+the whole system smarter and more autonomous and dynamic."
+
+Every empirical result must be treated as training signal for the solver stack,
+not as an isolated explanation. When a run, sweep, eval, profile, public-frontier
+intake, bug finding, or negative result changes what the next action should be,
+the durable output is one or more of:
+
+- a typed canonical record, ledger row, or schema extension;
+- an updated model, posterior, acquisition rule, bit allocator, sensitivity map,
+  cathedral/autopilot consumer, or probe-disambiguator;
+- a planner/actuator wiring change that consumes the new signal automatically;
+- a regression test or strict guard that prevents future agents from losing the
+  signal or repeating the bug class;
+- a dated `.omx/research/` memo only when code/schema integration is not yet
+  possible, with the missing integration explicitly named.
+
+Ad hoc analysis is temporary scratch. Do not leave important observations trapped
+in chat, one-off notebooks, transient Markdown, or local operator intuition. If
+a result reveals pair/frame/pixel/byte marginal behavior, component-specific
+SegNet/PoseNet/rate tradeoffs, CPU/CUDA/MLX axis drift, scorer batching effects,
+hardware sensitivity, archive-grammar behavior, or dispatch economics, encode
+that behavior in the reusable planning surface that should consume it next.
+
+Canonicalization must not suppress substrate-optimal engineering. Use canonical
+helpers when they improve correctness, reuse, and automation; fork or extend
+them when the method's math, hardware behavior, or score surface demands it.
+The target is production-hardened, OSS-reusable, composable infrastructure whose
+autonomy improves after every result.
+
 ## Frontier Velocity And Anti-Conservatism — NON-NEGOTIABLE
 
 The default operating mode is aggressive frontier movement, not conservative

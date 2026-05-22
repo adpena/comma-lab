@@ -81,6 +81,40 @@ Sister of CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first" (when 
 
 Cross-reference: CASCADE COMPRESSION T3 symposium `d125af6c3` rev #2 + APPARATUS META-BUGS T3 symposium §12.5 + consolidating T3 symposium `council_t3_carmack_mvp_first_elevation_symposium_20260521`.
 
+## Results must become system intelligence — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator standing directive 2026-05-22: "Instead of doing ad hoc
+analysis against the results, canonicalize and model and wire up and integrate
+and make the whole system smarter and more autonomous and dynamic."
+
+Every result is feedback for the solver, not a standalone explanation. A useful
+analysis must usually leave behind a reusable surface: a typed ledger row,
+canonical schema, posterior/model update, acquisition rule, bit allocator hook,
+sensitivity-map contribution, cathedral/autopilot consumer, probe-disambiguator,
+planner/actuator wiring change, or regression guard. Markdown prose alone is
+acceptable only as a dated bridge artifact that names the missing code/schema
+integration and the consumer that should absorb it next.
+
+The contest scoring function is always part of the model: rate term, SegNet
+term, PoseNet term, eval loader, batching behavior, CPU/CUDA/MLX axis drift,
+hardware substrate, raw-output custody, archive grammar, and exact inflate
+runtime are coupled. Do not optimize bytes, frames, pairs, pixels, tensors,
+latents, or configs as independent ad hoc knobs. Model their component-specific
+marginal effects and feed those marginals into the next planner, sweep, dispatch
+ranker, or stop/continue rule.
+
+This rule complements UNIQUE-AND-COMPLETE-PER-METHOD: canonicalization is for
+preserving signal and increasing autonomy, not for forcing every substrate
+through the same helper when that suppresses score. Use, extend, or fork the
+canonical surface according to the method's math and measured behavior, then
+wire the result into the autonomous loop so the next agent inherits the improved
+system rather than a chat-only insight.
+
+Production standard: abstractions must be reusable, composable, testable,
+fail-closed on false authority, and clear enough for OSS review. A result that
+does not make the system smarter is incomplete until it is encoded, integrated,
+or explicitly tagged `research_only=true` with a concrete integration blocker.
+
 ## Long-burn score-lowering campaign default — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 When the operator says aggressive score lowering, no meat left on the bone, no
