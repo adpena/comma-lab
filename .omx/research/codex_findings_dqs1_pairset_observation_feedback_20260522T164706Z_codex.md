@@ -333,6 +333,71 @@ selector families with sufficient matching observations:
 - New recommended candidate: `pairset_drop_two_r028_021_p0257_0371`
 - New recommended action: `materialize_pairset_archive_and_run_local_controls`
 
+`pairset_drop_two_r028_021_p0257_0371` was recovered from the parallel CPU
+dispatch. It bought two bytes versus compact top32 but regressed on SegNet, so
+it is not a frontier move.
+
+- Modal result:
+  `experiments/results/modal_auth_eval_cpu/dqs1_pairset_drop_two_r028_021_p0257_0371_selective_decoderq_cpu_20260522T1804Z/contest_auth_eval.json`
+- Modal call id:
+  `fc-01KS8DZ3GCDWECP5P80DDGPBG1`
+- Exact score:
+  `0.1920296170981836` `[contest-CPU]`
+- Delta versus compact DQS1 top32 CPU frontier:
+  `+0.0000006682820937464751`
+- Component deltas: PoseNet `+0.0`, SegNet
+  `+0.0000019999999999989644`, rate `-0.0000013317179062443428`
+- Archive SHA-256:
+  `3ca6c7bb54e98ab04e7ca71a5c709e743bd467eb5ad4501ebe2f9a1dac22222c`
+- Archive bytes: `178558`
+- Runtime tree SHA-256:
+  `af0d5587d0a6c25eb66cd411ebef0797b0ade9a82e1de7271f39d54b73d328fe`
+- Inflated aggregate SHA-256:
+  `fe5d3d0a9511ce2e776aeb96ff765f2993be92ec5f67af6b2e9e23622bd2c7e6`
+
+`pairset_drop_one_rank021_pair0371` was materialized, locality-checked,
+dispatched CPU-first, and recovered cleanly. It is a new exact
+`[contest-CPU]` frontier by one charged archive byte with unchanged rounded
+PoseNet and SegNet components versus compact top32.
+
+- Locality report:
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_drop_one_rank021_pair0371_materialization_20260522T180446Z/locality_controls.json`
+- Archive SHA-256:
+  `7a0da5d0fc327cba3f7d1387a544fd5ce5f05bc56ecc8e12cd5097141672f4fe`
+- Archive bytes: `178559`
+- Selected pairs:
+  `[26, 59, 68, 98, 109, 112, 134, 151, 167, 229, 242, 257, 259, 296, 320, 327, 376, 378, 412, 430, 440, 459, 467, 479, 492, 496, 501, 520, 544, 555, 588]`
+- Selected frame mismatch count: `0`
+- Unselected frame mismatch count: `0`
+- Modal result:
+  `experiments/results/modal_auth_eval_cpu/dqs1_pairset_drop_one_rank021_pair0371_selective_decoderq_cpu_20260522T180446Z/contest_auth_eval.json`
+- Modal call id:
+  `fc-01KS8E07E7MJVKXCQ0WW26WQZH`
+- Exact score:
+  `0.19202828295713675` `[contest-CPU]`
+- Delta versus compact DQS1 top32 CPU frontier:
+  `-0.0000006658589531138848`
+- Component deltas: PoseNet `+0.0`, SegNet `+0.0`, rate
+  `-0.0000006658589531221714`
+- Runtime tree SHA-256:
+  `da4a69cb7412cd879e460ed0ffe3ad9d48f2b1aa73215696ce8de492b7dac4b4`
+- Inflated aggregate SHA-256:
+  `abd960605e57a3f1a6a8fe8b21ebfd4ff4d50cd15300482d8658b3d53e63ddb5`
+
+The observation ledger now has `10` exact CPU calibration rows, including the
+new drop-two and drop-one outcomes. The latest refreshed observation-aware
+portfolio is:
+
+- `experiments/results/cross_family_candidate_portfolio/20260522T181725Z_observed_pairsets_new_frontier/portfolio.json`
+- `experiments/results/cross_family_candidate_portfolio/20260522T181725Z_observed_pairsets_new_frontier/portfolio.md`
+- `experiments/results/cross_family_candidate_portfolio/20260522T181725Z_observed_pairsets_new_frontier/action_summary.json`
+- Model: selector-scoped linear selected-pair-count prior on `contest_cpu`;
+  active selector kind `diversity_spaced`, selected-pair identity verified for
+  all `9` candidate-id matches in the acquisition surface, false-authority
+  fields preserved.
+- New recommended candidate: `pairset_drop_one_rank010_pair0376`
+- New recommended action: `materialize_pairset_archive_and_run_local_controls`
+
 ## Verification
 
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py -q`
@@ -354,6 +419,9 @@ selector families with sufficient matching observations:
 - `tools/recover_modal_auth_eval.py` on k024 Modal CPU call `fc-01KS8C4SX0TQ5G50VE7Z6M47PQ`
 - `tools/run_decoder_q_selective_runtime_locality_controls.py` on drop-one rank013 pair0327
 - `tools/recover_modal_auth_eval.py` on drop-one rank013 pair0327 Modal CPU call `fc-01KS8CRN8VP339K8BQKAM6BA4H`
+- `tools/recover_modal_auth_eval.py` on drop-two r028/r021 Modal CPU call `fc-01KS8DZ3GCDWECP5P80DDGPBG1`
+- `tools/run_decoder_q_selective_runtime_locality_controls.py` on drop-one rank021 pair0371
+- `tools/recover_modal_auth_eval.py` on drop-one rank021 pair0371 Modal CPU call `fc-01KS8E07E7MJVKXCQ0WW26WQZH`
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_mlx_dynamic_sweep_observations.py -q`
 - `.venv/bin/python -m pytest src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py -q`
 - `.venv/bin/ruff check src/tac/optimization/cross_family_candidate_portfolio.py src/tac/optimization/mlx_dynamic_sweep_observations.py tools/plan_cross_family_candidate_portfolio.py src/tac/tests/test_cross_family_candidate_portfolio.py`
@@ -375,4 +443,8 @@ selector families with sufficient matching observations:
 - k024 now has exact `[contest-CPU]` evidence only, not CUDA promotion
   evidence.
 - drop-one rank013 pair0327 now has exact `[contest-CPU]` evidence only, not
+  CUDA promotion evidence.
+- drop-two r028/r021 now has exact `[contest-CPU]` evidence only, not CUDA
+  promotion evidence.
+- drop-one rank021 pair0371 now has exact `[contest-CPU]` evidence only, not
   CUDA promotion evidence.

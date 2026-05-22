@@ -8,18 +8,22 @@ last_refreshed_head: a12c231f9
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
-  superseded on the contest-CPU axis by the compact gap-ULEB DQS1 archive at
-  0.19202894881608987. MLX remains non-authoritative local research signal.
-  The compact gap-ULEB packet passed raw-output locality and exact Modal
-  recovery on both CPU and CUDA; CPU improves the frontier, CUDA regresses.
+  superseded on the contest-CPU axis by the compact gap-ULEB DQS1 archive, then
+  by the pairset drop-one rank021 DQS1 archive at 0.19202828295713675. MLX
+  remains non-authoritative local research signal. The compact gap-ULEB packet
+  passed raw-output locality and exact Modal recovery on both CPU and CUDA; CPU
+  improves the frontier, CUDA regresses.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
 
-> **2026-05-22 refresh note**: compact DQS1 top32 `sorted_gap_uleb` exact
-> Modal recovery moved the scanner-derived `[contest-CPU]` best to
-> `0.19202894881608987`. The same archive regresses on `[contest-CUDA T4]`
-> at `0.22619043540195719`, so this is a CPU-axis frontier move only.
+> **2026-05-22 refresh note**: DQS1 pairset
+> `pairset_drop_one_rank021_pair0371` exact Modal CPU recovery moved the
+> scanner-derived `[contest-CPU]` best to `0.19202828295713675`, improving the
+> compact top32 gap-ULEB anchor by one charged byte with unchanged rounded
+> SegNet/PoseNet components. The compact top32 archive regresses on
+> `[contest-CUDA T4]` at `0.22619043540195719`, so this is a CPU-axis frontier
+> move only.
 > Historical roadmap sections below remain retained for context; use `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
 > detailed queue routing.
@@ -42,7 +46,7 @@ last_refreshed_note: |
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
-| **`[contest-CPU Linux x86_64]`** | **0.1920289488** | `e12f5cfe93f9` | linux_x86_64_cpu | `lane_dqs1_top32_gap_uleb_selective_decoderq_exact_cpu_20260522` |
+| **`[contest-CPU Linux x86_64]`** | **0.1920282830** | `7a0da5d0fc32` | linux_x86_64_cpu | `lane_dqs1_pairset_drop_one_rank021_pair0371_selective_decoderq_exact_cpu_20260522` |
 | **`[contest-CUDA T4]`** | **0.2053300290** | `9cb989cef519` | linux_x86_64_t4 | `lane_pr106_format0d_latent_score_table_20260516_contest_cuda` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
@@ -201,22 +205,33 @@ last_refreshed_note: |
   locality and exact Modal `[contest-CPU]` eval. It scored
   `0.19202928295713673`, still a regression versus compact DQS1 top32 by
   `+0.00000033414104685935975`; component deltas were PoseNet `+0.0`, SegNet
-  `+0.000001000000000007939`, rate `-0.0000006658589531277626`. The refreshed
-  identity-verified, selector-scoped observation-response portfolio now
-  recommends `pairset_drop_one_rank021_pair0371` as the next fresh
-  local-control candidate. The response model is active only for
-  `diversity_spaced` rows, caps regression-only extrapolation at the best
-  observed score, and uses selected-pair identity matching before fitting.
+  `+0.000001000000000007939`, rate `-0.0000006658589531277626`.
+  `pairset_drop_two_r028_021_p0257_0371` also passed locality and exact Modal
+  `[contest-CPU]` eval, but regressed to `0.1920296170981836`; component deltas
+  were PoseNet `+0.0`, SegNet `+0.0000019999999999989644`, rate
+  `-0.0000013317179062443428`. `pairset_drop_one_rank021_pair0371`
+  (`7a0da5d0fc327cba3f7d1387a544fd5ce5f05bc56ecc8e12cd5097141672f4fe`,
+  `178559` bytes, pairs
+  `[26, 59, 68, 98, 109, 112, 134, 151, 167, 229, 242, 257, 259, 296, 320, 327, 376, 378, 412, 430, 440, 459, 467, 479, 492, 496, 501, 520, 544, 555, 588]`)
+  passed locality and exact Modal `[contest-CPU]` eval and is the new CPU
+  frontier at `0.19202828295713675`, improving compact DQS1 top32 by
+  `-0.0000006658589531138848`; component deltas were PoseNet `+0.0`, SegNet
+  `+0.0`, rate `-0.0000006658589531221714`. The refreshed identity-verified,
+  selector-scoped observation-response portfolio now recommends
+  `pairset_drop_one_rank010_pair0376` as the next fresh local-control
+  candidate. The response model is active only for `diversity_spaced` rows, caps
+  regression-only extrapolation at the best observed score, and requires
+  selected-pair identity matching before fitting.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
 **`[contest-CPU]`**:
 
-1. **0.1920289488** — `e12f5cfe93f9` — `lane_dqs1_top32_gap_uleb_selective_decoderq_exact_cpu_20260522`
-2. 0.1920289488 — `e12f5cfe93f9` — duplicate canonical anchor for current CPU frontier
-3. 0.1920502563 — `3c4e15bfe7ae` — `lane_dqs1_top32_selective_decoderq_exact_cpu_20260522`
-4. 0.1920502563 — `3c4e15bfe7ae` — duplicate canonical anchor for superseded raw-u16 DQS1 top32
-5. 0.1920513169 — `6bae0201fb08` — `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515`
+1. **0.1920282830** — `7a0da5d0fc32` — `lane_dqs1_pairset_drop_one_rank021_pair0371_selective_decoderq_exact_cpu_20260522`
+2. 0.1920289488 — `e12f5cfe93f9` — `lane_dqs1_top32_gap_uleb_selective_decoderq_exact_cpu_20260522`
+3. 0.1920289488 — `e12f5cfe93f9` — duplicate canonical anchor for superseded compact DQS1 top32
+4. 0.1920502563 — `3c4e15bfe7ae` — `lane_dqs1_top32_selective_decoderq_exact_cpu_20260522`
+5. 0.1920502563 — `3c4e15bfe7ae` — duplicate canonical anchor for superseded raw-u16 DQS1 top32
 
 **`[contest-CUDA T4]`**:
 
