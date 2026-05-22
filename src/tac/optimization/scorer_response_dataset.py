@@ -51,6 +51,7 @@ MLX_TORCH_PARITY_SWEEP_SCHEMA = "mlx_scorer_torch_parity_sweep.v1"
 MLX_SCORE_CALIBRATION_SCHEMA = "mlx_score_calibration.v1"
 LL_MLX_PRODUCTION_CONTRACT_GATE_SCHEMA = "ll_mlx_production_contract_gate.v1"
 DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
+SOURCE_IDENTITY_REFRESH_SCHEMA = "scorer_response_source_identity_refresh.v1"
 
 DEFAULT_RESPONSE_PREDICTION_FIELDS = (
     "predicted_delta_vs_baseline_score",
@@ -1067,6 +1068,136 @@ def build_windowed_mlx_response_dataset(
         "feature_correlations": feature_correlations(rows),
         "rows": rows,
         "skipped": skipped,
+    }
+
+
+def refresh_mlx_scorer_response_source_identity(
+    dataset: dict[str, Any],
+) -> dict[str, Any]:
+    """Refresh MLX scorer-response row identity from each row's source payload.
+
+    Historical derived datasets can retain prediction/features while losing
+    production-contract identity fields. This helper re-reads each MLX
+    scorer-response row's source payload, verifies non-authority, and fills only
+    matching or missing custody fields. Any mismatch is fail-closed.
+    """
+
+    rows = dataset.get("rows")
+    if not isinstance(rows, list):
+        raise ScorerResponseDatasetError("dataset rows[] missing")
+    out = copy.deepcopy(dataset)
+    out_rows = out["rows"]
+    blockers: list[str] = []
+    refreshed_row_ids: list[str] = []
+    updated_row_ids: list[str] = []
+    changed_field_count = 0
+    mlx_row_count = 0
+    required_fields = (
+        "archive_sha256",
+        "source_inflated_outputs_aggregate_sha256",
+        "source_batch_pairs",
+        "source_n_samples",
+        "source_pair_window",
+    )
+    for row in out_rows:
+        if not isinstance(row, dict) or not _is_mlx_scorer_response_row(row):
+            continue
+        mlx_row_count += 1
+        row_id = str(row.get("row_id") or "<unknown>")
+        source_path_value = row.get("source_path")
+        if not isinstance(source_path_value, str) or not source_path_value:
+            blockers.append(f"source_identity_source_path_missing:{row_id}")
+            continue
+        source_path = Path(source_path_value)
+        try:
+            payload = _load_json(source_path)
+            _require_mlx_response_false_authority(
+                payload,
+                label=f"{source_path}:source_identity_refresh",
+                allow_candidate_array_identity=True,
+            )
+        except (OSError, json.JSONDecodeError, ScorerResponseDatasetError) as exc:
+            blockers.append(f"source_identity_source_payload_invalid:{row_id}:{exc}")
+            continue
+
+        identity = _mlx_source_identity_fields(payload)
+        row_blockers_start = len(blockers)
+        row_changed = False
+        for field, value in identity.items():
+            if value is None:
+                continue
+            existing = row.get(field)
+            if existing not in (None, "") and existing != value:
+                blockers.append(f"source_identity_field_mismatch:{row_id}:{field}")
+                continue
+            if existing != value:
+                row[field] = copy.deepcopy(value)
+                row_changed = True
+                changed_field_count += 1
+        for field in required_fields:
+            value = row.get(field)
+            if value is None or value == "":
+                blockers.append(f"source_identity_required_field_missing:{row_id}:{field}")
+        if len(blockers) == row_blockers_start:
+            refreshed_row_ids.append(row_id)
+            if row_changed:
+                updated_row_ids.append(row_id)
+
+    passed = not blockers
+    out["source_identity_refresh"] = {
+        "schema": SOURCE_IDENTITY_REFRESH_SCHEMA,
+        "producer": TOOL,
+        "passed": passed,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "mlx_row_count": mlx_row_count,
+        "refreshed_row_count": len(refreshed_row_ids),
+        "updated_row_count": len(updated_row_ids),
+        "changed_field_count": changed_field_count,
+        "refreshed_row_ids_sample": refreshed_row_ids[:8],
+        "updated_row_ids_sample": updated_row_ids[:8],
+        "blockers": blockers,
+    }
+    summary = out.get("summary")
+    if isinstance(summary, dict):
+        summary["mlx_source_identity_refresh_passed"] = passed
+        summary["mlx_source_identity_refreshed_row_count"] = len(refreshed_row_ids)
+        summary["mlx_source_identity_updated_row_count"] = len(updated_row_ids)
+        summary["mlx_source_identity_changed_field_count"] = changed_field_count
+    return out
+
+
+def _mlx_source_identity_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "archive_sha256": payload.get("archive_sha256"),
+        "raw_sha256": payload.get("raw_sha256"),
+        "source_batch_pairs": _as_int(payload.get("batch_pairs")),
+        "source_n_samples": _as_int(payload.get("n_samples")),
+        "source_pair_window": payload.get("pair_window"),
+        "source_start_pair": _as_int(payload.get("start_pair")),
+        "source_max_pairs": _as_int(payload.get("max_pairs")),
+        "source_elapsed_seconds": _as_float(payload.get("elapsed_seconds")),
+        "source_inflated_outputs_aggregate_sha256": (
+            payload.get("inflated_outputs_aggregate_sha256")
+            or _get_path(
+                payload,
+                ("cache_identity", "candidate", "inflated_outputs_aggregate_sha256"),
+            )
+        ),
+        "source_candidate_cache_array_sha256": _get_path(
+            payload,
+            ("cache_identity", "candidate", "array_sha256"),
+        ),
+        "source_reference_cache_array_sha256": _get_path(
+            payload,
+            ("cache_identity", "reference", "array_sha256"),
+        ),
+        "source_posenet_sha256": _get_path(payload, ("components", "posenet_sha256")),
+        "source_segnet_sha256": _get_path(payload, ("components", "segnet_sha256")),
     }
 
 

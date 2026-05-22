@@ -33,6 +33,7 @@ from tac.optimization.scorer_response_dataset import (
     build_windowed_mlx_response_dataset,
     merge_scorer_response_datasets,
     normalize_legacy_response_dataset_authority,
+    refresh_mlx_scorer_response_source_identity,
     render_markdown,
     render_next_probe_plan_markdown,
     render_validation_gate_markdown,
@@ -1248,6 +1249,58 @@ def test_build_windowed_mlx_response_dataset_accepts_reference_cache_baseline_id
 
     assert dataset["summary"]["row_count"] == 1
     assert dataset["skipped"] == []
+
+
+def test_refresh_mlx_scorer_response_source_identity_restores_missing_fields(
+    tmp_path,
+) -> None:
+    source_path = tmp_path / "candidate.json"
+    source_path.write_text(json.dumps(_mlx_response_payload()), encoding="utf-8")
+    dataset = build_response_dataset(
+        [source_path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+    row = dataset["rows"][0]
+    row.pop("source_inflated_outputs_aggregate_sha256")
+    row.pop("source_candidate_cache_array_sha256")
+    row.pop("source_reference_cache_array_sha256")
+    row.pop("source_posenet_sha256")
+    row.pop("source_segnet_sha256")
+
+    refreshed = refresh_mlx_scorer_response_source_identity(dataset)
+
+    refresh = refreshed["source_identity_refresh"]
+    assert refresh["passed"] is True
+    assert refresh["mlx_row_count"] == 1
+    assert refresh["refreshed_row_count"] == 1
+    assert refresh["updated_row_count"] == 1
+    refreshed_row = refreshed["rows"][0]
+    assert refreshed_row["source_inflated_outputs_aggregate_sha256"] == "e" * 64
+    assert refreshed_row["source_candidate_cache_array_sha256"] == {
+        "pair_indices": "0" * 64,
+        "posenet_yuv6_pair": "3" * 64,
+        "segnet_last_rgb": "4" * 64,
+    }
+    assert refreshed["summary"]["mlx_source_identity_refresh_passed"] is True
+
+
+def test_refresh_mlx_scorer_response_source_identity_blocks_mismatch(tmp_path) -> None:
+    source_path = tmp_path / "candidate.json"
+    source_path.write_text(json.dumps(_mlx_response_payload()), encoding="utf-8")
+    dataset = build_response_dataset(
+        [source_path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+    dataset["rows"][0]["archive_sha256"] = "b" * 64
+
+    refreshed = refresh_mlx_scorer_response_source_identity(dataset)
+
+    refresh = refreshed["source_identity_refresh"]
+    assert refresh["passed"] is False
+    assert (
+        f"source_identity_field_mismatch:{dataset['rows'][0]['row_id']}:archive_sha256"
+        in refresh["blockers"]
+    )
 
 
 def test_build_windowed_mlx_response_dataset_skips_missing_window_baseline(tmp_path) -> None:
