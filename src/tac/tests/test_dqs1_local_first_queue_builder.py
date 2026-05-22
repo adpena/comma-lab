@@ -130,6 +130,8 @@ def _write_eureka_signal(
     advisory: Path,
     archive_sha: str,
     local_score: float = 0.2,
+    eureka_trigger: bool = False,
+    recommended_action: str = "observe_only",
 ) -> Path:
     signal = (
         repo
@@ -149,8 +151,8 @@ def _write_eureka_signal(
                 "target_axis": "contest-CPU",
                 "local_score": local_score,
                 "auth_frontier_score": 0.192028,
-                "eureka_trigger": False,
-                "recommended_action": "observe_only",
+                "eureka_trigger": eureka_trigger,
+                "recommended_action": recommended_action,
                 "source_artifact": str(advisory),
             }
         )
@@ -186,6 +188,24 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
         for step in experiment["steps"]
         for condition in step["postconditions"]
     )
+
+
+def test_dqs1_queue_builder_refuses_to_skip_positive_eureka_candidate(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
+        eureka_trigger=True,
+        recommended_action="dispatch_exact_auth_anchor",
+    )
+
+    with pytest.raises(ExperimentQueueError, match="requests exact auth dispatch"):
+        build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
 
 
 def test_dqs1_queue_builder_does_not_skip_without_eureka_signal(

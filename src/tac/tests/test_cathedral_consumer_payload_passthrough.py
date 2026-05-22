@@ -104,7 +104,7 @@ def test_cathedral_consumer_payload_rejects_rank_or_promote_authority() -> None:
 def test_cathedral_consumer_payload_rejects_nested_authority() -> None:
     with pytest.raises(
         ValueError,
-        match=r"optimizer_recipe\.ready_for_exact_eval_dispatch=true",
+        match=r"optimizer_recipe\.ready_for_exact_eval_dispatch=truthy",
     ):
         _coerce_consumer_payload(
             {

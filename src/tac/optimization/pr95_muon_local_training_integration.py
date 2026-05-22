@@ -20,6 +20,7 @@ from tac.optimization.optimizer_training_signal_bridge import (
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     auth_bridge_score_rankable,
+    require_no_truthy_authority_fields,
 )
 
 SCHEMA = "pr95_local_training_probe_manifest_v1"
@@ -143,6 +144,10 @@ def validate_pr95_local_training_manifest(payload: Mapping[str, Any]) -> None:
     for key in REQUIRED_FALSE_AUTHORITY_FIELDS:
         if key in bridge and bridge.get(key) is not False:
             raise PR95MuonLocalTrainingIntegrationError(f"auth_eval_bridge.{key} must be false")
+    try:
+        require_no_truthy_authority_fields(payload, context="pr95_local_training_manifest")
+    except ValueError as exc:
+        raise PR95MuonLocalTrainingIntegrationError(str(exc)) from exc
 
 
 def adapt_pr95_local_training_manifest_to_candidate(

@@ -5,6 +5,7 @@ import pytest
 
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
+    auth_bridge_score_rankable,
     require_no_truthy_authority_fields,
     truthy_authority_field_violations,
     validate_proxy_candidate,
@@ -35,10 +36,10 @@ def test_consumer_payload_authority_validator_rejects_truthy_fields() -> None:
     violations = truthy_authority_field_violations(payload)
 
     assert violations == [
-        "score_claim_valid=true",
-        "dispatch_packet_ready=true",
+        "score_claim_valid=truthy",
+        "dispatch_packet_ready=truthy",
     ]
-    with pytest.raises(ValueError, match="score_claim_valid=true"):
+    with pytest.raises(ValueError, match="score_claim_valid=truthy"):
         require_no_truthy_authority_fields(payload, context="fixture")
 
 
@@ -57,13 +58,33 @@ def test_consumer_payload_authority_validator_recurses_into_nested_payloads() ->
     violations = truthy_authority_field_violations(payload)
 
     assert violations == [
-        "optimizer_recipe.ready_for_exact_eval_dispatch=true",
-        "candidate_payloads[0].promotable=true",
+        "optimizer_recipe.ready_for_exact_eval_dispatch=truthy",
+        "candidate_payloads[0].promotable=truthy",
     ]
     with pytest.raises(
         ValueError,
-        match=r"optimizer_recipe\.ready_for_exact_eval_dispatch=true",
+        match=r"optimizer_recipe\.ready_for_exact_eval_dispatch=truthy",
     ):
+        require_no_truthy_authority_fields(payload, context="fixture")
+
+
+def test_consumer_payload_authority_validator_rejects_string_and_numeric_truthy() -> None:
+    payload = {
+        "score_claim_valid": "true",
+        "dispatch_packet_ready": 1,
+        "promotion_eligible": "yes",
+        "rank_or_kill_eligible": "0",
+        "domain_payload": {"ok": True},
+    }
+
+    violations = truthy_authority_field_violations(payload)
+
+    assert violations == [
+        "score_claim_valid=truthy",
+        "dispatch_packet_ready=truthy",
+        "promotion_eligible=truthy",
+    ]
+    with pytest.raises(ValueError, match="promotion_eligible=truthy"):
         require_no_truthy_authority_fields(payload, context="fixture")
 
 
@@ -75,4 +96,22 @@ def test_consumer_payload_authority_validator_allows_false_or_missing() -> None:
             "domain_payload": {"ok": True},
         },
         context="fixture",
+    )
+
+
+def test_auth_bridge_score_rankable_accepts_contest_cpu_gha_axis_variants() -> None:
+    assert auth_bridge_score_rankable(
+        {"score_comparable": True, "score_axis": "contest_cpu_gha"}
+    )
+    assert auth_bridge_score_rankable(
+        {"score_comparable": True, "score_axis": "[contest-CPU GHA Linux x86_64]"}
+    )
+    assert auth_bridge_score_rankable(
+        {"score_comparable": True, "score_axis": "contest-cpu-linux-x86-64-modal"}
+    )
+    assert not auth_bridge_score_rankable(
+        {"score_comparable": False, "score_axis": "[contest-CPU GHA Linux x86_64]"}
+    )
+    assert not auth_bridge_score_rankable(
+        {"score_comparable": True, "score_axis": "macOS-CPU advisory"}
     )

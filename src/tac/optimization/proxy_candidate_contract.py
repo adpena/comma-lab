@@ -8,6 +8,7 @@ they can rank planning rows and warm-start exact work, never promote scores.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -45,8 +46,16 @@ CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS: tuple[str, ...] = (
 CONTEST_AUTH_SCORE_AXES: frozenset[str] = frozenset(
     {
         "contest-cpu",
+        "contest-cpu-gha",
+        "contest-cpu-gha-linux-x86-64",
+        "contest-cpu-linux-x86-64",
         "contest-cuda",
     }
+)
+CONTEST_AUTH_SCORE_AXIS_PREFIXES: tuple[str, ...] = (
+    "contest-cpu-gha-",
+    "contest-cpu-linux-x86-64",
+    "contest-cuda-",
 )
 
 PROXY_TARGET_MODES = ["contest_exact_eval_planning"]
@@ -124,23 +133,27 @@ def validate_proxy_candidate(row: Mapping[str, Any]) -> list[str]:
 
 
 def _normalized_axis(value: Any) -> str:
-    return (
-        str(value or "")
-        .strip()
-        .strip("[]")
-        .lower()
-        .replace("_", "-")
-        .replace(" ", "-")
-    )
+    text = str(value or "").strip().strip("[]").lower()
+    return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
 
 
 def auth_bridge_score_rankable(bridge: Mapping[str, Any]) -> bool:
     """Return true only for comparable contest-axis auth bridge scores."""
 
-    return (
-        bridge.get("score_comparable") is True
-        and _normalized_axis(bridge.get("score_axis")) in CONTEST_AUTH_SCORE_AXES
-    )
+    if bridge.get("score_comparable") is not True:
+        return False
+    axis = _normalized_axis(bridge.get("score_axis"))
+    return axis in CONTEST_AUTH_SCORE_AXES or axis.startswith(CONTEST_AUTH_SCORE_AXIS_PREFIXES)
+
+
+def _authority_truthy(value: Any) -> bool:
+    if value is True:
+        return True
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return False
 
 
 def truthy_authority_field_violations(
@@ -166,8 +179,8 @@ def truthy_authority_field_violations(
             for key, inner in value.items():
                 key_text = str(key)
                 next_path = f"{path}.{key_text}" if path else key_text
-                if key_text in field_set and inner is True:
-                    violations.append(f"{next_path}=true")
+                if key_text in field_set and _authority_truthy(inner):
+                    violations.append(f"{next_path}=truthy")
                 visit(inner, next_path)
         elif isinstance(value, list | tuple):
             for index, inner in enumerate(value):
@@ -193,6 +206,7 @@ def require_no_truthy_authority_fields(
 __all__ = [
     "CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS",
     "CONTEST_AUTH_SCORE_AXES",
+    "CONTEST_AUTH_SCORE_AXIS_PREFIXES",
     "PROXY_DEPLOYMENT_TARGET",
     "PROXY_DISPATCH_BLOCKERS",
     "PROXY_FALSE_AUTHORITY_FIELDS",

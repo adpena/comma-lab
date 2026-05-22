@@ -113,6 +113,20 @@ def test_pr95_manifest_adapter_rejects_truthy_authority() -> None:
         validate_pr95_local_training_manifest(payload)
 
 
+def test_pr95_manifest_adapter_rejects_nested_truthy_authority() -> None:
+    payload = _manifest()
+    payload["optimizer_recipe"] = {
+        "id": "unsafe",
+        "ready_for_exact_eval_dispatch": 1,
+    }
+
+    with pytest.raises(
+        PR95MuonLocalTrainingIntegrationError,
+        match=r"optimizer_recipe\.ready_for_exact_eval_dispatch=truthy",
+    ):
+        validate_pr95_local_training_manifest(payload)
+
+
 def test_pr95_manifest_adapter_emits_consumer_payload_for_cathedral_and_mlx_sweep(
     tmp_path: Path,
 ) -> None:

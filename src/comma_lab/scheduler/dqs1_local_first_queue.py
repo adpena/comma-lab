@@ -289,7 +289,7 @@ def _candidate_completed_locally(
     digest = sha256(expected_archive_path.read_bytes()).hexdigest()
     if digest != archive_sha:
         return False
-    return _candidate_eureka_signal_recorded(
+    eureka_action = _candidate_eureka_signal_action(
         repo_root=repo_root,
         candidate_id=candidate_id,
         advisory_path=advisory_path,
@@ -297,9 +297,15 @@ def _candidate_completed_locally(
         archive_sha=archive_sha,
         local_score=score,
     )
+    if eureka_action == "dispatch_exact_auth_anchor":
+        raise ExperimentQueueError(
+            f"{candidate_id}: local CPU drift/eureka signal requests exact auth dispatch; "
+            "refusing to reroute the local-first queue past this candidate"
+        )
+    return eureka_action == "observe_only"
 
 
-def _candidate_eureka_signal_recorded(
+def _candidate_eureka_signal_action(
     *,
     repo_root: Path,
     candidate_id: str,
@@ -307,10 +313,10 @@ def _candidate_eureka_signal_recorded(
     advisory: dict[str, Any],
     archive_sha: str,
     local_score: float,
-) -> bool:
+) -> str | None:
     research_root = repo_root / ".omx" / "research"
     if not research_root.exists():
-        return False
+        return None
     expected_advisory = advisory_path.resolve(strict=False)
     for signal_path in sorted(
         research_root.glob(f"local_cpu_contest_drift_eureka_{candidate_id}_*.json"),
@@ -351,15 +357,18 @@ def _candidate_eureka_signal_recorded(
             continue
         if signal.get("target_axis") != "contest-CPU":
             continue
-        if signal.get("eureka_trigger") not in {True, False}:
-            continue
-        if signal.get("recommended_action") not in {
+        eureka_trigger = signal.get("eureka_trigger")
+        recommended_action = signal.get("recommended_action")
+        if eureka_trigger is False and recommended_action == "observe_only":
+            return "observe_only"
+        if eureka_trigger is True and recommended_action == "dispatch_exact_auth_anchor":
+            return "dispatch_exact_auth_anchor"
+        if eureka_trigger not in {True, False} or recommended_action not in {
             "observe_only",
             "dispatch_exact_auth_anchor",
         }:
             continue
-        return True
-    return False
+    return None
 
 
 def _lane_date_from_summary_path(action_summary_path: Path) -> str:

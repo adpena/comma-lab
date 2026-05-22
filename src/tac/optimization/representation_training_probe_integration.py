@@ -22,6 +22,7 @@ from tac.optimization.optimizer_training_signal_bridge import (
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     auth_bridge_score_rankable,
+    require_no_truthy_authority_fields,
 )
 
 SCHEMA = "representation_training_probe_manifest_v1"
@@ -148,6 +149,13 @@ def validate_representation_training_manifest(payload: Mapping[str, Any]) -> Non
     _reject_truthy_authority(payload)
     bridge = _mapping(payload.get("auth_eval_bridge"))
     _reject_truthy_authority(bridge, prefix="auth_eval_bridge")
+    try:
+        require_no_truthy_authority_fields(
+            payload,
+            context="representation_training_manifest",
+        )
+    except ValueError as exc:
+        raise RepresentationTrainingProbeIntegrationError(str(exc)) from exc
     for attr in ("candidate_id", "representation_family", "substrate_family"):
         if not str(payload.get(attr) or "").strip():
             raise RepresentationTrainingProbeIntegrationError(f"{attr} is required")

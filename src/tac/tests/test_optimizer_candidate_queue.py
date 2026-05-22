@@ -168,6 +168,47 @@ def test_candidate_queue_identity_preserves_distinct_representation_families(
     }
 
 
+def test_candidate_queue_identity_preserves_same_family_distinct_params(
+    tmp_path: Path,
+) -> None:
+    def manifest(*, path: Path, q: int, score: float) -> Path:
+        return _write_json(
+            path,
+            {
+                "schema": "representation_training_probe_manifest_v1",
+                "candidate_id": "seed17",
+                "candidate_family": "hnerv_optimizer_probe",
+                "representation_family": "hnerv",
+                "substrate_family": "nerv_family",
+                "profile": "local_training",
+                "lane_id": "offline_hnerv_training",
+                "param_schema": "hnerv_training_params_v1",
+                "candidate_params": {"quant": q, "temperature": 0.7},
+                "results": [
+                    {
+                        "stage_index": 1,
+                        "stage_module": "smoke",
+                        "epochs_run": 1,
+                        "best_score": score,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        )
+
+    q5 = manifest(path=tmp_path / "q5_manifest.json", q=5, score=0.199)
+    q7 = manifest(path=tmp_path / "q7_manifest.json", q=7, score=0.198)
+
+    queue = build_candidate_queue([q5, q7], repo_root=tmp_path, top_k=10)
+
+    assert queue["n_candidates"] == 2
+    assert queue["top_k_count"] == 2
+    assert [row["candidate_params"]["quant"] for row in queue["top_k"]] == [7, 5]
+
+
 def test_merge_candidate_or_preserves_score_affecting_booleans() -> None:
     merged = candidate_queue_module._merge_candidate(
         {

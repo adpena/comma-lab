@@ -150,6 +150,20 @@ def test_generic_representation_training_manifest_rejects_truthy_authority() -> 
         validate_representation_training_manifest(payload)
 
 
+def test_generic_representation_training_manifest_rejects_nested_truthy_authority() -> None:
+    payload = _manifest()
+    payload["optimizer_recipe"] = {
+        "id": "unsafe",
+        "ready_for_exact_eval_dispatch": "true",
+    }
+
+    with pytest.raises(
+        RepresentationTrainingProbeIntegrationError,
+        match=r"optimizer_recipe\.ready_for_exact_eval_dispatch=truthy",
+    ):
+        validate_representation_training_manifest(payload)
+
+
 def test_candidate_queue_accepts_generic_representation_training_manifest(
     tmp_path: Path,
 ) -> None:

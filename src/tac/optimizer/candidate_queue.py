@@ -179,9 +179,18 @@ def _candidate_identity_key(row: Mapping[str, Any]) -> tuple[str, ...]:
     family/schema fields are absent or identical.
     """
 
+    family_or_schema_present = any(
+        str(row.get(field) or "") for field in CANDIDATE_IDENTITY_FIELDS
+    )
+    params = row.get("candidate_params")
+    if family_or_schema_present and isinstance(params, Mapping):
+        params_key = json.dumps(params, sort_keys=True, separators=(",", ":"), default=str)
+    else:
+        params_key = ""
     return tuple(
         [str(row.get("candidate_id") or "")]
         + [str(row.get(field) or "") for field in CANDIDATE_IDENTITY_FIELDS]
+        + [params_key]
     )
 
 
