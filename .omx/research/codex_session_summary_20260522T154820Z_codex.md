@@ -26,15 +26,6 @@ All new/changed planning and observation surfaces remain false-authority:
 - `ready_for_exact_eval_dispatch=false`
 - `promotable=false`
 
-Adversarial follow-up after review:
-
-- The effective MLX spend-triage path now enforces family-level OOF gates via
-  `required_spend_triage_families` and refuses selected families that are not
-  present in `spend_triage_allowed_families`.
-- Exact contest-axis dynamic sweep observations now validate against a local
-  auth-eval JSON payload before preserving `[contest-CPU]` / `[contest-CUDA]`
-  labels.
-
 ## Exact CPU Observation
 
 Recovered DQS1 `prefix_k028` exact CPU calibration from Modal:
@@ -64,22 +55,18 @@ Pair-set planner emitted `175` local-only candidates. The top local acquisition
 row is intentionally planning-only and requires materialization/local controls
 before any exact-eval queueing.
 
-The dynamic observation row points at
-`experiments/results/modal_auth_eval_cpu/dqs1_prefix_k028_gap_uleb_selective_decoderq_20260522T153210Z_cpu/contest_auth_eval.json`
-as its validated auth-eval source artifact.
-
 ## Verification
 
 ```bash
-.venv/bin/python -m pytest src/tac/tests/test_scorer_response_dataset.py src/tac/tests/test_mlx_score_calibration.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_decoder_q_pairset_acquisition.py src/tac/tests/test_mlx_effective_spend_triage_selection.py src/tac/tests/test_plan_ll_scorer_response_next_cli.py -q
-ruff check src/tac/optimization/scorer_response_dataset.py src/tac/tests/test_scorer_response_dataset.py tools/validate_scorer_response_dataset.py src/tac/local_acceleration/mlx_score_calibration.py src/tac/tests/test_mlx_score_calibration.py src/tac/optimization/mlx_dynamic_sweep_observations.py tools/append_mlx_dynamic_sweep_observation.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/optimization/decoder_q_pairset_acquisition.py tools/plan_decoder_q_pairset_acquisition.py src/tac/tests/test_decoder_q_pairset_acquisition.py src/tac/optimization/mlx_effective_spend_triage_selection.py src/tac/tests/test_mlx_effective_spend_triage_selection.py src/tac/tests/test_plan_ll_scorer_response_next_cli.py tools/plan_ll_scorer_response_next.py
+.venv/bin/python -m pytest src/tac/tests/test_scorer_response_dataset.py src/tac/tests/test_mlx_score_calibration.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_decoder_q_pairset_acquisition.py -q
+.venv/bin/python -m ruff check src/tac/optimization/scorer_response_dataset.py src/tac/tests/test_scorer_response_dataset.py tools/validate_scorer_response_dataset.py src/tac/local_acceleration/mlx_score_calibration.py src/tac/tests/test_mlx_score_calibration.py src/tac/optimization/mlx_dynamic_sweep_observations.py tools/append_mlx_dynamic_sweep_observation.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/optimization/decoder_q_pairset_acquisition.py tools/plan_decoder_q_pairset_acquisition.py src/tac/tests/test_decoder_q_pairset_acquisition.py
 .venv/bin/python tools/scan_best_anchor_per_axis.py --format json
 git check-ignore -v experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition.json experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition.md experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl
 ```
 
 Results:
 
-- `144 passed`
+- `127 passed`
 - Ruff passed
 - Frontier scanner reported no drift
 - `.gitignore` covers generated artifacts
@@ -88,8 +75,8 @@ Results:
 
 1. Feed observation JSONL summaries back into `mlx_dynamic_learned_sweep` so
    known exact negatives suppress repeat rows.
-2. Feed required-family gates into downstream MLX selection CLIs by default
-   where a target family is known.
+2. Wire required family gates into MLX effective spend-triage selection and
+   dynamic sweep CLIs.
 3. Materialize only the top pair-set acquisition rows that pass local controls,
    then use exact CPU/CUDA spend only after family OOF, calibration, custody,
    and lane-claim gates pass.
