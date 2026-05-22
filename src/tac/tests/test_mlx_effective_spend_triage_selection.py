@@ -239,3 +239,75 @@ def test_selection_cli_writes_false_authority_manifest(tmp_path: Path) -> None:
     assert payload["selected_rows"][0]["row_id"] == "best"
     assert payload["source_artifacts"]["dataset"]["sha256"]
     assert "Required Next Step" in md_out.read_text(encoding="utf-8")
+
+
+def test_selection_cli_defaults_to_effective_gate_allowed_families(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    plan_path = tmp_path / "plan.json"
+    json_out = tmp_path / "selection.json"
+    dataset_path.write_text(json.dumps(_dataset()), encoding="utf-8")
+    plan_path.write_text(json.dumps(_plan()), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "select_mlx_effective_spend_triage_candidates.py"),
+            "--dataset",
+            str(dataset_path),
+            "--plan",
+            str(plan_path),
+            "--top-k",
+            "4",
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(json_out.read_text(encoding="utf-8"))
+    assert payload["selection_policy"]["families"] == ["mlx_decoder_q"]
+    assert payload["selection_policy"]["gate_spend_triage_allowed_families"] == [
+        "mlx_decoder_q"
+    ]
+    assert [row["family"] for row in payload["selected_rows"]] == [
+        "mlx_decoder_q",
+        "mlx_decoder_q",
+    ]
+    assert payload["summary"]["rejection_counts"]["family_not_selected"] == 1
+
+
+def test_selection_cli_rejects_family_without_effective_gate(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    plan_path = tmp_path / "plan.json"
+    json_out = tmp_path / "selection.json"
+    dataset_path.write_text(json.dumps(_dataset()), encoding="utf-8")
+    plan_path.write_text(json.dumps(_plan()), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "select_mlx_effective_spend_triage_candidates.py"),
+            "--dataset",
+            str(dataset_path),
+            "--plan",
+            str(plan_path),
+            "--family",
+            "mlx_fec6_auth_parent",
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert "selected families lack family-level spend-triage gate" in completed.stderr
+    assert "mlx_fec6_auth_parent" in completed.stderr
+    assert not json_out.exists()
