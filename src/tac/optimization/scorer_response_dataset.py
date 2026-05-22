@@ -22,6 +22,12 @@ from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_production_contract import (
+    BUNDLE_PASS_VERDICT as MLX_PRODUCTION_CONTRACT_BUNDLE_PASS_VERDICT,
+)
+from tac.local_acceleration.mlx_production_contract import (
+    BUNDLE_SCHEMA_VERSION as MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA,
+)
+from tac.local_acceleration.mlx_production_contract import (
     GATE_SET_VERSION as MLX_PRODUCTION_CONTRACT_GATE_SET_VERSION,
 )
 from tac.local_acceleration.mlx_production_contract import (
@@ -43,10 +49,6 @@ VALIDATION_GATE_SCHEMA = "scorer_response_dataset_validation_gate.v1"
 MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
 MLX_TORCH_PARITY_SWEEP_SCHEMA = "mlx_scorer_torch_parity_sweep.v1"
 MLX_SCORE_CALIBRATION_SCHEMA = "mlx_score_calibration.v1"
-MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA = "mlx_scorer_production_contract_bundle.v1"
-MLX_PRODUCTION_CONTRACT_BUNDLE_PASS_VERDICT = (
-    "PASS_MLX_SCORER_PRODUCTION_CONTRACT_BUNDLE"
-)
 LL_MLX_PRODUCTION_CONTRACT_GATE_SCHEMA = "ll_mlx_production_contract_gate.v1"
 DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
 

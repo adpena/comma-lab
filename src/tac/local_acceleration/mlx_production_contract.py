@@ -36,6 +36,9 @@ GATE_SET_VERSION = "mlx_scorer_production_gate_set.v2.cache_auth_torch_profile"
 PASS_VERDICT = "PASS_MLX_SCORER_PRODUCTION_CONTRACT"
 FAIL_VERDICT = "FAIL_MLX_SCORER_PRODUCTION_CONTRACT"
 ADVISORY_VERDICT = "ADVISORY_MLX_SCORER_DEV_CONTRACT"
+BUNDLE_SCHEMA_VERSION = "mlx_scorer_production_contract_bundle.v1"
+BUNDLE_PASS_VERDICT = "PASS_MLX_SCORER_PRODUCTION_CONTRACT_BUNDLE"
+BUNDLE_FAIL_VERDICT = "FAIL_MLX_SCORER_PRODUCTION_CONTRACT_BUNDLE"
 MAX_ALLOWED_TORCH_PARITY_ARGMAX_DIFF_PIXELS = 1
 
 AUTHORITY_FALSE_FIELDS = (
@@ -267,6 +270,84 @@ def build_mlx_scorer_production_contract_manifest(
             "signal only; paired contest CPU/CUDA auth eval remains required "
             "for score claims, promotion, rank/kill, and dispatch readiness."
         ),
+    }
+
+
+def build_mlx_scorer_production_contract_bundle_manifest(
+    contracts: list[dict[str, Any]],
+    *,
+    run_id: str | None = None,
+    producer: str = "tac.local_acceleration.mlx_production_contract",
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    child_summaries: list[dict[str, Any]] = []
+    if not contracts:
+        blockers.append("mlx_production_contract_bundle_empty")
+    for index, contract in enumerate(contracts):
+        if not isinstance(contract, dict):
+            blockers.append(f"mlx_production_contract_bundle_child_not_object:{index}")
+            continue
+        child_blockers: list[str] = []
+        if contract.get("schema_version") != SCHEMA_VERSION:
+            child_blockers.append("schema_version_mismatch")
+        if contract.get("gate_set_version") != GATE_SET_VERSION:
+            child_blockers.append("gate_set_version_mismatch")
+        if contract.get("passed") is not True:
+            child_blockers.append("not_passed")
+        if contract.get("verdict") != PASS_VERDICT:
+            child_blockers.append("verdict_not_pass")
+        for field in ("score_authority", "contest_authority", *AUTHORITY_FALSE_FIELDS):
+            if contract.get(field) is not False:
+                child_blockers.append(f"{field}_not_false")
+        if contract.get("candidate_generation_only") is not True:
+            child_blockers.append("candidate_generation_only_not_true")
+        if contract.get("requires_exact_eval_before_promotion") is not True:
+            child_blockers.append("requires_exact_eval_before_promotion_not_true")
+        source_blockers = contract.get("blockers")
+        if source_blockers:
+            child_blockers.append("source_blockers_not_empty")
+        if child_blockers:
+            blockers.append(f"mlx_production_contract_bundle_child_blocked:{index}")
+        child_summaries.append(
+            {
+                "index": index,
+                "run_id": contract.get("run_id"),
+                "passed": contract.get("passed") is True,
+                "verdict": contract.get("verdict"),
+                "blockers": child_blockers,
+                "response_summary": contract.get("response_summary"),
+            }
+        )
+    passed = not blockers
+    return {
+        "schema": BUNDLE_SCHEMA_VERSION,
+        "producer": producer,
+        "run_id": run_id,
+        "passed": passed,
+        "verdict": BUNDLE_PASS_VERDICT if passed else BUNDLE_FAIL_VERDICT,
+        "blockers": blockers,
+        "warnings": [],
+        "score_authority": False,
+        "contest_authority": False,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "contracts": contracts,
+        "summary": {
+            "contract_count": len(contracts),
+            "strict_contract_count": sum(
+                1 for child in child_summaries if child["passed"] and not child["blockers"]
+            ),
+            "child_contracts": child_summaries,
+        },
     }
 
 

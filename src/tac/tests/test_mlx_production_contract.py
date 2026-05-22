@@ -9,9 +9,12 @@ from pathlib import Path
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_production_contract import (
     ADVISORY_VERDICT,
+    BUNDLE_FAIL_VERDICT,
+    BUNDLE_PASS_VERDICT,
     FAIL_VERDICT,
     GATE_SET_VERSION,
     PASS_VERDICT,
+    build_mlx_scorer_production_contract_bundle_manifest,
     build_mlx_scorer_production_contract_manifest,
 )
 from tac.local_acceleration.mlx_scorer_response import GPU_BATCH_SHAPE_BLOCKER
@@ -57,6 +60,41 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
     assert manifest["response_summary"]["segnet_sha256"] == "b" * 64
     assert manifest["required_gates"]["batch_invariance"] is False
     assert manifest["required_gates"]["batch_invariance_policy_requested"] is True
+
+
+def test_mlx_production_contract_bundle_accepts_strict_contracts() -> None:
+    contract = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+    )
+
+    bundle = build_mlx_scorer_production_contract_bundle_manifest(
+        [contract],
+        run_id="unit-bundle",
+    )
+
+    assert bundle["schema"] == "mlx_scorer_production_contract_bundle.v1"
+    assert bundle["passed"] is True
+    assert bundle["verdict"] == BUNDLE_PASS_VERDICT
+    assert bundle["score_claim"] is False
+    assert bundle["summary"]["contract_count"] == 1
+    assert bundle["summary"]["strict_contract_count"] == 1
+    assert bundle["contracts"][0]["run_id"] == contract["run_id"]
+
+
+def test_mlx_production_contract_bundle_blocks_failed_contract() -> None:
+    contract = build_mlx_scorer_production_contract_manifest(_response_payload())
+
+    bundle = build_mlx_scorer_production_contract_bundle_manifest([contract])
+
+    assert bundle["passed"] is False
+    assert bundle["verdict"] == BUNDLE_FAIL_VERDICT
+    assert "mlx_production_contract_bundle_child_blocked:0" in bundle["blockers"]
+    assert bundle["summary"]["strict_contract_count"] == 0
 
 
 def test_mlx_production_contract_requires_gates_by_default() -> None:
@@ -565,6 +603,44 @@ def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
     manifest = json.loads(out_path.read_text(encoding="utf-8"))
     assert manifest["run_id"] == "unit"
     assert manifest["passed"] is True
+
+
+def test_mlx_production_contract_bundle_cli_writes_manifest(tmp_path: Path) -> None:
+    contract = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+    )
+    contract_path = tmp_path / "contract.json"
+    out_path = tmp_path / "bundle.json"
+    contract_path.write_text(json.dumps(contract), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_production_contract_bundle.py"),
+            "--contract",
+            str(contract_path),
+            "--output",
+            str(out_path),
+            "--run-id",
+            "unit-bundle",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"passed": true' in completed.stdout
+    bundle = json.loads(out_path.read_text(encoding="utf-8"))
+    assert bundle["run_id"] == "unit-bundle"
+    assert bundle["passed"] is True
+    assert bundle["verdict"] == BUNDLE_PASS_VERDICT
+    assert bundle["summary"]["contract_count"] == 1
+    assert bundle["summary"]["strict_contract_count"] == 1
 
 
 def _response_payload(*, device: str = "cpu", batch_pairs: int = 1) -> dict:
