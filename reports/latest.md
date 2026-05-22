@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-22T20:37:00Z
+generated_at: 2026-05-22T20:41:09Z
 from_state_hash: frontier_scan_dqs1_pairset_rank023_local_advisory_20260522T2037Z
 regenerated_by: codex:dqs1_rank023_local_advisory_observe_only_20260522
-last_refreshed_at: 2026-05-22T20:37:00Z
+last_refreshed_at: 2026-05-22T20:41:09Z
 last_refreshed_by: codex:dqs1_rank023_local_advisory_observe_only_20260522
-last_refreshed_head: d49171d7
+last_refreshed_head: 057d11548
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
