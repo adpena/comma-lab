@@ -110,6 +110,13 @@ def test_batchnorm2d_adapter_matches_torch_eval_nchw() -> None:
     assert _max_abs(actual, expected) < 1.0e-5
 
 
+def test_batchnorm2d_adapter_uses_eval_affine_for_running_stats() -> None:
+    bn = nn.BatchNorm2d(3).eval()
+    adapter = torch_batchnorm2d_to_mlx(bn)
+
+    assert type(adapter).__name__ == "MLXBatchNorm2dEvalAffineAdapter"
+
+
 def test_linear_adapter_matches_torch() -> None:
     torch.manual_seed(29)
     linear = nn.Linear(13, 7).eval()
@@ -528,9 +535,11 @@ def test_segnet_segmentation_head_matches_torch_on_mlx_cpu() -> None:
     x = torch.randn(1, 16, 64, 80)
 
     expected = head(x).detach().numpy()
+    adapter = torch_segmentation_head_to_mlx(head)
+    assert type(adapter.conv).__name__ == "MLXExplicitSpatialConv2dAdapter"
     with temporary_mlx_device("cpu"):
         actual = run_mlx_segmentation_head_nchw(
-            torch_segmentation_head_to_mlx(head),
+            adapter,
             x.numpy(),
         )
 

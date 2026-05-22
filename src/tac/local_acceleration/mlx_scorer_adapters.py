@@ -102,6 +102,44 @@ class MLXConvNormAct2dAdapter:
         return _apply_2d_activation(self.bn(self.conv(x_nhwc)), self.activation_path)
 
 
+class MLXBatchNorm2dEvalAffineAdapter:
+    """Eval-mode BatchNorm2d affine transform on NHWC tensors."""
+
+    def __init__(self, torch_bn: Any):
+        import mlx.core as mx
+
+        if getattr(torch_bn, "training", False):
+            raise NotImplementedError("training-mode BatchNorm2d is not covered")
+        if not bool(getattr(torch_bn, "track_running_stats", False)):
+            raise NotImplementedError("BatchNorm2d without running stats is not covered")
+        running_mean = getattr(torch_bn, "running_mean", None)
+        running_var = getattr(torch_bn, "running_var", None)
+        if running_mean is None or running_var is None:
+            raise TypeError("BatchNorm2d eval affine adapter requires running stats")
+
+        channels = int(torch_bn.num_features)
+        mean = _torch_tensor_to_numpy(running_mean).reshape(channels)
+        var = _torch_tensor_to_numpy(running_var).reshape(channels)
+        if bool(getattr(torch_bn, "affine", False)):
+            weight = _torch_tensor_to_numpy(torch_bn.weight).reshape(channels)
+            bias = _torch_tensor_to_numpy(torch_bn.bias).reshape(channels)
+        else:
+            weight = np.ones(channels, dtype=np.float32)
+            bias = np.zeros(channels, dtype=np.float32)
+
+        inv_std = np.float32(1.0) / np.sqrt(
+            var.astype(np.float32, copy=False) + np.float32(float(torch_bn.eps)),
+            dtype=np.float32,
+        )
+        scale = weight.astype(np.float32, copy=False) * inv_std
+        offset = bias.astype(np.float32, copy=False) - mean.astype(np.float32, copy=False) * scale
+        self.scale = mx.array(np.ascontiguousarray(scale.reshape(1, 1, 1, channels)))
+        self.offset = mx.array(np.ascontiguousarray(offset.reshape(1, 1, 1, channels)))
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        return x_nhwc * self.scale + self.offset
+
+
 class MLXBatchNormAct2dAdapter:
     """MLX adapter for timm ``BatchNormAct2d``."""
 
@@ -128,13 +166,13 @@ class MLXSEModuleAdapter:
         gate_path = _class_path(getattr(torch_se, "gate", None))
         if gate_path != "timm.layers.activations.Sigmoid":
             raise NotImplementedError(f"unsupported SEModule gate: {gate_path}")
-        self.fc1 = torch_conv2d_to_mlx(torch_se.fc1)
-        self.fc2 = torch_conv2d_to_mlx(torch_se.fc2)
+        self.fc1 = MLXExplicitSpatialConv2dAdapter(torch_se.fc1)
+        self.fc2 = MLXExplicitSpatialConv2dAdapter(torch_se.fc2)
 
     def __call__(self, x_nhwc: Any) -> Any:
         import mlx.core as mx
 
-        x_se = mx.mean(x_nhwc, axis=(1, 2), keepdims=True)
+        x_se = mx.mean(mx.mean(x_nhwc, axis=2, keepdims=True), axis=1, keepdims=True)
         x_se = mlx_relu(self.fc1(x_se))
         x_se = self.fc2(x_se)
         return x_nhwc * mlx_sigmoid(x_se)
@@ -348,10 +386,61 @@ class MLXSegmentationHeadAdapter:
         activation = getattr(children[2], "activation", None)
         if _class_path(activation) != "torch.nn.modules.linear.Identity":
             raise NotImplementedError("SegmentationHead activation is not identity")
-        self.conv = torch_conv2d_to_mlx(children[0])
+        self.conv = MLXExplicitSpatialConv2dAdapter(children[0])
 
     def __call__(self, x_nhwc: Any) -> Any:
         return self.conv(x_nhwc)
+
+
+class MLXExplicitSpatialConv2dAdapter:
+    """Small explicit Conv2d for numerically sensitive SegNet head logits."""
+
+    def __init__(self, torch_conv: Any):
+        import mlx.core as mx
+
+        if int(torch_conv.groups) != 1:
+            raise NotImplementedError("explicit spatial Conv2d requires groups=1")
+        if _pair(torch_conv.stride) != (1, 1):
+            raise NotImplementedError("explicit spatial Conv2d requires stride=1")
+        if _pair(torch_conv.dilation) != (1, 1):
+            raise NotImplementedError("explicit spatial Conv2d requires dilation=1")
+        weight = _torch_tensor_to_numpy(torch_conv.weight)
+        if weight.ndim != 4:
+            raise ValueError(f"Conv2d weight must be rank-4 OIHW, got {weight.shape}")
+        self.padding = _pair(torch_conv.padding)
+        out_channels, in_channels, kernel_h, kernel_w = weight.shape
+        self.out_channels = int(out_channels)
+        self.terms = [
+            (
+                int(kh),
+                int(kw),
+                int(channel),
+                mx.array(np.ascontiguousarray(weight[:, channel, kh, kw].reshape(1, 1, 1, -1))),
+            )
+            for kh in range(kernel_h)
+            for kw in range(kernel_w)
+            for channel in range(in_channels)
+        ]
+        self.bias = (
+            None
+            if torch_conv.bias is None
+            else mx.array(
+                np.ascontiguousarray(
+                    _torch_tensor_to_numpy(torch_conv.bias).reshape(1, 1, 1, self.out_channels)
+                )
+            )
+        )
+
+    def __call__(self, x_nhwc: Any) -> Any:
+        import mlx.core as mx
+
+        pad_h, pad_w = self.padding
+        x_pad = mx.pad(x_nhwc, ((0, 0), (pad_h, pad_h), (pad_w, pad_w), (0, 0)))
+        batch, height, width, _ = x_nhwc.shape
+        out = mx.zeros((batch, height, width, self.out_channels), dtype=x_nhwc.dtype)
+        for kh, kw, channel, weight in self.terms:
+            out = out + x_pad[:, kh : kh + height, kw : kw + width, channel : channel + 1] * weight
+        return out if self.bias is None else out + self.bias
 
 
 class MLXSegNetAdapter:
@@ -780,10 +869,18 @@ def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
 
 
 def torch_batchnorm2d_to_mlx(torch_bn: Any) -> Any:
-    """Convert eval-mode PyTorch ``nn.BatchNorm2d`` to MLX ``nn.BatchNorm``."""
+    """Convert PyTorch ``nn.BatchNorm2d`` to an MLX-compatible adapter."""
 
     import mlx.core as mx
     import mlx.nn as nn
+
+    if (
+        not bool(getattr(torch_bn, "training", False))
+        and bool(getattr(torch_bn, "track_running_stats", False))
+        and getattr(torch_bn, "running_mean", None) is not None
+        and getattr(torch_bn, "running_var", None) is not None
+    ):
+        return MLXBatchNorm2dEvalAffineAdapter(torch_bn)
 
     bn = nn.BatchNorm(
         int(torch_bn.num_features),

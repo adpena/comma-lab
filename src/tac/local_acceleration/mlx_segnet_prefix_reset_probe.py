@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Prefix-reset probe for MLX SegNet stage-0 drift localization."""
+"""Prefix-reset probe for MLX SegNet drift localization."""
 
 from __future__ import annotations
 
@@ -25,17 +25,15 @@ from tac.local_acceleration.mlx_scorer_response import (
 from tac.local_acceleration.mlx_scorer_torch_parity import (
     _jsonable,
     _segnet_deltas,
+    run_torch_segnet_layer_trace_nchw,
 )
 from tac.local_acceleration.mlx_segnet_cross_input_probe import (
     _as_mlx_nhwc,
-    _torch_stage0_block0_depthwise_values,
 )
 
-SCHEMA_VERSION = "mlx_segnet_stage0_prefix_reset_probe.v1"
+SCHEMA_VERSION = "mlx_segnet_prefix_reset_probe.v2"
 
-BOUNDARIES = (
-    "input",
-    "encoder.stem",
+STAGE0_BLOCK0_BOUNDARIES = (
     "encoder.stage_0.block_0.conv_dw",
     "encoder.stage_0.block_0.bn1",
     "encoder.stage_0.block_0.se",
@@ -43,8 +41,29 @@ BOUNDARIES = (
     "encoder.stage_0.block_0.bn2",
 )
 
+BOUNDARIES = (
+    "input",
+    "encoder.stem",
+    *STAGE0_BLOCK0_BOUNDARIES,
+    "encoder.stage_0",
+    "encoder.stage_1",
+    "encoder.stage_2",
+    "encoder.stage_3",
+    "encoder.stage_4",
+    "encoder.stage_5",
+    "encoder.stage_6",
+    "encoder.all_features",
+    "decoder.block_0",
+    "decoder.block_1",
+    "decoder.block_2",
+    "decoder.block_3",
+    "decoder.block_4",
+    "decoder.output",
+    "segmentation_head.logits",
+)
 
-def build_mlx_segnet_stage0_prefix_reset_probe_manifest(
+
+def build_mlx_segnet_prefix_reset_probe_manifest(
     *,
     cache_dir: str | Path,
     repo_root: str | Path = ".",
@@ -78,8 +97,8 @@ def build_mlx_segnet_stage0_prefix_reset_probe_manifest(
     seg = np.asarray(cache.segnet_last_rgb[start:stop], dtype=np.float32)
 
     dist = _load_upstream_distortion_net(Path(repo_root).resolve())
-    torch_values = _torch_stage0_block0_depthwise_values(dist.segnet, seg)
-    torch_logits = _torch_segnet_logits(dist.segnet, seg)
+    torch_values = run_torch_segnet_layer_trace_nchw(dist.segnet, seg)
+    torch_logits = torch_values["segmentation_head.logits"]
     with temporary_mlx_device(device_type):
         mlx_segnet = torch_segnet_to_mlx(dist.segnet)
         rows = [
@@ -149,7 +168,7 @@ def build_mlx_segnet_stage0_prefix_reset_probe_manifest(
     }
 
 
-def write_mlx_segnet_stage0_prefix_reset_probe_manifest(
+def write_mlx_segnet_prefix_reset_probe_manifest(
     manifest: dict[str, Any],
     path: str | Path,
 ) -> None:
@@ -208,10 +227,9 @@ def _mlx_logits_with_stage0_prefix_reset(
         raise ValueError(f"unsupported boundary {boundary!r}")
     reset_order = BOUNDARIES.index(boundary)
     encoder_model = mlx_segnet.encoder.model
-    block0 = encoder_model.stages[0].blocks[0]
 
     x = mx.array(nchw_to_nhwc(x_nchw))
-    if reset_order >= BOUNDARIES.index("encoder.stem"):
+    if _should_reset(reset_order, "encoder.stem"):
         stem = _as_mlx_nhwc(torch_values["encoder.stem"])
     else:
         stem = encoder_model.stem(x)
@@ -222,6 +240,56 @@ def _mlx_logits_with_stage0_prefix_reset(
     if 0 in stage_out_idx:
         features.append(stem)
 
+    stage0 = encoder_model.stages[0]
+    if _should_reset(reset_order, "encoder.stage_0"):
+        out = _as_mlx_nhwc(torch_values["encoder.stage_0"])
+    else:
+        out = _stage0_block0_prefix_reset(
+            block0=stage0.blocks[0],
+            stem=stem,
+            reset_order=reset_order,
+            torch_values=torch_values,
+        )
+        for block in stage0.blocks[1:]:
+            out = block(out)
+    if 1 in stage_out_idx:
+        features.append(out)
+    for stage_index, stage in enumerate(encoder_model.stages[1:], start=1):
+        stage_name = f"encoder.stage_{stage_index}"
+        out = (
+            _as_mlx_nhwc(torch_values[stage_name])
+            if _should_reset(reset_order, stage_name)
+            else stage(out)
+        )
+        if stage_index + 1 in stage_out_idx:
+            features.append(out)
+    if mlx_segnet.encoder.prepend_input:
+        features = [x, *features]
+
+    if _should_reset(reset_order, "encoder.all_features"):
+        features = _torch_features_as_mlx(torch_values)
+
+    decoder_output = _mlx_decoder_with_prefix_reset(
+        mlx_segnet=mlx_segnet,
+        features=features,
+        torch_values=torch_values,
+        reset_order=reset_order,
+    )
+    if _should_reset(reset_order, "decoder.output"):
+        decoder_output = _as_mlx_nhwc(torch_values["decoder.output"])
+    if _should_reset(reset_order, "segmentation_head.logits"):
+        return np.asarray(torch_values["segmentation_head.logits"], dtype=np.float32)
+    return nhwc_to_nchw(_mlx_array_to_numpy(mlx_segnet.segmentation_head(decoder_output)))
+
+
+def _stage0_block0_prefix_reset(
+    *,
+    block0: Any,
+    stem: Any,
+    reset_order: int,
+    torch_values: dict[str, np.ndarray],
+) -> Any:
+    out = stem
     out = _maybe_reset_or_run(
         name="encoder.stage_0.block_0.conv_dw",
         out=out,
@@ -259,21 +327,44 @@ def _mlx_logits_with_stage0_prefix_reset(
     )
     if bool(getattr(block0, "has_skip", False)):
         out = out + stem
+    return out
 
-    stage0 = encoder_model.stages[0]
-    for block in stage0.blocks[1:]:
-        out = block(out)
-    if 1 in stage_out_idx:
-        features.append(out)
-    for stage_index, stage in enumerate(encoder_model.stages[1:], start=1):
-        out = stage(out)
-        if stage_index + 1 in stage_out_idx:
-            features.append(out)
-    if mlx_segnet.encoder.prepend_input:
-        features = [x, *features]
 
-    decoder_output = mlx_segnet.decoder(features)
-    return nhwc_to_nchw(_mlx_array_to_numpy(mlx_segnet.segmentation_head(decoder_output)))
+def _mlx_decoder_with_prefix_reset(
+    *,
+    mlx_segnet: Any,
+    features: list[Any],
+    torch_values: dict[str, np.ndarray],
+    reset_order: int,
+) -> Any:
+    spatial_shapes = [(int(feature.shape[1]), int(feature.shape[2])) for feature in features]
+    spatial_shapes = spatial_shapes[::-1]
+    decoder_features = features[1:][::-1]
+    out = decoder_features[0]
+    skip_connections = decoder_features[1:]
+    for index, decoder_block in enumerate(mlx_segnet.decoder.blocks):
+        block_name = f"decoder.block_{index}"
+        if _should_reset(reset_order, block_name):
+            out = _as_mlx_nhwc(torch_values[block_name])
+            continue
+        target_height, target_width = spatial_shapes[index + 1]
+        skip_connection = (
+            skip_connections[index] if index < len(skip_connections) else None
+        )
+        out = decoder_block(out, target_height, target_width, skip_connection)
+    return out
+
+
+def _torch_features_as_mlx(torch_values: dict[str, np.ndarray]) -> list[Any]:
+    feature_items = [
+        (int(name.rsplit("_", 1)[1]), value)
+        for name, value in torch_values.items()
+        if name.startswith("encoder.feature_")
+    ]
+    return [
+        _as_mlx_nhwc(value)
+        for _, value in sorted(feature_items, key=lambda item: item[0])
+    ]
 
 
 def _maybe_reset_or_run(
@@ -284,18 +375,13 @@ def _maybe_reset_or_run(
     torch_values: dict[str, np.ndarray],
     fn: Any,
 ) -> Any:
-    if reset_order >= BOUNDARIES.index(name):
+    if _should_reset(reset_order, name):
         return _as_mlx_nhwc(torch_values[name])
     return fn(out)
 
 
-def _torch_segnet_logits(torch_segnet: Any, x_nchw: np.ndarray) -> np.ndarray:
-    import torch
-
-    torch_segnet.eval()
-    x = torch.from_numpy(np.array(x_nchw, dtype=np.float32, copy=True, order="C"))
-    with torch.inference_mode():
-        return torch_segnet(x).detach().cpu().numpy().astype(np.float32, copy=True)
+def _should_reset(reset_order: int, name: str) -> bool:
+    return reset_order >= BOUNDARIES.index(name)
 
 
 def _prefix_reset_verdict(
@@ -313,6 +399,15 @@ def _prefix_reset_verdict(
 __all__ = [
     "BOUNDARIES",
     "SCHEMA_VERSION",
+    "build_mlx_segnet_prefix_reset_probe_manifest",
     "build_mlx_segnet_stage0_prefix_reset_probe_manifest",
+    "write_mlx_segnet_prefix_reset_probe_manifest",
     "write_mlx_segnet_stage0_prefix_reset_probe_manifest",
 ]
+
+build_mlx_segnet_stage0_prefix_reset_probe_manifest = (
+    build_mlx_segnet_prefix_reset_probe_manifest
+)
+write_mlx_segnet_stage0_prefix_reset_probe_manifest = (
+    write_mlx_segnet_prefix_reset_probe_manifest
+)

@@ -13,7 +13,7 @@ from tac.local_acceleration.mlx_scorer_response import GPU_RESEARCH_SIGNAL_BLOCK
 from tac.local_acceleration.mlx_segnet_prefix_reset_probe import (
     BOUNDARIES,
     SCHEMA_VERSION,
-    build_mlx_segnet_stage0_prefix_reset_probe_manifest,
+    build_mlx_segnet_prefix_reset_probe_manifest,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -22,7 +22,7 @@ REPO = Path(__file__).resolve().parents[3]
 def test_mlx_segnet_stage0_prefix_reset_probe_schema_and_authority(tmp_path: Path) -> None:
     cache_dir = _write_test_cache(tmp_path / "cache")
 
-    manifest = build_mlx_segnet_stage0_prefix_reset_probe_manifest(
+    manifest = build_mlx_segnet_prefix_reset_probe_manifest(
         cache_dir=cache_dir,
         repo_root=REPO,
         device_type="cpu",
@@ -55,7 +55,7 @@ def test_mlx_segnet_stage0_prefix_reset_probe_cli_rejects_gpu_without_allowance(
     completed = subprocess.run(
         [
             sys.executable,
-            str(REPO / "tools" / "probe_mlx_segnet_stage0_prefix_reset.py"),
+            str(REPO / "tools" / "probe_mlx_segnet_prefix_reset.py"),
             "--cache-dir",
             str(tmp_path / "missing"),
             "--output",

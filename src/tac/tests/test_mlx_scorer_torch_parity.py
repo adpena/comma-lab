@@ -13,12 +13,14 @@ from tac.local_acceleration.mlx_scorer_response import GPU_RESEARCH_SIGNAL_BLOCK
 from tac.local_acceleration.mlx_scorer_torch_parity import (
     FAIL_VERDICT,
     PASS_SWEEP_VERDICT,
+    PASS_TORCH_BATCH_INVARIANCE_VERDICT,
     PASS_VERDICT,
     MLXTorchParityThresholds,
     build_mlx_scorer_torch_parity_manifest,
     build_mlx_scorer_torch_parity_manifest_from_outputs,
     build_mlx_scorer_torch_parity_sweep_manifest,
     build_mlx_segnet_layer_trace_manifest,
+    build_torch_segnet_batch_invariance_manifest,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -297,6 +299,64 @@ def test_mlx_segnet_layer_trace_cli_rejects_invalid_window_before_loading(
         [
             sys.executable,
             str(REPO / "tools" / "trace_mlx_segnet_layer_parity.py"),
+            "--cache-dir",
+            str(tmp_path / "missing"),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(REPO),
+            "--max-pairs",
+            "0",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert "max_pairs must be >= 1" in completed.stderr
+    assert not output.exists()
+
+
+def test_torch_segnet_batch_invariance_manifest_passes_cpu_fixture(tmp_path: Path) -> None:
+    cache_dir = _write_test_cache(tmp_path / "cache", pair_count=2)
+
+    manifest = build_torch_segnet_batch_invariance_manifest(
+        cache_dir=cache_dir,
+        repo_root=REPO,
+        device_type="cpu",
+        start_pair=0,
+        max_pairs=2,
+        run_id="fixture_torch_batch_invariance",
+    )
+
+    assert manifest["schema_version"] == "torch_segnet_batch_invariance.v1"
+    assert manifest["passed"] is True
+    assert manifest["verdict"] == PASS_TORCH_BATCH_INVARIANCE_VERDICT
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["requires_exact_eval_before_promotion"] is True
+    assert manifest["comparison"] == "segnet_batch_vs_per_sample_loop"
+    assert manifest["pair_window"] == [0, 2]
+    assert manifest["n_samples"] == 2
+    assert manifest["device_type"] == "cpu"
+    assert manifest["deltas"]["segnet_argmax_diff_pixels"] == 0
+    assert manifest["deltas"]["segnet_argmax_mismatch_detail"]["comparison_labels"] == {
+        "torch": "batch",
+        "mlx": "per_sample_loop",
+    }
+    assert manifest["torch_backend"]["device_type"] == "cpu"
+
+
+def test_torch_segnet_batch_invariance_cli_rejects_invalid_window_before_loading(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "torch_batch_trace.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "trace_torch_segnet_batch_invariance.py"),
             "--cache-dir",
             str(tmp_path / "missing"),
             "--output",

@@ -33,10 +33,13 @@ from tac.local_acceleration.mlx_scorer_response import (
 SCHEMA_VERSION = "mlx_scorer_torch_parity.v1"
 SWEEP_SCHEMA_VERSION = "mlx_scorer_torch_parity_sweep.v1"
 SEGNET_TRACE_SCHEMA_VERSION = "mlx_segnet_layer_trace.v1"
+TORCH_BATCH_INVARIANCE_SCHEMA_VERSION = "torch_segnet_batch_invariance.v1"
 PASS_VERDICT = "PASS_MLX_TORCH_SCORER_PARITY"
 FAIL_VERDICT = "FAIL_MLX_TORCH_SCORER_PARITY"
 PASS_SWEEP_VERDICT = "PASS_MLX_TORCH_SCORER_PARITY_SWEEP"
 FAIL_SWEEP_VERDICT = "FAIL_MLX_TORCH_SCORER_PARITY_SWEEP"
+PASS_TORCH_BATCH_INVARIANCE_VERDICT = "PASS_TORCH_SEGNET_BATCH_INVARIANCE"
+FAIL_TORCH_BATCH_INVARIANCE_VERDICT = "FAIL_TORCH_SEGNET_BATCH_INVARIANCE"
 
 
 @dataclass(frozen=True)
@@ -380,6 +383,169 @@ def build_mlx_segnet_layer_trace_manifest(
     }
 
 
+def build_torch_segnet_batch_invariance_manifest(
+    *,
+    cache_dir: str | Path,
+    repo_root: str | Path = ".",
+    device_type: str = "cpu",
+    start_pair: int = 0,
+    max_pairs: int = 1,
+    run_id: str | None = None,
+    max_segnet_argmax_diff_pixels: int = 0,
+    max_segnet_logit_abs_delta: float | None = None,
+    use_deterministic_algorithms: bool = False,
+    cudnn_benchmark: bool | None = None,
+    cudnn_deterministic: bool | None = None,
+    allow_tf32: bool | None = None,
+    mkldnn_enabled: bool | None = None,
+    torch_num_threads: int | None = None,
+) -> dict[str, Any]:
+    """Trace upstream PyTorch SegNet batch-vs-per-sample-loop behavior."""
+
+    if device_type not in {"cpu", "cuda", "mps"}:
+        raise ValueError(f"device_type must be one of cpu/cuda/mps, got {device_type!r}")
+    if int(start_pair) < 0:
+        raise ValueError(f"start_pair must be >= 0, got {start_pair}")
+    if int(max_pairs) < 1:
+        raise ValueError(f"max_pairs must be >= 1, got {max_pairs}")
+    if int(max_segnet_argmax_diff_pixels) < 0:
+        raise ValueError(
+            "max_segnet_argmax_diff_pixels must be >= 0, "
+            f"got {max_segnet_argmax_diff_pixels}"
+        )
+    if max_segnet_logit_abs_delta is not None and float(max_segnet_logit_abs_delta) < 0.0:
+        raise ValueError(
+            "max_segnet_logit_abs_delta must be >= 0 when set, "
+            f"got {max_segnet_logit_abs_delta}"
+        )
+    if torch_num_threads is not None and int(torch_num_threads) < 1:
+        raise ValueError(f"torch_num_threads must be >= 1 when set, got {torch_num_threads}")
+
+    cache = load_scorer_input_cache(cache_dir)
+    total_pair_count = int(cache.pair_indices.shape[0])
+    start = int(start_pair)
+    if start >= total_pair_count:
+        raise ValueError(f"start_pair {start} is outside cache pair count {total_pair_count}")
+    stop = min(total_pair_count, start + int(max_pairs))
+    seg = np.asarray(cache.segnet_last_rgb[start:stop], dtype=np.float32)
+
+    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    with _torch_backend_options(
+        use_deterministic_algorithms=bool(use_deterministic_algorithms),
+        cudnn_benchmark=cudnn_benchmark,
+        cudnn_deterministic=cudnn_deterministic,
+        allow_tf32=allow_tf32,
+        mkldnn_enabled=mkldnn_enabled,
+        torch_num_threads=torch_num_threads,
+    ):
+        outputs = run_torch_segnet_batch_and_loop_nchw(
+            dist.segnet,
+            seg,
+            device_type=device_type,
+        )
+        backend_metadata = _torch_backend_metadata(device_type)
+
+    blockers: list[str] = []
+    logit_delta, argmax_diff_pixels, pixel_count, mismatch_detail = _segnet_deltas(
+        {"segnet": outputs["batch"]},
+        {"segnet": outputs["loop"]},
+        blockers,
+    )
+    mismatch_detail["comparison_labels"] = {
+        "torch": "batch",
+        "mlx": "per_sample_loop",
+    }
+    if (
+        argmax_diff_pixels is not None
+        and argmax_diff_pixels > int(max_segnet_argmax_diff_pixels)
+    ):
+        blockers.append(
+            "segnet_batch_argmax_diff_pixels_exceeds_threshold:"
+            f"{argmax_diff_pixels}>{int(max_segnet_argmax_diff_pixels)}"
+        )
+    if max_segnet_logit_abs_delta is not None and logit_delta is not None:
+        limit = float(max_segnet_logit_abs_delta)
+        if logit_delta > limit:
+            blockers.append(
+                "segnet_batch_logit_abs_delta_exceeds_threshold:"
+                f"{logit_delta:.12g}>{limit:.12g}"
+            )
+
+    passed = not blockers
+    return {
+        "schema_version": TORCH_BATCH_INVARIANCE_SCHEMA_VERSION,
+        "run_id": run_id,
+        "verdict": (
+            PASS_TORCH_BATCH_INVARIANCE_VERDICT
+            if passed
+            else FAIL_TORCH_BATCH_INVARIANCE_VERDICT
+        ),
+        "passed": passed,
+        "blockers": blockers,
+        "thresholds": {
+            "max_segnet_argmax_diff_pixels": int(max_segnet_argmax_diff_pixels),
+            "max_segnet_logit_abs_delta": (
+                None
+                if max_segnet_logit_abs_delta is None
+                else float(max_segnet_logit_abs_delta)
+            ),
+        },
+        "evidence_grade": "[upstream-pytorch-backend-diagnostic]",
+        "evidence_tag": "[upstream-pytorch-backend-diagnostic]",
+        "score_axis": "[upstream-pytorch-backend-diagnostic]",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "comparison": "segnet_batch_vs_per_sample_loop",
+        "device_type": device_type,
+        "cache_dir": str(cache_dir),
+        "start_pair": start,
+        "max_pairs": int(max_pairs),
+        "pair_window": [start, stop],
+        "n_samples": stop - start,
+        "total_pair_count": total_pair_count,
+        "requested_backend_options": {
+            "use_deterministic_algorithms": bool(use_deterministic_algorithms),
+            "cudnn_benchmark": cudnn_benchmark,
+            "cudnn_deterministic": cudnn_deterministic,
+            "allow_tf32": allow_tf32,
+            "mkldnn_enabled": mkldnn_enabled,
+            "torch_num_threads": None if torch_num_threads is None else int(torch_num_threads),
+        },
+        "torch_backend": backend_metadata,
+        "deltas": {
+            "segnet_logit_abs_max": logit_delta,
+            "segnet_argmax_diff_pixels": argmax_diff_pixels,
+            "segnet_argmax_pixel_count": pixel_count,
+            "segnet_argmax_diff_fraction": (
+                None
+                if argmax_diff_pixels is None
+                or pixel_count is None
+                or pixel_count == 0
+                else float(argmax_diff_pixels) / float(pixel_count)
+            ),
+            "segnet_argmax_mismatch_detail": mismatch_detail,
+        },
+        "allowed_use": (
+            ["backend_batch_invariance_green_for_selected_cache_window"]
+            if passed
+            else [
+                "diagnose_backend_batch_sensitive_argmax_pixels",
+                "compare_against_cuda_auth_eval_hardware_before_mlx_exactness_claims",
+            ]
+        ),
+        "authority_status": (
+            "PyTorch backend batch-invariance traces are diagnostic evidence only; "
+            "they do not replace contest CPU/CUDA auth eval or establish MLX score "
+            "authority."
+        ),
+    }
+
+
 def run_torch_segnet_layer_trace_nchw(torch_segnet: Any, x_nchw: np.ndarray) -> dict[str, np.ndarray]:
     """Run upstream PyTorch SegNet and capture structural boundary outputs."""
 
@@ -419,6 +585,33 @@ def run_mlx_segnet_layer_trace_nchw(mlx_segnet: Any, x_nchw: np.ndarray) -> dict
         _mlx_array_to_numpy(mlx_segnet.segmentation_head(decoder_output))
     )
     return trace
+
+
+def run_torch_segnet_batch_and_loop_nchw(
+    torch_segnet: Any,
+    x_nchw: np.ndarray,
+    *,
+    device_type: str = "cpu",
+) -> dict[str, np.ndarray]:
+    """Run upstream PyTorch SegNet as one batch and as a per-sample loop."""
+
+    import torch
+
+    device = _torch_device(device_type)
+    x = torch.from_numpy(np.array(x_nchw, dtype=np.float32, copy=True, order="C")).to(device)
+    model = torch_segnet.eval().to(device)
+    with torch.inference_mode():
+        batch = model(x).detach().cpu()
+        loop = torch.cat(
+            [model(x[index : index + 1]).detach().cpu() for index in range(int(x.shape[0]))],
+            dim=0,
+        )
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+    return {
+        "batch": batch.numpy().astype(np.float32, copy=True),
+        "loop": loop.numpy().astype(np.float32, copy=True),
+    }
 
 
 def run_torch_distortion_scorer_nchw(
@@ -610,6 +803,17 @@ def write_mlx_segnet_layer_trace_manifest(
     path: str | Path,
 ) -> None:
     """Write a SegNet layer trace manifest with stable formatting."""
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_torch_segnet_batch_invariance_manifest(
+    manifest: dict[str, Any],
+    path: str | Path,
+) -> None:
+    """Write a PyTorch backend batch-invariance manifest with stable formatting."""
 
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -1065,6 +1269,107 @@ def _segnet_mismatch_detail(
     }
 
 
+def _torch_backend_options(
+    *,
+    use_deterministic_algorithms: bool,
+    cudnn_benchmark: bool | None,
+    cudnn_deterministic: bool | None,
+    allow_tf32: bool | None,
+    mkldnn_enabled: bool | None,
+    torch_num_threads: int | None,
+) -> Any:
+    class _TorchBackendOptions:
+        def __enter__(self) -> None:
+            import torch
+
+            self.torch = torch
+            self.previous = {
+                "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
+                "cudnn_benchmark": getattr(torch.backends.cudnn, "benchmark", None),
+                "cudnn_deterministic": getattr(torch.backends.cudnn, "deterministic", None),
+                "cuda_matmul_allow_tf32": getattr(torch.backends.cuda.matmul, "allow_tf32", None),
+                "cudnn_allow_tf32": getattr(torch.backends.cudnn, "allow_tf32", None),
+                "mkldnn_enabled": (
+                    getattr(torch.backends.mkldnn, "enabled", None)
+                    if getattr(torch.backends, "mkldnn", None) is not None
+                    else None
+                ),
+                "torch_num_threads": torch.get_num_threads(),
+            }
+            if use_deterministic_algorithms:
+                torch.use_deterministic_algorithms(True)
+            if cudnn_benchmark is not None:
+                torch.backends.cudnn.benchmark = bool(cudnn_benchmark)
+            if cudnn_deterministic is not None:
+                torch.backends.cudnn.deterministic = bool(cudnn_deterministic)
+            if allow_tf32 is not None:
+                torch.backends.cuda.matmul.allow_tf32 = bool(allow_tf32)
+                torch.backends.cudnn.allow_tf32 = bool(allow_tf32)
+            if mkldnn_enabled is not None and getattr(torch.backends, "mkldnn", None) is not None:
+                torch.backends.mkldnn.enabled = bool(mkldnn_enabled)
+            if torch_num_threads is not None:
+                torch.set_num_threads(int(torch_num_threads))
+
+        def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+            torch = self.torch
+            previous = self.previous
+            torch.use_deterministic_algorithms(bool(previous["deterministic_algorithms"]))
+            if previous["cudnn_benchmark"] is not None:
+                torch.backends.cudnn.benchmark = bool(previous["cudnn_benchmark"])
+            if previous["cudnn_deterministic"] is not None:
+                torch.backends.cudnn.deterministic = bool(previous["cudnn_deterministic"])
+            if previous["cuda_matmul_allow_tf32"] is not None:
+                torch.backends.cuda.matmul.allow_tf32 = bool(previous["cuda_matmul_allow_tf32"])
+            if previous["cudnn_allow_tf32"] is not None:
+                torch.backends.cudnn.allow_tf32 = bool(previous["cudnn_allow_tf32"])
+            if previous["mkldnn_enabled"] is not None and getattr(torch.backends, "mkldnn", None) is not None:
+                torch.backends.mkldnn.enabled = bool(previous["mkldnn_enabled"])
+            torch.set_num_threads(int(previous["torch_num_threads"]))
+
+    return _TorchBackendOptions()
+
+
+def _torch_device(device_type: str) -> Any:
+    import torch
+
+    if device_type == "cuda":
+        if not torch.cuda.is_available():
+            raise ValueError("CUDA device requested but torch.cuda.is_available() is false")
+        return torch.device("cuda")
+    if device_type == "mps":
+        mps = getattr(torch.backends, "mps", None)
+        if mps is None or not bool(mps.is_available()):
+            raise ValueError("MPS device requested but torch.backends.mps.is_available() is false")
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+def _torch_backend_metadata(device_type: str) -> dict[str, Any]:
+    import torch
+
+    metadata: dict[str, Any] = {
+        "torch_version": torch.__version__,
+        "torch_cuda_version": getattr(torch.version, "cuda", None),
+        "device_type": device_type,
+        "num_threads": int(torch.get_num_threads()),
+        "deterministic_algorithms": bool(torch.are_deterministic_algorithms_enabled()),
+        "cudnn_available": bool(torch.backends.cudnn.is_available()),
+        "cudnn_version": torch.backends.cudnn.version(),
+        "cudnn_benchmark": bool(torch.backends.cudnn.benchmark),
+        "cudnn_deterministic": bool(torch.backends.cudnn.deterministic),
+        "cuda_matmul_allow_tf32": bool(torch.backends.cuda.matmul.allow_tf32),
+        "cudnn_allow_tf32": bool(torch.backends.cudnn.allow_tf32),
+    }
+    mkldnn = getattr(torch.backends, "mkldnn", None)
+    if mkldnn is not None:
+        metadata["mkldnn_enabled"] = bool(mkldnn.enabled)
+    if device_type == "cuda" and torch.cuda.is_available():
+        device = torch.device("cuda")
+        metadata["cuda_device_name"] = torch.cuda.get_device_name(device)
+        metadata["cuda_device_capability"] = list(torch.cuda.get_device_capability(device))
+    return metadata
+
+
 def _top2_margin(logits_nchw: np.ndarray) -> np.ndarray:
     if logits_nchw.shape[1] < 2:
         return np.full(logits_nchw.shape[:1] + logits_nchw.shape[2:], np.inf, dtype=np.float32)
@@ -1086,21 +1391,27 @@ def _jsonable(value: Any) -> Any:
 
 __all__ = [
     "FAIL_SWEEP_VERDICT",
+    "FAIL_TORCH_BATCH_INVARIANCE_VERDICT",
     "FAIL_VERDICT",
     "PASS_SWEEP_VERDICT",
+    "PASS_TORCH_BATCH_INVARIANCE_VERDICT",
     "PASS_VERDICT",
     "SCHEMA_VERSION",
     "SEGNET_TRACE_SCHEMA_VERSION",
     "SWEEP_SCHEMA_VERSION",
+    "TORCH_BATCH_INVARIANCE_SCHEMA_VERSION",
     "MLXTorchParityThresholds",
     "build_mlx_scorer_torch_parity_manifest",
     "build_mlx_scorer_torch_parity_manifest_from_outputs",
     "build_mlx_scorer_torch_parity_sweep_manifest",
     "build_mlx_segnet_layer_trace_manifest",
+    "build_torch_segnet_batch_invariance_manifest",
     "run_mlx_segnet_layer_trace_nchw",
     "run_torch_distortion_scorer_nchw",
+    "run_torch_segnet_batch_and_loop_nchw",
     "run_torch_segnet_layer_trace_nchw",
     "write_mlx_scorer_torch_parity_manifest",
     "write_mlx_scorer_torch_parity_sweep_manifest",
     "write_mlx_segnet_layer_trace_manifest",
+    "write_torch_segnet_batch_invariance_manifest",
 ]
