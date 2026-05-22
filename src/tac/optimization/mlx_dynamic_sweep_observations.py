@@ -55,6 +55,14 @@ REQUIRED_COMPONENT_DELTAS = (
     "rate_delta",
 )
 
+DUPLICATE_OBSERVATION_KEY_FIELDS = (
+    "candidate_id",
+    "observed_axis",
+    "archive_sha256",
+    "raw_output_or_cache_sha256",
+    "source_artifact_sha256",
+)
+
 _SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 _CONTEST_AXIS_BY_GRADE = {
     "contest-CPU": "contest_cpu",
@@ -414,6 +422,7 @@ def append_observation_row(
     row: Mapping[str, Any],
     *,
     output_path: Path,
+    allow_duplicate_observation: bool = False,
 ) -> dict[str, Any]:
     """Append one validated observation row to a JSONL file under an fcntl lock."""
 
@@ -424,12 +433,39 @@ def append_observation_row(
     with lock_path.open("a", encoding="utf-8") as lock_fh:
         fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX)
         try:
+            if not allow_duplicate_observation:
+                duplicate = _find_duplicate_observation(output_path, normalized)
+                if duplicate is not None:
+                    key = _duplicate_observation_key(normalized)
+                    key_text = ", ".join(f"{field}={value!r}" for field, value in key)
+                    raise MLXDynamicSweepObservationError(
+                        "duplicate MLX dynamic sweep observation refused; "
+                        f"{key_text}; use allow_duplicate_observation only for intentional duplicates"
+                    )
             with output_path.open("a", encoding="utf-8") as handle:
                 handle.write(line)
                 handle.flush()
         finally:
             fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
     return normalized
+
+
+def _duplicate_observation_key(row: Mapping[str, Any]) -> tuple[tuple[str, str | None], ...]:
+    return tuple(
+        (field, None if row.get(field) is None else str(row[field]))
+        for field in DUPLICATE_OBSERVATION_KEY_FIELDS
+    )
+
+
+def _find_duplicate_observation(
+    path: Path,
+    normalized: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    target_key = _duplicate_observation_key(normalized)
+    for existing in load_observation_rows(path):
+        if _duplicate_observation_key(existing) == target_key:
+            return existing
+    return None
 
 
 def load_observation_rows(path: Path) -> list[dict[str, Any]]:
@@ -557,6 +593,7 @@ def summarize_observation_file(path: Path) -> dict[str, Any]:
 
 
 __all__ = [
+    "DUPLICATE_OBSERVATION_KEY_FIELDS",
     "EVIDENCE_TAG_MLX",
     "FALSE_AUTHORITY",
     "REQUIRED_COMPONENT_DELTAS",

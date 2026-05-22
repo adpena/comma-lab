@@ -71,6 +71,41 @@ def test_append_observation_row_jsonl_fail_closed(tmp_path: Path) -> None:
     assert appended["component_deltas"]["segnet_delta"] == pytest.approx(-0.0001)
 
 
+def test_append_rejects_duplicate_observation_key_by_default(tmp_path: Path) -> None:
+    source = tmp_path / "source.json"
+    source.write_text('{"ok": true}\n', encoding="utf-8")
+    output = tmp_path / "observations.jsonl"
+    first = _base_row(source)
+    second = _base_row(source)
+    second["runtime_sha256"] = _sha("d")
+    second["run_id"] = "intentional-rerun"
+
+    append_observation_row(first, output_path=output)
+
+    with pytest.raises(MLXDynamicSweepObservationError, match="duplicate MLX dynamic sweep observation"):
+        append_observation_row(second, output_path=output)
+
+    assert len(load_observation_rows(output)) == 1
+
+
+def test_append_allows_duplicate_observation_only_when_explicit(tmp_path: Path) -> None:
+    source = tmp_path / "source.json"
+    source.write_text('{"ok": true}\n', encoding="utf-8")
+    output = tmp_path / "observations.jsonl"
+    row = _base_row(source)
+
+    append_observation_row(row, output_path=output)
+    appended = append_observation_row(
+        row,
+        output_path=output,
+        allow_duplicate_observation=True,
+    )
+
+    rows = load_observation_rows(output)
+    assert len(rows) == 2
+    assert rows[-1] == appended
+
+
 def test_summary_groups_by_candidate_config_pass_and_family(tmp_path: Path) -> None:
     output = tmp_path / "observations.jsonl"
     append_observation_row(_base_row(), output_path=output)
@@ -208,44 +243,45 @@ def test_cli_appends_and_prints_json_summary(tmp_path: Path) -> None:
     source.write_text('{"source": true}\n', encoding="utf-8")
     output = tmp_path / "observations.jsonl"
 
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "append_mlx_dynamic_sweep_observation.py"),
+        "--jsonl",
+        str(output),
+        "--candidate-id",
+        "prefix_k032",
+        "--sweep-config-id",
+        "mlx_local_response",
+        "--optimization-pass-id",
+        "smoke",
+        "--family",
+        "decoder_q_selective_dqs1",
+        "--observed-axis",
+        "[macOS-MLX research-signal]",
+        "--evidence-grade",
+        "macOS-MLX-research-signal",
+        "--observed-score-or-delta",
+        "-0.00002",
+        "--archive-sha256",
+        _sha("a"),
+        "--runtime-sha256",
+        _sha("b"),
+        "--raw-output-or-cache-sha256",
+        _sha("c"),
+        "--segnet-delta",
+        "-0.0001",
+        "--posenet-delta",
+        "0.0003",
+        "--rate-delta",
+        "-0.0002",
+        "--source-artifact",
+        str(source),
+        "--observed-at-utc",
+        "2026-05-22T14:30:00Z",
+        "--print-summary",
+    ]
     completed = subprocess.run(
-        [
-            sys.executable,
-            str(REPO_ROOT / "tools" / "append_mlx_dynamic_sweep_observation.py"),
-            "--jsonl",
-            str(output),
-            "--candidate-id",
-            "prefix_k032",
-            "--sweep-config-id",
-            "mlx_local_response",
-            "--optimization-pass-id",
-            "smoke",
-            "--family",
-            "decoder_q_selective_dqs1",
-            "--observed-axis",
-            "[macOS-MLX research-signal]",
-            "--evidence-grade",
-            "macOS-MLX-research-signal",
-            "--observed-score-or-delta",
-            "-0.00002",
-            "--archive-sha256",
-            _sha("a"),
-            "--runtime-sha256",
-            _sha("b"),
-            "--raw-output-or-cache-sha256",
-            _sha("c"),
-            "--segnet-delta",
-            "-0.0001",
-            "--posenet-delta",
-            "0.0003",
-            "--rate-delta",
-            "-0.0002",
-            "--source-artifact",
-            str(source),
-            "--observed-at-utc",
-            "2026-05-22T14:30:00Z",
-            "--print-summary",
-        ],
+        command,
         cwd=REPO_ROOT,
         check=True,
         text=True,
@@ -261,6 +297,27 @@ def test_cli_appends_and_prints_json_summary(tmp_path: Path) -> None:
     assert stored["evidence_grade"] == "macOS-MLX-research-signal"
     assert stored["score_claim"] is False
     assert stored["promotable"] is False
+
+    duplicate = subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    assert duplicate.returncode == 2
+    assert "duplicate MLX dynamic sweep observation" in duplicate.stderr
+    assert len(load_observation_rows(output)) == 1
+
+    allowed = subprocess.run(
+        [*command, "--allow-duplicate-observation"],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    allowed_summary = json.loads(allowed.stdout)
+    assert allowed_summary["row_count"] == 2
 
 
 def _row_to_builder_kwargs(row: dict) -> dict:

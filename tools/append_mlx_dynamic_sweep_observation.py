@@ -84,6 +84,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--run-id")
     parser.add_argument("--notes")
     parser.add_argument("--print-summary", action="store_true")
+    parser.add_argument(
+        "--allow-duplicate-observation",
+        action="store_true",
+        help="Intentionally append a duplicate candidate/axis/archive/raw/source observation.",
+    )
     return parser.parse_args(argv)
 
 
@@ -139,7 +144,11 @@ def main(argv: list[str] | None = None) -> int:
             observed_at_utc=args.observed_at_utc,
             extra=extra,
         )
-        appended = append_observation_row(row, output_path=args.jsonl)
+        appended = append_observation_row(
+            row,
+            output_path=args.jsonl,
+            allow_duplicate_observation=args.allow_duplicate_observation,
+        )
         payload = summarize_observation_file(args.jsonl) if args.print_summary else appended
     except (OSError, MLXDynamicSweepObservationError, ValueError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
