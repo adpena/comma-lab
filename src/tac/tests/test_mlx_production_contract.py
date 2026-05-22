@@ -70,6 +70,8 @@ def test_mlx_production_contract_bundle_accepts_strict_contracts() -> None:
         reference_torch_parity=_torch_parity(side="reference"),
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
+        score_calibration=_score_calibration(),
+        require_score_calibration=True,
     )
 
     bundle = build_mlx_scorer_production_contract_bundle_manifest(
@@ -613,6 +615,8 @@ def test_mlx_production_contract_bundle_cli_writes_manifest(tmp_path: Path) -> N
         reference_torch_parity=_torch_parity(side="reference"),
         profile_stability=_profile_stability(),
         batch_invariance=_batch_invariance(),
+        score_calibration=_score_calibration(),
+        require_score_calibration=True,
     )
     contract_path = tmp_path / "contract.json"
     out_path = tmp_path / "bundle.json"
@@ -641,6 +645,137 @@ def test_mlx_production_contract_bundle_cli_writes_manifest(tmp_path: Path) -> N
     assert bundle["verdict"] == BUNDLE_PASS_VERDICT
     assert bundle["summary"]["contract_count"] == 1
     assert bundle["summary"]["strict_contract_count"] == 1
+
+
+def test_mlx_production_contract_bundle_cli_validates_dataset_coverage(
+    tmp_path: Path,
+) -> None:
+    contract = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        score_calibration=_score_calibration(),
+        require_score_calibration=True,
+    )
+    contract_path = tmp_path / "contract.json"
+    dataset_path = tmp_path / "dataset.json"
+    out_path = tmp_path / "bundle.json"
+    contract_path.write_text(json.dumps(contract), encoding="utf-8")
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "schema": "scorer_response_dataset.v1",
+                "rows": [_mlx_dataset_row_from_contract(contract)],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_production_contract_bundle.py"),
+            "--contract",
+            str(contract_path),
+            "--dataset",
+            str(dataset_path),
+            "--output",
+            str(out_path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"passed": true' in completed.stdout
+    bundle = json.loads(out_path.read_text(encoding="utf-8"))
+    assert bundle["passed"] is True
+    assert bundle["dataset_coverage_gate"]["status"] == "strict_pass"
+    assert bundle["summary"]["dataset_mlx_row_count"] == 1
+    assert bundle["summary"]["dataset_matched_row_count"] == 1
+
+
+def test_mlx_production_contract_bundle_cli_blocks_uncovered_dataset_row(
+    tmp_path: Path,
+) -> None:
+    contract = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        score_calibration=_score_calibration(),
+        require_score_calibration=True,
+    )
+    row = _mlx_dataset_row_from_contract(contract)
+    row["source_pair_window"] = [1, 2]
+    contract_path = tmp_path / "contract.json"
+    dataset_path = tmp_path / "dataset.json"
+    out_path = tmp_path / "bundle.json"
+    contract_path.write_text(json.dumps(contract), encoding="utf-8")
+    dataset_path.write_text(
+        json.dumps({"schema": "scorer_response_dataset.v1", "rows": [row]}),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_production_contract_bundle.py"),
+            "--contract",
+            str(contract_path),
+            "--dataset",
+            str(dataset_path),
+            "--output",
+            str(out_path),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert '"passed": false' in completed.stdout
+    bundle = json.loads(out_path.read_text(encoding="utf-8"))
+    assert bundle["passed"] is False
+    assert "dataset_mlx_row_coverage_gate_not_strict_pass" in bundle["blockers"]
+    assert bundle["dataset_coverage_gate"]["status"] == "blocked"
+    assert "mlx_production_contract_bundle_row_unmatched:mlx-row-1" in bundle[
+        "blockers"
+    ]
+
+
+def _mlx_dataset_row_from_contract(contract: dict) -> dict:
+    summary = contract["response_summary"]
+    return {
+        "schema": "scorer_response_row.v1",
+        "row_id": "mlx-row-1",
+        "family": "mlx_scorer_response",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "archive_sha256": summary["archive_sha256"],
+        "source_inflated_outputs_aggregate_sha256": summary[
+            "inflated_outputs_aggregate_sha256"
+        ],
+        "source_batch_pairs": summary["batch_pairs"],
+        "source_n_samples": summary["n_samples"],
+        "source_pair_window": summary["pair_window"],
+        "source_candidate_cache_array_sha256": summary[
+            "candidate_cache_array_sha256"
+        ],
+        "source_reference_cache_array_sha256": summary[
+            "reference_cache_array_sha256"
+        ],
+        "source_posenet_sha256": summary["posenet_sha256"],
+        "source_segnet_sha256": summary["segnet_sha256"],
+    }
 
 
 def _response_payload(*, device: str = "cpu", batch_pairs: int = 1) -> dict:
