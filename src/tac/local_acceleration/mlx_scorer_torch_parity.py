@@ -15,10 +15,14 @@ import numpy as np
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_scorer_adapters import (
+    _mlx_array_to_numpy,
+    nchw_to_nhwc,
+    nhwc_to_nchw,
     run_mlx_distortion_scorer_nchw,
     scorer_distortion_components_numpy,
     temporary_mlx_device,
     torch_distortion_net_to_mlx,
+    torch_segnet_to_mlx,
 )
 from tac.local_acceleration.mlx_scorer_response import (
     GPU_RESEARCH_SIGNAL_BLOCKER,
@@ -28,6 +32,7 @@ from tac.local_acceleration.mlx_scorer_response import (
 
 SCHEMA_VERSION = "mlx_scorer_torch_parity.v1"
 SWEEP_SCHEMA_VERSION = "mlx_scorer_torch_parity_sweep.v1"
+SEGNET_TRACE_SCHEMA_VERSION = "mlx_segnet_layer_trace.v1"
 PASS_VERDICT = "PASS_MLX_TORCH_SCORER_PARITY"
 FAIL_VERDICT = "FAIL_MLX_TORCH_SCORER_PARITY"
 PASS_SWEEP_VERDICT = "PASS_MLX_TORCH_SCORER_PARITY_SWEEP"
@@ -271,6 +276,151 @@ def build_mlx_scorer_torch_parity_sweep_manifest(
     }
 
 
+def build_mlx_segnet_layer_trace_manifest(
+    *,
+    cache_dir: str | Path,
+    repo_root: str | Path = ".",
+    device_type: str = "cpu",
+    start_pair: int = 0,
+    max_pairs: int = 1,
+    run_id: str | None = None,
+    allow_gpu_research_signal: bool = False,
+    cliff_threshold: float = 1.0e-4,
+) -> dict[str, Any]:
+    """Trace PyTorch-vs-MLX SegNet drift across encoder/decoder boundaries."""
+
+    if device_type not in {"cpu", "gpu"}:
+        raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+    if device_type == "gpu" and not allow_gpu_research_signal:
+        raise ValueError(
+            f"{GPU_RESEARCH_SIGNAL_BLOCKER}: MLX GPU layer traces are local "
+            "research-signal implementation checks only; pass "
+            "allow_gpu_research_signal=True after recording that rationale"
+        )
+    if int(start_pair) < 0:
+        raise ValueError(f"start_pair must be >= 0, got {start_pair}")
+    if int(max_pairs) < 1:
+        raise ValueError(f"max_pairs must be >= 1, got {max_pairs}")
+    if float(cliff_threshold) < 0.0:
+        raise ValueError(f"cliff_threshold must be >= 0, got {cliff_threshold}")
+
+    cache = load_scorer_input_cache(cache_dir)
+    total_pair_count = int(cache.pair_indices.shape[0])
+    start = int(start_pair)
+    if start >= total_pair_count:
+        raise ValueError(f"start_pair {start} is outside cache pair count {total_pair_count}")
+    stop = min(total_pair_count, start + int(max_pairs))
+    seg = np.asarray(cache.segnet_last_rgb[start:stop], dtype=np.float32)
+
+    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    torch_trace = run_torch_segnet_layer_trace_nchw(dist.segnet, seg)
+    with temporary_mlx_device(device_type):
+        mlx_trace = run_mlx_segnet_layer_trace_nchw(
+            torch_segnet_to_mlx(dist.segnet),
+            seg,
+        )
+
+    rows = _layer_trace_rows(
+        torch_trace=torch_trace,
+        mlx_trace=mlx_trace,
+        cliff_threshold=float(cliff_threshold),
+    )
+    logits_torch = torch_trace.get("segmentation_head.logits")
+    logits_mlx = mlx_trace.get("segmentation_head.logits")
+    if logits_torch is None or logits_mlx is None:
+        argmax_detail: dict[str, Any] = {"missing_logits": True}
+        argmax_diff_pixels = None
+        argmax_diff_fraction = None
+    else:
+        _, argmax_diff_pixels, pixel_count, argmax_detail = _segnet_deltas(
+            {"segnet": logits_torch},
+            {"segnet": logits_mlx},
+            [],
+        )
+        argmax_diff_fraction = (
+            None
+            if argmax_diff_pixels is None or pixel_count in (None, 0)
+            else float(argmax_diff_pixels) / float(pixel_count)
+        )
+
+    drift_cliff = next((row for row in rows if row["exceeds_cliff_threshold"]), None)
+    return {
+        "schema_version": SEGNET_TRACE_SCHEMA_VERSION,
+        "run_id": run_id,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "device_type": device_type,
+        "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
+        "cache_dir": str(cache_dir),
+        "start_pair": start,
+        "max_pairs": int(max_pairs),
+        "pair_window": [start, stop],
+        "n_samples": stop - start,
+        "total_pair_count": total_pair_count,
+        "cliff_threshold": float(cliff_threshold),
+        "trace_count": len(rows),
+        "drift_cliff": drift_cliff,
+        "segnet_argmax_diff_pixels": argmax_diff_pixels,
+        "segnet_argmax_diff_fraction": argmax_diff_fraction,
+        "segnet_argmax_mismatch_detail": argmax_detail,
+        "rows": rows,
+        "authority_status": (
+            "PyTorch-vs-MLX SegNet layer traces are diagnostic local "
+            "implementation evidence only; exact auth eval remains required for "
+            "score claims and promotion."
+        ),
+    }
+
+
+def run_torch_segnet_layer_trace_nchw(torch_segnet: Any, x_nchw: np.ndarray) -> dict[str, np.ndarray]:
+    """Run upstream PyTorch SegNet and capture structural boundary outputs."""
+
+    import torch
+
+    trace: dict[str, np.ndarray] = {"input": np.array(x_nchw, dtype=np.float32, copy=True)}
+    x = torch.from_numpy(np.array(x_nchw, dtype=np.float32, copy=True, order="C"))
+    with torch.inference_mode():
+        features, stage_trace = _torch_segnet_encoder_features(torch_segnet, x)
+        trace.update(stage_trace)
+        for index, feature in enumerate(features):
+            trace[f"encoder.feature_{index}"] = _torch_to_numpy(feature)
+        decoder_output, decoder_trace = _torch_segnet_decoder_trace(torch_segnet, features)
+        trace.update(decoder_trace)
+        trace["decoder.output"] = _torch_to_numpy(decoder_output)
+        trace["segmentation_head.logits"] = _torch_to_numpy(
+            torch_segnet.segmentation_head(decoder_output)
+        )
+    return trace
+
+
+def run_mlx_segnet_layer_trace_nchw(mlx_segnet: Any, x_nchw: np.ndarray) -> dict[str, np.ndarray]:
+    """Run MLX SegNet and capture structural boundary outputs."""
+
+    import mlx.core as mx
+
+    trace: dict[str, np.ndarray] = {"input": np.array(x_nchw, dtype=np.float32, copy=True)}
+    x = mx.array(nchw_to_nhwc(x_nchw))
+    features, stage_trace = _mlx_segnet_encoder_features(mlx_segnet, x)
+    trace.update(stage_trace)
+    for index, feature in enumerate(features):
+        trace[f"encoder.feature_{index}"] = nhwc_to_nchw(_mlx_array_to_numpy(feature))
+    decoder_output, decoder_trace = _mlx_segnet_decoder_trace(mlx_segnet, features)
+    trace.update(decoder_trace)
+    trace["decoder.output"] = nhwc_to_nchw(_mlx_array_to_numpy(decoder_output))
+    trace["segmentation_head.logits"] = nhwc_to_nchw(
+        _mlx_array_to_numpy(mlx_segnet.segmentation_head(decoder_output))
+    )
+    return trace
+
+
 def run_torch_distortion_scorer_nchw(
     distortion_net: Any,
     posenet_yuv6_pair_nchw: np.ndarray,
@@ -331,7 +481,12 @@ def build_mlx_scorer_torch_parity_manifest_from_outputs(
 
     pose_deltas = _pose_output_deltas(torch_outputs, mlx_outputs)
     max_pose_delta = max(pose_deltas.values(), default=0.0)
-    seg_logit_delta, seg_argmax_diff_pixels, seg_argmax_pixel_count = _segnet_deltas(
+    (
+        seg_logit_delta,
+        seg_argmax_diff_pixels,
+        seg_argmax_pixel_count,
+        seg_argmax_mismatch_detail,
+    ) = _segnet_deltas(
         torch_outputs,
         mlx_outputs,
         blockers,
@@ -406,6 +561,7 @@ def build_mlx_scorer_torch_parity_manifest_from_outputs(
                 or seg_argmax_pixel_count == 0
                 else float(seg_argmax_diff_pixels) / float(seg_argmax_pixel_count)
             ),
+            "segnet_argmax_mismatch_detail": seg_argmax_mismatch_detail,
             "posenet_component_abs_max": pose_component_abs_max,
             "segnet_component_diff_samples": seg_component_diff_samples,
         },
@@ -447,6 +603,278 @@ def write_mlx_scorer_torch_parity_manifest(
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_mlx_segnet_layer_trace_manifest(
+    manifest: dict[str, Any],
+    path: str | Path,
+) -> None:
+    """Write a SegNet layer trace manifest with stable formatting."""
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _torch_to_numpy(value: Any) -> np.ndarray:
+    return value.detach().cpu().numpy().astype(np.float32, copy=True)
+
+
+def _torch_segnet_encoder_features(torch_segnet: Any, x: Any) -> tuple[list[Any], dict[str, np.ndarray]]:
+    model = torch_segnet.encoder.model
+    stage_out_idx = set(getattr(model, "_stage_out_idx", {}))
+    trace: dict[str, np.ndarray] = {}
+    out = model.bn1(model.conv_stem(x))
+    trace["encoder.stem"] = _torch_to_numpy(out)
+    features: list[Any] = []
+    if 0 in stage_out_idx:
+        features.append(out)
+    for index, stage in enumerate(model.blocks):
+        for block_index, block in enumerate(stage):
+            out = _torch_efficientnet_block_trace(
+                block,
+                out,
+                prefix=f"encoder.stage_{index}.block_{block_index}",
+                trace=trace,
+            )
+            trace[f"encoder.stage_{index}.block_{block_index}"] = _torch_to_numpy(out)
+        trace[f"encoder.stage_{index}"] = _torch_to_numpy(out)
+        if index + 1 in stage_out_idx:
+            features.append(out)
+    if not bool(getattr(torch_segnet.encoder, "_is_vgg_style", False)):
+        features = [x, *features]
+    return features, trace
+
+
+def _mlx_segnet_encoder_features(mlx_segnet: Any, x: Any) -> tuple[list[Any], dict[str, np.ndarray]]:
+    encoder_model = mlx_segnet.encoder.model
+    trace: dict[str, np.ndarray] = {}
+    out = encoder_model.stem(x)
+    trace["encoder.stem"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+    features: list[Any] = []
+    if 0 in encoder_model.stage_out_idx:
+        features.append(out)
+    for index, stage in enumerate(encoder_model.stages):
+        for block_index, block in enumerate(stage.blocks):
+            out = _mlx_efficientnet_block_trace(
+                block,
+                out,
+                prefix=f"encoder.stage_{index}.block_{block_index}",
+                trace=trace,
+            )
+            trace[f"encoder.stage_{index}.block_{block_index}"] = nhwc_to_nchw(
+                _mlx_array_to_numpy(out)
+            )
+        trace[f"encoder.stage_{index}"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        if index + 1 in encoder_model.stage_out_idx:
+            features.append(out)
+    if mlx_segnet.encoder.prepend_input:
+        features = [x, *features]
+    return features, trace
+
+
+def _torch_efficientnet_block_trace(
+    block: Any,
+    x: Any,
+    *,
+    prefix: str,
+    trace: dict[str, np.ndarray],
+) -> Any:
+    class_name = type(block).__name__
+    shortcut = x
+    if class_name == "DepthwiseSeparableConv":
+        out = block.conv_dw(x)
+        trace[f"{prefix}.conv_dw"] = _torch_to_numpy(out)
+        out = block.bn1(out)
+        trace[f"{prefix}.bn1"] = _torch_to_numpy(out)
+        out = block.se(out)
+        trace[f"{prefix}.se"] = _torch_to_numpy(out)
+        out = block.conv_pw(out)
+        trace[f"{prefix}.conv_pw"] = _torch_to_numpy(out)
+        out = block.bn2(out)
+        trace[f"{prefix}.bn2"] = _torch_to_numpy(out)
+    elif class_name == "InvertedResidual":
+        out = block.conv_pw(x)
+        trace[f"{prefix}.conv_pw"] = _torch_to_numpy(out)
+        out = block.bn1(out)
+        trace[f"{prefix}.bn1"] = _torch_to_numpy(out)
+        out = block.conv_dw(out)
+        trace[f"{prefix}.conv_dw"] = _torch_to_numpy(out)
+        out = block.bn2(out)
+        trace[f"{prefix}.bn2"] = _torch_to_numpy(out)
+        out = block.se(out)
+        trace[f"{prefix}.se"] = _torch_to_numpy(out)
+        out = block.conv_pwl(out)
+        trace[f"{prefix}.conv_pwl"] = _torch_to_numpy(out)
+        out = block.bn3(out)
+        trace[f"{prefix}.bn3"] = _torch_to_numpy(out)
+    else:
+        return block(x)
+    if bool(getattr(block, "has_skip", False)):
+        out = out + shortcut
+        trace[f"{prefix}.residual_add"] = _torch_to_numpy(out)
+    return out
+
+
+def _mlx_efficientnet_block_trace(
+    block: Any,
+    x: Any,
+    *,
+    prefix: str,
+    trace: dict[str, np.ndarray],
+) -> Any:
+    class_name = type(block).__name__
+    shortcut = x
+    if class_name == "MLXDepthwiseSeparableConvAdapter":
+        out = block.conv_dw(x)
+        trace[f"{prefix}.conv_dw"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.bn1(out)
+        trace[f"{prefix}.bn1"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.se(out)
+        trace[f"{prefix}.se"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.conv_pw(out)
+        trace[f"{prefix}.conv_pw"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.bn2(out)
+        trace[f"{prefix}.bn2"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+    elif class_name == "MLXInvertedResidualAdapter":
+        out = block.conv_pw(x)
+        trace[f"{prefix}.conv_pw"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.bn1(out)
+        trace[f"{prefix}.bn1"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.conv_dw(out)
+        trace[f"{prefix}.conv_dw"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.bn2(out)
+        trace[f"{prefix}.bn2"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.se(out)
+        trace[f"{prefix}.se"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.conv_pwl(out)
+        trace[f"{prefix}.conv_pwl"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+        out = block.bn3(out)
+        trace[f"{prefix}.bn3"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+    else:
+        return block(x)
+    if bool(getattr(block, "has_skip", False)):
+        out = out + shortcut
+        trace[f"{prefix}.residual_add"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+    return out
+
+
+def _torch_segnet_decoder_trace(torch_segnet: Any, features: list[Any]) -> tuple[Any, dict[str, np.ndarray]]:
+    spatial_shapes = [(int(feature.shape[2]), int(feature.shape[3])) for feature in features]
+    spatial_shapes = spatial_shapes[::-1]
+    decoder_features = features[1:][::-1]
+    out = decoder_features[0]
+    skip_connections = decoder_features[1:]
+    trace: dict[str, np.ndarray] = {}
+    for index, block in enumerate(torch_segnet.decoder.blocks):
+        target_height, target_width = spatial_shapes[index + 1]
+        skip_connection = (
+            skip_connections[index] if index < len(skip_connections) else None
+        )
+        out = block(out, target_height, target_width, skip_connection)
+        trace[f"decoder.block_{index}"] = _torch_to_numpy(out)
+    return out, trace
+
+
+def _mlx_segnet_decoder_trace(mlx_segnet: Any, features: list[Any]) -> tuple[Any, dict[str, np.ndarray]]:
+    spatial_shapes = [(int(feature.shape[1]), int(feature.shape[2])) for feature in features]
+    spatial_shapes = spatial_shapes[::-1]
+    decoder_features = features[1:][::-1]
+    out = decoder_features[0]
+    skip_connections = decoder_features[1:]
+    trace: dict[str, np.ndarray] = {}
+    for index, decoder_block in enumerate(mlx_segnet.decoder.blocks):
+        target_height, target_width = spatial_shapes[index + 1]
+        skip_connection = (
+            skip_connections[index] if index < len(skip_connections) else None
+        )
+        out = decoder_block(out, target_height, target_width, skip_connection)
+        trace[f"decoder.block_{index}"] = nhwc_to_nchw(_mlx_array_to_numpy(out))
+    return out, trace
+
+
+def _layer_trace_rows(
+    *,
+    torch_trace: dict[str, np.ndarray],
+    mlx_trace: dict[str, np.ndarray],
+    cliff_threshold: float,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, name in enumerate(torch_trace):
+        torch_value = torch_trace[name]
+        mlx_value = mlx_trace.get(name)
+        if mlx_value is None:
+            rows.append(
+                {
+                    "index": index,
+                    "name": name,
+                    "present_in_torch": True,
+                    "present_in_mlx": False,
+                    "shape_match": False,
+                    "exceeds_cliff_threshold": True,
+                    "blockers": ["missing_mlx_trace"],
+                }
+            )
+            continue
+        summary = _array_delta_summary(torch_value, mlx_value)
+        rows.append(
+            {
+                "index": index,
+                "name": name,
+                **summary,
+                "exceeds_cliff_threshold": (
+                    summary.get("max_abs_delta") is None
+                    or float(summary["max_abs_delta"]) > cliff_threshold
+                ),
+            }
+        )
+    for name in mlx_trace:
+        if name not in torch_trace:
+            rows.append(
+                {
+                    "index": len(rows),
+                    "name": name,
+                    "present_in_torch": False,
+                    "present_in_mlx": True,
+                    "shape_match": False,
+                    "exceeds_cliff_threshold": True,
+                    "blockers": ["missing_torch_trace"],
+                }
+            )
+    return rows
+
+
+def _array_delta_summary(torch_value: np.ndarray, mlx_value: np.ndarray) -> dict[str, Any]:
+    lhs = np.asarray(torch_value, dtype=np.float32)
+    rhs = np.asarray(mlx_value, dtype=np.float32)
+    if lhs.shape != rhs.shape:
+        return {
+            "present_in_torch": True,
+            "present_in_mlx": True,
+            "shape_match": False,
+            "torch_shape": list(lhs.shape),
+            "mlx_shape": list(rhs.shape),
+            "max_abs_delta": None,
+            "mean_abs_delta": None,
+            "rms_delta": None,
+            "p95_abs_delta": None,
+            "p99_abs_delta": None,
+            "blockers": ["shape_mismatch"],
+        }
+    diff = np.abs(lhs - rhs).astype(np.float64, copy=False)
+    return {
+        "present_in_torch": True,
+        "present_in_mlx": True,
+        "shape_match": True,
+        "torch_shape": list(lhs.shape),
+        "mlx_shape": list(rhs.shape),
+        "max_abs_delta": float(np.max(diff)) if diff.size else 0.0,
+        "mean_abs_delta": float(np.mean(diff)) if diff.size else 0.0,
+        "rms_delta": float(np.sqrt(np.mean(np.square(diff)))) if diff.size else 0.0,
+        "p95_abs_delta": float(np.quantile(diff, 0.95)) if diff.size else 0.0,
+        "p99_abs_delta": float(np.quantile(diff, 0.99)) if diff.size else 0.0,
+        "blockers": [],
+    }
 
 
 def _build_windows(
@@ -492,6 +920,20 @@ def _summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     for key in keys:
         values = [float(row["deltas"][key]) for row in rows if row["deltas"].get(key) is not None]
         summary[key] = _distribution(values)
+    mismatch_details = [
+        row["deltas"]["segnet_argmax_mismatch_detail"]
+        for row in rows
+        if row["deltas"]["segnet_argmax_mismatch_detail"].get("mismatch_pixels", 0) > 0
+    ]
+    summary["segnet_argmax_mismatch_pixels_total"] = sum(
+        int(detail["mismatch_pixels"]) for detail in mismatch_details
+    )
+    summary["segnet_argmax_mismatch_min_top2_margin"] = _distribution(
+        [float(detail["mismatch_min_top2_margin"]) for detail in mismatch_details]
+    )
+    summary["segnet_argmax_mismatch_logit_abs_delta_max"] = _distribution(
+        [float(detail["mismatch_logit_abs_delta_max"]) for detail in mismatch_details]
+    )
     return summary
 
 
@@ -547,7 +989,7 @@ def _segnet_deltas(
     torch_outputs: dict[str, Any],
     mlx_outputs: dict[str, Any],
     blockers: list[str],
-) -> tuple[float | None, int | None, int | None]:
+) -> tuple[float | None, int | None, int | None, dict[str, Any]]:
     torch_seg = np.asarray(torch_outputs.get("segnet"), dtype=np.float32)
     mlx_seg = np.asarray(mlx_outputs.get("segnet"), dtype=np.float32)
     if torch_seg.shape != mlx_seg.shape:
@@ -555,12 +997,79 @@ def _segnet_deltas(
             "segnet_shape_mismatch:"
             f"torch={list(torch_seg.shape)}:mlx={list(mlx_seg.shape)}"
         )
-        return None, None, None
+        return None, None, None, {"shape_mismatch": True}
     logit_delta = float(np.max(np.abs(torch_seg - mlx_seg)))
     argmax_mismatch = np.argmax(torch_seg, axis=1) != np.argmax(mlx_seg, axis=1)
     argmax_diff = int(np.sum(argmax_mismatch))
     pixel_count = int(argmax_mismatch.size)
-    return logit_delta, argmax_diff, pixel_count
+    return logit_delta, argmax_diff, pixel_count, _segnet_mismatch_detail(
+        torch_seg=torch_seg,
+        mlx_seg=mlx_seg,
+        argmax_mismatch=argmax_mismatch,
+    )
+
+
+def _segnet_mismatch_detail(
+    *,
+    torch_seg: np.ndarray,
+    mlx_seg: np.ndarray,
+    argmax_mismatch: np.ndarray,
+) -> dict[str, Any]:
+    torch_margin = _top2_margin(torch_seg)
+    mlx_margin = _top2_margin(mlx_seg)
+    if not np.any(argmax_mismatch):
+        return {
+            "mismatch_pixels": 0,
+            "torch_top2_margin_min": float(np.min(torch_margin)),
+            "mlx_top2_margin_min": float(np.min(mlx_margin)),
+            "mismatch_torch_top2_margin_min": None,
+            "mismatch_mlx_top2_margin_min": None,
+            "mismatch_min_top2_margin": None,
+            "mismatch_logit_abs_delta_max": None,
+            "examples": [],
+        }
+
+    mismatch_logit_delta = np.max(
+        np.abs(torch_seg - mlx_seg) * np.expand_dims(argmax_mismatch, axis=1),
+        axis=1,
+    )
+    torch_argmax = np.argmax(torch_seg, axis=1)
+    mlx_argmax = np.argmax(mlx_seg, axis=1)
+    mismatch_torch_margin = torch_margin[argmax_mismatch]
+    mismatch_mlx_margin = mlx_margin[argmax_mismatch]
+    mismatch_min_margin = np.minimum(mismatch_torch_margin, mismatch_mlx_margin)
+    coords = np.argwhere(argmax_mismatch)
+    examples: list[dict[str, Any]] = []
+    for sample_index, y, x in coords[:8]:
+        examples.append(
+            {
+                "sample_index": int(sample_index),
+                "y": int(y),
+                "x": int(x),
+                "torch_class": int(torch_argmax[sample_index, y, x]),
+                "mlx_class": int(mlx_argmax[sample_index, y, x]),
+                "torch_top2_margin": float(torch_margin[sample_index, y, x]),
+                "mlx_top2_margin": float(mlx_margin[sample_index, y, x]),
+                "logit_abs_delta_max": float(mismatch_logit_delta[sample_index, y, x]),
+            }
+        )
+    return {
+        "mismatch_pixels": int(coords.shape[0]),
+        "torch_top2_margin_min": float(np.min(torch_margin)),
+        "mlx_top2_margin_min": float(np.min(mlx_margin)),
+        "mismatch_torch_top2_margin_min": float(np.min(mismatch_torch_margin)),
+        "mismatch_mlx_top2_margin_min": float(np.min(mismatch_mlx_margin)),
+        "mismatch_min_top2_margin": float(np.min(mismatch_min_margin)),
+        "mismatch_logit_abs_delta_max": float(np.max(mismatch_logit_delta[argmax_mismatch])),
+        "examples": examples,
+    }
+
+
+def _top2_margin(logits_nchw: np.ndarray) -> np.ndarray:
+    if logits_nchw.shape[1] < 2:
+        return np.full(logits_nchw.shape[:1] + logits_nchw.shape[2:], np.inf, dtype=np.float32)
+    top2 = np.partition(logits_nchw, kth=-2, axis=1)
+    return np.asarray(top2[:, -1, ...] - top2[:, -2, ...], dtype=np.float32)
 
 
 def _jsonable(value: Any) -> Any:
@@ -581,12 +1090,17 @@ __all__ = [
     "PASS_SWEEP_VERDICT",
     "PASS_VERDICT",
     "SCHEMA_VERSION",
+    "SEGNET_TRACE_SCHEMA_VERSION",
     "SWEEP_SCHEMA_VERSION",
     "MLXTorchParityThresholds",
     "build_mlx_scorer_torch_parity_manifest",
     "build_mlx_scorer_torch_parity_manifest_from_outputs",
     "build_mlx_scorer_torch_parity_sweep_manifest",
+    "build_mlx_segnet_layer_trace_manifest",
+    "run_mlx_segnet_layer_trace_nchw",
     "run_torch_distortion_scorer_nchw",
+    "run_torch_segnet_layer_trace_nchw",
     "write_mlx_scorer_torch_parity_manifest",
     "write_mlx_scorer_torch_parity_sweep_manifest",
+    "write_mlx_segnet_layer_trace_manifest",
 ]

@@ -18,6 +18,7 @@ from tac.local_acceleration.mlx_scorer_torch_parity import (
     build_mlx_scorer_torch_parity_manifest,
     build_mlx_scorer_torch_parity_manifest_from_outputs,
     build_mlx_scorer_torch_parity_sweep_manifest,
+    build_mlx_segnet_layer_trace_manifest,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -127,6 +128,20 @@ def test_mlx_scorer_torch_parity_counts_segnet_argmax_fraction() -> None:
     assert manifest["deltas"]["segnet_argmax_diff_pixels"] == 1
     assert manifest["deltas"]["segnet_argmax_pixel_count"] == 4
     assert manifest["deltas"]["segnet_argmax_diff_fraction"] == 0.25
+    detail = manifest["deltas"]["segnet_argmax_mismatch_detail"]
+    assert detail["mismatch_pixels"] == 1
+    assert detail["mismatch_min_top2_margin"] == 1.0
+    assert abs(detail["mismatch_logit_abs_delta_max"] - 1.1) < 1.0e-6
+    assert len(detail["examples"]) == 1
+    example = detail["examples"][0]
+    assert example["sample_index"] == 0
+    assert example["y"] == 1
+    assert example["x"] == 1
+    assert example["torch_class"] == 0
+    assert example["mlx_class"] == 1
+    assert example["torch_top2_margin"] == 1.0
+    assert abs(example["mlx_top2_margin"] - 1.1) < 1.0e-6
+    assert abs(example["logit_abs_delta_max"] - 1.1) < 1.0e-6
     assert any(
         blocker.startswith("segnet_argmax_diff_pixels_exceeds_threshold")
         for blocker in manifest["blockers"]
@@ -210,6 +225,7 @@ def test_mlx_scorer_torch_parity_sweep_passes_cpu_cache_windows(tmp_path: Path) 
     assert manifest["summary"]["failed_windows"] == 0
     assert manifest["summary"]["segnet_argmax_diff_pixels"]["max"] == 0.0
     assert manifest["summary"]["segnet_argmax_diff_fraction"]["max"] == 0.0
+    assert manifest["summary"]["segnet_argmax_mismatch_pixels_total"] == 0
     assert manifest["rows"][0]["deltas"]["segnet_argmax_pixel_count"] > 0
 
 
@@ -238,6 +254,65 @@ def test_mlx_scorer_torch_parity_sweep_cli_rejects_empty_window_before_loading(
 
     assert completed.returncode == 2
     assert "window_pairs must be >= 1" in completed.stderr
+    assert not output.exists()
+
+
+def test_mlx_segnet_layer_trace_manifest_covers_structural_boundaries(tmp_path: Path) -> None:
+    cache_dir = _write_test_cache(tmp_path / "cache")
+
+    manifest = build_mlx_segnet_layer_trace_manifest(
+        cache_dir=cache_dir,
+        repo_root=REPO,
+        device_type="cpu",
+        start_pair=0,
+        max_pairs=1,
+        run_id="fixture_trace",
+    )
+
+    assert manifest["schema_version"] == "mlx_segnet_layer_trace.v1"
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["requires_exact_eval_before_promotion"] is True
+    assert manifest["pair_window"] == [0, 1]
+    names = {row["name"] for row in manifest["rows"]}
+    assert "encoder.stem" in names
+    assert "encoder.stage_0.block_0.conv_dw" in names
+    assert "encoder.stage_0.block_0.bn2" in names
+    assert "encoder.stage_0.block_0" in names
+    assert "encoder.stage_6" in names
+    assert "decoder.block_4" in names
+    assert "segmentation_head.logits" in names
+    assert manifest["trace_count"] == len(manifest["rows"])
+    assert manifest["segnet_argmax_diff_pixels"] == 0
+    logits = next(row for row in manifest["rows"] if row["name"] == "segmentation_head.logits")
+    assert logits["shape_match"] is True
+
+
+def test_mlx_segnet_layer_trace_cli_rejects_invalid_window_before_loading(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "trace.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "trace_mlx_segnet_layer_parity.py"),
+            "--cache-dir",
+            str(tmp_path / "missing"),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(REPO),
+            "--max-pairs",
+            "0",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert "max_pairs must be >= 1" in completed.stderr
     assert not output.exists()
 
 
