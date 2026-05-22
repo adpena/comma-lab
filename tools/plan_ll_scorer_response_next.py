@@ -63,6 +63,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--decoder-q-response-surface",
+        type=Path,
+        help=(
+            "Optional tools/plan_decoder_q_response_surface.py JSON output. "
+            "When provided, the LL planner prioritizes preserving improving "
+            "decoder-q windows while suppressing or inverting regressing ones."
+        ),
+    )
+    parser.add_argument(
         "--mlx-torch-parity-sweep",
         type=Path,
         help=(
@@ -136,6 +145,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.magic_codec_seed_boundary_smoke is None
             else json.loads(args.magic_codec_seed_boundary_smoke.read_text(encoding="utf-8"))
         )
+        decoder_q_response_surface = (
+            None
+            if args.decoder_q_response_surface is None
+            else json.loads(args.decoder_q_response_surface.read_text(encoding="utf-8"))
+        )
         mlx_torch_parity_sweep = (
             None
             if args.mlx_torch_parity_sweep is None
@@ -149,6 +163,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.allow_legacy_null_byte_matrix_missing_authority
             ),
             magic_codec_seed_boundary_smoke=magic_codec_seed_boundary_smoke,
+            decoder_q_response_surface=decoder_q_response_surface,
             mlx_torch_parity_sweep=mlx_torch_parity_sweep,
             allow_mlx_parity_research_signal_override=(
                 args.allow_mlx_parity_research_signal_override

@@ -1755,6 +1755,7 @@ def build_next_probe_plan(
     magic_codec_seed_boundary_smoke: dict[str, Any] | None = None,
     mlx_torch_parity_sweep: dict[str, Any] | None = None,
     allow_mlx_parity_research_signal_override: bool = False,
+    decoder_q_response_surface: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic LL next-probe plan from response economics."""
 
@@ -2013,6 +2014,36 @@ def build_next_probe_plan(
             },
         )
 
+    decoder_q_response_surface_summary = None
+    if decoder_q_response_surface is not None:
+        decoder_q_response_surface_summary = _validate_decoder_q_response_surface(
+            decoder_q_response_surface
+        )
+        for probe in probes:
+            probe["priority"] = int(probe["priority"]) + 1
+        probes.insert(
+            0,
+            {
+                "probe_id": "ll_decoder_q_window_signed_response_surface",
+                "priority": 1,
+                "class": "byte_neutral_representation_mutation",
+                "rationale": (
+                    "Matched MLX family deltas show decoder-q response is "
+                    "window-signed; preserve improving windows and suppress "
+                    "or invert regressing windows before exact-eval spend."
+                ),
+                "input_rows": [],
+                "response_surface_summary": decoder_q_response_surface_summary,
+                "top_preserve_windows": decoder_q_response_surface.get("top_preserve_windows", [])[:8],
+                "top_suppress_windows": decoder_q_response_surface.get("top_suppress_windows", [])[:8],
+                "acceptance_gate": (
+                    "new decoder-q candidate improves matched local response "
+                    "surface and remains byte-neutral/fixed-length before "
+                    "official inflate and exact CUDA eval"
+                ),
+            },
+        )
+
     return {
         "schema": "ll_scorer_response_next_probe_plan.v1",
         "producer": TOOL,
@@ -2029,8 +2060,42 @@ def build_next_probe_plan(
         "null_byte_priority_weights": null_byte_priority_weights,
         "magic_codec_seed_boundary": magic_codec_seed_boundary,
         "mlx_torch_parity_sweep_gate": mlx_torch_parity_sweep_gate,
+        "decoder_q_response_surface_summary": decoder_q_response_surface_summary,
         "prohibitions": prohibitions,
         "probes": probes,
+    }
+
+
+def _validate_decoder_q_response_surface(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ScorerResponseDatasetError("decoder-q response surface must be a JSON object")
+    if payload.get("schema") != "decoder_q_response_surface_plan.v1":
+        raise ScorerResponseDatasetError("decoder-q response surface schema mismatch")
+    _require_explicit_false_authority(payload, label="decoder-q response surface")
+    summary = payload.get("summary")
+    if not isinstance(summary, dict):
+        raise ScorerResponseDatasetError("decoder-q response surface summary missing")
+    preserve = _as_int(summary.get("preserve_candidate_effect_count"))
+    suppress = _as_int(summary.get("suppress_or_invert_candidate_effect_count"))
+    matched = _as_int(summary.get("matched_count"))
+    if preserve is None or suppress is None or matched is None:
+        raise ScorerResponseDatasetError(
+            "decoder-q response surface summary counts must be finite integers"
+        )
+    return {
+        "schema": payload.get("schema"),
+        "matched_count": matched,
+        "preserve_candidate_effect_count": preserve,
+        "suppress_or_invert_candidate_effect_count": suppress,
+        "neutral_or_uncertain_count": _as_int(summary.get("neutral_or_uncertain_count")),
+        "preserve_gain_sum": _as_float(summary.get("preserve_gain_sum")),
+        "suppress_harm_sum": _as_float(summary.get("suppress_harm_sum")),
+        "axis_dominance_counts": summary.get("axis_dominance_counts"),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
     }
 
 

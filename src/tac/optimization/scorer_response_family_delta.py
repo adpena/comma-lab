@@ -16,6 +16,9 @@ FAMILY_DELTA_SCHEMA = "scorer_response_family_delta.v1"
 DEFAULT_DELTA_FIELDS = (
     "delta_vs_baseline_score",
     "scorer_delta_vs_baseline",
+    "pose_term",
+    "seg_term",
+    "scorer_term",
     "avg_posenet_dist",
     "avg_segnet_dist",
 )

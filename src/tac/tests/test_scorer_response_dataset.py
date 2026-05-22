@@ -10,6 +10,10 @@ from types import SimpleNamespace
 import numpy as np
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.optimization.decoder_q_response_surface import (
+    build_decoder_q_response_surface,
+    render_decoder_q_response_surface_markdown,
+)
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 from tac.optimization.scorer_response_dataset import (
     RATE_SCORE_PER_BYTE,
@@ -1121,6 +1125,82 @@ def test_family_delta_matches_rows_by_source_start_pair() -> None:
         -0.001,
     )
     assert "Scorer Response Family Delta" in render_family_delta_markdown(delta)
+
+
+def test_decoder_q_response_surface_classifies_preserve_and_suppress_windows() -> None:
+    family_delta = {
+        "schema": "scorer_response_family_delta.v1",
+        "reference_family": "mlx_scorer_response",
+        "candidate_family": "mlx_decoder_q",
+        "match_key": "source_start_pair",
+        "matched_rows": [
+            {
+                "match_key_value": "1",
+                "candidate_minus_reference_delta_vs_baseline_score": -0.002,
+                "candidate_minus_reference_seg_term": -0.003,
+                "candidate_minus_reference_pose_term": 0.001,
+            },
+            {
+                "match_key_value": "2",
+                "candidate_minus_reference_delta_vs_baseline_score": 0.004,
+                "candidate_minus_reference_seg_term": 0.004,
+                "candidate_minus_reference_pose_term": 0.0,
+            },
+            {
+                "match_key_value": "3",
+                "candidate_minus_reference_delta_vs_baseline_score": 0.0,
+                "candidate_minus_reference_seg_term": 0.0,
+                "candidate_minus_reference_pose_term": 0.0,
+            },
+        ],
+    }
+
+    surface = build_decoder_q_response_surface(family_delta, top_k=2)
+
+    assert surface["score_claim"] is False
+    assert surface["summary"]["matched_count"] == 3
+    assert surface["summary"]["preserve_candidate_effect_count"] == 1
+    assert surface["summary"]["suppress_or_invert_candidate_effect_count"] == 1
+    assert surface["summary"]["neutral_or_uncertain_count"] == 1
+    assert surface["summary"]["preserve_gain_sum"] == 0.002
+    assert surface["summary"]["suppress_harm_sum"] == 0.004
+    assert surface["top_preserve_windows"][0]["recommended_action"] == "prefer_window_or_similar_axis_pattern"
+    assert surface["top_suppress_windows"][0]["recommended_action"] == "penalize_window_or_try_opposite_sign"
+    assert "Decoder-Q Response Surface" in render_decoder_q_response_surface_markdown(surface)
+
+
+def test_next_probe_plan_can_prioritize_decoder_q_response_surface() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response", "mlx_decoder_q"),
+        rows_per_fold=5,
+        include_prediction=True,
+    )
+    surface = {
+        "schema": "decoder_q_response_surface_plan.v1",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "summary": {
+            "matched_count": 10,
+            "preserve_candidate_effect_count": 3,
+            "suppress_or_invert_candidate_effect_count": 7,
+            "neutral_or_uncertain_count": 0,
+            "preserve_gain_sum": 0.01,
+            "suppress_harm_sum": 0.05,
+            "axis_dominance_counts": {"seg": 10},
+        },
+        "top_preserve_windows": [{"match_key_value": "1"}],
+        "top_suppress_windows": [{"match_key_value": "2"}],
+    }
+
+    plan = build_next_probe_plan(dataset, decoder_q_response_surface=surface)
+
+    assert plan["decoder_q_response_surface_summary"]["matched_count"] == 10
+    assert plan["probes"][0]["probe_id"] == "ll_decoder_q_window_signed_response_surface"
+    assert plan["probes"][0]["response_surface_summary"]["suppress_harm_sum"] == 0.05
+    assert plan["probes"][0]["top_preserve_windows"] == [{"match_key_value": "1"}]
 
 
 def test_scorer_response_validation_gate_blocks_mixed_axis_targets() -> None:
