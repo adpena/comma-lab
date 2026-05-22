@@ -153,6 +153,24 @@ last_refreshed_note: |
   `[contest-CPU]` frontier. Exact `[contest-CUDA T4]` recovery passed at
   `0.22619043540195719`, with SegNet distortion `0.00066252` and PoseNet
   distortion `0.00016845`; CUDA remains a regression.
+- Observation feedback now demotes already-tested DQS1 pairset candidates in
+  the cross-family portfolio planner. `pairset_diversity_k002` (`[26, 588]`)
+  passed byte-closed locality controls and exact Modal `[contest-CPU]` eval,
+  but scored `0.19205563890644933`, regressing `+0.00002669009035946579`
+  versus the compact DQS1 top32 CPU frontier. Component decomposition versus
+  that frontier: PoseNet `+0.0`, SegNet `+0.00004600000000001131`, rate
+  `-0.00001930990964053858`. Its local advisory sign-calibration row also
+  regressed (`0.19206763890644935` versus local baseline
+  `0.19206131688110561`). The observation-aware portfolio now recommends
+  `pairset_diversity_k004`; its byte-closed archive
+  `fc01aca62f07cd4959f98e7fe33f99c6f1bc0f5812b26fe40151ad8fb0e8b392`
+  (`178535` bytes, pairs `[26, 242, 440, 588]`) passed locality controls with
+  selected/unselected mismatch counts all `0`. Exact Modal `[contest-CPU]`
+  eval also passed, but regressed to `0.19205830234226182`; component
+  decomposition versus the compact DQS1 top32 CPU frontier was PoseNet `+0.0`,
+  SegNet `+0.00004600000000001131`, rate
+  `-0.000016646473828055286`. The refreshed portfolio now recommends
+  `pairset_diversity_k008` as the next fresh local-control candidate.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
