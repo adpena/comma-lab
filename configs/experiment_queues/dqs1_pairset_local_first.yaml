@@ -14,14 +14,15 @@
   "experiments": [
     {
       "id": "pairset_drop_one_rank001_pair0501",
-      "status": "queued",
+      "status": "disabled",
       "priority": 8,
       "lane_id": "lane_dqs1_pairset_drop_one_rank001_pair0501_local_first_20260522",
       "tags": [
         "dqs1",
         "pairset",
         "local-first",
-        "no-score-authority"
+        "no-score-authority",
+        "exhausted-local-advisory-observed"
       ],
       "steps": [
         {
