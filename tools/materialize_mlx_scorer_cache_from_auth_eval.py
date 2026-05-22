@@ -32,6 +32,7 @@ from experiments.contest_auth_eval import (  # noqa: E402  # pyright: ignore[rep
     _validate_archive_members,
 )
 from tac.local_acceleration.mlx_cache_audit import (  # noqa: E402
+    AUTHORITY_FALSE_FIELDS,
     audit_mlx_scorer_input_cache_against_auth_eval,
     write_cache_audit,
 )
@@ -43,8 +44,26 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--auth-eval-dir", required=True, type=Path)
     parser.add_argument("--output-cache-dir", required=True, type=Path)
-    parser.add_argument("--work-dir", required=True, type=Path)
+    parser.add_argument("--work-dir", default=None, type=Path)
     parser.add_argument("--audit-output", required=True, type=Path)
+    parser.add_argument(
+        "--downloaded-tensor-cache-dir",
+        default=None,
+        type=Path,
+        help=(
+            "No-reinflate mode: directory downloaded from the Modal auth-cache "
+            "volume containing manifest.json and scorer input .npy tensors."
+        ),
+    )
+    parser.add_argument(
+        "--tensor-volume-manifest",
+        default=None,
+        type=Path,
+        help=(
+            "No-reinflate mode: scorer_input_cache_tensor_volume_manifest.json "
+            "from the recovered auth-eval artifact."
+        ),
+    )
     parser.add_argument("--upstream-dir", default=Path("upstream"), type=Path)
     parser.add_argument(
         "--video-names-file",
@@ -81,6 +100,19 @@ def main(argv: list[str] | None = None) -> int:
     auth_dir = args.auth_eval_dir.resolve()
     auth_eval_path = auth_dir / "contest_auth_eval.json"
     auth_eval = _read_object(auth_eval_path)
+    if bool(args.downloaded_tensor_cache_dir) != bool(args.tensor_volume_manifest):
+        raise SystemExit(
+            "--downloaded-tensor-cache-dir and --tensor-volume-manifest must be passed together"
+        )
+    if args.downloaded_tensor_cache_dir is not None:
+        return _main_downloaded_tensor_cache(
+            args=args,
+            auth_dir=auth_dir,
+            auth_eval_path=auth_eval_path,
+            auth_eval=auth_eval,
+        )
+    if args.work_dir is None:
+        raise SystemExit("--work-dir is required unless --downloaded-tensor-cache-dir is used")
     recovered_manifest = _read_object(auth_dir / "inflated_outputs_manifest.json")
     local_request = _load_local_request(auth_dir)
 
@@ -238,12 +270,237 @@ def main(argv: list[str] | None = None) -> int:
     return 0 if audit["passed"] else 2
 
 
+def _main_downloaded_tensor_cache(
+    *,
+    args: argparse.Namespace,
+    auth_dir: Path,
+    auth_eval_path: Path,
+    auth_eval: dict[str, Any],
+) -> int:
+    source_cache = args.downloaded_tensor_cache_dir.resolve()
+    volume_manifest_path = args.tensor_volume_manifest.resolve()
+    output_cache = args.output_cache_dir.resolve()
+    audit_output = args.audit_output.resolve()
+    if not source_cache.is_dir():
+        raise SystemExit(f"downloaded tensor cache dir not found: {source_cache}")
+    _require_file(volume_manifest_path, "tensor_volume_manifest")
+
+    validation = _validate_downloaded_tensor_cache(
+        downloaded_cache_dir=source_cache,
+        tensor_volume_manifest=_read_object(volume_manifest_path),
+        auth_eval=auth_eval,
+    )
+    normalized_manifest = validation["normalized_manifest"]
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(normalized_manifest, auth_eval)
+    write_cache_audit(audit, audit_output)
+
+    if not audit["passed"]:
+        summary = {
+            "cache_manifest": None,
+            "audit_output": str(audit_output),
+            "audit_passed": False,
+            "audit_verdict": audit["verdict"],
+            "downloaded_tensor_cache_dir": str(source_cache),
+            "tensor_volume_manifest": str(volume_manifest_path),
+            "validation": _public_validation_summary(validation),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        print(json.dumps(summary, sort_keys=True))
+        return 2
+
+    same_output = source_cache == output_cache
+    if output_cache.exists() and not same_output:
+        if not args.force:
+            raise SystemExit(
+                f"--output-cache-dir already exists; pass --force to replace: {output_cache}"
+            )
+        shutil.rmtree(output_cache)
+    if not same_output:
+        shutil.copytree(source_cache, output_cache)
+    write_json(output_cache / "manifest.json", normalized_manifest)
+    cache_manifest = _finalize_cache_after_audit(
+        output_cache=output_cache,
+        audit_output=audit_output,
+        audit=audit,
+        auth_dir=auth_dir,
+        auth_eval_path=auth_eval_path,
+        delete_on_fail=False,
+    )
+    cache_manifest["downloaded_tensor_cache_identity"] = _public_validation_summary(validation)
+    write_json(output_cache / "manifest.json", cache_manifest)
+
+    summary = {
+        "cache_manifest": str(output_cache / "manifest.json"),
+        "audit_output": str(audit_output),
+        "audit_passed": True,
+        "audit_verdict": audit["verdict"],
+        "downloaded_tensor_cache_dir": str(source_cache),
+        "tensor_volume_manifest": str(volume_manifest_path),
+        "validation": _public_validation_summary(validation),
+        "archive_sha256": cache_manifest.get("archive_sha256"),
+        "inflated_outputs_aggregate_sha256": cache_manifest.get(
+            "inflated_outputs_aggregate_sha256"
+        ),
+        "pair_count": cache_manifest.get("pair_count"),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    print(json.dumps(summary, sort_keys=True))
+    return 0
+
+
 def _load_local_request(auth_dir: Path) -> dict[str, Any]:
     for path in sorted(auth_dir.glob("modal_*_auth_eval_local_request.json")):
         payload = read_json(path)
         if isinstance(payload, dict):
             return payload
     raise SystemExit(f"no modal_*_auth_eval_local_request.json found in {auth_dir}")
+
+
+def _validate_downloaded_tensor_cache(
+    *,
+    downloaded_cache_dir: Path,
+    tensor_volume_manifest: dict[str, Any],
+    auth_eval: dict[str, Any],
+) -> dict[str, Any]:
+    if tensor_volume_manifest.get("schema_version") != "modal_auth_eval_tensor_volume_manifest.v1":
+        raise SystemExit("tensor volume manifest has unexpected schema_version")
+    volume_payload = _dict(tensor_volume_manifest.get("payload"), "tensor volume payload")
+    manifest_path = downloaded_cache_dir / "manifest.json"
+    _require_file(manifest_path, "downloaded tensor cache manifest")
+    downloaded_manifest = _read_object(manifest_path)
+
+    manifest_sha_expected = _string(tensor_volume_manifest.get("manifest_sha256"))
+    manifest_sha_actual = _sha256(manifest_path, prefix=0)
+    pre_stamp_manifest = _manifest_without_local_audit_stamp(downloaded_manifest)
+    manifest_sha_exact = bool(manifest_sha_expected and manifest_sha_actual == manifest_sha_expected)
+    if not manifest_sha_exact and pre_stamp_manifest != volume_payload:
+        raise SystemExit(
+            "downloaded tensor cache manifest mismatch against tensor volume manifest "
+            f"(local_sha={manifest_sha_actual} expected_sha={manifest_sha_expected})"
+        )
+    if manifest_sha_exact and downloaded_manifest != volume_payload:
+        raise SystemExit(
+            "downloaded tensor cache manifest SHA matches but JSON payload differs "
+            "from tensor volume manifest payload"
+        )
+
+    auth_tensor_record = _auth_tensor_manifest_record(auth_eval)
+    if auth_tensor_record:
+        auth_payload = _dict(auth_tensor_record.get("payload"), "auth eval tensor payload")
+        if auth_payload != volume_payload:
+            raise SystemExit("tensor volume manifest payload differs from auth eval provenance")
+        auth_manifest_sha = _string(auth_tensor_record.get("sha256"))
+        if auth_manifest_sha and manifest_sha_expected and auth_manifest_sha != manifest_sha_expected:
+            raise SystemExit(
+                "tensor volume manifest SHA differs from auth eval provenance: "
+                f"volume={manifest_sha_expected} auth={auth_manifest_sha}"
+            )
+
+    artifact_checks = _validate_downloaded_tensor_artifacts(
+        downloaded_cache_dir=downloaded_cache_dir,
+        manifest_payload=volume_payload,
+    )
+    normalized_manifest = _complete_false_authority_contract(dict(pre_stamp_manifest))
+    return {
+        "schema_version": "downloaded_mlx_tensor_cache_identity.v1",
+        "downloaded_cache_dir": str(downloaded_cache_dir),
+        "manifest_sha256_expected": manifest_sha_expected,
+        "manifest_sha256_actual": manifest_sha_actual,
+        "manifest_sha256_exact_match": manifest_sha_exact,
+        "preexisting_local_audit_stamp": pre_stamp_manifest != downloaded_manifest,
+        "authority_contract_completed_fields": [
+            field
+            for field in AUTHORITY_FALSE_FIELDS
+            if pre_stamp_manifest.get(field) is not False
+        ],
+        "artifact_checks": artifact_checks,
+        "normalized_manifest": normalized_manifest,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _validate_downloaded_tensor_artifacts(
+    *,
+    downloaded_cache_dir: Path,
+    manifest_payload: dict[str, Any],
+) -> list[dict[str, Any]]:
+    artifacts = _dict(manifest_payload.get("artifacts"), "tensor cache artifacts")
+    checks: list[dict[str, Any]] = []
+    for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+        record = _dict(artifacts.get(key), f"tensor artifact {key}")
+        remote_path = _string(record.get("path"))
+        if remote_path is None:
+            raise SystemExit(f"tensor artifact {key} missing path")
+        local_path = downloaded_cache_dir / Path(remote_path).name
+        _require_file(local_path, f"downloaded tensor artifact {key}")
+        expected_bytes = _int(record.get("bytes"))
+        if expected_bytes is None:
+            raise SystemExit(f"tensor artifact {key} missing byte count")
+        actual_bytes = local_path.stat().st_size
+        if actual_bytes != expected_bytes:
+            raise SystemExit(
+                f"tensor artifact byte count mismatch for {key}: "
+                f"local={actual_bytes} expected={expected_bytes}"
+            )
+        expected_sha = _string(record.get("sha256"))
+        if expected_sha is None:
+            raise SystemExit(f"tensor artifact {key} missing sha256")
+        actual_sha = _sha256(local_path, prefix=0)
+        if actual_sha != expected_sha:
+            raise SystemExit(
+                f"tensor artifact SHA mismatch for {key}: "
+                f"local={actual_sha} expected={expected_sha}"
+            )
+        checks.append(
+            {
+                "name": key,
+                "path": str(local_path),
+                "bytes": actual_bytes,
+                "sha256": actual_sha,
+            }
+        )
+    return checks
+
+
+def _manifest_without_local_audit_stamp(manifest: dict[str, Any]) -> dict[str, Any]:
+    stripped = dict(manifest)
+    stripped.pop("auth_eval_identity_audit", None)
+    stripped.pop("eligible_for_local_mlx_transfer_calibration", None)
+    stripped.pop("downloaded_tensor_cache_identity", None)
+    return stripped
+
+
+def _complete_false_authority_contract(manifest: dict[str, Any]) -> dict[str, Any]:
+    for field in AUTHORITY_FALSE_FIELDS:
+        manifest[field] = False
+    return manifest
+
+
+def _auth_tensor_manifest_record(auth_eval: dict[str, Any]) -> dict[str, Any]:
+    provenance = auth_eval.get("provenance")
+    if not isinstance(provenance, dict):
+        return {}
+    record = provenance.get("scorer_input_cache_tensor_manifest")
+    return record if isinstance(record, dict) else {}
+
+
+def _public_validation_summary(validation: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in validation.items()
+        if key not in {"normalized_manifest"}
+    }
 
 
 def _read_object(path: Path) -> dict[str, Any]:
@@ -397,10 +654,12 @@ def _finalize_cache_after_audit(
     audit: dict[str, Any],
     auth_dir: Path,
     auth_eval_path: Path,
+    delete_on_fail: bool = True,
 ) -> dict[str, Any]:
     manifest_path = output_cache / "manifest.json"
     if audit.get("passed") is not True:
-        shutil.rmtree(output_cache, ignore_errors=True)
+        if delete_on_fail:
+            shutil.rmtree(output_cache, ignore_errors=True)
         return {}
 
     manifest = _read_object(manifest_path)
@@ -441,6 +700,20 @@ def _string(value: Any) -> str | None:
     if isinstance(value, str) and value.strip():
         return value.strip()
     return None
+
+
+def _int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    return None
+
+
+def _dict(value: Any, label: str) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    raise SystemExit(f"expected JSON object for {label}")
 
 
 def _single_raw_path(manifest: dict[str, Any], inflated_dir: Path) -> Path:
