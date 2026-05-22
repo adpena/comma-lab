@@ -324,9 +324,12 @@ last_refreshed_note: |
   `[327, 376, 320, 378, 296, 430, 167, 151]`,
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
   for `pairset_drop_one_rank021_pair0371`. After rank023, rank024, rank018,
-  rank017, rank016, rank025, and rank015 local
-  observe-only results, the generated checked-in fresh local-control candidate
-  is `pairset_drop_one_rank001_pair0501`. The response
+  rank017, rank016, rank025, rank015, and rank001 local
+  observe-only results, the current action summary is exhausted: all eight
+  listed DQS1-safe rows have completed local advisory custody plus matching
+  false eureka records, and `tools/build_dqs1_local_first_queue.py
+  --action-summary latest --write` now correctly refuses to invent a ninth
+  queue target. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
   selected-pair identity matching before fitting. The operator-action prior now
@@ -346,10 +349,12 @@ last_refreshed_note: |
   substrate: `tools/experiment_queue.py`,
   `src/comma_lab/scheduler/experiment_queue.py`, and
   `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with rank023,
-  rank024, rank018, rank017, rank016, rank025, and rank015 now
-  local-advisory-observed with matching eureka records, and the next generated
-  candidate routed to rank001/pair0501. Completed-local skip detection now
-  requires both local advisory custody and a matching drift/eureka record.
+  rank024, rank018, rank017, rank016, rank025, rank015, and rank001 now
+  local-advisory-observed with matching eureka records. Completed-local skip
+  detection now requires both local advisory custody and a matching
+  drift/eureka record, and a positive eureka signal with
+  `recommended_action=dispatch_exact_auth_anchor` fails closed instead of being
+  skipped by the local-first rerouter.
   Queue commands are argv
   lists, state and telemetry live in SQLite, cloud resources are hidden unless
   explicitly allowed, controls support `running`/`paused`/`frozen`, and
@@ -372,10 +377,17 @@ last_refreshed_note: |
   calibration JSON from embedded anchors, and emits JSON-safe empty
   calibrations with false-authority blockers. Outside this trust region, older
   MPS/nonlocal/different-substrate rows remain out-of-class and must be
-  separately calibrated or widened. Rank023's eureka artifact is
+  separately calibrated or widened. Rank001 locally scored
+  `0.19204128295713674` `[macOS-CPU advisory]`, projects to
+  `0.19203128295713673` `[contest-CPU drift-projected; false authority]`, and
+  conservatively projects to `0.19203428295713673`; it does not beat the exact
+  CPU frontier `0.19202828295713675` and is not an exact-eval spend trigger.
+  Rank023's eureka artifact is
   `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank023_pair0440_20260522T203717Z.json`;
   rank024's eureka artifact is
-  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank024_pair0112_20260522T205606Z.json`.
+  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank024_pair0112_20260522T205606Z.json`;
+  rank001's eureka artifact is
+  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank001_pair0501_20260522T223722Z.json`.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
