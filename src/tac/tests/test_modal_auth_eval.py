@@ -173,6 +173,11 @@ def test_run_auth_eval_function_signature(mod):
     assert "expected_runtime_tree_sha256" in sig.parameters
     assert "scorer_input_cache_hashes" in sig.parameters
     assert "scorer_input_cache_hash_batch_pairs" in sig.parameters
+    assert "scorer_input_cache_tensors" in sig.parameters
+    assert "scorer_input_cache_tensor_batch_pairs" in sig.parameters
+    assert "scorer_input_cache_tensor_large_pair_threshold" in sig.parameters
+    assert "allow_large_scorer_input_cache_tensor_export" in sig.parameters
+    assert "scorer_input_cache_tensor_volume_run_id" in sig.parameters
 
 
 def test_cuda_remote_unexpected_exception_returns_fail_closed_result(mod, tmp_path, monkeypatch):
@@ -240,6 +245,11 @@ def test_cpu_run_auth_eval_signature_and_source_commit_flow(tmp_path, monkeypatc
     sig = inspect.signature(raw)
     assert "source_repo_commit" in sig.parameters
     assert "expected_runtime_tree_sha256" in sig.parameters
+    assert "scorer_input_cache_tensors" in sig.parameters
+    assert "scorer_input_cache_tensor_batch_pairs" in sig.parameters
+    assert "scorer_input_cache_tensor_large_pair_threshold" in sig.parameters
+    assert "allow_large_scorer_input_cache_tensor_export" in sig.parameters
+    assert "scorer_input_cache_tensor_volume_run_id" in sig.parameters
 
     archive = tmp_path / "candidate.zip"
     archive.write_bytes(b"archive bytes")
@@ -286,10 +296,11 @@ def test_cpu_run_auth_eval_signature_and_source_commit_flow(tmp_path, monkeypatc
     assert request["expected_runtime_tree_sha256"] == expected_hash
     assert result["source_repo_commit"] == request["source_repo_commit"]
     assert result["expected_runtime_tree_sha256"] == expected_hash
-    assert captured_args[0][-6] == request["source_repo_commit"]
-    assert captured_args[0][-3] == expected_hash
-    assert captured_args[0][-2] is False
-    assert captured_args[0][-1] == 8
+    assert captured_args[0][6] == request["source_repo_commit"]
+    assert captured_args[0][9] == expected_hash
+    assert captured_args[0][10] is False
+    assert captured_args[0][11] == 8
+    assert captured_args[0][12] is False
 
 
 def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
@@ -303,6 +314,10 @@ def test_source_uses_literal_cuda_canonical_contest_eval() -> None:
     assert '"--expected-runtime-tree-sha256"' in text
     assert '"--scorer-input-cache-hashes-out"' in text
     assert '"--scorer-input-cache-hash-batch-pairs"' in text
+    assert '"--scorer-input-cache-tensors-out-dir"' in text
+    assert '"--allow-scorer-input-cache-artifact-output-outside-work-dir"' in text
+    assert 'AUTH_CACHE_VOLUME_NAME = "comma-auth-eval-cache-artifacts"' in text
+    assert "modal.Volume.from_name(AUTH_CACHE_VOLUME_NAME" in text
     assert 'DALI_DISABLE_NVML_VALUE = "1"' in text
     assert "REMOTE_PYTHONPATH =" in text
     assert '"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE' in text
@@ -336,6 +351,8 @@ def test_modal_auth_eval_images_include_hard_runtime_entropy_deps() -> None:
         assert 'work_dir / "inflated_outputs_manifest.json"' in text
         assert '"--expected-runtime-tree-sha256"' in text
         assert "expected_runtime_tree_sha256" in text
+        assert '"--scorer-input-cache-tensors-out-dir"' in text
+        assert "scorer_input_cache_tensor_volume_download_command" in text
     assert '"PACT_SOURCE_COMMIT": source_repo_commit' in cuda_text
     assert '"PACT_SOURCE_COMMIT": source_repo_commit' in cpu_text
     assert 'REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_work")' in cuda_text
@@ -357,12 +374,16 @@ def test_cuda_artifact_harvest_includes_inflated_output_manifest(mod, tmp_path):
         '{"hash_only": true, "array_sha256": {}}\n'
     )
     (work_dir / "provenance.json").write_text("{}\n")
+    (out_dir / "scorer_input_cache_tensor_volume_manifest.json").write_text(
+        '{"tensor_payload_returned_via_modal_artifacts": false}\n'
+    )
 
     artifacts = mod._collect_artifacts(out_dir, work_dir)
 
     assert "contest_auth_eval.json" in artifacts
     assert "inflated_outputs_manifest.json" in artifacts
     assert "scorer_input_cache_hashes.json" in artifacts
+    assert "scorer_input_cache_tensor_volume_manifest.json" in artifacts
     assert b'"aggregate_sha256"' in artifacts["inflated_outputs_manifest.json"]
 
 
@@ -814,12 +835,13 @@ def test_modal_cuda_inflate_env_request_is_diagnostic_only(mod, tmp_path, monkey
     assert request["diagnostic_only"] is True
     assert request["inflate_env_overrides"] == ["CUDA_VISIBLE_DEVICES="]
     assert result["inflate_env_overrides"] == ["CUDA_VISIBLE_DEVICES="]
-    assert captured_args[0][-6] == "cuda"
-    assert captured_args[0][-5] == "auto"
-    assert captured_args[0][-4] == ("CUDA_VISIBLE_DEVICES=",)
-    assert captured_args[0][-3] == ""
-    assert captured_args[0][-2] is False
-    assert captured_args[0][-1] == 8
+    assert captured_args[0][9] == "cuda"
+    assert captured_args[0][10] == "auto"
+    assert captured_args[0][11] == ("CUDA_VISIBLE_DEVICES=",)
+    assert captured_args[0][12] == ""
+    assert captured_args[0][13] is False
+    assert captured_args[0][14] == 8
+    assert captured_args[0][15] is False
 
 
 def test_modal_cuda_inflate_device_request_is_diagnostic_only(mod, tmp_path, monkeypatch):
@@ -865,12 +887,13 @@ def test_modal_cuda_inflate_device_request_is_diagnostic_only(mod, tmp_path, mon
     assert request["diagnostic_only"] is True
     assert request["inflate_device_policy"] == "cpu"
     assert result["inflate_device_policy"] == "cpu"
-    assert captured_args[0][-6] == "cuda"
-    assert captured_args[0][-5] == "cpu"
-    assert captured_args[0][-4] == ()
-    assert captured_args[0][-3] == ""
-    assert captured_args[0][-2] is False
-    assert captured_args[0][-1] == 8
+    assert captured_args[0][9] == "cuda"
+    assert captured_args[0][10] == "cpu"
+    assert captured_args[0][11] == ()
+    assert captured_args[0][12] == ""
+    assert captured_args[0][13] is False
+    assert captured_args[0][14] == 8
+    assert captured_args[0][15] is False
 
 
 def test_modal_gpu_host_cpu_scorer_requires_explicit_inflate_device(
@@ -944,12 +967,13 @@ def test_modal_gpu_host_cpu_scorer_cuda_inflate_is_diagnostic_only(
     assert result["inflate_device_policy"] == "cuda"
     assert result["score_claim"] is False
     assert result["promotion_eligible"] is False
-    assert captured_args[0][-6] == "cpu"
-    assert captured_args[0][-5] == "cuda"
-    assert captured_args[0][-4] == ()
-    assert captured_args[0][-3] == ""
-    assert captured_args[0][-2] is False
-    assert captured_args[0][-1] == 8
+    assert captured_args[0][9] == "cpu"
+    assert captured_args[0][10] == "cuda"
+    assert captured_args[0][11] == ()
+    assert captured_args[0][12] == ""
+    assert captured_args[0][13] is False
+    assert captured_args[0][14] == 8
+    assert captured_args[0][15] is False
 
 
 def test_modal_cuda_expected_runtime_hash_flows_to_remote_call(mod, tmp_path, monkeypatch):
@@ -995,9 +1019,10 @@ def test_modal_cuda_expected_runtime_hash_flows_to_remote_call(mod, tmp_path, mo
     result = json.loads((out_dir / "modal_cuda_auth_eval_result.json").read_text())
     assert request["expected_runtime_tree_sha256"] == expected_hash
     assert result["expected_runtime_tree_sha256"] == expected_hash
-    assert captured_args[0][-3] == expected_hash
-    assert captured_args[0][-2] is False
-    assert captured_args[0][-1] == 8
+    assert captured_args[0][12] == expected_hash
+    assert captured_args[0][13] is False
+    assert captured_args[0][14] == 8
+    assert captured_args[0][15] is False
 
 
 def test_modal_cuda_scorer_input_hash_bridge_flows_to_remote_call(
@@ -1049,8 +1074,135 @@ def test_modal_cuda_scorer_input_hash_bridge_flows_to_remote_call(
     assert result["scorer_input_cache_hashes_requested"] is True
     assert result["scorer_input_cache_hash_batch_pairs"] == 3
     assert (out_dir / "scorer_input_cache_hashes.json").is_file()
-    assert captured_args[0][-2] is True
-    assert captured_args[0][-1] == 3
+    assert captured_args[0][13] is True
+    assert captured_args[0][14] == 3
+    assert captured_args[0][15] is False
+
+
+def test_modal_cuda_tensor_volume_export_flows_to_remote_call(
+    mod, tmp_path, monkeypatch
+):
+    archive = tmp_path / "point_004_eps_p2.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+    captured_args = []
+
+    class FakeRemote:
+        @staticmethod
+        def remote(*args):
+            captured_args.append(args)
+            return {
+                "passed": True,
+                "returncode": 0,
+                "score_recomputed_from_components": 1.23,
+                "avg_posenet_dist": 0.01,
+                "avg_segnet_dist": 0.002,
+                "archive_size_bytes": archive.stat().st_size,
+                "promotion_eligible": False,
+                "score_claim": False,
+                "artifacts": {
+                    "contest_auth_eval.json": b"{}\n",
+                    "modal_cuda_auth_eval_validation.json": b"{}\n",
+                    "scorer_input_cache_tensor_volume_manifest.json": (
+                        b"{\"tensor_payload_returned_via_modal_artifacts\": false}\n"
+                    ),
+                },
+            }
+
+    monkeypatch.setattr(mod, "run_auth_eval", FakeRemote)
+    monkeypatch.setattr(mod, "claim_modal_auth_eval_dispatch", lambda **_kwargs: None)
+    monkeypatch.setattr(mod, "terminal_modal_auth_eval_claim", lambda **_kwargs: None)
+
+    mod.main(
+        str(archive),
+        str(out_dir),
+        scorer_input_cache_tensors=True,
+        scorer_input_cache_tensor_batch_pairs=2,
+        scorer_input_cache_tensor_large_pair_threshold=600,
+        allow_large_scorer_input_cache_tensor_export=True,
+        scorer_input_cache_tensor_volume_run_id="unit_tensor_run",
+        lane_id="lane_unit_modal_auth_eval_tensor_volume",  # FAKE_LANE_OK:test-fixture lane_id
+        instance_job_id="job_unit_modal_auth_eval_tensor_volume",
+        pair_group_id="pair_unit_modal_auth_eval",
+    )
+
+    request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
+    result = json.loads((out_dir / "modal_cuda_auth_eval_result.json").read_text())
+    assert request["scorer_input_cache_tensors_requested"] is True
+    assert request["scorer_input_cache_tensor_volume_run_id"] == "unit_tensor_run"
+    assert "modal volume get comma-auth-eval-cache-artifacts" in request[
+        "scorer_input_cache_tensor_volume_download_command"
+    ]
+    assert result["scorer_input_cache_tensors_requested"] is True
+    assert result["scorer_input_cache_tensor_batch_pairs"] == 2
+    assert (out_dir / "scorer_input_cache_tensor_volume_manifest.json").is_file()
+    assert captured_args[0][15] is True
+    assert captured_args[0][16] == 2
+    assert captured_args[0][17] == 600
+    assert captured_args[0][18] is True
+    assert captured_args[0][19] == "unit_tensor_run"
+
+
+def test_modal_cpu_tensor_volume_export_flows_to_remote_call(tmp_path, monkeypatch):
+    pytest.importorskip("modal", reason="modal SDK not installed")
+    cpu_mod = _load_cpu_module()
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"archive bytes")
+    out_dir = tmp_path / "out"
+    captured_args = []
+
+    class FakeRemote:
+        @staticmethod
+        def remote(*args):
+            captured_args.append(args)
+            return {
+                "passed": True,
+                "returncode": 0,
+                "score_recomputed_from_components": 1.23,
+                "avg_posenet_dist": 0.01,
+                "avg_segnet_dist": 0.002,
+                "archive_size_bytes": archive.stat().st_size,
+                "score_axis": "contest_cpu",
+                "promotion_eligible": False,
+                "score_claim": False,
+                "artifacts": {
+                    "contest_auth_eval.json": b"{}\n",
+                    "modal_cpu_auth_eval_validation.json": b"{}\n",
+                    "scorer_input_cache_tensor_volume_manifest.json": (
+                        b"{\"tensor_payload_returned_via_modal_artifacts\": false}\n"
+                    ),
+                },
+            }
+
+    monkeypatch.setattr(cpu_mod, "run_auth_eval_cpu", FakeRemote)
+    monkeypatch.setattr(cpu_mod, "claim_modal_auth_eval_dispatch", lambda **_kwargs: None)
+    monkeypatch.setattr(cpu_mod, "terminal_modal_auth_eval_claim", lambda **_kwargs: None)
+
+    cpu_mod.main(
+        str(archive),
+        str(out_dir),
+        scorer_input_cache_tensors=True,
+        scorer_input_cache_tensor_batch_pairs=2,
+        scorer_input_cache_tensor_large_pair_threshold=600,
+        allow_large_scorer_input_cache_tensor_export=True,
+        scorer_input_cache_tensor_volume_run_id="unit_cpu_tensor_run",
+        lane_id="lane_unit_modal_cpu_auth_eval_tensor_volume",  # FAKE_LANE_OK:test-fixture lane_id
+        instance_job_id="job_unit_modal_cpu_auth_eval_tensor_volume",
+        pair_group_id="pair_unit_modal_auth_eval",
+    )
+
+    request = json.loads((out_dir / "modal_cpu_auth_eval_local_request.json").read_text())
+    result = json.loads((out_dir / "modal_cpu_auth_eval_result.json").read_text())
+    assert request["scorer_input_cache_tensors_requested"] is True
+    assert request["scorer_input_cache_tensor_volume_run_id"] == "unit_cpu_tensor_run"
+    assert result["scorer_input_cache_tensors_requested"] is True
+    assert result["scorer_input_cache_tensor_batch_pairs"] == 2
+    assert (out_dir / "scorer_input_cache_tensor_volume_manifest.json").is_file()
+    assert captured_args[0][12] is True
+    assert captured_args[0][13] == 2
+    assert captured_args[0][14] == 600
+    assert captured_args[0][15] is True
+    assert captured_args[0][16] == "unit_cpu_tensor_run"
 
 
 def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path, monkeypatch):

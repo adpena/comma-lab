@@ -463,6 +463,18 @@ def test_contest_auth_eval_hash_artifact_updates_provenance(tmp_path: Path) -> N
             tmp_path / "outside_hashes.json",
             batch_pairs=1,
         )
+    outside_manifest = _record_scorer_input_cache_hash_artifact(
+        prov,
+        work_dir,
+        inflated,
+        video_names,
+        {"aggregate_sha256": "b" * 64},
+        tmp_path / "outside_hashes.json",
+        batch_pairs=1,
+        allow_output_outside_work_dir=True,
+    )
+    assert outside_manifest["hash_only"] is True
+    assert (tmp_path / "outside_hashes.json").is_file()
 
 
 def test_contest_auth_eval_tensor_artifact_is_guarded_and_updates_provenance(

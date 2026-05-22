@@ -291,6 +291,22 @@ def _recommended_commands(*, action: str, cache_audit_path: str | None) -> list[
         )
     if action == _RAW_OR_TENSOR_ACTION:
         commands.append(
+            "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run "
+            "experiments/modal_auth_eval_cpu.py --archive <archive.zip> "
+            "--inflate-sh <submission_dir/inflate.sh> --output-dir <output_dir> "
+            "--scorer-input-cache-tensors "
+            "--scorer-input-cache-tensor-batch-pairs 8 "
+            "--scorer-input-cache-tensor-large-pair-threshold 600 "
+            "--allow-large-scorer-input-cache-tensor-export "
+            "--scorer-input-cache-tensor-volume-run-id <run_id> "
+            "--lane-id <lane_id> --instance-job-id <job_id> "
+            "--pair-group-id <pair_group_id>"
+        )
+        commands.append(
+            ".venv/bin/modal volume get comma-auth-eval-cache-artifacts "
+            "<run_id>/ ./modal_<run_id>/"
+        )
+        commands.append(
             ".venv/bin/python experiments/contest_auth_eval.py --archive <archive.zip> "
             "--inflate-sh <submission_dir/inflate.sh> --upstream-dir upstream "
             "--work-dir <local_or_persistent_auth_work_dir> --keep-work-dir "

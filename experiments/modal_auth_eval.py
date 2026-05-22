@@ -55,11 +55,14 @@ APP_NAME = "comma-auth-eval"
 REMOTE_REPO = Path("/workspace/pact")
 REMOTE_OUT = Path("/tmp/modal_auth_eval")
 REMOTE_WORK_ROOT = Path("/root/modal_auth_eval_work")
+AUTH_CACHE_VOLUME_NAME = "comma-auth-eval-cache-artifacts"
+AUTH_CACHE_VOLUME_ROOT = Path("/modal_auth_cache")
 REQUIRED_SAMPLES = 600
 DALI_DISABLE_NVML_VALUE = "1"
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 
 app = modal.App(APP_NAME)
+auth_cache_vol = modal.Volume.from_name(AUTH_CACHE_VOLUME_NAME, create_if_missing=True)
 
 
 base_image = (
@@ -335,6 +338,7 @@ def _collect_artifacts(out_dir: Path, work_dir: Path) -> dict[str, bytes]:
         work_dir / "scorer_input_cache_hashes.json",
         work_dir / "provenance.json",
         work_dir / "report.txt",
+        out_dir / "scorer_input_cache_tensor_volume_manifest.json",
     ):
         if path.is_file():
             artifacts[path.name] = path.read_bytes()
@@ -358,6 +362,11 @@ def _run_auth_eval_inner(
     expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
+    scorer_input_cache_tensors: bool = False,
+    scorer_input_cache_tensor_batch_pairs: int = 8,
+    scorer_input_cache_tensor_large_pair_threshold: int = 64,
+    allow_large_scorer_input_cache_tensor_export: bool = False,
+    scorer_input_cache_tensor_volume_run_id: str = "",
 ) -> dict[str, Any]:
     import os
     import shutil
@@ -371,6 +380,24 @@ def _run_auth_eval_inner(
             "passed": False,
             "returncode": 14,
             "error": "scorer_input_cache_hash_batch_pairs must be >= 1",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+    if int(scorer_input_cache_tensor_batch_pairs) < 1:
+        return {
+            "schema_version": 1,
+            "passed": False,
+            "returncode": 15,
+            "error": "scorer_input_cache_tensor_batch_pairs must be >= 1",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
+    if int(scorer_input_cache_tensor_large_pair_threshold) < 1:
+        return {
+            "schema_version": 1,
+            "passed": False,
+            "returncode": 16,
+            "error": "scorer_input_cache_tensor_large_pair_threshold must be >= 1",
             "score_claim": False,
             "promotion_eligible": False,
         }
@@ -426,6 +453,12 @@ def _run_auth_eval_inner(
     canonical_path = (
         f"archive.zip -> inflate.sh -> upstream/evaluate.py --device {scorer_device}"
     )
+    tensor_volume_run_id = _safe_tensor_volume_run_id(
+        scorer_input_cache_tensor_volume_run_id,
+        archive_sha256=archive_sha256,
+        axis=f"modal_{scorer_device}",
+    )
+    tensor_volume_dir = AUTH_CACHE_VOLUME_ROOT / tensor_volume_run_id / "scorer_input_cache_tensors"
 
     os.environ["DALI_DISABLE_NVML"] = DALI_DISABLE_NVML_VALUE
     preflight = _probe_cuda_environment()
@@ -443,6 +476,16 @@ def _run_auth_eval_inner(
             "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
             "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
             "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
+            "scorer_input_cache_tensors_requested": bool(scorer_input_cache_tensors),
+            "scorer_input_cache_tensor_batch_pairs": int(
+                scorer_input_cache_tensor_batch_pairs
+            ),
+            "scorer_input_cache_tensor_large_pair_threshold": int(
+                scorer_input_cache_tensor_large_pair_threshold
+            ),
+            "scorer_input_cache_tensor_volume_name": AUTH_CACHE_VOLUME_NAME,
+            "scorer_input_cache_tensor_volume_run_id": tensor_volume_run_id,
+            "scorer_input_cache_tensor_volume_path": str(tensor_volume_dir),
         }
     )
     write_json(out_dir / "modal_cuda_preflight.json", preflight)
@@ -596,6 +639,20 @@ def _run_auth_eval_inner(
                 str(int(scorer_input_cache_hash_batch_pairs)),
             ]
         )
+    if scorer_input_cache_tensors:
+        cmd.extend(
+            [
+                "--scorer-input-cache-tensors-out-dir",
+                str(tensor_volume_dir),
+                "--scorer-input-cache-tensor-batch-pairs",
+                str(int(scorer_input_cache_tensor_batch_pairs)),
+                "--scorer-input-cache-tensor-large-pair-threshold",
+                str(int(scorer_input_cache_tensor_large_pair_threshold)),
+                "--allow-scorer-input-cache-artifact-output-outside-work-dir",
+            ]
+        )
+        if allow_large_scorer_input_cache_tensor_export:
+            cmd.append("--allow-large-scorer-input-cache-tensor-export")
     for item in inflate_env_overrides:
         cmd.extend(["--inflate-env", item])
     env = {
@@ -659,6 +716,15 @@ def _run_auth_eval_inner(
     result_json = work_dir / "contest_auth_eval.json"
     payload: dict[str, Any] | None = None
     validation_errors: list[str] = []
+    tensor_volume_manifest = None
+    if scorer_input_cache_tensors:
+        tensor_volume_manifest = _record_tensor_volume_manifest(
+            out_dir=out_dir,
+            tensor_volume_dir=tensor_volume_dir,
+            tensor_volume_run_id=tensor_volume_run_id,
+        )
+        if tensor_volume_manifest is None:
+            validation_errors.append("scorer_input_cache_tensor_volume_manifest was not produced")
     if result_json.is_file():
         try:
             payload = read_json(result_json)
@@ -706,6 +772,19 @@ def _run_auth_eval_inner(
         "inflate_device_policy": inflate_device_policy,
         "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
         "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
+        "scorer_input_cache_tensors_requested": bool(scorer_input_cache_tensors),
+        "scorer_input_cache_tensor_batch_pairs": int(scorer_input_cache_tensor_batch_pairs),
+        "scorer_input_cache_tensor_large_pair_threshold": int(
+            scorer_input_cache_tensor_large_pair_threshold
+        ),
+        "scorer_input_cache_tensor_volume_name": AUTH_CACHE_VOLUME_NAME,
+        "scorer_input_cache_tensor_volume_run_id": tensor_volume_run_id,
+        "scorer_input_cache_tensor_volume_path": str(tensor_volume_dir),
+        "scorer_input_cache_tensor_volume_download_command": (
+            f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+            f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
+        ),
+        "scorer_input_cache_tensor_volume_manifest": tensor_volume_manifest,
         "diagnostic_only": diagnostic_only,
         "validation_errors": validation_errors,
         "score_claim": payload_score_claim,
@@ -769,6 +848,11 @@ def _run_auth_eval_fail_closed(
     expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
+    scorer_input_cache_tensors: bool = False,
+    scorer_input_cache_tensor_batch_pairs: int = 8,
+    scorer_input_cache_tensor_large_pair_threshold: int = 64,
+    allow_large_scorer_input_cache_tensor_export: bool = False,
+    scorer_input_cache_tensor_volume_run_id: str = "",
 ) -> dict[str, Any]:
     try:
         return _run_auth_eval_inner(
@@ -787,6 +871,15 @@ def _run_auth_eval_fail_closed(
             expected_runtime_tree_sha256=expected_runtime_tree_sha256,
             scorer_input_cache_hashes=scorer_input_cache_hashes,
             scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
+            scorer_input_cache_tensors=scorer_input_cache_tensors,
+            scorer_input_cache_tensor_batch_pairs=scorer_input_cache_tensor_batch_pairs,
+            scorer_input_cache_tensor_large_pair_threshold=(
+                scorer_input_cache_tensor_large_pair_threshold
+            ),
+            allow_large_scorer_input_cache_tensor_export=(
+                allow_large_scorer_input_cache_tensor_export
+            ),
+            scorer_input_cache_tensor_volume_run_id=scorer_input_cache_tensor_volume_run_id,
         )
     except Exception as exc:  # pragma: no cover - remote diagnostic path
         return fail_closed_remote_exception_result(
@@ -805,6 +898,7 @@ def _run_auth_eval_fail_closed(
     image=eval_image,
     gpu="T4",
     timeout=4800,
+    volumes={str(AUTH_CACHE_VOLUME_ROOT): auth_cache_vol},
 )
 def run_auth_eval(
     archive_bytes: bytes,
@@ -822,6 +916,11 @@ def run_auth_eval(
     expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
+    scorer_input_cache_tensors: bool = False,
+    scorer_input_cache_tensor_batch_pairs: int = 8,
+    scorer_input_cache_tensor_large_pair_threshold: int = 64,
+    allow_large_scorer_input_cache_tensor_export: bool = False,
+    scorer_input_cache_tensor_volume_run_id: str = "",
 ) -> dict[str, Any]:
     """Run the canonical CUDA auth eval on Modal T4."""
 
@@ -841,6 +940,11 @@ def run_auth_eval(
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         scorer_input_cache_hashes=scorer_input_cache_hashes,
         scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
+        scorer_input_cache_tensors=scorer_input_cache_tensors,
+        scorer_input_cache_tensor_batch_pairs=scorer_input_cache_tensor_batch_pairs,
+        scorer_input_cache_tensor_large_pair_threshold=scorer_input_cache_tensor_large_pair_threshold,
+        allow_large_scorer_input_cache_tensor_export=allow_large_scorer_input_cache_tensor_export,
+        scorer_input_cache_tensor_volume_run_id=scorer_input_cache_tensor_volume_run_id,
     )
 
 
@@ -848,6 +952,7 @@ def run_auth_eval(
     image=eval_image,
     gpu="A100",
     timeout=4800,
+    volumes={str(AUTH_CACHE_VOLUME_ROOT): auth_cache_vol},
 )
 def run_auth_eval_a100(
     archive_bytes: bytes,
@@ -865,6 +970,11 @@ def run_auth_eval_a100(
     expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
+    scorer_input_cache_tensors: bool = False,
+    scorer_input_cache_tensor_batch_pairs: int = 8,
+    scorer_input_cache_tensor_large_pair_threshold: int = 64,
+    allow_large_scorer_input_cache_tensor_export: bool = False,
+    scorer_input_cache_tensor_volume_run_id: str = "",
 ) -> dict[str, Any]:
     """Run CUDA auth eval on Modal A100 as a diagnostic axis."""
 
@@ -884,6 +994,11 @@ def run_auth_eval_a100(
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         scorer_input_cache_hashes=scorer_input_cache_hashes,
         scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
+        scorer_input_cache_tensors=scorer_input_cache_tensors,
+        scorer_input_cache_tensor_batch_pairs=scorer_input_cache_tensor_batch_pairs,
+        scorer_input_cache_tensor_large_pair_threshold=scorer_input_cache_tensor_large_pair_threshold,
+        allow_large_scorer_input_cache_tensor_export=allow_large_scorer_input_cache_tensor_export,
+        scorer_input_cache_tensor_volume_run_id=scorer_input_cache_tensor_volume_run_id,
     )
 
 
@@ -891,6 +1006,7 @@ def run_auth_eval_a100(
     image=eval_image,
     gpu="H100",
     timeout=4800,
+    volumes={str(AUTH_CACHE_VOLUME_ROOT): auth_cache_vol},
 )
 def run_auth_eval_h100(
     archive_bytes: bytes,
@@ -908,6 +1024,11 @@ def run_auth_eval_h100(
     expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
+    scorer_input_cache_tensors: bool = False,
+    scorer_input_cache_tensor_batch_pairs: int = 8,
+    scorer_input_cache_tensor_large_pair_threshold: int = 64,
+    allow_large_scorer_input_cache_tensor_export: bool = False,
+    scorer_input_cache_tensor_volume_run_id: str = "",
 ) -> dict[str, Any]:
     """Run CUDA auth eval on Modal H100 as a diagnostic axis."""
 
@@ -927,6 +1048,11 @@ def run_auth_eval_h100(
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         scorer_input_cache_hashes=scorer_input_cache_hashes,
         scorer_input_cache_hash_batch_pairs=scorer_input_cache_hash_batch_pairs,
+        scorer_input_cache_tensors=scorer_input_cache_tensors,
+        scorer_input_cache_tensor_batch_pairs=scorer_input_cache_tensor_batch_pairs,
+        scorer_input_cache_tensor_large_pair_threshold=scorer_input_cache_tensor_large_pair_threshold,
+        allow_large_scorer_input_cache_tensor_export=allow_large_scorer_input_cache_tensor_export,
+        scorer_input_cache_tensor_volume_run_id=scorer_input_cache_tensor_volume_run_id,
     )
 
 
@@ -946,6 +1072,11 @@ def main(
     expected_runtime_tree_sha256: str = "",
     scorer_input_cache_hashes: bool = False,
     scorer_input_cache_hash_batch_pairs: int = 8,
+    scorer_input_cache_tensors: bool = False,
+    scorer_input_cache_tensor_batch_pairs: int = 8,
+    scorer_input_cache_tensor_large_pair_threshold: int = 64,
+    allow_large_scorer_input_cache_tensor_export: bool = False,
+    scorer_input_cache_tensor_volume_run_id: str = "",
     detach: bool = False,
     provider_detach_ack: bool = False,
     lane_id: str = "",
@@ -960,6 +1091,12 @@ def main(
 
     if int(scorer_input_cache_hash_batch_pairs) < 1:
         raise SystemExit("FATAL: --scorer-input-cache-hash-batch-pairs must be >= 1")
+    if int(scorer_input_cache_tensor_batch_pairs) < 1:
+        raise SystemExit("FATAL: --scorer-input-cache-tensor-batch-pairs must be >= 1")
+    if int(scorer_input_cache_tensor_large_pair_threshold) < 1:
+        raise SystemExit(
+            "FATAL: --scorer-input-cache-tensor-large-pair-threshold must be >= 1"
+        )
     if detach and not provider_detach_ack:
         raise SystemExit(
             "FATAL: wrapper --detach requires provider-level Modal CLI detach. "
@@ -992,6 +1129,11 @@ def main(
     submission_dir_zip_sha256 = prepared.submission_dir_zip_sha256
     out_dir = prepared.output_dir
     source_repo_commit = _local_git_commit()
+    tensor_volume_run_id = _safe_tensor_volume_run_id(
+        scorer_input_cache_tensor_volume_run_id or out_dir.name,
+        archive_sha256=archive_sha256,
+        axis="contest_cuda",
+    )
     requested_axis = (
         "contest_cuda"
         if str(scorer_device or "cuda").lower() == "cuda"
@@ -1057,6 +1199,23 @@ def main(
         "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
         "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
         "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
+        "scorer_input_cache_tensors_requested": bool(scorer_input_cache_tensors),
+        "scorer_input_cache_tensor_batch_pairs": int(scorer_input_cache_tensor_batch_pairs),
+        "scorer_input_cache_tensor_large_pair_threshold": int(
+            scorer_input_cache_tensor_large_pair_threshold
+        ),
+        "allow_large_scorer_input_cache_tensor_export": bool(
+            allow_large_scorer_input_cache_tensor_export
+        ),
+        "scorer_input_cache_tensor_volume_name": AUTH_CACHE_VOLUME_NAME,
+        "scorer_input_cache_tensor_volume_run_id": tensor_volume_run_id,
+        "scorer_input_cache_tensor_volume_path": str(
+            AUTH_CACHE_VOLUME_ROOT / tensor_volume_run_id / "scorer_input_cache_tensors"
+        ),
+        "scorer_input_cache_tensor_volume_download_command": (
+            f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+            f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
+        ),
         "diagnostic_only": diagnostic_only,
         "non_t4_gpu_diagnostic": non_t4_gpu_diagnostic,
         "score_claim": False,
@@ -1111,6 +1270,11 @@ def main(
         expected_runtime_tree_sha256,
         bool(scorer_input_cache_hashes),
         int(scorer_input_cache_hash_batch_pairs),
+        bool(scorer_input_cache_tensors),
+        int(scorer_input_cache_tensor_batch_pairs),
+        int(scorer_input_cache_tensor_large_pair_threshold),
+        bool(allow_large_scorer_input_cache_tensor_export),
+        tensor_volume_run_id,
     )
     claim_modal_auth_eval_dispatch(
         repo_root=Path.cwd(),
@@ -1155,6 +1319,13 @@ def main(
                 "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
                 "scorer_input_cache_hashes_requested": bool(scorer_input_cache_hashes),
                 "scorer_input_cache_hash_batch_pairs": int(scorer_input_cache_hash_batch_pairs),
+                "scorer_input_cache_tensors_requested": bool(scorer_input_cache_tensors),
+                "scorer_input_cache_tensor_volume_name": AUTH_CACHE_VOLUME_NAME,
+                "scorer_input_cache_tensor_volume_run_id": tensor_volume_run_id,
+                "scorer_input_cache_tensor_volume_download_command": (
+                    f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+                    f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
+                ),
                 "expected_archive_sha256": expected_archive_sha256 or archive_sha256,
                 "lane_id": lane_id,
                 "instance_job_id": instance_job_id,
@@ -1238,6 +1409,17 @@ def main(
     result["expected_runtime_tree_sha256"] = expected_runtime_tree_sha256
     result["scorer_input_cache_hashes_requested"] = bool(scorer_input_cache_hashes)
     result["scorer_input_cache_hash_batch_pairs"] = int(scorer_input_cache_hash_batch_pairs)
+    result["scorer_input_cache_tensors_requested"] = bool(scorer_input_cache_tensors)
+    result["scorer_input_cache_tensor_batch_pairs"] = int(scorer_input_cache_tensor_batch_pairs)
+    result["scorer_input_cache_tensor_large_pair_threshold"] = int(
+        scorer_input_cache_tensor_large_pair_threshold
+    )
+    result["scorer_input_cache_tensor_volume_name"] = AUTH_CACHE_VOLUME_NAME
+    result["scorer_input_cache_tensor_volume_run_id"] = tensor_volume_run_id
+    result["scorer_input_cache_tensor_volume_download_command"] = (
+        f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+        f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
+    )
     result.update(pairing)
     if diagnostic_only:
         result["diagnostic_only"] = True
@@ -1285,6 +1467,42 @@ def main(
         status="completed_modal_auth_eval_recovered",
         notes=terminal_notes,
     )
+
+
+def _safe_tensor_volume_run_id(value: str, *, archive_sha256: str, axis: str) -> str:
+    raw = str(value or "").strip() or f"{axis}_{archive_sha256[:16]}"
+    safe = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in raw)
+    safe = safe.strip("._-/")
+    return safe or f"{axis}_{archive_sha256[:16]}"
+
+
+def _record_tensor_volume_manifest(
+    *,
+    out_dir: Path,
+    tensor_volume_dir: Path,
+    tensor_volume_run_id: str,
+) -> dict[str, Any] | None:
+    manifest_path = tensor_volume_dir / "manifest.json"
+    if not manifest_path.is_file():
+        return None
+    auth_cache_vol.commit()
+    payload = read_json(manifest_path)
+    record = {
+        "schema_version": "modal_auth_eval_tensor_volume_manifest.v1",
+        "volume_name": AUTH_CACHE_VOLUME_NAME,
+        "volume_run_id": tensor_volume_run_id,
+        "volume_path": str(tensor_volume_dir),
+        "manifest_path": str(manifest_path),
+        "manifest_sha256": _sha256_path(manifest_path),
+        "tensor_payload_returned_via_modal_artifacts": False,
+        "volume_download_command": (
+            f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+            f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
+        ),
+        "payload": payload,
+    }
+    write_json(out_dir / "scorer_input_cache_tensor_volume_manifest.json", record)
+    return record
 
 
 def _local_git_commit() -> str:

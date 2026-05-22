@@ -711,6 +711,7 @@ def _record_scorer_input_cache_hash_artifact(
     output_path: Path,
     *,
     batch_pairs: int,
+    allow_output_outside_work_dir: bool = False,
 ) -> dict:
     """Write compact scorer-input array hashes for the inflated raw surface."""
 
@@ -734,6 +735,7 @@ def _record_scorer_input_cache_hash_artifact(
         work_dir,
         output_path,
         label="scorer-input hash artifact",
+        allow_outside_work_dir=allow_output_outside_work_dir,
     )
     manifest = write_scorer_input_cache_hash_manifest_from_raw_file(
         raw_path,
@@ -767,6 +769,7 @@ def _record_scorer_input_cache_tensor_artifact(
     batch_pairs: int,
     allow_large_tensor_export: bool,
     large_pair_threshold: int,
+    allow_output_outside_work_dir: bool = False,
 ) -> dict:
     """Write full scorer-input tensor cache for explicit local/volume export."""
 
@@ -807,6 +810,7 @@ def _record_scorer_input_cache_tensor_artifact(
         work_dir,
         output_dir,
         label="scorer-input tensor cache directory",
+        allow_outside_work_dir=allow_output_outside_work_dir,
     )
     manifest = write_scorer_input_cache_from_raw_file(
         raw_path,
@@ -839,12 +843,15 @@ def _resolve_auth_artifact_output_under_work_dir(
     output_path: Path,
     *,
     label: str,
+    allow_outside_work_dir: bool = False,
 ) -> Path:
     """Resolve auth-side MLX artifact paths without escaping eval custody."""
 
     work_root = work_dir.resolve()
     target = output_path if output_path.is_absolute() else work_root / output_path
     resolved = target.resolve(strict=False)
+    if allow_outside_work_dir:
+        return resolved
     try:
         resolved.relative_to(work_root)
     except ValueError as exc:
@@ -1807,6 +1814,15 @@ def main() -> int:
         action="store_true",
         help="Explicitly acknowledge full scorer-input tensor export for large surfaces.",
     )
+    parser.add_argument(
+        "--allow-scorer-input-cache-artifact-output-outside-work-dir",
+        action="store_true",
+        help=(
+            "Allow scorer-input cache hash/tensor artifacts to be written outside "
+            "work_dir, for example to an explicitly mounted Modal Volume. "
+            "Default refuses path escapes."
+        ),
+    )
     args = parser.parse_args()
     if args.scorer_input_cache_hash_batch_pairs < 1:
         raise SystemExit("--scorer-input-cache-hash-batch-pairs must be >= 1")
@@ -1931,6 +1947,9 @@ def main() -> int:
                 inflated_manifest,
                 args.scorer_input_cache_hashes_out,
                 batch_pairs=args.scorer_input_cache_hash_batch_pairs,
+                allow_output_outside_work_dir=(
+                    args.allow_scorer_input_cache_artifact_output_outside_work_dir
+                ),
             )
         if args.scorer_input_cache_tensors_out_dir is not None:
             _record_scorer_input_cache_tensor_artifact(
@@ -1943,6 +1962,9 @@ def main() -> int:
                 batch_pairs=args.scorer_input_cache_tensor_batch_pairs,
                 allow_large_tensor_export=args.allow_large_scorer_input_cache_tensor_export,
                 large_pair_threshold=args.scorer_input_cache_tensor_large_pair_threshold,
+                allow_output_outside_work_dir=(
+                    args.allow_scorer_input_cache_artifact_output_outside_work_dir
+                ),
             )
 
         # Stage 3: run upstream/evaluate.py on submission_dir = work_dir
