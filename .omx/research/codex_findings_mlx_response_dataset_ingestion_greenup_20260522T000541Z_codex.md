@@ -8,7 +8,7 @@
 
 The direct MLX scorer-response ingestion path is useful for the research-helper side of the scorer port: it lets local MLX response artifacts become LL/scorer-response dataset rows without wrapping them in a legacy candidate envelope.
 
-The first cut needed stricter authority and custody gates. Without them, a malformed direct MLX payload could enter the response dataset if it carried the right schema and false score-claim fields but omitted score-axis tagging, recomputed-score provenance, or cache identity.
+The first cut needed stricter authority and custody gates. Without them, a malformed direct MLX payload could enter the response dataset if it carried the right schema and false score-claim fields but omitted exact-eval-required provenance, score-axis tagging, recomputed-score provenance, or cache identity.
 
 ## Fix
 
@@ -18,12 +18,12 @@ The first cut needed stricter authority and custody gates. Without them, a malfo
   - `score_axis=[macOS-MLX research-signal]`
   - score/promotion/rank/dispatch authority fields explicit false
   - `candidate_generation_only=true`
-  - `requires_exact_eval_before_promotion=true` when that optional field is present
+  - `requires_exact_eval_before_promotion=true`
   - `canonical_score_source=score_recomputed_from_components`
   - finite `canonical_score`, `score_recomputed_from_components`, PoseNet, and SegNet metrics
   - exact equality between canonical and recomputed scores
   - `device_contract.forbidden_uses` including `score_claim`
-  - cache identity with equal pair indices, candidate archive/raw/inflated SHA-256 custody, and scorer-input array hashes when present
+  - cache identity with equal pair indices, candidate archive/raw/inflated SHA-256 custody, and reference archive/raw or array SHA-256 custody
 - Normalized rows preserve MLX source schema, evidence grade/tag, substrate, pair window, batch size, sample count, elapsed seconds, and component hashes.
 - The LL next-probe planner now promotes MLX-only datasets into a specific `ll_mlx_cpu_stable_response_harvest` probe instead of falling through to an empty decoder-q recommendation.
 
@@ -43,19 +43,26 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m ruff check \
 
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest \
   src/tac/tests/test_scorer_response_dataset.py \
-  src/tac/tests/test_plan_ll_scorer_response_next_cli.py \
+  src/tac/tests/test_mlx_production_contract.py \
   src/tac/tests/test_mlx_execution_plan.py -q
-# 31 passed in 0.56s
+# 35 passed in 0.48s
 
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest \
   src/tac/tests/test_scorer_response_dataset.py \
-  src/tac/tests/test_plan_ll_scorer_response_next_cli.py \
+  src/tac/tests/test_mlx_production_contract.py \
   src/tac/tests/test_mlx_execution_plan.py \
-  src/tac/tests/test_mlx_profile_stability.py \
-  src/tac/tests/test_profile_mlx_scorer_response_cache.py \
+  src/tac/tests/test_mlx_batch_invariance.py \
+  src/tac/tests/test_mlx_scorer_adapters.py \
   src/tac/tests/test_mlx_scorer_response.py \
-  src/tac/tests/test_mlx_batch_invariance.py -q
-# 54 passed in 3.89s
+  src/tac/tests/test_profile_mlx_scorer_response_cache.py \
+  src/tac/tests/test_mlx_profile_stability.py \
+  src/tac/tests/test_mlx_preprocess.py \
+  src/tac/tests/test_mlx_scorer_fidelity.py \
+  src/tac/tests/test_mlx_cache_audit.py \
+  src/tac/tests/test_mlx_scorer_state_map.py \
+  src/tac/tests/test_mlx_scorer_port_inventory.py \
+  src/tac/tests/test_mlx_to_pytorch_export.py -q
+# 128 passed in 16.93s
 ```
 
 ## Real FEC6 local-window artifact
