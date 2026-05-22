@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tac.auth_eval_schema import contest_formula_score
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_production_contract import (
     ADVISORY_VERDICT,
@@ -174,6 +175,27 @@ def test_mlx_production_contract_rejects_false_authority() -> None:
     assert manifest["verdict"] == FAIL_VERDICT
     assert "response_score_claim_not_false" in manifest["blockers"]
     assert "response_promotion_eligible_not_false" in manifest["blockers"]
+
+
+def test_mlx_production_contract_rejects_self_consistent_wrong_score_formula() -> None:
+    payload = _response_payload()
+    payload["canonical_score"] = 0.1
+    payload["score_recomputed_from_components"] = 0.1
+
+    manifest = build_mlx_scorer_production_contract_manifest(
+        payload,
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        reference_torch_parity=_torch_parity(side="reference"),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+    )
+
+    assert manifest["passed"] is False
+    assert any(
+        blocker.startswith("response_score_formula_recompute_mismatch")
+        for blocker in manifest["blockers"]
+    )
 
 
 def test_mlx_production_contract_accepts_reference_array_hash_identity() -> None:
@@ -780,6 +802,7 @@ def _mlx_dataset_row_from_contract(contract: dict) -> dict:
 
 def _response_payload(*, device: str = "cpu", batch_pairs: int = 1) -> dict:
     n_samples = int(batch_pairs)
+    score = _fixture_score()
     return {
         "schema_version": "mlx_scorer_response.v1",
         "evidence_grade": EVIDENCE_GRADE_MLX,
@@ -796,8 +819,8 @@ def _response_payload(*, device: str = "cpu", batch_pairs: int = 1) -> dict:
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,
         "requires_exact_eval_before_promotion": True,
-        "canonical_score": 0.1,
-        "score_recomputed_from_components": 0.1,
+        "canonical_score": score,
+        "score_recomputed_from_components": score,
         "canonical_score_source": "score_recomputed_from_components",
         "avg_posenet_dist": 0.0,
         "avg_segnet_dist": 0.0,
@@ -876,6 +899,7 @@ def _profile_stability(
     candidate_cache_dir: str = "candidate/cache",
     reference_cache_dir: str = "reference/cache",
 ) -> dict:
+    score = _fixture_score()
     return {
         "schema_version": "mlx_scorer_response_profile_stability.v1",
         "passed": passed,
@@ -903,7 +927,7 @@ def _profile_stability(
                 "batch_pairs": int(batch_pairs),
                 "n_samples": int(batch_pairs),
                 "pair_window": [start_pair, start_pair + int(batch_pairs)],
-                "canonical_score": 0.1,
+                "canonical_score": score,
                 "avg_posenet_dist": 0.0,
                 "avg_segnet_dist": 0.0,
                 "posenet_sha256": "a" * 64,
@@ -1069,6 +1093,7 @@ def _torch_parity(
 
 
 def _score_calibration(*, uncertain_count: int = 0) -> dict:
+    score = _fixture_score()
     return {
         "schema_version": "mlx_score_calibration.v1",
         "score_claim": False,
@@ -1098,7 +1123,7 @@ def _score_calibration(*, uncertain_count: int = 0) -> dict:
                 "pair_window": [0, 1],
                 "n_samples": 1,
                 "batch_pairs": 1,
-                "mlx_score": 0.1,
+                "mlx_score": score,
                 "mlx_avg_posenet_dist": 0.0,
                 "mlx_avg_segnet_dist": 0.0,
                 "mlx_components": {
@@ -1132,6 +1157,10 @@ def _score_calibration(*, uncertain_count: int = 0) -> dict:
             }
         ],
     }
+
+
+def _fixture_score() -> float:
+    return contest_formula_score(seg_dist=0.0, pose_dist=0.0, archive_bytes=123)
 
 
 def _batch_invariance(

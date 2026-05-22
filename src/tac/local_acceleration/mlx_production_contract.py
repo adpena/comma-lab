@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 from typing import Any
 
+from tac.auth_eval_schema import contest_formula_score
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_cache_audit import PASS_VERDICT as CACHE_AUDIT_PASS_VERDICT
 from tac.local_acceleration.mlx_score_calibration import (
@@ -405,6 +406,9 @@ def _check_response_payload(
         "avg_segnet_dist",
     ):
         _finite_float_field(payload, key, blockers)
+    archive_size_bytes = _int_field(payload, "archive_size_bytes", blockers)
+    if archive_size_bytes is not None and archive_size_bytes < 0:
+        blockers.append("response_archive_size_bytes_negative")
     if payload.get("canonical_score_source") != "score_recomputed_from_components":
         blockers.append("response_canonical_score_source_not_recomputed_from_components")
     try:
@@ -417,6 +421,7 @@ def _check_response_payload(
             blockers.append("response_canonical_score_recompute_mismatch")
     except (TypeError, ValueError):
         pass
+    _check_response_formula_recompute(payload, archive_size_bytes, blockers)
 
     components = payload.get("components")
     if not isinstance(components, dict):
@@ -1424,6 +1429,31 @@ def _check_component_shape(
         return
     if n_samples is not None and first_dim != n_samples:
         blockers.append(f"response_components_{key}_n_samples_mismatch")
+
+
+def _check_response_formula_recompute(
+    payload: dict[str, Any],
+    archive_size_bytes: int | None,
+    blockers: list[str],
+) -> None:
+    if archive_size_bytes is None:
+        return
+    try:
+        expected = contest_formula_score(
+            seg_dist=float(payload.get("avg_segnet_dist")),
+            pose_dist=float(payload.get("avg_posenet_dist")),
+            archive_bytes=archive_size_bytes,
+        )
+        actual = float(payload.get("score_recomputed_from_components"))
+    except (TypeError, ValueError):
+        return
+    if not math.isfinite(expected) or not math.isfinite(actual):
+        return
+    if not math.isclose(actual, expected, rel_tol=0.0, abs_tol=1.0e-12):
+        blockers.append(
+            "response_score_formula_recompute_mismatch:"
+            f"actual={actual}:expected={expected}"
+        )
 
 
 def _finite_float_field(payload: dict[str, Any], key: str, blockers: list[str]) -> None:
