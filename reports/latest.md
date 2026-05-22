@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-22T22:06:39Z
-from_state_hash: frontier_scan_dqs1_pairset_rank025_local_advisory_20260522T2206Z
-regenerated_by: codex:dqs1_rank025_local_advisory_rank015_queue_20260522
-last_refreshed_at: 2026-05-22T22:06:39Z
-last_refreshed_by: codex:dqs1_rank025_local_advisory_rank015_queue_20260522
-last_refreshed_head: 19b9585ec
+generated_at: 2026-05-22T22:24:00Z
+from_state_hash: frontier_scan_dqs1_pairset_rank015_local_advisory_20260522T2224Z
+regenerated_by: codex:dqs1_rank015_local_advisory_rank001_queue_20260522
+last_refreshed_at: 2026-05-22T22:24:00Z
+last_refreshed_by: codex:dqs1_rank015_local_advisory_rank001_queue_20260522
+last_refreshed_head: 392c79dd5
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
@@ -16,10 +16,10 @@ last_refreshed_note: |
   passed locality and exact Modal CPU eval and regressed to the same
   SegNet-penalized one-byte class as rank010/rank013/rank020/rank022/rank026/rank027/rank031.
   Rank023/pair0440, rank024/pair0112, rank018/pair0588, rank017/pair0242,
-  rank016/pair0229, and rank025/pair0026 completed local
+  rank016/pair0229, rank025/pair0026, and rank015/pair0068 completed local
   plan/materialize/locality/advisory and are observe-only by drift/eureka
   calibration, so the generated local-first queue now routes
-  rank015/pair0068.
+  rank001/pair0501.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
@@ -310,14 +310,23 @@ last_refreshed_note: |
   projection is `0.19203228295713673`, and the eureka margin is
   `-0.000003999999999976245`, so it is observe-only and not an exact-eval
   spend trigger.
+  Local-first follow-up `pairset_drop_one_rank015_pair0068`
+  (`2776804063ab15e0a760a0d8c525d3b0828113bf1a8774e310a96baf62152f4e`,
+  `178559` bytes) passed plan/materialize/locality controls and macOS CPU
+  advisory eval at `0.19204028295713674` with `score_claim=false`. Its
+  calibrated point projection is `0.19203028295713673`, the conservative
+  projection is `0.19203328295713673`, and the eureka margin is
+  `-0.000004999999999977245`, so it is observe-only and not an exact-eval
+  spend trigger.
   The refreshed identity-verified, selector-scoped portfolio now includes the
   component marginal model from `cross_family_candidate_portfolio.v1`: CPU-safe
   observed drop pair `[371]`, CPU-protected observed drop pairs
   `[327, 376, 320, 378, 296, 430, 167, 151]`,
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
-  for `pairset_drop_one_rank021_pair0371`. After rank023, rank024, rank018, rank017, rank016, and rank025 local
+  for `pairset_drop_one_rank021_pair0371`. After rank023, rank024, rank018,
+  rank017, rank016, rank025, and rank015 local
   observe-only results, the generated checked-in fresh local-control candidate
-  is `pairset_drop_one_rank015_pair0068`. The response
+  is `pairset_drop_one_rank001_pair0501`. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
   selected-pair identity matching before fitting. The operator-action prior now
@@ -337,8 +346,11 @@ last_refreshed_note: |
   substrate: `tools/experiment_queue.py`,
   `src/comma_lab/scheduler/experiment_queue.py`, and
   `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with rank023,
-  rank024, rank018, rank017, rank016, and rank025 now local-advisory-observed
-  and the next generated candidate routed to rank015/pair0068. Queue commands are argv
+  rank024, rank018, rank017, rank016, rank025, and rank015 now
+  local-advisory-observed with matching eureka records, and the next generated
+  candidate routed to rank001/pair0501. Completed-local skip detection now
+  requires both local advisory custody and a matching drift/eureka record.
+  Queue commands are argv
   lists, state and telemetry live in SQLite, cloud resources are hidden unless
   explicitly allowed, controls support `running`/`paused`/`frozen`, and
   rewinds can cascade through dependent steps. `run-worker` now supports bounded
