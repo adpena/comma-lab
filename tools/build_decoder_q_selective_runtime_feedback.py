@@ -69,6 +69,13 @@ def main(argv: list[str] | None = None) -> int:
             locality_controls=load_json_object(args.locality_controls),
             advisory_result=load_json_object(args.advisory_result),
             packet_plan=packet_plan,
+            input_paths={
+                "bridge_plan": str(args.bridge_plan.resolve()),
+                "packet_plan": str(args.packet_plan.resolve()) if args.packet_plan else "auto",
+                "materialization_manifest": str(args.materialization_manifest.resolve()),
+                "locality_controls": str(args.locality_controls.resolve()),
+                "advisory_result": str(args.advisory_result.resolve()),
+            },
             local_baseline_score=args.local_baseline_score,
             min_dispatch_edge=args.min_dispatch_edge,
             contest_cpu_frontier_score=args.contest_cpu_frontier_score,

@@ -3,10 +3,10 @@
 ## Frontier
 
 - Canonical scanner-derived best CPU anchor:
-  `0.1920513168811056`
-  `[contest-CPU; GHA Linux x86_64 1:1]`, archive
-  `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`,
-  lane `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515`.
+  `0.19202894881608987`
+  `[contest-CPU; Linux x86_64 1:1]`, archive
+  `e12f5cfe93f9dbf624549466cda62d00a01e10bee8d1e0ea8a635af69247908a`,
+  lane `lane_dqs1_top32_gap_uleb_selective_decoderq_exact_cpu_20260522`.
 - Canonical scanner-derived best CUDA anchor:
   `0.20533002902019143`
   `[contest-CUDA T4]`, archive
@@ -43,6 +43,10 @@
   `ll_decoder_q_surface_sign_calibration_repair`. Use the advisory-negative
   batch as labeled response data; do not send the three surface-guided
   candidates to exact CUDA.
+- DQS1 top32 compact `sorted_gap_uleb` exact Modal recovery is now the CPU
+  frontier: `0.19202894881608987 [contest-CPU]`. The same archive is not a
+  CUDA frontier: `0.22619043540195719 [contest-CUDA T4]`. Raw-u16 top32 is
+  superseded on CPU at `0.1920502563025898`.
 - Next local-substrate portability work is full-weight PyTorch/NumPy/MLX trace
   parity plus CPU-stable response harvest expansion. MLX GPU/batch behavior
   remains research-only until batch invariance and transfer checks pass.

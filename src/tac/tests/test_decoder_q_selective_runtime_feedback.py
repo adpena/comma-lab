@@ -119,12 +119,32 @@ def test_feedback_builds_fail_closed_transfer_metrics() -> None:
 
     assert feedback["score_claim"] is False
     assert feedback["decision"]["dispatch_recommended"] is False
+    assert feedback["decision"]["exact_dispatch_suppression_allowed"] is False
+    assert feedback["decision"]["local_spend_triage_positive"] is False
     assert feedback["advisory"]["score_delta_vs_local_baseline"] == pytest.approx(-0.01)
     assert feedback["mlx_transfer"]["observed_mlx_gain_sum"] == pytest.approx(0.015)
+    assert feedback["custody"]["advisory_raw_sha256"] == "b" * 64
+    assert feedback["custody"]["locality_selective_raw_sha256"] == "b" * 64
     assert feedback["sign_calibration_label"]["observed_score_delta_sign"] == -1
     assert feedback["sign_calibration_label"]["atom_mutation_keys"] == [
         {"tensor_name": "rgb_1.weight", "q_offset": 0, "delta": 1}
     ]
+
+
+def test_feedback_never_suppresses_exact_dispatch_from_local_advisory() -> None:
+    feedback = build_decoder_q_selective_runtime_feedback(
+        bridge_plan=_bridge(),
+        materialization_manifest=_manifest(),
+        locality_controls=_locality(),
+        advisory_result=_advisory(0.97),
+        local_baseline_score=1.0,
+        min_dispatch_edge=0.02,
+        contest_cpu_frontier_score=0.98,
+    )
+
+    assert feedback["decision"]["local_spend_triage_positive"] is True
+    assert feedback["decision"]["dispatch_recommended"] is False
+    assert feedback["decision"]["exact_dispatch_suppression_allowed"] is False
 
 
 def test_feedback_rejects_raw_sha_mismatch() -> None:

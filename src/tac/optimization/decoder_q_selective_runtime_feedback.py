@@ -257,6 +257,7 @@ def build_decoder_q_selective_runtime_feedback(
     locality_controls: dict[str, Any],
     advisory_result: dict[str, Any],
     packet_plan: dict[str, Any] | None = None,
+    input_paths: dict[str, str] | None = None,
     local_baseline_score: float,
     min_dispatch_edge: float,
     contest_cpu_frontier_score: float | None = None,
@@ -310,6 +311,7 @@ def build_decoder_q_selective_runtime_feedback(
     raw_file_hashes = locality_hashes.get("0.raw", {}).get("raw_files") if isinstance(locality_hashes, dict) else None
     if not isinstance(raw_file_hashes, dict) or raw_file_hashes.get("selective") != raw_sha:
         raise DecoderQSelectiveRuntimeFeedbackError("advisory raw SHA mismatch")
+    locality_raw_sha = str(raw_file_hashes.get("selective"))
 
     advisory_score = _as_float(advisory_result.get("canonical_score"), label="advisory score")
     local_baseline_score = _as_float(local_baseline_score, label="local baseline score")
@@ -330,14 +332,11 @@ def build_decoder_q_selective_runtime_feedback(
             contest_cpu_frontier_score,
             label="contest CPU frontier score",
         )
-    dispatch_recommended = (
+    local_spend_triage_positive = (
         advisory_improvement >= min_dispatch_edge
         and (naive_contest_delta is None or naive_contest_delta < 0.0)
     )
-    if not dispatch_recommended:
-        recommended_next_action = "route_to_decoder_q_sign_calibration_and_subset_search"
-    else:
-        recommended_next_action = "queue_claimed_exact_cpu_cuda_replay_before_any_score_claim"
+    recommended_next_action = "append_local_sign_calibration_label_keep_exact_dispatch_decision_external"
 
     sign = 0
     if score_delta > 0:
@@ -354,6 +353,8 @@ def build_decoder_q_selective_runtime_feedback(
         "observed_score_delta_sign": sign,
         "advisory_score": advisory_score,
         "local_baseline_score": local_baseline_score,
+        "score_axis": advisory_result.get("score_axis"),
+        "evidence_grade": advisory_result.get("evidence_grade"),
         "atom_mutation_keys": [_mutation_key(materialization_manifest, packet_plan)],
         **FALSE_AUTHORITY,
     }
@@ -370,6 +371,25 @@ def build_decoder_q_selective_runtime_feedback(
         "selected_frame_count": len(selected_frames),
         "locality_controls_passed": True,
         "mismatch_counts": locality_controls.get("mismatch_counts"),
+        "custody": {
+            "input_paths": input_paths or {},
+            "materialized_archive_sha256": archive_sha,
+            "materialized_archive_bytes": _as_int(materialized.get("zip_bytes"), label="archive bytes"),
+            "materialized_member_sha256": materialized.get("member_sha256"),
+            "materialized_member_bytes": materialized.get("member_bytes"),
+            "dqs1_payload_sha256": dqs1.get("payload_sha256"),
+            "dqs1_pair_encoding": dqs1.get("pair_encoding"),
+            "advisory_archive_sha256": _archive_sha_from_advisory(advisory_result),
+            "advisory_raw_sha256": raw_sha,
+            "locality_selective_archive_sha256": (
+                locality_selective.get("archive_sha256")
+                if isinstance(locality_selective, dict)
+                else None
+            ),
+            "locality_selective_raw_sha256": locality_raw_sha,
+            "advisory_score_axis": advisory_result.get("score_axis"),
+            "advisory_evidence_grade": advisory_result.get("evidence_grade"),
+        },
         "advisory": {
             "canonical_score": advisory_score,
             "local_baseline_score": local_baseline_score,
@@ -378,6 +398,7 @@ def build_decoder_q_selective_runtime_feedback(
             "min_dispatch_edge": min_dispatch_edge,
             "naive_delta_vs_contest_cpu_frontier": naive_contest_delta,
             "score_axis": advisory_result.get("score_axis"),
+            "evidence_grade": advisory_result.get("evidence_grade"),
         },
         "mlx_transfer": {
             "observed_mlx_gain_sum": observed_mlx_gain_sum,
@@ -386,13 +407,11 @@ def build_decoder_q_selective_runtime_feedback(
             "advisory_to_mlx_transfer_efficiency": transfer_efficiency,
         },
         "decision": {
-            "dispatch_recommended": dispatch_recommended,
+            "dispatch_recommended": False,
+            "local_spend_triage_positive": local_spend_triage_positive,
+            "exact_dispatch_suppression_allowed": False,
             "recommended_next_action": recommended_next_action,
-            "reason": (
-                "advisory edge below dispatch threshold or non-apples-to-apples frontier delta"
-                if not dispatch_recommended
-                else "local advisory edge clears threshold; exact replay still required"
-            ),
+            "reason": "local macOS advisory is calibration signal only and cannot rank, kill, promote, or suppress exact replay",
         },
         "sign_calibration_label": label,
         **FALSE_AUTHORITY,
@@ -444,16 +463,23 @@ def render_decoder_q_selective_runtime_feedback_markdown(feedback: dict[str, Any
         f"- Selected pairs: `{feedback.get('selected_pair_count')}`",
         f"- Selected frames: `{feedback.get('selected_frame_count')}`",
         f"- DQS1 payload bytes: `{feedback.get('dqs1_payload_bytes')}`",
-        f"- Advisory score: `{advisory.get('canonical_score')}`",
-        f"- Delta vs local baseline: `{advisory.get('score_delta_vs_local_baseline')}`",
+        "- Advisory score "
+        f"`[{advisory.get('evidence_grade')}; {advisory.get('score_axis')}; non-authoritative]`: "
+        f"`{advisory.get('canonical_score')}`",
+        "- Delta vs local baseline "
+        f"`[{advisory.get('evidence_grade')}; non-authoritative]`: "
+        f"`{advisory.get('score_delta_vs_local_baseline')}`",
         f"- MLX gain sum: `{mlx.get('observed_mlx_gain_sum')}`",
         f"- Net MLX gain after rate: `{mlx.get('net_mlx_gain_after_rate')}`",
         f"- Advisory/MLX transfer efficiency: `{mlx.get('advisory_to_mlx_transfer_efficiency')}`",
-        f"- Dispatch recommended: `{decision.get('dispatch_recommended')}`",
+        f"- Exact dispatch recommended by this local advisory artifact: `{decision.get('dispatch_recommended')}`",
+        f"- Exact dispatch suppression allowed: `{decision.get('exact_dispatch_suppression_allowed')}`",
+        f"- Local spend-triage positive: `{decision.get('local_spend_triage_positive')}`",
         f"- Next action: `{decision.get('recommended_next_action')}`",
         "",
         "Authority: `score_claim=false`, `promotion_eligible=false`, "
-        "`ready_for_exact_eval_dispatch=false`.",
+        "`ready_for_exact_eval_dispatch=false`. This report is local calibration "
+        "signal only and cannot rank, kill, promote, or suppress exact replay.",
     ]
     return "\n".join(lines) + "\n"
 

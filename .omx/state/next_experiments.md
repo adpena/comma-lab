@@ -18,10 +18,10 @@ architecture-lock/TT5L custody artifacts.
 ## Active Anchor
 
 - Canonical scanner-derived best CPU anchor:
-  `0.1920513168811056`
-  `[contest-CPU; GHA Linux x86_64 1:1]`, archive
-  `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`,
-  lane `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515`.
+  `0.19202894881608987`
+  `[contest-CPU; Linux x86_64 1:1]`, archive
+  `e12f5cfe93f9dbf624549466cda62d00a01e10bee8d1e0ea8a635af69247908a`,
+  lane `lane_dqs1_top32_gap_uleb_selective_decoderq_exact_cpu_20260522`.
 - Canonical scanner-derived best CUDA anchor:
   `0.20533002902019143`
   `[contest-CUDA T4]`, archive
@@ -54,6 +54,11 @@ architecture-lock/TT5L custody artifacts.
 - Portability task: implement and verify full-weight PyTorch -> NumPy -> MLX
   state/intermediate trace parity for the canonical scorer path. MLX GPU/batch
   remains research-only until batch invariance passes against CPU-stable rows.
+- DQS1 continuation: compact `sorted_gap_uleb` top32 is exact `[contest-CPU]`
+  frontier at `0.19202894881608987` and exact `[contest-CUDA T4]` recovered at
+  `0.22619043540195719`. Raw-u16 top32 is superseded on CPU. Next work is
+  subset/Pareto search and sign-calibrated response modeling, not another
+  unbounded exact replay of the same top32 row.
 
 ### 1. Rule #6 A1 Ballé Hyperprior Bolt-On
 

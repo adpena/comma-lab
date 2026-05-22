@@ -1,28 +1,25 @@
 <!--
-generated_at: 2026-05-22T14:35:30Z
-from_state_hash: frontier_scan_no_drift_plus_decoder_q_selective_runtime_top32_locality_20260522T1435Z
-regenerated_by: codex:decoder_q_selective_runtime_top32_locality_20260522
-last_refreshed_at: 2026-05-22T14:35:30Z
-last_refreshed_by: codex:decoder_q_selective_runtime_top32_locality_20260522
-last_refreshed_head: 2293f9f56
+generated_at: 2026-05-22T15:02:28Z
+from_state_hash: frontier_scan_dqs1_gap_uleb_exact_cpu_cuda_20260522T1502Z
+regenerated_by: codex:dqs1_gap_uleb_exact_cpu_recovery_20260522
+last_refreshed_at: 2026-05-22T15:02:28Z
+last_refreshed_by: codex:dqs1_exact_recovery_and_gap_uleb_20260522
+last_refreshed_head: a12c231f9
 last_refreshed_note: |
-  Current frontier/status refresh after the 2026-05-22 decoder-q selective
-  runtime packet materialization and top32 raw-locality pass. The scanner-derived
-  FRONTIER section remains unchanged from the 2026-05-22T09:27Z drift check. MLX
-  remains non-authoritative local research signal: calibrated spend triage is
-  allowed only through the composed effective gate and still requires exact
-  CPU/CUDA auth eval before any score, promotion, rank, kill, or
-  dispatch-readiness claim. The DQS1 trailer materialization and locality
-  controls are byte-closed local-substrate evidence, not score authority.
+  Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
+  and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
+  superseded on the contest-CPU axis by the compact gap-ULEB DQS1 archive at
+  0.19202894881608987. MLX remains non-authoritative local research signal.
+  The compact gap-ULEB packet passed raw-output locality and exact Modal
+  recovery on both CPU and CUDA; CPU improves the frontier, CUDA regresses.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
 
-> **2026-05-22 refresh note**: the scanner-derived FRONTIER section remains
-> unchanged from the 09:27Z drift check. Decoder-q selective runtime now has a
-> byte-closed DQS1 trailer materialization, manifest/archive-tail custody checks,
-> and singleton/top32 raw-output locality controls, but it still carries no
-> score, promotion, rank/kill, or dispatch-readiness authority.
+> **2026-05-22 refresh note**: compact DQS1 top32 `sorted_gap_uleb` exact
+> Modal recovery moved the scanner-derived `[contest-CPU]` best to
+> `0.19202894881608987`. The same archive regresses on `[contest-CUDA T4]`
+> at `0.22619043540195719`, so this is a CPU-axis frontier move only.
 > Historical roadmap sections below remain retained for context; use `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
 > detailed queue routing.
@@ -41,11 +38,11 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-05-22T09:27Z
+### Current best - last rechecked 2026-05-22T15:02Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
-| **`[contest-CPU GHA Linux x86_64]`** | **0.1920513169** | `6bae0201fb08` | linux_x86_64_cpu | `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515` |
+| **`[contest-CPU Linux x86_64]`** | **0.1920289488** | `e12f5cfe93f9` | linux_x86_64_cpu | `lane_dqs1_top32_gap_uleb_selective_decoderq_exact_cpu_20260522` |
 | **`[contest-CUDA T4]`** | **0.2053300290** | `9cb989cef519` | linux_x86_64_t4 | `lane_pr106_format0d_latent_score_table_20260516_contest_cuda` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
@@ -94,9 +91,9 @@ last_refreshed_note: |
   `f98e3017e8568bf36b304b5c053b6c7b4afc0e7ece8ef6d3f927849114765202`).
   It maps the top 32 observed MLX singleton windows to the existing
   `d1f1e56e042692f2` materialized decoder-q mutation. Runtime grammar is now
-  implemented as an archive-member `DQS1` trailer, but the lane remains
-  `score_claim=false` and `ready_for_exact_eval_dispatch=false` until exact
-  CPU/CUDA auth eval passes.
+  implemented as an archive-member `DQS1` trailer. Planner and local advisory
+  artifacts remain non-authoritative; exact recovered auth payloads below carry
+  the score axis.
 - Decoder-q selective packet planning and materialization now have L0 byte
   accounting for the same bridge. Singleton pair `501` maps to frames
   `[1002, 1003]` under `pair_all_frames` with a charged `DQS1` payload of `13`
@@ -129,21 +126,43 @@ last_refreshed_note: |
   `0.19206131688110561 [macOS-CPU advisory]`, this is `-0.0000010605785158157577`
   lower despite the `+75` byte trailer, driven by a `-0.000000510000000000007`
   SegNet-distortion shift. Against the Linux x86_64 `[contest-CPU]` frontier
-  it is not an apples-to-apples claim; the naive cross-axis arithmetic would be
-  `+0.000008939421484194243`, so exact CPU/CUDA replay is still required.
-  This remains `score_claim=false`, `promotion_eligible=false`,
-  `rank_or_kill_eligible=false`, and `ready_for_exact_eval_dispatch=false`
-  until exact auth eval passes.
+  it was not an apples-to-apples claim; exact CPU/CUDA replay is recorded
+  below.
+  These local advisory artifacts remain `score_claim=false`,
+  `promotion_eligible=false`, `rank_or_kill_eligible=false`, and
+  `ready_for_exact_eval_dispatch=false`.
+- Exact Modal recovery for the canonical raw-u16 DQS1 top32 archive
+  (`3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59`,
+  `178592` bytes) passed both axes on `2026-05-22`:
+  `[contest-CPU]` score `0.1920502563025898` with SegNet distortion
+  `0.00055978`, PoseNet distortion `0.00002943`, and rate component
+  `0.11891708215599484`; `[contest-CUDA T4]` score `0.2262117428884571`
+  with SegNet distortion `0.00066252`, PoseNet distortion `0.00016845`,
+  and the same rate component. The CPU result was a temporary CPU frontier
+  improvement, superseded by compact gap-ULEB below; the CUDA result is a
+  regression versus the PR106 CUDA anchor.
+- Compact DQS1 `sorted_gap_uleb` pair encoding is implemented and tested in
+  `fb14164d6`. It reduces the top32 DQS1 payload from `75` bytes to `43`
+  bytes and materializes archive
+  `e12f5cfe93f9dbf624549466cda62d00a01e10bee8d1e0ea8a635af69247908a`
+  (`178560` bytes). Official raw-output locality controls pass with the same
+  selected/unselected frame hashes and all mismatch counts `0`. Exact
+  `[contest-CPU]` recovery passed at `0.19202894881608987`, with SegNet
+  distortion `0.00055978`, PoseNet distortion `0.00002943`, and archive bytes
+  `178560`. That is `0.000022368065015737626` below the prior PR101/FEC6
+  `[contest-CPU]` frontier. Exact `[contest-CUDA T4]` recovery passed at
+  `0.22619043540195719`, with SegNet distortion `0.00066252` and PoseNet
+  distortion `0.00016845`; CUDA remains a regression.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
 **`[contest-CPU]`**:
 
-1. **0.1920513169** — `6bae0201fb08` — `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515`
-2. 0.1920513169 — `6bae0201fb08` — duplicate canonical anchor for current CPU frontier
-3. 0.1920978868 — `8866ebb655e9` — pr101 fec sibling
-4. 0.1920978868 — `8866ebb655e9` — duplicate canonical anchor for fec sibling
-5. 0.1928475774 — `87ec7ca5f2f3` — `hnerv_ft_microcodec`
+1. **0.1920289488** — `e12f5cfe93f9` — `lane_dqs1_top32_gap_uleb_selective_decoderq_exact_cpu_20260522`
+2. 0.1920289488 — `e12f5cfe93f9` — duplicate canonical anchor for current CPU frontier
+3. 0.1920502563 — `3c4e15bfe7ae` — `lane_dqs1_top32_selective_decoderq_exact_cpu_20260522`
+4. 0.1920502563 — `3c4e15bfe7ae` — duplicate canonical anchor for superseded raw-u16 DQS1 top32
+5. 0.1920513169 — `6bae0201fb08` — `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515`
 
 **`[contest-CUDA T4]`**:
 
