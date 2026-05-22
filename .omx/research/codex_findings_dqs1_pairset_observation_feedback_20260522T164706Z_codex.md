@@ -282,6 +282,57 @@ observation-aware portfolio is:
 - New recommended candidate: `pairset_drop_one_rank013_pair0327`
 - New recommended action: `materialize_pairset_archive_and_run_local_controls`
 
+`pairset_drop_one_rank013_pair0327` was materialized, locality-checked,
+dispatched CPU-first, and recovered cleanly. It is the closest tested
+pairset-family candidate to compact DQS1 top32, but still misses by
+`3.3414104685935975e-7` on exact `[contest-CPU]`.
+
+- Locality report:
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_drop_one_rank013_pair0327_materialization_20260522T174354Z/locality_controls.json`
+- Archive SHA-256:
+  `fa8ccca5331525668433a56c4bcf861a3efbecc81460c707fca79857cf792697`
+- Archive bytes: `178559`
+- Selected pairs:
+  `[26, 59, 68, 98, 109, 112, 134, 151, 167, 229, 242, 257, 259, 296, 320, 371, 376, 378, 412, 430, 440, 459, 467, 479, 492, 496, 501, 520, 544, 555, 588]`
+- Selected frame mismatch count: `0`
+- Unselected frame mismatch count: `0`
+- Modal result:
+  `experiments/results/modal_auth_eval_cpu/dqs1_pairset_drop_one_rank013_pair0327_selective_decoderq_cpu_20260522T174354Z/contest_auth_eval.json`
+- Modal call id:
+  `fc-01KS8CRN8VP339K8BQKAM6BA4H`
+- Exact score:
+  `0.19202928295713673` `[contest-CPU]`
+- Delta versus compact DQS1 top32 CPU frontier:
+  `+0.00000033414104685935975`
+- Component deltas: PoseNet `+0.0`, SegNet
+  `+0.000001000000000007939`, rate `-0.0000006658589531277626`
+- Runtime tree SHA-256:
+  `eaf208407c6f301b830c0f76059da1a930c2ef7fc2996b24bf86032a249a679f`
+- Inflated aggregate SHA-256:
+  `7695b3bf0f2ac64f47f82d9ac9a4469612b8209617056049c9ff61d92189939e`
+
+The observation ledger now has `8` exact CPU calibration rows:
+`prefix_k028`, `pairset_diversity_k002`, `pairset_diversity_k004`,
+`pairset_diversity_k008`, `pairset_diversity_k012`,
+`pairset_diversity_k016`, `pairset_diversity_k024`, and
+`pairset_drop_one_rank013_pair0327`. The latest refreshed observation-aware
+portfolio was regenerated after adversarial review fixed selector-family
+leakage, regression-only extrapolation, and missing selected-pair identity
+checks. The exact pairset observation-response model is active only for
+selector families with sufficient matching observations:
+
+- `experiments/results/cross_family_candidate_portfolio_20260522T180248Z_identity_required_selector_scoped/portfolio.json`
+- `experiments/results/cross_family_candidate_portfolio_20260522T180248Z_identity_required_selector_scoped/portfolio.md`
+- `experiments/results/cross_family_candidate_portfolio_20260522T180248Z_identity_required_selector_scoped/action_summary.json`
+- Model: selector-scoped linear selected-pair-count prior on `contest_cpu`;
+  active selector kind `diversity_spaced`, intercept `0.192059196213965`,
+  slope per pair `-9.95745144e-07`, residual MSE
+  `5.017957909820203e-12`, selected-pair identity verified for all `7`
+  candidate-id matches, regression-only cap active at best observed score
+  `0.19203562194446488`, false-authority fields preserved.
+- New recommended candidate: `pairset_drop_two_r028_021_p0257_0371`
+- New recommended action: `materialize_pairset_archive_and_run_local_controls`
+
 ## Verification
 
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py -q`
@@ -301,6 +352,12 @@ observation-aware portfolio is:
 - `tools/run_decoder_q_selective_runtime_locality_controls.py` on k024 first 180-second run
 - `tools/run_decoder_q_selective_runtime_locality_controls.py` on k024 600-second rerun
 - `tools/recover_modal_auth_eval.py` on k024 Modal CPU call `fc-01KS8C4SX0TQ5G50VE7Z6M47PQ`
+- `tools/run_decoder_q_selective_runtime_locality_controls.py` on drop-one rank013 pair0327
+- `tools/recover_modal_auth_eval.py` on drop-one rank013 pair0327 Modal CPU call `fc-01KS8CRN8VP339K8BQKAM6BA4H`
+- `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_mlx_dynamic_sweep_observations.py -q`
+- `.venv/bin/python -m pytest src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py -q`
+- `.venv/bin/ruff check src/tac/optimization/cross_family_candidate_portfolio.py src/tac/optimization/mlx_dynamic_sweep_observations.py tools/plan_cross_family_candidate_portfolio.py src/tac/tests/test_cross_family_candidate_portfolio.py`
+- `.venv/bin/ruff check src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py`
 
 ## Authority
 
@@ -317,3 +374,5 @@ observation-aware portfolio is:
   evidence.
 - k024 now has exact `[contest-CPU]` evidence only, not CUDA promotion
   evidence.
+- drop-one rank013 pair0327 now has exact `[contest-CPU]` evidence only, not
+  CUDA promotion evidence.

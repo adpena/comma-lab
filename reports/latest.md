@@ -197,8 +197,16 @@ last_refreshed_note: |
   `0.19203562194446488`, still a regression versus compact DQS1 top32 by
   `+0.000006673128375017656`; component deltas were PoseNet `+0.0`, SegNet
   `+0.000012000000000005062`, rate `-0.000005326871624980467`. The refreshed
-  portfolio now recommends `pairset_drop_one_rank013_pair0327` as the next
-  fresh local-control candidate.
+  portfolio recommended `pairset_drop_one_rank013_pair0327`, which passed
+  locality and exact Modal `[contest-CPU]` eval. It scored
+  `0.19202928295713673`, still a regression versus compact DQS1 top32 by
+  `+0.00000033414104685935975`; component deltas were PoseNet `+0.0`, SegNet
+  `+0.000001000000000007939`, rate `-0.0000006658589531277626`. The refreshed
+  identity-verified, selector-scoped observation-response portfolio now
+  recommends `pairset_drop_one_rank021_pair0371` as the next fresh
+  local-control candidate. The response model is active only for
+  `diversity_spaced` rows, caps regression-only extrapolation at the best
+  observed score, and uses selected-pair identity matching before fitting.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
