@@ -10,7 +10,10 @@ from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_cache_audit import PASS_VERDICT as CACHE_AUDIT_PASS_VERDICT
-from tac.local_acceleration.mlx_score_calibration import SCHEMA_VERSION as SCORE_CALIBRATION_SCHEMA_VERSION
+from tac.local_acceleration.mlx_score_calibration import (
+    SCHEMA_VERSION as SCORE_CALIBRATION_SCHEMA_VERSION,
+)
+from tac.local_acceleration.mlx_score_calibration import STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE
 from tac.local_acceleration.mlx_scorer_response import (
     GPU_BATCH_SHAPE_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
@@ -28,9 +31,11 @@ from tac.local_acceleration.mlx_scorer_torch_parity import (
     SWEEP_SCHEMA_VERSION as TORCH_PARITY_SWEEP_SCHEMA_VERSION,
 )
 
-SCHEMA_VERSION = "mlx_scorer_production_contract.v1"
+SCHEMA_VERSION = "mlx_scorer_production_contract.v2"
+GATE_SET_VERSION = "mlx_scorer_production_gate_set.v2.cache_auth_torch_profile"
 PASS_VERDICT = "PASS_MLX_SCORER_PRODUCTION_CONTRACT"
 FAIL_VERDICT = "FAIL_MLX_SCORER_PRODUCTION_CONTRACT"
+ADVISORY_VERDICT = "ADVISORY_MLX_SCORER_DEV_CONTRACT"
 
 AUTHORITY_FALSE_FIELDS = (
     "score_claim",
@@ -86,6 +91,11 @@ def build_mlx_scorer_production_contract_manifest(
         warnings=warnings,
         require_cache_identity=require_cache_identity,
     )
+    response_batch_pairs = _safe_int(response_payload.get("batch_pairs"))
+    batch_invariance_required = bool(
+        require_batch_invariance
+        and (response_batch_pairs is None or response_batch_pairs > 1)
+    )
     if cache_auth_audit is None:
         missing = "cache_auth_audit_manifest_not_supplied"
         if require_cache_auth_audit:
@@ -117,26 +127,29 @@ def build_mlx_scorer_production_contract_manifest(
         else:
             warnings.append(missing)
     else:
-        _check_optional_gate_manifest(
+        _check_profile_stability_manifest(
             profile_stability,
+            response_payload=response_payload,
             blockers=blockers,
             warnings=warnings,
-            schema_prefix="mlx_scorer_response_profile_stability",
-            label="profile_stability",
         )
     if batch_invariance is None:
         missing = "batch_invariance_manifest_not_supplied"
-        if require_batch_invariance:
+        if batch_invariance_required:
             blockers.append(missing)
+        elif require_batch_invariance:
+            warnings.append("batch_invariance_not_required_for_singleton_response")
         else:
             warnings.append(missing)
     else:
         _check_batch_invariance_gate_manifest(
             batch_invariance,
+            response_payload=response_payload,
             blockers=blockers,
             warnings=warnings,
             response_device=_response_device(response_payload),
-            response_batch_pairs=_safe_int(response_payload.get("batch_pairs")),
+            response_batch_pairs=response_batch_pairs,
+            required=batch_invariance_required,
         )
     if score_calibration is None:
         missing = "score_calibration_manifest_not_supplied"
@@ -145,20 +158,45 @@ def build_mlx_scorer_production_contract_manifest(
     else:
         _check_score_calibration_gate_manifest(score_calibration, blockers=blockers)
 
-    passed = not blockers
+    strict_gate_policy = bool(
+        require_cache_identity
+        and require_cache_auth_audit
+        and require_torch_parity
+        and require_profile_stability
+        and require_batch_invariance
+    )
+    advisory_only = not strict_gate_policy
+    production_passed = not blockers and not advisory_only
     return {
         "schema_version": SCHEMA_VERSION,
+        "gate_set_version": GATE_SET_VERSION,
         "run_id": run_id,
-        "passed": passed,
-        "verdict": PASS_VERDICT if passed else FAIL_VERDICT,
+        "passed": production_passed,
+        "advisory_passed": bool(not blockers),
+        "verdict": (
+            PASS_VERDICT
+            if production_passed
+            else ADVISORY_VERDICT
+            if not blockers
+            else FAIL_VERDICT
+        ),
         "blockers": blockers,
-        "warnings": warnings,
+        "warnings": (
+            [*warnings, "production_required_gate_policy_bypassed"]
+            if advisory_only
+            else warnings
+        ),
         "production_deployment_role": "local_mlx_scorer_acceleration_non_authoritative",
         "score_authority": False,
         "contest_authority": False,
+        "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "score_axis": EVIDENCE_TAG_MLX,
         "evidence_grade": EVIDENCE_GRADE_MLX,
         "evidence_tag": EVIDENCE_TAG_MLX,
         "response_summary": {
@@ -177,8 +215,10 @@ def build_mlx_scorer_production_contract_manifest(
             "cache_auth_audit": bool(require_cache_auth_audit),
             "torch_parity": bool(require_torch_parity),
             "profile_stability": bool(require_profile_stability),
-            "batch_invariance": bool(require_batch_invariance),
+            "batch_invariance": batch_invariance_required,
+            "batch_invariance_policy_requested": bool(require_batch_invariance),
             "score_calibration": bool(require_score_calibration),
+            "strict_gate_policy": strict_gate_policy,
         },
         "authority_status": (
             "Contract pass means production-safe local MLX scorer acceleration "
@@ -327,6 +367,7 @@ def _check_optional_gate_manifest(
     warnings: list[str],
     schema_prefix: str,
     label: str,
+    require_passed: bool = True,
 ) -> None:
     if not isinstance(manifest, dict):
         blockers.append(f"{label}_manifest_not_object")
@@ -343,7 +384,7 @@ def _check_optional_gate_manifest(
         blockers.append(f"{label}_evidence_tag_not_mlx_research_signal")
     if manifest.get("candidate_generation_only") not in {None, True}:
         blockers.append(f"{label}_candidate_generation_only_not_true")
-    if manifest.get("passed") is not True:
+    if require_passed and manifest.get("passed") is not True:
         blockers.append(f"{label}_not_passing")
 
 
@@ -362,12 +403,12 @@ def _check_cache_auth_audit_manifest(
         blockers.append("cache_auth_audit_not_passing")
     if manifest.get("verdict") != CACHE_AUDIT_PASS_VERDICT:
         blockers.append("cache_auth_audit_verdict_not_pass")
-    for field in (
-        "score_claim",
-        "promotion_eligible",
-        "rank_or_kill_eligible",
-        "ready_for_exact_eval_dispatch",
-    ):
+    audit_blockers = manifest.get("blockers")
+    if isinstance(audit_blockers, list):
+        for blocker in audit_blockers:
+            if blocker:
+                blockers.append(f"cache_auth_audit_blocker:{blocker}")
+    for field in AUTHORITY_FALSE_FIELDS:
         if manifest.get(field) is not False:
             blockers.append(f"cache_auth_audit_{field}_not_false")
     allowed_use = manifest.get("allowed_use")
@@ -376,37 +417,74 @@ def _check_cache_auth_audit_manifest(
         or "local_mlx_training_transfer_calibration" not in allowed_use
     ):
         blockers.append("cache_auth_audit_missing_transfer_calibration_allowed_use")
+    canonical_equation = manifest.get("canonical_equation")
+    if not isinstance(canonical_equation, dict):
+        blockers.append("cache_auth_audit_canonical_equation_missing")
+    else:
+        if canonical_equation.get("eligible_for_local_mlx_transfer_calibration") is not True:
+            blockers.append("cache_auth_audit_canonical_equation_not_transfer_eligible")
+        if canonical_equation.get("identity_residual") != 0:
+            blockers.append("cache_auth_audit_canonical_equation_identity_residual_nonzero")
+        if canonical_equation.get("score_claim") is not False:
+            blockers.append("cache_auth_audit_canonical_equation_score_claim_not_false")
+        for key in ("hash_domain", "compared_scorer_input_hashes", "compared_scorer_input_shapes"):
+            if not canonical_equation.get(key):
+                blockers.append(f"cache_auth_audit_canonical_equation_{key}_missing")
     cache = manifest.get("cache")
     if not isinstance(cache, dict):
         blockers.append("cache_auth_audit_cache_identity_missing")
         return
-    _check_hash_match(
+    _require_hash_match(
         response_payload.get("archive_sha256"),
         cache.get("archive_sha256"),
         "cache_auth_audit_archive_sha256_mismatch",
         blockers,
     )
-    _check_hash_match(
+    _require_hash_match(
         response_payload.get("inflated_outputs_aggregate_sha256"),
         cache.get("inflated_outputs_aggregate_sha256"),
         "cache_auth_audit_inflated_outputs_aggregate_sha256_mismatch",
         blockers,
     )
+    _check_int_match(
+        _response_cache_side(response_payload, "candidate").get("pair_count"),
+        cache.get("pair_count"),
+        "cache_auth_audit_pair_count_mismatch",
+        blockers,
+    )
+    if not _hash_mapping(cache.get("array_sha256")):
+        blockers.append("cache_auth_audit_array_sha256_missing")
+    if not _shape_mapping(cache):
+        blockers.append("cache_auth_audit_shapes_missing")
+    if not cache.get("hash_domain"):
+        blockers.append("cache_auth_audit_hash_domain_missing")
+    auth_eval = manifest.get("auth_eval")
+    if not isinstance(auth_eval, dict):
+        blockers.append("cache_auth_audit_auth_eval_summary_missing")
+    else:
+        if _safe_int(auth_eval.get("n_samples")) is None:
+            blockers.append("cache_auth_audit_auth_eval_n_samples_missing")
+        if not auth_eval.get("scorer_input_hash_domain"):
+            blockers.append("cache_auth_audit_auth_eval_hash_domain_missing")
+        if not _hash_mapping(auth_eval.get("scorer_input_array_sha256")):
+            blockers.append("cache_auth_audit_auth_eval_array_sha256_missing")
+        if not _shape_mapping_from_auth_summary(auth_eval.get("scorer_input_shapes")):
+            blockers.append("cache_auth_audit_auth_eval_shapes_missing")
     candidate = _response_cache_side(response_payload, "candidate")
     if candidate:
-        _check_hash_match(
+        _require_hash_match(
             candidate.get("archive_sha256"),
             cache.get("archive_sha256"),
             "cache_auth_audit_candidate_archive_sha256_mismatch",
             blockers,
         )
-        _check_hash_match(
+        _require_hash_match(
             candidate.get("inflated_outputs_aggregate_sha256"),
             cache.get("inflated_outputs_aggregate_sha256"),
             "cache_auth_audit_candidate_inflated_outputs_aggregate_sha256_mismatch",
             blockers,
         )
-        _check_hash_match(
+        _require_hash_match(
             candidate.get("raw_sha256"),
             cache.get("raw_sha256"),
             "cache_auth_audit_candidate_raw_sha256_mismatch",
@@ -451,7 +529,7 @@ def _check_torch_parity_manifest(
         blockers.append("torch_parity_cache_identity_missing")
         return
     parity_archive = cache_identity.get("archive_sha256")
-    if parity_archive is not None and not _is_sha256(str(parity_archive)):
+    if not _is_sha256(str(parity_archive)):
         blockers.append("torch_parity_cache_identity_archive_sha256_invalid")
     expected_archives = {
         value
@@ -464,6 +542,50 @@ def _check_torch_parity_manifest(
     }
     if parity_archive is not None and expected_archives and parity_archive not in expected_archives:
         blockers.append("torch_parity_cache_identity_archive_sha256_mismatch")
+    candidate = _response_cache_side(response_payload, "candidate")
+    _check_cache_path_match(
+        candidate.get("path"),
+        cache_identity.get("path") or manifest.get("cache_dir"),
+        "torch_parity_cache_dir_mismatch",
+        blockers,
+    )
+    _check_int_match(
+        candidate.get("pair_count"),
+        cache_identity.get("pair_count") or manifest.get("total_pair_count"),
+        "torch_parity_pair_count_mismatch",
+        blockers,
+    )
+    _require_hash_match(
+        candidate.get("inflated_outputs_aggregate_sha256"),
+        cache_identity.get("inflated_outputs_aggregate_sha256"),
+        "torch_parity_inflated_outputs_aggregate_sha256_mismatch",
+        blockers,
+    )
+    _require_hash_match(
+        candidate.get("raw_sha256"),
+        cache_identity.get("raw_sha256"),
+        "torch_parity_raw_sha256_mismatch",
+        blockers,
+    )
+    response_window = _pair_window(response_payload)
+    covered_window = _pair_window({"pair_window": manifest.get("covered_pair_window")})
+    if response_window is not None:
+        if covered_window is None:
+            blockers.append("torch_parity_covered_pair_window_missing")
+        elif not (
+            covered_window[0] <= response_window[0]
+            and response_window[1] <= covered_window[1]
+        ):
+            blockers.append(
+                "torch_parity_window_does_not_cover_response:"
+                f"response={response_window}:covered={covered_window}"
+            )
+    if not cache_identity.get("hash_domain"):
+        blockers.append("torch_parity_cache_identity_hash_domain_missing")
+    if not _hash_mapping(cache_identity.get("array_sha256")):
+        blockers.append("torch_parity_cache_identity_array_sha256_missing")
+    if not _shape_mapping(cache_identity):
+        blockers.append("torch_parity_cache_identity_shapes_missing")
 
 
 def _check_score_calibration_gate_manifest(
@@ -485,7 +607,7 @@ def _check_score_calibration_gate_manifest(
         return
     if (
         decision_policy.get("allowed_use")
-        != "local_spend_triage_only_after_strict_auth_axis_calibration"
+        != STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE
     ):
         blockers.append("score_calibration_allowed_use_not_strict_auth_axis")
     if decision_policy.get("recommended_min_mlx_gap_for_spend_triage") is None:
@@ -495,17 +617,78 @@ def _check_score_calibration_gate_manifest(
         uncertain = _safe_int(summary.get("mlx_spend_triage_pairwise_uncertain_count"))
         if uncertain is not None and uncertain > 0:
             blockers.append("score_calibration_uncertain_pairwise_triage")
+        certified = _safe_int(summary.get("mlx_spend_triage_pairwise_certified_count"))
+        total = _safe_int(summary.get("mlx_spend_triage_pairwise_total_count"))
+        if certified is None or certified <= 0:
+            blockers.append("score_calibration_certified_pairwise_count_missing")
+        if total is None or total <= 0:
+            blockers.append("score_calibration_total_pairwise_count_missing")
+        if decision_policy.get("calibration_uncertainty_score") is None:
+            blockers.append("score_calibration_uncertainty_missing")
     else:
         blockers.append("score_calibration_summary_missing")
+
+
+def _check_profile_stability_manifest(
+    manifest: dict[str, Any],
+    *,
+    response_payload: dict[str, Any],
+    blockers: list[str],
+    warnings: list[str],
+) -> None:
+    _check_optional_gate_manifest(
+        manifest,
+        blockers=blockers,
+        warnings=warnings,
+        schema_prefix="mlx_scorer_response_profile_stability",
+        label="profile_stability",
+    )
+    if not isinstance(manifest, dict):
+        return
+    summary = manifest.get("profile_summary")
+    if not isinstance(summary, dict):
+        blockers.append("profile_stability_summary_missing")
+        return
+    _check_int_match(
+        response_payload.get("archive_size_bytes"),
+        summary.get("archive_size_bytes"),
+        "profile_stability_archive_size_bytes_mismatch",
+        blockers,
+    )
+    response_window = _pair_window(response_payload)
+    profile_start = _safe_int(summary.get("start_pair"))
+    profile_max_pairs = _safe_int(summary.get("max_pairs"))
+    if response_window is not None:
+        if profile_start is None or profile_max_pairs is None:
+            blockers.append("profile_stability_window_missing")
+        elif response_window != [profile_start, profile_start + profile_max_pairs]:
+            blockers.append(
+                "profile_stability_pair_window_mismatch:"
+                f"response={response_window}:profile={[profile_start, profile_start + profile_max_pairs]}"
+            )
+    _check_cache_path_match(
+        _response_cache_side(response_payload, "candidate").get("path"),
+        summary.get("candidate_cache_dir"),
+        "profile_stability_candidate_cache_dir_mismatch",
+        blockers,
+    )
+    _check_cache_path_match(
+        _response_cache_side(response_payload, "reference").get("path"),
+        summary.get("reference_cache_dir"),
+        "profile_stability_reference_cache_dir_mismatch",
+        blockers,
+    )
 
 
 def _check_batch_invariance_gate_manifest(
     manifest: dict[str, Any],
     *,
+    response_payload: dict[str, Any],
     blockers: list[str],
     warnings: list[str],
     response_device: str,
     response_batch_pairs: int | None,
+    required: bool,
 ) -> None:
     _check_optional_gate_manifest(
         manifest,
@@ -513,8 +696,13 @@ def _check_batch_invariance_gate_manifest(
         warnings=warnings,
         schema_prefix="mlx_scorer_batch_invariance",
         label="batch_invariance",
+        require_passed=required,
     )
     if not isinstance(manifest, dict):
+        return
+    if not required:
+        if manifest.get("passed") is False:
+            warnings.append("batch_invariance_supplied_but_not_required_and_failing")
         return
     if response_batch_pairs is None or response_batch_pairs <= 1:
         return
@@ -536,6 +724,31 @@ def _check_batch_invariance_gate_manifest(
             "batch_invariance_batch_pairs_mismatch:"
             f"response={response_batch_pairs}:gate={gate_batch_pairs}"
         )
+    _check_cache_path_match(
+        _response_cache_side(response_payload, "candidate").get("path"),
+        manifest.get("cache_dir"),
+        "batch_invariance_candidate_cache_dir_mismatch",
+        blockers,
+    )
+    _check_int_match(
+        _response_cache_side(response_payload, "candidate").get("pair_count"),
+        manifest.get("total_pair_count"),
+        "batch_invariance_total_pair_count_mismatch",
+        blockers,
+    )
+    response_window = _pair_window(response_payload)
+    gate_start = _safe_int(manifest.get("start_pair"))
+    if response_window is not None:
+        if gate_start is None or gate_batch_pairs is None:
+            blockers.append("batch_invariance_pair_window_missing")
+        elif not (
+            response_window[0] <= gate_start
+            and gate_start + gate_batch_pairs <= response_window[1]
+        ):
+            blockers.append(
+                "batch_invariance_window_not_within_response_window:"
+                f"response={response_window}:gate={[gate_start, gate_start + gate_batch_pairs]}"
+            )
 
 
 def _response_cache_side(payload: dict[str, Any], side: str) -> dict[str, Any]:
@@ -556,6 +769,80 @@ def _check_hash_match(
         return
     if not _is_sha256(str(lhs)) or not _is_sha256(str(rhs)) or str(lhs) != str(rhs):
         blockers.append(blocker)
+
+
+def _require_hash_match(
+    lhs: Any,
+    rhs: Any,
+    blocker: str,
+    blockers: list[str],
+) -> None:
+    if not _is_sha256(str(lhs)) or not _is_sha256(str(rhs)) or str(lhs) != str(rhs):
+        blockers.append(blocker)
+
+
+def _check_int_match(lhs: Any, rhs: Any, blocker: str, blockers: list[str]) -> None:
+    if lhs is None or rhs is None:
+        blockers.append(blocker)
+        return
+    left = _safe_int(lhs)
+    right = _safe_int(rhs)
+    if left is None or right is None or left != right:
+        blockers.append(blocker)
+
+
+def _check_cache_path_match(lhs: Any, rhs: Any, blocker: str, blockers: list[str]) -> None:
+    if not lhs or not rhs:
+        blockers.append(blocker)
+        return
+    if _normalize_path_text(str(lhs)) != _normalize_path_text(str(rhs)):
+        blockers.append(blocker)
+
+
+def _normalize_path_text(value: str) -> str:
+    return str(Path(value)).rstrip("/")
+
+
+def _pair_window(payload: dict[str, Any]) -> list[int] | None:
+    window = payload.get("pair_window")
+    if not isinstance(window, list) or len(window) != 2:
+        return None
+    start = _safe_int(window[0])
+    stop = _safe_int(window[1])
+    if start is None or stop is None:
+        return None
+    return [start, stop]
+
+
+def _hash_mapping(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+        item = value.get(key)
+        if _is_sha256(str(item)):
+            out[key] = str(item)
+    return out if len(out) == 3 else {}
+
+
+def _shape_mapping(value: dict[str, Any]) -> dict[str, list[Any]]:
+    out: dict[str, list[Any]] = {}
+    for key in ("pair_indices_shape", "posenet_yuv6_pair_shape", "segnet_last_rgb_shape"):
+        item = value.get(key)
+        if isinstance(item, list) and item:
+            out[key] = item
+    return out if len(out) == 3 else {}
+
+
+def _shape_mapping_from_auth_summary(value: Any) -> dict[str, list[Any]]:
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, list[Any]] = {}
+    for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+        item = value.get(key)
+        if isinstance(item, list) and item:
+            out[key] = item
+    return out if len(out) == 3 else {}
 
 
 def _response_device(payload: dict[str, Any]) -> str:
@@ -621,7 +908,9 @@ def _is_sha256(value: str) -> bool:
 
 
 __all__ = [
+    "ADVISORY_VERDICT",
     "FAIL_VERDICT",
+    "GATE_SET_VERSION",
     "PASS_VERDICT",
     "SCHEMA_VERSION",
     "build_mlx_scorer_production_contract_manifest",

@@ -132,7 +132,10 @@ def test_cache_audit_passes_matching_identity() -> None:
     assert audit["passed"] is True
     assert audit["verdict"] == PASS_VERDICT
     assert audit["score_claim"] is False
+    assert audit["score_claim_valid"] is False
     assert audit["promotion_eligible"] is False
+    assert audit["cache"]["hash_domain"] == HASH_DOMAIN
+    assert audit["cache"]["pair_indices_shape"] == [600, 2]
     assert "local_mlx_training_transfer_calibration" in audit["allowed_use"]
     assert audit["auth_eval_contract"]["evidence_grade"] == "contest-CPU"
     assert audit["auth_eval_contract"]["score_axis"] == "contest_cpu"

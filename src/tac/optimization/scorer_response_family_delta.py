@@ -7,9 +7,11 @@ import copy
 import math
 from typing import Any
 
+from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.scorer_response_dataset import (
     ScorerResponseDatasetError,
     normalize_legacy_response_dataset_authority,
+    render_authority_markdown_block,
 )
 
 FAMILY_DELTA_SCHEMA = "scorer_response_family_delta.v1"
@@ -92,6 +94,11 @@ def build_family_delta(
             else math.inf
         ),
     )
+    authority = normalized.get("authority") if isinstance(normalized.get("authority"), dict) else {}
+    evidence_tag = authority.get("evidence_tag") or _single_row_axis(rows)
+    evidence_grade = authority.get("evidence_grade")
+    if evidence_tag == EVIDENCE_TAG_MLX:
+        evidence_grade = EVIDENCE_GRADE_MLX
     return {
         "schema": FAMILY_DELTA_SCHEMA,
         "producer": "tac.optimization.scorer_response_family_delta",
@@ -121,10 +128,14 @@ def build_family_delta(
         "reference_duplicate_keys": reference_duplicates[:100],
         "candidate_duplicate_keys": candidate_duplicates[:100],
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
+        "evidence_grade": evidence_grade,
+        "evidence_tag": evidence_tag,
+        "score_axis": authority.get("score_axis") or evidence_tag,
     }
 
 
@@ -140,11 +151,13 @@ def render_family_delta_markdown(delta: dict[str, Any]) -> str:
         f"- Candidate better / worse / tie: `{summary['candidate_better_count']}` / `{summary['candidate_worse_count']}` / `{summary['candidate_tie_count']}`",
         f"- Mean candidate-minus-reference score delta: `{summary['score_delta_mean']}`",
         f"- Min / max score delta: `{summary['score_delta_min']}` / `{summary['score_delta_max']}`",
-        f"- Score claim: `{delta['score_claim']}`",
-        "",
-        "## Top Candidate Improvements",
         "",
     ]
+    lines.extend(render_authority_markdown_block(delta))
+    lines.extend([
+        "## Top Candidate Improvements",
+        "",
+    ])
     for row in delta["top_candidate_improvements"]:
         lines.append(_render_delta_row(row))
     lines.extend(["", "## Top Candidate Regressions", ""])
@@ -196,6 +209,17 @@ def _match_value(row: dict[str, Any], match_key: str) -> str | None:
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
     return str(value)
+
+
+def _single_row_axis(rows: list[dict[str, Any]]) -> str | None:
+    tags = {
+        str(row.get("axis") or row.get("source_evidence_tag"))
+        for row in rows
+        if row.get("axis") is not None or row.get("source_evidence_tag") is not None
+    }
+    if len(tags) == 1:
+        return next(iter(tags))
+    return None
 
 
 def _delta_row(

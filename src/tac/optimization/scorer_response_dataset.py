@@ -21,6 +21,9 @@ from pathlib import Path
 from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.local_acceleration.mlx_score_calibration import (
+    STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE,
+)
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
 
 SCHEMA = "scorer_response_dataset.v1"
@@ -68,6 +71,64 @@ _SOURCE_OPTIONAL_FALSE_AUTHORITY_FIELDS = (
     "rank_or_kill_eligible",
     "promotable",
 )
+
+
+def render_authority_markdown_block(
+    payload: dict[str, Any],
+    *,
+    title: str = "Authority",
+) -> list[str]:
+    """Render the standard non-authority block for generated Markdown reports."""
+
+    authority = payload.get("authority")
+    if not isinstance(authority, dict):
+        authority = {}
+
+    def value(key: str, default: Any = False) -> Any:
+        if key in payload:
+            return payload.get(key)
+        if key in authority:
+            return authority.get(key)
+        return default
+
+    evidence_grade = value("evidence_grade", None)
+    evidence_tag = value("evidence_tag", None)
+    if evidence_tag is None:
+        evidence_tag = _single_payload_evidence_tag(payload)
+    if evidence_grade == EVIDENCE_GRADE_MLX and evidence_tag is None:
+        evidence_tag = EVIDENCE_TAG_MLX
+    score_axis = value("score_axis", evidence_tag)
+    if evidence_grade == EVIDENCE_GRADE_MLX and score_axis is None:
+        score_axis = EVIDENCE_TAG_MLX
+    return [
+        f"## {title}",
+        "",
+        f"- Evidence grade: `{evidence_grade}`",
+        f"- Evidence tag: `{evidence_tag}`",
+        f"- Score axis: `{score_axis}`",
+        f"- Score claim: `{value('score_claim')}`",
+        f"- Score claim valid: `{value('score_claim_valid')}`",
+        f"- Promotion eligible: `{value('promotion_eligible')}`",
+        f"- Rank/kill eligible: `{value('rank_or_kill_eligible')}`",
+        f"- Ready for exact-eval dispatch: `{value('ready_for_exact_eval_dispatch')}`",
+        f"- Promotable: `{value('promotable')}`",
+        "",
+    ]
+
+
+def _single_payload_evidence_tag(payload: dict[str, Any]) -> str | None:
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        return None
+    tags = {
+        str(row.get("axis") or row.get("source_evidence_tag"))
+        for row in rows
+        if isinstance(row, dict)
+        and (row.get("axis") is not None or row.get("source_evidence_tag") is not None)
+    }
+    if len(tags) == 1:
+        return next(iter(tags))
+    return None
 
 
 def _require_explicit_false_authority(
@@ -805,12 +866,14 @@ def build_response_dataset(
         "schema": SCHEMA,
         "producer": TOOL,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
         "authority": {
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "rank_or_kill_eligible": False,
@@ -936,17 +999,21 @@ def build_windowed_mlx_response_dataset(
         "schema": SCHEMA,
         "producer": TOOL,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
         "authority": {
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "rank_or_kill_eligible": False,
             "promotable": False,
             "evidence_grade": EVIDENCE_GRADE_MLX,
+            "evidence_tag": EVIDENCE_TAG_MLX,
+            "score_axis": EVIDENCE_TAG_MLX,
             "notes": (
                 "Rows are local MLX scorer-response observations paired with "
                 "same-window MLX baselines for surrogate fitting and ranking only."
@@ -1010,12 +1077,14 @@ def merge_scorer_response_datasets(
         "schema": SCHEMA,
         "producer": TOOL,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
         "authority": {
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "rank_or_kill_eligible": False,
@@ -1557,7 +1626,7 @@ def build_mlx_score_calibration_gate(calibration: dict[str, Any]) -> dict[str, A
             "rank_or_kill_eligible",
         ),
     )
-    if decision_policy.get("allowed_use") != "local_spend_triage_only":
+    if decision_policy.get("allowed_use") != STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE:
         raise ScorerResponseDatasetError(
             "MLX score calibration decision_policy allowed_use mismatch"
         )
@@ -1730,14 +1799,19 @@ def build_scorer_response_validation_gate(
         blockers.append("no_prediction_field_passed_heldout_correlation")
 
     status = "passed" if not blockers else "blocked"
+    authority = normalized.get("authority") if isinstance(normalized.get("authority"), dict) else {}
     return {
         "schema": VALIDATION_GATE_SCHEMA,
         "producer": TOOL,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
+        "evidence_grade": authority.get("evidence_grade"),
+        "evidence_tag": authority.get("evidence_tag"),
+        "score_axis": authority.get("score_axis") or authority.get("evidence_tag"),
         "candidate_generation_only": True,
         "requires_exact_eval_before_promotion": True,
         "status": status,
@@ -1845,6 +1919,7 @@ def _blocked_response_validation_gate(reason: str, *, row_count: int) -> dict[st
         "schema": VALIDATION_GATE_SCHEMA,
         "producer": TOOL,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
@@ -1886,6 +1961,7 @@ def build_next_probe_plan(
     rows = dataset.get("rows")
     if not isinstance(rows, list):
         raise ScorerResponseDatasetError("dataset rows[] missing")
+    dataset_authority = dataset.get("authority") if isinstance(dataset.get("authority"), dict) else {}
     try:
         response_validation_gate = build_scorer_response_validation_gate(dataset)
     except ScorerResponseDatasetError as exc:
@@ -2261,10 +2337,14 @@ def build_next_probe_plan(
         "schema": "ll_scorer_response_next_probe_plan.v1",
         "producer": TOOL,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
+        "evidence_grade": dataset_authority.get("evidence_grade"),
+        "evidence_tag": dataset_authority.get("evidence_tag"),
+        "score_axis": dataset_authority.get("score_axis") or dataset_authority.get("evidence_tag"),
         "dataset_summary": dataset.get("summary"),
         "best_total_row": best_total,
         "best_scorer_row": best_scorer,
@@ -2627,11 +2707,13 @@ def render_markdown(dataset: dict[str, Any]) -> str:
         f"- Rows: {summary['row_count']}",
         f"- Total-score improvements: {summary['improved_total_score_count']}",
         f"- Scorer-term improvements: {summary['improved_scorer_term_count']}",
-        f"- Score claim: {dataset['score_claim']}",
-        "",
-        "## Families",
         "",
     ]
+    lines.extend(render_authority_markdown_block(dataset))
+    lines.extend([
+        "## Families",
+        "",
+    ])
     for family, count in sorted(summary["family_counts"].items()):
         lines.append(f"- `{family}`: {count}")
     lines.extend(["", "## Best/Worst", ""])
@@ -2665,10 +2747,12 @@ def render_validation_gate_markdown(gate: dict[str, Any]) -> str:
         "# Scorer Response Validation Gate",
         "",
         f"- Status: `{gate.get('status')}`",
-        f"- Score claim: `{gate.get('score_claim')}`",
         f"- Allowed use: `{gate.get('allowed_use')}`",
         f"- Blockers: `{gate.get('blockers')}`",
         "",
+    ]
+    lines.extend(render_authority_markdown_block(gate))
+    lines.extend([
         "## Thresholds",
         "",
         f"- Min rows: `{thresholds.get('min_rows')}`",
@@ -2688,7 +2772,7 @@ def render_validation_gate_markdown(gate: dict[str, Any]) -> str:
         "",
         "## Prediction Fields",
         "",
-    ]
+    ])
     for item in gate.get("prediction_evaluations", []):
         if not isinstance(item, dict):
             continue
@@ -2706,12 +2790,12 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
     lines = [
         "# LL Scorer Response Next-Probe Plan",
         "",
-        f"- Score claim: {plan['score_claim']}",
         f"- Best total row: `{plan.get('best_total_row')}`",
         f"- Best scorer row: `{plan.get('best_scorer_row')}`",
         f"- Best byte-budget margin row: `{plan.get('best_byte_budget_margin_row')}`",
         "",
     ]
+    lines.extend(render_authority_markdown_block(plan))
     validation_gate = plan.get("response_validation_gate")
     if isinstance(validation_gate, dict):
         coverage = (

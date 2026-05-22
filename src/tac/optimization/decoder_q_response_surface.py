@@ -6,6 +6,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from tac.optimization.scorer_response_dataset import render_authority_markdown_block
 from tac.optimization.scorer_response_family_delta import FAMILY_DELTA_SCHEMA
 
 DECODER_Q_RESPONSE_SURFACE_SCHEMA = "decoder_q_response_surface_plan.v1"
@@ -90,10 +91,14 @@ def build_decoder_q_response_surface(
         "neutral_windows_sample": neutral[:top_k],
         "rows": rows,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
+        "evidence_grade": family_delta.get("evidence_grade"),
+        "evidence_tag": family_delta.get("evidence_tag"),
+        "score_axis": family_delta.get("score_axis") or family_delta.get("evidence_tag"),
     }
 
 
@@ -110,11 +115,13 @@ def render_decoder_q_response_surface_markdown(surface: dict[str, Any]) -> str:
         f"- Suppress harm sum: `{summary['suppress_harm_sum']}`",
         f"- Score delta sum: `{summary['score_delta_sum']}`",
         f"- Axis dominance: `{summary['axis_dominance_counts']}`",
-        f"- Score claim: `{surface['score_claim']}`",
-        "",
-        "## Preserve Candidate Effect",
         "",
     ]
+    lines.extend(render_authority_markdown_block(surface))
+    lines.extend([
+        "## Preserve Candidate Effect",
+        "",
+    ])
     for row in surface["top_preserve_windows"]:
         lines.append(_render_row(row))
     lines.extend(["", "## Suppress Or Invert Candidate Effect", ""])

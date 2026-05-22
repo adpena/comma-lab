@@ -212,7 +212,7 @@ def _mlx_score_calibration_payload(*, uncertain_count: int = 0) -> dict:
             "calibration_uncertainty_basis": "mlx_minus_cpu_max_abs",
             "calibration_uncertainty_score": 1.0e-5,
             "recommended_min_mlx_gap_for_spend_triage": 5.0e-5,
-            "allowed_use": "local_spend_triage_only",
+            "allowed_use": "local_spend_triage_only_after_strict_auth_axis_calibration",
             "forbidden_use": "score_claim_or_rank_or_kill_or_promotion",
         },
         "summary": {
@@ -613,6 +613,9 @@ def test_build_windowed_mlx_response_dataset_uses_matching_window_baseline(tmp_p
     assert row["window_baseline_scorer_term"] == 1.2
     assert row["delta_vs_baseline_score"] == 0.0000010000000000287557
     assert row["added_archive_bytes"] == 10
+    rendered = render_markdown(dataset)
+    assert EVIDENCE_TAG_MLX in rendered
+    assert "Ready for exact-eval dispatch: `False`" in rendered
 
 
 def test_build_windowed_mlx_response_dataset_accepts_reference_cache_baseline_identity(
@@ -1104,7 +1107,10 @@ def test_scorer_response_validation_gate_blocks_single_family_without_prediction
     assert "families_with_required_folds_below_min:1<2" in gate["blockers"]
     assert "no_prediction_fields_present" in gate["blockers"]
     assert gate["coverage"]["row_count"] == 50
-    assert "Scorer Response Validation Gate" in render_validation_gate_markdown(gate)
+    rendered = render_validation_gate_markdown(gate)
+    assert "Scorer Response Validation Gate" in rendered
+    assert "## Authority" in rendered
+    assert "Promotion eligible: `False`" in rendered
 
 
 def test_scorer_response_validation_gate_passes_family_diverse_heldout_predictions() -> None:
@@ -1254,7 +1260,10 @@ def test_family_delta_matches_rows_by_source_start_pair() -> None:
         delta["matched_rows"][0]["candidate_minus_reference_avg_segnet_dist"],
         -0.001,
     )
-    assert "Scorer Response Family Delta" in render_family_delta_markdown(delta)
+    rendered = render_family_delta_markdown(delta)
+    assert "Scorer Response Family Delta" in rendered
+    assert "## Authority" in rendered
+    assert "Ready for exact-eval dispatch: `False`" in rendered
 
 
 def test_decoder_q_response_surface_classifies_preserve_and_suppress_windows() -> None:
@@ -1296,7 +1305,10 @@ def test_decoder_q_response_surface_classifies_preserve_and_suppress_windows() -
     assert surface["summary"]["suppress_harm_sum"] == 0.004
     assert surface["top_preserve_windows"][0]["recommended_action"] == "prefer_window_or_similar_axis_pattern"
     assert surface["top_suppress_windows"][0]["recommended_action"] == "penalize_window_or_try_opposite_sign"
-    assert "Decoder-Q Response Surface" in render_decoder_q_response_surface_markdown(surface)
+    rendered = render_decoder_q_response_surface_markdown(surface)
+    assert "Decoder-Q Response Surface" in rendered
+    assert "## Authority" in rendered
+    assert "Rank/kill eligible: `False`" in rendered
 
 
 def test_next_probe_plan_can_prioritize_decoder_q_response_surface() -> None:
@@ -1703,6 +1715,8 @@ def test_build_response_dataset_normalizes_candidate_list_and_correlations(tmp_p
     assert dataset["feature_correlations"]
     md = render_markdown(dataset)
     assert "Scorer Response Dataset" in md
+    assert "## Authority" in md
+    assert "Score claim valid: `False`" in md
     assert "`decoder_q`: 4" in md
 
 
@@ -1749,7 +1763,10 @@ def test_next_probe_plan_blocks_overbudget_coordinate_residual(tmp_path) -> None
     assert plan["score_claim"] is False
     assert plan["prohibitions"][0]["rule"] == "do_not_widen_coordinate_sparse_residual_sidecar"
     assert plan["probes"][0]["probe_id"] == "ll_byte_neutral_decoder_q_response_model"
-    assert "Next-Probe" in render_next_probe_plan_markdown(plan)
+    rendered = render_next_probe_plan_markdown(plan)
+    assert "Next-Probe" in rendered
+    assert "## Authority" in rendered
+    assert "Promotable: `False`" in rendered
 
 
 def _null_byte_matrix() -> dict:

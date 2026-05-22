@@ -18,6 +18,9 @@ from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 SCHEMA_VERSION = "mlx_score_calibration.v1"
 DEFAULT_DECISION_SAFETY_FACTOR = 5.0
+STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE = (
+    "local_spend_triage_only_after_strict_auth_axis_calibration"
+)
 
 AUTHORITY_FALSE_FIELDS = (
     "score_claim",
@@ -347,7 +350,7 @@ def _build_decision_policy(
         "calibration_uncertainty_score": calibration_uncertainty_score,
         "recommended_min_mlx_gap_for_spend_triage": min_gap,
         "allowed_use": (
-            "local_spend_triage_only_after_strict_auth_axis_calibration"
+            STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE
             if available_errors
             else "diagnostic_only_auth_axis_calibration_missing"
         ),
@@ -430,6 +433,7 @@ def _positive_float(value: Any, label: str) -> float:
 __all__ = [
     "DEFAULT_DECISION_SAFETY_FACTOR",
     "SCHEMA_VERSION",
+    "STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE",
     "build_mlx_score_calibration_manifest",
     "load_json_object",
     "write_mlx_score_calibration_manifest",

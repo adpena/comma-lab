@@ -8,7 +8,9 @@ from pathlib import Path
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_production_contract import (
+    ADVISORY_VERDICT,
     FAIL_VERDICT,
+    GATE_SET_VERSION,
     PASS_VERDICT,
     build_mlx_scorer_production_contract_manifest,
 )
@@ -28,13 +30,20 @@ def test_mlx_production_contract_accepts_cpu_local_acceleration_signal() -> None
 
     assert manifest["passed"] is True
     assert manifest["verdict"] == PASS_VERDICT
+    assert manifest["gate_set_version"] == GATE_SET_VERSION
     assert manifest["production_deployment_role"] == "local_mlx_scorer_acceleration_non_authoritative"
     assert manifest["score_authority"] is False
     assert manifest["contest_authority"] is False
+    assert manifest["score_claim"] is False
+    assert manifest["score_claim_valid"] is False
+    assert manifest["candidate_generation_only"] is True
+    assert manifest["requires_exact_eval_before_promotion"] is True
+    assert manifest["score_axis"] == EVIDENCE_TAG_MLX
     assert manifest["required_gates"]["cache_auth_audit"] is True
     assert manifest["required_gates"]["torch_parity"] is True
     assert manifest["required_gates"]["profile_stability"] is True
-    assert manifest["required_gates"]["batch_invariance"] is True
+    assert manifest["required_gates"]["batch_invariance"] is False
+    assert manifest["required_gates"]["batch_invariance_policy_requested"] is True
 
 
 def test_mlx_production_contract_requires_gates_by_default() -> None:
@@ -44,7 +53,21 @@ def test_mlx_production_contract_requires_gates_by_default() -> None:
     assert "cache_auth_audit_manifest_not_supplied" in manifest["blockers"]
     assert "torch_parity_manifest_not_supplied" in manifest["blockers"]
     assert "profile_stability_manifest_not_supplied" in manifest["blockers"]
+    assert "batch_invariance_manifest_not_supplied" not in manifest["blockers"]
+    assert "batch_invariance_not_required_for_singleton_response" in manifest["warnings"]
+
+
+def test_mlx_production_contract_requires_batch_invariance_for_multi_pair_response() -> None:
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(batch_pairs=4),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        profile_stability=_profile_stability(batch_pairs=4),
+    )
+
+    assert manifest["passed"] is False
     assert "batch_invariance_manifest_not_supplied" in manifest["blockers"]
+    assert manifest["required_gates"]["batch_invariance"] is True
 
 
 def test_mlx_production_contract_advisory_mode_warns_on_missing_gates() -> None:
@@ -56,11 +79,14 @@ def test_mlx_production_contract_advisory_mode_warns_on_missing_gates() -> None:
         require_batch_invariance=False,
     )
 
-    assert manifest["passed"] is True
+    assert manifest["passed"] is False
+    assert manifest["advisory_passed"] is True
+    assert manifest["verdict"] == ADVISORY_VERDICT
     assert "cache_auth_audit_manifest_not_supplied" in manifest["warnings"]
     assert "torch_parity_manifest_not_supplied" in manifest["warnings"]
     assert "profile_stability_manifest_not_supplied" in manifest["warnings"]
     assert "batch_invariance_manifest_not_supplied" in manifest["warnings"]
+    assert "production_required_gate_policy_bypassed" in manifest["warnings"]
 
 
 def test_mlx_production_contract_rejects_failing_supplied_gate() -> None:
@@ -150,6 +176,24 @@ def test_mlx_production_contract_rejects_cache_auth_audit_identity_mismatch() ->
     assert "cache_auth_audit_candidate_archive_sha256_mismatch" in manifest["blockers"]
 
 
+def test_mlx_production_contract_rejects_minimal_cache_auth_audit() -> None:
+    audit = _cache_auth_audit()
+    audit.pop("canonical_equation")
+    audit["cache"].pop("array_sha256")
+
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=audit,
+        torch_parity=_torch_parity(),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+    )
+
+    assert manifest["passed"] is False
+    assert "cache_auth_audit_canonical_equation_missing" in manifest["blockers"]
+    assert "cache_auth_audit_array_sha256_missing" in manifest["blockers"]
+
+
 def test_mlx_production_contract_rejects_failed_torch_parity() -> None:
     manifest = build_mlx_scorer_production_contract_manifest(
         _response_payload(),
@@ -175,6 +219,22 @@ def test_mlx_production_contract_rejects_torch_parity_identity_mismatch() -> Non
 
     assert manifest["passed"] is False
     assert "torch_parity_cache_identity_archive_sha256_mismatch" in manifest["blockers"]
+
+
+def test_mlx_production_contract_rejects_torch_parity_window_mismatch() -> None:
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(batch_pairs=4),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(covered_pair_window=[10, 14]),
+        profile_stability=_profile_stability(batch_pairs=4),
+        batch_invariance=_batch_invariance(batch_pairs=4),
+    )
+
+    assert manifest["passed"] is False
+    assert (
+        "torch_parity_window_does_not_cover_response:response=[0, 4]:covered=[10, 14]"
+        in manifest["blockers"]
+    )
 
 
 def test_mlx_production_contract_can_require_score_calibration() -> None:
@@ -205,6 +265,24 @@ def test_mlx_production_contract_rejects_uncertain_score_calibration() -> None:
 
     assert manifest["passed"] is False
     assert "score_calibration_uncertain_pairwise_triage" in manifest["blockers"]
+
+
+def test_mlx_production_contract_rejects_incomplete_score_calibration() -> None:
+    calibration = _score_calibration()
+    calibration["summary"].pop("mlx_spend_triage_pairwise_certified_count")
+
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        profile_stability=_profile_stability(),
+        batch_invariance=_batch_invariance(),
+        score_calibration=calibration,
+        require_score_calibration=True,
+    )
+
+    assert manifest["passed"] is False
+    assert "score_calibration_certified_pairwise_count_missing" in manifest["blockers"]
 
 
 def test_mlx_production_contract_rejects_gpu_non_singleton_batch() -> None:
@@ -252,6 +330,52 @@ def test_mlx_production_contract_rejects_multi_pair_batch_invariance_device_mism
     assert "batch_invariance_device_type_mismatch:response=cpu:gate=gpu" in manifest["blockers"]
 
 
+def test_mlx_production_contract_rejects_profile_window_mismatch() -> None:
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        profile_stability=_profile_stability(start_pair=5),
+        batch_invariance=_batch_invariance(),
+    )
+
+    assert manifest["passed"] is False
+    assert (
+        "profile_stability_pair_window_mismatch:response=[0, 1]:profile=[5, 6]"
+        in manifest["blockers"]
+    )
+
+
+def test_mlx_production_contract_rejects_batch_invariance_cache_mismatch() -> None:
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(batch_pairs=4),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        profile_stability=_profile_stability(batch_pairs=4),
+        batch_invariance=_batch_invariance(batch_pairs=4, cache_dir="other/cache"),
+    )
+
+    assert manifest["passed"] is False
+    assert "batch_invariance_candidate_cache_dir_mismatch" in manifest["blockers"]
+
+
+def test_mlx_production_contract_checks_optional_batch_invariance_authority() -> None:
+    batch_invariance = _batch_invariance()
+    batch_invariance["score_claim"] = True
+
+    manifest = build_mlx_scorer_production_contract_manifest(
+        _response_payload(),
+        cache_auth_audit=_cache_auth_audit(),
+        torch_parity=_torch_parity(),
+        profile_stability=_profile_stability(),
+        batch_invariance=batch_invariance,
+    )
+
+    assert manifest["passed"] is False
+    assert "batch_invariance_score_claim_not_false" in manifest["blockers"]
+    assert manifest["required_gates"]["batch_invariance"] is False
+
+
 def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
     response_path = tmp_path / "response.json"
     cache_audit_path = tmp_path / "cache_audit.json"
@@ -296,6 +420,7 @@ def test_mlx_production_contract_cli_writes_manifest(tmp_path: Path) -> None:
 
 
 def _response_payload(*, device: str = "cpu", batch_pairs: int = 1) -> dict:
+    n_samples = int(batch_pairs)
     return {
         "schema_version": "mlx_scorer_response.v1",
         "evidence_grade": EVIDENCE_GRADE_MLX,
@@ -315,12 +440,13 @@ def _response_payload(*, device: str = "cpu", batch_pairs: int = 1) -> dict:
         "canonical_score_source": "score_recomputed_from_components",
         "avg_posenet_dist": 0.0,
         "avg_segnet_dist": 0.0,
+        "archive_size_bytes": 123,
         "batch_pairs": batch_pairs,
-        "n_samples": 1,
-        "pair_window": [0, 1],
+        "n_samples": n_samples,
+        "pair_window": [0, n_samples],
         "components": {
-            "posenet_shape": [1],
-            "segnet_shape": [1],
+            "posenet_shape": [n_samples],
+            "segnet_shape": [n_samples],
             "posenet_sha256": "a" * 64,
             "segnet_sha256": "b" * 64,
         },
@@ -330,11 +456,24 @@ def _response_payload(*, device: str = "cpu", batch_pairs: int = 1) -> dict:
                 "archive_sha256": "c" * 64,
                 "inflated_outputs_aggregate_sha256": "d" * 64,
                 "raw_sha256": "e" * 64,
+                "path": "reference/cache",
+                "array_sha256": {
+                    "pair_indices": "6" * 64,
+                    "posenet_yuv6_pair": "7" * 64,
+                    "segnet_last_rgb": "8" * 64,
+                },
             },
             "candidate": {
                 "archive_sha256": "f" * 64,
                 "inflated_outputs_aggregate_sha256": "1" * 64,
                 "raw_sha256": "2" * 64,
+                "path": "candidate/cache",
+                "pair_count": 10,
+                "array_sha256": {
+                    "pair_indices": "9" * 64,
+                    "posenet_yuv6_pair": "a" * 64,
+                    "segnet_last_rgb": "b" * 64,
+                },
             },
         },
         "archive_sha256": "f" * 64,
@@ -347,7 +486,14 @@ def _response_payload(*, device: str = "cpu", batch_pairs: int = 1) -> dict:
     }
 
 
-def _profile_stability(*, passed: bool = True) -> dict:
+def _profile_stability(
+    *,
+    passed: bool = True,
+    start_pair: int = 0,
+    batch_pairs: int = 1,
+    candidate_cache_dir: str = "candidate/cache",
+    reference_cache_dir: str = "reference/cache",
+) -> dict:
     return {
         "schema_version": "mlx_scorer_response_profile_stability.v1",
         "passed": passed,
@@ -359,6 +505,13 @@ def _profile_stability(*, passed: bool = True) -> dict:
         "evidence_grade": EVIDENCE_GRADE_MLX,
         "evidence_tag": EVIDENCE_TAG_MLX,
         "candidate_generation_only": True,
+        "profile_summary": {
+            "reference_cache_dir": reference_cache_dir,
+            "candidate_cache_dir": candidate_cache_dir,
+            "archive_size_bytes": 123,
+            "start_pair": start_pair,
+            "max_pairs": int(batch_pairs),
+        },
     }
 
 
@@ -372,6 +525,7 @@ def _cache_auth_audit(*, passed: bool = True, archive_sha256: str = "f" * 64) ->
             else "FAIL_CACHE_AUTH_EVAL_IDENTITY"
         ),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -379,6 +533,46 @@ def _cache_auth_audit(*, passed: bool = True, archive_sha256: str = "f" * 64) ->
             "archive_sha256": archive_sha256,
             "inflated_outputs_aggregate_sha256": "1" * 64,
             "raw_sha256": "2" * 64,
+            "pair_count": 10,
+            "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+            "array_sha256": {
+                "pair_indices": "9" * 64,
+                "posenet_yuv6_pair": "a" * 64,
+                "segnet_last_rgb": "b" * 64,
+            },
+            "pair_indices_shape": [10, 2],
+            "posenet_yuv6_pair_shape": [10, 12, 192, 256],
+            "segnet_last_rgb_shape": [10, 3, 384, 512],
+        },
+        "auth_eval": {
+            "n_samples": 10,
+            "scorer_input_hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+            "scorer_input_array_sha256": {
+                "pair_indices": "9" * 64,
+                "posenet_yuv6_pair": "a" * 64,
+                "segnet_last_rgb": "b" * 64,
+            },
+            "scorer_input_shapes": {
+                "pair_indices": [10, 2],
+                "posenet_yuv6_pair": [10, 12, 192, 256],
+                "segnet_last_rgb": [10, 3, 384, 512],
+            },
+        },
+        "canonical_equation": {
+            "eligible_for_local_mlx_transfer_calibration": passed,
+            "identity_residual": 0 if passed else 1,
+            "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+            "compared_scorer_input_hashes": {
+                "pair_indices": True,
+                "posenet_yuv6_pair": True,
+                "segnet_last_rgb": True,
+            },
+            "compared_scorer_input_shapes": {
+                "pair_indices": True,
+                "posenet_yuv6_pair": True,
+                "segnet_last_rgb": True,
+            },
+            "score_claim": False,
         },
         "allowed_use": (
             ["local_mlx_training_transfer_calibration"] if passed else ["debug_only"]
@@ -386,7 +580,12 @@ def _cache_auth_audit(*, passed: bool = True, archive_sha256: str = "f" * 64) ->
     }
 
 
-def _torch_parity(*, passed: bool = True, archive_sha256: str = "f" * 64) -> dict:
+def _torch_parity(
+    *,
+    passed: bool = True,
+    archive_sha256: str = "f" * 64,
+    covered_pair_window: list[int] | None = None,
+) -> dict:
     return {
         "schema_version": "mlx_scorer_torch_parity_sweep.v1",
         "passed": passed,
@@ -407,7 +606,23 @@ def _torch_parity(*, passed: bool = True, archive_sha256: str = "f" * 64) -> dic
         "requires_exact_eval_before_promotion": True,
         "cache_identity": {
             "archive_sha256": archive_sha256,
+            "inflated_outputs_aggregate_sha256": "1" * 64,
+            "raw_sha256": "2" * 64,
+            "path": "candidate/cache",
+            "pair_count": 10,
+            "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+            "array_sha256": {
+                "pair_indices": "9" * 64,
+                "posenet_yuv6_pair": "a" * 64,
+                "segnet_last_rgb": "b" * 64,
+            },
+            "pair_indices_shape": [10, 2],
+            "posenet_yuv6_pair_shape": [10, 12, 192, 256],
+            "segnet_last_rgb_shape": [10, 3, 384, 512],
         },
+        "cache_dir": "candidate/cache",
+        "total_pair_count": 10,
+        "covered_pair_window": covered_pair_window or [0, 1],
         "summary": {"failed_windows": 0 if passed else 1},
     }
 
@@ -423,19 +638,33 @@ def _score_calibration(*, uncertain_count: int = 0) -> dict:
         "decision_policy": {
             "allowed_use": "local_spend_triage_only_after_strict_auth_axis_calibration",
             "recommended_min_mlx_gap_for_spend_triage": 1.0e-4,
+            "calibration_uncertainty_score": 2.0e-5,
         },
         "summary": {
             "mlx_spend_triage_pairwise_uncertain_count": uncertain_count,
+            "mlx_spend_triage_pairwise_certified_count": 3,
+            "mlx_spend_triage_pairwise_total_count": 3,
+            "recommended_min_mlx_gap_for_spend_triage": 1.0e-4,
+            "calibration_uncertainty_score": 2.0e-5,
         },
     }
 
 
-def _batch_invariance(*, passed: bool = True, device: str = "cpu", batch_pairs: int = 1) -> dict:
+def _batch_invariance(
+    *,
+    passed: bool = True,
+    device: str = "cpu",
+    batch_pairs: int = 1,
+    cache_dir: str = "candidate/cache",
+) -> dict:
     return {
         "schema_version": "mlx_scorer_batch_invariance.v1",
         "passed": passed,
         "device_type": device,
         "batch_pairs": batch_pairs,
+        "cache_dir": cache_dir,
+        "start_pair": 0,
+        "total_pair_count": 10,
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
