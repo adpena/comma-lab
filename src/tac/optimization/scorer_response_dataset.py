@@ -2143,6 +2143,92 @@ def build_mlx_production_contract_gate(
     }
 
 
+def build_effective_mlx_spend_triage_gate(
+    *,
+    mlx_rows: list[dict[str, Any]],
+    response_validation_gate: dict[str, Any],
+    mlx_torch_parity_sweep_gate: dict[str, Any] | None,
+    mlx_score_calibration_gate: dict[str, Any] | None,
+    mlx_production_contract_gate: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Compose MLX constituent gates into one spend-triage decision.
+
+    Constituent MLX gates can be useful individually, but downstream automation
+    should consume this effective gate when deciding whether MLX rows may filter
+    exact-eval spend. A pass still creates no score, rank, promotion, or dispatch
+    authority.
+    """
+
+    blockers: list[str] = []
+    if not mlx_rows:
+        blockers.append("no_mlx_rows")
+    if response_validation_gate.get("passed") is not True:
+        blockers.append("response_validation_gate_not_passed")
+    if (
+        mlx_torch_parity_sweep_gate is None
+        or mlx_torch_parity_sweep_gate.get("status") != "strict_pass"
+        or mlx_torch_parity_sweep_gate.get("mlx_rows_allowed_for_planner") is not True
+    ):
+        blockers.append("mlx_torch_parity_sweep_gate_not_strict_pass")
+    if (
+        mlx_score_calibration_gate is None
+        or mlx_score_calibration_gate.get("status") != "strict_pass"
+        or mlx_score_calibration_gate.get("mlx_spend_triage_allowed") is not True
+    ):
+        blockers.append("mlx_score_calibration_gate_not_strict_pass")
+    if (
+        mlx_production_contract_gate is None
+        or mlx_production_contract_gate.get("status") != "strict_pass"
+        or mlx_production_contract_gate.get("mlx_spend_triage_allowed") is not True
+    ):
+        blockers.append("mlx_production_contract_gate_not_strict_pass")
+
+    status = "strict_pass" if not blockers else "blocked"
+    return {
+        "schema": "ll_effective_mlx_spend_triage_gate.v1",
+        "producer": TOOL,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "status": status,
+        "mlx_exact_eval_spend_triage_allowed": status == "strict_pass",
+        "blockers": blockers,
+        "input_rows": [row.get("row_id") for row in mlx_rows][:8],
+        "summary": {
+            "mlx_row_count": len(mlx_rows),
+            "response_validation_status": response_validation_gate.get("status"),
+            "torch_parity_status": (
+                None
+                if mlx_torch_parity_sweep_gate is None
+                else mlx_torch_parity_sweep_gate.get("status")
+            ),
+            "score_calibration_status": (
+                None
+                if mlx_score_calibration_gate is None
+                else mlx_score_calibration_gate.get("status")
+            ),
+            "production_contract_status": (
+                None
+                if mlx_production_contract_gate is None
+                else mlx_production_contract_gate.get("status")
+            ),
+        },
+        "allowed_use": (
+            "local_exact_eval_spend_triage_filter_after_all_mlx_and_dataset_gates"
+            if status == "strict_pass"
+            else "blocked_until_response_dataset_and_all_mlx_gates_strict_pass"
+        ),
+    }
+
+
 def build_scorer_response_validation_gate(
     dataset: dict[str, Any],
     *,
@@ -2509,6 +2595,15 @@ def build_next_probe_plan(
             mlx_production_contract,
             rows=mlx_row_items,
         )
+    effective_mlx_spend_triage_gate = None
+    if mlx_row_items:
+        effective_mlx_spend_triage_gate = build_effective_mlx_spend_triage_gate(
+            mlx_rows=mlx_row_items,
+            response_validation_gate=response_validation_gate,
+            mlx_torch_parity_sweep_gate=mlx_torch_parity_sweep_gate,
+            mlx_score_calibration_gate=mlx_score_calibration_gate,
+            mlx_production_contract_gate=mlx_production_contract_gate,
+        )
 
     probes = [
         {
@@ -2683,6 +2778,7 @@ def build_next_probe_plan(
                     "mlx_torch_parity_gate": mlx_torch_parity_sweep_gate,
                     "mlx_score_calibration_gate": mlx_score_calibration_gate,
                     "mlx_production_contract_gate": mlx_production_contract_gate,
+                    "effective_mlx_spend_triage_gate": effective_mlx_spend_triage_gate,
                     "acceptance_gate": (
                         ">=50 MLX rows across stable CPU windows/families, all "
                         "score_claim=false, with parity-gated held-out "
@@ -2833,6 +2929,7 @@ def build_next_probe_plan(
         "mlx_torch_parity_sweep_gate": mlx_torch_parity_sweep_gate,
         "mlx_score_calibration_gate": mlx_score_calibration_gate,
         "mlx_production_contract_gate": mlx_production_contract_gate,
+        "effective_mlx_spend_triage_gate": effective_mlx_spend_triage_gate,
         "decoder_q_response_surface_summary": decoder_q_response_surface_summary,
         "decoder_q_surface_advisory_gate": decoder_q_surface_advisory_gate,
         "prohibitions": prohibitions,
@@ -3555,6 +3652,38 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
                 f"`{gate_summary.get('inflated_outputs_aggregate_sha256')}`"
             )
         lines.append(f"- Blockers: `{mlx_production_gate.get('blockers')}`")
+        lines.append("")
+    effective_mlx_gate = plan.get("effective_mlx_spend_triage_gate")
+    if isinstance(effective_mlx_gate, dict):
+        gate_summary = (
+            effective_mlx_gate.get("summary")
+            if isinstance(effective_mlx_gate.get("summary"), dict)
+            else {}
+        )
+        lines.extend(["## Effective MLX Spend Triage Gate", ""])
+        lines.append(f"- Status: `{effective_mlx_gate.get('status')}`")
+        lines.append(
+            "- Spend triage allowed: "
+            f"`{effective_mlx_gate.get('mlx_exact_eval_spend_triage_allowed')}`"
+        )
+        lines.append(f"- MLX rows: `{gate_summary.get('mlx_row_count')}`")
+        lines.append(
+            "- Response validation: "
+            f"`{gate_summary.get('response_validation_status')}`"
+        )
+        lines.append(
+            "- Torch parity: "
+            f"`{gate_summary.get('torch_parity_status')}`"
+        )
+        lines.append(
+            "- Score calibration: "
+            f"`{gate_summary.get('score_calibration_status')}`"
+        )
+        lines.append(
+            "- Production contract: "
+            f"`{gate_summary.get('production_contract_status')}`"
+        )
+        lines.append(f"- Blockers: `{effective_mlx_gate.get('blockers')}`")
         lines.append("")
     decoder_q_surface_gate = plan.get("decoder_q_surface_advisory_gate")
     if isinstance(decoder_q_surface_gate, dict):

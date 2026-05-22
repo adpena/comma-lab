@@ -386,6 +386,18 @@ def _mlx_response_row(
     return row
 
 
+def _attach_mlx_identity_to_rows(dataset: dict) -> dict:
+    for row in dataset["rows"]:
+        if row.get("family") != "mlx_scorer_response":
+            continue
+        row["archive_sha256"] = "a" * 64
+        row["source_inflated_outputs_aggregate_sha256"] = "e" * 64
+        row["source_batch_pairs"] = 1
+        row["source_n_samples"] = 600
+        row["source_pair_window"] = [0, 600]
+    return dataset
+
+
 def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     path = tmp_path / "scorer_gradient.json"
     payload = {
@@ -792,8 +804,46 @@ def test_next_probe_plan_accepts_mlx_production_contract_bundle() -> None:
         "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_failed_production_contract"
         not in rules
     )
+    assert plan["effective_mlx_spend_triage_gate"]["status"] == "blocked"
+    assert (
+        "response_validation_gate_not_passed"
+        in plan["effective_mlx_spend_triage_gate"]["blockers"]
+    )
+    assert (
+        plan["effective_mlx_spend_triage_gate"][
+            "mlx_exact_eval_spend_triage_allowed"
+        ]
+        is False
+    )
     assert plan["probes"][0]["probe_id"] == "ll_mlx_cpu_stable_response_harvest"
     assert plan["probes"][0]["input_rows"] == ["mlx-row-1", "mlx-row-2"]
+
+
+def test_next_probe_plan_effective_mlx_spend_triage_gate_passes_only_after_dataset_validation() -> None:
+    dataset = _attach_mlx_identity_to_rows(
+        _validation_dataset(
+            families=("mlx_scorer_response", "decoder_q"),
+            rows_per_fold=5,
+            include_prediction=True,
+        )
+    )
+
+    plan = build_next_probe_plan(
+        dataset,
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+        mlx_production_contract=_mlx_production_contract_payload(),
+    )
+
+    assert plan["response_validation_gate"]["status"] == "passed"
+    assert plan["mlx_torch_parity_sweep_gate"]["status"] == "strict_pass"
+    assert plan["mlx_score_calibration_gate"]["status"] == "strict_pass"
+    assert plan["mlx_production_contract_gate"]["status"] == "strict_pass"
+    gate = plan["effective_mlx_spend_triage_gate"]
+    assert gate["status"] == "strict_pass"
+    assert gate["mlx_exact_eval_spend_triage_allowed"] is True
+    assert gate["blockers"] == []
+    assert gate["summary"]["mlx_row_count"] == 25
 
 
 def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:
