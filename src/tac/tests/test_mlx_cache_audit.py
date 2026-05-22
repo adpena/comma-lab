@@ -60,10 +60,22 @@ def _auth(
         "avg_posenet_dist": pose,
         "archive_size_bytes": archive_size,
         "score_rate_contribution": 25.0 * archive_size / ORIGINAL_VIDEO_BYTES,
+        "rate_unscaled": archive_size / ORIGINAL_VIDEO_BYTES,
         "n_samples": n_samples,
         "evidence_grade": evidence_grade,
+        "lane_tag": "[contest-CPU]",
         "score_axis": score_axis,
+        "evidence_semantics": "public_leaderboard_cpu_reproduction",
+        "exact_cuda_eval_complete": False,
+        "score_claim": True,
+        "score_claim_valid": True,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "cpu_leaderboard_reproduction_eligible": True,
         "provenance": {
+            "device": "cpu",
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
             "archive_sha256": "a" * 64,
             "inflated_output_manifest": {
                 "payload": {
@@ -146,6 +158,31 @@ def test_cache_audit_fails_pair_count_mismatch() -> None:
     assert "cache_pair_count_mismatch:cache=16:expected=600" in audit["blockers"]
 
 
+def test_cache_audit_requires_full_contest_auth_axis_even_with_debug_expected_pair_count() -> None:
+    cache = _cache(pair_count=16)
+    auth = _auth_with_scorer_input_hash()
+    auth["n_samples"] = 16
+    provenance = auth["provenance"]
+    assert isinstance(provenance, dict)
+    scorer_manifest = provenance["scorer_input_cache_hash_manifest"]
+    assert isinstance(scorer_manifest, dict)
+    payload = scorer_manifest["payload"]
+    assert isinstance(payload, dict)
+    payload["pair_count"] = 16
+    payload["segnet_last_rgb_shape"] = [16, 3, 384, 512]
+    payload["posenet_yuv6_pair_shape"] = [16, 12, 192, 256]
+    payload["pair_indices_shape"] = [16, 2]
+
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        cache,
+        auth,
+        expected_pair_count=16,
+    )
+
+    assert audit["passed"] is False
+    assert "n_samples_mismatch:manifest=16:expected=600" in audit["blockers"]
+
+
 def test_cache_audit_cli_writes_output(tmp_path: Path) -> None:
     cache_path = tmp_path / "cache.json"
     auth_path = tmp_path / "auth.json"
@@ -223,15 +260,11 @@ def test_cache_audit_accepts_independent_reference_hash_manifest() -> None:
 
 
 def test_cache_audit_rejects_non_contest_auth_eval_axis() -> None:
-    audit = audit_mlx_scorer_input_cache_against_auth_eval(
-        _cache(),
-        _auth_with_scorer_input_hash(),
-    )
-    assert audit["passed"] is True
-
     bad_auth = _auth_with_scorer_input_hash()
     bad_auth["evidence_grade"] = "B"
     bad_auth["score_axis"] = "diagnostic_cuda"
+    bad_auth["score_claim"] = False
+    bad_auth["score_claim_valid"] = False
     blocked = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), bad_auth)
 
     assert blocked["passed"] is False
@@ -245,4 +278,18 @@ def test_cache_audit_requires_auth_axis_matching_grade() -> None:
     audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), bad_auth)
 
     assert audit["passed"] is False
-    assert "auth_eval_score_axis_not_contest_cuda" in audit["blockers"]
+    assert "score_axis_not_contest_cuda" in audit["blockers"]
+
+
+def test_cache_audit_rejects_forged_contest_cpu_auth_eval_custody() -> None:
+    bad_auth = _auth_with_scorer_input_hash()
+    provenance = bad_auth["provenance"]
+    assert isinstance(provenance, dict)
+    provenance["platform_system"] = "Darwin"
+    provenance["platform_machine"] = "arm64"
+
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), bad_auth)
+
+    assert audit["passed"] is False
+    assert "contest_cpu_platform_system_not_linux" in audit["blockers"]
+    assert "contest_cpu_platform_machine_not_x86_64" in audit["blockers"]

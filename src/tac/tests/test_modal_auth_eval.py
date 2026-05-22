@@ -97,6 +97,50 @@ def test_modal_auth_eval_requires_pair_group_or_single_axis_waiver(
         )
 
 
+def test_modal_auth_eval_rejects_nonpositive_scorer_hash_batch_before_claim(
+    mod, tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **_kwargs: pytest.fail("claim should not be recorded before batch validation"),
+    )
+
+    with pytest.raises(SystemExit, match="scorer-input-cache-hash-batch-pairs must be >= 1"):
+        mod.main(
+            str(tmp_path / "missing.zip"),
+            str(tmp_path / "out"),
+            scorer_input_cache_hashes=True,
+            scorer_input_cache_hash_batch_pairs=0,
+            lane_id="lane_unit_modal_auth_eval_hash_batch_guard",  # FAKE_LANE_OK:test-fixture lane_id
+            instance_job_id="job_unit_modal_auth_eval_hash_batch_guard",
+            pair_group_id="pair_unit_modal_auth_eval",
+        )
+
+
+def test_modal_cpu_auth_eval_rejects_nonpositive_scorer_hash_batch_before_claim(
+    tmp_path, monkeypatch
+) -> None:
+    pytest.importorskip("modal", reason="modal SDK not installed")
+    cpu_mod = _load_cpu_module()
+    monkeypatch.setattr(
+        cpu_mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **_kwargs: pytest.fail("claim should not be recorded before batch validation"),
+    )
+
+    with pytest.raises(SystemExit, match="scorer-input-cache-hash-batch-pairs must be >= 1"):
+        cpu_mod.main(
+            str(tmp_path / "missing.zip"),
+            str(tmp_path / "out"),
+            scorer_input_cache_hashes=True,
+            scorer_input_cache_hash_batch_pairs=-1,
+            lane_id="lane_unit_modal_cpu_auth_eval_hash_batch_guard",  # FAKE_LANE_OK:test-fixture lane_id
+            instance_job_id="job_unit_modal_cpu_auth_eval_hash_batch_guard",
+            pair_group_id="pair_unit_modal_auth_eval",
+        )
+
+
 def test_blocking_auth_eval_closes_claim_on_invalid_artifacts() -> None:
     cuda_text = TOOL_PATH.read_text(encoding="utf-8")
     cpu_text = CPU_TOOL_PATH.read_text(encoding="utf-8")

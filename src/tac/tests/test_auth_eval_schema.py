@@ -11,6 +11,8 @@ from tac.auth_eval_schema import (
     eval_device,
     eval_metric_summary,
     main,
+    required_contest_auth_axis_payload_blockers,
+    required_contest_cpu_evidence_blockers,
     required_contest_cuda_evidence_blockers,
     required_exact_eval_metric_blockers,
 )
@@ -216,6 +218,53 @@ def _contest_cuda_payload(**overrides):
     return payload
 
 
+def _strict_contest_cuda_payload(**overrides):
+    payload = _contest_cuda_payload(
+        evidence_grade="contest-CUDA",
+        exact_cuda_eval_complete=True,
+        score_claim=True,
+        rank_or_kill_eligible=False,
+    )
+    payload.update(overrides)
+    return payload
+
+
+def _strict_contest_cpu_payload(**overrides):
+    score = contest_formula_score(
+        seg_dist=0.000665,
+        pose_dist=0.00017099,
+        archive_bytes=178392,
+    )
+    payload = {
+        "canonical_score": score,
+        "score_recomputed_from_components": score,
+        "avg_posenet_dist": 0.00017099,
+        "avg_segnet_dist": 0.000665,
+        "score_rate_contribution": 25 * 178392 / 37_545_489,
+        "rate_unscaled": 178392 / 37_545_489,
+        "archive_size_bytes": 178392,
+        "n_samples": 600,
+        "canonical_score_source": "score_recomputed_from_components",
+        "evidence_grade": "contest-CPU",
+        "lane_tag": "[contest-CPU]",
+        "score_axis": "contest_cpu",
+        "evidence_semantics": "public_leaderboard_cpu_reproduction",
+        "exact_cuda_eval_complete": False,
+        "score_claim": True,
+        "score_claim_valid": True,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "cpu_leaderboard_reproduction_eligible": True,
+        "provenance": {
+            "device": "cpu",
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+        },
+    }
+    payload.update(overrides)
+    return payload
+
+
 def test_required_contest_cuda_evidence_blockers_accepts_t4_full_sample_eval() -> None:
     payload = _contest_cuda_payload()
     metrics = eval_metric_summary(payload)
@@ -226,6 +275,83 @@ def test_required_contest_cuda_evidence_blockers_accepts_t4_full_sample_eval() -
         expected_archive_bytes=178392,
         expected_n_samples=600,
     ) == []
+
+
+def test_required_contest_cpu_evidence_blockers_accepts_linux_x86_full_sample_eval() -> None:
+    payload = _strict_contest_cpu_payload()
+    metrics = eval_metric_summary(payload)
+
+    assert required_contest_cpu_evidence_blockers(
+        payload,
+        metrics,
+        expected_archive_bytes=178392,
+        expected_n_samples=600,
+    ) == []
+
+
+def test_required_contest_cpu_evidence_blockers_rejects_darwin_arm64() -> None:
+    payload = _strict_contest_cpu_payload(
+        provenance={
+            "device": "cpu",
+            "platform_system": "Darwin",
+            "platform_machine": "arm64",
+        },
+    )
+    metrics = eval_metric_summary(payload)
+
+    blockers = required_contest_cpu_evidence_blockers(payload, metrics)
+
+    assert "contest_cpu_platform_system_not_linux" in blockers
+    assert "contest_cpu_platform_machine_not_x86_64" in blockers
+
+
+def test_required_contest_auth_axis_payload_blockers_accept_strict_cuda_and_cpu() -> None:
+    cuda_payload = _strict_contest_cuda_payload()
+    cpu_payload = _strict_contest_cpu_payload()
+
+    assert required_contest_auth_axis_payload_blockers(
+        cuda_payload,
+        eval_metric_summary(cuda_payload),
+    ) == []
+    assert required_contest_auth_axis_payload_blockers(
+        cpu_payload,
+        eval_metric_summary(cpu_payload),
+    ) == []
+
+
+def test_required_contest_auth_axis_payload_blockers_rejects_forged_cuda_labels() -> None:
+    payload = _strict_contest_cuda_payload(
+        exact_cuda_eval_complete=False,
+        score_claim_valid=False,
+        provenance={"device": "mps", "gpu_t4_match": True},
+        diagnostic_blockers=["synthetic_diagnostic_blocker"],
+    )
+    metrics = eval_metric_summary(payload)
+
+    blockers = required_contest_auth_axis_payload_blockers(payload, metrics)
+
+    assert "diagnostic_blockers_present" in blockers
+    assert "device_not_cuda" in blockers
+    assert "exact_cuda_eval_complete_not_true" in blockers
+    assert "score_claim_valid_not_true" in blockers
+
+
+def test_required_contest_auth_axis_payload_blockers_rejects_forged_cpu_labels() -> None:
+    payload = _strict_contest_cpu_payload(
+        provenance={
+            "device": "cpu",
+            "platform_system": "Darwin",
+            "platform_machine": "arm64",
+        },
+        cpu_leaderboard_reproduction_eligible=False,
+    )
+    metrics = eval_metric_summary(payload)
+
+    blockers = required_contest_auth_axis_payload_blockers(payload, metrics)
+
+    assert "contest_cpu_platform_system_not_linux" in blockers
+    assert "contest_cpu_platform_machine_not_x86_64" in blockers
+    assert "cpu_leaderboard_reproduction_eligible_not_true" in blockers
 
 
 def test_required_contest_cuda_evidence_blockers_rejects_cpu_axis_even_with_metrics() -> None:

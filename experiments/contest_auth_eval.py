@@ -1674,6 +1674,8 @@ def main() -> int:
         help="Batch size for --scorer-input-cache-hashes-out streaming preprocessing.",
     )
     args = parser.parse_args()
+    if args.scorer_input_cache_hash_batch_pairs < 1:
+        raise SystemExit("--scorer-input-cache-hash-batch-pairs must be >= 1")
 
     # Resolve required paths
     archive = args.archive.resolve()

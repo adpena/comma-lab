@@ -835,6 +835,24 @@ def test_main_refuses_missing_archive(cae, tmp_path: Path):
         cae.main()
 
 
+def test_main_rejects_nonpositive_scorer_hash_batch_before_path_resolution(cae, tmp_path: Path):
+    sys.argv = [
+        "contest_auth_eval.py",
+        "--archive",
+        str(tmp_path / "nonexistent.zip"),
+        "--inflate-sh",
+        str(tmp_path / "inflate.sh"),
+        "--upstream-dir",
+        str(tmp_path / "upstream"),
+        "--scorer-input-cache-hashes-out",
+        str(tmp_path / "hashes.json"),
+        "--scorer-input-cache-hash-batch-pairs",
+        "0",
+    ]
+    with pytest.raises(SystemExit, match="scorer-input-cache-hash-batch-pairs must be >= 1"):
+        cae.main()
+
+
 def test_main_refuses_missing_inflate(cae, tmp_path: Path):
     """--inflate-sh must point to an existing file."""
     fake_archive = tmp_path / "fake.zip"

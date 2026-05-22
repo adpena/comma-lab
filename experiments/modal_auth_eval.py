@@ -365,6 +365,15 @@ def _run_auth_eval_inner(
     import sys
     import time
 
+    if int(scorer_input_cache_hash_batch_pairs) < 1:
+        return {
+            "schema_version": 1,
+            "passed": False,
+            "returncode": 14,
+            "error": "scorer_input_cache_hash_batch_pairs must be >= 1",
+            "score_claim": False,
+            "promotion_eligible": False,
+        }
     scorer_device = str(scorer_device or "cuda").lower()
     inflate_device_policy = str(inflate_device_policy or "auto").lower()
     if scorer_device not in {"cuda", "cpu"}:
@@ -949,6 +958,8 @@ def main(
 ) -> None:
     """Upload an archive and harvest Modal CUDA auth-eval artifacts."""
 
+    if int(scorer_input_cache_hash_batch_pairs) < 1:
+        raise SystemExit("FATAL: --scorer-input-cache-hash-batch-pairs must be >= 1")
     if detach and not provider_detach_ack:
         raise SystemExit(
             "FATAL: wrapper --detach requires provider-level Modal CLI detach. "

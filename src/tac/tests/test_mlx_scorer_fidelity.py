@@ -30,6 +30,7 @@ def _payload(
     evidence_tag: str | None = None,
     score_axis: str | None = None,
     score_claim: bool = False,
+    extra_fields: dict[str, object] | None = None,
 ) -> dict[str, object]:
     score = contest_formula_score(
         seg_dist=seg_avg,
@@ -55,6 +56,8 @@ def _payload(
         payload["evidence_tag"] = evidence_tag
     if score_axis is not None:
         payload["score_axis"] = score_axis
+    if extra_fields:
+        payload.update(extra_fields)
     return payload
 
 
@@ -68,9 +71,28 @@ def _mlx_payload(**kwargs: object) -> dict[str, object]:
 
 
 def _auth_payload(**kwargs: object) -> dict[str, object]:
+    extra_fields = {
+        "lane_tag": "[contest-CPU]",
+        "evidence_semantics": "public_leaderboard_cpu_reproduction",
+        "score_claim_valid": True,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "cpu_leaderboard_reproduction_eligible": True,
+        "provenance": {
+            "device": "cpu",
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+        },
+    }
+    extra_override = kwargs.pop("extra_fields", None)
+    if isinstance(extra_override, dict):
+        extra_fields.update(extra_override)
     return _payload(
         evidence_grade="contest-CPU",
+        evidence_tag="[contest-CPU]",
         score_axis="contest_cpu",
+        score_claim=True,
+        extra_fields=extra_fields,
         **kwargs,
     )
 
@@ -187,11 +209,66 @@ def test_mlx_fidelity_requires_auth_eval_contest_axis() -> None:
 def test_mlx_fidelity_requires_auth_eval_axis_matches_grade() -> None:
     manifest = build_mlx_scorer_training_signal_fidelity_manifest(
         _mlx_payload(),
-        _payload(evidence_grade="contest-CUDA", score_axis="contest_cpu"),
+        _payload(
+            evidence_grade="contest-CUDA",
+            score_axis="contest_cpu",
+            score_claim=True,
+            extra_fields={
+                "lane_tag": "[contest-CUDA]",
+                "evidence_semantics": "contest_cuda_exact_auth_eval",
+                "exact_cuda_eval_complete": True,
+                "score_claim_valid": True,
+                "provenance": {"device": "cuda", "gpu_t4_match": True},
+            },
+        ),
     )
 
     assert manifest["passed"] is False
-    assert "auth_eval_score_axis_not_contest_cuda" in manifest["blockers"]
+    assert "score_axis_not_contest_cuda" in manifest["blockers"]
+
+
+def test_mlx_fidelity_rejects_forged_contest_cpu_auth_eval_custody() -> None:
+    manifest = build_mlx_scorer_training_signal_fidelity_manifest(
+        _mlx_payload(),
+        _auth_payload(
+            extra_fields={
+                "provenance": {
+                    "device": "cpu",
+                    "platform_system": "Darwin",
+                    "platform_machine": "arm64",
+                },
+            },
+        ),
+    )
+
+    assert manifest["passed"] is False
+    assert "contest_cpu_platform_system_not_linux" in manifest["blockers"]
+    assert "contest_cpu_platform_machine_not_x86_64" in manifest["blockers"]
+
+
+def test_mlx_fidelity_requires_full_contest_auth_axis_even_for_subset_debug_threshold() -> None:
+    manifest = build_mlx_scorer_training_signal_fidelity_manifest(
+        _mlx_payload(n_samples=16),
+        _auth_payload(n_samples=16),
+        thresholds=MLXScorerFidelityThresholds(expected_n_samples=None),
+    )
+
+    assert manifest["passed"] is False
+    assert "n_samples_mismatch:manifest=16:expected=600" in manifest["blockers"]
+
+
+def test_mlx_fidelity_rejects_unrelated_aggregate_sha256_for_inflated_identity() -> None:
+    auth = _auth_payload(inflated_sha256="")
+    auth.pop("inflated_outputs_aggregate_sha256", None)
+    auth["some_artifact"] = {"aggregate_sha256": "b" * 64}
+
+    manifest = build_mlx_scorer_training_signal_fidelity_manifest(
+        _mlx_payload(inflated_sha256="b" * 64),
+        auth,
+    )
+
+    assert manifest["passed"] is False
+    assert "inflated_outputs_aggregate_sha256_identity_mismatch_or_missing" in manifest["blockers"]
 
 
 def test_mlx_fidelity_cli_writes_manifest(tmp_path: Path) -> None:

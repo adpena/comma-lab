@@ -21,10 +21,12 @@ from pathlib import Path
 from typing import Any
 
 from tac.auth_eval_schema import (
+    CONTEST_AUTH_AXIS_BY_EVIDENCE_GRADE,
     FULL_CONTEST_SAMPLE_COUNT,
     ORIGINAL_VIDEO_BYTES,
     contest_formula_score,
     eval_metric_summary,
+    required_contest_auth_axis_payload_blockers,
 )
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
@@ -38,10 +40,7 @@ __all__ = [
 SCHEMA_VERSION = "mlx_scorer_training_signal_fidelity.v1"
 PASS_VERDICT = "PASS_TRAINING_SIGNAL_FIDELITY"
 FAIL_VERDICT = "FAIL_TRAINING_SIGNAL_FIDELITY"
-AUTH_EVAL_AXIS_BY_GRADE = {
-    "contest-CPU": "contest_cpu",
-    "contest-CUDA": "contest_cuda",
-}
+AUTH_EVAL_AXIS_BY_GRADE = CONTEST_AUTH_AXIS_BY_EVIDENCE_GRADE
 
 
 @dataclass(frozen=True)
@@ -50,8 +49,9 @@ class MLXScorerFidelityThresholds:
 
     The defaults are deliberately tight enough to catch the MPS-style noisy
     authority problem before a local surrogate can route expensive exact evals.
-    For small calibration subsets, callers may pass ``expected_n_samples=None``
-    while keeping the same per-axis deltas.
+    ``expected_n_samples`` controls the local MLX-vs-auth sample comparison.
+    The right-hand auth-eval payload must still satisfy the full contest-axis
+    contract before the manifest can pass.
     """
 
     max_score_abs_delta: float = 1.0e-3
@@ -119,7 +119,7 @@ def build_mlx_scorer_training_signal_fidelity_manifest(
         require_inflated_output_identity=limits.require_inflated_output_identity,
     )
     _append_axis_and_authority_blockers(blockers, mlx)
-    _append_auth_eval_authority_blockers(blockers, auth)
+    _append_auth_eval_authority_blockers(blockers, auth, auth_metrics, limits)
     _append_sample_blockers(blockers, mlx_metrics, auth_metrics, limits.expected_n_samples)
 
     deltas = _component_deltas(mlx_metrics, auth_metrics)
@@ -287,15 +287,19 @@ def _append_axis_and_authority_blockers(blockers: list[str], mlx: dict[str, Any]
         blockers.append(f"mlx_score_axis_not_{EVIDENCE_TAG_MLX}")
 
 
-def _append_auth_eval_authority_blockers(blockers: list[str], auth: dict[str, Any]) -> None:
-    evidence_grade = auth.get("evidence_grade")
-    expected_axis = AUTH_EVAL_AXIS_BY_GRADE.get(evidence_grade)
-    if expected_axis is None:
-        blockers.append("auth_eval_evidence_grade_not_contest_cpu_or_cuda")
-        return
-    score_axis = auth.get("score_axis")
-    if score_axis != expected_axis:
-        blockers.append(f"auth_eval_score_axis_not_{expected_axis}")
+def _append_auth_eval_authority_blockers(
+    blockers: list[str],
+    auth: dict[str, Any],
+    auth_metrics: dict[str, Any],
+    limits: MLXScorerFidelityThresholds,
+) -> None:
+    for blocker in required_contest_auth_axis_payload_blockers(
+        auth,
+        auth_metrics,
+        expected_n_samples=FULL_CONTEST_SAMPLE_COUNT,
+    ):
+        if blocker not in blockers:
+            blockers.append(blocker)
 
 
 def _append_sample_blockers(
@@ -400,15 +404,29 @@ def _archive_sha256(payload: dict[str, Any]) -> str | None:
 
 
 def _inflated_outputs_aggregate_sha256(payload: dict[str, Any]) -> str | None:
-    return _first_nested_string(
-        payload,
-        (
-            "inflated_outputs_aggregate_sha256",
-            "inflated_output_aggregate_sha256",
-            "raw_inflated_aggregate_sha256",
-            "aggregate_sha256",
-        ),
-    )
+    for key in (
+        "inflated_outputs_aggregate_sha256",
+        "inflated_output_aggregate_sha256",
+        "raw_inflated_aggregate_sha256",
+    ):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        return None
+    manifest = provenance.get("inflated_output_manifest")
+    if not isinstance(manifest, dict):
+        return None
+    payload_obj = manifest.get("payload")
+    if isinstance(payload_obj, dict):
+        value = payload_obj.get("aggregate_sha256")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    value = manifest.get("aggregate_sha256")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
 
 
 def _first_nested_string(payload: Any, keys: tuple[str, ...]) -> str | None:
