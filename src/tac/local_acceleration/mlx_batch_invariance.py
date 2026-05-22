@@ -17,6 +17,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (
     torch_distortion_net_to_mlx,
 )
 from tac.local_acceleration.mlx_scorer_response import (
+    GPU_RESEARCH_SIGNAL_BLOCKER,
     _load_upstream_distortion_net,
     load_scorer_input_cache,
 )
@@ -48,6 +49,7 @@ def build_mlx_scorer_batch_invariance_manifest(
     device_type: str,
     start_pair: int,
     batch_pairs: int,
+    allow_gpu_research_signal: bool = False,
     thresholds: MLXBatchInvarianceThresholds | None = None,
     run_id: str | None = None,
 ) -> dict[str, Any]:
@@ -55,6 +57,12 @@ def build_mlx_scorer_batch_invariance_manifest(
 
     if device_type not in {"cpu", "gpu"}:
         raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+    if device_type == "gpu" and not allow_gpu_research_signal:
+        raise ValueError(
+            f"{GPU_RESEARCH_SIGNAL_BLOCKER}: device_type='gpu' is local MLX "
+            "research signal only; pass allow_gpu_research_signal=True after "
+            "recording a non-promotional rationale"
+        )
     if int(start_pair) < 0:
         raise ValueError(f"start_pair must be >= 0, got {start_pair}")
     if int(batch_pairs) < 2:
@@ -91,6 +99,7 @@ def build_mlx_scorer_batch_invariance_manifest(
         start_pair=start,
         batch_pairs=int(batch_pairs),
         total_pair_count=total_pair_count,
+        allow_gpu_research_signal=allow_gpu_research_signal,
     )
 
 
@@ -124,6 +133,7 @@ def build_batch_invariance_manifest_from_outputs(
     start_pair: int | None = None,
     batch_pairs: int | None = None,
     total_pair_count: int | None = None,
+    allow_gpu_research_signal: bool = False,
 ) -> dict[str, Any]:
     limits = thresholds or MLXBatchInvarianceThresholds()
     blockers: list[str] = []
@@ -166,6 +176,8 @@ def build_batch_invariance_manifest_from_outputs(
             "segnet_argmax_diff_pixels_exceeds_threshold:"
             f"{seg_argmax_diff_pixels}>{limits.max_segnet_argmax_diff_pixels}"
         )
+    if device_type == "gpu" and not allow_gpu_research_signal:
+        blockers.append(GPU_RESEARCH_SIGNAL_BLOCKER)
 
     passed = not blockers
     return {
@@ -184,6 +196,12 @@ def build_batch_invariance_manifest_from_outputs(
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,
         "device_type": device_type,
+        "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
+        "device_contract": {
+            "gpu_research_signal_required": device_type == "gpu",
+            "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
+            "gpu_research_signal_blocker": GPU_RESEARCH_SIGNAL_BLOCKER,
+        },
         "cache_dir": cache_dir,
         "start_pair": start_pair,
         "batch_pairs": batch_pairs,

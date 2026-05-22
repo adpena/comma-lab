@@ -21,6 +21,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=Path("."), type=Path)
     parser.add_argument("--device", choices=("cpu", "gpu"), default="cpu")
+    parser.add_argument(
+        "--allow-gpu-research-signal",
+        action="store_true",
+        help="Permit --device gpu as local MLX research-signal evidence only.",
+    )
     parser.add_argument("--start-pair", type=int, default=0)
     parser.add_argument("--batch-pairs", type=int, default=2)
     parser.add_argument("--run-id", default=None)
@@ -38,6 +43,7 @@ def main(argv: list[str] | None = None) -> int:
         device_type=args.device,
         start_pair=args.start_pair,
         batch_pairs=args.batch_pairs,
+        allow_gpu_research_signal=args.allow_gpu_research_signal,
         thresholds=MLXBatchInvarianceThresholds(
             max_posenet_output_abs_delta=args.max_posenet_output_abs_delta,
             max_segnet_logit_abs_delta=args.max_segnet_logit_abs_delta,

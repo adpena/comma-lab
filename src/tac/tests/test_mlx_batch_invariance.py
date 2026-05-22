@@ -14,6 +14,7 @@ from tac.local_acceleration.mlx_batch_invariance import (
     build_batch_invariance_manifest_from_outputs,
     concatenate_distortion_outputs,
 )
+from tac.local_acceleration.mlx_scorer_response import GPU_RESEARCH_SIGNAL_BLOCKER
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -59,7 +60,42 @@ def test_batch_invariance_manifest_passes_exact_outputs() -> None:
     assert manifest["verdict"] == PASS_VERDICT
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
+    assert manifest["gpu_research_signal_allowed"] is False
     assert manifest["deltas"]["segnet_argmax_diff_pixels"] == 0
+
+
+def test_batch_invariance_manifest_rejects_gpu_without_explicit_research_allowance() -> None:
+    batched, singleton = _outputs()
+
+    manifest = build_batch_invariance_manifest_from_outputs(
+        batched_outputs=batched,
+        singleton_outputs=singleton,
+        device_type="gpu",
+        start_pair=16,
+        batch_pairs=2,
+    )
+
+    assert manifest["passed"] is False
+    assert manifest["verdict"] == FAIL_VERDICT
+    assert GPU_RESEARCH_SIGNAL_BLOCKER in manifest["blockers"]
+    assert manifest["device_contract"]["gpu_research_signal_required"] is True
+    assert manifest["device_contract"]["gpu_research_signal_allowed"] is False
+
+
+def test_batch_invariance_manifest_allows_gpu_only_when_research_allowance_recorded() -> None:
+    batched, singleton = _outputs()
+
+    manifest = build_batch_invariance_manifest_from_outputs(
+        batched_outputs=batched,
+        singleton_outputs=singleton,
+        device_type="gpu",
+        start_pair=16,
+        batch_pairs=2,
+        allow_gpu_research_signal=True,
+    )
+
+    assert manifest["passed"] is True
+    assert manifest["gpu_research_signal_allowed"] is True
 
 
 def test_batch_invariance_manifest_fails_pose_and_segnet_drift() -> None:
@@ -131,4 +167,32 @@ def test_batch_invariance_cli_rejects_singleton_batch(tmp_path: Path) -> None:
 
     assert completed.returncode != 0
     assert "batch_pairs must be >= 2" in completed.stderr
+    assert not out_path.exists()
+
+
+def test_batch_invariance_cli_rejects_gpu_without_research_allowance_before_cache_load(
+    tmp_path: Path,
+) -> None:
+    out_path = tmp_path / "audit.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_mlx_scorer_batch_invariance.py"),
+            "--cache-dir",
+            str(tmp_path / "missing-cache"),
+            "--output",
+            str(out_path),
+            "--device",
+            "gpu",
+            "--batch-pairs",
+            "2",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode != 0
+    assert GPU_RESEARCH_SIGNAL_BLOCKER in completed.stderr
     assert not out_path.exists()
