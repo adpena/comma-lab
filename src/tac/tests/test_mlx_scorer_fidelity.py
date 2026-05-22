@@ -10,8 +10,8 @@ from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_scorer_fidelity import (
     FAIL_VERDICT,
-    MLXScorerFidelityThresholds,
     PASS_VERDICT,
+    MLXScorerFidelityThresholds,
     build_mlx_scorer_training_signal_fidelity_manifest,
 )
 
@@ -50,6 +50,7 @@ def _payload(
     if evidence_grade is not None:
         payload["evidence_grade"] = evidence_grade
         payload["evidence_tag"] = EVIDENCE_TAG_MLX
+        payload["score_axis"] = EVIDENCE_TAG_MLX
     return payload
 
 
@@ -119,6 +120,21 @@ def test_mlx_fidelity_requires_mlx_evidence_grade() -> None:
 
     assert manifest["passed"] is False
     assert "mlx_evidence_grade_missing" in manifest["blockers"]
+
+
+def test_mlx_fidelity_requires_mlx_axis_tags() -> None:
+    mlx_payload = _payload(evidence_grade=EVIDENCE_GRADE_MLX)
+    mlx_payload["evidence_tag"] = "[contest-CUDA]"
+    mlx_payload["score_axis"] = "[contest-CUDA]"
+
+    manifest = build_mlx_scorer_training_signal_fidelity_manifest(
+        mlx_payload,
+        _payload(),
+    )
+
+    assert manifest["passed"] is False
+    assert f"mlx_evidence_tag_not_{EVIDENCE_TAG_MLX}" in manifest["blockers"]
+    assert f"mlx_score_axis_not_{EVIDENCE_TAG_MLX}" in manifest["blockers"]
 
 
 def test_mlx_fidelity_allow_missing_inflated_identity_does_not_allow_present_mismatch() -> None:

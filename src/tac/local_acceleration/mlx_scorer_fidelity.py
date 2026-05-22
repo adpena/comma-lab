@@ -14,9 +14,9 @@ the upstream CPU evaluator) remains the authority path for promotion.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import json
 import math
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -265,6 +265,16 @@ def _append_axis_and_authority_blockers(blockers: list[str], mlx: dict[str, Any]
         blockers.append("mlx_evidence_grade_missing")
     elif evidence_grade != EVIDENCE_GRADE_MLX:
         blockers.append(f"mlx_evidence_grade_not_{EVIDENCE_GRADE_MLX}")
+    evidence_tag = mlx.get("evidence_tag")
+    if evidence_tag is None:
+        blockers.append("mlx_evidence_tag_missing")
+    elif evidence_tag != EVIDENCE_TAG_MLX:
+        blockers.append(f"mlx_evidence_tag_not_{EVIDENCE_TAG_MLX}")
+    score_axis = mlx.get("score_axis")
+    if score_axis is None:
+        blockers.append("mlx_score_axis_missing")
+    elif score_axis != EVIDENCE_TAG_MLX:
+        blockers.append(f"mlx_score_axis_not_{EVIDENCE_TAG_MLX}")
 
 
 def _append_sample_blockers(
