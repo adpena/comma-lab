@@ -164,7 +164,7 @@ def _signed_calibration_maps(
     signed_calibration: dict[str, Any] | None,
 ) -> dict[str, dict[tuple[str, int, int], list[dict[str, Any]]]]:
     if signed_calibration is None:
-        return {"same": {}, "inverse": {}}
+        return {"same": {}, "inverse": {}, "opposite_improvement": {}}
     if signed_calibration.get("schema") != "decoder_q_surface_sign_calibration_labels.v1":
         raise SystemExit("decoder-q signed calibration schema mismatch")
     for authority_field in (
@@ -184,6 +184,7 @@ def _signed_calibration_maps(
         raise SystemExit("decoder-q signed calibration labels[] missing")
     same: dict[tuple[str, int, int], list[dict[str, Any]]] = defaultdict(list)
     inverse: dict[tuple[str, int, int], list[dict[str, Any]]] = defaultdict(list)
+    opposite_improvement: dict[tuple[str, int, int], list[dict[str, Any]]] = defaultdict(list)
     for label in labels:
         if not isinstance(label, dict):
             continue
@@ -221,7 +222,13 @@ def _signed_calibration_maps(
             same[key].append(label)
             if observed_sign_i > 0:
                 inverse[(key[0], key[1], -key[2])].append(label)
-    return {"same": same, "inverse": inverse}
+            elif observed_sign_i < 0:
+                opposite_improvement[(key[0], key[1], -key[2])].append(label)
+    return {
+        "same": same,
+        "inverse": inverse,
+        "opposite_improvement": opposite_improvement,
+    }
 
 
 def _attach_signed_calibration(
@@ -236,7 +243,8 @@ def _attach_signed_calibration(
     )
     same = calibration_maps["same"].get(key, [])
     inverse = calibration_maps["inverse"].get(key, [])
-    if not same and not inverse:
+    opposite_improvements = calibration_maps["opposite_improvement"].get(key, [])
+    if not same and not inverse and not opposite_improvements:
         return atom
     same_regressions = [
         label for label in same if int(label.get("observed_score_delta_sign") or 0) > 0
@@ -245,7 +253,8 @@ def _attach_signed_calibration(
         label for label in same if int(label.get("observed_score_delta_sign") or 0) < 0
     ]
     boost = 1.0
-    if inverse:
+    context_conflict = bool(inverse and opposite_improvements)
+    if inverse and not context_conflict:
         boost *= 4.0
     if same_improvements:
         boost *= 2.0
@@ -258,10 +267,20 @@ def _attach_signed_calibration(
         "same_sign_regression_count": len(same_regressions),
         "same_sign_improvement_count": len(same_improvements),
         "inverse_of_regressing_candidate_count": len(inverse),
+        "opposite_sign_improvement_count": len(opposite_improvements),
+        "signed_calibration_context_conflict": context_conflict,
         "priority_multiplier": boost,
         "score_claim": False,
     }
     return annotated
+
+
+def _signed_calibration_context_conflict(atom: dict[str, Any]) -> bool:
+    calibration = atom.get("signed_calibration")
+    return (
+        isinstance(calibration, dict)
+        and calibration.get("signed_calibration_context_conflict") is True
+    )
 
 
 def _calibration_multiplier(atom: dict[str, Any]) -> float:
@@ -316,12 +335,17 @@ def _rank_atoms(
         bad_signs = {1 if int(atom["mutation"]["delta"]) > 0 else -1 for atom in bad}
         for atom in group:
             sign = 1 if int(atom["mutation"]["delta"]) > 0 else -1
-            if -sign in bad_signs and atom.get("advisory") is None:
+            if (
+                -sign in bad_signs
+                and atom.get("advisory") is None
+                and not _signed_calibration_context_conflict(atom)
+            ):
                 sign_inverted.append(atom)
     sign_inverted.extend(
         atom
         for atom in atoms
         if atom.get("advisory") is None
+        and not _signed_calibration_context_conflict(atom)
         and (
             atom.get("signed_calibration", {}).get("inverse_of_regressing_candidate_count", 0)
             if isinstance(atom.get("signed_calibration"), dict)
@@ -379,7 +403,10 @@ def _rank_atoms(
 
     ranked = {
         "seg_heavy": ordered_unique(good, unmeasured),
-        "sign_inverted_from_bad": ordered_unique(sign_inverted, unmeasured),
+        "sign_inverted_from_bad": ordered_unique(
+            sign_inverted,
+            [atom for atom in unmeasured if not _signed_calibration_context_conflict(atom)],
+        ),
         "mixed_tradeoff": ordered_unique(mixed, unmeasured),
         "bias_only": bias,
         "negative_control": negative_control,

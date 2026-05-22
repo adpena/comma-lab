@@ -183,8 +183,11 @@ retiring the L5/L5-v2 staircase:
   `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`.
 - FEC6 CPU frontier submission-surface adversarial review:
   `.omx/research/fec6_cpu_frontier_submission_surface_adversarial_review_20260517_codex.md`.
-  Verdict: FEC6 remains the current best `[contest-CPU]` anchor, but the
-  current WIP packet is not submission-ready. Strict compliance output is
+  Verdict at the 2026-05-17 review time: FEC6 remained the best
+  `[contest-CPU]` anchor, but the WIP packet was not submission-ready. FEC6 is
+  now superseded as best CPU anchor by the 2026-05-22 compact DQS1 gap-ULEB
+  exact CPU result; the submission-surface blockers below remain relevant for
+  any FEC6-derived packet. Strict compliance output is
   preserved at
   `experiments/results/fec6_cpu_submission_surface_review_20260517_codex/pre_submission_compliance_cpu.json`
   with `passed=false`; blockers include missing `archive.zip`/`report.txt` in

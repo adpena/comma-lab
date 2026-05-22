@@ -200,11 +200,12 @@ last_refreshed_note: |
 
 ### 2026-05-21 MLX local-acceleration refresh
 
-- **Frontier unchanged after current scan**:
+- **Historical frontier scan before DQS1 gap-ULEB landing**:
   `tools/scan_best_anchor_per_axis.py --format json` was rerun at
-  `2026-05-21T23:23Z`. Drift list is empty; best existing `[contest-CPU]`
-  remains `0.1920513169` and best existing `[contest-CUDA T4]` remains
-  `0.2053300290`.
+  `2026-05-21T23:23Z`. Drift list was empty at that time; best existing
+  `[contest-CPU]` was `0.1920513169` and best existing `[contest-CUDA T4]`
+  was `0.2053300290`. This scan predates the 2026-05-22 compact DQS1
+  gap-ULEB exact CPU anchor now cited in the current-frontier table above.
 - **MLX full-cache local advisory identity evidence landed**:
   `.omx/research/codex_findings_mlx_full600_local_advisory_fec6_transfer_calibration_20260521T231339Z_codex.md`
   records the FEC6 full-600 local MLX response against the matching macOS CPU
@@ -273,12 +274,15 @@ last_refreshed_note: |
 
 ### 2026-05-21 zero-spend cascade refresh
 
-- **Frontier unchanged after scan**: `tools/scan_best_anchor_per_axis.py`
+- **Historical frontier scan before DQS1 gap-ULEB landing**:
+  `tools/scan_best_anchor_per_axis.py`
   scanned `222` anchors (`202` qualifying). Best existing `[contest-CPU]`
-  remains `0.1920513169` at archive SHA
+  was `0.1920513169` at archive SHA
   `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`;
-  best `[contest-CUDA T4]` remains `0.2053300290` at archive SHA
+  best `[contest-CUDA T4]` was `0.2053300290` at archive SHA
   `9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4`.
+  The CPU value is now superseded by the 2026-05-22 DQS1 gap-ULEB exact CPU
+  anchor.
 - **Null-byte matrix surfaced a real but not-yet-materialized budget**:
   `.omx/research/null_byte_matrix_across_11_anchors_20260520.md` records
   `16,292` fec6 frontier null-space bytes (`9.131%`) at the master-gradient
@@ -404,7 +408,11 @@ last_refreshed_note: |
 
 ### Comparison vs public PRs
 
-- **PR101 GOLD** (`qpose14_qzs3_filmq9g_slsb1_r55`): 0.193 `[contest-CPU]` → **we beat by 0.00095 on CPU axis** with `6bae0201`.
+- **PR101 GOLD** (`qpose14_qzs3_filmq9g_slsb1_r55`): rounded public
+  0.193 `[contest-CPU]` → **we beat by about 0.00097 on CPU axis** with
+  current DQS1 gap-ULEB archive `e12f5cfe93f9` (`0.1920289488
+  [contest-CPU]`). The older `6bae0201` FEC6 anchor remains historical
+  PR101-family evidence.
 - **PR102 (bronze)**: 0.19538 `[contest-CPU]` / 0.22839 `[contest-CUDA]` → **we beat by 0.0033 CPU + 0.023 CUDA**.
 - **PR103 (silver)**: ~0.195 `[contest-CPU]` → **we beat by 0.0028 CPU**.
 
@@ -418,12 +426,17 @@ last_refreshed_note: |
 ### Strategic implications
 
 - The Top-5 CUDA bucket is dominated by PR106 `format0*` family (alien-tech routing per `feedback_a1d3dd050fc09dc54`) — a clear architectural cluster worth deeper investigation.
-- The CPU/CUDA bifurcation is real: best-CPU is fec6 (PR101 family) but best-CUDA is format0d (PR106 family). Different lanes win different axes. **A binding artifact that combines fec6's selector + PR106 format0d's score-table grammar + FP4 codebook + Ballé hyperprior + Cheng2020 has every primitive we'd need for a dual-axis frontier sweep.**
+- The CPU/CUDA bifurcation is real: best-CPU is now compact DQS1 gap-ULEB
+  selective decoder-q (PR101/FEC6-derived family), while best-CUDA remains
+  format0d (PR106 family). Different lanes win different axes. **A binding
+  artifact that combines DQS1/FEC6-style selective scoring + PR106 format0d's
+  score-table grammar + FP4 codebook + Ballé hyperprior + Cheng2020 has every
+  primitive we'd need for a dual-axis frontier sweep.**
 - **Per-byte sensitivity comparative analysis (Wave 3, 2026-05-20).** The 21-pair cross-candidate matrix empirically established the HNeRV-class backbone is class-saturated at the 0.19xxx medal cluster (Pearson seg ρ=0.961 between PR101 and fec6 on shared 178,158 backbone bytes); the entire +794 ppm fec6 advantage is concentrated in +259 bytes of orthogonal selector overhead. PR106-vs-HNeRV-family pairs classify SUPER_ADDITIVE (top-K Jaccard 0.000) per canonical equation `cross_codec_super_additive_orthogonality_predictor_v1`, structurally supporting the dual-axis stack candidate. Discipline + methodology: [`docs/per_byte_sensitivity_comparative_analysis_methodology.md`](../docs/per_byte_sensitivity_comparative_analysis_methodology.md). Selector-extensions class enumeration: [`docs/asymptotic_floor_candidate_inventory.md`](../docs/asymptotic_floor_candidate_inventory.md) §C.12.
 
 ### G1 CPU-axis optimization — 2026-05-18 Codex local rerank
 
-Per `codex_routing_directive_rate_attack_vector_2_g1_cpu_axis_optimization_20260518.md`, Codex added a $0 CPU-axis-only reranker over canonical `tac.frontier_scan` anchors. Result: no existing qualifying Linux x86_64 CPU anchor beats the current CPU frontier.
+Per `codex_routing_directive_rate_attack_vector_2_g1_cpu_axis_optimization_20260518.md`, Codex added a $0 CPU-axis-only reranker over canonical `tac.frontier_scan` anchors. Result at that 2026-05-18/2026-05-21 scan time: no existing qualifying Linux x86_64 CPU anchor beat the then-current CPU frontier.
 
 Evidence report: `experiments/results/g1_cpu_axis_re_rank_20260518T214250Z/report.json`.
 
@@ -434,7 +447,7 @@ Evidence report: `experiments/results/g1_cpu_axis_re_rank_20260518T214250Z/repor
 | pr103 | 0.1948697174 | `7d1e46331a04` | `pr103_global_combo_mid32_latent_hi_brotli_retune_exact_cpu` |
 | other | 0.1928475774 | `87ec7ca5f2f3` | `hnerv_ft_microcodec` |
 
-**G1 verdict:** `current_frontier_remains_cpu_optimal`; delta vs current CPU frontier = `+0.0000000000` (CPU-axis delta, not a frontier score citation). The 2026-05-21 recheck scanned 222 canonical anchors, including 67 qualifying CPU anchors from the live `accepted_anchor_history` posterior plus dispatch-claim surfaces. This does not retire CPU-axis-specific optimization as a class; it closes the zero-cost existing-anchor rerank probe and leaves any future G1 improvement dependent on new paired Linux x86_64 CPU anchors.
+**G1 verdict at scan time:** `current_frontier_remains_cpu_optimal`; delta vs the then-current CPU frontier = `+0.0000000000` (CPU-axis delta, not a current frontier score citation). The 2026-05-21 recheck scanned 222 canonical anchors, including 67 qualifying CPU anchors from the live `accepted_anchor_history` posterior plus dispatch-claim surfaces. This does not retire CPU-axis-specific optimization as a class; it closes the zero-cost existing-anchor rerank probe and leaves any future G1 improvement dependent on new paired Linux x86_64 CPU anchors. The 2026-05-22 DQS1 gap-ULEB CPU anchor later superseded the FEC6 value.
 
 ### ASYMPTOTIC PURSUIT pivot (2026-05-17)
 
@@ -519,10 +532,10 @@ Per HORIZON-CLASS Stage 2 deferred plan (CLAUDE.md Catalog #309 horizon_class ta
 | `lane_q6_preprobe_pairwise_composition_alpha_20260517` | Phantom-provenance probe inputs (pr101_state_dict / pr106_state_dict / posenet_class_sensitivity) per Catalog #321/#322 | VALIDATED_CONTEST_MEMBER inputs only |
 | `lane_batched_815_consumer_15_amendment_plus_816_meta_meta_cleanup_plus_q6_op3_extended_20260517` | Q6 OP3 extended sweep produced phantom-provenance α values | Catalog #321 revalidation |
 
-### Current frontier remains (no Q4 anchor landed)
+### Historical frontier state at Q4 close (no Q4 anchor landed)
 
-- **CPU**: 0.19205 [contest-CPU] fec6 (unchanged from 2026-05-15)
-- **CUDA**: 0.20533 [contest-CUDA] pr106 format0d (unchanged from 2026-05-16)
+- **Then-current CPU**: 0.19205 [contest-CPU] fec6 (unchanged from 2026-05-15; superseded by 2026-05-22 DQS1 gap-ULEB CPU anchor)
+- **Current CUDA**: 0.20533 [contest-CUDA] pr106 format0d (unchanged from 2026-05-16)
 - **Mission alignment** (CLAUDE.md): this REDO is `frontier_protecting` (preventing phantom anchor pollution that would corrupt dispatch ranking) + queues `frontier_breaking` substrate-class-shift work via Q4 redirect to Z6.
 
 ### First ASYMPTOTIC empirical anchor — C6 IBPS smoke 2026-05-17 — DEFER
@@ -537,7 +550,9 @@ Per HORIZON-CLASS Stage 2 deferred plan (CLAUDE.md Catalog #309 horizon_class ta
 - **CPU axis (auth_eval_device=cpu, advisory_only=true)** — Modal injected CPU axis NOT CUDA; rc=1 because dispatch contract required `contest_cuda` axis. Paired full dispatch **NOT FIRED** per briefing "Score outside band → ABORT before full dispatch + emit landing memo + register Catalog #313 probe outcome verdict DEFER."
 - **Catalog #313 probe outcome registered DEFER** (`c6_e4_mdl_ibps_smoke_modal_a10g_50ep_fc01krw353mjj9a6qw8h99qwzemh_20260517`; blocker_status=blocking; expires_at_utc=2026-06-16); per CLAUDE.md "Forbidden premature KILL" + "Substrate MUST be at OPTIMAL FORM" — this is **implementation-level falsification** of `beta_ib=0.01 + latent_dim=24`, NOT a paradigm kill.
 - **Stage 2 reactivation gate clause #1** (anchor within ±10% of L5 codex band 0.138): **NOT SATISFIED** (3.04 / 0.138 = 22× outside).
-- **Frontier beat**: NO — 3.04 ≫ 0.19205 CPU baseline; no axis update.
+- **Frontier beat**: NO — 3.04 ≫ the then-current 0.19205
+  `[contest-CPU]` baseline and also far above the 2026-05-22 DQS1 gap-ULEB
+  CPU anchor; no axis update.
 - **Reactivation queue** (3 paths): (1) `beta_ib` sweep `[0.0001, 0.001, 0.01, 0.1, 1.0]` to balance pose vs seg; (2) `latent_dim` widen 24 → 48/96/192 to give SegNet more capacity; (3) Phase 2 sextet cargo-cult-unwind redesign of SegNet-collapse mechanism per Catalog #303 (decoder output resolution? IB KL too tight? Phase 2 redesign).
 - **Mission alignment**: `mission_questioned` — produced a real empirical upper bound for first ASYMPTOTIC class-shift smoke; downstream operator decision: invest in C6 redesign (reactivation queue) or pivot Q4 budget to Z6 / TT5L L5 autonomy per the readiness matrix above.
 - Memory: `feedback_c6_ibps_first_asymptotic_dispatch_smoke_before_full_paired_landed_20260517.md`.
@@ -555,7 +570,10 @@ Per HORIZON-CLASS Stage 2 deferred plan (CLAUDE.md Catalog #309 horizon_class ta
 - **Catalog #313 probe outcome**: `z6_v2_wave_2_dispatch_smoke_before_full_paired_2026_05_18` verdict DEFER blocker_status=blocking expires_at_utc=2026-06-17T00:30:00Z.
 - **Catalog #324 post-training Tier-C re-measurement**: NOT APPLICABLE — neither archive carries the architecture-as-spec'd; post-training Tier-C cannot validate the council-binding spec against synthetic-cfg outputs.
 - **Stage 2 reactivation gate clause #1**: NOT SATISFIED.
-- **Frontier beat**: NO axis update (no empirical contest-CUDA / contest-CPU score produced; frontier remains `0.19205 [contest-CPU]` / `0.20533 [contest-CUDA T4]`).
+- **Frontier beat**: NO axis update (no empirical contest-CUDA / contest-CPU
+  score produced; at this 2026-05-18 attempt time the frontier remained
+  `0.19205 [contest-CPU]` / `0.20533 [contest-CUDA T4]`; current CPU is
+  superseded by the 2026-05-22 DQS1 gap-ULEB anchor).
 - **Total spent**: ~$0.50 across both fires (both 10s well under cost band).
 - **Reactivation queue** (3 paths): (1) **driver-fix subagent**: modify `scripts/remote_lane_substrate_time_traveler_l5_z6.sh` to accept `$Z6_TRAINER_MODE` env var (smoke|full) and dispatch trainer accordingly + re-fire $3 envelope per Phase 3 council §9; (2) trainer-side fix: gate `smoke=1` flag in `_smoke_main` invocation on env var rather than hardcoded; (3) Phase 4 council on Wave 2-outcome with empirical anchor (BLOCKED on path 1 or 2 landing first).
 - **Mission alignment**: `mission_questioned` — second consecutive ASYMPTOTIC dispatch attempt frustrated by infrastructure-level bug (C6 IBPS by SegNet collapse mechanism; Z6-v2 by driver mode hardcoding). Per CLAUDE.md "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" + Catalog #315: BOTH attempts demonstrate the iteration discipline IS structurally protecting against premature paradigm KILL by deferring; the next operator action is operator-routed driver-fix (path 1).

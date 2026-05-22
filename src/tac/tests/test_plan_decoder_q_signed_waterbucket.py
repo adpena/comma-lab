@@ -95,6 +95,48 @@ def test_signed_calibration_prioritizes_inverse_of_regressing_surface_atom() -> 
     )
 
 
+def test_signed_calibration_context_conflict_suppresses_inverse_boost() -> None:
+    signed_calibration = _signed_calibration()
+    signed_calibration["summary"] = {"label_count": 2}
+    signed_calibration["labels"].append(
+        {
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+            "candidate_id": "surface-good",
+            "observed_score_delta_sign": -1,
+            "atom_mutation_keys": [
+                {
+                    "tensor_name": "decoder.weight",
+                    "q_offset": 7,
+                    "delta": 1,
+                }
+            ],
+        }
+    )
+
+    ranked = _rank_atoms(
+        _rows(),
+        advisory_by_key={},
+        signed_calibration=signed_calibration,
+    )
+
+    inverse = next(
+        atom for atom in ranked["mixed_tradeoff"] if atom["candidate_id"] == "inverse-candidate"
+    )
+    assert inverse["signed_calibration"]["inverse_of_regressing_candidate_count"] == 1
+    assert inverse["signed_calibration"]["opposite_sign_improvement_count"] == 1
+    assert inverse["signed_calibration"]["signed_calibration_context_conflict"] is True
+    assert inverse["signed_calibration"]["priority_multiplier"] == 1.0
+    assert all(
+        atom["candidate_id"] != "inverse-candidate"
+        for atom in ranked["sign_inverted_from_bad"]
+    )
+
+
 def test_signed_calibration_refuses_promotable_payload() -> None:
     signed_calibration = _signed_calibration()
     signed_calibration["promotable"] = True

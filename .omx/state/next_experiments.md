@@ -154,10 +154,10 @@ architecture-lock/TT5L custody artifacts.
   archive bytes via lossless Brotli recompression, with packet closure proven
   and runtime/exact-eval gates still closed. This is a template, not the P0
   score target.
-- Next score-relevant operator class: FEC6 `FP11`/`FEC6` selector-grammar
+- Next score-relevant operator class: compact DQS1/FEC6-family selector-grammar
   mutation on the current `[contest-CPU]` frontier archive. Do not apply raw
-  byte flips; parse the selector, mutate a grammar-level choice, rebuild the
-  wrapper/ZIP, and prove runtime consumption before dispatch.
+  byte flips; parse the selector/DQS1 payload, mutate a grammar-level choice,
+  rebuild the wrapper/ZIP, and prove runtime consumption before dispatch.
 - Landed selector audit:
   `tac.fec6_selector_operator_space` plus
   `tools/audit_fec6_selector_operator_space.py`. The current FEC6 archive has
