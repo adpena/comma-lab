@@ -12,12 +12,24 @@ from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.bayesian_experimental_design import expected_improvement_minimize
+from tac.optimization.mlx_dynamic_sweep_observations import (
+    normalize_observation_row,
+    summarize_observations,
+)
 
 SCHEMA = "mlx_dynamic_learned_sweep_plan.v1"
 ROW_SCHEMA = "mlx_dynamic_learned_sweep_row.v1"
 OPTIMIZATION_PASS_SCHEMA = "mlx_dynamic_learned_sweep_optimization_pass.v1"
 TOOL = "tac.optimization.mlx_dynamic_learned_sweep"
 DEFAULT_SCORE_VARIANCE = 2.5e-10
+_CONTEST_OBSERVATION_LABELS = {
+    "contest_cpu",
+    "contest_cuda",
+    "contest-CPU",
+    "contest-CUDA",
+    "[contest-CPU]",
+    "[contest-CUDA]",
+}
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -782,6 +794,127 @@ def _stratified_rows_by_pass(
     return selected[:top_k]
 
 
+def _observation_tuple_key(row: Mapping[str, Any]) -> str:
+    return "|".join(
+        (
+            str(row["candidate_id"]),
+            str(row["sweep_config_id"]),
+            str(row["optimization_pass_id"]),
+            str(row["family"]),
+        )
+    )
+
+
+def _candidate_config_family_key(row: Mapping[str, Any]) -> str:
+    return "|".join(
+        (
+            str(row["candidate_id"]),
+            str(row["sweep_config_id"]),
+            str(row["family"]),
+        )
+    )
+
+
+def _is_contest_axis_observation(row: Mapping[str, Any]) -> bool:
+    return any(
+        str(row.get(key) or "") in _CONTEST_OBSERVATION_LABELS
+        for key in ("observed_axis", "evidence_grade", "evidence_tag")
+    )
+
+
+def _latest_observation_summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "row_count": 0,
+        "observed_axes": [],
+        "evidence_tags": [],
+        "latest_observed_at_utc": None,
+        "observed_score_or_delta_latest": None,
+        **FALSE_AUTHORITY,
+    }
+    for row in rows:
+        observed_at = str(row.get("observed_at_utc") or "")
+        summary["row_count"] += 1
+        for key, target in (
+            ("observed_axis", "observed_axes"),
+            ("evidence_tag", "evidence_tags"),
+        ):
+            value = str(row.get(key) or "")
+            if value and value not in summary[target]:
+                summary[target].append(value)
+        if summary["latest_observed_at_utc"] is None or observed_at >= str(
+            summary["latest_observed_at_utc"]
+        ):
+            summary["latest_observed_at_utc"] = observed_at
+            summary["observed_score_or_delta_latest"] = row.get(
+                "observed_score_or_delta"
+            )
+    summary["observed_axes"].sort()
+    summary["evidence_tags"].sort()
+    return summary
+
+
+def _normalize_observations(
+    observations: Sequence[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    return [normalize_observation_row(row) for row in observations or ()]
+
+
+def _observation_feedback_indexes(
+    observations: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, list[Mapping[str, Any]]], dict[str, list[Mapping[str, Any]]]]:
+    by_tuple: dict[str, list[Mapping[str, Any]]] = {}
+    exact_by_candidate_config_family: dict[str, list[Mapping[str, Any]]] = {}
+    for row in observations:
+        by_tuple.setdefault(_observation_tuple_key(row), []).append(row)
+        if _is_contest_axis_observation(row):
+            exact_by_candidate_config_family.setdefault(
+                _candidate_config_family_key(row),
+                [],
+            ).append(row)
+    return by_tuple, exact_by_candidate_config_family
+
+
+def _apply_observation_feedback(
+    rows: Sequence[dict[str, Any]],
+    *,
+    observations: Sequence[Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    by_tuple, exact_by_candidate_config_family = _observation_feedback_indexes(
+        observations
+    )
+    kept: list[dict[str, Any]] = []
+    suppressed: list[dict[str, Any]] = []
+    for row in rows:
+        tuple_key = _observation_tuple_key(row)
+        candidate_config_family_key = _candidate_config_family_key(row)
+        feedback_rows: list[Mapping[str, Any]] = []
+        reason: str | None = None
+        if tuple_key in by_tuple:
+            reason = "already_observed_candidate_config_pass_family"
+            feedback_rows = by_tuple[tuple_key]
+        elif candidate_config_family_key in exact_by_candidate_config_family:
+            reason = "exact_axis_observed_candidate_config_family"
+            feedback_rows = exact_by_candidate_config_family[candidate_config_family_key]
+
+        if reason is None:
+            kept.append(row)
+            continue
+
+        suppressed_row = dict(row)
+        suppressed_row["rank"] = None
+        suppressed_row["suppressed_by_observation_feedback"] = True
+        suppressed_row["observation_feedback"] = {
+            "schema": "mlx_dynamic_learned_sweep_observation_feedback.v1",
+            "suppression_reason": reason,
+            "candidate_config_pass_family_key": tuple_key,
+            "candidate_config_family_key": candidate_config_family_key,
+            "summary": _latest_observation_summary(feedback_rows),
+            **FALSE_AUTHORITY,
+        }
+        suppressed.append(suppressed_row)
+    return kept, suppressed
+
+
 def build_mlx_dynamic_learned_sweep_plan(
     *,
     incumbent_score: float,
@@ -789,6 +922,7 @@ def build_mlx_dynamic_learned_sweep_plan(
     candidate_payloads: Sequence[Mapping[str, Any]] | None = None,
     execution_configs: Sequence[Mapping[str, Any]] | None = None,
     optimization_passes: Sequence[Mapping[str, Any]] | None = None,
+    observations: Sequence[Mapping[str, Any]] | None = None,
     top_k: int = 32,
     per_pass_top_k: int | None = None,
     default_score_variance: float = DEFAULT_SCORE_VARIANCE,
@@ -811,6 +945,7 @@ def build_mlx_dynamic_learned_sweep_plan(
         raise MLXDynamicLearnedSweepError("default_score_variance must be non-negative")
     configs = _normalize_execution_configs(execution_configs)
     passes = _normalize_optimization_passes(optimization_passes)
+    observation_rows = _normalize_observations(observations)
     candidates = _normalize_candidates(
         selector_pareto=selector_pareto,
         candidate_payloads=candidate_payloads,
@@ -830,6 +965,10 @@ def build_mlx_dynamic_learned_sweep_plan(
         for config in configs
         for optimization_pass in passes
     ]
+    rows, suppressed_rows = _apply_observation_feedback(
+        rows,
+        observations=observation_rows,
+    )
     rows.sort(key=_row_sort_key)
     if per_pass_top_k is None:
         rows = rows[: int(top_k)]
@@ -845,6 +984,7 @@ def build_mlx_dynamic_learned_sweep_plan(
     local_rows = [row for row in rows if row["ready_for_local_sweep"] is True]
     exact_rows = [row for row in rows if row["exact_eval_candidate"] is True]
     freeze_rows = [row for row in rows if row["freeze_candidate"] is True]
+    observation_summary = summarize_observations(observation_rows)
     return {
         "schema": SCHEMA,
         "producer": TOOL,
@@ -877,6 +1017,21 @@ def build_mlx_dynamic_learned_sweep_plan(
         "execution_configs": configs,
         "optimization_passes": passes,
         "source_artifacts": dict(source_artifacts or {}),
+        "observation_feedback": {
+            "schema": "mlx_dynamic_learned_sweep_observation_feedback_summary.v1",
+            "observation_row_count": len(observation_rows),
+            "suppressed_observed_row_count": len(suppressed_rows),
+            "suppression_policy": {
+                "local_or_advisory_observation": (
+                    "suppress_exact_candidate_config_pass_family_tuple_only"
+                ),
+                "contest_axis_observation": (
+                    "suppress_same_candidate_config_family_across_passes"
+                ),
+            },
+            "observation_summary": observation_summary,
+            **FALSE_AUTHORITY,
+        },
         "recursive_learning_contract": {
             "schema": "mlx_dynamic_learned_sweep_recursive_learning_contract.v1",
             "initial_scale": "smoke",
@@ -891,6 +1046,8 @@ def build_mlx_dynamic_learned_sweep_plan(
             "candidate_count": len(candidates),
             "config_count": len(configs),
             "optimization_pass_count": len(passes),
+            "observation_row_count": len(observation_rows),
+            "suppressed_observed_row_count": len(suppressed_rows),
             "ranked_row_count": len(rows),
             "local_ready_row_count": len(local_rows),
             "exact_candidate_row_count": len(exact_rows),
@@ -899,6 +1056,7 @@ def build_mlx_dynamic_learned_sweep_plan(
             "ready_for_exact_eval_dispatch": False,
         },
         "ranked_sweep_rows": rows,
+        "suppressed_observed_sweep_rows": suppressed_rows,
     }
 
 
@@ -911,6 +1069,8 @@ def render_mlx_dynamic_learned_sweep_markdown(plan: Mapping[str, Any]) -> str:
         f"- Score claim: `{plan.get('score_claim')}`",
         f"- Ready for exact eval dispatch: `{plan.get('ready_for_exact_eval_dispatch')}`",
         f"- Local ready rows: `{summary.get('local_ready_row_count') if isinstance(summary, Mapping) else None}`",
+        f"- Observation rows: `{summary.get('observation_row_count') if isinstance(summary, Mapping) else None}`",
+        f"- Suppressed observed rows: `{summary.get('suppressed_observed_row_count') if isinstance(summary, Mapping) else None}`",
         "",
         "| rank | candidate | config | pass | acq | mean | lcb | local ready | next action |",
         "|---:|---|---|---|---:|---:|---:|---|---|",

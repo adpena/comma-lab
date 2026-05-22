@@ -81,6 +81,57 @@ def _selector_pareto() -> dict:
     }
 
 
+def _contest_auth_source(
+    path: Path,
+    *,
+    archive_sha256: str,
+    aggregate_sha256: str,
+    score: float,
+) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cpu",
+                "evidence_grade": "[contest-CPU]",
+                "score_claim_valid": True,
+                "archive_sha256": archive_sha256,
+                "inflated_outputs_aggregate_sha256": aggregate_sha256,
+                "canonical_score": score,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _exact_cpu_observation(
+    source_path: Path,
+    *,
+    candidate_id: str = "prefix_k032",
+    sweep_config_id: str = "contest_cpu_later",
+) -> dict:
+    return {
+        "schema": "mlx_dynamic_sweep_observation.v1",
+        "candidate_id": candidate_id,
+        "sweep_config_id": sweep_config_id,
+        "optimization_pass_id": "exact_cpu_calibration",
+        "family": "decoder_q_selective_dqs1",
+        "observed_axis": "contest_cpu",
+        "evidence_tag": "[contest-CPU]",
+        "evidence_grade": "[contest-CPU]",
+        "observed_score_or_delta": 0.193,
+        "archive_sha256": "a" * 64,
+        "runtime_sha256": "c" * 64,
+        "raw_output_or_cache_sha256": "b" * 64,
+        "component_deltas": {
+            "segnet_delta": 0.001,
+            "posenet_delta": 0.002,
+            "rate_delta": 0.0,
+        },
+        "source_artifact_path": str(source_path),
+    }
+
+
 def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
     plan = build_mlx_dynamic_learned_sweep_plan(
         incumbent_score=0.1920513168811056,
@@ -158,6 +209,58 @@ def test_dynamic_sweep_can_preserve_each_recursive_pass() -> None:
     assert plan["summary"]["freeze_candidate_row_count"] == 1
 
 
+def test_dynamic_sweep_suppresses_exact_observed_candidate_config_family(
+    tmp_path: Path,
+) -> None:
+    source_path = _contest_auth_source(
+        tmp_path / "contest_auth_eval.json",
+        archive_sha256="a" * 64,
+        aggregate_sha256="b" * 64,
+        score=0.193,
+    )
+
+    plan = build_mlx_dynamic_learned_sweep_plan(
+        incumbent_score=0.1920513168811056,
+        selector_pareto=_selector_pareto(),
+        execution_configs=[
+            {
+                "config_id": "local_mlx_fast",
+                "substrate": "[macOS-MLX research-signal]",
+                "cost_units": 1.0,
+                "signal_quality": 0.4,
+                "exact_eval_candidate": False,
+            },
+            {
+                "config_id": "contest_cpu_later",
+                "substrate": "[contest-CPU]",
+                "cost_units": 10.0,
+                "signal_quality": 0.9,
+                "exact_eval_candidate": True,
+            },
+        ],
+        observations=[_exact_cpu_observation(source_path)],
+        top_k=12,
+    )
+
+    assert plan["summary"]["observation_row_count"] == 1
+    assert plan["summary"]["suppressed_observed_row_count"] == 4
+    assert not any(
+        row["candidate_id"] == "prefix_k032"
+        and row["sweep_config_id"] == "contest_cpu_later"
+        for row in plan["ranked_sweep_rows"]
+    )
+    assert any(
+        row["candidate_id"] == "prefix_k032"
+        and row["sweep_config_id"] == "local_mlx_fast"
+        for row in plan["ranked_sweep_rows"]
+    )
+    assert {
+        row["observation_feedback"]["suppression_reason"]
+        for row in plan["suppressed_observed_sweep_rows"]
+    } == {"exact_axis_observed_candidate_config_family"}
+    assert all(row["score_claim"] is False for row in plan["suppressed_observed_sweep_rows"])
+
+
 def test_dynamic_sweep_rejects_impossible_stratified_cap() -> None:
     with pytest.raises(MLXDynamicLearnedSweepError, match="per_pass_top_k"):
         build_mlx_dynamic_learned_sweep_plan(
@@ -170,9 +273,27 @@ def test_dynamic_sweep_rejects_impossible_stratified_cap() -> None:
 
 def test_dynamic_sweep_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     selector_path = tmp_path / "selector.json"
+    source_path = _contest_auth_source(
+        tmp_path / "contest_auth_eval.json",
+        archive_sha256="a" * 64,
+        aggregate_sha256="b" * 64,
+        score=0.193,
+    )
+    observation_path = tmp_path / "observations.jsonl"
     json_out = tmp_path / "plan.json"
     md_out = tmp_path / "plan.md"
     selector_path.write_text(json.dumps(_selector_pareto()), encoding="utf-8")
+    observation_path.write_text(
+        json.dumps(
+            _exact_cpu_observation(
+                source_path,
+                sweep_config_id="contest_cpu_exact_candidate",
+            ),
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     completed = subprocess.run(
         [
@@ -186,6 +307,8 @@ def test_dynamic_sweep_cli_writes_json_and_markdown(tmp_path: Path) -> None:
             "4",
             "--per-pass-top-k",
             "1",
+            "--observation-jsonl",
+            str(observation_path),
             "--json-out",
             str(json_out),
             "--md-out",
@@ -199,8 +322,12 @@ def test_dynamic_sweep_cli_writes_json_and_markdown(tmp_path: Path) -> None:
 
     stdout_payload = json.loads(completed.stdout)
     assert stdout_payload["score_claim"] is False
+    assert stdout_payload["suppressed_observed_row_count"] == 4
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     assert payload["summary"]["ranked_row_count"] == 4
     assert payload["summary"]["freeze_candidate_row_count"] == 1
+    assert payload["summary"]["observation_row_count"] == 1
+    assert payload["summary"]["suppressed_observed_row_count"] == 4
     assert payload["source_artifacts"]["selector_pareto"]["sha256"]
+    assert payload["source_artifacts"]["observation_jsonl"][0]["sha256"]
     assert "MLX Dynamic Learned Sweep Plan" in md_out.read_text(encoding="utf-8")

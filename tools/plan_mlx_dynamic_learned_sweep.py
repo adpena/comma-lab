@@ -27,6 +27,9 @@ from tac.optimization.mlx_dynamic_learned_sweep import (  # noqa: E402
     render_mlx_dynamic_learned_sweep_markdown,
     write_json,
 )
+from tac.optimization.mlx_dynamic_sweep_observations import (  # noqa: E402
+    load_observation_rows,
+)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -59,6 +62,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Optional JSON list or object.optimization_passes defining recursive "
             "smoke/micro/intermediate/macro sweep passes."
+        ),
+    )
+    parser.add_argument(
+        "--observation-jsonl",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Append-only mlx_dynamic_sweep_observation.v1 JSONL to feed back "
+            "into the planner and suppress already-observed rows. May repeat."
         ),
     )
     parser.add_argument("--top-k", type=int, default=32)
@@ -128,6 +141,13 @@ def _source_artifacts(paths: dict[str, Path | list[Path] | None]) -> dict[str, A
     return out
 
 
+def _load_observation_rows(paths: list[Path]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for path in paths:
+        rows.extend(load_observation_rows(path))
+    return rows
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
@@ -144,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
             candidate_payloads=candidate_payloads,
             execution_configs=_load_execution_configs(args.execution_configs),
             optimization_passes=_load_optimization_passes(args.optimization_passes),
+            observations=_load_observation_rows(args.observation_jsonl),
             top_k=args.top_k,
             per_pass_top_k=args.per_pass_top_k,
             lcb_z=args.lcb_z,
@@ -155,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
                     "candidate_payloads": args.candidate_payload,
                     "execution_configs": args.execution_configs,
                     "optimization_passes": args.optimization_passes,
+                    "observation_jsonl": args.observation_jsonl,
                 }
             ),
             **kwargs,
@@ -182,6 +204,9 @@ def main(argv: list[str] | None = None) -> int:
                 "md_out": None if args.md_out is None else str(args.md_out),
                 "ranked_row_count": plan["summary"]["ranked_row_count"],
                 "local_ready_row_count": plan["summary"]["local_ready_row_count"],
+                "suppressed_observed_row_count": plan["summary"][
+                    "suppressed_observed_row_count"
+                ],
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
             }
