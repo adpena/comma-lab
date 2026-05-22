@@ -1,26 +1,26 @@
 <!--
-generated_at: 2026-05-21T23:47:02Z
-from_state_hash: frontier_scan_no_drift_plus_mlx_profile_selection_20260521T2347Z
-regenerated_by: codex:mlx_profile_stability_selection_20260521
-last_refreshed_at: 2026-05-21T23:47:02Z
-last_refreshed_by: codex:mlx_profile_stability_selection_20260521
-last_refreshed_head: 41e7d056cf28babf97dc3b8b39870470dc3d6a0a
+generated_at: 2026-05-22T04:23:40Z
+from_state_hash: frontier_scan_no_drift_plus_mlx_advisory_gate_20260522T0423Z
+regenerated_by: codex:mlx_decoderq_advisory_gate_hardening_20260522
+last_refreshed_at: 2026-05-22T04:23:40Z
+last_refreshed_by: codex:mlx_decoderq_advisory_gate_hardening_20260522
+last_refreshed_head: 90bff5e9d
 last_refreshed_note: |
-  Current frontier/status refresh after MLX scorer-response full-cache
-  calibration, deterministic pair-windowing, local profiler landing, profile
-  stability selection, and GPU batch-invariance gating. The scanner-derived
-  FRONTIER section below was rechecked with
-  tools/scan_best_anchor_per_axis.py --check-drift at 2026-05-21T23:47Z; no
-  CPU/CUDA frontier score changed. MLX local acceleration remains
-  candidate-generation only until matching CPU/CUDA auth-axis transfer
-  calibration passes.
+  Current frontier/status refresh after the 2026-05-22 MLX scorer-response
+  calibration, decoder-q response-surface planning, and advisory-gate
+  hardening pass. The scanner-derived FRONTIER section below was rechecked with
+  tools/scan_best_anchor_per_axis.py --check-drift at 2026-05-22T04:20Z; no
+  CPU/CUDA frontier score changed. MLX remains non-authoritative local
+  research signal: calibrated spend triage is allowed only above the attached
+  decision band and still requires exact CPU/CUDA auth eval before any score,
+  promotion, rank, or kill claim.
 -->
 
-# Comma Lab - Current Frontier Snapshot - 2026-05-21 UTC
+# Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
 
-> **2026-05-21 refresh note**: the scanner-derived FRONTIER section was
-> rechecked after the MLX local-acceleration landings at head `41e7d056c`; the
-> CPU/CUDA leaders are unchanged. Historical roadmap sections below remain
+> **2026-05-22 refresh note**: the scanner-derived FRONTIER section was
+> rechecked after the MLX advisory-gate hardening pass at head `90bff5e9d`;
+> the CPU/CUDA leaders are unchanged. Historical roadmap sections below remain
 > retained for context; use `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
 > detailed queue routing.
@@ -39,27 +39,34 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-05-21T23:47Z
+### Current best - last rechecked 2026-05-22T04:20Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU GHA Linux x86_64]`** | **0.1920513169** | `6bae0201fb08` | linux_x86_64_cpu | `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515` |
 | **`[contest-CUDA T4]`** | **0.2053300290** | `9cb989cef519` | linux_x86_64_t4 | `lane_pr106_format0d_latent_score_table_20260516_contest_cuda` |
 
-### 2026-05-21 MLX local-acceleration guard refresh
+### 2026-05-22 MLX portable-local-substrate refresh
 
-- MLX scorer-response remains **local candidate-generation signal only**.
-  It is not auth-eval evidence, not rank/kill evidence, and not promotion
-  evidence.
-- The MLX GPU profile is fast but not CPU-transfer-stable on the FEC6 pair
-  window `[16, 20]`: GPU rows are rejected by
-  `tools/check_mlx_scorer_response_profile_stability.py` under CPU-baseline
-  thresholds.
-- The new row-selection surface recommends the fastest stable row from that
-  profile: `device=cpu`, `batch_pairs=2`, `pairs_per_second=1.1846059274864154`.
-- The new batch-invariance guard records CPU pass and GPU batch-2 fail on the
-  same reference cache window; future GPU scorer-response use requires explicit
-  `--allow-gpu-research-signal` plus passing invariance/transfer checks.
+- MLX scorer-response remains **local candidate-generation and spend-triage
+  signal only**. It is not auth-eval evidence, not rank/kill evidence, and not
+  promotion evidence.
+- The public-frontier calibration gate is `strict_pass` on PR110/101/103/102:
+  certified pairwise decisions `6/6`, uncertain `0/6`, calibration uncertainty
+  `1.7603544242461577e-05`, and recommended minimum MLX gap for spend triage
+  `8.801772121230789e-05`.
+- The OOF response dataset is same-axis local signal with `600` rows across
+  `mlx_scorer_response` and `mlx_decoder_q`; it is explicitly
+  `score_claim=false`, `promotion_eligible=false`,
+  `rank_or_kill_eligible=false`, `ready_for_exact_eval_dispatch=false`, and
+  `promotable=false`.
+- The decoder-q response surface found useful high-leverage atoms, but the
+  first surface-guided waterbucket batch is now **blocked** for exact-eval
+  spend: three fixed-length candidates changed all 600 frames, preserved
+  archive byte count, and all regressed on `[macOS-CPU advisory decoder-q]`.
+- Current decoder-q first probe is
+  `ll_decoder_q_surface_sign_calibration_repair`, not exact CUDA dispatch.
+  Treat the advisory-negative batch as labeled sign-calibration data.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
@@ -642,7 +649,8 @@ Per CLAUDE.md "Public Disclosure Hygiene":
 - No `~/.claude/projects/...` paths in this report
 - No operator email
 - All score claims tagged `[predicted]` / `[contest-CUDA]` / `[contest-CPU]`
-  / `[macOS-MLX advisory]` / `[empirical:<short-ref>]` per axis discipline
+  / `[macOS-MLX research-signal]` / `[macOS-CPU advisory decoder-q]`
+  / `[empirical:<short-ref>]` per axis discipline
 - Lane IDs, commit SHAs, substrate names included as canonical references
 
 ---

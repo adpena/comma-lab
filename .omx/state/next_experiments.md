@@ -1,4 +1,4 @@
-# Next Experiments - 2026-05-17
+# Next Experiments - 2026-05-22
 
 Authority:
 
@@ -7,6 +7,8 @@ Authority:
 - `ready_for_exact_eval_dispatch=false`
 - `ready_for_provider_dispatch=false`
 - `dispatch_attempted=false`
+- `rank_or_kill_eligible=false`
+- `promotable=false`
 
 This queue supersedes the stale 2026-05-09 A1-sidecar/Phase-1 queue. It is
 derived from the May 17 T4 symposium, the parent-scope `.omx` Markdown scan
@@ -31,6 +33,25 @@ architecture-lock/TT5L custody artifacts.
   `0.2263520234784395` `[contest-CUDA T4]`.
 
 ## Queue
+
+### 0. MLX Portable-Local-Substrate Sign Calibration
+
+- Lane class: local research-signal and spend-triage hardening; no score
+  claim.
+- Required work: ingest the 2026-05-22 decoder-q advisory-negative batch as
+  signed labels, fit a repair objective that distinguishes high visible-change
+  atoms from score-lowering atoms, expand full-300-window structural features,
+  and re-run OOF validation before generating a new bounded candidate batch.
+- Dispatch blocker: exact-eval spend remains blocked unless a fixed-length,
+  surface-guided candidate improves on `[macOS-CPU advisory decoder-q]` and the
+  attached MLX score-calibration gate keeps the MLX margin above
+  `8.801772121230789e-05`.
+- Hard no-dispatch set: `a2f90a216aac4184`, `a9b04920db67ec71`, and
+  `8f3a33e49b9b7906` are advisory regressions and must not enter exact CUDA
+  queue from the current selector.
+- Portability task: implement and verify full-weight PyTorch -> NumPy -> MLX
+  state/intermediate trace parity for the canonical scorer path. MLX GPU/batch
+  remains research-only until batch invariance passes against CPU-stable rows.
 
 ### 1. Rule #6 A1 Ballé Hyperprior Bolt-On
 

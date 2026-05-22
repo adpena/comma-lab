@@ -85,12 +85,16 @@ The agent may **not** edit without explicit human approval:
 
 - Never claim an improvement without a measured score.
 - Prefer the official evaluator over proxies.
-- Use proxy evaluation only to rank cheap candidates before promotion.
+- Use proxy evaluation only to rank cheap local follow-up candidates before
+  promotion. Proxy/advisory/local-substrate rows are never rank/kill or
+  promotion authority by themselves.
 - Record config, command, artifact size, and score breakdown for each promoted run.
 - Label every score with its exact evidence axis: `[contest-CPU]`,
-  `[contest-CUDA]`, `[macOS-CPU advisory]`, diagnostic/proxy, or historical
-  unlimited-compute context. Never promote a proxy or advisory axis into a
-  public leaderboard claim.
+  `[contest-CUDA]`, `[macOS-CPU advisory]`, `[macOS-MLX research-signal]`,
+  diagnostic/proxy, or historical unlimited-compute context. Calibrated MLX
+  rows may guide spend triage only with an attached calibration manifest and
+  exact-eval follow-through. Never promote a proxy, advisory, or MLX research
+  axis into a public leaderboard claim.
 
 ## Evidence Axes And Historical Lanes
 

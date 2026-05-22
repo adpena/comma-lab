@@ -6,12 +6,13 @@ local cpu and mps and metal and mlx as much as possible"* + Carmack MVP-first
 phasing 5-step amplification per CLAUDE.md non-negotiable.
 
 This package operationalizes the M5 Max 128GB unified memory + Metal GPU +
-MLX framework as a FIRST-CLASS local pre-paid-dispatch substrate for:
+MLX framework as a FIRST-CLASS local pre-dispatch research substrate for:
 
 - Substrate prototyping (paradigm validation BEFORE paid Modal/Vast.ai spend)
 - Codec primitive acceleration (Metal compute shaders / MLX kernels)
 - Premise verification at 100% recipe-exact fidelity (no Modal worker setup)
-- 1:1-faithful proxy ranking per the MPS-VIABLE prescreen sister discipline
+- Conditional local candidate ranking after cache identity, parity, and score
+  calibration gates; never standalone contest-axis authority
 
 Per CLAUDE.md non-negotiables PRESERVED:
 - **MPS auth eval is NOISE** (Catalog #1; never authoritative score path)
@@ -60,11 +61,11 @@ Sister of:
 from __future__ import annotations
 
 __all__ = [
-    "SCHEMA_VERSION",
-    "EVIDENCE_GRADE_MLX",
     "EVIDENCE_GRADE_METAL",
-    "EVIDENCE_TAG_MLX",
+    "EVIDENCE_GRADE_MLX",
     "EVIDENCE_TAG_METAL",
+    "EVIDENCE_TAG_MLX",
+    "SCHEMA_VERSION",
 ]
 
 SCHEMA_VERSION = "local_acceleration.v1"

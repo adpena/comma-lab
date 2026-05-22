@@ -3,11 +3,11 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import importlib
 import json
-from pathlib import Path
 import sys
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX

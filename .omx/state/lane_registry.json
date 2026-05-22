@@ -46796,15 +46796,15 @@
       "id": "lane_codex_mlx_response_sprint_orchestration_20260522",
       "name": "Codex MLX response sprint orchestration",
       "phase": 0.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_decoderq_surface_advisory_gate_20260522T042330Z_codex.md"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/mlx_same_axis_decoderq_d1f1e56e042692f2_20260522T031205Z/ll_next_probe_plan_same_axis_600rows_oof_validated_decoderq_surface_calibrated_advisory_gated.json"
         },
         "contest_cuda": {
           "status": false,
@@ -46841,5 +46841,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-22T04:19:53Z"
+  "updated_at": "2026-05-22T04:26:58Z"
 }

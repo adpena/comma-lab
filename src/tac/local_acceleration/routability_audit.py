@@ -62,15 +62,15 @@ from pathlib import Path
 from typing import Any
 
 __all__ = [
-    "SubstrateRoutabilityClass",
-    "SubstrateRoutabilityVerdict",
     "M5_MAX_UNIFIED_MEMORY_BYTES",
     "M5_MAX_USABLE_WORKING_SET_BYTES",
     "MLX_TRAINABLE_VRAM_CEILING_GB",
     "MPS_TRAINABLE_VRAM_CEILING_GB",
     "PAID_VRAM_CEILING_GB",
-    "classify_recipe_routability",
+    "SubstrateRoutabilityClass",
+    "SubstrateRoutabilityVerdict",
     "audit_all_substrate_recipes",
+    "classify_recipe_routability",
     "verdict_summary_text",
 ]
 
@@ -291,8 +291,8 @@ def classify_recipe_routability(
             classification=SubstrateRoutabilityClass.UNKNOWN,
             min_vram_gb_declared=None,
             rationale=(
-                f"recipe does not declare min_vram_gb per Catalog #170; "
-                f"classification deferred pending operator-routed backfill"
+                "recipe does not declare min_vram_gb per Catalog #170; "
+                "classification deferred pending operator-routed backfill"
             ),
             estimated_cost_compression_usd=0.0,
         )

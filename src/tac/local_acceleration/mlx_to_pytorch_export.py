@@ -53,7 +53,6 @@ Operator-routable next step after export:
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 from typing import Any
 
@@ -62,9 +61,9 @@ import numpy as np
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 __all__ = [
+    "build_export_manifest",
     "export_mlx_state_dict_to_torch_pt",
     "load_pytorch_state_dict_from_pt",
-    "build_export_manifest",
 ]
 
 

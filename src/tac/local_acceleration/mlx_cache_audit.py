@@ -21,6 +21,10 @@ __all__ = [
 SCHEMA_VERSION = "mlx_scorer_input_cache_auth_eval_audit.v1"
 PASS_VERDICT = "PASS_CACHE_AUTH_EVAL_IDENTITY"
 FAIL_VERDICT = "FAIL_CACHE_AUTH_EVAL_IDENTITY"
+AUTH_EVAL_AXIS_BY_GRADE = {
+    "contest-CPU": "contest_cpu",
+    "contest-CUDA": "contest_cuda",
+}
 
 
 def audit_mlx_scorer_input_cache_against_auth_eval(
@@ -100,6 +104,7 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
             )
     if cache_manifest.get("score_claim") is True or cache_manifest.get("promotion_eligible") is True:
         blockers.append("cache_manifest_attempts_score_authority")
+    _append_auth_eval_authority_blockers(blockers, auth_eval_payload)
     for blocker in identity["blockers"]:
         if blocker not in blockers:
             blockers.append(blocker)
@@ -144,6 +149,11 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
             "scorer_input_array_sha256": auth_scorer_input_hashes,
             "scorer_input_shapes": auth_shapes,
         },
+        "auth_eval_contract": {
+            "evidence_grade": auth_eval_payload.get("evidence_grade"),
+            "score_axis": auth_eval_payload.get("score_axis"),
+            "accepted_grade_axis_pairs": dict(AUTH_EVAL_AXIS_BY_GRADE),
+        },
         "allowed_use": (
             [
                 "local_mlx_training_transfer_calibration",
@@ -162,6 +172,17 @@ def write_cache_audit(audit: dict[str, Any], path: str | Path) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _append_auth_eval_authority_blockers(blockers: list[str], payload: dict[str, Any]) -> None:
+    evidence_grade = payload.get("evidence_grade")
+    expected_axis = AUTH_EVAL_AXIS_BY_GRADE.get(evidence_grade)
+    if expected_axis is None:
+        blockers.append("auth_eval_evidence_grade_not_contest_cpu_or_cuda")
+        return
+    score_axis = payload.get("score_axis")
+    if score_axis != expected_axis:
+        blockers.append(f"auth_eval_score_axis_not_{expected_axis}")
 
 
 def _archive_sha256(payload: dict[str, Any]) -> str | None:

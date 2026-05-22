@@ -39,7 +39,13 @@ def _cache(*, aggregate: str = "b" * 64, pair_count: int = 600) -> dict[str, obj
     }
 
 
-def _auth(*, aggregate: str = "b" * 64, n_samples: int = 600) -> dict[str, object]:
+def _auth(
+    *,
+    aggregate: str = "b" * 64,
+    n_samples: int = 600,
+    evidence_grade: str = "contest-CPU",
+    score_axis: str = "contest_cpu",
+) -> dict[str, object]:
     archive_size = 178_517
     seg = 0.00056029
     pose = 0.00002943
@@ -55,8 +61,8 @@ def _auth(*, aggregate: str = "b" * 64, n_samples: int = 600) -> dict[str, objec
         "archive_size_bytes": archive_size,
         "score_rate_contribution": 25.0 * archive_size / ORIGINAL_VIDEO_BYTES,
         "n_samples": n_samples,
-        "evidence_grade": "contest-CPU",
-        "score_axis": "contest_cpu",
+        "evidence_grade": evidence_grade,
+        "score_axis": score_axis,
         "provenance": {
             "archive_sha256": "a" * 64,
             "inflated_output_manifest": {
@@ -116,6 +122,8 @@ def test_cache_audit_passes_matching_identity() -> None:
     assert audit["score_claim"] is False
     assert audit["promotion_eligible"] is False
     assert "local_mlx_training_transfer_calibration" in audit["allowed_use"]
+    assert audit["auth_eval_contract"]["evidence_grade"] == "contest-CPU"
+    assert audit["auth_eval_contract"]["score_axis"] == "contest_cpu"
 
 
 def test_cache_audit_fails_inflated_aggregate_mismatch() -> None:
@@ -212,3 +220,29 @@ def test_cache_audit_accepts_independent_reference_hash_manifest() -> None:
 
     assert audit["passed"] is True
     assert audit["auth_eval"]["scorer_input_hash_reference_source"] == "reference_cache_manifest"
+
+
+def test_cache_audit_rejects_non_contest_auth_eval_axis() -> None:
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        _cache(),
+        _auth_with_scorer_input_hash(),
+    )
+    assert audit["passed"] is True
+
+    bad_auth = _auth_with_scorer_input_hash()
+    bad_auth["evidence_grade"] = "B"
+    bad_auth["score_axis"] = "diagnostic_cuda"
+    blocked = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), bad_auth)
+
+    assert blocked["passed"] is False
+    assert "auth_eval_evidence_grade_not_contest_cpu_or_cuda" in blocked["blockers"]
+
+
+def test_cache_audit_requires_auth_axis_matching_grade() -> None:
+    bad_auth = _auth_with_scorer_input_hash()
+    bad_auth["evidence_grade"] = "contest-CUDA"
+    bad_auth["score_axis"] = "contest_cpu"
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), bad_auth)
+
+    assert audit["passed"] is False
+    assert "auth_eval_score_axis_not_contest_cuda" in audit["blockers"]

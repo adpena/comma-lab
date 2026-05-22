@@ -281,8 +281,8 @@ def _jsonable(value: Any) -> Any:
 
 
 __all__ = [
-    "MLXResponseWindowSplitError",
     "WINDOW_SPLIT_SCHEMA",
+    "MLXResponseWindowSplitError",
     "load_distortion_components_from_response",
     "split_mlx_scorer_response_windows",
 ]

@@ -262,10 +262,10 @@ def build_mlx_scorer_response_payload(
             "batch_pairs_allowed_without_invariance_override": 1,
             "allowed_uses": [
                 "local_mlx_training_gradient_shaping",
-                "local_sweep_reranking_after_passing_transfer_calibration",
+                "local_sweep_reranking_after_transfer_and_score_calibration",
                 "candidate_generation_prior",
                 "signal_exposure",
-                "prepaid_dispatch_spend_filter",
+                "prepaid_dispatch_spend_filter_after_score_calibration",
             ],
             "forbidden_uses": [
                 "auth_eval",

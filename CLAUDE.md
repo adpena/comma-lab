@@ -1948,6 +1948,27 @@ This applies to:
    - Tag results `[contest-CPU]` distinctly ONLY when running on Linux x86_64. Apple Silicon CPU eval is `[macOS-CPU advisory only]`.
    - CPU eval on a small Vast.ai / Modal CPU instance takes 60-120 min for 600 samples (matching the contest GitHub Actions CPU runner). Budget accordingly.
 
+### MLX portable-local-substrate authority — NON-NEGOTIABLE
+
+MLX is a local substrate for fast candidate generation, scorer-response
+training data, portability engineering, and calibrated spend triage. It is not
+a contest scoring axis.
+
+- Tag MLX rows `[macOS-MLX research-signal]`.
+- Every MLX-derived row must carry explicit false authority:
+  `score_claim=false`, `promotion_eligible=false`,
+  `rank_or_kill_eligible=false`, `ready_for_exact_eval_dispatch=false`, and
+  `promotable=false`.
+- MLX scorer-response rows used by the LL planner must flow through
+  `tac.optimization.scorer_response_dataset`.
+- MLX spend triage requires both PyTorch/MLX parity evidence and an attached
+  `tac.local_acceleration.mlx_score_calibration` manifest. Decisions below the
+  calibration band are uncertain and must not trigger spend.
+- MLX may select local follow-up candidates and queue exact-eval candidates
+  only through the normal lane-claim/custody path. Exact CPU/CUDA auth eval on
+  contest-compliant hardware is still required before any score, frontier,
+  promotion, rank/kill, or submission claim.
+
 6. **For non-submission empirical work (intermediate candidates, ablations, sweep arms), use the cheapest faithful signal that matches the question.** CUDA is still the GPU-axis truth; macOS CPU and MPS can accelerate research-signal sweeps when tagged non-authoritatively. The dual-eval mandate applies specifically to ARCHIVES THAT WILL SHIP or are used to make medal-band/frontier claims.
 
 7. **Existing CUDA-only artifacts are NOT retroactively invalidated.** They remain `[contest-CUDA]` with their CUDA-axis truth value. The dual-eval mandate is forward-looking: from this rule's commit forward, every shippable archive gets both axes on 1:1 contest-compliant hardware.

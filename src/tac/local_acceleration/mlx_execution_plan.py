@@ -155,7 +155,7 @@ def build_mlx_scorer_response_execution_plan(
     if stability_manifest.get("passed") is not True:
         plan_warnings.append(
             "source_profile_failed_but_recommended_row_is_eligible; "
-            "using row-level selection only"
+            "using row-level selection only; not exact-eval spend authority"
         )
 
     return {

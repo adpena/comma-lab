@@ -205,7 +205,7 @@ def write_scorer_input_cache(
             "allowed_uses": [
                 "local_mlx_training",
                 "scorer_surrogate_calibration",
-                "prepaid_dispatch_spend_filter",
+                "prepaid_dispatch_spend_filter_after_score_calibration",
                 "cross_backend_tensor_parity",
             ],
             "forbidden_uses": [
@@ -457,7 +457,7 @@ def write_scorer_input_cache_from_video_file(
             "allowed_uses": [
                 "local_mlx_training",
                 "scorer_surrogate_calibration",
-                "prepaid_dispatch_spend_filter",
+                "prepaid_dispatch_spend_filter_after_score_calibration",
                 "cross_backend_tensor_parity",
             ],
             "forbidden_uses": [

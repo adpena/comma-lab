@@ -1,4 +1,4 @@
-# Current Focus - 2026-05-17 (L5 v2 + Rule #6 Rebaseline)
+# Current Focus - 2026-05-22 (MLX portable substrate + L5 v2 + Rule #6)
 
 ## Frontier
 
@@ -21,6 +21,26 @@
 - Public medal band remains the immediate score target:
   PR101/PR102/PR103 around `0.193`/`0.195`/`0.195`, axis-specific and
   external until exact replay custody proves otherwise.
+
+## 2026-05-22 MLX Portable-Local-Substrate State
+
+- MLX is now a calibrated local research/spend-triage substrate, not score
+  authority. Current allowed axis tag is `[macOS-MLX research-signal]`; exact
+  CPU/CUDA auth eval remains mandatory before any score, rank/kill, promotion,
+  or submission claim.
+- MLX score calibration is strict-pass for the current public-frontier set:
+  `6/6` pairwise decisions certified, `0/6` uncertain, and minimum MLX gap for
+  spend triage `8.801772121230789e-05`.
+- The decoder-q surface-guided batch is blocked for exact-eval dispatch:
+  candidates `a2f90a216aac4184`, `a9b04920db67ec71`, and
+  `8f3a33e49b9b7906` all regressed on `[macOS-CPU advisory decoder-q]`.
+- Current first MLX follow-up is sign calibration:
+  `ll_decoder_q_surface_sign_calibration_repair`. Use the advisory-negative
+  batch as labeled response data; do not send the three surface-guided
+  candidates to exact CUDA.
+- Next local-substrate portability work is full-weight PyTorch/NumPy/MLX trace
+  parity plus CPU-stable response harvest expansion. MLX GPU/batch behavior
+  remains research-only until batch invariance and transfer checks pass.
 
 ## Active Strategic Rebaseline
 

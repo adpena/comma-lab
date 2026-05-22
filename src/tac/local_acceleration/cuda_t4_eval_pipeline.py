@@ -133,9 +133,9 @@ def build_cuda_t4_eval_invocation(
         f"4. Set OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 + "
         f"OPERATOR_AUTHORIZE_SESSION_BUDGET_USD={max(expected_cost_usd * 2, 1.0):.2f} per Catalog #199",
         f"5. Operator-explicitly invoke: {operator_command}",
-        f"6. Harvest via tools/parallel_harvest_actuator.py --call-id <fc-...> "
-        f"(canonical Modal call_id ledger per Catalog #245)",
-        f"7. Verify [contest-CUDA] score lands in canonical Provenance per Catalog #287/#323",
+        "6. Harvest via tools/parallel_harvest_actuator.py --call-id <fc-...> "
+        "(canonical Modal call_id ledger per Catalog #245)",
+        "7. Verify [contest-CUDA] score lands in canonical Provenance per Catalog #287/#323",
     ]
 
     return {

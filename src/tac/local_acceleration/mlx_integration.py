@@ -82,8 +82,8 @@ from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 __all__ = [
     "MLX_AVAILABLE",
     "MLXTrainingResult",
-    "is_mlx_available",
     "build_mlx_training_result",
+    "is_mlx_available",
     "mlx_smoke_test",
 ]
 

@@ -272,10 +272,11 @@ baseline on the same evidence axis and runtime contract.
   parity. Keep `full_frame_inflate_output_parity_missing` until source and
   candidate `inflate.sh archive_dir output_dir file_list` outputs are compared
   byte-for-byte, or until both packets have exact same-runtime eval artifacts.
-- `[contest-CPU]`, `[contest-CUDA]`, `[macOS-CPU advisory]`, MPS, and proxy
-  signals are separate evidence spaces. The public HNeRV leaderboard CPU axis
-  can be materially better than the CUDA/T4 axis. Never convert CPU to CUDA or
-  CUDA to CPU for promotion, ranking, retirement, or submission readiness.
+- `[contest-CPU]`, `[contest-CUDA]`, `[macOS-CPU advisory]`,
+  `[macOS-MLX research-signal]`, MPS, and proxy signals are separate evidence
+  spaces. The public HNeRV leaderboard CPU axis can be materially better than
+  the CUDA/T4 axis. Never convert CPU to CUDA, CUDA to CPU, MLX to either
+  contest axis, or local advisory output to promotion/rank/kill authority.
 - There is no universal CPU-better or CUDA-better ordering. Treat the
   CPU/CUDA gap as a per-submission, per-runtime, per-inflate-device, and
   per-scorer-device property. A valid mechanism claim must record archive SHA,
@@ -407,6 +408,13 @@ that forces `score_claim=false`, `promotion_eligible=false`,
 `ready_for_exact_eval_dispatch=false`. Paid dispatch queues must require an
 explicit contest target marker such as `target_modes=["contest_exact_eval"]`;
 missing target metadata fails closed.
+
+MLX scorer-response rows are a special local-substrate case: they must flow
+through `tac.optimization.scorer_response_dataset` and, when used for spend
+triage, `tac.local_acceleration.mlx_score_calibration`. A calibrated
+`[macOS-MLX research-signal]` row may select local follow-up or exact-eval
+spend candidates only after parity and score-calibration gates pass; it still
+cannot claim a score, promote, rank/kill, or skip exact CPU/CUDA auth eval.
 
 If a lane-specific provider script starts accumulating package lists, path
 mount rules, import probes, cost tables, timeout policy, or runtime closure
