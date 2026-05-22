@@ -76,6 +76,7 @@ def _auth_payload(**kwargs: object) -> dict[str, object]:
         "evidence_semantics": "public_leaderboard_cpu_reproduction",
         "score_claim_valid": True,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "cpu_leaderboard_reproduction_eligible": True,
         "provenance": {

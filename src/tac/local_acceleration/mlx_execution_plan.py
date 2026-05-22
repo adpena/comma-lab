@@ -25,6 +25,7 @@ _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
     "score_claim_valid",
     "promotion_eligible",
+    "promotable",
     "ready_for_exact_eval_dispatch",
     "rank_or_kill_eligible",
 )
@@ -174,9 +175,9 @@ def build_mlx_scorer_response_execution_plan(
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
-        "promotable": False,
         "candidate_generation_only": True,
         "requires_exact_eval_before_promotion": True,
         "allowed_uses": [

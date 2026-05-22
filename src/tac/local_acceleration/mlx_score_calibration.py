@@ -26,6 +26,7 @@ AUTHORITY_FALSE_FIELDS = (
     "score_claim",
     "score_claim_valid",
     "promotion_eligible",
+    "promotable",
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
 )
@@ -79,6 +80,7 @@ def build_mlx_score_calibration_manifest(
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,
@@ -104,17 +106,29 @@ def _normalize_row(row: dict[str, Any], *, repo_root: Path, index: int) -> dict[
     _require_mlx_response_false_authority(mlx_response, mlx_response_path)
 
     mlx_archive_size_bytes = int(mlx_response.get("archive_size_bytes"))
+    mlx_archive_sha256 = _required_sha256(
+        mlx_response.get("archive_sha256"),
+        f"{mlx_response_path}:archive_sha256",
+    )
+    mlx_inflated_outputs_aggregate_sha256 = _required_sha256(
+        mlx_response.get("inflated_outputs_aggregate_sha256"),
+        f"{mlx_response_path}:inflated_outputs_aggregate_sha256",
+    )
     cpu_score = _resolve_axis_score(
         row,
         "cpu",
         repo_root,
         expected_archive_bytes=mlx_archive_size_bytes,
+        expected_archive_sha256=mlx_archive_sha256,
+        expected_inflated_outputs_aggregate_sha256=mlx_inflated_outputs_aggregate_sha256,
     )
     cuda_score = _resolve_axis_score(
         row,
         "cuda",
         repo_root,
         expected_archive_bytes=mlx_archive_size_bytes,
+        expected_archive_sha256=mlx_archive_sha256,
+        expected_inflated_outputs_aggregate_sha256=mlx_inflated_outputs_aggregate_sha256,
     )
     local_cpu_score = _optional_float(row.get("local_cpu_score"))
     mlx_score = _finite_float(mlx_response.get("canonical_score"), "mlx_response.canonical_score")
@@ -123,10 +137,8 @@ def _normalize_row(row: dict[str, Any], *, repo_root: Path, index: int) -> dict[
         "index": index,
         "label": label,
         "pr_number": row.get("pr_number"),
-        "archive_sha256": mlx_response.get("archive_sha256"),
-        "inflated_outputs_aggregate_sha256": mlx_response.get(
-            "inflated_outputs_aggregate_sha256"
-        ),
+        "archive_sha256": mlx_archive_sha256,
+        "inflated_outputs_aggregate_sha256": mlx_inflated_outputs_aggregate_sha256,
         "archive_size_bytes": mlx_archive_size_bytes,
         "n_samples": int(mlx_response.get("n_samples")),
         "batch_pairs": int(mlx_response.get("batch_pairs")),
@@ -176,6 +188,8 @@ def _resolve_axis_score(
     repo_root: Path,
     *,
     expected_archive_bytes: int,
+    expected_archive_sha256: str,
+    expected_inflated_outputs_aggregate_sha256: str,
 ) -> float | None:
     direct_key = f"{axis}_score"
     path_key = f"{axis}_auth_eval_path"
@@ -198,6 +212,8 @@ def _resolve_axis_score(
         path,
         axis,
         expected_archive_bytes=expected_archive_bytes,
+        expected_archive_sha256=expected_archive_sha256,
+        expected_inflated_outputs_aggregate_sha256=expected_inflated_outputs_aggregate_sha256,
     )
     if direct_score is not None and not math.isclose(
         direct_score,
@@ -218,6 +234,8 @@ def _score_from_auth_eval_payload(
     axis: str,
     *,
     expected_archive_bytes: int,
+    expected_archive_sha256: str,
+    expected_inflated_outputs_aggregate_sha256: str,
 ) -> float:
     expected_score_axis = {
         "cpu": "contest_cpu",
@@ -236,6 +254,19 @@ def _score_from_auth_eval_payload(
         blockers.append(
             f"{axis}_auth_eval_score_axis_mismatch:"
             f"expected={expected_score_axis}:actual={payload.get('score_axis')}"
+        )
+    actual_archive_sha256 = _auth_archive_sha256(payload)
+    if actual_archive_sha256 != expected_archive_sha256:
+        blockers.append(
+            f"{axis}_auth_eval_archive_sha256_mismatch:"
+            f"expected={expected_archive_sha256}:actual={actual_archive_sha256}"
+        )
+    actual_inflated_sha256 = _auth_inflated_outputs_aggregate_sha256(payload)
+    if actual_inflated_sha256 != expected_inflated_outputs_aggregate_sha256:
+        blockers.append(
+            f"{axis}_auth_eval_inflated_outputs_aggregate_sha256_mismatch:"
+            f"expected={expected_inflated_outputs_aggregate_sha256}:"
+            f"actual={actual_inflated_sha256}"
         )
     evidence_grade = payload.get("evidence_grade")
     expected_from_grade = CONTEST_AUTH_AXIS_BY_EVIDENCE_GRADE.get(str(evidence_grade))
@@ -258,11 +289,49 @@ def _score_from_auth_eval_payload(
 def _require_mlx_response_false_authority(payload: dict[str, Any], path: Path) -> None:
     if payload.get("schema_version") != "mlx_scorer_response.v1":
         raise ValueError(f"not an mlx_scorer_response.v1 payload: {path}")
-    if payload.get("evidence_grade") not in {None, EVIDENCE_GRADE_MLX}:
+    if payload.get("evidence_grade") != EVIDENCE_GRADE_MLX:
         raise ValueError(f"MLX response evidence grade is not local MLX: {path}")
+    if payload.get("evidence_tag") != EVIDENCE_TAG_MLX:
+        raise ValueError(f"MLX response evidence tag is not local MLX: {path}")
+    if payload.get("score_axis") != EVIDENCE_TAG_MLX:
+        raise ValueError(f"MLX response score axis is not local MLX: {path}")
+    if payload.get("candidate_generation_only") is not True:
+        raise ValueError(f"MLX response {path} is not candidate_generation_only")
+    if payload.get("requires_exact_eval_before_promotion") is not True:
+        raise ValueError(
+            f"MLX response {path} does not require exact eval before promotion"
+        )
     for field in AUTHORITY_FALSE_FIELDS:
         if payload.get(field) is not False:
             raise ValueError(f"MLX response {path} has non-false {field}")
+
+
+def _auth_archive_sha256(payload: dict[str, Any]) -> str | None:
+    value = _optional_str(payload.get("archive_sha256"))
+    if value:
+        return value
+    provenance = payload.get("provenance")
+    if isinstance(provenance, dict):
+        return _optional_str(provenance.get("archive_sha256"))
+    return None
+
+
+def _auth_inflated_outputs_aggregate_sha256(payload: dict[str, Any]) -> str | None:
+    value = _optional_str(payload.get("inflated_outputs_aggregate_sha256"))
+    if value:
+        return value
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        return None
+    manifest = provenance.get("inflated_output_manifest")
+    if isinstance(manifest, dict):
+        payload_obj = manifest.get("payload")
+        if isinstance(payload_obj, dict):
+            nested = _optional_str(payload_obj.get("aggregate_sha256"))
+            if nested:
+                return nested
+        return _optional_str(manifest.get("aggregate_sha256"))
+    return None
 
 
 def _attach_ranks(rows: list[dict[str, Any]], score_key: str, rank_key: str) -> None:
@@ -301,6 +370,7 @@ def _build_summary(rows: list[dict[str, Any]], pairwise: list[dict[str, Any]]) -
     summary: dict[str, Any] = {
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -343,6 +413,7 @@ def _build_decision_policy(
     return {
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "decision_safety_factor": safety_factor,
@@ -428,6 +499,19 @@ def _positive_float(value: Any, label: str) -> float:
     if out <= 0:
         raise ValueError(f"{label} must be positive, got {value!r}")
     return out
+
+
+def _optional_str(value: Any) -> str | None:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _required_sha256(value: Any, label: str) -> str:
+    text = _optional_str(value)
+    if text is None or len(text) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in text):
+        raise ValueError(f"{label} must be a SHA-256 hex string")
+    return text.lower()
 
 
 __all__ = [

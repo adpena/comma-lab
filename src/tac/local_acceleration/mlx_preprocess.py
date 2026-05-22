@@ -154,6 +154,7 @@ def preprocess_scorer_inputs_from_pairs(
         "evidence_tag": EVIDENCE_TAG_MLX,
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -294,6 +295,7 @@ def write_scorer_input_cache_hash_manifest_from_raw_file(
         "evidence_tag": EVIDENCE_TAG_MLX,
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "device_contract": {
@@ -451,6 +453,7 @@ def write_scorer_input_cache_from_video_file(
         "evidence_tag": EVIDENCE_TAG_MLX,
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "device_contract": {

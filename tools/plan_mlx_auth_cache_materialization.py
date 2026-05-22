@@ -8,7 +8,15 @@ import argparse
 import json
 from pathlib import Path
 
-from tac.local_acceleration.mlx_auth_cache_materialization import (
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.local_acceleration.mlx_auth_cache_materialization import (  # noqa: E402
     build_mlx_auth_cache_materialization_plan,
     load_json_object,
     write_materialization_plan,

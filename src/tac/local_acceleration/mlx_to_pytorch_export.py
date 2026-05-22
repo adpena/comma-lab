@@ -208,6 +208,7 @@ def build_export_manifest(
         "training_evidence_tag": EVIDENCE_TAG_MLX,
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "ready_for_exact_eval_dispatch": False,
         "blockers": [
             "macos_mlx_research_signal_training_axis_only",

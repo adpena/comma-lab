@@ -403,6 +403,7 @@ def _write_test_cache_with_pair_count(path: Path, *, pair_count: int) -> Path:
             "pair_indices_shape": list(pair_indices.shape),
             "score_claim": False,
             "promotion_eligible": False,
+            "promotable": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },

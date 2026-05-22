@@ -18,6 +18,7 @@ AUTHORITY_FALSE_FIELDS = (
     "score_claim",
     "score_claim_valid",
     "promotion_eligible",
+    "promotable",
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
 )
@@ -81,6 +82,7 @@ def build_mlx_auth_cache_materialization_plan(
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,

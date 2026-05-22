@@ -111,6 +111,7 @@ def split_mlx_scorer_response_windows(
         "source_schema_version": response_payload.get("schema_version"),
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "candidate_generation_only": True,
@@ -208,6 +209,7 @@ def _validate_parent_response(payload: dict[str, Any]) -> None:
         "score_claim",
         "score_claim_valid",
         "promotion_eligible",
+        "promotable",
         "rank_or_kill_eligible",
         "ready_for_exact_eval_dispatch",
     ):

@@ -11,8 +11,8 @@ import numpy as np
 from tac.auth_eval_schema import contest_formula_score
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_response_windows import (
-    MLXResponseWindowSplitError,
     WINDOW_SPLIT_SCHEMA,
+    MLXResponseWindowSplitError,
     split_mlx_scorer_response_windows,
 )
 
@@ -155,6 +155,7 @@ def _response_payload() -> dict:
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "candidate_generation_only": True,

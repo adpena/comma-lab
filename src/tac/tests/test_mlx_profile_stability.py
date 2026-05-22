@@ -22,6 +22,7 @@ def _profile(*, score_delta: float = 0.0, evidence_grade: str | None = EVIDENCE_
         "schema_version": "mlx_scorer_response_profile.v1",
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "reference_cache_dir": "/tmp/ref",
         "candidate_cache_dir": "/tmp/cand",

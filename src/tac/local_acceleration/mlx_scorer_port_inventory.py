@@ -369,6 +369,7 @@ def build_upstream_scorer_port_inventory(
         "evidence_tag": EVIDENCE_TAG_MLX,
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "repo_root": str(root),

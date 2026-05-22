@@ -23,6 +23,7 @@ def _profile_with_gpu_rejected() -> dict:
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,

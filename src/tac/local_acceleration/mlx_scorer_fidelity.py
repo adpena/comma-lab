@@ -138,6 +138,7 @@ def build_mlx_scorer_training_signal_fidelity_manifest(
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,
@@ -268,6 +269,8 @@ def _append_axis_and_authority_blockers(blockers: list[str], mlx: dict[str, Any]
         blockers.append("mlx_payload_attempts_score_claim")
     if mlx.get("promotion_eligible") is True:
         blockers.append("mlx_payload_attempts_promotion_eligibility")
+    if mlx.get("promotable") is True:
+        blockers.append("mlx_payload_attempts_promotable")
     if mlx.get("rank_or_kill_eligible") is True:
         blockers.append("mlx_payload_attempts_rank_or_kill_eligibility")
     evidence_grade = mlx.get("evidence_grade")

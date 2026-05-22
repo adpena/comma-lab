@@ -172,6 +172,61 @@ def test_mlx_score_calibration_rejects_auth_payload_archive_size_mismatch(
         raise AssertionError("mismatched auth archive size was accepted")
 
 
+def test_mlx_score_calibration_rejects_same_size_wrong_archive_sha(
+    tmp_path: Path,
+) -> None:
+    row = _row(tmp_path, "bad", mlx_score=0.2, cpu_score=0.2, cuda_score=0.3)
+    cpu_path = tmp_path / row["cpu_auth_eval_path"]
+    payload = json.loads(cpu_path.read_text(encoding="utf-8"))
+    payload["archive_sha256"] = "f" * 64
+    provenance = payload["provenance"]
+    provenance["archive_sha256"] = "f" * 64
+    cpu_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    try:
+        build_mlx_score_calibration_manifest([row], repo_root=tmp_path)
+    except ValueError as exc:
+        assert "cpu_auth_eval_archive_sha256_mismatch" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("same-size wrong-archive auth payload was accepted")
+
+
+def test_mlx_score_calibration_rejects_same_archive_wrong_inflated_surface(
+    tmp_path: Path,
+) -> None:
+    row = _row(tmp_path, "bad", mlx_score=0.2, cpu_score=0.2, cuda_score=0.3)
+    cpu_path = tmp_path / row["cpu_auth_eval_path"]
+    payload = json.loads(cpu_path.read_text(encoding="utf-8"))
+    payload["inflated_outputs_aggregate_sha256"] = "c" * 64
+    provenance = payload["provenance"]
+    provenance["inflated_output_manifest"]["payload"]["aggregate_sha256"] = "c" * 64
+    cpu_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    try:
+        build_mlx_score_calibration_manifest([row], repo_root=tmp_path)
+    except ValueError as exc:
+        assert "cpu_auth_eval_inflated_outputs_aggregate_sha256_mismatch" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("wrong inflated-surface auth payload was accepted")
+
+
+def test_mlx_score_calibration_rejects_incomplete_mlx_authority_tags(
+    tmp_path: Path,
+) -> None:
+    row = _row(tmp_path, "bad", mlx_score=0.2, cpu_score=0.2, cuda_score=0.3)
+    response_path = tmp_path / row["mlx_response_path"]
+    payload = json.loads(response_path.read_text(encoding="utf-8"))
+    payload.pop("score_axis")
+    response_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    try:
+        build_mlx_score_calibration_manifest([row], repo_root=tmp_path)
+    except ValueError as exc:
+        assert "score axis is not local MLX" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("MLX response with incomplete authority tags was accepted")
+
+
 def test_mlx_score_calibration_cli(tmp_path: Path) -> None:
     rows = [
         _row(tmp_path, "a", mlx_score=0.2, cpu_score=0.201, cuda_score=0.201),
@@ -224,12 +279,15 @@ def _row(
                 "schema_version": "mlx_scorer_response.v1",
                 "evidence_grade": EVIDENCE_GRADE_MLX,
                 "evidence_tag": EVIDENCE_TAG_MLX,
+                "score_axis": EVIDENCE_TAG_MLX,
                 "score_claim": False,
                 "score_claim_valid": False,
                 "promotion_eligible": False,
+                "promotable": False,
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
                 "candidate_generation_only": True,
+                "requires_exact_eval_before_promotion": True,
                 "canonical_score": mlx_score,
                 "avg_posenet_dist": 1.0e-4,
                 "avg_segnet_dist": 2.0e-4,
@@ -273,12 +331,15 @@ def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
         "avg_segnet_dist": seg,
         "avg_posenet_dist": pose,
         "archive_size_bytes": archive_size,
+        "archive_sha256": "a" * 64,
+        "inflated_outputs_aggregate_sha256": "b" * 64,
         "score_rate_contribution": rate_score,
         "rate_unscaled": archive_size / ORIGINAL_VIDEO_BYTES,
         "n_samples": 600,
         "score_claim": True,
         "score_claim_valid": True,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
     }
     if axis == "cpu":
@@ -293,6 +354,10 @@ def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
                     "device": "cpu",
                     "platform_system": "Linux",
                     "platform_machine": "x86_64",
+                    "archive_sha256": "a" * 64,
+                    "inflated_output_manifest": {
+                        "payload": {"aggregate_sha256": "b" * 64}
+                    },
                 },
             }
         )
@@ -307,6 +372,10 @@ def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
                 "provenance": {
                     "device": "cuda",
                     "gpu_t4_match": True,
+                    "archive_sha256": "a" * 64,
+                    "inflated_output_manifest": {
+                        "payload": {"aggregate_sha256": "b" * 64}
+                    },
                 },
             }
         )

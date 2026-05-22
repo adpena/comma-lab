@@ -17,6 +17,7 @@ AUTHORITY_FALSE_FIELDS = (
     "score_claim",
     "score_claim_valid",
     "promotion_eligible",
+    "promotable",
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
 )
@@ -103,6 +104,7 @@ def compare_mlx_segnet_layer_traces(
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "candidate_generation_only": True,

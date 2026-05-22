@@ -32,6 +32,7 @@ def test_materialization_plan_ready_for_passing_audit() -> None:
     assert plan["promotion_eligible"] is False
     assert plan["rank_or_kill_eligible"] is False
     assert plan["ready_for_exact_eval_dispatch"] is False
+    assert plan["promotable"] is False
     assert plan["evidence_grade"] == EVIDENCE_GRADE_MLX
     assert plan["score_axis"] == EVIDENCE_TAG_MLX
     assert plan["next_materialization_action"] == "use_existing_cache_for_local_mlx_transfer_calibration"
@@ -172,6 +173,7 @@ def _audit(
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "cache": {

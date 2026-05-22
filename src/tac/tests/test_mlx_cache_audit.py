@@ -36,6 +36,7 @@ def _cache(*, aggregate: str = "b" * 64, pair_count: int = 600) -> dict[str, obj
         "array_sha256": dict(ARRAY_HASHES),
         "score_claim": False,
         "promotion_eligible": False,
+        "promotable": False,
     }
 
 
@@ -70,6 +71,7 @@ def _auth(
         "score_claim": True,
         "score_claim_valid": True,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "cpu_leaderboard_reproduction_eligible": True,
         "provenance": {

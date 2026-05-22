@@ -104,6 +104,7 @@ def build_profile_stability_manifest(
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
+        "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,
@@ -132,6 +133,8 @@ def _append_profile_authority_blockers(blockers: list[str], profile: dict[str, A
         blockers.append("profile_attempts_score_claim")
     if profile.get("promotion_eligible") is True:
         blockers.append("profile_attempts_promotion_eligibility")
+    if profile.get("promotable") is True:
+        blockers.append("profile_attempts_promotable")
     if profile.get("rank_or_kill_eligible") is True:
         blockers.append("profile_attempts_rank_or_kill_eligibility")
     evidence_grade = profile.get("evidence_grade")
