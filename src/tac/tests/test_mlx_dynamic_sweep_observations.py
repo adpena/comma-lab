@@ -169,6 +169,55 @@ def test_summary_preserves_exact_axis_evidence_labels(tmp_path: Path) -> None:
     assert summary["evidence_tags"] == ["[contest-CPU]"]
 
 
+def test_exact_axis_observation_normalizes_display_axis_and_proxy_defaults(
+    tmp_path: Path,
+) -> None:
+    auth_eval = tmp_path / "contest_auth_eval.json"
+    auth_eval.write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cpu",
+                "evidence_grade": "contest-CPU",
+                "score_claim_valid": True,
+                "canonical_score": 0.123456,
+                "provenance": {
+                    "archive_sha256": _sha("a"),
+                    "inflated_output_manifest": {
+                        "payload": {
+                            "aggregate_sha256": _sha("c"),
+                        },
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    row = build_observation_row(
+        candidate_id="drop_rank013_pair0327",
+        sweep_config_id="contest_cpu_exact_candidate",
+        optimization_pass_id="exact_cpu_calibration",
+        family="decoder_q_selective_dqs1",
+        observed_axis="contest-CPU",
+        evidence_tag=EVIDENCE_TAG_MLX,
+        observed_score_or_delta=0.123456,
+        archive_sha256=_sha("a"),
+        runtime_sha256=_sha("b"),
+        raw_output_or_cache_sha256=_sha("c"),
+        component_deltas={
+            "segnet_delta": 0.000001,
+            "posenet_delta": 0.0,
+            "rate_delta": -0.0000006,
+        },
+        source_artifact_path=auth_eval,
+    )
+
+    assert row["observed_axis"] == "contest_cpu"
+    assert row["evidence_grade"] == "contest-CPU"
+    assert row["evidence_tag"] == "[contest-CPU]"
+    assert row["score_claim"] is False
+
+
 def test_exact_axis_observation_requires_strict_auth_source(tmp_path: Path) -> None:
     exact = _base_row()
     exact["observed_axis"] = "contest_cpu"
@@ -318,6 +367,78 @@ def test_cli_appends_and_prints_json_summary(tmp_path: Path) -> None:
     )
     allowed_summary = json.loads(allowed.stdout)
     assert allowed_summary["row_count"] == 2
+
+
+def test_cli_normalizes_exact_axis_defaults(tmp_path: Path) -> None:
+    output = tmp_path / "observations.jsonl"
+    auth_eval = tmp_path / "contest_auth_eval.json"
+    auth_eval.write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cpu",
+                "evidence_grade": "contest-CPU",
+                "score_claim_valid": True,
+                "canonical_score": 0.123456,
+                "provenance": {
+                    "archive_sha256": _sha("a"),
+                    "inflated_output_manifest": {
+                        "payload": {
+                            "aggregate_sha256": _sha("c"),
+                        },
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "tools" / "append_mlx_dynamic_sweep_observation.py"),
+        "--jsonl",
+        str(output),
+        "--candidate-id",
+        "drop_rank013_pair0327",
+        "--sweep-config-id",
+        "contest_cpu_exact_candidate",
+        "--optimization-pass-id",
+        "exact_cpu_calibration",
+        "--family",
+        "decoder_q_selective_dqs1",
+        "--observed-axis",
+        "contest-CPU",
+        "--observed-score-or-delta",
+        "0.123456",
+        "--archive-sha256",
+        _sha("a"),
+        "--runtime-sha256",
+        _sha("b"),
+        "--raw-output-or-cache-sha256",
+        _sha("c"),
+        "--segnet-delta",
+        "0.000001",
+        "--posenet-delta",
+        "0.0",
+        "--rate-delta",
+        "-0.0000006",
+        "--source-artifact",
+        str(auth_eval),
+        "--print-summary",
+    ]
+    completed = subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    summary = json.loads(completed.stdout)
+    stored = load_observation_rows(output)[0]
+    assert summary["evidence_grade"] == "contest-CPU"
+    assert summary["evidence_tag"] == "[contest-CPU]"
+    assert stored["observed_axis"] == "contest_cpu"
+    assert stored["score_claim"] is False
 
 
 def _row_to_builder_kwargs(row: dict) -> dict:
