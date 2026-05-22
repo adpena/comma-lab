@@ -63,6 +63,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--mlx-torch-parity-sweep",
+        type=Path,
+        help=(
+            "Optional tools/audit_mlx_scorer_torch_parity_sweep.py JSON output. "
+            "MLX scorer-response rows are blocked from LL planning unless this "
+            "gate is attached or an explicit research-only override is set."
+        ),
+    )
+    parser.add_argument(
         "--mlx-profile-stability",
         type=Path,
         help=(
@@ -90,6 +99,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "execution plan. The plan remains non-authoritative."
         ),
     )
+    parser.add_argument(
+        "--allow-mlx-parity-research-signal-override",
+        action="store_true",
+        help=(
+            "Allow MLX rows into the LL planner when the attached parity sweep "
+            "is not a strict pass. This remains non-promotional and cannot "
+            "rank, claim, or dispatch exact eval."
+        ),
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
     return parser.parse_args(argv)
@@ -109,6 +127,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.magic_codec_seed_boundary_smoke is None
             else json.loads(args.magic_codec_seed_boundary_smoke.read_text(encoding="utf-8"))
         )
+        mlx_torch_parity_sweep = (
+            None
+            if args.mlx_torch_parity_sweep is None
+            else json.loads(args.mlx_torch_parity_sweep.read_text(encoding="utf-8"))
+        )
         plan = build_next_probe_plan(
             dataset,
             null_byte_matrix=null_byte_matrix,
@@ -117,6 +140,10 @@ def main(argv: list[str] | None = None) -> int:
                 args.allow_legacy_null_byte_matrix_missing_authority
             ),
             magic_codec_seed_boundary_smoke=magic_codec_seed_boundary_smoke,
+            mlx_torch_parity_sweep=mlx_torch_parity_sweep,
+            allow_mlx_parity_research_signal_override=(
+                args.allow_mlx_parity_research_signal_override
+            ),
         )
         if args.mlx_profile_stability is not None:
             mlx_profile_stability = json.loads(args.mlx_profile_stability.read_text(encoding="utf-8"))

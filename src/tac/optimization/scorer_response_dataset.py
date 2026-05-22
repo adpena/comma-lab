@@ -28,6 +28,7 @@ ROW_SCHEMA = "scorer_response_row.v1"
 NULL_BYTE_PRIORITY_SCHEMA = "ll_null_byte_priority_weights.v1"
 CONSUMER_ROUTING_SCHEMA = "scorer_response_dataset_consumer_routing.v1"
 MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
+MLX_TORCH_PARITY_SWEEP_SCHEMA = "mlx_scorer_torch_parity_sweep.v1"
 
 
 _FALSE_AUTHORITY_FIELDS = (
@@ -1215,6 +1216,163 @@ def build_magic_codec_seed_boundary(
     }
 
 
+def _summary_distribution_max(summary: dict[str, Any], key: str) -> float | None:
+    value = summary.get(key)
+    if isinstance(value, dict):
+        return _as_float(value.get("max"))
+    return _as_float(value)
+
+
+def _parity_sweep_failed_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    failed: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict) or row.get("passed") is True:
+            continue
+        failed.append(
+            {
+                "index": row.get("index"),
+                "pair_window": row.get("pair_window"),
+                "verdict": row.get("verdict"),
+                "blockers": list(row.get("blockers") or []),
+                "deltas": row.get("deltas") if isinstance(row.get("deltas"), dict) else {},
+            }
+        )
+    return failed[:8]
+
+
+def build_mlx_torch_parity_sweep_gate(
+    parity_sweep: dict[str, Any],
+    *,
+    allow_mlx_parity_research_signal_override: bool = False,
+) -> dict[str, Any]:
+    """Normalize PyTorch-vs-MLX parity evidence for LL planner gating.
+
+    The gate can allow MLX rows into local surrogate planning, but it never gives
+    those rows score, rank, or promotion authority.
+    """
+
+    if not isinstance(parity_sweep, dict):
+        raise ScorerResponseDatasetError("MLX parity sweep must be a JSON object")
+    source_schema = parity_sweep.get("schema_version") or parity_sweep.get("schema")
+    if source_schema != MLX_TORCH_PARITY_SWEEP_SCHEMA:
+        raise ScorerResponseDatasetError("MLX parity sweep schema mismatch")
+    _require_explicit_false_authority(
+        parity_sweep,
+        label="MLX parity sweep",
+        fields=(
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "ready_for_exact_eval_dispatch",
+            "rank_or_kill_eligible",
+        ),
+    )
+    if parity_sweep.get("candidate_generation_only") is not True:
+        raise ScorerResponseDatasetError(
+            "MLX parity sweep candidate_generation_only must be true"
+        )
+    if parity_sweep.get("requires_exact_eval_before_promotion") is not True:
+        raise ScorerResponseDatasetError(
+            "MLX parity sweep requires_exact_eval_before_promotion must be true"
+        )
+    if parity_sweep.get("evidence_grade") != EVIDENCE_GRADE_MLX:
+        raise ScorerResponseDatasetError("MLX parity sweep evidence_grade mismatch")
+    if parity_sweep.get("evidence_tag") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError("MLX parity sweep evidence_tag mismatch")
+    if parity_sweep.get("score_axis") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError("MLX parity sweep score_axis mismatch")
+    rows = parity_sweep.get("rows")
+    if not isinstance(rows, list):
+        raise ScorerResponseDatasetError("MLX parity sweep rows must be a list")
+
+    summary = parity_sweep.get("summary") if isinstance(parity_sweep.get("summary"), dict) else {}
+    failed_rows = _parity_sweep_failed_rows(rows)
+    source_passed = parity_sweep.get("passed") is True
+    source_blockers = list(parity_sweep.get("blockers") or [])
+    summary_failed_windows = _as_int(summary.get("failed_windows"))
+    strict_pass = (
+        source_passed
+        and not source_blockers
+        and not failed_rows
+        and summary_failed_windows in (None, 0)
+    )
+    if strict_pass:
+        status = "strict_pass"
+        mlx_rows_allowed = True
+    elif allow_mlx_parity_research_signal_override:
+        status = "research_signal_override"
+        mlx_rows_allowed = True
+    else:
+        status = "blocked"
+        mlx_rows_allowed = False
+
+    blockers = list(source_blockers)
+    if failed_rows:
+        blockers.append("mlx_torch_parity_sweep_has_failed_rows")
+    if summary_failed_windows not in (None, 0):
+        blockers.append("mlx_torch_parity_sweep_summary_failed_windows_nonzero")
+    if not strict_pass:
+        blockers.insert(0, "mlx_torch_parity_sweep_not_strict_pass")
+    return {
+        "schema": "ll_mlx_torch_parity_sweep_gate.v1",
+        "producer": TOOL,
+        "source_schema": source_schema,
+        "source_verdict": parity_sweep.get("verdict"),
+        "source_passed": source_passed,
+        "status": status,
+        "mlx_rows_allowed_for_planner": mlx_rows_allowed,
+        "research_signal_override": bool(allow_mlx_parity_research_signal_override),
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "device_type": parity_sweep.get("device_type"),
+        "window_count": _as_int(parity_sweep.get("window_count")) or len(rows),
+        "covered_pair_window": parity_sweep.get("covered_pair_window"),
+        "summary": {
+            "passed_windows": _as_int(summary.get("passed_windows")),
+            "failed_windows": _as_int(summary.get("failed_windows")),
+            "segnet_argmax_diff_pixels_max": _summary_distribution_max(
+                summary,
+                "segnet_argmax_diff_pixels",
+            ),
+            "segnet_argmax_diff_fraction_max": _summary_distribution_max(
+                summary,
+                "segnet_argmax_diff_fraction",
+            ),
+            "segnet_logit_abs_max": _summary_distribution_max(
+                summary,
+                "segnet_logit_abs_max",
+            ),
+            "posenet_output_abs_max": _summary_distribution_max(
+                summary,
+                "posenet_output_abs_max",
+            ),
+            "posenet_component_abs_max": _summary_distribution_max(
+                summary,
+                "posenet_component_abs_max",
+            ),
+            "segnet_argmax_mismatch_pixels_total": _as_int(
+                summary.get("segnet_argmax_mismatch_pixels_total")
+            ),
+        },
+        "blockers": blockers,
+        "failed_rows": failed_rows,
+        "allowed_use": (
+            "local_ll_surrogate_planner_input"
+            if mlx_rows_allowed
+            else "blocked_until_strict_torch_parity_or_explicit_research_override"
+        ),
+    }
+
+
 def build_next_probe_plan(
     dataset: dict[str, Any],
     *,
@@ -1222,6 +1380,8 @@ def build_next_probe_plan(
     null_byte_seed_budget_k: int = 16,
     allow_legacy_null_byte_matrix_missing_authority: bool = False,
     magic_codec_seed_boundary_smoke: dict[str, Any] | None = None,
+    mlx_torch_parity_sweep: dict[str, Any] | None = None,
+    allow_mlx_parity_research_signal_override: bool = False,
 ) -> dict[str, Any]:
     """Build a deterministic LL next-probe plan from response economics."""
 
@@ -1290,6 +1450,15 @@ def build_next_probe_plan(
                 }
             )
 
+    mlx_torch_parity_sweep_gate = None
+    if mlx_torch_parity_sweep is not None:
+        mlx_torch_parity_sweep_gate = build_mlx_torch_parity_sweep_gate(
+            mlx_torch_parity_sweep,
+            allow_mlx_parity_research_signal_override=(
+                allow_mlx_parity_research_signal_override
+            ),
+        )
+
     probes = [
         {
             "probe_id": "ll_byte_neutral_decoder_q_response_model",
@@ -1333,27 +1502,94 @@ def build_next_probe_plan(
         if isinstance(row, dict) and row.get("family") == "mlx_scorer_response"
     ][:8]
     if mlx_rows:
-        for probe in probes:
-            probe["priority"] = int(probe["priority"]) + 1
-        probes.insert(
-            0,
-            {
-                "probe_id": "ll_mlx_cpu_stable_response_harvest",
-                "priority": 1,
-                "class": "surrogate_training_data",
-                "rationale": (
-                    "Direct MLX scorer-response rows are now normalized as "
-                    "non-authoritative local signal; expand stable CPU windows "
-                    "before using MLX rows for surrogate fitting or spend filters."
-                ),
-                "input_rows": mlx_rows,
-                "acceptance_gate": (
-                    ">=50 MLX rows across stable CPU windows/families, all "
-                    "score_claim=false, with held-out correlation before any "
-                    "exact-eval dispatch selection"
-                ),
-            },
-        )
+        if mlx_torch_parity_sweep_gate is None:
+            prohibitions.append(
+                {
+                    "rule": "do_not_use_mlx_rows_without_torch_parity_sweep",
+                    "reason": (
+                        "MLX scorer-response rows require a PyTorch-vs-MLX "
+                        "parity sweep gate before they can train or rank the LL "
+                        "surrogate planner"
+                    ),
+                    "input_rows": mlx_rows,
+                }
+            )
+            for probe in probes:
+                probe["priority"] = int(probe["priority"]) + 1
+            probes.insert(
+                0,
+                {
+                    "probe_id": "ll_mlx_torch_parity_sweep_required",
+                    "priority": 1,
+                    "class": "parity_gate",
+                    "rationale": (
+                        "MLX rows exist, but planner use is blocked until an "
+                        "MLX-vs-upstream-PyTorch parity sweep is attached."
+                    ),
+                    "input_rows": mlx_rows,
+                    "acceptance_gate": (
+                        "PASS_MLX_TORCH_SCORER_PARITY_SWEEP on the intended "
+                        "cache/window before MLX rows train or rank LL probes"
+                    ),
+                },
+            )
+        elif not mlx_torch_parity_sweep_gate["mlx_rows_allowed_for_planner"]:
+            prohibitions.append(
+                {
+                    "rule": "do_not_use_mlx_rows_after_failed_strict_parity_sweep",
+                    "reason": (
+                        "the attached MLX-vs-PyTorch sweep is not a strict pass; "
+                        "repair parity or pass the explicit research-only override"
+                    ),
+                    "gate": mlx_torch_parity_sweep_gate,
+                    "input_rows": mlx_rows,
+                }
+            )
+            for probe in probes:
+                probe["priority"] = int(probe["priority"]) + 1
+            probes.insert(
+                0,
+                {
+                    "probe_id": "ll_mlx_torch_parity_repair_or_override",
+                    "priority": 1,
+                    "class": "parity_gate",
+                    "rationale": (
+                        "The MLX parity sweep failed strict conformance, so MLX "
+                        "rows stay out of LL planning unless parity is repaired "
+                        "or explicitly demoted to research-only signal."
+                    ),
+                    "input_rows": mlx_rows,
+                    "mlx_torch_parity_gate": mlx_torch_parity_sweep_gate,
+                    "acceptance_gate": (
+                        "strict parity pass, or explicit research-only override "
+                        "with score_claim=false and exact-eval-before-promotion"
+                    ),
+                },
+            )
+        else:
+            for probe in probes:
+                probe["priority"] = int(probe["priority"]) + 1
+            probes.insert(
+                0,
+                {
+                    "probe_id": "ll_mlx_cpu_stable_response_harvest",
+                    "priority": 1,
+                    "class": "surrogate_training_data",
+                    "rationale": (
+                        "Direct MLX scorer-response rows are normalized as "
+                        "non-authoritative local signal and have an attached "
+                        "PyTorch-vs-MLX parity gate; expand stable CPU windows "
+                        "before using MLX rows for surrogate fitting or spend filters."
+                    ),
+                    "input_rows": mlx_rows,
+                    "mlx_torch_parity_gate": mlx_torch_parity_sweep_gate,
+                    "acceptance_gate": (
+                        ">=50 MLX rows across stable CPU windows/families, all "
+                        "score_claim=false, with parity-gated held-out "
+                        "correlation before any exact-eval dispatch selection"
+                    ),
+                },
+            )
     null_byte_priority_weights = None
     if null_byte_matrix is not None:
         null_byte_priority_weights = build_null_byte_priority_weights(
@@ -1399,6 +1635,7 @@ def build_next_probe_plan(
         "best_byte_budget_margin_row": best_margin,
         "null_byte_priority_weights": null_byte_priority_weights,
         "magic_codec_seed_boundary": magic_codec_seed_boundary,
+        "mlx_torch_parity_sweep_gate": mlx_torch_parity_sweep_gate,
         "prohibitions": prohibitions,
         "probes": probes,
     }
@@ -1586,6 +1823,24 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
             lines.append(f"- Pair window: `{execution.get('pair_window')}`")
             lines.append(f"- Response output: `{execution.get('response_output')}`")
             lines.append("")
+    mlx_gate = plan.get("mlx_torch_parity_sweep_gate")
+    if isinstance(mlx_gate, dict):
+        gate_summary = mlx_gate.get("summary") if isinstance(mlx_gate.get("summary"), dict) else {}
+        lines.extend(["## MLX Torch Parity Gate", ""])
+        lines.append(f"- Status: `{mlx_gate.get('status')}`")
+        lines.append(f"- Source verdict: `{mlx_gate.get('source_verdict')}`")
+        lines.append(f"- Windows: `{mlx_gate.get('window_count')}`")
+        lines.append(f"- Covered pair window: `{mlx_gate.get('covered_pair_window')}`")
+        lines.append(
+            "- Failed windows: "
+            f"`{gate_summary.get('failed_windows')}`"
+        )
+        lines.append(
+            "- Max SegNet argmax diff fraction: "
+            f"`{gate_summary.get('segnet_argmax_diff_fraction_max')}`"
+        )
+        lines.append(f"- Blockers: `{mlx_gate.get('blockers')}`")
+        lines.append("")
     lines.extend(["## Prohibitions", ""])
     for item in plan.get("prohibitions", []):
         lines.append(f"- `{item['rule']}`: {item['reason']}")
