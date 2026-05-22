@@ -1991,6 +1991,7 @@ def _build_mlx_production_contract_bundle_gate(
             ),
             "row_count": 0 if row_list is None else len(row_list),
             "matched_row_count": len(matched_row_ids),
+            "unmatched_row_count": len(unmatched_row_ids),
             "unmatched_row_ids": unmatched_row_ids[:8],
             "child_contracts": child_summaries[:8],
         },
@@ -2159,6 +2160,26 @@ def build_effective_mlx_spend_triage_gate(
     authority.
     """
 
+    def _summary_from(gate: dict[str, Any] | None) -> dict[str, Any]:
+        if not isinstance(gate, dict):
+            return {}
+        summary = gate.get("summary")
+        return summary if isinstance(summary, dict) else {}
+
+    def _sample_list(gate: dict[str, Any] | None, key: str, limit: int = 8) -> list[Any]:
+        if not isinstance(gate, dict):
+            return []
+        value = gate.get(key)
+        if not isinstance(value, list):
+            return []
+        return list(value[:limit])
+
+    def _summary_list(summary: dict[str, Any], key: str, limit: int = 8) -> list[Any]:
+        value = summary.get(key)
+        if not isinstance(value, list):
+            return []
+        return list(value[:limit])
+
     blockers: list[str] = []
     if not mlx_rows:
         blockers.append("no_mlx_rows")
@@ -2183,6 +2204,22 @@ def build_effective_mlx_spend_triage_gate(
     ):
         blockers.append("mlx_production_contract_gate_not_strict_pass")
 
+    production_summary = _summary_from(mlx_production_contract_gate)
+    production_unmatched_row_ids = _summary_list(
+        production_summary, "unmatched_row_ids"
+    )
+    production_row_count = production_summary.get("row_count")
+    production_matched_row_count = production_summary.get("matched_row_count")
+    production_unmatched_row_count = production_summary.get("unmatched_row_count")
+    if production_unmatched_row_count is None:
+        production_unmatched_row_count = len(production_unmatched_row_ids)
+    if (
+        production_row_count is None
+        and isinstance(mlx_production_contract_gate, dict)
+        and mlx_production_contract_gate.get("status") == "strict_pass"
+    ):
+        production_row_count = len(mlx_rows)
+        production_matched_row_count = len(mlx_rows)
     status = "strict_pass" if not blockers else "blocked"
     return {
         "schema": "ll_effective_mlx_spend_triage_gate.v1",
@@ -2219,6 +2256,27 @@ def build_effective_mlx_spend_triage_gate(
                 None
                 if mlx_production_contract_gate is None
                 else mlx_production_contract_gate.get("status")
+            ),
+            "response_validation_blockers_sample": _sample_list(
+                response_validation_gate, "blockers"
+            ),
+            "torch_parity_blockers_sample": _sample_list(
+                mlx_torch_parity_sweep_gate, "blockers"
+            ),
+            "score_calibration_blockers_sample": _sample_list(
+                mlx_score_calibration_gate, "blockers"
+            ),
+            "production_contract_blockers_sample": _sample_list(
+                mlx_production_contract_gate, "blockers"
+            ),
+            "production_contract_row_count": production_row_count,
+            "production_contract_matched_row_count": production_matched_row_count,
+            "production_contract_unmatched_row_count": production_unmatched_row_count,
+            "production_contract_unmatched_row_ids_sample": (
+                production_unmatched_row_ids
+            ),
+            "production_contract_strict_contract_count": production_summary.get(
+                "strict_contract_count"
             ),
         },
         "allowed_use": (
@@ -3638,7 +3696,11 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
         if mlx_production_gate.get("source_schema") == MLX_PRODUCTION_CONTRACT_BUNDLE_SCHEMA:
             lines.append(f"- Contracts: `{gate_summary.get('contract_count')}`")
             lines.append(f"- Strict contracts: `{gate_summary.get('strict_contract_count')}`")
+            lines.append(f"- Dataset rows: `{gate_summary.get('row_count')}`")
             lines.append(f"- Rows covered: `{gate_summary.get('matched_row_count')}`")
+            lines.append(
+                f"- Rows uncovered: `{gate_summary.get('unmatched_row_count')}`"
+            )
             lines.append(f"- Unmatched rows: `{gate_summary.get('unmatched_row_ids')}`")
         else:
             lines.append(f"- Batch pairs: `{gate_summary.get('batch_pairs')}`")
@@ -3682,6 +3744,26 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
         lines.append(
             "- Production contract: "
             f"`{gate_summary.get('production_contract_status')}`"
+        )
+        lines.append(
+            "- Production contract rows: "
+            f"`{gate_summary.get('production_contract_row_count')}`"
+        )
+        lines.append(
+            "- Production contract matched rows: "
+            f"`{gate_summary.get('production_contract_matched_row_count')}`"
+        )
+        lines.append(
+            "- Production contract unmatched rows: "
+            f"`{gate_summary.get('production_contract_unmatched_row_count')}`"
+        )
+        lines.append(
+            "- Production contract unmatched row sample: "
+            f"`{gate_summary.get('production_contract_unmatched_row_ids_sample')}`"
+        )
+        lines.append(
+            "- Production contract blocker sample: "
+            f"`{gate_summary.get('production_contract_blockers_sample')}`"
         )
         lines.append(f"- Blockers: `{effective_mlx_gate.get('blockers')}`")
         lines.append("")

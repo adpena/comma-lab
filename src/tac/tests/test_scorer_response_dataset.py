@@ -844,6 +844,68 @@ def test_next_probe_plan_effective_mlx_spend_triage_gate_passes_only_after_datas
     assert gate["mlx_exact_eval_spend_triage_allowed"] is True
     assert gate["blockers"] == []
     assert gate["summary"]["mlx_row_count"] == 25
+    assert gate["summary"]["production_contract_row_count"] == 25
+    assert gate["summary"]["production_contract_matched_row_count"] == 25
+    assert gate["summary"]["production_contract_unmatched_row_count"] == 0
+    assert gate["summary"]["production_contract_unmatched_row_ids_sample"] == []
+    assert gate["summary"]["production_contract_blockers_sample"] == []
+
+
+def test_next_probe_plan_effective_mlx_spend_triage_gate_surfaces_contract_coverage_blocker() -> None:
+    dataset = _attach_mlx_identity_to_rows(
+        _validation_dataset(
+            families=("mlx_scorer_response", "decoder_q"),
+            rows_per_fold=5,
+            include_prediction=True,
+        )
+    )
+
+    plan = build_next_probe_plan(
+        dataset,
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+        mlx_production_contract=_mlx_production_contract_bundle(
+            _mlx_production_contract_for_window(
+                run_id="window-600-1200",
+                pair_window=[600, 1200],
+            ),
+        ),
+    )
+
+    assert plan["response_validation_gate"]["status"] == "passed"
+    assert plan["mlx_torch_parity_sweep_gate"]["status"] == "strict_pass"
+    assert plan["mlx_score_calibration_gate"]["status"] == "strict_pass"
+    assert plan["mlx_production_contract_gate"]["status"] == "blocked"
+    gate = plan["effective_mlx_spend_triage_gate"]
+    assert gate["status"] == "blocked"
+    assert gate["mlx_exact_eval_spend_triage_allowed"] is False
+    assert "mlx_production_contract_gate_not_strict_pass" in gate["blockers"]
+    summary = gate["summary"]
+    assert summary["mlx_row_count"] == 25
+    assert summary["response_validation_status"] == "passed"
+    assert summary["torch_parity_status"] == "strict_pass"
+    assert summary["score_calibration_status"] == "strict_pass"
+    assert summary["production_contract_status"] == "blocked"
+    assert summary["production_contract_row_count"] == 25
+    assert summary["production_contract_matched_row_count"] == 0
+    assert summary["production_contract_unmatched_row_count"] == 25
+    assert summary["production_contract_unmatched_row_ids_sample"] == [
+        "mlx_scorer_response-0-0",
+        "mlx_scorer_response-0-1",
+        "mlx_scorer_response-0-2",
+        "mlx_scorer_response-0-3",
+        "mlx_scorer_response-0-4",
+        "mlx_scorer_response-1-0",
+        "mlx_scorer_response-1-1",
+        "mlx_scorer_response-1-2",
+    ]
+    assert "mlx_production_contract_bundle_row_unmatched:mlx_scorer_response-0-0" in (
+        summary["production_contract_blockers_sample"]
+    )
+    rendered = render_next_probe_plan_markdown(plan)
+    assert "- Production contract rows: `25`" in rendered
+    assert "- Production contract matched rows: `0`" in rendered
+    assert "- Production contract unmatched rows: `25`" in rendered
 
 
 def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:
