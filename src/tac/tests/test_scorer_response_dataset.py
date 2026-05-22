@@ -454,6 +454,24 @@ def _mlx_cache_auth_audit_payload(
     }
 
 
+def _attach_auth_audit_to_mlx_response(payload: dict) -> dict:
+    candidate = payload["cache_identity"]["candidate"]
+    candidate["eligible_for_local_mlx_transfer_calibration"] = True
+    candidate["auth_eval_identity_audit"] = {
+        "schema_version": "mlx_scorer_input_cache_auth_eval_audit.v1",
+        "verdict": "PASS_CACHE_AUTH_EVAL_IDENTITY",
+        "passed": True,
+        "identity_residual": 0,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return payload
+
+
 def _attach_mlx_identity_to_rows(dataset: dict) -> dict:
     for row in dataset["rows"]:
         if row.get("family") != "mlx_scorer_response":
@@ -1775,6 +1793,61 @@ def test_build_windowed_mlx_response_dataset_accepts_reference_cache_baseline_id
 
     assert dataset["summary"]["row_count"] == 1
     assert dataset["skipped"] == []
+
+
+def test_build_windowed_mlx_response_dataset_requires_auth_audited_reference_match(
+    tmp_path,
+) -> None:
+    baseline = _attach_auth_audit_to_mlx_response(_mlx_response_payload())
+    baseline["canonical_score"] = 0.9
+    baseline["score_recomputed_from_components"] = 0.9
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    candidate = _attach_auth_audit_to_mlx_response(_mlx_response_payload())
+    candidate["cache_identity"]["reference"]["array_sha256"]["segnet_last_rgb"] = (
+        "9" * 64
+    )
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    dataset = build_windowed_mlx_response_dataset(
+        candidate_paths=[candidate_path],
+        baseline_paths=[baseline_path],
+        require_auth_audited_windows=True,
+    )
+
+    assert dataset["rows"] == []
+    assert any(
+        "reference cache array identity mismatch" in item["reason"]
+        for item in dataset["skipped"]
+    )
+
+
+def test_build_windowed_mlx_response_dataset_requires_passing_auth_audit(
+    tmp_path,
+) -> None:
+    baseline = _attach_auth_audit_to_mlx_response(_mlx_response_payload())
+    baseline["canonical_score"] = 0.9
+    baseline["score_recomputed_from_components"] = 0.9
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    candidate = _mlx_response_payload()
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    dataset = build_windowed_mlx_response_dataset(
+        candidate_paths=[candidate_path],
+        baseline_paths=[baseline_path],
+        require_auth_audited_windows=True,
+    )
+
+    assert dataset["rows"] == []
+    assert any(
+        "not eligible for local MLX transfer calibration" in item["reason"]
+        for item in dataset["skipped"]
+    )
 
 
 def test_refresh_mlx_scorer_response_source_identity_restores_missing_fields(

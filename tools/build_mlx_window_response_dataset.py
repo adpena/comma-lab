@@ -65,6 +65,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Write an empty dataset instead of failing when no usable candidate rows survive.",
     )
+    parser.add_argument(
+        "--require-auth-audited-windows",
+        action="store_true",
+        help=(
+            "Require candidate and baseline windows to carry passing auth-cache "
+            "identity audits and matching reference tensor identities."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -80,6 +88,7 @@ def main(argv: list[str] | None = None) -> int:
         dataset = build_windowed_mlx_response_dataset(
             candidate_paths=_expand_inputs(args.candidate_response),
             baseline_paths=_expand_inputs(args.baseline_response),
+            require_auth_audited_windows=args.require_auth_audited_windows,
         )
     except ScorerResponseDatasetError as exc:
         print(f"FATAL: {exc}", file=sys.stderr)

@@ -654,6 +654,88 @@ def _mlx_response_window_key(payload: dict[str, Any], *, label: str) -> str:
     return f"start={start}:max={max_pairs}:window={pair_window[0]}-{pair_window[1]}"
 
 
+def _require_auth_audited_mlx_window(payload: dict[str, Any], *, label: str) -> None:
+    cache_identity = payload.get("cache_identity")
+    if not isinstance(cache_identity, dict):
+        raise ScorerResponseDatasetError(f"{label} cache_identity must be an object")
+    candidate = cache_identity.get("candidate")
+    if not isinstance(candidate, dict):
+        raise ScorerResponseDatasetError(
+            f"{label} cache_identity.candidate must be an object"
+        )
+    if candidate.get("eligible_for_local_mlx_transfer_calibration") is not True:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache is not eligible for local MLX transfer calibration"
+        )
+    audit = candidate.get("auth_eval_identity_audit")
+    if not isinstance(audit, dict):
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit missing"
+        )
+    if audit.get("passed") is not True:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit did not pass"
+        )
+    if audit.get("verdict") != "PASS_CACHE_AUTH_EVAL_IDENTITY":
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit verdict mismatch"
+        )
+    if audit.get("identity_residual") != 0:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit residual must be 0"
+        )
+
+
+def _reference_array_identity(payload: dict[str, Any], *, label: str) -> dict[str, str]:
+    cache_identity = payload.get("cache_identity")
+    if not isinstance(cache_identity, dict):
+        raise ScorerResponseDatasetError(f"{label} cache_identity must be an object")
+    reference = cache_identity.get("reference")
+    if not isinstance(reference, dict):
+        raise ScorerResponseDatasetError(
+            f"{label} cache_identity.reference must be an object"
+        )
+    arrays = reference.get("array_sha256")
+    if not isinstance(arrays, dict):
+        raise ScorerResponseDatasetError(
+            f"{label} cache_identity.reference.array_sha256 must be an object"
+        )
+    result: dict[str, str] = {}
+    for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+        value = str(arrays.get(key, ""))
+        if not _is_sha256(value):
+            raise ScorerResponseDatasetError(
+                f"{label} cache_identity.reference.array_sha256.{key} must be sha256"
+            )
+        result[key] = value
+    return result
+
+
+def _candidate_array_identity(payload: dict[str, Any], *, label: str) -> dict[str, str]:
+    cache_identity = payload.get("cache_identity")
+    if not isinstance(cache_identity, dict):
+        raise ScorerResponseDatasetError(f"{label} cache_identity must be an object")
+    candidate = cache_identity.get("candidate")
+    if not isinstance(candidate, dict):
+        raise ScorerResponseDatasetError(
+            f"{label} cache_identity.candidate must be an object"
+        )
+    arrays = candidate.get("array_sha256")
+    if not isinstance(arrays, dict):
+        raise ScorerResponseDatasetError(
+            f"{label} cache_identity.candidate.array_sha256 must be an object"
+        )
+    result: dict[str, str] = {}
+    for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+        value = str(arrays.get(key, ""))
+        if not _is_sha256(value):
+            raise ScorerResponseDatasetError(
+                f"{label} cache_identity.candidate.array_sha256.{key} must be sha256"
+            )
+        result[key] = value
+    return result
+
+
 def _family_for(path: Path, parent: dict[str, Any], candidate: dict[str, Any]) -> str:
     explicit_family = _explicit_response_family(parent, candidate)
     if explicit_family is not None:
@@ -939,6 +1021,7 @@ def build_windowed_mlx_response_dataset(
     *,
     candidate_paths: list[Path],
     baseline_paths: list[Path],
+    require_auth_audited_windows: bool = False,
 ) -> dict[str, Any]:
     """Build response rows with one MLX baseline per scorer-pair window.
 
@@ -950,6 +1033,8 @@ def build_windowed_mlx_response_dataset(
 
     baseline_by_window: dict[str, ResponseBaseline] = {}
     baseline_sources: dict[str, str] = {}
+    baseline_reference_arrays: dict[str, dict[str, str]] = {}
+    baseline_candidate_arrays: dict[str, dict[str, str]] = {}
     duplicate_baseline_windows: set[str] = set()
     skipped: list[dict[str, str]] = []
     for path in baseline_paths:
@@ -961,6 +1046,8 @@ def build_windowed_mlx_response_dataset(
                 label=label,
                 allow_candidate_array_identity=True,
             )
+            if require_auth_audited_windows:
+                _require_auth_audited_mlx_window(payload, label=label)
             key = _mlx_response_window_key(payload, label=label)
             if key in baseline_by_window or key in duplicate_baseline_windows:
                 duplicate_baseline_windows.add(key)
@@ -980,6 +1067,14 @@ def build_windowed_mlx_response_dataset(
                 avg_segnet_dist=_as_float(payload.get("avg_segnet_dist")),
             )
             baseline_sources[key] = str(path)
+            baseline_reference_arrays[key] = _reference_array_identity(
+                payload,
+                label=label,
+            )
+            baseline_candidate_arrays[key] = _candidate_array_identity(
+                payload,
+                label=label,
+            )
         except (OSError, json.JSONDecodeError, ScorerResponseDatasetError, KeyError, ValueError) as exc:
             skipped.append({"path": str(path), "reason": f"baseline: {exc}"})
 
@@ -987,6 +1082,11 @@ def build_windowed_mlx_response_dataset(
     for path in candidate_paths:
         try:
             payload = _load_json(path)
+            if require_auth_audited_windows:
+                _require_auth_audited_mlx_window(
+                    payload,
+                    label=f"candidate {path}",
+                )
             key = _mlx_response_window_key(payload, label=f"candidate {path}")
             if key in duplicate_baseline_windows:
                 skipped.append(
@@ -1005,6 +1105,22 @@ def build_windowed_mlx_response_dataset(
                     }
                 )
                 continue
+            if require_auth_audited_windows:
+                candidate_reference_arrays = _reference_array_identity(
+                    payload,
+                    label=f"candidate {path}",
+                )
+                if candidate_reference_arrays != baseline_reference_arrays.get(key):
+                    skipped.append(
+                        {
+                            "path": str(path),
+                            "reason": (
+                                "candidate: reference cache array identity mismatch "
+                                f"for baseline window {key}"
+                            ),
+                        }
+                    )
+                    continue
             partial = build_response_dataset([path], baseline=baseline)
         except (OSError, json.JSONDecodeError, ScorerResponseDatasetError) as exc:
             skipped.append({"path": str(path), "reason": f"candidate: {exc}"})
@@ -1030,6 +1146,12 @@ def build_windowed_mlx_response_dataset(
             row["window_baseline_seg_term"] = baseline_terms["seg_term"]
             row["window_baseline_scorer_term"] = baseline_terms["scorer_term"]
             row["window_baseline_rate_term"] = baseline_terms["rate_term"]
+            row["window_baseline_candidate_cache_array_sha256"] = (
+                baseline_candidate_arrays.get(key)
+            )
+            row["window_baseline_reference_cache_array_sha256"] = (
+                baseline_reference_arrays.get(key)
+            )
             rows.append(row)
 
     rows.sort(
@@ -1064,6 +1186,7 @@ def build_windowed_mlx_response_dataset(
                 "Rows are local MLX scorer-response observations paired with "
                 "same-window MLX baselines for surrogate fitting and ranking only."
             ),
+            "require_auth_audited_windows": require_auth_audited_windows,
         },
         "baseline": {
             "mode": "per_window_mlx_response",

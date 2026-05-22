@@ -71,6 +71,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--existing-candidate-window-response",
+        action="append",
+        default=[],
+        help=(
+            "Existing candidate MLX scorer-response JSON path or glob to carry "
+            "forward into the rebuilt same-axis dataset, such as the already "
+            "strict FEC6 auth parent windows. May repeat."
+        ),
+    )
+    parser.add_argument(
         "--skip-dataset-rebuild",
         action="store_true",
         help=(
@@ -154,6 +164,11 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
     rebuilt_dataset_md = out_root / "candidate_same_axis_window_response_dataset.md"
     dataset_for_contract = args.dataset if args.skip_dataset_rebuild else rebuilt_dataset
     baseline_window_paths = _expand_existing_paths(args.baseline_window_response)
+    expected_baseline_window_count = _expected_baseline_window_count(
+        args.dataset,
+        candidate_family=args.candidate_family,
+        fallback=args.max_pairs,
+    )
     candidate_parity = out_root / f"candidate_torch_parity_sweep_cpu_singleton_pairs{args.start_pair}_{args.max_pairs}.json"
     reference_parity = out_root / f"reference_torch_parity_sweep_cpu_singleton_pairs{args.start_pair}_{args.max_pairs}.json"
     profile = out_root / f"candidate_profile_cpu_singleton_pairs{args.start_pair}_{args.max_pairs}_repeat2.json"
@@ -306,7 +321,10 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
             "tools/build_mlx_window_response_dataset.py",
             "--candidate-response",
             str(candidate_windows_dir / "*.json"),
+            "--require-auth-audited-windows",
         ]
+        for existing_candidate in args.existing_candidate_window_response:
+            dataset_command.extend(["--candidate-response", existing_candidate])
         for baseline in args.baseline_window_response:
             dataset_command.extend(["--baseline-response", baseline])
         dataset_command.extend(
@@ -326,7 +344,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
                 ),
                 dataset_command,
                 ready=candidate_windows_index.is_file()
-                and len(baseline_window_paths) >= args.max_pairs,
+                and len(baseline_window_paths) >= expected_baseline_window_count,
                 requires=["split_parent_windows"],
             )
         )
@@ -432,6 +450,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
             "id": "write_score_calibration_rows",
             "description": "Write the two-row strict CPU calibration input for FEC6 baseline plus decoder-q candidate.",
             "ready": auth_eval_path.is_file()
+            and parent_response.is_file()
             and bool(args.baseline_mlx_response and args.baseline_cpu_auth_eval)
             and (strict_full_calibration or args.allow_partial_full_auth_calibration),
             "requires": ["run_parent_response", "recover_modal_call"],
@@ -566,7 +585,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
         rebuild_dataset=not args.skip_dataset_rebuild,
         baseline_window_response=args.baseline_window_response,
         baseline_window_count=len(baseline_window_paths),
-        expected_baseline_window_count=args.max_pairs,
+        expected_baseline_window_count=expected_baseline_window_count,
         candidate_windows_index=candidate_windows_index,
         dataset_for_contract=dataset_for_contract,
         downloaded_tensor_files=list(downloaded_tensor_files.values()),
@@ -597,8 +616,11 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_windows_dir": str(candidate_windows_dir),
         "candidate_windows_index": str(candidate_windows_index),
         "baseline_window_responses": list(args.baseline_window_response),
+        "existing_candidate_window_responses": list(
+            args.existing_candidate_window_response
+        ),
         "baseline_window_existing_count": len(baseline_window_paths),
-        "expected_baseline_window_count": args.max_pairs,
+        "expected_baseline_window_count": expected_baseline_window_count,
         "candidate_contract": str(contract),
         "bundle": str(bundle),
         "steps": steps,
@@ -642,6 +664,39 @@ def _expand_existing_paths(patterns: list[str]) -> list[Path]:
                 paths.append(path)
                 seen.add(path)
     return paths
+
+
+def _expected_baseline_window_count(
+    dataset_path: Path,
+    *,
+    candidate_family: str,
+    fallback: int,
+) -> int:
+    """Infer baseline-window coverage from the legacy dataset when available.
+
+    A full auth-axis parent response can span 600 pairs while the closure target
+    dataset has only 300 rows for the candidate family. Requiring baseline
+    windows for the whole auth response dead-ends that valid flow; requiring the
+    legacy candidate-family row count preserves fail-closed coverage.
+    """
+
+    if fallback < 1:
+        return 1
+    if not dataset_path.is_file():
+        return fallback
+    try:
+        payload = json.loads(dataset_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return fallback
+    rows = payload.get("rows") if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        return fallback
+    count = sum(
+        1
+        for row in rows
+        if isinstance(row, dict) and row.get("family") == candidate_family
+    )
+    return count if count > 0 else fallback
 
 
 def _calibration_rows_payload(
