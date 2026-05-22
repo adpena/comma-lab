@@ -55,6 +55,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--allow-unaudited-candidate-cache-debug",
+        action="store_true",
+        help=(
+            "Permit response scoring from a candidate cache without a passing "
+            "auth-eval identity audit. Debug only; calibration/spend triage must "
+            "use audited candidate caches."
+        ),
+    )
+    parser.add_argument(
         "--progress-every",
         type=int,
         default=0,
@@ -92,6 +101,7 @@ def main(argv: list[str] | None = None) -> int:
             max_pairs=args.max_pairs,
             allow_gpu_research_signal=args.allow_gpu_research_signal,
             allow_batch_shape_research_signal=args.allow_batch_shape_research_signal,
+            allow_unaudited_candidate_cache_debug=args.allow_unaudited_candidate_cache_debug,
             response_family=args.response_family,
         )
     except (OSError, ValueError, NotImplementedError) as exc:

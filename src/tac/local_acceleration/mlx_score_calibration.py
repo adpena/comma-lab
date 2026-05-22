@@ -304,6 +304,34 @@ def _require_mlx_response_false_authority(payload: dict[str, Any], path: Path) -
     for field in AUTHORITY_FALSE_FIELDS:
         if payload.get(field) is not False:
             raise ValueError(f"MLX response {path} has non-false {field}")
+    candidate_identity = _response_candidate_cache_identity(payload)
+    audit = candidate_identity.get("auth_eval_identity_audit")
+    if candidate_identity.get("eligible_for_local_mlx_transfer_calibration") is not True:
+        raise ValueError(
+            f"MLX response {path} candidate cache is not eligible for local MLX "
+            "transfer calibration"
+        )
+    if not isinstance(audit, dict):
+        raise ValueError(f"MLX response {path} candidate cache audit is missing")
+    if audit.get("verdict") != "PASS_CACHE_AUTH_EVAL_IDENTITY":
+        raise ValueError(
+            f"MLX response {path} candidate cache audit did not pass: "
+            f"{audit.get('verdict')}"
+        )
+    if audit.get("passed") is not True or audit.get("identity_residual") != 0:
+        raise ValueError(
+            f"MLX response {path} candidate cache audit is not zero-residual"
+        )
+
+
+def _response_candidate_cache_identity(payload: dict[str, Any]) -> dict[str, Any]:
+    cache_identity = payload.get("cache_identity")
+    if not isinstance(cache_identity, dict):
+        raise ValueError("MLX response cache_identity is missing")
+    candidate = cache_identity.get("candidate")
+    if not isinstance(candidate, dict):
+        raise ValueError("MLX response candidate cache_identity is missing")
+    return candidate
 
 
 def _auth_archive_sha256(payload: dict[str, Any]) -> str | None:

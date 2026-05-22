@@ -12,6 +12,7 @@ from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
 from tac.local_acceleration.mlx_scorer_response import (
     BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER,
+    CANDIDATE_CACHE_TRANSFER_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
     build_mlx_scorer_response_payload,
     load_scorer_input_cache,
@@ -77,6 +78,48 @@ def test_load_scorer_input_cache_rejects_hash_only_manifest(tmp_path: Path) -> N
         assert "hash-only" in str(exc)
     else:
         raise AssertionError("hash-only cache was accepted")
+
+
+def test_mlx_scorer_response_cli_rejects_unaudited_candidate_cache(tmp_path: Path) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(
+        tmp_path / "reference",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    candidate_dir = _write_test_cache(
+        tmp_path / "candidate",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+        audited=False,
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1",
+            "--output",
+            str(tmp_path / "mlx_response.json"),
+            "--repo-root",
+            str(REPO),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert CANDIDATE_CACHE_TRANSFER_BLOCKER in completed.stderr
 
 
 def test_mlx_scorer_response_cli_can_score_deterministic_pair_window(tmp_path: Path) -> None:
@@ -260,23 +303,41 @@ def _write_test_cache(
     seg: np.ndarray,
     pose: np.ndarray,
     pair_indices: np.ndarray,
+    audited: bool = True,
 ) -> Path:
+    metadata = {
+        "schema_version": "mlx_scorer_input_cache.v1",
+        "pair_count": int(pair_indices.shape[0]),
+        "segnet_last_rgb_shape": list(seg.shape),
+        "posenet_yuv6_pair_shape": list(pose.shape),
+        "pair_indices_shape": list(pair_indices.shape),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if audited:
+        metadata.update(
+            {
+                "eligible_for_local_mlx_transfer_calibration": True,
+                "auth_eval_identity_audit": {
+                    "schema_version": "mlx_scorer_input_cache_auth_eval_audit.v1",
+                    "verdict": "PASS_CACHE_AUTH_EVAL_IDENTITY",
+                    "passed": True,
+                    "identity_residual": 0,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+            }
+        )
     batch = ScorerInputBatch(
         segnet_last_rgb=seg,
         posenet_yuv6_pair=pose,
         pair_indices=pair_indices,
-        metadata={
-            "schema_version": "mlx_scorer_input_cache.v1",
-            "pair_count": int(pair_indices.shape[0]),
-            "segnet_last_rgb_shape": list(seg.shape),
-            "posenet_yuv6_pair_shape": list(pose.shape),
-            "pair_indices_shape": list(pair_indices.shape),
-            "score_claim": False,
-            "promotion_eligible": False,
-            "promotable": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
-        },
+        metadata=metadata,
     )
     write_scorer_input_cache(
         batch,

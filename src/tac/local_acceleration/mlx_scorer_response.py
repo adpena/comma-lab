@@ -34,6 +34,9 @@ GPU_BATCH_SHAPE_BLOCKER = "mlx_gpu_scorer_response_requires_singleton_batches_un
 BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER = (
     "mlx_scorer_response_non_singleton_batches_require_explicit_batch_shape_research_signal_allowance"
 )
+CANDIDATE_CACHE_TRANSFER_BLOCKER = (
+    "mlx_scorer_response_candidate_cache_requires_passing_auth_identity_audit"
+)
 
 
 @dataclass(frozen=True)
@@ -90,6 +93,7 @@ def build_mlx_scorer_response_payload(
     max_pairs: int | None = None,
     allow_gpu_research_signal: bool = False,
     allow_batch_shape_research_signal: bool = False,
+    allow_unaudited_candidate_cache_debug: bool = False,
     response_family: str | None = None,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
@@ -126,6 +130,10 @@ def build_mlx_scorer_response_payload(
     reference = load_scorer_input_cache(reference_cache_dir)
     candidate = load_scorer_input_cache(candidate_cache_dir)
     _validate_cache_pairing(reference, candidate)
+    _validate_candidate_transfer_cache(
+        candidate,
+        allow_unaudited_candidate_cache_debug=allow_unaudited_candidate_cache_debug,
+    )
 
     started = time.time()
     dist = _load_upstream_distortion_net(Path(repo_root).resolve())
@@ -259,6 +267,10 @@ def build_mlx_scorer_response_payload(
             "batch_shape_research_signal_blocker": BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER,
             "gpu_research_signal_required": device_type == "gpu",
             "batch_shape_research_signal_required": batch_pairs_int != 1,
+            "unaudited_candidate_cache_debug_allowed": bool(
+                allow_unaudited_candidate_cache_debug
+            ),
+            "candidate_cache_transfer_blocker": CANDIDATE_CACHE_TRANSFER_BLOCKER,
             "gpu_batch_pairs_allowed_without_invariance_override": 1,
             "batch_pairs_allowed_without_invariance_override": 1,
             "allowed_uses": [
@@ -353,6 +365,31 @@ def _validate_cache_pairing(reference: ScorerInputCache, candidate: ScorerInputC
         raise ValueError("reference/candidate pair_indices differ")
 
 
+def _validate_candidate_transfer_cache(
+    candidate: ScorerInputCache,
+    *,
+    allow_unaudited_candidate_cache_debug: bool,
+) -> None:
+    manifest = candidate.manifest
+    audit = manifest.get("auth_eval_identity_audit")
+    audit_ok = (
+        manifest.get("eligible_for_local_mlx_transfer_calibration") is True
+        and isinstance(audit, dict)
+        and audit.get("verdict") == "PASS_CACHE_AUTH_EVAL_IDENTITY"
+        and audit.get("passed") is True
+        and audit.get("identity_residual") == 0
+    )
+    if audit_ok:
+        return
+    if allow_unaudited_candidate_cache_debug:
+        return
+    raise ValueError(
+        f"{CANDIDATE_CACHE_TRANSFER_BLOCKER}: candidate cache must be stamped by "
+        "tools/materialize_mlx_scorer_cache_from_auth_eval.py or an equivalent "
+        "PASS_CACHE_AUTH_EVAL_IDENTITY audit before response scoring"
+    )
+
+
 def _write_component_artifacts(
     components_dir: str | Path | None,
     *,
@@ -384,7 +421,15 @@ def _cache_identity(cache: ScorerInputCache) -> dict[str, Any]:
         ),
         "raw_sha256": _manifest_string(manifest, "raw_sha256"),
         "array_sha256": manifest.get("array_sha256"),
+        "hash_domain": manifest.get("hash_domain"),
+        "segnet_last_rgb_shape": manifest.get("segnet_last_rgb_shape"),
+        "posenet_yuv6_pair_shape": manifest.get("posenet_yuv6_pair_shape"),
+        "pair_indices_shape": manifest.get("pair_indices_shape"),
         "pair_count": int(cache.pair_indices.shape[0]),
+        "eligible_for_local_mlx_transfer_calibration": bool(
+            manifest.get("eligible_for_local_mlx_transfer_calibration")
+        ),
+        "auth_eval_identity_audit": manifest.get("auth_eval_identity_audit"),
     }
 
 
@@ -452,6 +497,7 @@ def _jsonable(value: Any) -> Any:
 
 
 __all__ = [
+    "CANDIDATE_CACHE_TRANSFER_BLOCKER",
     "GPU_BATCH_SHAPE_BLOCKER",
     "GPU_RESEARCH_SIGNAL_BLOCKER",
     "SCHEMA_VERSION",

@@ -227,6 +227,23 @@ def test_mlx_score_calibration_rejects_incomplete_mlx_authority_tags(
         raise AssertionError("MLX response with incomplete authority tags was accepted")
 
 
+def test_mlx_score_calibration_rejects_unaudited_candidate_cache(
+    tmp_path: Path,
+) -> None:
+    row = _row(tmp_path, "bad", mlx_score=0.2, cpu_score=0.2, cuda_score=0.3)
+    response_path = tmp_path / row["mlx_response_path"]
+    payload = json.loads(response_path.read_text(encoding="utf-8"))
+    payload["cache_identity"]["candidate"]["eligible_for_local_mlx_transfer_calibration"] = False
+    response_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    try:
+        build_mlx_score_calibration_manifest([row], repo_root=tmp_path)
+    except ValueError as exc:
+        assert "candidate cache is not eligible" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("MLX response with unaudited candidate cache was accepted")
+
+
 def test_mlx_score_calibration_cli(tmp_path: Path) -> None:
     rows = [
         _row(tmp_path, "a", mlx_score=0.2, cpu_score=0.201, cuda_score=0.201),
@@ -296,6 +313,29 @@ def _row(
                 "batch_pairs": 1,
                 "archive_sha256": "a" * 64,
                 "inflated_outputs_aggregate_sha256": "b" * 64,
+                "cache_identity": {
+                    "candidate": {
+                        "archive_sha256": "a" * 64,
+                        "inflated_outputs_aggregate_sha256": "b" * 64,
+                        "raw_sha256": "r" * 64,
+                        "pair_count": 600,
+                        "eligible_for_local_mlx_transfer_calibration": True,
+                        "auth_eval_identity_audit": {
+                            "schema_version": "mlx_scorer_input_cache_auth_eval_audit.v1",
+                            "verdict": "PASS_CACHE_AUTH_EVAL_IDENTITY",
+                            "passed": True,
+                            "identity_residual": 0,
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "rank_or_kill_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        },
+                    },
+                    "reference": {
+                        "pair_count": 600,
+                    },
+                    "pair_indices_equal": True,
+                },
             }
         ),
         encoding="utf-8",

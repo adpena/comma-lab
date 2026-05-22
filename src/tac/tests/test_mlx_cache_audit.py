@@ -247,6 +247,43 @@ def test_cache_audit_cli_writes_output(tmp_path: Path) -> None:
     assert payload["passed"] is True
 
 
+def test_cache_audit_cli_stamps_cache_manifest_on_pass(tmp_path: Path) -> None:
+    cache_path = tmp_path / "cache.json"
+    auth_path = tmp_path / "auth.json"
+    out_path = tmp_path / "audit.json"
+    reference_path = tmp_path / "reference.json"
+    cache_path.write_text(json.dumps(_cache()), encoding="utf-8")
+    auth_path.write_text(json.dumps(_auth()), encoding="utf-8")
+    reference_path.write_text(json.dumps(_reference_manifest()), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_mlx_scorer_input_cache.py"),
+            "--cache-manifest",
+            str(cache_path),
+            "--auth-eval",
+            str(auth_path),
+            "--output",
+            str(out_path),
+            "--reference-cache-manifest",
+            str(reference_path),
+            "--stamp-cache-manifest-on-pass",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    manifest = json.loads(cache_path.read_text(encoding="utf-8"))
+    assert manifest["eligible_for_local_mlx_transfer_calibration"] is True
+    stamp = manifest["auth_eval_identity_audit"]
+    assert stamp["verdict"] == PASS_VERDICT
+    assert stamp["passed"] is True
+    assert stamp["identity_residual"] == 0
+    assert len(stamp["sha256"]) == 64
+
+
 def test_cache_audit_alias_cli_writes_output(tmp_path: Path) -> None:
     cache_path = tmp_path / "cache.json"
     auth_path = tmp_path / "auth.json"
