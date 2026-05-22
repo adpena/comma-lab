@@ -40,6 +40,7 @@ def _packet_plan(
     *,
     pair_indices: list[int] | None = None,
     frame_policy: str = "pair_all_frames",
+    pair_encoding: str = "raw_u16",
     base_archive: dict[str, object] | None = None,
 ) -> dict[str, object]:
     pairs = [3, 5] if pair_indices is None else pair_indices
@@ -49,6 +50,7 @@ def _packet_plan(
         storage_index=26,
         q_offset=0,
         delta=1,
+        pair_encoding=pair_encoding,
     )
     plan: dict[str, object] = {
         "schema": PACKET_SCHEMA,
@@ -57,6 +59,7 @@ def _packet_plan(
         "evidence_grade": "macOS-MLX-research-signal",
         "selective_packet": {
             "frame_policy": frame_policy,
+            "pair_encoding": pair_encoding,
             "payload_bytes": len(payload),
             "payload_sha256": sha256_bytes(payload),
             "selected_pair_indices": pairs,
@@ -104,6 +107,8 @@ def test_dqs1_parsing_and_pair_all_frames_mapping() -> None:
     parsed = parse_dqs1_payload(payload)
 
     assert parsed["frame_policy"] == "pair_all_frames"
+    assert parsed["pair_encoding"] == "raw_u16"
+    assert parsed["mode_byte"] == 1
     assert parsed["storage_index"] == 26
     assert parsed["q_offset"] == 0
     assert parsed["delta"] == 1
@@ -120,6 +125,23 @@ def test_dqs1_parsing_and_segnet_last_frame_mapping() -> None:
 
     assert parsed["frame_policy"] == "segnet_last_frame_only"
     assert parsed["affected_frame_indices"] == [7, 11]
+
+
+def test_dqs1_parsing_supports_sorted_gap_uleb_pair_encoding() -> None:
+    payload = dqs1_payload_from_packet_plan(
+        _packet_plan(pair_indices=[2, 5, 9], pair_encoding="sorted_gap_uleb")
+    )
+
+    parsed = parse_dqs1_payload(payload)
+
+    assert len(payload) == 14
+    assert parsed["frame_policy"] == "pair_all_frames"
+    assert parsed["frame_policy_code"] == 1
+    assert parsed["mode_byte"] == 0x11
+    assert parsed["pair_encoding"] == "sorted_gap_uleb"
+    assert parsed["pair_encoding_code"] == 1
+    assert parsed["pair_indices"] == [2, 5, 9]
+    assert parsed["affected_frame_indices"] == [4, 5, 10, 11, 18, 19]
 
 
 def test_dqs1_parser_rejects_duplicate_pairs() -> None:
@@ -144,6 +166,8 @@ def test_selective_inflate_patch_compiles_and_contains_runtime_hooks(
 
     compile(patched, "inflate.py", "exec")
     assert "DQS1_MAGIC = b\"DQS1\"" in patched
+    assert 'DQS1_PAIR_ENCODING_BY_CODE = {0: "raw_u16", 1: "sorted_gap_uleb"}' in patched
+    assert 'pair_encoding == "sorted_gap_uleb"' in patched
     assert "apply_dqs1_patch_to_decoder_state" in patched
     assert "selector_codes, selector_specs, dqs1_packet" in patched
     assert "mutated_decoder = None" in patched

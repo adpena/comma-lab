@@ -20,11 +20,10 @@ from typing import Any
 from tac.optimization.decoder_q_selective_runtime_packet import (
     BRIDGE_SCHEMA,
     FALSE_AUTHORITY,
-    FRAME_POLICY_CODES,
-    PACKET_MAGIC,
     affected_frames_for_pairs,
     build_decoder_q_selective_runtime_packet_plan,
     pack_dqs1_payload,
+    unpack_dqs1_payload,
 )
 from tac.optimization.decoder_q_selective_runtime_packet import (
     SCHEMA as PACKET_SCHEMA,
@@ -180,36 +179,8 @@ def write_single_stored_member(archive_zip: Path, *, member_name: str, data: byt
 def parse_dqs1_payload(payload: bytes) -> dict[str, Any]:
     """Parse the compact DQS1 wire payload used inside archive member ``x``."""
 
-    if len(payload) < 11:
-        raise DecoderQSelectiveRuntimeMaterializerError("DQS1 payload truncated")
-    if payload[:4] != PACKET_MAGIC:
-        raise DecoderQSelectiveRuntimeMaterializerError(
-            f"DQS1 magic mismatch: {payload[:4]!r}"
-        )
-    frame_policy_code = int(payload[4])
-    frame_policy_by_code = {value: key for key, value in FRAME_POLICY_CODES.items()}
-    frame_policy = frame_policy_by_code.get(frame_policy_code)
-    if frame_policy is None:
-        raise DecoderQSelectiveRuntimeMaterializerError(
-            f"unsupported DQS1 frame policy code: {frame_policy_code}"
-        )
-    storage_index = int(payload[5])
-    q_offset = int.from_bytes(payload[6:8], "little", signed=False)
-    delta = int.from_bytes(payload[8:9], "little", signed=True)
-    count = int.from_bytes(payload[9:11], "little", signed=False)
-    expected_len = 11 + count * 2
-    if len(payload) != expected_len:
-        raise DecoderQSelectiveRuntimeMaterializerError(
-            f"DQS1 payload length mismatch: expected {expected_len}, got {len(payload)}"
-        )
-    pairs = [
-        int.from_bytes(payload[11 + index * 2 : 13 + index * 2], "little", signed=False)
-        for index in range(count)
-    ]
-    if len(set(pairs)) != len(pairs):
-        raise DecoderQSelectiveRuntimeMaterializerError(
-            "DQS1 selected pair indices contain duplicates"
-        )
+    parsed = unpack_dqs1_payload(payload)
+    pairs = [int(pair) for pair in parsed["pair_indices"]]
     for pair in pairs:
         if pair >= 600:
             raise DecoderQSelectiveRuntimeMaterializerError(
@@ -217,16 +188,19 @@ def parse_dqs1_payload(payload: bytes) -> dict[str, Any]:
             )
     return {
         "magic": "DQS1",
-        "frame_policy": frame_policy,
-        "frame_policy_code": frame_policy_code,
-        "storage_index": storage_index,
-        "q_offset": q_offset,
-        "delta": delta,
+        "frame_policy": parsed["frame_policy"],
+        "frame_policy_code": parsed["frame_policy_code"],
+        "mode_byte": parsed["mode_byte"],
+        "pair_encoding": parsed["pair_encoding"],
+        "pair_encoding_code": parsed["pair_encoding_code"],
+        "storage_index": parsed["storage_index"],
+        "q_offset": parsed["q_offset"],
+        "delta": parsed["delta"],
         "pair_indices": pairs,
         "pair_count": len(pairs),
         "affected_frame_indices": affected_frames_for_pairs(
             pairs,
-            frame_policy=frame_policy,
+            frame_policy=str(parsed["frame_policy"]),
         ),
         "payload_bytes": len(payload),
         "payload_sha256": sha256_bytes(payload),
@@ -268,6 +242,7 @@ def dqs1_payload_from_packet_plan(plan: dict[str, Any]) -> bytes:
         storage_index=_storage_index_from_packet_plan(plan),
         q_offset=_as_int(mutation.get("q_offset"), label="mutation q_offset"),
         delta=_as_int(mutation.get("delta"), label="mutation delta"),
+        pair_encoding=str(packet.get("pair_encoding", "raw_u16")),
     )
     expected_sha = packet.get("payload_sha256")
     if expected_sha is not None and str(expected_sha) != sha256_bytes(payload):
@@ -395,6 +370,7 @@ def build_selective_inflate_py(base_inflate_text: str) -> str:
         """OUTER_MAGIC = b"FP11"
 DQS1_MAGIC = b"DQS1"
 DQS1_FRAME_POLICY_BY_CODE = {1: "pair_all_frames", 2: "segnet_last_frame_only"}
+DQS1_PAIR_ENCODING_BY_CODE = {0: "raw_u16", 1: "sorted_gap_uleb"}
 
 """,
         label="DQS1 constants",
@@ -407,21 +383,78 @@ DQS1_FRAME_POLICY_BY_CODE = {1: "pair_all_frames", 2: "segnet_last_frame_only"}
         raise ValueError("DQS1 payload truncated")
     if payload[:4] != DQS1_MAGIC:
         raise ValueError(f"DQS1 magic mismatch: {payload[:4]!r}")
-    frame_policy_code = int(payload[4])
+    mode_byte = int(payload[4])
+    frame_policy_code = mode_byte & 0x0F
+    pair_encoding_code = mode_byte >> 4
     frame_policy = DQS1_FRAME_POLICY_BY_CODE.get(frame_policy_code)
     if frame_policy is None:
         raise ValueError(f"unsupported DQS1 frame policy code: {frame_policy_code}")
+    pair_encoding = DQS1_PAIR_ENCODING_BY_CODE.get(pair_encoding_code)
+    if pair_encoding is None:
+        raise ValueError(f"unsupported DQS1 pair encoding code: {pair_encoding_code}")
     storage_index = int(payload[5])
     q_offset = struct.unpack_from("<H", payload, 6)[0]
     delta = struct.unpack_from("<b", payload, 8)[0]
     count = struct.unpack_from("<H", payload, 9)[0]
-    expected_len = 11 + count * 2
-    if len(payload) != expected_len:
-        raise ValueError(f"DQS1 payload length mismatch: expected {expected_len}, got {len(payload)}")
-    pair_indices = [
-        int(struct.unpack_from("<H", payload, 11 + offset * 2)[0])
-        for offset in range(count)
-    ]
+
+    def pack_uleb128(value: int) -> bytes:
+        if value < 0:
+            raise ValueError("DQS1 ULEB value must be non-negative")
+        out = bytearray()
+        remaining = int(value)
+        while True:
+            byte = remaining & 0x7F
+            remaining >>= 7
+            if remaining:
+                out.append(byte | 0x80)
+            else:
+                out.append(byte)
+                return bytes(out)
+
+    def unpack_uleb128(offset: int) -> tuple[int, int]:
+        value = 0
+        shift = 0
+        start = offset
+        while offset < len(payload):
+            byte = payload[offset]
+            value |= (byte & 0x7F) << shift
+            offset += 1
+            if byte & 0x80 == 0:
+                if payload[start:offset] != pack_uleb128(value):
+                    raise ValueError("noncanonical DQS1 ULEB gap")
+                return value, offset
+            shift += 7
+            if shift > 28:
+                raise ValueError("DQS1 ULEB gap is too large")
+        raise ValueError("truncated DQS1 ULEB gap")
+
+    if pair_encoding == "raw_u16":
+        expected_len = 11 + count * 2
+        if len(payload) != expected_len:
+            raise ValueError(f"DQS1 payload length mismatch: expected {expected_len}, got {len(payload)}")
+        pair_indices = [
+            int(struct.unpack_from("<H", payload, 11 + offset * 2)[0])
+            for offset in range(count)
+        ]
+    elif pair_encoding == "sorted_gap_uleb":
+        pair_indices = []
+        previous = None
+        offset = 11
+        for _ in range(count):
+            value, offset = unpack_uleb128(offset)
+            if previous is not None and value <= 0:
+                raise ValueError("DQS1 sorted_gap_uleb gap must be positive")
+            pair_index = value if previous is None else previous + value
+            if pair_index > 65535:
+                raise ValueError("DQS1 selected pair outside u16 range")
+            pair_indices.append(int(pair_index))
+            previous = int(pair_index)
+        if offset != len(payload):
+            raise ValueError("DQS1 payload has trailing pair-index bytes")
+    else:
+        raise ValueError(f"unsupported DQS1 pair encoding {pair_encoding!r}")
+    if pair_indices != sorted(pair_indices):
+        raise ValueError("DQS1 selected pair indices must be sorted")
     if len(set(pair_indices)) != len(pair_indices):
         raise ValueError("DQS1 selected pair indices contain duplicates")
     for pair_index in pair_indices:
@@ -430,6 +463,9 @@ DQS1_FRAME_POLICY_BY_CODE = {1: "pair_all_frames", 2: "segnet_last_frame_only"}
     return {
         "frame_policy": frame_policy,
         "frame_policy_code": frame_policy_code,
+        "mode_byte": mode_byte,
+        "pair_encoding": pair_encoding,
+        "pair_encoding_code": pair_encoding_code,
         "storage_index": storage_index,
         "q_offset": q_offset,
         "delta": delta,

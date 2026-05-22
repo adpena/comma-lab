@@ -45,10 +45,57 @@ def test_dqs1_trailer_payload_round_trip() -> None:
     assert packet.unpack_dqs1_payload(payload) == {
         "frame_policy": "pair_all_frames",
         "frame_policy_code": 1,
+        "mode_byte": 1,
+        "pair_encoding": "raw_u16",
+        "pair_encoding_code": 0,
         "storage_index": 7,
         "q_offset": 123,
         "delta": -1,
         "pair_indices": [2, 5, 9],
+    }
+
+
+def test_dqs1_payload_supports_sorted_gap_uleb_pair_encoding() -> None:
+    payload = packet.pack_dqs1_payload(
+        pair_indices=[2, 5, 9],
+        frame_policy="pair_all_frames",
+        storage_index=7,
+        q_offset=123,
+        delta=-1,
+        pair_encoding="sorted_gap_uleb",
+    )
+
+    assert payload[:4] == b"DQS1"
+    assert payload[4] == 0x11
+    assert len(payload) == 14
+    assert packet.unpack_dqs1_payload(payload) == {
+        "frame_policy": "pair_all_frames",
+        "frame_policy_code": 1,
+        "mode_byte": 0x11,
+        "pair_encoding": "sorted_gap_uleb",
+        "pair_encoding_code": 1,
+        "storage_index": 7,
+        "q_offset": 123,
+        "delta": -1,
+        "pair_indices": [2, 5, 9],
+    }
+
+
+def test_dqs1_pair_encoding_selector_prefers_smallest_then_raw_compatibility() -> None:
+    compact = packet.choose_dqs1_pair_encoding([2, 5, 9])
+    assert compact["selected"] == {
+        "pair_encoding": "sorted_gap_uleb",
+        "pair_encoding_code": 1,
+        "pair_index_payload_bytes": 3,
+        "descriptor_bytes": 14,
+    }
+
+    raw_tie = packet.choose_dqs1_pair_encoding([599])
+    assert raw_tie["selected"] == {
+        "pair_encoding": "raw_u16",
+        "pair_encoding_code": 0,
+        "pair_index_payload_bytes": 2,
+        "descriptor_bytes": 13,
     }
 
 
@@ -150,9 +197,25 @@ def test_packet_plan_preserves_false_authority_and_trailer_byte_accounting(
         "member = legacy_FP11_FEC6_member || DQS1_trailer"
     )
     assert plan["selective_packet"]["selected_pair_indices"] == [2, 5]
-    assert plan["selective_packet"]["payload_bytes"] == 15
+    assert plan["selective_packet"]["pair_encoding"] == "sorted_gap_uleb"
+    assert plan["selective_packet"]["pair_index_payload_bytes"] == 2
+    assert plan["selective_packet"]["payload_bytes"] == 13
+    assert plan["selective_packet"]["pair_encoding_candidates"] == [
+        {
+            "pair_encoding": "raw_u16",
+            "pair_encoding_code": 0,
+            "pair_index_payload_bytes": 4,
+            "descriptor_bytes": 15,
+        },
+        {
+            "pair_encoding": "sorted_gap_uleb",
+            "pair_encoding_code": 1,
+            "pair_index_payload_bytes": 2,
+            "descriptor_bytes": 13,
+        },
+    ]
     assert plan["selective_packet"]["wrapper_header_bytes"] == 0
-    assert plan["selective_packet"]["estimated_archive_byte_delta_if_appended_to_member"] == 15
+    assert plan["selective_packet"]["estimated_archive_byte_delta_if_appended_to_member"] == 13
     assert (
         "packet plan must be materialized with selective runtime adapter before use"
         in plan["dispatch_blockers"]

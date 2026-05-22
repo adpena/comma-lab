@@ -51,6 +51,13 @@ FRAME_POLICY_CODES = {
     "segnet_last_frame_only": 2,
 }
 FRAME_POLICY_BY_CODE = {value: key for key, value in FRAME_POLICY_CODES.items()}
+PAIR_ENCODING_CODES = {
+    "raw_u16": 0,
+    "sorted_gap_uleb": 1,
+}
+PAIR_ENCODING_BY_CODE = {value: key for key, value in PAIR_ENCODING_CODES.items()}
+RAW_PAIR_ENCODING = "raw_u16"
+COMPACT_PAIR_ENCODING = "sorted_gap_uleb"
 
 
 class DecoderQSelectiveRuntimePacketError(ValueError):
@@ -248,6 +255,165 @@ def affected_frames_for_pairs(pair_indices: Sequence[int], *, frame_policy: str)
     return sorted(set(frames))
 
 
+def _canonical_pair_indices(pair_indices: Sequence[int]) -> list[int]:
+    if len(pair_indices) > 65535:
+        raise DecoderQSelectiveRuntimePacketError("too many selected pairs")
+    pairs = [int(pair) for pair in pair_indices]
+    if pairs != sorted(pairs):
+        raise DecoderQSelectiveRuntimePacketError("pair indices must be sorted")
+    if len(set(pairs)) != len(pairs):
+        raise DecoderQSelectiveRuntimePacketError("pair indices contain duplicates")
+    for pair in pairs:
+        if not 0 <= int(pair) <= 65535:
+            raise DecoderQSelectiveRuntimePacketError("pair index must fit u16")
+    return pairs
+
+
+def _pack_mode_byte(*, frame_policy: str, pair_encoding: str) -> int:
+    frame_policy_code = FRAME_POLICY_CODES.get(frame_policy)
+    if frame_policy_code is None:
+        raise DecoderQSelectiveRuntimePacketError(f"unknown frame_policy {frame_policy!r}")
+    encoding_code = PAIR_ENCODING_CODES.get(pair_encoding)
+    if encoding_code is None:
+        raise DecoderQSelectiveRuntimePacketError(f"unknown pair_encoding {pair_encoding!r}")
+    if frame_policy_code > 0x0F or encoding_code > 0x0F:
+        raise DecoderQSelectiveRuntimePacketError("DQS1 mode byte codes must fit nibbles")
+    return (encoding_code << 4) | frame_policy_code
+
+
+def _unpack_mode_byte(mode_byte: int) -> tuple[int, str, int, str]:
+    frame_policy_code = int(mode_byte) & 0x0F
+    pair_encoding_code = int(mode_byte) >> 4
+    frame_policy = FRAME_POLICY_BY_CODE.get(frame_policy_code)
+    if frame_policy is None:
+        raise DecoderQSelectiveRuntimePacketError(
+            f"unknown DQS1 frame_policy code: {frame_policy_code}"
+        )
+    pair_encoding = PAIR_ENCODING_BY_CODE.get(pair_encoding_code)
+    if pair_encoding is None:
+        raise DecoderQSelectiveRuntimePacketError(
+            f"unknown DQS1 pair_encoding code: {pair_encoding_code}"
+        )
+    return frame_policy_code, frame_policy, pair_encoding_code, pair_encoding
+
+
+def _pack_uleb128(value: int) -> bytes:
+    if value < 0:
+        raise DecoderQSelectiveRuntimePacketError("ULEB value must be non-negative")
+    out = bytearray()
+    remaining = int(value)
+    while True:
+        byte = remaining & 0x7F
+        remaining >>= 7
+        if remaining:
+            out.append(byte | 0x80)
+        else:
+            out.append(byte)
+            return bytes(out)
+
+
+def _unpack_uleb128(payload: bytes, offset: int) -> tuple[int, int]:
+    value = 0
+    shift = 0
+    start = offset
+    while offset < len(payload):
+        byte = payload[offset]
+        value |= (byte & 0x7F) << shift
+        offset += 1
+        if byte & 0x80 == 0:
+            if payload[start:offset] != _pack_uleb128(value):
+                raise DecoderQSelectiveRuntimePacketError("noncanonical DQS1 ULEB gap")
+            return value, offset
+        shift += 7
+        if shift > 28:
+            raise DecoderQSelectiveRuntimePacketError("DQS1 ULEB gap is too large")
+    raise DecoderQSelectiveRuntimePacketError("truncated DQS1 ULEB gap")
+
+
+def _pack_pair_index_body(pairs: Sequence[int], *, pair_encoding: str) -> bytes:
+    if pair_encoding == RAW_PAIR_ENCODING:
+        return b"".join(struct.pack("<H", int(pair)) for pair in pairs)
+    if pair_encoding == COMPACT_PAIR_ENCODING:
+        out = bytearray()
+        previous: int | None = None
+        for pair in pairs:
+            value = int(pair) if previous is None else int(pair) - previous
+            if previous is not None and value <= 0:
+                raise DecoderQSelectiveRuntimePacketError(
+                    "sorted_gap_uleb pair gaps must be positive"
+                )
+            out.extend(_pack_uleb128(value))
+            previous = int(pair)
+        return bytes(out)
+    raise DecoderQSelectiveRuntimePacketError(f"unknown pair_encoding {pair_encoding!r}")
+
+
+def _unpack_pair_index_body(
+    payload: bytes,
+    *,
+    count: int,
+    pair_encoding: str,
+) -> list[int]:
+    if pair_encoding == RAW_PAIR_ENCODING:
+        expected = int(count) * 2
+        if len(payload) != expected:
+            raise DecoderQSelectiveRuntimePacketError(
+                f"DQS1 descriptor length mismatch: got {len(payload) + SPEC_HEADER.size}, "
+                f"expected {expected + SPEC_HEADER.size}"
+            )
+        return [
+            struct.unpack_from("<H", payload, index * 2)[0]
+            for index in range(int(count))
+        ]
+    if pair_encoding == COMPACT_PAIR_ENCODING:
+        pair_indices: list[int] = []
+        previous: int | None = None
+        offset = 0
+        for _ in range(int(count)):
+            value, offset = _unpack_uleb128(payload, offset)
+            pair = value if previous is None else previous + value
+            if previous is not None and value <= 0:
+                raise DecoderQSelectiveRuntimePacketError(
+                    "DQS1 sorted_gap_uleb gap must be positive"
+                )
+            if pair > 65535:
+                raise DecoderQSelectiveRuntimePacketError("DQS1 pair index must fit u16")
+            pair_indices.append(pair)
+            previous = pair
+        if offset != len(payload):
+            raise DecoderQSelectiveRuntimePacketError(
+                "DQS1 descriptor has trailing pair-index bytes"
+            )
+        return pair_indices
+    raise DecoderQSelectiveRuntimePacketError(f"unknown pair_encoding {pair_encoding!r}")
+
+
+def choose_dqs1_pair_encoding(pair_indices: Sequence[int]) -> dict[str, Any]:
+    """Return the smallest supported DQS1 pair-index encoding for sorted pairs."""
+
+    pairs = _canonical_pair_indices(pair_indices)
+    candidates: list[dict[str, Any]] = []
+    for pair_encoding, pair_encoding_code in PAIR_ENCODING_CODES.items():
+        body = _pack_pair_index_body(pairs, pair_encoding=pair_encoding)
+        candidates.append(
+            {
+                "pair_encoding": pair_encoding,
+                "pair_encoding_code": pair_encoding_code,
+                "pair_index_payload_bytes": len(body),
+                "descriptor_bytes": SPEC_HEADER.size + len(body),
+            }
+        )
+    best = min(
+        candidates,
+        key=lambda row: (
+            int(row["descriptor_bytes"]),
+            0 if row["pair_encoding"] == RAW_PAIR_ENCODING else 1,
+            str(row["pair_encoding"]),
+        ),
+    )
+    return {"selected": best, "candidates": candidates}
+
+
 def pack_dqs1_payload(
     *,
     pair_indices: Sequence[int],
@@ -255,6 +421,7 @@ def pack_dqs1_payload(
     storage_index: int,
     q_offset: int,
     delta: int,
+    pair_encoding: str = RAW_PAIR_ENCODING,
 ) -> bytes:
     """Pack the compact archive-local selective mutation descriptor."""
 
@@ -266,28 +433,20 @@ def pack_dqs1_payload(
         raise DecoderQSelectiveRuntimePacketError("q_offset must fit u16 in DQS1")
     if not -128 <= int(delta) <= 127:
         raise DecoderQSelectiveRuntimePacketError("delta must fit i8")
-    if len(pair_indices) > 65535:
-        raise DecoderQSelectiveRuntimePacketError("too many selected pairs")
-    pairs = [int(pair) for pair in pair_indices]
-    if pairs != sorted(pairs):
-        raise DecoderQSelectiveRuntimePacketError("pair indices must be sorted")
-    if len(set(pairs)) != len(pairs):
-        raise DecoderQSelectiveRuntimePacketError("pair indices contain duplicates")
+    pairs = _canonical_pair_indices(pair_indices)
+    pair_index_body = _pack_pair_index_body(pairs, pair_encoding=pair_encoding)
     payload = bytearray()
     payload.extend(
         SPEC_HEADER.pack(
             SPEC_MAGIC,
-            FRAME_POLICY_CODES[frame_policy],
+            _pack_mode_byte(frame_policy=frame_policy, pair_encoding=pair_encoding),
             int(storage_index),
             int(q_offset),
             int(delta),
             len(pairs),
         )
     )
-    for pair in pairs:
-        if not 0 <= int(pair) <= 65535:
-            raise DecoderQSelectiveRuntimePacketError("pair index must fit u16")
-        payload.extend(struct.pack("<H", int(pair)))
+    payload.extend(pair_index_body)
     return bytes(payload)
 
 
@@ -296,27 +455,21 @@ def unpack_dqs1_payload(payload: bytes) -> dict[str, Any]:
 
     if len(payload) < SPEC_HEADER.size:
         raise DecoderQSelectiveRuntimePacketError("DQS1 descriptor truncated")
-    magic, frame_policy_code, storage_index, q_offset, delta, count = SPEC_HEADER.unpack_from(
+    magic, mode_byte, storage_index, q_offset, delta, count = SPEC_HEADER.unpack_from(
         payload
     )
     if magic != SPEC_MAGIC:
         raise DecoderQSelectiveRuntimePacketError(
             f"DQS1 descriptor magic mismatch: {magic!r}"
         )
-    frame_policy = FRAME_POLICY_BY_CODE.get(int(frame_policy_code))
-    if frame_policy is None:
-        raise DecoderQSelectiveRuntimePacketError(
-            f"unknown DQS1 frame_policy code: {frame_policy_code}"
-        )
-    expected = SPEC_HEADER.size + int(count) * 2
-    if len(payload) != expected:
-        raise DecoderQSelectiveRuntimePacketError(
-            f"DQS1 descriptor length mismatch: got {len(payload)}, expected {expected}"
-        )
-    pair_indices = [
-        struct.unpack_from("<H", payload, SPEC_HEADER.size + index * 2)[0]
-        for index in range(int(count))
-    ]
+    frame_policy_code, frame_policy, pair_encoding_code, pair_encoding = _unpack_mode_byte(
+        int(mode_byte)
+    )
+    pair_indices = _unpack_pair_index_body(
+        payload[SPEC_HEADER.size:],
+        count=int(count),
+        pair_encoding=pair_encoding,
+    )
     if pair_indices != sorted(pair_indices):
         raise DecoderQSelectiveRuntimePacketError("DQS1 pair indices must be sorted")
     if len(set(pair_indices)) != len(pair_indices):
@@ -324,6 +477,9 @@ def unpack_dqs1_payload(payload: bytes) -> dict[str, Any]:
     return {
         "frame_policy": frame_policy,
         "frame_policy_code": int(frame_policy_code),
+        "mode_byte": int(mode_byte),
+        "pair_encoding": pair_encoding,
+        "pair_encoding_code": int(pair_encoding_code),
         "storage_index": int(storage_index),
         "q_offset": int(q_offset),
         "delta": int(delta),
@@ -409,13 +565,19 @@ def build_decoder_q_selective_runtime_packet_plan(
         storage_index=probe.tensor.storage_index,
         q_offset=decoder_mutation.q_offset,
     )
+    pair_encoding_choice = choose_dqs1_pair_encoding(pair_indices)
+    selected_pair_encoding = str(pair_encoding_choice["selected"]["pair_encoding"])
     packet_payload = pack_dqs1_payload(
         pair_indices=pair_indices,
         frame_policy=frame_policy,
         storage_index=probe.tensor.storage_index,
         q_offset=decoder_mutation.q_offset,
         delta=decoder_mutation.delta,
+        pair_encoding=selected_pair_encoding,
     )
+    parsed_packet_payload = unpack_dqs1_payload(packet_payload)
+    if parsed_packet_payload["pair_indices"] != pair_indices:
+        raise DecoderQSelectiveRuntimePacketError("DQS1 packet pair encoding round-trip failed")
 
     decoder_diff_ranges = _diff_ranges(base_decoder, candidate_decoder)
     member_diff_ranges = _diff_ranges(base_member, candidate_member)
@@ -478,11 +640,19 @@ def build_decoder_q_selective_runtime_packet_plan(
         "selective_packet": {
             "wire_format": (
                 "member = legacy_FP11_FEC6_member || DQS1_trailer; "
-                "DQS1_trailer = DQS1,u8 frame_policy,u8 storage_index,u16 q_offset,i8 delta,"
-                "u16 count,u16[count] sorted_pair_indices"
+                "DQS1_trailer = DQS1,u8 mode,u8 storage_index,u16 q_offset,i8 delta,"
+                "u16 count,pair_index_payload; mode low nibble = frame_policy, "
+                "mode high nibble = pair_encoding"
             ),
             "frame_policy": frame_policy,
             "frame_policy_code": FRAME_POLICY_CODES[frame_policy],
+            "mode_byte": parsed_packet_payload["mode_byte"],
+            "pair_encoding": parsed_packet_payload["pair_encoding"],
+            "pair_encoding_code": parsed_packet_payload["pair_encoding_code"],
+            "pair_index_payload_bytes": pair_encoding_choice["selected"][
+                "pair_index_payload_bytes"
+            ],
+            "pair_encoding_candidates": pair_encoding_choice["candidates"],
             "descriptor_bytes": descriptor_len,
             "wrapper_header_bytes": 0,
             "wrapped_member_overhead_bytes": descriptor_len,
@@ -522,6 +692,7 @@ def build_decoder_q_selective_runtime_packet_plan(
             "must_keep_patch_bytes_inside_archive_zip_member": True,
             "must_derive_mutated_decoder_state_from_base_decoder_blob_and_dqs1_patch": True,
             "must_not_import_scorer_or_use_network": True,
+            "must_decode_dqs1_mode_byte_pair_encoding": True,
             "batch_decode_strategy": (
                 "decode base batch; when a local batch contains selected pairs, "
                 "decode the full same local batch with the mutated decoder and "
@@ -551,9 +722,11 @@ def render_decoder_q_selective_runtime_packet_markdown(plan: dict[str, Any]) -> 
         "",
         f"- Packet status: `{plan.get('packet_status')}`",
         f"- Frame policy: `{packet.get('frame_policy')}`",
+        f"- Pair encoding: `{packet.get('pair_encoding')}`",
         f"- Selected pairs: `{packet.get('selected_pair_count')}`",
         f"- Affected frames: `{packet.get('affected_frame_count')}`",
         f"- DQS1 payload bytes: `{packet.get('payload_bytes')}`",
+        f"- Pair-index payload bytes: `{packet.get('pair_index_payload_bytes')}`",
         f"- Estimated rate delta: `{packet.get('estimated_rate_score_delta')}`",
         f"- Non-authoritative MLX gain sum: `{packet.get('non_authoritative_mlx_gain_sum')}`",
         f"- Mutation: `{mutation.get('tensor_name')}` q_offset=`{mutation.get('q_offset')}` delta=`{mutation.get('delta')}`",
@@ -578,11 +751,14 @@ __all__ = [
     "FRAME_POLICY_BY_CODE",
     "FRAME_POLICY_CODES",
     "PACKET_MAGIC",
+    "PAIR_ENCODING_BY_CODE",
+    "PAIR_ENCODING_CODES",
     "SCHEMA",
     "SPEC_MAGIC",
     "DecoderQSelectiveRuntimePacketError",
     "affected_frames_for_pairs",
     "build_decoder_q_selective_runtime_packet_plan",
+    "choose_dqs1_pair_encoding",
     "dumps_json",
     "load_json_object",
     "pack_dqs1_payload",
