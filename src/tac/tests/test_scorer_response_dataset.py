@@ -252,6 +252,36 @@ def test_build_response_dataset_accepts_direct_mlx_scorer_response_payload(tmp_p
     assert row["source_posenet_sha256"] == "p" * 64
 
 
+def test_build_response_dataset_honors_explicit_mlx_response_family(tmp_path) -> None:
+    path = tmp_path / "mlx_decoder_q_response.json"
+    payload = _mlx_response_payload()
+    payload["response_family"] = "mlx_decoder_q"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+
+    assert dataset["summary"]["family_counts"] == {"mlx_decoder_q": 1}
+    assert dataset["rows"][0]["family"] == "mlx_decoder_q"
+
+
+def test_build_response_dataset_rejects_invalid_mlx_response_family(tmp_path) -> None:
+    path = tmp_path / "mlx_response.json"
+    payload = _mlx_response_payload()
+    payload["response_family"] = "Decoder Q"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=0.9, archive_bytes=100),
+    )
+
+    assert dataset["rows"] == []
+    assert "response_family may contain only lowercase" in dataset["skipped"][0]["reason"]
+
+
 def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
     false_authority = {
         "score_claim": False,

@@ -455,12 +455,41 @@ def _is_sha256(value: str) -> bool:
     return len(value) == 64 and all(ch in "0123456789abcdefABCDEF" for ch in value)
 
 
+def _normalize_family_label(value: Any, *, label: str) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        raise ScorerResponseDatasetError(f"{label} must be non-empty when provided")
+    allowed = set("abcdefghijklmnopqrstuvwxyz0123456789_-.")
+    if any(ch not in allowed for ch in text):
+        raise ScorerResponseDatasetError(
+            f"{label} may contain only lowercase letters, digits, underscore, dash, or dot"
+        )
+    return text
+
+
+def _explicit_response_family(parent: dict[str, Any], candidate: dict[str, Any]) -> str | None:
+    for source_label, source in (("candidate", candidate), ("parent", parent)):
+        family = _normalize_family_label(
+            source.get("response_family"),
+            label=f"{source_label}.response_family",
+        )
+        if family is not None:
+            return family
+    return None
+
+
 def _mlx_scorer_response_candidate_item(
     path: Path,
     payload: dict[str, Any],
 ) -> tuple[str, dict[str, Any], dict[str, Any]]:
     label = f"{path}:mlx_scorer_response"
     _require_mlx_response_false_authority(payload, label=label)
+    response_family = _normalize_family_label(
+        payload.get("response_family"),
+        label=f"{label}.response_family",
+    )
     candidate_id = str(
         payload.get("run_id")
         or f"mlx_pairs_{payload.get('start_pair')}_{payload.get('max_pairs')}_{payload.get('batch_pairs')}"
@@ -487,6 +516,7 @@ def _mlx_scorer_response_candidate_item(
         "candidate_id": candidate_id,
         "advisory_eval": advisory,
         "authority": authority,
+        "response_family": response_family,
         "summary": {
             "component": "mlx_scorer_response",
             "pair_indices": payload.get("pair_window"),
@@ -509,6 +539,7 @@ def _mlx_scorer_response_candidate_item(
         "components": payload.get("components"),
         "cache_identity": payload.get("cache_identity"),
         "device_contract": payload.get("device_contract"),
+        "response_family": response_family,
     }
     return candidate_id, candidate, parent
 
@@ -532,6 +563,9 @@ def _mlx_response_window_key(payload: dict[str, Any], *, label: str) -> str:
 
 
 def _family_for(path: Path, parent: dict[str, Any], candidate: dict[str, Any]) -> str:
+    explicit_family = _explicit_response_family(parent, candidate)
+    if explicit_family is not None:
+        return explicit_family
     producer = str(parent.get("producer") or candidate.get("producer") or "")
     schema = str(parent.get("schema") or candidate.get("schema") or "")
     smoke_kind = str(

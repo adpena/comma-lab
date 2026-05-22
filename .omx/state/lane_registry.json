@@ -46709,6 +46709,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_same_axis_decoderq_response_family_20260522_codex",
+      "name": "MLX same-axis decoder-q response family",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_same_axis_decoderq_response_family_20260522T032520Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/mlx_same_axis_decoderq_d1f1e56e042692f2_20260522T031205Z/mlx_fec6_decoderq_same_axis_600row_validation_gate.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -46718,5 +46759,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-22T00:01:53Z"
+  "updated_at": "2026-05-22T03:20:35Z"
 }

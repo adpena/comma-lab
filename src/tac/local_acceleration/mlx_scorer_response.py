@@ -90,6 +90,7 @@ def build_mlx_scorer_response_payload(
     max_pairs: int | None = None,
     allow_gpu_research_signal: bool = False,
     allow_batch_shape_research_signal: bool = False,
+    response_family: str | None = None,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
 
@@ -120,6 +121,7 @@ def build_mlx_scorer_response_payload(
         raise ValueError(f"start_pair must be >= 0, got {start_pair}")
     if max_pairs is not None and int(max_pairs) < 1:
         raise ValueError(f"max_pairs must be >= 1 when set, got {max_pairs}")
+    family = _normalize_response_family(response_family)
 
     reference = load_scorer_input_cache(reference_cache_dir)
     candidate = load_scorer_input_cache(candidate_cache_dir)
@@ -206,6 +208,7 @@ def build_mlx_scorer_response_payload(
         "evidence_grade": EVIDENCE_GRADE_MLX,
         "evidence_tag": EVIDENCE_TAG_MLX,
         "score_axis": EVIDENCE_TAG_MLX,
+        "response_family": family,
         "hardware_substrate": f"MLX {device_type}",
         "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
         "batch_shape_research_signal_allowed": bool(allow_batch_shape_research_signal),
@@ -419,6 +422,20 @@ def _file_sha256(path: Path) -> str:
 def _manifest_string(manifest: dict[str, Any], key: str) -> str | None:
     value = manifest.get(key)
     return value if isinstance(value, str) and value else None
+
+
+def _normalize_response_family(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        raise ValueError("response_family must be non-empty when provided")
+    allowed = set("abcdefghijklmnopqrstuvwxyz0123456789_-.")
+    if any(ch not in allowed for ch in text):
+        raise ValueError(
+            "response_family may contain only lowercase letters, digits, underscore, dash, or dot"
+        )
+    return text
 
 
 def _jsonable(value: Any) -> Any:

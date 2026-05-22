@@ -66,6 +66,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional directory for per-pair PoseNet/SegNet distortion .npy arrays.",
     )
+    parser.add_argument(
+        "--response-family",
+        help=(
+            "Optional candidate-family label for downstream scorer-response "
+            "datasets, e.g. mlx_fec6_frontier or mlx_decoder_q."
+        ),
+    )
     return parser
 
 
@@ -85,6 +92,7 @@ def main(argv: list[str] | None = None) -> int:
             max_pairs=args.max_pairs,
             allow_gpu_research_signal=args.allow_gpu_research_signal,
             allow_batch_shape_research_signal=args.allow_batch_shape_research_signal,
+            response_family=args.response_family,
         )
     except (OSError, ValueError, NotImplementedError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
