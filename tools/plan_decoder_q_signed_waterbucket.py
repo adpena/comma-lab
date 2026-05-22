@@ -31,6 +31,11 @@ from tac.optimization.fec6_decoder_mutations import (  # noqa: E402
     sha256_bytes,
     write_stored_archive,
 )
+from tac.optimization.decoder_q_surface_objective import (  # noqa: E402
+    build_surface_objective,
+    sort_atoms_for_surface_objective,
+    summarize_candidate_surface_proxy,
+)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -145,7 +150,12 @@ def _atom(row: dict[str, Any], advisory: dict[str, Any] | None) -> dict[str, Any
     }
 
 
-def _rank_atoms(rows: list[dict[str, Any]], advisory_by_key: dict[tuple[str, int, int], dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+def _rank_atoms(
+    rows: list[dict[str, Any]],
+    advisory_by_key: dict[tuple[str, int, int], dict[str, Any]],
+    *,
+    surface_objective: dict[str, Any] | None = None,
+) -> dict[str, list[dict[str, Any]]]:
     atoms = [_atom(row, advisory_by_key.get(_mutation_key(row))) for row in rows]
 
     def improved(atom: dict[str, Any]) -> bool:
@@ -210,13 +220,26 @@ def _rank_atoms(rows: list[dict[str, Any]], advisory_by_key: dict[tuple[str, int
     if not negative_control:
         negative_control = atoms[-8:]
 
-    return {
+    ranked = {
         "seg_heavy": good + unmeasured,
         "sign_inverted_from_bad": sign_inverted + unmeasured,
         "mixed_tradeoff": mixed + unmeasured,
         "bias_only": bias,
         "negative_control": negative_control,
     }
+    if surface_objective is not None:
+        if surface_objective["strategy"] == "suppress_or_invert_regressions_first":
+            surface_atoms = sign_inverted + unmeasured + good
+            preferred_direction = "suppress"
+        else:
+            surface_atoms = good + unmeasured + sign_inverted
+            preferred_direction = "preserve"
+        ranked["response_surface_guided"] = sort_atoms_for_surface_objective(
+            surface_atoms,
+            surface_objective,
+            preferred_direction=preferred_direction,
+        )
+    return ranked
 
 
 def _dedupe_atoms(atoms: list[dict[str, Any]], budget: int) -> list[dict[str, Any]]:
@@ -253,6 +276,7 @@ def _materialize_candidate(
     member_bytes: bytes,
     prepared: Any,
     brotli_quality: int,
+    surface_objective: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     mutations = [
         DecoderQMutation(
@@ -283,6 +307,9 @@ def _materialize_candidate(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    surface_proxy = summarize_candidate_surface_proxy(atoms, surface_objective)
+    if surface_proxy is not None:
+        row["response_surface_objective"] = surface_proxy
     if not fixed_length:
         row["blockers"] = ["combined_decoder_length_changed"]
         return row
@@ -315,9 +342,11 @@ def _materialize_candidate(
 def build_plan(args: argparse.Namespace) -> dict[str, Any]:
     feasibility = _read_json(args.feasibility.resolve())
     advisory_summary = _read_json(args.advisory_summary.resolve()) if args.advisory_summary and args.advisory_summary.is_file() else None
+    response_surface = _read_json(args.decoder_q_response_surface.resolve()) if args.decoder_q_response_surface and args.decoder_q_response_surface.is_file() else None
+    surface_objective = build_surface_objective(response_surface) if response_surface is not None else None
     rows = _fixed_rows(feasibility)
     advisory_by_key = _advisory_by_key(advisory_summary, args.baseline_score)
-    ranked = _rank_atoms(rows, advisory_by_key)
+    ranked = _rank_atoms(rows, advisory_by_key, surface_objective=surface_objective)
     budgets = _parse_csv_ints(args.edit_budgets)
     requested_buckets = [part.strip() for part in args.buckets.split(",") if part.strip()]
     member_bytes = args.archive_bin.resolve().read_bytes()
@@ -348,6 +377,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
                         member_bytes=member_bytes,
                         prepared=prepared,
                         brotli_quality=args.brotli_quality,
+                        surface_objective=surface_objective if bucket == "response_surface_guided" else None,
                     )
                 )
             except Fec6DecoderMutationError as exc:
@@ -372,6 +402,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
             "archive_bin_sha256": member_sha,
             "feasibility": str(args.feasibility.resolve()),
             "advisory_summary": str(args.advisory_summary.resolve()) if args.advisory_summary else None,
+            "decoder_q_response_surface": str(args.decoder_q_response_surface.resolve()) if args.decoder_q_response_surface else None,
             "baseline_score": args.baseline_score,
             "edit_budgets": budgets,
             "buckets": requested_buckets,
@@ -379,6 +410,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, Any]:
             "brotli_quality": int(args.brotli_quality),
         },
         "ranked_atom_counts": {bucket: len(atoms) for bucket, atoms in ranked.items()},
+        "response_surface_objective": surface_objective,
         "summary": {
             "single_fixed_atom_count": len(rows),
             "advisory_measurement_count": len(advisory_by_key),
@@ -401,12 +433,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--archive-bin", type=Path, required=True)
     parser.add_argument("--feasibility", type=Path, required=True)
     parser.add_argument("--advisory-summary", type=Path)
+    parser.add_argument("--decoder-q-response-surface", type=Path)
     parser.add_argument("--baseline-score", type=float)
     parser.add_argument("--expected-member-sha256")
     parser.add_argument("--edit-budgets", default="1,2,4,8,16")
     parser.add_argument(
         "--buckets",
-        default="seg_heavy,sign_inverted_from_bad,mixed_tradeoff,bias_only,negative_control",
+        default="response_surface_guided,seg_heavy,sign_inverted_from_bad,mixed_tradeoff,bias_only,negative_control",
     )
     parser.add_argument("--brotli-quality", type=int, default=11)
     parser.add_argument("--candidate-output-dir", type=Path, required=True)
