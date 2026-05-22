@@ -103,6 +103,9 @@ env_overrides:
   GRAYSCALE_LUT_BATCH_SIZE: "16"
   GRAYSCALE_LUT_UPSTREAM_DIR: /workspace/pact/upstream
   GRAYSCALE_LUT_DEVICE: cuda
+  GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT: "${GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT:-}"
+  # Leave 30 min inside the 4h provider envelope for checkpoint export + auth artifacts.
+  GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS: "12600"
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:

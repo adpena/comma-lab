@@ -73,6 +73,8 @@ GRAYSCALE_LUT_DEVICE="${GRAYSCALE_LUT_DEVICE:-cuda}"
 # verdict (lut_bits=5 = 32-level cargo-cult unwind from PR #56 lut_bits=4 default 16-level).
 # Default 8 preserves byte-stable backward-compat per trainer argparse default.
 GRAYSCALE_LUT_LUT_BITS="${GRAYSCALE_LUT_LUT_BITS:-8}"
+GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT="${GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT:-}"
+GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS="${GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS:-}"
 
 DISPATCH_INSTANCE_JOB_ID="${GRAYSCALE_LUT_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${GRAYSCALE_LUT_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
@@ -167,6 +169,9 @@ prov = {
     'epochs': $GRAYSCALE_LUT_EPOCHS,
     'batch_size': $GRAYSCALE_LUT_BATCH_SIZE,
     'device': '$GRAYSCALE_LUT_DEVICE',
+    'lut_bits': '$GRAYSCALE_LUT_LUT_BITS',
+    'export_only_checkpoint': '$GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT',
+    'soft_train_deadline_seconds': '$GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS',
     # Council Phase 5 prediction: 0.18 [contest-CUDA].
     # Source: .omx/research/grand_council_fields_medal_substrate_design_20260512.md
     # + recipe substrate_grayscale_lut_modal_a100_dispatch.yaml::predicted_score_target.
@@ -195,7 +200,14 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # Stage 4: invoke trainer.
 #
 # All 5 TIER_1_OPERATOR_REQUIRED_FLAGS are threaded explicitly per Catalog #151.
-log "stage_4_trainer_invoke_begin video=$GRAYSCALE_LUT_VIDEO_PATH epochs=$GRAYSCALE_LUT_EPOCHS device=$GRAYSCALE_LUT_DEVICE batch_size=$GRAYSCALE_LUT_BATCH_SIZE"
+TRAINER_EXTRA_ARGS=()
+if [ -n "$GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT" ]; then
+    TRAINER_EXTRA_ARGS+=(--export-only-checkpoint "$GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT")
+fi
+if [ -n "$GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS" ]; then
+    TRAINER_EXTRA_ARGS+=(--soft-train-deadline-seconds "$GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS")
+fi
+log "stage_4_trainer_invoke_begin video=$GRAYSCALE_LUT_VIDEO_PATH epochs=$GRAYSCALE_LUT_EPOCHS device=$GRAYSCALE_LUT_DEVICE batch_size=$GRAYSCALE_LUT_BATCH_SIZE lut_bits=$GRAYSCALE_LUT_LUT_BITS export_only=${GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT:-none} soft_deadline=${GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS:-none}"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 set +e
 "$PYBIN" experiments/train_substrate_grayscale_lut.py \
@@ -206,6 +218,7 @@ set +e
     --upstream-dir "$GRAYSCALE_LUT_UPSTREAM_DIR" \
     --device "$GRAYSCALE_LUT_DEVICE" \
     --lut-bits "$GRAYSCALE_LUT_LUT_BITS" \
+    ${TRAINER_EXTRA_ARGS[@]+"${TRAINER_EXTRA_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/run.log"
 TRAIN_RC=${PIPESTATUS[0]}
 set -e
@@ -213,13 +226,17 @@ TRAIN_END_UTC=$(date -u +%FT%TZ)
 log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_END_UTC"
 
 # Stage 5: completion record.
-AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_cuda.json"
+AUTH_EVAL_CUDA_JSON="$OUTPUT_DIR/contest_auth_eval_cuda.json"
+AUTH_EVAL_CPU_JSON="$OUTPUT_DIR/contest_auth_eval_cpu.json"
 ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
-if [ -f "$AUTH_EVAL_JSON" ]; then
-    log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_GRAYSCALE_LUT_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+if [ -f "$AUTH_EVAL_CUDA_JSON" ]; then
+    log "auth_eval_artifact_present path=$AUTH_EVAL_CUDA_JSON"
+    log "LANE_GRAYSCALE_LUT_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_CUDA_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+elif [ -f "$AUTH_EVAL_CPU_JSON" ]; then
+    log "auth_eval_artifact_present path=$AUTH_EVAL_CPU_JSON"
+    log "LANE_GRAYSCALE_LUT_DONE [diagnostic-CPU] auth_eval=$AUTH_EVAL_CPU_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
 else
-    log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 12)"
+    log "auth_eval_artifact_missing paths=$AUTH_EVAL_CUDA_JSON,$AUTH_EVAL_CPU_JSON (trainer may have failed before stage 12)"
 fi
 
 exit "$TRAIN_RC"

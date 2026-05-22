@@ -117,6 +117,9 @@ env_overrides:
   # construction; promotable via paired paid Modal A100 sister recipe only.
   GRAYSCALE_LUT_DEVICE: mps
   GRAYSCALE_LUT_LUT_BITS: "5"
+  GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT: "${GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT:-}"
+  # Leave 60 min inside the 8h local-MPS envelope for archive/auth artifact export.
+  GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS: "25200"
 
 dependencies:
   - scripts/remote_lane_substrate_grayscale_lut.sh

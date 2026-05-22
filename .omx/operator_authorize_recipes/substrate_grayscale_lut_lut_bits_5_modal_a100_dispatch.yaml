@@ -144,6 +144,10 @@ env_overrides:
   # Catalog #151 env-var ladder + OVERNIGHT-TT Phase 2 BUILD: lut_bits=5 per
   # AA HIGH verdict 2026-05-21 + OVERNIGHT-EE-RESUME §13 op-routable #4.
   GRAYSCALE_LUT_LUT_BITS: "5"
+  GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT: "${GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT:-}"
+  # Harvested audit 2026-05-22: 4h Modal timeout preserved best.pt but missed export/auth.
+  # Stop training 30 min before the provider envelope so export/auth can run.
+  GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS: "12600"
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:

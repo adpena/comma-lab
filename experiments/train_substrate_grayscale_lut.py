@@ -406,6 +406,28 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip building the archive.zip (e.g. for trainer-only smoke).",
     )
+    p.add_argument(
+        "--export-only-checkpoint",
+        type=Path,
+        default=None,
+        help=(
+            "Load an existing best.pt / EMA checkpoint and build archive/auth "
+            "artifacts without running the training loop. Intended for Modal "
+            "timeout recovery when best.pt was harvested but archive/auth "
+            "artifacts were not produced."
+        ),
+    )
+    p.add_argument(
+        "--soft-train-deadline-seconds",
+        type=float,
+        default=None,
+        help=(
+            "Best-effort training-loop wall-clock budget. When reached, stop "
+            "training at the next batch/epoch boundary, save the current EMA "
+            "checkpoint if needed, and proceed to archive/auth export before "
+            "the provider's hard timeout."
+        ),
+    )
     # Tier-1 optimization CLI surface (TIER-1-OPT-BATCH 2026-05-14).
     p.add_argument(
         "--enable-autocast-fp16",
@@ -629,13 +651,110 @@ def _build_archive_zip(
             zf.writestr(zi, src.read_bytes())
 
 
+def _export_archive_from_checkpoint(
+    args: argparse.Namespace,
+    checkpoint_path: Path,
+) -> dict[str, Any]:
+    """Build GLV1 archive artifacts from a saved EMA checkpoint.
+
+    This is the recovery surface for timed-out provider runs: if training
+    produced ``best.pt`` but hit the outer timeout before archive/auth stages,
+    rerun the trainer with ``--export-only-checkpoint <best.pt>`` to consume the
+    checkpoint directly without retraining.
+    """
+    import torch
+
+    from tac.substrates.grayscale_lut.architecture import (
+        GrayscaleLutConfig,
+        GrayscaleLutSubstrate,
+    )
+    from tac.substrates.grayscale_lut.archive import pack_archive
+
+    checkpoint_path = checkpoint_path.expanduser()
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(f"--export-only-checkpoint not found: {checkpoint_path}")
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    archive_zip_path = args.output_dir / "archive.zip"
+    if args.skip_archive_build:
+        return {
+            "checkpoint_path": checkpoint_path,
+            "config": None,
+            "archive_sha256": "",
+            "archive_bytes": 0,
+            "archive_zip_path": archive_zip_path,
+        }
+
+    print(f"[full] building archive from {checkpoint_path} ...")
+    ema_ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    cfg_raw = ema_ckpt.get("config")
+    if not isinstance(cfg_raw, dict):
+        raise ValueError(
+            f"checkpoint {checkpoint_path} missing dict 'config' payload; "
+            "cannot recover grayscale_lut archive grammar"
+        )
+    cfg = GrayscaleLutConfig(**cfg_raw)
+    sd = ema_ckpt["state_dict"]
+
+    # Re-instantiate the model on CPU with the EMA weights to use the
+    # quantize_grayscale_for_archive + runtime_state_dict_for_archive helpers
+    # without duplicating byte-packing logic here.
+    cpu_model = GrayscaleLutSubstrate(cfg).to("cpu")
+    cpu_model.load_state_dict(sd, strict=False)
+    grayscale_uint8 = cpu_model.quantize_grayscale_for_archive()
+    decoder_sd = cpu_model.runtime_state_dict_for_archive()
+
+    meta = {
+        "decoder_hidden": cfg.decoder_hidden,
+        "decoder_blocks": cfg.decoder_blocks,
+        # Observability-only; GLV1 remains uint8 and byte-compatible.
+        "lut_bits": cfg.lut_bits,
+    }
+    bin_bytes = pack_archive(
+        decoder_sd,
+        grayscale_uint8,
+        meta,
+        num_pairs=cfg.num_pairs,
+        grayscale_downsample=cfg.grayscale_downsample,
+        embedding_dim=cfg.embedding_dim,
+        output_height=cfg.output_height,
+        output_width=cfg.output_width,
+    )
+    (args.output_dir / "0.bin").write_bytes(bin_bytes)
+    archive_sha = _sha256_bytes(bin_bytes)
+    archive_bytes = len(bin_bytes)
+    print(f"[full] wrote 0.bin ({archive_bytes} bytes, sha256={archive_sha})")
+
+    submission_dir = args.output_dir / "submission"
+    _write_runtime(submission_dir)
+    (submission_dir / "0.bin").write_bytes(bin_bytes)
+    _build_archive_zip(
+        archive_zip_path,
+        bin_bytes=bin_bytes,
+        submission_dir=submission_dir,
+    )
+    print(f"[full] wrote {archive_zip_path}")
+    return {
+        "checkpoint_path": checkpoint_path,
+        "config": cfg,
+        "archive_sha256": archive_sha,
+        "archive_bytes": archive_bytes,
+        "archive_zip_path": archive_zip_path,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
 
-def _device_or_die(name: str, *, smoke: bool):
+def _device_or_die(name: str, *, smoke: bool, allow_full_cpu: bool = False):
     """Thin substrate-tag-bound wrapper over the canonical helper (CANON-DEDUP-1)."""
-    return _device_or_die_canonical(name, smoke=smoke, substrate_tag="grayscale_lut")
+    return _device_or_die_canonical(
+        name,
+        smoke=smoke,
+        substrate_tag="grayscale_lut",
+        allow_full_cpu=allow_full_cpu,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -708,7 +827,6 @@ def _full_main(args: argparse.Namespace) -> int:
         GrayscaleLutConfig,
         GrayscaleLutSubstrate,
     )
-    from tac.substrates.grayscale_lut.archive import pack_archive
     from tac.substrates.grayscale_lut.score_aware_loss import (
         GrayscaleLutScoreAwareLoss,
         ScoreAwareLossWeights,
@@ -717,7 +835,11 @@ def _full_main(args: argparse.Namespace) -> int:
 
     # 1. Pin seeds (deterministic CUDA where possible)
     _pin_seeds(args.seed)
-    device = _device_or_die(args.device, smoke=False)
+    device = _device_or_die(
+        args.device,
+        smoke=False,
+        allow_full_cpu=args.export_only_checkpoint is not None,
+    )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stage_log: list[dict[str, Any]] = []
@@ -726,6 +848,111 @@ def _full_main(args: argparse.Namespace) -> int:
         stage_log.append({"stage": name, "at": _utc_now_iso()})
 
     _stage("seed_pinned")
+
+    if args.export_only_checkpoint is not None:
+        _stage("export_only_checkpoint_begin")
+        export_started_at = time.time()
+        export_result = _export_archive_from_checkpoint(
+            args,
+            args.export_only_checkpoint,
+        )
+        cfg_from_checkpoint = export_result["config"]
+        archive_sha = str(export_result["archive_sha256"])
+        archive_bytes = int(export_result["archive_bytes"])
+        archive_zip_path = Path(export_result["archive_zip_path"])
+        if archive_sha:
+            _stage(f"archive_built_bytes_{archive_bytes}")
+
+        auth_eval_result_path: Path | None = None
+        contest_cuda_score: float | None = None
+        auth_eval_score: float | None = None
+        auth_eval_axis: str | None = None
+        if not args.skip_auth_eval and archive_zip_path.is_file():
+            print("[full] launching auth eval from export-only checkpoint ...")
+            requested_auth_json = args.output_dir / "contest_auth_eval_cuda.json"
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=args.output_dir / "submission" / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=requested_auth_json,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag="grayscale_lut",
+                device=device,
+                return_non_cuda_result=True,
+            )
+            if auth_result is not None:
+                auth_eval_result_path = Path(str(auth_result["auth_eval_json_path"]))
+                auth_eval_axis = str(auth_result.get("auth_eval_score_axis") or "")
+                if "auth_eval_cuda_score" in auth_result:
+                    contest_cuda_score = float(auth_result["auth_eval_cuda_score"])
+                    auth_eval_score = contest_cuda_score
+                    print(
+                        f"[full] [contest-CUDA] score = {contest_cuda_score} "
+                        f"(axis={auth_eval_axis}, archive_sha256={archive_sha})"
+                    )
+                elif auth_result.get("auth_eval_score") is not None:
+                    auth_eval_score = float(auth_result["auth_eval_score"])
+                    print(
+                        f"[full] auth eval score = {auth_eval_score} "
+                        f"(axis={auth_eval_axis}, archive_sha256={archive_sha})"
+                    )
+            _stage("auth_eval_done")
+
+        export_elapsed_sec = time.time() - export_started_at
+        n_pairs_export = (
+            int(cfg_from_checkpoint.num_pairs)
+            if cfg_from_checkpoint is not None
+            else None
+        )
+        provenance = {
+            "schema": "grayscale_lut_provenance_v1",
+            "generated_at": _utc_now_iso(),
+            "from_state_hash": "regen_per_session_below",
+            "git_head": _git_head_sha(),
+            "trainer": "experiments/train_substrate_grayscale_lut.py",
+            "lane_id": "lane_substrate_grayscale_lut_20260512",
+            "args": {
+                k: (str(v) if isinstance(v, Path) else v)
+                for k, v in vars(args).items()
+            },
+            "pytorch_version": _torch_version_string(),
+            "device": str(device),
+            "export_only": True,
+            "export_only_checkpoint": str(export_result["checkpoint_path"]),
+            "num_pairs_decoded": n_pairs_export,
+            "num_train_pairs": None,
+            "num_val_pairs": None,
+            "best_val_lagrangian": None,
+            "best_epoch": None,
+            "train_elapsed_sec": 0.0,
+            "export_elapsed_sec": float(export_elapsed_sec),
+            "training_stopped_by_soft_deadline": False,
+            "soft_train_deadline_seconds": args.soft_train_deadline_seconds,
+            "archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "auth_eval_score": auth_eval_score,
+            "auth_eval_score_axis": auth_eval_axis,
+            "auth_eval_cuda_score": contest_cuda_score,
+            "auth_eval_json_path": (
+                str(auth_eval_result_path) if auth_eval_result_path else None
+            ),
+            "cost_band_anchor_appended": False,
+            "cost_band_anchor_skip_reason": "export_only_no_training",
+            "stage_log": stage_log,
+            "custody_status": "ci-rebuildable",
+            "score_claim": contest_cuda_score is not None,
+            "score_axis_tag": (
+                "[contest-CUDA]" if contest_cuda_score is not None else None
+            ),
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        (args.output_dir / "provenance.json").write_text(
+            json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        print(f"[full] wrote {args.output_dir / 'provenance.json'}")
+        return 0
 
     # 2. Patch upstream rgb_to_yuv6 BEFORE scorer construction (PR #95/#106)
     yuv6_token = patch_upstream_yuv6_globally()
@@ -807,6 +1034,20 @@ def _full_main(args: argparse.Namespace) -> int:
 
         # 9. Train
         train_started_at = time.time()
+        train_started_monotonic = time.monotonic()
+        soft_deadline_at: float | None = None
+        if args.soft_train_deadline_seconds is not None:
+            if args.soft_train_deadline_seconds <= 0:
+                raise ValueError("--soft-train-deadline-seconds must be positive")
+            soft_deadline_at = train_started_monotonic + float(
+                args.soft_train_deadline_seconds
+            )
+            _stage(
+                "soft_train_deadline_seconds_"
+                f"{int(args.soft_train_deadline_seconds)}"
+            )
+        training_stopped_by_soft_deadline = False
+        last_epoch_seen = -1
         best_val_lag = math.inf
         best_epoch = -1
         ckpt_best_path = args.output_dir / "best.pt"
@@ -820,11 +1061,31 @@ def _full_main(args: argparse.Namespace) -> int:
         max_nan_strikes = 3
 
         for epoch in range(args.epochs):
+            if soft_deadline_at is not None and time.monotonic() >= soft_deadline_at:
+                training_stopped_by_soft_deadline = True
+                print(
+                    f"[full] soft train deadline reached before epoch {epoch + 1}; "
+                    "proceeding to checkpoint/export stages."
+                )
+                _stage(f"soft_train_deadline_reached_before_epoch_{epoch + 1}")
+                break
+            last_epoch_seen = epoch
             model.train()
             perm = train_indices[torch.randperm(n_train, device=device)]
             epoch_loss_sum = 0.0
             epoch_batches = 0
             for start in range(0, n_train, batch_size):
+                if soft_deadline_at is not None and time.monotonic() >= soft_deadline_at:
+                    training_stopped_by_soft_deadline = True
+                    print(
+                        f"[full] soft train deadline reached at epoch {epoch + 1} "
+                        f"batch_start={start}; proceeding to checkpoint/export stages."
+                    )
+                    _stage(
+                        "soft_train_deadline_reached_"
+                        f"epoch_{epoch + 1}_batch_{start}"
+                    )
+                    break
                 idx = perm[start : start + batch_size]
                 if idx.numel() == 0:
                     continue
@@ -867,6 +1128,9 @@ def _full_main(args: argparse.Namespace) -> int:
                 ema.update(model)
                 epoch_loss_sum += float(loss.detach().item())
                 epoch_batches += 1
+
+            if training_stopped_by_soft_deadline:
+                break
 
             scheduler.step()
             avg_loss = epoch_loss_sum / max(1, epoch_batches)
@@ -921,9 +1185,14 @@ def _full_main(args: argparse.Namespace) -> int:
                         f"[full] epoch {epoch + 1}/{args.epochs} "
                         f"train_avg_loss={avg_loss:.6f}"
                     )
+            if training_stopped_by_soft_deadline:
+                break
 
         train_elapsed_sec = time.time() - train_started_at
-        _stage(f"train_complete_elapsed_{int(train_elapsed_sec)}s")
+        if training_stopped_by_soft_deadline:
+            _stage(f"train_soft_deadline_elapsed_{int(train_elapsed_sec)}s")
+        else:
+            _stage(f"train_complete_elapsed_{int(train_elapsed_sec)}s")
 
         if not ckpt_best_path.is_file():
             print(
@@ -938,90 +1207,60 @@ def _full_main(args: argparse.Namespace) -> int:
                     "config": asdict(cfg),
                     "ema_decay": args.ema_decay,
                     "best_val_lagrangian": best_val_lag,
-                    "best_epoch": int(args.epochs - 1),
+                    "best_epoch": int(max(0, last_epoch_seen)),
                     "saved_at_utc": _utc_now_iso(),
                     "fallback_end_of_training_save": True,
+                    "training_stopped_by_soft_deadline": training_stopped_by_soft_deadline,
                 },
                 ckpt_best_path,
             )
 
         # 11. Build the GLV1 archive bytes from the EMA shadow
-        archive_sha = ""
-        archive_bytes = 0
-        archive_zip_path = args.output_dir / "archive.zip"
-        if not args.skip_archive_build:
-            print(f"[full] building archive from {ckpt_best_path} ...")
-            ema_ckpt = torch.load(ckpt_best_path, map_location="cpu", weights_only=False)
-            sd = ema_ckpt["state_dict"]
-
-            # Re-instantiate the model on CPU with the EMA weights to use the
-            # quantize_grayscale_for_archive + runtime_state_dict_for_archive
-            # helpers (avoids replicating the byte-packing logic here).
-            cpu_model = GrayscaleLutSubstrate(cfg).to("cpu")
-            cpu_model.load_state_dict(sd, strict=False)
-            grayscale_uint8 = cpu_model.quantize_grayscale_for_archive()
-            decoder_sd = cpu_model.runtime_state_dict_for_archive()
-
-            meta = {
-                "decoder_hidden": cfg.decoder_hidden,
-                "decoder_blocks": cfg.decoder_blocks,
-                # OVERNIGHT-TT Phase 2 BUILD 2026-05-21 + AA HIGH verdict:
-                # lut_bits surfaced in meta for observability + downstream STC
-                # sidecar consumers; archive bytes preserve uint8 schema per
-                # Catalog #110/#113 (GLV1 unchanged), so meta key is observability-only.
-                "lut_bits": cfg.lut_bits,
-            }
-            bin_bytes = pack_archive(
-                decoder_sd,
-                grayscale_uint8,
-                meta,
-                num_pairs=cfg.num_pairs,
-                grayscale_downsample=cfg.grayscale_downsample,
-                embedding_dim=cfg.embedding_dim,
-                output_height=cfg.output_height,
-                output_width=cfg.output_width,
-            )
-            (args.output_dir / "0.bin").write_bytes(bin_bytes)
-            archive_sha = _sha256_bytes(bin_bytes)
-            archive_bytes = len(bin_bytes)
-            print(f"[full] wrote 0.bin ({archive_bytes} bytes, sha256={archive_sha})")
-
-            submission_dir = args.output_dir / "submission"
-            _write_runtime(submission_dir)
-            (submission_dir / "0.bin").write_bytes(bin_bytes)
-            _build_archive_zip(
-                archive_zip_path,
-                bin_bytes=bin_bytes,
-                submission_dir=submission_dir,
-            )
-            print(f"[full] wrote {archive_zip_path}")
+        export_result = _export_archive_from_checkpoint(args, ckpt_best_path)
+        archive_sha = str(export_result["archive_sha256"])
+        archive_bytes = int(export_result["archive_bytes"])
+        archive_zip_path = Path(export_result["archive_zip_path"])
+        if archive_sha:
             _stage(f"archive_built_bytes_{archive_bytes}")
 
         # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)
         auth_eval_result_path: Path | None = None
+        auth_eval_score: float | None = None
+        auth_eval_axis: str | None = None
         contest_cuda_score: float | None = None
         if not args.skip_auth_eval and archive_zip_path.is_file():
-            print("[full] launching CUDA auth eval ...")
-            auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
+            print("[full] launching auth eval ...")
+            requested_auth_json = args.output_dir / "contest_auth_eval_cuda.json"
             auth_result = _canon_gate_auth_eval_call(
                 args=args,
                 archive_zip=archive_zip_path,
                 inflate_sh=args.output_dir / "submission" / "inflate.sh",
                 upstream_dir=args.upstream_dir,
-                output_json=auth_eval_result_path,
+                output_json=requested_auth_json,
                 contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
                 substrate_tag="grayscale_lut",
                 device=device,
+                return_non_cuda_result=True,
             )
             if auth_result is not None:
-                contest_cuda_score = auth_result["auth_eval_cuda_score"]
-                print(
-                    f"[full] [contest-CUDA] score = {contest_cuda_score} "
-                    f"(axis={auth_result['auth_eval_score_axis']}, "
-                    f"lane_tag={auth_result['auth_eval_lane_tag']}, "
-                    f"archive_sha256={archive_sha})"
-                )
-            _stage("auth_eval_cuda_done")
+                auth_eval_result_path = Path(str(auth_result["auth_eval_json_path"]))
+                auth_eval_axis = str(auth_result.get("auth_eval_score_axis") or "")
+                if "auth_eval_cuda_score" in auth_result:
+                    contest_cuda_score = float(auth_result["auth_eval_cuda_score"])
+                    auth_eval_score = contest_cuda_score
+                    print(
+                        f"[full] [contest-CUDA] score = {contest_cuda_score} "
+                        f"(axis={auth_eval_axis}, "
+                        f"lane_tag={auth_result['auth_eval_lane_tag']}, "
+                        f"archive_sha256={archive_sha})"
+                    )
+                elif auth_result.get("auth_eval_score") is not None:
+                    auth_eval_score = float(auth_result["auth_eval_score"])
+                    print(
+                        f"[full] auth eval score = {auth_eval_score} "
+                        f"(axis={auth_eval_axis}, archive_sha256={archive_sha})"
+                    )
+            _stage("auth_eval_done")
 
         # 13. Continual-learning posterior update (Catalog #128 atomic)
         if contest_cuda_score is not None and archive_sha:
@@ -1121,16 +1360,22 @@ def _full_main(args: argparse.Namespace) -> int:
             },
             "pytorch_version": _torch_version_string(),
             "device": str(device),
+            "export_only": False,
+            "export_only_checkpoint": None,
             "num_pairs_decoded": n_pairs,
             "num_train_pairs": int(train_indices.shape[0]),
             "num_val_pairs": int(val_indices.shape[0]),
             "best_val_lagrangian": (
                 best_val_lag if math.isfinite(best_val_lag) else None
             ),
-            "best_epoch": int(best_epoch),
+            "best_epoch": int(best_epoch if best_epoch >= 0 else max(0, last_epoch_seen)),
             "train_elapsed_sec": float(train_elapsed_sec),
+            "training_stopped_by_soft_deadline": training_stopped_by_soft_deadline,
+            "soft_train_deadline_seconds": args.soft_train_deadline_seconds,
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
+            "auth_eval_score": auth_eval_score,
+            "auth_eval_score_axis": auth_eval_axis,
             "auth_eval_cuda_score": contest_cuda_score,
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None
