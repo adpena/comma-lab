@@ -45,7 +45,9 @@ architecture-lock/TT5L custody artifacts.
 - Dispatch blocker: exact-eval spend remains blocked unless a fixed-length,
   surface-guided candidate improves on `[macOS-CPU advisory decoder-q]` and the
   attached MLX score-calibration gate keeps the MLX margin above
-  `8.801772121230789e-05`.
+  `8.801772121230789e-05` against a full-sample `contest-CPU` or
+  `contest-CUDA` auth-axis payload accepted by
+  `tac.auth_eval_schema.required_contest_auth_axis_payload_blockers`.
 - Hard no-dispatch set: `a2f90a216aac4184`, `a9b04920db67ec71`, and
   `8f3a33e49b9b7906` are advisory regressions and must not enter exact CUDA
   queue from the current selector.

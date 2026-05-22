@@ -93,7 +93,9 @@ The agent may **not** edit without explicit human approval:
   `[contest-CUDA]`, `[macOS-CPU advisory]`, `[macOS-MLX research-signal]`,
   diagnostic/proxy, or historical unlimited-compute context. Calibrated MLX
   rows may guide spend triage only with an attached calibration manifest and
-  exact-eval follow-through. Never promote a proxy, advisory, or MLX research
+  a full-sample `contest-CPU` or `contest-CUDA` auth-axis comparison payload
+  that passes `tac.auth_eval_schema.required_contest_auth_axis_payload_blockers`.
+  Never promote a proxy, advisory, diagnostic, partial-sample, or MLX research
   axis into a public leaderboard claim.
 
 ## Evidence Axes And Historical Lanes

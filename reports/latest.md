@@ -55,6 +55,10 @@ last_refreshed_note: |
   certified pairwise decisions `6/6`, uncertain `0/6`, calibration uncertainty
   `1.7603544242461577e-05`, and recommended minimum MLX gap for spend triage
   `8.801772121230789e-05`.
+- Auth-side MLX calibration targets must now pass the strict contest-auth-axis
+  contract in `tac.auth_eval_schema`: full-sample `contest-CPU` /
+  `contest_cpu` or `contest-CUDA` / `contest_cuda` only. Advisory/proxy/local
+  diagnostic payloads are debug or historical signal, not transfer authority.
 - The OOF response dataset is same-axis local signal with `600` rows across
   `mlx_scorer_response` and `mlx_decoder_q`; it is explicitly
   `score_claim=false`, `promotion_eligible=false`,
@@ -118,10 +122,12 @@ last_refreshed_note: |
   `2026-05-21T23:23Z`. Drift list is empty; best existing `[contest-CPU]`
   remains `0.1920513169` and best existing `[contest-CUDA T4]` remains
   `0.2053300290`.
-- **MLX full-cache local advisory calibration landed**:
+- **MLX full-cache local advisory identity evidence landed**:
   `.omx/research/codex_findings_mlx_full600_local_advisory_fec6_transfer_calibration_20260521T231339Z_codex.md`
   records the FEC6 full-600 local MLX response against the matching macOS CPU
-  advisory payload. Corrected archive bytes are `178517`; calibrated local
+  advisory payload. After the 2026-05-22 auth-axis contract hardening, this is
+  historical advisory/identity evidence only, not an auth-side transfer
+  authority payload. Corrected archive bytes are `178517`; calibrated local
   advisory score is `0.19206194316409206`; score delta versus macOS CPU
   advisory is `6.26282986443405e-07`. This is not a contest score.
 - **MLX deterministic pair-windowing landed**:
@@ -475,7 +481,7 @@ gate clears.
 | **ego_nerv** | unknown | yes (dispatch_blockers: remote driver missing) | recipe-only |
 | **cnerv** | unknown | yes (dispatch_blockers: remote driver missing) | recipe-only |
 | **quantizr_faithful** | 0.33 [predicted, first-anchor replication target] | yes (dispatch_blockers: trainer not wired) | recipe-only |
-| **mlx_mask_renderer** | [macOS-MLX advisory only — never promotable to contest-CUDA] | yes | local Apple Silicon only |
+| **mlx_mask_renderer** | [macOS-MLX research-signal — never promotable to contest-CUDA] | yes | local Apple Silicon only |
 | **dp_sims_renderer** | unknown | yes (dispatch_blockers: library deps) | recipe-only |
 | **diffusion_renderer** | research_only=true, never produces contest archive | yes | research-only |
 | **grayscale_lut** | unknown | (pending recipe) | L0 SKETCH |
@@ -579,7 +585,7 @@ backfill.
    recipes but no trainers (lane_12_v2_nerv, nervdc, e_nerv, ego_nerv,
    cnerv, quantizr_faithful, mlx_mask_renderer, dp_sims_renderer,
    diffusion_renderer). Are these production-targeted, or research-only?
-   `mlx_mask_renderer` is `[macOS-MLX advisory]` only by construction;
+   `mlx_mask_renderer` is `[macOS-MLX research-signal]` only by construction;
    `diffusion_renderer` is `research_only=true` permanently.
 4. **`recovered_*/` body-cleavage (~106 MB).** WAVE-8 audit landed but
    DEFERRED-pending-operator. Per Catalog #110 + #154:

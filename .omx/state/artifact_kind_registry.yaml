@@ -75,6 +75,14 @@
   rationale: "lane claims ledger, terminal rows append at top per CLAUDE.md"
   append_fields: [claims, rows]
 
+- pattern: ".omx/state/current_focus.md"
+  kind: DERIVED_OUTPUT
+  rationale: "canonical operator focus snapshot; refreshed from latest ledgers and reports"
+
+- pattern: ".omx/state/next_experiments.md"
+  kind: DERIVED_OUTPUT
+  rationale: "canonical operator queue snapshot; refreshed from latest ledgers and reports"
+
 - pattern: ".omx/state/canonical_task_status.jsonl"
   kind: HISTORICAL_PROVENANCE
   rationale: "canonical Claude/Codex task-status mirror; fcntl-locked append-only JSONL source of truth"

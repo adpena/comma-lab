@@ -1964,6 +1964,12 @@ a contest scoring axis.
 - MLX spend triage requires both PyTorch/MLX parity evidence and an attached
   `tac.local_acceleration.mlx_score_calibration` manifest. Decisions below the
   calibration band are uncertain and must not trigger spend.
+- The auth-side calibration/comparison payload must pass the strict
+  `tac.auth_eval_schema.required_contest_auth_axis_payload_blockers` contract:
+  only `contest-CPU` / `contest_cpu` and `contest-CUDA` / `contest_cuda`
+  full-sample auth-axis payloads qualify. Advisory, diagnostic, proxy,
+  macOS-local, forged-label, or partial-sample payloads fail closed even when
+  numeric score components or hashes match.
 - MLX may select local follow-up candidates and queue exact-eval candidates
   only through the normal lane-claim/custody path. Exact CPU/CUDA auth eval on
   contest-compliant hardware is still required before any score, frontier,

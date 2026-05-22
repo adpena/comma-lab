@@ -413,8 +413,12 @@ MLX scorer-response rows are a special local-substrate case: they must flow
 through `tac.optimization.scorer_response_dataset` and, when used for spend
 triage, `tac.local_acceleration.mlx_score_calibration`. A calibrated
 `[macOS-MLX research-signal]` row may select local follow-up or exact-eval
-spend candidates only after parity and score-calibration gates pass; it still
-cannot claim a score, promote, rank/kill, or skip exact CPU/CUDA auth eval.
+spend candidates only after parity, score-calibration, and strict
+`tac.auth_eval_schema.required_contest_auth_axis_payload_blockers` gates pass
+against a full-sample `contest-CPU` or `contest-CUDA` auth-axis payload.
+Advisory/proxy/local diagnostic payloads are not valid auth-side calibration
+targets, even with matching numbers or hashes. MLX still cannot claim a score,
+promote, rank/kill, or skip exact CPU/CUDA auth eval.
 
 If a lane-specific provider script starts accumulating package lists, path
 mount rules, import probes, cost tables, timeout policy, or runtime closure

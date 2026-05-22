@@ -31,6 +31,11 @@
 - MLX score calibration is strict-pass for the current public-frontier set:
   `6/6` pairwise decisions certified, `0/6` uncertain, and minimum MLX gap for
   spend triage `8.801772121230789e-05`.
+- MLX transfer calibration now also requires the auth-side payload to pass the
+  strict contest-auth-axis contract in `tac.auth_eval_schema`: only full-sample
+  `contest-CPU` / `contest_cpu` or `contest-CUDA` / `contest_cuda` payloads
+  qualify. Advisory/proxy/local diagnostic payloads are historical or debug
+  evidence only.
 - The decoder-q surface-guided batch is blocked for exact-eval dispatch:
   candidates `a2f90a216aac4184`, `a9b04920db67ec71`, and
   `8f3a33e49b9b7906` all regressed on `[macOS-CPU advisory decoder-q]`.

@@ -28,6 +28,12 @@ workspace/upstream_snapshot.json
 .omx/state/*
 !.omx/state/artifact_kind_registry.yaml
 !.omx/state/next_catalog_number.txt
+!.omx/state/current_focus.md
+!.omx/state/next_experiments.md
+!.omx/state/lane_registry.json
+!.omx/state/lane_maturity_audit.log
+!.omx/state/canonical_task_status.jsonl
+!.omx/state/active_lane_dispatch_claims.md
 .omx/state/vastai_active_instances.json
 .omx/state/instance_setup_first_seen.json
 
