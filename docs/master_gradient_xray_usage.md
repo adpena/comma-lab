@@ -19,6 +19,14 @@ Consumers of the ledger (cathedral autopilot, Pareto solver, bit allocator):
 - `tac.master_gradient_consumers` — canonical Python reader API.
 - `tac.cathedral_consumers.*` — 21 sister cathedral consumers per Catalog
   #335 auto-discovery (see `feedback_master_gradient_consumer_cathedral_wire_in_landed_20260519.md`).
+- `tac.optimization.pairset_component_marginal` +
+  `tac.xray.pairset_component_marginal` — exact auth-eval component deltas
+  over DQS1 pairset candidates. This signal does not read the gradient tensor
+  directly; it wires exact per-pair component outcomes back to the
+  master-gradient consumers (`per_pair_difficulty_atlas`,
+  `per_pair_pareto_envelope`, `per_pair_lagrangian_lambda_bisection`,
+  `per_pair_coding_budget_allocation`) so future pair drops are modeled rather
+  than handled as one-off analysis.
 
 This tool is the **operator-facing observability surface** between them —
 it turns the producer's gradient tensors into 5 canonical plots so the

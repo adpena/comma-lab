@@ -423,29 +423,50 @@ component marginal model consumed by the portfolio planner.
   `1533283b3e4f6ad10a2eb736a098df739f0b161d0385df56b89ba94d190a8237`
 - Rank010 inflated aggregate SHA-256:
   `8c13092466131b70228ee09993f2f5b29ac2d3f146bf44be200eecbf91d05e7e`
+- `pairset_drop_one_rank026_pair0320` exact `[contest-CPU]` replay:
+  `experiments/results/modal_auth_eval_cpu/dqs1_pairset_drop_one_rank026_pair0320_selective_decoderq_cpu_20260522T183308Z/contest_auth_eval.json`
+- Exact CPU score: `0.19202928295713673`
+- Delta versus current rank021 CPU frontier:
+  `+0.0000010000000000`
+- Component deltas versus compact DQS1 top32 CPU: PoseNet `+0.0`,
+  SegNet `+0.000001`, rate `-0.00000066585895312`
+- Rank026 archive SHA-256:
+  `bf6c2135ce874c7a99b727af76cdbf0dc31deca128b5ee462334dde460731296`
+- Rank026 inflated aggregate SHA-256:
+  `d8f43d23d84ca3b7631a7a5109d95f8f1472b903b91fedf50f8176949f1377d2`
 
 Canonicalization/wire-in:
 
 - Commit `130f09683` added `pairset_component_marginal_model.v1` to
   `tac.optimization.cross_family_candidate_portfolio`.
+- The follow-up landing adds reusable component-marginal helpers under
+  `tac.optimization.pairset_component_marginal`, the canonical equation
+  `pairset_component_marginal_score_decomposition_v1`, and the xray primitive
+  `tac.xray.pairset_component_marginal`.
 - The model consumes exact-axis observations with selected-pair identity,
   component deltas, and acquisition operations.
 - Current generated portfolio:
-  `experiments/results/cross_family_candidate_portfolio/20260522T183100Z_observed_pairsets_rank010_cuda_feedback/portfolio.json`
+  `experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/portfolio.json`
 - Current action summary:
-  `experiments/results/cross_family_candidate_portfolio/20260522T183100Z_observed_pairsets_rank010_cuda_feedback/action_summary.json`
+  `experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/action_summary.json`
 - Portfolio SHA-256:
-  `35c59bc87e577615e604ac95b6e5a13b9d7a1ce5fea6383f4006ba9b488644f4`
+  `ce035dc78a07bce924bddca50646d60f7e36c353a848848bce9ba250af542154`
 - Action summary SHA-256:
-  `766b4497c26ce8785b8cd971b10c497351d6e67265bf244502d021d7a167ee13`
+  `a8255b7d3d2b6c69bcd9257864cc757603df4c05dd29b0225423504e1c160220`
 - Component marginal summary: CPU-safe observed drop pair `[371]`;
-  CPU-protected observed drop pairs `[327, 376]`; CUDA-protected observed drop
-  pair `[371]`; cross-axis transfer diagnostic present for
+  CPU-protected observed drop pairs `[327, 376, 320]`; CUDA-protected observed
+  drop pair `[371]`; cross-axis transfer diagnostic present for
   `pairset_drop_one_rank021_pair0371`.
 - New recommended candidate:
-  `pairset_drop_one_rank026_pair0320`
+  `pairset_drop_one_rank027_pair0378`
 - New recommended action:
   `materialize_pairset_archive_and_run_local_controls`
+- The regenerated portfolio contains `canonical_signal_refs` pointing this
+  exact-axis component ledger to xray primitive `pairset_component_marginal`,
+  canonical equation `pairset_component_marginal_score_decomposition_v1`, and
+  master-gradient consumers including `per_pair_difficulty_atlas`,
+  `per_pair_pareto_envelope`, `per_pair_lagrangian_lambda_bisection`, and
+  `per_pair_coding_budget_allocation`.
 
 ## Verification
 
@@ -473,6 +494,12 @@ Canonicalization/wire-in:
 - `tools/recover_modal_auth_eval.py` on drop-one rank021 pair0371 Modal CPU call `fc-01KS8E07E7MJVKXCQ0WW26WQZH`
 - `tools/recover_modal_auth_eval.py` on drop-one rank021 pair0371 Modal CUDA call `fc-01KS8ERK4DVX1EBGVHP80H4QRW`
 - `tools/recover_modal_auth_eval.py` on drop-one rank010 pair0376 Modal CPU call `fc-01KS8EY13VWJZD0QDND9ER6G34`
+- `tools/run_decoder_q_selective_runtime_locality_controls.py` on drop-one rank026 pair0320
+- `tools/recover_modal_auth_eval.py` on drop-one rank026 pair0320 Modal CPU call `fc-01KS8FKFADCWKVAN8FGDFW5M69`
+- `.venv/bin/python -m pytest src/tac/xray/tests/test_pairset_component_marginal.py src/tac/canonical_equations/tests/test_pairset_component_marginal.py src/tac/xray/tests/test_registry.py src/tac/xray/tests/test_integration_with_solver_stack.py src/tac/xray/tests/test_compositional_integration.py src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py -q`
+- `.venv/bin/python -m pytest src/tac/tests/test_pairset_component_marginal.py src/tac/xray/tests/test_pairset_component_marginal.py src/tac/canonical_equations/tests/test_pairset_component_marginal.py -q`
+- `.venv/bin/ruff check src/tac/tests/test_pairset_component_marginal.py src/tac/xray/tests/test_pairset_component_marginal.py src/tac/canonical_equations/tests/test_pairset_component_marginal.py src/tac/optimization/pairset_component_marginal.py src/tac/canonical_equations/pairset_component_marginal.py src/tac/xray/pairset_component_marginal.py`
+- `.venv/bin/python tools/plan_cross_family_candidate_portfolio.py --incumbent-score 0.205330029 --incumbent-score-by-axis contest_cpu=0.19202828295713675 --pairset-acquisition experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition_dense_tail_20260522T1812Z.json --observation-jsonl experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl --json-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/portfolio.json --md-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/portfolio.md --summary-json-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/action_summary.json --top-k 32 --top-actions 8`
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_decoder_q_pairset_acquisition.py -q`
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_mlx_dynamic_sweep_observations.py -q`
 - `.venv/bin/python -m pytest src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py -q`
@@ -502,4 +529,6 @@ Canonicalization/wire-in:
   `[contest-CUDA T4]` evidence. It remains CPU-frontier only; the CUDA replay
   regressed, so there is no CUDA promotion evidence.
 - drop-one rank010 pair0376 has exact `[contest-CPU]` evidence only and
+  regressed versus the current rank021 CPU frontier.
+- drop-one rank026 pair0320 has exact `[contest-CPU]` evidence only and
   regressed versus the current rank021 CPU frontier.

@@ -109,6 +109,11 @@ from tac.canonical_equations.scorer_input_cache_hash_identity import (
     build_scorer_input_cache_hash_identity_v1,
     scorer_input_cache_hash_identity,
 )
+from tac.canonical_equations.pairset_component_marginal import (
+    build_pairset_component_marginal_score_decomposition_v1,
+    pairset_component_marginal_payload,
+    pairset_component_marginal_score_delta,
+)
 
 __all__ = [
     # Contract
@@ -161,4 +166,7 @@ __all__ = [
     "update_equation_with_anchor_via_conjugate_prior",
     "build_scorer_input_cache_hash_identity_v1",
     "scorer_input_cache_hash_identity",
+    "build_pairset_component_marginal_score_decomposition_v1",
+    "pairset_component_marginal_payload",
+    "pairset_component_marginal_score_delta",
 ]

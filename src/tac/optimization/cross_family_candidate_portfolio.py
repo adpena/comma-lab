@@ -21,6 +21,13 @@ from tac.optimization.mlx_dynamic_sweep_observations import (
     normalize_observation_row,
     summarize_observations,
 )
+from tac.optimization.pairset_component_marginal import (
+    PAIRSET_COMPONENT_MARGINAL_MODEL_SCHEMA,
+    build_component_score_delta_payload,
+    canonical_signal_refs,
+    component_marginal_status,
+    component_score_delta,
+)
 from tac.repo_io import json_text, repo_relative, sha256_file
 
 SCHEMA = "cross_family_candidate_portfolio.v1"
@@ -643,10 +650,10 @@ def _observation_component_deltas(row: Mapping[str, Any]) -> dict[str, float] | 
 
 
 def _component_net_delta(component_deltas: Mapping[str, float]) -> float:
-    return (
-        float(component_deltas.get("segnet_delta", 0.0))
-        + float(component_deltas.get("posenet_delta", 0.0))
-        + float(component_deltas.get("rate_delta", 0.0))
+    return component_score_delta(
+        segnet_delta=float(component_deltas.get("segnet_delta", 0.0)),
+        posenet_delta=float(component_deltas.get("posenet_delta", 0.0)),
+        rate_delta=float(component_deltas.get("rate_delta", 0.0)),
     )
 
 
@@ -661,15 +668,11 @@ def _score_delta_status(delta: float | None) -> str:
 
 
 def _component_marginal_status(component_deltas: Mapping[str, float]) -> str:
-    scorer_penalty = float(component_deltas.get("segnet_delta", 0.0)) + float(
-        component_deltas.get("posenet_delta", 0.0)
+    return component_marginal_status(
+        segnet_delta=float(component_deltas.get("segnet_delta", 0.0)),
+        posenet_delta=float(component_deltas.get("posenet_delta", 0.0)),
+        rate_delta=float(component_deltas.get("rate_delta", 0.0)),
     )
-    rate_credit = -float(component_deltas.get("rate_delta", 0.0))
-    if scorer_penalty < rate_credit:
-        return "rate_credit_exceeds_scorer_penalty"
-    if scorer_penalty > rate_credit:
-        return "scorer_penalty_exceeds_rate_credit"
-    return "rate_credit_ties_scorer_penalty"
 
 
 def _transfer_status(axis_statuses: Mapping[str, str]) -> str:
@@ -760,11 +763,12 @@ def _build_pairset_component_marginal_model(
         )
 
     base = {
-        "schema": "pairset_component_marginal_model.v1",
+        "schema": PAIRSET_COMPONENT_MARGINAL_MODEL_SCHEMA,
         "active": bool(training_rows),
         "training_row_count": len(training_rows),
         "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
         "identity_counts": dict(sorted(identity_counts.items())),
+        "canonical_signal_refs": canonical_signal_refs(),
         **FALSE_AUTHORITY,
         "allowed_use": "component_marginal_planning_signal_only_no_score_or_dispatch_authority",
     }
@@ -796,6 +800,15 @@ def _build_pairset_component_marginal_model(
             component_deltas = dict(row["component_deltas"])
             scorer_penalty = component_deltas["segnet_delta"] + component_deltas["posenet_delta"]
             rate_credit = -component_deltas["rate_delta"]
+            component_payload = build_component_score_delta_payload(
+                candidate_id=str(row["candidate_id"]),
+                axis=axis,
+                pair_index=pair,
+                dropped_pair_rank=rank,
+                segnet_delta=component_deltas["segnet_delta"],
+                posenet_delta=component_deltas["posenet_delta"],
+                rate_delta=component_deltas["rate_delta"],
+            )
             drop_one_marginals.append(
                 {
                     "pair_index": pair,
@@ -812,6 +825,7 @@ def _build_pairset_component_marginal_model(
                     "net_component_delta": row["net_component_delta"],
                     "score_delta_status": row["score_delta_status"],
                     "component_marginal_status": row["component_marginal_status"],
+                    "component_score_delta_payload": component_payload,
                     **FALSE_AUTHORITY,
                 }
             )
@@ -983,6 +997,7 @@ def _apply_pairset_component_marginal_feedback(
             "dropped_pair_index": dropped_pair,
             "dropped_pair_rank": dropped_rank,
             "nearest_drop_one_evidence_by_axis": nearest,
+            "canonical_signal_refs": component_model.get("canonical_signal_refs"),
             "allowed_use": (
                 "candidate_planning_signal_only_requires_exact_axis_materialization"
             ),

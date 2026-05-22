@@ -30,15 +30,10 @@ from tac.xray import (
     wire_in_for_hook,
 )
 from tac.xray.bilinear_resize_nullspace import BilinearResizeNullspace
-from tac.xray.foveation_ego_motion import FoveationEgoMotionAnalyzer
 from tac.xray.mdl_scorer_conditional import ScorerConditionalMDLEstimator
-from tac.xray.per_pair_score_decomposition import PerPairScoreDecomposition
 from tac.xray.posenet_se3_lie_algebra import PoseNetSE3LieAlgebra
-from tac.xray.predictive_coding_hierarchy import PredictiveCodingHierarchy
-from tac.xray.score_lipschitz import ScoreVsArchiveLipschitz
 from tac.xray.segnet_margin_polytope import SegNetLogitMarginPolytope
 from tac.xray.shannon_vector_r_d import ShannonVectorRDEstimator
-from tac.xray.unified_action_principle import UnifiedActionPrinciple
 from tac.xray.vq_codebook_coverage import VQCodebookCoverage
 from tac.xray.wavelet_hf_energy import WaveletHFEnergy
 from tac.xray.yuv6_sublattice_geometry import YUV6SublatticeGeometry
@@ -295,12 +290,12 @@ def test_f9_times_f11_cathedral_autopilot_hook_yields_both():
 # ---------------------------------------------------------------------------
 
 
-def test_thirteen_xray_primitives_each_engage_at_least_one_hook():
+def test_fourteen_xray_primitives_each_engage_at_least_one_hook():
     """Every xray primitive must engage at least one of the 6 canonical
     wire-in hooks (per CLAUDE.md "Subagent coherence-by-default" - silent
     omission is the orphan-work failure mode)."""
     inv = canonical_xray_primitive_inventory()
-    assert len(inv) == 13
+    assert len(inv) == 14
     for spec in inv:
         hooks_engaged = set(spec.wire_in_hooks)
         assert hooks_engaged, (
@@ -341,7 +336,7 @@ def test_inventory_canonical_names_match_module_paths():
         assert cls is not None
 
 
-def test_thirteen_primitive_total_hook_engagements_match_solver_stack_consumers():
+def test_fourteen_primitive_total_hook_engagements_match_solver_stack_consumers():
     """The solver-stack adapters expect the following minimum hook
     engagement counts (per Batch 6 wire-in design):
 

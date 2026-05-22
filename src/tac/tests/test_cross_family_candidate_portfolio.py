@@ -572,10 +572,22 @@ def test_portfolio_builds_component_marginal_model_and_axis_transfer_diagnostics
     assert model["active"] is True
     assert model["score_claim"] is False
     assert model["ready_for_exact_eval_dispatch"] is False
+    assert model["canonical_signal_refs"]["xray_primitives"][0] == (
+        "pairset_component_marginal"
+    )
+    assert (
+        "pairset_component_marginal_score_decomposition_v1"
+        in model["canonical_signal_refs"]["canonical_equations"]
+    )
     assert model["axes"] == ["contest_cpu", "contest_cuda"]
     cpu_model = model["axis_models"]["contest_cpu"]
     assert cpu_model["safe_drop_pair_indices"] == [371]
     assert cpu_model["protected_drop_pair_indices"] == [327]
+    cpu_payload = cpu_model["drop_one_pair_marginals"][0][
+        "component_score_delta_payload"
+    ]
+    assert cpu_payload["schema"] == "pairset_component_marginal_score_delta.v1"
+    assert cpu_payload["score_claim"] is False
     transfer = model["cross_axis_transfer_diagnostics"][0]
     assert transfer["candidate_id"] == "pairset_drop_one_rank003_pair0371"
     assert transfer["transfer_status"] == "cpu_improves_cuda_regresses"
@@ -592,6 +604,10 @@ def test_portfolio_builds_component_marginal_model_and_axis_transfer_diagnostics
     assert nearest_cpu["source_pair_index"] == 371
     assert nearest_cpu["source_component_marginal_status"] == (
         "rate_credit_exceeds_scorer_penalty"
+    )
+    assert (
+        "tac.master_gradient_consumers.per_pair_difficulty_atlas"
+        in feedback["canonical_signal_refs"]["master_gradient_consumers"]
     )
     assert feedback["score_claim"] is False
 

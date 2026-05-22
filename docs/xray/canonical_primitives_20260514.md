@@ -4,7 +4,10 @@ Lane: `lane_xray_canon_math_findings_wire_in_20260514`
 
 The `tac.xray.*` package landed 13 canonical primitives during XRAY-CANON-WIRE-IN
 (commits `bef68c270` + `fc266c43e` + `ca21c497c` + `b62f3b872` + `caefbe1b3` +
-`3b86b4e00`). This document is the canonical operator/subagent reference
+`3b86b4e00`). The DQS1 pairset component-marginal follow-up adds the 14th
+primitive, `pairset_component_marginal`, so exact auth-eval component deltas
+are discoverable by the same xray wire-in surface. This document is the
+canonical operator/subagent reference
 for the inventory, the 6-hook wire-in surface, and the cross-primitive
 composition contract.
 
@@ -35,16 +38,16 @@ Per CLAUDE.md "Subagent coherence-by-default" NON-NEGOTIABLE, every xray
 primitive declares which of these 6 hooks it engages. Silent omission is
 the orphan-work failure mode.
 
-1. **sensitivity_map** (`tac.sensitivity_map.*`) — per-tensor importance / per-bit sensitivity. 11 primitives engage this hook.
-2. **pareto_constraint** (`tac.pareto_*` / `tac.optimization.field_equation_planner`) — rate-distortion / feasibility constraints. 3 primitives engage.
-3. **bit_allocator** (`tac.optimization.bit_allocator_end_to_end`) — per-tensor bit budget. 10 primitives engage.
-4. **cathedral_autopilot** (`tac.optimization.autopilot_dispatch_ranking`) — top-K candidate ranking for paid GPU dispatch. 3 primitives engage.
-5. **continual_learning** (`tac.continual_learning`) — posterior update with empirical anchors. 1 primitive engages (F1 MDL).
-6. **probe_disambiguator** — competing-interpretation arbitration (`tools/probe_<track>_disambiguator.py`). 9 primitives engage.
+1. **sensitivity_map** (`tac.sensitivity_map.*`) — per-tensor importance / per-bit sensitivity. 12 primitives engage this hook.
+2. **pareto_constraint** (`tac.pareto_*` / `tac.optimization.field_equation_planner`) — rate-distortion / feasibility constraints. 4 primitives engage.
+3. **bit_allocator** (`tac.optimization.bit_allocator_end_to_end`) — per-tensor bit budget. 11 primitives engage.
+4. **cathedral_autopilot** (`tac.optimization.autopilot_dispatch_ranking`) — top-K candidate ranking for paid GPU dispatch. 4 primitives engage.
+5. **continual_learning** (`tac.continual_learning`) — posterior update with empirical anchors. 2 primitives engage.
+6. **probe_disambiguator** — competing-interpretation arbitration (`tools/probe_<track>_disambiguator.py`). 10 primitives engage.
 
-Total hook-primitive engagements across the 13-primitive inventory: **37**.
+Total hook-primitive engagements across the 14-primitive inventory: **43**.
 
-## The 13 canonical primitives
+## The 14 canonical primitives
 
 The inventory is loaded from `tac.xray.registry.canonical_xray_primitive_inventory()`.
 
@@ -63,6 +66,7 @@ The inventory is loaded from `tac.xray.registry.canonical_xray_primitive_invento
 | F11 | `unified_action_principle` | variational-principle | mathematical-derivation | pareto_constraint, sensitivity_map, bit_allocator, cathedral_autopilot | shannon_vector_r_d, per_pair_score_decomposition |
 | F12 | `predictive_coding_hierarchy` | temporal-axis | mathematical-derivation | sensitivity_map, bit_allocator, probe_disambiguator | foveation_ego_motion |
 | F13 | `foveation_ego_motion` | temporal-axis | mathematical-derivation | sensitivity_map, bit_allocator, probe_disambiguator | predictive_coding_hierarchy |
+| F14 | `pairset_component_marginal` | scorer-internal | empirical-anchor | sensitivity_map, pareto_constraint, bit_allocator, cathedral_autopilot, continual_learning, probe_disambiguator | per_pair_score_decomposition, segnet_margin_polytope, posenet_se3_lie_algebra, score_lipschitz |
 
 ## Cross-primitive composition pairs (verified by integration tests)
 
@@ -84,6 +88,10 @@ Per `src/tac/xray/tests/test_compositional_integration.py`:
   scalar.
 - **F12 × F13 (predictive coding × foveation)** — Temporal-axis pair; both
   feed `sensitivity_map` + `bit_allocator` for temporal redundancy.
+- **F14 × F9 × F7 × F8 (component marginal × per-pair × scorer geometry)** —
+  Exact auth-eval component deltas explain when one-byte rate credit is
+  dominated by SegNet/PoseNet penalty, and route safe/protected pairs into the
+  master-gradient consumers and candidate planner.
 
 ## How to consume the wire-in surface
 
@@ -92,7 +100,7 @@ from tac.xray import wire_in_for_hook, discover_primitives_by_hook
 
 # Discover which primitives feed your hook.
 discovered = discover_primitives_by_hook()
-sensitivity_primitives = discovered["sensitivity_map"]  # 11 names
+sensitivity_primitives = discovered["sensitivity_map"]  # 12 names
 
 # Run all primitives engaging a hook with per-primitive targets.
 bundle = wire_in_for_hook(
@@ -115,11 +123,11 @@ bundle = wire_in_for_hook(
 
 The 4 major solver-stack consumer surfaces:
 
-- `tac.sensitivity_map.*` — 11 primitives wire in.
-- `tac.optimization.bit_allocator_end_to_end` — 10 primitives wire in.
-- `tac.optimization.autopilot_dispatch_ranking` — 3 primitives wire in.
-- `tac.optimization.field_equation_planner` — 3 primitives wire in.
-- `tac.continual_learning` — 1 primitive (F1) wires in.
+- `tac.sensitivity_map.*` — 12 primitives wire in.
+- `tac.optimization.bit_allocator_end_to_end` — 11 primitives wire in.
+- `tac.optimization.autopilot_dispatch_ranking` — 4 primitives wire in.
+- `tac.optimization.field_equation_planner` — 4 primitives wire in.
+- `tac.continual_learning` — 2 primitives wire in.
 
 Each consumer's adapter iterates `wire_in_for_hook(hook, targets)` and
 consumes `XRayPrimitiveResult` rows in the canonical format — no consumer-side
@@ -135,14 +143,16 @@ primitive-specific code required.
 
 ## Test coverage
 
-- Per-primitive: 13 test files (one per primitive)
+- Per-primitive: 14 test files (one per primitive)
 - Solver-stack integration: `test_integration_with_solver_stack.py` (16 tests)
 - Compositional integration: `test_compositional_integration.py` (14 tests, this landing)
 - Registry: `test_registry.py` (12 tests)
 - Wire-in: `test_wire_in.py` (8 tests)
 
-Total xray tests at this landing: **310 passed** (296 from Batch 1-5 +
-14 new compositional integration tests).
+Current focused verification for this surface includes the registry,
+solver-stack integration, compositional integration, and
+`test_pairset_component_marginal.py` primitive tests. Re-run those tests after
+any registry cardinality change.
 
 ## Canonical contract
 

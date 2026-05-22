@@ -15,8 +15,6 @@ import pytest
 import torch
 
 from tac.xray import (
-    XRayPrimitiveResult,
-    XRayWireInBundle,
     aggregate_hook_evidence_grade,
     canonical_xray_primitive_inventory,
     discover_primitives_by_hook,
@@ -114,14 +112,14 @@ def test_cathedral_autopilot_bundle_engaged_by_per_pair_decomposition():
     assert "per_pair_score_decomposition" in names
 
 
-def test_continual_learning_bundle_engaged_by_mdl_only():
-    """F1 (mdl_scorer_conditional) is the sole continual_learning hook
-    engager (until additional primitives are added)."""
+def test_continual_learning_bundle_engaged_by_mdl_and_pairset_component():
+    """F1 plus the pairset component-marginal primitive engage continual learning."""
     bundle = wire_in_for_hook("continual_learning", targets={})
-    assert bundle.n_primitives == 1
-    spec_names = {s for s in (
-        ["mdl_scorer_conditional"]
-    )}
+    assert bundle.n_primitives == 2
+    spec_names = {
+        "mdl_scorer_conditional",
+        "pairset_component_marginal",
+    }
     discovered = discover_primitives_by_hook()
     assert set(discovered["continual_learning"]) == spec_names
 
@@ -199,10 +197,10 @@ def test_full_six_hook_coverage_via_discover():
         assert len(discovered[hook]) >= 1
 
 
-def test_inventory_matches_thirteen_primitives_at_landing():
-    """Lock the 13-primitive inventory cardinality at landing time so future
+def test_inventory_matches_fourteen_primitives_after_pairset_component_signal():
+    """Lock the 14-primitive inventory cardinality after pairset component wiring so future
     regressions surface immediately."""
-    assert len(canonical_xray_primitive_inventory()) == 13
+    assert len(canonical_xray_primitive_inventory()) == 14
 
 
 def test_canonical_a1_archive_mdl_density_close_to_one_via_wire_in():

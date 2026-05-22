@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from tac.xray.base import CANONICAL_WIRE_IN_HOOKS, EvidenceGrade, WireInHook
@@ -104,7 +104,7 @@ class XRayPrimitiveSpec:
 
 
 def canonical_xray_primitive_inventory() -> list[XRayPrimitiveSpec]:
-    """Return the 13 canonical xray primitives wired into the solver stack.
+    """Return the canonical xray primitives wired into the solver stack.
 
     Per the 2026-05-14 wire-in sweep ``lane_xray_canon_math_findings_wire_in_20260514``,
     these 13 primitives promote one-off math findings + research-memo
@@ -123,10 +123,11 @@ def canonical_xray_primitive_inventory() -> list[XRayPrimitiveSpec]:
         6. ``wavelet_hf_energy`` — HF-energy floor estimate
         10. ``yuv6_sublattice_geometry`` — 4-luma + 2-chroma sublattice
 
-      scorer-internal (F7, F8, F9):
+      scorer-internal (F7, F8, F9, F14):
         7. ``segnet_margin_polytope`` — per-pixel logit margin map
         8. ``posenet_se3_lie_algebra`` — Cartan-Killing pose distance
         9. ``per_pair_score_decomposition`` — heterogeneous pair selector
+        14. ``pairset_component_marginal`` — exact-axis component deltas
 
       unified-action (F11):
         11. ``unified_action_principle`` — Wasserstein × Fisher × tropical
@@ -402,6 +403,44 @@ def canonical_xray_primitive_inventory() -> list[XRayPrimitiveSpec]:
             ),
             composes_with=("posenet_se3_lie_algebra", "segnet_margin_polytope"),
             upstream_memo=".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md",
+        ),
+        XRayPrimitiveSpec(
+            primitive_name="pairset_component_marginal",
+            canonical_module="tac.xray.pairset_component_marginal",
+            canonical_symbol="PairsetComponentMarginalXRay",
+            category="scorer-internal",
+            description=(
+                "Canonicalizes exact-axis pairset component marginals from "
+                "auth-eval component traces. The primitive exposes per-axis "
+                "safe/protected drop pairs, CPU/CUDA transfer diagnostics, "
+                "and canonical refs into the master-gradient consumers and "
+                "pairset component marginal equation."
+            ),
+            primary_finding=(
+                "DQS1 drop-one pair0371 improves [contest-CPU] by the one-byte "
+                "rate credit but regresses [contest-CUDA T4] because SegNet "
+                "penalty exceeds rate credit [empirical-anchor; "
+                "codex_findings_dqs1_pairset_observation_feedback_20260522]"
+            ),
+            evidence_grade="empirical-anchor",
+            wire_in_hooks=(
+                "sensitivity_map",
+                "pareto_constraint",
+                "bit_allocator",
+                "cathedral_autopilot",
+                "continual_learning",
+                "probe_disambiguator",
+            ),
+            composes_with=(
+                "per_pair_score_decomposition",
+                "segnet_margin_polytope",
+                "posenet_se3_lie_algebra",
+                "score_lipschitz",
+            ),
+            upstream_memo=(
+                ".omx/research/codex_findings_dqs1_pairset_observation_feedback_"
+                "20260522T164706Z_codex.md"
+            ),
         ),
         # ── Unified-action (F11) ──────────────────────────────────────────
         XRayPrimitiveSpec(

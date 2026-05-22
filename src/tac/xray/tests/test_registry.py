@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-import importlib
-
 import pytest
 
 from tac.xray.base import CANONICAL_WIRE_IN_HOOKS
@@ -23,9 +21,9 @@ def test_schema_version_pinned():
     assert XRAY_REGISTRY_SCHEMA_VERSION == "tac_xray_registry_v1"
 
 
-def test_inventory_returns_thirteen_primitives():
+def test_inventory_returns_fourteen_primitives():
     specs = canonical_xray_primitive_inventory()
-    assert len(specs) == 13
+    assert len(specs) == 14
 
 
 def test_inventory_names_unique():
@@ -61,6 +59,7 @@ def test_inventory_required_primitives_present():
         "segnet_margin_polytope",  # F7
         "posenet_se3_lie_algebra",  # F8
         "per_pair_score_decomposition",  # F9
+        "pairset_component_marginal",  # F14
         "yuv6_sublattice_geometry",  # F10
         "unified_action_principle",  # F11
         "predictive_coding_hierarchy",  # F12a
@@ -149,8 +148,8 @@ def test_specs_by_category_codec_axis_count():
 
 def test_specs_by_category_scorer_internal_count():
     scorer_internal = specs_by_category("scorer-internal")
-    # F7, F8, F9 = 3
-    assert len(scorer_internal) == 3
+    # F7, F8, F9, F14 = 4
+    assert len(scorer_internal) == 4
 
 
 def test_specs_by_category_unified_action_count():
@@ -168,7 +167,7 @@ def test_specs_by_category_codec_primitive_count():
 def test_serialize_inventory_returns_lists_not_tuples():
     """JSON-friendly: tuples become lists."""
     out = serialize_xray_inventory()
-    assert len(out) == 13
+    assert len(out) == 14
     for d in out:
         assert isinstance(d["wire_in_hooks"], list)
         assert isinstance(d["composes_with"], list)

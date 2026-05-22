@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-22T18:17:25Z
-from_state_hash: frontier_scan_dqs1_pairset_drop_one_rank021_exact_cpu_20260522T1817Z
-regenerated_by: codex:dqs1_pairset_drop_one_rank021_exact_cpu_recovery_20260522
-last_refreshed_at: 2026-05-22T18:17:25Z
-last_refreshed_by: codex:dqs1_pairset_drop_one_rank021_exact_cpu_recovery_20260522
-last_refreshed_head: b792915f1
+generated_at: 2026-05-22T18:51:21Z
+from_state_hash: frontier_scan_dqs1_pairset_component_marginal_xray_equation_refs_20260522T1851Z
+regenerated_by: codex:dqs1_pairset_component_marginal_xray_equation_refs_20260522
+last_refreshed_at: 2026-05-22T18:51:21Z
+last_refreshed_by: codex:dqs1_pairset_component_marginal_xray_equation_refs_20260522
+last_refreshed_head: 5b1826d43
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
@@ -42,7 +42,7 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-05-22T18:17Z
+### Current best - last rechecked 2026-05-22T18:51Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
@@ -225,15 +225,25 @@ last_refreshed_note: |
   `178559` bytes) also passed exact Modal `[contest-CPU]` eval and regressed
   to `0.19202928295713673`, matching the rank013 one-byte-drop response class:
   PoseNet `+0.0`, SegNet `+0.000001`, rate `-0.00000066585895312`.
+  Follow-up `pairset_drop_one_rank026_pair0320`
+  (`bf6c2135ce874c7a99b727af76cdbf0dc31deca128b5ee462334dde460731296`,
+  `178559` bytes) also passed locality and exact Modal `[contest-CPU]` eval
+  and regressed to `0.19202928295713673` with the same response class:
+  PoseNet `+0.0`, SegNet `+0.000001`, rate `-0.00000066585895312`.
   The refreshed identity-verified, selector-scoped portfolio now includes the
   component marginal model from `cross_family_candidate_portfolio.v1`: CPU-safe
-  observed drop pair `[371]`, CPU-protected observed drop pairs `[327, 376]`,
+  observed drop pair `[371]`, CPU-protected observed drop pairs
+  `[327, 376, 320]`,
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
   for `pairset_drop_one_rank021_pair0371`. The current recommended fresh
-  local-control candidate is `pairset_drop_one_rank026_pair0320`. The response
+  local-control candidate is `pairset_drop_one_rank027_pair0378`. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
-  selected-pair identity matching before fitting.
+  selected-pair identity matching before fitting. The regenerated portfolio
+  also carries `canonical_signal_refs` to the new
+  `pairset_component_marginal` xray primitive, the canonical equation
+  `pairset_component_marginal_score_decomposition_v1`, and the canonical
+  master-gradient per-pair consumers.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
