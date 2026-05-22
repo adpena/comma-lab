@@ -30,6 +30,11 @@ def test_mlx_score_calibration_preserves_order_and_false_authority(tmp_path: Pat
     assert manifest["summary"]["mlx_cpu_rank_inversions"] == 0
     assert manifest["summary"]["mlx_cuda_rank_inversions"] == 0
     assert manifest["summary"]["mlx_minus_cpu_max_abs"] == 0.0010000000000000009
+    assert manifest["decision_policy"]["recommended_min_mlx_gap_for_spend_triage"] == (
+        0.0010000000000000009 * 5.0
+    )
+    assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 1
+    assert manifest["pairwise_order"][0]["mlx_spend_triage_decision_certified"] is True
     assert manifest["rows"][0]["mlx_rank"] == 1
     assert manifest["rows"][0]["cpu_rank"] == 1
     assert manifest["rows"][0]["cuda_rank"] == 1
@@ -45,6 +50,24 @@ def test_mlx_score_calibration_counts_rank_inversions(tmp_path: Path) -> None:
 
     assert manifest["summary"]["mlx_cpu_rank_inversions"] == 1
     assert manifest["summary"]["mlx_cuda_rank_inversions"] == 0
+
+
+def test_mlx_score_calibration_marks_close_pairs_uncertain(tmp_path: Path) -> None:
+    rows = [
+        _row(tmp_path, "a", mlx_score=0.200, cpu_score=0.201, cuda_score=0.230),
+        _row(tmp_path, "b", mlx_score=0.203, cpu_score=0.204, cuda_score=0.233),
+    ]
+
+    manifest = build_mlx_score_calibration_manifest(rows, repo_root=tmp_path)
+
+    assert manifest["summary"]["mlx_cpu_rank_inversions"] == 0
+    assert manifest["summary"]["recommended_min_mlx_gap_for_spend_triage"] == (
+        0.0010000000000000009 * 5.0
+    )
+    assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 0
+    assert manifest["summary"]["mlx_spend_triage_pairwise_uncertain_count"] == 1
+    assert manifest["pairwise_order"][0]["mlx_spend_triage_uncertain"] is True
+    assert manifest["pairwise_order"][0]["mlx_matches_cpu"] is True
 
 
 def test_mlx_score_calibration_rejects_authoritative_mlx_response(tmp_path: Path) -> None:
@@ -91,6 +114,9 @@ def test_mlx_score_calibration_cli(tmp_path: Path) -> None:
     manifest = json.loads(output_path.read_text(encoding="utf-8"))
     assert manifest["run_id"] == "cli"
     assert manifest["summary"]["mlx_cpu_rank_inversions"] == 0
+    assert manifest["summary"]["recommended_min_mlx_gap_for_spend_triage"] == (
+        0.0010000000000000009 * 5.0
+    )
 
 
 def _row(

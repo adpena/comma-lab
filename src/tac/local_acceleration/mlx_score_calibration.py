@@ -11,6 +11,7 @@ from typing import Any
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 SCHEMA_VERSION = "mlx_score_calibration.v1"
+DEFAULT_DECISION_SAFETY_FACTOR = 5.0
 
 AUTHORITY_FALSE_FIELDS = (
     "score_claim",
@@ -39,10 +40,12 @@ def build_mlx_score_calibration_manifest(
     *,
     repo_root: str | Path = ".",
     run_id: str | None = None,
+    decision_safety_factor: float = DEFAULT_DECISION_SAFETY_FACTOR,
 ) -> dict[str, Any]:
     """Build a false-authority calibration table from MLX and exact-axis rows."""
 
     root = Path(repo_root)
+    safety_factor = _positive_float(decision_safety_factor, "decision_safety_factor")
     normalized = [
         _normalize_row(row, repo_root=root, index=index)
         for index, row in enumerate(rows)
@@ -55,6 +58,9 @@ def build_mlx_score_calibration_manifest(
 
     pairwise = _pairwise_order(normalized)
     summary = _build_summary(normalized, pairwise)
+    decision_policy = _build_decision_policy(summary, safety_factor)
+    _attach_decision_certification(pairwise, decision_policy)
+    _attach_decision_summary(summary, pairwise, decision_policy)
     return {
         "schema_version": SCHEMA_VERSION,
         "run_id": run_id,
@@ -71,6 +77,7 @@ def build_mlx_score_calibration_manifest(
         "rows": normalized,
         "pairwise_order": pairwise,
         "summary": summary,
+        "decision_policy": decision_policy,
         "authority_status": (
             "This manifest measures MLX local signal quality only. Exact contest "
             "CPU/CUDA auth eval remains required for score claims, promotion, "
@@ -182,17 +189,23 @@ def _pairwise_order(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for i, left in enumerate(rows):
         for right in rows[i + 1 :]:
+            mlx_gap = float(left["mlx_score"]) - float(right["mlx_score"])
             item: dict[str, Any] = {
                 "left_index": left["index"],
                 "right_index": right["index"],
                 "left_label": left["label"],
                 "right_label": right["label"],
                 "mlx_order": _order(left.get("mlx_score"), right.get("mlx_score")),
+                "mlx_score_gap": mlx_gap,
+                "mlx_score_gap_abs": abs(mlx_gap),
             }
             for axis in ("cpu", "cuda"):
                 key = f"{axis}_score"
                 if left.get(key) is not None and right.get(key) is not None:
+                    axis_gap = float(left[key]) - float(right[key])
                     item[f"{axis}_order"] = _order(left.get(key), right.get(key))
+                    item[f"{axis}_score_gap"] = axis_gap
+                    item[f"{axis}_score_gap_abs"] = abs(axis_gap)
                     item[f"mlx_matches_{axis}"] = item["mlx_order"] == item[f"{axis}_order"]
             out.append(item)
     return out
@@ -217,6 +230,75 @@ def _build_summary(rows: list[dict[str, Any]], pairwise: list[dict[str, Any]]) -
             1 for item in comparable if item[match_key] is not True
         )
     return summary
+
+
+def _build_decision_policy(
+    summary: dict[str, Any],
+    safety_factor: float,
+) -> dict[str, Any]:
+    local_error = summary.get("mlx_minus_local_cpu_max_abs")
+    cpu_error = summary.get("mlx_minus_cpu_max_abs")
+    available_errors = [
+        float(value)
+        for value in (local_error, cpu_error)
+        if value is not None and math.isfinite(float(value))
+    ]
+    calibration_uncertainty_score = max(available_errors) if available_errors else None
+    min_gap = (
+        None
+        if calibration_uncertainty_score is None
+        else calibration_uncertainty_score * safety_factor
+    )
+    basis = "mlx_minus_cpu_max_abs"
+    if local_error is not None and cpu_error is None:
+        basis = "mlx_minus_local_cpu_max_abs"
+    elif local_error is not None and cpu_error is not None:
+        basis = "max(mlx_minus_cpu_max_abs, mlx_minus_local_cpu_max_abs)"
+    return {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "decision_safety_factor": safety_factor,
+        "calibration_uncertainty_basis": basis if available_errors else None,
+        "calibration_uncertainty_score": calibration_uncertainty_score,
+        "recommended_min_mlx_gap_for_spend_triage": min_gap,
+        "allowed_use": "local_spend_triage_only",
+        "forbidden_use": "score_claim_or_rank_or_kill_or_promotion",
+    }
+
+
+def _attach_decision_certification(
+    pairwise: list[dict[str, Any]],
+    decision_policy: dict[str, Any],
+) -> None:
+    min_gap = decision_policy.get("recommended_min_mlx_gap_for_spend_triage")
+    for item in pairwise:
+        gap = _finite_float(item["mlx_score_gap_abs"], "pairwise.mlx_score_gap_abs")
+        certified = min_gap is not None and gap >= float(min_gap)
+        item["mlx_spend_triage_decision_certified"] = certified
+        item["mlx_spend_triage_uncertain"] = not certified
+        item["mlx_spend_triage_min_gap"] = min_gap
+
+
+def _attach_decision_summary(
+    summary: dict[str, Any],
+    pairwise: list[dict[str, Any]],
+    decision_policy: dict[str, Any],
+) -> None:
+    certified = [
+        item for item in pairwise if item.get("mlx_spend_triage_decision_certified") is True
+    ]
+    uncertain = [item for item in pairwise if item.get("mlx_spend_triage_uncertain") is True]
+    summary["mlx_spend_triage_pairwise_certified_count"] = len(certified)
+    summary["mlx_spend_triage_pairwise_uncertain_count"] = len(uncertain)
+    summary["mlx_spend_triage_pairwise_total_count"] = len(pairwise)
+    summary["recommended_min_mlx_gap_for_spend_triage"] = decision_policy.get(
+        "recommended_min_mlx_gap_for_spend_triage"
+    )
+    summary["calibration_uncertainty_score"] = decision_policy.get(
+        "calibration_uncertainty_score"
+    )
 
 
 def _attach_delta_stats(summary: dict[str, Any], rows: list[dict[str, Any]], key: str) -> None:
@@ -251,7 +333,15 @@ def _optional_float(value: Any) -> float | None:
     return _finite_float(value, "optional_float")
 
 
+def _positive_float(value: Any, label: str) -> float:
+    out = _finite_float(value, label)
+    if out <= 0:
+        raise ValueError(f"{label} must be positive, got {value!r}")
+    return out
+
+
 __all__ = [
+    "DEFAULT_DECISION_SAFETY_FACTOR",
     "SCHEMA_VERSION",
     "build_mlx_score_calibration_manifest",
     "load_json_object",

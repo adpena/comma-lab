@@ -26,6 +26,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--repo-root", default=Path("."), type=Path)
     parser.add_argument("--run-id", default=None)
+    parser.add_argument(
+        "--decision-safety-factor",
+        default=5.0,
+        type=float,
+        help=(
+            "Multiplier applied to the observed MLX calibration uncertainty when "
+            "marking pairwise gaps as spend-triage safe. This never creates score "
+            "authority."
+        ),
+    )
     return parser
 
 
@@ -45,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
             rows,
             repo_root=args.repo_root,
             run_id=None if run_id is None else str(run_id),
+            decision_safety_factor=args.decision_safety_factor,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
@@ -63,6 +74,9 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 "score_claim": manifest["score_claim"],
                 "promotion_eligible": manifest["promotion_eligible"],
+                "recommended_min_mlx_gap_for_spend_triage": manifest["summary"].get(
+                    "recommended_min_mlx_gap_for_spend_triage"
+                ),
             },
             sort_keys=True,
         )
