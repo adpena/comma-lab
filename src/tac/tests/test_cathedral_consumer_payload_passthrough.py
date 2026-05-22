@@ -88,7 +88,12 @@ def test_load_candidates_from_jsonl_preserves_consumer_payload(tmp_path: Path) -
 
 
 def test_cathedral_consumer_payload_rejects_rank_or_promote_authority() -> None:
-    for key in ("rank_or_kill_eligible", "promotable"):
+    for key in (
+        "rank_or_kill_eligible",
+        "promotable",
+        "score_claim_valid",
+        "dispatch_packet_ready",
+    ):
         with pytest.raises(ValueError, match=key):
             _coerce_consumer_payload(
                 {"consumer_payload": {key: True}},

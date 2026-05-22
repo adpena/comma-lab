@@ -3692,20 +3692,19 @@ def _candidate_has_effective_negative_delta_for_race_mode(
 def _coerce_consumer_payload(raw: Mapping[str, Any], *, context: str) -> dict[str, Any]:
     """Return bounded consumer-only payload passthrough fields."""
 
+    from tac.optimization.proxy_candidate_contract import (
+        require_no_truthy_authority_fields,
+    )
+
     value = raw.get("consumer_payload")
     if value is None:
         return {}
     if not isinstance(value, Mapping):
         raise ValueError(f"{context}: consumer_payload must be a JSON object")
-    for key in (
-        "score_claim",
-        "promotion_eligible",
-        "ready_for_exact_eval_dispatch",
-        "rank_or_kill_eligible",
-        "promotable",
-    ):
-        if value.get(key) is True:
-            raise ValueError(f"{context}: consumer_payload.{key}=true is forbidden")
+    require_no_truthy_authority_fields(
+        value,
+        context=f"{context}: consumer_payload",
+    )
     return dict(value)
 
 

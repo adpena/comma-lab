@@ -18,12 +18,29 @@ PROXY_FALSE_AUTHORITY_FIELDS: dict[str, bool] = {
     "score_claim_eligible": False,
     "promotion_eligible": False,
     "rank_or_kill_eligible": False,
+    "promotable": False,
     "field_selection_ready_for_exact_eval_dispatch": False,
     "exact_cuda_auth_eval": False,
     "contest_cuda_auth_eval": False,
     "score_affecting_payload_changed": False,
     "charged_bits_changed": False,
 }
+
+CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS: tuple[str, ...] = (
+    "score_claim",
+    "score_claim_valid",
+    "score_claim_eligible",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+    "field_selection_ready_for_exact_eval_dispatch",
+    "dispatch_attempted",
+    "gpu_launched",
+    "dispatch_packet_ready",
+    "exact_cuda_auth_eval",
+    "contest_cuda_auth_eval",
+    "promotable",
+)
 
 PROXY_TARGET_MODES = ["contest_exact_eval_planning"]
 PROXY_DEPLOYMENT_TARGET = "desktop_research"
@@ -99,7 +116,42 @@ def validate_proxy_candidate(row: Mapping[str, Any]) -> list[str]:
     return violations
 
 
+def truthy_authority_field_violations(
+    payload: Mapping[str, Any],
+    *,
+    fields: Iterable[str] = CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    prefix: str = "",
+) -> list[str]:
+    """Return authority-bearing fields whose value is explicitly true.
+
+    This is intentionally narrower than ``validate_proxy_candidate``: consumer
+    payloads are optional passthrough metadata, so they may omit false fields.
+    They must never smuggle a truthy score, promotion, rank/kill, dispatch, or
+    exact-eval authority flag into downstream queues.
+    """
+
+    violations: list[str] = []
+    for key in fields:
+        if payload.get(key) is True:
+            violations.append(f"{prefix}{key}=true")
+    return violations
+
+
+def require_no_truthy_authority_fields(
+    payload: Mapping[str, Any],
+    *,
+    context: str,
+    fields: Iterable[str] = CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+) -> None:
+    """Raise ``ValueError`` when a payload carries authority as ``true``."""
+
+    violations = truthy_authority_field_violations(payload, fields=fields)
+    if violations:
+        raise ValueError(f"{context}: forbidden truthy authority fields: {', '.join(violations)}")
+
+
 __all__ = [
+    "CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS",
     "PROXY_DEPLOYMENT_TARGET",
     "PROXY_DISPATCH_BLOCKERS",
     "PROXY_FALSE_AUTHORITY_FIELDS",
@@ -107,5 +159,7 @@ __all__ = [
     "apply_proxy_evidence_boundary",
     "ordered_unique",
     "proxy_authority_fields",
+    "require_no_truthy_authority_fields",
+    "truthy_authority_field_violations",
     "validate_proxy_candidate",
 ]
