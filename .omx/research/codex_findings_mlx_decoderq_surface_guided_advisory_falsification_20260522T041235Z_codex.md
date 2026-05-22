@@ -17,7 +17,7 @@ The response-surface-guided waterbucket objective produced valid fixed-length ar
 - Batch size: 16
 - `num_threads`: 2
 - Baseline raw SHA-256: `d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c`
-- Baseline score used for advisory deltas: 0.19206142414659494
+- Baseline score used for advisory deltas: `0.19206142414659494 [macOS-CPU advisory decoder-q]`
 
 Authority remains false:
 
@@ -27,7 +27,7 @@ Authority remains false:
 
 ## Results
 
-| candidate_id | edits | surface proxy priority | advisory score | delta vs baseline | avg SegNet dist | avg PoseNet dist | changed bytes |
+| candidate_id | edits | surface proxy priority | advisory score `[macOS-CPU advisory decoder-q]` | delta vs baseline `[macOS-CPU advisory decoder-q]` | avg SegNet dist | avg PoseNet dist | changed bytes |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `a2f90a216aac4184` | 1 | 0.47923087385670265 | 0.19249142414659495 | +0.0004300000000000137 | 0.00056469 | 0.00002943 | 35132514 |
 | `a9b04920db67ec71` | 2 | 0.9584617477134053 | 0.19254442414659495 | +0.0004830000000000112 | 0.00056522 | 0.00002943 | 46453851 |

@@ -68,8 +68,8 @@ Recovered detached Modal CPU auth eval with scorer-input hashes:
 - Output dir: `experiments/results/modal_auth_eval_cpu/mlx_fec6_scorer_input_hash_cpu_20260521T214030Z`
 - Call id: `fc-01KS67R1HR4T63VQ95201KBVHB`
 - Archive SHA-256: `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`
-- Score axis: `contest_cpu`
-- Score recomputed from components: `0.1920513168811056`
+- Score axis: `[contest-CPU]` / `contest_cpu`
+- Score recomputed from components: `0.1920513168811056 [contest-CPU]`
 - Scorer-input hash artifact: `scorer_input_cache_hashes.json`
 
 ## Transfer-Calibration Audit

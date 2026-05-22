@@ -17,8 +17,8 @@ stacking/synergy signals.
 
 HFV9 has clean paired exact-eval evidence but is not promotional:
 
-- CPU exact eval: `0.32067828057415293`
-- CUDA exact eval: `0.33713201858942626`
+- `[contest-CPU]` exact eval: `0.32067828057415293`
+- `[contest-CUDA]` exact eval: `0.33713201858942626`
 - archive bytes: `178553`
 - archive SHA: `9a32b1311da1076b1659ff6652481383527279905c8a135eeedff6ec913888ac`
 - runtime content tree: `20a96c8c...`

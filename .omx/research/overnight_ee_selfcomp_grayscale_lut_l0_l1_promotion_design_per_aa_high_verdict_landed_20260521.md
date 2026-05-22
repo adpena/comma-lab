@@ -24,6 +24,11 @@ council_decisions_recorded:
   - "op-routable #4: Author NEW substrate-level recipe at lut_bits=5 (sister of existing lut_bits=4 recipe `substrate_grayscale_lut_modal_a100_dispatch.yaml`) so the STC-compatibility-optimum bit depth is parameterized rather than implicit."
   - "op-routable #5: Sister probe 3c (wavelet coefficients) + 3d (PR101 grammar bytes) per AA op-routable #2,3 enumerate alternative-probe-methodology cover signals so STC paradigm isn't single-sourced on grayscale_lut."
 council_predicted_mission_contribution: frontier_breaking_enabler
+score_claim_valid: false
+ready_for_exact_eval_dispatch: false
+promotable: false
+evidence_grade: "[predicted]"
+score_axis: "[predicted planning prior]"
 council_override_invoked: false
 council_override_rationale: ""
 deferred_substrate_id: ""
@@ -214,6 +219,11 @@ Consumer canonical contract per Catalog #335 satisfied via package's `CONSUMER_N
 ## 13. Operator-routable Phase 2 BUILD options
 
 **Tier 1 (RECOMMENDED) — local MLX training ($0)**: Per Carmack MVP-first Step 1.5 LOCAL_MLX_TRAINABLE classification + sister OO memo. Path: convert `experiments/train_substrate_grayscale_lut.py` PyTorch trainer to MLX-compatible variant; run on M5 Max local GPU; produce archive bytes via canonical `pack_archive`; manually validate archive sha + parse + inflate roundtrip per `tests/test_grayscale_lut_roundtrip.py`. **Cost**: $0 + ~6-12h wall-clock. **Cascade unlock**: STC sidecar Phase 1 smoke against the locally-built archive (no paid GPU until smoke validates ΔS band).
+
+Any local MLX-trained archive is `[macOS-MLX research-signal]` until byte-closed
+archive custody and paired `contest-CPU` / `contest-CUDA` auth eval land. Local
+MLX training may produce candidate bytes, but it cannot create score,
+promotion, rank/kill, or dispatch-readiness authority.
 
 **Tier 2 (Alternative) — paid Modal A100 dispatch (~$5.50 per cost-band)**: Per existing recipe `substrate_grayscale_lut_modal_a100_dispatch.yaml` (`dispatch_enabled: false` → operator flips to true). Path: `operator_authorize_substrate_grayscale_lut_modal_a100_dispatch.sh` (or canonical `tools/operator_authorize.py --recipe substrate_grayscale_lut_modal_a100_dispatch`). **Cost**: ~$5.50 (within $20 envelope per recipe). **Cascade unlock**: identical to Tier 1 but $5.50 + ~2-4h wall-clock; SISTER recipe at lut_bits=5 (cargo-cult #2 unwind) recommended for full STC compatibility.
 

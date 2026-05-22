@@ -9,11 +9,15 @@ author: claude:overnight-o-5-substrate-procedural-variant-matrix-20260521
 lane_id: lane_overnight_o_5_substrate_procedural_variant_matrix_design_20260521
 mission_contribution: apparatus_maintenance
 score_claim: false
+score_claim_valid: false
 promotion_eligible: false
+promotable: false
 rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false
 dispatch_attempted: false
 paid_dispatch_attempted: false
 evidence_grade: "[predicted]"
+score_axis: "[predicted planning prior]"
 predicted_band_validation_status: pending_post_training
 current_head_before_landing: ae5c9d41c43a0385d2b7208c58639f7a632f0294
 council_tier: T1
@@ -79,7 +83,15 @@ Per operator NON-NEGOTIABLE 2026-05-21 (2nd round) blanket approval + OVERNIGHT-
 | 4 | grayscale_lut | IN-DOMAIN `chroma_lut_replacement` | ✓ existing substrate; canonical sister-precedent for GLV1 grammar pattern |
 | 5 | ATW V2 cdf_table_blob | EXCLUDED `direct_byte_substitution_on_decode_opaque_raw_sections` per RATIFY-4 | ✗ REPLACEMENT IMPLEMENTATION-LEVEL FALSIFIED per codex byte-mutation smoke; REMOVAL paradigm reclassified |
 
-**Cumulative predicted ΔS at canonical hypothesis center**: -0.013 score points (per `_AGGREGATE_PREDICTED_DELTA_S` constant at `src/tac/canonical_equations/procedural_codebook_savings.py:80`); **OVERNIGHT-G aggregate-12 IN-DOMAIN candidate corroboration**: [-0.0161, -0.0488] [predicted] range CONSISTENT with the 5-substrate canonical hypothesis (the matrix is the canonical 5-substrate subset of the 12 IN-DOMAIN total in the recode queue). Both ranges are predicted-only; no paid contest-axis empirical anchor has landed yet (DP1 IN-FLIGHT).
+## Supersession Note
+
+DP1 is no longer merely `IN-FLIGHT`: later Modal recovery/audit evidence records
+byte-smaller procedural archives with severe score regression and a
+runtime-closure packaging bug. Treat DP1 post-training procedural substitution
+as blocked pending score-opacity audit or joint retraining with the procedural
+seed present during training.
+
+**Cumulative predicted ΔS at canonical hypothesis center**: -0.013 score points (per `_AGGREGATE_PREDICTED_DELTA_S` constant at `src/tac/canonical_equations/procedural_codebook_savings.py:80`); **OVERNIGHT-G aggregate-12 IN-DOMAIN candidate corroboration**: [-0.0161, -0.0488] [predicted] range CONSISTENT with the 5-substrate canonical hypothesis (the matrix is the canonical 5-substrate subset of the 12 IN-DOMAIN total in the recode queue). Both ranges are predicted-only; at original memo time no paid contest-axis empirical anchor had landed yet. Later DP1 evidence is superseded by the note above.
 
 **Apparatus-discipline empirical receipts validated by this session's 5-substrate matrix**:
 - Sister-DISJOINT scope partitioning (Catalog #230 + #340): 7+ sister-convergence pattern instances today across slot 3 (ATW V2 cdf_table_blob) without cross-collision

@@ -2,41 +2,45 @@ schema_version: 1
 name: substrate_grayscale_lut_lut_bits_5_local_mlx_dispatch
 lane_id: lane_overnight_tt_selfcomp_grayscale_lut_phase_2_build_via_local_mlx_tier_1_recommended_20260521
 summary: |
-  Grayscale-LUT lut_bits=5 variant for local MLX/MPS dispatch per AA HIGH
-  verdict 2026-05-21 + OVERNIGHT-EE-RESUME §13 op-routable #4 + OVERNIGHT-TT
-  Phase 2 BUILD. Sister of substrate_grayscale_lut_modal_a100_dispatch.yaml
-  (canonical paid Modal A100 recipe) at the lut_bits=5 + local-MLX surface.
+  Grayscale-LUT lut_bits=5 variant for local CPU/export-only recovery until a
+  true MLX/MPS trainer exists. Historical local-MLX/MPS dispatch concept per
+  AA HIGH verdict 2026-05-21 + OVERNIGHT-EE-RESUME §13 op-routable #4 +
+  OVERNIGHT-TT Phase 2 BUILD. Sister of
+  substrate_grayscale_lut_modal_a100_dispatch.yaml (canonical paid Modal A100
+  recipe) at the lut_bits=5 + local research surface.
 
-# Per Catalog #317 sister + CLAUDE.md "ONE-ARG LOCAL-MPS VS MODAL DISPATCH SWITCH"
-# 2026-05-17: local-MPS (and MLX-future) is the canonical local-pre-paid-dispatch
-# substrate per operator directive 2026-05-21 + Carmack MVP-first 5-step.
-platform: local-mps
-gpu: "MPS"
+# Historical note: this recipe name predates the current trainer contract. The
+# PyTorch trainer accepts only cuda|cpu today, so the local recipe is pinned to
+# CPU until a real MLX/MPS trainer lands. This prevents a stale `mps` env value
+# from failing after operator authorization.
+platform: local-cpu
+gpu: "CPU"
 min_vram_gb: 0  # Unified memory on Apple Silicon; M5 Max has 128GB available
-# Catalog #215: smoke-class matches dispatch-class (local-MPS smoke = local-MPS full).
-min_smoke_gpu: "MPS"
+# Catalog #215: smoke-class matches dispatch-class (local-CPU smoke = local-CPU full).
+min_smoke_gpu: "CPU"
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
   - research_substrate
   - contest_one_video_replay
 canary_status: independent_substrate
-# Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #1 + #192: local-MPS results
-# are [macOS-MPS research-signal] NON-PROMOTABLE; paid Linux x86_64 + NVIDIA
-# follow-on required for promotion. dispatch_enabled remains FALSE until
-# operator approves local-MPS dispatch surface activation.
+# Local results are non-promotional research signal; paid Linux x86_64 + NVIDIA
+# follow-on required for promotion. dispatch_enabled remains FALSE until the
+# unsupported MPS/MLX trainer gap is closed or the recipe is explicitly retargeted.
 dispatch_enabled: false
 research_only: true
 defer_reason: |
   Phase 2 BUILD landed lut_bits parameterization (5/6/7/8) + sister tests
   9/9 PASS + local CPU smoke @ lut_bits=5 GREEN per OVERNIGHT-TT 2026-05-21.
-  Dispatch deferred until: (a) operator approves local-MPS first-anchor
-  dispatch (full epochs on M5 Max MPS); (b) Tier-2 paid Modal A100 follow-on
+  Dispatch deferred until: (a) the current trainer's MPS/MLX support gap is
+  closed or this recipe is explicitly retargeted to CPU-only recovery; (b)
+  Tier-2 paid Modal A100 follow-on
   for [contest-CUDA] promotion (operator-routable per OVERNIGHT-EE-RESUME §13
   Tier-2 fallback). This recipe is the canonical lut_bits=5 dispatch surface
-  for both local-MPS exec AND the future paid Modal A100 follow-on (sister
+  for the local research surface AND the future paid Modal A100 follow-on (sister
   recipe will copy this + flip platform: modal + dispatch_enabled: true).
 dispatch_blockers:
+  - trainer_mps_device_unsupported_current_parser_accepts_cuda_or_cpu_only
   - operator_local_mps_dispatch_surface_activation_pending
   - paired_paid_modal_a100_followon_for_contest_cuda_promotion_pending
   - empirical_anchor_for_lut_bits_5_vs_lut_bits_8_archive_bytes_savings_pending
@@ -46,7 +50,7 @@ cost_band:
   all_flags_on: true
   hand_calibrated_fallback_p50_usd: 0.00  # local execution, no paid cost
   platform_key: local
-  gpu_key: MPS
+  gpu_key: CPU
 
 # Predicted band per AA HIGH verdict reasoning: lut_bits=5 reduces grayscale
 # brotli output ~30-40% vs lut_bits=8 (entropy reduction); naive expectation
@@ -70,12 +74,12 @@ substrate_tradition: TRADITION_1
 mission_predicted_contribution: frontier_breaking_enabler
 
 risk: |
-  Phase 2 BUILD landed lut_bits parameterization; local MPS dispatch first-
-  anchor risks:
-  (a) MPS-specific gradient drift (per Catalog #1 "MPS auth eval is NOISE"):
-      training-loop loss may diverge between MPS and CUDA paths. Mitigation:
-      [macOS-MPS research-signal] axis tag NON-PROMOTABLE; paired paid Modal
-      A100 follow-on for [contest-CUDA] promotion.
+  Phase 2 BUILD landed lut_bits parameterization; local dispatch first-anchor
+  risks:
+  (a) MPS/MLX trainer gap: the current trainer accepts cuda|cpu only, so this
+      recipe is pinned to CPU and remains disabled until a true MPS/MLX path
+      lands. Mitigation: local output is non-promotional; paired paid Modal
+      A100 follow-on remains required for [contest-CUDA] promotion.
   (b) lut_bits=5 EXPRESSIVITY CEILING: 32 levels may not preserve enough
       grayscale resolution for natural-video chroma reconstruction (paired
       with FiLM embedding compensation). Mitigation: AA HIGH verdict
@@ -85,13 +89,12 @@ risk: |
       verified (Catalog #229) but not empirically anchored against contest
       scorer. Mitigation: this recipe IS the empirical anchor mechanism.
 
-envelope_status: "ZERO paid GPU; local M5 Max MPS execution per Carmack MVP-first."
+envelope_status: "ZERO paid GPU; local CPU/export-only until true MLX/MPS trainer lands."
 
-# Local-MPS dispatch driver (sister of remote_lane_substrate_grayscale_lut.sh
-# for Modal dispatch surface; local-MPS dispatch via operator_authorize.py
-# --target local-mps per Catalog #317).
+# Local CPU dispatch driver (sister of remote_lane_substrate_grayscale_lut.sh
+# for Modal dispatch surface).
 remote_driver: scripts/remote_lane_substrate_grayscale_lut.sh
-timeout_hours: 8.0  # local MPS full epochs may take longer than CUDA A100
+timeout_hours: 8.0  # local CPU full epochs may take longer than CUDA A100
 
 required_input_files:
   - flag: --video-path
@@ -109,16 +112,16 @@ required_input_files_trainer: experiments/train_substrate_grayscale_lut.py
 env_overrides:
   GRAYSCALE_LUT_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   GRAYSCALE_LUT_VIDEO_PATH: upstream/videos/0.mkv
-  GRAYSCALE_LUT_OUTPUT_DIR: experiments/results/grayscale_lut_lut_bits_5_local_mps_${INSTANCE_JOB_ID}/output
+  GRAYSCALE_LUT_OUTPUT_DIR: experiments/results/grayscale_lut_lut_bits_5_local_cpu_${INSTANCE_JOB_ID}/output
   GRAYSCALE_LUT_EPOCHS: "2000"
   GRAYSCALE_LUT_BATCH_SIZE: "16"
   GRAYSCALE_LUT_UPSTREAM_DIR: upstream
-  # Per Catalog #317 sister + #1 + #192: local-MPS surface non-promotable by
-  # construction; promotable via paired paid Modal A100 sister recipe only.
-  GRAYSCALE_LUT_DEVICE: mps
+  # Current trainer parser accepts cuda|cpu only. Keep this fail-closed on CPU
+  # until a true MLX/MPS trainer is implemented and tested.
+  GRAYSCALE_LUT_DEVICE: cpu
   GRAYSCALE_LUT_LUT_BITS: "5"
   GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT: "${GRAYSCALE_LUT_EXPORT_ONLY_CHECKPOINT:-}"
-  # Leave 60 min inside the 8h local-MPS envelope for archive/auth artifact export.
+  # Leave 60 min inside the 8h local envelope for archive/auth artifact export.
   GRAYSCALE_LUT_SOFT_TRAIN_DEADLINE_SECONDS: "25200"
 
 dependencies:
@@ -135,7 +138,7 @@ notes: |
   sidecar required cover-signal granularity per OVERNIGHT-EE-RESUME §13
   op-routable #4. Sister of canonical
   substrate_grayscale_lut_modal_a100_dispatch.yaml at the lut_bits=5 +
-  local-MPS surface.
+  local research surface.
 
   ARCHIVE BYTES PREDICTION (entropy reduction):
     Per OVERNIGHT-TT empirical test (test_lower_lut_bits_smaller_brotli_output):
@@ -161,14 +164,14 @@ notes: |
   at lut_bits=5).
 
   CLAUDE.md non-negotiable acknowledgments:
-  - "MPS auth eval is NOISE" (Catalog #1): MPS training produces
-    [macOS-MPS research-signal] NON-PROMOTABLE per Catalog #192 + #317;
-    paired paid Modal A100 follow-on for [contest-CUDA] promotion.
+  - "MPS auth eval is NOISE" (Catalog #1): local training produces
+    non-promotional research signal per Catalog #192 + #317; paired paid Modal
+    A100 follow-on remains required for [contest-CUDA] promotion.
   - "Submission auth eval - BOTH CPU AND CUDA": this recipe is research
     surface only; submission packets require paired contest-axis dispatches
     via the canonical recipe.
-  - "Apples-to-apples evidence discipline": every score from local MPS
-    carries [macOS-MPS] axis tag + lut_bits=5 + canonical Provenance per
+  - "Apples-to-apples evidence discipline": every score from local execution
+    carries a local advisory axis tag + lut_bits=5 + canonical Provenance per
     Catalog #287/#323.
   - "Frontier scores are pointer-only" (Catalog #343): no hardcoded score
     literals; predicted_band_validation_status: pending_post_training.

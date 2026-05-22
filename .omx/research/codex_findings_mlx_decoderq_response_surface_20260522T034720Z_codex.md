@@ -40,7 +40,7 @@ dominance on score terms instead of raw distortion units.
 | Neutral | 0 |
 | Preserve gain sum | 0.028526397509450963 |
 | Suppress harm sum | 0.1535767647957981 |
-| Net score delta sum | +0.12505036728634714 |
+| Net score delta sum `[macOS-MLX research-signal]` | +0.12505036728634714 |
 | Axis dominance | seg: 216, pose: 84 |
 
 Top preserve windows are SegNet-dominated improvements at pairs 109, 68, 98,

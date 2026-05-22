@@ -2,6 +2,15 @@
 
 **Lane:** `lane_overnight_xx_selfcomp_tier_2_paid_modal_a100_first_anchor_dispatch_20260521` L1 (impl_complete + memory_entry; dispatch fired pending harvest)
 
+**Supersession note 2026-05-22:** later harvest evidence classifies this
+dispatch as `failed_modal_training_timeout`, not a successful completed
+score-bearing run. The useful recovered artifact is the harvested `best.pt`
+checkpoint under
+`experiments/results/lane_substrate_grayscale_lut_lut_bits_5_modal_a100_dispatch_20260521T185859Z_modal/harvested_artifacts/`;
+Raman's follow-on `d9009b09b` added an export-only recovery path for that
+checkpoint. Do not read this memo's original "dispatch fired pending harvest"
+language as current completion, score, or promotion authority.
+
 **Status:** DISPATCH FIRED via canonical operator_authorize chain. Modal app `https://modal.com/apps/adpena/main/ap-PjyLmPNIbkjIvQ5HVceIoF`. Call_id `fc-01KS5YG9W26T72D6Z8Y3N44JEN` registered in canonical Catalog #245 ledger.
 
 **Operator directive (2026-05-21):** verbatim *"All are approved on my end"* (morning) + *"Do option 1 and 3 in parallel"* (~18:00Z) per operator-frontier-override Catalog #300 Mission alignment Consequence 1.

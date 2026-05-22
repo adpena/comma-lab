@@ -99,6 +99,13 @@ or local/macOS advisory cache identity as a proxy for the FEC6/decoder-q
 dataset. Exact-eval spend triage requires the effective gate to pass after
 dataset-specific production-contract coverage.
 
+## Supersession Note
+
+As of `.omx/research/codex_findings_mlx_fec6_auth_parent_contract_20260522T110007Z_codex.md`,
+the FEC6 parent group is covered by a strict local MLX parent contract. The
+remaining dataset blocker is decoder-q parent coverage; do not read this memo
+as current evidence that both parent groups are missing.
+
 ## Verification
 
 - `.venv/bin/python -m ruff check src/tac/optimization/scorer_response_dataset.py src/tac/tests/test_scorer_response_dataset.py tools/plan_mlx_parent_production_contracts.py`

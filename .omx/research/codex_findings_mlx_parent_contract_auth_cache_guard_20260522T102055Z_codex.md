@@ -53,6 +53,13 @@ The decoder-q candidate cache completed a full 300-window singleton CPU parity s
 
 This is useful for a future decoder-q parent production contract, but it is not sufficient without cache/auth identity audit, profile stability, reference parity, score calibration, and contract bundle coverage.
 
+## Supersession Note
+
+As of `.omx/research/codex_findings_mlx_fec6_auth_parent_contract_20260522T110007Z_codex.md`,
+the FEC6 parent group is covered by a strict local MLX parent contract. The
+remaining dataset blocker is decoder-q parent coverage; do not read this memo
+as current evidence that both parent groups are missing.
+
 ## Final status
 
 MLX local acceleration is still not production-ready for spend triage or training target selection. The next highest-EV action is to rebuild/regenerate FEC6 scorer-response rows from the auth-faithful tensor cache identity, or materialize/download the auth tensor payloads if they are not locally available. Decoder-q needs its own contest-CPU auth eval/cache audit before it can become a strict production-contract parent.

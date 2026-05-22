@@ -39,7 +39,7 @@ last_refreshed_note: |
 > contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
 > macOS-CPU advisory / MPS rows are excluded.
 
-### Current best - last rechecked 2026-05-22T04:20Z
+### Current best - last rechecked 2026-05-22T09:27Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
@@ -119,6 +119,7 @@ last_refreshed_note: |
   rebuilt. Authority remains local/compiler-only; no score or promotion claim.
 - **VQ K=2 diagnostic**: call `fc-01KS21XSVGM2KJ5ET0ET3YCCFN` completed and was
   terminalized at `2026-05-20T12:10:19Z`; diagnostic CPU score
+  `[diagnostic-CPU; score_claim=false]`
   `78.07586900258559`, archive SHA
   `fea2cd8af897fcc22525b86a4a6bc9745b47a385cc83c392e01e56fdb93dda76`,
   `score_claim=false`, `promotion_eligible=false`.
@@ -141,9 +142,10 @@ last_refreshed_note: |
   records the FEC6 full-600 local MLX response against the matching macOS CPU
   advisory payload. After the 2026-05-22 auth-axis contract hardening, this is
   historical advisory/identity evidence only, not an auth-side transfer
-  authority payload. Corrected archive bytes are `178517`; calibrated local
-  advisory score is `0.19206194316409206`; score delta versus macOS CPU
-  advisory is `6.26282986443405e-07`. This is not a contest score.
+  authority payload. Corrected archive bytes are `178517`; `[macOS-MLX
+  research-signal]` advisory score is `0.19206194316409206`; delta versus
+  `[macOS-CPU advisory]` is `6.26282986443405e-07`. This is not a contest
+  score.
 - **MLX deterministic pair-windowing landed**:
   `.omx/research/codex_findings_mlx_scorer_response_windowing_20260521T232100Z_codex.md`
   adds `--start-pair` / `--max-pairs` to
@@ -156,6 +158,39 @@ last_refreshed_note: |
   `1.1174859826486507` pairs/s versus `0.94424426733706` pairs/s for
   `batch_pairs=1`; SegNet SHA was identical and PoseNet drift was low-order.
   The profiler output is candidate-generation only.
+
+### 2026-05-22 MLX auth-cache full-600 contract addendum
+
+- **FEC6 plus decoder-q full-sample parent contracts closed**:
+  `.omx/research/codex_findings_mlx_decoderq_full600_parent_contract_20260522T123316Z_codex.md`
+  records strict full-600 local MLX parent contracts for both auth-cache-backed
+  FEC6 and decoder-q. Bundle
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_parent_contract_bundle_full600_fec6_decoderq.json`
+  passed with `2/2` strict contracts; refreshed parent plan
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/parent_production_contract_plan_full600_fec6_decoderq.json`
+  is `strict_pass` over `1200` MLX rows. This is `[macOS-MLX
+  research-signal]` only: no score claim, no rank/kill authority, no
+  promotion, and no exact-eval dispatch readiness.
+- **Full-parent ordering is certified for spend triage, not promotion**:
+  FEC6 full-parent MLX score is `0.1920527920355189 [macOS-MLX
+  research-signal]`; decoder-q full-parent MLX score is `0.1924459939299716
+  [macOS-MLX research-signal]`. Decoder-q is worse than FEC6 by
+  `0.00039320189445271603 [macOS-MLX research-signal]`, matching the
+  `[contest-CPU]` ordering and clearing the calibrated spend-triage minimum
+  gap `7.375772066442465e-06`.
+- **Window signal remains useful**:
+  The full-600 same-axis dataset has `170` decoder-q singleton windows that
+  improve over the FEC6 baseline; best singleton delta is
+  `-0.0020326847010743165 [macOS-MLX research-signal]`. Those windows may feed
+  local byte-closed candidate construction, but every promoted candidate still
+  requires claimed exact CPU/CUDA auth eval.
+- **Grayscale LUT timeout recovery produced archive bytes**:
+  `.omx/research/codex_findings_grayscale_lut_export_recovery_20260522T123316Z_codex.md`
+  records local export-only recovery from the Modal A100 `best.pt`. The
+  recovered archive ZIP SHA-256 is
+  `99203f6b0858e8bd54bbc8b88b0a1583ed49f4c75d75590c1ce1951ecfcfda13`; it is a
+  local archive artifact with `score_claim=false`, pending normal contest-axis
+  auth eval.
 
 ### 2026-05-21 zero-spend cascade refresh
 
@@ -330,6 +365,10 @@ Per operator directive 2026-05-17 verbatim *"Want to keep pushing to asymptotic 
 
 **Current 7-candidate readiness matrix** (refreshed 2026-05-18 by Codex; artifact `.omx/state/asymptotic_pursuit/readiness_assessment_20260518T040149Z.json`):
 
+> Historical matrix retained from 2026-05-18. Superseding status: Z6 candidate
+> 4c is not currently launchable until the driver/full-mode fix and a fresh
+> smoke-before-full pass land; see the DEFER-PENDING-DRIVER-FIX section below.
+
 | Substrate | Verdict | Council | Recipe | Predicted ΔS | Cost | Blocking |
 |---|---|---|---|---|---|---|
 | `z6_v2_candidate_4c_scorer_logit` | **READY** | NO_DELIBERATION | dispatch-enabled | [0.11, 0.17] *asymptotic_pursuit planning prior* | $1.08 full / $2.18 paired sequence | L1 registered; score_claim=false; promotion_eligible=false |
@@ -409,7 +448,7 @@ Per HORIZON-CLASS Stage 2 deferred plan (CLAUDE.md Catalog #309 horizon_class ta
 
 ### First ASYMPTOTIC empirical anchor — C6 IBPS smoke 2026-05-17 — DEFER
 
-**Empirical anchor**: C6 IBPS smoke 50ep Modal A10G `fc-01KRW353MJJ9A6QW8H99QWZEMH` 2026-05-17T23:08:18Z returned final_score=**3.04** [contest-CPU advisory; archive_sha=`be06a4b0972e6c...`].
+**Empirical anchor**: C6 IBPS smoke 50ep Modal A10G `fc-01KRW353MJJ9A6QW8H99QWZEMH` 2026-05-17T23:08:18Z returned final_score=**3.04** [diagnostic-CPU advisory; score_claim=false; archive_sha=`be06a4b0972e6c...`].
 
 - **Predicted smoke band**: `[0.10, 0.30]` (recipe `smoke_score_band`)
 - **Actual**: 3.04 — **10× OUTSIDE band**
@@ -437,7 +476,7 @@ Per HORIZON-CLASS Stage 2 deferred plan (CLAUDE.md Catalog #309 horizon_class ta
 - **Catalog #313 probe outcome**: `z6_v2_wave_2_dispatch_smoke_before_full_paired_2026_05_18` verdict DEFER blocker_status=blocking expires_at_utc=2026-06-17T00:30:00Z.
 - **Catalog #324 post-training Tier-C re-measurement**: NOT APPLICABLE — neither archive carries the architecture-as-spec'd; post-training Tier-C cannot validate the council-binding spec against synthetic-cfg outputs.
 - **Stage 2 reactivation gate clause #1**: NOT SATISFIED.
-- **Frontier beat**: NO axis update (no empirical contest-CUDA / contest-CPU score produced; frontier remains 0.19205 CPU / 0.20533 CUDA).
+- **Frontier beat**: NO axis update (no empirical contest-CUDA / contest-CPU score produced; frontier remains `0.19205 [contest-CPU]` / `0.20533 [contest-CUDA T4]`).
 - **Total spent**: ~$0.50 across both fires (both 10s well under cost band).
 - **Reactivation queue** (3 paths): (1) **driver-fix subagent**: modify `scripts/remote_lane_substrate_time_traveler_l5_z6.sh` to accept `$Z6_TRAINER_MODE` env var (smoke|full) and dispatch trainer accordingly + re-fire $3 envelope per Phase 3 council §9; (2) trainer-side fix: gate `smoke=1` flag in `_smoke_main` invocation on env var rather than hardcoded; (3) Phase 4 council on Wave 2-outcome with empirical anchor (BLOCKED on path 1 or 2 landing first).
 - **Mission alignment**: `mission_questioned` — second consecutive ASYMPTOTIC dispatch attempt frustrated by infrastructure-level bug (C6 IBPS by SegNet collapse mechanism; Z6-v2 by driver mode hardcoding). Per CLAUDE.md "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" + Catalog #315: BOTH attempts demonstrate the iteration discipline IS structurally protecting against premature paradigm KILL by deferring; the next operator action is operator-routed driver-fix (path 1).

@@ -9,7 +9,8 @@
 ## Result
 
 FEC6 now has a strict local MLX parent production contract for the `[0, 300]`
-CPU singleton parent window:
+singleton parent window on the local MLX CPU backend; this is
+`[macOS-MLX research-signal]`, not a `contest-CPU` score:
 
 - Contract: `experiments/results/mlx_parent_contract_prereqs_20260522T1030Z/fec6_auth_parent_contract_strict_v1.json`
 - Verdict: `PASS_MLX_SCORER_PRODUCTION_CONTRACT`
@@ -42,7 +43,7 @@ Auth cache identity:
 
 Parent MLX response:
 
-- `canonical_score`: `0.19224369340250186`
+- `canonical_score` `[macOS-MLX research-signal; 300-sample local parent response; non-authoritative]`: `0.19224369340250186`
 - `avg_posenet_dist`: `3.968034641692005e-05`
 - `avg_segnet_dist`: `0.0005345662435865961`
 - `n_samples`: `300`
@@ -53,8 +54,8 @@ Parity:
 
 - Candidate parity: `PASS_MLX_TORCH_SCORER_PARITY_SWEEP`, 300 windows, 0 failed
 - Reference parity: `PASS_MLX_TORCH_SCORER_PARITY_SWEEP`, 300 windows, 0 failed
-- Candidate max SegNet argmax diff: 1 pixel
-- Reference max SegNet argmax diff: 1 pixel
+- Candidate max SegNet argmax diff in the `[0, 300]` strict contract: 0 pixels
+- Reference max SegNet argmax diff in the `[0, 300]` strict contract: 0 pixels
 
 Profile:
 
@@ -85,7 +86,16 @@ FEC6 group `mlx_parent_contract_b04a89b260e7715a` is covered by the strict
 contract. Decoder-q group `mlx_parent_contract_f5391bf78f60224c` still lacks an
 auth-axis cache audit and strict parent production contract.
 
-## Next Action
+## 2026-05-22T12:33Z Supersession
+
+This `[0, 300]` FEC6-only contract was superseded by the full-600 two-parent
+bundle recorded in
+`.omx/research/codex_findings_mlx_decoderq_full600_parent_contract_20260522T123316Z_codex.md`.
+The new bundle covers FEC6 and decoder-q over `1200` auth-audited MLX rows and
+the refreshed parent plan is `strict_pass`. All MLX evidence remains
+`[macOS-MLX research-signal]` and non-authoritative.
+
+## Historical Next Action - Completed By Supersession
 
 The MLX production hardening lane should now move to decoder-q:
 
@@ -93,4 +103,3 @@ The MLX production hardening lane should now move to decoder-q:
 2. Materialize or download the decoder-q auth tensor cache locally.
 3. Regenerate the decoder-q parent response from auth-faithful tensors.
 4. Re-run candidate/reference parity, profile stability, score calibration, and strict parent contract.
-

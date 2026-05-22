@@ -75,13 +75,24 @@ existing `.gitignore` rules:
 - `experiments/results/*`
 - `modal_*_auth_tensors_*/`
 
-## Next Critical Path
+## 2026-05-22T12:33Z Supersession
+
+Decoder-q is no longer blocked on auth tensor identity or strict parent
+coverage. `.omx/research/codex_session_summary_20260522T123316Z_codex.md`
+records full-600 FEC6 plus decoder-q parent contracts, a two-contract bundle,
+and a refreshed parent plan with status `strict_pass`. All MLX evidence remains
+`[macOS-MLX research-signal]` only and non-authoritative.
+
+## Historical Next Critical Path - Superseded
 
 1. Harvest Feynman's decoder-q tensor-export status and recover any completed
    Modal CPU auth tensor artifact through `tools/recover_modal_auth_eval.py`.
 2. Integrate or review Raman's grayscale LUT export-only patch; then export the
    existing A100 `best.pt` without retraining if the patch is green.
-3. Use the passing FEC6/PR101 auth tensor cache as the MLX transfer-calibration
-   parent only under `[macOS-MLX research-signal]`, never for score promotion.
+3. Use the passing FEC6/PR101 auth tensor cache only for the FEC6 parent group
+   covered by the strict parent contract, and only as `[macOS-MLX research-signal]`.
+   It does not cover decoder-q and does not make the combined 600-row dataset
+   eligible for exact-eval spend triage until decoder-q has matching auth-axis
+   cache identity and strict parent-contract coverage.
 4. Keep decoder-q blocked from MLX parent calibration until it has the same
    full-sample `contest-CPU` or `contest-CUDA` auth tensor identity pass.

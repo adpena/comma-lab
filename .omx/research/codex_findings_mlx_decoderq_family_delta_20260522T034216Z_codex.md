@@ -29,7 +29,7 @@ SegNet fields while preserving false authority.
 |---|---:|
 | Matched windows | 300 |
 | Candidate better / worse / tie | 76 / 224 / 0 |
-| Mean decoder-q minus FEC6 score delta | +0.00041683455762115714 |
+| Mean decoder-q minus FEC6 score delta `[macOS-MLX research-signal]` | +0.00041683455762115714 |
 | Best window delta | -0.0015431094684751623 at pair 109 |
 | Worst window delta | +0.0025598805968375105 at pair 61 |
 

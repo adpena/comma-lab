@@ -32,10 +32,10 @@ council_override_rationale: ""
 OVERNIGHT-YY executed cron `e0ee6bd8` HIGH-verdict cascade per OVERNIGHT-SS landing memo verdict framework:
 
 1. **All 4 paired auth_eval arms harvested rc=0**:
-   - baseline_cuda `fc-01KS5VRDK9SMB7JVJWTRC84D2D`: rc=0 / 73.8s / final_score=**4.25** / posenet=0.2445 / segnet=0.0267
-   - baseline_cpu `fc-01KS5VS5BYGEWV90TPH1WPWMYW`: rc=0 / 404.7s / final_score=**4.25** / posenet=0.2442 / segnet=0.0267
-   - procedural_cuda `fc-01KS5VT8PD95CZNHWF41K381N2`: rc=0 / 71.4s / final_score=**90.33** / posenet=163.40 / segnet=0.4990
-   - procedural_cpu `fc-01KS5VTVGYHHH01DMQDD6HEGZ7`: rc=0 / 411.1s / final_score=**90.33** / posenet=163.37 / segnet=0.4990
+   - baseline_cuda `fc-01KS5VRDK9SMB7JVJWTRC84D2D`: rc=0 / 73.8s / final_score=**4.25 [contest-CUDA]** / posenet=0.2445 / segnet=0.0267
+   - baseline_cpu `fc-01KS5VS5BYGEWV90TPH1WPWMYW`: rc=0 / 404.7s / final_score=**4.25 [contest-CPU]** / posenet=0.2442 / segnet=0.0267
+   - procedural_cuda `fc-01KS5VT8PD95CZNHWF41K381N2`: rc=0 / 71.4s / final_score=**90.33 [contest-CUDA]** / posenet=163.40 / segnet=0.4990
+   - procedural_cpu `fc-01KS5VTVGYHHH01DMQDD6HEGZ7`: rc=0 / 411.1s / final_score=**90.33 [contest-CPU]** / posenet=163.37 / segnet=0.4990
 
 2. **Paired CPU+CUDA agreement EXCELLENT** within 0.0024 across both archives — validates apples-to-apples evidence discipline per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
 
@@ -130,7 +130,7 @@ The CARGO-CULTED assumption surfaced is canonical equation #26's REPLACEMENT-sav
 - Catalog #246 canonical paired CPU+CUDA dispatch: arms dispatched via `tools/dispatch_modal_paired_auth_eval.py` per SS predecessor; this slot is the harvest+registration sister
 - Catalog #316 frontier pointer: read via `tools/refresh_canonical_frontier.py --json`; verdict D (above-frontier-canonical-equation-validated); no pointer update needed
 - Catalog #341 canonical non-promotable markers: paired CPU+CUDA agreement validates promotable axis trip BUT empirical full-axis regression = NOT score-lowering → `promotion_eligible=false`
-- Catalog #323 canonical Provenance: anchor's Provenance carries (axis_tag=[contest-CUDA], hardware_substrate=linux_x86_64_t4, evidence_grade=PROMOTABLE_EXACT_CONTEST_CUDA, source_sha256=c22d7f69..., score_claim_valid=true, promotion_eligible=true at the per-arm level; FULL-axis promotion blocked by Catalog #313 probe-outcome PROCEED+blocking due to regression)
+- Catalog #323 canonical Provenance: anchor's Provenance carries (axis_tag=[contest-CUDA], hardware_substrate=linux_x86_64_t4, evidence_grade=PROMOTABLE_EXACT_CONTEST_CUDA, source_sha256=c22d7f69..., score_claim_valid=true for the strict auth-axis evidence; promotion_eligible=false for the lane/archive because the full-axis result regresses; FULL-axis promotion blocked by Catalog #313 probe-outcome PROCEED+blocking due to regression)
 - Catalog #324 predicted_band_validation_status: validated_post_training (paired CPU+CUDA harvest landed; the predicted −0.00495 rate-only band IS empirically validated; the implicit full-axis-also-improves band is FALSIFIED)
 - Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY: 4 harvested rows + 1 anchor + 1 probe outcome are NEW events referencing existing predecessors; no mutation
 - Catalog #206 subagent crash-resume: 3 checkpoints emitted per ~5-tool-use cadence

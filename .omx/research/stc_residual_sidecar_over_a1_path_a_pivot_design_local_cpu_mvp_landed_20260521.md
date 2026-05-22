@@ -7,13 +7,17 @@ author: claude:overnight-w-stc-residual-sidecar-a1-design-20260521
 lane_id: lane_overnight_w_stc_residual_sidecar_over_a1_path_a_design_local_cpu_mvp_20260521
 mission_contribution: frontier_breaking_enabler
 score_claim: false
+score_claim_valid: false
 promotion_eligible: false
+promotable: false
 rank_or_kill_eligible: false
+ready_for_exact_eval_dispatch: false
 dispatch_attempted: false
 paid_dispatch_attempted: false
 paid_dispatch_actual_cost_usd: 0.00
 paid_dispatch_predicted_cost_usd: 0.00
-evidence_grade: "[prediction]"
+evidence_grade: "[predicted]"
+score_axis: "[predicted planning prior]"
 predicted_band_validation_status: pending_post_training
 current_head_before_landing: unknown_at_compose_time
 council_tier: T1
