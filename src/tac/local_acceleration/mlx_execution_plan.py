@@ -109,11 +109,6 @@ def build_mlx_scorer_response_execution_plan(
             "recommended_row.device=gpu requires allow_gpu_research_signal; "
             "GPU MLX scorer responses are local research signal only"
         )
-    if device == "gpu" and batch_pairs != 1:
-        raise MLXExecutionPlanError(
-            "recommended_row.device=gpu currently requires batch_pairs=1 until "
-            "audit_mlx_scorer_batch_invariance.py passes for the selected window"
-        )
     if batch_pairs != 1 and not allow_batch_shape_research_signal:
         raise MLXExecutionPlanError(
             f"{BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER}: recommended_row.batch_pairs="
@@ -222,6 +217,7 @@ def build_mlx_scorer_response_execution_plan(
             "Execution plan is local MLX candidate-generation guidance only; paired "
             "contest CPU/CUDA auth eval remains required for score claims or promotion."
         ),
+        "batch_shape_research_signal_blocker": BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER,
     }
 
 

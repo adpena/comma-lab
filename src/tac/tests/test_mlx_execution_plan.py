@@ -240,3 +240,46 @@ def test_execution_plan_cli_and_ll_plan_attachment(tmp_path: Path) -> None:
         == 1
     )
     assert "MLX Execution Recommendation" in ll_plan_md_path.read_text(encoding="utf-8")
+
+
+def test_ll_plan_attachment_can_explicitly_allow_batch_shape_research(
+    tmp_path: Path,
+) -> None:
+    manifest = build_profile_stability_manifest(
+        _profile_with_gpu_rejected(),
+        baseline_device="cpu",
+        baseline_batch_pairs=1,
+        allow_batch_shape_research_signal=True,
+    )
+    stability_path = tmp_path / "stability.json"
+    dataset_path = tmp_path / "dataset.json"
+    ll_plan_path = tmp_path / "ll_plan_batch_shape.json"
+    stability_path.write_text(json.dumps(manifest), encoding="utf-8")
+    dataset_path.write_text(
+        json.dumps({"schema": "scorer_response_dataset.v1", "summary": {}, "rows": []}),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "plan_ll_scorer_response_next.py"),
+            "--dataset",
+            str(dataset_path),
+            "--mlx-profile-stability",
+            str(stability_path),
+            "--allow-mlx-batch-shape-research-signal",
+            "--json-out",
+            str(ll_plan_path),
+        ],
+        cwd=REPO,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"score_claim": false' in completed.stdout
+    ll_plan = json.loads(ll_plan_path.read_text(encoding="utf-8"))
+    execution = ll_plan["mlx_scorer_response_execution_plan"]["recommended_execution"]
+    assert execution["batch_pairs"] == 2
+    assert "--allow-batch-shape-research-signal" in execution["command_args"]

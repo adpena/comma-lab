@@ -100,6 +100,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--allow-mlx-batch-shape-research-signal",
+        action="store_true",
+        help=(
+            "Permit a selected non-singleton MLX batch row as explicit batch-shape "
+            "research signal in the attached execution plan. The plan remains "
+            "non-authoritative."
+        ),
+    )
+    parser.add_argument(
         "--allow-mlx-parity-research-signal-override",
         action="store_true",
         help=(
@@ -158,6 +167,9 @@ def main(argv: list[str] | None = None) -> int:
                     components_dir=args.mlx_components_dir,
                     progress_every=args.mlx_progress_every,
                     allow_gpu_research_signal=args.allow_mlx_gpu_research_signal,
+                    allow_batch_shape_research_signal=(
+                        args.allow_mlx_batch_shape_research_signal
+                    ),
                 )
             )
     except (OSError, ValueError, ScorerResponseDatasetError, MLXExecutionPlanError) as exc:
