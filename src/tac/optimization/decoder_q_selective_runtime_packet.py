@@ -36,6 +36,7 @@ PACKET_MAGIC = b"DQS1"
 SPEC_MAGIC = PACKET_MAGIC
 SPEC_HEADER = struct.Struct("<4sBBHbH")
 CONTEST_RATE_DENOMINATOR_BYTES = 37_545_489
+FEC6_PAIR_COUNT = 600
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -208,10 +209,43 @@ def tensor_index_for_stored_q_offset(
     }
 
 
-def _selected_pair_indices(bridge_plan: dict[str, Any], *, max_units: int | None) -> list[int]:
+def _selected_pair_indices(
+    bridge_plan: dict[str, Any],
+    *,
+    max_units: int | None,
+    selected_pair_indices: Sequence[int] | None = None,
+) -> list[int]:
     units = bridge_plan.get("work_units")
     if not isinstance(units, list) or not units:
         raise DecoderQSelectiveRuntimePacketError("bridge plan work_units[] missing")
+    if selected_pair_indices is not None and max_units is not None:
+        raise DecoderQSelectiveRuntimePacketError(
+            "selected_pair_indices and max_units are mutually exclusive"
+        )
+    if selected_pair_indices is not None:
+        available = set()
+        for index, unit in enumerate(units):
+            if not isinstance(unit, dict):
+                raise DecoderQSelectiveRuntimePacketError(f"work unit {index} must be object")
+            _require_false_authority(unit, label=f"work unit {index}")
+            window = unit.get("pair_window")
+            if not isinstance(window, list) or len(window) != 2:
+                raise DecoderQSelectiveRuntimePacketError(f"work unit {index} pair_window invalid")
+            start = _as_int(window[0], label=f"work unit {index} pair_window[0]")
+            end = _as_int(window[1], label=f"work unit {index} pair_window[1]")
+            if end != start + 1:
+                raise DecoderQSelectiveRuntimePacketError(
+                    "selective packet v1 only supports singleton pair windows; "
+                    f"got {window}"
+                )
+            available.add(start)
+        pairs = _canonical_pair_indices(selected_pair_indices)
+        missing = sorted(set(pairs) - available)
+        if missing:
+            raise DecoderQSelectiveRuntimePacketError(
+                f"selected pairs missing from bridge work units: {missing}"
+            )
+        return pairs
     if max_units is not None:
         if max_units <= 0:
             raise DecoderQSelectiveRuntimePacketError("max_units must be positive")
@@ -234,10 +268,7 @@ def _selected_pair_indices(bridge_plan: dict[str, Any], *, max_units: int | None
         pairs.append(start)
     if len(set(pairs)) != len(pairs):
         raise DecoderQSelectiveRuntimePacketError("selected pair indices contain duplicates")
-    for pair in pairs:
-        if pair < 0 or pair >= 600:
-            raise DecoderQSelectiveRuntimePacketError(f"pair index out of FEC6 range: {pair}")
-    return sorted(pairs)
+    return _canonical_pair_indices(sorted(pairs))
 
 
 def affected_frames_for_pairs(pair_indices: Sequence[int], *, frame_policy: str) -> list[int]:
@@ -258,14 +289,19 @@ def affected_frames_for_pairs(pair_indices: Sequence[int], *, frame_policy: str)
 def _canonical_pair_indices(pair_indices: Sequence[int]) -> list[int]:
     if len(pair_indices) > 65535:
         raise DecoderQSelectiveRuntimePacketError("too many selected pairs")
-    pairs = [int(pair) for pair in pair_indices]
+    pairs = [
+        _as_int(pair, label=f"pair_indices[{index}]")
+        for index, pair in enumerate(pair_indices)
+    ]
     if pairs != sorted(pairs):
         raise DecoderQSelectiveRuntimePacketError("pair indices must be sorted")
     if len(set(pairs)) != len(pairs):
         raise DecoderQSelectiveRuntimePacketError("pair indices contain duplicates")
     for pair in pairs:
-        if not 0 <= int(pair) <= 65535:
-            raise DecoderQSelectiveRuntimePacketError("pair index must fit u16")
+        if not 0 <= int(pair) < FEC6_PAIR_COUNT:
+            raise DecoderQSelectiveRuntimePacketError(
+                f"pair index out of FEC6 range: {pair}"
+            )
     return pairs
 
 
@@ -470,10 +506,7 @@ def unpack_dqs1_payload(payload: bytes) -> dict[str, Any]:
         count=int(count),
         pair_encoding=pair_encoding,
     )
-    if pair_indices != sorted(pair_indices):
-        raise DecoderQSelectiveRuntimePacketError("DQS1 pair indices must be sorted")
-    if len(set(pair_indices)) != len(pair_indices):
-        raise DecoderQSelectiveRuntimePacketError("DQS1 pair indices contain duplicates")
+    pair_indices = _canonical_pair_indices(pair_indices)
     return {
         "frame_policy": frame_policy,
         "frame_policy_code": int(frame_policy_code),
@@ -504,11 +537,16 @@ def build_decoder_q_selective_runtime_packet_plan(
     repo_root: Path,
     frame_policy: str = "pair_all_frames",
     max_units: int | None = None,
+    selected_pair_indices: Sequence[int] | None = None,
 ) -> dict[str, Any]:
     """Verify a bridge plan and emit a compact selective-runtime packet plan."""
 
     _validate_bridge_plan(bridge_plan)
-    pair_indices = _selected_pair_indices(bridge_plan, max_units=max_units)
+    pair_indices = _selected_pair_indices(
+        bridge_plan,
+        max_units=max_units,
+        selected_pair_indices=selected_pair_indices,
+    )
     affected_frames = affected_frames_for_pairs(pair_indices, frame_policy=frame_policy)
 
     candidate = bridge_plan.get("materialized_decoder_q_candidate")
@@ -602,7 +640,14 @@ def build_decoder_q_selective_runtime_packet_plan(
 
     descriptor_len = len(packet_payload)
     rate_delta = 25.0 * descriptor_len / CONTEST_RATE_DENOMINATOR_BYTES
-    observed_gain_sum = sum(float(unit.get("observed_mlx_gain", 0.0)) for unit in bridge_plan["work_units"][: len(pair_indices)])
+    selected_pair_set = set(pair_indices)
+    observed_gain_sum = 0.0
+    for unit in bridge_plan["work_units"]:
+        window = unit.get("pair_window")
+        if isinstance(window, list) and window:
+            start = int(window[0])
+            if start in selected_pair_set:
+                observed_gain_sum += float(unit.get("observed_mlx_gain", 0.0))
     return {
         "schema": SCHEMA,
         "producer": TOOL,

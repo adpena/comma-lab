@@ -49,11 +49,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=int,
         help="Use only the top N bridge work units; useful for singleton proof planning.",
     )
+    parser.add_argument(
+        "--selected-pairs",
+        help="Comma-separated bridge pair indices to encode instead of the top-N prefix.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    selected_pair_indices = None
+    if args.selected_pairs:
+        selected_pair_indices = [
+            int(part.strip())
+            for part in args.selected_pairs.split(",")
+            if part.strip()
+        ]
     try:
         bridge_plan = load_json_object(args.bridge_plan)
         plan = build_decoder_q_selective_runtime_packet_plan(
@@ -62,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=REPO_ROOT,
             frame_policy=args.frame_policy,
             max_units=args.max_units,
+            selected_pair_indices=selected_pair_indices,
         )
     except (
         OSError,

@@ -111,6 +111,17 @@ def test_dqs1_payload_rejects_noncanonical_pair_order(pairs: list[int]) -> None:
         )
 
 
+def test_dqs1_payload_rejects_out_of_range_pair() -> None:
+    with pytest.raises(packet.DecoderQSelectiveRuntimePacketError, match="FEC6 range"):
+        packet.pack_dqs1_payload(
+            pair_indices=[600],
+            frame_policy="pair_all_frames",
+            storage_index=0,
+            q_offset=0,
+            delta=1,
+        )
+
+
 def test_packet_plan_preserves_false_authority_and_trailer_byte_accounting(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -223,3 +234,29 @@ def test_packet_plan_preserves_false_authority_and_trailer_byte_accounting(
     assert "decode the full same local batch with the mutated decoder" in plan[
         "runtime_adapter_contract"
     ]["batch_decode_strategy"]
+
+    selected = packet.build_decoder_q_selective_runtime_packet_plan(
+        bridge_plan,
+        base_archive=base_archive,
+        repo_root=tmp_path,
+        selected_pair_indices=[5],
+    )
+
+    assert selected["selective_packet"]["selected_pair_indices"] == [5]
+    assert selected["selective_packet"]["payload_bytes"] == 12
+    assert selected["selective_packet"]["non_authoritative_mlx_gain_sum"] == pytest.approx(0.001)
+
+    bridge_plan["work_units"].append(
+        {
+            **_false_authority(),
+            "pair_window": [600, 601],
+            "observed_mlx_gain": 0.001,
+        }
+    )
+    with pytest.raises(packet.DecoderQSelectiveRuntimePacketError, match="FEC6 range"):
+        packet.build_decoder_q_selective_runtime_packet_plan(
+            bridge_plan,
+            base_archive=base_archive,
+            repo_root=tmp_path,
+            selected_pair_indices=[600],
+        )
