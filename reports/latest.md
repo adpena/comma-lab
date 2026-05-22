@@ -1,27 +1,27 @@
 <!--
-generated_at: 2026-05-22T04:23:40Z
-from_state_hash: frontier_scan_no_drift_plus_mlx_advisory_gate_20260522T0423Z
-regenerated_by: codex:mlx_decoderq_advisory_gate_hardening_20260522
-last_refreshed_at: 2026-05-22T04:23:40Z
-last_refreshed_by: codex:mlx_decoderq_advisory_gate_hardening_20260522
-last_refreshed_head: 90bff5e9d
+generated_at: 2026-05-22T09:27:15Z
+from_state_hash: frontier_scan_no_drift_plus_mlx_production_contract_effective_gate_20260522T0927Z
+regenerated_by: codex:mlx_production_contract_effective_gate_hardening_20260522
+last_refreshed_at: 2026-05-22T09:27:15Z
+last_refreshed_by: codex:mlx_production_contract_effective_gate_hardening_20260522
+last_refreshed_head: 1f1989db0
 last_refreshed_note: |
-  Current frontier/status refresh after the 2026-05-22 MLX scorer-response
-  calibration, decoder-q response-surface planning, and advisory-gate
-  hardening pass. The scanner-derived FRONTIER section below was rechecked with
-  tools/scan_best_anchor_per_axis.py --check-drift at 2026-05-22T04:20Z; no
-  CPU/CUDA frontier score changed. MLX remains non-authoritative local
-  research signal: calibrated spend triage is allowed only above the attached
-  decision band and still requires exact CPU/CUDA auth eval before any score,
-  promotion, rank, or kill claim.
+  Current frontier/status refresh after the 2026-05-22 MLX production-contract,
+  rich-identity bundle, cache-integrity, and effective spend-triage hardening
+  pass. The scanner-derived FRONTIER section below was rechecked with
+  tools/scan_best_anchor_per_axis.py --check-drift at 2026-05-22T09:27Z; no
+  CPU/CUDA frontier score changed. MLX remains non-authoritative local research
+  signal: calibrated spend triage is allowed only through the composed effective
+  gate and still requires exact CPU/CUDA auth eval before any score, promotion,
+  rank, kill, or dispatch-readiness claim.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
 
 > **2026-05-22 refresh note**: the scanner-derived FRONTIER section was
-> rechecked after the MLX advisory-gate hardening pass at head `90bff5e9d`;
-> the CPU/CUDA leaders are unchanged. Historical roadmap sections below remain
-> retained for context; use `.omx/state/current_focus.md`,
+> rechecked after the MLX production-contract and effective-gate hardening pass
+> at head `1f1989db0`; the CPU/CUDA leaders are unchanged. Historical roadmap
+> sections below remain retained for context; use `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
 > detailed queue routing.
 
@@ -64,6 +64,20 @@ last_refreshed_note: |
   `score_claim=false`, `promotion_eligible=false`,
   `rank_or_kill_eligible=false`, `ready_for_exact_eval_dispatch=false`, and
   `promotable=false`.
+- Rich-identity MLX production contracts are now required before planner rows
+  can be used for exact-eval spend triage. The dataset-verified PR101 rich
+  bundle at
+  `experiments/results/mlx_strict_score_calibration_pr101_pose_axis_20260522/candidate_production_contract_bundle_v2_dataset_verified_rich_identity.json`
+  has SHA-256
+  `18e1cc7d78318fed7f50cc4702ac89d4d32d9727ea716f665c25f5936dc676ae`,
+  `dataset_coverage_gate.status=strict_pass`, and one matched MLX row.
+- `tools/plan_ll_scorer_response_next.py` now has
+  `--require-effective-mlx-spend-triage`. Automation can fail closed with exit
+  code `2` unless `ll_effective_mlx_spend_triage_gate.v1` is a strict pass,
+  while still writing JSON/Markdown outputs for inspection.
+- MLX scorer-response cache loading now verifies cached array hashes and `.npy`
+  artifact hashes before scoring, so mutated local tensors cannot silently feed
+  planner rows or calibration artifacts.
 - The decoder-q response surface found useful high-leverage atoms, but the
   first surface-guided waterbucket batch is now **blocked** for exact-eval
   spend: three fixed-length candidates changed all 600 frames, preserved
