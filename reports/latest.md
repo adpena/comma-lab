@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-22T21:40:46Z
-from_state_hash: frontier_scan_dqs1_pairset_rank017_local_advisory_20260522T2140Z
-regenerated_by: codex:dqs1_rank017_local_advisory_rank016_queue_20260522
-last_refreshed_at: 2026-05-22T21:40:46Z
-last_refreshed_by: codex:dqs1_rank017_local_advisory_rank016_queue_20260522
-last_refreshed_head: f8a4e6d12
+generated_at: 2026-05-22T21:53:48Z
+from_state_hash: frontier_scan_dqs1_pairset_rank016_local_advisory_20260522T2153Z
+regenerated_by: codex:dqs1_rank016_local_advisory_rank025_queue_20260522
+last_refreshed_at: 2026-05-22T21:53:48Z
+last_refreshed_by: codex:dqs1_rank016_local_advisory_rank025_queue_20260522
+last_refreshed_head: 9798e8e24
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
@@ -15,10 +15,11 @@ last_refreshed_note: |
   improves the frontier, CUDA regresses. Drop-one rank019/pair0151 has now
   passed locality and exact Modal CPU eval and regressed to the same
   SegNet-penalized one-byte class as rank010/rank013/rank020/rank022/rank026/rank027/rank031.
-  Rank023/pair0440, rank024/pair0112, rank018/pair0588, and rank017/pair0242 completed local
+  Rank023/pair0440, rank024/pair0112, rank018/pair0588, rank017/pair0242,
+  and rank016/pair0229 completed local
   plan/materialize/locality/advisory and are observe-only by drift/eureka
   calibration, so the generated local-first queue now routes
-  rank016/pair0229.
+  rank025/pair0026.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
@@ -293,14 +294,22 @@ last_refreshed_note: |
   `0.19202828295713675`, but the conservative projection is
   `0.19203128295713676`, so it is observe-only and not an exact-eval spend
   trigger.
+  Local-first follow-up `pairset_drop_one_rank016_pair0229`
+  (`b49ea7e29c22dd67b18a8cb59c4672adc6f9748b6681ce1327e16d258858dbf6`,
+  `178559` bytes) passed plan/materialize/locality controls and macOS CPU
+  advisory eval at `0.19204028295713674` with `score_claim=false`. Its
+  calibrated point projection is `0.19203028295713673`, the conservative
+  projection is `0.19203328295713673`, and the eureka margin is
+  `-0.000004999999999977245`, so it is observe-only and not an exact-eval
+  spend trigger.
   The refreshed identity-verified, selector-scoped portfolio now includes the
   component marginal model from `cross_family_candidate_portfolio.v1`: CPU-safe
   observed drop pair `[371]`, CPU-protected observed drop pairs
   `[327, 376, 320, 378, 296, 430, 167, 151]`,
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
-  for `pairset_drop_one_rank021_pair0371`. After rank023, rank024, rank018, and rank017 local
+  for `pairset_drop_one_rank021_pair0371`. After rank023, rank024, rank018, rank017, and rank016 local
   observe-only results, the generated checked-in fresh local-control candidate
-  is `pairset_drop_one_rank016_pair0229`. The response
+  is `pairset_drop_one_rank025_pair0026`. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
   selected-pair identity matching before fitting. The operator-action prior now
@@ -320,8 +329,8 @@ last_refreshed_note: |
   substrate: `tools/experiment_queue.py`,
   `src/comma_lab/scheduler/experiment_queue.py`, and
   `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with rank023,
-  rank024, rank018, and rank017 now local-advisory-observed and the next
-  generated candidate routed to rank016/pair0229. Queue commands are argv
+  rank024, rank018, rank017, and rank016 now local-advisory-observed and the
+  next generated candidate routed to rank025/pair0026. Queue commands are argv
   lists, state and telemetry live in SQLite, cloud resources are hidden unless
   explicitly allowed, controls support `running`/`paused`/`frozen`, and
   rewinds can cascade through dependent steps. `run-worker` now supports bounded
