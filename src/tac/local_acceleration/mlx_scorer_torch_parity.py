@@ -108,6 +108,7 @@ def build_mlx_scorer_torch_parity_manifest(
         pair_window=[start, stop],
         n_samples=stop - start,
         total_pair_count=total_pair_count,
+        cache_identity=_cache_identity(cache),
         gpu_research_signal_allowed=bool(allow_gpu_research_signal),
     )
 
@@ -192,6 +193,7 @@ def build_mlx_scorer_torch_parity_sweep_manifest(
                 pair_window=[window_start, window_stop],
                 n_samples=window_stop - window_start,
                 total_pair_count=total_pair_count,
+                cache_identity=_cache_identity(cache),
                 gpu_research_signal_allowed=bool(allow_gpu_research_signal),
             )
             row = {
@@ -252,6 +254,7 @@ def build_mlx_scorer_torch_parity_sweep_manifest(
         "device_type": device_type,
         "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
         "cache_dir": str(cache_dir),
+        "cache_identity": _cache_identity(cache),
         "total_pair_count": total_pair_count,
         "start_pair": start,
         "max_pairs": None if max_pairs is None else int(max_pairs),
@@ -363,6 +366,7 @@ def build_mlx_segnet_layer_trace_manifest(
         "device_type": device_type,
         "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
         "cache_dir": str(cache_dir),
+        "cache_identity": _cache_identity(cache),
         "start_pair": start,
         "max_pairs": int(max_pairs),
         "pair_window": [start, stop],
@@ -503,6 +507,7 @@ def build_torch_segnet_batch_invariance_manifest(
         "comparison": "segnet_batch_vs_per_sample_loop",
         "device_type": device_type,
         "cache_dir": str(cache_dir),
+        "cache_identity": _cache_identity(cache),
         "start_pair": start,
         "max_pairs": int(max_pairs),
         "pair_window": [start, stop],
@@ -665,6 +670,7 @@ def build_mlx_scorer_torch_parity_manifest_from_outputs(
     pair_window: list[int] | None = None,
     n_samples: int | None = None,
     total_pair_count: int | None = None,
+    cache_identity: dict[str, Any] | None = None,
     gpu_research_signal_allowed: bool = False,
 ) -> dict[str, Any]:
     """Build a parity manifest from already-computed PyTorch and MLX outputs."""
@@ -736,6 +742,7 @@ def build_mlx_scorer_torch_parity_manifest_from_outputs(
         "device_type": device_type,
         "gpu_research_signal_allowed": bool(gpu_research_signal_allowed),
         "cache_dir": cache_dir,
+        "cache_identity": cache_identity,
         "start_pair": start_pair,
         "max_pairs": max_pairs,
         "pair_window": pair_window,
@@ -1375,6 +1382,34 @@ def _top2_margin(logits_nchw: np.ndarray) -> np.ndarray:
         return np.full(logits_nchw.shape[:1] + logits_nchw.shape[2:], np.inf, dtype=np.float32)
     top2 = np.partition(logits_nchw, kth=-2, axis=1)
     return np.asarray(top2[:, -1, ...] - top2[:, -2, ...], dtype=np.float32)
+
+
+def _cache_identity(cache: Any) -> dict[str, Any]:
+    manifest = cache.manifest
+    return {
+        "path": str(cache.root),
+        "schema_version": manifest.get("schema_version"),
+        "source": manifest.get("source"),
+        "source_kind": manifest.get("source_kind"),
+        "hash_domain": manifest.get("hash_domain"),
+        "archive_sha256": _manifest_string(manifest, "archive_sha256"),
+        "inflated_outputs_aggregate_sha256": _manifest_string(
+            manifest,
+            "inflated_outputs_aggregate_sha256",
+        ),
+        "raw_sha256": _manifest_string(manifest, "raw_sha256"),
+        "source_video_sha256": _manifest_string(manifest, "source_video_sha256"),
+        "array_sha256": manifest.get("array_sha256"),
+        "pair_count": int(cache.pair_indices.shape[0]),
+        "segnet_last_rgb_shape": list(cache.segnet_last_rgb.shape),
+        "posenet_yuv6_pair_shape": list(cache.posenet_yuv6_pair.shape),
+        "pair_indices_shape": list(cache.pair_indices.shape),
+    }
+
+
+def _manifest_string(manifest: dict[str, Any], key: str) -> str | None:
+    value = manifest.get(key)
+    return value if isinstance(value, str) else None
 
 
 def _jsonable(value: Any) -> Any:

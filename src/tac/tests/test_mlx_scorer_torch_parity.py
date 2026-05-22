@@ -46,6 +46,11 @@ def test_mlx_scorer_torch_parity_passes_cpu_cache_window(tmp_path: Path) -> None
     assert manifest["score_axis"] == EVIDENCE_TAG_MLX
     assert manifest["pair_window"] == [0, 1]
     assert manifest["n_samples"] == 1
+    assert manifest["cache_identity"]["archive_sha256"] == "a" * 64
+    assert manifest["cache_identity"]["inflated_outputs_aggregate_sha256"] == "b" * 64
+    assert manifest["cache_identity"]["raw_sha256"] == "c" * 64
+    assert manifest["cache_identity"]["pair_count"] == 1
+    assert len(manifest["cache_identity"]["array_sha256"]["segnet_last_rgb"]) == 64
     assert manifest["deltas"]["segnet_argmax_diff_pixels"] == 0
     assert manifest["deltas"]["posenet_component_abs_max"] <= 2.0e-5
     assert manifest["device_contract"]["gpu_research_signal_required"] is False
@@ -224,6 +229,8 @@ def test_mlx_scorer_torch_parity_sweep_passes_cpu_cache_windows(tmp_path: Path) 
     assert manifest["requires_exact_eval_before_promotion"] is True
     assert manifest["window_count"] == 2
     assert manifest["covered_pair_window"] == [0, 2]
+    assert manifest["cache_identity"]["archive_sha256"] == "a" * 64
+    assert manifest["cache_identity"]["pair_count"] == 2
     assert manifest["summary"]["failed_windows"] == 0
     assert manifest["summary"]["segnet_argmax_diff_pixels"]["max"] == 0.0
     assert manifest["summary"]["segnet_argmax_diff_fraction"]["max"] == 0.0
@@ -276,6 +283,8 @@ def test_mlx_segnet_layer_trace_manifest_covers_structural_boundaries(tmp_path: 
     assert manifest["promotion_eligible"] is False
     assert manifest["requires_exact_eval_before_promotion"] is True
     assert manifest["pair_window"] == [0, 1]
+    assert manifest["cache_identity"]["archive_sha256"] == "a" * 64
+    assert manifest["cache_identity"]["pair_count"] == 1
     names = {row["name"] for row in manifest["rows"]}
     assert "encoder.stem" in names
     assert "encoder.stage_0.block_0.conv_dw" in names
@@ -340,6 +349,8 @@ def test_torch_segnet_batch_invariance_manifest_passes_cpu_fixture(tmp_path: Pat
     assert manifest["pair_window"] == [0, 2]
     assert manifest["n_samples"] == 2
     assert manifest["device_type"] == "cpu"
+    assert manifest["cache_identity"]["archive_sha256"] == "a" * 64
+    assert manifest["cache_identity"]["pair_count"] == 2
     assert manifest["deltas"]["segnet_argmax_diff_pixels"] == 0
     assert manifest["deltas"]["segnet_argmax_mismatch_detail"]["comparison_labels"] == {
         "torch": "batch",

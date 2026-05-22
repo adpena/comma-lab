@@ -291,6 +291,28 @@ def test_cache_audit_accepts_independent_reference_hash_manifest() -> None:
     assert audit["auth_eval"]["scorer_input_hash_reference_source"] == "reference_cache_manifest"
 
 
+def test_cache_audit_fails_undercustodied_reference_manifest() -> None:
+    reference = {
+        "schema_version": "mlx_scorer_input_cache_hashes.v1",
+        "hash_domain": HASH_DOMAIN,
+        "array_sha256": dict(ARRAY_HASHES),
+    }
+
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        _cache(),
+        _auth(),
+        reference_cache_manifest=reference,
+    )
+
+    assert audit["passed"] is False
+    assert "reference_archive_sha256_missing" in audit["blockers"]
+    assert "reference_inflated_outputs_aggregate_sha256_missing" in audit["blockers"]
+    assert "reference_raw_sha256_missing" in audit["blockers"]
+    assert "reference_pair_count_missing" in audit["blockers"]
+    assert "reference_segnet_last_rgb_shape_missing" in audit["blockers"]
+    assert "do_not_use_for_auth_axis_transfer_calibration" in audit["allowed_use"]
+
+
 def test_cache_audit_rejects_non_contest_auth_eval_axis() -> None:
     bad_auth = _auth_with_scorer_input_hash()
     bad_auth["evidence_grade"] = "B"

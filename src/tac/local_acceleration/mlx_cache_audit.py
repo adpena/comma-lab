@@ -96,13 +96,25 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
             reference_cache_manifest.get("inflated_outputs_aggregate_sha256")
         )
         ref_pair_count = _int(reference_cache_manifest.get("pair_count"))
+        ref_raw_sha = _string(reference_cache_manifest.get("raw_sha256"))
         if ref_archive_sha and auth_archive_sha and ref_archive_sha != auth_archive_sha:
             blockers.append("reference_archive_sha256_mismatch_with_auth_eval")
         if ref_inflated_sha and auth_inflated_sha and ref_inflated_sha != auth_inflated_sha:
             blockers.append("reference_inflated_outputs_aggregate_sha256_mismatch_with_auth_eval")
+        if ref_raw_sha and auth_raw_sha and ref_raw_sha != auth_raw_sha:
+            blockers.append("reference_raw_sha256_mismatch_with_auth_eval")
         if ref_pair_count is not None and auth_n_samples is not None and ref_pair_count != auth_n_samples:
             blockers.append(
                 f"reference_pair_count_mismatch:reference={ref_pair_count}:auth={auth_n_samples}"
+            )
+        if not auth_hash_manifest:
+            _append_reference_cache_manifest_blockers(
+                blockers,
+                reference_cache_manifest,
+                auth_archive_sha=auth_archive_sha,
+                auth_inflated_sha=auth_inflated_sha,
+                auth_raw_sha=auth_raw_sha,
+                auth_n_samples=auth_n_samples,
             )
     if cache_manifest.get("score_claim") is True or cache_manifest.get("promotion_eligible") is True:
         blockers.append("cache_manifest_attempts_score_authority")
@@ -192,6 +204,58 @@ def _append_auth_eval_authority_blockers(
     ):
         if blocker not in blockers:
             blockers.append(blocker)
+
+
+def _append_reference_cache_manifest_blockers(
+    blockers: list[str],
+    reference: dict[str, Any],
+    *,
+    auth_archive_sha: str | None,
+    auth_inflated_sha: str | None,
+    auth_raw_sha: str | None,
+    auth_n_samples: int | None,
+) -> None:
+    required_strings = (
+        "archive_sha256",
+        "inflated_outputs_aggregate_sha256",
+        "raw_sha256",
+        "hash_domain",
+    )
+    for key in required_strings:
+        if not _string(reference.get(key)):
+            blockers.append(f"reference_{key}_missing")
+    if _int(reference.get("pair_count")) is None:
+        blockers.append("reference_pair_count_missing")
+    for key in ("segnet_last_rgb_shape", "posenet_yuv6_pair_shape", "pair_indices_shape"):
+        if not isinstance(reference.get(key), list) or not reference.get(key):
+            blockers.append(f"reference_{key}_missing")
+    hashes = _hash_mapping(reference.get("array_sha256"))
+    for key in ("segnet_last_rgb", "posenet_yuv6_pair", "pair_indices"):
+        if not _string(hashes.get(key)):
+            blockers.append(f"reference_array_sha256_{key}_missing")
+    if (
+        _string(reference.get("archive_sha256"))
+        and auth_archive_sha
+        and _string(reference.get("archive_sha256")) != auth_archive_sha
+    ):
+        blockers.append("reference_archive_sha256_mismatch_with_auth_eval")
+    if (
+        _string(reference.get("inflated_outputs_aggregate_sha256"))
+        and auth_inflated_sha
+        and _string(reference.get("inflated_outputs_aggregate_sha256")) != auth_inflated_sha
+    ):
+        blockers.append("reference_inflated_outputs_aggregate_sha256_mismatch_with_auth_eval")
+    if (
+        _string(reference.get("raw_sha256"))
+        and auth_raw_sha
+        and _string(reference.get("raw_sha256")) != auth_raw_sha
+    ):
+        blockers.append("reference_raw_sha256_mismatch_with_auth_eval")
+    pair_count = _int(reference.get("pair_count"))
+    if pair_count is not None and auth_n_samples is not None and pair_count != auth_n_samples:
+        blockers.append(
+            f"reference_pair_count_mismatch:reference={pair_count}:auth={auth_n_samples}"
+        )
 
 
 def _archive_sha256(payload: dict[str, Any]) -> str | None:

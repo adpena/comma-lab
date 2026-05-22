@@ -8,6 +8,12 @@ import math
 from pathlib import Path
 from typing import Any
 
+from tac.auth_eval_schema import (
+    CONTEST_AUTH_AXIS_BY_EVIDENCE_GRADE,
+    FULL_CONTEST_SAMPLE_COUNT,
+    eval_metric_summary,
+    required_contest_auth_axis_payload_blockers,
+)
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 SCHEMA_VERSION = "mlx_score_calibration.v1"
@@ -94,8 +100,19 @@ def _normalize_row(row: dict[str, Any], *, repo_root: Path, index: int) -> dict[
     mlx_response = load_json_object(mlx_response_path)
     _require_mlx_response_false_authority(mlx_response, mlx_response_path)
 
-    cpu_score = _resolve_axis_score(row, "cpu", repo_root)
-    cuda_score = _resolve_axis_score(row, "cuda", repo_root)
+    mlx_archive_size_bytes = int(mlx_response.get("archive_size_bytes"))
+    cpu_score = _resolve_axis_score(
+        row,
+        "cpu",
+        repo_root,
+        expected_archive_bytes=mlx_archive_size_bytes,
+    )
+    cuda_score = _resolve_axis_score(
+        row,
+        "cuda",
+        repo_root,
+        expected_archive_bytes=mlx_archive_size_bytes,
+    )
     local_cpu_score = _optional_float(row.get("local_cpu_score"))
     mlx_score = _finite_float(mlx_response.get("canonical_score"), "mlx_response.canonical_score")
 
@@ -107,7 +124,7 @@ def _normalize_row(row: dict[str, Any], *, repo_root: Path, index: int) -> dict[
         "inflated_outputs_aggregate_sha256": mlx_response.get(
             "inflated_outputs_aggregate_sha256"
         ),
-        "archive_size_bytes": int(mlx_response.get("archive_size_bytes")),
+        "archive_size_bytes": mlx_archive_size_bytes,
         "n_samples": int(mlx_response.get("n_samples")),
         "batch_pairs": int(mlx_response.get("batch_pairs")),
         "mlx_response_path": str(mlx_response_path),
@@ -150,23 +167,89 @@ def _required_path(row: dict[str, Any], key: str, repo_root: Path) -> Path:
     return path
 
 
-def _resolve_axis_score(row: dict[str, Any], axis: str, repo_root: Path) -> float | None:
+def _resolve_axis_score(
+    row: dict[str, Any],
+    axis: str,
+    repo_root: Path,
+    *,
+    expected_archive_bytes: int,
+) -> float | None:
     direct_key = f"{axis}_score"
     path_key = f"{axis}_auth_eval_path"
-    if row.get(direct_key) is not None:
-        return _finite_float(row[direct_key], direct_key)
+    if row.get(direct_key) is not None and row.get(path_key) is None:
+        raise ValueError(
+            f"{direct_key} direct scalar is not accepted for MLX calibration; "
+            f"use {path_key} with a strict contest auth-eval payload"
+        )
     if row.get(path_key) is None:
         return None
+    direct_score = (
+        None
+        if row.get(direct_key) is None
+        else _finite_float(row[direct_key], direct_key)
+    )
     path = _required_path(row, path_key, repo_root)
     payload = load_json_object(path)
-    return _score_from_auth_eval_payload(payload, path)
+    payload_score = _score_from_auth_eval_payload(
+        payload,
+        path,
+        axis,
+        expected_archive_bytes=expected_archive_bytes,
+    )
+    if direct_score is not None and not math.isclose(
+        direct_score,
+        payload_score,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        raise ValueError(
+            f"{direct_key} direct scalar does not match strict auth-eval payload: "
+            f"direct={direct_score}:payload={payload_score}:path={path}"
+        )
+    return payload_score
 
 
-def _score_from_auth_eval_payload(payload: dict[str, Any], path: Path) -> float:
-    for key in ("canonical_score", "score_recomputed_from_components"):
-        if payload.get(key) is not None:
-            return _finite_float(payload[key], f"{path}:{key}")
-    raise ValueError(f"auth eval payload has no canonical score: {path}")
+def _score_from_auth_eval_payload(
+    payload: dict[str, Any],
+    path: Path,
+    axis: str,
+    *,
+    expected_archive_bytes: int,
+) -> float:
+    expected_score_axis = {
+        "cpu": "contest_cpu",
+        "cuda": "contest_cuda",
+    }.get(axis)
+    if expected_score_axis is None:
+        raise ValueError(f"unknown auth axis {axis!r}")
+    metrics = eval_metric_summary(payload)
+    blockers = required_contest_auth_axis_payload_blockers(
+        payload,
+        metrics,
+        expected_archive_bytes=expected_archive_bytes,
+        expected_n_samples=FULL_CONTEST_SAMPLE_COUNT,
+    )
+    if payload.get("score_axis") != expected_score_axis:
+        blockers.append(
+            f"{axis}_auth_eval_score_axis_mismatch:"
+            f"expected={expected_score_axis}:actual={payload.get('score_axis')}"
+        )
+    evidence_grade = payload.get("evidence_grade")
+    expected_from_grade = CONTEST_AUTH_AXIS_BY_EVIDENCE_GRADE.get(str(evidence_grade))
+    if expected_from_grade != expected_score_axis:
+        blockers.append(
+            f"{axis}_auth_eval_evidence_grade_axis_mismatch:"
+            f"grade={evidence_grade}:expected_score_axis={expected_score_axis}"
+        )
+    if blockers:
+        raise ValueError(
+            f"auth eval payload is not a strict {axis} contest auth-axis source: "
+            f"{path}: {sorted(set(blockers))}"
+        )
+    score = metrics.get("score")
+    if score is None:
+        raise ValueError(f"auth eval payload has no canonical score: {path}")
+    return _finite_float(score, f"{path}:score")
 
 
 def _require_mlx_response_false_authority(payload: dict[str, Any], path: Path) -> None:
@@ -236,11 +319,11 @@ def _build_decision_policy(
     summary: dict[str, Any],
     safety_factor: float,
 ) -> dict[str, Any]:
-    local_error = summary.get("mlx_minus_local_cpu_max_abs")
     cpu_error = summary.get("mlx_minus_cpu_max_abs")
+    cuda_error = summary.get("cuda_minus_mlx_max_abs")
     available_errors = [
         float(value)
-        for value in (local_error, cpu_error)
+        for value in (cpu_error, cuda_error)
         if value is not None and math.isfinite(float(value))
     ]
     calibration_uncertainty_score = max(available_errors) if available_errors else None
@@ -250,10 +333,10 @@ def _build_decision_policy(
         else calibration_uncertainty_score * safety_factor
     )
     basis = "mlx_minus_cpu_max_abs"
-    if local_error is not None and cpu_error is None:
-        basis = "mlx_minus_local_cpu_max_abs"
-    elif local_error is not None and cpu_error is not None:
-        basis = "max(mlx_minus_cpu_max_abs, mlx_minus_local_cpu_max_abs)"
+    if cuda_error is not None and cpu_error is None:
+        basis = "cuda_minus_mlx_max_abs"
+    elif cuda_error is not None and cpu_error is not None:
+        basis = "max(mlx_minus_cpu_max_abs, cuda_minus_mlx_max_abs)"
     return {
         "score_claim": False,
         "promotion_eligible": False,
@@ -263,7 +346,11 @@ def _build_decision_policy(
         "calibration_uncertainty_basis": basis if available_errors else None,
         "calibration_uncertainty_score": calibration_uncertainty_score,
         "recommended_min_mlx_gap_for_spend_triage": min_gap,
-        "allowed_use": "local_spend_triage_only",
+        "allowed_use": (
+            "local_spend_triage_only_after_strict_auth_axis_calibration"
+            if available_errors
+            else "diagnostic_only_auth_axis_calibration_missing"
+        ),
         "forbidden_use": "score_claim_or_rank_or_kill_or_promotion",
     }
 
