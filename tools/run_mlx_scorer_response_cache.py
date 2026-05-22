@@ -117,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
                 "avg_segnet_dist": payload["avg_segnet_dist"],
                 "canonical_score": payload["canonical_score"],
                 "score_claim": payload["score_claim"],
+                "promotable": payload["promotable"],
             },
             sort_keys=True,
         )

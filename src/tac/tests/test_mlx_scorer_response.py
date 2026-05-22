@@ -55,7 +55,9 @@ def test_mlx_scorer_response_cache_cli_is_non_authoritative(tmp_path: Path) -> N
     payload = json.loads(output.read_text(encoding="utf-8"))
     expected_rate_score = 25.0 * archive_size_bytes / ORIGINAL_VIDEO_BYTES
     assert stdout["score_claim"] is False
+    assert stdout["promotable"] is False
     assert payload["score_claim"] is False
+    assert payload["promotable"] is False
     assert payload["promotion_eligible"] is False
     assert payload["rank_or_kill_eligible"] is False
     assert payload["n_samples"] == 1
