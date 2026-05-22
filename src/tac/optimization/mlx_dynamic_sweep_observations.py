@@ -72,6 +72,10 @@ _CONTEST_AXIS_BY_GRADE = {
     "[contest-CUDA]": "contest_cuda",
     "contest_cuda": "contest_cuda",
 }
+_CONTEST_EVIDENCE_BY_AXIS = {
+    "contest_cpu": ("contest-CPU", "[contest-CPU]"),
+    "contest_cuda": ("contest-CUDA", "[contest-CUDA]"),
+}
 
 
 class MLXDynamicSweepObservationError(ValueError):
@@ -205,6 +209,29 @@ def _contest_axis_from_row(row: Mapping[str, Any]) -> str | None:
             "contest-axis observation labels disagree across observed_axis/evidence_grade/evidence_tag"
         )
     return next(iter(axes))
+
+
+def _normalize_contest_axis_evidence(normalized: dict[str, Any]) -> None:
+    contest_axis = _contest_axis_from_row(normalized)
+    if contest_axis is None:
+        return
+    evidence_grade, evidence_tag = _CONTEST_EVIDENCE_BY_AXIS[contest_axis]
+    proxy_defaults = {EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX}
+    for key, default_value in (
+        ("evidence_grade", EVIDENCE_GRADE_MLX),
+        ("evidence_tag", EVIDENCE_TAG_MLX),
+    ):
+        value = str(normalized.get(key) or "")
+        if value == default_value or value in proxy_defaults:
+            continue
+        axis = _CONTEST_AXIS_BY_GRADE.get(value)
+        if axis != contest_axis:
+            raise MLXDynamicSweepObservationError(
+                f"contest-axis observation {key} must match {contest_axis}"
+            )
+    normalized["observed_axis"] = contest_axis
+    normalized["evidence_grade"] = evidence_grade
+    normalized["evidence_tag"] = evidence_tag
 
 
 def _payload_archive_sha256(payload: Mapping[str, Any]) -> str | None:
@@ -376,6 +403,7 @@ def normalize_observation_row(row: Mapping[str, Any]) -> dict[str, Any]:
     normalized["evidence_grade"] = str(
         row.get("evidence_grade") or normalized["evidence_tag"] or EVIDENCE_GRADE_MLX
     )
+    _normalize_contest_axis_evidence(normalized)
     normalized["observed_score_or_delta"] = _as_finite_float(
         row.get("observed_score_or_delta"),
         label="observed_score_or_delta",

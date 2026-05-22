@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,27 @@ from tac.optimization.mlx_dynamic_sweep_observations import (  # noqa: E402
     load_observation_rows,
 )
 from tac.repo_io import read_json  # noqa: E402
+
+ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
+
+FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+    "promotable",
+)
+
+
+def _positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a positive integer") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -94,7 +116,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path)
+    parser.add_argument(
+        "--summary-json-out",
+        type=Path,
+        help=(
+            "Optional compact operator action summary JSON. Planning-only; "
+            "does not create dispatch authority."
+        ),
+    )
     parser.add_argument("--top-k", type=int, default=32)
+    parser.add_argument(
+        "--top-actions",
+        type=_positive_int,
+        default=8,
+        help="Number of operator next-action rows to expose in stdout/summary.",
+    )
+    parser.add_argument(
+        "--require-active-pairset-observation-model",
+        action="store_true",
+        help=(
+            "Fail closed unless exact-axis pairset observations activate the "
+            "pairset observation-response planning model."
+        ),
+    )
     parser.add_argument("--expected-improvement-weight", type=float, default=1.0)
     parser.add_argument("--information-gain-weight", type=float, default=0.01)
     return parser.parse_args(argv)
@@ -155,6 +199,165 @@ def _axis_scores(values: list[str]) -> dict[str, float]:
     return out
 
 
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _false_authority_payload() -> dict[str, bool]:
+    return dict.fromkeys(FALSE_AUTHORITY_FIELDS, False)
+
+
+def _pairset_observation_response_model(
+    portfolio: Mapping[str, Any],
+) -> dict[str, Any]:
+    feedback = _mapping(portfolio.get("observation_feedback"))
+    model = feedback.get("pairset_observation_response_model")
+    if isinstance(model, Mapping):
+        return dict(model)
+    return {
+        "schema": "pairset_observation_response_model.v1",
+        "active": False,
+        "inactive_reason": "missing_from_portfolio",
+        **_false_authority_payload(),
+    }
+
+
+def _top_operator_actions(
+    portfolio: Mapping[str, Any],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    rows = portfolio.get("operator_action_rows")
+    if not isinstance(rows, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for row in rows[:limit]:
+        if not isinstance(row, Mapping):
+            continue
+        metadata = _mapping(row.get("source_metadata"))
+        observation_feedback = _mapping(metadata.get("observation_feedback"))
+        response_model = _mapping(metadata.get("observation_response_model"))
+        blockers = [str(blocker) for blocker in row.get("dispatch_blockers") or []]
+        out.append(
+            {
+                "operator_action_rank": row.get("operator_action_rank"),
+                "bayesian_rank": row.get("rank"),
+                "candidate_id": row.get("candidate_id"),
+                "family_id": row.get("family_id"),
+                "source_kind": row.get("source_kind"),
+                "operator_next_action": row.get("operator_next_action"),
+                "acquisition_value": row.get("acquisition_value"),
+                "predicted_score_mean": row.get("predicted_score_mean"),
+                "predicted_score_variance": row.get("predicted_score_variance"),
+                "prediction_source": row.get("prediction_source"),
+                "exact_archive_custody_ready": row.get("exact_archive_custody_ready"),
+                "bayesian_ready_for_exact_eval_dispatch": row.get(
+                    "bayesian_ready_for_exact_eval_dispatch"
+                ),
+                "observation_feedback_status": observation_feedback.get("status"),
+                "observation_response_model_active": response_model.get("active"),
+                "dispatch_blocker_count": len(blockers),
+                "dispatch_blockers": blockers[:8],
+                **_false_authority_payload(),
+            }
+        )
+    return out
+
+
+def _build_action_summary(
+    portfolio: Mapping[str, Any],
+    *,
+    top_actions: int,
+    json_out: Path,
+    md_out: Path | None,
+    summary_json_out: Path | None,
+) -> dict[str, Any]:
+    model = _pairset_observation_response_model(portfolio)
+    return {
+        "schema": ACTION_SUMMARY_SCHEMA,
+        "producer": Path(__file__).name,
+        "allowed_use": "operator_next_action_planning_only_no_score_or_dispatch_authority",
+        "json_out": str(json_out),
+        "md_out": None if md_out is None else str(md_out),
+        "summary_json_out": (
+            None if summary_json_out is None else str(summary_json_out)
+        ),
+        "portfolio_summary": dict(_mapping(portfolio.get("portfolio_summary"))),
+        "pairset_observation_response_model": model,
+        "top_action_limit": top_actions,
+        "top_operator_actions": _top_operator_actions(
+            portfolio,
+            limit=top_actions,
+        ),
+        "dispatch_blockers": [
+            str(blocker) for blocker in portfolio.get("dispatch_blockers") or []
+        ],
+        **_false_authority_payload(),
+    }
+
+
+def _require_active_pairset_observation_model(summary: Mapping[str, Any]) -> None:
+    model = _mapping(summary.get("pairset_observation_response_model"))
+    if model.get("active") is True:
+        return
+    reason = model.get("inactive_reason") or "unknown"
+    raise CrossFamilyCandidatePortfolioError(
+        "pairset observation response model inactive "
+        f"({reason}); provide --observation-jsonl with at least two exact-axis "
+        "pairset observations at distinct selected_pair_count values, or omit "
+        "--require-active-pairset-observation-model for exploratory planning"
+    )
+
+
+def _render_action_summary_markdown(summary: Mapping[str, Any]) -> str:
+    model = _mapping(summary.get("pairset_observation_response_model"))
+    lines = [
+        "## CLI Action Summary",
+        "",
+        f"- Summary schema: `{summary.get('schema')}`",
+        f"- Allowed use: `{summary.get('allowed_use')}`",
+        f"- Score claim: `{summary.get('score_claim')}`",
+        "- Ready for exact eval dispatch: "
+        f"`{summary.get('ready_for_exact_eval_dispatch')}`",
+        "",
+        "### Observation Response Model",
+        "",
+        f"- Active: `{model.get('active')}`",
+        f"- Axis: `{model.get('axis')}`",
+        f"- Training rows: `{model.get('training_row_count')}`",
+        f"- Updated candidates: `{model.get('updated_candidate_count')}`",
+        f"- Inactive reason: `{model.get('inactive_reason')}`",
+        f"- Allowed use: `{model.get('allowed_use')}`",
+        f"- Score claim: `{model.get('score_claim')}`",
+        "- Ready for exact eval dispatch: "
+        f"`{model.get('ready_for_exact_eval_dispatch')}`",
+        "",
+        "### Top Next Actions",
+        "",
+        "| action rank | bayes rank | candidate | source | action | acquisition | blockers |",
+        "|---:|---:|---|---|---|---:|---:|",
+    ]
+    rows = summary.get("top_operator_actions")
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, Mapping):
+                continue
+            lines.append(
+                "| {action_rank} | {bayes_rank} | `{candidate}` | `{source}` | "
+                "`{action}` | {acquisition:.12g} | {blockers} |".format(
+                    action_rank=row.get("operator_action_rank"),
+                    bayes_rank=row.get("bayesian_rank"),
+                    candidate=row.get("candidate_id"),
+                    source=row.get("source_kind"),
+                    action=row.get("operator_next_action"),
+                    acquisition=float(row.get("acquisition_value", 0.0)),
+                    blockers=row.get("dispatch_blocker_count"),
+                )
+            )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
@@ -196,6 +399,15 @@ def main(argv: list[str] | None = None) -> int:
             expected_improvement_weight=args.expected_improvement_weight,
             information_gain_weight=args.information_gain_weight,
         )
+        action_summary = _build_action_summary(
+            portfolio,
+            top_actions=args.top_actions,
+            json_out=args.json_out,
+            md_out=args.md_out,
+            summary_json_out=args.summary_json_out,
+        )
+        if args.require_active_pairset_observation_model:
+            _require_active_pairset_observation_model(action_summary)
     except (
         OSError,
         json.JSONDecodeError,
@@ -205,10 +417,14 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     write_json(args.json_out, portfolio)
+    if args.summary_json_out:
+        write_json(args.summary_json_out, action_summary)
     if args.md_out:
         args.md_out.parent.mkdir(parents=True, exist_ok=True)
         args.md_out.write_text(
-            render_cross_family_candidate_portfolio_markdown(portfolio),
+            render_cross_family_candidate_portfolio_markdown(portfolio).rstrip()
+            + "\n\n"
+            + _render_action_summary_markdown(action_summary),
             encoding="utf-8",
         )
     print(
@@ -216,6 +432,11 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "json_out": str(args.json_out),
                 "md_out": None if args.md_out is None else str(args.md_out),
+                "summary_json_out": (
+                    None
+                    if args.summary_json_out is None
+                    else str(args.summary_json_out)
+                ),
                 "ranked_candidate_count": portfolio["portfolio_summary"][
                     "ranked_candidate_count"
                 ],
@@ -224,6 +445,10 @@ def main(argv: list[str] | None = None) -> int:
                 ]["candidate_archive_custody_ready_count"],
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
+                "pairset_observation_response_model": action_summary[
+                    "pairset_observation_response_model"
+                ],
+                "top_operator_actions": action_summary["top_operator_actions"],
             },
             indent=2,
             sort_keys=True,

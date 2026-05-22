@@ -31,6 +31,7 @@ DEFAULT_EXPECTED_IMPROVEMENT_WEIGHT = 1.0
 DEFAULT_INFORMATION_GAIN_WEIGHT = 0.01
 DEFAULT_MLX_VARIANCE_FLOOR = 1e-8
 DEFAULT_PAIRSET_VARIANCE = 2.5e-8
+DEFAULT_PAIRSET_OBSERVATION_MODEL_VARIANCE_FLOOR = 2.5e-9
 DEFAULT_OUTSIDE_CLASS_VARIANCE = 1e-3
 _EXACT_AXIS_ALIASES = {
     "contest_cpu": "contest_cpu",
@@ -557,6 +558,200 @@ def _normalize_incumbent_scores_by_axis(
     return scores
 
 
+def _candidate_selected_pair_count(row: Mapping[str, Any]) -> int | None:
+    metadata = row.get("source_metadata")
+    raw = row.get("selected_pair_count")
+    if raw is None and isinstance(metadata, Mapping):
+        raw = metadata.get("selected_pair_count")
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        raise CrossFamilyCandidatePortfolioError(
+            f"{row.get('candidate_id')}.selected_pair_count must be an integer"
+        )
+    try:
+        count = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise CrossFamilyCandidatePortfolioError(
+            f"{row.get('candidate_id')}.selected_pair_count must be an integer"
+        ) from exc
+    if count <= 0:
+        raise CrossFamilyCandidatePortfolioError(
+            f"{row.get('candidate_id')}.selected_pair_count must be positive"
+        )
+    return count
+
+
+def _fit_line(xs: Sequence[float], ys: Sequence[float]) -> dict[str, float] | None:
+    if len(xs) != len(ys) or len(xs) < 2:
+        return None
+    x_mean = sum(xs) / len(xs)
+    y_mean = sum(ys) / len(ys)
+    variance_x = sum((x - x_mean) ** 2 for x in xs)
+    if variance_x <= 0.0:
+        return None
+    slope = sum((x - x_mean) * (y - y_mean) for x, y in zip(xs, ys, strict=True)) / variance_x
+    intercept = y_mean - slope * x_mean
+    residuals = [y - (intercept + slope * x) for x, y in zip(xs, ys, strict=True)]
+    residual_mse = sum(value * value for value in residuals) / max(1, len(residuals) - 2)
+    return {
+        "intercept": intercept,
+        "slope_per_pair": slope,
+        "residual_mse": residual_mse,
+    }
+
+
+def _pairset_observation_training_rows(
+    candidates: Sequence[Mapping[str, Any]],
+    observations: Sequence[Mapping[str, Any]],
+) -> tuple[str | None, list[dict[str, Any]], dict[str, int]]:
+    candidates_by_id = {
+        str(row.get("candidate_id") or ""): row
+        for row in candidates
+        if str(row.get("source_kind") or "") == "decoder_q_pairset_acquisition"
+    }
+    rows_by_axis: dict[str, list[dict[str, Any]]] = {}
+    axis_counts: dict[str, int] = {}
+    for observation in observations:
+        axis = _exact_observation_axis(observation)
+        if axis is None:
+            continue
+        candidate_id = str(observation.get("candidate_id") or "")
+        candidate = candidates_by_id.get(candidate_id)
+        if candidate is None:
+            continue
+        count = _candidate_selected_pair_count(candidate)
+        if count is None:
+            continue
+        score = _finite_float(
+            observation.get("observed_score_or_delta"),
+            label=f"{candidate_id}.observed_score_or_delta",
+        )
+        rows_by_axis.setdefault(axis, []).append(
+            {
+                "candidate_id": candidate_id,
+                "selected_pair_count": count,
+                "observed_score": score,
+                "observed_at_utc": observation.get("observed_at_utc"),
+            }
+        )
+        axis_counts[axis] = axis_counts.get(axis, 0) + 1
+    if not rows_by_axis:
+        return None, [], axis_counts
+    selected_axis = sorted(
+        rows_by_axis,
+        key=lambda axis: (-len(rows_by_axis[axis]), axis),
+    )[0]
+    return selected_axis, rows_by_axis[selected_axis], axis_counts
+
+
+def _apply_pairset_observation_response_model(
+    candidates: Sequence[Mapping[str, Any]],
+    observations: Sequence[Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Use exact pairset observations to recalibrate unobserved pairset priors.
+
+    This is a planning prior only: it updates predicted means/variances for
+    ordering future local controls and exact-eval spend, while leaving all
+    authority fields false.
+    """
+
+    axis, training_rows, axis_counts = _pairset_observation_training_rows(
+        candidates,
+        observations,
+    )
+    base_summary: dict[str, Any] = {
+        "schema": "pairset_observation_response_model.v1",
+        "active": False,
+        "axis": axis,
+        "axis_observation_counts": dict(sorted(axis_counts.items())),
+        "training_row_count": len(training_rows),
+        **FALSE_AUTHORITY,
+    }
+    xs = [float(row["selected_pair_count"]) for row in training_rows]
+    ys = [float(row["observed_score"]) for row in training_rows]
+    fit = _fit_line(xs, ys)
+    if fit is None:
+        return [dict(row) for row in candidates], {
+            **base_summary,
+            "inactive_reason": "need_two_distinct_selected_pair_counts",
+        }
+
+    observed_counts = sorted({int(row["selected_pair_count"]) for row in training_rows})
+    observed_ids = sorted({str(row["candidate_id"]) for row in training_rows})
+    blend_weight = min(0.85, len(training_rows) / float(len(training_rows) + 3))
+    residual_mse = max(0.0, float(fit["residual_mse"]))
+    updated: list[dict[str, Any]] = []
+    updated_count = 0
+    for candidate in candidates:
+        row = dict(candidate)
+        if str(row.get("source_kind") or "") != "decoder_q_pairset_acquisition":
+            updated.append(row)
+            continue
+        count = _candidate_selected_pair_count(row)
+        if count is None:
+            updated.append(row)
+            continue
+        prior_mean = _finite_float(
+            row.get("predicted_score_mean"),
+            label=f"{row.get('candidate_id')}.predicted_score_mean",
+        )
+        model_mean = fit["intercept"] + fit["slope_per_pair"] * float(count)
+        posterior_mean = (1.0 - blend_weight) * prior_mean + blend_weight * model_mean
+        nearest_count = min(observed_counts, key=lambda value: abs(value - count))
+        distance = abs(float(count - nearest_count))
+        distance_variance = (abs(float(fit["slope_per_pair"])) * distance * 0.25) ** 2
+        prior_variance = _finite_float(
+            row.get("predicted_score_variance", DEFAULT_PAIRSET_VARIANCE),
+            label=f"{row.get('candidate_id')}.predicted_score_variance",
+        )
+        posterior_variance = max(
+            DEFAULT_PAIRSET_OBSERVATION_MODEL_VARIANCE_FLOOR,
+            residual_mse,
+            distance_variance,
+            prior_variance * 0.1,
+        )
+        metadata = dict(row.get("source_metadata") or {})
+        metadata["observation_response_model"] = {
+            **base_summary,
+            "active": True,
+            "model_kind": "linear_selected_pair_count_exact_axis",
+            "observed_candidate_ids": observed_ids,
+            "observed_selected_pair_counts": observed_counts,
+            "intercept": round(float(fit["intercept"]), 15),
+            "slope_per_pair": round(float(fit["slope_per_pair"]), 15),
+            "residual_mse": residual_mse,
+            "prior_predicted_score_mean": prior_mean,
+            "model_predicted_score_mean": model_mean,
+            "posterior_blend_weight": blend_weight,
+            "nearest_observed_selected_pair_count": nearest_count,
+            "selected_pair_count_distance": distance,
+            "posterior_score_variance": posterior_variance,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+        }
+        row["source_metadata"] = metadata
+        row["predicted_score_mean"] = posterior_mean
+        row["predicted_score_variance"] = posterior_variance
+        row["prediction_source"] = "exact_pairset_observation_response_model_planning_prior"
+        updated_count += 1
+        updated.append(row)
+
+    return updated, {
+        **base_summary,
+        "active": True,
+        "model_kind": "linear_selected_pair_count_exact_axis",
+        "updated_candidate_count": updated_count,
+        "observed_candidate_ids": observed_ids,
+        "observed_selected_pair_counts": observed_counts,
+        "intercept": round(float(fit["intercept"]), 15),
+        "slope_per_pair": round(float(fit["slope_per_pair"]), 15),
+        "residual_mse": residual_mse,
+        "posterior_blend_weight": blend_weight,
+        "variance_floor": DEFAULT_PAIRSET_OBSERVATION_MODEL_VARIANCE_FLOOR,
+        "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+    }
+
+
 def _apply_observation_feedback(
     candidates: Sequence[Mapping[str, Any]],
     observations: Sequence[Mapping[str, Any]],
@@ -695,10 +890,20 @@ def _operator_action_priority(row: Mapping[str, Any]) -> tuple[int, int, float, 
             base += 100
     source_rank = row.get("source_rank")
     rank_value = int(source_rank) if source_rank is not None else 999_999
+    acquisition_value = -float(row.get("acquisition_value", 0.0))
+    if source_kind == "decoder_q_pairset_acquisition" and str(row.get("prediction_source") or "") == (
+        "exact_pairset_observation_response_model_planning_prior"
+    ):
+        return (
+            base,
+            acquisition_value,
+            rank_value,
+            str(row.get("candidate_id") or ""),
+        )
     return (
         base,
         rank_value,
-        -float(row.get("acquisition_value", 0.0)),
+        acquisition_value,
         str(row.get("candidate_id") or ""),
     )
 
@@ -779,6 +984,10 @@ def build_cross_family_candidate_portfolio(
         incumbent,
         incumbent_scores_by_axis,
     )
+    candidates, pairset_observation_response_model = _apply_pairset_observation_response_model(
+        candidates,
+        normalized_observations,
+    )
     candidates = _apply_observation_feedback(
         candidates,
         normalized_observations,
@@ -809,6 +1018,7 @@ def build_cross_family_candidate_portfolio(
             "source_artifact_path",
             "source_dispatch_blockers",
             "source_metadata",
+            "prediction_source",
         ):
             if key in source_row:
                 row[key] = source_row[key]
@@ -880,6 +1090,7 @@ def build_cross_family_candidate_portfolio(
             "candidate_suppression_policy": (
                 "exact-axis same-candidate observations demote repeat operator actions"
             ),
+            "pairset_observation_response_model": pairset_observation_response_model,
         },
         "portfolio_summary": {
             "candidate_count_before_top_k": len(candidates),
