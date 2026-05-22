@@ -33,6 +33,10 @@ from tac.optimization.scorer_response_prediction import (
     STRUCTURED_FEATURE_SET,
     attach_out_of_fold_linear_predictions,
 )
+from tac.optimization.scorer_response_family_delta import (
+    build_family_delta,
+    render_family_delta_markdown,
+)
 from tac.optimization.scorer_response_structural_features import (
     attach_structural_features,
 )
@@ -1076,6 +1080,47 @@ def test_structural_features_feed_oof_predictions_without_authority() -> None:
     assert decoder_row["decoder_q_score_impact_abs_sum"] == 0.25
     assert baseline_row["decoder_q_score_impact_abs_sum"] == 0.0
     assert gate["status"] == "passed"
+
+
+def test_family_delta_matches_rows_by_source_start_pair() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response", "mlx_decoder_q"),
+        rows_per_fold=3,
+    )
+    for row in dataset["rows"]:
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        pair_start = fold * 3 + offset
+        row["source_pair_window"] = [pair_start, pair_start + 1]
+        if row["family"] == "mlx_scorer_response":
+            row["delta_vs_baseline_score"] = 0.1 + 0.001 * pair_start
+            row["avg_posenet_dist"] = 0.01
+            row["avg_segnet_dist"] = 0.02
+        else:
+            row["delta_vs_baseline_score"] = 0.2 + 0.001 * pair_start
+            row["avg_posenet_dist"] = 0.011
+            row["avg_segnet_dist"] = 0.019
+
+    delta = build_family_delta(
+        dataset,
+        reference_family="mlx_scorer_response",
+        candidate_family="mlx_decoder_q",
+        top_k=2,
+    )
+
+    assert delta["score_claim"] is False
+    assert delta["summary"]["matched_count"] == 15
+    assert delta["summary"]["candidate_worse_count"] == 15
+    assert math.isclose(delta["summary"]["score_delta_mean"], 0.1)
+    assert math.isclose(
+        delta["matched_rows"][0]["candidate_minus_reference_avg_posenet_dist"],
+        0.001,
+    )
+    assert math.isclose(
+        delta["matched_rows"][0]["candidate_minus_reference_avg_segnet_dist"],
+        -0.001,
+    )
+    assert "Scorer Response Family Delta" in render_family_delta_markdown(delta)
 
 
 def test_scorer_response_validation_gate_blocks_mixed_axis_targets() -> None:
