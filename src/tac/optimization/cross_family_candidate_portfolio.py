@@ -582,6 +582,42 @@ def _candidate_selected_pair_count(row: Mapping[str, Any]) -> int | None:
     return count
 
 
+def _candidate_selector_kind(row: Mapping[str, Any]) -> str:
+    metadata = row.get("source_metadata")
+    raw = row.get("selector_kind")
+    if raw is None and isinstance(metadata, Mapping):
+        raw = metadata.get("selector_kind")
+    text = str(raw or "").strip()
+    return text or "unknown_selector"
+
+
+def _candidate_selected_pair_indices(row: Mapping[str, Any]) -> list[int] | None:
+    metadata = row.get("source_metadata")
+    raw = row.get("selected_pair_indices")
+    if raw is None and isinstance(metadata, Mapping):
+        raw = metadata.get("selected_pair_indices")
+    if raw is None:
+        return None
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        raise CrossFamilyCandidatePortfolioError(
+            f"{row.get('candidate_id')}.selected_pair_indices must be a sequence"
+        )
+    out: list[int] = []
+    for value in raw:
+        if isinstance(value, bool):
+            raise CrossFamilyCandidatePortfolioError(
+                f"{row.get('candidate_id')}.selected_pair_indices values must be integers"
+            )
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as exc:
+            raise CrossFamilyCandidatePortfolioError(
+                f"{row.get('candidate_id')}.selected_pair_indices values must be integers"
+            ) from exc
+        out.append(parsed)
+    return out
+
+
 def _fit_line(xs: Sequence[float], ys: Sequence[float]) -> dict[str, float] | None:
     if len(xs) != len(ys) or len(xs) < 2:
         return None
@@ -604,7 +640,7 @@ def _fit_line(xs: Sequence[float], ys: Sequence[float]) -> dict[str, float] | No
 def _pairset_observation_training_rows(
     candidates: Sequence[Mapping[str, Any]],
     observations: Sequence[Mapping[str, Any]],
-) -> tuple[str | None, list[dict[str, Any]], dict[str, int]]:
+) -> tuple[str | None, list[dict[str, Any]], dict[str, int], dict[str, int]]:
     candidates_by_id = {
         str(row.get("candidate_id") or ""): row
         for row in candidates
@@ -612,6 +648,13 @@ def _pairset_observation_training_rows(
     }
     rows_by_axis: dict[str, list[dict[str, Any]]] = {}
     axis_counts: dict[str, int] = {}
+    identity_counts = {
+        "candidate_id_match_count": 0,
+        "selected_pair_indices_missing_candidate_count": 0,
+        "selected_pair_indices_verified_count": 0,
+        "selected_pair_indices_missing_observation_count": 0,
+        "selected_pair_indices_mismatch_count": 0,
+    }
     for observation in observations:
         axis = _exact_observation_axis(observation)
         if axis is None:
@@ -620,6 +663,19 @@ def _pairset_observation_training_rows(
         candidate = candidates_by_id.get(candidate_id)
         if candidate is None:
             continue
+        identity_counts["candidate_id_match_count"] += 1
+        observed_indices = _candidate_selected_pair_indices(observation)
+        candidate_indices = _candidate_selected_pair_indices(candidate)
+        if candidate_indices is None:
+            identity_counts["selected_pair_indices_missing_candidate_count"] += 1
+            continue
+        if observed_indices is None:
+            identity_counts["selected_pair_indices_missing_observation_count"] += 1
+            continue
+        if observed_indices != candidate_indices:
+            identity_counts["selected_pair_indices_mismatch_count"] += 1
+            continue
+        identity_counts["selected_pair_indices_verified_count"] += 1
         count = _candidate_selected_pair_count(candidate)
         if count is None:
             continue
@@ -630,24 +686,28 @@ def _pairset_observation_training_rows(
         rows_by_axis.setdefault(axis, []).append(
             {
                 "candidate_id": candidate_id,
+                "selector_kind": _candidate_selector_kind(candidate),
                 "selected_pair_count": count,
+                "selected_pair_indices_verified": observed_indices is not None,
                 "observed_score": score,
                 "observed_at_utc": observation.get("observed_at_utc"),
             }
         )
         axis_counts[axis] = axis_counts.get(axis, 0) + 1
     if not rows_by_axis:
-        return None, [], axis_counts
+        return None, [], axis_counts, identity_counts
     selected_axis = sorted(
         rows_by_axis,
         key=lambda axis: (-len(rows_by_axis[axis]), axis),
     )[0]
-    return selected_axis, rows_by_axis[selected_axis], axis_counts
+    return selected_axis, rows_by_axis[selected_axis], axis_counts, identity_counts
 
 
 def _apply_pairset_observation_response_model(
     candidates: Sequence[Mapping[str, Any]],
     observations: Sequence[Mapping[str, Any]],
+    *,
+    incumbent_scores_by_axis: Mapping[str, float],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Use exact pairset observations to recalibrate unobserved pairset priors.
 
@@ -656,7 +716,7 @@ def _apply_pairset_observation_response_model(
     authority fields false.
     """
 
-    axis, training_rows, axis_counts = _pairset_observation_training_rows(
+    axis, training_rows, axis_counts, identity_counts = _pairset_observation_training_rows(
         candidates,
         observations,
     )
@@ -666,26 +726,70 @@ def _apply_pairset_observation_response_model(
         "axis": axis,
         "axis_observation_counts": dict(sorted(axis_counts.items())),
         "training_row_count": len(training_rows),
+        "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+        "identity_counts": dict(sorted(identity_counts.items())),
         **FALSE_AUTHORITY,
     }
-    xs = [float(row["selected_pair_count"]) for row in training_rows]
-    ys = [float(row["observed_score"]) for row in training_rows]
-    fit = _fit_line(xs, ys)
-    if fit is None:
+    rows_by_selector: dict[str, list[dict[str, Any]]] = {}
+    for row in training_rows:
+        rows_by_selector.setdefault(str(row["selector_kind"]), []).append(row)
+    selector_models: dict[str, dict[str, Any]] = {}
+    inactive_selector_reasons: dict[str, str] = {}
+    axis_incumbent = incumbent_scores_by_axis.get(axis or "")
+    for selector_kind, selector_rows in sorted(rows_by_selector.items()):
+        xs = [float(row["selected_pair_count"]) for row in selector_rows]
+        ys = [float(row["observed_score"]) for row in selector_rows]
+        fit = _fit_line(xs, ys)
+        if fit is None:
+            inactive_selector_reasons[selector_kind] = "need_two_distinct_selected_pair_counts"
+            continue
+        best_observed = min(ys)
+        regression_only = axis_incumbent is not None and all(score >= axis_incumbent for score in ys)
+        selector_models[selector_kind] = {
+            "selector_kind": selector_kind,
+            "training_row_count": len(selector_rows),
+            "observed_candidate_ids": sorted({str(row["candidate_id"]) for row in selector_rows}),
+            "observed_selected_pair_counts": sorted(
+                {int(row["selected_pair_count"]) for row in selector_rows}
+            ),
+            "intercept": float(fit["intercept"]),
+            "slope_per_pair": float(fit["slope_per_pair"]),
+            "residual_mse": max(0.0, float(fit["residual_mse"])),
+            "best_observed_score": best_observed,
+            "axis_incumbent_score": axis_incumbent,
+            "regression_only_cap_active": regression_only,
+            "selected_pair_indices_verified_count": sum(
+                1 for row in selector_rows if row.get("selected_pair_indices_verified") is True
+            ),
+        }
+    if not selector_models:
         return [dict(row) for row in candidates], {
             **base_summary,
-            "inactive_reason": "need_two_distinct_selected_pair_counts",
+            "inactive_reason": "need_two_distinct_selected_pair_counts_per_selector_kind",
+            "inactive_selector_reasons": inactive_selector_reasons,
         }
 
-    observed_counts = sorted({int(row["selected_pair_count"]) for row in training_rows})
-    observed_ids = sorted({str(row["candidate_id"]) for row in training_rows})
     blend_weight = min(0.85, len(training_rows) / float(len(training_rows) + 3))
-    residual_mse = max(0.0, float(fit["residual_mse"]))
     updated: list[dict[str, Any]] = []
     updated_count = 0
     for candidate in candidates:
         row = dict(candidate)
         if str(row.get("source_kind") or "") != "decoder_q_pairset_acquisition":
+            updated.append(row)
+            continue
+        selector_kind = _candidate_selector_kind(row)
+        selector_model = selector_models.get(selector_kind)
+        if selector_model is None:
+            metadata = dict(row.get("source_metadata") or {})
+            metadata["observation_response_model"] = {
+                **base_summary,
+                "active": False,
+                "selector_kind": selector_kind,
+                "inactive_reason": "no_exact_observations_for_selector_kind",
+                "available_selector_kinds": sorted(selector_models),
+                "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            }
+            row["source_metadata"] = metadata
             updated.append(row)
             continue
         count = _candidate_selected_pair_count(row)
@@ -696,18 +800,24 @@ def _apply_pairset_observation_response_model(
             row.get("predicted_score_mean"),
             label=f"{row.get('candidate_id')}.predicted_score_mean",
         )
-        model_mean = fit["intercept"] + fit["slope_per_pair"] * float(count)
+        model_mean_raw = selector_model["intercept"] + selector_model["slope_per_pair"] * float(count)
+        model_mean = model_mean_raw
+        if selector_model["regression_only_cap_active"]:
+            model_mean = max(model_mean, float(selector_model["best_observed_score"]))
         posterior_mean = (1.0 - blend_weight) * prior_mean + blend_weight * model_mean
+        if selector_model["regression_only_cap_active"]:
+            posterior_mean = max(posterior_mean, float(selector_model["best_observed_score"]))
+        observed_counts = list(selector_model["observed_selected_pair_counts"])
         nearest_count = min(observed_counts, key=lambda value: abs(value - count))
         distance = abs(float(count - nearest_count))
-        distance_variance = (abs(float(fit["slope_per_pair"])) * distance * 0.25) ** 2
+        distance_variance = (abs(float(selector_model["slope_per_pair"])) * distance * 0.25) ** 2
         prior_variance = _finite_float(
             row.get("predicted_score_variance", DEFAULT_PAIRSET_VARIANCE),
             label=f"{row.get('candidate_id')}.predicted_score_variance",
         )
         posterior_variance = max(
             DEFAULT_PAIRSET_OBSERVATION_MODEL_VARIANCE_FLOOR,
-            residual_mse,
+            float(selector_model["residual_mse"]),
             distance_variance,
             prior_variance * 0.1,
         )
@@ -716,36 +826,63 @@ def _apply_pairset_observation_response_model(
             **base_summary,
             "active": True,
             "model_kind": "linear_selected_pair_count_exact_axis",
-            "observed_candidate_ids": observed_ids,
+            "selector_kind": selector_kind,
+            "observed_candidate_ids": selector_model["observed_candidate_ids"],
             "observed_selected_pair_counts": observed_counts,
-            "intercept": round(float(fit["intercept"]), 15),
-            "slope_per_pair": round(float(fit["slope_per_pair"]), 15),
-            "residual_mse": residual_mse,
+            "intercept": round(float(selector_model["intercept"]), 15),
+            "slope_per_pair": round(float(selector_model["slope_per_pair"]), 15),
+            "residual_mse": selector_model["residual_mse"],
             "prior_predicted_score_mean": prior_mean,
+            "model_predicted_score_mean_raw": model_mean_raw,
             "model_predicted_score_mean": model_mean,
+            "best_observed_score": selector_model["best_observed_score"],
+            "axis_incumbent_score": selector_model["axis_incumbent_score"],
+            "regression_only_cap_active": selector_model["regression_only_cap_active"],
             "posterior_blend_weight": blend_weight,
             "nearest_observed_selected_pair_count": nearest_count,
             "selected_pair_count_distance": distance,
             "posterior_score_variance": posterior_variance,
+            "prediction_axis": axis,
             "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
         }
         row["source_metadata"] = metadata
         row["predicted_score_mean"] = posterior_mean
         row["predicted_score_variance"] = posterior_variance
         row["prediction_source"] = "exact_pairset_observation_response_model_planning_prior"
+        row["prediction_axis"] = axis
         updated_count += 1
         updated.append(row)
 
+    primary_selector = sorted(
+        selector_models,
+        key=lambda key: (-int(selector_models[key]["training_row_count"]), key),
+    )[0]
+    primary_model = selector_models[primary_selector]
     return updated, {
         **base_summary,
         "active": True,
         "model_kind": "linear_selected_pair_count_exact_axis",
+        "selector_family_scoped": True,
         "updated_candidate_count": updated_count,
-        "observed_candidate_ids": observed_ids,
-        "observed_selected_pair_counts": observed_counts,
-        "intercept": round(float(fit["intercept"]), 15),
-        "slope_per_pair": round(float(fit["slope_per_pair"]), 15),
-        "residual_mse": residual_mse,
+        "active_selector_kinds": sorted(selector_models),
+        "inactive_selector_reasons": inactive_selector_reasons,
+        "primary_selector_kind": primary_selector,
+        "observed_candidate_ids": primary_model["observed_candidate_ids"],
+        "observed_selected_pair_counts": primary_model["observed_selected_pair_counts"],
+        "intercept": round(float(primary_model["intercept"]), 15),
+        "slope_per_pair": round(float(primary_model["slope_per_pair"]), 15),
+        "residual_mse": primary_model["residual_mse"],
+        "best_observed_score": primary_model["best_observed_score"],
+        "axis_incumbent_score": primary_model["axis_incumbent_score"],
+        "regression_only_cap_active": primary_model["regression_only_cap_active"],
+        "selector_models": {
+            key: {
+                **value,
+                "intercept": round(float(value["intercept"]), 15),
+                "slope_per_pair": round(float(value["slope_per_pair"]), 15),
+            }
+            for key, value in sorted(selector_models.items())
+        },
         "posterior_blend_weight": blend_weight,
         "variance_floor": DEFAULT_PAIRSET_OBSERVATION_MODEL_VARIANCE_FLOOR,
         "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
@@ -987,6 +1124,7 @@ def build_cross_family_candidate_portfolio(
     candidates, pairset_observation_response_model = _apply_pairset_observation_response_model(
         candidates,
         normalized_observations,
+        incumbent_scores_by_axis=axis_incumbents,
     )
     candidates = _apply_observation_feedback(
         candidates,

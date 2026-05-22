@@ -101,6 +101,7 @@ def _contest_observation(
     candidate_id: str = "pairset_diversity_k002",
     archive_char: str = "a",
     raw_char: str = "b",
+    selected_pair_indices: list[int] | None = None,
 ) -> dict[str, object]:
     source = tmp_path / f"{candidate_id}_contest_auth_eval.json"
     archive_sha = archive_char * 64
@@ -123,7 +124,7 @@ def _contest_observation(
         ),
         encoding="utf-8",
     )
-    return {
+    row: dict[str, object] = {
         "schema": "mlx_dynamic_sweep_observation.v1",
         "candidate_id": candidate_id,
         "sweep_config_id": "contest_cpu_exact_candidate",
@@ -143,6 +144,9 @@ def _contest_observation(
         },
         "source_artifact_path": source.as_posix(),
     }
+    if selected_pair_indices is not None:
+        row["selected_pair_indices"] = selected_pair_indices
+    return row
 
 
 def _pairset_acquisition_with_response_candidates() -> dict[str, object]:
@@ -188,6 +192,20 @@ def _pairset_acquisition_with_response_candidates() -> dict[str, object]:
                 "selector_kind": "diversity_spaced",
                 "selected_pair_count": 8,
                 "selected_pair_indices": [26, 109, 229, 296, 378, 459, 501, 588],
+                "payload_bytes": 21,
+                "rate_delta": 0.000012,
+                "predicted_score_mean": 0.195,
+                "predicted_score_source": "source_selector_inherited_non_authoritative",
+            },
+            {
+                "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                **_false_authority(),
+                "dispatch_attempted": False,
+                "acquisition_id": "pairset_prefix_k008",
+                "acquisition_rank": 4,
+                "selector_kind": "prefix_variant",
+                "selected_pair_count": 8,
+                "selected_pair_indices": [59, 68, 98, 109, 134, 376, 479, 501],
                 "payload_bytes": 21,
                 "rate_delta": 0.000012,
                 "predicted_score_mean": 0.195,
@@ -325,6 +343,67 @@ def test_portfolio_uses_exact_pairset_observations_as_planning_prior(
                 score=0.193,
                 archive_char="a",
                 raw_char="b",
+                selected_pair_indices=[26, 588],
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_diversity_k004",
+                score=0.1928,
+                archive_char="d",
+                raw_char="e",
+                selected_pair_indices=[26, 109, 501, 588],
+            ),
+        ],
+        incumbent_scores_by_axis={"contest_cpu": 0.1927},
+        top_k=8,
+    )
+
+    model = portfolio["observation_feedback"]["pairset_observation_response_model"]
+    assert model["active"] is True
+    assert model["axis"] == "contest_cpu"
+    assert model["training_row_count"] == 2
+    assert model["observed_selected_pair_counts"] == [2, 4]
+    assert model["active_selector_kinds"] == ["diversity_spaced"]
+    assert model["regression_only_cap_active"] is True
+    assert model["score_claim"] is False
+
+    unobserved = next(
+        row
+        for row in portfolio["ranked_rows"]
+        if row["candidate_id"] == "pairset_diversity_k008"
+    )
+    row_model = unobserved["source_metadata"]["observation_response_model"]
+    assert row_model["active"] is True
+    assert unobserved["prediction_source"] == (
+        "exact_pairset_observation_response_model_planning_prior"
+    )
+    assert unobserved["predicted_score_mean"] < 0.195
+    assert unobserved["predicted_score_mean"] >= 0.1928
+    assert unobserved["predicted_score_variance"] >= 2.5e-9
+    assert unobserved["score_claim"] is False
+    assert unobserved["ready_for_exact_eval_dispatch"] is False
+    prefix = next(
+        row
+        for row in portfolio["ranked_rows"]
+        if row["candidate_id"] == "pairset_prefix_k008"
+    )
+    assert "prediction_source" not in prefix
+    prefix_model = prefix["source_metadata"]["observation_response_model"]
+    assert prefix_model["active"] is False
+    assert prefix_model["inactive_reason"] == "no_exact_observations_for_selector_kind"
+
+
+def test_pairset_response_model_requires_selected_pair_identity(tmp_path: Path) -> None:
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.195,
+        pairset_acquisitions=[_pairset_acquisition_with_response_candidates()],
+        observations=[
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_diversity_k002",
+                score=0.193,
+                archive_char="a",
+                raw_char="b",
             ),
             _contest_observation(
                 tmp_path,
@@ -339,26 +418,15 @@ def test_portfolio_uses_exact_pairset_observations_as_planning_prior(
     )
 
     model = portfolio["observation_feedback"]["pairset_observation_response_model"]
-    assert model["active"] is True
-    assert model["axis"] == "contest_cpu"
-    assert model["training_row_count"] == 2
-    assert model["observed_selected_pair_counts"] == [2, 4]
-    assert model["score_claim"] is False
-
+    assert model["active"] is False
+    assert model["identity_counts"]["selected_pair_indices_missing_observation_count"] == 2
+    assert model["inactive_reason"] == "need_two_distinct_selected_pair_counts_per_selector_kind"
     unobserved = next(
         row
         for row in portfolio["ranked_rows"]
         if row["candidate_id"] == "pairset_diversity_k008"
     )
-    row_model = unobserved["source_metadata"]["observation_response_model"]
-    assert row_model["active"] is True
-    assert unobserved["prediction_source"] == (
-        "exact_pairset_observation_response_model_planning_prior"
-    )
-    assert unobserved["predicted_score_mean"] < 0.195
-    assert unobserved["predicted_score_variance"] >= 2.5e-9
-    assert unobserved["score_claim"] is False
-    assert unobserved["ready_for_exact_eval_dispatch"] is False
+    assert "prediction_source" not in unobserved
 
 
 def test_portfolio_preserves_custody_readiness_as_advisory_only(

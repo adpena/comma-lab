@@ -325,6 +325,8 @@ def test_cli_appends_and_prints_json_summary(tmp_path: Path) -> None:
         "-0.0002",
         "--source-artifact",
         str(source),
+        "--selected-pair-indices",
+        "26,588",
         "--observed-at-utc",
         "2026-05-22T14:30:00Z",
         "--print-summary",
@@ -344,6 +346,7 @@ def test_cli_appends_and_prints_json_summary(tmp_path: Path) -> None:
     stored = json.loads(output.read_text(encoding="utf-8").strip())
     assert stored["source_artifact_sha256"] == file_sha256(source)
     assert stored["evidence_grade"] == "macOS-MLX-research-signal"
+    assert stored["selected_pair_indices"] == [26, 588]
     assert stored["score_claim"] is False
     assert stored["promotable"] is False
 

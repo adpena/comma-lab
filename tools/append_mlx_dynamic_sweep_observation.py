@@ -42,6 +42,25 @@ def _parse_component_delta(value: str) -> tuple[str, float]:
     return key, parsed
 
 
+def _parse_int_csv(value: str) -> list[int]:
+    out: list[int] = []
+    for raw in value.split(","):
+        text = raw.strip()
+        if not text:
+            continue
+        try:
+            out.append(int(text))
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(
+                "--selected-pair-indices must be a comma-separated integer list"
+            ) from exc
+    if not out:
+        raise argparse.ArgumentTypeError(
+            "--selected-pair-indices must include at least one integer"
+        )
+    return out
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--jsonl", type=Path, required=True, help="Observation JSONL to append.")
@@ -83,6 +102,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--observed-at-utc")
     parser.add_argument("--run-id")
     parser.add_argument("--notes")
+    parser.add_argument(
+        "--selected-pair-indices",
+        type=_parse_int_csv,
+        help="Comma-separated pair indices for pairset identity/custody matching.",
+    )
     parser.add_argument("--print-summary", action="store_true")
     parser.add_argument(
         "--allow-duplicate-observation",
@@ -124,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
                 "run_id": args.run_id,
                 "notes": args.notes,
                 "evidence_grade": args.evidence_grade,
+                "selected_pair_indices": args.selected_pair_indices,
             }.items()
             if value is not None
         }

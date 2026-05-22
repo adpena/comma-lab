@@ -88,6 +88,7 @@ def _observation_row(
     score: float,
     archive_char: str,
     raw_char: str,
+    selected_pair_indices: list[int],
 ) -> dict[str, object]:
     source_path, archive_sha, raw_sha = _auth_eval_json(
         tmp_path,
@@ -115,6 +116,7 @@ def _observation_row(
             "rate_delta": 0.0,
         },
         "source_artifact_path": source_path.as_posix(),
+        "selected_pair_indices": selected_pair_indices,
     }
 
 
@@ -147,6 +149,7 @@ def test_cli_writes_action_summary_and_response_model_markdown(
                 score=0.193,
                 archive_char="a",
                 raw_char="b",
+                selected_pair_indices=[0, 1],
             ),
             _observation_row(
                 tmp_path,
@@ -154,6 +157,7 @@ def test_cli_writes_action_summary_and_response_model_markdown(
                 score=0.1928,
                 archive_char="d",
                 raw_char="e",
+                selected_pair_indices=[0, 1, 2, 3],
             ),
         ],
     )
