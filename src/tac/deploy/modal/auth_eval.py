@@ -29,6 +29,14 @@ from tac.deploy.claims import (
 from tac.repo_io import read_json, write_json
 
 SPAWN_SCHEMA = "modal_auth_eval_spawn_v1"
+FALSE_AUTHORITY_FIELDS = {
+    "score_claim": False,
+    "score_claim_valid": False,
+    "promotion_eligible": False,
+    "promotable": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+}
 SKIPPED_RUNTIME_UPLOAD_FILENAMES = {".DS_Store", ".gitignore", ".gitattributes"}
 SENSITIVE_RUNTIME_UPLOAD_NAMES = {
     ".env",
@@ -134,6 +142,16 @@ def sha256_bytes(data: bytes) -> str:
     """Return the SHA-256 digest for in-memory custody payloads."""
 
     return hashlib.sha256(data).hexdigest()
+
+
+def complete_false_authority_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    """Fill the standard false-authority fields on non-authoritative payloads."""
+
+    out = dict(payload)
+    if out.get("score_claim") is False and out.get("promotion_eligible") is False:
+        for key, value in FALSE_AUTHORITY_FIELDS.items():
+            out.setdefault(key, value)
+    return out
 
 
 def _canonical_json_sha256(payload: Any) -> str:
@@ -504,6 +522,7 @@ def write_spawn_metadata(
     }
     if extra:
         payload.update(extra)
+    payload = complete_false_authority_fields(payload)
     path = out_dir / "modal_auth_eval_spawn.json"
     write_json(path, payload)
     (out_dir / "modal_call_id.txt").write_text(call_id + "\n", encoding="utf-8")
@@ -540,6 +559,7 @@ def fail_closed_remote_exception_result(
         "adjudication_required": True,
         "allowed_use": ["debug", "no_score_claim", "no_promotion"],
     }
+    validation = complete_false_authority_fields(validation)
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
         validation_path.parent.mkdir(parents=True, exist_ok=True)
@@ -693,6 +713,7 @@ def recover_modal_auth_eval(
             "score_claim": False,
             "promotion_eligible": False,
         }
+        summary = complete_false_authority_fields(summary)
         write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
         return summary
     except Exception as exc:
@@ -707,6 +728,7 @@ def recover_modal_auth_eval(
             "score_claim": False,
             "promotion_eligible": False,
         }
+        summary = complete_false_authority_fields(summary)
         write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
         return summary
 
@@ -721,6 +743,7 @@ def recover_modal_auth_eval(
             "score_claim": False,
             "promotion_eligible": False,
         }
+        summary = complete_false_authority_fields(summary)
         write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
         return summary
 
@@ -743,6 +766,7 @@ def recover_modal_auth_eval(
                 "score_claim": False,
                 "promotion_eligible": False,
             }
+            summary = complete_false_authority_fields(summary)
             write_json(out_dir / "modal_auth_eval_recover_summary.json", summary)
             return summary
 
@@ -795,6 +819,7 @@ __all__ = [
     "PreparedModalAuthEvalRequest",
     "UnsafeModalArtifactPath",
     "claim_modal_auth_eval_dispatch",
+    "complete_false_authority_fields",
     "fail_closed_remote_exception_result",
     "function_call_id",
     "materialize_modal_artifacts",

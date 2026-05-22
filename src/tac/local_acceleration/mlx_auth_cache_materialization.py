@@ -303,7 +303,7 @@ def _recommended_commands(*, action: str, cache_audit_path: str | None) -> list[
             "--pair-group-id <pair_group_id>"
         )
         commands.append(
-            ".venv/bin/modal volume get comma-auth-eval-cache-artifacts "
+            ".venv/bin/modal volume get --force comma-auth-eval-cache-artifacts "
             "<run_id>/ ./modal_<run_id>/"
         )
         commands.append(

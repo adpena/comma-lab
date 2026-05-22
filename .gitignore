@@ -86,6 +86,7 @@ reports/mlx_scorer_response_profile*/
 reports/mlx_scorer_batch_invariance*/
 reports/mlx_scorer_production_contract*/
 reports/mlx_scorer_response_execution_plan*/
+modal_*_auth_tensors_*/
 outputs/
 
 # Local Claude scheduler locks contain machine/session PIDs and must not churn.

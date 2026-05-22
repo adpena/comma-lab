@@ -60,6 +60,7 @@ from tac.deploy.modal.auth_eval import (
     ModalArtifactWriteError,
     ModalAuthEvalPairingError,
     claim_modal_auth_eval_dispatch,
+    complete_false_authority_fields,
     fail_closed_remote_exception_result,
     function_call_id,
     materialize_modal_artifacts,
@@ -198,7 +199,7 @@ _sha256_path = sha256_file
 
 
 def _json_bytes(payload: dict[str, Any]) -> bytes:
-    return json_text(payload).encode("utf-8")
+    return json_text(complete_false_authority_fields(payload)).encode("utf-8")
 
 
 def _expected_uploaded_runtime_tree_sha256(
@@ -776,7 +777,7 @@ def _run_auth_eval_inner(
         "scorer_input_cache_tensor_volume_run_id": tensor_volume_run_id,
         "scorer_input_cache_tensor_volume_path": str(tensor_volume_dir),
         "scorer_input_cache_tensor_volume_download_command": (
-            f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+            f".venv/bin/modal volume get --force {AUTH_CACHE_VOLUME_NAME} "
             f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
         ),
         "scorer_input_cache_tensor_volume_manifest": tensor_volume_manifest,
@@ -1052,7 +1053,7 @@ def main(
             AUTH_CACHE_VOLUME_ROOT / tensor_volume_run_id / "scorer_input_cache_tensors"
         ),
         "scorer_input_cache_tensor_volume_download_command": (
-            f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+            f".venv/bin/modal volume get --force {AUTH_CACHE_VOLUME_NAME} "
             f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
         ),
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cpu",
@@ -1063,6 +1064,7 @@ def main(
         "score_axis": "contest_cpu",
         **pairing,
     }
+    local_summary = complete_false_authority_fields(local_summary)
     write_json(out_dir / "modal_cpu_auth_eval_local_request.json", local_summary)
 
     claim_spec = ClaimSpec(
@@ -1195,6 +1197,7 @@ def main(
                 "archive_sha256": archive_sha256,
                 "archive_size_bytes": archive_size_bytes,
             }
+            failure = complete_false_authority_fields(failure)
             write_json(out_dir / "modal_cpu_auth_eval_result.json", failure)
             terminal_modal_auth_eval_claim(
                 repo_root=Path.cwd(),
@@ -1226,10 +1229,11 @@ def main(
     result["scorer_input_cache_tensor_volume_name"] = AUTH_CACHE_VOLUME_NAME
     result["scorer_input_cache_tensor_volume_run_id"] = tensor_volume_run_id
     result["scorer_input_cache_tensor_volume_download_command"] = (
-        f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+        f".venv/bin/modal volume get --force {AUTH_CACHE_VOLUME_NAME} "
         f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
     )
     result.update(pairing)
+    result = complete_false_authority_fields(result)
     write_json(out_dir / "modal_cpu_auth_eval_result.json", result)
 
     print("=" * 60)
@@ -1304,7 +1308,7 @@ def _record_tensor_volume_manifest(
         "manifest_sha256": _sha256_path(manifest_path),
         "tensor_payload_returned_via_modal_artifacts": False,
         "volume_download_command": (
-            f".venv/bin/modal volume get {AUTH_CACHE_VOLUME_NAME} "
+            f".venv/bin/modal volume get --force {AUTH_CACHE_VOLUME_NAME} "
             f"{tensor_volume_run_id}/ ./modal_{tensor_volume_run_id}/"
         ),
         "payload": payload,

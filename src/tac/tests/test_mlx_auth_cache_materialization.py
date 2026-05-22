@@ -83,7 +83,7 @@ def test_materialization_plan_classifies_same_archive_auth_surface_mismatch() ->
     assert plan["required_artifacts"][0]["expected_raw_sha256"] == "d" * 64
     recommended = "\n".join(plan["recommended_commands"])
     assert "experiments/modal_auth_eval_cpu.py" in recommended
-    assert "modal volume get comma-auth-eval-cache-artifacts" in recommended
+    assert "modal volume get --force comma-auth-eval-cache-artifacts" in recommended
     assert "--scorer-input-cache-tensors-out-dir" in recommended
     assert "--allow-large-scorer-input-cache-tensor-export" in recommended
     assert "tools/build_mlx_scorer_input_cache.py --raw" in recommended

@@ -195,7 +195,11 @@ def test_cuda_remote_unexpected_exception_returns_fail_closed_result(mod, tmp_pa
 
     assert result["passed"] is False
     assert result["score_claim"] is False
+    assert result["score_claim_valid"] is False
     assert result["promotion_eligible"] is False
+    assert result["promotable"] is False
+    assert result["rank_or_kill_eligible"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
     assert result["returncode"] == 98
     assert result["error_type"] == "ValueError"
     assert "synthetic runtime envelope failure" in result["error"]
@@ -223,7 +227,11 @@ def test_cpu_remote_unexpected_exception_returns_fail_closed_result(tmp_path, mo
 
     assert result["passed"] is False
     assert result["score_claim"] is False
+    assert result["score_claim_valid"] is False
     assert result["promotion_eligible"] is False
+    assert result["promotable"] is False
+    assert result["rank_or_kill_eligible"] is False
+    assert result["ready_for_exact_eval_dispatch"] is False
     assert result["returncode"] == 98
     assert result["error_type"] == "RuntimeError"
     assert "synthetic cpu runtime envelope failure" in result["error"]
@@ -783,7 +791,11 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
     request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
     result = json.loads((out_dir / "modal_cuda_auth_eval_result.json").read_text())
     assert request["score_claim"] is False
+    assert request["score_claim_valid"] is False
     assert request["promotion_eligible"] is False
+    assert request["promotable"] is False
+    assert request["rank_or_kill_eligible"] is False
+    assert request["ready_for_exact_eval_dispatch"] is False
     assert request["adjudication_required"] is True
     assert request["submission_dir"] is None
     assert request["modal_dispatch_mode"] == "blocking_remote"
@@ -1130,7 +1142,7 @@ def test_modal_cuda_tensor_volume_export_flows_to_remote_call(
     result = json.loads((out_dir / "modal_cuda_auth_eval_result.json").read_text())
     assert request["scorer_input_cache_tensors_requested"] is True
     assert request["scorer_input_cache_tensor_volume_run_id"] == "unit_tensor_run"
-    assert "modal volume get comma-auth-eval-cache-artifacts" in request[
+    assert "modal volume get --force comma-auth-eval-cache-artifacts" in request[
         "scorer_input_cache_tensor_volume_download_command"
     ]
     assert result["scorer_input_cache_tensors_requested"] is True

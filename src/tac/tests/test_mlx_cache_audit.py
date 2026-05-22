@@ -288,6 +288,8 @@ def test_cache_audit_uses_canonical_equation_for_scorer_input_hashes() -> None:
     assert audit["passed"] is True
     assert audit["canonical_equation"]["equation_id"] == "scorer_input_cache_hash_identity_v1"
     assert audit["canonical_equation"]["identity_residual"] == 0
+    assert audit["eligible_for_local_mlx_transfer_calibration"] is True
+    assert audit["identity_residual"] == 0
 
 
 def test_cache_audit_accepts_auth_eval_tensor_manifest() -> None:
@@ -299,6 +301,8 @@ def test_cache_audit_accepts_auth_eval_tensor_manifest() -> None:
     assert audit["passed"] is True
     assert audit["auth_eval"]["scorer_input_hash_reference_source"] == "auth_eval_provenance"
     assert audit["canonical_equation"]["identity_residual"] == 0
+    assert audit["eligible_for_local_mlx_transfer_calibration"] is True
+    assert audit["identity_residual"] == 0
 
 
 def test_cache_audit_fails_scorer_input_hash_mismatch_when_auth_provides_hashes() -> None:
