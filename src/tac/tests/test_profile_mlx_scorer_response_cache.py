@@ -56,7 +56,7 @@ def test_profile_payload_is_non_authoritative_and_selects_best(monkeypatch: pyte
         candidate_cache_dir="/tmp/cand",
         archive_size_bytes=123,
         repo_root=REPO,
-        batch_pairs_values=[1, 2],
+        batch_pairs_values=[1],
         device_values=["cpu"],
         start_pair=8,
         max_pairs=4,
@@ -65,12 +65,27 @@ def test_profile_payload_is_non_authoritative_and_selects_best(monkeypatch: pyte
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["candidate_generation_only"] is True
-    assert len(payload["rows"]) == 2
+    assert len(payload["rows"]) == 1
     assert payload["rows"][0]["pair_window"] == [8, 12]
-    assert payload["best"]["batch_pairs"] == 2
-    assert payload["best"]["pairs_per_second"] == 2.0
+    assert payload["best"]["batch_pairs"] == 1
+    assert payload["best"]["pairs_per_second"] == 1.0
     assert payload["gpu_research_signal_allowed"] is False
-    assert seen_allowances == [False, False]
+    assert payload["batch_shape_research_signal_allowed"] is False
+    assert seen_allowances == [False]
+
+
+def test_profile_payload_rejects_non_singleton_batch_without_explicit_research_allowance() -> None:
+    with pytest.raises(ValueError, match="--allow-batch-shape-research-signal"):
+        profiler.build_profile_payload(
+            reference_cache_dir="/tmp/ref",
+            candidate_cache_dir="/tmp/cand",
+            archive_size_bytes=123,
+            repo_root=REPO,
+            batch_pairs_values=[1, 2],
+            device_values=["cpu"],
+            start_pair=0,
+            max_pairs=1,
+        )
 
 
 def test_profile_payload_rejects_gpu_without_explicit_research_allowance() -> None:
@@ -88,7 +103,7 @@ def test_profile_payload_rejects_gpu_without_explicit_research_allowance() -> No
 
 
 def test_profile_payload_rejects_non_singleton_gpu_batch_after_allowance() -> None:
-    with pytest.raises(ValueError, match="--batch-pairs 1"):
+    with pytest.raises(ValueError, match="--allow-batch-shape-research-signal"):
         profiler.build_profile_payload(
             reference_cache_dir="/tmp/ref",
             candidate_cache_dir="/tmp/cand",

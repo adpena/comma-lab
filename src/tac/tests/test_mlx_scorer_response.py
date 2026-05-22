@@ -11,7 +11,7 @@ import numpy as np
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
 from tac.local_acceleration.mlx_scorer_response import (
-    GPU_BATCH_SHAPE_BLOCKER,
+    BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
     build_mlx_scorer_response_payload,
     load_scorer_input_cache,
@@ -152,6 +152,22 @@ def test_mlx_scorer_response_rejects_gpu_without_explicit_research_allowance() -
         raise AssertionError("MLX GPU scorer-response path was accepted without explicit allowance")
 
 
+def test_mlx_scorer_response_rejects_non_singleton_cpu_batch_without_research_allowance() -> None:
+    try:
+        build_mlx_scorer_response_payload(
+            reference_cache_dir="/does/not/exist/reference",
+            candidate_cache_dir="/does/not/exist/candidate",
+            archive_size_bytes=1,
+            device_type="cpu",
+            batch_pairs=2,
+        )
+    except ValueError as exc:
+        assert BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER in str(exc)
+        assert "batch_pairs=1" in str(exc)
+    else:
+        raise AssertionError("MLX CPU non-singleton batch was accepted without research allowance")
+
+
 def test_mlx_scorer_response_cli_rejects_gpu_without_explicit_research_allowance(tmp_path: Path) -> None:
     pair_indices = np.array([[0, 1]], dtype=np.int64)
     seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
@@ -196,7 +212,7 @@ def test_mlx_scorer_response_rejects_non_singleton_gpu_batch_after_allowance() -
             allow_gpu_research_signal=True,
         )
     except ValueError as exc:
-        assert GPU_BATCH_SHAPE_BLOCKER in str(exc)
+        assert BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER in str(exc)
         assert "batch_pairs=1" in str(exc)
     else:
         raise AssertionError("MLX GPU non-singleton batch was accepted without invariance override")
@@ -235,7 +251,7 @@ def test_mlx_scorer_response_cli_rejects_non_singleton_gpu_batch_after_allowance
     )
 
     assert completed.returncode != 0
-    assert GPU_BATCH_SHAPE_BLOCKER in completed.stderr
+    assert BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER in completed.stderr
 
 
 def _write_test_cache(

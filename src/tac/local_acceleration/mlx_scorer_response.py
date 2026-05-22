@@ -31,6 +31,9 @@ from tac.local_acceleration.mlx_scorer_adapters import (
 SCHEMA_VERSION = "mlx_scorer_response.v1"
 GPU_RESEARCH_SIGNAL_BLOCKER = "mlx_gpu_scorer_response_requires_explicit_research_signal_allowance"
 GPU_BATCH_SHAPE_BLOCKER = "mlx_gpu_scorer_response_requires_singleton_batches_until_invariance_passes"
+BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER = (
+    "mlx_scorer_response_non_singleton_batches_require_explicit_batch_shape_research_signal_allowance"
+)
 
 
 @dataclass(frozen=True)
@@ -86,6 +89,7 @@ def build_mlx_scorer_response_payload(
     start_pair: int = 0,
     max_pairs: int | None = None,
     allow_gpu_research_signal: bool = False,
+    allow_batch_shape_research_signal: bool = False,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
 
@@ -102,12 +106,13 @@ def build_mlx_scorer_response_payload(
             "prescreen signal only; pass allow_gpu_research_signal=True after "
             "recording CPU-transfer calibration or a research-only rationale"
         )
-    if device_type == "gpu" and batch_pairs_int != 1:
+    if batch_pairs_int != 1 and not allow_batch_shape_research_signal:
         raise ValueError(
-            f"{GPU_BATCH_SHAPE_BLOCKER}: MLX GPU scorer responses showed "
-            "batch-shape drift in FEC6 calibration; use batch_pairs=1 for GPU "
-            "or route larger GPU batches through audit_mlx_scorer_batch_invariance.py "
-            "before adding a reviewed override"
+            f"{BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER}: clean-head FEC6 parity "
+            "found batch-shape-sensitive SegNet argmax drift for MLX scorer "
+            "responses; use batch_pairs=1 for production local signal or pass "
+            "allow_batch_shape_research_signal=True only for explicitly "
+            "recorded batch-shape research probes"
         )
     if int(progress_every) < 0:
         raise ValueError(f"progress_every must be >= 0, got {progress_every}")
@@ -203,6 +208,7 @@ def build_mlx_scorer_response_payload(
         "score_axis": EVIDENCE_TAG_MLX,
         "hardware_substrate": f"MLX {device_type}",
         "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
+        "batch_shape_research_signal_allowed": bool(allow_batch_shape_research_signal),
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -246,8 +252,11 @@ def build_mlx_scorer_response_payload(
         "device_contract": {
             "gpu_research_signal_blocker": GPU_RESEARCH_SIGNAL_BLOCKER,
             "gpu_batch_shape_blocker": GPU_BATCH_SHAPE_BLOCKER,
+            "batch_shape_research_signal_blocker": BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER,
             "gpu_research_signal_required": device_type == "gpu",
+            "batch_shape_research_signal_required": batch_pairs_int != 1,
             "gpu_batch_pairs_allowed_without_invariance_override": 1,
+            "batch_pairs_allowed_without_invariance_override": 1,
             "allowed_uses": [
                 "local_mlx_training_gradient_shaping",
                 "local_sweep_reranking_after_passing_transfer_calibration",

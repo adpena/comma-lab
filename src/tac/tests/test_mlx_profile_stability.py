@@ -67,10 +67,26 @@ def test_profile_stability_passes_small_metric_drift_with_sha_warning() -> None:
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
     assert "profile_row_posenet_sha256_mismatch:index=1" in manifest["warnings"]
+    assert manifest["selection"]["eligible_row_indices"] == [0]
+    assert manifest["selection"]["recommended_row"]["index"] == 0
+    assert manifest["selection"]["recommended_row"]["batch_pairs"] == 1
+    assert manifest["selection"]["rejected_rows"][0]["reason"] == (
+        "non_singleton_batch_shape_requires_explicit_research_allowance"
+    )
+    assert manifest["profile_summary"]["archive_size_bytes"] is None
+
+
+def test_profile_stability_can_select_non_singleton_for_explicit_batch_shape_research() -> None:
+    manifest = build_profile_stability_manifest(
+        _profile(),
+        baseline_batch_pairs=1,
+        allow_batch_shape_research_signal=True,
+    )
+
+    assert manifest["passed"] is True
     assert manifest["selection"]["eligible_row_indices"] == [0, 1]
     assert manifest["selection"]["recommended_row"]["index"] == 1
     assert manifest["selection"]["recommended_row"]["batch_pairs"] == 2
-    assert manifest["profile_summary"]["archive_size_bytes"] is None
 
 
 def test_profile_stability_can_require_component_sha_match() -> None:
@@ -136,4 +152,4 @@ def test_profile_stability_cli_writes_manifest(tmp_path: Path) -> None:
     payload = json.loads(out_path.read_text(encoding="utf-8"))
     assert payload["passed"] is True
     assert payload["baseline"]["batch_pairs"] == 1
-    assert payload["selection"]["recommended_row"]["batch_pairs"] == 2
+    assert payload["selection"]["recommended_row"]["batch_pairs"] == 1

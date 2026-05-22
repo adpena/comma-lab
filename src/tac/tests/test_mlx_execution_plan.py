@@ -95,7 +95,7 @@ def _stable_gpu_manifest() -> dict:
     return build_profile_stability_manifest(profile, baseline_device="gpu")
 
 
-def test_execution_plan_uses_fastest_eligible_cpu_row_from_failed_profile() -> None:
+def test_execution_plan_uses_singleton_cpu_row_after_batch_shape_guard() -> None:
     manifest = build_profile_stability_manifest(
         _profile_with_gpu_rejected(),
         baseline_device="cpu",
@@ -113,12 +113,35 @@ def test_execution_plan_uses_fastest_eligible_cpu_row_from_failed_profile() -> N
     assert plan["promotion_eligible"] is False
     assert plan["profile_full_pass_required"] is False
     assert execution["device"] == "cpu"
-    assert execution["batch_pairs"] == 2
+    assert execution["batch_pairs"] == 1
     assert execution["start_pair"] == 16
     assert execution["max_pairs"] == 4
     assert execution["archive_size_bytes"] == 178417
     assert "--allow-gpu-research-signal" not in execution["command_args"]
     assert any("source_profile_failed" in warning for warning in plan["warnings"])
+
+
+def test_execution_plan_rejects_non_singleton_batch_without_explicit_research_allowance() -> None:
+    manifest = build_profile_stability_manifest(
+        _profile_with_gpu_rejected(),
+        baseline_device="cpu",
+        baseline_batch_pairs=1,
+        allow_batch_shape_research_signal=True,
+    )
+
+    try:
+        build_mlx_scorer_response_execution_plan(manifest)
+    except MLXExecutionPlanError as exc:
+        assert "non_singleton_batches_require_explicit_batch_shape" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected non-singleton batch-shape rejection")
+
+    plan = build_mlx_scorer_response_execution_plan(
+        manifest,
+        allow_batch_shape_research_signal=True,
+    )
+    assert plan["recommended_execution"]["batch_pairs"] == 2
+    assert "--allow-batch-shape-research-signal" in plan["recommended_execution"]["command_args"]
 
 
 def test_execution_plan_rejects_false_authority() -> None:
@@ -186,7 +209,7 @@ def test_execution_plan_cli_and_ll_plan_attachment(tmp_path: Path) -> None:
     )
     assert '"score_claim": false' in completed.stdout
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
-    assert plan["recommended_execution"]["batch_pairs"] == 2
+    assert plan["recommended_execution"]["batch_pairs"] == 1
 
     subprocess.run(
         [
@@ -214,6 +237,6 @@ def test_execution_plan_cli_and_ll_plan_attachment(tmp_path: Path) -> None:
         ll_plan["mlx_scorer_response_execution_plan"]["recommended_execution"][
             "batch_pairs"
         ]
-        == 2
+        == 1
     )
     assert "MLX Execution Recommendation" in ll_plan_md_path.read_text(encoding="utf-8")

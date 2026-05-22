@@ -36,6 +36,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "still refuses score/promotion authority."
         ),
     )
+    parser.add_argument(
+        "--allow-batch-shape-research-signal",
+        action="store_true",
+        help=(
+            "Permit a selected non-singleton batch row as explicit local "
+            "batch-shape research only. Production MLX scorer execution defaults "
+            "to batch_pairs=1."
+        ),
+    )
     return parser
 
 
@@ -50,6 +59,7 @@ def main(argv: list[str] | None = None) -> int:
             components_dir=args.components_dir,
             progress_every=args.progress_every,
             allow_gpu_research_signal=args.allow_gpu_research_signal,
+            allow_batch_shape_research_signal=args.allow_batch_shape_research_signal,
         )
     except (OSError, ValueError, MLXExecutionPlanError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)

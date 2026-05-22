@@ -31,6 +31,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Treat component array SHA drift as a blocker instead of a warning.",
     )
+    parser.add_argument(
+        "--allow-batch-shape-research-signal",
+        action="store_true",
+        help=(
+            "Allow non-singleton batch rows to be selected as research-only "
+            "execution candidates. Default selection rejects them after clean-head "
+            "FEC6 parity found batch-shape-sensitive SegNet argmax drift."
+        ),
+    )
     return parser
 
 
@@ -47,6 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         baseline_device=args.baseline_device,
         baseline_batch_pairs=args.baseline_batch_pairs,
         run_id=args.run_id,
+        allow_batch_shape_research_signal=args.allow_batch_shape_research_signal,
     )
     write_profile_stability_manifest(manifest, args.output)
     print(json.dumps({"passed": manifest["passed"], "verdict": manifest["verdict"]}, sort_keys=True))

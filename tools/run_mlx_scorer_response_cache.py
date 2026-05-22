@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from tac.local_acceleration.mlx_scorer_response import (
@@ -45,6 +46,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--allow-batch-shape-research-signal",
+        action="store_true",
+        help=(
+            "Permit batch_pairs > 1 as explicit local batch-shape research only. "
+            "Production MLX scorer signal should use singleton batches unless the "
+            "exact device/batch shape has a recorded passing invariance gate."
+        ),
+    )
+    parser.add_argument(
         "--progress-every",
         type=int,
         default=0,
@@ -61,19 +71,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
-    payload = build_mlx_scorer_response_payload(
-        reference_cache_dir=args.reference_cache_dir,
-        candidate_cache_dir=args.candidate_cache_dir,
-        archive_size_bytes=args.archive_size_bytes,
-        repo_root=args.repo_root,
-        batch_pairs=args.batch_pairs,
-        device_type=args.device,
-        components_dir=args.components_dir,
-        progress_every=args.progress_every,
-        start_pair=args.start_pair,
-        max_pairs=args.max_pairs,
-        allow_gpu_research_signal=args.allow_gpu_research_signal,
-    )
+    try:
+        payload = build_mlx_scorer_response_payload(
+            reference_cache_dir=args.reference_cache_dir,
+            candidate_cache_dir=args.candidate_cache_dir,
+            archive_size_bytes=args.archive_size_bytes,
+            repo_root=args.repo_root,
+            batch_pairs=args.batch_pairs,
+            device_type=args.device,
+            components_dir=args.components_dir,
+            progress_every=args.progress_every,
+            start_pair=args.start_pair,
+            max_pairs=args.max_pairs,
+            allow_gpu_research_signal=args.allow_gpu_research_signal,
+            allow_batch_shape_research_signal=args.allow_batch_shape_research_signal,
+        )
+    except (OSError, ValueError, NotImplementedError) as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 2
     write_mlx_scorer_response_payload(payload, args.output)
     print(
         json.dumps(

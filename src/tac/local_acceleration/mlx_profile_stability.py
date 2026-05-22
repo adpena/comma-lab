@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.local_acceleration.mlx_scorer_response import BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER
 
 SCHEMA_VERSION = "mlx_scorer_response_profile_stability.v1"
 PASS_VERDICT = "PASS_MLX_PROFILE_STABILITY"
@@ -46,6 +47,7 @@ def build_profile_stability_manifest(
     baseline_device: str | None = None,
     baseline_batch_pairs: int | None = None,
     run_id: str | None = None,
+    allow_batch_shape_research_signal: bool = False,
 ) -> dict[str, Any]:
     """Compare all profile rows to one baseline row.
 
@@ -85,6 +87,7 @@ def build_profile_stability_manifest(
         rows=normalized_rows,
         comparisons=comparisons,
         global_blockers=global_blockers,
+        allow_batch_shape_research_signal=bool(allow_batch_shape_research_signal),
     )
 
     passed = not blockers
@@ -104,6 +107,7 @@ def build_profile_stability_manifest(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,
+        "batch_shape_research_signal_allowed": bool(allow_batch_shape_research_signal),
         "baseline": baseline,
         "comparisons": comparisons,
         "selection": selection,
@@ -270,6 +274,7 @@ def _build_row_selection(
     rows: list[dict[str, Any]],
     comparisons: list[dict[str, Any]],
     global_blockers: list[str],
+    allow_batch_shape_research_signal: bool,
 ) -> dict[str, Any]:
     comparisons_by_index = {int(item["index"]): item for item in comparisons}
     eligible_rows: list[dict[str, Any]] = []
@@ -287,6 +292,16 @@ def _build_row_selection(
                     "blockers": global_blockers,
                 }
             )
+        elif row["batch_pairs"] != 1 and not allow_batch_shape_research_signal:
+            rejected_rows.append(
+                {
+                    "index": row["index"],
+                    "device": row["device"],
+                    "batch_pairs": row["batch_pairs"],
+                    "reason": "non_singleton_batch_shape_requires_explicit_research_allowance",
+                    "blockers": [BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER],
+                }
+            )
         elif comparison_blockers:
             rejected_rows.append(
                 {
@@ -302,7 +317,11 @@ def _build_row_selection(
 
     recommended = _select_fastest_row(eligible_rows)
     return {
-        "policy": "fastest_row_with_no_stability_blockers",
+        "policy": (
+            "fastest_row_with_no_stability_blockers_batch_shape_research_allowed"
+            if allow_batch_shape_research_signal
+            else "fastest_singleton_row_with_no_stability_blockers"
+        ),
         "eligible_row_indices": [int(row["index"]) for row in eligible_rows],
         "rejected_rows": rejected_rows,
         "recommended_row": _public_row(recommended) if recommended is not None else None,

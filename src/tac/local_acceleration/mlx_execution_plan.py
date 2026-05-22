@@ -16,6 +16,7 @@ from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_profile_stability import SCHEMA_VERSION as STABILITY_SCHEMA
+from tac.local_acceleration.mlx_scorer_response import BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER
 
 SCHEMA_VERSION = "mlx_scorer_response_execution_plan.v1"
 PRODUCER = "tac.local_acceleration.mlx_execution_plan"
@@ -55,6 +56,7 @@ def build_mlx_scorer_response_execution_plan(
     components_dir: str | Path | None = None,
     progress_every: int = 0,
     allow_gpu_research_signal: bool = False,
+    allow_batch_shape_research_signal: bool = False,
 ) -> dict[str, Any]:
     """Build safe runner args from a profile-stability manifest selection."""
 
@@ -112,6 +114,12 @@ def build_mlx_scorer_response_execution_plan(
             "recommended_row.device=gpu currently requires batch_pairs=1 until "
             "audit_mlx_scorer_batch_invariance.py passes for the selected window"
         )
+    if batch_pairs != 1 and not allow_batch_shape_research_signal:
+        raise MLXExecutionPlanError(
+            f"{BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER}: recommended_row.batch_pairs="
+            f"{batch_pairs}; pass allow_batch_shape_research_signal=True only for "
+            "explicit batch-shape research probes"
+        )
     progress = _nonnegative_int(progress_every, "progress_every")
 
     command_args = [
@@ -143,6 +151,8 @@ def build_mlx_scorer_response_execution_plan(
         command_args.extend(["--components-dir", str(components_dir)])
     if device == "gpu":
         command_args.append("--allow-gpu-research-signal")
+    if batch_pairs != 1:
+        command_args.append("--allow-batch-shape-research-signal")
 
     source_blockers = list(stability_manifest.get("blockers") or [])
     source_warnings = list(stability_manifest.get("warnings") or [])
@@ -202,6 +212,7 @@ def build_mlx_scorer_response_execution_plan(
             "components_dir": None if components_dir is None else str(components_dir),
             "progress_every": progress,
             "allow_gpu_research_signal_required": device == "gpu",
+            "allow_batch_shape_research_signal_required": batch_pairs != 1,
             "command_args": command_args,
             "python_command_args": [".venv/bin/python", *command_args],
         },
