@@ -121,7 +121,10 @@ def _rank_order(raw: Any, *, fallback_pairs: Sequence[int], label: str) -> list[
 
 
 def _default_positive_ints(max_count: int) -> list[int]:
-    return sorted({value for value in (1, 2, 4, 8, 12, 16, 24, 32, max_count) if 0 < value <= max_count})
+    coarse = (1, 2, 4, 8, 12, 16, 24, 32, max_count)
+    dense_tail = tuple(range(max(1, min(max_count, 32) - 6), min(max_count, 32) + 1, 2))
+    near_full = tuple(range(max(1, max_count - 2), max_count + 1))
+    return sorted({value for value in (*coarse, *dense_tail, *near_full) if 0 < value <= max_count})
 
 
 def _parse_positive_ints(values: Sequence[int] | None, *, max_count: int) -> list[int]:
@@ -548,6 +551,9 @@ def build_decoder_q_pairset_acquisition_plan(
             "best_selector_kind": best["selector_kind"],
             "prefix_ks": _parse_positive_ints(prefix_ks, max_count=len(best_order)),
             "diversity_ks": _parse_positive_ints(diversity_ks, max_count=diversity_max) if diversity_max else [],
+            "default_k_policy": (
+                "coarse_global_sweep_plus_dense_tail_for_observation_response_interpolation"
+            ),
             "include_drop_one": include_drop_one,
             "max_drop_two": max_drop_two,
             "max_swap_in": max_swap_in,

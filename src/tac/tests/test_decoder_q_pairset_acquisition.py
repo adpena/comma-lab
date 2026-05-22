@@ -89,6 +89,43 @@ def _selector_pareto() -> dict[str, object]:
     }
 
 
+def _large_selector_pareto(pair_count: int = 32) -> dict[str, object]:
+    pairs = list(range(pair_count))
+    return {
+        "schema": "decoder_q_selective_selector_pareto.v1",
+        **_false_authority(),
+        "summary": {"recommended_selector_id": "best_top32"},
+        "candidates": [
+            {
+                "schema": "decoder_q_selective_selector_candidate.v1",
+                **_false_authority(),
+                "selector_id": "best_top32",
+                "selector_kind": "top_rank_prefix",
+                "selector_rank": 1,
+                "rank_order_pair_indices": pairs,
+                "selected_pair_indices": pairs,
+                "selected_pair_count": len(pairs),
+                "payload_bytes": 41,
+                "predicted_score_mean": 0.19203,
+                "exact_cpu_calibrated_estimate": _exact_estimate(0.19203),
+            },
+            {
+                "schema": "decoder_q_selective_selector_candidate.v1",
+                **_false_authority(),
+                "selector_id": "spread_alt",
+                "selector_kind": "diversity_probe",
+                "selector_rank": 2,
+                "rank_order_pair_indices": list(range(0, pair_count * 2, 2)),
+                "selected_pair_indices": list(range(0, pair_count * 2, 2)),
+                "selected_pair_count": pair_count,
+                "payload_bytes": 41,
+                "predicted_score_mean": 0.19204,
+                "exact_cpu_calibrated_estimate": _exact_estimate(0.19204),
+            },
+        ],
+    }
+
+
 def _small_plan() -> dict[str, object]:
     return build_decoder_q_pairset_acquisition_plan(
         _selector_pareto(),
@@ -154,6 +191,55 @@ def test_pairset_acquisition_generates_deterministic_candidates() -> None:
     assert any(row[0] == "pairset_prefix_k004" for row in first_rows)
     assert any(row[1] == "drop_two_from_best" for row in first_rows)
     assert any(row[1] == "swap_in_alternative" for row in first_rows)
+
+
+def test_pairset_acquisition_defaults_include_dense_response_tail() -> None:
+    plan = build_decoder_q_pairset_acquisition_plan(
+        _large_selector_pareto(),
+        max_drop_two=0,
+        max_swap_in=0,
+        include_drop_one=False,
+    )
+
+    assert plan["selection_policy"]["prefix_ks"] == [
+        1,
+        2,
+        4,
+        8,
+        12,
+        16,
+        24,
+        26,
+        28,
+        30,
+        31,
+        32,
+    ]
+    assert plan["selection_policy"]["diversity_ks"] == [
+        1,
+        2,
+        4,
+        8,
+        12,
+        16,
+        24,
+        26,
+        28,
+        30,
+        31,
+        32,
+    ]
+    acquisition_ids = {
+        row["acquisition_id"]
+        for row in plan["candidates"]  # type: ignore[index]
+    }
+    assert "pairset_prefix_k026" in acquisition_ids
+    assert "pairset_prefix_k028" in acquisition_ids
+    assert "pairset_diversity_k030" in acquisition_ids
+    assert (
+        plan["selection_policy"]["default_k_policy"]
+        == "coarse_global_sweep_plus_dense_tail_for_observation_response_interpolation"
+    )
 
 
 def test_pairset_acquisition_preserves_selector_metadata_and_valid_pairs() -> None:
