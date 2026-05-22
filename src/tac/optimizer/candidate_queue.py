@@ -17,11 +17,23 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.pr95_muon_local_training_integration import (
+    SCHEMA as PR95_LOCAL_TRAINING_SCHEMA,
+)
+from tac.optimization.pr95_muon_local_training_integration import (
+    adapt_pr95_local_training_manifest_to_candidate,
+)
 from tac.optimization.proxy_candidate_contract import (
     PROXY_DEPLOYMENT_TARGET,
     PROXY_DISPATCH_BLOCKERS,
     PROXY_TARGET_MODES,
     apply_proxy_evidence_boundary,
+)
+from tac.optimization.representation_training_probe_integration import (
+    SCHEMA as REPRESENTATION_TRAINING_SCHEMA,
+)
+from tac.optimization.representation_training_probe_integration import (
+    adapt_representation_training_manifest_to_candidate,
 )
 
 QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
@@ -115,25 +127,22 @@ def _add_blockers(row: dict[str, Any], blockers: Iterable[str]) -> None:
 def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
     merged = dict(existing)
     for key, value in incoming.items():
-        if key == "source_paths":
-            merged[key] = _ordered_unique([*merged.get(key, []), *value])
-        elif key == "dispatch_blockers":
+        if key == "source_paths" or key == "dispatch_blockers":
             merged[key] = _ordered_unique([*merged.get(key, []), *value])
         elif key in {"rank_score", "predicted_contest_cpu_gha", "fitness"}:
             old = _as_float(merged.get(key))
             new = _as_float(value)
             if old is None or (new is not None and new < old):
                 merged[key] = value
-        elif value is not None:
-            if key not in merged or merged.get(key) in (None, "", [], {}):
-                merged[key] = value
-            elif key in {
+        elif value is not None and (
+            key not in merged or merged.get(key) in (None, "", [], {}) or key in {
                 "macos_cpu_score",
                 "rank_score_field",
                 "queue_priority",
                 "ranking_evidence_grade",
-            }:
-                merged[key] = value
+            }
+        ):
+            merged[key] = value
     return merged
 
 
@@ -483,6 +492,75 @@ def _optimizer_guided_queue_candidates(
     return rows
 
 
+def _mlx_dynamic_learned_sweep_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for source in payload.get("ranked_sweep_rows") or []:
+        if not isinstance(source, Mapping):
+            continue
+        source_candidate_id = str(source.get("candidate_id") or "")
+        config_id = str(source.get("sweep_config_id") or "")
+        pass_id = str(source.get("optimization_pass_id") or "")
+        if not source_candidate_id or not config_id or not pass_id:
+            continue
+        acquisition_value = _as_float(source.get("acquisition_value"))
+        row = dict(source)
+        row.update(
+            {
+                "candidate_id": f"{source_candidate_id}::{config_id}::{pass_id}",
+                "source_candidate_id": source_candidate_id,
+                "source_paths": [_repo_rel(source_path, repo_root)],
+                "lane_id": source.get("lane_id") or "mlx_dynamic_learned_sweep_planning",
+                "lane_class": source.get("family") or "mlx_dynamic_learned_sweep",
+                "candidate_family": source.get("family") or "mlx_dynamic_learned_sweep",
+                "optimizer_tool": payload.get("tool") or "tools/plan_mlx_dynamic_learned_sweep.py",
+                "rank_score": -acquisition_value if acquisition_value is not None else None,
+                "rank_score_field": "negative_acquisition_value_proxy_not_score",
+                "evidence_semantics": (
+                    "mlx_dynamic_learned_sweep_plan_proxy_not_exact_auth_eval"
+                ),
+                "evidence_grade": payload.get("evidence_grade")
+                or "[macOS-MLX research-signal]",
+                "consumer_payload": {
+                    "schema": "mlx_dynamic_learned_sweep_candidate_payload.v1",
+                    "mlx_dynamic_learned_sweep": {
+                        "source_candidate_id": source_candidate_id,
+                        "sweep_config_id": config_id,
+                        "optimization_pass_id": pass_id,
+                        "family": source.get("family"),
+                        "component_axis_context": source.get("component_axis_context"),
+                        "canonical_equation_provenance": source.get(
+                            "canonical_equation_provenance"
+                        ),
+                        "master_gradient_provenance": source.get(
+                            "master_gradient_provenance"
+                        ),
+                        "acquisition_value": acquisition_value,
+                        "ready_for_local_sweep": source.get("ready_for_local_sweep"),
+                        "exact_eval_candidate": source.get("exact_eval_candidate"),
+                    },
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "promotable": False,
+                },
+            }
+        )
+        row = apply_proxy_evidence_boundary(
+            row,
+            dispatch_blockers=[
+                "mlx_dynamic_learned_sweep_plan_is_proxy_signal",
+                "requires_observation_append_before_promotion",
+                "requires_byte_closed_materialization_before_exact_eval",
+                "requires_lane_claim_before_dispatch",
+            ],
+        )
+        rows.append(row)
+    return rows
+
+
 def _kaggle_proxy_sweep_candidates(
     payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
 ) -> list[dict[str, Any]]:
@@ -772,6 +850,28 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str,
             source_path=path,
             repo_root=repo_root,
         )
+    if schema == "mlx_dynamic_learned_sweep_plan.v1":
+        return schema, _mlx_dynamic_learned_sweep_candidates(
+            payload,
+            source_path=path,
+            repo_root=repo_root,
+        )
+    if schema == PR95_LOCAL_TRAINING_SCHEMA:
+        return schema, [
+            adapt_pr95_local_training_manifest_to_candidate(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            )
+        ]
+    if schema == REPRESENTATION_TRAINING_SCHEMA:
+        return schema, [
+            adapt_representation_training_manifest_to_candidate(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            )
+        ]
     if schema == "pr101_kaggle_proxy_sweep_v1":
         return schema, _kaggle_proxy_sweep_candidates(payload, source_path=path, repo_root=repo_root)
     if schema == "pr101_kaggle_proxy_runtime_packet_v1":

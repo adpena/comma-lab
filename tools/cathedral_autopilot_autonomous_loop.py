@@ -1980,9 +1980,7 @@ def _cable_d_consumer_sidecar_carries_structural_signal(
         n_bytes, (int, float)
     ):
         return False
-    if n_pairs <= 0 and n_bytes <= 0:
-        return False
-    return True
+    return not (n_pairs <= 0 and n_bytes <= 0)
 
 
 def _cable_d_consumers_7_14_sidecar_reward_factor(
@@ -3699,7 +3697,13 @@ def _coerce_consumer_payload(raw: Mapping[str, Any], *, context: str) -> dict[st
         return {}
     if not isinstance(value, Mapping):
         raise ValueError(f"{context}: consumer_payload must be a JSON object")
-    for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+    for key in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "promotable",
+    ):
         if value.get(key) is True:
             raise ValueError(f"{context}: consumer_payload.{key}=true is forbidden")
     return dict(value)
@@ -6493,7 +6497,7 @@ def _invoke_consumer_safely(
         if per_axis_breakdown is not None:
             result["predicted_axis_decomposition"] = per_axis_breakdown
         return result
-    except Exception as exc:  # noqa: BLE001  defensive at consumer boundary
+    except Exception as exc:
         return {
             "consumer_module": getattr(module, "__name__", "<unknown>"),
             "candidate_id": candidate.candidate_id,
@@ -6553,6 +6557,8 @@ def _compose_per_axis_decomposition_if_present(
         from tac.cathedral.consumer_contract import AxisDecomposition
         from tac.score_composition import (
             CANONICAL_RATE_DENOM_BYTES as _RATE_DENOM,
+        )
+        from tac.score_composition import (
             compose_score_from_axes,
         )
     except ImportError as exc:
@@ -6665,7 +6671,7 @@ def invoke_cathedral_consumers_on_candidates(
                     "predicted_delta_passthrough": float(predicted_delta),
                     "explanation": str(explanation)[:512],
                 })
-        except Exception as exc:  # noqa: BLE001  defensive
+        except Exception as exc:
             master_gradient_annotations.append({
                 "error": f"{type(exc).__name__}: {exc}",
             })
@@ -6895,16 +6901,15 @@ def invoke_phase_2_ablation_on_candidates(
     # on the hot path.
     try:
         from tac.findings_lagrangian.phase_2_ablation import (
+            SUPPORTED_ADJUSTERS,
             AblationMode,
             AdjusterAblationContext,
-            AdjusterAblationVerdict,
-            SUPPORTED_ADJUSTERS,
             append_paired_comparison_row,
             paired_comparison_against_hand_derived,
         )
         _ABLATION_OK = True
         _import_error: str | None = None
-    except Exception as exc:  # noqa: BLE001 defensive
+    except Exception as exc:
         _ABLATION_OK = False
         _import_error = f"{type(exc).__name__}: {exc}"
 
@@ -6967,12 +6972,8 @@ def invoke_phase_2_ablation_on_candidates(
     divergences_per_adjuster: dict[str, list[float]] = {
         name: [] for name in SUPPORTED_ADJUSTERS
     }
-    sign_flips_per_adjuster: dict[str, int] = {
-        name: 0 for name in SUPPORTED_ADJUSTERS
-    }
-    out_of_tolerance_per_adjuster: dict[str, int] = {
-        name: 0 for name in SUPPORTED_ADJUSTERS
-    }
+    sign_flips_per_adjuster: dict[str, int] = dict.fromkeys(SUPPORTED_ADJUSTERS, 0)
+    out_of_tolerance_per_adjuster: dict[str, int] = dict.fromkeys(SUPPORTED_ADJUSTERS, 0)
 
     # Map adjuster name -> CandidateRow field accessor.
     def _signal_for_adjuster(c: CandidateRow, name: str) -> float | None:
@@ -7015,7 +7016,7 @@ def invoke_phase_2_ablation_on_candidates(
                     try:
                         append_paired_comparison_row(verdict)
                         posterior_persisted_count += 1
-                    except Exception as persist_exc:  # noqa: BLE001
+                    except Exception as persist_exc:
                         per_candidate_errors += 1
                         verdicts.append({
                             "candidate_id": candidate.candidate_id,
@@ -7028,7 +7029,7 @@ def invoke_phase_2_ablation_on_candidates(
                             "score_claim": False,
                             "promotable": False,
                         })
-            except Exception as exc:  # noqa: BLE001 defensive
+            except Exception as exc:
                 per_candidate_errors += 1
                 verdicts.append({
                     "candidate_id": candidate.candidate_id,
@@ -7062,7 +7063,7 @@ def invoke_phase_2_ablation_on_candidates(
             try:
                 import statistics as _stats
                 std_abs = _stats.pstdev(abs_divs)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 std_abs = None
         else:
             std_abs = 0.0
@@ -7185,13 +7186,13 @@ def invoke_meta_lagrangian_on_candidates(
     # the wire-in is not on the hot path.
     try:
         from tac.findings_lagrangian import (
-            posterior_update_from_anchors,
-            compute_findings_lagrangian,
             build_initial_partition,
+            compute_findings_lagrangian,
+            posterior_update_from_anchors,
         )
         _LAGRANGIAN_OK = True
         _import_error: str | None = None
-    except Exception as exc:  # noqa: BLE001  defensive
+    except Exception as exc:
         _LAGRANGIAN_OK = False
         _import_error = f"{type(exc).__name__}: {exc}"
 
@@ -7236,7 +7237,7 @@ def invoke_meta_lagrangian_on_candidates(
     # per the MDL-with-wavelet-prior splitting rule per Catalog #277).
     try:
         partition = build_initial_partition()
-    except Exception as exc:  # noqa: BLE001  defensive
+    except Exception as exc:
         invocations.append({
             "schema_error": (
                 f"build_initial_partition failed: "
@@ -7307,7 +7308,7 @@ def invoke_meta_lagrangian_on_candidates(
                     "Phase 2 will replace with actual dual variables"
                 )[:512],
             })
-        except Exception as exc:  # noqa: BLE001  defensive per-candidate
+        except Exception as exc:
             per_candidate_errors += 1
             invocations.append({
                 "candidate_id": candidate.candidate_id,
@@ -7917,7 +7918,7 @@ def main(argv: list[str] | None = None) -> int:
                     invocations_summary_path=str(args.output) if args.output else None,
                     notes="report-only autopilot run",
                 )
-            except Exception as exc:  # noqa: BLE001  defensive: never crash the loop
+            except Exception as exc:
                 print(
                     f"cathedral_autopilot_autonomous_loop: WARNING — verdict-ledger persistence failed: {type(exc).__name__}: {exc}",
                     file=sys.stderr,
@@ -8043,7 +8044,7 @@ def main(argv: list[str] | None = None) -> int:
             panel_axis=args.score_panel_axis,
             persist_to_posterior=args.persist_phase_2_ablation,
         )
-    except Exception as exc:  # noqa: BLE001  defensive: never crash the loop
+    except Exception as exc:
         consumer_invocations_post_loop = {
             "schema": CATHEDRAL_CONSUMER_INVOCATION_SCHEMA,
             "score_claim": False,
@@ -8110,7 +8111,7 @@ def main(argv: list[str] | None = None) -> int:
                 invocations_summary_path=str(args.output) if args.output else None,
                 notes="run_continuous_loop autopilot run",
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(
                 f"cathedral_autopilot_autonomous_loop: WARNING — verdict-ledger persistence failed: {type(exc).__name__}: {exc}",
                 file=sys.stderr,

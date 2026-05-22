@@ -4,8 +4,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tac.optimizer.candidate_queue import QUEUE_SCHEMA, build_candidate_queue
+from tac.optimization.optimizer_training_signal_bridge import (
+    build_optimizer_training_signal_wire_in,
+    validate_optimizer_training_signal_wire_in,
+)
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
+from tac.optimizer.candidate_queue import QUEUE_SCHEMA, build_candidate_queue
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -199,6 +203,23 @@ def test_predicted_param_sweep_manifest_is_forced_non_dispatchable(
 def test_optimizer_guided_queue_schema_is_adapted_as_proxy_only(
     tmp_path: Path,
 ) -> None:
+    solver_stack_wire_in = build_optimizer_training_signal_wire_in(
+        candidate_id="bias_sidecar_cmaes_style_stdlib_anchor",
+        profile_id="pr101_bias_sidecar",
+        lane_id="offline_pr101_bias_sidecar_candidate_generation",
+        lane_class="a1_pr101_bias_sidecar_prefilter",
+        candidate_family="a1_pr101_runtime_bias_plus_sidecar_probe",
+        param_schema="pr101_bias_sidecar_candidate_params_v1",
+        candidate_params={
+            "bias_b": -1.0,
+            "bias_g": -1.0,
+            "bias_r": -1.0,
+            "sidecar_f1_r": 0.0,
+        },
+        source_anchor="fixture",
+        score_lowering_hypothesis="fixture",
+        dispatch_blockers=["sidecar_param_requires_archive_builder_support"],
+    )
     queue_path = _write_json(
         tmp_path / "optimizer_guided_queue.json",
         {
@@ -227,6 +248,7 @@ def test_optimizer_guided_queue_schema_is_adapted_as_proxy_only(
                     },
                     "proxy_objective": 0.19285,
                     "rank_score": 0.19285,
+                    "solver_stack_wire_in": solver_stack_wire_in,
                     "score_claim": True,
                     "ready_for_exact_eval_dispatch": True,
                     "rank_or_kill_eligible": True,
@@ -249,6 +271,68 @@ def test_optimizer_guided_queue_schema_is_adapted_as_proxy_only(
     assert "sidecar_param_requires_archive_builder_support" in row["dispatch_blockers"]
     assert "optimizer_guided_queue_requires_archive_materialization" in row["dispatch_blockers"]
     assert "optimizer_guided_row_has_no_runtime_consumption_proof" in row["dispatch_blockers"]
+    assert validate_optimizer_training_signal_wire_in(row["solver_stack_wire_in"]) == []
+    assert row["solver_stack_wire_in"]["cathedral_autopilot_wire_in"][
+        "dispatch_ready"
+    ] is False
+    assert row["solver_stack_wire_in"]["atom_wire_in"]["atom_kind"] == "meta_lagrangian"
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only(
+    tmp_path: Path,
+) -> None:
+    plan = _write_json(
+        tmp_path / "mlx_dynamic_plan.json",
+        {
+            "schema": "mlx_dynamic_learned_sweep_plan.v1",
+            "tool": "tools/plan_mlx_dynamic_learned_sweep.py",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "ranked_sweep_rows": [
+                {
+                    "schema": "mlx_dynamic_learned_sweep_row.v1",
+                    "candidate_id": "prefix_k032",
+                    "sweep_config_id": "mlx_local_response",
+                    "optimization_pass_id": "micro",
+                    "family": "decoder_q_selective_dqs1",
+                    "acquisition_value": 0.0125,
+                    "component_axis_context": {"seg": 0.7, "pose": 0.3},
+                    "canonical_equation_provenance": {
+                        "canonical_equation_id": "pairset_component_marginal_score_decomposition_v1"
+                    },
+                    "master_gradient_provenance": {"anchor_count": 2},
+                    "ready_for_local_sweep": True,
+                    "exact_eval_candidate": False,
+                    "score_claim": True,
+                    "promotion_eligible": True,
+                    "rank_or_kill_eligible": True,
+                    "ready_for_exact_eval_dispatch": True,
+                }
+            ],
+        },
+    )
+
+    queue = build_candidate_queue([plan], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["candidate_id"] == "prefix_k032::mlx_local_response::micro"
+    assert row["source_candidate_id"] == "prefix_k032"
+    assert row["rank_score"] == -0.0125
+    assert row["rank_score_field"] == "negative_acquisition_value_proxy_not_score"
+    assert row["component_axis_context"] == {"seg": 0.7, "pose": 0.3}
+    assert row["canonical_equation_provenance"]["canonical_equation_id"].endswith("_v1")
+    assert row["master_gradient_provenance"] == {"anchor_count": 2}
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert "mlx_dynamic_learned_sweep_plan_is_proxy_signal" in row["dispatch_blockers"]
+    assert row["consumer_payload"]["mlx_dynamic_learned_sweep"]["source_candidate_id"] == (
+        "prefix_k032"
+    )
     assert validate_proxy_candidate(row) == []
 
 

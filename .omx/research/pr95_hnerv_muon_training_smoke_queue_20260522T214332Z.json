@@ -1,0 +1,2877 @@
+{
+  "compatible_top_k_schema": "optimizer_candidate_queue_v1",
+  "consumer_contract": {
+    "dispatch_actuators": "must require a separate exact-readiness queue",
+    "kaggle_prefilters": "may seed private proxy kernels; keep proxy boundary",
+    "m5_prefilters": "may perform CPU/macOS ranking; result remains advisory",
+    "modal_prefilters": "may consume top_k[*].candidate_params offline only"
+  },
+  "dispatch_ready": [],
+  "dispatch_ready_count": 0,
+  "evidence_boundary": {
+    "next_gate": "materialize byte-closed archive/runtime custody, prove runtime consumption, then use exact-readiness promotion before any dispatch",
+    "offline_only": true,
+    "planning_only_by_default": true,
+    "provider_agnostic": true,
+    "proxy_objective_is_not_exact_score": true,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "generated_at_utc": "2026-05-22T21:43:32Z",
+  "max_candidates": 8,
+  "metadata_time_policy": "stable_by_default_for_seed_reproducibility",
+  "n_candidates": 8,
+  "optimizer": "cmaes",
+  "optimizer_status": "cmaes_style_stdlib",
+  "profile": "pr95_hnerv_muon_training_smoke",
+  "profile_contract": {
+    "base_proxy_objective": 0.19285,
+    "bias_asymmetry_weight": 0.0,
+    "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+    "candidate_prefix": "pr95_muon_hnerv",
+    "canonical_equation_refs": [
+      "per_pair_master_gradient_score_impact_taylor_v1",
+      "master_gradient_locality_violation_by_codec_v1",
+      "canonical_frontier_pointer_v1",
+      "pairset_component_marginal_score_decomposition_v1",
+      "scorer_input_cache_hash_identity_v1"
+    ],
+    "deterministic_solution_refs": [
+      "tac.packet_compiler.deterministic_compiler",
+      "tac.hnerv_training_parity_guard",
+      "tac.canonical_equations.scorer_input_cache_hash_identity",
+      "tools/recover_pr95_training_curriculum.py"
+    ],
+    "dispatch_blockers": [
+      "pr95_hnerv_training_smoke_not_archive",
+      "requires_pr95_faithful_control_pair",
+      "requires_common_seed_and_budget",
+      "requires_optimizer_config_sha",
+      "requires_trainer_runtime_sha",
+      "requires_archive_export_before_exact_eval",
+      "requires_master_gradient_component_marginal_anchor"
+    ],
+    "jitter_scale": 2.5e-08,
+    "lane_class": "pr95_hnerv_muon_local_training_proxy",
+    "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+    "master_gradient_features": [
+      "pairset_component_marginal",
+      "hard_pair_indices",
+      "segnet_posenet_axis_dominance",
+      "per_pair_training_weight_schedule",
+      "optimizer_recipe_component_marginal"
+    ],
+    "objective_scale": 0.00018,
+    "paired_modes": [
+      "pr95_faithful_control",
+      "optimizer_variant",
+      "scheduler_variant",
+      "normalization_or_weight_decay_variant",
+      "archive_export_variant"
+    ],
+    "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+    "parameters": [
+      {
+        "anchor": 5.0,
+        "description": "Newton-Schulz/polar iteration count for Muon-eligible HNeRV hidden weights.",
+        "high": 7.0,
+        "kind": "int",
+        "low": 3.0,
+        "name": "muon_ns_steps",
+        "runtime_slot": "optimizer.muon.ns_steps",
+        "step": 1.0,
+        "weight": 1.0
+      },
+      {
+        "anchor": 0.95,
+        "high": 0.98,
+        "kind": "float",
+        "low": 0.9,
+        "name": "muon_momentum",
+        "runtime_slot": "optimizer.muon.momentum",
+        "weight": 1.0
+      },
+      {
+        "anchor": 0.0005,
+        "high": 0.001,
+        "kind": "float",
+        "low": 0.0001,
+        "name": "hidden_weight_decay",
+        "runtime_slot": "optimizer.muon.hidden_weight_decay",
+        "weight": 1.0
+      },
+      {
+        "anchor": 1.0,
+        "description": "LR multiplier for non-Muon params: 1D, bias, stem, RGB/head params.",
+        "high": 2.0,
+        "kind": "float",
+        "low": 0.25,
+        "name": "adamw_lr_ratio",
+        "runtime_slot": "optimizer.adamw.lr_ratio",
+        "weight": 1.0
+      },
+      {
+        "anchor": 0.05,
+        "high": 0.2,
+        "kind": "float",
+        "low": 0.0,
+        "name": "warmup_fraction",
+        "runtime_slot": "scheduler.warmup_fraction",
+        "weight": 1.0
+      },
+      {
+        "anchor": 0.15,
+        "description": "Late-training averaging budget; smoke-only until paired replay proves benefit.",
+        "high": 0.4,
+        "kind": "float",
+        "low": 0.0,
+        "name": "polyak_swa_fraction",
+        "runtime_slot": "averaging.polyak_swa_fraction",
+        "weight": 1.0
+      }
+    ],
+    "profile_id": "pr95_hnerv_muon_training_smoke",
+    "representation_family": "hnerv",
+    "schema": "optimizer_guided_candidate_profile_v1",
+    "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+    "sidecar_l1_weight": 6e-05,
+    "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+    "substrate_family": "nerv_family",
+    "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+    "variant_axes": [
+      "pr95_source_faithful_control",
+      "optimizer_recipe",
+      "scheduler_recipe",
+      "normalization_or_weight_decay",
+      "training_curriculum",
+      "archive_export"
+    ],
+    "xray_primitives": [
+      "pairset_component_marginal",
+      "per_pair_score_decomposition",
+      "unified_action_principle",
+      "score_lipschitz",
+      "segnet_margin_polytope",
+      "posenet_se3_lie_algebra",
+      "wavelet_hf_energy"
+    ]
+  },
+  "schema": "optimizer_guided_candidate_queue_v1",
+  "score_lowering_connection": {
+    "how_this_lowers_score": "ranked params focus scarce local-training, prefilter, and exact-eval attention on the declared representation/substrate family before archive materialization",
+    "hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+    "not_a_score_claim": true
+  },
+  "seed": 20260522,
+  "tool": "tools/build_optimizer_guided_candidate_queue.py",
+  "top_k": [
+    {
+      "archive_zip_emitted": false,
+      "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+      "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_anchor",
+      "candidate_params": {
+        "adamw_lr_ratio": 1.0,
+        "hidden_weight_decay": 0.0005,
+        "muon_momentum": 0.95,
+        "muon_ns_steps": 5,
+        "polyak_swa_fraction": 0.15,
+        "warmup_fraction": 0.05
+      },
+      "canonical_equation_refs": [
+        "per_pair_master_gradient_score_impact_taylor_v1",
+        "master_gradient_locality_violation_by_codec_v1",
+        "canonical_frontier_pointer_v1",
+        "pairset_component_marginal_score_decomposition_v1",
+        "scorer_input_cache_hash_identity_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "deterministic_solution_refs": [
+        "tac.packet_compiler.deterministic_compiler",
+        "tac.hnerv_training_parity_guard",
+        "tac.canonical_equations.scorer_input_cache_hash_identity",
+        "tools/recover_pr95_training_curriculum.py"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "offline_optimizer_candidate_generation_only",
+        "no_archive_zip_emitted",
+        "no_inflate_runtime_emitted",
+        "no_score_affecting_payload_change_proof",
+        "no_contest_cuda_auth_eval",
+        "provider_prefilter_must_preserve_proxy_boundary",
+        "archive_builder_handoff_required_before_promotion",
+        "pr95_hnerv_training_smoke_not_archive",
+        "requires_pr95_faithful_control_pair",
+        "requires_common_seed_and_budget",
+        "requires_optimizer_config_sha",
+        "requires_trainer_runtime_sha",
+        "requires_archive_export_before_exact_eval",
+        "requires_master_gradient_component_marginal_anchor"
+      ],
+      "dry_run_only": true,
+      "evidence_grade": "[offline-proxy-planning-only]",
+      "evidence_semantics": "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+      "exact_auth_eval_performed": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "generation": 0,
+      "inflate_runtime_emitted": false,
+      "lane_class": "pr95_hnerv_muon_local_training_proxy",
+      "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+      "master_gradient_features": [
+        "pairset_component_marginal",
+        "hard_pair_indices",
+        "segnet_posenet_axis_dominance",
+        "per_pair_training_weight_schedule",
+        "optimizer_recipe_component_marginal"
+      ],
+      "op_params": {
+        "adamw_lr_ratio": 1.0,
+        "hidden_weight_decay": 0.0005,
+        "muon_momentum": 0.95,
+        "muon_ns_steps": 5,
+        "polyak_swa_fraction": 0.15,
+        "warmup_fraction": 0.05
+      },
+      "optimizer": "cmaes",
+      "optimizer_status": "cmaes_style_stdlib",
+      "paired_modes": [
+        "pr95_faithful_control",
+        "optimizer_variant",
+        "scheduler_variant",
+        "normalization_or_weight_decay_variant",
+        "archive_export_variant"
+      ],
+      "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+      "profile": "pr95_hnerv_muon_training_smoke",
+      "promotion_eligible": false,
+      "promotion_path": "builder consumes candidate_params -> byte-closed archive/runtime -> runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval",
+      "provider_agnostic": true,
+      "proxy_components": {
+        "anchor_proximity": 0.0,
+        "bias_asymmetry": 0.0,
+        "deterministic_jitter": 7.315980492845919e-09,
+        "normalized_adamw_lr_ratio": 0.0,
+        "normalized_hidden_weight_decay": 0.0,
+        "normalized_muon_momentum": 0.0,
+        "normalized_muon_ns_steps": 0.0,
+        "normalized_polyak_swa_fraction": 0.0,
+        "normalized_warmup_fraction": 0.0,
+        "sidecar_l1": 0.0
+      },
+      "proxy_objective": 0.19285000731598048,
+      "proxy_only": true,
+      "rank": 1,
+      "rank_or_kill_eligible": false,
+      "rank_score": 0.19285000731598048,
+      "rank_score_field": "proxy_objective_not_score",
+      "ready_for_exact_eval_dispatch": false,
+      "representation_family": "hnerv",
+      "runtime_slots": {
+        "adamw_lr_ratio": "optimizer.adamw.lr_ratio",
+        "hidden_weight_decay": "optimizer.muon.hidden_weight_decay",
+        "muon_momentum": "optimizer.muon.momentum",
+        "muon_ns_steps": "optimizer.muon.ns_steps",
+        "polyak_swa_fraction": "averaging.polyak_swa_fraction",
+        "warmup_fraction": "scheduler.warmup_fraction"
+      },
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+      "seed": 20260522,
+      "solver_stack_wire_in": {
+        "atom_wire_in": {
+          "atom_kind": "meta_lagrangian",
+          "candidate_atom_id": "optimizer_training:pr95_muon_hnerv_cmaes_style_stdlib_anchor",
+          "canonical_helper_repo_link": "src/tac/optimization/optimizer_training_signal_bridge.py",
+          "resolution_path": "learned",
+          "wired_hooks": [
+            "sensitivity_map",
+            "pareto_constraint",
+            "bit_allocator",
+            "cathedral_autopilot_dispatch",
+            "continual_learning_posterior",
+            "probe_disambiguator"
+          ]
+        },
+        "bit_allocator_wire_in": {
+          "allocator_features": [
+            "rate_component_marginal",
+            "optimizer_recipe_cost",
+            "representation_recipe_cost",
+            "pair_weight_schedule"
+          ],
+          "charged_bits_status": "unchanged_until_archive_materialization"
+        },
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_anchor",
+        "candidate_params": {
+          "adamw_lr_ratio": 1.0,
+          "hidden_weight_decay": 0.0005,
+          "muon_momentum": 0.95,
+          "muon_ns_steps": 5,
+          "polyak_swa_fraction": 0.15,
+          "warmup_fraction": 0.05
+        },
+        "canonical_equation_refs": [
+          "per_pair_master_gradient_score_impact_taylor_v1",
+          "master_gradient_locality_violation_by_codec_v1",
+          "canonical_frontier_pointer_v1",
+          "pairset_component_marginal_score_decomposition_v1",
+          "scorer_input_cache_hash_identity_v1"
+        ],
+        "canonical_hook_aliases": {
+          "atom_cathedral_hook": "cathedral_autopilot_dispatch",
+          "atom_continual_learning_hook": "continual_learning_posterior"
+        },
+        "cathedral_autopilot_wire_in": {
+          "adapter": "tools/build_optimizer_candidate_queue.py",
+          "dispatch_blockers": [
+            "offline_optimizer_candidate_generation_only",
+            "no_archive_zip_emitted",
+            "no_inflate_runtime_emitted",
+            "no_score_affecting_payload_change_proof",
+            "no_contest_cuda_auth_eval",
+            "provider_prefilter_must_preserve_proxy_boundary",
+            "archive_builder_handoff_required_before_promotion",
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor"
+          ],
+          "dispatch_ready": false,
+          "promotion_gate": "tools/promote_optimizer_candidate_for_exact_eval.py",
+          "queue_schema": "optimizer_candidate_queue_v1"
+        },
+        "continual_learning_wire_in": {
+          "compatible_observation_surface": "representation_training_probe_manifest_v1",
+          "observation_surface": "tac.optimization.mlx_dynamic_sweep_observations",
+          "posterior_update_policy": "append_only_after_empirical_anchor",
+          "score_claim": false
+        },
+        "deterministic_solution_wire_in": {
+          "references": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py"
+          ],
+          "requirements": [
+            "deterministic_seed_recorded",
+            "optimizer_config_sha_recorded",
+            "training_recipe_config_sha_recorded",
+            "trainer_runtime_sha_recorded",
+            "archive_export_is_byte_closed_before_exact_eval"
+          ]
+        },
+        "evidence_grade": "[offline-proxy-planning-only]",
+        "evidence_semantics": "optimizer_training_proxy_signal_not_exact_auth_eval",
+        "false_authority": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false
+        },
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "master_gradient_wire_in": {
+          "consumer_modules": [
+            "tac.master_gradient_consumers",
+            "tac.master_gradient_pr101_score_response_matrix",
+            "tac.training_curriculum.master_gradient_pair_weights",
+            "tools/master_gradient_xray.py"
+          ],
+          "features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal"
+          ],
+          "required_before_exact_promotion": [
+            "per_pair_master_gradient_anchor_or_explicit_non_binding_rationale",
+            "component_marginal_observation_or_explicit_non_binding_rationale",
+            "archive_runtime_identity_before_empirical_anchor"
+          ]
+        },
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "pareto_wire_in": {
+          "axes": [
+            "rate",
+            "segnet",
+            "posenet"
+          ],
+          "constraints": [
+            "common_seed_and_training_budget_for_paired_smokes",
+            "same_archive_export_contract_before_comparing_variants",
+            "contest_axis_component_deltas_required_before_promotion"
+          ],
+          "rank_signal": "proxy_objective_not_score",
+          "scope": "representation_substrate_agnostic"
+        },
+        "probe_disambiguator_wire_in": {
+          "arbitration_rule": "paired_budget_same_seed_then_exact_auth_gate",
+          "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant"
+          ]
+        },
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "representation_family": "hnerv",
+        "schema": "optimizer_training_signal_wire_in_v1",
+        "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "variant_axes": [
+          "pr95_source_faithful_control",
+          "optimizer_recipe",
+          "scheduler_recipe",
+          "normalization_or_weight_decay",
+          "training_curriculum",
+          "archive_export"
+        ],
+        "wire_in_hooks_engaged": [
+          "sensitivity_map",
+          "pareto_constraint",
+          "bit_allocator",
+          "cathedral_autopilot",
+          "continual_learning",
+          "probe_disambiguator"
+        ],
+        "xray_wire_in": {
+          "primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy"
+          ],
+          "required_review_surfaces": [
+            "pairset_component_marginal",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "score_lipschitz"
+          ]
+        }
+      },
+      "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+      "substrate_family": "nerv_family",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+      "trial_index": 0,
+      "variant_axes": [
+        "pr95_source_faithful_control",
+        "optimizer_recipe",
+        "scheduler_recipe",
+        "normalization_or_weight_decay",
+        "training_curriculum",
+        "archive_export"
+      ],
+      "xray_primitives": [
+        "pairset_component_marginal",
+        "per_pair_score_decomposition",
+        "unified_action_principle",
+        "score_lipschitz",
+        "segnet_margin_polytope",
+        "posenet_se3_lie_algebra",
+        "wavelet_hf_energy"
+      ]
+    },
+    {
+      "archive_zip_emitted": false,
+      "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+      "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0002",
+      "candidate_params": {
+        "adamw_lr_ratio": 0.886022866294,
+        "hidden_weight_decay": 0.000550435272,
+        "muon_momentum": 0.949835605209,
+        "muon_ns_steps": 6,
+        "polyak_swa_fraction": 0.147459472299,
+        "warmup_fraction": 0.090099548328
+      },
+      "canonical_equation_refs": [
+        "per_pair_master_gradient_score_impact_taylor_v1",
+        "master_gradient_locality_violation_by_codec_v1",
+        "canonical_frontier_pointer_v1",
+        "pairset_component_marginal_score_decomposition_v1",
+        "scorer_input_cache_hash_identity_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "deterministic_solution_refs": [
+        "tac.packet_compiler.deterministic_compiler",
+        "tac.hnerv_training_parity_guard",
+        "tac.canonical_equations.scorer_input_cache_hash_identity",
+        "tools/recover_pr95_training_curriculum.py"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "offline_optimizer_candidate_generation_only",
+        "no_archive_zip_emitted",
+        "no_inflate_runtime_emitted",
+        "no_score_affecting_payload_change_proof",
+        "no_contest_cuda_auth_eval",
+        "provider_prefilter_must_preserve_proxy_boundary",
+        "archive_builder_handoff_required_before_promotion",
+        "pr95_hnerv_training_smoke_not_archive",
+        "requires_pr95_faithful_control_pair",
+        "requires_common_seed_and_budget",
+        "requires_optimizer_config_sha",
+        "requires_trainer_runtime_sha",
+        "requires_archive_export_before_exact_eval",
+        "requires_master_gradient_component_marginal_anchor"
+      ],
+      "dry_run_only": true,
+      "evidence_grade": "[offline-proxy-planning-only]",
+      "evidence_semantics": "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+      "exact_auth_eval_performed": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "generation": 2,
+      "inflate_runtime_emitted": false,
+      "lane_class": "pr95_hnerv_muon_local_training_proxy",
+      "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+      "master_gradient_features": [
+        "pairset_component_marginal",
+        "hard_pair_indices",
+        "segnet_posenet_axis_dominance",
+        "per_pair_training_weight_schedule",
+        "optimizer_recipe_component_marginal"
+      ],
+      "op_params": {
+        "adamw_lr_ratio": 0.886022866294,
+        "hidden_weight_decay": 0.000550435272,
+        "muon_momentum": 0.949835605209,
+        "muon_ns_steps": 6,
+        "polyak_swa_fraction": 0.147459472299,
+        "warmup_fraction": 0.090099548328
+      },
+      "optimizer": "cmaes",
+      "optimizer_status": "cmaes_style_stdlib",
+      "paired_modes": [
+        "pr95_faithful_control",
+        "optimizer_variant",
+        "scheduler_variant",
+        "normalization_or_weight_decay_variant",
+        "archive_export_variant"
+      ],
+      "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+      "profile": "pr95_hnerv_muon_training_smoke",
+      "promotion_eligible": false,
+      "promotion_path": "builder consumes candidate_params -> byte-closed archive/runtime -> runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval",
+      "provider_agnostic": true,
+      "proxy_components": {
+        "anchor_proximity": 0.07341745799465228,
+        "bias_asymmetry": 0.0,
+        "deterministic_jitter": 3.824814498499852e-09,
+        "normalized_adamw_lr_ratio": 0.016967558540846254,
+        "normalized_hidden_weight_decay": 0.012561563761550558,
+        "normalized_muon_momentum": 1.689102956744713e-05,
+        "normalized_muon_ns_steps": 0.25,
+        "normalized_polyak_swa_fraction": 0.00016135702498870798,
+        "normalized_warmup_fraction": 0.16079737761096077,
+        "sidecar_l1": 0.0
+      },
+      "proxy_objective": 0.19286321896725353,
+      "proxy_only": true,
+      "rank": 2,
+      "rank_or_kill_eligible": false,
+      "rank_score": 0.19286321896725353,
+      "rank_score_field": "proxy_objective_not_score",
+      "ready_for_exact_eval_dispatch": false,
+      "representation_family": "hnerv",
+      "runtime_slots": {
+        "adamw_lr_ratio": "optimizer.adamw.lr_ratio",
+        "hidden_weight_decay": "optimizer.muon.hidden_weight_decay",
+        "muon_momentum": "optimizer.muon.momentum",
+        "muon_ns_steps": "optimizer.muon.ns_steps",
+        "polyak_swa_fraction": "averaging.polyak_swa_fraction",
+        "warmup_fraction": "scheduler.warmup_fraction"
+      },
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+      "seed": 20260522,
+      "solver_stack_wire_in": {
+        "atom_wire_in": {
+          "atom_kind": "meta_lagrangian",
+          "candidate_atom_id": "optimizer_training:pr95_muon_hnerv_cmaes_style_stdlib_0002",
+          "canonical_helper_repo_link": "src/tac/optimization/optimizer_training_signal_bridge.py",
+          "resolution_path": "learned",
+          "wired_hooks": [
+            "sensitivity_map",
+            "pareto_constraint",
+            "bit_allocator",
+            "cathedral_autopilot_dispatch",
+            "continual_learning_posterior",
+            "probe_disambiguator"
+          ]
+        },
+        "bit_allocator_wire_in": {
+          "allocator_features": [
+            "rate_component_marginal",
+            "optimizer_recipe_cost",
+            "representation_recipe_cost",
+            "pair_weight_schedule"
+          ],
+          "charged_bits_status": "unchanged_until_archive_materialization"
+        },
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0002",
+        "candidate_params": {
+          "adamw_lr_ratio": 0.886022866294,
+          "hidden_weight_decay": 0.000550435272,
+          "muon_momentum": 0.949835605209,
+          "muon_ns_steps": 6,
+          "polyak_swa_fraction": 0.147459472299,
+          "warmup_fraction": 0.090099548328
+        },
+        "canonical_equation_refs": [
+          "per_pair_master_gradient_score_impact_taylor_v1",
+          "master_gradient_locality_violation_by_codec_v1",
+          "canonical_frontier_pointer_v1",
+          "pairset_component_marginal_score_decomposition_v1",
+          "scorer_input_cache_hash_identity_v1"
+        ],
+        "canonical_hook_aliases": {
+          "atom_cathedral_hook": "cathedral_autopilot_dispatch",
+          "atom_continual_learning_hook": "continual_learning_posterior"
+        },
+        "cathedral_autopilot_wire_in": {
+          "adapter": "tools/build_optimizer_candidate_queue.py",
+          "dispatch_blockers": [
+            "offline_optimizer_candidate_generation_only",
+            "no_archive_zip_emitted",
+            "no_inflate_runtime_emitted",
+            "no_score_affecting_payload_change_proof",
+            "no_contest_cuda_auth_eval",
+            "provider_prefilter_must_preserve_proxy_boundary",
+            "archive_builder_handoff_required_before_promotion",
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor"
+          ],
+          "dispatch_ready": false,
+          "promotion_gate": "tools/promote_optimizer_candidate_for_exact_eval.py",
+          "queue_schema": "optimizer_candidate_queue_v1"
+        },
+        "continual_learning_wire_in": {
+          "compatible_observation_surface": "representation_training_probe_manifest_v1",
+          "observation_surface": "tac.optimization.mlx_dynamic_sweep_observations",
+          "posterior_update_policy": "append_only_after_empirical_anchor",
+          "score_claim": false
+        },
+        "deterministic_solution_wire_in": {
+          "references": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py"
+          ],
+          "requirements": [
+            "deterministic_seed_recorded",
+            "optimizer_config_sha_recorded",
+            "training_recipe_config_sha_recorded",
+            "trainer_runtime_sha_recorded",
+            "archive_export_is_byte_closed_before_exact_eval"
+          ]
+        },
+        "evidence_grade": "[offline-proxy-planning-only]",
+        "evidence_semantics": "optimizer_training_proxy_signal_not_exact_auth_eval",
+        "false_authority": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false
+        },
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "master_gradient_wire_in": {
+          "consumer_modules": [
+            "tac.master_gradient_consumers",
+            "tac.master_gradient_pr101_score_response_matrix",
+            "tac.training_curriculum.master_gradient_pair_weights",
+            "tools/master_gradient_xray.py"
+          ],
+          "features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal"
+          ],
+          "required_before_exact_promotion": [
+            "per_pair_master_gradient_anchor_or_explicit_non_binding_rationale",
+            "component_marginal_observation_or_explicit_non_binding_rationale",
+            "archive_runtime_identity_before_empirical_anchor"
+          ]
+        },
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "pareto_wire_in": {
+          "axes": [
+            "rate",
+            "segnet",
+            "posenet"
+          ],
+          "constraints": [
+            "common_seed_and_training_budget_for_paired_smokes",
+            "same_archive_export_contract_before_comparing_variants",
+            "contest_axis_component_deltas_required_before_promotion"
+          ],
+          "rank_signal": "proxy_objective_not_score",
+          "scope": "representation_substrate_agnostic"
+        },
+        "probe_disambiguator_wire_in": {
+          "arbitration_rule": "paired_budget_same_seed_then_exact_auth_gate",
+          "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant"
+          ]
+        },
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "representation_family": "hnerv",
+        "schema": "optimizer_training_signal_wire_in_v1",
+        "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "variant_axes": [
+          "pr95_source_faithful_control",
+          "optimizer_recipe",
+          "scheduler_recipe",
+          "normalization_or_weight_decay",
+          "training_curriculum",
+          "archive_export"
+        ],
+        "wire_in_hooks_engaged": [
+          "sensitivity_map",
+          "pareto_constraint",
+          "bit_allocator",
+          "cathedral_autopilot",
+          "continual_learning",
+          "probe_disambiguator"
+        ],
+        "xray_wire_in": {
+          "primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy"
+          ],
+          "required_review_surfaces": [
+            "pairset_component_marginal",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "score_lipschitz"
+          ]
+        }
+      },
+      "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+      "substrate_family": "nerv_family",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+      "trial_index": 2,
+      "variant_axes": [
+        "pr95_source_faithful_control",
+        "optimizer_recipe",
+        "scheduler_recipe",
+        "normalization_or_weight_decay",
+        "training_curriculum",
+        "archive_export"
+      ],
+      "xray_primitives": [
+        "pairset_component_marginal",
+        "per_pair_score_decomposition",
+        "unified_action_principle",
+        "score_lipschitz",
+        "segnet_margin_polytope",
+        "posenet_se3_lie_algebra",
+        "wavelet_hf_energy"
+      ]
+    },
+    {
+      "archive_zip_emitted": false,
+      "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+      "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0003",
+      "candidate_params": {
+        "adamw_lr_ratio": 0.687246363549,
+        "hidden_weight_decay": 0.0004982641,
+        "muon_momentum": 0.967891864456,
+        "muon_ns_steps": 5,
+        "polyak_swa_fraction": 0.0,
+        "warmup_fraction": 0.06142025957
+      },
+      "canonical_equation_refs": [
+        "per_pair_master_gradient_score_impact_taylor_v1",
+        "master_gradient_locality_violation_by_codec_v1",
+        "canonical_frontier_pointer_v1",
+        "pairset_component_marginal_score_decomposition_v1",
+        "scorer_input_cache_hash_identity_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "deterministic_solution_refs": [
+        "tac.packet_compiler.deterministic_compiler",
+        "tac.hnerv_training_parity_guard",
+        "tac.canonical_equations.scorer_input_cache_hash_identity",
+        "tools/recover_pr95_training_curriculum.py"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "offline_optimizer_candidate_generation_only",
+        "no_archive_zip_emitted",
+        "no_inflate_runtime_emitted",
+        "no_score_affecting_payload_change_proof",
+        "no_contest_cuda_auth_eval",
+        "provider_prefilter_must_preserve_proxy_boundary",
+        "archive_builder_handoff_required_before_promotion",
+        "pr95_hnerv_training_smoke_not_archive",
+        "requires_pr95_faithful_control_pair",
+        "requires_common_seed_and_budget",
+        "requires_optimizer_config_sha",
+        "requires_trainer_runtime_sha",
+        "requires_archive_export_before_exact_eval",
+        "requires_master_gradient_component_marginal_anchor"
+      ],
+      "dry_run_only": true,
+      "evidence_grade": "[offline-proxy-planning-only]",
+      "evidence_semantics": "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+      "exact_auth_eval_performed": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "generation": 3,
+      "inflate_runtime_emitted": false,
+      "lane_class": "pr95_hnerv_muon_local_training_proxy",
+      "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+      "master_gradient_features": [
+        "pairset_component_marginal",
+        "hard_pair_indices",
+        "segnet_posenet_axis_dominance",
+        "per_pair_training_weight_schedule",
+        "optimizer_recipe_component_marginal"
+      ],
+      "op_params": {
+        "adamw_lr_ratio": 0.687246363549,
+        "hidden_weight_decay": 0.0004982641,
+        "muon_momentum": 0.967891864456,
+        "muon_ns_steps": 5,
+        "polyak_swa_fraction": 0.0,
+        "warmup_fraction": 0.06142025957
+      },
+      "optimizer": "cmaes",
+      "optimizer_status": "cmaes_style_stdlib",
+      "paired_modes": [
+        "pr95_faithful_control",
+        "optimizer_variant",
+        "scheduler_variant",
+        "normalization_or_weight_decay_variant",
+        "archive_export_variant"
+      ],
+      "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+      "profile": "pr95_hnerv_muon_training_smoke",
+      "promotion_eligible": false,
+      "promotion_path": "builder consumes candidate_params -> byte-closed archive/runtime -> runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval",
+      "provider_agnostic": true,
+      "proxy_components": {
+        "anchor_proximity": 0.15056492112773323,
+        "bias_asymmetry": 0.0,
+        "deterministic_jitter": 9.587191789129594e-10,
+        "normalized_adamw_lr_ratio": 0.12775815459699494,
+        "normalized_hidden_weight_decay": 1.488073486419715e-05,
+        "normalized_muon_momentum": 0.2000742585699227,
+        "normalized_muon_ns_steps": 0.0,
+        "normalized_polyak_swa_fraction": 0.5624999999999999,
+        "normalized_warmup_fraction": 0.01304223286461766,
+        "sidecar_l1": 0.0
+      },
+      "proxy_objective": 0.19287710264452218,
+      "proxy_only": true,
+      "rank": 3,
+      "rank_or_kill_eligible": false,
+      "rank_score": 0.19287710264452218,
+      "rank_score_field": "proxy_objective_not_score",
+      "ready_for_exact_eval_dispatch": false,
+      "representation_family": "hnerv",
+      "runtime_slots": {
+        "adamw_lr_ratio": "optimizer.adamw.lr_ratio",
+        "hidden_weight_decay": "optimizer.muon.hidden_weight_decay",
+        "muon_momentum": "optimizer.muon.momentum",
+        "muon_ns_steps": "optimizer.muon.ns_steps",
+        "polyak_swa_fraction": "averaging.polyak_swa_fraction",
+        "warmup_fraction": "scheduler.warmup_fraction"
+      },
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+      "seed": 20260522,
+      "solver_stack_wire_in": {
+        "atom_wire_in": {
+          "atom_kind": "meta_lagrangian",
+          "candidate_atom_id": "optimizer_training:pr95_muon_hnerv_cmaes_style_stdlib_0003",
+          "canonical_helper_repo_link": "src/tac/optimization/optimizer_training_signal_bridge.py",
+          "resolution_path": "learned",
+          "wired_hooks": [
+            "sensitivity_map",
+            "pareto_constraint",
+            "bit_allocator",
+            "cathedral_autopilot_dispatch",
+            "continual_learning_posterior",
+            "probe_disambiguator"
+          ]
+        },
+        "bit_allocator_wire_in": {
+          "allocator_features": [
+            "rate_component_marginal",
+            "optimizer_recipe_cost",
+            "representation_recipe_cost",
+            "pair_weight_schedule"
+          ],
+          "charged_bits_status": "unchanged_until_archive_materialization"
+        },
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0003",
+        "candidate_params": {
+          "adamw_lr_ratio": 0.687246363549,
+          "hidden_weight_decay": 0.0004982641,
+          "muon_momentum": 0.967891864456,
+          "muon_ns_steps": 5,
+          "polyak_swa_fraction": 0.0,
+          "warmup_fraction": 0.06142025957
+        },
+        "canonical_equation_refs": [
+          "per_pair_master_gradient_score_impact_taylor_v1",
+          "master_gradient_locality_violation_by_codec_v1",
+          "canonical_frontier_pointer_v1",
+          "pairset_component_marginal_score_decomposition_v1",
+          "scorer_input_cache_hash_identity_v1"
+        ],
+        "canonical_hook_aliases": {
+          "atom_cathedral_hook": "cathedral_autopilot_dispatch",
+          "atom_continual_learning_hook": "continual_learning_posterior"
+        },
+        "cathedral_autopilot_wire_in": {
+          "adapter": "tools/build_optimizer_candidate_queue.py",
+          "dispatch_blockers": [
+            "offline_optimizer_candidate_generation_only",
+            "no_archive_zip_emitted",
+            "no_inflate_runtime_emitted",
+            "no_score_affecting_payload_change_proof",
+            "no_contest_cuda_auth_eval",
+            "provider_prefilter_must_preserve_proxy_boundary",
+            "archive_builder_handoff_required_before_promotion",
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor"
+          ],
+          "dispatch_ready": false,
+          "promotion_gate": "tools/promote_optimizer_candidate_for_exact_eval.py",
+          "queue_schema": "optimizer_candidate_queue_v1"
+        },
+        "continual_learning_wire_in": {
+          "compatible_observation_surface": "representation_training_probe_manifest_v1",
+          "observation_surface": "tac.optimization.mlx_dynamic_sweep_observations",
+          "posterior_update_policy": "append_only_after_empirical_anchor",
+          "score_claim": false
+        },
+        "deterministic_solution_wire_in": {
+          "references": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py"
+          ],
+          "requirements": [
+            "deterministic_seed_recorded",
+            "optimizer_config_sha_recorded",
+            "training_recipe_config_sha_recorded",
+            "trainer_runtime_sha_recorded",
+            "archive_export_is_byte_closed_before_exact_eval"
+          ]
+        },
+        "evidence_grade": "[offline-proxy-planning-only]",
+        "evidence_semantics": "optimizer_training_proxy_signal_not_exact_auth_eval",
+        "false_authority": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false
+        },
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "master_gradient_wire_in": {
+          "consumer_modules": [
+            "tac.master_gradient_consumers",
+            "tac.master_gradient_pr101_score_response_matrix",
+            "tac.training_curriculum.master_gradient_pair_weights",
+            "tools/master_gradient_xray.py"
+          ],
+          "features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal"
+          ],
+          "required_before_exact_promotion": [
+            "per_pair_master_gradient_anchor_or_explicit_non_binding_rationale",
+            "component_marginal_observation_or_explicit_non_binding_rationale",
+            "archive_runtime_identity_before_empirical_anchor"
+          ]
+        },
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "pareto_wire_in": {
+          "axes": [
+            "rate",
+            "segnet",
+            "posenet"
+          ],
+          "constraints": [
+            "common_seed_and_training_budget_for_paired_smokes",
+            "same_archive_export_contract_before_comparing_variants",
+            "contest_axis_component_deltas_required_before_promotion"
+          ],
+          "rank_signal": "proxy_objective_not_score",
+          "scope": "representation_substrate_agnostic"
+        },
+        "probe_disambiguator_wire_in": {
+          "arbitration_rule": "paired_budget_same_seed_then_exact_auth_gate",
+          "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant"
+          ]
+        },
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "representation_family": "hnerv",
+        "schema": "optimizer_training_signal_wire_in_v1",
+        "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "variant_axes": [
+          "pr95_source_faithful_control",
+          "optimizer_recipe",
+          "scheduler_recipe",
+          "normalization_or_weight_decay",
+          "training_curriculum",
+          "archive_export"
+        ],
+        "wire_in_hooks_engaged": [
+          "sensitivity_map",
+          "pareto_constraint",
+          "bit_allocator",
+          "cathedral_autopilot",
+          "continual_learning",
+          "probe_disambiguator"
+        ],
+        "xray_wire_in": {
+          "primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy"
+          ],
+          "required_review_surfaces": [
+            "pairset_component_marginal",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "score_lipschitz"
+          ]
+        }
+      },
+      "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+      "substrate_family": "nerv_family",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+      "trial_index": 3,
+      "variant_axes": [
+        "pr95_source_faithful_control",
+        "optimizer_recipe",
+        "scheduler_recipe",
+        "normalization_or_weight_decay",
+        "training_curriculum",
+        "archive_export"
+      ],
+      "xray_primitives": [
+        "pairset_component_marginal",
+        "per_pair_score_decomposition",
+        "unified_action_principle",
+        "score_lipschitz",
+        "segnet_margin_polytope",
+        "posenet_se3_lie_algebra",
+        "wavelet_hf_energy"
+      ]
+    },
+    {
+      "archive_zip_emitted": false,
+      "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+      "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0006",
+      "candidate_params": {
+        "adamw_lr_ratio": 0.533806579683,
+        "hidden_weight_decay": 0.000285139566,
+        "muon_momentum": 0.953150599472,
+        "muon_ns_steps": 3,
+        "polyak_swa_fraction": 0.033234367929,
+        "warmup_fraction": 0.0
+      },
+      "canonical_equation_refs": [
+        "per_pair_master_gradient_score_impact_taylor_v1",
+        "master_gradient_locality_violation_by_codec_v1",
+        "canonical_frontier_pointer_v1",
+        "pairset_component_marginal_score_decomposition_v1",
+        "scorer_input_cache_hash_identity_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "deterministic_solution_refs": [
+        "tac.packet_compiler.deterministic_compiler",
+        "tac.hnerv_training_parity_guard",
+        "tac.canonical_equations.scorer_input_cache_hash_identity",
+        "tools/recover_pr95_training_curriculum.py"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "offline_optimizer_candidate_generation_only",
+        "no_archive_zip_emitted",
+        "no_inflate_runtime_emitted",
+        "no_score_affecting_payload_change_proof",
+        "no_contest_cuda_auth_eval",
+        "provider_prefilter_must_preserve_proxy_boundary",
+        "archive_builder_handoff_required_before_promotion",
+        "pr95_hnerv_training_smoke_not_archive",
+        "requires_pr95_faithful_control_pair",
+        "requires_common_seed_and_budget",
+        "requires_optimizer_config_sha",
+        "requires_trainer_runtime_sha",
+        "requires_archive_export_before_exact_eval",
+        "requires_master_gradient_component_marginal_anchor"
+      ],
+      "dry_run_only": true,
+      "evidence_grade": "[offline-proxy-planning-only]",
+      "evidence_semantics": "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+      "exact_auth_eval_performed": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "generation": 6,
+      "inflate_runtime_emitted": false,
+      "lane_class": "pr95_hnerv_muon_local_training_proxy",
+      "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+      "master_gradient_features": [
+        "pairset_component_marginal",
+        "hard_pair_indices",
+        "segnet_posenet_axis_dominance",
+        "per_pair_training_weight_schedule",
+        "optimizer_recipe_component_marginal"
+      ],
+      "op_params": {
+        "adamw_lr_ratio": 0.533806579683,
+        "hidden_weight_decay": 0.000285139566,
+        "muon_momentum": 0.953150599472,
+        "muon_ns_steps": 3,
+        "polyak_swa_fraction": 0.033234367929,
+        "warmup_fraction": 0.0
+      },
+      "optimizer": "cmaes",
+      "optimizer_status": "cmaes_style_stdlib",
+      "paired_modes": [
+        "pr95_faithful_control",
+        "optimizer_variant",
+        "scheduler_variant",
+        "normalization_or_weight_decay_variant",
+        "archive_export_variant"
+      ],
+      "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+      "profile": "pr95_hnerv_muon_training_smoke",
+      "promotion_eligible": false,
+      "promotion_path": "builder consumes candidate_params -> byte-closed archive/runtime -> runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval",
+      "provider_agnostic": true,
+      "proxy_components": {
+        "anchor_proximity": 0.35148373497642676,
+        "bias_asymmetry": 0.0,
+        "deterministic_jitter": 1.827146917197641e-08,
+        "normalized_adamw_lr_ratio": 0.28386782713059655,
+        "normalized_hidden_weight_decay": 0.22797533875885603,
+        "normalized_muon_momentum": 0.006203923145604285,
+        "normalized_muon_ns_steps": 1.0,
+        "normalized_polyak_swa_fraction": 0.34085532082350356,
+        "normalized_warmup_fraction": 0.25,
+        "sidecar_l1": 0.0
+      },
+      "proxy_objective": 0.19291328534376492,
+      "proxy_only": true,
+      "rank": 4,
+      "rank_or_kill_eligible": false,
+      "rank_score": 0.19291328534376492,
+      "rank_score_field": "proxy_objective_not_score",
+      "ready_for_exact_eval_dispatch": false,
+      "representation_family": "hnerv",
+      "runtime_slots": {
+        "adamw_lr_ratio": "optimizer.adamw.lr_ratio",
+        "hidden_weight_decay": "optimizer.muon.hidden_weight_decay",
+        "muon_momentum": "optimizer.muon.momentum",
+        "muon_ns_steps": "optimizer.muon.ns_steps",
+        "polyak_swa_fraction": "averaging.polyak_swa_fraction",
+        "warmup_fraction": "scheduler.warmup_fraction"
+      },
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+      "seed": 20260522,
+      "solver_stack_wire_in": {
+        "atom_wire_in": {
+          "atom_kind": "meta_lagrangian",
+          "candidate_atom_id": "optimizer_training:pr95_muon_hnerv_cmaes_style_stdlib_0006",
+          "canonical_helper_repo_link": "src/tac/optimization/optimizer_training_signal_bridge.py",
+          "resolution_path": "learned",
+          "wired_hooks": [
+            "sensitivity_map",
+            "pareto_constraint",
+            "bit_allocator",
+            "cathedral_autopilot_dispatch",
+            "continual_learning_posterior",
+            "probe_disambiguator"
+          ]
+        },
+        "bit_allocator_wire_in": {
+          "allocator_features": [
+            "rate_component_marginal",
+            "optimizer_recipe_cost",
+            "representation_recipe_cost",
+            "pair_weight_schedule"
+          ],
+          "charged_bits_status": "unchanged_until_archive_materialization"
+        },
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0006",
+        "candidate_params": {
+          "adamw_lr_ratio": 0.533806579683,
+          "hidden_weight_decay": 0.000285139566,
+          "muon_momentum": 0.953150599472,
+          "muon_ns_steps": 3,
+          "polyak_swa_fraction": 0.033234367929,
+          "warmup_fraction": 0.0
+        },
+        "canonical_equation_refs": [
+          "per_pair_master_gradient_score_impact_taylor_v1",
+          "master_gradient_locality_violation_by_codec_v1",
+          "canonical_frontier_pointer_v1",
+          "pairset_component_marginal_score_decomposition_v1",
+          "scorer_input_cache_hash_identity_v1"
+        ],
+        "canonical_hook_aliases": {
+          "atom_cathedral_hook": "cathedral_autopilot_dispatch",
+          "atom_continual_learning_hook": "continual_learning_posterior"
+        },
+        "cathedral_autopilot_wire_in": {
+          "adapter": "tools/build_optimizer_candidate_queue.py",
+          "dispatch_blockers": [
+            "offline_optimizer_candidate_generation_only",
+            "no_archive_zip_emitted",
+            "no_inflate_runtime_emitted",
+            "no_score_affecting_payload_change_proof",
+            "no_contest_cuda_auth_eval",
+            "provider_prefilter_must_preserve_proxy_boundary",
+            "archive_builder_handoff_required_before_promotion",
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor"
+          ],
+          "dispatch_ready": false,
+          "promotion_gate": "tools/promote_optimizer_candidate_for_exact_eval.py",
+          "queue_schema": "optimizer_candidate_queue_v1"
+        },
+        "continual_learning_wire_in": {
+          "compatible_observation_surface": "representation_training_probe_manifest_v1",
+          "observation_surface": "tac.optimization.mlx_dynamic_sweep_observations",
+          "posterior_update_policy": "append_only_after_empirical_anchor",
+          "score_claim": false
+        },
+        "deterministic_solution_wire_in": {
+          "references": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py"
+          ],
+          "requirements": [
+            "deterministic_seed_recorded",
+            "optimizer_config_sha_recorded",
+            "training_recipe_config_sha_recorded",
+            "trainer_runtime_sha_recorded",
+            "archive_export_is_byte_closed_before_exact_eval"
+          ]
+        },
+        "evidence_grade": "[offline-proxy-planning-only]",
+        "evidence_semantics": "optimizer_training_proxy_signal_not_exact_auth_eval",
+        "false_authority": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false
+        },
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "master_gradient_wire_in": {
+          "consumer_modules": [
+            "tac.master_gradient_consumers",
+            "tac.master_gradient_pr101_score_response_matrix",
+            "tac.training_curriculum.master_gradient_pair_weights",
+            "tools/master_gradient_xray.py"
+          ],
+          "features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal"
+          ],
+          "required_before_exact_promotion": [
+            "per_pair_master_gradient_anchor_or_explicit_non_binding_rationale",
+            "component_marginal_observation_or_explicit_non_binding_rationale",
+            "archive_runtime_identity_before_empirical_anchor"
+          ]
+        },
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "pareto_wire_in": {
+          "axes": [
+            "rate",
+            "segnet",
+            "posenet"
+          ],
+          "constraints": [
+            "common_seed_and_training_budget_for_paired_smokes",
+            "same_archive_export_contract_before_comparing_variants",
+            "contest_axis_component_deltas_required_before_promotion"
+          ],
+          "rank_signal": "proxy_objective_not_score",
+          "scope": "representation_substrate_agnostic"
+        },
+        "probe_disambiguator_wire_in": {
+          "arbitration_rule": "paired_budget_same_seed_then_exact_auth_gate",
+          "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant"
+          ]
+        },
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "representation_family": "hnerv",
+        "schema": "optimizer_training_signal_wire_in_v1",
+        "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "variant_axes": [
+          "pr95_source_faithful_control",
+          "optimizer_recipe",
+          "scheduler_recipe",
+          "normalization_or_weight_decay",
+          "training_curriculum",
+          "archive_export"
+        ],
+        "wire_in_hooks_engaged": [
+          "sensitivity_map",
+          "pareto_constraint",
+          "bit_allocator",
+          "cathedral_autopilot",
+          "continual_learning",
+          "probe_disambiguator"
+        ],
+        "xray_wire_in": {
+          "primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy"
+          ],
+          "required_review_surfaces": [
+            "pairset_component_marginal",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "score_lipschitz"
+          ]
+        }
+      },
+      "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+      "substrate_family": "nerv_family",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+      "trial_index": 6,
+      "variant_axes": [
+        "pr95_source_faithful_control",
+        "optimizer_recipe",
+        "scheduler_recipe",
+        "normalization_or_weight_decay",
+        "training_curriculum",
+        "archive_export"
+      ],
+      "xray_primitives": [
+        "pairset_component_marginal",
+        "per_pair_score_decomposition",
+        "unified_action_principle",
+        "score_lipschitz",
+        "segnet_margin_polytope",
+        "posenet_se3_lie_algebra",
+        "wavelet_hf_energy"
+      ]
+    }
+  ],
+  "top_k_count": 4,
+  "top_k_forensic": [
+    {
+      "archive_zip_emitted": false,
+      "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+      "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_anchor",
+      "candidate_params": {
+        "adamw_lr_ratio": 1.0,
+        "hidden_weight_decay": 0.0005,
+        "muon_momentum": 0.95,
+        "muon_ns_steps": 5,
+        "polyak_swa_fraction": 0.15,
+        "warmup_fraction": 0.05
+      },
+      "canonical_equation_refs": [
+        "per_pair_master_gradient_score_impact_taylor_v1",
+        "master_gradient_locality_violation_by_codec_v1",
+        "canonical_frontier_pointer_v1",
+        "pairset_component_marginal_score_decomposition_v1",
+        "scorer_input_cache_hash_identity_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "deterministic_solution_refs": [
+        "tac.packet_compiler.deterministic_compiler",
+        "tac.hnerv_training_parity_guard",
+        "tac.canonical_equations.scorer_input_cache_hash_identity",
+        "tools/recover_pr95_training_curriculum.py"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "offline_optimizer_candidate_generation_only",
+        "no_archive_zip_emitted",
+        "no_inflate_runtime_emitted",
+        "no_score_affecting_payload_change_proof",
+        "no_contest_cuda_auth_eval",
+        "provider_prefilter_must_preserve_proxy_boundary",
+        "archive_builder_handoff_required_before_promotion",
+        "pr95_hnerv_training_smoke_not_archive",
+        "requires_pr95_faithful_control_pair",
+        "requires_common_seed_and_budget",
+        "requires_optimizer_config_sha",
+        "requires_trainer_runtime_sha",
+        "requires_archive_export_before_exact_eval",
+        "requires_master_gradient_component_marginal_anchor"
+      ],
+      "dry_run_only": true,
+      "evidence_grade": "[offline-proxy-planning-only]",
+      "evidence_semantics": "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+      "exact_auth_eval_performed": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "generation": 0,
+      "inflate_runtime_emitted": false,
+      "lane_class": "pr95_hnerv_muon_local_training_proxy",
+      "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+      "master_gradient_features": [
+        "pairset_component_marginal",
+        "hard_pair_indices",
+        "segnet_posenet_axis_dominance",
+        "per_pair_training_weight_schedule",
+        "optimizer_recipe_component_marginal"
+      ],
+      "op_params": {
+        "adamw_lr_ratio": 1.0,
+        "hidden_weight_decay": 0.0005,
+        "muon_momentum": 0.95,
+        "muon_ns_steps": 5,
+        "polyak_swa_fraction": 0.15,
+        "warmup_fraction": 0.05
+      },
+      "optimizer": "cmaes",
+      "optimizer_status": "cmaes_style_stdlib",
+      "paired_modes": [
+        "pr95_faithful_control",
+        "optimizer_variant",
+        "scheduler_variant",
+        "normalization_or_weight_decay_variant",
+        "archive_export_variant"
+      ],
+      "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+      "profile": "pr95_hnerv_muon_training_smoke",
+      "promotion_eligible": false,
+      "promotion_path": "builder consumes candidate_params -> byte-closed archive/runtime -> runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval",
+      "provider_agnostic": true,
+      "proxy_components": {
+        "anchor_proximity": 0.0,
+        "bias_asymmetry": 0.0,
+        "deterministic_jitter": 7.315980492845919e-09,
+        "normalized_adamw_lr_ratio": 0.0,
+        "normalized_hidden_weight_decay": 0.0,
+        "normalized_muon_momentum": 0.0,
+        "normalized_muon_ns_steps": 0.0,
+        "normalized_polyak_swa_fraction": 0.0,
+        "normalized_warmup_fraction": 0.0,
+        "sidecar_l1": 0.0
+      },
+      "proxy_objective": 0.19285000731598048,
+      "proxy_only": true,
+      "rank": 1,
+      "rank_or_kill_eligible": false,
+      "rank_score": 0.19285000731598048,
+      "rank_score_field": "proxy_objective_not_score",
+      "ready_for_exact_eval_dispatch": false,
+      "representation_family": "hnerv",
+      "runtime_slots": {
+        "adamw_lr_ratio": "optimizer.adamw.lr_ratio",
+        "hidden_weight_decay": "optimizer.muon.hidden_weight_decay",
+        "muon_momentum": "optimizer.muon.momentum",
+        "muon_ns_steps": "optimizer.muon.ns_steps",
+        "polyak_swa_fraction": "averaging.polyak_swa_fraction",
+        "warmup_fraction": "scheduler.warmup_fraction"
+      },
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+      "seed": 20260522,
+      "solver_stack_wire_in": {
+        "atom_wire_in": {
+          "atom_kind": "meta_lagrangian",
+          "candidate_atom_id": "optimizer_training:pr95_muon_hnerv_cmaes_style_stdlib_anchor",
+          "canonical_helper_repo_link": "src/tac/optimization/optimizer_training_signal_bridge.py",
+          "resolution_path": "learned",
+          "wired_hooks": [
+            "sensitivity_map",
+            "pareto_constraint",
+            "bit_allocator",
+            "cathedral_autopilot_dispatch",
+            "continual_learning_posterior",
+            "probe_disambiguator"
+          ]
+        },
+        "bit_allocator_wire_in": {
+          "allocator_features": [
+            "rate_component_marginal",
+            "optimizer_recipe_cost",
+            "representation_recipe_cost",
+            "pair_weight_schedule"
+          ],
+          "charged_bits_status": "unchanged_until_archive_materialization"
+        },
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_anchor",
+        "candidate_params": {
+          "adamw_lr_ratio": 1.0,
+          "hidden_weight_decay": 0.0005,
+          "muon_momentum": 0.95,
+          "muon_ns_steps": 5,
+          "polyak_swa_fraction": 0.15,
+          "warmup_fraction": 0.05
+        },
+        "canonical_equation_refs": [
+          "per_pair_master_gradient_score_impact_taylor_v1",
+          "master_gradient_locality_violation_by_codec_v1",
+          "canonical_frontier_pointer_v1",
+          "pairset_component_marginal_score_decomposition_v1",
+          "scorer_input_cache_hash_identity_v1"
+        ],
+        "canonical_hook_aliases": {
+          "atom_cathedral_hook": "cathedral_autopilot_dispatch",
+          "atom_continual_learning_hook": "continual_learning_posterior"
+        },
+        "cathedral_autopilot_wire_in": {
+          "adapter": "tools/build_optimizer_candidate_queue.py",
+          "dispatch_blockers": [
+            "offline_optimizer_candidate_generation_only",
+            "no_archive_zip_emitted",
+            "no_inflate_runtime_emitted",
+            "no_score_affecting_payload_change_proof",
+            "no_contest_cuda_auth_eval",
+            "provider_prefilter_must_preserve_proxy_boundary",
+            "archive_builder_handoff_required_before_promotion",
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor"
+          ],
+          "dispatch_ready": false,
+          "promotion_gate": "tools/promote_optimizer_candidate_for_exact_eval.py",
+          "queue_schema": "optimizer_candidate_queue_v1"
+        },
+        "continual_learning_wire_in": {
+          "compatible_observation_surface": "representation_training_probe_manifest_v1",
+          "observation_surface": "tac.optimization.mlx_dynamic_sweep_observations",
+          "posterior_update_policy": "append_only_after_empirical_anchor",
+          "score_claim": false
+        },
+        "deterministic_solution_wire_in": {
+          "references": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py"
+          ],
+          "requirements": [
+            "deterministic_seed_recorded",
+            "optimizer_config_sha_recorded",
+            "training_recipe_config_sha_recorded",
+            "trainer_runtime_sha_recorded",
+            "archive_export_is_byte_closed_before_exact_eval"
+          ]
+        },
+        "evidence_grade": "[offline-proxy-planning-only]",
+        "evidence_semantics": "optimizer_training_proxy_signal_not_exact_auth_eval",
+        "false_authority": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false
+        },
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "master_gradient_wire_in": {
+          "consumer_modules": [
+            "tac.master_gradient_consumers",
+            "tac.master_gradient_pr101_score_response_matrix",
+            "tac.training_curriculum.master_gradient_pair_weights",
+            "tools/master_gradient_xray.py"
+          ],
+          "features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal"
+          ],
+          "required_before_exact_promotion": [
+            "per_pair_master_gradient_anchor_or_explicit_non_binding_rationale",
+            "component_marginal_observation_or_explicit_non_binding_rationale",
+            "archive_runtime_identity_before_empirical_anchor"
+          ]
+        },
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "pareto_wire_in": {
+          "axes": [
+            "rate",
+            "segnet",
+            "posenet"
+          ],
+          "constraints": [
+            "common_seed_and_training_budget_for_paired_smokes",
+            "same_archive_export_contract_before_comparing_variants",
+            "contest_axis_component_deltas_required_before_promotion"
+          ],
+          "rank_signal": "proxy_objective_not_score",
+          "scope": "representation_substrate_agnostic"
+        },
+        "probe_disambiguator_wire_in": {
+          "arbitration_rule": "paired_budget_same_seed_then_exact_auth_gate",
+          "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant"
+          ]
+        },
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "representation_family": "hnerv",
+        "schema": "optimizer_training_signal_wire_in_v1",
+        "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "variant_axes": [
+          "pr95_source_faithful_control",
+          "optimizer_recipe",
+          "scheduler_recipe",
+          "normalization_or_weight_decay",
+          "training_curriculum",
+          "archive_export"
+        ],
+        "wire_in_hooks_engaged": [
+          "sensitivity_map",
+          "pareto_constraint",
+          "bit_allocator",
+          "cathedral_autopilot",
+          "continual_learning",
+          "probe_disambiguator"
+        ],
+        "xray_wire_in": {
+          "primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy"
+          ],
+          "required_review_surfaces": [
+            "pairset_component_marginal",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "score_lipschitz"
+          ]
+        }
+      },
+      "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+      "substrate_family": "nerv_family",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+      "trial_index": 0,
+      "variant_axes": [
+        "pr95_source_faithful_control",
+        "optimizer_recipe",
+        "scheduler_recipe",
+        "normalization_or_weight_decay",
+        "training_curriculum",
+        "archive_export"
+      ],
+      "xray_primitives": [
+        "pairset_component_marginal",
+        "per_pair_score_decomposition",
+        "unified_action_principle",
+        "score_lipschitz",
+        "segnet_margin_polytope",
+        "posenet_se3_lie_algebra",
+        "wavelet_hf_energy"
+      ]
+    },
+    {
+      "archive_zip_emitted": false,
+      "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+      "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0002",
+      "candidate_params": {
+        "adamw_lr_ratio": 0.886022866294,
+        "hidden_weight_decay": 0.000550435272,
+        "muon_momentum": 0.949835605209,
+        "muon_ns_steps": 6,
+        "polyak_swa_fraction": 0.147459472299,
+        "warmup_fraction": 0.090099548328
+      },
+      "canonical_equation_refs": [
+        "per_pair_master_gradient_score_impact_taylor_v1",
+        "master_gradient_locality_violation_by_codec_v1",
+        "canonical_frontier_pointer_v1",
+        "pairset_component_marginal_score_decomposition_v1",
+        "scorer_input_cache_hash_identity_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "deterministic_solution_refs": [
+        "tac.packet_compiler.deterministic_compiler",
+        "tac.hnerv_training_parity_guard",
+        "tac.canonical_equations.scorer_input_cache_hash_identity",
+        "tools/recover_pr95_training_curriculum.py"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "offline_optimizer_candidate_generation_only",
+        "no_archive_zip_emitted",
+        "no_inflate_runtime_emitted",
+        "no_score_affecting_payload_change_proof",
+        "no_contest_cuda_auth_eval",
+        "provider_prefilter_must_preserve_proxy_boundary",
+        "archive_builder_handoff_required_before_promotion",
+        "pr95_hnerv_training_smoke_not_archive",
+        "requires_pr95_faithful_control_pair",
+        "requires_common_seed_and_budget",
+        "requires_optimizer_config_sha",
+        "requires_trainer_runtime_sha",
+        "requires_archive_export_before_exact_eval",
+        "requires_master_gradient_component_marginal_anchor"
+      ],
+      "dry_run_only": true,
+      "evidence_grade": "[offline-proxy-planning-only]",
+      "evidence_semantics": "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+      "exact_auth_eval_performed": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "generation": 2,
+      "inflate_runtime_emitted": false,
+      "lane_class": "pr95_hnerv_muon_local_training_proxy",
+      "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+      "master_gradient_features": [
+        "pairset_component_marginal",
+        "hard_pair_indices",
+        "segnet_posenet_axis_dominance",
+        "per_pair_training_weight_schedule",
+        "optimizer_recipe_component_marginal"
+      ],
+      "op_params": {
+        "adamw_lr_ratio": 0.886022866294,
+        "hidden_weight_decay": 0.000550435272,
+        "muon_momentum": 0.949835605209,
+        "muon_ns_steps": 6,
+        "polyak_swa_fraction": 0.147459472299,
+        "warmup_fraction": 0.090099548328
+      },
+      "optimizer": "cmaes",
+      "optimizer_status": "cmaes_style_stdlib",
+      "paired_modes": [
+        "pr95_faithful_control",
+        "optimizer_variant",
+        "scheduler_variant",
+        "normalization_or_weight_decay_variant",
+        "archive_export_variant"
+      ],
+      "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+      "profile": "pr95_hnerv_muon_training_smoke",
+      "promotion_eligible": false,
+      "promotion_path": "builder consumes candidate_params -> byte-closed archive/runtime -> runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval",
+      "provider_agnostic": true,
+      "proxy_components": {
+        "anchor_proximity": 0.07341745799465228,
+        "bias_asymmetry": 0.0,
+        "deterministic_jitter": 3.824814498499852e-09,
+        "normalized_adamw_lr_ratio": 0.016967558540846254,
+        "normalized_hidden_weight_decay": 0.012561563761550558,
+        "normalized_muon_momentum": 1.689102956744713e-05,
+        "normalized_muon_ns_steps": 0.25,
+        "normalized_polyak_swa_fraction": 0.00016135702498870798,
+        "normalized_warmup_fraction": 0.16079737761096077,
+        "sidecar_l1": 0.0
+      },
+      "proxy_objective": 0.19286321896725353,
+      "proxy_only": true,
+      "rank": 2,
+      "rank_or_kill_eligible": false,
+      "rank_score": 0.19286321896725353,
+      "rank_score_field": "proxy_objective_not_score",
+      "ready_for_exact_eval_dispatch": false,
+      "representation_family": "hnerv",
+      "runtime_slots": {
+        "adamw_lr_ratio": "optimizer.adamw.lr_ratio",
+        "hidden_weight_decay": "optimizer.muon.hidden_weight_decay",
+        "muon_momentum": "optimizer.muon.momentum",
+        "muon_ns_steps": "optimizer.muon.ns_steps",
+        "polyak_swa_fraction": "averaging.polyak_swa_fraction",
+        "warmup_fraction": "scheduler.warmup_fraction"
+      },
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+      "seed": 20260522,
+      "solver_stack_wire_in": {
+        "atom_wire_in": {
+          "atom_kind": "meta_lagrangian",
+          "candidate_atom_id": "optimizer_training:pr95_muon_hnerv_cmaes_style_stdlib_0002",
+          "canonical_helper_repo_link": "src/tac/optimization/optimizer_training_signal_bridge.py",
+          "resolution_path": "learned",
+          "wired_hooks": [
+            "sensitivity_map",
+            "pareto_constraint",
+            "bit_allocator",
+            "cathedral_autopilot_dispatch",
+            "continual_learning_posterior",
+            "probe_disambiguator"
+          ]
+        },
+        "bit_allocator_wire_in": {
+          "allocator_features": [
+            "rate_component_marginal",
+            "optimizer_recipe_cost",
+            "representation_recipe_cost",
+            "pair_weight_schedule"
+          ],
+          "charged_bits_status": "unchanged_until_archive_materialization"
+        },
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0002",
+        "candidate_params": {
+          "adamw_lr_ratio": 0.886022866294,
+          "hidden_weight_decay": 0.000550435272,
+          "muon_momentum": 0.949835605209,
+          "muon_ns_steps": 6,
+          "polyak_swa_fraction": 0.147459472299,
+          "warmup_fraction": 0.090099548328
+        },
+        "canonical_equation_refs": [
+          "per_pair_master_gradient_score_impact_taylor_v1",
+          "master_gradient_locality_violation_by_codec_v1",
+          "canonical_frontier_pointer_v1",
+          "pairset_component_marginal_score_decomposition_v1",
+          "scorer_input_cache_hash_identity_v1"
+        ],
+        "canonical_hook_aliases": {
+          "atom_cathedral_hook": "cathedral_autopilot_dispatch",
+          "atom_continual_learning_hook": "continual_learning_posterior"
+        },
+        "cathedral_autopilot_wire_in": {
+          "adapter": "tools/build_optimizer_candidate_queue.py",
+          "dispatch_blockers": [
+            "offline_optimizer_candidate_generation_only",
+            "no_archive_zip_emitted",
+            "no_inflate_runtime_emitted",
+            "no_score_affecting_payload_change_proof",
+            "no_contest_cuda_auth_eval",
+            "provider_prefilter_must_preserve_proxy_boundary",
+            "archive_builder_handoff_required_before_promotion",
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor"
+          ],
+          "dispatch_ready": false,
+          "promotion_gate": "tools/promote_optimizer_candidate_for_exact_eval.py",
+          "queue_schema": "optimizer_candidate_queue_v1"
+        },
+        "continual_learning_wire_in": {
+          "compatible_observation_surface": "representation_training_probe_manifest_v1",
+          "observation_surface": "tac.optimization.mlx_dynamic_sweep_observations",
+          "posterior_update_policy": "append_only_after_empirical_anchor",
+          "score_claim": false
+        },
+        "deterministic_solution_wire_in": {
+          "references": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py"
+          ],
+          "requirements": [
+            "deterministic_seed_recorded",
+            "optimizer_config_sha_recorded",
+            "training_recipe_config_sha_recorded",
+            "trainer_runtime_sha_recorded",
+            "archive_export_is_byte_closed_before_exact_eval"
+          ]
+        },
+        "evidence_grade": "[offline-proxy-planning-only]",
+        "evidence_semantics": "optimizer_training_proxy_signal_not_exact_auth_eval",
+        "false_authority": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false
+        },
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "master_gradient_wire_in": {
+          "consumer_modules": [
+            "tac.master_gradient_consumers",
+            "tac.master_gradient_pr101_score_response_matrix",
+            "tac.training_curriculum.master_gradient_pair_weights",
+            "tools/master_gradient_xray.py"
+          ],
+          "features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal"
+          ],
+          "required_before_exact_promotion": [
+            "per_pair_master_gradient_anchor_or_explicit_non_binding_rationale",
+            "component_marginal_observation_or_explicit_non_binding_rationale",
+            "archive_runtime_identity_before_empirical_anchor"
+          ]
+        },
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "pareto_wire_in": {
+          "axes": [
+            "rate",
+            "segnet",
+            "posenet"
+          ],
+          "constraints": [
+            "common_seed_and_training_budget_for_paired_smokes",
+            "same_archive_export_contract_before_comparing_variants",
+            "contest_axis_component_deltas_required_before_promotion"
+          ],
+          "rank_signal": "proxy_objective_not_score",
+          "scope": "representation_substrate_agnostic"
+        },
+        "probe_disambiguator_wire_in": {
+          "arbitration_rule": "paired_budget_same_seed_then_exact_auth_gate",
+          "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant"
+          ]
+        },
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "representation_family": "hnerv",
+        "schema": "optimizer_training_signal_wire_in_v1",
+        "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "variant_axes": [
+          "pr95_source_faithful_control",
+          "optimizer_recipe",
+          "scheduler_recipe",
+          "normalization_or_weight_decay",
+          "training_curriculum",
+          "archive_export"
+        ],
+        "wire_in_hooks_engaged": [
+          "sensitivity_map",
+          "pareto_constraint",
+          "bit_allocator",
+          "cathedral_autopilot",
+          "continual_learning",
+          "probe_disambiguator"
+        ],
+        "xray_wire_in": {
+          "primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy"
+          ],
+          "required_review_surfaces": [
+            "pairset_component_marginal",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "score_lipschitz"
+          ]
+        }
+      },
+      "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+      "substrate_family": "nerv_family",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+      "trial_index": 2,
+      "variant_axes": [
+        "pr95_source_faithful_control",
+        "optimizer_recipe",
+        "scheduler_recipe",
+        "normalization_or_weight_decay",
+        "training_curriculum",
+        "archive_export"
+      ],
+      "xray_primitives": [
+        "pairset_component_marginal",
+        "per_pair_score_decomposition",
+        "unified_action_principle",
+        "score_lipschitz",
+        "segnet_margin_polytope",
+        "posenet_se3_lie_algebra",
+        "wavelet_hf_energy"
+      ]
+    },
+    {
+      "archive_zip_emitted": false,
+      "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+      "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0003",
+      "candidate_params": {
+        "adamw_lr_ratio": 0.687246363549,
+        "hidden_weight_decay": 0.0004982641,
+        "muon_momentum": 0.967891864456,
+        "muon_ns_steps": 5,
+        "polyak_swa_fraction": 0.0,
+        "warmup_fraction": 0.06142025957
+      },
+      "canonical_equation_refs": [
+        "per_pair_master_gradient_score_impact_taylor_v1",
+        "master_gradient_locality_violation_by_codec_v1",
+        "canonical_frontier_pointer_v1",
+        "pairset_component_marginal_score_decomposition_v1",
+        "scorer_input_cache_hash_identity_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "deterministic_solution_refs": [
+        "tac.packet_compiler.deterministic_compiler",
+        "tac.hnerv_training_parity_guard",
+        "tac.canonical_equations.scorer_input_cache_hash_identity",
+        "tools/recover_pr95_training_curriculum.py"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "offline_optimizer_candidate_generation_only",
+        "no_archive_zip_emitted",
+        "no_inflate_runtime_emitted",
+        "no_score_affecting_payload_change_proof",
+        "no_contest_cuda_auth_eval",
+        "provider_prefilter_must_preserve_proxy_boundary",
+        "archive_builder_handoff_required_before_promotion",
+        "pr95_hnerv_training_smoke_not_archive",
+        "requires_pr95_faithful_control_pair",
+        "requires_common_seed_and_budget",
+        "requires_optimizer_config_sha",
+        "requires_trainer_runtime_sha",
+        "requires_archive_export_before_exact_eval",
+        "requires_master_gradient_component_marginal_anchor"
+      ],
+      "dry_run_only": true,
+      "evidence_grade": "[offline-proxy-planning-only]",
+      "evidence_semantics": "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+      "exact_auth_eval_performed": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "generation": 3,
+      "inflate_runtime_emitted": false,
+      "lane_class": "pr95_hnerv_muon_local_training_proxy",
+      "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+      "master_gradient_features": [
+        "pairset_component_marginal",
+        "hard_pair_indices",
+        "segnet_posenet_axis_dominance",
+        "per_pair_training_weight_schedule",
+        "optimizer_recipe_component_marginal"
+      ],
+      "op_params": {
+        "adamw_lr_ratio": 0.687246363549,
+        "hidden_weight_decay": 0.0004982641,
+        "muon_momentum": 0.967891864456,
+        "muon_ns_steps": 5,
+        "polyak_swa_fraction": 0.0,
+        "warmup_fraction": 0.06142025957
+      },
+      "optimizer": "cmaes",
+      "optimizer_status": "cmaes_style_stdlib",
+      "paired_modes": [
+        "pr95_faithful_control",
+        "optimizer_variant",
+        "scheduler_variant",
+        "normalization_or_weight_decay_variant",
+        "archive_export_variant"
+      ],
+      "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+      "profile": "pr95_hnerv_muon_training_smoke",
+      "promotion_eligible": false,
+      "promotion_path": "builder consumes candidate_params -> byte-closed archive/runtime -> runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval",
+      "provider_agnostic": true,
+      "proxy_components": {
+        "anchor_proximity": 0.15056492112773323,
+        "bias_asymmetry": 0.0,
+        "deterministic_jitter": 9.587191789129594e-10,
+        "normalized_adamw_lr_ratio": 0.12775815459699494,
+        "normalized_hidden_weight_decay": 1.488073486419715e-05,
+        "normalized_muon_momentum": 0.2000742585699227,
+        "normalized_muon_ns_steps": 0.0,
+        "normalized_polyak_swa_fraction": 0.5624999999999999,
+        "normalized_warmup_fraction": 0.01304223286461766,
+        "sidecar_l1": 0.0
+      },
+      "proxy_objective": 0.19287710264452218,
+      "proxy_only": true,
+      "rank": 3,
+      "rank_or_kill_eligible": false,
+      "rank_score": 0.19287710264452218,
+      "rank_score_field": "proxy_objective_not_score",
+      "ready_for_exact_eval_dispatch": false,
+      "representation_family": "hnerv",
+      "runtime_slots": {
+        "adamw_lr_ratio": "optimizer.adamw.lr_ratio",
+        "hidden_weight_decay": "optimizer.muon.hidden_weight_decay",
+        "muon_momentum": "optimizer.muon.momentum",
+        "muon_ns_steps": "optimizer.muon.ns_steps",
+        "polyak_swa_fraction": "averaging.polyak_swa_fraction",
+        "warmup_fraction": "scheduler.warmup_fraction"
+      },
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+      "seed": 20260522,
+      "solver_stack_wire_in": {
+        "atom_wire_in": {
+          "atom_kind": "meta_lagrangian",
+          "candidate_atom_id": "optimizer_training:pr95_muon_hnerv_cmaes_style_stdlib_0003",
+          "canonical_helper_repo_link": "src/tac/optimization/optimizer_training_signal_bridge.py",
+          "resolution_path": "learned",
+          "wired_hooks": [
+            "sensitivity_map",
+            "pareto_constraint",
+            "bit_allocator",
+            "cathedral_autopilot_dispatch",
+            "continual_learning_posterior",
+            "probe_disambiguator"
+          ]
+        },
+        "bit_allocator_wire_in": {
+          "allocator_features": [
+            "rate_component_marginal",
+            "optimizer_recipe_cost",
+            "representation_recipe_cost",
+            "pair_weight_schedule"
+          ],
+          "charged_bits_status": "unchanged_until_archive_materialization"
+        },
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0003",
+        "candidate_params": {
+          "adamw_lr_ratio": 0.687246363549,
+          "hidden_weight_decay": 0.0004982641,
+          "muon_momentum": 0.967891864456,
+          "muon_ns_steps": 5,
+          "polyak_swa_fraction": 0.0,
+          "warmup_fraction": 0.06142025957
+        },
+        "canonical_equation_refs": [
+          "per_pair_master_gradient_score_impact_taylor_v1",
+          "master_gradient_locality_violation_by_codec_v1",
+          "canonical_frontier_pointer_v1",
+          "pairset_component_marginal_score_decomposition_v1",
+          "scorer_input_cache_hash_identity_v1"
+        ],
+        "canonical_hook_aliases": {
+          "atom_cathedral_hook": "cathedral_autopilot_dispatch",
+          "atom_continual_learning_hook": "continual_learning_posterior"
+        },
+        "cathedral_autopilot_wire_in": {
+          "adapter": "tools/build_optimizer_candidate_queue.py",
+          "dispatch_blockers": [
+            "offline_optimizer_candidate_generation_only",
+            "no_archive_zip_emitted",
+            "no_inflate_runtime_emitted",
+            "no_score_affecting_payload_change_proof",
+            "no_contest_cuda_auth_eval",
+            "provider_prefilter_must_preserve_proxy_boundary",
+            "archive_builder_handoff_required_before_promotion",
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor"
+          ],
+          "dispatch_ready": false,
+          "promotion_gate": "tools/promote_optimizer_candidate_for_exact_eval.py",
+          "queue_schema": "optimizer_candidate_queue_v1"
+        },
+        "continual_learning_wire_in": {
+          "compatible_observation_surface": "representation_training_probe_manifest_v1",
+          "observation_surface": "tac.optimization.mlx_dynamic_sweep_observations",
+          "posterior_update_policy": "append_only_after_empirical_anchor",
+          "score_claim": false
+        },
+        "deterministic_solution_wire_in": {
+          "references": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py"
+          ],
+          "requirements": [
+            "deterministic_seed_recorded",
+            "optimizer_config_sha_recorded",
+            "training_recipe_config_sha_recorded",
+            "trainer_runtime_sha_recorded",
+            "archive_export_is_byte_closed_before_exact_eval"
+          ]
+        },
+        "evidence_grade": "[offline-proxy-planning-only]",
+        "evidence_semantics": "optimizer_training_proxy_signal_not_exact_auth_eval",
+        "false_authority": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false
+        },
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "master_gradient_wire_in": {
+          "consumer_modules": [
+            "tac.master_gradient_consumers",
+            "tac.master_gradient_pr101_score_response_matrix",
+            "tac.training_curriculum.master_gradient_pair_weights",
+            "tools/master_gradient_xray.py"
+          ],
+          "features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal"
+          ],
+          "required_before_exact_promotion": [
+            "per_pair_master_gradient_anchor_or_explicit_non_binding_rationale",
+            "component_marginal_observation_or_explicit_non_binding_rationale",
+            "archive_runtime_identity_before_empirical_anchor"
+          ]
+        },
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "pareto_wire_in": {
+          "axes": [
+            "rate",
+            "segnet",
+            "posenet"
+          ],
+          "constraints": [
+            "common_seed_and_training_budget_for_paired_smokes",
+            "same_archive_export_contract_before_comparing_variants",
+            "contest_axis_component_deltas_required_before_promotion"
+          ],
+          "rank_signal": "proxy_objective_not_score",
+          "scope": "representation_substrate_agnostic"
+        },
+        "probe_disambiguator_wire_in": {
+          "arbitration_rule": "paired_budget_same_seed_then_exact_auth_gate",
+          "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant"
+          ]
+        },
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "representation_family": "hnerv",
+        "schema": "optimizer_training_signal_wire_in_v1",
+        "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "variant_axes": [
+          "pr95_source_faithful_control",
+          "optimizer_recipe",
+          "scheduler_recipe",
+          "normalization_or_weight_decay",
+          "training_curriculum",
+          "archive_export"
+        ],
+        "wire_in_hooks_engaged": [
+          "sensitivity_map",
+          "pareto_constraint",
+          "bit_allocator",
+          "cathedral_autopilot",
+          "continual_learning",
+          "probe_disambiguator"
+        ],
+        "xray_wire_in": {
+          "primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy"
+          ],
+          "required_review_surfaces": [
+            "pairset_component_marginal",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "score_lipschitz"
+          ]
+        }
+      },
+      "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+      "substrate_family": "nerv_family",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+      "trial_index": 3,
+      "variant_axes": [
+        "pr95_source_faithful_control",
+        "optimizer_recipe",
+        "scheduler_recipe",
+        "normalization_or_weight_decay",
+        "training_curriculum",
+        "archive_export"
+      ],
+      "xray_primitives": [
+        "pairset_component_marginal",
+        "per_pair_score_decomposition",
+        "unified_action_principle",
+        "score_lipschitz",
+        "segnet_margin_polytope",
+        "posenet_se3_lie_algebra",
+        "wavelet_hf_energy"
+      ]
+    },
+    {
+      "archive_zip_emitted": false,
+      "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+      "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0006",
+      "candidate_params": {
+        "adamw_lr_ratio": 0.533806579683,
+        "hidden_weight_decay": 0.000285139566,
+        "muon_momentum": 0.953150599472,
+        "muon_ns_steps": 3,
+        "polyak_swa_fraction": 0.033234367929,
+        "warmup_fraction": 0.0
+      },
+      "canonical_equation_refs": [
+        "per_pair_master_gradient_score_impact_taylor_v1",
+        "master_gradient_locality_violation_by_codec_v1",
+        "canonical_frontier_pointer_v1",
+        "pairset_component_marginal_score_decomposition_v1",
+        "scorer_input_cache_hash_identity_v1"
+      ],
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "deterministic_solution_refs": [
+        "tac.packet_compiler.deterministic_compiler",
+        "tac.hnerv_training_parity_guard",
+        "tac.canonical_equations.scorer_input_cache_hash_identity",
+        "tools/recover_pr95_training_curriculum.py"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "offline_optimizer_candidate_generation_only",
+        "no_archive_zip_emitted",
+        "no_inflate_runtime_emitted",
+        "no_score_affecting_payload_change_proof",
+        "no_contest_cuda_auth_eval",
+        "provider_prefilter_must_preserve_proxy_boundary",
+        "archive_builder_handoff_required_before_promotion",
+        "pr95_hnerv_training_smoke_not_archive",
+        "requires_pr95_faithful_control_pair",
+        "requires_common_seed_and_budget",
+        "requires_optimizer_config_sha",
+        "requires_trainer_runtime_sha",
+        "requires_archive_export_before_exact_eval",
+        "requires_master_gradient_component_marginal_anchor"
+      ],
+      "dry_run_only": true,
+      "evidence_grade": "[offline-proxy-planning-only]",
+      "evidence_semantics": "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
+      "exact_auth_eval_performed": false,
+      "exact_cuda_auth_eval": false,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "generation": 6,
+      "inflate_runtime_emitted": false,
+      "lane_class": "pr95_hnerv_muon_local_training_proxy",
+      "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+      "master_gradient_features": [
+        "pairset_component_marginal",
+        "hard_pair_indices",
+        "segnet_posenet_axis_dominance",
+        "per_pair_training_weight_schedule",
+        "optimizer_recipe_component_marginal"
+      ],
+      "op_params": {
+        "adamw_lr_ratio": 0.533806579683,
+        "hidden_weight_decay": 0.000285139566,
+        "muon_momentum": 0.953150599472,
+        "muon_ns_steps": 3,
+        "polyak_swa_fraction": 0.033234367929,
+        "warmup_fraction": 0.0
+      },
+      "optimizer": "cmaes",
+      "optimizer_status": "cmaes_style_stdlib",
+      "paired_modes": [
+        "pr95_faithful_control",
+        "optimizer_variant",
+        "scheduler_variant",
+        "normalization_or_weight_decay_variant",
+        "archive_export_variant"
+      ],
+      "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+      "profile": "pr95_hnerv_muon_training_smoke",
+      "promotion_eligible": false,
+      "promotion_path": "builder consumes candidate_params -> byte-closed archive/runtime -> runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval",
+      "provider_agnostic": true,
+      "proxy_components": {
+        "anchor_proximity": 0.35148373497642676,
+        "bias_asymmetry": 0.0,
+        "deterministic_jitter": 1.827146917197641e-08,
+        "normalized_adamw_lr_ratio": 0.28386782713059655,
+        "normalized_hidden_weight_decay": 0.22797533875885603,
+        "normalized_muon_momentum": 0.006203923145604285,
+        "normalized_muon_ns_steps": 1.0,
+        "normalized_polyak_swa_fraction": 0.34085532082350356,
+        "normalized_warmup_fraction": 0.25,
+        "sidecar_l1": 0.0
+      },
+      "proxy_objective": 0.19291328534376492,
+      "proxy_only": true,
+      "rank": 4,
+      "rank_or_kill_eligible": false,
+      "rank_score": 0.19291328534376492,
+      "rank_score_field": "proxy_objective_not_score",
+      "ready_for_exact_eval_dispatch": false,
+      "representation_family": "hnerv",
+      "runtime_slots": {
+        "adamw_lr_ratio": "optimizer.adamw.lr_ratio",
+        "hidden_weight_decay": "optimizer.muon.hidden_weight_decay",
+        "muon_momentum": "optimizer.muon.momentum",
+        "muon_ns_steps": "optimizer.muon.ns_steps",
+        "polyak_swa_fraction": "averaging.polyak_swa_fraction",
+        "warmup_fraction": "scheduler.warmup_fraction"
+      },
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+      "seed": 20260522,
+      "solver_stack_wire_in": {
+        "atom_wire_in": {
+          "atom_kind": "meta_lagrangian",
+          "candidate_atom_id": "optimizer_training:pr95_muon_hnerv_cmaes_style_stdlib_0006",
+          "canonical_helper_repo_link": "src/tac/optimization/optimizer_training_signal_bridge.py",
+          "resolution_path": "learned",
+          "wired_hooks": [
+            "sensitivity_map",
+            "pareto_constraint",
+            "bit_allocator",
+            "cathedral_autopilot_dispatch",
+            "continual_learning_posterior",
+            "probe_disambiguator"
+          ]
+        },
+        "bit_allocator_wire_in": {
+          "allocator_features": [
+            "rate_component_marginal",
+            "optimizer_recipe_cost",
+            "representation_recipe_cost",
+            "pair_weight_schedule"
+          ],
+          "charged_bits_status": "unchanged_until_archive_materialization"
+        },
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "candidate_id": "pr95_muon_hnerv_cmaes_style_stdlib_0006",
+        "candidate_params": {
+          "adamw_lr_ratio": 0.533806579683,
+          "hidden_weight_decay": 0.000285139566,
+          "muon_momentum": 0.953150599472,
+          "muon_ns_steps": 3,
+          "polyak_swa_fraction": 0.033234367929,
+          "warmup_fraction": 0.0
+        },
+        "canonical_equation_refs": [
+          "per_pair_master_gradient_score_impact_taylor_v1",
+          "master_gradient_locality_violation_by_codec_v1",
+          "canonical_frontier_pointer_v1",
+          "pairset_component_marginal_score_decomposition_v1",
+          "scorer_input_cache_hash_identity_v1"
+        ],
+        "canonical_hook_aliases": {
+          "atom_cathedral_hook": "cathedral_autopilot_dispatch",
+          "atom_continual_learning_hook": "continual_learning_posterior"
+        },
+        "cathedral_autopilot_wire_in": {
+          "adapter": "tools/build_optimizer_candidate_queue.py",
+          "dispatch_blockers": [
+            "offline_optimizer_candidate_generation_only",
+            "no_archive_zip_emitted",
+            "no_inflate_runtime_emitted",
+            "no_score_affecting_payload_change_proof",
+            "no_contest_cuda_auth_eval",
+            "provider_prefilter_must_preserve_proxy_boundary",
+            "archive_builder_handoff_required_before_promotion",
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor"
+          ],
+          "dispatch_ready": false,
+          "promotion_gate": "tools/promote_optimizer_candidate_for_exact_eval.py",
+          "queue_schema": "optimizer_candidate_queue_v1"
+        },
+        "continual_learning_wire_in": {
+          "compatible_observation_surface": "representation_training_probe_manifest_v1",
+          "observation_surface": "tac.optimization.mlx_dynamic_sweep_observations",
+          "posterior_update_policy": "append_only_after_empirical_anchor",
+          "score_claim": false
+        },
+        "deterministic_solution_wire_in": {
+          "references": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py"
+          ],
+          "requirements": [
+            "deterministic_seed_recorded",
+            "optimizer_config_sha_recorded",
+            "training_recipe_config_sha_recorded",
+            "trainer_runtime_sha_recorded",
+            "archive_export_is_byte_closed_before_exact_eval"
+          ]
+        },
+        "evidence_grade": "[offline-proxy-planning-only]",
+        "evidence_semantics": "optimizer_training_proxy_signal_not_exact_auth_eval",
+        "false_authority": {
+          "charged_bits_changed": false,
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_affecting_payload_changed": false,
+          "score_claim": false,
+          "score_claim_eligible": false
+        },
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "master_gradient_wire_in": {
+          "consumer_modules": [
+            "tac.master_gradient_consumers",
+            "tac.master_gradient_pr101_score_response_matrix",
+            "tac.training_curriculum.master_gradient_pair_weights",
+            "tools/master_gradient_xray.py"
+          ],
+          "features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal"
+          ],
+          "required_before_exact_promotion": [
+            "per_pair_master_gradient_anchor_or_explicit_non_binding_rationale",
+            "component_marginal_observation_or_explicit_non_binding_rationale",
+            "archive_runtime_identity_before_empirical_anchor"
+          ]
+        },
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "pareto_wire_in": {
+          "axes": [
+            "rate",
+            "segnet",
+            "posenet"
+          ],
+          "constraints": [
+            "common_seed_and_training_budget_for_paired_smokes",
+            "same_archive_export_contract_before_comparing_variants",
+            "contest_axis_component_deltas_required_before_promotion"
+          ],
+          "rank_signal": "proxy_objective_not_score",
+          "scope": "representation_substrate_agnostic"
+        },
+        "probe_disambiguator_wire_in": {
+          "arbitration_rule": "paired_budget_same_seed_then_exact_auth_gate",
+          "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant"
+          ]
+        },
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "representation_family": "hnerv",
+        "schema": "optimizer_training_signal_wire_in_v1",
+        "score_lowering_hypothesis": "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied through bounded optimizer/scheduler/normalization deltas under common seed and budget before any archive/runtime exact-eval gate.",
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "variant_axes": [
+          "pr95_source_faithful_control",
+          "optimizer_recipe",
+          "scheduler_recipe",
+          "normalization_or_weight_decay",
+          "training_curriculum",
+          "archive_export"
+        ],
+        "wire_in_hooks_engaged": [
+          "sensitivity_map",
+          "pareto_constraint",
+          "bit_allocator",
+          "cathedral_autopilot",
+          "continual_learning",
+          "probe_disambiguator"
+        ],
+        "xray_wire_in": {
+          "primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy"
+          ],
+          "required_review_surfaces": [
+            "pairset_component_marginal",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "score_lipschitz"
+          ]
+        }
+      },
+      "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+      "substrate_family": "nerv_family",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ],
+      "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+      "trial_index": 6,
+      "variant_axes": [
+        "pr95_source_faithful_control",
+        "optimizer_recipe",
+        "scheduler_recipe",
+        "normalization_or_weight_decay",
+        "training_curriculum",
+        "archive_export"
+      ],
+      "xray_primitives": [
+        "pairset_component_marginal",
+        "per_pair_score_decomposition",
+        "unified_action_principle",
+        "score_lipschitz",
+        "segnet_margin_polytope",
+        "posenet_se3_lie_algebra",
+        "wavelet_hf_energy"
+      ]
+    }
+  ]
+}

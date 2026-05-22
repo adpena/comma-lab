@@ -15,6 +15,10 @@ from tac.optimization.optimizer_guided_candidate_generation import (
     generate_candidate_queue,
     load_profile,
 )
+from tac.optimization.optimizer_training_signal_bridge import (
+    OPTIMIZER_TRAINING_SIGNAL_WIRE_IN_SCHEMA,
+    validate_optimizer_training_signal_wire_in,
+)
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -182,3 +186,60 @@ def test_cli_writes_stable_queue_without_dispatching(tmp_path: Path) -> None:
     assert len(queue["top_k"]) == 4
     assert all(row["score_claim"] is False for row in queue["top_k"])
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in queue["top_k"])
+
+
+def test_pr95_hnerv_muon_profile_emits_full_solver_stack_wire_in() -> None:
+    profile = load_profile("pr95_hnerv_muon_training_smoke")
+
+    queue = generate_candidate_queue(
+        profile=profile,
+        optimizer="cmaes",
+        max_candidates=8,
+        top_k=5,
+        seed=20260522,
+    )
+
+    assert queue["schema"] == QUEUE_SCHEMA
+    assert queue["dispatch_ready_count"] == 0
+    assert queue["profile"] == "pr95_hnerv_muon_training_smoke"
+    assert queue["profile_contract"]["candidate_family"] == (
+        "pr95_hnerv_muon_optimizer_recipe_smoke"
+    )
+    assert queue["profile_contract"]["representation_family"] == "hnerv"
+    assert queue["profile_contract"]["substrate_family"] == "nerv_family"
+    row = queue["top_k"][0]
+    assert validate_proxy_candidate(row) == []
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["rank_score_field"] == "proxy_objective_not_score"
+    assert row["representation_family"] == "hnerv"
+    assert row["substrate_family"] == "nerv_family"
+    assert row["candidate_params"].keys() == {
+        "muon_ns_steps",
+        "muon_momentum",
+        "hidden_weight_decay",
+        "adamw_lr_ratio",
+        "warmup_fraction",
+        "polyak_swa_fraction",
+    }
+    assert "requires_master_gradient_component_marginal_anchor" in row["dispatch_blockers"]
+    assert "per_pair_training_weight_schedule" in row["master_gradient_features"]
+    assert "pairset_component_marginal_score_decomposition_v1" in row[
+        "canonical_equation_refs"
+    ]
+
+    wire = row["solver_stack_wire_in"]
+    assert wire["schema"] == OPTIMIZER_TRAINING_SIGNAL_WIRE_IN_SCHEMA
+    assert wire["representation_family"] == "hnerv"
+    assert wire["substrate_family"] == "nerv_family"
+    assert "optimizer_recipe" in wire["variant_axes"]
+    assert validate_optimizer_training_signal_wire_in(wire) == []
+    assert wire["false_authority"]["ready_for_exact_eval_dispatch"] is False
+    assert wire["cathedral_autopilot_wire_in"]["dispatch_ready"] is False
+    assert wire["atom_wire_in"]["atom_kind"] == "meta_lagrangian"
+    assert wire["atom_wire_in"]["resolution_path"] == "learned"
+    assert "tac.training_curriculum.master_gradient_pair_weights" in wire[
+        "master_gradient_wire_in"
+    ]["consumer_modules"]
+    assert wire[
+        "cathedral_autopilot_wire_in"
+    ]["promotion_gate"] == "tools/promote_optimizer_candidate_for_exact_eval.py"

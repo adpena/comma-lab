@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Deterministic offline candidate generation for optimizer-guided sweeps.
 
-This module is a reusable planning scaffold for low-dimensional
-score-lowering searches such as A1/PR101 inflate-time bias and sidecar
-experiments.  It emits ranked proxy rows only.  It never creates archives,
-dispatches GPU work, or claims exact scores.
+This module is a reusable planning scaffold for low-dimensional score-lowering
+searches: A1/PR101 inflate-time bias, PR95/HNeRV optimizer smokes, broader
+representation-family training probes, and custom profile JSON supplied by
+family-specific substrate builders. It emits ranked proxy rows only. It never
+creates archives, dispatches GPU work, or claims exact scores.
 """
 
 from __future__ import annotations
@@ -19,6 +20,15 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from tac.optimization.optimizer_training_signal_bridge import (
+    DEFAULT_CANONICAL_EQUATION_REFS,
+    DEFAULT_DETERMINISTIC_SOLUTION_REFS,
+    DEFAULT_MASTER_GRADIENT_FEATURES,
+    DEFAULT_PAIRED_MODES,
+    DEFAULT_VARIANT_AXES,
+    DEFAULT_XRAY_PRIMITIVES,
+    build_optimizer_training_signal_wire_in,
+)
 from tac.optimization.proxy_candidate_contract import apply_proxy_evidence_boundary
 
 QUEUE_SCHEMA = "optimizer_guided_candidate_queue_v1"
@@ -146,6 +156,9 @@ class CandidateGenerationProfile:
     lane_id: str
     lane_class: str
     candidate_family: str
+    representation_family: str
+    substrate_family: str
+    training_signal_kind: str
     param_schema: str
     candidate_prefix: str
     parameters: tuple[ParameterSpec, ...]
@@ -157,6 +170,12 @@ class CandidateGenerationProfile:
     jitter_scale: float = 2.5e-8
     source_anchor: str | None = None
     dispatch_blockers: tuple[str, ...] = field(default_factory=tuple)
+    canonical_equation_refs: tuple[str, ...] = DEFAULT_CANONICAL_EQUATION_REFS
+    master_gradient_features: tuple[str, ...] = DEFAULT_MASTER_GRADIENT_FEATURES
+    xray_primitives: tuple[str, ...] = DEFAULT_XRAY_PRIMITIVES
+    deterministic_solution_refs: tuple[str, ...] = DEFAULT_DETERMINISTIC_SOLUTION_REFS
+    variant_axes: tuple[str, ...] = DEFAULT_VARIANT_AXES
+    paired_modes: tuple[str, ...] = DEFAULT_PAIRED_MODES
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> CandidateGenerationProfile:
@@ -169,6 +188,20 @@ class CandidateGenerationProfile:
             lane_id=str(payload.get("lane_id") or ""),
             lane_class=str(payload.get("lane_class") or ""),
             candidate_family=str(payload.get("candidate_family") or ""),
+            representation_family=str(
+                payload.get("representation_family")
+                or payload.get("candidate_family")
+                or "unspecified"
+            ),
+            substrate_family=str(
+                payload.get("substrate_family")
+                or payload.get("representation_family")
+                or payload.get("candidate_family")
+                or "unspecified"
+            ),
+            training_signal_kind=str(
+                payload.get("training_signal_kind") or "optimizer_guided_proxy"
+            ),
             param_schema=str(payload.get("param_schema") or ""),
             candidate_prefix=str(payload.get("candidate_prefix") or ""),
             parameters=parameters,
@@ -192,6 +225,30 @@ class CandidateGenerationProfile:
             jitter_scale=_nonnegative_float(payload.get("jitter_scale", 2.5e-8), "jitter_scale"),
             source_anchor=_optional_str(payload.get("source_anchor")),
             dispatch_blockers=tuple(str(item) for item in payload.get("dispatch_blockers", []) if str(item)),
+            canonical_equation_refs=_str_tuple_or_default(
+                payload.get("canonical_equation_refs"),
+                DEFAULT_CANONICAL_EQUATION_REFS,
+            ),
+            master_gradient_features=_str_tuple_or_default(
+                payload.get("master_gradient_features"),
+                DEFAULT_MASTER_GRADIENT_FEATURES,
+            ),
+            xray_primitives=_str_tuple_or_default(
+                payload.get("xray_primitives"),
+                DEFAULT_XRAY_PRIMITIVES,
+            ),
+            deterministic_solution_refs=_str_tuple_or_default(
+                payload.get("deterministic_solution_refs"),
+                DEFAULT_DETERMINISTIC_SOLUTION_REFS,
+            ),
+            variant_axes=_str_tuple_or_default(
+                payload.get("variant_axes"),
+                DEFAULT_VARIANT_AXES,
+            ),
+            paired_modes=_str_tuple_or_default(
+                payload.get("paired_modes"),
+                DEFAULT_PAIRED_MODES,
+            ),
         )
         profile.validate()
         return profile
@@ -202,6 +259,9 @@ class CandidateGenerationProfile:
             "lane_id",
             "lane_class",
             "candidate_family",
+            "representation_family",
+            "substrate_family",
+            "training_signal_kind",
             "param_schema",
             "candidate_prefix",
             "score_lowering_hypothesis",
@@ -211,6 +271,16 @@ class CandidateGenerationProfile:
         names = [param.name for param in self.parameters]
         if len(names) != len(set(names)):
             raise CandidateGenerationError("profile parameter names must be unique")
+        for attr in (
+            "canonical_equation_refs",
+            "master_gradient_features",
+            "xray_primitives",
+            "deterministic_solution_refs",
+            "variant_axes",
+            "paired_modes",
+        ):
+            if not getattr(self, attr):
+                raise CandidateGenerationError(f"profile {attr} must be non-empty")
 
     @property
     def parameter_map(self) -> dict[str, ParameterSpec]:
@@ -227,6 +297,9 @@ class CandidateGenerationProfile:
                 "lane_id": self.lane_id,
                 "lane_class": self.lane_class,
                 "candidate_family": self.candidate_family,
+                "representation_family": self.representation_family,
+                "substrate_family": self.substrate_family,
+                "training_signal_kind": self.training_signal_kind,
                 "param_schema": self.param_schema,
                 "candidate_prefix": self.candidate_prefix,
                 "parameters": [param.as_dict() for param in self.parameters],
@@ -238,6 +311,12 @@ class CandidateGenerationProfile:
                 "jitter_scale": self.jitter_scale,
                 "source_anchor": self.source_anchor,
                 "dispatch_blockers": list(self.dispatch_blockers),
+                "canonical_equation_refs": list(self.canonical_equation_refs),
+                "master_gradient_features": list(self.master_gradient_features),
+                "xray_primitives": list(self.xray_primitives),
+                "deterministic_solution_refs": list(self.deterministic_solution_refs),
+                "variant_axes": list(self.variant_axes),
+                "paired_modes": list(self.paired_modes),
             }
         )
 
@@ -255,7 +334,7 @@ class CandidateDraft:
 
 
 def default_profiles() -> dict[str, CandidateGenerationProfile]:
-    """Return built-in profiles for A1/PR101 low-dimensional sweeps."""
+    """Return built-in profiles for low-dimensional planning sweeps."""
 
     return {
         name: CandidateGenerationProfile.from_mapping(payload)
@@ -363,8 +442,9 @@ def generate_candidate_queue(
             "score_lowering_connection": {
                 "hypothesis": profile.score_lowering_hypothesis,
                 "how_this_lowers_score": (
-                    "ranked params focus scarce prefilter/eval attention on the "
-                    "A1/PR101 bias/sidecar neighborhood before archive materialization"
+                    "ranked params focus scarce local-training, prefilter, and "
+                    "exact-eval attention on the declared representation/substrate "
+                    "family before archive materialization"
                 ),
                 "not_a_score_claim": True,
             },
@@ -655,11 +735,35 @@ def _candidate_row(
     optimizer_status: str,
     seed: int,
 ) -> dict[str, Any]:
+    solver_stack_wire_in = build_optimizer_training_signal_wire_in(
+        candidate_id=draft.candidate_id,
+        profile_id=profile.profile_id,
+        lane_id=profile.lane_id,
+        lane_class=profile.lane_class,
+        candidate_family=profile.candidate_family,
+        representation_family=profile.representation_family,
+        substrate_family=profile.substrate_family,
+        training_signal_kind=profile.training_signal_kind,
+        param_schema=profile.param_schema,
+        candidate_params=draft.params,
+        source_anchor=profile.source_anchor,
+        score_lowering_hypothesis=profile.score_lowering_hypothesis,
+        dispatch_blockers=[*BASE_DISPATCH_BLOCKERS, *profile.dispatch_blockers],
+        canonical_equation_refs=profile.canonical_equation_refs,
+        master_gradient_features=profile.master_gradient_features,
+        xray_primitives=profile.xray_primitives,
+        deterministic_solution_refs=profile.deterministic_solution_refs,
+        variant_axes=profile.variant_axes,
+        paired_modes=profile.paired_modes,
+    )
     row = {
         "candidate_id": draft.candidate_id,
         "lane_id": profile.lane_id,
         "lane_class": profile.lane_class,
         "candidate_family": profile.candidate_family,
+        "representation_family": profile.representation_family,
+        "substrate_family": profile.substrate_family,
+        "training_signal_kind": profile.training_signal_kind,
         "profile": profile.profile_id,
         "param_schema": profile.param_schema,
         "optimizer": optimizer,
@@ -689,6 +793,13 @@ def _candidate_row(
         "evidence_grade": EVIDENCE_GRADE,
         "score_lowering_hypothesis": profile.score_lowering_hypothesis,
         "source_anchor": profile.source_anchor,
+        "solver_stack_wire_in": solver_stack_wire_in,
+        "master_gradient_features": list(profile.master_gradient_features),
+        "xray_primitives": list(profile.xray_primitives),
+        "canonical_equation_refs": list(profile.canonical_equation_refs),
+        "deterministic_solution_refs": list(profile.deterministic_solution_refs),
+        "variant_axes": list(profile.variant_axes),
+        "paired_modes": list(profile.paired_modes),
         "promotion_path": (
             "builder consumes candidate_params -> byte-closed archive/runtime -> "
             "runtime-consumption proof -> exact-readiness queue -> claimed exact CUDA eval"
@@ -737,6 +848,20 @@ def _optional_str(value: Any) -> str | None:
         return None
     text = str(value)
     return text if text else None
+
+
+def _str_tuple_or_default(value: Any, default: tuple[str, ...]) -> tuple[str, ...]:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        items = (value,)
+    elif isinstance(value, Iterable):
+        items = tuple(str(item) for item in value if str(item))
+    else:
+        raise CandidateGenerationError("wire-in reference fields must be strings or lists")
+    if not items:
+        return default
+    return tuple(dict.fromkeys(items))
 
 
 def _drop_none(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -883,6 +1008,129 @@ _DEFAULT_PROFILE_PAYLOADS: dict[str, dict[str, Any]] = {
                 "weight": 1.5,
                 "runtime_slot": "up[:, 1, 0]",
                 "description": "Sidecar coordinate on valid frame-1 red slot.",
+            },
+        ],
+    },
+    "pr95_hnerv_muon_training_smoke": {
+        "profile_id": "pr95_hnerv_muon_training_smoke",
+        "lane_id": "offline_pr95_hnerv_muon_training_smoke_candidate_generation",
+        "lane_class": "pr95_hnerv_muon_local_training_proxy",
+        "candidate_family": "pr95_hnerv_muon_optimizer_recipe_smoke",
+        "representation_family": "hnerv",
+        "substrate_family": "nerv_family",
+        "training_signal_kind": "local_representation_training_optimizer_schedule_smoke",
+        "param_schema": "pr95_hnerv_muon_optimizer_recipe_params_v1",
+        "candidate_prefix": "pr95_muon_hnerv",
+        "base_proxy_objective": 0.19285,
+        "objective_scale": 0.00018,
+        "bias_asymmetry_weight": 0.0,
+        "sidecar_l1_weight": 0.00006,
+        "source_anchor": "PR95 HNeRV Muon stage-8 recipe; local training smoke only",
+        "score_lowering_hypothesis": (
+            "PR95's HNeRV Muon recipe should be reproduced faithfully, then varied "
+            "through bounded optimizer/scheduler/normalization deltas under common "
+            "seed and budget before any archive/runtime exact-eval gate."
+        ),
+        "dispatch_blockers": [
+            "pr95_hnerv_training_smoke_not_archive",
+            "requires_pr95_faithful_control_pair",
+            "requires_common_seed_and_budget",
+            "requires_optimizer_config_sha",
+            "requires_trainer_runtime_sha",
+            "requires_archive_export_before_exact_eval",
+            "requires_master_gradient_component_marginal_anchor",
+        ],
+        "canonical_equation_refs": [
+            "per_pair_master_gradient_score_impact_taylor_v1",
+            "master_gradient_locality_violation_by_codec_v1",
+            "canonical_frontier_pointer_v1",
+            "pairset_component_marginal_score_decomposition_v1",
+            "scorer_input_cache_hash_identity_v1",
+        ],
+        "master_gradient_features": [
+            "pairset_component_marginal",
+            "hard_pair_indices",
+            "segnet_posenet_axis_dominance",
+            "per_pair_training_weight_schedule",
+            "optimizer_recipe_component_marginal",
+        ],
+        "xray_primitives": [
+            "pairset_component_marginal",
+            "per_pair_score_decomposition",
+            "unified_action_principle",
+            "score_lipschitz",
+            "segnet_margin_polytope",
+            "posenet_se3_lie_algebra",
+            "wavelet_hf_energy",
+        ],
+        "deterministic_solution_refs": [
+            "tac.packet_compiler.deterministic_compiler",
+            "tac.hnerv_training_parity_guard",
+            "tac.canonical_equations.scorer_input_cache_hash_identity",
+            "tools/recover_pr95_training_curriculum.py",
+        ],
+        "variant_axes": [
+            "pr95_source_faithful_control",
+            "optimizer_recipe",
+            "scheduler_recipe",
+            "normalization_or_weight_decay",
+            "training_curriculum",
+            "archive_export",
+        ],
+        "paired_modes": [
+            "pr95_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "normalization_or_weight_decay_variant",
+            "archive_export_variant",
+        ],
+        "parameters": [
+            {
+                "name": "muon_ns_steps",
+                "kind": "int",
+                "low": 3,
+                "high": 7,
+                "anchor": 5,
+                "step": 1,
+                "runtime_slot": "optimizer.muon.ns_steps",
+                "description": "Newton-Schulz/polar iteration count for Muon-eligible HNeRV hidden weights.",
+            },
+            {
+                "name": "muon_momentum",
+                "low": 0.90,
+                "high": 0.98,
+                "anchor": 0.95,
+                "runtime_slot": "optimizer.muon.momentum",
+            },
+            {
+                "name": "hidden_weight_decay",
+                "low": 0.0001,
+                "high": 0.0010,
+                "anchor": 0.0005,
+                "runtime_slot": "optimizer.muon.hidden_weight_decay",
+            },
+            {
+                "name": "adamw_lr_ratio",
+                "low": 0.25,
+                "high": 2.0,
+                "anchor": 1.0,
+                "runtime_slot": "optimizer.adamw.lr_ratio",
+                "description": "LR multiplier for non-Muon params: 1D, bias, stem, RGB/head params.",
+            },
+            {
+                "name": "warmup_fraction",
+                "low": 0.0,
+                "high": 0.20,
+                "anchor": 0.05,
+                "runtime_slot": "scheduler.warmup_fraction",
+            },
+            {
+                "name": "polyak_swa_fraction",
+                "low": 0.0,
+                "high": 0.40,
+                "anchor": 0.15,
+                "runtime_slot": "averaging.polyak_swa_fraction",
+                "description": "Late-training averaging budget; smoke-only until paired replay proves benefit.",
             },
         ],
     },

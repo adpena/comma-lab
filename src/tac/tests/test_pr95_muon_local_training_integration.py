@@ -1,0 +1,146 @@
+# SPDX-License-Identifier: MIT
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from tac.optimization.pr95_muon_local_training_integration import (
+    CANDIDATE_PAYLOAD_SCHEMA,
+    PR95MuonLocalTrainingIntegrationError,
+    adapt_pr95_local_training_manifest_to_candidate,
+    validate_pr95_local_training_manifest,
+)
+from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
+from tac.optimizer.candidate_queue import build_candidate_queue
+
+
+def _manifest() -> dict[str, object]:
+    return {
+        "schema": "pr95_local_training_probe_manifest_v1",
+        "lane_id": "lane_pr95_local_mps_source_faithful_training_probe_20260519",
+        "source_tree_sha256": "a" * 64,
+        "device_selected": "cpu",
+        "torch_version": "2.11.0",
+        "platform": "Darwin-arm64",
+        "seed": 1234,
+        "full_curriculum": False,
+        "stage_count": 8,
+        "stages": [
+            {"index": 1, "module": "stage1_v328_ce"},
+            {"index": 8, "module": "stage8_muon_finetune"},
+        ],
+        "results": [
+            {
+                "stage_index": 1,
+                "stage_module": "stage1_v328_ce",
+                "epochs_run": 1,
+                "wall_seconds": 12.5,
+                "best_score": 0.215,
+            },
+            {
+                "stage_index": 8,
+                "stage_module": "stage8_muon_finetune",
+                "epochs_run": 2,
+                "wall_seconds": 22.5,
+                "best_score": 0.193,
+            },
+        ],
+        "archive_zip": {
+            "path": "experiments/results/pr95_probe/archive.zip",
+            "bytes": 178417,
+            "sha256": "b" * 64,
+            "member_sha256": "c" * 64,
+        },
+        "auth_eval_bridge": {
+            "ok": True,
+            "score_axis": "macOS-CPU advisory",
+            "auth_eval_json_sha256": "d" * 64,
+            "auth_eval_canonical_score": 0.194,
+            "score_comparable": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def test_pr95_manifest_adapter_stamps_false_authority(tmp_path: Path) -> None:
+    source = tmp_path / "manifest.json"
+    source.write_text(json.dumps(_manifest()), encoding="utf-8")
+
+    row = adapt_pr95_local_training_manifest_to_candidate(
+        _manifest(),
+        source_path=source,
+        repo_root=tmp_path,
+    )
+
+    assert row["candidate_id"] == "pr95_muon_hnerv_local_cpu_stages8_seed1234"
+    assert row["representation_family"] == "hnerv"
+    assert row["substrate_family"] == "nerv_family"
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["score_affecting_payload_changed"] is False
+    assert row["charged_bits_changed"] is False
+    assert validate_proxy_candidate(row) == []
+    assert row["consumer_payload"]["schema"] == CANDIDATE_PAYLOAD_SCHEMA
+    assert row["consumer_payload"]["pr95_muon_local_training"]["muon_partition"][
+        "hidden_2d_plus_weights"
+    ] == "Muon"
+    assert row["solver_stack_wire_in"]["atom_wire_in"]["atom_kind"] == "meta_lagrangian"
+
+
+def test_pr95_manifest_adapter_rejects_truthy_authority() -> None:
+    payload = _manifest()
+    payload["rank_or_kill_eligible"] = True
+
+    with pytest.raises(PR95MuonLocalTrainingIntegrationError, match="rank_or_kill"):
+        validate_pr95_local_training_manifest(payload)
+
+
+def test_pr95_manifest_adapter_emits_consumer_payload_for_cathedral_and_mlx_sweep(
+    tmp_path: Path,
+) -> None:
+    row = adapt_pr95_local_training_manifest_to_candidate(
+        _manifest(),
+        source_path=tmp_path / "manifest.json",
+        repo_root=tmp_path,
+    )
+
+    payload = row["consumer_payload"]["pr95_muon_local_training"]
+    assert payload["stage_count"] == 8
+    assert payload["archive_export"]["present"] is True
+    assert payload["auth_bridge"]["axis"] == "macOS-CPU advisory"
+    assert "stage8_muon_finetune" in payload["stage_modules"]
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in payload[
+        "missing_blockers"
+    ]
+
+
+def test_candidate_queue_accepts_pr95_local_training_manifest_as_planning_only(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "pr95_manifest.json"
+    manifest.write_text(
+        json.dumps(_manifest(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert queue["dispatch_ready_count"] == 0
+    assert row["candidate_family"] == "pr95_hnerv_muon_training_probe"
+    assert row["rank_score"] == 0.194
+    assert row["rank_score_field"] == "auth_eval_bridge_or_training_best_score_not_authority"
+    assert row["consumer_payload"]["schema"] == CANDIDATE_PAYLOAD_SCHEMA
+    assert "pr95_local_training_probe_is_proxy_signal" in row["dispatch_blockers"]
+    assert validate_proxy_candidate(row) == []

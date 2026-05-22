@@ -3,8 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tools.cathedral_autopilot_autonomous_loop import (
     CandidateRow,
+    _coerce_consumer_payload,
     _invoke_consumer_safely,
     load_candidates_from_jsonl,
 )
@@ -82,3 +85,12 @@ def test_load_candidates_from_jsonl_preserves_consumer_payload(tmp_path: Path) -
     assert candidates[0].consumer_payload["procedural_codebook_savings_candidate"][
         "affected_frame_indices"
     ] == [1]
+
+
+def test_cathedral_consumer_payload_rejects_rank_or_promote_authority() -> None:
+    for key in ("rank_or_kill_eligible", "promotable"):
+        with pytest.raises(ValueError, match=key):
+            _coerce_consumer_payload(
+                {"consumer_payload": {key: True}},
+                context="fixture",
+            )
