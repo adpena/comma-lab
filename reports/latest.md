@@ -189,9 +189,16 @@ last_refreshed_note: |
   also passed locality controls and exact Modal `[contest-CPU]` eval. It
   scored `0.19204229507283993`, still a regression versus compact DQS1 top32
   by `+0.000013346256750063068`; component deltas were PoseNet `+0.0`, SegNet
-  `+0.000024000000000010124`, rate `-0.000010653743249947056`. The refreshed
-  portfolio now recommends `pairset_diversity_k024` as the next fresh
-  local-control candidate.
+  `+0.000024000000000010124`, rate `-0.000010653743249947056`.
+  `pairset_diversity_k024` (`a904d580436b44f4871eb6b7bb83f700ea5e493721bd1bf5845476131382e7ff`,
+  `178552` bytes, 24 pairs) passed locality on a 600-second rerun after the
+  first 180-second locality run produced a premature raw-size mismatch while
+  inflate children were still writing. Exact Modal `[contest-CPU]` eval scored
+  `0.19203562194446488`, still a regression versus compact DQS1 top32 by
+  `+0.000006673128375017656`; component deltas were PoseNet `+0.0`, SegNet
+  `+0.000012000000000005062`, rate `-0.000005326871624980467`. The refreshed
+  portfolio now recommends `pairset_drop_one_rank013_pair0327` as the next
+  fresh local-control candidate.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 

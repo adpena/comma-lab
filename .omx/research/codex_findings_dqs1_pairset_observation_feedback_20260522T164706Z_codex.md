@@ -238,6 +238,50 @@ The observation ledger now has `6` exact CPU calibration rows:
 - New recommended candidate: `pairset_diversity_k024`
 - New recommended action: `materialize_pairset_archive_and_run_local_controls`
 
+`pairset_diversity_k024` was materialized, locality-checked, dispatched
+CPU-first, and recovered cleanly. It is the best tested diversity pairset so
+far and is close to compact DQS1 top32, but still does not beat it.
+
+- Locality report used for dispatch:
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k024_materialization_20260522T173059Z/locality_controls_rerun_20260522T1738Z.json`
+- First locality report:
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k024_materialization_20260522T173059Z/locality_controls.json`
+- First locality note: the 180-second run emitted a raw-size mismatch while
+  inflate children were still writing; the 600-second rerun completed with
+  stable full-size raw outputs and zero mismatches.
+- Archive SHA-256:
+  `a904d580436b44f4871eb6b7bb83f700ea5e493721bd1bf5845476131382e7ff`
+- Archive bytes: `178552`
+- Selected pairs:
+  `[26, 59, 98, 109, 112, 151, 167, 229, 257, 259, 296, 327, 371, 378, 412, 430, 459, 467, 479, 496, 501, 520, 555, 588]`
+- Selected frame mismatch count on rerun: `0`
+- Unselected frame mismatch count on rerun: `0`
+- Modal result:
+  `experiments/results/modal_auth_eval_cpu/dqs1_pairset_diversity_k024_selective_decoderq_cpu_20260522T173059Z/contest_auth_eval.json`
+- Modal call id:
+  `fc-01KS8C4SX0TQ5G50VE7Z6M47PQ`
+- Exact score:
+  `0.19203562194446488` `[contest-CPU]`
+- Delta versus compact DQS1 top32 CPU frontier:
+  `+0.000006673128375017656`
+- Component deltas: PoseNet `+0.0`, SegNet
+  `+0.000012000000000005062`, rate `-0.000005326871624980467`
+- Runtime tree SHA-256:
+  `d8431f5ca579e93fcc1eb3f357b831e351e056beeac765572a3c95609519a4f5`
+- Inflated aggregate SHA-256:
+  `34aa715e5871c930843259970988c56ff4c4c2fbcf61a29084d897ded7903b12`
+
+The observation ledger now has `7` exact CPU calibration rows:
+`prefix_k028`, `pairset_diversity_k002`, `pairset_diversity_k004`,
+`pairset_diversity_k008`, `pairset_diversity_k012`,
+`pairset_diversity_k016`, and `pairset_diversity_k024`. The latest refreshed
+observation-aware portfolio is:
+
+- `experiments/results/cross_family_candidate_portfolio_20260522T174300Z_observed_pairsets_k024/portfolio.json`
+- `experiments/results/cross_family_candidate_portfolio_20260522T174300Z_observed_pairsets_k024/portfolio.md`
+- New recommended candidate: `pairset_drop_one_rank013_pair0327`
+- New recommended action: `materialize_pairset_archive_and_run_local_controls`
+
 ## Verification
 
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py -q`
@@ -254,6 +298,9 @@ The observation ledger now has `6` exact CPU calibration rows:
 - `tools/recover_modal_auth_eval.py` on k012 Modal CPU call `fc-01KS8APGE4NYE8GB3Q27A711D8`
 - `tools/run_decoder_q_selective_runtime_locality_controls.py` on k016
 - `tools/recover_modal_auth_eval.py` on k016 Modal CPU call `fc-01KS8BAYCXTYEXS13FABSDDR2E`
+- `tools/run_decoder_q_selective_runtime_locality_controls.py` on k024 first 180-second run
+- `tools/run_decoder_q_selective_runtime_locality_controls.py` on k024 600-second rerun
+- `tools/recover_modal_auth_eval.py` on k024 Modal CPU call `fc-01KS8C4SX0TQ5G50VE7Z6M47PQ`
 
 ## Authority
 
@@ -267,4 +314,6 @@ The observation ledger now has `6` exact CPU calibration rows:
 - k012 now has exact `[contest-CPU]` evidence only, not CUDA promotion
   evidence.
 - k016 now has exact `[contest-CPU]` evidence only, not CUDA promotion
+  evidence.
+- k024 now has exact `[contest-CPU]` evidence only, not CUDA promotion
   evidence.
