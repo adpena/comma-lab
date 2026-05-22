@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-22T18:51:21Z
-from_state_hash: frontier_scan_dqs1_pairset_component_marginal_xray_equation_refs_20260522T1851Z
-regenerated_by: codex:dqs1_pairset_component_marginal_xray_equation_refs_20260522
-last_refreshed_at: 2026-05-22T18:51:21Z
-last_refreshed_by: codex:dqs1_pairset_component_marginal_xray_equation_refs_20260522
-last_refreshed_head: 5b1826d43
+generated_at: 2026-05-22T19:00:13Z
+from_state_hash: frontier_scan_dqs1_pairset_component_marginal_helper_20260522T1900Z
+regenerated_by: codex:dqs1_pairset_component_marginal_helper_20260522
+last_refreshed_at: 2026-05-22T19:00:13Z
+last_refreshed_by: codex:dqs1_pairset_component_marginal_helper_20260522
+last_refreshed_head: 7ba157a6
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
@@ -243,7 +243,14 @@ last_refreshed_note: |
   also carries `canonical_signal_refs` to the new
   `pairset_component_marginal` xray primitive, the canonical equation
   `pairset_component_marginal_score_decomposition_v1`, and the canonical
-  master-gradient per-pair consumers.
+  master-gradient per-pair consumers. The repeatable canonicalization path is
+  now the fail-closed helper
+  `tools/canonicalize_pairset_component_marginal_signal.py`; its latest
+  planning-only output is
+  `experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper/portfolio.json`
+  (SHA-256
+  `30ef27382e9b2bcbece1e589ebf6a2fc8d6506cdc1d0e3838bd00a88af670829`),
+  ignored by `.gitignore` under `experiments/results/*`.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 

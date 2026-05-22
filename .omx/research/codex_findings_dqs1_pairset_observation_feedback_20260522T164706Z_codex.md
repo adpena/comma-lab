@@ -443,16 +443,23 @@ Canonicalization/wire-in:
   `tac.optimization.pairset_component_marginal`, the canonical equation
   `pairset_component_marginal_score_decomposition_v1`, and the xray primitive
   `tac.xray.pairset_component_marginal`.
+- The canonical operator helper
+  `tools/canonicalize_pairset_component_marginal_signal.py` now performs the
+  repeatable process fail-closed: ingest acquisition + exact observation JSONL,
+  emit portfolio/action artifacts, require active component-marginal model
+  unless explicitly exploratory, enforce xray/equation/master-gradient refs,
+  recursively enforce false-authority fields, and optionally register the
+  canonical equation through the locked registry.
 - The model consumes exact-axis observations with selected-pair identity,
   component deltas, and acquisition operations.
-- Current generated portfolio:
-  `experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/portfolio.json`
-- Current action summary:
-  `experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/action_summary.json`
+- Current helper-generated portfolio:
+  `experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper/portfolio.json`
+- Current helper-generated action summary:
+  `experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper/action_summary.json`
 - Portfolio SHA-256:
-  `ce035dc78a07bce924bddca50646d60f7e36c353a848848bce9ba250af542154`
+  `30ef27382e9b2bcbece1e589ebf6a2fc8d6506cdc1d0e3838bd00a88af670829`
 - Action summary SHA-256:
-  `a8255b7d3d2b6c69bcd9257864cc757603df4c05dd29b0225423504e1c160220`
+  `034aca3d7c9a45bf02fc2c89393051f425e8c86f62d24b2755c5c3d9c8796415`
 - Component marginal summary: CPU-safe observed drop pair `[371]`;
   CPU-protected observed drop pairs `[327, 376, 320]`; CUDA-protected observed
   drop pair `[371]`; cross-axis transfer diagnostic present for
@@ -500,6 +507,10 @@ Canonicalization/wire-in:
 - `.venv/bin/python -m pytest src/tac/tests/test_pairset_component_marginal.py src/tac/xray/tests/test_pairset_component_marginal.py src/tac/canonical_equations/tests/test_pairset_component_marginal.py -q`
 - `.venv/bin/ruff check src/tac/tests/test_pairset_component_marginal.py src/tac/xray/tests/test_pairset_component_marginal.py src/tac/canonical_equations/tests/test_pairset_component_marginal.py src/tac/optimization/pairset_component_marginal.py src/tac/canonical_equations/pairset_component_marginal.py src/tac/xray/pairset_component_marginal.py`
 - `.venv/bin/python tools/plan_cross_family_candidate_portfolio.py --incumbent-score 0.205330029 --incumbent-score-by-axis contest_cpu=0.19202828295713675 --pairset-acquisition experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition_dense_tail_20260522T1812Z.json --observation-jsonl experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl --json-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/portfolio.json --md-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/portfolio.md --summary-json-out experiments/results/cross_family_candidate_portfolio/20260522T185121Z_observed_pairsets_rank026_xray_equation_refs/action_summary.json --top-k 32 --top-actions 8`
+- `.venv/bin/python tools/canonicalize_pairset_component_marginal_signal.py --incumbent-score 0.205330029 --incumbent-score-by-axis contest_cpu=0.19202828295713675 --pairset-acquisition experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition_dense_tail_20260522T1812Z.json --observation-jsonl experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/dynamic_learned_sweep/dqs1_dynamic_sweep_observations.jsonl --output-dir experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper --top-k 32 --top-actions 8`
+- `.venv/bin/python -m pytest src/tac/tests/test_canonicalize_pairset_component_marginal_signal_cli.py -q`
+- `.venv/bin/ruff check tools/canonicalize_pairset_component_marginal_signal.py src/tac/tests/test_canonicalize_pairset_component_marginal_signal_cli.py`
+- `git check-ignore -v experiments/results/cross_family_candidate_portfolio/20260522T185942Z_pairset_component_canonicalized_helper/portfolio.json`
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_decoder_q_pairset_acquisition.py -q`
 - `.venv/bin/python -m pytest src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_mlx_dynamic_sweep_observations.py -q`
 - `.venv/bin/python -m pytest src/tac/tests/test_mlx_dynamic_sweep_observations.py src/tac/tests/test_cross_family_candidate_portfolio.py src/tac/tests/test_plan_cross_family_candidate_portfolio_cli.py -q`
