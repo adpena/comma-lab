@@ -109,6 +109,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--mlx-production-contract",
+        type=Path,
+        help=(
+            "Optional strict MLX production-contract manifest. Exact-eval spend "
+            "triage from MLX rows is blocked unless this gate is attached and "
+            "passes, even when parity and score calibration are present."
+        ),
+    )
+    parser.add_argument(
         "--mlx-archive-size-bytes",
         type=int,
         help=(
@@ -184,6 +193,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.mlx_score_calibration is None
             else json.loads(args.mlx_score_calibration.read_text(encoding="utf-8"))
         )
+        mlx_production_contract = (
+            None
+            if args.mlx_production_contract is None
+            else json.loads(args.mlx_production_contract.read_text(encoding="utf-8"))
+        )
         plan = build_next_probe_plan(
             dataset,
             null_byte_matrix=null_byte_matrix,
@@ -198,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.allow_mlx_parity_research_signal_override
             ),
             mlx_score_calibration=mlx_score_calibration,
+            mlx_production_contract=mlx_production_contract,
             decoder_q_surface_advisory_batch=decoder_q_surface_advisory_batch,
         )
         if args.mlx_profile_stability is not None:

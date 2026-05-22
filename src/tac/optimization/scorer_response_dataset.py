@@ -21,6 +21,15 @@ from pathlib import Path
 from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.local_acceleration.mlx_production_contract import (
+    GATE_SET_VERSION as MLX_PRODUCTION_CONTRACT_GATE_SET_VERSION,
+)
+from tac.local_acceleration.mlx_production_contract import (
+    PASS_VERDICT as MLX_PRODUCTION_CONTRACT_PASS_VERDICT,
+)
+from tac.local_acceleration.mlx_production_contract import (
+    SCHEMA_VERSION as MLX_PRODUCTION_CONTRACT_SCHEMA,
+)
 from tac.local_acceleration.mlx_score_calibration import (
     STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE,
 )
@@ -34,6 +43,7 @@ VALIDATION_GATE_SCHEMA = "scorer_response_dataset_validation_gate.v1"
 MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
 MLX_TORCH_PARITY_SWEEP_SCHEMA = "mlx_scorer_torch_parity_sweep.v1"
 MLX_SCORE_CALIBRATION_SCHEMA = "mlx_score_calibration.v1"
+LL_MLX_PRODUCTION_CONTRACT_GATE_SCHEMA = "ll_mlx_production_contract_gate.v1"
 DECODER_Q_SURFACE_SIGN_CALIBRATION_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
 
 DEFAULT_RESPONSE_PREDICTION_FIELDS = (
@@ -592,6 +602,11 @@ def _mlx_scorer_response_candidate_item(
         "authority": authority,
         "evidence_grade": payload.get("evidence_grade"),
         "evidence_tag": payload.get("evidence_tag"),
+        "archive_sha256": payload.get("archive_sha256"),
+        "inflated_outputs_aggregate_sha256": payload.get(
+            "inflated_outputs_aggregate_sha256"
+        ),
+        "raw_sha256": payload.get("raw_sha256"),
         "hardware_substrate": payload.get("hardware_substrate"),
         "batch_pairs": payload.get("batch_pairs"),
         "n_samples": payload.get("n_samples"),
@@ -808,6 +823,21 @@ def normalize_response_row(
         "source_start_pair": _as_int(parent.get("start_pair") or candidate.get("start_pair")),
         "source_max_pairs": _as_int(parent.get("max_pairs") or candidate.get("max_pairs")),
         "source_elapsed_seconds": _as_float(parent.get("elapsed_seconds") or candidate.get("elapsed_seconds")),
+        "source_inflated_outputs_aggregate_sha256": (
+            parent.get("inflated_outputs_aggregate_sha256")
+            or _get_path(
+                parent,
+                ("cache_identity", "candidate", "inflated_outputs_aggregate_sha256"),
+            )
+        ),
+        "source_candidate_cache_array_sha256": _get_path(
+            parent,
+            ("cache_identity", "candidate", "array_sha256"),
+        ),
+        "source_reference_cache_array_sha256": _get_path(
+            parent,
+            ("cache_identity", "reference", "array_sha256"),
+        ),
         "source_posenet_sha256": _get_path(parent, ("components", "posenet_sha256")),
         "source_segnet_sha256": _get_path(parent, ("components", "segnet_sha256")),
         "target_raw_sha256": _get_path(candidate, ("inputs", "target_raw_sha256")),
@@ -1703,6 +1733,179 @@ def build_mlx_score_calibration_gate(calibration: dict[str, Any]) -> dict[str, A
     }
 
 
+def _mlx_contract_row_identity_blockers(
+    response_summary: dict[str, Any],
+    rows: Iterable[dict[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    expected_archive = response_summary.get("archive_sha256")
+    expected_inflated = response_summary.get("inflated_outputs_aggregate_sha256")
+    expected_batch_pairs = _as_int(response_summary.get("batch_pairs"))
+    expected_n_samples = _as_int(response_summary.get("n_samples"))
+    expected_pair_window = response_summary.get("pair_window")
+
+    for row in rows:
+        row_id = str(row.get("row_id") or "<unknown>")
+        checks = (
+            ("archive_sha256", row.get("archive_sha256"), expected_archive),
+            (
+                "inflated_outputs_aggregate_sha256",
+                row.get("source_inflated_outputs_aggregate_sha256"),
+                expected_inflated,
+            ),
+            ("batch_pairs", _as_int(row.get("source_batch_pairs")), expected_batch_pairs),
+            ("n_samples", _as_int(row.get("source_n_samples")), expected_n_samples),
+            ("pair_window", row.get("source_pair_window"), expected_pair_window),
+        )
+        for field, actual, expected in checks:
+            if actual is None or expected is None:
+                blockers.append(
+                    f"mlx_production_contract_row_{field}_missing:{row_id}"
+                )
+                continue
+            if actual != expected:
+                blockers.append(
+                    f"mlx_production_contract_row_{field}_mismatch:{row_id}"
+                )
+    return blockers
+
+
+def _is_mlx_scorer_response_row(row: Any) -> bool:
+    return isinstance(row, dict) and (
+        row.get("family") == "mlx_scorer_response"
+        or row.get("source_schema") == MLX_SCORER_RESPONSE_SCHEMA
+    )
+
+
+def build_mlx_production_contract_gate(
+    contract: dict[str, Any],
+    *,
+    rows: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Normalize the strict MLX production contract for LL planner spend gating.
+
+    A passing contract allows local MLX rows to filter exact-eval spend only as
+    a non-authoritative signal. It does not create score, rank, promotion, or
+    dispatch authority.
+    """
+
+    if not isinstance(contract, dict):
+        raise ScorerResponseDatasetError("MLX production contract must be a JSON object")
+    source_schema = contract.get("schema_version") or contract.get("schema")
+    if source_schema != MLX_PRODUCTION_CONTRACT_SCHEMA:
+        raise ScorerResponseDatasetError("MLX production contract schema mismatch")
+    _require_explicit_false_authority(
+        contract,
+        label="MLX production contract",
+        fields=(
+            "score_authority",
+            "contest_authority",
+            "score_claim",
+            "score_claim_valid",
+            "promotion_eligible",
+            "ready_for_exact_eval_dispatch",
+            "rank_or_kill_eligible",
+            "promotable",
+        ),
+    )
+    if contract.get("gate_set_version") != MLX_PRODUCTION_CONTRACT_GATE_SET_VERSION:
+        raise ScorerResponseDatasetError("MLX production contract gate_set_version mismatch")
+    if contract.get("candidate_generation_only") is not True:
+        raise ScorerResponseDatasetError(
+            "MLX production contract candidate_generation_only must be true"
+        )
+    if contract.get("requires_exact_eval_before_promotion") is not True:
+        raise ScorerResponseDatasetError(
+            "MLX production contract requires_exact_eval_before_promotion must be true"
+        )
+    if contract.get("evidence_grade") != EVIDENCE_GRADE_MLX:
+        raise ScorerResponseDatasetError(
+            "MLX production contract evidence_grade mismatch"
+        )
+    if contract.get("evidence_tag") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError("MLX production contract evidence_tag mismatch")
+    if contract.get("score_axis") != EVIDENCE_TAG_MLX:
+        raise ScorerResponseDatasetError("MLX production contract score_axis mismatch")
+
+    required_gates = (
+        contract.get("required_gates")
+        if isinstance(contract.get("required_gates"), dict)
+        else {}
+    )
+    response_summary = (
+        contract.get("response_summary")
+        if isinstance(contract.get("response_summary"), dict)
+        else {}
+    )
+    source_blockers = list(contract.get("blockers") or [])
+    blockers = list(source_blockers)
+    if contract.get("passed") is not True:
+        blockers.append("mlx_production_contract_not_passed")
+    if contract.get("verdict") != MLX_PRODUCTION_CONTRACT_PASS_VERDICT:
+        blockers.append("mlx_production_contract_verdict_not_pass")
+    if required_gates.get("strict_gate_policy") is not True:
+        blockers.append("mlx_production_contract_strict_gate_policy_not_true")
+    for gate_name in (
+        "cache_identity",
+        "cache_auth_audit",
+        "torch_parity",
+        "reference_torch_parity",
+        "profile_stability",
+        "score_calibration",
+    ):
+        if required_gates.get(gate_name) is not True:
+            blockers.append(
+                f"mlx_production_contract_required_gate_{gate_name}_not_true"
+            )
+    if not response_summary:
+        blockers.append("mlx_production_contract_response_summary_missing")
+    if rows is not None:
+        blockers.extend(_mlx_contract_row_identity_blockers(response_summary, rows))
+
+    status = "strict_pass" if not blockers else "blocked"
+    return {
+        "schema": LL_MLX_PRODUCTION_CONTRACT_GATE_SCHEMA,
+        "producer": TOOL,
+        "source_schema": source_schema,
+        "source_run_id": contract.get("run_id"),
+        "source_verdict": contract.get("verdict"),
+        "source_passed": contract.get("passed") is True,
+        "status": status,
+        "mlx_production_signal_allowed": status == "strict_pass",
+        "mlx_spend_triage_allowed": status == "strict_pass",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "summary": {
+            "archive_sha256": response_summary.get("archive_sha256"),
+            "inflated_outputs_aggregate_sha256": response_summary.get(
+                "inflated_outputs_aggregate_sha256"
+            ),
+            "response_schema_version": response_summary.get("schema_version"),
+            "hardware_substrate": response_summary.get("hardware_substrate"),
+            "batch_pairs": _as_int(response_summary.get("batch_pairs")),
+            "n_samples": _as_int(response_summary.get("n_samples")),
+            "pair_window": response_summary.get("pair_window"),
+            "required_gates": dict(required_gates),
+            "warnings": list(contract.get("warnings") or []),
+        },
+        "blockers": blockers,
+        "allowed_use": (
+            "local_exact_eval_spend_triage_filter_after_strict_production_contract"
+            if not blockers
+            else "blocked_until_strict_mlx_production_contract_passes"
+        ),
+    }
+
+
 def build_scorer_response_validation_gate(
     dataset: dict[str, Any],
     *,
@@ -1954,6 +2157,7 @@ def build_next_probe_plan(
     mlx_torch_parity_sweep: dict[str, Any] | None = None,
     allow_mlx_parity_research_signal_override: bool = False,
     mlx_score_calibration: dict[str, Any] | None = None,
+    mlx_production_contract: dict[str, Any] | None = None,
     decoder_q_response_surface: dict[str, Any] | None = None,
     decoder_q_surface_advisory_batch: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -2044,6 +2248,11 @@ def build_next_probe_plan(
                 }
             )
 
+    mlx_row_items = [
+        row
+        for row in rows
+        if _is_mlx_scorer_response_row(row)
+    ]
     mlx_torch_parity_sweep_gate = None
     if mlx_torch_parity_sweep is not None:
         mlx_torch_parity_sweep_gate = build_mlx_torch_parity_sweep_gate(
@@ -2056,6 +2265,12 @@ def build_next_probe_plan(
     if mlx_score_calibration is not None:
         mlx_score_calibration_gate = build_mlx_score_calibration_gate(
             mlx_score_calibration
+        )
+    mlx_production_contract_gate = None
+    if mlx_production_contract is not None:
+        mlx_production_contract_gate = build_mlx_production_contract_gate(
+            mlx_production_contract,
+            rows=mlx_row_items,
         )
 
     probes = [
@@ -2095,12 +2310,35 @@ def build_next_probe_plan(
             "acceptance_gate": ">=50 rows with at least two families containing held-out folds 0..4",
         },
     ]
-    mlx_rows = [
-        row.get("row_id")
-        for row in rows
-        if isinstance(row, dict) and row.get("family") == "mlx_scorer_response"
-    ][:8]
+    mlx_rows = [row.get("row_id") for row in mlx_row_items][:8]
     if mlx_rows:
+        if mlx_production_contract_gate is None:
+            prohibitions.append(
+                {
+                    "rule": "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract",
+                    "reason": (
+                        "MLX parity and score calibration are constituent checks; "
+                        "exact-eval spend filtering also requires a strict MLX "
+                        "production contract tying cache identity, reference and "
+                        "candidate parity, profile stability, and calibration to "
+                        "the same response identity."
+                    ),
+                    "input_rows": mlx_rows,
+                }
+            )
+        elif not mlx_production_contract_gate["mlx_spend_triage_allowed"]:
+            prohibitions.append(
+                {
+                    "rule": "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_failed_production_contract",
+                    "reason": (
+                        "the attached MLX production contract is not a strict pass; "
+                        "local MLX rows remain non-authoritative research signal "
+                        "until the full production gate passes"
+                    ),
+                    "gate": mlx_production_contract_gate,
+                    "input_rows": mlx_rows,
+                }
+            )
         if mlx_score_calibration_gate is None:
             prohibitions.append(
                 {
@@ -2207,11 +2445,13 @@ def build_next_probe_plan(
                     "input_rows": mlx_rows,
                     "mlx_torch_parity_gate": mlx_torch_parity_sweep_gate,
                     "mlx_score_calibration_gate": mlx_score_calibration_gate,
+                    "mlx_production_contract_gate": mlx_production_contract_gate,
                     "acceptance_gate": (
                         ">=50 MLX rows across stable CPU windows/families, all "
                         "score_claim=false, with parity-gated held-out "
-                        "correlation and calibrated score-gap decision bands before "
-                        "any exact-eval dispatch selection"
+                        "correlation, calibrated score-gap decision bands, and a "
+                        "strict MLX production contract before any exact-eval "
+                        "dispatch selection"
                     ),
                 },
             )
@@ -2355,6 +2595,7 @@ def build_next_probe_plan(
         "magic_codec_seed_boundary": magic_codec_seed_boundary,
         "mlx_torch_parity_sweep_gate": mlx_torch_parity_sweep_gate,
         "mlx_score_calibration_gate": mlx_score_calibration_gate,
+        "mlx_production_contract_gate": mlx_production_contract_gate,
         "decoder_q_response_surface_summary": decoder_q_response_surface_summary,
         "decoder_q_surface_advisory_gate": decoder_q_surface_advisory_gate,
         "prohibitions": prohibitions,
@@ -3049,6 +3290,28 @@ def render_next_probe_plan_markdown(plan: dict[str, Any]) -> str:
             f"`{gate_summary.get('recommended_min_mlx_gap_for_spend_triage')}`"
         )
         lines.append(f"- Blockers: `{mlx_calibration_gate.get('blockers')}`")
+        lines.append("")
+    mlx_production_gate = plan.get("mlx_production_contract_gate")
+    if isinstance(mlx_production_gate, dict):
+        gate_summary = (
+            mlx_production_gate.get("summary")
+            if isinstance(mlx_production_gate.get("summary"), dict)
+            else {}
+        )
+        lines.extend(["## MLX Production Contract Gate", ""])
+        lines.append(f"- Status: `{mlx_production_gate.get('status')}`")
+        lines.append(f"- Source verdict: `{mlx_production_gate.get('source_verdict')}`")
+        lines.append(f"- Batch pairs: `{gate_summary.get('batch_pairs')}`")
+        lines.append(f"- Pair window: `{gate_summary.get('pair_window')}`")
+        lines.append(
+            "- Archive SHA-256: "
+            f"`{gate_summary.get('archive_sha256')}`"
+        )
+        lines.append(
+            "- Inflated aggregate SHA-256: "
+            f"`{gate_summary.get('inflated_outputs_aggregate_sha256')}`"
+        )
+        lines.append(f"- Blockers: `{mlx_production_gate.get('blockers')}`")
         lines.append("")
     decoder_q_surface_gate = plan.get("decoder_q_surface_advisory_gate")
     if isinstance(decoder_q_surface_gate, dict):

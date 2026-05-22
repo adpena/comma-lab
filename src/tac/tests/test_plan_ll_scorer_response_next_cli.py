@@ -27,6 +27,11 @@ def _mlx_dataset() -> dict:
                 "delta_vs_baseline_score": 1.0e-6,
                 "scorer_delta_vs_baseline": 1.0e-6,
                 "byte_budget_margin_vs_break_even": None,
+                "archive_sha256": "a" * 64,
+                "source_inflated_outputs_aggregate_sha256": "e" * 64,
+                "source_batch_pairs": 1,
+                "source_n_samples": 600,
+                "source_pair_window": [0, 600],
                 **false_authority,
             }
         ],
@@ -79,6 +84,106 @@ def _failed_mlx_parity_sweep() -> dict:
                 },
             }
         ],
+    }
+
+
+def _passing_mlx_parity_sweep() -> dict:
+    payload = _failed_mlx_parity_sweep()
+    payload["verdict"] = "PASS_MLX_TORCH_SCORER_PARITY_SWEEP"
+    payload["passed"] = True
+    payload["blockers"] = []
+    payload["summary"]["passed_windows"] = 75
+    payload["summary"]["failed_windows"] = 0
+    payload["summary"]["segnet_argmax_diff_pixels"]["max"] = 0.0
+    payload["summary"]["segnet_argmax_diff_fraction"]["max"] = 0.0
+    payload["summary"]["segnet_argmax_mismatch_pixels_total"] = 0
+    payload["rows"][0]["passed"] = True
+    payload["rows"][0]["verdict"] = "PASS_MLX_TORCH_SCORER_PARITY"
+    payload["rows"][0]["blockers"] = []
+    payload["rows"][0]["deltas"]["segnet_argmax_diff_pixels"] = 0
+    payload["rows"][0]["deltas"]["segnet_argmax_diff_fraction"] = 0.0
+    return payload
+
+
+def _passing_mlx_score_calibration() -> dict:
+    return {
+        "schema_version": "mlx_score_calibration.v1",
+        "run_id": "unit",
+        "evidence_grade": "macOS-MLX-research-signal",
+        "evidence_tag": "[macOS-MLX research-signal]",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "candidate_generation_only": True,
+        "decision_policy": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "decision_safety_factor": 5.0,
+            "calibration_uncertainty_basis": "mlx_minus_cpu_max_abs",
+            "calibration_uncertainty_score": 1.0e-5,
+            "recommended_min_mlx_gap_for_spend_triage": 5.0e-5,
+            "allowed_use": "local_spend_triage_only_after_strict_auth_axis_calibration",
+            "forbidden_use": "score_claim_or_rank_or_kill_or_promotion",
+        },
+        "summary": {
+            "mlx_spend_triage_pairwise_certified_count": 1,
+            "mlx_spend_triage_pairwise_uncertain_count": 0,
+            "mlx_spend_triage_pairwise_total_count": 1,
+            "recommended_min_mlx_gap_for_spend_triage": 5.0e-5,
+            "calibration_uncertainty_score": 1.0e-5,
+        },
+    }
+
+
+def _passing_mlx_production_contract() -> dict:
+    return {
+        "schema_version": "mlx_scorer_production_contract.v2",
+        "gate_set_version": "mlx_scorer_production_gate_set.v2.cache_auth_torch_profile",
+        "run_id": "unit",
+        "passed": True,
+        "advisory_passed": True,
+        "verdict": "PASS_MLX_SCORER_PRODUCTION_CONTRACT",
+        "blockers": [],
+        "warnings": ["batch_invariance_not_required_for_singleton_response"],
+        "production_deployment_role": "local_mlx_scorer_acceleration_non_authoritative",
+        "score_authority": False,
+        "contest_authority": False,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "score_axis": "[macOS-MLX research-signal]",
+        "evidence_grade": "macOS-MLX-research-signal",
+        "evidence_tag": "[macOS-MLX research-signal]",
+        "response_summary": {
+            "schema_version": "mlx_scorer_response.v1",
+            "hardware_substrate": "MLX cpu",
+            "batch_pairs": 1,
+            "n_samples": 600,
+            "pair_window": [0, 600],
+            "archive_sha256": "a" * 64,
+            "inflated_outputs_aggregate_sha256": "e" * 64,
+        },
+        "required_gates": {
+            "cache_identity": True,
+            "cache_auth_audit": True,
+            "torch_parity": True,
+            "reference_torch_parity": True,
+            "profile_stability": True,
+            "batch_invariance": False,
+            "batch_invariance_policy_requested": True,
+            "score_calibration": True,
+            "strict_gate_policy": True,
+        },
+        "authority_status": "non-authoritative local MLX production signal",
     }
 
 
@@ -325,6 +430,61 @@ def test_plan_ll_scorer_response_next_cli_blocks_failed_mlx_parity_without_overr
     assert "MLX Torch Parity Gate" in md_out.read_text(encoding="utf-8")
 
 
+def test_plan_ll_scorer_response_next_cli_accepts_mlx_production_contract(
+    tmp_path: Path,
+) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    parity_path = tmp_path / "parity.json"
+    calibration_path = tmp_path / "calibration.json"
+    production_path = tmp_path / "production_contract.json"
+    json_out = tmp_path / "plan.json"
+    md_out = tmp_path / "plan.md"
+    dataset_path.write_text(json.dumps(_mlx_dataset()), encoding="utf-8")
+    parity_path.write_text(json.dumps(_passing_mlx_parity_sweep()), encoding="utf-8")
+    calibration_path.write_text(
+        json.dumps(_passing_mlx_score_calibration()),
+        encoding="utf-8",
+    )
+    production_path.write_text(
+        json.dumps(_passing_mlx_production_contract()),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "plan_ll_scorer_response_next.py"),
+            "--dataset",
+            str(dataset_path),
+            "--mlx-torch-parity-sweep",
+            str(parity_path),
+            "--mlx-score-calibration",
+            str(calibration_path),
+            "--mlx-production-contract",
+            str(production_path),
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert "ll_mlx_cpu_stable_response_harvest" in completed.stdout
+    assert "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract" not in completed.stdout
+    plan = json.loads(json_out.read_text(encoding="utf-8"))
+    assert plan["mlx_production_contract_gate"]["status"] == "strict_pass"
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
+        not in rules
+    )
+    assert "MLX Production Contract Gate" in md_out.read_text(encoding="utf-8")
+
+
 def test_plan_ll_scorer_response_next_cli_allows_failed_mlx_parity_with_override(
     tmp_path: Path,
 ) -> None:
@@ -356,6 +516,10 @@ def test_plan_ll_scorer_response_next_cli_allows_failed_mlx_parity_with_override
     )
 
     assert "ll_mlx_cpu_stable_response_harvest" in completed.stdout
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
+        in completed.stdout
+    )
     plan = json.loads(json_out.read_text(encoding="utf-8"))
     assert plan["mlx_torch_parity_sweep_gate"]["status"] == "research_signal_override"
     assert plan["probes"][0]["probe_id"] == "ll_mlx_cpu_stable_response_harvest"

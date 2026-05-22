@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
@@ -21,6 +22,7 @@ from tac.optimization.scorer_response_dataset import (
     ScorerResponseDatasetError,
     build_decoder_q_surface_advisory_gate,
     build_magic_codec_seed_boundary,
+    build_mlx_production_contract_gate,
     build_mlx_score_calibration_gate,
     build_mlx_torch_parity_sweep_gate,
     build_next_probe_plan,
@@ -225,6 +227,59 @@ def _mlx_score_calibration_payload(*, uncertain_count: int = 0) -> dict:
     }
 
 
+def _mlx_production_contract_payload(*, passed: bool = True) -> dict:
+    blockers = [] if passed else ["score_calibration_manifest_not_supplied"]
+    return {
+        "schema_version": "mlx_scorer_production_contract.v2",
+        "gate_set_version": "mlx_scorer_production_gate_set.v2.cache_auth_torch_profile",
+        "run_id": "unit",
+        "passed": passed,
+        "advisory_passed": passed,
+        "verdict": (
+            "PASS_MLX_SCORER_PRODUCTION_CONTRACT"
+            if passed
+            else "FAIL_MLX_SCORER_PRODUCTION_CONTRACT"
+        ),
+        "blockers": blockers,
+        "warnings": ["batch_invariance_not_required_for_singleton_response"] if passed else [],
+        "production_deployment_role": "local_mlx_scorer_acceleration_non_authoritative",
+        "score_authority": False,
+        "contest_authority": False,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "response_summary": {
+            "schema_version": "mlx_scorer_response.v1",
+            "hardware_substrate": "MLX cpu",
+            "batch_pairs": 1,
+            "n_samples": 600,
+            "pair_window": [0, 600],
+            "archive_sha256": "a" * 64,
+            "inflated_outputs_aggregate_sha256": "e" * 64,
+        },
+        "required_gates": {
+            "cache_identity": passed,
+            "cache_auth_audit": passed,
+            "torch_parity": passed,
+            "reference_torch_parity": passed,
+            "profile_stability": passed,
+            "batch_invariance": False,
+            "batch_invariance_policy_requested": True,
+            "score_calibration": passed,
+            "strict_gate_policy": passed,
+        },
+        "authority_status": "non-authoritative local MLX production signal",
+    }
+
+
 def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     path = tmp_path / "scorer_gradient.json"
     payload = {
@@ -356,20 +411,35 @@ def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
                     "byte_budget_margin_vs_break_even": None,
+                    "archive_sha256": "a" * 64,
+                    "source_inflated_outputs_aggregate_sha256": "e" * 64,
+                    "source_batch_pairs": 1,
+                    "source_n_samples": 600,
+                    "source_pair_window": [0, 600],
                     **false_authority,
                 }
             ],
         },
         mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+        mlx_production_contract=_mlx_production_contract_payload(),
     )
 
     assert plan["score_claim"] is False
     assert plan["mlx_torch_parity_sweep_gate"]["status"] == "strict_pass"
+    assert plan["mlx_score_calibration_gate"]["status"] == "strict_pass"
+    assert plan["mlx_production_contract_gate"]["status"] == "strict_pass"
     assert plan["probes"][0]["probe_id"] == "ll_mlx_cpu_stable_response_harvest"
     assert plan["probes"][0]["input_rows"] == ["mlx-row-1"]
-    assert {
-        item["rule"] for item in plan["prohibitions"]
-    } >= {"do_not_use_mlx_rows_for_exact_eval_spend_triage_without_score_calibration"}
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_score_calibration"
+        not in rules
+    )
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
+        not in rules
+    )
 
 
 def test_mlx_torch_parity_sweep_gate_blocks_failed_strict_sweep() -> None:
@@ -390,6 +460,78 @@ def test_mlx_score_calibration_gate_passes_certified_decision_band() -> None:
     assert gate["status"] == "strict_pass"
     assert gate["mlx_spend_triage_allowed"] is True
     assert gate["summary"]["recommended_min_mlx_gap_for_spend_triage"] == 5.0e-5
+
+
+def test_mlx_production_contract_gate_passes_strict_bundle() -> None:
+    gate = build_mlx_production_contract_gate(_mlx_production_contract_payload())
+
+    assert gate["score_claim"] is False
+    assert gate["status"] == "strict_pass"
+    assert gate["mlx_spend_triage_allowed"] is True
+    assert gate["summary"]["batch_pairs"] == 1
+    assert gate["summary"]["n_samples"] == 600
+    assert gate["summary"]["required_gates"]["score_calibration"] is True
+
+
+def test_mlx_production_contract_gate_blocks_failed_bundle() -> None:
+    gate = build_mlx_production_contract_gate(
+        _mlx_production_contract_payload(passed=False)
+    )
+
+    assert gate["status"] == "blocked"
+    assert gate["mlx_spend_triage_allowed"] is False
+    assert "mlx_production_contract_not_passed" in gate["blockers"]
+    assert (
+        "mlx_production_contract_required_gate_score_calibration_not_true"
+        in gate["blockers"]
+    )
+
+
+def test_mlx_production_contract_gate_blocks_advisory_contract_without_blockers() -> None:
+    payload = _mlx_production_contract_payload()
+    payload["passed"] = False
+    payload["verdict"] = "ADVISORY_MLX_SCORER_DEV_CONTRACT"
+    payload["blockers"] = []
+    payload["warnings"] = ["production_required_gate_policy_bypassed"]
+    payload["required_gates"]["strict_gate_policy"] = False
+
+    gate = build_mlx_production_contract_gate(payload)
+
+    assert gate["status"] == "blocked"
+    assert "mlx_production_contract_not_passed" in gate["blockers"]
+    assert "mlx_production_contract_verdict_not_pass" in gate["blockers"]
+
+
+def test_mlx_production_contract_gate_rejects_false_authority_breach() -> None:
+    payload = _mlx_production_contract_payload()
+    payload["score_claim"] = True
+
+    with pytest.raises(
+        ScorerResponseDatasetError,
+        match="MLX production contract score_claim must be false",
+    ):
+        build_mlx_production_contract_gate(payload)
+
+
+def test_mlx_production_contract_gate_blocks_row_identity_mismatch() -> None:
+    gate = build_mlx_production_contract_gate(
+        _mlx_production_contract_payload(),
+        rows=[
+            {
+                "row_id": "mlx-row-1",
+                "archive_sha256": "b" * 64,
+                "source_inflated_outputs_aggregate_sha256": "e" * 64,
+                "source_batch_pairs": 1,
+                "source_n_samples": 600,
+                "source_pair_window": [0, 600],
+            }
+        ],
+    )
+
+    assert gate["status"] == "blocked"
+    assert "mlx_production_contract_row_archive_sha256_mismatch:mlx-row-1" in gate[
+        "blockers"
+    ]
 
 
 def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:
@@ -426,6 +568,10 @@ def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:
         probe["probe_id"] for probe in plan["probes"]
     }
     assert "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_score_calibration" in rules
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
+        in rules
+    )
 
 
 def test_next_probe_plan_attaches_passing_mlx_score_calibration_gate() -> None:
@@ -462,6 +608,10 @@ def test_next_probe_plan_attaches_passing_mlx_score_calibration_gate() -> None:
         "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_uncertain_calibration"
         not in rules
     )
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
+        in rules
+    )
     assert plan["mlx_score_calibration_gate"]["status"] == "strict_pass"
     assert (
         plan["probes"][0]["mlx_score_calibration_gate"]["summary"][
@@ -469,6 +619,43 @@ def test_next_probe_plan_attaches_passing_mlx_score_calibration_gate() -> None:
         ]
         == 5.0e-5
     )
+
+
+def test_next_probe_plan_gates_explicit_mlx_response_family_by_source_schema() -> None:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 1},
+            "rows": [
+                {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": "mlx-row-1",
+                    "family": "pr101_pose_axis_strict_calibration",
+                    "source_schema": "mlx_scorer_response.v1",
+                    "delta_vs_baseline_score": 1.0e-6,
+                    "scorer_delta_vs_baseline": 1.0e-6,
+                    "byte_budget_margin_vs_break_even": None,
+                    **false_authority,
+                }
+            ],
+        },
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+    )
+
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
+        in rules
+    )
+    assert plan["probes"][0]["input_rows"] == ["mlx-row-1"]
 
 
 def test_next_probe_plan_blocks_uncertain_mlx_score_calibration_gate() -> None:
@@ -506,6 +693,44 @@ def test_next_probe_plan_blocks_uncertain_mlx_score_calibration_gate() -> None:
     )
     assert plan["mlx_score_calibration_gate"]["status"] == "blocked"
     assert plan["mlx_score_calibration_gate"]["mlx_spend_triage_allowed"] is False
+
+
+def test_next_probe_plan_blocks_failed_mlx_production_contract() -> None:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 1},
+            "rows": [
+                {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": "mlx-row-1",
+                    "family": "mlx_scorer_response",
+                    "delta_vs_baseline_score": 1.0e-6,
+                    "scorer_delta_vs_baseline": 1.0e-6,
+                    "byte_budget_margin_vs_break_even": None,
+                    **false_authority,
+                }
+            ],
+        },
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+        mlx_production_contract=_mlx_production_contract_payload(passed=False),
+    )
+
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_after_failed_production_contract"
+        in rules
+    )
+    assert plan["mlx_production_contract_gate"]["status"] == "blocked"
+    assert plan["mlx_production_contract_gate"]["mlx_spend_triage_allowed"] is False
 
 
 def test_next_probe_plan_blocks_failed_mlx_parity_sweep_without_override() -> None:
@@ -578,6 +803,11 @@ def test_next_probe_plan_allows_failed_mlx_parity_sweep_with_research_override()
     assert gate["ready_for_exact_eval_dispatch"] is False
     assert plan["probes"][0]["probe_id"] == "ll_mlx_cpu_stable_response_harvest"
     assert plan["probes"][0]["mlx_torch_parity_gate"]["status"] == "research_signal_override"
+    rules = {item["rule"] for item in plan["prohibitions"]}
+    assert (
+        "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
+        in rules
+    )
 
 
 def test_build_windowed_mlx_response_dataset_uses_matching_window_baseline(tmp_path) -> None:
