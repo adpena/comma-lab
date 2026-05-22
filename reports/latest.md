@@ -325,11 +325,10 @@ last_refreshed_note: |
   CUDA-protected observed drop pair `[371]`, and a CPU/CUDA transfer diagnostic
   for `pairset_drop_one_rank021_pair0371`. After rank023, rank024, rank018,
   rank017, rank016, rank025, rank015, and rank001 local
-  observe-only results, the current action summary is exhausted: all eight
-  listed DQS1-safe rows have completed local advisory custody plus matching
-  false eureka records, and `tools/build_dqs1_local_first_queue.py
-  --action-summary latest --write` now correctly refuses to invent a ninth
-  queue target. The response
+  observe-only results, the original top-8 action summary is exhausted. A
+  widened top-32 canonicalization artifact now exposes the next unobserved
+  candidate, `pairset_drop_one_rank002_pair0109`, for the same local-first
+  custody gate. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
   selected-pair identity matching before fitting. The operator-action prior now
@@ -344,17 +343,19 @@ last_refreshed_note: |
   `experiments/results/cross_family_candidate_portfolio/20260522T202400Z_pairset_component_rank019_append_only_hardened/portfolio.json`
   (SHA-256
   `66dbcd3588d1f19f844cdd73f2b3656b811ce0ff9b0b187efd47b22041a5f267`),
-  ignored by `.gitignore` under `experiments/results/*`.
+  ignored by `.gitignore` under `experiments/results/*`. The widened top-32
+  follow-up lives at
+  `experiments/results/cross_family_candidate_portfolio/20260522T224218Z_pairset_component_rank001_exhausted_top32/action_summary.json`.
 - Local-first experiment orchestration now has a reusable SQLite-backed queue
   substrate: `tools/experiment_queue.py`,
   `src/comma_lab/scheduler/experiment_queue.py`, and
   `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with rank023,
   rank024, rank018, rank017, rank016, rank025, rank015, and rank001 now
-  local-advisory-observed with matching eureka records. Completed-local skip
-  detection now requires both local advisory custody and a matching
-  drift/eureka record, and a positive eureka signal with
-  `recommended_action=dispatch_exact_auth_anchor` fails closed instead of being
-  skipped by the local-first rerouter.
+  local-advisory-observed with matching eureka records; the checked-in queue is
+  routed to rank002/pair0109. Completed-local skip detection now requires both
+  local advisory custody and a matching drift/eureka record, and a positive
+  eureka signal with `recommended_action=dispatch_exact_auth_anchor` fails
+  closed instead of being skipped by the local-first rerouter.
   Queue commands are argv
   lists, state and telemetry live in SQLite, cloud resources are hidden unless
   explicitly allowed, controls support `running`/`paused`/`frozen`, and
