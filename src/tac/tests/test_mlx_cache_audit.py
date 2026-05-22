@@ -35,8 +35,11 @@ def _cache(*, aggregate: str = "b" * 64, pair_count: int = 600) -> dict[str, obj
         "pair_indices_shape": [pair_count, 2],
         "array_sha256": dict(ARRAY_HASHES),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -178,6 +181,21 @@ def test_cache_audit_fails_inflated_aggregate_mismatch() -> None:
     assert audit["passed"] is False
     assert audit["verdict"] == FAIL_VERDICT
     assert "inflated_outputs_aggregate_sha256_mismatch_or_missing" in audit["blockers"]
+
+
+def test_cache_audit_requires_complete_false_authority_contract() -> None:
+    cache = _cache()
+    cache.pop("score_claim_valid")
+    cache["rank_or_kill_eligible"] = True
+
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        cache,
+        _auth_with_scorer_input_hash(),
+    )
+
+    assert audit["passed"] is False
+    assert "cache_manifest_score_claim_valid_not_false" in audit["blockers"]
+    assert "cache_manifest_rank_or_kill_eligible_not_false" in audit["blockers"]
     assert "do_not_use_for_auth_axis_transfer_calibration" in audit["allowed_use"]
 
 

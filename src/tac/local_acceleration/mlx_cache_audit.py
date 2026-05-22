@@ -27,6 +27,14 @@ SCHEMA_VERSION = "mlx_scorer_input_cache_auth_eval_audit.v1"
 PASS_VERDICT = "PASS_CACHE_AUTH_EVAL_IDENTITY"
 FAIL_VERDICT = "FAIL_CACHE_AUTH_EVAL_IDENTITY"
 AUTH_EVAL_AXIS_BY_GRADE = CONTEST_AUTH_AXIS_BY_EVIDENCE_GRADE
+AUTHORITY_FALSE_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "promotable",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+)
 
 
 def audit_mlx_scorer_input_cache_against_auth_eval(
@@ -116,8 +124,9 @@ def audit_mlx_scorer_input_cache_against_auth_eval(
                 auth_raw_sha=auth_raw_sha,
                 auth_n_samples=auth_n_samples,
             )
-    if cache_manifest.get("score_claim") is True or cache_manifest.get("promotion_eligible") is True:
-        blockers.append("cache_manifest_attempts_score_authority")
+    for field in AUTHORITY_FALSE_FIELDS:
+        if cache_manifest.get(field) is not False:
+            blockers.append(f"cache_manifest_{field}_not_false")
     _append_auth_eval_authority_blockers(
         blockers,
         auth_eval_payload,
