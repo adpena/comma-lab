@@ -922,13 +922,41 @@ def test_mlx_parent_production_contract_plan_discovers_parent_response_candidate
         json.dumps(
             {
                 "schema_version": "mlx_scorer_response.v1",
+                "evidence_grade": EVIDENCE_GRADE_MLX,
+                "evidence_tag": EVIDENCE_TAG_MLX,
+                "score_axis": EVIDENCE_TAG_MLX,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "candidate_generation_only": True,
+                "requires_exact_eval_before_promotion": True,
+                "hardware_substrate": {"device_type": "cpu"},
                 "archive_sha256": "a" * 64,
                 "inflated_outputs_aggregate_sha256": "e" * 64,
                 "batch_pairs": 1,
+                "n_samples": 300,
                 "pair_window": [0, 300],
+                "canonical_score": 1.0,
+                "score_recomputed_from_components": 1.0,
+                "canonical_score_source": "score_recomputed_from_components",
+                "avg_posenet_dist": 0.1,
+                "avg_segnet_dist": 0.1,
+                "components": {
+                    "posenet_sha256": "p" * 64,
+                    "posenet_shape": [300],
+                    "segnet_sha256": "s" * 64,
+                    "segnet_shape": [300],
+                },
                 "cache_identity": {
+                    "pair_indices_equal": True,
                     "candidate": {"array_sha256": cache_hashes},
                     "reference": {"array_sha256": cache_hashes},
+                },
+                "device_contract": {
+                    "forbidden_uses": ["score_claim"],
+                    "allowed_uses": ["local_mlx_training_gradient_shaping"],
                 },
             }
         ),
@@ -951,6 +979,15 @@ def test_mlx_parent_production_contract_plan_discovers_parent_response_candidate
     assert plan["required_parent_contracts"][0]["source_parent_response_candidates"] == [
         "run/candidate_parent_0000_0300.json"
     ]
+    assert plan["required_parent_contracts"][0][
+        "source_parent_response_contract_probes"
+    ][0]["path"] == "run/candidate_parent_0000_0300.json"
+    assert "response_promotable_not_false" in plan["required_parent_contracts"][0][
+        "source_parent_response_contract_probes"
+    ][0]["blockers"]
+    assert "cache_auth_audit_manifest_not_supplied" in plan[
+        "required_parent_contracts"
+    ][0]["source_parent_response_contract_probes"][0]["blockers"]
 
 
 def test_mlx_production_contract_bundle_gate_blocks_failed_bundle_verdict() -> None:

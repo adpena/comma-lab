@@ -36,6 +36,9 @@ from tac.local_acceleration.mlx_production_contract import (
 from tac.local_acceleration.mlx_production_contract import (
     SCHEMA_VERSION as MLX_PRODUCTION_CONTRACT_SCHEMA,
 )
+from tac.local_acceleration.mlx_production_contract import (
+    build_mlx_scorer_production_contract_manifest,
+)
 from tac.local_acceleration.mlx_score_calibration import (
     STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE,
 )
@@ -2412,13 +2415,14 @@ def _source_parent_response_candidates_for_group(
     group: dict[str, Any],
     *,
     repo_root: Path | None,
-) -> list[str]:
+) -> tuple[list[str], list[dict[str, Any]]]:
     if repo_root is None:
-        return []
+        return [], []
     source_paths = group.get("source_paths_sample")
     if not isinstance(source_paths, list):
-        return []
+        return [], []
     candidates: list[str] = []
+    probes: list[dict[str, Any]] = []
     seen: set[str] = set()
     for source in source_paths:
         if not isinstance(source, str) or not source:
@@ -2467,7 +2471,27 @@ def _source_parent_response_candidates_for_group(
             if text not in seen:
                 seen.add(text)
                 candidates.append(text)
-    return candidates[:8]
+                if len(probes) < 8:
+                    probe = build_mlx_scorer_production_contract_manifest(
+                        payload,
+                        run_id=f"parent_contract_probe:{text}",
+                        require_cache_identity=True,
+                        require_cache_auth_audit=True,
+                        require_torch_parity=True,
+                        require_profile_stability=True,
+                        require_batch_invariance=True,
+                        require_score_calibration=True,
+                    )
+                    probes.append(
+                        {
+                            "path": text,
+                            "passed": probe.get("passed") is True,
+                            "verdict": probe.get("verdict"),
+                            "blockers": list(probe.get("blockers") or []),
+                            "warnings": list(probe.get("warnings") or []),
+                        }
+                    )
+    return candidates[:8], probes[:8]
 
 
 def _strict_contract_summaries_from_payload(
@@ -2612,9 +2636,11 @@ def build_mlx_parent_production_contract_plan(
 
     groups = sorted(groups_by_key.values(), key=lambda item: item["group_id"])
     for group in groups:
-        group["source_parent_response_candidates"] = (
+        parent_candidates, parent_contract_probes = (
             _source_parent_response_candidates_for_group(group, repo_root=repo_root)
         )
+        group["source_parent_response_candidates"] = parent_candidates
+        group["source_parent_response_contract_probes"] = parent_contract_probes
         matching_contract = next(
             (
                 item
@@ -2746,6 +2772,8 @@ def render_mlx_parent_production_contract_plan_markdown(plan: dict[str, Any]) ->
                 "- Reference cache arrays: "
                 f"`{group.get('reference_cache_array_sha256')}`",
                 f"- Parent response candidates: `{group.get('source_parent_response_candidates')}`",
+                "- Parent response contract probes: "
+                f"`{group.get('source_parent_response_contract_probes')}`",
                 f"- Row sample: `{group.get('row_ids_sample')}`",
                 f"- Blockers: `{group.get('blockers')}`",
                 "",
