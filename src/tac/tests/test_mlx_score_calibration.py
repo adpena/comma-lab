@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_score_calibration import (
@@ -30,10 +32,10 @@ def test_mlx_score_calibration_preserves_order_and_false_authority(tmp_path: Pat
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["summary"]["mlx_cpu_rank_inversions"] == 0
     assert manifest["summary"]["mlx_cuda_rank_inversions"] == 0
-    assert manifest["summary"]["mlx_minus_cpu_max_abs"] == 0.0010000000000000009
-    assert manifest["decision_policy"]["recommended_min_mlx_gap_for_spend_triage"] == (
-        0.0010000000000000009 * 5.0
-    )
+    assert manifest["summary"]["mlx_minus_cpu_max_abs"] == pytest.approx(0.001)
+    assert manifest["decision_policy"][
+        "recommended_min_mlx_gap_for_spend_triage"
+    ] == pytest.approx(0.001 * 5.0)
     assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 1
     assert manifest["pairwise_order"][0]["mlx_spend_triage_decision_certified"] is True
     assert manifest["rows"][0]["mlx_rank"] == 1
@@ -62,8 +64,8 @@ def test_mlx_score_calibration_marks_close_pairs_uncertain(tmp_path: Path) -> No
     manifest = build_mlx_score_calibration_manifest(rows, repo_root=tmp_path)
 
     assert manifest["summary"]["mlx_cpu_rank_inversions"] == 0
-    assert manifest["summary"]["recommended_min_mlx_gap_for_spend_triage"] == (
-        0.0010000000000000009 * 5.0
+    assert manifest["summary"]["recommended_min_mlx_gap_for_spend_triage"] == pytest.approx(
+        0.001 * 5.0
     )
     assert manifest["summary"]["mlx_spend_triage_pairwise_certified_count"] == 0
     assert manifest["summary"]["mlx_spend_triage_pairwise_uncertain_count"] == 1
@@ -99,6 +101,36 @@ def test_mlx_score_calibration_rejects_direct_auth_score_scalars(tmp_path: Path)
         raise AssertionError("direct scalar CPU score was accepted")
 
 
+def test_mlx_score_calibration_accepts_matching_direct_scalar_with_strict_payload(
+    tmp_path: Path,
+) -> None:
+    row = _row(tmp_path, "a", mlx_score=0.2, cpu_score=0.201, cuda_score=0.201)
+    row["cpu_score"] = 0.201
+
+    manifest = build_mlx_score_calibration_manifest([row], repo_root=tmp_path)
+
+    assert manifest["rows"][0]["cpu_score"] == pytest.approx(0.201)
+    assert manifest["rows"][0]["cpu_source"] == row["cpu_auth_eval_path"]
+    assert manifest["decision_policy"]["allowed_use"] == (
+        "local_spend_triage_only_after_strict_auth_axis_calibration"
+    )
+    assert manifest["decision_policy"]["score_claim"] is False
+
+
+def test_mlx_score_calibration_rejects_direct_scalar_auth_payload_mismatch(
+    tmp_path: Path,
+) -> None:
+    row = _row(tmp_path, "bad", mlx_score=0.2, cpu_score=0.2, cuda_score=0.3)
+    row["cpu_score"] = 0.25
+
+    try:
+        build_mlx_score_calibration_manifest([row], repo_root=tmp_path)
+    except ValueError as exc:
+        assert "cpu_score direct scalar does not match strict auth-eval payload" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("mismatched direct scalar CPU score was accepted")
+
+
 def test_mlx_score_calibration_rejects_non_auth_payload(tmp_path: Path) -> None:
     row = _row(tmp_path, "bad", mlx_score=0.2, cpu_score=0.2, cuda_score=0.3)
     cpu_path = tmp_path / row["cpu_auth_eval_path"]
@@ -114,6 +146,30 @@ def test_mlx_score_calibration_rejects_non_auth_payload(tmp_path: Path) -> None:
         assert "auth_eval_evidence_grade_not_contest_cpu_or_cuda" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("non-auth CPU payload was accepted")
+
+
+def test_mlx_score_calibration_rejects_auth_payload_archive_size_mismatch(
+    tmp_path: Path,
+) -> None:
+    row = _row(tmp_path, "bad", mlx_score=0.2, cpu_score=0.2, cuda_score=0.3)
+    cpu_path = tmp_path / row["cpu_auth_eval_path"]
+    payload = json.loads(cpu_path.read_text(encoding="utf-8"))
+    payload["archive_size_bytes"] = 124
+    payload["rate_unscaled"] = 124 / ORIGINAL_VIDEO_BYTES
+    payload["score_rate_contribution"] = 25.0 * 124 / ORIGINAL_VIDEO_BYTES
+    payload["canonical_score"] = contest_formula_score(
+        seg_dist=payload["avg_segnet_dist"],
+        pose_dist=payload["avg_posenet_dist"],
+        archive_bytes=124,
+    )
+    cpu_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    try:
+        build_mlx_score_calibration_manifest([row], repo_root=tmp_path)
+    except ValueError as exc:
+        assert "archive_size_bytes_mismatch:manifest=124:actual=123" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("mismatched auth archive size was accepted")
 
 
 def test_mlx_score_calibration_cli(tmp_path: Path) -> None:
@@ -145,8 +201,8 @@ def test_mlx_score_calibration_cli(tmp_path: Path) -> None:
     manifest = json.loads(output_path.read_text(encoding="utf-8"))
     assert manifest["run_id"] == "cli"
     assert manifest["summary"]["mlx_cpu_rank_inversions"] == 0
-    assert manifest["summary"]["recommended_min_mlx_gap_for_spend_triage"] == (
-        0.0010000000000000009 * 5.0
+    assert manifest["summary"]["recommended_min_mlx_gap_for_spend_triage"] == pytest.approx(
+        0.001 * 5.0
     )
 
 
@@ -161,6 +217,7 @@ def _row(
     response_path = tmp_path / f"{label}_mlx.json"
     cpu_path = tmp_path / f"{label}_cpu_auth.json"
     cuda_path = tmp_path / f"{label}_cuda_auth.json"
+    archive_size = 123
     response_path.write_text(
         json.dumps(
             {
@@ -176,7 +233,7 @@ def _row(
                 "canonical_score": mlx_score,
                 "avg_posenet_dist": 1.0e-4,
                 "avg_segnet_dist": 2.0e-4,
-                "archive_size_bytes": 123,
+                "archive_size_bytes": archive_size,
                 "n_samples": 600,
                 "batch_pairs": 1,
                 "archive_sha256": "a" * 64,
@@ -185,8 +242,14 @@ def _row(
         ),
         encoding="utf-8",
     )
-    cpu_path.write_text(json.dumps(_auth_eval_payload("cpu", cpu_score)), encoding="utf-8")
-    cuda_path.write_text(json.dumps(_auth_eval_payload("cuda", cuda_score)), encoding="utf-8")
+    cpu_path.write_text(
+        json.dumps(_auth_eval_payload("cpu", cpu_score, archive_size)),
+        encoding="utf-8",
+    )
+    cuda_path.write_text(
+        json.dumps(_auth_eval_payload("cuda", cuda_score, archive_size)),
+        encoding="utf-8",
+    )
     return {
         "label": label,
         "mlx_response_path": response_path.name,
@@ -195,10 +258,10 @@ def _row(
     }
 
 
-def _auth_eval_payload(axis: str, score: float) -> dict:
-    archive_size = 0
+def _auth_eval_payload(axis: str, score: float, archive_size: int) -> dict:
     pose = 0.0
-    seg = float(score) / 100.0
+    rate_score = 25.0 * archive_size / ORIGINAL_VIDEO_BYTES
+    seg = (float(score) - rate_score) / 100.0
     canonical_score = contest_formula_score(
         seg_dist=seg,
         pose_dist=pose,
@@ -210,7 +273,7 @@ def _auth_eval_payload(axis: str, score: float) -> dict:
         "avg_segnet_dist": seg,
         "avg_posenet_dist": pose,
         "archive_size_bytes": archive_size,
-        "score_rate_contribution": 25.0 * archive_size / ORIGINAL_VIDEO_BYTES,
+        "score_rate_contribution": rate_score,
         "rate_unscaled": archive_size / ORIGINAL_VIDEO_BYTES,
         "n_samples": 600,
         "score_claim": True,
