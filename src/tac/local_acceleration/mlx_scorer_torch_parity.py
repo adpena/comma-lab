@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import gc
 import json
+import sys
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -24,8 +27,11 @@ from tac.local_acceleration.mlx_scorer_response import (
 )
 
 SCHEMA_VERSION = "mlx_scorer_torch_parity.v1"
+SWEEP_SCHEMA_VERSION = "mlx_scorer_torch_parity_sweep.v1"
 PASS_VERDICT = "PASS_MLX_TORCH_SCORER_PARITY"
 FAIL_VERDICT = "FAIL_MLX_TORCH_SCORER_PARITY"
+PASS_SWEEP_VERDICT = "PASS_MLX_TORCH_SCORER_PARITY_SWEEP"
+FAIL_SWEEP_VERDICT = "FAIL_MLX_TORCH_SCORER_PARITY_SWEEP"
 
 
 @dataclass(frozen=True)
@@ -98,6 +104,173 @@ def build_mlx_scorer_torch_parity_manifest(
     )
 
 
+def build_mlx_scorer_torch_parity_sweep_manifest(
+    *,
+    cache_dir: str | Path,
+    repo_root: str | Path = ".",
+    device_type: str = "cpu",
+    start_pair: int = 0,
+    max_pairs: int | None = None,
+    window_pairs: int = 4,
+    stride_pairs: int | None = None,
+    max_windows: int | None = None,
+    thresholds: MLXTorchParityThresholds | None = None,
+    run_id: str | None = None,
+    allow_gpu_research_signal: bool = False,
+    progress_every: int = 0,
+    progress_stream: Any | None = None,
+) -> dict[str, Any]:
+    """Compare PyTorch-vs-MLX scorer parity across a cache-window sweep."""
+
+    if device_type not in {"cpu", "gpu"}:
+        raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+    if device_type == "gpu" and not allow_gpu_research_signal:
+        raise ValueError(
+            f"{GPU_RESEARCH_SIGNAL_BLOCKER}: MLX GPU parity sweeps are local "
+            "research-signal implementation checks only; pass "
+            "allow_gpu_research_signal=True after recording that rationale"
+        )
+    if int(start_pair) < 0:
+        raise ValueError(f"start_pair must be >= 0, got {start_pair}")
+    if max_pairs is not None and int(max_pairs) < 1:
+        raise ValueError(f"max_pairs must be >= 1 when set, got {max_pairs}")
+    if int(window_pairs) < 1:
+        raise ValueError(f"window_pairs must be >= 1, got {window_pairs}")
+    stride = int(window_pairs) if stride_pairs is None else int(stride_pairs)
+    if stride < 1:
+        raise ValueError(f"stride_pairs must be >= 1, got {stride_pairs}")
+    if max_windows is not None and int(max_windows) < 1:
+        raise ValueError(f"max_windows must be >= 1 when set, got {max_windows}")
+    if int(progress_every) < 0:
+        raise ValueError(f"progress_every must be >= 0, got {progress_every}")
+
+    cache = load_scorer_input_cache(cache_dir)
+    total_pair_count = int(cache.pair_indices.shape[0])
+    start = int(start_pair)
+    if start >= total_pair_count:
+        raise ValueError(f"start_pair {start} is outside cache pair count {total_pair_count}")
+    sweep_stop = total_pair_count if max_pairs is None else min(total_pair_count, start + int(max_pairs))
+    windows = _build_windows(
+        start=start,
+        stop=sweep_stop,
+        window_pairs=int(window_pairs),
+        stride_pairs=stride,
+        max_windows=max_windows,
+    )
+    if not windows:
+        raise ValueError("no parity windows selected")
+
+    limits = thresholds or MLXTorchParityThresholds()
+    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    rows: list[dict[str, Any]] = []
+    started = time.time()
+    stream = sys.stderr if progress_stream is None else progress_stream
+    with temporary_mlx_device(device_type):
+        adapter = torch_distortion_net_to_mlx(dist)
+        for row_index, (window_start, window_stop) in enumerate(windows):
+            pose = np.asarray(cache.posenet_yuv6_pair[window_start:window_stop], dtype=np.float32)
+            seg = np.asarray(cache.segnet_last_rgb[window_start:window_stop], dtype=np.float32)
+            torch_outputs = run_torch_distortion_scorer_nchw(dist, pose, seg)
+            mlx_outputs = run_mlx_distortion_scorer_nchw(adapter, pose, seg)
+            window_manifest = build_mlx_scorer_torch_parity_manifest_from_outputs(
+                torch_outputs=torch_outputs,
+                mlx_outputs=mlx_outputs,
+                thresholds=limits,
+                run_id=f"{run_id}:window{row_index}" if run_id else None,
+                device_type=device_type,
+                cache_dir=str(cache_dir),
+                start_pair=window_start,
+                max_pairs=window_stop - window_start,
+                pair_window=[window_start, window_stop],
+                n_samples=window_stop - window_start,
+                total_pair_count=total_pair_count,
+                gpu_research_signal_allowed=bool(allow_gpu_research_signal),
+            )
+            row = {
+                "index": row_index,
+                "passed": bool(window_manifest["passed"]),
+                "verdict": window_manifest["verdict"],
+                "blockers": list(window_manifest["blockers"]),
+                "pair_window": [window_start, window_stop],
+                "n_samples": window_stop - window_start,
+                "deltas": window_manifest["deltas"],
+            }
+            rows.append(row)
+            _clear_mlx_runtime_cache()
+            if progress_every and (row_index + 1) % int(progress_every) == 0:
+                elapsed = time.time() - started
+                print(
+                    json.dumps(
+                        {
+                            "event": "mlx_torch_parity_sweep_progress",
+                            "done_windows": row_index + 1,
+                            "total_windows": len(windows),
+                            "elapsed_seconds": elapsed,
+                            "failed_windows": sum(1 for item in rows if not item["passed"]),
+                            "last_pair_window": row["pair_window"],
+                            "last_passed": row["passed"],
+                            "windows_per_second": (row_index + 1) / elapsed
+                            if elapsed > 0
+                            else 0.0,
+                        },
+                        sort_keys=True,
+                    ),
+                    file=stream,
+                    flush=True,
+                )
+            del pose, seg, torch_outputs, mlx_outputs, window_manifest
+            gc.collect()
+            _clear_mlx_runtime_cache()
+
+    blockers = _sweep_blockers(rows)
+    passed = not blockers
+    return {
+        "schema_version": SWEEP_SCHEMA_VERSION,
+        "run_id": run_id,
+        "verdict": PASS_SWEEP_VERDICT if passed else FAIL_SWEEP_VERDICT,
+        "passed": passed,
+        "blockers": blockers,
+        "thresholds": asdict(limits),
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
+        "device_type": device_type,
+        "gpu_research_signal_allowed": bool(allow_gpu_research_signal),
+        "cache_dir": str(cache_dir),
+        "total_pair_count": total_pair_count,
+        "start_pair": start,
+        "max_pairs": None if max_pairs is None else int(max_pairs),
+        "window_pairs": int(window_pairs),
+        "stride_pairs": stride,
+        "max_windows": None if max_windows is None else int(max_windows),
+        "window_count": len(rows),
+        "covered_pair_window": [windows[0][0], windows[-1][1]],
+        "summary": _summarize_rows(rows),
+        "rows": rows,
+        "authority_status": (
+            "PyTorch-vs-MLX parity sweep is local implementation evidence only; "
+            "paired CPU/CUDA auth eval remains required for score claims and promotion."
+        ),
+        "device_contract": {
+            "gpu_research_signal_blocker": GPU_RESEARCH_SIGNAL_BLOCKER,
+            "gpu_research_signal_required": device_type == "gpu",
+            "forbidden_uses": [
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+                "replacement_for_cpu_or_cuda_auth_eval",
+            ],
+        },
+    }
+
+
 def run_torch_distortion_scorer_nchw(
     distortion_net: Any,
     posenet_yuv6_pair_nchw: np.ndarray,
@@ -125,6 +298,17 @@ def run_torch_distortion_scorer_nchw(
     }
 
 
+def write_mlx_scorer_torch_parity_sweep_manifest(
+    manifest: dict[str, Any],
+    path: str | Path,
+) -> None:
+    """Write a parity sweep manifest with stable formatting."""
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def build_mlx_scorer_torch_parity_manifest_from_outputs(
     *,
     torch_outputs: dict[str, Any],
@@ -147,7 +331,7 @@ def build_mlx_scorer_torch_parity_manifest_from_outputs(
 
     pose_deltas = _pose_output_deltas(torch_outputs, mlx_outputs)
     max_pose_delta = max(pose_deltas.values(), default=0.0)
-    seg_logit_delta, seg_argmax_diff_pixels = _segnet_deltas(
+    seg_logit_delta, seg_argmax_diff_pixels, seg_argmax_pixel_count = _segnet_deltas(
         torch_outputs,
         mlx_outputs,
         blockers,
@@ -214,6 +398,14 @@ def build_mlx_scorer_torch_parity_manifest_from_outputs(
             "posenet_output_abs_max": max_pose_delta,
             "segnet_logit_abs_max": seg_logit_delta,
             "segnet_argmax_diff_pixels": seg_argmax_diff_pixels,
+            "segnet_argmax_pixel_count": seg_argmax_pixel_count,
+            "segnet_argmax_diff_fraction": (
+                None
+                if seg_argmax_diff_pixels is None
+                or seg_argmax_pixel_count is None
+                or seg_argmax_pixel_count == 0
+                else float(seg_argmax_diff_pixels) / float(seg_argmax_pixel_count)
+            ),
             "posenet_component_abs_max": pose_component_abs_max,
             "segnet_component_diff_samples": seg_component_diff_samples,
         },
@@ -257,6 +449,83 @@ def write_mlx_scorer_torch_parity_manifest(
     out.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _build_windows(
+    *,
+    start: int,
+    stop: int,
+    window_pairs: int,
+    stride_pairs: int,
+    max_windows: int | None,
+) -> list[tuple[int, int]]:
+    windows: list[tuple[int, int]] = []
+    cursor = start
+    while cursor < stop:
+        window_stop = min(stop, cursor + window_pairs)
+        windows.append((cursor, window_stop))
+        if max_windows is not None and len(windows) >= int(max_windows):
+            break
+        cursor += stride_pairs
+    return windows
+
+
+def _sweep_blockers(rows: list[dict[str, Any]]) -> list[str]:
+    blockers: list[str] = []
+    for row in rows:
+        if not row["passed"]:
+            blockers.append(f"window_failed:index={row['index']}:pair_window={row['pair_window']}")
+    return blockers
+
+
+def _summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    keys = (
+        "posenet_output_abs_max",
+        "segnet_logit_abs_max",
+        "posenet_component_abs_max",
+        "segnet_argmax_diff_pixels",
+        "segnet_argmax_diff_fraction",
+        "segnet_component_diff_samples",
+    )
+    summary: dict[str, Any] = {
+        "passed_windows": sum(1 for row in rows if row["passed"]),
+        "failed_windows": sum(1 for row in rows if not row["passed"]),
+    }
+    for key in keys:
+        values = [float(row["deltas"][key]) for row in rows if row["deltas"].get(key) is not None]
+        summary[key] = _distribution(values)
+    return summary
+
+
+def _distribution(values: list[float]) -> dict[str, float | int | None]:
+    if not values:
+        return {
+            "count": 0,
+            "max": None,
+            "mean": None,
+            "p50": None,
+            "p95": None,
+            "p99": None,
+        }
+    arr = np.asarray(values, dtype=np.float64)
+    return {
+        "count": int(arr.size),
+        "max": float(np.max(arr)),
+        "mean": float(np.mean(arr)),
+        "p50": float(np.quantile(arr, 0.50)),
+        "p95": float(np.quantile(arr, 0.95)),
+        "p99": float(np.quantile(arr, 0.99)),
+    }
+
+
+def _clear_mlx_runtime_cache() -> None:
+    try:
+        import mlx.core as mx
+
+        mx.synchronize()
+        mx.clear_cache()
+    except (AttributeError, ImportError):
+        return
+
+
 def _pose_output_deltas(torch_outputs: dict[str, Any], mlx_outputs: dict[str, Any]) -> dict[str, float]:
     torch_pose = torch_outputs.get("posenet")
     mlx_pose = mlx_outputs.get("posenet")
@@ -278,7 +547,7 @@ def _segnet_deltas(
     torch_outputs: dict[str, Any],
     mlx_outputs: dict[str, Any],
     blockers: list[str],
-) -> tuple[float | None, int | None]:
+) -> tuple[float | None, int | None, int | None]:
     torch_seg = np.asarray(torch_outputs.get("segnet"), dtype=np.float32)
     mlx_seg = np.asarray(mlx_outputs.get("segnet"), dtype=np.float32)
     if torch_seg.shape != mlx_seg.shape:
@@ -286,10 +555,12 @@ def _segnet_deltas(
             "segnet_shape_mismatch:"
             f"torch={list(torch_seg.shape)}:mlx={list(mlx_seg.shape)}"
         )
-        return None, None
+        return None, None, None
     logit_delta = float(np.max(np.abs(torch_seg - mlx_seg)))
-    argmax_diff = int(np.sum(np.argmax(torch_seg, axis=1) != np.argmax(mlx_seg, axis=1)))
-    return logit_delta, argmax_diff
+    argmax_mismatch = np.argmax(torch_seg, axis=1) != np.argmax(mlx_seg, axis=1)
+    argmax_diff = int(np.sum(argmax_mismatch))
+    pixel_count = int(argmax_mismatch.size)
+    return logit_delta, argmax_diff, pixel_count
 
 
 def _jsonable(value: Any) -> Any:
@@ -305,12 +576,17 @@ def _jsonable(value: Any) -> Any:
 
 
 __all__ = [
+    "FAIL_SWEEP_VERDICT",
     "FAIL_VERDICT",
+    "PASS_SWEEP_VERDICT",
     "PASS_VERDICT",
     "SCHEMA_VERSION",
+    "SWEEP_SCHEMA_VERSION",
     "MLXTorchParityThresholds",
     "build_mlx_scorer_torch_parity_manifest",
     "build_mlx_scorer_torch_parity_manifest_from_outputs",
+    "build_mlx_scorer_torch_parity_sweep_manifest",
     "run_torch_distortion_scorer_nchw",
     "write_mlx_scorer_torch_parity_manifest",
+    "write_mlx_scorer_torch_parity_sweep_manifest",
 ]

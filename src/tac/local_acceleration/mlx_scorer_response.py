@@ -138,16 +138,23 @@ def build_mlx_scorer_response_payload(
             start=1,
         ):
             stop = min(stop_exclusive, batch_start + int(batch_pairs))
+            ref_pose = np.asarray(reference.posenet_yuv6_pair[batch_start:stop], dtype=np.float32)
+            ref_seg = np.asarray(reference.segnet_last_rgb[batch_start:stop], dtype=np.float32)
+            cand_pose = np.asarray(candidate.posenet_yuv6_pair[batch_start:stop], dtype=np.float32)
+            cand_seg = np.asarray(candidate.segnet_last_rgb[batch_start:stop], dtype=np.float32)
             ref_outputs = run_mlx_distortion_scorer_nchw(
                 adapter,
-                np.asarray(reference.posenet_yuv6_pair[batch_start:stop], dtype=np.float32),
-                np.asarray(reference.segnet_last_rgb[batch_start:stop], dtype=np.float32),
+                ref_pose,
+                ref_seg,
             )
-            cand_outputs = run_mlx_distortion_scorer_nchw(
-                adapter,
-                np.asarray(candidate.posenet_yuv6_pair[batch_start:stop], dtype=np.float32),
-                np.asarray(candidate.segnet_last_rgb[batch_start:stop], dtype=np.float32),
-            )
+            if np.array_equal(ref_pose, cand_pose) and np.array_equal(ref_seg, cand_seg):
+                cand_outputs = ref_outputs
+            else:
+                cand_outputs = run_mlx_distortion_scorer_nchw(
+                    adapter,
+                    cand_pose,
+                    cand_seg,
+                )
             components = scorer_distortion_components_numpy(ref_outputs, cand_outputs)
             pose_chunks.append(components["posenet"])
             seg_chunks.append(components["segnet"])
