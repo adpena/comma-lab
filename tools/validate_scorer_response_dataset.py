@@ -58,6 +58,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--min-prediction-pairs-per-fold", type=int, default=3)
     parser.add_argument("--min-pearson-r", type=float, default=0.2)
+    parser.add_argument(
+        "--allow-mixed-axis-targets",
+        action="store_true",
+        help=(
+            "Disable the default fail-closed requirement that all rows share "
+            "one score axis/target scale."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -74,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
             prediction_fields=args.prediction_fields,
             min_prediction_pairs_per_fold=args.min_prediction_pairs_per_fold,
             min_pearson_r=args.min_pearson_r,
+            require_single_axis=not args.allow_mixed_axis_targets,
         )
     except (OSError, ValueError, ScorerResponseDatasetError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)

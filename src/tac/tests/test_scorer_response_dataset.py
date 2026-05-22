@@ -21,6 +21,7 @@ from tac.optimization.scorer_response_dataset import (
     build_scorer_response_validation_gate,
     build_scorer_response_consumer_routing,
     build_windowed_mlx_response_dataset,
+    merge_scorer_response_datasets,
     normalize_legacy_response_dataset_authority,
     render_markdown,
     render_next_probe_plan_markdown,
@@ -823,12 +824,16 @@ def _validation_dataset(
                 row = {
                     "schema": "scorer_response_row.v1",
                     "row_id": f"{family}-{fold}-{offset}",
+                    "candidate_id": f"{family}-{fold}-{offset}",
                     **false_authority,
                     "authority_source_score_claim": False,
                     "family": family,
+                    "axis": "[unit-test response-signal]",
                     "holdout_fold": fold,
                     "delta_vs_baseline_score": value,
                     "scorer_delta_vs_baseline": value,
+                    "byte_budget_margin_vs_break_even": None,
+                    "archive_bytes": 100,
                 }
                 if include_prediction:
                     row["predicted_delta_vs_baseline_score"] = value
@@ -936,6 +941,23 @@ def test_scorer_response_validation_gate_passes_family_diverse_heldout_predictio
     assert gate["passing_prediction_fields"] == ["predicted_delta_vs_baseline_score"]
 
 
+def test_scorer_response_validation_gate_blocks_mixed_axis_targets() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response", "decoder_q"),
+        rows_per_fold=5,
+        include_prediction=True,
+    )
+    for row in dataset["rows"]:
+        if row["family"] == "decoder_q":
+            row["axis"] = "[macOS-CPU advisory decoder-q]"
+
+    gate = build_scorer_response_validation_gate(dataset)
+
+    assert gate["status"] == "blocked"
+    assert any(blocker.startswith("mixed_axis_targets") for blocker in gate["blockers"])
+    assert gate["passing_prediction_fields"] == ["predicted_delta_vs_baseline_score"]
+
+
 def test_validate_scorer_response_dataset_cli_writes_gate(tmp_path) -> None:
     dataset_path = tmp_path / "dataset.json"
     dataset_path.write_text(
@@ -967,6 +989,71 @@ def test_validate_scorer_response_dataset_cli_writes_gate(tmp_path) -> None:
     assert gate["status"] == "blocked"
     assert "no_prediction_fields_present" in gate["blockers"]
     assert "Scorer Response Validation Gate" in md_out.read_text(encoding="utf-8")
+
+
+def test_merge_scorer_response_datasets_preserves_false_authority() -> None:
+    mlx = _validation_dataset(families=("mlx_scorer_response",), rows_per_fold=1)
+    decoder_q = _validation_dataset(families=("decoder_q",), rows_per_fold=1)
+
+    merged = merge_scorer_response_datasets([("mlx.json", mlx), ("decoder_q.json", decoder_q)])
+
+    assert merged["score_claim"] is False
+    assert merged["summary"]["row_count"] == 10
+    assert merged["summary"]["family_counts"] == {
+        "decoder_q": 5,
+        "mlx_scorer_response": 5,
+    }
+    assert {row["source_dataset"] for row in merged["rows"]} == {"mlx.json", "decoder_q.json"}
+
+
+def test_merge_scorer_response_datasets_rejects_duplicate_rows() -> None:
+    dataset = _validation_dataset(families=("decoder_q",), rows_per_fold=1)
+
+    try:
+        merge_scorer_response_datasets([("a.json", dataset), ("b.json", dataset)])
+    except ScorerResponseDatasetError as exc:
+        assert "duplicate row_id" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("duplicate rows were accepted")
+
+
+def test_merge_scorer_response_datasets_cli(tmp_path) -> None:
+    mlx_path = tmp_path / "mlx.json"
+    decoder_path = tmp_path / "decoder_q.json"
+    mlx_path.write_text(
+        json.dumps(_validation_dataset(families=("mlx_scorer_response",), rows_per_fold=1)),
+        encoding="utf-8",
+    )
+    decoder_path.write_text(
+        json.dumps(_validation_dataset(families=("decoder_q",), rows_per_fold=1)),
+        encoding="utf-8",
+    )
+    json_out = tmp_path / "merged.json"
+    md_out = tmp_path / "merged.md"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "merge_scorer_response_datasets.py"),
+            "--input",
+            str(mlx_path),
+            "--input",
+            str(decoder_path),
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"score_claim": false' in completed.stdout
+    merged = json.loads(json_out.read_text(encoding="utf-8"))
+    assert merged["summary"]["family_counts"]["decoder_q"] == 5
+    assert "Scorer Response Dataset" in md_out.read_text(encoding="utf-8")
 
 
 def test_build_response_dataset_normalizes_candidate_list_and_correlations(tmp_path) -> None:

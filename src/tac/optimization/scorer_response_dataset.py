@@ -916,6 +916,76 @@ def build_windowed_mlx_response_dataset(
     }
 
 
+def merge_scorer_response_datasets(
+    datasets: list[tuple[str, dict[str, Any]]],
+) -> dict[str, Any]:
+    """Merge normalized scorer-response datasets without creating authority."""
+
+    if not datasets:
+        raise ScorerResponseDatasetError("at least one dataset is required")
+    rows: list[dict[str, Any]] = []
+    seen_row_ids: set[str] = set()
+    sources: list[dict[str, Any]] = []
+    for label, dataset in datasets:
+        normalized = normalize_legacy_response_dataset_authority(
+            dataset,
+            source_label=label,
+        )
+        source_rows = normalized["rows"]
+        sources.append(
+            {
+                "label": label,
+                "row_count": len(source_rows),
+                "summary": normalized.get("summary"),
+                "authority_normalization": normalized.get("authority_normalization"),
+            }
+        )
+        for row in source_rows:
+            row_id = str(row.get("row_id"))
+            if row_id in seen_row_ids:
+                raise ScorerResponseDatasetError(f"duplicate row_id across datasets: {row_id}")
+            seen_row_ids.add(row_id)
+            merged = copy.deepcopy(row)
+            merged["source_dataset"] = label
+            rows.append(merged)
+
+    rows.sort(
+        key=lambda row: (
+            str(row.get("family")),
+            row.get("delta_vs_baseline_score")
+            if isinstance(row.get("delta_vs_baseline_score"), (int, float))
+            else 1e9,
+            str(row.get("row_id")),
+        )
+    )
+    return {
+        "schema": SCHEMA,
+        "producer": TOOL,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "authority": {
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "promotable": False,
+            "evidence_grade": "merged non-authoritative scorer-response dataset",
+            "notes": (
+                "Merged rows preserve source false-authority contracts; this "
+                "artifact remains local planning signal only."
+            ),
+        },
+        "merge_sources": sources,
+        "summary": summarize_rows(rows),
+        "feature_correlations": feature_correlations(rows),
+        "rows": rows,
+        "skipped": [],
+    }
+
+
 def build_scorer_response_consumer_routing(
     dataset: dict[str, Any],
     *,
@@ -1404,6 +1474,7 @@ def build_scorer_response_validation_gate(
     prediction_fields: Iterable[str] = DEFAULT_RESPONSE_PREDICTION_FIELDS,
     min_prediction_pairs_per_fold: int = 3,
     min_pearson_r: float = 0.2,
+    require_single_axis: bool = True,
 ) -> dict[str, Any]:
     """Validate whether a response dataset is ready for LL held-out use.
 
@@ -1430,9 +1501,12 @@ def build_scorer_response_validation_gate(
     family_counts: dict[str, int] = {}
     family_folds: dict[str, set[int]] = {}
     fold_counts: dict[int, int] = {}
+    axis_counts: dict[str, int] = {}
     for row in rows:
         family = str(row.get("family") or "unknown")
         family_counts[family] = family_counts.get(family, 0) + 1
+        axis = str(row.get("axis") or row.get("source_evidence_tag") or "missing")
+        axis_counts[axis] = axis_counts.get(axis, 0) + 1
         fold = _as_int(row.get("holdout_fold"))
         if fold is None:
             continue
@@ -1476,6 +1550,11 @@ def build_scorer_response_validation_gate(
         )
     if missing_global_folds:
         blockers.append(f"missing_global_holdout_folds:{missing_global_folds}")
+    if require_single_axis:
+        if "missing" in axis_counts:
+            blockers.append("missing_axis_target")
+        if len(axis_counts) != 1:
+            blockers.append(f"mixed_axis_targets:{sorted(axis_counts)}")
     if not prediction_evaluations:
         blockers.append("no_prediction_fields_present")
     elif not passing_predictions:
@@ -1514,10 +1593,12 @@ def build_scorer_response_validation_gate(
             "prediction_fields": [str(field) for field in prediction_fields],
             "min_prediction_pairs_per_fold": int(min_prediction_pairs_per_fold),
             "min_pearson_r": float(min_pearson_r),
+            "require_single_axis": bool(require_single_axis),
         },
         "coverage": {
             "row_count": len(rows),
             "family_counts": family_counts,
+            "axis_counts": axis_counts,
             "fold_counts": {str(k): v for k, v in sorted(fold_counts.items())},
             "missing_global_folds": missing_global_folds,
             "families_with_required_folds": families_with_required_folds,
@@ -2066,11 +2147,13 @@ def render_validation_gate_markdown(gate: dict[str, Any]) -> str:
         f"- Required folds: `{thresholds.get('required_folds')}`",
         f"- Target: `{thresholds.get('target')}`",
         f"- Min Pearson r: `{thresholds.get('min_pearson_r')}`",
+        f"- Require single axis: `{thresholds.get('require_single_axis')}`",
         "",
         "## Coverage",
         "",
         f"- Rows: `{coverage.get('row_count')}`",
         f"- Family counts: `{coverage.get('family_counts')}`",
+        f"- Axis counts: `{coverage.get('axis_counts')}`",
         f"- Fold counts: `{coverage.get('fold_counts')}`",
         f"- Families with required folds: `{coverage.get('families_with_required_folds')}`",
         "",
