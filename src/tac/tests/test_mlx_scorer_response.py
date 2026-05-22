@@ -11,6 +11,7 @@ import numpy as np
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
 from tac.local_acceleration.mlx_scorer_response import (
+    GPU_BATCH_SHAPE_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
     build_mlx_scorer_response_payload,
     load_scorer_input_cache,
@@ -182,6 +183,59 @@ def test_mlx_scorer_response_cli_rejects_gpu_without_explicit_research_allowance
 
     assert completed.returncode != 0
     assert GPU_RESEARCH_SIGNAL_BLOCKER in completed.stderr
+
+
+def test_mlx_scorer_response_rejects_non_singleton_gpu_batch_after_allowance() -> None:
+    try:
+        build_mlx_scorer_response_payload(
+            reference_cache_dir="/does/not/exist/reference",
+            candidate_cache_dir="/does/not/exist/candidate",
+            archive_size_bytes=1,
+            device_type="gpu",
+            batch_pairs=2,
+            allow_gpu_research_signal=True,
+        )
+    except ValueError as exc:
+        assert GPU_BATCH_SHAPE_BLOCKER in str(exc)
+        assert "batch_pairs=1" in str(exc)
+    else:
+        raise AssertionError("MLX GPU non-singleton batch was accepted without invariance override")
+
+
+def test_mlx_scorer_response_cli_rejects_non_singleton_gpu_batch_after_allowance(tmp_path: Path) -> None:
+    pair_indices = np.array([[0, 1], [2, 3]], dtype=np.int64)
+    seg = np.zeros((2, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((2, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(tmp_path / "reference", seg=seg, pose=pose, pair_indices=pair_indices)
+    candidate_dir = _write_test_cache(tmp_path / "candidate", seg=seg, pose=pose, pair_indices=pair_indices)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1",
+            "--output",
+            str(tmp_path / "mlx_response.json"),
+            "--repo-root",
+            str(REPO),
+            "--device",
+            "gpu",
+            "--allow-gpu-research-signal",
+            "--batch-pairs",
+            "2",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode != 0
+    assert GPU_BATCH_SHAPE_BLOCKER in completed.stderr
 
 
 def _write_test_cache(

@@ -71,9 +71,15 @@ experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20
 mlx_scorer_input_cache*/
 mlx_scorer_response*/
 mlx_scorer_response_profile*/
+mlx_scorer_batch_invariance*/
+mlx_scorer_production_contract*/
+mlx_scorer_response_execution_plan*/
 reports/mlx_scorer_input_cache*/
 reports/mlx_scorer_response*/
 reports/mlx_scorer_response_profile*/
+reports/mlx_scorer_batch_invariance*/
+reports/mlx_scorer_production_contract*/
+reports/mlx_scorer_response_execution_plan*/
 outputs/
 
 # Local Claude scheduler locks contain machine/session PIDs and must not churn.

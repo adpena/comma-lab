@@ -87,6 +87,21 @@ def test_profile_payload_rejects_gpu_without_explicit_research_allowance() -> No
         )
 
 
+def test_profile_payload_rejects_non_singleton_gpu_batch_after_allowance() -> None:
+    with pytest.raises(ValueError, match="--batch-pairs 1"):
+        profiler.build_profile_payload(
+            reference_cache_dir="/tmp/ref",
+            candidate_cache_dir="/tmp/cand",
+            archive_size_bytes=123,
+            repo_root=REPO,
+            batch_pairs_values=[1, 2],
+            device_values=["gpu"],
+            start_pair=0,
+            max_pairs=1,
+            allow_gpu_research_signal=True,
+        )
+
+
 def test_profile_payload_passes_explicit_gpu_research_allowance(monkeypatch: pytest.MonkeyPatch) -> None:
     seen_allowances: list[bool] = []
 

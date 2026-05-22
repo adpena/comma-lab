@@ -92,6 +92,14 @@ def build_profile_payload(
             "responses are profiling/prescreen signal only and are not "
             "CPU-transfer-stable by default"
         )
+    if "gpu" in device_values:
+        non_singleton_gpu_batches = [value for value in batch_pairs_values if int(value) != 1]
+        if non_singleton_gpu_batches:
+            raise ValueError(
+                "--devices gpu currently requires --batch-pairs 1 only; larger "
+                "MLX GPU scorer batches must pass audit_mlx_scorer_batch_invariance.py "
+                "before a reviewed override is added"
+            )
 
     rows: list[dict[str, Any]] = []
     for device in device_values:

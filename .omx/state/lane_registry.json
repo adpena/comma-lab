@@ -46668,6 +46668,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mlx_auth_scorer_production_hardening_20260521",
+      "name": "MLX auth scorer production hardening",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_production_contract_greenup_20260522T000112Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "tools/check_mlx_scorer_production_contract.py"
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -46677,5 +46718,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-21T23:43:54Z"
+  "updated_at": "2026-05-22T00:01:53Z"
 }

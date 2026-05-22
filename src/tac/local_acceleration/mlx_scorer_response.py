@@ -30,6 +30,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (
 
 SCHEMA_VERSION = "mlx_scorer_response.v1"
 GPU_RESEARCH_SIGNAL_BLOCKER = "mlx_gpu_scorer_response_requires_explicit_research_signal_allowance"
+GPU_BATCH_SHAPE_BLOCKER = "mlx_gpu_scorer_response_requires_singleton_batches_until_invariance_passes"
 
 
 @dataclass(frozen=True)
@@ -90,7 +91,8 @@ def build_mlx_scorer_response_payload(
 
     if int(archive_size_bytes) < 0:
         raise ValueError(f"archive_size_bytes must be non-negative, got {archive_size_bytes}")
-    if int(batch_pairs) < 1:
+    batch_pairs_int = int(batch_pairs)
+    if batch_pairs_int < 1:
         raise ValueError(f"batch_pairs must be >= 1, got {batch_pairs}")
     if device_type not in {"cpu", "gpu"}:
         raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
@@ -99,6 +101,13 @@ def build_mlx_scorer_response_payload(
             f"{GPU_RESEARCH_SIGNAL_BLOCKER}: device_type='gpu' is local MLX "
             "prescreen signal only; pass allow_gpu_research_signal=True after "
             "recording CPU-transfer calibration or a research-only rationale"
+        )
+    if device_type == "gpu" and batch_pairs_int != 1:
+        raise ValueError(
+            f"{GPU_BATCH_SHAPE_BLOCKER}: MLX GPU scorer responses showed "
+            "batch-shape drift in FEC6 calibration; use batch_pairs=1 for GPU "
+            "or route larger GPU batches through audit_mlx_scorer_batch_invariance.py "
+            "before adding a reviewed override"
         )
     if int(progress_every) < 0:
         raise ValueError(f"progress_every must be >= 0, got {progress_every}")
@@ -193,6 +202,7 @@ def build_mlx_scorer_response_payload(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "candidate_generation_only": True,
+        "requires_exact_eval_before_promotion": True,
         "canonical_score": score,
         "score_recomputed_from_components": score,
         "canonical_score_source": "score_recomputed_from_components",
@@ -228,7 +238,9 @@ def build_mlx_scorer_response_payload(
         "raw_sha256": _manifest_string(candidate.manifest, "raw_sha256"),
         "device_contract": {
             "gpu_research_signal_blocker": GPU_RESEARCH_SIGNAL_BLOCKER,
+            "gpu_batch_shape_blocker": GPU_BATCH_SHAPE_BLOCKER,
             "gpu_research_signal_required": device_type == "gpu",
+            "gpu_batch_pairs_allowed_without_invariance_override": 1,
             "allowed_uses": [
                 "local_mlx_training_gradient_shaping",
                 "local_sweep_reranking_after_passing_transfer_calibration",
@@ -406,6 +418,7 @@ def _jsonable(value: Any) -> Any:
 
 
 __all__ = [
+    "GPU_BATCH_SHAPE_BLOCKER",
     "GPU_RESEARCH_SIGNAL_BLOCKER",
     "SCHEMA_VERSION",
     "ScorerInputCache",
