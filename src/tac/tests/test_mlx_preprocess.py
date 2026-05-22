@@ -48,6 +48,46 @@ def test_preprocess_uses_last_frame_for_segnet_and_both_frames_for_posenet() -> 
     np.testing.assert_allclose(second_frame_uv, 128.0, atol=1e-4, rtol=0)
 
 
+def test_preprocess_matches_upstream_distortionnet_preprocess_input() -> None:
+    sys.path.insert(0, str(REPO / "upstream"))
+    try:
+        modules = pytest.importorskip("modules")
+    finally:
+        sys.path.remove(str(REPO / "upstream"))
+
+    import torch
+
+    values = np.arange(2 * 2 * 17 * 19 * 3, dtype=np.uint32)
+    pairs = ((values * 37 + 11) % 256).astype(np.uint8).reshape(2, 2, 17, 19, 3)
+    pair_indices = np.array([[0, 1], [2, 3]], dtype=np.int64)
+    batch = preprocess_scorer_inputs_from_pairs(pairs, pair_indices=pair_indices)
+
+    class _RefDistortionNet:
+        pass
+
+    ref = _RefDistortionNet()
+    ref.posenet = modules.PoseNet.__new__(modules.PoseNet)
+    ref.segnet = modules.SegNet.__new__(modules.SegNet)
+    with torch.no_grad():
+        ref_posenet, ref_segnet = modules.DistortionNet.preprocess_input(
+            ref,
+            torch.from_numpy(np.ascontiguousarray(pairs)),
+        )
+
+    np.testing.assert_allclose(
+        batch.posenet_yuv6_pair,
+        ref_posenet.detach().cpu().numpy(),
+        atol=1e-5,
+        rtol=0,
+    )
+    np.testing.assert_allclose(
+        batch.segnet_last_rgb,
+        ref_segnet.detach().cpu().numpy(),
+        atol=1e-5,
+        rtol=0,
+    )
+
+
 def test_write_scorer_input_cache_is_non_authoritative(tmp_path: Path) -> None:
     pair = np.zeros((1, 2, 4, 4, 3), dtype=np.uint8)
     pair[:, 1, ...] = 255

@@ -215,6 +215,38 @@ def test_cache_audit_cli_writes_output(tmp_path: Path) -> None:
     assert payload["passed"] is True
 
 
+def test_cache_audit_alias_cli_writes_output(tmp_path: Path) -> None:
+    cache_path = tmp_path / "cache.json"
+    auth_path = tmp_path / "auth.json"
+    out_path = tmp_path / "audit.json"
+    cache_path.write_text(json.dumps(_cache()), encoding="utf-8")
+    auth_path.write_text(json.dumps(_auth()), encoding="utf-8")
+    reference_path = tmp_path / "reference.json"
+    reference_path.write_text(json.dumps(_reference_manifest()), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "mlx_cache_audit.py"),
+            "--cache-manifest",
+            str(cache_path),
+            "--auth-eval",
+            str(auth_path),
+            "--output",
+            str(out_path),
+            "--reference-cache-manifest",
+            str(reference_path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert '"passed": true' in completed.stdout
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["passed"] is True
+
+
 def test_cache_audit_uses_canonical_equation_for_scorer_input_hashes() -> None:
     audit = audit_mlx_scorer_input_cache_against_auth_eval(
         _cache(),
