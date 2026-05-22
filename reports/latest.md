@@ -1,27 +1,28 @@
 <!--
-generated_at: 2026-05-22T09:27:15Z
-from_state_hash: frontier_scan_no_drift_plus_mlx_production_contract_effective_gate_20260522T0927Z
-regenerated_by: codex:mlx_production_contract_effective_gate_hardening_20260522
-last_refreshed_at: 2026-05-22T09:27:15Z
-last_refreshed_by: codex:mlx_production_contract_effective_gate_hardening_20260522
-last_refreshed_head: 1f1989db0
+generated_at: 2026-05-22T14:32:09Z
+from_state_hash: frontier_scan_no_drift_plus_decoder_q_selective_runtime_materialization_20260522T1424Z
+regenerated_by: codex:decoder_q_selective_runtime_materialization_20260522
+last_refreshed_at: 2026-05-22T14:32:09Z
+last_refreshed_by: codex:decoder_q_selective_runtime_materialization_20260522
+last_refreshed_head: 9bc56608f
 last_refreshed_note: |
-  Current frontier/status refresh after the 2026-05-22 MLX production-contract,
-  rich-identity bundle, cache-integrity, and effective spend-triage hardening
-  pass. The scanner-derived FRONTIER section below was rechecked with
-  tools/scan_best_anchor_per_axis.py --check-drift at 2026-05-22T09:27Z; no
-  CPU/CUDA frontier score changed. MLX remains non-authoritative local research
-  signal: calibrated spend triage is allowed only through the composed effective
-  gate and still requires exact CPU/CUDA auth eval before any score, promotion,
-  rank, kill, or dispatch-readiness claim.
+  Current frontier/status refresh after the 2026-05-22 decoder-q selective
+  runtime packet materialization pass. The scanner-derived FRONTIER section
+  remains unchanged from the 2026-05-22T09:27Z drift check. MLX remains
+  non-authoritative local research signal: calibrated spend triage is allowed
+  only through the composed effective gate and still requires exact CPU/CUDA
+  auth eval before any score, promotion, rank, kill, or dispatch-readiness
+  claim. The DQS1 trailer materialization is byte-closed local-substrate work,
+  not score evidence.
 -->
 
 # Comma Lab - Current Frontier Snapshot - 2026-05-22 UTC
 
-> **2026-05-22 refresh note**: the scanner-derived FRONTIER section was
-> rechecked after the MLX production-contract and effective-gate hardening pass
-> at head `1f1989db0`; the CPU/CUDA leaders are unchanged. Historical roadmap
-> sections below remain retained for context; use `.omx/state/current_focus.md`,
+> **2026-05-22 refresh note**: the scanner-derived FRONTIER section remains
+> unchanged from the 09:27Z drift check. Decoder-q selective runtime now has a
+> byte-closed DQS1 trailer materialization and locality-control harness, but it
+> still carries no score, promotion, rank/kill, or dispatch-readiness authority.
+> Historical roadmap sections below remain retained for context; use `.omx/state/current_focus.md`,
 > `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
 > detailed queue routing.
 
@@ -80,7 +81,7 @@ last_refreshed_note: |
   planner rows or calibration artifacts.
 - The decoder-q response surface found useful high-leverage atoms, but the
   first surface-guided waterbucket batch is now **blocked** for exact-eval
-  spend: three fixed-length candidates changed all 600 frames, preserved
+  spend: five unique fixed-length archives changed all 600 frames, preserved
   archive byte count, and all regressed on `[macOS-CPU advisory decoder-q]`.
 - Current decoder-q first probe is
   `ll_decoder_q_surface_sign_calibration_repair`, not exact CUDA dispatch.
@@ -91,11 +92,45 @@ last_refreshed_note: |
   (SHA-256
   `f98e3017e8568bf36b304b5c053b6c7b4afc0e7ece8ef6d3f927849114765202`).
   It maps the top 32 observed MLX singleton windows to the existing
-  `d1f1e56e042692f2` materialized decoder-q mutation, but remains
-  `blocked_missing_decoder_q_selective_runtime_grammar`,
-  `score_claim=false`, and `ready_for_exact_eval_dispatch=false` until a
-  byte-closed selective runtime grammar, official inflate controls, and exact
-  CPU/CUDA auth eval exist.
+  `d1f1e56e042692f2` materialized decoder-q mutation. Runtime grammar is now
+  implemented as an archive-member `DQS1` trailer, but the lane remains
+  `score_claim=false` and `ready_for_exact_eval_dispatch=false` until exact
+  CPU/CUDA auth eval passes.
+- Decoder-q selective packet planning and materialization now have L0 byte
+  accounting for the same bridge. Singleton pair `[501, 502]` maps to frames
+  `[1002, 1003]` under `pair_all_frames` with a charged `DQS1` payload of `13`
+  bytes and estimated rate-score delta `0.000008656166390588228`; top32 maps to
+  `64` affected frames with a charged `DQS1` payload of `75` bytes and
+  estimated rate-score delta `0.00004993942148416285`. Plan artifacts:
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/decoder_q_selective_runtime_packet_plan_singleton_pair501.json`
+  and
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/decoder_q_selective_runtime_packet_plan_top32.json`.
+  The top32 materialized local packet is
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/decoder_q_selective_runtime_trailer_top32/archive.zip`
+  with archive SHA-256
+  `3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59`,
+  member `x` length `178492`, and `+75` bytes versus FEC6.
+  Official raw-output locality controls pass for top32:
+  selected-frame hash `cff4cc7400011f2d1cbe0e4a19c7aeb66af1b409d0cdad9868b86edcb23e2cea`
+  equals the full global decoder-q runtime, unselected-frame hash
+  `d99cf5d5f735249a66bea6a8ed02bd45d44abbf9e79e20cfa801756cb95d0654`
+  equals the parent, and all mismatch counts are `0`.
+  Control artifact:
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_controls_fullbatch.json`.
+  Local scorer smoke also passed on `[macOS-CPU advisory]`: canonical score
+  `0.1920602563025898`, archive bytes `178592`, PoseNet distortion
+  `0.00002943`, SegNet distortion `0.00055988`, rate `0.004756683286239793`,
+  artifact
+  `experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_cpu_advisory_venv.json`.
+  Against the matching local FEC6 advisory baseline
+  `0.19206131688110561 [macOS-CPU advisory]`, this is `-0.0000010605785158157577`
+  lower despite the `+75` byte trailer, driven by a `-0.000000510000000000007`
+  SegNet-distortion shift. Against the Linux x86_64 `[contest-CPU]` frontier
+  it is not an apples-to-apples claim; the naive cross-axis arithmetic would be
+  `+0.000008939421484194243`, so exact CPU/CUDA replay is still required.
+  This remains `score_claim=false`, `promotion_eligible=false`,
+  `rank_or_kill_eligible=false`, and `ready_for_exact_eval_dispatch=false`
+  until exact auth eval passes.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 

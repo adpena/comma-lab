@@ -545,7 +545,8 @@ def test_run_inflate_defaults_python_to_current_interpreter(
     Public PR101/A1-style packets import dependencies such as brotli from the
     evaluator environment. If contest_auth_eval is launched with
     `.venv/bin/python`, the inflate subprocess should inherit that interpreter
-    unless the caller explicitly overrides `PYTHON` or `PYTHON_BIN`.
+    unless the caller explicitly overrides `PYTHON`, `PYTHON_BIN`, or
+    `PACT_PYTHON_BIN`.
     """
     captured: dict[str, str] = {}
     video_names = tmp_path / "names.txt"
@@ -565,12 +566,15 @@ def test_run_inflate_defaults_python_to_current_interpreter(
         return subprocess.CompletedProcess(args=cmd, returncode=0)
 
     monkeypatch.delenv("PYTHON", raising=False)
+    monkeypatch.delenv("PYTHON_BIN", raising=False)
+    monkeypatch.delenv("PACT_PYTHON_BIN", raising=False)
     monkeypatch.setattr(cae.subprocess, "run", fake_run)
 
     cae._run_inflate(inflate_sh, archive_dir, inflated_dir, video_names, timeout=5)
 
     assert captured["PYTHON"] == sys.executable
     assert captured["PYTHON_BIN"] == sys.executable
+    assert captured["PACT_PYTHON_BIN"] == sys.executable
 
 
 def test_run_inflate_applies_diagnostic_env_to_inflate_only(

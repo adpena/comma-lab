@@ -47488,6 +47488,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_decoderq_selective_runtime_locality_controls_20260522",
+      "name": "DQS1 decoder-q selective runtime locality controls",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/decoder_q_selective_runtime_materializer.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_cpu_advisory_venv.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_decoder_q_selective_runtime_controls.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_decoder_q_selective_runtime_packet_plan_20260522T135520Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -47497,5 +47538,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-22T13:35:04Z"
+  "updated_at": "2026-05-22T14:33:16Z"
 }

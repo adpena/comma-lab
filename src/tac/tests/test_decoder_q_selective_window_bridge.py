@@ -128,7 +128,7 @@ def _manifest(tmp_path: Path) -> dict:
     }
 
 
-def test_bridge_plan_preserves_false_authority_and_runtime_blocker(tmp_path: Path) -> None:
+def test_bridge_plan_preserves_false_authority_and_requires_dqs1_materialization(tmp_path: Path) -> None:
     selection = _selection(tmp_path)
     manifest = _manifest(tmp_path)
     for row in selection["selected_rows"]:
@@ -144,14 +144,18 @@ def test_bridge_plan_preserves_false_authority_and_runtime_blocker(tmp_path: Pat
 
     assert plan["score_claim"] is False
     assert plan["ready_for_exact_eval_dispatch"] is False
-    assert plan["bridge_status"] == "blocked_missing_decoder_q_selective_runtime_grammar"
+    assert plan["bridge_status"] == "ready_for_dqs1_tail_trailer_materialization"
     assert plan["summary"]["selected_window_count"] == 3
     assert plan["summary"]["coalesced_run_count"] == 2
     assert plan["summary"]["all_units_prediction_disagree_count"] == 3
     assert plan["materialized_decoder_q_candidate"]["mutation"]["tensor_name"] == "rgb_1.weight"
     assert plan["work_units"][0]["pair_window"] == [10, 11]
     assert plan["coalesced_runs"][0]["pair_window"] == [10, 12]
-    assert "missing byte-closed selective decoder-q runtime grammar" in plan["dispatch_blockers"]
+    assert "DQS1 packet materialization not run for this bridge plan" in plan["dispatch_blockers"]
+    assert (
+        plan["bridge_policy"]["runtime_strategy"]
+        == "dqs1_tail_trailer_selective_runtime"
+    )
 
     markdown = render_decoder_q_selective_window_bridge_markdown(plan)
     assert "Decoder-Q Selective Window Bridge Plan" in markdown

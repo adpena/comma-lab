@@ -464,9 +464,9 @@ def build_decoder_q_selective_window_bridge_plan(
         "promotable": False,
         "candidate_generation_only": True,
         "requires_exact_auth_eval_before_score_claim": True,
-        "bridge_status": "blocked_missing_decoder_q_selective_runtime_grammar",
+        "bridge_status": "ready_for_dqs1_tail_trailer_materialization",
         "allowed_use": (
-            "work_order_for_byte_closed_decoder_q_selective_runtime_implementation"
+            "input_for_byte_closed_decoder_q_selective_runtime_materialization"
         ),
         "evidence_grade": EVIDENCE_GRADE_MLX,
         "evidence_tag": EVIDENCE_TAG_MLX,
@@ -484,7 +484,7 @@ def build_decoder_q_selective_window_bridge_plan(
             "max_windows": max_windows,
             "coalesce_gap": coalesce_gap,
             "sort": "selection_rank_ascending",
-            "runtime_strategy": "new_decoder_q_selective_runtime_required",
+            "runtime_strategy": "dqs1_tail_trailer_selective_runtime",
         },
         "summary": {
             "selected_window_count": len(units),
@@ -508,14 +508,13 @@ def build_decoder_q_selective_window_bridge_plan(
         "work_units": units,
         "coalesced_runs": runs,
         "dispatch_blockers": [
-            "missing byte-closed selective decoder-q runtime grammar",
+            "DQS1 packet materialization not run for this bridge plan",
             "official inflate.sh raw-output locality controls not run for selective packet",
             "claimed contest CPU/CUDA auth eval not run for selective packet",
             "MLX window gains are candidate-generation signal only",
         ],
         "required_next_steps": [
-            "implement runtime grammar that can apply the materialized decoder-q mutation only to selected pair windows",
-            "materialize a single-member archive.zip for singleton and coalesced-run work units",
+            "materialize DQS1 tail-trailer archive.zip for singleton and coalesced-run work units",
             "run official inflate.sh raw-output locality controls against FEC6 parent and selective packets",
             "run local advisory scorer only as a smoke gate with score_claim=false",
             "claim dispatch lane before any exact contest CPU/CUDA auth eval",
