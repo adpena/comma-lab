@@ -11,9 +11,9 @@
   },
   "experiments": [
     {
-      "id": "pairset_drop_two_r010_005_p0376_0467",
-      "lane_id": "lane_dqs1_pairset_drop_two_r010_005_p0376_0467_local_first_20260523",
-      "priority": 24,
+      "id": "pairset_drop_two_r010_003_p0376_0479",
+      "lane_id": "lane_dqs1_pairset_drop_two_r010_003_p0376_0479_local_first_20260523",
+      "priority": 25,
       "status": "queued",
       "steps": [
         {
@@ -25,11 +25,11 @@
             "--candidate-manifest",
             "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
             "--lane-id",
-            "lane_dqs1_pairset_drop_two_r010_005_p0376_0467_local_first_20260523",
+            "lane_dqs1_pairset_drop_two_r010_003_p0376_0479_local_first_20260523",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/decoder_q_selective_window_bridge_plan.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/decoder_q_selective_window_bridge_plan.md"
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/decoder_q_selective_window_bridge_plan.md"
           ],
           "id": "build_bridge_plan",
           "kind": "command",
@@ -40,7 +40,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/decoder_q_selective_window_bridge_plan.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/decoder_q_selective_window_bridge_plan.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -60,17 +60,17 @@
             ".venv/bin/python",
             "tools/plan_decoder_q_selective_runtime_packet.py",
             "--bridge-plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/decoder_q_selective_window_bridge_plan.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/decoder_q_selective_window_bridge_plan.json",
             "--base-archive",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_005_p0376_0467.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_003_p0376_0479.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_005_p0376_0467.md",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_003_p0376_0479.md",
             "--frame-policy",
             "pair_all_frames",
             "--selected-pairs",
-            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,479,492,496,501,520,544,555,588"
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,492,496,501,520,544,555,588"
           ],
           "id": "plan_packet",
           "kind": "command",
@@ -81,7 +81,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_005_p0376_0467.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_003_p0376_0479.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -103,15 +103,15 @@
             ".venv/bin/python",
             "tools/materialize_decoder_q_selective_runtime_candidate.py",
             "--plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_005_p0376_0467.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_003_p0376_0479.json",
             "--base-submission-dir",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
             "--output-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/submission_dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/submission_dir",
             "--frame-policy",
             "pair_all_frames",
             "--manifest-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/materialization_manifest.json"
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/materialization_manifest.json"
           ],
           "id": "materialize",
           "kind": "command",
@@ -122,7 +122,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/materialization_manifest.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/materialization_manifest.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -148,17 +148,17 @@
             "--global-mutated-archive",
             "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
             "--selective-submission-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/submission_dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/submission_dir",
             "--selected-pairs",
-            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,479,492,496,501,520,544,555,588",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,492,496,501,520,544,555,588",
             "--frame-policy",
             "pair_all_frames",
             "--timeout-seconds",
             "600",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/locality_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json"
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/locality_controls.json"
           ],
           "id": "locality_controls",
           "kind": "command",
@@ -166,7 +166,7 @@
             {
               "equals": true,
               "key": "locality_controls_passed",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/locality_controls.json",
               "type": "json_equals"
             },
             {
@@ -177,7 +177,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/locality_controls.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -199,9 +199,9 @@
             ".venv/bin/python",
             "experiments/contest_auth_eval.py",
             "--archive",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/submission_dir/archive.zip",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/submission_dir/archive.zip",
             "--inflate-sh",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/submission_dir/inflate.sh",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/submission_dir/inflate.sh",
             "--upstream-dir",
             "upstream",
             "--video-names-file",
@@ -209,9 +209,9 @@
             "--device",
             "cpu",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/local_cpu_advisory_work",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/local_cpu_advisory_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/local_cpu_advisory.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/local_cpu_advisory.json",
             "--inflate-timeout",
             "600",
             "--evaluate-timeout",
@@ -229,7 +229,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/local_cpu_advisory.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/local_cpu_advisory.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -250,11 +250,11 @@
           "command": [
             ".venv/bin/python",
             "tools/compact_experiment_artifacts.py",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479",
             "--min-bytes",
             "1",
             "--json-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/raw_artifact_retention_plan.json"
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/raw_artifact_retention_plan.json"
           ],
           "id": "plan_raw_artifact_retention",
           "kind": "command",
@@ -262,12 +262,12 @@
             {
               "equals": 0,
               "key": "plan.blocked_candidate_count",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/raw_artifact_retention_plan.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/raw_artifact_retention_plan.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/raw_artifact_retention_plan.json",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/raw_artifact_retention_plan.json",
               "required_false": [
                 "plan.score_claim",
                 "plan.promotion_eligible",
@@ -291,12 +291,12 @@
             "--calibration-json",
             ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
             "--candidate-id",
-            "pairset_drop_two_r010_005_p0376_0467",
+            "pairset_drop_two_r010_003_p0376_0479",
             "--candidate-local-json",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/local_cpu_advisory.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_003_p0376_0479/local_cpu_advisory.json",
             "--auth-frontier-score-from-pointer",
             "--eureka-out",
-            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_005_p0376_0467_20260523T124014Z.json",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_003_p0376_0479_20260523T125531Z.json",
             "--min-margin",
             "0.0"
           ],
@@ -306,12 +306,12 @@
             {
               "equals": "local_cpu_contest_drift_eureka_signal.v1",
               "key": "schema",
-              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_005_p0376_0467_20260523T124014Z.json",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_003_p0376_0479_20260523T125531Z.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_005_p0376_0467_20260523T124014Z.json",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_003_p0376_0479_20260523T125531Z.json",
               "required_false": [
                 "ready_for_exact_eval_dispatch",
                 "dispatch_attempted",
