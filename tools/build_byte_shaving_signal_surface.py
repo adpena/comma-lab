@@ -41,6 +41,7 @@ def _render_markdown(surface: dict[str, Any]) -> str:
         "",
         "## Authority Boundary",
         "- score_claim: `false`",
+        "- score_claim_valid: `false`",
         "- promotion_eligible: `false`",
         "- rank_or_kill_eligible: `false`",
         "- ready_for_exact_eval_dispatch: `false`",

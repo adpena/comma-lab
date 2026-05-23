@@ -15,6 +15,7 @@ from tac.optimization.byte_shaving_campaign import (
 from tac.optimization.byte_shaving_signal_surface_builder import (
     build_byte_shaving_signal_surface,
 )
+from tac.optimization.scorer_response_dataset import RATE_SCORE_PER_BYTE
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_byte_shaving_signal_surface.py"
@@ -106,6 +107,68 @@ def _mlx_calibration(path: Path) -> None:
     )
 
 
+def _scorer_response_dataset(path: Path, *, rows: list[dict[str, object]]) -> None:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "scorer_response_dataset.v1",
+                "producer": "test",
+                **false_authority,
+                "authority": {
+                    **false_authority,
+                    "evidence_grade": "macOS-MLX research-signal",
+                },
+                "summary": {"row_count": len(rows)},
+                "rows": rows,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mlx_response_row(*, projected_delta: float, raw_delta: float) -> dict[str, object]:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    normalized_gain = -float(projected_delta)
+    return {
+        "schema": "scorer_response_row.v1",
+        "row_id": "mlx-row-a",
+        "candidate_id": "mlx-row-a",
+        "family": "mlx_decoder_q",
+        "source_schema": "mlx_scorer_response.v1",
+        **false_authority,
+        "authority_source_score_claim": False,
+        "delta_vs_baseline_score": float(raw_delta),
+        "scorer_delta_vs_baseline": float(raw_delta),
+        "observed_scorer_gain_vs_baseline": normalized_gain,
+        "added_archive_bytes": 0,
+        "source_n_samples": 600,
+        "full_video_denominator": 600,
+        "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+        "projected_full_video_delta_vs_baseline_score": float(projected_delta),
+        "break_even_added_bytes_from_normalized_full_video_gain": (
+            normalized_gain / RATE_SCORE_PER_BYTE
+        ),
+        "normalized_full_video_byte_budget_margin_vs_break_even": (
+            normalized_gain / RATE_SCORE_PER_BYTE
+        ),
+    }
+
+
 def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     tmp_path: Path,
 ) -> None:
@@ -131,10 +194,66 @@ def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     assert surface["units"][0]["unit_id"] == "drop_pair_0371"
     assert surface["auth_eval_refs"][0]["source_score_claim_present"] is True
     assert "score_claim" not in surface["auth_eval_refs"][0]["metrics"]
+    assert surface["source_signal_refs"][0]["score_claim_valid"] is False
     assert surface["mlx_calibration_refs"][0]["score_claim"] is False
+    assert surface["mlx_calibration_refs"][0]["score_claim_valid"] is False
     assert surface["xray_refs"][0]["primitive_count"] >= 0
     assert plan["ranked_units"][0]["unit_id"] == "drop_pair_0371"
     assert plan["score_claim"] is False
+
+
+def test_builder_canonicalizes_scorer_response_ref_planning_targets(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "queue.json"
+    scorer = tmp_path / "scorer.json"
+    _candidate_queue(queue)
+    _scorer_response_dataset(
+        scorer,
+        rows=[_mlx_response_row(projected_delta=0.001, raw_delta=-10.0)],
+    )
+
+    surface = build_byte_shaving_signal_surface(
+        repo_root=tmp_path,
+        campaign_id="fixture_surface",
+        candidate_queue_paths=[queue],
+        scorer_response_paths=[scorer],
+    )
+
+    ref = surface["scorer_response_refs"][0]
+    summary = ref["planning_summary"]
+    assert ref["planning_target_accessor"] == "scorer_response_planning_value_for_target"
+    assert ref["score_claim_valid"] is False
+    assert ref["mlx_scorer_response_row_count"] == 1
+    assert summary["improved_total_score_count"] == 0
+    assert summary["improved_scorer_term_count"] == 0
+    assert summary["best_delta"]["delta_vs_baseline_score"] == 0.001
+    assert summary["best_scorer_delta"]["scorer_delta_vs_baseline"] == 0.001
+
+
+def test_builder_rejects_mlx_scorer_response_ref_missing_normalized_target(
+    tmp_path: Path,
+) -> None:
+    queue = tmp_path / "queue.json"
+    scorer = tmp_path / "scorer.json"
+    _candidate_queue(queue)
+    row = _mlx_response_row(projected_delta=0.001, raw_delta=-10.0)
+    for key in (
+        "normalized_full_video_scorer_gain_vs_baseline",
+        "projected_full_video_delta_vs_baseline_score",
+        "break_even_added_bytes_from_normalized_full_video_gain",
+        "normalized_full_video_byte_budget_margin_vs_break_even",
+    ):
+        row.pop(key)
+    _scorer_response_dataset(scorer, rows=[row])
+
+    with pytest.raises(ByteShavingCampaignError, match="missing normalized full-video objective"):
+        build_byte_shaving_signal_surface(
+            repo_root=tmp_path,
+            campaign_id="fixture_surface",
+            candidate_queue_paths=[queue],
+            scorer_response_paths=[scorer],
+        )
 
 
 def test_builder_rejects_truthy_proxy_sources(tmp_path: Path) -> None:

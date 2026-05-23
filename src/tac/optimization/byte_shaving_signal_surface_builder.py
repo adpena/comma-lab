@@ -33,6 +33,12 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.scorer_response_dataset import (
+    ScorerResponseDatasetError,
+    normalize_legacy_response_dataset_authority,
+    scorer_response_planning_value_for_target,
+    summarize_rows,
+)
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -126,6 +132,7 @@ def _candidate_queue_surface(
                 "top_k_count": payload.get("top_k_count"),
                 "surface_unit_count": len(_as_list(surface.get("units"))),
                 "score_claim": False,
+                "score_claim_valid": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
             }
@@ -227,6 +234,7 @@ def _mlx_calibration_ref(path: Path, repo_root: Path) -> dict[str, Any]:
         "summary": dict(summary),
         "decision_policy": dict(policy),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -240,22 +248,73 @@ def _scorer_response_ref(path: Path, repo_root: Path) -> dict[str, Any]:
             payload,
             context="byte_shaving_scorer_response_ref",
         )
+        normalized = normalize_legacy_response_dataset_authority(
+            payload,
+            source_label=_repo_rel(path, repo_root),
+        )
+        planning_summary = _scorer_response_planning_summary(normalized, path=path)
     except ValueError as exc:
         raise ByteShavingCampaignError(str(exc)) from exc
+    except ScorerResponseDatasetError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+    rows = _as_list(normalized.get("rows"))
     return {
         **_json_payload_ref(
             path,
             repo_root,
             kind="scorer_response_dataset",
-            payload=payload,
+            payload=normalized,
         ),
-        "row_count": payload.get("row_count")
-        if payload.get("row_count") is not None
-        else len(_as_list(payload.get("rows"))),
-        "evidence_grade": payload.get("evidence_grade"),
-        "evidence_tag": payload.get("evidence_tag"),
-        "consumer_routing_schema": payload.get("consumer_routing_schema"),
+        "row_count": normalized.get("row_count")
+        if normalized.get("row_count") is not None
+        else len(rows),
+        "evidence_grade": normalized.get("evidence_grade"),
+        "evidence_tag": normalized.get("evidence_tag"),
+        "consumer_routing_schema": normalized.get("consumer_routing_schema"),
+        "planning_target_accessor": "scorer_response_planning_value_for_target",
+        "planning_summary": planning_summary,
+        "authority_normalization": normalized.get("authority_normalization"),
+        "mlx_scorer_response_row_count": sum(
+            1
+            for row in rows
+            if isinstance(row, Mapping)
+            and row.get("source_schema") == "mlx_scorer_response.v1"
+        ),
         "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _scorer_response_planning_summary(
+    dataset: Mapping[str, Any],
+    *,
+    path: Path,
+) -> dict[str, Any]:
+    rows = dataset.get("rows")
+    if not isinstance(rows, list):
+        raise ScorerResponseDatasetError(f"{path}: scorer-response rows[] missing")
+    normalized_rows = [dict(row) for row in rows if isinstance(row, Mapping)]
+    if len(normalized_rows) != len(rows):
+        raise ScorerResponseDatasetError(f"{path}: scorer-response row must be object")
+    validated_targets = (
+        "delta_vs_baseline_score",
+        "scorer_delta_vs_baseline",
+        "observed_scorer_gain_vs_baseline",
+    )
+    for row in normalized_rows:
+        label = str(row.get("row_id") or row.get("candidate_id") or path)
+        for target in validated_targets:
+            scorer_response_planning_value_for_target(row, target, label=label)
+    return {
+        "schema": "byte_shaving_scorer_response_planning_summary.v1",
+        "target_value_accessor": "scorer_response_planning_value_for_target",
+        "validated_targets": list(validated_targets),
+        **summarize_rows(normalized_rows),
+        "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -394,6 +453,7 @@ def _atom_refs(
             "event_type": row.get("event_type"),
             "written_at_utc": row.get("written_at_utc"),
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
