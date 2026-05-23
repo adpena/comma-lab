@@ -49038,7 +49038,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_byte_range_entropy_recode_materializer_contract_20260523T154315Z_codex.md"
+          "evidence": ".omx/research/codex_findings_byte_range_entropy_recode_pr103_bridge_20260523T155826Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -49055,5 +49055,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T15:45:53Z"
+  "updated_at": "2026-05-23T15:59:06Z"
 }

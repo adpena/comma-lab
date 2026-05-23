@@ -42,6 +42,10 @@ class MaterializerAdapter:
     cooperative_receiver_required: bool
     materialization_resource_kind: str
     required_context_fields: tuple[str, ...] = ()
+    implementation_module: str = ""
+    plan_function: str = ""
+    materialize_function: str = ""
+    receiver_verify_function: str = ""
 
 
 @dataclass(frozen=True)
@@ -84,6 +88,14 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
             "archive_byte_range",
             "runtime_consumption_proof",
         ),
+        implementation_module=(
+            "tac.optimization.byte_range_entropy_recode_materializer"
+        ),
+        plan_function="build_byte_range_entropy_recode_plan",
+        materialize_function="materialize_byte_range_entropy_recode_candidate",
+        receiver_verify_function=(
+            "verify_byte_range_entropy_recode_receiver_contract"
+        ),
     ),
     MaterializerAdapter(
         materializer_id=DQS1_DROP_PAIR_MATERIALIZER,
@@ -97,6 +109,7 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         cooperative_receiver_required=True,
         materialization_resource_kind="local_cpu",
         required_context_fields=("dqs1_base_pair_indices",),
+        implementation_module="comma_lab.scheduler.byte_shaving_campaign_queue",
     ),
 )
 
@@ -291,6 +304,10 @@ def registry_manifest() -> dict[str, Any]:
                 "cooperative_receiver_required": adapter.cooperative_receiver_required,
                 "materialization_resource_kind": adapter.materialization_resource_kind,
                 "required_context_fields": list(adapter.required_context_fields),
+                "implementation_module": adapter.implementation_module,
+                "plan_function": adapter.plan_function,
+                "materialize_function": adapter.materialize_function,
+                "receiver_verify_function": adapter.receiver_verify_function,
                 "description": adapter.description,
             }
             for adapter in _ADAPTERS

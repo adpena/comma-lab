@@ -221,6 +221,10 @@ def _suggested_materializer_rows(
             "cooperative_receiver_required": adapter.cooperative_receiver_required,
             "materialization_resource_kind": adapter.materialization_resource_kind,
             "required_context_fields": list(adapter.required_context_fields),
+            "implementation_module": adapter.implementation_module,
+            "plan_function": adapter.plan_function,
+            "materialize_function": adapter.materialize_function,
+            "receiver_verify_function": adapter.receiver_verify_function,
             "description": adapter.description,
         }
         for adapter in suggest_materializer_adapters(

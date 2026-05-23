@@ -1954,7 +1954,11 @@ def _candidate_section_diffs(
         diffs.append(
             {
                 "name": name,
+                "source_start": source.get("start"),
+                "source_end": source.get("end"),
                 "source_bytes": source_bytes,
+                "candidate_start": candidate.get("start"),
+                "candidate_end": candidate.get("end"),
                 "candidate_bytes": candidate_bytes,
                 "byte_delta": candidate_bytes - source_bytes,
                 "source_sha256": source_sha,
