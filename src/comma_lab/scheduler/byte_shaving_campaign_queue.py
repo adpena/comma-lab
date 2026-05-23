@@ -144,6 +144,7 @@ def _materialize_row(
     row: Mapping[str, Any],
     kind: str,
     base_pairs: tuple[int, ...] | None,
+    units_by_id: Mapping[str, Mapping[str, Any]],
     rank: int,
 ) -> dict[str, Any]:
     selection_id = _selection_id(kind, row)
@@ -175,7 +176,31 @@ def _materialize_row(
         blockers.append("dqs1_base_pair_indices_required")
 
     dropped_pairs: list[int] = []
+    source_units: list[dict[str, Any]] = []
     for operation in selected_operations:
+        unit_id = str(operation.get("unit_id") or "")
+        unit = units_by_id.get(unit_id)
+        if unit is None:
+            blockers.append(f"selected_unit_missing_from_ranked_units:{unit_id or '<missing>'}")
+        else:
+            unit_kind = str(unit.get("unit_kind") or "")
+            source_units.append(
+                {
+                    "unit_id": unit_id,
+                    "unit_kind": unit_kind,
+                    "candidate_saved_bytes": unit.get("candidate_saved_bytes"),
+                    "score_axis": unit.get("score_axis"),
+                    "source_paths": unit.get("source_paths"),
+                    "source_candidate_id": unit.get("source_candidate_id"),
+                    "candidate_archive_sha256": unit.get("candidate_archive_sha256"),
+                    "candidate_archive_bytes": unit.get("candidate_archive_bytes"),
+                    "candidate_trust_region_blockers": unit.get(
+                        "candidate_trust_region_blockers"
+                    ),
+                }
+            )
+            if unit_kind != "pair":
+                blockers.append(f"unsupported_unit_kind:{unit_id}:{unit_kind}")
         pair_index = _pair_index_from_operation(operation)
         if pair_index is None:
             blockers.append(f"pair_index_missing:{operation.get('unit_id') or operation.get('operation_id')}")
@@ -228,6 +253,7 @@ def _materialize_row(
         "selected_unit_ids": _as_list(row.get("selected_unit_ids")),
         "operation_families": _as_list(row.get("operation_families")),
         "source_dispatch_blockers": source_dispatch_blockers,
+        "source_units": source_units,
         "base_pair_indices": list(base_pairs or []),
         "dropped_pair_indices": dropped_pairs,
         "selected_pair_indices": list(selected_pairs),
@@ -274,6 +300,11 @@ def compile_dqs1_byte_shaving_campaign(
         raise ExperimentQueueError("candidate_limit must be >= 1 when provided")
     repo = Path(repo_root)
     base_pairs = _base_pair_indices(payload, base_pair_indices)
+    units_by_id = {
+        str(unit.get("unit_id") or ""): unit
+        for unit in _as_list(payload.get("ranked_units"))
+        if isinstance(unit, Mapping) and str(unit.get("unit_id") or "")
+    }
     plan_ref = (
         _repo_rel(Path(plan_path), repo)
         if plan_path is not None
@@ -287,6 +318,7 @@ def compile_dqs1_byte_shaving_campaign(
                 row=row,
                 kind=kind,
                 base_pairs=base_pairs,
+                units_by_id=units_by_id,
                 rank=rank,
             )
         )
@@ -307,6 +339,7 @@ def compile_dqs1_byte_shaving_campaign(
             "base_pair_indices": row["base_pair_indices"],
             "dropped_pair_indices": row["dropped_pair_indices"],
             "selected_operations": row["selected_operations"],
+            "source_units": row["source_units"],
             "selection_kind": row["selection_kind"],
             "selection_id": row["selection_id"],
             "source_plan_path": plan_ref,

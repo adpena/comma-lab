@@ -111,6 +111,7 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
         if row["dropped_pair_indices"] == [320, 371]
     )
     assert both["selected_pair_indices"] == [101, 501]
+    assert {unit["unit_id"] for unit in both["source_units"]} == {"pair0320", "pair0371"}
     action = next(
         row
         for row in compiled["action_summary"]["top_operator_actions"]
@@ -123,7 +124,37 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
         if row["candidate_id"] == both["candidate_id"]
     )
     assert portfolio_row["source_metadata"]["selected_pair_indices"] == [101, 501]
+    assert {unit["unit_id"] for unit in portfolio_row["source_metadata"]["source_units"]} == {
+        "pair0320",
+        "pair0371",
+    }
     assert portfolio_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_compile_dqs1_byte_shaving_plan_blocks_drop_pair_on_non_pair_unit(
+    tmp_path: Path,
+) -> None:
+    plan = _pair_drop_plan()
+    for unit in plan["ranked_units"]:
+        if unit["unit_id"] == "pair0371":
+            unit["unit_kind"] = "byte_range"
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=8,
+        portfolio_json="portfolio.json",
+    )
+
+    assert any(
+        "unsupported_unit_kind:pair0371:byte_range" in row["materialization_blockers"]
+        for row in compiled["blocked_rows"]
+    )
+    assert all(
+        "pair0371" not in {unit["unit_id"] for unit in row["source_units"]}
+        for row in compiled["executable_rows"]
+    )
 
 
 def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> None:
