@@ -12,6 +12,7 @@ from tac.optimization.cross_family_candidate_portfolio import (
     CrossFamilyCandidatePortfolioError,
     build_cross_family_candidate_portfolio,
 )
+from tac.optimization.normalized_objective import RATE_SCORE_PER_BYTE
 from tac.repo_io import sha256_file
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -40,15 +41,20 @@ def _mlx_selection() -> dict[str, object]:
                 "family": "mlx_decoder_q",
                 "rank": 1,
                 "observed_delta_vs_baseline_score": -0.002,
+                "observed_scorer_gain_vs_baseline": 0.012,
                 "projected_full_video_delta_vs_baseline_score": -0.00002,
                 "full_video_denominator": 600,
-                "normalized_full_video_scorer_gain_vs_baseline": 0.00003,
-                "normalized_full_video_byte_budget_margin_vs_break_even": 25.0,
+                "normalized_full_video_scorer_gain_vs_baseline": 0.00002,
+                "normalized_full_video_byte_budget_margin_vs_break_even": (
+                    0.00002 / RATE_SCORE_PER_BYTE
+                ),
                 "predicted_delta_vs_baseline_score": 0.0004,
                 "calibrated_min_mlx_gap_for_spend_triage": 0.00001,
                 "selection_basis": "normalized_full_video_mlx_singleton_response_gain",
                 "pair_indices": [501, 502],
                 "byte_budget_margin_vs_break_even": 2500.0,
+                "added_archive_bytes": 0,
+                "source_n_samples": 1,
                 "requires_exact_auth_eval_before_score_claim": True,
             }
         ],
@@ -669,6 +675,36 @@ def test_portfolio_rejects_authoritative_source_rows() -> None:
     selection = _mlx_selection()
     selection["selected_rows"][0]["score_claim"] = True  # type: ignore[index]
     with pytest.raises(CrossFamilyCandidatePortfolioError, match="score_claim"):
+        build_cross_family_candidate_portfolio(
+            incumbent_score=0.2,
+            mlx_selections=[selection],
+        )
+
+
+def test_portfolio_rejects_mlx_selection_with_inconsistent_normalized_objective() -> None:
+    selection = _mlx_selection()
+    row = selection["selected_rows"][0]  # type: ignore[index]
+    row["normalized_full_video_scorer_gain_vs_baseline"] = 0.012  # type: ignore[index]
+
+    with pytest.raises(
+        CrossFamilyCandidatePortfolioError,
+        match="normalized_full_video_gain_mismatch",
+    ):
+        build_cross_family_candidate_portfolio(
+            incumbent_score=0.2,
+            mlx_selections=[selection],
+        )
+
+
+def test_portfolio_requires_mlx_selection_boundary_markers() -> None:
+    selection = _mlx_selection()
+    row = selection["selected_rows"][0]  # type: ignore[index]
+    row["requires_exact_auth_eval_before_score_claim"] = False  # type: ignore[index]
+
+    with pytest.raises(
+        CrossFamilyCandidatePortfolioError,
+        match="requires_exact_auth_eval_before_score_claim",
+    ):
         build_cross_family_candidate_portfolio(
             incumbent_score=0.2,
             mlx_selections=[selection],

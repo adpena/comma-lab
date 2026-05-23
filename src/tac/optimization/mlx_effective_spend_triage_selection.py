@@ -9,8 +9,10 @@ import math
 from pathlib import Path
 from typing import Any
 
-from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.optimization.normalized_objective import (
+    normalized_full_video_objective_metrics,
+)
 from tac.optimization.scorer_response_dataset import (
     render_authority_markdown_block,
 )
@@ -183,25 +185,11 @@ def _validate_dataset(dataset: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _normalized_scope_metrics(row: dict[str, Any]) -> tuple[dict[str, float], list[str]]:
-    blockers: list[str] = []
-    denominator = row.get("full_video_denominator")
-    if denominator != CONTEST_EXACT_SAMPLE_COUNT:
-        blockers.append("full_video_denominator_missing_or_not_contest_sample_count")
-    normalized_gain = _as_float(row.get("normalized_full_video_scorer_gain_vs_baseline"))
-    projected_delta = _as_float(row.get("projected_full_video_delta_vs_baseline_score"))
-    normalized_margin = _as_float(
-        row.get("normalized_full_video_byte_budget_margin_vs_break_even")
-    )
-    if normalized_gain is None:
-        blockers.append("normalized_full_video_gain_missing")
-    if projected_delta is None:
-        blockers.append("projected_full_video_delta_missing")
-    if normalized_margin is None:
-        blockers.append("normalized_full_video_margin_missing")
+    metrics, blockers = normalized_full_video_objective_metrics(row)
     return {
-        "normalized_gain": 0.0 if normalized_gain is None else normalized_gain,
-        "projected_delta": 0.0 if projected_delta is None else projected_delta,
-        "normalized_margin": 0.0 if normalized_margin is None else normalized_margin,
+        "normalized_gain": metrics["normalized_gain"],
+        "projected_delta": metrics["projected_delta"],
+        "normalized_margin": metrics["normalized_margin"],
     }, blockers
 
 
@@ -503,8 +491,8 @@ def build_mlx_effective_spend_triage_selection(
             "selected_count": len(selected),
             "rejected_row_count": len(rows) - len(eligible),
             "rejection_counts": rejection_counts,
-            "observed_gain_min": None if not gains else min(gains),
-            "observed_gain_max": None if not gains else max(gains),
+            "normalized_full_video_gain_min": None if not gains else min(gains),
+            "normalized_full_video_gain_max": None if not gains else max(gains),
             "prediction_agree_selected_count": prediction_agree_count,
             "prediction_disagree_selected_count": (
                 len(selected) - prediction_agree_count
@@ -567,14 +555,18 @@ def render_mlx_effective_spend_triage_selection_markdown(
             continue
         lines.append(
             "- rank={rank} family=`{family}` pair=`{pair}` "
-            "gain=`{gain}` margin=`{margin}` predicted_delta=`{pred}` "
+            "normalized_gain=`{gain}` normalized_margin=`{margin}` "
+            "predicted_delta=`{pred}` raw_window_gain=`{raw}` "
             "source=`{source}`".format(
                 rank=row.get("rank"),
                 family=row.get("family"),
                 pair=row.get("source_pair_window"),
-                gain=row.get("observed_scorer_gain_vs_baseline"),
-                margin=row.get("byte_budget_margin_vs_break_even"),
+                gain=row.get("normalized_full_video_scorer_gain_vs_baseline"),
+                margin=row.get(
+                    "normalized_full_video_byte_budget_margin_vs_break_even"
+                ),
                 pred=row.get("predicted_delta_vs_baseline_score"),
+                raw=row.get("observed_scorer_gain_vs_baseline"),
                 source=row.get("source_path"),
             )
         )

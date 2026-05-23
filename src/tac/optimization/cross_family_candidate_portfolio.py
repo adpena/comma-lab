@@ -21,6 +21,10 @@ from tac.optimization.mlx_dynamic_sweep_observations import (
     normalize_observation_row,
     summarize_observations,
 )
+from tac.optimization.normalized_objective import (
+    NormalizedObjectiveError,
+    require_normalized_full_video_objective,
+)
 from tac.optimization.pairset_component_marginal import (
     PAIRSET_COMPONENT_MARGINAL_MODEL_SCHEMA,
     build_component_score_delta_payload,
@@ -278,10 +282,25 @@ def _mlx_candidate_rows(
         _require_false_authority(row, label=f"MLX selected row {index}")
         candidate_id = str(row.get("candidate_id") or row.get("row_id") or f"mlx_row_{index:04d}")
         family = str(row.get("family") or "mlx_decoder_q")
+        if row.get("selection_basis") != "normalized_full_video_mlx_singleton_response_gain":
+            raise CrossFamilyCandidatePortfolioError(
+                f"{candidate_id}.selection_basis must be normalized_full_video_mlx_singleton_response_gain"
+            )
+        if row.get("requires_exact_auth_eval_before_score_claim") is not True:
+            raise CrossFamilyCandidatePortfolioError(
+                f"{candidate_id}.requires_exact_auth_eval_before_score_claim must be true"
+            )
         if row.get("full_video_denominator") != 600:
             raise CrossFamilyCandidatePortfolioError(
                 f"{candidate_id}.full_video_denominator must be 600"
             )
+        try:
+            require_normalized_full_video_objective(
+                row,
+                label=f"{candidate_id}.normalized_objective",
+            )
+        except NormalizedObjectiveError as exc:
+            raise CrossFamilyCandidatePortfolioError(str(exc)) from exc
         observed_delta = _finite_float(
             row.get("projected_full_video_delta_vs_baseline_score"),
             label=f"{candidate_id}.projected_full_video_delta_vs_baseline_score",

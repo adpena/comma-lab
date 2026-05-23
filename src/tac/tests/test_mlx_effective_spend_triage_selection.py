@@ -12,6 +12,7 @@ from tac.optimization.mlx_effective_spend_triage_selection import (
     MLXEffectiveSpendTriageSelectionError,
     build_mlx_effective_spend_triage_selection,
 )
+from tac.optimization.normalized_objective import RATE_SCORE_PER_BYTE
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -36,7 +37,7 @@ def _row(
     predicted: float = 1.0e-4,
     score_claim: bool = False,
 ) -> dict:
-    full_gain = gain if normalized_gain is None else normalized_gain
+    full_gain = gain / 600.0 if normalized_gain is None else normalized_gain
     return {
         "schema": "scorer_response_row.v1",
         **_false_authority(),
@@ -57,12 +58,14 @@ def _row(
         "delta_vs_baseline_score": -gain,
         "scorer_delta_vs_baseline": -gain,
         "observed_scorer_gain_vs_baseline": gain,
-        "byte_budget_margin_vs_break_even": gain * 1000.0,
-        "break_even_added_bytes_from_scorer_gain": gain * 1000.0,
+        "byte_budget_margin_vs_break_even": gain / RATE_SCORE_PER_BYTE,
+        "break_even_added_bytes_from_scorer_gain": gain / RATE_SCORE_PER_BYTE,
         "full_video_denominator": 600,
         "normalized_full_video_scorer_gain_vs_baseline": full_gain,
         "projected_full_video_delta_vs_baseline_score": -full_gain,
-        "normalized_full_video_byte_budget_margin_vs_break_even": full_gain * 1000.0,
+        "normalized_full_video_byte_budget_margin_vs_break_even": (
+            full_gain / RATE_SCORE_PER_BYTE
+        ),
         "added_archive_bytes": 0,
         "ll_predicted_delta_vs_baseline_score": predicted,
         "archive_sha256": "a" * 64,
@@ -81,8 +84,8 @@ def _dataset() -> dict:
         **_false_authority(),
         "authority": _false_authority(),
         "rows": [
-            _row("best", gain=0.002, predicted=0.0003),
-            _row("second", gain=0.001, predicted=-0.0001),
+            _row("best", gain=0.012, predicted=0.0003),
+            _row("second", gain=0.009, predicted=-0.0001),
             _row("weak", gain=0.000001),
             _row("fec6", gain=0.0, family="mlx_fec6_auth_parent"),
         ],
@@ -194,31 +197,40 @@ def test_selection_min_observed_gain_can_only_raise_calibrated_gap() -> None:
         _dataset(),
         _plan(),
         top_k=4,
-        min_observed_gain=0.0015,
+        min_observed_gain=0.000018,
     )
 
-    assert selection["selection_policy"]["min_observed_gain"] == pytest.approx(0.0015)
+    assert selection["selection_policy"]["min_observed_gain"] == pytest.approx(0.000018)
     assert [row["row_id"] for row in selection["selected_rows"]] == ["best"]
 
 
 def test_selection_blocks_raw_singleton_gain_when_normalized_full_video_gain_fails() -> None:
     dataset = _dataset()
-    dataset["rows"][0] = _row("raw_only", gain=0.002, normalized_gain=0.000001)
+    dataset["rows"][0] = _row("raw_only", gain=0.012, normalized_gain=0.000001)
 
     selection = build_mlx_effective_spend_triage_selection(dataset, _plan(), top_k=4)
 
     assert [row["row_id"] for row in selection["selected_rows"]] == ["second"]
     assert (
         selection["summary"]["rejection_counts"][
-            "normalized_full_video_gain_below_calibrated_gap"
+            "normalized_full_video_gain_mismatch"
         ]
-        >= 1
+        == 1
     )
+
+
+def test_selection_recomputes_normalized_objective_and_rejects_projected_mismatch() -> None:
+    dataset = _dataset()
+    dataset["rows"][0]["projected_full_video_delta_vs_baseline_score"] = -0.012
+
+    selection = build_mlx_effective_spend_triage_selection(dataset, _plan(), top_k=4)
+
+    assert [row["row_id"] for row in selection["selected_rows"]] == ["second"]
     assert (
         selection["summary"]["rejection_counts"][
-            "projected_full_video_delta_not_calibrated_improvement"
+            "projected_full_video_delta_mismatch"
         ]
-        >= 1
+        == 1
     )
 
 
