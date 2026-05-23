@@ -1518,6 +1518,31 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
     }
 
 
+def _auth_eval_authority_fields(
+    *,
+    score_claim: bool,
+    score_claim_valid: bool,
+    exact_cuda_auth_eval: bool = False,
+    contest_cuda_auth_eval: bool = False,
+) -> dict:
+    """Return explicit score/dispatch authority flags for auth-eval payloads."""
+
+    return {
+        "score_claim": score_claim,
+        "promotion_eligible": False,
+        "score_claim_valid": score_claim_valid,
+        "score_claim_eligible": score_claim_valid,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "field_selection_ready_for_exact_eval_dispatch": False,
+        "exact_cuda_auth_eval": exact_cuda_auth_eval,
+        "contest_cuda_auth_eval": contest_cuda_auth_eval,
+    }
+
+
 def _auth_eval_evidence_contract(
     device: str,
     n_samples: int,
@@ -1544,6 +1569,7 @@ def _auth_eval_evidence_contract(
             "promotion_eligible": False,
             "score_claim_valid": False,
             "rank_or_kill_eligible": False,
+            **_auth_eval_authority_fields(score_claim=False, score_claim_valid=False),
             "cpu_leaderboard_reproduction_eligible": False,
             "diagnostic_blockers": sorted(set(diagnostic_blockers)),
             "allowed_uses": [
@@ -1585,6 +1611,12 @@ def _auth_eval_evidence_contract(
             "promotion_eligible": False,
             "score_claim_valid": True,
             "rank_or_kill_eligible": False,
+            **_auth_eval_authority_fields(
+                score_claim=True,
+                score_claim_valid=True,
+                exact_cuda_auth_eval=True,
+                contest_cuda_auth_eval=True,
+            ),
             "cpu_leaderboard_reproduction_eligible": False,
             "promotion_blockers": [
                 "raw_auth_eval_does_not_verify_submission_policy_gates",
@@ -1612,6 +1644,7 @@ def _auth_eval_evidence_contract(
             "promotion_eligible": False,
             "score_claim_valid": True,
             "rank_or_kill_eligible": False,
+            **_auth_eval_authority_fields(score_claim=True, score_claim_valid=True),
             "cpu_leaderboard_reproduction_eligible": True,
             "promotion_blockers": [
                 "raw_auth_eval_does_not_verify_submission_policy_gates",
@@ -1650,6 +1683,7 @@ def _auth_eval_evidence_contract(
             "promotion_eligible": False,
             "score_claim_valid": False,
             "rank_or_kill_eligible": False,
+            **_auth_eval_authority_fields(score_claim=False, score_claim_valid=False),
             "cpu_leaderboard_reproduction_eligible": False,
             "hardware_compliance_blocker": "contest_cpu_requires_linux_x86_64",
             "allowed_uses": [
@@ -1667,6 +1701,7 @@ def _auth_eval_evidence_contract(
         "promotion_eligible": False,
         "score_claim_valid": False,
         "rank_or_kill_eligible": False,
+        **_auth_eval_authority_fields(score_claim=False, score_claim_valid=False),
         "cpu_leaderboard_reproduction_eligible": False,
         "allowed_uses": [
             "diagnostic_debugging",

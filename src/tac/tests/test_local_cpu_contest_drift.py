@@ -31,6 +31,18 @@ def _anchor(archive: str, delta: float) -> PairedDriftAnchor:
         contest_score=0.192040,
         local_path=f"local/{archive}.json",
         contest_path=f"contest/{archive}.json",
+        local_axis="macOS-CPU advisory",
+        contest_axis="contest-CPU",
+        local_evidence_semantics="non_contest_cpu_auth_eval_advisory",
+        contest_evidence_semantics="public_leaderboard_cpu_reproduction",
+        local_n_samples=600,
+        contest_n_samples=600,
+        local_platform_system="Darwin",
+        contest_platform_system="Linux",
+        local_platform_machine="arm64",
+        contest_platform_machine="x86_64",
+        local_device="cpu",
+        contest_device="cpu",
         local_segnet_dist=contest_segnet + delta / 100.0,
         contest_segnet_dist=contest_segnet,
         local_posenet_dist=0.00002943,
@@ -38,6 +50,50 @@ def _anchor(archive: str, delta: float) -> PairedDriftAnchor:
         local_rate_unscaled=0.0047558,
         contest_rate_unscaled=0.0047558,
     )
+
+
+def _local_advisory_payload(**overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "score_recomputed_from_components": 0.192010,
+        "evidence_grade": "macOS-CPU advisory",
+        "score_axis": "cpu_advisory",
+        "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+        "n_samples": 600,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "provenance": {
+            "archive_sha256": "d" * 64,
+            "platform_system": "Darwin",
+            "platform_machine": "arm64",
+            "device": "cpu",
+        },
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _contest_cpu_payload(**overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "score_recomputed_from_components": 0.192000,
+        "evidence_grade": "contest-CPU",
+        "score_axis": "contest_cpu",
+        "evidence_semantics": "public_leaderboard_cpu_reproduction",
+        "n_samples": 600,
+        "avg_segnet_dist": 0.1,
+        "avg_posenet_dist": 0.2,
+        "rate_unscaled": 0.3,
+        "provenance": {
+            "archive_sha256": "d" * 64,
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+            "device": "cpu",
+        },
+    }
+    payload.update(overrides)
+    return payload
 
 
 def test_fit_stable_core_and_false_authority_payload() -> None:
@@ -201,15 +257,7 @@ def test_eureka_from_calibration_and_local_json_file(tmp_path: Path) -> None:
     calibration_json.write_text(json.dumps(calibration.to_dict()))
     candidate_json = tmp_path / "candidate.json"
     candidate_json.write_text(
-        json.dumps(
-            {
-                "score_recomputed_from_components": 0.192010,
-                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
-                "n_samples": 600,
-                "score_axis": "cpu_advisory",
-                "provenance": {"archive_sha256": "d" * 64},
-            }
-        )
+        json.dumps(_local_advisory_payload())
     )
 
     signal = build_eureka_signal_from_local_json_file(
@@ -281,15 +329,7 @@ def test_eureka_from_local_json_file_accepts_bracketed_macos_cpu_axis(
     )
     candidate_json = tmp_path / "candidate_bracketed_axis.json"
     candidate_json.write_text(
-        json.dumps(
-            {
-                "score_recomputed_from_components": 0.192010,
-                "evidence_grade": "[macOS-CPU advisory]",
-                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
-                "n_samples": 600,
-                "provenance": {"archive_sha256": "d" * 64},
-            }
-        )
+        json.dumps(_local_advisory_payload(evidence_grade="[macOS-CPU advisory]"))
     )
 
     signal = build_eureka_signal_from_local_json_file(
@@ -301,6 +341,39 @@ def test_eureka_from_local_json_file_accepts_bracketed_macos_cpu_axis(
 
     assert signal["eureka_trigger"] is True
     assert signal["candidate_trust_region_blockers"] == []
+
+
+def test_eureka_from_local_json_file_rejects_contradictory_axis_labels(
+    tmp_path: Path,
+) -> None:
+    calibration = fit_drift_calibration(
+        [
+            _anchor("a" * 64, 0.000010),
+            _anchor("b" * 64, 0.000011),
+            _anchor("c" * 64, 0.000012),
+        ]
+    )
+    candidate_json = tmp_path / "candidate_contradictory_axis.json"
+    candidate_json.write_text(
+        json.dumps(
+            _local_advisory_payload(
+                evidence_grade="[macOS-CPU advisory]",
+                score_axis="contest_cpu",
+            )
+        )
+    )
+
+    signal = build_eureka_signal_from_local_json_file(
+        candidate_id="candidate",
+        local_path=candidate_json,
+        auth_frontier_score=0.192028,
+        calibration=calibration,
+    )
+
+    assert signal["eureka_trigger"] is False
+    assert "candidate_local_axis_contradicts_advisory:score_axis" in signal[
+        "candidate_trust_region_blockers"
+    ]
 
 
 def test_cli_auth_frontier_score_can_come_from_canonical_pointer(tmp_path: Path) -> None:
@@ -338,6 +411,25 @@ def test_cli_auth_frontier_score_can_come_from_canonical_pointer(tmp_path: Path)
     assert drift_cli._auth_frontier_score_from_args(args) == pytest.approx(
         0.19202828295713675
     )
+
+
+def test_cli_write_json_is_append_only_without_audited_overwrite(tmp_path: Path) -> None:
+    out = tmp_path / "eureka.json"
+    drift_cli._write_json(out, {"schema": "unit"})
+
+    with pytest.raises(SystemExit, match="already exists"):
+        drift_cli._write_json(out, {"schema": "unit2"})
+
+    with pytest.raises(SystemExit, match="overwrite-rationale"):
+        drift_cli._write_json(out, {"schema": "unit2"}, overwrite_ok=True)
+
+    drift_cli._write_json(
+        out,
+        {"schema": "unit2"},
+        overwrite_ok=True,
+        overwrite_rationale="unit test audited overwrite path",
+    )
+    assert json.loads(out.read_text())["schema"] == "unit2"
 
 
 def test_load_calibration_json_refits_embedded_anchors(tmp_path: Path) -> None:
@@ -381,13 +473,7 @@ def test_eureka_from_local_json_file_refuses_mps_axis(tmp_path: Path) -> None:
     candidate_json = tmp_path / "candidate_mps.json"
     candidate_json.write_text(
         json.dumps(
-            {
-                "score_recomputed_from_components": 0.192010,
-                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
-                "n_samples": 600,
-                "score_axis": "mps_advisory",
-                "provenance": {"archive_sha256": "d" * 64},
-            }
+            _local_advisory_payload(score_axis="mps_advisory")
         )
     )
 
@@ -400,7 +486,7 @@ def test_eureka_from_local_json_file_refuses_mps_axis(tmp_path: Path) -> None:
 
     assert signal["eureka_trigger"] is False
     assert signal["recommended_action"] == "observe_only"
-    assert "candidate_local_axis_not_macos_cpu_advisory" in signal[
+    assert "candidate_local_axis_not_macos_cpu_advisory:score_axis" in signal[
         "candidate_trust_region_blockers"
     ]
 
@@ -411,23 +497,31 @@ def test_paired_anchor_from_json_files_requires_same_archive(tmp_path: Path) -> 
     local.write_text(
         json.dumps(
             {
+                **_local_advisory_payload(),
                 "score_recomputed_from_components": 0.2,
                 "avg_segnet_dist": 0.1,
                 "avg_posenet_dist": 0.2,
                 "rate_unscaled": 0.3,
-                "provenance": {"archive_sha256": "a" * 64},
+                "provenance": {
+                    "archive_sha256": "a" * 64,
+                    "platform_system": "Darwin",
+                    "platform_machine": "arm64",
+                    "device": "cpu",
+                },
             }
         )
     )
     contest.write_text(
         json.dumps(
-            {
-                "score_recomputed_from_components": 0.199,
-                "avg_segnet_dist": 0.1,
-                "avg_posenet_dist": 0.2,
-                "rate_unscaled": 0.3,
-                "provenance": {"archive_sha256": "a" * 64},
-            }
+            _contest_cpu_payload(
+                score_recomputed_from_components=0.199,
+                provenance={
+                    "archive_sha256": "a" * 64,
+                    "platform_system": "Linux",
+                    "platform_machine": "x86_64",
+                    "device": "cpu",
+                },
+            )
         )
     )
 
@@ -440,7 +534,12 @@ def test_paired_anchor_from_json_files_requires_same_archive(tmp_path: Path) -> 
         json.dumps(
             {
                 "score_recomputed_from_components": 0.199,
-                "provenance": {"archive_sha256": "b" * 64},
+                "provenance": {
+                    "archive_sha256": "b" * 64,
+                    "platform_system": "Linux",
+                    "platform_machine": "x86_64",
+                    "device": "cpu",
+                },
             }
         )
     )

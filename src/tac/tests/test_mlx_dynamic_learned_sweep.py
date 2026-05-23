@@ -160,7 +160,20 @@ def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
     assert plan["candidate_generation_only"] is True
     assert plan["summary"]["candidate_count"] == 2
     assert plan["summary"]["config_count"] == 2
+    assert plan["summary"]["optimizer_scheduler_candidate_count"] >= 3
     assert plan["summary"]["optimization_pass_count"] == 4
+    assert plan["recursive_learning_contract"]["optimizer_scheduler_registry_surface"].endswith(
+        "enumerate_optimizer_scheduler_candidates"
+    )
+    assert plan["recursive_learning_contract"]["optimizer_scheduler_telemetry_surface"].endswith(
+        "build_optimizer_scheduler_telemetry_record"
+    )
+    assert plan["optimizer_scheduler_candidates"]
+    assert all(row["score_claim"] is False for row in plan["optimizer_scheduler_candidates"])
+    assert all(
+        row["rank_score_field"] == "planner_priority_not_score"
+        for row in plan["optimizer_scheduler_candidates"]
+    )
     assert {row["candidate_id"] for row in plan["ranked_sweep_rows"]} == {
         "prefix_k032",
         "prefix_k016",
@@ -215,6 +228,24 @@ def test_dynamic_sweep_rejects_nested_authority_metadata() -> None:
         build_mlx_dynamic_learned_sweep_plan(
             incumbent_score=0.1920513168811056,
             selector_pareto=pareto,
+        )
+
+
+def test_dynamic_sweep_rejects_authoritative_optimizer_scheduler_candidate() -> None:
+    with pytest.raises(
+        MLXDynamicLearnedSweepError,
+        match=r"optimizer_scheduler_candidate\[0\].*score_claim=truthy",
+    ):
+        build_mlx_dynamic_learned_sweep_plan(
+            incumbent_score=0.1920513168811056,
+            selector_pareto=_selector_pareto(),
+            optimizer_scheduler_candidates=[
+                {
+                    "descriptor_id": "unsafe",
+                    "rank_score_field": "planner_priority_not_score",
+                    "score_claim": True,
+                }
+            ],
         )
 
 

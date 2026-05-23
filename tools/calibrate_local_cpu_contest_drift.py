@@ -30,9 +30,36 @@ from tac.optimization.local_cpu_contest_drift import (  # noqa: E402
     require_eureka_false_authority,
 )
 
+_PLACEHOLDER_RATIONALES = {"", "n/a", "na", "none", "test", "true", "yes", "because"}
 
-def _write_json(path: str | Path, payload: object) -> None:
+
+def _rationale_text(value: str | None, *, label: str) -> str | None:
+    if value is None:
+        return None
+    text = value.strip()
+    if len(text) < 12 or text.lower() in _PLACEHOLDER_RATIONALES:
+        raise SystemExit(f"{label} must be a specific non-placeholder rationale")
+    return text
+
+
+def _write_json(
+    path: str | Path,
+    payload: object,
+    *,
+    overwrite_ok: bool = False,
+    overwrite_rationale: str | None = None,
+) -> None:
     out = Path(path)
+    if out.exists() and not overwrite_ok:
+        raise SystemExit(
+            f"{out} already exists; eureka/calibration outputs are append-only. "
+            "Use a fresh output path, or pass --overwrite-ok with a specific "
+            "--overwrite-rationale for an audited replacement."
+        )
+    if overwrite_ok:
+        if overwrite_rationale is None:
+            raise SystemExit("--overwrite-rationale is required with --overwrite-ok")
+        _rationale_text(overwrite_rationale, label="--overwrite-rationale")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n")
 
@@ -128,6 +155,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="required positive conservative margin for eureka trigger",
     )
     parser.add_argument("--source-artifact", default="", help="source artifact for eureka signal")
+    parser.add_argument(
+        "--overwrite-ok",
+        action="store_true",
+        help="allow replacing an existing output path; requires --overwrite-rationale",
+    )
+    parser.add_argument(
+        "--overwrite-rationale",
+        default=None,
+        help="specific rationale required with --overwrite-ok",
+    )
     return parser.parse_args(argv)
 
 
@@ -149,7 +186,12 @@ def main(argv: list[str] | None = None) -> int:
         calibration = fit_drift_calibration(anchors, trust_region=args.trust_region)
     payload = calibration.to_dict()
     if args.json_out:
-        _write_json(args.json_out, payload)
+        _write_json(
+            args.json_out,
+            payload,
+            overwrite_ok=args.overwrite_ok,
+            overwrite_rationale=args.overwrite_rationale,
+        )
     print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
 
     if args.eureka_out:
@@ -186,7 +228,12 @@ def main(argv: list[str] | None = None) -> int:
             signal,
             context=f"{args.candidate_id} generated eureka signal",
         )
-        _write_json(args.eureka_out, signal)
+        _write_json(
+            args.eureka_out,
+            signal,
+            overwrite_ok=args.overwrite_ok,
+            overwrite_rationale=args.overwrite_rationale,
+        )
     return 0
 
 

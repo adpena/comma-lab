@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 try:
@@ -74,6 +75,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="directory for canonical local CPU contest drift eureka signals",
     )
     parser.add_argument(
+        "--eureka-run-id",
+        default=None,
+        help=(
+            "unique UTC-ish id for append-only eureka outputs; defaults to the "
+            "current UTC timestamp when --write is used, otherwise the summary timestamp"
+        ),
+    )
+    parser.add_argument(
         "--exclude-candidate",
         action="append",
         default=[],
@@ -109,6 +118,12 @@ def main(argv: list[str] | None = None) -> int:
                 "frame_policy": args.frame_policy,
                 "drift_calibration_json": args.drift_calibration_json,
                 "eureka_output_dir": args.eureka_output_dir,
+                "eureka_run_id": args.eureka_run_id
+                or (
+                    datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+                    if args.write
+                    else None
+                ),
             }.items()
             if value is not None
         },

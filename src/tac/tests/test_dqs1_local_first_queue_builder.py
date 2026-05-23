@@ -374,6 +374,7 @@ def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:
         frame_policy="single_last_frame",
         drift_calibration_json="calibration/custom.json",
         eureka_output_dir=".omx/custom_research",
+        eureka_run_id="20260523T010203Z",
     )
 
     steps = {step["id"]: step["command"] for step in result.queue["experiments"][0]["steps"]}
@@ -387,7 +388,7 @@ def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:
     assert "calibration/custom.json" in steps["local_cpu_contest_drift_eureka"]
     assert any(
         part
-        == ".omx/custom_research/local_cpu_contest_drift_eureka_pairset_drop_one_rank023_pair0440_20260522T202400Z.json"
+        == ".omx/custom_research/local_cpu_contest_drift_eureka_pairset_drop_one_rank023_pair0440_20260523T010203Z.json"
         for part in steps["local_cpu_contest_drift_eureka"]
     )
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sqlite3
@@ -52,6 +53,10 @@ def _utc_now() -> str:
 
 def _json_text(payload: object) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _sha256_json(payload: object) -> str:
+    return hashlib.sha256(_json_text(payload).encode("utf-8")).hexdigest()
 
 
 def _require_text(value: object, label: str) -> str:
@@ -301,11 +306,37 @@ def _create_schema(conn: sqlite3.Connection) -> None:
         );
         """
     )
+    columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(step_state)").fetchall()
+    }
+    for column in ("definition_hash", "command_hash", "postcondition_hash"):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE step_state ADD COLUMN {column} TEXT")
     conn.execute(
         "INSERT OR IGNORE INTO queue_meta(key, value) VALUES (?, ?)",
         ("schema", STATE_SCHEMA),
     )
     conn.commit()
+
+
+def _step_hashes(step: Mapping[str, Any]) -> dict[str, str]:
+    command = [str(item) for item in step.get("command", [])]
+    postconditions = [dict(item) for item in step.get("postconditions", [])]
+    definition = {
+        "id": str(step.get("id") or ""),
+        "kind": str(step.get("kind") or "command"),
+        "command": command,
+        "requires": [str(item) for item in step.get("requires", [])],
+        "resources": dict(step.get("resources") or {}),
+        "postconditions": postconditions,
+        "timeout_seconds": int(step.get("timeout_seconds") or 0),
+    }
+    return {
+        "definition_hash": _sha256_json(definition),
+        "command_hash": _sha256_json(command),
+        "postcondition_hash": _sha256_json(postconditions),
+    }
 
 
 def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> None:
@@ -325,15 +356,102 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
     )
     for experiment in queue["experiments"]:
         for step in experiment["steps"]:
+            hashes = _step_hashes(step)
+            row = conn.execute(
+                """
+                SELECT status, definition_hash, command_hash, postcondition_hash
+                FROM step_state
+                WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                """,
+                (queue_id, experiment["id"], step["id"]),
+            ).fetchone()
+            if row is None:
+                conn.execute(
+                    """
+                    INSERT INTO step_state(
+                      queue_id, experiment_id, step_id, status, attempts,
+                      updated_at_utc, last_event_json, definition_hash,
+                      command_hash, postcondition_hash
+                    )
+                    VALUES (?, ?, ?, 'queued', 0, ?, NULL, ?, ?, ?)
+                    """,
+                    (
+                        queue_id,
+                        experiment["id"],
+                        step["id"],
+                        now,
+                        hashes["definition_hash"],
+                        hashes["command_hash"],
+                        hashes["postcondition_hash"],
+                    ),
+                )
+                continue
+
+            previous_hashes = {
+                "definition_hash": row["definition_hash"],
+                "command_hash": row["command_hash"],
+                "postcondition_hash": row["postcondition_hash"],
+            }
+            missing_hash = any(value is None for value in previous_hashes.values())
+            changed_hash = any(
+                previous_hashes[key] is not None and previous_hashes[key] != hashes[key]
+                for key in hashes
+            )
+            if missing_hash and not changed_hash:
+                conn.execute(
+                    """
+                    UPDATE step_state
+                    SET definition_hash = ?, command_hash = ?, postcondition_hash = ?
+                    WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                    """,
+                    (
+                        hashes["definition_hash"],
+                        hashes["command_hash"],
+                        hashes["postcondition_hash"],
+                        queue_id,
+                        experiment["id"],
+                        step["id"],
+                    ),
+                )
+                continue
+            if not changed_hash:
+                continue
+            if str(row["status"]) == "running":
+                raise ExperimentQueueError(
+                    f"{experiment['id']}.{step['id']} definition changed while running; "
+                    "wait for the step to finish, then rewind or use a fresh state"
+                )
+            event = {
+                "previous_status": str(row["status"]),
+                "definition_changed": True,
+                "previous_hashes": previous_hashes,
+                "new_hashes": hashes,
+            }
             conn.execute(
                 """
-                INSERT OR IGNORE INTO step_state(
-                  queue_id, experiment_id, step_id, status, attempts,
-                  updated_at_utc, last_event_json
-                )
-                VALUES (?, ?, ?, 'queued', 0, ?, NULL)
+                UPDATE step_state
+                SET status = 'queued', updated_at_utc = ?, last_event_json = ?,
+                    definition_hash = ?, command_hash = ?, postcondition_hash = ?
+                WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
                 """,
-                (queue_id, experiment["id"], step["id"], now),
+                (
+                    now,
+                    _json_text(event),
+                    hashes["definition_hash"],
+                    hashes["command_hash"],
+                    hashes["postcondition_hash"],
+                    queue_id,
+                    experiment["id"],
+                    step["id"],
+                ),
+            )
+            append_event(
+                conn,
+                queue_id=queue_id,
+                experiment_id=str(experiment["id"]),
+                step_id=str(step["id"]),
+                event_type="step_definition_changed_requeued",
+                payload=event,
             )
     if int(prior_count) == 0:
         append_event(

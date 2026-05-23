@@ -18,6 +18,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.local_cpu_contest_drift import (
+    EUREKA_SIGNAL_SCHEMA,
+    LocalCPUContestDriftError,
+    require_eureka_false_authority,
+)
 from tac.optimization.pr95_muon_local_training_integration import (
     PLAN_SCHEMA as PR95_LOCAL_TRAINING_PLAN_SCHEMA,
 )
@@ -213,7 +218,7 @@ def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
         class_rank = 0
     elif priority == "operator_decision":
         class_rank = 1
-    elif row.get("candidate_archive_path") or row.get("submission_dir"):
+    elif row.get("archive_candidate_verified") is True:
         class_rank = 2
     elif row.get("materialized_payload_path"):
         class_rank = 3
@@ -236,6 +241,44 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, tuple):
         return [_json_safe(v) for v in value]
     return value
+
+
+def _resolve_repo_path(path_value: Any, repo_root: Path) -> Path | None:
+    if not isinstance(path_value, str) or not path_value.strip():
+        return None
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = repo_root / path
+    return path
+
+
+def _annotate_archive_candidate_verification(row: dict[str, Any], repo_root: Path) -> None:
+    archive_path = _resolve_repo_path(row.get("candidate_archive_path") or row.get("archive_path"), repo_root)
+    submission_dir = _resolve_repo_path(row.get("submission_dir"), repo_root)
+    if archive_path is None and submission_dir is not None:
+        archive_path = submission_dir / "archive.zip"
+    if archive_path is None and submission_dir is None:
+        return
+
+    blockers: list[str] = []
+    archive_sha = _shaish(row.get("candidate_archive_sha256") or row.get("archive_sha256"))
+    archive_bytes = _as_int(row.get("candidate_archive_bytes") or row.get("archive_bytes") or row.get("archive_size_bytes"))
+    if archive_path is None or not archive_path.is_file():
+        blockers.append("candidate_archive_path_unverified")
+    if archive_sha is None:
+        blockers.append("candidate_archive_sha256_missing")
+    if archive_bytes is None:
+        blockers.append("candidate_archive_bytes_missing")
+    elif archive_path is not None and archive_path.is_file() and archive_path.stat().st_size != archive_bytes:
+        blockers.append("candidate_archive_bytes_mismatch")
+
+    if blockers:
+        row["archive_candidate_verified"] = False
+        row["candidate_archive_path_unverified"] = True
+        _add_blockers(row, blockers)
+        return
+    row["archive_candidate_verified"] = True
+    row["candidate_archive_path_unverified"] = False
 
 
 def _read_optional_manifest(path_value: Any, repo_root: Path) -> dict[str, Any]:
@@ -619,6 +662,83 @@ def _mlx_dynamic_learned_sweep_candidates(
     return rows
 
 
+def _local_cpu_drift_eureka_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    candidate_id = str(payload.get("candidate_id") or "")
+    if not candidate_id:
+        return []
+    try:
+        require_eureka_false_authority(
+            payload,
+            context=f"{source_path} local CPU eureka",
+        )
+    except LocalCPUContestDriftError as exc:
+        raise ValueError(str(exc)) from exc
+    require_no_truthy_authority_fields(payload, context="local_cpu_drift_eureka")
+    eureka_trigger = payload.get("eureka_trigger") is True
+    recommended_action = str(payload.get("recommended_action") or "")
+    rank_score = _as_float(
+        payload.get("conservative_projected_contest_score")
+        or payload.get("projected_contest_score")
+        or payload.get("local_score")
+    )
+    row = {
+        "candidate_id": f"{candidate_id}::local_cpu_contest_drift_eureka",
+        "source_candidate_id": candidate_id,
+        "source_paths": [_repo_rel(source_path, repo_root)],
+        "lane_id": f"local_cpu_drift_eureka_{candidate_id}",
+        "lane_class": "local_cpu_contest_drift_eureka",
+        "candidate_family": "dqs1_local_cpu_drift_eureka",
+        "candidate_archive_sha256": _shaish(payload.get("candidate_archive_sha256")),
+        "local_score": _as_float(payload.get("local_score")),
+        "projected_contest_score": _as_float(payload.get("projected_contest_score")),
+        "conservative_projected_contest_score": _as_float(
+            payload.get("conservative_projected_contest_score")
+        ),
+        "auth_frontier_score": _as_float(payload.get("auth_frontier_score")),
+        "eureka_margin": _as_float(payload.get("eureka_margin")),
+        "eureka_trigger": eureka_trigger,
+        "recommended_action": recommended_action,
+        "exact_auth_anchor_requested": (
+            eureka_trigger and recommended_action == "dispatch_exact_auth_anchor"
+        ),
+        "rank_score": rank_score,
+        "rank_score_field": "conservative_projected_contest_score_false_authority",
+        "queue_priority": "operator_decision" if eureka_trigger else "observe_only",
+        "evidence_semantics": "local_cpu_drift_eureka_spend_triage_not_score_authority",
+        "evidence_grade": "[contest-CPU drift-projected; false authority]",
+        "consumer_payload": {
+            "schema": "local_cpu_drift_eureka_candidate_payload.v1",
+            "source_schema": payload.get("schema"),
+            "candidate_id": candidate_id,
+            "source_artifact": payload.get("source_artifact"),
+            "candidate_trust_region_blockers": list(
+                payload.get("candidate_trust_region_blockers") or []
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "promotable": False,
+        },
+    }
+    row = apply_proxy_evidence_boundary(
+        row,
+        dispatch_blockers=[
+            "local_cpu_drift_eureka_is_spend_triage_only",
+            "exact_auth_anchor_requires_lane_claim_and_dispatch",
+            "exact_auth_eval_result_required_before_score_claim",
+            *(
+                ["positive_eureka_requires_manual_exact_auth_anchor_claim"]
+                if eureka_trigger
+                else ["observe_only_eureka_not_dispatch_candidate"]
+            ),
+        ],
+    )
+    return [row]
+
+
 def _kaggle_proxy_sweep_candidates(
     payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
 ) -> list[dict[str, Any]]:
@@ -935,6 +1055,15 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
                 repo_root=repo_root,
             ),
         )
+    if schema == EUREKA_SIGNAL_SCHEMA:
+        return SourceExtraction(
+            schema=schema,
+            rows=_local_cpu_drift_eureka_candidates(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            ),
+        )
     if schema in {PR95_LOCAL_TRAINING_SCHEMA, PR95_LOCAL_TRAINING_PLAN_SCHEMA}:
         return SourceExtraction(
             schema=schema,
@@ -1041,6 +1170,9 @@ def build_candidate_queue(
                 merged[identity_key] = _merge_candidate(merged[identity_key], row)
             else:
                 merged[identity_key] = row
+
+    for row in merged.values():
+        _annotate_archive_candidate_verification(row, repo_root)
 
     sorted_rows = sorted(merged.values(), key=_candidate_sort_key)
     if top_k is not None:

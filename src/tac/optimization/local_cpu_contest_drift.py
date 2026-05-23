@@ -57,6 +57,27 @@ LOCAL_CPU_ADVISORY_AXIS_LABELS = frozenset(
 )
 LOCAL_CPU_ADVISORY_EVIDENCE_SEMANTICS = "non_contest_cpu_auth_eval_advisory"
 LOCAL_CPU_ADVISORY_EXPECTED_SAMPLES = 600
+LOCAL_CPU_REQUIRED_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+)
+CONTEST_CPU_AXIS_LABELS = frozenset(
+    {
+        "contest-cpu",
+        "contest-cpu-gha",
+        "contest-cpu-linux-x86-64",
+        "contest-cpu-gha-linux-x86-64",
+    }
+)
+CONTEST_CPU_EVIDENCE_SEMANTICS = frozenset(
+    {
+        "public_leaderboard_cpu_reproduction",
+        "contest_cpu_exact_auth_eval",
+    }
+)
 
 
 class LocalCPUContestDriftError(ValueError):
@@ -88,6 +109,18 @@ class PairedDriftAnchor:
     contest_score: float
     local_path: str
     contest_path: str
+    local_axis: str
+    contest_axis: str
+    local_evidence_semantics: str
+    contest_evidence_semantics: str
+    local_n_samples: int
+    contest_n_samples: int
+    local_platform_system: str
+    contest_platform_system: str
+    local_platform_machine: str
+    contest_platform_machine: str
+    local_device: str
+    contest_device: str
     local_segnet_dist: float | None = None
     contest_segnet_dist: float | None = None
     local_posenet_dist: float | None = None
@@ -126,6 +159,18 @@ class PairedDriftAnchor:
             "score_delta_local_minus_contest": self.score_delta_local_minus_contest,
             "local_path": self.local_path,
             "contest_path": self.contest_path,
+            "local_axis": self.local_axis,
+            "contest_axis": self.contest_axis,
+            "local_evidence_semantics": self.local_evidence_semantics,
+            "contest_evidence_semantics": self.contest_evidence_semantics,
+            "local_n_samples": self.local_n_samples,
+            "contest_n_samples": self.contest_n_samples,
+            "local_platform_system": self.local_platform_system,
+            "contest_platform_system": self.contest_platform_system,
+            "local_platform_machine": self.local_platform_machine,
+            "contest_platform_machine": self.contest_platform_machine,
+            "local_device": self.local_device,
+            "contest_device": self.contest_device,
             "local_segnet_dist": self.local_segnet_dist,
             "contest_segnet_dist": self.contest_segnet_dist,
             "segnet_delta_local_minus_contest": self.segnet_delta_local_minus_contest,
@@ -216,6 +261,26 @@ def assess_anchor_trust_region(
         blockers.append("anchor_trust_region_label_mismatch")
     if not anchor.archive_sha256:
         blockers.append("missing_archive_sha256")
+    if _normalize_axis_label(anchor.local_axis) not in LOCAL_CPU_ADVISORY_AXIS_LABELS:
+        blockers.append("local_axis_not_macos_cpu_advisory")
+    if _normalize_axis_label(anchor.contest_axis) not in CONTEST_CPU_AXIS_LABELS:
+        blockers.append("contest_axis_not_contest_cpu")
+    if anchor.local_evidence_semantics != LOCAL_CPU_ADVISORY_EVIDENCE_SEMANTICS:
+        blockers.append("local_evidence_semantics_not_cpu_advisory")
+    if anchor.contest_evidence_semantics not in CONTEST_CPU_EVIDENCE_SEMANTICS:
+        blockers.append("contest_evidence_semantics_not_contest_cpu")
+    if anchor.local_n_samples != LOCAL_CPU_ADVISORY_EXPECTED_SAMPLES:
+        blockers.append("local_not_full_public_sample")
+    if anchor.contest_n_samples != LOCAL_CPU_ADVISORY_EXPECTED_SAMPLES:
+        blockers.append("contest_not_full_public_sample")
+    if anchor.local_platform_system != "Darwin":
+        blockers.append("local_platform_not_macos")
+    if anchor.contest_platform_system != "Linux":
+        blockers.append("contest_platform_not_linux")
+    if anchor.contest_platform_machine.lower() not in {"x86_64", "amd64"}:
+        blockers.append("contest_platform_not_x86_64")
+    if anchor.local_device != "cpu" or anchor.contest_device != "cpu":
+        blockers.append("non_cpu_anchor_device")
     if not math.isfinite(anchor.local_score) or not math.isfinite(anchor.contest_score):
         blockers.append("nonfinite_score")
     delta = anchor.score_delta_local_minus_contest
@@ -416,8 +481,20 @@ def _anchor_from_mapping(payload: Mapping[str, Any]) -> PairedDriftAnchor:
             archive_sha256=str(payload["archive_sha256"]),
             local_score=float(payload["local_score"]),
             contest_score=float(payload["contest_score"]),
-            local_path=str(payload.get("local_path", "")),
-            contest_path=str(payload.get("contest_path", "")),
+            local_path=str(payload["local_path"]),
+            contest_path=str(payload["contest_path"]),
+            local_axis=str(payload["local_axis"]),
+            contest_axis=str(payload["contest_axis"]),
+            local_evidence_semantics=str(payload["local_evidence_semantics"]),
+            contest_evidence_semantics=str(payload["contest_evidence_semantics"]),
+            local_n_samples=_required_int(payload, "local_n_samples"),
+            contest_n_samples=_required_int(payload, "contest_n_samples"),
+            local_platform_system=str(payload["local_platform_system"]),
+            contest_platform_system=str(payload["contest_platform_system"]),
+            local_platform_machine=str(payload["local_platform_machine"]),
+            contest_platform_machine=str(payload["contest_platform_machine"]),
+            local_device=str(payload["local_device"]),
+            contest_device=str(payload["contest_device"]),
             local_segnet_dist=_optional_float(payload, "local_segnet_dist"),
             contest_segnet_dist=_optional_float(payload, "contest_segnet_dist"),
             local_posenet_dist=_optional_float(payload, "local_posenet_dist"),
@@ -480,6 +557,15 @@ def _payload_axis_label(payload: Mapping[str, Any]) -> str:
     return ""
 
 
+def _payload_axis_labels(payload: Mapping[str, Any]) -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    for key in ("evidence_grade", "score_axis", "lane_tag"):
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            out.append((key, value))
+    return out
+
+
 def _normalize_axis_label(value: str) -> str:
     return value.strip().strip("[]").replace("_", "-").replace(" ", "-").lower()
 
@@ -488,11 +574,15 @@ def local_cpu_advisory_payload_blockers(payload: Mapping[str, Any]) -> list[str]
     """Return fail-closed blockers for local macOS-CPU advisory eureka inputs."""
 
     blockers: list[str] = []
-    local_axis = _payload_axis_label(payload)
-    if not local_axis:
+    axis_labels = _payload_axis_labels(payload)
+    if not axis_labels:
         blockers.append("candidate_local_axis_missing")
-    elif _normalize_axis_label(local_axis) not in LOCAL_CPU_ADVISORY_AXIS_LABELS:
-        blockers.append("candidate_local_axis_not_macos_cpu_advisory")
+    for key, value in axis_labels:
+        normalized = _normalize_axis_label(value)
+        if normalized in CONTEST_CPU_AXIS_LABELS:
+            blockers.append(f"candidate_local_axis_contradicts_advisory:{key}")
+        elif normalized not in LOCAL_CPU_ADVISORY_AXIS_LABELS:
+            blockers.append(f"candidate_local_axis_not_macos_cpu_advisory:{key}")
 
     evidence_semantics = payload.get("evidence_semantics")
     if evidence_semantics != LOCAL_CPU_ADVISORY_EVIDENCE_SEMANTICS:
@@ -506,6 +596,10 @@ def local_cpu_advisory_payload_blockers(payload: Mapping[str, Any]) -> list[str]
     ):
         blockers.append("candidate_local_not_full_public_sample")
 
+    for field in LOCAL_CPU_REQUIRED_FALSE_AUTHORITY_FIELDS:
+        if payload.get(field) is not False:
+            blockers.append(f"candidate_local_authority_field_not_false:{field}")
+
     blockers.extend(
         "candidate_local_payload_truthy_authority:" + violation
         for violation in truthy_authority_field_violations(
@@ -513,6 +607,40 @@ def local_cpu_advisory_payload_blockers(payload: Mapping[str, Any]) -> list[str]
             fields=CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
         )
     )
+    return blockers
+
+
+def contest_cpu_payload_blockers(payload: Mapping[str, Any]) -> list[str]:
+    """Return blockers for a full Linux contest-CPU auth payload."""
+
+    blockers: list[str] = []
+    axis_labels = _payload_axis_labels(payload)
+    if not axis_labels:
+        blockers.append("contest_axis_missing")
+    for key, value in axis_labels:
+        normalized = _normalize_axis_label(value)
+        if normalized not in CONTEST_CPU_AXIS_LABELS:
+            blockers.append(f"contest_axis_not_contest_cpu:{key}")
+    if payload.get("evidence_semantics") not in CONTEST_CPU_EVIDENCE_SEMANTICS:
+        blockers.append("contest_evidence_semantics_not_contest_cpu")
+    n_samples = payload.get("n_samples")
+    if (
+        isinstance(n_samples, bool)
+        or not isinstance(n_samples, int)
+        or n_samples != LOCAL_CPU_ADVISORY_EXPECTED_SAMPLES
+    ):
+        blockers.append("contest_not_full_public_sample")
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, Mapping):
+        blockers.append("contest_provenance_missing")
+        return blockers
+    if provenance.get("platform_system") != "Linux":
+        blockers.append("contest_platform_not_linux")
+    platform_machine = str(provenance.get("platform_machine") or "").lower()
+    if platform_machine not in {"x86_64", "amd64"}:
+        blockers.append("contest_platform_not_x86_64")
+    if provenance.get("device") != "cpu":
+        blockers.append("contest_device_not_cpu")
     return blockers
 
 
@@ -604,6 +732,22 @@ def _optional_float(payload: Mapping[str, Any], key: str) -> float | None:
     return None
 
 
+def _required_int(payload: Mapping[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise LocalCPUContestDriftError(f"{key} must be an integer")
+    return value
+
+
+def _provenance_text(payload: Mapping[str, Any], key: str) -> str:
+    provenance = payload.get("provenance")
+    if isinstance(provenance, Mapping):
+        value = provenance.get(key)
+        if isinstance(value, str):
+            return value
+    return ""
+
+
 def paired_anchor_from_json_files(
     *,
     local_path: str | Path,
@@ -621,12 +765,32 @@ def paired_anchor_from_json_files(
             "local and contest payloads must reference the same archive sha256: "
             f"{local_archive} != {contest_archive}"
         )
+    local_blockers = local_cpu_advisory_payload_blockers(local)
+    contest_blockers = contest_cpu_payload_blockers(contest)
+    if local_blockers or contest_blockers:
+        raise LocalCPUContestDriftError(
+            "paired drift anchor outside local macOS-CPU advisory to contest-CPU "
+            "custody contract: "
+            f"local_blockers={local_blockers}; contest_blockers={contest_blockers}"
+        )
     return PairedDriftAnchor(
         archive_sha256=local_archive,
         local_score=_score(local),
         contest_score=_score(contest),
         local_path=str(local_file),
         contest_path=str(contest_file),
+        local_axis=_payload_axis_label(local),
+        contest_axis=_payload_axis_label(contest),
+        local_evidence_semantics=str(local["evidence_semantics"]),
+        contest_evidence_semantics=str(contest["evidence_semantics"]),
+        local_n_samples=_required_int(local, "n_samples"),
+        contest_n_samples=_required_int(contest, "n_samples"),
+        local_platform_system=_provenance_text(local, "platform_system"),
+        contest_platform_system=_provenance_text(contest, "platform_system"),
+        local_platform_machine=_provenance_text(local, "platform_machine"),
+        contest_platform_machine=_provenance_text(contest, "platform_machine"),
+        local_device=_provenance_text(local, "device"),
+        contest_device=_provenance_text(contest, "device"),
         local_segnet_dist=_optional_float(local, "avg_segnet_dist"),
         contest_segnet_dist=_optional_float(contest, "avg_segnet_dist"),
         local_posenet_dist=_optional_float(local, "avg_posenet_dist"),
@@ -651,6 +815,7 @@ __all__ = [
     "build_eureka_signal_from_local_json_file",
     "build_eureka_signal_from_local_payload",
     "calibration_from_mapping",
+    "contest_cpu_payload_blockers",
     "eureka_false_authority_violations",
     "fit_drift_calibration",
     "load_calibration_json",

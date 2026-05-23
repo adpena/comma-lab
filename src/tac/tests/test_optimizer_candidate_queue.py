@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
 from tac.optimization.optimizer_training_signal_bridge import (
     build_optimizer_training_signal_wire_in,
     validate_optimizer_training_signal_wire_in,
@@ -293,6 +294,45 @@ def test_codec_search_report_rows_are_payload_planning_not_archive_dispatch(
     assert "optimizer_eval_failed" in failed["dispatch_blockers"]
 
 
+def test_stale_archive_path_does_not_outrank_materialized_payload(
+    tmp_path: Path,
+) -> None:
+    report = _write_json(
+        tmp_path / "optuna_search_report.json",
+        {
+            "schema": "codec_op_optuna_search_report_v1",
+            "tool": "tools/codec_op_optuna_search.py",
+            "op_class": "FixtureCodecOp",
+            "all_evaluations": [
+                {
+                    "eval_idx": 0,
+                    "fitness": 100.0,
+                    "materialized_payload_path": "payloads/eval_00000.section",
+                    "materialized_payload_sha256": "e" * 64,
+                    "materialized_payload_bytes": 100,
+                }
+            ],
+        },
+    )
+    stale_archive = _write_json(
+        tmp_path / "hnerv_manifest.json",
+        {
+            "schema": "hnerv_lowlevel_exact_eval_candidate_manifest_v1",
+            "candidate_id": "stale_archive_candidate",
+            "candidate_archive_sha256": "a" * 64,
+            "candidate_archive_bytes": 123,
+        },
+    )
+
+    queue = build_candidate_queue([stale_archive, report], repo_root=tmp_path, top_k=2)
+
+    assert queue["top_k"][0]["candidate_id"] == "fixturecodecop_eval_00000"
+    stale = next(row for row in queue["top_k"] if row["candidate_id"] == "stale_archive_candidate")
+    assert stale["archive_candidate_verified"] is False
+    assert stale["candidate_archive_path_unverified"] is True
+    assert "candidate_archive_path_unverified" in stale["dispatch_blockers"]
+
+
 def test_predicted_param_sweep_manifest_is_forced_non_dispatchable(
     tmp_path: Path,
 ) -> None:
@@ -523,6 +563,64 @@ def test_candidate_queue_rejects_mlx_dynamic_sweep_nested_authority(
 
     with pytest.raises(ValueError, match=r"waterbucket_context\.promotable=truthy"):
         build_candidate_queue([plan], repo_root=tmp_path)
+
+
+def test_candidate_queue_accepts_local_cpu_eureka_as_spend_triage_only(
+    tmp_path: Path,
+) -> None:
+    eureka_path = _write_json(
+        tmp_path / "local_cpu_eureka.json",
+        {
+            **dict.fromkeys(EUREKA_FALSE_AUTHORITY_FIELDS, False),
+            "schema": "local_cpu_contest_drift_eureka_signal.v1",
+            "candidate_id": "pairset_drop_one_rank999_pair0001",
+            "candidate_archive_sha256": "a" * 64,
+            "local_score": 0.1919,
+            "projected_contest_score": 0.19189,
+            "conservative_projected_contest_score": 0.191893,
+            "auth_frontier_score": 0.1920,
+            "eureka_margin": 0.000107,
+            "eureka_trigger": True,
+            "recommended_action": "dispatch_exact_auth_anchor",
+            "source_artifact": "local_cpu_advisory.json",
+            "candidate_trust_region_blockers": [],
+        },
+    )
+
+    queue = build_candidate_queue([eureka_path], repo_root=tmp_path, top_k=1)
+    row = queue["top_k"][0]
+
+    assert queue["dispatch_ready_count"] == 0
+    assert row["candidate_id"] == (
+        "pairset_drop_one_rank999_pair0001::local_cpu_contest_drift_eureka"
+    )
+    assert row["exact_auth_anchor_requested"] is True
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["score_claim"] is False
+    assert row["rank_score_field"] == "conservative_projected_contest_score_false_authority"
+    assert "positive_eureka_requires_manual_exact_auth_anchor_claim" in row[
+        "dispatch_blockers"
+    ]
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_rejects_truthy_local_cpu_eureka_authority(
+    tmp_path: Path,
+) -> None:
+    eureka_path = _write_json(
+        tmp_path / "local_cpu_eureka.json",
+        {
+            **dict.fromkeys(EUREKA_FALSE_AUTHORITY_FIELDS, False),
+            "schema": "local_cpu_contest_drift_eureka_signal.v1",
+            "candidate_id": "unsafe",
+            "eureka_trigger": True,
+            "recommended_action": "dispatch_exact_auth_anchor",
+            "score_claim_valid": True,
+        },
+    )
+
+    with pytest.raises(ValueError, match="score_claim_valid"):
+        build_candidate_queue([eureka_path], repo_root=tmp_path, top_k=1)
 
 
 def test_unknown_candidates_schema_is_not_ranked_by_generic_numeric_fields(

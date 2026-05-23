@@ -16,6 +16,9 @@ from tac.optimization.mlx_dynamic_sweep_observations import (
     normalize_observation_row,
     summarize_observations,
 )
+from tac.optimization.optimizer_scheduler_registry import (
+    enumerate_optimizer_scheduler_candidates,
+)
 from tac.optimization.optimizer_training_signal_bridge import (
     build_optimizer_training_signal_wire_in,
 )
@@ -981,6 +984,7 @@ def build_mlx_dynamic_learned_sweep_plan(
     execution_configs: Sequence[Mapping[str, Any]] | None = None,
     optimization_passes: Sequence[Mapping[str, Any]] | None = None,
     observations: Sequence[Mapping[str, Any]] | None = None,
+    optimizer_scheduler_candidates: Sequence[Mapping[str, Any]] | None = None,
     top_k: int = 32,
     per_pass_top_k: int | None = None,
     default_score_variance: float = DEFAULT_SCORE_VARIANCE,
@@ -1003,6 +1007,22 @@ def build_mlx_dynamic_learned_sweep_plan(
         raise MLXDynamicLearnedSweepError("default_score_variance must be non-negative")
     configs = _normalize_execution_configs(execution_configs)
     passes = _normalize_optimization_passes(optimization_passes)
+    optimizer_scheduler_rows = [
+        dict(row)
+        for row in (
+            optimizer_scheduler_candidates
+            if optimizer_scheduler_candidates is not None
+            else enumerate_optimizer_scheduler_candidates()
+        )
+    ]
+    for index, row in enumerate(optimizer_scheduler_rows):
+        try:
+            require_no_truthy_authority_fields(
+                row,
+                context=f"optimizer_scheduler_candidate[{index}]",
+            )
+        except ValueError as exc:
+            raise MLXDynamicLearnedSweepError(str(exc)) from exc
     observation_rows = _normalize_observations(observations)
     candidates = _normalize_candidates(
         selector_pareto=selector_pareto,
@@ -1074,6 +1094,7 @@ def build_mlx_dynamic_learned_sweep_plan(
         },
         "execution_configs": configs,
         "optimization_passes": passes,
+        "optimizer_scheduler_candidates": optimizer_scheduler_rows,
         "source_artifacts": dict(source_artifacts or {}),
         "observation_feedback": {
             "schema": "mlx_dynamic_learned_sweep_observation_feedback_summary.v1",
@@ -1098,11 +1119,20 @@ def build_mlx_dynamic_learned_sweep_plan(
             "observation_append_only": True,
             "rerun_planner_after_each_pass": True,
             "frozen_configs_are_baselines_not_scores": True,
+            "optimizer_scheduler_registry_surface": (
+                "tac.optimization.optimizer_scheduler_registry."
+                "enumerate_optimizer_scheduler_candidates"
+            ),
+            "optimizer_scheduler_telemetry_surface": (
+                "tac.optimization.optimizer_scheduler_registry."
+                "build_optimizer_scheduler_telemetry_record"
+            ),
             **FALSE_AUTHORITY,
         },
         "summary": {
             "candidate_count": len(candidates),
             "config_count": len(configs),
+            "optimizer_scheduler_candidate_count": len(optimizer_scheduler_rows),
             "optimization_pass_count": len(passes),
             "observation_row_count": len(observation_rows),
             "suppressed_observed_row_count": len(suppressed_rows),

@@ -31,6 +31,18 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "LangevinOptimizer": ("tac.optimization.langevin_optimizer", "LangevinOptimizer"),
     "MuonOptimizer": ("tac.optimization.muon", "MuonOptimizer"),
     "OperatingPoint": ("tac.optimization.scorer_surface_shaking", "OperatingPoint"),
+    "OptimizerSchedulerDescriptor": (
+        "tac.optimization.optimizer_scheduler_registry",
+        "OptimizerSchedulerDescriptor",
+    ),
+    "OptimizerSchedulerRegistry": (
+        "tac.optimization.optimizer_scheduler_registry",
+        "OptimizerSchedulerRegistry",
+    ),
+    "OptimizerSchedulerTelemetryRecord": (
+        "tac.optimization.optimizer_scheduler_registry",
+        "OptimizerSchedulerTelemetryRecord",
+    ),
     "ScorerSurfacePlanError": (
         "tac.optimization.scorer_surface_shaking",
         "ScorerSurfacePlanError",
@@ -51,6 +63,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "build_info_geom_langevin_optimizer": (
         "tac.optimization.info_geom_langevin",
         "build_info_geom_langevin_optimizer",
+    ),
+    "build_optimizer_scheduler_telemetry_record": (
+        "tac.optimization.optimizer_scheduler_registry",
+        "build_optimizer_scheduler_telemetry_record",
     ),
     "TernaryCalibration": (
         "tac.optimization.ternary_qat",
@@ -76,6 +92,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "exponential_temperature_schedule": (
         "tac.optimization.langevin_optimizer",
         "exponential_temperature_schedule",
+    ),
+    "enumerate_optimizer_scheduler_candidates": (
+        "tac.optimization.optimizer_scheduler_registry",
+        "enumerate_optimizer_scheduler_candidates",
     ),
     "fisher_diagonal_ema": (
         "tac.optimization.info_geom_langevin",

@@ -403,8 +403,9 @@ def _eureka_signal_path(
     selection: Dqs1QueueSelection,
     *,
     eureka_output_dir: str,
+    eureka_run_id: str | None = None,
 ) -> str:
-    timestamp = _summary_timestamp_from_path(selection.action_summary_path)
+    timestamp = eureka_run_id or _summary_timestamp_from_path(selection.action_summary_path)
     filename = f"local_cpu_contest_drift_eureka_{selection.candidate_id}_{timestamp}.json"
     return f"{eureka_output_dir.rstrip('/')}/{filename}"
 
@@ -527,13 +528,18 @@ def build_dqs1_local_first_queue(
     frame_policy: str = DEFAULT_FRAME_POLICY,
     drift_calibration_json: str = DEFAULT_DRIFT_CALIBRATION_JSON,
     eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
+    eureka_run_id: str | None = None,
 ) -> dict[str, Any]:
     date = lane_date or _lane_date_from_summary_path(selection.action_summary_path)
     selected_pairs = ",".join(str(index) for index in selection.selected_pair_indices)
     materialized_root = f"{results_root}/materialized/{selection.candidate_slug}"
     packet_plan = f"{results_root}/selector_pareto/packet_plans/{selection.candidate_slug}.json"
     packet_plan_md = f"{results_root}/selector_pareto/packet_plans/{selection.candidate_slug}.md"
-    eureka_signal = _eureka_signal_path(selection, eureka_output_dir=eureka_output_dir)
+    eureka_signal = _eureka_signal_path(
+        selection,
+        eureka_output_dir=eureka_output_dir,
+        eureka_run_id=eureka_run_id,
+    )
     experiment_id = selection.candidate_id
 
     queue = {
@@ -729,6 +735,7 @@ def build_queue_from_action_summary(
     frame_policy: str = DEFAULT_FRAME_POLICY,
     drift_calibration_json: str = DEFAULT_DRIFT_CALIBRATION_JSON,
     eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
+    eureka_run_id: str | None = None,
     exclude_candidate_ids: set[str] | None = None,
     skip_completed_local_advisory: bool = True,
 ) -> Dqs1QueueBuildResult:
@@ -751,6 +758,7 @@ def build_queue_from_action_summary(
             frame_policy=frame_policy,
             drift_calibration_json=drift_calibration_json,
             eureka_output_dir=eureka_output_dir,
+            eureka_run_id=eureka_run_id,
         ),
         selection=selection,
     )

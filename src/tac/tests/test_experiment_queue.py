@@ -700,6 +700,85 @@ def test_experiment_queue_worker_can_reload_updated_definition(tmp_path: Path) -
         assert queue_summary(conn, reload_queue())["status_counts"] == {"succeeded": 2}
 
 
+def test_experiment_queue_requeues_succeeded_step_when_definition_changes(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+
+    def queue_for(path: Path) -> dict[str, object]:
+        return normalize_queue_definition(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "definition_hash_queue",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "steps": [
+                            {
+                                "id": "same_step",
+                                "command": [
+                                    sys.executable,
+                                    "-c",
+                                    f"import pathlib; pathlib.Path({str(path)!r}).write_text('ok')",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        queue = queue_for(first)
+        initialize_queue_state(conn, queue)
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=1,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+        assert result["success_count"] == 1
+        assert queue_summary(conn, queue)["status_counts"] == {"succeeded": 1}
+
+        changed = queue_for(second)
+        initialize_queue_state(conn, changed)
+        summary = queue_summary(conn, changed)
+
+        assert summary["status_counts"] == {"queued": 1}
+        assert summary["ready_steps"][0]["step_id"] == "same_step"
+        assert summary["steps"][0]["last_event"]["definition_changed"] is True
+
+
+def test_experiment_queue_refuses_definition_change_while_running(tmp_path: Path) -> None:
+    queue = _queue(tmp_path)
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running'
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            ("unit_queue", "candidate_a", "materialize"),
+        )
+        conn.commit()
+        changed = _queue(tmp_path)
+        changed["experiments"][0]["steps"][0]["command"] = [
+            sys.executable,
+            "-c",
+            "print('changed')",
+        ]
+
+        with pytest.raises(ExperimentQueueError, match="definition changed while running"):
+            initialize_queue_state(conn, changed)
+
+
 def test_experiment_queue_summary_separates_orphaned_reroute_rows(
     tmp_path: Path,
 ) -> None:
