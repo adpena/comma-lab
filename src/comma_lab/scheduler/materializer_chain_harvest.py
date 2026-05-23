@@ -34,6 +34,15 @@ from tac.optimization.proxy_candidate_contract import (
     require_no_truthy_authority_fields,
 )
 from tac.optimizer.candidate_queue import build_candidate_queue
+from tac.optimizer.exact_readiness import (
+    ACTIVE_FLOOR_ARCHIVE_BYTES,
+    ACTIVE_FLOOR_SCORE,
+    ExactReadinessError,
+    promote_candidate_for_exact_eval,
+)
+from tac.optimizer.exact_readiness import (
+    json_dumps as exact_readiness_json_dumps,
+)
 from tac.optimizer.materializer_chain_harvest import (
     SUPPORTED_CHAIN_SCHEMAS,
     MaterializerChainHarvestError,
@@ -47,7 +56,20 @@ from .byte_shaving_campaign_queue import (
 from .experiment_queue import ExperimentQueueError, connect_state_readonly
 
 HARVEST_SCHEMA = "materializer_chain_harvest_report.v1"
+EXACT_READINESS_BRIDGE_SCHEMA = "materializer_chain_exact_readiness_bridge_report.v1"
 TOOL_NAME = "comma_lab.scheduler.materializer_chain_harvest"
+EXACT_READINESS_BRIDGE_TOOL = (
+    "comma_lab.scheduler.materializer_chain_harvest.exact_readiness_bridge"
+)
+MATERIALIZER_HARVEST_CLEARABLE_SOURCE_BLOCKERS = (
+    "materializer_chain_is_not_dispatch_authorization",
+    "materialized_archive_runtime_custody_required",
+    "materializer_chain_harvest_candidate_pending_exact_readiness",
+    "exact_readiness_promotion_required",
+    "exact_auth_eval_result_required_before_score_claim",
+    "byte_range_entropy_recode_chain_is_not_dispatch_authorization",
+    "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization",
+)
 CHAIN_MANIFEST_NAME_BY_SCHEMA = {
     BYTE_RANGE_CHAIN_SCHEMA: BYTE_RANGE_CHAIN_MANIFEST_NAME,
     INVERSE_SCORER_CELL_CHAIN_SCHEMA: INVERSE_SCORER_CELL_CHAIN_MANIFEST_NAME,
@@ -155,6 +177,156 @@ def harvest_materializer_chain_manifests(
         ],
     )
     return {"report": report, "source_queue": source_queue}
+
+
+def run_exact_readiness_bridge_for_harvested_queue(
+    *,
+    repo_root: str | Path,
+    source_queue_path: str | Path,
+    exact_readiness_out_dir: str | Path,
+    candidate_ids: Sequence[str] = (),
+    allow_source_blockers: Sequence[str] = (),
+    dispatch_claims_path: str | Path | None = None,
+    claim_ttl_hours: float = 24.0,
+    active_floor_archive_bytes: int | None = ACTIVE_FLOOR_ARCHIVE_BYTES,
+    active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
+    allow_above_active_floor_dispatch: bool = False,
+    operator_override_reason: str | None = None,
+) -> dict[str, Any]:
+    """Run the exact-readiness gate for harvested materializer source rows.
+
+    The returned report is an observation artifact. Only per-candidate
+    ``*_exact_ready_queue.json`` outputs from the existing promoter are dispatch
+    packets, and those still require a lane claim before provider launch.
+    """
+
+    repo = Path(repo_root)
+    queue_path = _resolve_path(source_queue_path, repo_root=repo)
+    out_dir = _resolve_path(exact_readiness_out_dir, repo_root=repo)
+    if allow_above_active_floor_dispatch and not operator_override_reason:
+        raise ExperimentQueueError(
+            "allow_above_active_floor_dispatch requires operator_override_reason"
+        )
+    queue_payload = _load_json(queue_path)
+    if not isinstance(queue_payload, Mapping):
+        raise ExperimentQueueError("source queue must be an object")
+    if queue_payload.get("schema") != "optimizer_candidate_queue_v1":
+        raise ExperimentQueueError(
+            f"expected optimizer_candidate_queue_v1, got {queue_payload.get('schema')!r}"
+        )
+    candidate_filter = {str(candidate_id) for candidate_id in candidate_ids if str(candidate_id)}
+    rows = [
+        row
+        for row in queue_payload.get("top_k") or []
+        if isinstance(row, Mapping)
+        and (
+            not candidate_filter
+            or str(row.get("candidate_id") or "") in candidate_filter
+        )
+    ]
+    if candidate_filter:
+        found = {str(row.get("candidate_id") or "") for row in rows}
+        missing = sorted(candidate_filter - found)
+        if missing:
+            raise ExperimentQueueError(
+                "exact_readiness_candidate_id_missing:" + ",".join(missing)
+            )
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    clearable_source_blockers = ordered_unique(
+        [
+            *MATERIALIZER_HARVEST_CLEARABLE_SOURCE_BLOCKERS,
+            *[str(item) for item in allow_source_blockers if str(item)],
+        ]
+    )
+    resolved_dispatch_claims_path = (
+        _resolve_path(dispatch_claims_path, repo_root=repo)
+        if dispatch_claims_path is not None
+        else repo / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    )
+    report_rows: list[dict[str, Any]] = []
+    ready_count = 0
+    for row in rows:
+        candidate_id = str(row.get("candidate_id") or "")
+        if not candidate_id:
+            continue
+        slug = _safe_slug(candidate_id)
+        per_candidate_report_path = out_dir / f"{slug}.exact_readiness_report.json"
+        exact_ready_queue_path = out_dir / f"{slug}.exact_ready_queue.json"
+        try:
+            result = promote_candidate_for_exact_eval(
+                queue_path,
+                candidate_id,
+                repo_root=repo,
+                active_floor_archive_bytes=active_floor_archive_bytes,
+                active_floor_score=active_floor_score,
+                allow_above_active_floor_dispatch=allow_above_active_floor_dispatch,
+                operator_override_reason=operator_override_reason,
+                extra_clearable_source_blockers=clearable_source_blockers,
+                dispatch_claims_path=resolved_dispatch_claims_path,
+                claim_ttl_hours=claim_ttl_hours,
+            )
+            readiness_report = result["report"]
+            promoted_queue = result["promoted_queue"]
+        except ExactReadinessError as exc:
+            readiness_report = {
+                "schema": "optimizer_candidate_exact_eval_readiness_report_v1",
+                "tool": "tools/promote_optimizer_candidate_for_exact_eval.py",
+                "generated_at_utc": _utc_now(),
+                "source_queue_path": _repo_rel(queue_path, repo),
+                "candidate_id": candidate_id,
+                "ready_for_exact_eval_dispatch": False,
+                "blockers": [str(exc)],
+                "facts": {},
+            }
+            promoted_queue = None
+        per_candidate_report_path.write_text(
+            exact_readiness_json_dumps(readiness_report),
+            encoding="utf-8",
+        )
+        ready = promoted_queue is not None
+        if ready:
+            exact_ready_queue_path.write_text(
+                exact_readiness_json_dumps(promoted_queue),
+                encoding="utf-8",
+            )
+            ready_count += 1
+        report_rows.append(
+            {
+                "candidate_id": candidate_id,
+                "ready_for_exact_eval_dispatch": ready,
+                "exact_readiness_report_path": _repo_rel(per_candidate_report_path, repo),
+                "exact_ready_queue_path": _repo_rel(exact_ready_queue_path, repo)
+                if ready
+                else None,
+                "blockers": list(readiness_report.get("blockers") or []),
+            }
+        )
+
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": EXACT_READINESS_BRIDGE_SCHEMA,
+            "tool": EXACT_READINESS_BRIDGE_TOOL,
+            "generated_at_utc": _utc_now(),
+            "source_queue_path": _repo_rel(queue_path, repo),
+            "exact_readiness_out_dir": _repo_rel(out_dir, repo),
+            "candidate_count": len(rows),
+            "ready_candidate_count": ready_count,
+            "blocked_candidate_count": len(rows) - ready_count,
+            "clearable_source_blockers": clearable_source_blockers,
+            "dispatch_claims_path": _repo_rel(resolved_dispatch_claims_path, repo),
+            "rows": report_rows,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        dispatch_blockers=[
+            "bridge_report_is_not_dispatch_authority",
+            "use_per_candidate_exact_ready_queue_only_when_present",
+            "lane_claim_required_before_gpu_or_remote_eval",
+        ],
+    )
 
 
 def _discover_chain_manifest_candidates(
@@ -396,6 +568,11 @@ def _repo_rel(path: Path, repo_root: Path) -> str:
         return path.as_posix()
 
 
+def _safe_slug(value: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
+    return slug[:120] or "candidate"
+
+
 def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -424,7 +601,9 @@ def write_json(path: str | Path, payload: Any) -> None:
 
 
 __all__ = [
+    "EXACT_READINESS_BRIDGE_SCHEMA",
     "HARVEST_SCHEMA",
     "harvest_materializer_chain_manifests",
+    "run_exact_readiness_bridge_for_harvested_queue",
     "write_json",
 ]

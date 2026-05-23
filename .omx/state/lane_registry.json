@@ -50317,6 +50317,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "codex_materializer_exact_readiness_bridge_20260523",
+      "name": "Codex materializer exact-readiness bridge",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/materializer_chain_harvest.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_materializer_chain_harvest_scheduler.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_exact_readiness_bridge_20260523T224437Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "tools/harvest_materializer_chain_candidates.py"
+        }
+      },
+      "notes": "L0: explicit optional bridge from harvested materializer planning queue into exact-readiness promoter; fail-closed, no dispatch or score authority."
     }
   ],
   "level_rules": {
@@ -50326,5 +50367,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T22:32:17Z"
+  "updated_at": "2026-05-23T22:45:12Z"
 }

@@ -5,6 +5,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
@@ -18,8 +19,10 @@ from comma_lab.scheduler.experiment_queue import (
     normalize_queue_definition,
 )
 from comma_lab.scheduler.materializer_chain_harvest import (
+    EXACT_READINESS_BRIDGE_SCHEMA,
     HARVEST_SCHEMA,
     harvest_materializer_chain_manifests,
+    run_exact_readiness_bridge_for_harvested_queue,
 )
 from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_MANIFEST_NAME,
@@ -50,6 +53,15 @@ def _write_bytes(path: Path, data: bytes) -> dict[str, object]:
         "bytes": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
     }
+
+
+def _write_zip_archive(path: Path, member: str, data: bytes) -> dict[str, object]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr(info, data, compress_type=zipfile.ZIP_STORED)
+    return _artifact_record(path)
 
 
 def _artifact_record(path: Path) -> dict[str, object]:
@@ -130,6 +142,96 @@ def _chain_manifest(
     if authority_overrides:
         payload.update(authority_overrides)
     return _write_json(external_root / CHAIN_MANIFEST_NAME, payload)
+
+
+def _exact_ready_chain_manifest(repo: Path) -> Path:
+    source_archive = _write_zip_archive(
+        repo / "source" / "archive.zip",
+        "0.bin",
+        b"source archive payload that is deliberately larger",
+    )
+    submission = repo / "submission"
+    candidate_archive = _write_zip_archive(
+        submission / "archive.zip",
+        "0.bin",
+        b"candidate",
+    )
+    inflate = submission / "inflate.sh"
+    inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
+    inflate.chmod(inflate.stat().st_mode | 0o100)
+    (submission / "report.txt").write_text(
+        "candidate archive ready for exact eval\n",
+        encoding="utf-8",
+    )
+    _write_json(
+        submission / "archive_manifest.json",
+        {
+            "candidate_archive_sha256": candidate_archive["sha256"],
+            "candidate_archive_bytes": candidate_archive["bytes"],
+            "candidate_archive": {"member_name": "0.bin"},
+        },
+    )
+    runtime_proof = _write_json(
+        submission / "runtime_consumption_proof.json",
+        {
+            "schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+            "runtime_consumption_proven_for_supported_bias_params": True,
+            "inflate_sh_routes_to_packet_inflate_py": True,
+            "archive_unchanged_proof": {
+                "archive_sha256": candidate_archive["sha256"],
+            },
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+        },
+    )
+    (repo / "upstream").mkdir(parents=True, exist_ok=True)
+    (repo / "upstream" / "evaluate.py").write_text("# fixture\n", encoding="utf-8")
+    artifact = _write_json(
+        submission / "candidate_manifest.json",
+        {"schema": "fixture_materializer_artifact_v1"},
+    )
+    artifact_record = _artifact_record(artifact)
+    payload: dict[str, object] = {
+        "schema": CHAIN_SCHEMA,
+        "candidate_id": "exact_ready_materializer_candidate",
+        "lane_id": "fixture_materializer_chain_harvest",
+        "source_archive": source_archive,
+        "source_archive_sha256": source_archive["sha256"],
+        "source_archive_bytes": source_archive["bytes"],
+        "candidate_archive": candidate_archive,
+        "candidate_archive_sha256": candidate_archive["sha256"],
+        "candidate_archive_bytes": candidate_archive["bytes"],
+        "serialized_archive_delta": build_serialized_archive_delta_contract(
+            source_archive=source_archive,
+            candidate_archive=candidate_archive,
+            require_realized_saving=True,
+        ),
+        "byte_closed_candidate_emitted": True,
+        "runtime_adapter_ready": True,
+        "receiver_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "readiness_blockers": [],
+        "dispatch_blockers": [
+            "byte_range_entropy_recode_chain_is_not_dispatch_authorization",
+            "exact_cuda_auth_eval_missing",
+        ],
+        "artifacts": {"candidate_manifest": artifact_record},
+        "chain_steps": [
+            {
+                "step_id": "materialize_candidate",
+                "status": "succeeded",
+                "artifact": artifact_record,
+            }
+        ],
+        "next_required_gates": ["contest_auth_eval"],
+        "runtime_consumption_proof_required": True,
+        "runtime_consumption_proof_status": "present",
+        "runtime_consumption_proof_path": runtime_proof.relative_to(repo).as_posix(),
+        **_false_authority(),
+    }
+    return _write_json(repo / "chain" / CHAIN_MANIFEST_NAME, payload)
 
 
 def _work_queue(repo: Path, chain_manifest: Path) -> Path:
@@ -320,3 +422,109 @@ def test_harvest_cli_writes_report_and_source_queue(tmp_path: Path) -> None:
     assert source_queue["dispatch_ready_count"] == 0
     assert report["accepted_manifest_count"] == 1
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_exact_readiness_bridge_promotes_valid_harvested_source_queue(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+
+    assert bridge["schema"] == EXACT_READINESS_BRIDGE_SCHEMA
+    assert bridge["ready_candidate_count"] == 1
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+    row = bridge["rows"][0]
+    assert row["candidate_id"] == "exact_ready_materializer_candidate"
+    assert row["ready_for_exact_eval_dispatch"] is True
+    exact_ready_queue = json.loads(
+        (repo / row["exact_ready_queue_path"]).read_text(encoding="utf-8")
+    )
+    assert exact_ready_queue["dispatch_ready_count"] == 1
+    promoted = exact_ready_queue["dispatch_ready"][0]
+    assert promoted["ready_for_exact_eval_dispatch"] is True
+    assert promoted["score_claim"] is False
+    assert promoted["dispatch_claim_required_before_gpu_or_remote_eval"] is True
+
+
+def test_exact_readiness_bridge_writes_blocked_report_without_ready_queue(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+
+    assert bridge["ready_candidate_count"] == 0
+    assert bridge["blocked_candidate_count"] == 1
+    row = bridge["rows"][0]
+    assert row["exact_ready_queue_path"] is None
+    assert row["blockers"]
+    assert (repo / row["exact_readiness_report_path"]).is_file()
+
+
+def test_harvest_cli_can_run_explicit_exact_readiness_bridge(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    source_queue_out = repo / "source_queue.json"
+    report_out = repo / "harvest_report.json"
+    bridge_report_out = repo / "bridge_report.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--repo-root",
+            str(repo),
+            "--chain-manifest",
+            str(chain),
+            "--source-queue-out",
+            str(source_queue_out),
+            "--report-out",
+            str(report_out),
+            "--exact-readiness-out-dir",
+            str(repo / "exact_readiness"),
+            "--exact-readiness-bridge-report-out",
+            str(bridge_report_out),
+            "--require-accepted",
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    bridge = json.loads(bridge_report_out.read_text(encoding="utf-8"))
+    assert bridge["schema"] == EXACT_READINESS_BRIDGE_SCHEMA
+    assert bridge["candidate_count"] == 1
+    assert bridge["ready_candidate_count"] == 0
+    assert "exact-readiness bridge: ready=0/1" in completed.stdout

@@ -124,6 +124,7 @@ def adapt_materializer_chain_manifest_to_candidate(
         "next_required_gates": _string_list(chain.get("next_required_gates")),
         "chain_artifact_count": len(chain.get("artifacts") or {}),
         "chain_step_count": len(chain.get("chain_steps") or []),
+        **_runtime_consumption_proof_fields(chain),
         "local_advisory_axes": _local_advisory_axes(chain),
         "local_advisory_axes_semantics": (
             "non_authoritative_planning_signal_only_not_score_claim"
@@ -147,6 +148,18 @@ def adapt_materializer_chain_manifest_to_candidate(
     )
     out["score_affecting_payload_changed"] = archive_changed
     out["charged_bits_changed"] = byte_changed
+    return out
+
+
+def _runtime_consumption_proof_fields(chain: Mapping[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in (
+        "runtime_consumption_proof_required",
+        "runtime_consumption_proof_status",
+        "runtime_consumption_proof_path",
+    ):
+        if key in chain:
+            out[key] = chain[key]
     return out
 
 
