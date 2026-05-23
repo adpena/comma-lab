@@ -52,6 +52,10 @@ from .experiment_queue_observer import (
     observe_experiment_queue,
     render_observation_markdown,
 )
+from .materializer_chain_harvest import (
+    HARVEST_SCHEMA,
+    harvest_materializer_chain_manifests,
+)
 from .models import (
     BudgetReport,
     BudgetSpec,
@@ -74,6 +78,7 @@ __all__ = [
     "DQS1_PAIRSET_TARGET_KIND",
     "DQS1_RECEIVER_CONTRACT_ID",
     "DQS1_RECEIVER_CONTRACT_KIND",
+    "HARVEST_SCHEMA",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID",
     "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND",
@@ -102,6 +107,7 @@ __all__ = [
     "build_materializer_execution_queue",
     "connect_state",
     "default_state_path",
+    "harvest_materializer_chain_manifests",
     "initialize_queue_state",
     "known_materializer_target_kinds",
     "load_queue_definition",

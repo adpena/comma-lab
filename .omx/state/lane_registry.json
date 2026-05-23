@@ -50285,7 +50285,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "src/tac/optimizer/materializer_chain_harvest.py"
+          "evidence": "src/tac/optimizer/materializer_chain_harvest.py; src/comma_lab/scheduler/materializer_chain_harvest.py; tools/harvest_materializer_chain_candidates.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -50301,7 +50301,7 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "src/tac/tests/test_optimizer_candidate_queue.py"
+          "evidence": "src/tac/tests/test_optimizer_candidate_queue.py; src/tac/tests/test_materializer_chain_harvest_scheduler.py"
         },
         "three_clean_review": {
           "status": false,
@@ -50312,8 +50312,8 @@
           "evidence": ".omx/research/codex_findings_materializer_chain_harvest_20260523T221654Z_codex.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/harvest_materializer_chain_candidates.py"
         }
       },
       "notes": ""
@@ -50326,5 +50326,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T22:17:33Z"
+  "updated_at": "2026-05-23T22:32:17Z"
 }

@@ -34,6 +34,14 @@ manifests and emits planning-only queue rows with dispatch blockers preserved.
 Rows can rank and feed follow-up gates, but cannot claim score, promote, or
 dispatch until the explicit exact-readiness path clears archive/runtime custody.
 
+`comma_lab.scheduler.materializer_chain_harvest` and
+`tools/harvest_materializer_chain_candidates.py` now scan explicit chain
+manifests, materializer work-queue postconditions, bounded chain roots, and
+optional experiment-queue state. Queue state is a filter only; live chain
+manifest custody is revalidated before the tool emits the optimizer candidate
+queue. This is the operator-facing automated handoff from DAG/materializer
+execution into candidate planning.
+
 ## Sidecar Audit
 
 Read-only subagent Raman independently identified the same boundary: chain
@@ -44,18 +52,20 @@ separate.
 
 ## Verification
 
-- `.venv/bin/python -m pytest src/tac/tests/test_optimizer_candidate_queue.py -q`
-  - 34 passed
-- `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_optimizer_candidate_queue.py src/tac/tests/test_experiment_queue.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_optimizer_exact_readiness.py src/tac/tests/test_serialized_archive_economics.py -q`
-  - 164 passed
-- `.venv/bin/python -m ruff check src/tac/optimizer/materializer_chain_harvest.py src/tac/optimizer/candidate_queue.py src/tac/tests/test_optimizer_candidate_queue.py tools/build_optimizer_candidate_queue.py`
+- `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_materializer_chain_harvest_scheduler.py src/tac/tests/test_optimizer_candidate_queue.py -q`
+  - 38 passed
+- `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_materializer_chain_harvest_scheduler.py src/tac/tests/test_optimizer_candidate_queue.py src/tac/tests/test_experiment_queue.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_optimizer_exact_readiness.py src/tac/tests/test_serialized_archive_economics.py -q`
+  - 168 passed
+- `.venv/bin/python -m ruff check src/comma_lab/scheduler/materializer_chain_harvest.py src/comma_lab/scheduler/__init__.py tools/harvest_materializer_chain_candidates.py src/tac/optimizer/materializer_chain_harvest.py src/tac/optimizer/candidate_queue.py src/tac/tests/test_optimizer_candidate_queue.py src/tac/tests/test_materializer_chain_harvest_scheduler.py`
   - passed
 - `.venv/bin/python tools/build_optimizer_candidate_queue.py --source experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/inverse_action_functional_autosaturated_queue_20260523T220300Z/chain_output/inverse_scorer_cell_candidate_chain_manifest.json --output /tmp/pact_materializer_chain_live_candidate_queue.json`
   - harvested 1 planning-only candidate, `dispatch_ready_count=0`
+- `.venv/bin/python tools/harvest_materializer_chain_candidates.py --work-queue experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/inverse_action_functional_autosaturated_queue_20260523T220300Z/materializer_work_queue.json --source-queue-out /tmp/pact_scheduler_materializer_harvest_source_queue.json --report-out /tmp/pact_scheduler_materializer_harvest_report.json --allow-unfinished-state --require-accepted`
+  - harvested 1/1 completed chain manifest and emitted a planning-only source
+    queue, `dispatch_ready=0`
 
 ## Next Gate
 
-Build the scheduler-level harvest CLI that scans materializer work queues and
-experiment state, finds completed chain manifests, writes a source queue, and
-optionally invokes the existing exact-readiness promoter under an explicit flag.
-That should consume this adapter rather than bypassing it.
+Next automation step is optional exact-readiness bridge wiring: consume the
+harvested planning queue, run the existing exact-readiness promoter under an
+explicit flag, and keep all parity/auth blockers fail-closed.

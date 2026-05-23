@@ -249,16 +249,15 @@ def _record_path(record: Mapping[str, Any], *, repo_root: Path, label: str) -> P
     if not isinstance(value, str) or not value.strip():
         raise MaterializerChainHarvestError(f"{label}_path_missing")
     path = Path(value)
-    if path.is_absolute():
-        raise MaterializerChainHarvestError(f"{label}_path_must_be_repo_relative")
-    raw_path = repo_root / path
+    raw_path = path if path.is_absolute() else repo_root / path
     if raw_path.is_symlink():
         raise MaterializerChainHarvestError(f"{label}_file_is_symlink:{path}")
     resolved = raw_path.resolve(strict=False)
-    try:
-        resolved.relative_to(repo_root.resolve())
-    except ValueError:
-        raise MaterializerChainHarvestError(f"{label}_path_outside_repo") from None
+    if not path.is_absolute():
+        try:
+            resolved.relative_to(repo_root.resolve())
+        except ValueError:
+            raise MaterializerChainHarvestError(f"{label}_path_outside_repo") from None
     if not resolved.is_file():
         raise MaterializerChainHarvestError(f"{label}_file_missing:{path}")
     return resolved
@@ -409,7 +408,7 @@ def _repo_rel(path: Path, repo_root: Path) -> str:
     try:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
     except ValueError:
-        raise MaterializerChainHarvestError(f"path_outside_repo:{path}") from None
+        return path.as_posix()
 
 
 def _sha256_file(path: Path) -> str:
