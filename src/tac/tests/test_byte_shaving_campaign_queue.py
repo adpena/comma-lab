@@ -187,6 +187,40 @@ def _inverse_surface_plan() -> dict[str, object]:
     return build_byte_shaving_campaign_plan(surface, max_k=1)
 
 
+def _inverse_cell_candidate_plan() -> dict[str, object]:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "inverse_cell_candidate_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_inverse_cell_candidate_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "inverse_action_pair_0007",
+                "unit_kind": "scorer_inverse_surface_cell",
+                "candidate_saved_bytes": 0,
+                "predicted_quality_score_delta": -0.0001,
+                "confidence": 0.6,
+                "operations": [
+                    {
+                        "operation_id": "materialize_inverse_surface_pair_0007",
+                        "operation_family": "materialize_inverse_scorer_cell_candidate",
+                        "target_kind": INVERSE_SCORER_CELL_TARGET_KIND,
+                    }
+                ],
+                "blockers": [
+                    "inverse_action_unit_is_planning_only",
+                    "requires_inverse_scorer_cell_materializer",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+            }
+        ],
+        **_false_authority(),
+    }
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
+
+
 def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contracts() -> None:
     manifest = registry_manifest()
 
@@ -255,8 +289,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         "cooperative_receiver_required": True,
         "materializer_id": INVERSE_SCORER_CELL_MATERIALIZER,
         "materialization_resource_kind": "local_mlx",
-        "implementation_module": "tac.optimization.inverse_steganalysis_acquisition",
-        "plan_function": "build_discrete_scorer_action_functional",
+        "implementation_module": "tac.optimization.inverse_scorer_cell_materializer",
+        "plan_function": "build_inverse_scorer_cell_candidate_plan",
         "materialize_function": "materialize_inverse_scorer_cell_candidate",
         "receiver_proof_function": "build_inverse_scorer_cell_receiver_proof",
         "receiver_verify_function": "verify_inverse_scorer_cell_receiver_contract",
@@ -267,6 +301,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
             "raw_contest_video_digest",
             "candidate_archive_template",
             "inverse_action_functional",
+            "output_archive",
+            "manifest_out",
             "runtime_consumption_proof",
         ],
         "target_kind": INVERSE_SCORER_CELL_TARGET_KIND,
@@ -943,6 +979,96 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
     ]
     assert row["telemetry"]["artifact_paths"] == [str(action_output), str(action_md)]
     assert "inverse_action_functional_is_not_candidate_archive" in row["dispatch_blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_action_cells_compile_to_candidate_materializer_work_queue(
+    tmp_path: Path,
+) -> None:
+    action = tmp_path / "inverse_action.json"
+    template = tmp_path / "template.zip"
+    candidate = tmp_path / "candidate.zip"
+    manifest = tmp_path / "candidate_manifest.json"
+    action.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_steganalysis_discrete_action_functional.v1",
+                "water_bucket": {
+                    "selected_cells": [
+                        {
+                            "atom_id": "inverse_surface_pair0007",
+                            "candidate_id": "candidate_pair0007",
+                            "scope_axis": "pairs",
+                            "component": "posenet",
+                            "water_fill_cost_bytes": 32,
+                            "expected_score_gain": 0.0001,
+                            "euler_lagrange_residual": 0.00009,
+                        }
+                    ]
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    template.write_bytes(b"not-a-real-zip-for-command-building")
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _inverse_cell_candidate_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    assert backlog_row["unit_kind"] == "scorer_inverse_surface_cell"
+    assert backlog_row["operation_family"] == "materialize_inverse_scorer_cell_candidate"
+    assert backlog_row["target_kind"] == INVERSE_SCORER_CELL_TARGET_KIND
+    assert backlog_row["materializer_id"] == INVERSE_SCORER_CELL_MATERIALIZER
+
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            INVERSE_SCORER_CELL_TARGET_KIND: {
+                "candidate_archive_template": str(template),
+                "inverse_action_functional": str(action),
+                "raw_contest_video_digest": "f" * 64,
+                "output_archive": str(candidate),
+                "manifest_out": str(manifest),
+                "atom_ids": ["inverse_surface_pair0007"],
+                "selected_limit": 1,
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert work_queue["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
+    assert work_queue["executable_row_count"] == 1
+    row = work_queue["rows"][0]
+    assert row["tool"] == "tools/materialize_inverse_scorer_cell_candidate.py"
+    assert row["command"][:4] == [
+        ".venv/bin/python",
+        "tools/materialize_inverse_scorer_cell_candidate.py",
+        "--candidate-archive-template",
+        str(template),
+    ]
+    assert "--atom-id" in row["command"]
+    assert row["postconditions"] == [
+        {
+            "type": "json_equals",
+            "path": str(manifest),
+            "key": "schema",
+            "equals": "inverse_scorer_cell_candidate_v1",
+        }
+    ]
+    assert row["telemetry"]["artifact_paths"] == [str(candidate), str(manifest)]
+    assert "inverse_scorer_cell_candidate_requires_receiver_proof" in row[
+        "dispatch_blockers"
+    ]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 

@@ -10,6 +10,7 @@ import pytest
 
 from comma_lab.scheduler.experiment_queue import (
     ExperimentQueueError,
+    _step_hashes,
     connect_state,
     initialize_queue_state,
 )
@@ -37,6 +38,10 @@ def _queue() -> dict[str, object]:
                 "status": "queued",
                 "priority": 1,
                 "lane_id": "lane_family_a",
+                "metadata": {
+                    "schema": "fixture_metadata.v1",
+                    "source_archive_sha256": "a" * 64,
+                },
                 "steps": [
                     {
                         "id": "plan",
@@ -94,7 +99,17 @@ def test_build_queue_dag_plans_executor_specs_without_authority(tmp_path: Path) 
     assert plan["dask_task_specs"][0]["experiment_id"] in {"cand_a", "cand_b"}
     assert plan["dask_task_specs"][0]["step_id"] == "plan"
     assert plan["dask_task_specs"][0]["step_hashes"]["definition_hash"]
+    if plan["dask_task_specs"][0]["experiment_id"] == "cand_a":
+        expected_hashes = _step_hashes(
+            _queue()["experiments"][0]["steps"][0],
+            experiment_metadata=_queue()["experiments"][0]["metadata"],
+        )
+        assert plan["dask_task_specs"][0]["step_hashes"] == expected_hashes
     assert plan["dask_task_specs"][0]["queue_state_writeback"]["required"] is True
+    assert (
+        plan["dask_task_specs"][0]["queue_state_writeback"]["step_hashes"]
+        == plan["dask_task_specs"][0]["step_hashes"]
+    )
     assert (
         plan["dask_task_specs"][0]["executor_boundary"]
         == "planning_only_task_must_write_back_to_experiment_queue_state"

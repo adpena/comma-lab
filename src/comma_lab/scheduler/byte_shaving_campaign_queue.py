@@ -32,6 +32,7 @@ from tac.optimization.proxy_candidate_contract import (
 from .byte_shaving_materializer_registry import (
     DQS1_PAIRSET_TARGET_KIND,
     INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
+    INVERSE_SCORER_CELL_TARGET_KIND,
     REGISTRY_SCHEMA,
     known_materializer_target_kinds,
     registry_manifest,
@@ -53,8 +54,10 @@ PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
+INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
 BYTE_RANGE_CHAIN_MANIFEST = CHAIN_MANIFEST_NAME
 INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
+INVERSE_SCORER_CELL_CANDIDATE_SCHEMA = "inverse_scorer_cell_candidate_v1"
 MATERIALIZER_EXECUTION_STEP_ID = "materialize_local_proof_chain"
 
 
@@ -771,6 +774,71 @@ def _inverse_scorer_action_functional_command(
     }
 
 
+def _inverse_scorer_cell_candidate_command(
+    context: Mapping[str, Any],
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    template = _path_context_value(context, "candidate_archive_template")
+    if template is None:
+        blockers.append("materializer_context_missing:candidate_archive_template")
+    action_functional = _path_context_value(context, "inverse_action_functional")
+    if action_functional is None:
+        blockers.append("materializer_context_missing:inverse_action_functional")
+    raw_digest = context.get("raw_contest_video_digest")
+    if not isinstance(raw_digest, str) or not raw_digest.strip():
+        blockers.append("materializer_context_missing:raw_contest_video_digest")
+    output_archive = _path_context_value(context, "output_archive")
+    if output_archive is None:
+        blockers.append("materializer_context_missing:output_archive")
+    manifest_out = _path_context_value(context, "manifest_out")
+    if manifest_out is None:
+        blockers.append("materializer_context_missing:manifest_out")
+    if blockers:
+        return [], blockers, {}
+
+    assert template is not None
+    assert action_functional is not None
+    assert isinstance(raw_digest, str)
+    assert output_archive is not None
+    assert manifest_out is not None
+    command = [
+        ".venv/bin/python",
+        INVERSE_SCORER_CELL_TOOL,
+        "--candidate-archive-template",
+        template,
+        "--inverse-action-functional",
+        action_functional,
+        "--raw-contest-video-digest",
+        raw_digest,
+        "--output-archive",
+        output_archive,
+        "--manifest-out",
+        manifest_out,
+    ]
+    runtime_proof = _path_context_value(context, "runtime_consumption_proof")
+    if runtime_proof is not None:
+        command.extend(["--runtime-consumption-proof", runtime_proof])
+    for atom_id in _path_list_context_value(context, "atom_id"):
+        command.extend(["--atom-id", atom_id])
+    for atom_id in _path_list_context_value(context, "atom_ids"):
+        command.extend(["--atom-id", atom_id])
+    selected_limit = _finite_int(context.get("selected_limit"))
+    if selected_limit is not None:
+        command.extend(["--selected-limit", str(selected_limit)])
+    if context.get("allow_overwrite") is True:
+        command.append("--allow-overwrite")
+    expected_output_sha = context.get("expected_output_sha256")
+    if isinstance(expected_output_sha, str) and expected_output_sha.strip():
+        command.extend(["--expected-output-sha256", expected_output_sha])
+    expected_manifest_sha = context.get("expected_manifest_sha256")
+    if isinstance(expected_manifest_sha, str) and expected_manifest_sha.strip():
+        command.extend(["--expected-manifest-sha256", expected_manifest_sha])
+    return command, [], {
+        "artifact_paths": [output_archive, manifest_out],
+        "include_postcondition_paths": True,
+    }
+
+
 def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
     blockers = ["materializer_work_queue_local_proof_chain_only"]
     if target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND:
@@ -778,6 +846,13 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
             [
                 "local_inverse_action_functional_proof_chain_only",
                 "inverse_action_functional_is_not_candidate_archive",
+            ]
+        )
+    if target_kind == INVERSE_SCORER_CELL_TARGET_KIND:
+        blockers.extend(
+            [
+                "inverse_scorer_cell_candidate_requires_receiver_proof",
+                "inverse_scorer_cell_candidate_requires_inflate_parity",
             ]
         )
     blockers.append("exact_auth_eval_required_before_score_claim")
@@ -872,6 +947,23 @@ def build_materializer_work_queue(
                     "path": output,
                     "key": "schema",
                     "equals": INVERSE_ACTION_FUNCTIONAL_SCHEMA,
+                }
+        elif (
+            unit_kind == "scorer_inverse_surface_cell"
+            and operation_family == "materialize_inverse_scorer_cell_candidate"
+            and target_kind == INVERSE_SCORER_CELL_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = _inverse_scorer_cell_candidate_command(
+                context
+            )
+            blockers.extend(command_blockers)
+            manifest_out = _path_context_value(context, "manifest_out")
+            if command and manifest_out is not None:
+                postcondition = {
+                    "type": "json_equals",
+                    "path": manifest_out,
+                    "key": "schema",
+                    "equals": INVERSE_SCORER_CELL_CANDIDATE_SCHEMA,
                 }
         else:
             blockers.append(

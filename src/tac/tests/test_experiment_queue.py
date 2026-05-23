@@ -12,6 +12,7 @@ from src.comma_lab.scheduler.experiment_queue import (
     ExperimentQueueError,
     assert_canonical_state_for_execution,
     assert_no_orphaned_steps_for_execution,
+    claim_ready_step_for_execution,
     connect_state,
     default_state_path,
     initialize_queue_state,
@@ -719,6 +720,226 @@ def test_experiment_queue_stale_ready_step_respects_pause(tmp_path: Path) -> Non
             for row in conn.execute("SELECT event_type FROM queue_events ORDER BY id").fetchall()
         ]
         assert "step_claim_refused_control_not_running" in events
+
+
+def test_experiment_queue_atomic_claim_respects_resource_limits_across_connections(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "queue.sqlite"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "atomic_resource_queue",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {"local_mlx": 1},
+            },
+            "experiments": [
+                {
+                    "id": "candidate",
+                    "steps": [
+                        {
+                            "id": "first",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [sys.executable, "-c", "print('first')"],
+                        },
+                        {
+                            "id": "second",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [sys.executable, "-c", "print('second')"],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(state_path) as conn_a, connect_state(state_path) as conn_b:
+        initialize_queue_state(conn_a, queue)
+        stale_ready_a = ready_steps(conn_a, queue)
+        stale_ready_b = ready_steps(conn_b, queue)
+
+        assert [step.step_id for step in stale_ready_a] == ["first"]
+        assert [step.step_id for step in stale_ready_b] == ["first"]
+
+        assert claim_ready_step_for_execution(
+            conn_a,
+            queue,
+            stale_ready_a[0],
+            event={"command": list(stale_ready_a[0].command), "test": "first_claim"},
+        ) is None
+        refused = claim_ready_step_for_execution(
+            conn_b,
+            queue,
+            stale_ready_b[0],
+            event={"command": list(stale_ready_b[0].command), "test": "second_claim"},
+        )
+
+        assert refused == "not_queued"
+        summary = queue_summary(conn_b, queue)
+        first_row = next(row for row in summary["steps"] if row["step_id"] == "first")
+        second_row = next(row for row in summary["steps"] if row["step_id"] == "second")
+        assert first_row["status"] == "running"
+        assert first_row["attempts"] == 1
+        assert second_row["status"] == "queued"
+        assert second_row["attempts"] == 0
+
+
+def test_experiment_queue_atomic_claim_refuses_stale_resource_capacity(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "queue.sqlite"
+    queue_payload = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "atomic_capacity_queue",
+        "controls": {
+            "mode": "running",
+            "max_concurrency": {"local_mlx": 1},
+        },
+        "experiments": [
+            {
+                "id": "candidate",
+                "steps": [
+                    {
+                        "id": "first",
+                        "resources": {"kind": "local_mlx"},
+                        "command": [sys.executable, "-c", "print('first')"],
+                    },
+                    {
+                        "id": "second",
+                        "resources": {"kind": "local_mlx"},
+                        "command": [sys.executable, "-c", "print('second')"],
+                    },
+                ],
+            }
+        ],
+    }
+    queue = normalize_queue_definition(queue_payload)
+    planning_payload = {
+        **queue_payload,
+        "controls": {"mode": "running", "max_concurrency": {"local_mlx": 2}},
+    }
+    planning_queue = normalize_queue_definition(planning_payload)
+
+    with connect_state(state_path) as conn_a, connect_state(state_path) as conn_b:
+        initialize_queue_state(conn_a, queue)
+        first_ready, second_ready = ready_steps(conn_a, planning_queue)
+
+        assert claim_ready_step_for_execution(
+            conn_a,
+            queue,
+            first_ready,
+            event={"command": list(first_ready.command), "test": "first_claim"},
+        ) is None
+        refused = claim_ready_step_for_execution(
+            conn_b,
+            queue,
+            second_ready,
+            event={"command": list(second_ready.command), "test": "second_claim"},
+        )
+
+        assert refused == "resource_limit_reached"
+        summary = queue_summary(conn_b, queue)
+        second_row = next(row for row in summary["steps"] if row["step_id"] == "second")
+        assert second_row["status"] == "queued"
+        assert second_row["attempts"] == 0
+        events = [
+            row["event_type"]
+            for row in conn_b.execute(
+                "SELECT event_type FROM queue_events ORDER BY id"
+            ).fetchall()
+        ]
+        assert "step_claim_refused_resource_limit_reached" in events
+
+
+def test_experiment_queue_stale_ready_step_refuses_definition_drift(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "queue.sqlite"
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+
+    def queue_for(path: Path) -> dict[str, object]:
+        return normalize_queue_definition(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "stale_definition_claim_queue",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "steps": [
+                            {
+                                "id": "same_step",
+                                "command": [
+                                    sys.executable,
+                                    "-c",
+                                    f"import pathlib; pathlib.Path({str(path)!r}).write_text('ok')",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+    with connect_state(state_path) as conn_a, connect_state(state_path) as conn_b:
+        original = queue_for(first)
+        initialize_queue_state(conn_a, original)
+        stale_ready = ready_steps(conn_a, original)[0]
+        changed = queue_for(second)
+        initialize_queue_state(conn_b, changed)
+
+        result = run_ready_step(
+            conn_a,
+            original,
+            stale_ready,
+            repo_root=tmp_path,
+            execute=True,
+            log_root=tmp_path / "logs",
+        )
+
+        assert result["executed"] is False
+        assert result["claim_refused"] is True
+        assert result["claim_refused_reason"] == "definition_changed"
+        summary = queue_summary(conn_a, changed)
+        assert summary["status_counts"] == {"queued": 1}
+        assert summary["steps"][0]["attempts"] == 0
+        assert not first.exists()
+        assert not second.exists()
+
+
+def test_experiment_queue_claim_refuses_missing_step_hashes(tmp_path: Path) -> None:
+    queue = _queue(tmp_path)
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        stale_ready = ready_steps(conn, queue)[0]
+        conn.execute(
+            """
+            UPDATE step_state
+            SET command_hash = NULL
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            ("unit_queue", "candidate_a", "materialize"),
+        )
+        conn.commit()
+
+        result = run_ready_step(
+            conn,
+            queue,
+            stale_ready,
+            repo_root=tmp_path,
+            execute=True,
+            log_root=tmp_path / "logs",
+        )
+
+        assert result["executed"] is False
+        assert result["claim_refused"] is True
+        assert result["claim_refused_reason"] == "definition_hash_missing"
+        summary = queue_summary(conn, queue)
+        first_step = next(row for row in summary["steps"] if row["step_id"] == "materialize")
+        assert first_step["status"] == "queued"
+        assert first_step["attempts"] == 0
 
 
 def test_experiment_queue_worker_runs_bounded_local_steps(tmp_path: Path) -> None:

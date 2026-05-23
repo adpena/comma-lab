@@ -43,6 +43,9 @@ class ReadyStep:
     priority: int
     resource_kind: str
     command: tuple[str, ...]
+    definition_hash: str
+    command_hash: str
+    postcondition_hash: str
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -52,6 +55,11 @@ class ReadyStep:
             "priority": self.priority,
             "resource_kind": self.resource_kind,
             "command": list(self.command),
+            "step_hashes": {
+                "definition_hash": self.definition_hash,
+                "command_hash": self.command_hash,
+                "postcondition_hash": self.postcondition_hash,
+            },
         }
 
 
@@ -500,7 +508,12 @@ def _create_schema(conn: sqlite3.Connection) -> None:
         str(row["name"])
         for row in conn.execute("PRAGMA table_info(step_state)").fetchall()
     }
-    for column in ("definition_hash", "command_hash", "postcondition_hash"):
+    for column in (
+        "definition_hash",
+        "command_hash",
+        "postcondition_hash",
+        "resource_kind",
+    ):
         if column not in columns:
             conn.execute(f"ALTER TABLE step_state ADD COLUMN {column} TEXT")
     conn.execute(
@@ -558,7 +571,8 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
             hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
             row = conn.execute(
                 """
-                SELECT status, definition_hash, command_hash, postcondition_hash
+                SELECT status, definition_hash, command_hash, postcondition_hash,
+                       resource_kind
                 FROM step_state
                 WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
                 """,
@@ -570,9 +584,9 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
                     INSERT INTO step_state(
                       queue_id, experiment_id, step_id, status, attempts,
                       updated_at_utc, last_event_json, definition_hash,
-                      command_hash, postcondition_hash
+                      command_hash, postcondition_hash, resource_kind
                     )
-                    VALUES (?, ?, ?, 'queued', 0, ?, NULL, ?, ?, ?)
+                    VALUES (?, ?, ?, 'queued', 0, ?, NULL, ?, ?, ?, ?)
                     """,
                     (
                         queue_id,
@@ -582,6 +596,7 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
                         hashes["definition_hash"],
                         hashes["command_hash"],
                         hashes["postcondition_hash"],
+                        _resource_kind(step),
                     ),
                 )
                 continue
@@ -592,21 +607,24 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
                 "postcondition_hash": row["postcondition_hash"],
             }
             missing_hash = any(value is None for value in previous_hashes.values())
+            missing_resource_kind = row["resource_kind"] is None
             changed_hash = any(
                 previous_hashes[key] is not None and previous_hashes[key] != hashes[key]
                 for key in hashes
             )
-            if missing_hash and not changed_hash:
+            if (missing_hash or missing_resource_kind) and not changed_hash:
                 conn.execute(
                     """
                     UPDATE step_state
-                    SET definition_hash = ?, command_hash = ?, postcondition_hash = ?
+                    SET definition_hash = ?, command_hash = ?, postcondition_hash = ?,
+                        resource_kind = ?
                     WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
                     """,
                     (
                         hashes["definition_hash"],
                         hashes["command_hash"],
                         hashes["postcondition_hash"],
+                        _resource_kind(step),
                         queue_id,
                         experiment["id"],
                         step["id"],
@@ -630,7 +648,8 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
                 """
                 UPDATE step_state
                 SET status = 'queued', updated_at_utc = ?, last_event_json = ?,
-                    definition_hash = ?, command_hash = ?, postcondition_hash = ?
+                    definition_hash = ?, command_hash = ?, postcondition_hash = ?,
+                    resource_kind = ?
                 WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
                 """,
                 (
@@ -639,6 +658,7 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
                     hashes["definition_hash"],
                     hashes["command_hash"],
                     hashes["postcondition_hash"],
+                    _resource_kind(step),
                     queue_id,
                     experiment["id"],
                     step["id"],
@@ -724,7 +744,8 @@ def _raise_on_running_definition_drift(conn: sqlite3.Connection, queue: Mapping[
             hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
             row = conn.execute(
                 """
-                SELECT status, definition_hash, command_hash, postcondition_hash
+                SELECT status, definition_hash, command_hash, postcondition_hash,
+                       resource_kind
                 FROM step_state
                 WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
                 """,
@@ -824,7 +845,8 @@ def set_control_mode(conn: sqlite3.Connection, queue_id: str, mode: str, *, reas
 def _state_rows(conn: sqlite3.Connection, queue_id: str) -> dict[tuple[str, str], sqlite3.Row]:
     rows = conn.execute(
         """
-        SELECT experiment_id, step_id, status, attempts, updated_at_utc, last_event_json
+        SELECT experiment_id, step_id, status, attempts, updated_at_utc,
+               last_event_json, definition_hash, command_hash, postcondition_hash
         FROM step_state WHERE queue_id = ?
         """,
         (queue_id,),
@@ -970,6 +992,10 @@ def ready_steps(
                     break
             if dependency_blocked:
                 continue
+            hashes = _step_hashes(
+                step,
+                experiment_metadata=dict(experiment.get("metadata") or {}),
+            )
             out.append(
                 ReadyStep(
                     queue_id=queue_id,
@@ -978,6 +1004,9 @@ def ready_steps(
                     priority=int(experiment["priority"]),
                     resource_kind=kind,
                     command=tuple(str(part) for part in step["command"]),
+                    definition_hash=hashes["definition_hash"],
+                    command_hash=hashes["command_hash"],
+                    postcondition_hash=hashes["postcondition_hash"],
                 )
             )
             running_by_resource[kind] = running_by_resource.get(kind, 0) + 1
@@ -1000,6 +1029,20 @@ def _lookup_step(queue: Mapping[str, Any], experiment_id: str, step_id: str) -> 
         for step in experiment["steps"]:
             if step["id"] == step_id:
                 return dict(step)
+    raise ExperimentQueueError(f"unknown step: {experiment_id}.{step_id}")
+
+
+def _lookup_step_with_experiment_metadata(
+    queue: Mapping[str, Any],
+    experiment_id: str,
+    step_id: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    for experiment in queue["experiments"]:
+        if experiment["id"] != experiment_id:
+            continue
+        for step in experiment["steps"]:
+            if step["id"] == step_id:
+                return dict(step), dict(experiment.get("metadata") or {})
     raise ExperimentQueueError(f"unknown step: {experiment_id}.{step_id}")
 
 
@@ -1099,55 +1142,302 @@ def _set_step_status(
     )
 
 
+def _claim_refused_event_type(reason: str) -> str:
+    if reason == "not_queued":
+        return "step_claim_refused"
+    return f"step_claim_refused_{reason}"
+
+
+def _record_step_claim_refusal(
+    conn: sqlite3.Connection,
+    *,
+    ready: ReadyStep,
+    reason: str,
+    event: Mapping[str, Any],
+    control_mode_value: str,
+    extra: Mapping[str, Any] | None = None,
+) -> str:
+    refused_event = {
+        **dict(event),
+        "claim_refused_reason": reason,
+        "control_mode": control_mode_value,
+        **(dict(extra) if extra is not None else {}),
+    }
+    append_event(
+        conn,
+        queue_id=ready.queue_id,
+        experiment_id=ready.experiment_id,
+        step_id=ready.step_id,
+        event_type=_claim_refused_event_type(reason),
+        payload=refused_event,
+    )
+    conn.commit()
+    return reason
+
+
+def _step_state_hashes(row: sqlite3.Row) -> dict[str, str | None]:
+    return {
+        "definition_hash": row["definition_hash"],
+        "command_hash": row["command_hash"],
+        "postcondition_hash": row["postcondition_hash"],
+    }
+
+
+def _step_hash_mismatches(
+    row: sqlite3.Row,
+    expected_hashes: Mapping[str, str],
+) -> dict[str, dict[str, str | None]]:
+    state_hashes = _step_state_hashes(row)
+    return {
+        key: {"state": state_hashes.get(key), "expected": expected_hashes[key]}
+        for key in expected_hashes
+        if state_hashes.get(key) != expected_hashes[key]
+    }
+
+
+def _running_resource_count(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    resource_kind: str,
+) -> int:
+    row = conn.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM step_state
+        WHERE queue_id = ? AND status = 'running' AND resource_kind = ?
+        """,
+        (str(queue["queue_id"]), resource_kind),
+    ).fetchone()
+    return int(row["count"] if row is not None else 0)
+
+
+def claim_ready_step_for_execution(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    ready: ReadyStep,
+    *,
+    event: Mapping[str, Any],
+) -> str | None:
+    """Atomically claim a ready step, enforcing queue mode, hashes, and resources."""
+
+    return _claim_step_running(conn, queue=queue, ready=ready, event=event)
+
+
 def _claim_step_running(
     conn: sqlite3.Connection,
     *,
-    queue_id: str,
-    experiment_id: str,
-    step_id: str,
+    queue: Mapping[str, Any],
+    ready: ReadyStep,
     event: Mapping[str, Any],
 ) -> str | None:
-    cursor = conn.execute(
-        """
-        UPDATE step_state
-        SET status = 'running',
-            attempts = attempts + 1,
-            updated_at_utc = ?,
-            last_event_json = ?
-        WHERE queue_id = ?
-          AND experiment_id = ?
-          AND step_id = ?
-          AND status = 'queued'
-          AND COALESCE(
-            (SELECT mode FROM queue_controls WHERE queue_controls.queue_id = ?),
-            'running'
-          ) = 'running'
-        """,
-        (_utc_now(), _json_text(dict(event)), queue_id, experiment_id, step_id, queue_id),
-    )
-    if cursor.rowcount != 1:
-        mode = control_mode(conn, queue_id)
-        reason = "control_not_running" if mode != "running" else "not_queued"
-        refused_event = {**dict(event), "claim_refused_reason": reason, "control_mode": mode}
-        append_event(
-            conn,
-            queue_id=queue_id,
-            experiment_id=experiment_id,
-            step_id=step_id,
-            event_type=(
-                "step_claim_refused_control_not_running"
-                if reason == "control_not_running"
-                else "step_claim_refused"
-            ),
-            payload=refused_event,
+    queue_id = str(queue["queue_id"])
+    if ready.queue_id != queue_id:
+        raise ExperimentQueueError(
+            f"ready step queue_id {ready.queue_id!r} does not match active queue {queue_id!r}"
         )
-        conn.commit()
-        return reason
+    step, experiment_metadata = _lookup_step_with_experiment_metadata(
+        queue,
+        ready.experiment_id,
+        ready.step_id,
+    )
+    step_resource_kind = _resource_kind(step)
+    expected_hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
+    ready_hashes = {
+        "definition_hash": ready.definition_hash,
+        "command_hash": ready.command_hash,
+        "postcondition_hash": ready.postcondition_hash,
+    }
+    max_concurrency = dict(queue["controls"].get("max_concurrency") or {})
+    resource_limit = int(max_concurrency.get(step_resource_kind, 1))
+    started_transaction = False
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+        started_transaction = True
+    try:
+        mode = control_mode(conn, queue_id)
+        if mode != "running":
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason="control_not_running",
+                event=event,
+                control_mode_value=mode,
+            )
+        ready_hash_mismatches = {
+            key: {"ready": ready_hashes[key], "active_queue": expected_hashes[key]}
+            for key in expected_hashes
+            if ready_hashes[key] != expected_hashes[key]
+        }
+        if ready_hash_mismatches:
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason="ready_step_definition_mismatch",
+                event=event,
+                control_mode_value=mode,
+                extra={
+                    "ready_hashes": ready_hashes,
+                    "active_queue_hashes": expected_hashes,
+                    "hash_mismatches": ready_hash_mismatches,
+                },
+            )
+        row = conn.execute(
+            """
+            SELECT status, attempts, definition_hash, command_hash, postcondition_hash,
+                   resource_kind
+            FROM step_state
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            (queue_id, ready.experiment_id, ready.step_id),
+        ).fetchone()
+        if row is None or row["status"] != "queued":
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason="not_queued",
+                event=event,
+                control_mode_value=mode,
+                extra={"current_status": str(row["status"]) if row else None},
+            )
+        hash_mismatches = _step_hash_mismatches(row, expected_hashes)
+        if hash_mismatches:
+            reason = (
+                "definition_hash_missing"
+                if any(value["state"] is None for value in hash_mismatches.values())
+                else "definition_changed"
+            )
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason=reason,
+                event=event,
+                control_mode_value=mode,
+                extra={
+                    "expected_hashes": dict(expected_hashes),
+                    "state_hashes": _step_state_hashes(row),
+                    "hash_mismatches": hash_mismatches,
+                },
+            )
+        if row["resource_kind"] != step_resource_kind:
+            reason = (
+                "resource_kind_missing"
+                if row["resource_kind"] is None
+                else "resource_kind_changed"
+            )
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason=reason,
+                event=event,
+                control_mode_value=mode,
+                extra={
+                    "state_resource_kind": row["resource_kind"],
+                    "step_resource_kind": step_resource_kind,
+                },
+            )
+        if ready.resource_kind != step_resource_kind:
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason="resource_kind_changed",
+                event=event,
+                control_mode_value=mode,
+                extra={
+                    "ready_resource_kind": ready.resource_kind,
+                    "step_resource_kind": step_resource_kind,
+                },
+            )
+        missing_dependencies: list[dict[str, str]] = []
+        for required in step.get("requires") or []:
+            required_experiment_id, required_step_id = _resolve_step_ref(
+                str(required),
+                default_experiment_id=ready.experiment_id,
+            )
+            required_row = conn.execute(
+                """
+                SELECT status
+                FROM step_state
+                WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                """,
+                (queue_id, required_experiment_id, required_step_id),
+            ).fetchone()
+            if required_row is not None and required_row["status"] == "succeeded":
+                continue
+            missing_dependencies.append(
+                {
+                    "experiment_id": required_experiment_id,
+                    "step_id": required_step_id,
+                    "status": str(required_row["status"]) if required_row else "missing",
+                }
+            )
+        if missing_dependencies:
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason="dependency_not_satisfied",
+                event=event,
+                control_mode_value=mode,
+                extra={"missing_dependencies": missing_dependencies},
+            )
+        running_count = _running_resource_count(conn, queue, step_resource_kind)
+        if resource_limit <= 0 or running_count >= resource_limit:
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason="resource_limit_reached",
+                event=event,
+                control_mode_value=mode,
+                extra={
+                    "resource_kind": step_resource_kind,
+                    "resource_limit": resource_limit,
+                    "running_count": running_count,
+                },
+            )
+        cursor = conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = attempts + 1,
+                updated_at_utc = ?,
+                last_event_json = ?
+            WHERE queue_id = ?
+              AND experiment_id = ?
+              AND step_id = ?
+              AND status = 'queued'
+              AND definition_hash = ?
+              AND command_hash = ?
+              AND postcondition_hash = ?
+              AND resource_kind = ?
+            """,
+            (
+                _utc_now(),
+                _json_text(dict(event)),
+                queue_id,
+                ready.experiment_id,
+                ready.step_id,
+                expected_hashes["definition_hash"],
+                expected_hashes["command_hash"],
+                expected_hashes["postcondition_hash"],
+                step_resource_kind,
+            ),
+        )
+        if cursor.rowcount != 1:
+            return _record_step_claim_refusal(
+                conn,
+                ready=ready,
+                reason="claim_lost_race",
+                event=event,
+                control_mode_value=mode,
+            )
+    except Exception:
+        if started_transaction:
+            conn.rollback()
+        raise
     append_event(
         conn,
-        queue_id=queue_id,
-        experiment_id=experiment_id,
-        step_id=step_id,
+        queue_id=ready.queue_id,
+        experiment_id=ready.experiment_id,
+        step_id=ready.step_id,
         event_type="step_running",
         payload=event,
     )
@@ -1175,12 +1465,15 @@ def run_ready_step(
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / f"{ts}.log"
 
-    running_event = {"command": list(ready.command), "log_path": str(log_path)}
-    claim_refused_reason = _claim_step_running(
+    running_event = {
+        "command": list(ready.command),
+        "log_path": str(log_path),
+        "resource_kind": ready.resource_kind,
+    }
+    claim_refused_reason = claim_ready_step_for_execution(
         conn,
-        queue_id=ready.queue_id,
-        experiment_id=ready.experiment_id,
-        step_id=ready.step_id,
+        queue,
+        ready,
         event=running_event,
     )
     if claim_refused_reason:
@@ -1498,11 +1791,10 @@ def _start_ready_step_process(
         "timeout_seconds": timeout_seconds,
         "parent_pid": os.getpid(),
     }
-    claim_refused_reason = _claim_step_running(
+    claim_refused_reason = claim_ready_step_for_execution(
         conn,
-        queue_id=ready.queue_id,
-        experiment_id=ready.experiment_id,
-        step_id=ready.step_id,
+        queue,
+        ready,
         event=running_event,
     )
     if claim_refused_reason:
@@ -2333,7 +2625,8 @@ def reconcile_satisfied_queued_steps(
                 """
                 UPDATE step_state
                 SET status = 'succeeded', updated_at_utc = ?, last_event_json = ?,
-                    definition_hash = ?, command_hash = ?, postcondition_hash = ?
+                    definition_hash = ?, command_hash = ?, postcondition_hash = ?,
+                    resource_kind = ?
                 WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
                 """,
                 (
@@ -2342,6 +2635,7 @@ def reconcile_satisfied_queued_steps(
                     hashes["definition_hash"],
                     hashes["command_hash"],
                     hashes["postcondition_hash"],
+                    _resource_kind(step),
                     queue_id,
                     experiment["id"],
                     step["id"],
@@ -2644,7 +2938,8 @@ def queue_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
             hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
             row = conn.execute(
                 """
-                SELECT status, definition_hash, command_hash, postcondition_hash
+                SELECT status, definition_hash, command_hash, postcondition_hash,
+                       resource_kind
                 FROM step_state
                 WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
                 """,
@@ -2663,17 +2958,20 @@ def queue_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
                 "postcondition_hash": row["postcondition_hash"],
             }
             missing_hash = any(value is None for value in previous_hashes.values())
+            missing_resource_kind = row["resource_kind"] is None
             changed_hash = any(
                 previous_hashes[key] is not None and previous_hashes[key] != hashes[key]
                 for key in hashes
             )
-            if missing_hash and not changed_hash:
+            if (missing_hash or missing_resource_kind) and not changed_hash:
                 missing_hash_steps.append(
                     {
                         **identity,
                         "status": str(row["status"]),
                         "previous_hashes": previous_hashes,
                         "new_hashes": hashes,
+                        "previous_resource_kind": row["resource_kind"],
+                        "new_resource_kind": _resource_kind(step),
                     }
                 )
             elif changed_hash:

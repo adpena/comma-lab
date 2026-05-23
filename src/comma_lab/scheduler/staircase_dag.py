@@ -459,11 +459,15 @@ def build_staircase_dag_from_experiment_queue(
                 continue
             step_id = _require_text(step.get("id"), f"{experiment_id}.step.id")
             resources = _mapping(step.get("resources"), f"{experiment_id}.{step_id}.resources")
+            step_hashes = _step_hashes(
+                step,
+                experiment_metadata=dict(experiment.get("metadata") or {}),
+            )
             metadata = {
                 "queue_id": queue.get("queue_id"),
                 "experiment_id": experiment_id,
                 "step_id": step_id,
-                "step_hashes": _step_hashes(step),
+                "step_hashes": step_hashes,
                 "postconditions": list(step.get("postconditions") or []),
                 "resource_requirements": resources,
             }
@@ -796,6 +800,7 @@ def plan_staircase_dispatch(
                 "queue_id": metadata.get("queue_id"),
                 "experiment_id": metadata.get("experiment_id"),
                 "step_id": metadata.get("step_id"),
+                "step_hashes": metadata.get("step_hashes"),
                 "executor_must_claim_step_before_execution": True,
                 "executor_must_record_terminal_step_event": True,
                 "terminal_statuses": ["succeeded", "failed"],
