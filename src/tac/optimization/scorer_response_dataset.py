@@ -4240,7 +4240,10 @@ def build_next_probe_plan(
                 "increase scorer gain by orders of magnitude."
             ),
             "input_rows": [] if best_scorer is None else [best_scorer["row_id"]],
-            "acceptance_gate": "byte_budget_margin_vs_break_even >= 0 before widening",
+            "acceptance_gate": (
+                "planning byte-budget margin >= 0 before widening; MLX rows "
+                "must use normalized_full_video_byte_budget_margin_vs_break_even"
+            ),
         },
         {
             "probe_id": "ll_response_dataset_expansion",
@@ -5126,13 +5129,18 @@ def render_markdown(dataset: dict[str, Any]) -> str:
         )
     lines.extend(["", "## Rows", ""])
     for row in dataset["rows"]:
+        planning_delta = _planning_delta_vs_baseline(row)
+        planning_scorer_delta = _planning_scorer_delta_vs_baseline(row)
+        planning_margin = _planning_byte_budget_margin(row)
+        planning_scope = _planning_scope(row)
         lines.append(
             "- "
             f"`{row['family']}` `{row['candidate_id']}` "
             f"fold={row['holdout_fold']} "
-            f"delta={row['delta_vs_baseline_score']} "
-            f"scorer_delta={row['scorer_delta_vs_baseline']} "
-            f"byte_margin={row['byte_budget_margin_vs_break_even']} "
+            f"planning_scope={planning_scope} "
+            f"delta={planning_delta} "
+            f"scorer_delta={planning_scorer_delta} "
+            f"byte_margin={planning_margin} "
             f"archive_bytes={row['archive_bytes']}"
         )
     lines.append("")

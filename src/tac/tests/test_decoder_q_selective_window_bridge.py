@@ -58,7 +58,7 @@ def _row(tmp_path: Path, *, rank: int, start: int, gain: float) -> dict:
         "source_batch_pairs": 1,
         "full_video_denominator": 600,
         "normalized_full_video_scorer_gain_vs_baseline": gain / 600.0,
-        "projected_full_video_delta_vs_baseline_score": 0.0,
+        "projected_full_video_delta_vs_baseline_score": -(gain / 600.0),
         "normalized_full_video_byte_budget_margin_vs_break_even": gain,
         "source_path": str(candidate_path),
         "window_baseline_source_path": str(baseline_path),
@@ -157,8 +157,11 @@ def test_bridge_plan_preserves_false_authority_and_requires_dqs1_materialization
     assert plan["materialized_decoder_q_candidate"]["mutation"]["tensor_name"] == "rgb_1.weight"
     assert plan["work_units"][0]["pair_window"] == [10, 11]
     assert plan["work_units"][0]["observed_mlx_window_gain"] == pytest.approx(0.002)
+    assert "observed_mlx_gain" not in plan["work_units"][0]
     assert plan["work_units"][0]["normalized_full_video_gain"] == pytest.approx(0.002 / 600.0)
+    assert "byte_budget_margin_vs_break_even" not in plan["work_units"][0]
     assert plan["coalesced_runs"][0]["pair_window"] == [10, 12]
+    assert "local_mlx_gain_sum_non_authoritative" not in plan["coalesced_runs"][0]
     assert plan["coalesced_runs"][0]["normalized_full_video_gain_sum_non_authoritative"] == pytest.approx(
         0.003 / 600.0
     )
@@ -180,6 +183,25 @@ def test_bridge_rejects_archive_sha_mismatch(tmp_path: Path) -> None:
     with pytest.raises(
         DecoderQSelectiveWindowBridgeError,
         match="does not match materialized candidate",
+    ):
+        build_decoder_q_selective_window_bridge_plan(
+            selection,
+            manifest,
+            repo_root=tmp_path,
+            lane_id="lane_decoder_q_bridge_test",
+        )
+
+
+def test_bridge_rejects_non_improving_projected_full_video_delta(tmp_path: Path) -> None:
+    selection = _selection(tmp_path)
+    manifest = _manifest(tmp_path)
+    for row in selection["selected_rows"]:
+        row["archive_sha256"] = manifest["archive_zip_sha256"]
+    selection["selected_rows"][0]["projected_full_video_delta_vs_baseline_score"] = 0.0
+
+    with pytest.raises(
+        DecoderQSelectiveWindowBridgeError,
+        match="projected full-video delta must be negative",
     ):
         build_decoder_q_selective_window_bridge_plan(
             selection,

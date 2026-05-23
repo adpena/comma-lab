@@ -172,6 +172,26 @@ def _validate_selection(selection: dict[str, Any]) -> list[dict[str, Any]]:
             raise DecoderQSelectiveWindowBridgeError(f"{label} gain must be positive")
         if (
             _as_float(
+                row.get("normalized_full_video_scorer_gain_vs_baseline"),
+                label=f"{label} normalized full-video gain",
+            )
+            <= 0
+        ):
+            raise DecoderQSelectiveWindowBridgeError(
+                f"{label} normalized full-video gain must be positive"
+            )
+        if (
+            _as_float(
+                row.get("projected_full_video_delta_vs_baseline_score"),
+                label=f"{label} projected full-video delta",
+            )
+            >= 0
+        ):
+            raise DecoderQSelectiveWindowBridgeError(
+                f"{label} projected full-video delta must be negative"
+            )
+        if (
+            _as_float(
                 row.get("normalized_full_video_byte_budget_margin_vs_break_even"),
                 label=f"{label} normalized margin",
             )
@@ -354,7 +374,6 @@ def _build_window_unit(
         "materialized_decoder_q_candidate_id": candidate["candidate_id"],
         "archive_sha256": archive_sha,
         "observed_mlx_window_gain": observed_gain,
-        "observed_mlx_gain": observed_gain,
         "source_n_samples": source_n_samples,
         "full_video_denominator": denominator,
         "normalized_full_video_gain": normalized_gain,
@@ -362,10 +381,7 @@ def _build_window_unit(
         "projected_full_video_delta_vs_baseline_score": row.get(
             "projected_full_video_delta_vs_baseline_score"
         ),
-        "normalized_full_video_byte_budget_margin_vs_break_even": row.get(
-            "normalized_full_video_byte_budget_margin_vs_break_even"
-        ),
-        "byte_budget_margin_vs_break_even": margin,
+        "normalized_full_video_byte_budget_margin_vs_break_even": margin,
         "predicted_delta_vs_baseline_score": row.get(
             "predicted_delta_vs_baseline_score"
         ),
@@ -443,7 +459,6 @@ def _coalesce_window_runs(
                 "source_ranks": ranks,
                 "unit_ids": [str(unit["unit_id"]) for unit in active],
                 "local_mlx_window_gain_sum_non_authoritative": raw_gain_sum,
-                "local_mlx_gain_sum_non_authoritative": raw_gain_sum,
                 "normalized_full_video_gain_sum_non_authoritative": (
                     normalized_gain_sum
                 ),
@@ -552,10 +567,9 @@ def build_decoder_q_selective_window_bridge_plan(
             "selected_archive_sha256": selected_archive_shas,
             "top_pair_window": top_unit["pair_window"],
             "top_observed_mlx_window_gain": top_unit["observed_mlx_window_gain"],
-            "top_observed_mlx_gain": top_unit["observed_mlx_window_gain"],
             "top_normalized_full_video_gain": top_unit["normalized_full_video_gain"],
-            "top_byte_budget_margin_vs_break_even": top_unit[
-                "byte_budget_margin_vs_break_even"
+            "top_normalized_full_video_byte_budget_margin_vs_break_even": top_unit[
+                "normalized_full_video_byte_budget_margin_vs_break_even"
             ],
             "all_units_prediction_agree_count": sum(
                 1 for unit in units if unit["prediction_agrees_with_observed_gain"] is True
@@ -639,7 +653,9 @@ def render_decoder_q_selective_window_bridge_markdown(plan: dict[str, Any]) -> s
                 pair=unit.get("pair_window"),
                 gain=unit.get("observed_mlx_window_gain"),
                 normalized=unit.get("normalized_full_video_gain"),
-                margin=unit.get("byte_budget_margin_vs_break_even"),
+                margin=unit.get(
+                    "normalized_full_video_byte_budget_margin_vs_break_even"
+                ),
                 agree=unit.get("prediction_agrees_with_observed_gain"),
             )
         )

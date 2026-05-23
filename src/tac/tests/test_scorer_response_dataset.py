@@ -1826,6 +1826,8 @@ def test_build_windowed_mlx_response_dataset_uses_matching_window_baseline(tmp_p
     rendered = render_markdown(dataset)
     assert EVIDENCE_TAG_MLX in rendered
     assert "Ready for exact-eval dispatch: `False`" in rendered
+    assert "planning_scope=normalized_full_video" in rendered
+    assert "byte_margin=" in rendered
 
 
 def test_build_windowed_mlx_response_dataset_accepts_reference_cache_baseline_identity(
@@ -3476,6 +3478,7 @@ def test_next_probe_plan_blocks_overbudget_coordinate_residual(tmp_path) -> None
     assert plan["score_claim"] is False
     assert plan["prohibitions"][0]["rule"] == "do_not_widen_coordinate_sparse_residual_sidecar"
     assert plan["probes"][0]["probe_id"] == "ll_byte_neutral_decoder_q_response_model"
+    assert "planning byte-budget margin" in plan["probes"][1]["acceptance_gate"]
     rendered = render_next_probe_plan_markdown(plan)
     assert "Next-Probe" in rendered
     assert "## Authority" in rendered
