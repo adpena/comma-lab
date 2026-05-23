@@ -1219,6 +1219,7 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
         scheduler_storage_expected_workload_root=str(tmp_path / "materializer_results"),
         scheduler_storage_expected_bytes=123456,
         scheduler_proactive_cleanup_roots=("experiments/results", ".omx/tmp"),
+        scheduler_proactive_cleanup_execute=True,
         scheduler_proactive_cleanup_cold_store_roots=(str(tmp_path / "cold_store"),),
     )
 
@@ -1253,6 +1254,7 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
         "tools/compact_experiment_artifacts.py",
     ]
     assert "experiments/results" in cleanup_step["command"]
+    assert "--execute" in cleanup_step["command"]
     materializer_step = execution_queue["experiments"][1]["steps"][0]
     assert materializer_step["requires"] == [
         f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
@@ -1337,6 +1339,81 @@ def test_materializer_execution_queue_blocks_outputs_outside_storage_root(
     )
 
     with pytest.raises(ExperimentQueueError, match="outside scheduler workload root"):
+        build_materializer_execution_queue(
+            work_queue,
+            queue_id="materializer_storage_preflight_fixture",
+            repo_root=tmp_path,
+            include_scheduler_preflight=True,
+            scheduler_results_root=str(tmp_path / "materializer_results"),
+            scheduler_storage_expected_workload_root=str(tmp_path / "materializer_results"),
+            scheduler_proactive_cleanup_execute=True,
+        )
+
+
+def test_materializer_execution_queue_requires_bound_storage_root_for_preflight(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            "zip_member_range_a": {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(tmp_path / "materializer_results" / "materializer_out"),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    with pytest.raises(
+        ExperimentQueueError,
+        match="scheduler_storage_expected_workload_root is required",
+    ):
+        build_materializer_execution_queue(
+            work_queue,
+            queue_id="materializer_storage_preflight_fixture",
+            repo_root=tmp_path,
+            include_scheduler_preflight=True,
+            scheduler_results_root="experiments/results",
+            scheduler_proactive_cleanup_execute=True,
+        )
+
+
+def test_materializer_execution_queue_rejects_dry_run_cleanup_gate(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            "zip_member_range_a": {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(tmp_path / "materializer_results" / "materializer_out"),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    with pytest.raises(
+        ExperimentQueueError,
+        match="scheduler_proactive_cleanup_execute must be true",
+    ):
         build_materializer_execution_queue(
             work_queue,
             queue_id="materializer_storage_preflight_fixture",
@@ -1937,6 +2014,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
             "4096",
             "--materializer-scheduler-proactive-cleanup-root",
             "experiments/results",
+            "--materializer-scheduler-proactive-cleanup-execute",
             "--repo-root",
             str(tmp_path),
             "--candidate-limit",

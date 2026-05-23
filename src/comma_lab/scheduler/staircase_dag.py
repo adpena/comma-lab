@@ -441,6 +441,19 @@ def normalize_resource_pools(raw_pools: Sequence[Mapping[str, Any]] | None) -> l
     return normalized
 
 
+def _normalize_max_concurrency(value: object, label: str) -> dict[str, int]:
+    if value is None:
+        return {}
+    raw = _mapping(value, label)
+    out: dict[str, int] = {}
+    for kind, count in raw.items():
+        out[normalize_resource_kind(kind, f"{label} key")] = _non_negative_int(
+            count,
+            f"{label}.{kind}",
+        )
+    return out
+
+
 def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
     schema = _require_text(payload.get("schema", STAIRCASE_DAG_SCHEMA), "schema")
     if schema != STAIRCASE_DAG_SCHEMA:
@@ -483,6 +496,10 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
                     controls.get("diversity_bucket_limit"),
                     "controls.diversity_bucket_limit",
                     default=2,
+                ),
+                "max_concurrency": _normalize_max_concurrency(
+                    controls.get("max_concurrency"),
+                    "controls.max_concurrency",
                 ),
             },
             "resource_pools": normalize_resource_pools(
@@ -632,6 +649,12 @@ def build_staircase_dag_from_experiment_queue(
             "dag_id": dag_id or f"{queue.get('queue_id')}_staircase",
             "controls": {
                 "mode": str(_mapping(queue.get("controls"), "queue.controls").get("mode", "running")),
+                "max_concurrency": dict(
+                    _mapping(queue.get("controls"), "queue.controls").get(
+                        "max_concurrency",
+                        {},
+                    )
+                ),
             },
             "resource_pools": list(resource_pools or default_local_resource_pools()),
             "storage": dict(storage_plan) if storage_plan is not None else None,
@@ -782,6 +805,21 @@ def plan_staircase_dispatch(
         for kind, slot_count in slots.items():
             key = (pool_id, str(kind))
             remaining[key] = max(0, int(slot_count) - running.get(key, 0))
+    queue_limits = controls.get("max_concurrency")
+    if isinstance(queue_limits, Mapping):
+        running_by_kind: dict[str, int] = {}
+        for (_pool_id, kind), count in running.items():
+            running_by_kind[str(kind)] = running_by_kind.get(str(kind), 0) + int(count)
+        for kind, limit in sorted(queue_limits.items()):
+            kind_text = str(kind)
+            budget = max(0, int(limit) - running_by_kind.get(kind_text, 0))
+            for key in sorted(
+                [item for item in remaining if item[1] == kind_text],
+                key=lambda item: item[0],
+            ):
+                keep = min(remaining[key], budget)
+                remaining[key] = keep
+                budget -= keep
 
     ready_candidates: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []

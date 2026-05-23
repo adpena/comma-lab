@@ -932,7 +932,15 @@ def validate_runtime_consumption_proof(
     submission_dir: Path | None,
     archive_sha256: str | None,
 ) -> tuple[list[str], dict[str, Any]]:
-    required = row.get("runtime_consumption_proof_required") is True
+    proof_backed_by_full_frame_parity = _has_strict_inverse_scorer_full_frame_parity(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    )
+    required = row.get("runtime_consumption_proof_required") is True or (
+        any(as_bool(row.get(field)) for field in TRUE_CHANGE_FIELDS)
+        and not proof_backed_by_full_frame_parity
+    )
     status = row.get("runtime_consumption_proof_status")
     proof_ref = row.get("runtime_consumption_proof_path")
     if not required and status is None and proof_ref is None:
@@ -942,6 +950,9 @@ def validate_runtime_consumption_proof(
     facts: dict[str, Any] = {
         "runtime_consumption_proof_required": required,
         "runtime_consumption_proof_status": status,
+        "runtime_consumption_proof_backed_by_full_frame_parity": (
+            proof_backed_by_full_frame_parity
+        ),
     }
     if status != "present":
         blockers.append("runtime_consumption_proof_missing")
@@ -1339,6 +1350,15 @@ def promoted_row(
             "runtime_content_tree_sha256"
         ],
         "runtime_manifest": runtime_manifest,
+        "runtime_consumption_proof_required": facts.get(
+            "runtime_consumption_proof_required"
+        ),
+        "runtime_consumption_proof_status": facts.get(
+            "runtime_consumption_proof_status"
+        ),
+        "runtime_consumption_proof_backed_by_full_frame_parity": facts.get(
+            "runtime_consumption_proof_backed_by_full_frame_parity"
+        ),
         "runtime_consumption_proof_path": repo_rel(
             facts["runtime_consumption_proof_path"],
             repo_root,

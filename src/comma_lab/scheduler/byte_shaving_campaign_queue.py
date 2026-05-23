@@ -1257,6 +1257,11 @@ def build_materializer_execution_queue(
         raise ExperimentQueueError("scheduler_storage_expected_bytes must be non-negative")
     if scheduler_proactive_cleanup_action not in {"move", "delete"}:
         raise ExperimentQueueError("scheduler_proactive_cleanup_action must be move or delete")
+    if include_scheduler_preflight and not scheduler_proactive_cleanup_execute:
+        raise ExperimentQueueError(
+            "scheduler_proactive_cleanup_execute must be true when "
+            "scheduler preflight gates materializer execution"
+        )
 
     queue_id = str(queue_id or "").strip()
     if not queue_id:
@@ -1292,6 +1297,12 @@ def build_materializer_execution_queue(
         if include_scheduler_preflight
         else None
     )
+    if include_scheduler_preflight and expected_output_root is None:
+        raise ExperimentQueueError(
+            "scheduler_storage_expected_workload_root is required when "
+            "scheduler_results_root is relative and scheduler preflight gates "
+            "materializer execution"
+        )
     if expected_output_root is not None:
         for index, row in enumerate(executable_rows, start=1):
             telemetry = row.get("telemetry")

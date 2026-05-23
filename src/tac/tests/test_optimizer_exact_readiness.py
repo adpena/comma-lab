@@ -99,6 +99,7 @@ def _make_submission(repo: Path) -> tuple[Path, int, str]:
 
 
 def _make_queue(repo: Path, submission: Path, archive_bytes: int, archive_sha: str) -> Path:
+    proof_path = _write_pr101_runtime_proof(submission, archive_sha, proven=True)
     return _write_json(
         repo / "queue.json",
         {
@@ -115,6 +116,9 @@ def _make_queue(repo: Path, submission: Path, archive_bytes: int, archive_sha: s
                     "predicted_contest_cpu_gha": 0.1,
                     "score_affecting_payload_changed": True,
                     "charged_bits_changed": True,
+                    "runtime_consumption_proof_required": True,
+                    "runtime_consumption_proof_status": "present",
+                    "runtime_consumption_proof_path": proof_path.relative_to(repo).as_posix(),
                     "dispatch_blockers": [
                         "optimizer_candidate_queue_is_planning_only",
                         "requires_exact_eval_readiness_gate",
@@ -696,6 +700,7 @@ def test_refuses_pr101_runtime_packet_without_runtime_consumption_proof(
 ) -> None:
     submission, archive_bytes, archive_sha = _make_submission(tmp_path)
     queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    (submission / "runtime_consumption_proof.json").unlink()
     _add_required_runtime_proof_fields(queue, submission, tmp_path, status="missing")
 
     result = promote_candidate_for_exact_eval(
@@ -708,6 +713,29 @@ def test_refuses_pr101_runtime_packet_without_runtime_consumption_proof(
     assert result["promoted_queue"] is None
     assert "runtime_consumption_proof_missing" in result["report"]["blockers"]
     assert "runtime_consumption_proof_file_missing" in result["report"]["blockers"]
+
+
+def test_refuses_changed_byte_closed_candidate_without_default_runtime_proof(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.pop("runtime_consumption_proof_required")
+    row.pop("runtime_consumption_proof_status")
+    row.pop("runtime_consumption_proof_path")
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "runtime_consumption_proof_missing" in result["report"]["blockers"]
 
 
 def test_refuses_pr101_runtime_packet_when_runtime_consumption_not_proven(

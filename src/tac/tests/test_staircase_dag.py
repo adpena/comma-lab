@@ -208,6 +208,42 @@ def test_staircase_dag_skips_nonqueued_experiments() -> None:
     assert plan_staircase_dispatch(dag)["selected_count"] == 0
 
 
+def test_staircase_dag_respects_queue_max_concurrency_over_pool_slots() -> None:
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "staircase_concurrency_fixture",
+        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "experiments": [
+            {
+                "id": f"cand_{index}",
+                "status": "queued",
+                "priority": index,
+                "steps": [
+                    {
+                        "id": "materialize",
+                        "kind": "command",
+                        "command": ["python", "-c", f"print({index})"],
+                        "resources": {"kind": "local_cpu"},
+                    }
+                ],
+            }
+            for index in range(5)
+        ],
+    }
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="fixture_concurrency_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 8}, "memory_gb": 128, "disk_gb": 80}
+        ],
+    )
+
+    plan = plan_staircase_dispatch(dag, max_nodes=5)
+
+    assert dag["controls"]["max_concurrency"] == {"local_cpu": 1}
+    assert plan["selected_count"] == 1
+
+
 def test_staircase_dag_respects_queue_control_pause() -> None:
     queue = _queue()
     queue["controls"]["mode"] = "paused"
