@@ -45,6 +45,11 @@ from tac.local_acceleration.mlx_score_calibration import (
     STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE,
 )
 from tac.optimization.candidate_evidence_contract import CONTEST_UNCOMPRESSED_BYTES
+from tac.optimization.normalized_objective import (
+    NormalizedObjectiveError,
+    compute_normalized_full_video_gain,
+    require_normalized_full_video_objective,
+)
 
 SCHEMA = "scorer_response_dataset.v1"
 ROW_SCHEMA = "scorer_response_row.v1"
@@ -73,6 +78,12 @@ PREDICTION_CANDIDATE_FAMILY_TOP_K = (8, 16, 32)
 PREDICTION_CANDIDATE_FAMILY_MIN_PEARSON_R = 0.2
 PREDICTION_CANDIDATE_FAMILY_MIN_TOP_K_OVERLAP = 1
 PREDICTION_CANDIDATE_FAMILY_MIN_NEGATIVE_PREDICTIONS = 1
+_NORMALIZED_OBJECTIVE_OUTPUT_FIELDS = (
+    "normalized_full_video_scorer_gain_vs_baseline",
+    "projected_full_video_delta_vs_baseline_score",
+    "break_even_added_bytes_from_normalized_full_video_gain",
+    "normalized_full_video_byte_budget_margin_vs_break_even",
+)
 
 
 _FALSE_AUTHORITY_FIELDS = (
@@ -1001,11 +1012,14 @@ def normalize_response_row(
     normalized_break_even_added_bytes = None
     normalized_byte_budget_margin = None
     if observed_scorer_gain is not None and source_n_samples is not None:
-        normalized_full_video_scorer_gain = (
-            observed_scorer_gain
-            * float(source_n_samples)
-            / float(CONTEST_EXACT_SAMPLE_COUNT)
-        )
+        try:
+            normalized_full_video_scorer_gain = compute_normalized_full_video_gain(
+                observed_scorer_gain,
+                source_n_samples,
+                full_video_denominator=CONTEST_EXACT_SAMPLE_COUNT,
+            )
+        except NormalizedObjectiveError as exc:
+            raise ScorerResponseDatasetError(f"{row_id}: {exc}") from exc
         if rate_delta is not None:
             projected_full_video_delta = rate_delta - normalized_full_video_scorer_gain
         normalized_break_even_added_bytes = (
@@ -1016,7 +1030,7 @@ def normalize_response_row(
                 normalized_break_even_added_bytes - float(added_archive_bytes)
             )
     local = _local_pair_summary(candidate)
-    return {
+    row = {
         "schema": ROW_SCHEMA,
         "row_id": row_id,
         "holdout_fold": _sha_fold(row_id),
@@ -1098,6 +1112,8 @@ def normalize_response_row(
         "target_raw_sha256": _get_path(candidate, ("inputs", "target_raw_sha256")),
         **local,
     }
+    _require_normalized_objective_if_present(row, label=row_id)
+    return row
 
 
 def build_response_dataset(
@@ -4941,12 +4957,42 @@ def _require_present_false_authority(payload: dict[str, Any], *, label: str) -> 
             raise ScorerResponseDatasetError(f"{label} {key} must be false")
 
 
+def _has_normalized_objective_fields(row: dict[str, Any]) -> bool:
+    return any(row.get(key) is not None for key in _NORMALIZED_OBJECTIVE_OUTPUT_FIELDS)
+
+
+def _require_normalized_objective_if_present(
+    row: dict[str, Any],
+    *,
+    label: str,
+) -> dict[str, float] | None:
+    if not _has_normalized_objective_fields(row):
+        return None
+    try:
+        return require_normalized_full_video_objective(row, label=label)
+    except NormalizedObjectiveError as exc:
+        raise ScorerResponseDatasetError(str(exc)) from exc
+
+
+def _mlx_normalized_objective_for_planning(row: dict[str, Any]) -> dict[str, float] | None:
+    if not _is_mlx_scorer_response_row(row):
+        return None
+    return _require_normalized_objective_if_present(
+        row,
+        label=str(row.get("row_id") or "mlx scorer-response row"),
+    )
+
+
 def _planning_scope(row: dict[str, Any]) -> str:
-    return "normalized_full_video" if _is_mlx_scorer_response_row(row) else "native_row"
+    if not _is_mlx_scorer_response_row(row):
+        return "native_row"
+    if _mlx_normalized_objective_for_planning(row) is not None:
+        return "normalized_full_video"
+    return "native_row_missing_normalized_full_video_objective"
 
 
 def _planning_delta_vs_baseline(row: dict[str, Any]) -> float | None:
-    if _is_mlx_scorer_response_row(row):
+    if _mlx_normalized_objective_for_planning(row) is not None:
         value = _as_float(row.get("projected_full_video_delta_vs_baseline_score"))
         if value is not None:
             return value
@@ -4954,7 +5000,7 @@ def _planning_delta_vs_baseline(row: dict[str, Any]) -> float | None:
 
 
 def _planning_scorer_gain(row: dict[str, Any]) -> float | None:
-    if _is_mlx_scorer_response_row(row):
+    if _mlx_normalized_objective_for_planning(row) is not None:
         value = _as_float(row.get("normalized_full_video_scorer_gain_vs_baseline"))
         if value is not None:
             return value
@@ -4969,7 +5015,7 @@ def _planning_scorer_delta_vs_baseline(row: dict[str, Any]) -> float | None:
 
 
 def _planning_break_even_bytes(row: dict[str, Any]) -> float | None:
-    if _is_mlx_scorer_response_row(row):
+    if _mlx_normalized_objective_for_planning(row) is not None:
         value = _as_float(row.get("break_even_added_bytes_from_normalized_full_video_gain"))
         if value is not None:
             return value
@@ -4977,7 +5023,7 @@ def _planning_break_even_bytes(row: dict[str, Any]) -> float | None:
 
 
 def _planning_byte_budget_margin(row: dict[str, Any]) -> float | None:
-    if _is_mlx_scorer_response_row(row):
+    if _mlx_normalized_objective_for_planning(row) is not None:
         value = _as_float(row.get("normalized_full_video_byte_budget_margin_vs_break_even"))
         if value is not None:
             return value

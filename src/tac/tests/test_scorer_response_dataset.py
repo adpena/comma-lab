@@ -622,6 +622,19 @@ def test_build_response_dataset_accepts_direct_mlx_scorer_response_payload(tmp_p
     assert row["source_batch_pairs"] == 2
     assert row["source_pair_window"] == [16, 20]
     assert row["source_posenet_sha256"] == "p" * 64
+    expected_normalized_gain = (
+        row["observed_scorer_gain_vs_baseline"]
+        * row["source_n_samples"]
+        / row["full_video_denominator"]
+    )
+    assert math.isclose(
+        row["normalized_full_video_scorer_gain_vs_baseline"],
+        expected_normalized_gain,
+    )
+    assert math.isclose(
+        row["projected_full_video_delta_vs_baseline_score"],
+        row["rate_delta_vs_baseline"] - expected_normalized_gain,
+    )
 
 
 def test_build_response_dataset_preserves_zero_source_start_pair(tmp_path) -> None:
@@ -721,6 +734,45 @@ def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
         "do_not_use_mlx_rows_for_exact_eval_spend_triage_without_production_contract"
         not in rules
     )
+
+
+def test_next_probe_plan_rejects_mismatched_mlx_normalized_objective() -> None:
+    false_authority = {
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    bad_row = {
+        "schema": "scorer_response_row.v1",
+        "row_id": "mlx-row-bad-normalized-objective",
+        "family": "mlx_scorer_response",
+        "delta_vs_baseline_score": -0.012,
+        "scorer_delta_vs_baseline": -0.012,
+        "observed_scorer_gain_vs_baseline": 0.012,
+        "source_n_samples": 1,
+        "full_video_denominator": 600,
+        "added_archive_bytes": 0,
+        "normalized_full_video_scorer_gain_vs_baseline": 0.012,
+        "projected_full_video_delta_vs_baseline_score": -0.012,
+        "normalized_full_video_byte_budget_margin_vs_break_even": (
+            0.012 / RATE_SCORE_PER_BYTE
+        ),
+        **false_authority,
+    }
+
+    with pytest.raises(
+        ScorerResponseDatasetError,
+        match="normalized_full_video_gain_mismatch",
+    ):
+        build_next_probe_plan(
+            {
+                "schema": "scorer_response_dataset.v1",
+                "summary": {"row_count": 1},
+                "rows": [bad_row],
+            }
+        )
 
 
 def test_mlx_torch_parity_sweep_gate_blocks_failed_strict_sweep() -> None:
