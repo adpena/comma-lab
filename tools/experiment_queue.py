@@ -39,6 +39,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     queue_summary,
     ready_steps,
     reconcile_satisfied_queued_steps,
+    reconcile_stale_running_steps,
     resolve_worker_max_parallel,
     retire_orphaned_steps,
     rewind_step,
@@ -371,6 +372,22 @@ def cmd_reconcile_satisfied(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reconcile_stale_running(args: argparse.Namespace) -> int:
+    queue, state = _load(args)
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        before = queue_summary(conn, queue, repo_root=REPO_ROOT)
+        reconciled = reconcile_stale_running_steps(
+            conn,
+            queue,
+            repo_root=REPO_ROOT,
+            stale_after_seconds=args.stale_after_seconds,
+        )
+        after = queue_summary(conn, queue, repo_root=REPO_ROOT)
+    _json_print({"state": str(state), "before": before, "after": after, **reconciled})
+    return 0
+
+
 def _blocking_orphan_count(conn: sqlite3.Connection, queue: dict) -> int:
     return sum(
         1
@@ -530,6 +547,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="mark queued steps succeeded when their postconditions already pass",
     )
     sp.set_defaults(func=cmd_reconcile_satisfied)
+
+    sp = sub.add_parser(
+        "reconcile-stale-running",
+        help="fail or recover local running rows whose recorded process is gone",
+    )
+    sp.add_argument("--stale-after-seconds", type=float, default=300.0)
+    sp.set_defaults(func=cmd_reconcile_stale_running)
 
     return parser.parse_args(argv)
 

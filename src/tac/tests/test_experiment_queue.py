@@ -25,6 +25,7 @@ from src.comma_lab.scheduler.experiment_queue import (
     queue_summary,
     ready_steps,
     reconcile_satisfied_queued_steps,
+    reconcile_stale_running_steps,
     resolve_worker_max_parallel,
     retire_orphaned_steps,
     rewind_step,
@@ -888,6 +889,151 @@ def test_experiment_queue_atomic_claim_refuses_stale_resource_capacity(
             ).fetchall()
         ]
         assert "step_claim_refused_resource_limit_reached" in events
+
+
+def test_reconcile_stale_running_step_recovers_when_postconditions_pass(
+    tmp_path: Path,
+) -> None:
+    marker = tmp_path / "first.done"
+    marker.write_text("ok", encoding="utf-8")
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "stale_running_recovery_queue",
+            "controls": {"mode": "running", "max_concurrency": {"local_mlx": 1}},
+            "experiments": [
+                {
+                    "id": "candidate",
+                    "steps": [
+                        {
+                            "id": "first",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [sys.executable, "-c", "print('first')"],
+                            "postconditions": [
+                                {"type": "path_exists", "path": marker.name}
+                            ],
+                        },
+                        {
+                            "id": "second",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [sys.executable, "-c", "print('second')"],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = 1,
+                resource_kind = 'local_mlx',
+                last_event_json = ?
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            (
+                json.dumps({"pid": 999999, "parent_pid": 999999}),
+                "stale_running_recovery_queue",
+                "candidate",
+                "first",
+            ),
+        )
+        conn.commit()
+
+        assert ready_steps(conn, queue, repo_root=tmp_path) == []
+        result = reconcile_stale_running_steps(conn, queue, repo_root=tmp_path)
+        summary = queue_summary(conn, queue, repo_root=tmp_path)
+
+    assert result["reconciled_step_count"] == 1
+    assert result["reconciled_steps"][0]["status"] == "succeeded"
+    assert summary["status_counts"] == {"queued": 1, "succeeded": 1}
+    assert summary["ready_steps"][0]["step_id"] == "second"
+
+
+def test_worker_reclaims_failed_stale_running_step_before_launching_next(
+    tmp_path: Path,
+) -> None:
+    second_marker = tmp_path / "second.done"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "stale_running_worker_queue",
+            "controls": {"mode": "running", "max_concurrency": {"local_mlx": 1}},
+            "experiments": [
+                {
+                    "id": "candidate",
+                    "steps": [
+                        {
+                            "id": "first",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [sys.executable, "-c", "print('first')"],
+                            "postconditions": [
+                                {"type": "path_exists", "path": "missing.done"}
+                            ],
+                        },
+                        {
+                            "id": "second",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib; "
+                                    f"pathlib.Path({str(second_marker)!r}).write_text('ok')"
+                                ),
+                            ],
+                            "postconditions": [
+                                {"type": "path_exists", "path": str(second_marker)}
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running',
+                attempts = 1,
+                resource_kind = 'local_mlx',
+                last_event_json = ?
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            (
+                json.dumps({"pid": 999999, "parent_pid": 999999}),
+                "stale_running_worker_queue",
+                "candidate",
+                "first",
+            ),
+        )
+        conn.commit()
+
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=1,
+            max_parallel=0,
+            poll_interval_seconds=0.01,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+        summary = queue_summary(conn, queue, repo_root=tmp_path)
+
+    assert result["success_count"] == 1
+    assert result["stale_running_reconciliations"][0]["reconciled_step_count"] == 1
+    assert result["stale_running_reconciliations"][0]["reconciled_steps"][0]["status"] == "failed"
+    assert summary["status_counts"] == {"failed": 1, "succeeded": 1}
 
 
 def test_experiment_queue_stale_ready_step_refuses_definition_drift(

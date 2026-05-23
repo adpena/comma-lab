@@ -1482,6 +1482,219 @@ def _running_resource_count(
     return int(row["count"] if row is not None else 0)
 
 
+def _process_alive(pid: int | None) -> bool:
+    if pid is None or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _last_event(row: sqlite3.Row) -> dict[str, Any]:
+    raw = row["last_event_json"]
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return dict(payload) if isinstance(payload, Mapping) else {}
+
+
+def _updated_age_seconds(row: sqlite3.Row) -> float | None:
+    raw = row["updated_at_utc"]
+    if not isinstance(raw, str) or not raw:
+        return None
+    try:
+        updated = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return max(0.0, (datetime.now(UTC) - updated).total_seconds())
+
+
+def _event_positive_int(event: Mapping[str, Any], key: str) -> int | None:
+    value = event.get(key)
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _event_number(event: Mapping[str, Any], key: str) -> float | None:
+    value = event.get(key)
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def reconcile_stale_running_steps(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+    stale_after_seconds: float = 300.0,
+) -> dict[str, Any]:
+    """Recover local ``running`` rows whose recorded worker process is gone."""
+
+    if stale_after_seconds < 0:
+        raise ExperimentQueueError("stale_after_seconds must be non-negative")
+    queue_id = str(queue["queue_id"])
+    repo = Path(repo_root)
+    step_lookup = _step_lookup_by_key(queue)
+    rows = conn.execute(
+        """
+        SELECT experiment_id, step_id, status, attempts, updated_at_utc,
+               last_event_json, resource_kind
+        FROM step_state
+        WHERE queue_id = ? AND status = 'running'
+        ORDER BY experiment_id, step_id
+        """,
+        (queue_id,),
+    ).fetchall()
+    inspected = 0
+    recovered: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    now_epoch = time.time()
+    for row in rows:
+        inspected += 1
+        experiment_id = str(row["experiment_id"])
+        step_id = str(row["step_id"])
+        step = step_lookup.get((experiment_id, step_id))
+        if step is None:
+            skipped.append(
+                {
+                    "experiment_id": experiment_id,
+                    "step_id": step_id,
+                    "reason": "step_not_in_active_queue",
+                }
+            )
+            continue
+        resource_kind = str(row["resource_kind"] or _resource_kind(step))
+        if resource_kind not in LOCAL_RESOURCE_KINDS:
+            skipped.append(
+                {
+                    "experiment_id": experiment_id,
+                    "step_id": step_id,
+                    "resource_kind": resource_kind,
+                    "reason": "non_local_resource",
+                }
+            )
+            continue
+        event = _last_event(row)
+        pid = _event_positive_int(event, "pid")
+        parent_pid = _event_positive_int(event, "parent_pid")
+        child_alive = _process_alive(pid)
+        parent_alive = _process_alive(parent_pid)
+        age_seconds = _updated_age_seconds(row)
+        timeout_deadline = _event_number(event, "timeout_deadline_epoch_seconds")
+        timed_out = timeout_deadline is not None and now_epoch >= timeout_deadline
+        if child_alive:
+            skipped.append(
+                {
+                    "experiment_id": experiment_id,
+                    "step_id": step_id,
+                    "pid": pid,
+                    "reason": "child_process_alive",
+                }
+            )
+            continue
+        if parent_alive:
+            skipped.append(
+                {
+                    "experiment_id": experiment_id,
+                    "step_id": step_id,
+                    "parent_pid": parent_pid,
+                    "reason": "worker_parent_alive",
+                }
+            )
+            continue
+        if pid is None and (
+            age_seconds is None or age_seconds < stale_after_seconds
+        ):
+            skipped.append(
+                {
+                    "experiment_id": experiment_id,
+                    "step_id": step_id,
+                    "age_seconds": age_seconds,
+                    "reason": "missing_child_pid_within_grace",
+                }
+            )
+            continue
+
+        failed_conditions, postcondition_errors = _evaluate_postconditions(step, repo=repo)
+        succeeded = not failed_conditions and not postcondition_errors and bool(
+            step.get("postconditions")
+        )
+        recovery_event = {
+            **event,
+            "stale_running_reconciled": True,
+            "previous_status": "running",
+            "pid": pid,
+            "parent_pid": parent_pid,
+            "resource_kind": resource_kind,
+            "age_seconds": age_seconds,
+            "timed_out": timed_out,
+            "execution_error": None
+            if succeeded
+            else "stale_running_process_missing",
+            "failed_postconditions": failed_conditions,
+            "postcondition_errors": postcondition_errors,
+        }
+        _set_step_status(
+            conn,
+            queue_id=queue_id,
+            experiment_id=experiment_id,
+            step_id=step_id,
+            status="succeeded" if succeeded else "failed",
+            event=recovery_event,
+        )
+        append_event(
+            conn,
+            queue_id=queue_id,
+            experiment_id=experiment_id,
+            step_id=step_id,
+            event_type="step_reconciled_from_stale_running",
+            payload=recovery_event,
+        )
+        recovered.append(
+            {
+                "experiment_id": experiment_id,
+                "step_id": step_id,
+                "status": "succeeded" if succeeded else "failed",
+                "resource_kind": resource_kind,
+                "pid": pid,
+                "parent_pid": parent_pid,
+                "timed_out": timed_out,
+            }
+        )
+    conn.commit()
+    return {
+        "schema": "experiment_queue_stale_running_reconciliation.v1",
+        "queue_id": queue_id,
+        "inspected_running_step_count": inspected,
+        "reconciled_step_count": len(recovered),
+        "reconciled_steps": recovered,
+        "skipped_step_count": len(skipped),
+        "skipped_steps": skipped,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def claim_ready_step_for_execution(
     conn: sqlite3.Connection,
     queue: Mapping[str, Any],
@@ -2398,6 +2611,7 @@ def run_queue_worker(
         requested_max_parallel,
         allow_cloud=allow_cloud,
     )
+    stale_running_reconciliations: list[dict[str, Any]] = []
 
     def _active_queue() -> Mapping[str, Any]:
         nonlocal active_queue, max_parallel, resource_limits
@@ -2410,6 +2624,14 @@ def run_queue_worker(
             )
         initialize_queue_state(conn, refreshed)
         assert_no_orphaned_steps_for_execution(conn, refreshed, allow_orphaned_state=allow_orphaned_state)
+        if execute:
+            reconciliation = reconcile_stale_running_steps(
+                conn,
+                refreshed,
+                repo_root=repo_root,
+            )
+            if reconciliation["reconciled_step_count"]:
+                stale_running_reconciliations.append(reconciliation)
         active_queue = refreshed
         if requested_max_parallel in (None, 0):
             max_parallel, resource_limits = resolve_worker_max_parallel(
@@ -2422,6 +2644,14 @@ def run_queue_worker(
         return active_queue
 
     assert_no_orphaned_steps_for_execution(conn, active_queue, allow_orphaned_state=allow_orphaned_state)
+    if execute:
+        reconciliation = reconcile_stale_running_steps(
+            conn,
+            active_queue,
+            repo_root=repo_root,
+        )
+        if reconciliation["reconciled_step_count"]:
+            stale_running_reconciliations.append(reconciliation)
     started_at = _utc_now()
     append_event(
         conn,
@@ -2445,6 +2675,7 @@ def run_queue_worker(
             "orphaned_state_rationale": orphaned_state_rationale,
             "noncanonical_state_rationale": noncanonical_state_rationale,
             "max_experiments": max_experiments,
+            "stale_running_reconciliations": stale_running_reconciliations,
         },
     )
     conn.commit()
@@ -2514,6 +2745,7 @@ def run_queue_worker(
             "success_count": 0,
             "failure_count": 0,
             "claim_refused_count": 0,
+            "stale_running_reconciliations": stale_running_reconciliations,
             "idle_cycles": 0,
             "planned_steps": selected,
             "step_results": [],
@@ -2682,6 +2914,7 @@ def run_queue_worker(
             "success_count": success_count,
             "failure_count": failure_count,
             "claim_refused_count": claim_refused_count,
+            "stale_running_reconciliations": stale_running_reconciliations,
             "idle_cycles": idle_cycles,
         },
     )
@@ -2704,6 +2937,7 @@ def run_queue_worker(
         "success_count": success_count,
         "failure_count": failure_count,
         "claim_refused_count": claim_refused_count,
+        "stale_running_reconciliations": stale_running_reconciliations,
         "idle_cycles": idle_cycles,
         "planned_steps": [],
         "step_results": step_results,
@@ -3460,6 +3694,7 @@ __all__ = [
     "queue_summary",
     "ready_steps",
     "reconcile_satisfied_queued_steps",
+    "reconcile_stale_running_steps",
     "resolve_worker_max_parallel",
     "retire_orphaned_steps",
     "rewind_step",
