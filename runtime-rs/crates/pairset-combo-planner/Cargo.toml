@@ -1,0 +1,13 @@
+[package]
+name = "pairset-combo-planner"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Native Rust/Rayon beam search for DQS1 pairset component combo planning."
+rust-version = "1.85"
+publish = false
+
+[dependencies]
+rayon = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

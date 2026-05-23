@@ -26,6 +26,10 @@ from tac.optimization.normalized_objective import (
     NormalizedObjectiveError,
     require_normalized_full_video_objective,
 )
+from tac.optimization.pairset_combo_rust_bridge import (
+    PairsetComboRustBridgeError,
+    plan_pairset_component_combos_native,
+)
 from tac.optimization.pairset_component_marginal import (
     CONTEST_RATE_DENOMINATOR_BYTES,
     CONTEST_RATE_MULTIPLIER,
@@ -48,6 +52,8 @@ DEFAULT_PAIRSET_VARIANCE = 2.5e-8
 DEFAULT_PAIRSET_OBSERVATION_MODEL_VARIANCE_FLOOR = 2.5e-9
 DEFAULT_OUTSIDE_CLASS_VARIANCE = 1e-3
 DEFAULT_COMPONENT_COMBO_VARIANCE_PER_PAIR = 7.5e-9
+DEFAULT_COMPONENT_COMBO_BEAM_WIDTH = 64
+DEFAULT_COMPONENT_COMBO_POOL_LIMIT = 48
 _EXACT_AXIS_ALIASES = {
     "contest_cpu": "contest_cpu",
     "contest-CPU": "contest_cpu",
@@ -852,6 +858,117 @@ def _transfer_status(axis_statuses: Mapping[str, str]) -> str:
     return "mixed_axis_status"
 
 
+def _ordered_pair_key(pair_a: int, pair_b: int) -> tuple[int, int]:
+    left = int(pair_a)
+    right = int(pair_b)
+    return (left, right) if left <= right else (right, left)
+
+
+def _dropped_pair_indices_from_operation(operation: Mapping[str, Any]) -> list[int]:
+    raw = operation.get("dropped_pair_indices")
+    if raw is None and operation.get("dropped_pair_index") is not None:
+        raw = [operation.get("dropped_pair_index")]
+    if raw is None:
+        return []
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        raise CrossFamilyCandidatePortfolioError(
+            "acquisition_operation.dropped_pair_indices must be a sequence"
+        )
+    out: list[int] = []
+    for value in raw:
+        if isinstance(value, bool):
+            raise CrossFamilyCandidatePortfolioError(
+                "acquisition_operation.dropped_pair_indices values must be integers"
+            )
+        try:
+            out.append(int(value))
+        except (TypeError, ValueError) as exc:
+            raise CrossFamilyCandidatePortfolioError(
+                "acquisition_operation.dropped_pair_indices values must be integers"
+            ) from exc
+    return out
+
+
+def _build_pairwise_interaction_terms(
+    *,
+    axis: str,
+    drop_two_rows: Sequence[Mapping[str, Any]],
+    drop_one_marginals: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Estimate second-order pair interactions from measured drop-two rows."""
+
+    drop_one_by_pair = {
+        int(row["pair_index"]): row
+        for row in drop_one_marginals
+        if row.get("pair_index") is not None
+    }
+    terms: list[dict[str, Any]] = []
+    for row in drop_two_rows:
+        operation = row["operation"]
+        dropped_pairs = sorted(set(_dropped_pair_indices_from_operation(operation)))
+        if len(dropped_pairs) != 2:
+            continue
+        if any(pair not in drop_one_by_pair for pair in dropped_pairs):
+            continue
+        first_order = [drop_one_by_pair[pair] for pair in dropped_pairs]
+        observed = dict(row["component_deltas"])
+        first_order_components = {
+            key: sum(
+                _finite_float(
+                    (source.get("component_deltas") or {}).get(key),
+                    label=f"{source.get('candidate_id')}.{key}",
+                )
+                for source in first_order
+                if isinstance(source.get("component_deltas"), Mapping)
+            )
+            for key in ("segnet_delta", "posenet_delta", "rate_delta")
+        }
+        interaction_components = {
+            key: observed[key] - first_order_components[key]
+            for key in ("segnet_delta", "posenet_delta", "rate_delta")
+        }
+        observed_net_delta = _finite_float(
+            row.get("net_component_delta"),
+            label=f"{row.get('candidate_id')}.net_component_delta",
+        )
+        first_order_net_delta = sum(
+            _finite_float(
+                source.get("net_component_delta"),
+                label=f"{source.get('candidate_id')}.net_component_delta",
+            )
+            for source in first_order
+        )
+        net_interaction_delta = observed_net_delta - first_order_net_delta
+        terms.append(
+            {
+                "pair_indices": dropped_pairs,
+                "candidate_id": row["candidate_id"],
+                "axis": axis,
+                "axis_authority": row["axis_authority"],
+                "observed_net_component_delta": observed_net_delta,
+                "first_order_net_component_delta": first_order_net_delta,
+                "net_interaction_delta": net_interaction_delta,
+                "interaction_component_deltas": interaction_components,
+                "interaction_status": _component_delta_status_from_net_delta(
+                    net_interaction_delta
+                ),
+                "source_drop_one_candidate_ids": sorted(
+                    {str(source.get("candidate_id") or "") for source in first_order}
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return sorted(
+        terms,
+        key=lambda term: (
+            float(term["net_interaction_delta"]),
+            int(term["pair_indices"][0]),
+            int(term["pair_indices"][1]),
+            str(term.get("candidate_id") or ""),
+        ),
+    )
+
+
 def _build_pairset_component_marginal_model(
     candidates: Sequence[Mapping[str, Any]],
     observations: Sequence[Mapping[str, Any]],
@@ -1016,12 +1133,18 @@ def _build_pairset_component_marginal_model(
             for row in axis_rows
             if str(row["operation"].get("op") or "") == "drop_two"
         ]
+        pairwise_interaction_terms = _build_pairwise_interaction_terms(
+            axis=axis,
+            drop_two_rows=drop_two_rows,
+            drop_one_marginals=drop_one_marginals,
+        )
         axis_models[axis] = {
             "axis": axis,
             "axis_authority": _PAIRSET_AXIS_AUTHORITY.get(axis, "unknown_axis"),
             "training_row_count": len(axis_rows),
             "drop_one_training_row_count": len(drop_one_rows),
             "drop_two_training_row_count": len(drop_two_rows),
+            "pairwise_interaction_term_count": len(pairwise_interaction_terms),
             "drop_one_pair_marginals": sorted(
                 drop_one_marginals,
                 key=lambda row: (
@@ -1051,6 +1174,7 @@ def _build_pairset_component_marginal_model(
                 }
                 for row in drop_two_rows
             ],
+            "pairwise_interaction_terms": pairwise_interaction_terms,
             "safe_drop_pair_indices": [
                 int(row["pair_index"])
                 for row in drop_one_marginals
@@ -1309,6 +1433,336 @@ def _component_combo_primary_axis(component_model: Mapping[str, Any]) -> str | N
     return sorted(axes)[0] if axes else None
 
 
+def _component_combo_row_payload(row: Mapping[str, Any]) -> dict[str, Any]:
+    component_deltas = row.get("component_deltas")
+    if not isinstance(component_deltas, Mapping):
+        raise CrossFamilyCandidatePortfolioError(
+            f"{row.get('candidate_id')}.component_deltas missing"
+        )
+    return {
+        "candidate_id": str(row.get("candidate_id") or ""),
+        "pair_index": int(row["pair_index"]),
+        "dropped_pair_rank": int(row.get("dropped_pair_rank") or 0),
+        "net_component_delta": _finite_float(
+            row.get("net_component_delta"),
+            label=f"{row.get('candidate_id')}.net_component_delta",
+        ),
+        "component_deltas": {
+            key: _finite_float(
+                component_deltas.get(key),
+                label=f"{row.get('candidate_id')}.{key}",
+            )
+            for key in ("segnet_delta", "posenet_delta", "rate_delta")
+        },
+        "axis_baseline_score": (
+            _finite_float(
+                row.get("axis_baseline_score"),
+                label=f"{row.get('candidate_id')}.axis_baseline_score",
+            )
+            if row.get("axis_baseline_score") is not None
+            else None
+        ),
+        "component_marginal_status": row.get("component_marginal_status"),
+    }
+
+
+def _component_interaction_map(
+    axis_model: Mapping[str, Any],
+) -> dict[tuple[int, int], dict[str, Any]]:
+    out: dict[tuple[int, int], dict[str, Any]] = {}
+    for raw in axis_model.get("pairwise_interaction_terms") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        pairs = raw.get("pair_indices")
+        if not isinstance(pairs, Sequence) or isinstance(pairs, (str, bytes)):
+            continue
+        if len(pairs) != 2:
+            continue
+        key = _ordered_pair_key(int(pairs[0]), int(pairs[1]))
+        out[key] = dict(raw)
+    return out
+
+
+def _component_combo_score(
+    selected_rows: Sequence[Mapping[str, Any]],
+    interactions: Mapping[tuple[int, int], Mapping[str, Any]],
+) -> dict[str, Any]:
+    dropped_pairs = sorted({int(row["pair_index"]) for row in selected_rows})
+    first_order_net_delta = sum(
+        _finite_float(
+            row.get("net_component_delta"),
+            label=f"{row.get('candidate_id')}.net_component_delta",
+        )
+        for row in selected_rows
+    )
+    component_deltas = {
+        key: sum(
+            _finite_float(
+                (row.get("component_deltas") or {}).get(key),
+                label=f"{row.get('candidate_id')}.{key}",
+            )
+            for row in selected_rows
+            if isinstance(row.get("component_deltas"), Mapping)
+        )
+        for key in ("segnet_delta", "posenet_delta", "rate_delta")
+    }
+    interaction_rows: list[dict[str, Any]] = []
+    second_order_net_delta = 0.0
+    for index, pair_a in enumerate(dropped_pairs):
+        for pair_b in dropped_pairs[index + 1 :]:
+            interaction = interactions.get(_ordered_pair_key(pair_a, pair_b))
+            if interaction is None:
+                continue
+            delta = _finite_float(
+                interaction.get("net_interaction_delta"),
+                label=f"{interaction.get('candidate_id')}.net_interaction_delta",
+            )
+            second_order_net_delta += delta
+            raw_components = interaction.get("interaction_component_deltas")
+            if isinstance(raw_components, Mapping):
+                for key in ("segnet_delta", "posenet_delta", "rate_delta"):
+                    component_deltas[key] += _finite_float(
+                        raw_components.get(key),
+                        label=f"{interaction.get('candidate_id')}.{key}",
+                    )
+            interaction_rows.append(
+                {
+                    "source_candidate_id": interaction.get("candidate_id"),
+                    "pair_indices": [pair_a, pair_b],
+                    "net_interaction_delta": delta,
+                    "interaction_status": interaction.get("interaction_status"),
+                    **FALSE_AUTHORITY,
+                }
+            )
+    return {
+        "first_order_net_component_delta": first_order_net_delta,
+        "second_order_net_component_delta": second_order_net_delta,
+        "expected_net_component_delta": first_order_net_delta + second_order_net_delta,
+        "expected_component_deltas": component_deltas,
+        "pairwise_interaction_terms": interaction_rows,
+    }
+
+
+def _component_combo_state_sort_key(state: Mapping[str, Any]) -> tuple[Any, ...]:
+    dropped_pairs = state["dropped_pair_indices"]
+    ranks = state["dropped_pair_ranks"]
+    return (
+        float(state["score"]["expected_net_component_delta"]),
+        tuple(int(rank) for rank in ranks),
+        tuple(int(pair) for pair in dropped_pairs),
+    )
+
+
+def _python_component_combo_specs(
+    *,
+    base_pairs: Sequence[int],
+    rows: Sequence[Mapping[str, Any]],
+    combo_counts: Sequence[int],
+    existing_pairsets: set[tuple[int, ...]],
+    existing_ids: set[str],
+    interactions: Mapping[tuple[int, int], Mapping[str, Any]],
+    beam_width: int = DEFAULT_COMPONENT_COMBO_BEAM_WIDTH,
+    pool_limit: int = DEFAULT_COMPONENT_COMBO_POOL_LIMIT,
+) -> list[dict[str, Any]]:
+    ranked = sorted(
+        (_component_combo_row_payload(row) for row in rows),
+        key=lambda row: (
+            float(row["net_component_delta"]),
+            int(row["dropped_pair_rank"]),
+            int(row["pair_index"]),
+            str(row.get("candidate_id") or ""),
+        ),
+    )
+    ranked = [
+        row
+        for row in ranked
+        if float(row["net_component_delta"]) < 0.0
+    ][:pool_limit]
+    if len(ranked) < 2:
+        return []
+
+    requested_counts = set(combo_counts)
+    max_count = min(max(requested_counts, default=0), len(ranked))
+    states: list[dict[str, Any]] = [
+        {
+            "indices": [],
+            "last_index": -1,
+            "dropped_pair_indices": [],
+            "dropped_pair_ranks": [],
+            "score": {
+                "first_order_net_component_delta": 0.0,
+                "second_order_net_component_delta": 0.0,
+                "expected_net_component_delta": 0.0,
+                "expected_component_deltas": {
+                    "segnet_delta": 0.0,
+                    "posenet_delta": 0.0,
+                    "rate_delta": 0.0,
+                },
+                "pairwise_interaction_terms": [],
+            },
+        }
+    ]
+    specs: list[dict[str, Any]] = []
+    base_set = {int(pair) for pair in base_pairs}
+    for count in range(1, max_count + 1):
+        expanded: list[dict[str, Any]] = []
+        for state in states:
+            used_pairs = set(state["dropped_pair_indices"])
+            for index in range(int(state["last_index"]) + 1, len(ranked)):
+                row = ranked[index]
+                pair = int(row["pair_index"])
+                if pair in used_pairs:
+                    continue
+                selected_rows = [ranked[i] for i in [*state["indices"], index]]
+                score = _component_combo_score(selected_rows, interactions)
+                dropped_pairs = sorted({int(item["pair_index"]) for item in selected_rows})
+                expanded.append(
+                    {
+                        "indices": [*state["indices"], index],
+                        "last_index": index,
+                        "dropped_pair_indices": dropped_pairs,
+                        "dropped_pair_ranks": [
+                            int(item["dropped_pair_rank"]) for item in selected_rows
+                        ],
+                        "score": score,
+                    }
+                )
+        expanded.sort(key=_component_combo_state_sort_key)
+        states = expanded[:beam_width]
+        if count not in requested_counts:
+            continue
+        for state in states:
+            dropped_pairs = list(state["dropped_pair_indices"])
+            selected_pairs = sorted(base_set - set(dropped_pairs))
+            if not selected_pairs:
+                continue
+            selected_key = tuple(selected_pairs)
+            if selected_key in existing_pairsets:
+                continue
+            candidate_id = _component_combo_candidate_id(dropped_pairs)
+            if candidate_id in existing_ids:
+                continue
+            source_rows = [ranked[i] for i in state["indices"]]
+            baselines = [
+                float(row["axis_baseline_score"])
+                for row in source_rows
+                if row.get("axis_baseline_score") is not None
+            ]
+            if not baselines:
+                continue
+            specs.append(
+                {
+                    "candidate_id": candidate_id,
+                    "base_pair_indices": sorted(base_set),
+                    "dropped_pair_indices": dropped_pairs,
+                    "selected_pair_indices": selected_pairs,
+                    "axis_baseline_score": min(baselines),
+                    "score": state["score"],
+                    "source_rows": source_rows,
+                    "search_strategy": "python_beam_pairwise_interaction_waterfill",
+                }
+            )
+            existing_ids.add(candidate_id)
+            existing_pairsets.add(selected_key)
+            break
+    return specs
+
+
+def _native_component_combo_specs(
+    *,
+    axis_model: Mapping[str, Any],
+    grouped: Mapping[tuple[int, ...], Sequence[Mapping[str, Any]]],
+    combo_counts_by_base: Mapping[tuple[int, ...], Sequence[int]],
+    existing_pairsets: set[tuple[int, ...]],
+    existing_ids: set[str],
+) -> list[dict[str, Any]] | None:
+    groups: list[dict[str, Any]] = []
+    for base_pairs, rows in sorted(grouped.items()):
+        groups.append(
+            {
+                "group_id": "_".join(str(pair) for pair in base_pairs),
+                "base_pair_indices": list(base_pairs),
+                "combo_counts": list(combo_counts_by_base.get(base_pairs, ())),
+                "existing_pairsets": [list(pairset) for pairset in sorted(existing_pairsets)],
+                "existing_candidate_ids": sorted(existing_ids),
+                "rows": [_component_combo_row_payload(row) for row in rows],
+                "pairwise_interactions": axis_model.get("pairwise_interaction_terms") or [],
+            }
+        )
+    if not groups:
+        return None
+    request = {
+        "schema": "pairset_component_combo_request.v1",
+        "beam_width": DEFAULT_COMPONENT_COMBO_BEAM_WIDTH,
+        "pool_limit": DEFAULT_COMPONENT_COMBO_POOL_LIMIT,
+        "groups": groups,
+        **FALSE_AUTHORITY,
+    }
+    try:
+        response = plan_pairset_component_combos_native(request)
+    except PairsetComboRustBridgeError as exc:
+        raise CrossFamilyCandidatePortfolioError(str(exc)) from exc
+    if response is None:
+        return None
+    combos = response.get("combos")
+    if not isinstance(combos, list):
+        raise CrossFamilyCandidatePortfolioError(
+            "pairset-combo-planner native response missing combos[]"
+        )
+    specs: list[dict[str, Any]] = []
+    by_group = {
+        "_".join(str(pair) for pair in base_pairs): tuple(base_pairs)
+        for base_pairs in grouped
+    }
+    for raw in combos:
+        if not isinstance(raw, Mapping):
+            continue
+        group_id = str(raw.get("group_id") or "")
+        base_pairs = by_group.get(group_id)
+        if base_pairs is None:
+            continue
+        dropped_pairs = [int(pair) for pair in raw.get("dropped_pair_indices") or []]
+        selected_pairs = [int(pair) for pair in raw.get("selected_pair_indices") or []]
+        candidate_id = str(raw.get("candidate_id") or _component_combo_candidate_id(dropped_pairs))
+        selected_key = tuple(selected_pairs)
+        if not selected_pairs or selected_key in existing_pairsets or candidate_id in existing_ids:
+            continue
+        score = raw.get("score")
+        if not isinstance(score, Mapping):
+            continue
+        source_rows = raw.get("source_rows")
+        if not isinstance(source_rows, list):
+            continue
+        baselines = [
+            _finite_float(
+                row.get("axis_baseline_score"),
+                label=f"{row.get('candidate_id')}.axis_baseline_score",
+            )
+            for row in source_rows
+            if isinstance(row, Mapping) and row.get("axis_baseline_score") is not None
+        ]
+        if not baselines:
+            continue
+        specs.append(
+            {
+                "candidate_id": candidate_id,
+                "base_pair_indices": list(base_pairs),
+                "dropped_pair_indices": dropped_pairs,
+                "selected_pair_indices": selected_pairs,
+                "axis_baseline_score": min(baselines),
+                "score": dict(score),
+                "source_rows": [dict(row) for row in source_rows if isinstance(row, Mapping)],
+                "search_strategy": str(
+                    raw.get("search_strategy")
+                    or "rust_rayon_beam_pairwise_interaction_waterfill"
+                ),
+            }
+        )
+        existing_ids.add(candidate_id)
+        existing_pairsets.add(selected_key)
+    return specs
+
+
 def _component_combo_candidate_rows(
     candidates: Sequence[Mapping[str, Any]],
     component_model: Mapping[str, Any],
@@ -1359,126 +1813,127 @@ def _component_combo_candidate_rows(
             continue
         grouped.setdefault(base_key, []).append(raw)
 
+    combo_counts_by_base = {
+        base_pairs: _component_combo_counts(min(len(rows), len(base_pairs) - 1))
+        for base_pairs, rows in grouped.items()
+    }
+    spec_existing_ids = set(existing_ids)
+    spec_existing_pairsets = set(existing_pairsets)
+    specs = _native_component_combo_specs(
+        axis_model=axis_model,
+        grouped=grouped,
+        combo_counts_by_base=combo_counts_by_base,
+        existing_pairsets=spec_existing_pairsets,
+        existing_ids=spec_existing_ids,
+    )
+    if specs is None:
+        interactions = _component_interaction_map(axis_model)
+        specs = []
+        for base_pairs, rows in sorted(grouped.items()):
+            specs.extend(
+                _python_component_combo_specs(
+                    base_pairs=base_pairs,
+                    rows=rows,
+                    combo_counts=combo_counts_by_base[base_pairs],
+                    existing_pairsets=spec_existing_pairsets,
+                    existing_ids=spec_existing_ids,
+                    interactions=interactions,
+                )
+            )
+
     out: list[dict[str, Any]] = []
     source_rank = 900_000
-    for base_pairs, rows in sorted(grouped.items()):
-        ranked = sorted(
-            rows,
-            key=lambda row: (
-                _finite_float(
-                    row.get("net_component_delta"),
-                    label=f"{row.get('candidate_id')}.net_component_delta",
-                ),
-                int(row.get("dropped_pair_rank") or 0),
-                int(row.get("pair_index") or 0),
-            ),
+    for spec in specs:
+        dropped_pairs = [int(pair) for pair in spec["dropped_pair_indices"]]
+        selected_pairs = [int(pair) for pair in spec["selected_pair_indices"]]
+        score = spec["score"]
+        source_rows = [row for row in spec["source_rows"] if isinstance(row, Mapping)]
+        payload_bytes = _selected_pair_payload_bytes(selected_pairs)
+        component_deltas = {
+            key: _finite_float(
+                score.get("expected_component_deltas", {}).get(key),
+                label=f"{spec['candidate_id']}.{key}",
+            )
+            for key in ("segnet_delta", "posenet_delta", "rate_delta")
+        }
+        expected_net_delta = _finite_float(
+            score.get("expected_net_component_delta"),
+            label=f"{spec['candidate_id']}.expected_net_component_delta",
         )
-        for count in _component_combo_counts(min(len(ranked), len(base_pairs) - 1)):
-            selected_rows = ranked[:count]
-            dropped_pairs = sorted({int(row["pair_index"]) for row in selected_rows})
-            if len(dropped_pairs) != count:
-                continue
-            selected_pairs = sorted(pair for pair in base_pairs if pair not in set(dropped_pairs))
-            selected_key = tuple(selected_pairs)
-            if not selected_pairs or selected_key in existing_pairsets:
-                continue
-            candidate_id = _component_combo_candidate_id(dropped_pairs)
-            if candidate_id in existing_ids:
-                continue
-            baselines = [
-                _finite_float(
-                    row.get("axis_baseline_score"),
-                    label=f"{row.get('candidate_id')}.axis_baseline_score",
-                )
-                for row in selected_rows
-                if row.get("axis_baseline_score") is not None
-            ]
-            if not baselines:
-                continue
-            baseline = min(baselines)
-            expected_net_delta = sum(
-                _finite_float(
-                    row.get("net_component_delta"),
-                    label=f"{row.get('candidate_id')}.net_component_delta",
-                )
-                for row in selected_rows
-            )
-            component_deltas = {
-                key: sum(
-                    _finite_float(
-                        (row.get("component_deltas") or {}).get(key),
-                        label=f"{row.get('candidate_id')}.{key}",
-                    )
-                    for row in selected_rows
-                    if isinstance(row.get("component_deltas"), Mapping)
-                )
-                for key in ("segnet_delta", "posenet_delta", "rate_delta")
-            }
-            payload_bytes = _selected_pair_payload_bytes(selected_pairs)
-            metadata = {
-                "selector_kind": "learned_component_marginal_combo",
-                "selected_pair_count": len(selected_pairs),
-                "selected_pair_indices": selected_pairs,
-                "payload_bytes": payload_bytes,
-                "rate_delta": _selected_pair_rate_delta(selected_pairs),
-                "acquisition_operation": {
-                    "op": "learned_multi_drop",
-                    "dropped_pair_indices": dropped_pairs,
-                    "dropped_pair_count": count,
-                    "source_axis": primary_axis,
-                    "source_axis_authority": axis_model.get("axis_authority"),
-                    "base_pair_indices": list(base_pairs),
-                    "source_candidate_ids": sorted(
-                        {str(row.get("candidate_id") or "") for row in selected_rows}
-                    ),
+        metadata = {
+            "selector_kind": "learned_component_marginal_combo",
+            "selected_pair_count": len(selected_pairs),
+            "selected_pair_indices": selected_pairs,
+            "payload_bytes": payload_bytes,
+            "rate_delta": _selected_pair_rate_delta(selected_pairs),
+            "acquisition_operation": {
+                "op": "learned_multi_drop",
+                "dropped_pair_indices": dropped_pairs,
+                "dropped_pair_count": len(dropped_pairs),
+                "source_axis": primary_axis,
+                "source_axis_authority": axis_model.get("axis_authority"),
+                "base_pair_indices": [int(pair) for pair in spec["base_pair_indices"]],
+                "source_candidate_ids": sorted(
+                    {str(row.get("candidate_id") or "") for row in source_rows}
+                ),
+            },
+            "component_marginal_model": {
+                "schema": "pairset_component_marginal_combo_feedback.v1",
+                "active": True,
+                "model_kind": component_model.get("model_kind"),
+                "source_axis": primary_axis,
+                "source_axis_authority": axis_model.get("axis_authority"),
+                "expected_net_component_delta": expected_net_delta,
+                "first_order_net_component_delta": score.get(
+                    "first_order_net_component_delta"
+                ),
+                "second_order_net_component_delta": score.get(
+                    "second_order_net_component_delta"
+                ),
+                "expected_component_deltas": component_deltas,
+                "pairwise_interaction_terms": score.get(
+                    "pairwise_interaction_terms",
+                    [],
+                ),
+                "combo_search_strategy": spec.get("search_strategy"),
+                "source_drop_one_rows": [
+                    {
+                        "source_candidate_id": row.get("candidate_id"),
+                        "pair_index": row.get("pair_index"),
+                        "dropped_pair_rank": row.get("dropped_pair_rank"),
+                        "net_component_delta": row.get("net_component_delta"),
+                        "component_marginal_status": row.get("component_marginal_status"),
+                        **FALSE_AUTHORITY,
+                    }
+                    for row in source_rows
+                ],
+                "canonical_signal_refs": component_model.get("canonical_signal_refs"),
+                "allowed_use": "learned_local_pairset_batch_planning_only",
+                **FALSE_AUTHORITY,
+            },
+        }
+        out.append(
+            _candidate(
+                candidate_id=str(spec["candidate_id"]),
+                family="decoder_q_selective_dqs1",
+                predicted_score_mean=float(spec["axis_baseline_score"]) + expected_net_delta,
+                predicted_score_variance=max(
+                    DEFAULT_PAIRSET_VARIANCE,
+                    DEFAULT_COMPONENT_COMBO_VARIANCE_PER_PAIR
+                    * float(len(dropped_pairs) * len(dropped_pairs)),
+                ),
+                source_kind="decoder_q_pairset_acquisition",
+                source_rank=source_rank,
+                source_artifact_path=None,
+                family_couplings={
+                    "fec6_decoder_q": 0.9,
+                    "mlx_decoder_q": 0.7,
+                    "score_surface_stack": 0.3,
                 },
-                "component_marginal_model": {
-                    "schema": "pairset_component_marginal_combo_feedback.v1",
-                    "active": True,
-                    "model_kind": component_model.get("model_kind"),
-                    "source_axis": primary_axis,
-                    "source_axis_authority": axis_model.get("axis_authority"),
-                    "expected_net_component_delta": expected_net_delta,
-                    "expected_component_deltas": component_deltas,
-                    "source_drop_one_rows": [
-                        {
-                            "source_candidate_id": row.get("candidate_id"),
-                            "pair_index": row.get("pair_index"),
-                            "dropped_pair_rank": row.get("dropped_pair_rank"),
-                            "net_component_delta": row.get("net_component_delta"),
-                            "component_marginal_status": row.get("component_marginal_status"),
-                            **FALSE_AUTHORITY,
-                        }
-                        for row in selected_rows
-                    ],
-                    "canonical_signal_refs": component_model.get("canonical_signal_refs"),
-                    "allowed_use": "learned_local_pairset_batch_planning_only",
-                    **FALSE_AUTHORITY,
-                },
-            }
-            out.append(
-                _candidate(
-                    candidate_id=candidate_id,
-                    family="decoder_q_selective_dqs1",
-                    predicted_score_mean=baseline + expected_net_delta,
-                    predicted_score_variance=max(
-                        DEFAULT_PAIRSET_VARIANCE,
-                        DEFAULT_COMPONENT_COMBO_VARIANCE_PER_PAIR * float(count * count),
-                    ),
-                    source_kind="decoder_q_pairset_acquisition",
-                    source_rank=source_rank,
-                    source_artifact_path=None,
-                    family_couplings={
-                        "fec6_decoder_q": 0.9,
-                        "mlx_decoder_q": 0.7,
-                        "score_surface_stack": 0.3,
-                    },
-                    source_metadata=metadata,
-                )
+                source_metadata=metadata,
             )
-            existing_ids.add(candidate_id)
-            existing_pairsets.add(selected_key)
-            source_rank += 1
+        )
+        source_rank += 1
     return out
 
 

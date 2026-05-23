@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/inflate-cli",
+  "crates/pairset-combo-planner",
   "crates/python-ast-indexer",
   "crates/qma-codec",
   "crates/raw-locality-compare",

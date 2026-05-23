@@ -764,6 +764,120 @@ def test_portfolio_synthesizes_learned_multi_drop_candidates_from_local_componen
     assert learned["ready_for_exact_eval_dispatch"] is False
 
 
+def test_portfolio_combo_search_uses_pairwise_interaction_terms(
+    tmp_path: Path,
+) -> None:
+    acquisition = _pairset_acquisition_with_component_candidates()
+    acquisition["candidates"].append(  # type: ignore[index,union-attr]
+        {
+            "schema": "decoder_q_pairset_acquisition_candidate.v1",
+            **_false_authority(),
+            "dispatch_attempted": False,
+            "acquisition_id": "pairset_drop_two_rank002_003_pairs0327_0371",
+            "acquisition_rank": 5,
+            "selector_kind": "drop_two_from_best",
+            "selected_pair_count": 2,
+            "selected_pair_indices": [101, 376],
+            "payload_bytes": 39,
+            "rate_delta": 0.000009,
+            "acquisition_score": 0.5,
+            "acquisition_operation": {
+                "op": "drop_two",
+                "dropped_pair_indices": [327, 371],
+                "dropped_pair_ranks": [2, 3],
+            },
+            "predicted_score_mean": 0.195,
+            "predicted_score_source": "source_selector_inherited_non_authoritative",
+        }
+    )
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.226190435402,
+        pairset_acquisitions=[acquisition],
+        observations=[
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank002_pair0327",
+                score=0.19202828,
+                archive_char="a",
+                raw_char="b",
+                selected_pair_indices=[101, 371, 376],
+                segnet_delta=0.0,
+                rate_delta=-0.00000066585895312,
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+                baseline_score=0.19203,
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank003_pair0371",
+                score=0.19202828,
+                archive_char="d",
+                raw_char="e",
+                selected_pair_indices=[101, 327, 376],
+                segnet_delta=0.0,
+                rate_delta=-0.00000066585895312,
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+                baseline_score=0.19203,
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank004_pair0376",
+                score=0.19202828,
+                archive_char="1",
+                raw_char="2",
+                selected_pair_indices=[101, 327, 371],
+                segnet_delta=0.0,
+                rate_delta=-0.00000066585895312,
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+                baseline_score=0.19203,
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_two_rank002_003_pairs0327_0371",
+                score=0.192034,
+                archive_char="f",
+                raw_char="0",
+                selected_pair_indices=[101, 376],
+                segnet_delta=0.000004,
+                rate_delta=-0.00000133171790624,
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+                baseline_score=0.19203,
+            ),
+        ],
+        top_k=16,
+    )
+
+    model = portfolio["observation_feedback"]["pairset_component_marginal_model"]
+    axis_model = model["axis_models"]["macos_cpu_advisory"]
+    assert axis_model["pairwise_interaction_term_count"] == 1
+    interaction = axis_model["pairwise_interaction_terms"][0]
+    assert interaction["pair_indices"] == [327, 371]
+    assert interaction["net_interaction_delta"] > 0.0
+
+    learned = next(
+        row
+        for row in portfolio["ranked_rows"]
+        if row["candidate_id"] == "pairset_learned_drop_combo_k002_p0327_p0376"
+    )
+    combo_feedback = learned["source_metadata"]["component_marginal_model"]
+    assert combo_feedback["second_order_net_component_delta"] == 0.0
+    assert combo_feedback["expected_net_component_delta"] < 0.0
+    assert combo_feedback["combo_search_strategy"].endswith(
+        "pairwise_interaction_waterfill"
+    )
+    assert all(
+        row["candidate_id"] != "pairset_learned_drop_combo_k002_p0327_p0371"
+        for row in portfolio["ranked_rows"]
+    )
+
+
 def test_portfolio_preserves_custody_readiness_as_advisory_only(
     tmp_path: Path,
 ) -> None:
