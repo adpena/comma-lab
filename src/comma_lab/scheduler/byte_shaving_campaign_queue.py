@@ -47,6 +47,7 @@ from .byte_shaving_materializer_registry import (
 )
 from .dqs1_local_first_queue import SAFE_OPERATOR_ACTION, candidate_slug
 from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
+from .storage_preflight import build_scheduler_storage_preflight_experiment
 
 MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
 MATERIALIZER_BACKLOG_SCHEMA = "byte_shaving_materializer_backlog.v1"
@@ -55,6 +56,7 @@ MATERIALIZER_WORK_QUEUE_SCHEMA = "byte_shaving_materializer_work_queue.v1"
 MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA = (
     "byte_shaving_materializer_execution_experiment_metadata.v1"
 )
+MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID = "materializer_scheduler_preflight"
 ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
@@ -72,11 +74,45 @@ def _utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+def _utc_stamp() -> str:
+    return time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+
+
 def _repo_rel(path: Path, repo_root: Path) -> str:
     try:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _resolve_output_path(path_value: Any, *, repo_root: Path) -> Path | None:
+    if not isinstance(path_value, str) or not path_value.strip():
+        return None
+    path = Path(path_value).expanduser()
+    if not path.is_absolute():
+        path = repo_root / path
+    return path.resolve(strict=False)
+
+
+def _expected_materializer_workload_root(
+    *,
+    results_root: str,
+    expected_workload_root: str | None,
+) -> Path | None:
+    if expected_workload_root is not None:
+        return Path(expected_workload_root).expanduser().resolve(strict=False)
+    path = Path(results_root).expanduser()
+    if path.is_absolute():
+        return path.resolve(strict=False)
+    return None
+
+
+def _path_under_root(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -1189,6 +1225,19 @@ def build_materializer_execution_queue(
     resource_concurrency: Mapping[str, int] | None = None,
     step_timeout_seconds: int = 0,
     limit: int | None = None,
+    include_scheduler_preflight: bool = False,
+    scheduler_results_root: str = "experiments/results",
+    scheduler_storage_tiers: Sequence[str] = (),
+    scheduler_storage_workload_subdir: str | None = None,
+    scheduler_storage_expected_workload_root: str | None = None,
+    scheduler_storage_reserve_free_gb: float = 40.0,
+    scheduler_storage_expected_bytes: int = 0,
+    scheduler_proactive_cleanup_roots: Sequence[str] = (),
+    scheduler_proactive_cleanup_execute: bool = False,
+    scheduler_proactive_cleanup_action: str = "move",
+    scheduler_proactive_cleanup_min_bytes: str = "1",
+    scheduler_proactive_cleanup_cold_store_roots: Sequence[str] = (),
+    scheduler_proactive_cleanup_cold_store_reserve_gb: float = 40.0,
 ) -> dict[str, Any]:
     """Compile executable materializer rows into ``experiment_queue.v1``."""
 
@@ -1200,6 +1249,10 @@ def build_materializer_execution_queue(
         raise ExperimentQueueError("step_timeout_seconds must be non-negative")
     if limit is not None and (isinstance(limit, bool) or limit < 1):
         raise ExperimentQueueError("limit must be >= 1 when provided")
+    if isinstance(scheduler_storage_expected_bytes, bool) or scheduler_storage_expected_bytes < 0:
+        raise ExperimentQueueError("scheduler_storage_expected_bytes must be non-negative")
+    if scheduler_proactive_cleanup_action not in {"move", "delete"}:
+        raise ExperimentQueueError("scheduler_proactive_cleanup_action must be move or delete")
 
     queue_id = str(queue_id or "").strip()
     if not queue_id:
@@ -1227,6 +1280,33 @@ def build_materializer_execution_queue(
         executable_rows = executable_rows[:limit]
     if not executable_rows:
         raise ExperimentQueueError("no executable materializer work rows")
+    expected_output_root = (
+        _expected_materializer_workload_root(
+            results_root=scheduler_results_root,
+            expected_workload_root=scheduler_storage_expected_workload_root,
+        )
+        if include_scheduler_preflight
+        else None
+    )
+    if expected_output_root is not None:
+        for index, row in enumerate(executable_rows, start=1):
+            telemetry = row.get("telemetry")
+            artifact_paths = (
+                telemetry.get("artifact_paths") if isinstance(telemetry, Mapping) else None
+            )
+            if not isinstance(artifact_paths, list) or not artifact_paths:
+                raise ExperimentQueueError(
+                    "materializer work row "
+                    f"{index} has no telemetry artifact_paths for storage preflight"
+                )
+            for raw_path in artifact_paths:
+                path = _resolve_output_path(raw_path, repo_root=repo)
+                if path is None or not _path_under_root(path, expected_output_root):
+                    raise ExperimentQueueError(
+                        "materializer work row "
+                        f"{index} artifact path outside scheduler workload root: "
+                        f"{raw_path!r} not under {expected_output_root}"
+                    )
 
     resource_limits: dict[str, int] = {}
     for key, value in (resource_concurrency or {}).items():
@@ -1238,6 +1318,11 @@ def build_materializer_execution_queue(
     used_resource_kinds: set[str] = set()
     experiments: list[dict[str, Any]] = []
     seen_experiments: set[str] = set()
+    preflight_dependency = (
+        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
+        if include_scheduler_preflight
+        else None
+    )
     for rank, row in enumerate(executable_rows, start=1):
         command = row.get("command")
         if not isinstance(command, list) or not command:
@@ -1300,7 +1385,7 @@ def build_materializer_execution_queue(
                         "id": MATERIALIZER_EXECUTION_STEP_ID,
                         "kind": "command",
                         "command": command_items,
-                        "requires": [],
+                        "requires": [] if preflight_dependency is None else [preflight_dependency],
                         "resources": {"kind": resource_kind},
                         "postconditions": _normalize_materializer_queue_postconditions(
                             row.get("postconditions")
@@ -1317,6 +1402,43 @@ def build_materializer_execution_queue(
             kind,
             local_cpu_concurrency if kind == "local_cpu" else 1,
         )
+    if include_scheduler_preflight:
+        stamp = _utc_stamp()
+        resource_limits.setdefault("local_cpu", local_cpu_concurrency)
+        resource_limits.setdefault("local_io_heavy", 1)
+        experiments = [
+            build_scheduler_storage_preflight_experiment(
+                experiment_id=MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
+                lane_id=f"lane_materializer_scheduler_preflight_{stamp}",
+                tags=[
+                    "byte-shaving",
+                    "materializer",
+                    "scheduler-preflight",
+                    "storage",
+                    "cleanup",
+                    "no-score-authority",
+                ],
+                artifact_prefix="byte_shaving_materializer",
+                date=stamp,
+                results_root=scheduler_results_root,
+                storage_tiers=tuple(scheduler_storage_tiers),
+                storage_workload_subdir=scheduler_storage_workload_subdir,
+                storage_expected_workload_root=scheduler_storage_expected_workload_root,
+                storage_reserve_free_gb=scheduler_storage_reserve_free_gb,
+                storage_expected_bytes=scheduler_storage_expected_bytes,
+                proactive_cleanup_roots=tuple(scheduler_proactive_cleanup_roots),
+                proactive_cleanup_execute=scheduler_proactive_cleanup_execute,
+                proactive_cleanup_action=scheduler_proactive_cleanup_action,
+                proactive_cleanup_min_bytes=scheduler_proactive_cleanup_min_bytes,
+                proactive_cleanup_cold_store_roots=tuple(
+                    scheduler_proactive_cleanup_cold_store_roots
+                ),
+                proactive_cleanup_cold_store_reserve_gb=(
+                    scheduler_proactive_cleanup_cold_store_reserve_gb
+                ),
+            ),
+            *experiments,
+        ]
     return normalize_queue_definition(
         {
             "schema": QUEUE_SCHEMA,

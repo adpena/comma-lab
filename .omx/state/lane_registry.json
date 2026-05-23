@@ -49661,6 +49661,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_materializer_scheduler_storage_preflight_20260523",
+      "name": "Materializer scheduler storage preflight",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/storage_preflight.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_campaign_queue.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_scheduler_storage_preflight_20260523T195129Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Historical alias; canonical current lane is lane_materializer_scheduler_preflight_20260523."
+    },
+    {
+      "id": "lane_inverse_scorer_exact_eval_queue_bridge_20260523",
+      "name": "Inverse scorer exact-eval queue bridge",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/inverse_scorer_exact_eval_queue.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/inverse_scorer_exact_eval_queue_20260523T195836Z/exact_ready_queue.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_inverse_scorer_exact_eval_queue.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_inverse_scorer_exact_eval_queue_bridge_20260523T194703Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_materializer_scheduler_preflight_20260523",
+      "name": "Materializer scheduler storage preflight",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/storage_preflight.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_campaign_queue.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_scheduler_storage_preflight_materializer_20260523T200010Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Canonical scheduler/materializer storage preflight lane; supersedes lane_materializer_scheduler_storage_preflight_20260523 alias."
     }
   ],
   "level_rules": {
@@ -49670,5 +49793,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T19:32:30Z"
+  "updated_at": "2026-05-23T20:01:36Z"
 }

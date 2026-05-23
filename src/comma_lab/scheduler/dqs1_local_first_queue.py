@@ -9,7 +9,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
-from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB, DEFAULT_TIERS
+from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB
 from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_FALSE_AUTHORITY_FIELDS,
@@ -19,6 +19,7 @@ from tac.optimization.local_cpu_contest_drift import (
 )
 
 from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
+from .storage_preflight import build_scheduler_storage_preflight_experiment
 
 DEFAULT_QUEUE_ID = "dqs1_pairset_local_first"
 DEFAULT_RESULTS_ROOT = (
@@ -149,27 +150,6 @@ def _candidate_priority(candidate_id: str, operator_action_rank: int | None) -> 
     return 100
 
 
-def _results_root_storage_workload_subdir(results_root: str, explicit: str | None) -> str:
-    if explicit:
-        return explicit
-    path = Path(results_root).expanduser()
-    if not path.is_absolute():
-        return path.as_posix()
-    for _name, root in DEFAULT_TIERS:
-        try:
-            return path.resolve(strict=False).relative_to(Path(root).resolve(strict=False)).as_posix()
-        except ValueError:
-            continue
-    return path.name
-
-
-def _expected_results_root(results_root: str) -> str:
-    path = Path(results_root).expanduser()
-    if not path.is_absolute():
-        return str(path)
-    return str(path.resolve(strict=False))
-
-
 def _scheduler_preflight_experiment(
     *,
     date: str,
@@ -186,93 +166,25 @@ def _scheduler_preflight_experiment(
     proactive_cleanup_cold_store_roots: tuple[str, ...] = (),
     proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
 ) -> dict[str, Any]:
-    storage_plan = f".omx/research/dqs1_local_first_storage_plan_{date}.json"
-    cleanup_plan = f".omx/research/dqs1_local_first_proactive_cleanup_{date}.json"
-    workload_subdir = _results_root_storage_workload_subdir(results_root, storage_workload_subdir)
-    expected_root = (
-        storage_expected_workload_root
-        if storage_expected_workload_root is not None
-        else (_expected_results_root(results_root) if Path(results_root).expanduser().is_absolute() else None)
+    return build_scheduler_storage_preflight_experiment(
+        experiment_id=DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
+        lane_id=f"lane_dqs1_scheduler_preflight_{date}",
+        tags=["dqs1", "scheduler-preflight", "storage", "cleanup", "no-score-authority"],
+        artifact_prefix="dqs1_local_first",
+        date=date,
+        results_root=results_root,
+        storage_tiers=storage_tiers,
+        storage_workload_subdir=storage_workload_subdir,
+        storage_expected_workload_root=storage_expected_workload_root,
+        storage_reserve_free_gb=storage_reserve_free_gb,
+        storage_expected_bytes=storage_expected_bytes,
+        proactive_cleanup_roots=proactive_cleanup_roots,
+        proactive_cleanup_execute=proactive_cleanup_execute,
+        proactive_cleanup_action=proactive_cleanup_action,
+        proactive_cleanup_min_bytes=proactive_cleanup_min_bytes,
+        proactive_cleanup_cold_store_roots=proactive_cleanup_cold_store_roots,
+        proactive_cleanup_cold_store_reserve_gb=proactive_cleanup_cold_store_reserve_gb,
     )
-    storage_command = [
-        ".venv/bin/python",
-        "tools/plan_experiment_storage.py",
-        "--output",
-        storage_plan,
-        "--workload-subdir",
-        workload_subdir,
-        "--reserve-free-gb",
-        str(storage_reserve_free_gb),
-        "--requested-bytes",
-        str(storage_expected_bytes),
-        "--create",
-    ]
-    if expected_root is not None:
-        storage_command.extend(["--expected-workload-root", expected_root])
-    for spec in storage_tiers:
-        storage_command.extend(["--storage-tier", spec])
-
-    cleanup_roots = proactive_cleanup_roots or (
-        "experiments/results",
-        ".omx/tmp",
-        "submissions/robust_current/eval_runs",
-    )
-    cleanup_command = [
-        ".venv/bin/python",
-        "tools/compact_experiment_artifacts.py",
-        *cleanup_roots,
-        "--min-bytes",
-        str(proactive_cleanup_min_bytes),
-        "--json-output",
-        cleanup_plan,
-    ]
-    if proactive_cleanup_execute:
-        cleanup_command.extend(["--execute", "--action", proactive_cleanup_action])
-        cleanup_command.extend(["--cold-store-reserve-gb", str(proactive_cleanup_cold_store_reserve_gb)])
-        for cold_store_root in proactive_cleanup_cold_store_roots:
-            cleanup_command.extend(["--cold-store-root", cold_store_root])
-    return {
-        "id": DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
-        "priority": 0,
-        "lane_id": f"lane_dqs1_scheduler_preflight_{date}",
-        "tags": ["dqs1", "scheduler-preflight", "storage", "cleanup", "no-score-authority"],
-        "steps": [
-            {
-                "id": "storage_tier_plan",
-                "timeout_seconds": 120,
-                "command": storage_command,
-                "resources": {"kind": "local_cpu"},
-                "postconditions": [
-                    {
-                        "type": "json_equals",
-                        "path": storage_plan,
-                        "key": "selected_workload_root_matches_expected",
-                        "equals": True,
-                    },
-                    _false_authority_postcondition(storage_plan),
-                ],
-            },
-            {
-                "id": "proactive_cleanup",
-                "requires": ["storage_tier_plan"],
-                "timeout_seconds": 1200,
-                "command": cleanup_command,
-                "resources": {"kind": "local_io_heavy"},
-                "postconditions": [
-                    {
-                        "type": "json_false_authority",
-                        "path": cleanup_plan,
-                        "required_false": [
-                            "plan.score_claim",
-                            "plan.promotion_eligible",
-                            "plan.ready_for_exact_eval_dispatch",
-                        ],
-                        "false_or_missing": [],
-                    }
-                ],
-            },
-        ],
-    }
 
 
 def _require_false_authority(

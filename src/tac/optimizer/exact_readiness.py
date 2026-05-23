@@ -156,6 +156,9 @@ INVERSE_SCORER_EXACT_AUTH_BOUNDARY_TOKENS = frozenset(
         "exact_auth_eval_required_before_score_claim",
     }
 )
+INVERSE_SCORER_ALLOWED_READINESS_BLOCKERS = frozenset(
+    {"exact_auth_eval_required_before_score_claim"}
+)
 INVERSE_SCORER_CLEARABLE_SOURCE_BLOCKERS = frozenset(
     {
         "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization",
@@ -449,6 +452,53 @@ def _has_strict_inverse_scorer_full_frame_parity(
     return False
 
 
+def _path_is_repo_confined(path: Path, repo_root: Path) -> bool:
+    try:
+        path.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _inverse_scorer_parity_payload_verified(payload: Any) -> bool:
+    if not isinstance(payload, Mapping):
+        return False
+    if payload.get("schema") != "inverse_scorer_cell_inflate_parity_probe_v1":
+        return False
+    for key in (
+        "full_frame_inflate_output_parity_claim",
+        "output_bytes_identical",
+        "output_contract_nonempty",
+        "output_contract_paths_match",
+    ):
+        if payload.get(key) is not True:
+            return False
+    if payload.get("proof_scope") != "full_frame_inflate_output_tree":
+        return False
+    if payload.get("differing_path_count") not in (0, None):
+        return False
+    for key in ("blockers", "missing_from_candidate", "extra_in_candidate"):
+        if payload.get(key):
+            return False
+    for key in PROXY_FALSE_AUTHORITY_FIELDS:
+        if payload.get(key) is not False:
+            return False
+    source_tree = payload.get("source_output_tree")
+    candidate_tree = payload.get("candidate_output_tree")
+    if not isinstance(source_tree, Mapping) or not isinstance(candidate_tree, Mapping):
+        return False
+    if source_tree.get("tree_sha256") != candidate_tree.get("tree_sha256"):
+        return False
+    for tree in (source_tree, candidate_tree):
+        if tree.get("exists") is not True or tree.get("blockers"):
+            return False
+        if not isinstance(tree.get("file_count"), int) or tree["file_count"] <= 0:
+            return False
+        if not isinstance(tree.get("total_bytes"), int) or tree["total_bytes"] <= 0:
+            return False
+    return True
+
+
 def _has_verified_inverse_scorer_parity_artifact(
     step: Mapping[str, Any],
     *,
@@ -466,7 +516,15 @@ def _has_verified_inverse_scorer_parity_artifact(
     artifact_path = resolve_path(artifact.get("path"), repo_root=repo_root, queue_dir=queue_dir)
     if artifact_path is None or not artifact_path.is_file() or artifact_path.is_symlink():
         return False
-    return sha256_file(artifact_path) == str(expected_sha).lower()
+    if not _path_is_repo_confined(artifact_path, repo_root):
+        return False
+    if sha256_file(artifact_path) != str(expected_sha).lower():
+        return False
+    try:
+        payload = read_json(artifact_path)
+    except (OSError, json.JSONDecodeError):
+        return False
+    return _inverse_scorer_parity_payload_verified(payload)
 
 
 def _has_inverse_scorer_exact_auth_boundary(row: Mapping[str, Any]) -> bool:
@@ -517,6 +575,12 @@ def inverse_scorer_chain_authority_blockers(
     if not _has_inverse_scorer_exact_auth_boundary(row):
         blockers.append(
             "inverse_scorer_cell_candidate_chain_exact_auth_eval_boundary_missing"
+        )
+    readiness = {str(item) for item in row.get("readiness_blockers") or [] if str(item)}
+    for blocker in sorted(readiness - INVERSE_SCORER_ALLOWED_READINESS_BLOCKERS):
+        blockers.append(
+            "inverse_scorer_cell_candidate_chain_unresolved_readiness_blocker:"
+            f"{blocker}"
         )
     return blockers
 

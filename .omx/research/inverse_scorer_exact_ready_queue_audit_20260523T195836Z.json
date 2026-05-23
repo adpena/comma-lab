@@ -1,0 +1,22 @@
+{
+  "generated_at_utc": "2026-05-23T19:58:54Z",
+  "passed": true,
+  "queue_count": 1,
+  "queues": [
+    {
+      "queue_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/inverse_scorer_exact_eval_queue_20260523T195836Z/exact_ready_queue.json",
+      "queue_schema": "optimizer_candidate_exact_eval_ready_queue_v1",
+      "raw_stale_ready_row_count": 0,
+      "row_count": 2,
+      "stale_ready_rows": [],
+      "suppressed_ready_row_count": 0,
+      "suppressed_ready_rows": []
+    }
+  ],
+  "raw_stale_ready_row_count": 0,
+  "schema": "optimizer_exact_ready_queue_terminal_evidence_audit_v1",
+  "stale_ready_row_count": 0,
+  "suppressed_ready_row_count": 0,
+  "suppression_manifest_path": ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json",
+  "suppression_manifest_schema": "optimizer_exact_ready_queue_suppression_manifest_v1"
+}

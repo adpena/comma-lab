@@ -14,6 +14,7 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZER_CONTEXTS_SCHEMA,
     MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
     MATERIALIZER_EXECUTION_STEP_ID,
+    MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
     build_materializer_execution_queue,
     build_materializer_work_queue,
@@ -41,6 +42,7 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     resolve_materializer,
     suggest_materializer_adapters,
 )
+from comma_lab.scheduler.dqs1_local_first_queue import DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID
 from comma_lab.scheduler.experiment_queue import (
     ExperimentQueueError,
     _condition_passes,
@@ -1131,6 +1133,115 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     assert task["experiment_metadata"]["ready_for_exact_eval_dispatch"] is False
 
 
+def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            "zip_member_range_a": {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(tmp_path / "materializer_results" / "materializer_out"),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="materializer_storage_preflight_fixture",
+        repo_root=tmp_path,
+        local_cpu_concurrency=2,
+        include_scheduler_preflight=True,
+        scheduler_results_root=str(tmp_path / "materializer_results"),
+        scheduler_storage_tiers=(f"fixture={tmp_path / 'VertigoDataTier'}",),
+        scheduler_storage_workload_subdir="materializer_results",
+        scheduler_storage_expected_workload_root=str(tmp_path / "materializer_results"),
+        scheduler_storage_expected_bytes=123456,
+        scheduler_proactive_cleanup_roots=("experiments/results", ".omx/tmp"),
+        scheduler_proactive_cleanup_cold_store_roots=(str(tmp_path / "cold_store"),),
+    )
+
+    assert execution_queue["controls"]["max_concurrency"]["local_cpu"] == 2
+    assert execution_queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
+    assert [experiment["id"] for experiment in execution_queue["experiments"]] == [
+        MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
+        work_queue["rows"][0]["work_id"],
+    ]
+    preflight = execution_queue["experiments"][0]
+    assert preflight["tags"] == [
+        "byte-shaving",
+        "materializer",
+        "scheduler-preflight",
+        "storage",
+        "cleanup",
+        "no-score-authority",
+    ]
+    storage_step, cleanup_step = preflight["steps"]
+    assert storage_step["command"][:4] == [
+        ".venv/bin/python",
+        "tools/plan_experiment_storage.py",
+        "--output",
+        storage_step["postconditions"][0]["path"],
+    ]
+    assert "--storage-tier" in storage_step["command"]
+    assert "--requested-bytes" in storage_step["command"]
+    assert "123456" in storage_step["command"]
+    assert cleanup_step["resources"]["kind"] == "local_io_heavy"
+    assert cleanup_step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/compact_experiment_artifacts.py",
+    ]
+    assert "experiments/results" in cleanup_step["command"]
+    materializer_step = execution_queue["experiments"][1]["steps"][0]
+    assert materializer_step["requires"] == [
+        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
+    ]
+
+
+def test_materializer_execution_queue_blocks_outputs_outside_storage_root(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            "zip_member_range_a": {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": "materializer_out",
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    with pytest.raises(ExperimentQueueError, match="outside scheduler workload root"):
+        build_materializer_execution_queue(
+            work_queue,
+            queue_id="materializer_storage_preflight_fixture",
+            repo_root=tmp_path,
+            include_scheduler_preflight=True,
+            scheduler_results_root=str(tmp_path / "materializer_results"),
+            scheduler_storage_expected_workload_root=str(tmp_path / "materializer_results"),
+        )
+
+
 def test_materializer_execution_queue_runs_executable_work_rows(
     tmp_path: Path,
 ) -> None:
@@ -1601,6 +1712,17 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
             "results",
             "--local-cpu-concurrency",
             "2",
+            "--include-scheduler-preflight",
+            "--scheduler-storage-tier",
+            f"fixture={tmp_path / 'VertigoDataTier'}",
+            "--scheduler-storage-workload-subdir",
+            "results",
+            "--scheduler-storage-expected-workload-root",
+            str(tmp_path / "results"),
+            "--scheduler-storage-expected-bytes",
+            "2048",
+            "--scheduler-proactive-cleanup-root",
+            "experiments/results",
         ],
         check=True,
         text=True,
@@ -1611,7 +1733,7 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
     assert stdout["executable_row_count"] >= 1
     assert stdout["materializer_backlog_out"] == str(backlog)
     assert stdout["materializer_backlog_row_count"] >= 1
-    assert stdout["queue"]["experiment_count"] == 2
+    assert stdout["queue"]["experiment_count"] == 3
     assert materialization.is_file()
     assert portfolio.is_file()
     assert summary.is_file()
@@ -1619,12 +1741,27 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
     assert json.loads(backlog.read_text(encoding="utf-8"))["schema"] == MATERIALIZER_BACKLOG_SCHEMA
     loaded = load_queue_definition(queue)
     assert loaded["controls"]["max_concurrency"]["local_cpu"] == 2
-    assert len(loaded["experiments"]) == 2
-    assert all(experiment["id"].startswith("pairset_byte_shave_") for experiment in loaded["experiments"])
+    assert len(loaded["experiments"]) == 3
+    preflight = loaded["experiments"][0]
+    assert preflight["id"] == DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID
+    assert preflight["steps"][0]["command"][:2] == [
+        ".venv/bin/python",
+        "tools/plan_experiment_storage.py",
+    ]
+    assert "--storage-tier" in preflight["steps"][0]["command"]
+    assert all(
+        experiment["id"].startswith("pairset_byte_shave_")
+        for experiment in loaded["experiments"][1:]
+    )
+    assert all(
+        experiment["steps"][0]["requires"]
+        == [f"{DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"]
+        for experiment in loaded["experiments"][1:]
+    )
     assert all(
         experiment["metadata"]["source_metadata"]["materializer_registry_schema"]
         == "byte_shaving_materializer_registry.v1"
-        for experiment in loaded["experiments"]
+        for experiment in loaded["experiments"][1:]
     )
 
 
@@ -1638,7 +1775,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     summary = tmp_path / "action_summary.json"
     work_queue = tmp_path / "materializer_work_queue.json"
     execution_queue = tmp_path / "materializer_execution_queue.json"
-    output_dir = tmp_path / "chain_out"
+    output_dir = tmp_path / "materializer_exec" / "chain_out"
     plan_path.write_text(json.dumps(_byte_range_entropy_plan()), encoding="utf-8")
     contexts_path.write_text(
         json.dumps(
@@ -1684,6 +1821,17 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
             "600",
             "--materializer-resource-concurrency",
             "local_cpu=4",
+            "--include-materializer-scheduler-preflight",
+            "--materializer-scheduler-storage-tier",
+            f"fixture={tmp_path / 'VertigoDataTier'}",
+            "--materializer-scheduler-storage-workload-subdir",
+            "materializer_exec",
+            "--materializer-scheduler-storage-expected-workload-root",
+            str(tmp_path / "materializer_exec"),
+            "--materializer-scheduler-storage-expected-bytes",
+            "4096",
+            "--materializer-scheduler-proactive-cleanup-root",
+            "experiments/results",
             "--repo-root",
             str(tmp_path),
             "--candidate-limit",
@@ -1698,7 +1846,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     assert stdout["materializer_contexts"] == str(contexts_path)
     assert stdout["materializer_work_queue_out"] == str(work_queue)
     assert stdout["materializer_execution_queue"]["queue_out"] == str(execution_queue)
-    assert stdout["materializer_execution_queue"]["experiment_count"] == 1
+    assert stdout["materializer_execution_queue"]["experiment_count"] == 2
     assert stdout["materializer_work_queue_row_count"] == 1
     payload = json.loads(work_queue.read_text(encoding="utf-8"))
     assert payload["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
@@ -1711,11 +1859,21 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     loaded_execution_queue = load_queue_definition(execution_queue)
     assert loaded_execution_queue["queue_id"] == "materializer_exec_fixture"
     assert loaded_execution_queue["controls"]["max_concurrency"]["local_cpu"] == 4
-    experiment = loaded_execution_queue["experiments"][0]
+    assert loaded_execution_queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
+    preflight = loaded_execution_queue["experiments"][0]
+    assert preflight["id"] == MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID
+    assert preflight["steps"][0]["command"][:2] == [
+        ".venv/bin/python",
+        "tools/plan_experiment_storage.py",
+    ]
+    experiment = loaded_execution_queue["experiments"][1]
     assert experiment["lane_id"] == "lane_materializer_exec_fixture"
     assert experiment["metadata"]["schema"] == MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA
     step = experiment["steps"][0]
     assert step["id"] == MATERIALIZER_EXECUTION_STEP_ID
+    assert step["requires"] == [
+        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
+    ]
     assert step["timeout_seconds"] == 600
     assert step["telemetry"]["artifact_paths"] == [str(output_dir)]
     assert step["postconditions"][0]["type"] == "json_equals"

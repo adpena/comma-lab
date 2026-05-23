@@ -137,10 +137,7 @@ def _mark_queue_row_as_inverse_scorer_chain(
     payload = json.loads(queue.read_text(encoding="utf-8"))
     row = payload["top_k"][0]
     proof_path = queue.parent / "inflate_parity_probe.json"
-    proof_payload = b'{"schema":"inverse_scorer_cell_inflate_parity_probe_v1"}\n'
-    if proof_backed:
-        proof_path.write_bytes(proof_payload)
-    false_authority = {
+    proof_false_authority = {
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
         "score_claim": False,
@@ -152,10 +149,50 @@ def _mark_queue_row_as_inverse_scorer_chain(
         "field_selection_ready_for_exact_eval_dispatch": False,
         "exact_cuda_auth_eval": False,
         "contest_cuda_auth_eval": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+    }
+    output_tree = {
+        "exists": True,
+        "file_count": 1,
+        "total_bytes": 16,
+        "tree_sha256": "1" * 64,
+        "blockers": [],
+        "files": [{"path": "0.raw", "bytes": 16, "sha256": "2" * 64}],
+    }
+    proof_payload = (
+        json.dumps(
+            {
+                "schema": "inverse_scorer_cell_inflate_parity_probe_v1",
+                "proof_scope": "full_frame_inflate_output_tree",
+                "full_frame_inflate_output_parity_claim": strict_full_frame_parity,
+                "output_bytes_identical": strict_full_frame_parity,
+                "output_contract_nonempty": strict_full_frame_parity,
+                "output_contract_paths_match": strict_full_frame_parity,
+                "differing_path_count": 0,
+                "blockers": []
+                if strict_full_frame_parity
+                else ["candidate_inflate_output_parity_missing"],
+                "missing_from_candidate": [],
+                "extra_in_candidate": [],
+                "source_output_tree": output_tree,
+                "candidate_output_tree": output_tree,
+                **proof_false_authority,
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode("utf-8")
+    if proof_backed:
+        proof_path.write_bytes(proof_payload)
+    row_false_authority = {
+        key: value
+        for key, value in proof_false_authority.items()
+        if key not in {"score_affecting_payload_changed", "charged_bits_changed"}
     }
     row.update(
         {
-            **false_authority,
+            **row_false_authority,
             "schema": "inverse_scorer_cell_candidate_chain_v1",
             "kind": "inverse_scorer_cell_candidate_chain",
             "receiver_contract_satisfied": True,

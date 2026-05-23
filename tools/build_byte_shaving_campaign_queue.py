@@ -134,6 +134,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--partial-materialization-rationale", default=None)
     parser.add_argument("--queue-id", default=DEFAULT_QUEUE_ID)
     parser.add_argument(
+        "--include-scheduler-preflight",
+        action="store_true",
+        help="gate generated DQS1 queue work on storage-tier planning and proactive cleanup",
+    )
+    parser.add_argument(
+        "--scheduler-storage-tier",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+    )
+    parser.add_argument("--scheduler-storage-workload-subdir", default=None)
+    parser.add_argument("--scheduler-storage-expected-workload-root", default=None)
+    parser.add_argument("--scheduler-storage-reserve-free-gb", type=float, default=40.0)
+    parser.add_argument("--scheduler-storage-expected-bytes", type=int, default=0)
+    parser.add_argument("--scheduler-proactive-cleanup-root", action="append", default=[])
+    parser.add_argument("--scheduler-proactive-cleanup-execute", action="store_true")
+    parser.add_argument(
+        "--scheduler-proactive-cleanup-action",
+        choices=("move", "delete"),
+        default="move",
+    )
+    parser.add_argument("--scheduler-proactive-cleanup-min-bytes", default="1")
+    parser.add_argument("--scheduler-proactive-cleanup-cold-store-root", action="append", default=[])
+    parser.add_argument("--scheduler-proactive-cleanup-cold-store-reserve-gb", type=float, default=40.0)
+    parser.add_argument(
         "--materializer-execution-queue-id",
         default="byte_shaving_materializer_local_proof_chain",
     )
@@ -149,6 +174,54 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Override materializer execution concurrency by resource kind, "
             "for example local_cpu=8 or local_mlx=2."
         ),
+    )
+    parser.add_argument(
+        "--include-materializer-scheduler-preflight",
+        action="store_true",
+        help="gate materializer execution work on storage-tier planning and proactive cleanup",
+    )
+    parser.add_argument(
+        "--materializer-scheduler-storage-tier",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+    )
+    parser.add_argument("--materializer-scheduler-storage-workload-subdir", default=None)
+    parser.add_argument("--materializer-scheduler-storage-expected-workload-root", default=None)
+    parser.add_argument(
+        "--materializer-scheduler-storage-reserve-free-gb",
+        type=float,
+        default=40.0,
+    )
+    parser.add_argument(
+        "--materializer-scheduler-storage-expected-bytes",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--materializer-scheduler-proactive-cleanup-root",
+        action="append",
+        default=[],
+    )
+    parser.add_argument(
+        "--materializer-scheduler-proactive-cleanup-execute",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--materializer-scheduler-proactive-cleanup-action",
+        choices=("move", "delete"),
+        default="move",
+    )
+    parser.add_argument("--materializer-scheduler-proactive-cleanup-min-bytes", default="1")
+    parser.add_argument(
+        "--materializer-scheduler-proactive-cleanup-cold-store-root",
+        action="append",
+        default=[],
+    )
+    parser.add_argument(
+        "--materializer-scheduler-proactive-cleanup-cold-store-reserve-gb",
+        type=float,
+        default=40.0,
     )
     parser.add_argument("--results-root", default=DEFAULT_RESULTS_ROOT)
     parser.add_argument("--completed-results-root", action="append", default=[])
@@ -259,6 +332,39 @@ def main(argv: list[str] | None = None) -> int:
                 ),
                 step_timeout_seconds=args.materializer_execution_timeout_seconds,
                 limit=args.materializer_execution_limit,
+                include_scheduler_preflight=args.include_materializer_scheduler_preflight,
+                scheduler_results_root=args.results_root,
+                scheduler_storage_tiers=tuple(args.materializer_scheduler_storage_tier),
+                scheduler_storage_workload_subdir=(
+                    args.materializer_scheduler_storage_workload_subdir
+                ),
+                scheduler_storage_expected_workload_root=(
+                    args.materializer_scheduler_storage_expected_workload_root
+                ),
+                scheduler_storage_reserve_free_gb=(
+                    args.materializer_scheduler_storage_reserve_free_gb
+                ),
+                scheduler_storage_expected_bytes=(
+                    args.materializer_scheduler_storage_expected_bytes
+                ),
+                scheduler_proactive_cleanup_roots=tuple(
+                    args.materializer_scheduler_proactive_cleanup_root
+                ),
+                scheduler_proactive_cleanup_execute=(
+                    args.materializer_scheduler_proactive_cleanup_execute
+                ),
+                scheduler_proactive_cleanup_action=(
+                    args.materializer_scheduler_proactive_cleanup_action
+                ),
+                scheduler_proactive_cleanup_min_bytes=(
+                    args.materializer_scheduler_proactive_cleanup_min_bytes
+                ),
+                scheduler_proactive_cleanup_cold_store_roots=tuple(
+                    args.materializer_scheduler_proactive_cleanup_cold_store_root
+                ),
+                scheduler_proactive_cleanup_cold_store_reserve_gb=(
+                    args.materializer_scheduler_proactive_cleanup_cold_store_reserve_gb
+                ),
             )
         except ExperimentQueueError as exc:
             raise SystemExit(str(exc)) from exc
@@ -275,6 +381,8 @@ def main(argv: list[str] | None = None) -> int:
             "selected_work_ids": [
                 experiment["metadata"]["work_id"]
                 for experiment in materializer_execution_queue["experiments"]
+                if isinstance(experiment.get("metadata"), dict)
+                and "work_id" in experiment["metadata"]
             ],
         }
 
@@ -297,6 +405,24 @@ def main(argv: list[str] | None = None) -> int:
             completed_results_roots=tuple(args.completed_results_root),
             candidate_limit=args.queue_candidate_limit,
             local_cpu_concurrency=args.local_cpu_concurrency,
+            include_scheduler_preflight=args.include_scheduler_preflight,
+            scheduler_storage_tiers=tuple(args.scheduler_storage_tier),
+            scheduler_storage_workload_subdir=args.scheduler_storage_workload_subdir,
+            scheduler_storage_expected_workload_root=(
+                args.scheduler_storage_expected_workload_root
+            ),
+            scheduler_storage_reserve_free_gb=args.scheduler_storage_reserve_free_gb,
+            scheduler_storage_expected_bytes=args.scheduler_storage_expected_bytes,
+            scheduler_proactive_cleanup_roots=tuple(args.scheduler_proactive_cleanup_root),
+            scheduler_proactive_cleanup_execute=args.scheduler_proactive_cleanup_execute,
+            scheduler_proactive_cleanup_action=args.scheduler_proactive_cleanup_action,
+            scheduler_proactive_cleanup_min_bytes=args.scheduler_proactive_cleanup_min_bytes,
+            scheduler_proactive_cleanup_cold_store_roots=tuple(
+                args.scheduler_proactive_cleanup_cold_store_root
+            ),
+            scheduler_proactive_cleanup_cold_store_reserve_gb=(
+                args.scheduler_proactive_cleanup_cold_store_reserve_gb
+            ),
         )
         _write_json(
             args.queue_out,

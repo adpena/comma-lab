@@ -1,67 +1,67 @@
-# Code Review Tracker Report — 2026-04-11 17:35 UTC
+# Code Review Tracker Report — 2026-05-23 20:05 UTC
 
 ## Summary
 
-- **Total entities**: 1598
-- **Reviewed**: 74 (5%)
-- **Unreviewed**: 1195
+- **Total entities**: 75247
+- **Reviewed**: 65029 (86%)
+- **Unreviewed**: 10218
 - **Stale**: 0
-- **Needs fix**: 329
+- **Needs fix**: 0
 
 ## Priority Review Queue (by complexity)
 
 | Entity | Type | Lines | Complexity | Status | File |
 |--------|------|-------|------------|--------|------|
-| `train` | function | 410 | 58 | needs_fix | train_renderer.py |
-| `main` | function | 236 | 32 | unreviewed | train_postfilter_dilated_h64.py |
-| `main` | function | 240 | 29 | unreviewed | train_postfilter_qat_ema.py |
-| `TacLosslessArithmeticTests` | class | 478 | 27 | unreviewed | test_tac_lossless_arithmetic.py |
-| `main` | function | 223 | 27 | unreviewed | train_postfilter_saliency.py |
-| `main` | function | 267 | 26 | unreviewed | train_postfilter_canonical.py |
-| `_run_lossless` | function | 222 | 24 | unreviewed | cli.py |
-| `main` | function | 267 | 24 | unreviewed | cloud_h96_trainer.py |
-| `main` | function | 214 | 23 | unreviewed | cloud_segnet_attack_h32_trainer.py |
-| `main` | function | 196 | 23 | unreviewed | train_postfilter_v2.py |
-| `parse_kaggle_status_text` | function | 68 | 22 | unreviewed | kaggle_status_sync.py |
-| `decode_uint16_prev_symbol_stream` | function | 68 | 20 | unreviewed | frequency_coder.py |
-| `main` | function | 194 | 19 | unreviewed | train_postfilter_segnet_attack.py |
-| `_parse_header` | function | 52 | 18 | unreviewed | frequency_coder.py |
-| `sweep` | function | 123 | 17 | unreviewed | crf_search.py |
-| `main` | function | 168 | 17 | unreviewed | train_postfilter_cvar.py |
-| `main` | function | 98 | 16 | unreviewed | train_postfilter_film_conditioned.py |
-| `main` | function | 155 | 16 | unreviewed | train_postfilter_kalman.py |
-| `main` | function | 152 | 16 | unreviewed | train_postfilter_uint8ste.py |
-| `main` | function | 140 | 16 | unreviewed | trust_region_sweep.py |
-| `main` | function | 189 | 15 | unreviewed | train_postfilter.py |
-| `main` | function | 166 | 15 | unreviewed | train_postfilter_segaware.py |
-| `DiffusionRenderer` | class | 316 | 15 | needs_fix | diffusion_renderer.py |
-| `main` | function | 89 | 14 | unreviewed | monte_carlo_layer_scale_search.py |
-| `train_variant` | function | 129 | 14 | unreviewed | run_saliency_sweep.py |
-| `TacLosslessBaselineTests` | class | 396 | 14 | unreviewed | test_tac_lossless_baseline.py |
-| `main` | function | 137 | 14 | unreviewed | train_postfilter_featmatch.py |
-| `main` | function | 134 | 14 | unreviewed | train_postfilter_h32.py |
-| `main` | function | 157 | 14 | unreviewed | train_postfilter_segnet_boundary.py |
-| `train` | function | 213 | 14 | unreviewed | train_renderer_mlx.py |
+| `InverseScorerCellChainError` | class | 2 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_resolve_optional_dir` | function | 7 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_chain_manifest` | function | 123 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_next_required_gates` | function | 12 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_prepare_new_output_dir` | function | 4 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_write_json` | function | 2 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_write_failure_manifest` | function | 23 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_file_record` | function | 6 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `build_inverse_scorer_cell_candidate_chain` | function | 129 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_mapping` | function | 2 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_string_list` | function | 2 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `_ordered_unique` | function | 8 | 1 | unreviewed | inverse_scorer_cell_chain.py |
+| `InverseScorerCellInflateParityError` | class | 2 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `build_inverse_scorer_cell_inflate_parity_probe` | function | 112 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `build_inverse_scorer_cell_inflate_parity_probe_from_archives` | function | 160 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `verify_inverse_scorer_cell_inflate_parity_probe` | function | 96 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_output_tree_record` | function | 41 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_missing_tree_record` | function | 10 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_file_map` | function | 17 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_load_candidate` | function | 22 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_load_optional_mapping` | function | 13 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_archive_record` | function | 10 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_descriptor_record` | function | 12 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_preflight_blocked_inflate_run` | function | 20 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_resolve_existing_path` | function | 9 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_match_text` | function | 10 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_canonical_tree_sha` | function | 10 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_blocked_archive_parity_probe` | function | 54 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_run_inflate` | function | 69 | 1 | unreviewed | inverse_scorer_cell_inflate_parity.py |
+| `_repo_path` | function | 2 | 1 | unreviewed | inverse_scorer_cell_chain.py |
 
 ## Recent Review Activity
 
-- `tac.fp4_quantize::_quantize_block` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::_dequantize_block` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::_pack_indices_signs` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::_unpack_indices_signs` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::quantize_fp4` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::dequantize_fp4` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::FakeQuantFP4` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::FakeQuantFP4.forward` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::FakeQuantFP4.backward` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::fake_quant_fp4` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::FP4Parametrize` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::FP4Parametrize.__init__` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::FP4Parametrize.forward` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::QATRendererFP4` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::QATRendererFP4.__init__` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::QATRendererFP4._register_parametrizations` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::QATRendererFP4.remove_hooks` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::QATRendererFP4.forward` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::save_fp4` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
-- `tac.fp4_quantize::load_fp4` — marked_needs_fix by council_5369_review (comprehensive_review_20260410)
+- `tac.tests.test_optimizer_exact_readiness::test_active_floor_score_tracks_score_frontier_not_rate_only_anchor` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_load_parallel_dispatch_tool` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_write_json` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_write_archive` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_make_submission` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_make_queue` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_mark_queue_row_as_inverse_scorer_chain` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_hdm8_selector_gate` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_selector_cuda_transfer_calibration` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_mark_submission_as_hdm8_selector` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_write_pr101_runtime_proof` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::_add_required_runtime_proof_fields` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::test_promotes_byte_closed_candidate_without_score_claim` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::test_refuses_inverse_scorer_chain_without_strict_full_frame_parity` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::test_refuses_inverse_scorer_chain_without_exact_auth_score_boundary` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::test_refuses_inverse_scorer_chain_with_self_asserted_unbacked_parity` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::test_refuses_inverse_scorer_chain_with_truthy_false_authority_fields` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::test_promotes_inverse_scorer_chain_only_after_parity_and_auth_boundary` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::test_refuses_hdm8_selector_without_passing_cuda_component_gate` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_optimizer_exact_readiness::test_promotes_hdm8_selector_after_passing_cuda_component_gate` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
