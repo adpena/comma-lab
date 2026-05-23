@@ -40,6 +40,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
 from tac.optimization.local_cpu_contest_drift import (  # noqa: E402
     local_cpu_advisory_payload_blockers,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 AUTOPILOT_SCHEMA = "dqs1_local_first_autopilot_result.v1"
 REROUTE_LEDGER_SCHEMA = "dqs1_local_first_queue_reroute_record.v1"
@@ -64,13 +65,10 @@ def _artifact_token(value: object) -> str:
 
 
 def _write_json_new(path: Path, payload: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        raise ExperimentQueueError(f"refusing to overwrite existing artifact: {path}")
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )
+    try:
+        write_json_artifact(path, payload)
+    except ArtifactWriteError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
 
 
 def _path_size_bytes(path: Path) -> int:
@@ -409,6 +407,9 @@ def main(argv: list[str] | None = None) -> int:
                 "timestamp": stamp,
                 "reroute_observe_only": True,
                 "output_queue_path": queue_path,
+                "expected_output_queue_sha256": _sha256_text(prior_queue_text)
+                if prior_queue_text
+                else None,
                 "action_summary": args.action_summary,
             }
             if args.results_root is not None:

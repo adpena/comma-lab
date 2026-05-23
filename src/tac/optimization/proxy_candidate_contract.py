@@ -16,6 +16,7 @@ PROXY_FALSE_AUTHORITY_FIELDS: dict[str, bool] = {
     "ready_for_exact_eval_dispatch": False,
     "dispatch_attempted": False,
     "score_claim": False,
+    "score_claim_valid": False,
     "score_claim_eligible": False,
     "promotion_eligible": False,
     "rank_or_kill_eligible": False,

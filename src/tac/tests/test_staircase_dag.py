@@ -18,6 +18,7 @@ from comma_lab.scheduler.staircase_dag import (
     experiment_queue_status_map,
     parse_resource_pool_spec,
     plan_staircase_dispatch,
+    write_staircase_dag,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -150,6 +151,16 @@ def test_parse_resource_pool_spec() -> None:
     assert pool["id"] == "bat00"
     assert pool["slots"] == {"local_cpu": 8, "cuda_gpu": 1}
     assert pool["tags"] == ["windows", "cuda"]
+
+
+def test_write_staircase_dag_refuses_silent_overwrite(tmp_path: Path) -> None:
+    dag = build_staircase_dag_from_experiment_queue(_queue(), dag_id="fixture_dag")
+    path = tmp_path / "dag.json"
+
+    write_staircase_dag(path, dag)
+
+    with pytest.raises(ExperimentQueueError, match="refusing to overwrite"):
+        write_staircase_dag(path, dag)
 
 
 def test_cli_from_queue_and_plan(tmp_path: Path) -> None:

@@ -252,6 +252,7 @@
                 "ready_for_exact_eval_dispatch",
                 "dispatch_attempted",
                 "score_claim",
+                "score_claim_valid",
                 "score_claim_eligible",
                 "promotion_eligible",
                 "rank_or_kill_eligible",
@@ -261,7 +262,6 @@
                 "contest_cuda_auth_eval",
                 "score_affecting_payload_changed",
                 "charged_bits_changed",
-                "score_claim_valid",
                 "gpu_launched"
               ],
               "false_or_missing": []

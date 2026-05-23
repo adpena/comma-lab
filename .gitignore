@@ -288,6 +288,12 @@ reports/public/.env
 .omx/state/.subagent-temp-index-*.lock
 .omx/state/launch_locks/
 
+# Ephemeral guarded artifact-directory transactions from tac.repo_io.
+# If one remains after interruption, rerun or inspect it locally; durable signal
+# belongs in the committed target artifact or a dated .omx/research ledger.
+**/.*.partial.*
+**/.*.backup.*
+
 # Ralph tool backup files (auto-generated)
 .ralph/*.bak
 # Ephemeral .omx/tmp/ scratch (never commit)

@@ -13,6 +13,7 @@ from tac.optimization.local_cpu_contest_drift import (
     require_eureka_false_authority,
 )
 from tac.optimization.proxy_candidate_contract import apply_proxy_evidence_boundary
+from tac.repo_io import ArtifactWriteError, write_json_artifact
 
 from .dqs1_local_first_queue import (
     DEFAULT_RESULTS_ROOT,
@@ -170,6 +171,8 @@ def build_dqs1_harvest_result(
     timestamp: str | None = None,
     reroute_observe_only: bool = False,
     output_queue_path: str | Path | None = None,
+    expected_output_queue_sha256: str | None = None,
+    min_output_queue_free_bytes: int = 0,
     action_summary: str | Path = "latest",
     results_root: str = DEFAULT_RESULTS_ROOT,
 ) -> Dqs1HarvestResult:
@@ -280,8 +283,21 @@ def build_dqs1_harvest_result(
         rerouted_queue = reroute.queue
         if output_queue_path is not None:
             output_path = _resolve(output_queue_path, repo_root=repo)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(json.dumps(rerouted_queue, indent=2, allow_nan=False) + "\n")
+            allow_overwrite = output_path.exists()
+            if allow_overwrite and expected_output_queue_sha256 is None:
+                raise ExperimentQueueError(
+                    f"{output_path}: expected_output_queue_sha256 is required before reroute overwrite"
+                )
+            try:
+                write_json_artifact(
+                    output_path,
+                    rerouted_queue,
+                    allow_overwrite=allow_overwrite,
+                    expected_existing_sha256=expected_output_queue_sha256,
+                    min_free_bytes=min_output_queue_free_bytes,
+                )
+            except ArtifactWriteError as exc:
+                raise ExperimentQueueError(str(exc)) from exc
 
     return Dqs1HarvestResult(
         harvest_record=harvest,

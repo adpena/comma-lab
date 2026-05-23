@@ -33,6 +33,7 @@ from comma_lab.scheduler.staircase_dag import (  # noqa: E402
     plan_staircase_dispatch,
     write_staircase_dag,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 
 def _json_print(payload: object) -> None:
@@ -40,9 +41,10 @@ def _json_print(payload: object) -> None:
 
 
 def _write_json(path: str | Path, payload: object) -> None:
-    out = Path(path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
+    try:
+        write_json_artifact(path, payload)
+    except ArtifactWriteError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
 
 
 def _resource_pools(args: argparse.Namespace) -> list[dict]:

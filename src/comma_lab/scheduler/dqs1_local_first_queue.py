@@ -649,7 +649,6 @@ def build_dqs1_local_first_queue(
                             frame_policy,
                             "--manifest-output",
                             f"{materialized_root}/materialization_manifest.json",
-                            "--force",
                         ],
                         "resources": {"kind": "local_cpu"},
                         "postconditions": [

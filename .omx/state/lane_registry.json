@@ -48431,6 +48431,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_artifact_write_safety_proxy_authority_20260523",
+      "name": "Codex artifact write safety and proxy authority",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_artifact_write_safety_and_proxy_authority_20260523T075258Z_codex.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_repo_io.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -48440,5 +48481,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T07:36:31Z"
+  "updated_at": "2026-05-23T07:53:32Z"
 }

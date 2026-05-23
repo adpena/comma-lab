@@ -23,13 +23,14 @@ from comma_lab.scheduler.dqs1_local_first_harvest import (  # noqa: E402
     ExperimentQueueError,
     build_dqs1_harvest_result,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 
 def _write_json(path: Path, payload: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        raise FileExistsError(f"refusing to overwrite existing artifact: {path}")
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n")
+    try:
+        write_json_artifact(path, payload)
+    except ArtifactWriteError as exc:
+        raise FileExistsError(str(exc)) from exc
 
 
 def _sha256_text(text: str) -> str:
@@ -104,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
             "timestamp": args.timestamp,
             "reroute_observe_only": args.reroute_observe_only,
             "output_queue_path": args.queue if args.write_queue else None,
+            "expected_output_queue_sha256": prior_queue_sha256 if args.write_queue else None,
             "action_summary": args.action_summary,
         }
         if args.results_root is not None:

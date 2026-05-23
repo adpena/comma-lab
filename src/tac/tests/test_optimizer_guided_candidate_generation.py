@@ -19,10 +19,26 @@ from tac.optimization.optimizer_training_signal_bridge import (
     OPTIMIZER_TRAINING_SIGNAL_WIRE_IN_SCHEMA,
     validate_optimizer_training_signal_wire_in,
 )
-from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
+from tac.optimization.proxy_candidate_contract import (
+    apply_proxy_evidence_boundary,
+    validate_proxy_candidate,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_optimizer_guided_candidate_queue.py"
+
+
+def test_proxy_evidence_boundary_clears_score_claim_valid() -> None:
+    row = apply_proxy_evidence_boundary(
+        {
+            "candidate_id": "proxy_overclaim",
+            "score_claim_valid": True,
+            "dispatch_blockers": ["source_proxy_row"],
+        }
+    )
+
+    assert row["score_claim_valid"] is False
+    assert validate_proxy_candidate(row) == []
 
 
 def test_pr101_bias_sidecar_cmaes_queue_is_seed_deterministic_and_proxy_only() -> None:

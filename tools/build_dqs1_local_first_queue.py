@@ -26,6 +26,7 @@ from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     build_queue_from_action_summary,
     find_latest_cross_family_action_summary,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 
 def _json_print(payload: object) -> None:
@@ -48,6 +49,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--write",
         action="store_true",
         help="write --output; without this flag the generated queue is printed",
+    )
+    parser.add_argument(
+        "--overwrite-output",
+        action="store_true",
+        help="allow --write to replace an existing --output only with --expected-output-sha256",
+    )
+    parser.add_argument(
+        "--expected-output-sha256",
+        default=None,
+        help="required sha256 of existing --output when --overwrite-output replaces it",
+    )
+    parser.add_argument(
+        "--min-free-gb",
+        type=float,
+        default=1.0,
+        help="free-space floor before writing --output (default: 1.0 GiB)",
     )
     parser.add_argument(
         "--results-root",
@@ -146,11 +163,30 @@ def main(argv: list[str] | None = None) -> int:
     )
     output = Path(args.output)
     if args.write:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(result.queue, indent=2, allow_nan=False) + "\n")
+        if args.overwrite_output and output.exists() and args.expected_output_sha256 is None:
+            print(
+                "--overwrite-output requires --expected-output-sha256 when --output exists",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            artifact = write_json_artifact(
+                output,
+                result.queue,
+                allow_overwrite=bool(args.overwrite_output),
+                expected_existing_sha256=args.expected_output_sha256,
+                min_free_bytes=int(max(args.min_free_gb, 0.0) * (1024**3)),
+            )
+        except ArtifactWriteError as exc:
+            print(f"FATAL: {exc}", file=sys.stderr)
+            return 2
         _json_print(
             {
                 "output": str(output),
+                "output_bytes": artifact.bytes_written,
+                "output_sha256": artifact.sha256,
+                "output_free_bytes_before": artifact.free_bytes_before,
+                "output_allow_overwrite": artifact.allow_overwrite,
                 "queue_id": result.queue["queue_id"],
                 "selected_candidate_id": result.selection.candidate_id,
                 "selected_candidate_ids": [

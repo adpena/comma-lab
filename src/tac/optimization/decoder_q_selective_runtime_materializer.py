@@ -29,6 +29,11 @@ from tac.optimization.decoder_q_selective_runtime_packet import (
     SCHEMA as PACKET_SCHEMA,
 )
 from tac.optimization.fec6_decoder_mutations import extract_fec6_decoder_blob
+from tac.repo_io import (
+    ArtifactWriteError,
+    artifact_dir_transaction,
+    write_json_artifact,
+)
 
 MATERIALIZER_SCHEMA = "decoder_q_selective_runtime_materialization.v1"
 TOOL = "tac.optimization.decoder_q_selective_runtime_materializer"
@@ -80,8 +85,10 @@ def load_json_object(path: Path) -> dict[str, Any]:
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    try:
+        write_json_artifact(path, payload)
+    except ArtifactWriteError as exc:
+        raise DecoderQSelectiveRuntimeMaterializerError(str(exc)) from exc
 
 
 def _require_false_authority(payload: dict[str, Any], *, label: str) -> None:
@@ -649,13 +656,14 @@ def copy_submission_runtime(
             f"base submission dir missing: {source_dir}"
         )
     if output_dir.exists():
-        if not force:
+        if any(output_dir.iterdir()) and not force:
             raise DecoderQSelectiveRuntimeMaterializerError(
                 f"output dir already exists: {output_dir}"
             )
-        shutil.rmtree(output_dir)
+        if any(output_dir.iterdir()):
+            shutil.rmtree(output_dir)
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc")
-    shutil.copytree(source_dir, output_dir, ignore=ignore)
+    shutil.copytree(source_dir, output_dir, ignore=ignore, dirs_exist_ok=output_dir.exists())
 
 
 def materialize_selective_runtime_candidate(
@@ -668,6 +676,8 @@ def materialize_selective_runtime_candidate(
     frame_policy: str = "pair_all_frames",
     max_units: int | None = None,
     force: bool = False,
+    expected_output_tree_sha256: str | None = None,
+    min_output_free_bytes: int = 0,
 ) -> dict[str, Any]:
     """Create a byte-closed selective runtime submission directory."""
 
@@ -686,25 +696,65 @@ def materialize_selective_runtime_candidate(
     base_member = read_single_stored_member(base_archive)
     candidate_member = base_member.data + dqs1_payload
 
-    copy_submission_runtime(
-        source_dir=base_submission_dir,
-        output_dir=output_dir,
-        force=force,
-    )
-    write_single_stored_member(
-        output_dir / "archive.zip",
-        member_name=base_member.name,
-        data=candidate_member,
-    )
-    base_inflate = (base_submission_dir / "inflate.py").read_text(encoding="utf-8")
-    (output_dir / "inflate.py").write_text(
-        build_selective_inflate_py(base_inflate),
-        encoding="utf-8",
-    )
-    write_json(output_dir / "decoder_q_selective_runtime_packet_plan.json", packet_plan)
+    try:
+        with artifact_dir_transaction(
+            output_dir,
+            allow_overwrite=force,
+            expected_existing_tree_sha256=expected_output_tree_sha256,
+            min_free_bytes=min_output_free_bytes,
+        ) as transaction:
+            copy_submission_runtime(
+                source_dir=base_submission_dir,
+                output_dir=transaction.staging,
+                force=False,
+            )
+            write_single_stored_member(
+                transaction.staging / "archive.zip",
+                member_name=base_member.name,
+                data=candidate_member,
+            )
+            base_inflate = (base_submission_dir / "inflate.py").read_text(encoding="utf-8")
+            (transaction.staging / "inflate.py").write_text(
+                build_selective_inflate_py(base_inflate),
+                encoding="utf-8",
+            )
+            write_json(
+                transaction.staging / "decoder_q_selective_runtime_packet_plan.json",
+                packet_plan,
+            )
+            materialized_member = read_single_stored_member(transaction.staging / "archive.zip")
+            manifest = _materialization_manifest(
+                plan_path=plan_path,
+                repo_root=repo_root,
+                base_submission_dir=base_submission_dir,
+                output_dir=output_dir,
+                base_archive=base_archive,
+                base_member=base_member,
+                materialized_member=materialized_member,
+                parsed_dqs1=parsed_dqs1,
+                dqs1_payload=dqs1_payload,
+                candidate_member=candidate_member,
+            )
+            write_json(transaction.staging / "selective_runtime_manifest.json", manifest)
+    except ArtifactWriteError as exc:
+        raise DecoderQSelectiveRuntimeMaterializerError(str(exc)) from exc
+    return manifest
 
-    materialized_member = read_single_stored_member(output_dir / "archive.zip")
-    manifest = {
+
+def _materialization_manifest(
+    *,
+    plan_path: Path,
+    repo_root: Path,
+    base_submission_dir: Path,
+    output_dir: Path,
+    base_archive: Path,
+    base_member: StoredMember,
+    materialized_member: StoredMember,
+    parsed_dqs1: dict[str, Any],
+    dqs1_payload: bytes,
+    candidate_member: bytes,
+) -> dict[str, Any]:
+    return {
         "schema": MATERIALIZER_SCHEMA,
         "producer": TOOL,
         "generated_at_utc": datetime.now(UTC).isoformat(),
@@ -745,8 +795,6 @@ def materialize_selective_runtime_candidate(
             "exact contest auth eval not run",
         ],
     }
-    write_json(output_dir / "selective_runtime_manifest.json", manifest)
-    return manifest
 
 
 __all__ = [

@@ -72,7 +72,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Replace --output-dir if it already exists.",
+        help="Replace --output-dir if it already exists and --expected-output-tree-sha256 matches.",
+    )
+    parser.add_argument(
+        "--expected-output-tree-sha256",
+        default=None,
+        help="required tree sha256 of existing --output-dir when --force replaces it",
     )
     return parser.parse_args(argv)
 
@@ -89,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         frame_policy=args.frame_policy,
         max_units=args.max_units,
         force=args.force,
+        expected_output_tree_sha256=args.expected_output_tree_sha256,
     )
     if args.manifest_output:
         write_json(args.manifest_output, manifest)

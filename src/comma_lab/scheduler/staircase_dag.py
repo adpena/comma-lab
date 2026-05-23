@@ -32,6 +32,7 @@ from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     require_no_truthy_authority_fields,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact
 
 STAIRCASE_DAG_SCHEMA = "staircase_dag.v1"
 STAIRCASE_DISPATCH_PLAN_SCHEMA = "staircase_dispatch_plan.v1"
@@ -693,11 +694,25 @@ def load_staircase_dag(path: str | Path) -> dict[str, Any]:
     return normalize_staircase_dag(payload)
 
 
-def write_staircase_dag(path: str | Path, dag: Mapping[str, Any]) -> None:
+def write_staircase_dag(
+    path: str | Path,
+    dag: Mapping[str, Any],
+    *,
+    allow_overwrite: bool = False,
+    expected_existing_sha256: str | None = None,
+    min_free_bytes: int = 0,
+) -> None:
     normalized = normalize_staircase_dag(dag)
-    out = Path(path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(normalized, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
+    try:
+        write_json_artifact(
+            path,
+            normalized,
+            allow_overwrite=allow_overwrite,
+            expected_existing_sha256=expected_existing_sha256,
+            min_free_bytes=min_free_bytes,
+        )
+    except ArtifactWriteError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
 
 
 __all__ = [

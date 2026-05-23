@@ -23,6 +23,7 @@ from tac.optimization.decoder_q_selective_runtime_packet import (
     SCHEMA as PACKET_SCHEMA,
 )
 from tac.pr101_split_brotli_codec import DECODER_BLOB_LEN, LATENT_BLOB_LEN
+from tac.repo_io import tree_sha256
 
 FEC6_INFLATE = Path(
     "experiments/results/"
@@ -254,3 +255,74 @@ def test_materialize_rejects_packet_plan_base_archive_mismatch(tmp_path: Path) -
             output_dir=tmp_path / "candidate_submission",
             repo_root=tmp_path,
         )
+
+
+def test_materialize_refuses_existing_output_dir_without_expected_tree(
+    tmp_path: Path,
+) -> None:
+    base_dir = tmp_path / "base_submission"
+    base_dir.mkdir()
+    (base_dir / "inflate.py").write_text(FEC6_INFLATE.read_text(encoding="utf-8"), encoding="utf-8")
+    base_member = _synthetic_fec6_member()
+    base_archive = base_dir / "archive.zip"
+    write_single_stored_member(base_archive, member_name="x", data=base_member)
+    plan_path = tmp_path / "packet_plan.json"
+    write_json(
+        plan_path,
+        _packet_plan(
+            pair_indices=[9],
+            base_archive=_base_archive_meta(base_archive, base_member),
+        ),
+    )
+    out_dir = tmp_path / "candidate_submission"
+    out_dir.mkdir()
+    sentinel = out_dir / "sentinel.txt"
+    sentinel.write_text("keep", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="expected_existing_tree_sha256"):
+        materialize_selective_runtime_candidate(
+            plan_path=plan_path,
+            base_submission_dir=base_dir,
+            base_archive=base_archive,
+            output_dir=out_dir,
+            repo_root=tmp_path,
+            force=True,
+        )
+
+    assert sentinel.read_text(encoding="utf-8") == "keep"
+
+
+def test_materialize_force_requires_matching_existing_output_tree(
+    tmp_path: Path,
+) -> None:
+    base_dir = tmp_path / "base_submission"
+    base_dir.mkdir()
+    (base_dir / "inflate.py").write_text(FEC6_INFLATE.read_text(encoding="utf-8"), encoding="utf-8")
+    base_member = _synthetic_fec6_member()
+    base_archive = base_dir / "archive.zip"
+    write_single_stored_member(base_archive, member_name="x", data=base_member)
+    plan_path = tmp_path / "packet_plan.json"
+    write_json(
+        plan_path,
+        _packet_plan(
+            pair_indices=[9],
+            base_archive=_base_archive_meta(base_archive, base_member),
+        ),
+    )
+    out_dir = tmp_path / "candidate_submission"
+    out_dir.mkdir()
+    (out_dir / "sentinel.txt").write_text("replace me", encoding="utf-8")
+
+    manifest = materialize_selective_runtime_candidate(
+        plan_path=plan_path,
+        base_submission_dir=base_dir,
+        base_archive=base_archive,
+        output_dir=out_dir,
+        repo_root=tmp_path,
+        force=True,
+        expected_output_tree_sha256=tree_sha256(out_dir),
+    )
+
+    assert manifest["output_submission_dir"] == str(out_dir)
+    assert not (out_dir / "sentinel.txt").exists()
+    assert (out_dir / "selective_runtime_manifest.json").is_file()

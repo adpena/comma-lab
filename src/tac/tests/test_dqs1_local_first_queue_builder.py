@@ -349,6 +349,7 @@ def test_dqs1_harvest_observe_only_reroutes_queue(tmp_path: Path) -> None:
         timestamp="20260523T010203Z",
         reroute_observe_only=True,
         output_queue_path=queue_path,
+        expected_output_queue_sha256=sha256(queue_path.read_bytes()).hexdigest(),
         results_root="results",
     )
 
@@ -390,6 +391,7 @@ def test_dqs1_harvest_positive_eureka_creates_exact_auth_request(tmp_path: Path)
         timestamp="20260523T010203Z",
         reroute_observe_only=True,
         output_queue_path=queue_path,
+        expected_output_queue_sha256=sha256(queue_path.read_bytes()).hexdigest(),
         results_root="results",
     )
 
@@ -403,6 +405,46 @@ def test_dqs1_harvest_positive_eureka_creates_exact_auth_request(tmp_path: Path)
     assert request["score_claim"] is False
     assert request["promotion_eligible"] is False
     assert request["ready_for_exact_eval_dispatch"] is False
+
+
+def test_dqs1_harvest_reroute_refuses_unexpected_queue_overwrite(tmp_path: Path) -> None:
+    summary = _write_summary(tmp_path)
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        eureka_run_id="20260522T000000Z",
+    )
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(json.dumps(result.queue))
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
+    )
+
+    with pytest.raises(ExperimentQueueError, match="expected_output_queue_sha256"):
+        build_dqs1_harvest_result(
+            queue_path=queue_path,
+            repo_root=tmp_path,
+            timestamp="20260523T010203Z",
+            reroute_observe_only=True,
+            output_queue_path=queue_path,
+            results_root="results",
+        )
+
+    with pytest.raises(ExperimentQueueError, match="sha256 mismatch"):
+        build_dqs1_harvest_result(
+            queue_path=queue_path,
+            repo_root=tmp_path,
+            timestamp="20260523T010204Z",
+            reroute_observe_only=True,
+            output_queue_path=queue_path,
+            expected_output_queue_sha256="0" * 64,
+            results_root="results",
+        )
 
 
 def test_dqs1_harvest_json_writer_refuses_overwrite(tmp_path: Path) -> None:
