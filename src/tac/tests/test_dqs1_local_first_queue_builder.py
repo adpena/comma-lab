@@ -303,6 +303,7 @@ def test_dqs1_queue_builder_can_emit_local_mlx_advisory_debug_steps(
         "local_cpu_advisory",
         "build_mlx_local_advisory_cache",
         "local_mlx_advisory_response",
+        "plan_mlx_delta_cache_retention",
         "local_cpu_contest_drift_eureka",
     ]
     build_cache = steps_by_id["build_mlx_local_advisory_cache"]
@@ -334,6 +335,20 @@ def test_dqs1_queue_builder_can_emit_local_mlx_advisory_debug_steps(
     )
     assert false_authority["axis_key"] == "score_axis"
     assert false_authority["axis_equals"] == "[macOS-MLX research-signal]"
+    retention = steps_by_id["plan_mlx_delta_cache_retention"]
+    assert retention["requires"] == ["local_mlx_advisory_response"]
+    assert retention["resources"]["kind"] == "local_cpu"
+    assert "tools/compact_experiment_artifacts.py" in retention["command"]
+    assert "mlx_scorer_input_cache" in retention["command"]
+    assert any(
+        condition == {
+            "type": "json_equals",
+            "path": "results/materialized/drop_rank023_pair0440/mlx_delta_cache_retention_plan.json",
+            "key": "plan.candidate_count",
+            "equals": 1,
+        }
+        for condition in retention["postconditions"]
+    )
 
 
 def test_dqs1_queue_builder_requires_explicit_large_mlx_cache_ack(

@@ -41,6 +41,14 @@ DEFAULT_RETENTION_KINDS = frozenset(
         "local_cpu_advisory_extracted_scratch",
     }
 )
+AUTHORITY_FALSE_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "promotable",
+    "rank_or_kill_eligible",
+    "ready_for_exact_eval_dispatch",
+)
 
 
 class ArtifactRetentionError(ValueError):
@@ -394,6 +402,7 @@ def _certify_mlx_cache(path: Path, repo_root: Path) -> RetentionCandidate | None
             "segnet_last_rgb",
         }.issubset(arrays):
             blockers.append("mlx_cache_array_hashes_missing")
+        artifact_hashes = _mlx_cache_artifact_hashes(manifest, blockers)
         for key in (
             "archive_sha256",
             "raw_sha256",
@@ -408,7 +417,7 @@ def _certify_mlx_cache(path: Path, repo_root: Path) -> RetentionCandidate | None
         _append_named_file_hash_blockers(
             blockers,
             root=path,
-            hashes=arrays if isinstance(arrays, dict) else {},
+            hashes=artifact_hashes,
             names={
                 "pair_indices": "pair_indices.npy",
                 "posenet_yuv6_pair": "posenet_yuv6_pair.npy",
@@ -416,6 +425,14 @@ def _certify_mlx_cache(path: Path, repo_root: Path) -> RetentionCandidate | None
             },
             prefix="mlx_cache",
         )
+        identity_certificate = _mlx_cache_identity_certificate(
+            manifest,
+            cache_root=path,
+            repo_root=repo_root,
+            blockers=blockers,
+        )
+        if identity_certificate:
+            certificate["identity_audit"] = identity_certificate
     return RetentionCandidate(
         path=_rel(path, repo_root),
         kind="mlx_scorer_input_cache",
@@ -424,6 +441,217 @@ def _certify_mlx_cache(path: Path, repo_root: Path) -> RetentionCandidate | None
         certificate=certificate,
         blockers=blockers,
     )
+
+
+def _mlx_cache_artifact_hashes(
+    manifest: dict[str, Any],
+    blockers: list[str],
+) -> dict[str, str]:
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        blockers.append("mlx_cache_artifacts_missing")
+        return {}
+    out: dict[str, str] = {}
+    for key in ("pair_indices", "posenet_yuv6_pair", "segnet_last_rgb"):
+        artifact = artifacts.get(key)
+        if not isinstance(artifact, dict):
+            blockers.append(f"mlx_cache_artifact_{key}_missing")
+            continue
+        sha = artifact.get("sha256")
+        if not isinstance(sha, str) or len(sha) != 64:
+            blockers.append(f"mlx_cache_artifact_{key}_sha256_missing")
+            continue
+        out[key] = sha
+    return out
+
+
+def _mlx_cache_identity_certificate(
+    manifest: dict[str, Any],
+    *,
+    cache_root: Path,
+    repo_root: Path,
+    blockers: list[str],
+) -> dict[str, Any] | None:
+    for stamp_key, expected_verdict, source_keys in (
+        (
+            "auth_eval_identity_audit",
+            "PASS_CACHE_AUTH_EVAL_IDENTITY",
+            ("auth_eval_path", "auth_eval_dir"),
+        ),
+        (
+            "local_cpu_advisory_cache_identity_audit",
+            "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
+            ("local_cpu_advisory_path",),
+        ),
+    ):
+        stamp = manifest.get(stamp_key)
+        if stamp is None:
+            continue
+        if not isinstance(stamp, dict):
+            blockers.append(f"{stamp_key}_not_object")
+            return None
+        return _validate_mlx_identity_stamp(
+            stamp,
+            stamp_key=stamp_key,
+            expected_verdict=expected_verdict,
+            source_keys=source_keys,
+            manifest=manifest,
+            cache_root=cache_root,
+            repo_root=repo_root,
+            blockers=blockers,
+        )
+    blockers.append("mlx_cache_identity_audit_stamp_missing")
+    return None
+
+
+def _validate_mlx_identity_stamp(
+    stamp: dict[str, Any],
+    *,
+    stamp_key: str,
+    expected_verdict: str,
+    source_keys: tuple[str, ...],
+    manifest: dict[str, Any],
+    cache_root: Path,
+    repo_root: Path,
+    blockers: list[str],
+) -> dict[str, Any] | None:
+    certificate: dict[str, Any] = {
+        "stamp_key": stamp_key,
+        "expected_verdict": expected_verdict,
+    }
+    if stamp.get("verdict") != expected_verdict:
+        blockers.append(f"{stamp_key}_verdict_not_{expected_verdict}")
+    if stamp.get("passed") is not True:
+        blockers.append(f"{stamp_key}_passed_not_true")
+    _append_authority_false_blockers(blockers, stamp, prefix=stamp_key)
+
+    audit_path = _resolve_referenced_path(
+        stamp.get("path"),
+        repo_root=repo_root,
+        cache_root=cache_root,
+    )
+    expected_sha = stamp.get("sha256")
+    if audit_path is None:
+        blockers.append(f"{stamp_key}_path_missing_or_not_found")
+    elif not isinstance(expected_sha, str) or len(expected_sha) != 64:
+        blockers.append(f"{stamp_key}_sha256_missing")
+    elif sha256_file(audit_path) != expected_sha:
+        blockers.append(f"{stamp_key}_sha256_mismatch")
+    else:
+        certificate["path"] = _rel(audit_path, repo_root)
+        certificate["sha256"] = expected_sha
+        audit = _load_optional_json(audit_path, blockers)
+        if audit is not None:
+            _append_mlx_identity_audit_blockers(
+                blockers,
+                audit,
+                manifest=manifest,
+                stamp_key=stamp_key,
+                expected_verdict=expected_verdict,
+            )
+            certificate["schema_version"] = audit.get("schema_version")
+
+    source_certificate = _mlx_identity_source_certificate(
+        stamp,
+        source_keys=source_keys,
+        repo_root=repo_root,
+        cache_root=cache_root,
+        blockers=blockers,
+        prefix=stamp_key,
+    )
+    if source_certificate:
+        certificate["source"] = source_certificate
+    return certificate
+
+
+def _append_mlx_identity_audit_blockers(
+    blockers: list[str],
+    audit: dict[str, Any],
+    *,
+    manifest: dict[str, Any],
+    stamp_key: str,
+    expected_verdict: str,
+) -> None:
+    if audit.get("verdict") != expected_verdict:
+        blockers.append(f"{stamp_key}_audit_verdict_not_{expected_verdict}")
+    if audit.get("passed") is not True:
+        blockers.append(f"{stamp_key}_audit_passed_not_true")
+    _append_authority_false_blockers(blockers, audit, prefix=f"{stamp_key}_audit")
+    audit_cache = audit.get("cache")
+    if not isinstance(audit_cache, dict):
+        blockers.append(f"{stamp_key}_audit_cache_missing")
+        return
+    for key in (
+        "archive_sha256",
+        "inflated_outputs_aggregate_sha256",
+        "raw_sha256",
+        "pair_count",
+        "array_sha256",
+        "hash_domain",
+    ):
+        if audit_cache.get(key) != manifest.get(key):
+            blockers.append(f"{stamp_key}_audit_cache_{key}_mismatch")
+
+
+def _mlx_identity_source_certificate(
+    stamp: dict[str, Any],
+    *,
+    source_keys: tuple[str, ...],
+    repo_root: Path,
+    cache_root: Path,
+    blockers: list[str],
+    prefix: str,
+) -> dict[str, Any] | None:
+    for key in source_keys:
+        source_path = _resolve_referenced_path(
+            stamp.get(key),
+            repo_root=repo_root,
+            cache_root=cache_root,
+        )
+        if source_path is None:
+            continue
+        return {
+            "key": key,
+            "path": _rel(source_path, repo_root),
+            "sha256": sha256_file(source_path) if source_path.is_file() else None,
+        }
+    blockers.append(f"{prefix}_source_path_missing_or_not_found")
+    return None
+
+
+def _resolve_referenced_path(
+    value: Any,
+    *,
+    repo_root: Path,
+    cache_root: Path,
+) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = Path(value)
+    candidates = [raw] if raw.is_absolute() else [
+        repo_root / raw,
+        cache_root / raw,
+        raw,
+    ]
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            resolved = candidate
+        if resolved.exists():
+            return resolved
+    return None
+
+
+def _append_authority_false_blockers(
+    blockers: list[str],
+    payload: dict[str, Any],
+    *,
+    prefix: str,
+) -> None:
+    for name in AUTHORITY_FALSE_FIELDS:
+        if payload.get(name) is not False:
+            blockers.append(f"{prefix}_{name}_not_false")
 
 
 def _append_manifest_file_hash_blockers(

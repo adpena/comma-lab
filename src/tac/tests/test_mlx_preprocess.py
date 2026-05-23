@@ -555,6 +555,9 @@ def test_build_mlx_cache_from_local_advisory_cli_stamps_manifest(tmp_path: Path)
     assert manifest["eligible_for_local_mlx_local_advisory_debug"] is True
     assert manifest["eligible_for_local_mlx_transfer_calibration"] is False
     assert manifest["local_cpu_advisory_cache_identity_audit"]["passed"] is True
+    assert manifest["local_cpu_advisory_cache_identity_audit"]["local_cpu_advisory_path"] == str(
+        advisory.resolve()
+    )
     assert audit["verdict"] == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
     assert audit["score_claim"] is False
 

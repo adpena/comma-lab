@@ -324,6 +324,46 @@
         {
           "command": [
             ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430",
+            "--include-kind",
+            "mlx_scorer_input_cache",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_cache_retention_plan.json"
+          ],
+          "id": "plan_mlx_delta_cache_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 1,
+              "key": "plan.candidate_count",
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_cache_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_cache_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_mlx_advisory_response"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "command": [
+            ".venv/bin/python",
             "tools/calibrate_local_cpu_contest_drift.py",
             "--calibration-json",
             ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",

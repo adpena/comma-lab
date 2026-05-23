@@ -589,6 +589,7 @@ def build_dqs1_local_first_queue(
     mlx_device: str = "gpu",
     mlx_batch_pairs: int = 1,
     mlx_cache_batch_pairs: int = 8,
+    include_mlx_retention_plan: bool = True,
 ) -> dict[str, Any]:
     if (
         isinstance(local_cpu_concurrency, bool)
@@ -634,6 +635,7 @@ def build_dqs1_local_first_queue(
     mlx_cache_dir = f"{materialized_root}/mlx_delta_cache"
     mlx_response = f"{materialized_root}/mlx_delta_response_{mlx_device}_b{mlx_batch_pairs}_full600.json"
     mlx_components_dir = f"{materialized_root}/mlx_delta_components_{mlx_device}_b{mlx_batch_pairs}_full600"
+    mlx_retention_plan = f"{materialized_root}/mlx_delta_cache_retention_plan.json"
 
     steps: list[dict[str, Any]] = [
         {
@@ -836,6 +838,44 @@ def build_dqs1_local_first_queue(
                 },
             ]
         )
+        if include_mlx_retention_plan:
+            steps.append(
+                {
+                    "id": "plan_mlx_delta_cache_retention",
+                    "requires": ["local_mlx_advisory_response"],
+                    "timeout_seconds": 120,
+                    "command": [
+                        ".venv/bin/python",
+                        "tools/compact_experiment_artifacts.py",
+                        materialized_root,
+                        "--include-kind",
+                        "mlx_scorer_input_cache",
+                        "--min-bytes",
+                        "1",
+                        "--json-output",
+                        mlx_retention_plan,
+                    ],
+                    "resources": {"kind": "local_cpu"},
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": mlx_retention_plan,
+                            "key": "plan.candidate_count",
+                            "equals": 1,
+                        },
+                        {
+                            "type": "json_false_authority",
+                            "path": mlx_retention_plan,
+                            "required_false": [
+                                "plan.score_claim",
+                                "plan.promotion_eligible",
+                                "plan.ready_for_exact_eval_dispatch",
+                            ],
+                            "false_or_missing": [],
+                        },
+                    ],
+                }
+            )
     steps.append(
         {
             "id": "local_cpu_contest_drift_eureka",
@@ -917,6 +957,7 @@ def build_dqs1_local_first_queue_from_selections(
     mlx_device: str = "gpu",
     mlx_batch_pairs: int = 1,
     mlx_cache_batch_pairs: int = 8,
+    include_mlx_retention_plan: bool = True,
 ) -> dict[str, Any]:
     if not selections:
         raise ExperimentQueueError("at least one DQS1 queue selection is required")
@@ -942,6 +983,7 @@ def build_dqs1_local_first_queue_from_selections(
             mlx_device=mlx_device,
             mlx_batch_pairs=mlx_batch_pairs,
             mlx_cache_batch_pairs=mlx_cache_batch_pairs,
+            include_mlx_retention_plan=include_mlx_retention_plan,
         )
         for selection in selections
     ]
@@ -978,6 +1020,7 @@ def build_queue_from_action_summary(
     mlx_device: str = "gpu",
     mlx_batch_pairs: int = 1,
     mlx_cache_batch_pairs: int = 8,
+    include_mlx_retention_plan: bool = True,
 ) -> Dqs1QueueBuildResult:
     selections = select_dqs1_local_first_candidates(
         action_summary_path,
@@ -1007,6 +1050,7 @@ def build_queue_from_action_summary(
             mlx_device=mlx_device,
             mlx_batch_pairs=mlx_batch_pairs,
             mlx_cache_batch_pairs=mlx_cache_batch_pairs,
+            include_mlx_retention_plan=include_mlx_retention_plan,
         ),
         selection=selections[0],
         selections=selections,

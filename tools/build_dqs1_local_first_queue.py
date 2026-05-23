@@ -144,6 +144,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--mlx-device", choices=("cpu", "gpu"), default="gpu")
     parser.add_argument("--mlx-batch-pairs", type=int, default=1)
     parser.add_argument("--mlx-cache-batch-pairs", type=int, default=8)
+    parser.add_argument(
+        "--skip-mlx-retention-plan",
+        action="store_true",
+        help="do not add the post-response mlx_delta_cache retention planning step",
+    )
     return parser.parse_args(argv)
 
 
@@ -188,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
         mlx_device=args.mlx_device,
         mlx_batch_pairs=args.mlx_batch_pairs,
         mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
+        include_mlx_retention_plan=not args.skip_mlx_retention_plan,
     )
     output = Path(args.output)
     if args.write:

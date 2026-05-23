@@ -93,6 +93,82 @@ def _write_locality_candidate(
     return inflated
 
 
+def _write_mlx_delta_cache(root: Path, *, stamp: bool = True) -> Path:
+    cache = root / "candidate_mlx" / "mlx_delta_cache"
+    _write(cache / "pair_indices.npy", b"pairs")
+    _write(cache / "posenet_yuv6_pair.npy", b"pose")
+    _write(cache / "segnet_last_rgb.npy", b"seg")
+    local_advisory = root / "candidate_mlx" / "local_cpu_advisory.json"
+    local_advisory.write_text(
+        json.dumps({"score_axis": "cpu_advisory", **_false_authority()}),
+        encoding="utf-8",
+    )
+    manifest = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "archive_sha256": "a" * 64,
+        "inflated_outputs_aggregate_sha256": "b" * 64,
+        "raw_sha256": "c" * 64,
+        "pair_count": 1,
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "array_sha256": {
+            "pair_indices": "1" * 64,
+            "posenet_yuv6_pair": "2" * 64,
+            "segnet_last_rgb": "3" * 64,
+        },
+        "artifacts": {
+            "pair_indices": {"sha256": sha256_file(cache / "pair_indices.npy")},
+            "posenet_yuv6_pair": {"sha256": sha256_file(cache / "posenet_yuv6_pair.npy")},
+            "segnet_last_rgb": {"sha256": sha256_file(cache / "segnet_last_rgb.npy")},
+        },
+    }
+    if stamp:
+        audit = {
+            "schema_version": "mlx_scorer_input_cache_local_cpu_advisory_audit.v1",
+            "verdict": "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
+            "passed": True,
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "promotable": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "cache": {
+                "archive_sha256": manifest["archive_sha256"],
+                "inflated_outputs_aggregate_sha256": manifest["inflated_outputs_aggregate_sha256"],
+                "raw_sha256": manifest["raw_sha256"],
+                "pair_count": manifest["pair_count"],
+                "hash_domain": manifest["hash_domain"],
+                "array_sha256": manifest["array_sha256"],
+            },
+        }
+        audit_path = root / ".omx" / "research" / "mlx_cache_identity.json"
+        audit_path.parent.mkdir(parents=True)
+        audit_path.write_text(json.dumps(audit), encoding="utf-8")
+        manifest["eligible_for_local_mlx_local_advisory_debug"] = True
+        manifest["eligible_for_local_mlx_transfer_calibration"] = False
+        manifest["local_cpu_advisory_cache_identity_audit"] = {
+            "schema_version": audit["schema_version"],
+            "path": str(audit_path),
+            "sha256": sha256_file(audit_path),
+            "verdict": audit["verdict"],
+            "passed": True,
+            "local_cpu_advisory_path": str(local_advisory),
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "promotable": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    (cache / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return cache
+
+
 def test_retention_deletes_only_certified_locality_raw(tmp_path: Path) -> None:
     inflated = _write_locality_candidate(tmp_path)
     plan = build_retention_plan(
@@ -295,6 +371,43 @@ def test_retention_blocks_mutated_locality_raw_after_manifest(tmp_path: Path) ->
     assert plan.candidates == []
     assert len(plan.blocked_candidates) == 1
     assert "locality_raw_sha_mismatch:0.raw" in plan.blocked_candidates[0].blockers
+
+
+def test_retention_certifies_mlx_cache_with_external_identity_stamp(tmp_path: Path) -> None:
+    cache = _write_mlx_delta_cache(tmp_path)
+
+    plan = build_retention_plan(
+        [tmp_path],
+        repo_root=tmp_path,
+        include_kinds={"mlx_scorer_input_cache"},
+        min_bytes=1,
+    )
+
+    assert plan.blocked_candidates == []
+    assert len(plan.candidates) == 1
+    candidate = plan.candidates[0]
+    assert candidate.path == cache.relative_to(tmp_path).as_posix()
+    assert candidate.kind == "mlx_scorer_input_cache"
+    identity = candidate.certificate["identity_audit"]
+    assert identity["stamp_key"] == "local_cpu_advisory_cache_identity_audit"
+    assert identity["source"]["key"] == "local_cpu_advisory_path"
+    assert candidate.certificate["archive_sha256"] == "a" * 64
+
+
+def test_retention_blocks_mlx_cache_without_identity_stamp(tmp_path: Path) -> None:
+    cache = _write_mlx_delta_cache(tmp_path, stamp=False)
+
+    plan = build_retention_plan(
+        [tmp_path],
+        repo_root=tmp_path,
+        include_kinds={"mlx_scorer_input_cache"},
+        min_bytes=1,
+    )
+
+    assert plan.candidates == []
+    assert len(plan.blocked_candidates) == 1
+    assert plan.blocked_candidates[0].path == cache.relative_to(tmp_path).as_posix()
+    assert "mlx_cache_identity_audit_stamp_missing" in plan.blocked_candidates[0].blockers
 
 
 def test_retention_reports_unknown_raw_surface(tmp_path: Path) -> None:

@@ -111,7 +111,12 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit(
                 "refusing to stamp cache manifest because local advisory identity audit failed"
             )
-        _stamp_cache_manifest(args.output_cache_dir / "manifest.json", args.audit_output, audit)
+        _stamp_cache_manifest(
+            args.output_cache_dir / "manifest.json",
+            args.audit_output,
+            audit,
+            args.local_cpu_advisory,
+        )
     print(
         json.dumps(
             {
@@ -209,7 +214,12 @@ def _refuse_existing_cache_outputs(cache_dir: Path) -> None:
         )
 
 
-def _stamp_cache_manifest(manifest_path: Path, audit_output: Path, audit: dict[str, Any]) -> None:
+def _stamp_cache_manifest(
+    manifest_path: Path,
+    audit_output: Path,
+    audit: dict[str, Any],
+    local_cpu_advisory: Path,
+) -> None:
     manifest = _load_json_object(manifest_path)
     manifest["eligible_for_local_mlx_local_advisory_debug"] = True
     manifest["eligible_for_local_mlx_transfer_calibration"] = False
@@ -219,6 +229,7 @@ def _stamp_cache_manifest(manifest_path: Path, audit_output: Path, audit: dict[s
         "sha256": _file_sha256(audit_output),
         "verdict": audit.get("verdict"),
         "passed": True,
+        "local_cpu_advisory_path": str(local_cpu_advisory.resolve()),
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
