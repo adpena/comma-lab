@@ -178,6 +178,17 @@ def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
     assert best["component_axis_context"]["seg"] == 0.7
     assert best["canonical_equation_provenance"]["canonical_equation_id"].endswith("_v1")
     assert best["frozen_config_contract"]["score_claim"] is False
+    assert best["queue_candidate_id"] == (
+        f"{best['candidate_id']}::{best['sweep_config_id']}::{best['optimization_pass_id']}"
+    )
+    wire = best["solver_stack_wire_in"]
+    assert wire["candidate_id"] == best["queue_candidate_id"]
+    assert wire["cathedral_autopilot_wire_in"]["dispatch_ready"] is False
+    assert wire["probe_disambiguator_wire_in"]["paired_modes"] == [
+        "same_candidate_different_config",
+        "same_config_different_candidate",
+        "local_axis_then_exact_axis_anchor",
+    ]
 
 
 def test_dynamic_sweep_rejects_authoritative_candidate_rows() -> None:
@@ -185,6 +196,22 @@ def test_dynamic_sweep_rejects_authoritative_candidate_rows() -> None:
     pareto["candidates"][0]["score_claim"] = True
 
     with pytest.raises(MLXDynamicLearnedSweepError, match="score_claim"):
+        build_mlx_dynamic_learned_sweep_plan(
+            incumbent_score=0.1920513168811056,
+            selector_pareto=pareto,
+        )
+
+
+def test_dynamic_sweep_rejects_nested_authority_metadata() -> None:
+    pareto = _selector_pareto()
+    pareto["candidates"][0]["waterbucket_context"] = {
+        "ready_for_exact_eval_dispatch": True
+    }
+
+    with pytest.raises(
+        MLXDynamicLearnedSweepError,
+        match=r"waterbucket_context\.ready_for_exact_eval_dispatch=truthy",
+    ):
         build_mlx_dynamic_learned_sweep_plan(
             incumbent_score=0.1920513168811056,
             selector_pareto=pareto,

@@ -48,6 +48,7 @@ import platform
 import random
 import shutil
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -172,6 +173,7 @@ def build_optimized_training_context(
     """
 
     import functools
+
     import torch
 
     from tac.substrates.score_aware_common import score_pair_components_dispatch
@@ -292,6 +294,159 @@ def torch_version_string() -> str:
 def sha256_bytes(data: bytes) -> str:
     """Hex sha256 of ``data``."""
     return hashlib.sha256(data).hexdigest()
+
+
+def _clean_none(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            str(key): cleaned
+            for key, inner in value.items()
+            for cleaned in (_clean_none(inner),)
+            if cleaned is not None
+        }
+    if isinstance(value, list):
+        return [cleaned for inner in value for cleaned in (_clean_none(inner),) if cleaned is not None]
+    return value
+
+
+def _mapping_or_empty(value: Mapping[str, Any] | None) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def build_representation_training_probe_manifest(
+    *,
+    candidate_id: str,
+    representation_family: str,
+    substrate_family: str,
+    schema: str = "representation_training_probe_manifest_v1",
+    lane_id: str | None = None,
+    lane_class: str | None = None,
+    candidate_family: str | None = None,
+    profile: str = "representation_training_probe",
+    param_schema: str = "representation_training_manifest_params_v1",
+    training_signal_kind: str = "local_representation_training_optimizer_schedule_probe",
+    seed: int | None = None,
+    device_requested: str | None = None,
+    device_selected: str | None = None,
+    source_tree_sha256: str | None = None,
+    runtime_tree_sha256: str | None = None,
+    output_dir: str | None = None,
+    stages: list[Mapping[str, Any]] | None = None,
+    results: list[Mapping[str, Any]] | None = None,
+    stage_count: int | None = None,
+    training_recipe: Mapping[str, Any] | None = None,
+    optimizer_recipe: Mapping[str, Any] | None = None,
+    scheduler_recipe: Mapping[str, Any] | None = None,
+    candidate_params: Mapping[str, Any] | None = None,
+    archive_zip: Mapping[str, Any] | None = None,
+    auth_eval_bridge: Mapping[str, Any] | None = None,
+    dispatch_blockers: list[str] | None = None,
+    evidence_grade: str = "local_training_probe_advisory",
+    source_anchor: str | None = None,
+    score_lowering_hypothesis: str | None = None,
+    variant_axes: list[str] | None = None,
+    paired_modes: list[str] | None = None,
+    extra_fields: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a generic representation-training manifest with no score authority.
+
+    The helper is intentionally trainer-agnostic. HNeRV, broader NeRV-family,
+    SIREN, learned-codec, and future representation trainers can keep their
+    substrate-specific provenance while also emitting one canonical sidecar
+    consumed by candidate queues, learned sweeps, and cathedral consumers.
+    """
+
+    if not candidate_id.strip():
+        raise ValueError("candidate_id is required")
+    if not representation_family.strip():
+        raise ValueError("representation_family is required")
+    if not substrate_family.strip():
+        raise ValueError("substrate_family is required")
+
+    stage_rows = [dict(stage) for stage in (stages or [])]
+    result_rows = [dict(result) for result in (results or [])]
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotable": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "dispatch_packet_ready": False,
+    }
+    manifest: dict[str, Any] = {
+        "schema": schema,
+        "candidate_id": candidate_id,
+        "lane_id": lane_id,
+        "lane_class": lane_class,
+        "candidate_family": candidate_family,
+        "representation_family": representation_family,
+        "substrate_family": substrate_family,
+        "profile": profile,
+        "param_schema": param_schema,
+        "training_signal_kind": training_signal_kind,
+        "seed": seed,
+        "device_requested": device_requested,
+        "device_selected": device_selected,
+        "source_tree_sha256": source_tree_sha256,
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "output_dir": output_dir,
+        "stage_count": stage_count if stage_count is not None else len(stage_rows),
+        "stages": stage_rows,
+        "results": result_rows,
+        "training_recipe": _mapping_or_empty(training_recipe),
+        "optimizer_recipe": _mapping_or_empty(optimizer_recipe),
+        "scheduler_recipe": _mapping_or_empty(scheduler_recipe),
+        "candidate_params": _mapping_or_empty(candidate_params),
+        "archive_zip": _mapping_or_empty(archive_zip),
+        "auth_eval_bridge": {
+            **_mapping_or_empty(auth_eval_bridge),
+            **{
+                key: False
+                for key in false_authority
+                if key not in _mapping_or_empty(auth_eval_bridge)
+            },
+        },
+        "dispatch_blockers": list(dispatch_blockers or []),
+        "evidence_grade": evidence_grade,
+        "source_anchor": source_anchor,
+        "score_lowering_hypothesis": score_lowering_hypothesis,
+        "variant_axes": list(variant_axes or []),
+        "paired_modes": list(paired_modes or []),
+        **false_authority,
+    }
+    if extra_fields:
+        for key, value in extra_fields.items():
+            if key in false_authority and value is not False:
+                raise ValueError(f"{key} must remain false in representation training manifests")
+            manifest[str(key)] = value
+
+    return _clean_none(manifest)
+
+
+def write_representation_training_probe_manifest(
+    path: Path,
+    *,
+    validate: bool = True,
+    **manifest_kwargs: Any,
+) -> dict[str, Any]:
+    """Write a canonical representation-training manifest sidecar as JSON."""
+
+    manifest = build_representation_training_probe_manifest(**manifest_kwargs)
+    if validate:
+        from tac.optimization.representation_training_probe_integration import (
+            validate_representation_training_manifest,
+        )
+
+        validate_representation_training_manifest(manifest)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True, default=str) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def git_head_sha(repo_root: Path | None = None) -> str:
@@ -736,12 +891,13 @@ def decode_real_pairs(
 __all__ = [
     "EVAL_HW",
     "OPTIMIZATION_FLAGS_MANIFEST",
-    "OptimizedTrainingContext",
     "REPO_ROOT",
-    "StageLog",
     "TRAINER_PROXY_AXIS_LABEL",
     "TRAINER_PROXY_PROMOTION_REQUIREMENT",
+    "OptimizedTrainingContext",
+    "StageLog",
     "build_optimized_training_context",
+    "build_representation_training_probe_manifest",
     "decode_real_pairs",
     "detect_hardware_substrate",
     "device_or_die",
@@ -753,4 +909,5 @@ __all__ = [
     "sha256_bytes",
     "torch_version_string",
     "utc_now_iso",
+    "write_representation_training_probe_manifest",
 ]

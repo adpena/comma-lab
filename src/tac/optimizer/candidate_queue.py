@@ -31,6 +31,7 @@ from tac.optimization.proxy_candidate_contract import (
     PROXY_DISPATCH_BLOCKERS,
     PROXY_TARGET_MODES,
     apply_proxy_evidence_boundary,
+    require_no_truthy_authority_fields,
 )
 from tac.optimization.representation_training_probe_integration import (
     PLAN_SCHEMA as REPRESENTATION_TRAINING_PLAN_SCHEMA,
@@ -547,6 +548,10 @@ def _mlx_dynamic_learned_sweep_candidates(
     for source in payload.get("ranked_sweep_rows") or []:
         if not isinstance(source, Mapping):
             continue
+        require_no_truthy_authority_fields(
+            source,
+            context="mlx_dynamic_learned_sweep_row",
+        )
         source_candidate_id = str(source.get("candidate_id") or "")
         config_id = str(source.get("sweep_config_id") or "")
         pass_id = str(source.get("optimization_pass_id") or "")

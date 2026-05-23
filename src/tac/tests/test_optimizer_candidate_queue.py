@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tac.optimization.optimizer_training_signal_bridge import (
     build_optimizer_training_signal_wire_in,
     validate_optimizer_training_signal_wire_in,
@@ -414,6 +416,25 @@ def test_optimizer_guided_queue_schema_is_adapted_as_proxy_only(
 def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only(
     tmp_path: Path,
 ) -> None:
+    solver_stack_wire_in = build_optimizer_training_signal_wire_in(
+        candidate_id="prefix_k032::mlx_local_response::micro",
+        profile_id="mlx_dynamic_learned_sweep",
+        lane_id="mlx_dynamic_learned_sweep_planning",
+        lane_class="decoder_q_selective_dqs1",
+        candidate_family="decoder_q_selective_dqs1",
+        representation_family="decoder_q_selective_dqs1",
+        substrate_family="[macOS-MLX research-signal]",
+        training_signal_kind="mlx_dynamic_learned_sweep_proxy",
+        param_schema="mlx_dynamic_learned_sweep_config_params_v1",
+        candidate_params={
+            "source_candidate_id": "prefix_k032",
+            "sweep_config_id": "mlx_local_response",
+            "optimization_pass_id": "micro",
+        },
+        source_anchor="fixture",
+        score_lowering_hypothesis="fixture",
+        dispatch_blockers=["score_claim_requires_exact_auth_eval_result"],
+    )
     plan = _write_json(
         tmp_path / "mlx_dynamic_plan.json",
         {
@@ -438,10 +459,11 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
                     "master_gradient_provenance": {"anchor_count": 2},
                     "ready_for_local_sweep": True,
                     "exact_eval_candidate": False,
-                    "score_claim": True,
-                    "promotion_eligible": True,
-                    "rank_or_kill_eligible": True,
-                    "ready_for_exact_eval_dispatch": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "solver_stack_wire_in": solver_stack_wire_in,
                 }
             ],
         },
@@ -462,10 +484,45 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
     assert row["promotion_eligible"] is False
     assert row["rank_or_kill_eligible"] is False
     assert "mlx_dynamic_learned_sweep_plan_is_proxy_signal" in row["dispatch_blockers"]
+    assert row["solver_stack_wire_in"]["candidate_id"] == row["candidate_id"]
+    assert validate_optimizer_training_signal_wire_in(row["solver_stack_wire_in"]) == []
     assert row["consumer_payload"]["mlx_dynamic_learned_sweep"]["source_candidate_id"] == (
         "prefix_k032"
     )
     assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_rejects_mlx_dynamic_sweep_nested_authority(
+    tmp_path: Path,
+) -> None:
+    plan = _write_json(
+        tmp_path / "mlx_dynamic_plan_nested_authority.json",
+        {
+            "schema": "mlx_dynamic_learned_sweep_plan.v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "ranked_sweep_rows": [
+                {
+                    "schema": "mlx_dynamic_learned_sweep_row.v1",
+                    "candidate_id": "prefix_k032",
+                    "sweep_config_id": "mlx_local_response",
+                    "optimization_pass_id": "micro",
+                    "family": "decoder_q_selective_dqs1",
+                    "acquisition_value": 0.0125,
+                    "waterbucket_context": {"promotable": True},
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(ValueError, match=r"waterbucket_context\.promotable=truthy"):
+        build_candidate_queue([plan], repo_root=tmp_path)
 
 
 def test_kaggle_proxy_manifest_becomes_canonical_non_dispatchable_queue_row(

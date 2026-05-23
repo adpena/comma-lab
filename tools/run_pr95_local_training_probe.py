@@ -26,6 +26,14 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = REPO_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
+    write_representation_training_probe_manifest,
+)
+
 DEFAULT_SOURCE_DIR = (
     REPO_ROOT
     / "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto"
@@ -507,6 +515,129 @@ def build_plan(
     }
 
 
+def _stage_modules_from_payload(payload: dict[str, Any]) -> list[str]:
+    modules: list[str] = []
+    for stage in payload.get("stages") or []:
+        if isinstance(stage, dict) and stage.get("module"):
+            modules.append(str(stage["module"]))
+    for result in payload.get("results") or []:
+        if isinstance(result, dict) and result.get("stage_module"):
+            module = str(result["stage_module"])
+            if module not in modules:
+                modules.append(module)
+    return modules
+
+
+def _pr95_generic_candidate_id(payload: dict[str, Any]) -> str:
+    if payload.get("candidate_id"):
+        return str(payload["candidate_id"])
+    device = payload.get("device_selected") or payload.get("device_requested") or "unknown"
+    stage_count = payload.get("stage_count") or len(_stage_modules_from_payload(payload)) or "unknown"
+    seed = payload.get("seed") or "unknown"
+    return f"pr95_muon_hnerv_local_{device}_stages{stage_count}_seed{seed}"
+
+
+def _write_pr95_representation_training_sidecar(
+    payload: dict[str, Any],
+    *,
+    output_dir: Path,
+    schema: str,
+    filename: str,
+) -> Path:
+    stage_modules = _stage_modules_from_payload(payload)
+    archive_zip = payload.get("archive_zip")
+    auth_eval_bridge = payload.get("auth_eval_bridge")
+    stage_count = int(payload.get("stage_count") or len(stage_modules) or 0)
+    sidecar_path = output_dir / filename
+    write_representation_training_probe_manifest(
+        sidecar_path,
+        schema=schema,
+        candidate_id=_pr95_generic_candidate_id(payload),
+        lane_id=str(payload.get("lane_id") or LANE_ID),
+        lane_class="pr95_hnerv_muon_local_training_proxy",
+        candidate_family="pr95_hnerv_muon_training_probe",
+        representation_family="hnerv",
+        substrate_family="nerv_family",
+        profile="pr95_hnerv_muon_training_smoke",
+        param_schema="pr95_hnerv_muon_local_training_manifest_params_v1",
+        training_signal_kind="local_representation_training_optimizer_schedule_probe",
+        seed=payload.get("seed"),
+        device_requested=payload.get("device_requested"),
+        device_selected=payload.get("device_selected"),
+        source_tree_sha256=payload.get("source_tree_sha256"),
+        output_dir=payload.get("output_dir") or _rel(output_dir),
+        stages=payload.get("stages") or [],
+        results=payload.get("results") or [],
+        stage_count=stage_count,
+        training_recipe={
+            "id": "pr95_source_faithful_curriculum",
+            "full_curriculum": bool(payload.get("full_curriculum", False)),
+            "stage_count": stage_count,
+        },
+        optimizer_recipe={
+            "id": "pr95_stage8_muon_partition",
+            "uses_stage8_muon": "stage8_muon_finetune" in stage_modules,
+            "hidden_2d_plus_weights": "Muon",
+            "bias_norm_scalar_stem_rgb_head": "AdamW",
+        },
+        scheduler_recipe={
+            "id": "pr95_source_faithful_stage_schedules",
+            "stage_epoch_overrides": {
+                str(stage.get("index")): stage.get("epoch_override")
+                for stage in payload.get("stages") or []
+                if isinstance(stage, dict) and stage.get("epoch_override") is not None
+            },
+        },
+        candidate_params={
+            "stage_count": stage_count,
+            "seed": payload.get("seed"),
+            "device": payload.get("device_selected") or payload.get("device_requested"),
+            "full_curriculum": bool(payload.get("full_curriculum", False)),
+            "uses_stage8_muon": "stage8_muon_finetune" in stage_modules,
+            "archive_exported": isinstance(archive_zip, dict),
+            "auth_eval_bridge_present": isinstance(auth_eval_bridge, dict),
+        },
+        archive_zip=archive_zip if isinstance(archive_zip, dict) else None,
+        auth_eval_bridge=auth_eval_bridge if isinstance(auth_eval_bridge, dict) else None,
+        dispatch_blockers=[
+            "pr95_local_training_probe_is_proxy_signal",
+            "requires_byte_closed_archive_export",
+            "requires_runtime_consumption_proof",
+            "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+            "requires_lane_claim_before_dispatch",
+        ],
+        evidence_grade=str(
+            payload.get("evidence_grade") or "local_training_portability_probe_advisory"
+        ),
+        source_anchor="PR95 HNeRV Muon local training probe manifest",
+        score_lowering_hypothesis=(
+            "Use source-faithful PR95/HNeRV training telemetry to rank Muon, "
+            "scheduler, and archive-export variants before exact auth replay."
+        ),
+        variant_axes=[
+            "source_faithful_control",
+            "optimizer_recipe",
+            "scheduler_recipe",
+            "stage_curriculum",
+            "archive_export",
+        ],
+        paired_modes=[
+            "source_faithful_control",
+            "optimizer_variant",
+            "scheduler_variant",
+            "substrate_variant",
+        ],
+        extra_fields={
+            "source_pr95_schema": payload.get("schema"),
+            "public_archive": payload.get("public_archive"),
+            "source_faithful_command": payload.get("source_faithful_command"),
+            "authority_contract": payload.get("authority_contract"),
+            "ok": payload.get("ok"),
+        },
+    )
+    return sidecar_path
+
+
 def run_probe(args: argparse.Namespace) -> dict[str, Any]:
     layout = resolve_layout(args.source_dir, args.public_archive)
     output_dir = args.output_dir or (
@@ -530,8 +661,18 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
         json.dumps(plan, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+    representation_plan_path = _write_pr95_representation_training_sidecar(
+        plan,
+        output_dir=output_dir,
+        schema="representation_training_probe_plan_v1",
+        filename="representation_training_plan.json",
+    )
     if args.plan_only:
-        return {"plan": plan, "manifest_path": str(output_dir / "plan.json")}
+        return {
+            "plan": plan,
+            "manifest_path": str(output_dir / "plan.json"),
+            "representation_training_plan_path": str(representation_plan_path),
+        }
 
     import torch
 
@@ -653,7 +794,17 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
         json.dumps(manifest, indent=2, sort_keys=True, default=str),
         encoding="utf-8",
     )
-    return {"manifest": manifest, "manifest_path": str(manifest_path)}
+    representation_manifest_path = _write_pr95_representation_training_sidecar(
+        manifest,
+        output_dir=output_dir,
+        schema="representation_training_probe_manifest_v1",
+        filename="representation_training_manifest.json",
+    )
+    return {
+        "manifest": manifest,
+        "manifest_path": str(manifest_path),
+        "representation_training_manifest_path": str(representation_manifest_path),
+    }
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

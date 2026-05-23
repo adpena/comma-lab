@@ -16,6 +16,10 @@ from tac.optimization.mlx_dynamic_sweep_observations import (
     normalize_observation_row,
     summarize_observations,
 )
+from tac.optimization.optimizer_training_signal_bridge import (
+    build_optimizer_training_signal_wire_in,
+)
+from tac.optimization.proxy_candidate_contract import require_no_truthy_authority_fields
 
 SCHEMA = "mlx_dynamic_learned_sweep_plan.v1"
 ROW_SCHEMA = "mlx_dynamic_learned_sweep_row.v1"
@@ -83,6 +87,10 @@ def _require_false_authority(payload: Mapping[str, Any], *, label: str) -> None:
     for key in FALSE_AUTHORITY:
         if payload.get(key) is not False:
             raise MLXDynamicLearnedSweepError(f"{label} {key} must be explicit false")
+    try:
+        require_no_truthy_authority_fields(payload, context=label)
+    except ValueError as exc:
+        raise MLXDynamicLearnedSweepError(str(exc)) from exc
 
 
 def _optional_float_from_keys(
@@ -652,9 +660,58 @@ def _row_for_config(
                 "dispatch_not_attempted_by_dynamic_sweep_planner",
             ]
         )
+    blockers = sorted(dict.fromkeys(blockers))
+    row_candidate_id = (
+        f"{candidate['candidate_id']}::{config['config_id']}::{optimization_pass['pass_id']}"
+    )
+    solver_candidate_params = {
+        "source_candidate_id": candidate["candidate_id"],
+        "sweep_config_id": config["config_id"],
+        "optimization_pass_id": optimization_pass["pass_id"],
+        "optimization_scale": optimization_pass["scale"],
+        "recursive_stage": optimization_pass["recursive_stage"],
+        "execution_layer": config["execution_layer"],
+        "substrate": config["substrate"],
+        "sample_budget": optimization_pass["sample_budget"],
+        "selected_pair_indices": candidate.get("selected_pair_indices"),
+        "selected_pair_count": candidate.get("selected_pair_count"),
+        "payload_bytes": candidate.get("payload_bytes"),
+        "exact_eval_candidate": exact_config,
+    }
+    solver_stack_wire_in = build_optimizer_training_signal_wire_in(
+        candidate_id=row_candidate_id,
+        profile_id="mlx_dynamic_learned_sweep",
+        lane_id="mlx_dynamic_learned_sweep_planning",
+        lane_class=str(candidate["family"]),
+        candidate_family=str(candidate["family"]),
+        representation_family=str(candidate.get("representation_family") or candidate["family"]),
+        substrate_family=str(candidate.get("substrate_family") or config["substrate"]),
+        training_signal_kind="mlx_dynamic_learned_sweep_proxy",
+        param_schema="mlx_dynamic_learned_sweep_config_params_v1",
+        candidate_params=solver_candidate_params,
+        source_anchor=str(candidate.get("source_schema") or "mlx dynamic learned sweep candidate"),
+        score_lowering_hypothesis=(
+            "Use MLX/local/advisory response-surface observations to rank recursive "
+            "sweep configs before byte-closed exact auth replay."
+        ),
+        dispatch_blockers=blockers,
+        variant_axes=[
+            "source_candidate",
+            "sweep_config",
+            "optimization_pass",
+            "component_axis_context",
+            "execution_substrate",
+        ],
+        paired_modes=[
+            "same_candidate_different_config",
+            "same_config_different_candidate",
+            "local_axis_then_exact_axis_anchor",
+        ],
+    )
     return {
         "schema": ROW_SCHEMA,
         "candidate_id": candidate["candidate_id"],
+        "queue_candidate_id": row_candidate_id,
         "sweep_config_id": config["config_id"],
         "optimization_pass_id": optimization_pass["pass_id"],
         "optimization_scale": optimization_pass["scale"],
@@ -690,7 +747,7 @@ def _row_for_config(
             "may_seed_next_baseline": bool(optimization_pass["freeze_candidate"]),
             **FALSE_AUTHORITY,
         },
-        "dispatch_blockers": sorted(dict.fromkeys(blockers)),
+        "dispatch_blockers": blockers,
         "predicted_score_mean": mean,
         "predicted_score_variance": variance,
         "predicted_score_sigma": sigma,
@@ -727,6 +784,7 @@ def _row_for_config(
         "orthogonality_contract": candidate.get("orthogonality_contract"),
         "freezing_provenance": candidate.get("freezing_provenance"),
         "portable_trainer_provenance": candidate.get("portable_trainer_provenance"),
+        "solver_stack_wire_in": solver_stack_wire_in,
         "next_action": (
             "run_local_mlx_or_cpu_sweep_then_append_observation"
             if not exact_config

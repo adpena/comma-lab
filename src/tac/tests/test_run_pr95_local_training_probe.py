@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimizer.candidate_queue import build_candidate_queue
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 HELPER_PATH = REPO_ROOT / "tools" / "run_pr95_local_training_probe.py"
 
@@ -144,8 +146,29 @@ def test_plan_only_writes_plan_without_running_training(tmp_path: Path) -> None:
     result = helper.run_probe(args)
 
     assert Path(result["manifest_path"]).name == "plan.json"
+    assert Path(result["representation_training_plan_path"]).name == (
+        "representation_training_plan.json"
+    )
     assert (tmp_path / "plan.json").exists()
+    assert (tmp_path / "representation_training_plan.json").exists()
     assert not (tmp_path / "stage1_stage1_v328_ce").exists()
+    generic_plan = json.loads(
+        (tmp_path / "representation_training_plan.json").read_text(encoding="utf-8")
+    )
+    assert generic_plan["schema"] == "representation_training_probe_plan_v1"
+    assert generic_plan["candidate_id"] == "pr95_muon_hnerv_local_cpu_stages1_seed1234"
+    assert generic_plan["representation_family"] == "hnerv"
+    assert generic_plan["substrate_family"] == "nerv_family"
+    assert generic_plan["score_claim"] is False
+    queue = build_candidate_queue(
+        [tmp_path / "representation_training_plan.json"],
+        repo_root=REPO_ROOT,
+    )
+    row = queue["top_k"][0]
+    assert row["candidate_id"] == "pr95_muon_hnerv_local_cpu_stages1_seed1234"
+    assert row["candidate_family"] == "pr95_hnerv_muon_training_probe"
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert "representation_training_best_score_missing" in row["dispatch_blockers"]
 
 
 def test_run_auth_eval_bridge_records_comparability_without_promotion(

@@ -3708,12 +3708,38 @@ def _coerce_consumer_payload(raw: Mapping[str, Any], *, context: str) -> dict[st
     return dict(value)
 
 
+def _require_no_root_truthy_authority_fields(
+    raw: Mapping[str, Any],
+    *,
+    context: str,
+    allow_dispatch_authority_flags: bool = False,
+) -> None:
+    from tac.optimization.proxy_candidate_contract import (
+        CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+        require_no_truthy_authority_fields,
+    )
+
+    fields = list(CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS)
+    if allow_dispatch_authority_flags:
+        fields = [
+            field
+            for field in fields
+            if field not in {"ready_for_exact_eval_dispatch", "dispatch_packet_ready"}
+        ]
+    require_no_truthy_authority_fields(raw, context=context, fields=fields)
+
+
 def _candidate_row_from_raw(
     raw: dict[str, Any],
     *,
     context: str,
     allow_dispatch_authority_flags: bool = False,
 ) -> CandidateRow:
+    _require_no_root_truthy_authority_fields(
+        raw,
+        context=context,
+        allow_dispatch_authority_flags=allow_dispatch_authority_flags,
+    )
     authority_flags = ["score_claim", "promotion_eligible"]
     if not allow_dispatch_authority_flags:
         authority_flags.append("ready_for_exact_eval_dispatch")
@@ -4070,12 +4096,17 @@ def load_candidates_from_substrate_composition_ranking(
             "the autopilot ranker must remain planning-only "
             "(per CLAUDE.md 'Forbidden score claims')"
         )
+    _require_no_root_truthy_authority_fields(
+        payload,
+        context="substrate composition ranking JSON",
+    )
     rows: list[CandidateRow] = []
     for raw in payload["ranked_dispatches"]:
         context = (
             "substrate composition ranked dispatch "
             f"{raw.get('candidate_id')!r}"
         )
+        _require_no_root_truthy_authority_fields(raw, context=context)
         if _json_bool_field(raw, "score_claim", default=False, context=context):
             raise ValueError(
                 f"ranked dispatch {raw.get('candidate_id')!r} has score_claim=True; "
@@ -6472,6 +6503,39 @@ def _invoke_consumer_safely(
                     f"consume_candidate returned {type(contribution).__name__}, "
                     "expected Mapping per CathedralConsumerContract"
                 ),
+            }
+        from tac.cathedral.consumer_contract import (
+            DEFAULT_CONSUMER_TIER,
+            ConsumerTier,
+            validate_tier_b_contribution,
+        )
+
+        tier = getattr(module, "CONSUMER_TIER", DEFAULT_CONSUMER_TIER)
+        contract_errors: list[str] = []
+        if tier is ConsumerTier.TIER_B_SCORE_CONTRIBUTING:
+            ok, errors = validate_tier_b_contribution(contribution)
+            if not ok:
+                contract_errors.extend(errors)
+        else:
+            delta = contribution.get("predicted_delta_adjustment", 0.0)
+            try:
+                delta_float = float(delta)
+            except (TypeError, ValueError):
+                contract_errors.append(
+                    f"Tier A predicted_delta_adjustment must be 0.0, got {delta!r}"
+                )
+            else:
+                if not math.isfinite(delta_float) or delta_float != 0.0:
+                    contract_errors.append(
+                        "Tier A predicted_delta_adjustment must be 0.0"
+                    )
+            if contribution.get("promotable", False) is not False:
+                contract_errors.append("Tier A promotable must be False")
+        if contract_errors:
+            return {
+                "consumer_module": getattr(module, "__name__", "<unknown>"),
+                "candidate_id": candidate.candidate_id,
+                "error": "consumer_contract_violation: " + "; ".join(contract_errors),
             }
         # Catalog #356 + CATHEDRAL-SMARTER-DESIGN-MEMO Dim 3 Step 3.3:
         # detect per-axis decomposition + auto-compose via canonical helper.
