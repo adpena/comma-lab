@@ -206,6 +206,9 @@ def test_cli_builds_inverse_action_functional_from_scorer_response(
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
                 "event_count": 1,
+                "candidate_id_by_experiment": {
+                    "inverse-row-a": ["inverse-row-a"]
+                },
                 "by_resource_kind": {},
                 "by_step": {
                     "inverse-row-a.materialize": {
@@ -378,3 +381,75 @@ def test_cli_requires_identity_for_queue_performance_summary(tmp_path: Path) -> 
 
     assert result.returncode != 0
     assert "--queue-performance-runtime-identity" in result.stderr
+
+
+def test_cli_requires_candidate_identity_for_queue_performance_summary(
+    tmp_path: Path,
+) -> None:
+    scorer = tmp_path / "scorer.json"
+    performance = tmp_path / "performance.json"
+    runtime_identity = tmp_path / "runtime_identity.json"
+    cache_identity = tmp_path / "cache_identity.json"
+    output = tmp_path / "action.json"
+    _scorer_response_dataset(scorer)
+    performance.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue_performance_summary.v1",
+                "queue_id": "inverse_action_queue",
+                "telemetry_only": True,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "event_count": 1,
+                "by_resource_kind": {},
+                "by_step": {
+                    "legacy.materialize": {
+                        "run_count": 1,
+                        "success_count": 1,
+                        "failure_count": 0,
+                        "elapsed_seconds_mean": 2.25,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    runtime_identity.write_text(
+        json.dumps(
+            {
+                "runtime_tree_sha256": "d" * 64,
+                "scorer_version": "local_scheduler.v1",
+            }
+        ),
+        encoding="utf-8",
+    )
+    cache_identity.write_text(
+        json.dumps({"cache_sha256": "e" * 64}),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--scorer-response",
+            str(scorer),
+            "--queue-performance-summary",
+            str(performance),
+            "--queue-performance-runtime-identity",
+            str(runtime_identity),
+            "--queue-performance-cache-identity",
+            str(cache_identity),
+            "--output",
+            str(output),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode != 0
+    assert "missing candidate_id_by_experiment" in result.stderr

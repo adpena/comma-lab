@@ -2724,6 +2724,70 @@ def _step_lookup_by_key(
     }
 
 
+def _experiment_lookup_by_id(queue: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    return {str(experiment["id"]): experiment for experiment in queue["experiments"]}
+
+
+def _metadata_string(value: object) -> str | None:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _metadata_string_list(value: object) -> list[str]:
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    if not isinstance(value, Sequence) or isinstance(value, bytes):
+        return []
+    out: list[str] = []
+    for item in value:
+        if isinstance(item, str) and item.strip():
+            out.append(item.strip())
+    return out
+
+
+def _performance_candidate_ids(
+    experiment_id: str,
+    metadata: Mapping[str, Any],
+) -> tuple[str, ...]:
+    for key in (
+        "candidate_ids",
+        "source_candidate_ids",
+        "source_unit_ids",
+        "source_selection_ids",
+    ):
+        values = _metadata_string_list(metadata.get(key))
+        if values:
+            return tuple(values)
+    for key in ("work_id", "backlog_key"):
+        value = _metadata_string(metadata.get(key))
+        if value is not None:
+            return (value,)
+    return (experiment_id,)
+
+
+def _add_performance_identity(
+    bucket: dict[str, Any],
+    *,
+    experiment_id: str,
+    step_id: str,
+    metadata: Mapping[str, Any],
+    candidate_ids: Sequence[str],
+) -> None:
+    bucket.setdefault("_experiment_ids", set()).add(experiment_id)
+    bucket.setdefault("_step_ids", set()).add(step_id)
+    bucket.setdefault("_candidate_ids", set()).update(candidate_ids)
+    for metadata_key, bucket_key in (
+        ("work_id", "_work_ids"),
+        ("backlog_key", "_backlog_keys"),
+        ("source_unit_ids", "_source_unit_ids"),
+        ("source_selection_ids", "_source_selection_ids"),
+    ):
+        values = _metadata_string_list(metadata.get(metadata_key))
+        if values:
+            bucket.setdefault(bucket_key, set()).update(values)
+
+
 def _new_performance_bucket() -> dict[str, Any]:
     return {
         "run_count": 0,
@@ -2788,8 +2852,8 @@ def _finalize_performance_bucket(bucket: dict[str, Any]) -> dict[str, Any]:
             resource_counts.items(),
             key=lambda item: (-item[1], item[0]),
         )[0][0]
-    return {
-        **bucket,
+    result = {
+        **{key: value for key, value in bucket.items() if not key.startswith("_")},
         "resource_kind_counts": resource_counts,
         "dominant_resource_kind": dominant_resource_kind,
         "elapsed_seconds_mean": elapsed_sum / run_count if run_count else None,
@@ -2801,6 +2865,19 @@ def _finalize_performance_bucket(bucket: dict[str, Any]) -> dict[str, Any]:
         ),
         "log_bytes_mean": int(bucket["log_bytes_sum"]) / run_count if run_count else None,
     }
+    for internal_key, public_key in (
+        ("_experiment_ids", "experiment_ids"),
+        ("_step_ids", "step_ids"),
+        ("_candidate_ids", "candidate_ids"),
+        ("_work_ids", "work_ids"),
+        ("_backlog_keys", "backlog_keys"),
+        ("_source_unit_ids", "source_unit_ids"),
+        ("_source_selection_ids", "source_selection_ids"),
+    ):
+        values = bucket.get(internal_key)
+        if values:
+            result[public_key] = sorted(str(value) for value in values)
+    return result
 
 
 def _telemetry_artifact_bytes(telemetry: Mapping[str, Any]) -> tuple[int, int, int]:
@@ -2862,8 +2939,19 @@ def queue_performance_summary(
 
     queue_id = str(queue["queue_id"])
     step_lookup = _step_lookup_by_key(queue)
+    experiment_lookup = _experiment_lookup_by_id(queue)
     by_resource: dict[str, dict[str, Any]] = {}
+    by_experiment: dict[str, dict[str, Any]] = {}
     by_step: dict[str, dict[str, Any]] = {}
+    by_work_id: dict[str, dict[str, Any]] = {}
+    by_backlog_key: dict[str, dict[str, Any]] = {}
+    by_source_unit_id: dict[str, dict[str, Any]] = {}
+    by_source_selection_id: dict[str, dict[str, Any]] = {}
+    candidate_id_by_experiment: dict[str, list[str]] = {}
+    work_id_by_experiment: dict[str, str] = {}
+    backlog_key_by_experiment: dict[str, str] = {}
+    source_unit_ids_by_experiment: dict[str, list[str]] = {}
+    source_selection_ids_by_experiment: dict[str, list[str]] = {}
     rows = conn.execute(
         """
         SELECT experiment_id, step_id, event_type, payload_json
@@ -2883,6 +2971,31 @@ def queue_performance_summary(
         if not isinstance(payload, Mapping):
             continue
         step = step_lookup.get((experiment_id, step_id), {})
+        experiment = experiment_lookup.get(experiment_id, {})
+        metadata = (
+            experiment.get("metadata")
+            if isinstance(experiment.get("metadata"), Mapping)
+            else {}
+        )
+        candidate_ids = _performance_candidate_ids(experiment_id, metadata)
+        candidate_id_by_experiment.setdefault(experiment_id, list(candidate_ids))
+        work_id = _metadata_string(metadata.get("work_id"))
+        if work_id is not None:
+            work_id_by_experiment.setdefault(experiment_id, work_id)
+        backlog_key = _metadata_string(metadata.get("backlog_key"))
+        if backlog_key is not None:
+            backlog_key_by_experiment.setdefault(experiment_id, backlog_key)
+        source_unit_ids = _metadata_string_list(metadata.get("source_unit_ids"))
+        if source_unit_ids:
+            source_unit_ids_by_experiment.setdefault(experiment_id, source_unit_ids)
+        source_selection_ids = _metadata_string_list(
+            metadata.get("source_selection_ids")
+        )
+        if source_selection_ids:
+            source_selection_ids_by_experiment.setdefault(
+                experiment_id,
+                source_selection_ids,
+            )
         resource_kind = str(payload.get("resource_kind") or _resource_kind(step))
         telemetry = payload.get("telemetry") if isinstance(payload.get("telemetry"), Mapping) else {}
         artifact_count, artifact_bytes, artifact_raw_bytes = _telemetry_artifact_bytes(telemetry)
@@ -2891,9 +3004,17 @@ def queue_performance_summary(
         succeeded = str(row["event_type"]) == "step_succeeded"
         for bucket_map, key in (
             (by_resource, resource_kind),
+            (by_experiment, experiment_id),
             (by_step, f"{experiment_id}.{step_id}"),
         ):
             bucket = bucket_map.setdefault(key, _new_performance_bucket())
+            _add_performance_identity(
+                bucket,
+                experiment_id=experiment_id,
+                step_id=step_id,
+                metadata=metadata,
+                candidate_ids=candidate_ids,
+            )
             _add_performance_sample(
                 bucket,
                 succeeded=succeeded,
@@ -2904,6 +3025,31 @@ def queue_performance_summary(
                 artifact_raw_bytes=artifact_raw_bytes,
                 log_bytes=log_bytes,
             )
+        for bucket_map, keys in (
+            (by_work_id, [work_id] if work_id is not None else []),
+            (by_backlog_key, [backlog_key] if backlog_key is not None else []),
+            (by_source_unit_id, source_unit_ids),
+            (by_source_selection_id, source_selection_ids),
+        ):
+            for key in keys:
+                bucket = bucket_map.setdefault(key, _new_performance_bucket())
+                _add_performance_identity(
+                    bucket,
+                    experiment_id=experiment_id,
+                    step_id=step_id,
+                    metadata=metadata,
+                    candidate_ids=candidate_ids,
+                )
+                _add_performance_sample(
+                    bucket,
+                    succeeded=succeeded,
+                    resource_kind=resource_kind,
+                    elapsed_seconds=elapsed,
+                    artifact_count=artifact_count,
+                    artifact_bytes=artifact_bytes,
+                    artifact_raw_bytes=artifact_raw_bytes,
+                    log_bytes=log_bytes,
+                )
     return {
         "schema": "experiment_queue_performance_summary.v1",
         "queue_id": queue_id,
@@ -2914,13 +3060,42 @@ def queue_performance_summary(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "event_count": len(rows),
+        "candidate_id_by_experiment": dict(sorted(candidate_id_by_experiment.items())),
+        "work_id_by_experiment": dict(sorted(work_id_by_experiment.items())),
+        "backlog_key_by_experiment": dict(sorted(backlog_key_by_experiment.items())),
+        "source_unit_ids_by_experiment": dict(
+            sorted(source_unit_ids_by_experiment.items())
+        ),
+        "source_selection_ids_by_experiment": dict(
+            sorted(source_selection_ids_by_experiment.items())
+        ),
         "by_resource_kind": {
             key: _finalize_performance_bucket(value)
             for key, value in sorted(by_resource.items())
         },
+        "by_experiment": {
+            key: _finalize_performance_bucket(value)
+            for key, value in sorted(by_experiment.items())
+        },
         "by_step": {
             key: _finalize_performance_bucket(value)
             for key, value in sorted(by_step.items())
+        },
+        "by_work_id": {
+            key: _finalize_performance_bucket(value)
+            for key, value in sorted(by_work_id.items())
+        },
+        "by_backlog_key": {
+            key: _finalize_performance_bucket(value)
+            for key, value in sorted(by_backlog_key.items())
+        },
+        "by_source_unit_id": {
+            key: _finalize_performance_bucket(value)
+            for key, value in sorted(by_source_unit_id.items())
+        },
+        "by_source_selection_id": {
+            key: _finalize_performance_bucket(value)
+            for key, value in sorted(by_source_selection_id.items())
         },
     }
 

@@ -311,25 +311,60 @@ def observations_from_queue_performance_summary(
     by_step = summary.get("by_step")
     if not isinstance(by_step, Mapping):
         raise InverseSteganalysisAcquisitionError("summary.by_step must be an object")
-    candidate_lookup: dict[str, tuple[str, ...]] = {}
-    for raw_key, raw_value in dict(candidate_id_by_experiment or {}).items():
-        key = _text(raw_key, "candidate_id_by_experiment key")
-        if isinstance(raw_value, str):
-            values = (_text(raw_value, "candidate_id_by_experiment value"),)
-        elif isinstance(raw_value, Sequence) and not isinstance(raw_value, bytes):
-            values = tuple(
-                _text(value, f"candidate_id_by_experiment[{key!r}][{index}]")
-                for index, value in enumerate(raw_value)
-            )
-            if not values:
-                raise InverseSteganalysisAcquisitionError(
-                    f"candidate_id_by_experiment[{key!r}] must not be empty"
+    def parse_candidate_lookup(
+        raw: Mapping[str, Any] | None,
+        *,
+        label: str,
+    ) -> dict[str, tuple[str, ...]]:
+        lookup: dict[str, tuple[str, ...]] = {}
+        if raw is None:
+            return lookup
+        if not isinstance(raw, Mapping):
+            raise InverseSteganalysisAcquisitionError(f"{label} must be an object")
+        for raw_key, raw_value in dict(raw).items():
+            key = _text(raw_key, f"{label} key")
+            if isinstance(raw_value, str):
+                values = (_text(raw_value, f"{label}[{key!r}]"),)
+            elif isinstance(raw_value, Sequence) and not isinstance(raw_value, bytes):
+                values = tuple(
+                    _text(value, f"{label}[{key!r}][{index}]")
+                    for index, value in enumerate(raw_value)
                 )
-        else:
+                if not values:
+                    raise InverseSteganalysisAcquisitionError(
+                        f"{label}[{key!r}] must not be empty"
+                    )
+            else:
+                raise InverseSteganalysisAcquisitionError(
+                    f"{label}[{key!r}] must be a string or list"
+                )
+            lookup[key] = values
+        return lookup
+
+    embedded_lookup = parse_candidate_lookup(
+        summary.get("candidate_id_by_experiment")
+        if summary.get("candidate_id_by_experiment") is not None
+        else None,
+        label="summary.candidate_id_by_experiment",
+    )
+    explicit_lookup = parse_candidate_lookup(
+        candidate_id_by_experiment,
+        label="candidate_id_by_experiment",
+    )
+    candidate_lookup = dict(embedded_lookup)
+    for key, values in explicit_lookup.items():
+        embedded_values = candidate_lookup.get(key)
+        if embedded_values is not None and embedded_values != values:
             raise InverseSteganalysisAcquisitionError(
-                f"candidate_id_by_experiment[{key!r}] must be a string or list"
+                "candidate_id_by_experiment conflicts with "
+                f"summary.candidate_id_by_experiment[{key!r}]"
             )
         candidate_lookup[key] = values
+    if by_step and not candidate_lookup:
+        raise InverseSteganalysisAcquisitionError(
+            "queue performance summary missing candidate_id_by_experiment; "
+            "pass candidate_id_by_experiment only for legacy summaries"
+        )
 
     observations: list[dict[str, Any]] = []
     for bucket_key, bucket in sorted(by_step.items(), key=lambda item: str(item[0])):
@@ -355,7 +390,12 @@ def observations_from_queue_performance_summary(
             exclusive=True,
         )
         artifact_bytes = _queue_performance_artifact_bytes(bucket)
-        candidate_ids = candidate_lookup.get(experiment_id, (experiment_id,))
+        candidate_ids = candidate_lookup.get(experiment_id)
+        if candidate_ids is None:
+            raise InverseSteganalysisAcquisitionError(
+                "summary.candidate_id_by_experiment missing experiment "
+                f"{experiment_id!r}"
+            )
         base_observation_id = (
             f"queue_perf_{_slug(queue_id)}_"
             f"{_slug(experiment_id)}_{_slug(step_id)}"

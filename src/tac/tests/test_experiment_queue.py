@@ -163,6 +163,12 @@ def test_experiment_queue_accepts_legacy_json_file_key_equals_postcondition(
                 {
                     "id": "candidate_a",
                     "priority": 1,
+                    "metadata": {
+                        "work_id": "work_drop_pair_001",
+                        "backlog_key": "pairset_drop_one:rank001",
+                        "source_unit_ids": ["pair0371"],
+                        "source_selection_ids": ["rank001_pair0371"],
+                    },
                     "steps": [
                         {
                             "id": "write_manifest",
@@ -225,6 +231,18 @@ def test_experiment_queue_accepts_legacy_json_file_key_equals_postcondition(
     assert performance["score_claim"] is False
     assert performance["promotion_eligible"] is False
     assert performance["rank_or_kill_eligible"] is False
+    assert performance["candidate_id_by_experiment"] == {
+        "candidate_a": ["pair0371"]
+    }
+    assert performance["work_id_by_experiment"] == {
+        "candidate_a": "work_drop_pair_001"
+    }
+    assert performance["backlog_key_by_experiment"] == {
+        "candidate_a": "pairset_drop_one:rank001"
+    }
+    assert performance["source_unit_ids_by_experiment"] == {
+        "candidate_a": ["pair0371"]
+    }
     assert performance["by_resource_kind"]["local_cpu"]["run_count"] == 1
     assert (
         performance["by_resource_kind"]["local_cpu"]["dominant_resource_kind"]
@@ -240,6 +258,24 @@ def test_experiment_queue_accepts_legacy_json_file_key_equals_postcondition(
         performance["by_step"]["candidate_a.write_manifest"]["success_count"]
         == 1
     )
+    assert performance["by_step"]["candidate_a.write_manifest"]["candidate_ids"] == [
+        "pair0371"
+    ]
+    assert performance["by_experiment"]["candidate_a"]["work_ids"] == [
+        "work_drop_pair_001"
+    ]
+    assert performance["by_work_id"]["work_drop_pair_001"]["candidate_ids"] == [
+        "pair0371"
+    ]
+    assert performance["by_backlog_key"]["pairset_drop_one:rank001"][
+        "source_unit_ids"
+    ] == ["pair0371"]
+    assert performance["by_source_unit_id"]["pair0371"]["backlog_keys"] == [
+        "pairset_drop_one:rank001"
+    ]
+    assert performance["by_source_selection_id"]["rank001_pair0371"][
+        "source_unit_ids"
+    ] == ["pair0371"]
 
 
 def test_experiment_queue_reconciles_queued_steps_with_satisfied_postconditions(

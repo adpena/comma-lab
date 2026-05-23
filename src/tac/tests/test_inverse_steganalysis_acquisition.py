@@ -353,6 +353,7 @@ def test_queue_performance_observations_calibrate_acquisition_denominator() -> N
         "schema": "experiment_queue_performance_summary.v1",
         "queue_id": "byte_shave_queue",
         "event_count": 2,
+        "candidate_id_by_experiment": {"candidate_a": ["candidate_a"]},
         "by_resource_kind": {},
         "by_step": {
             "candidate_a.materialize": {
@@ -424,6 +425,7 @@ def test_queue_performance_candidate_map_can_expand_bundle_steps() -> None:
         "schema": "experiment_queue_performance_summary.v1",
         "queue_id": "byte_shave_queue",
         "event_count": 1,
+        "candidate_id_by_experiment": {"bundle": ["candidate_a", "candidate_b"]},
         "by_resource_kind": {},
         "by_step": {
             "bundle.materialize": {
@@ -441,7 +443,6 @@ def test_queue_performance_candidate_map_can_expand_bundle_steps() -> None:
         performance,
         runtime_identity=runtime_identity,
         cache_identity=cache_identity,
-        candidate_id_by_experiment={"bundle": ["candidate_a", "candidate_b"]},
     )
     action = build_discrete_scorer_action_functional(
         [_atom("candidate_a"), _atom("candidate_b")],
@@ -471,6 +472,49 @@ def test_queue_performance_candidate_map_can_expand_bundle_steps() -> None:
     assert cells_by_candidate["candidate_b"]["priority"]["artifact_bytes"] == 8192
 
 
+def test_queue_performance_summary_requires_candidate_identity() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {
+        "cache_sha256": "e" * 64,
+    }
+    legacy_summary = {
+        "schema": "experiment_queue_performance_summary.v1",
+        "queue_id": "legacy_queue",
+        "event_count": 1,
+        "by_resource_kind": {},
+        "by_step": {
+            "anonymous.materialize": {
+                "run_count": 1,
+                "success_count": 1,
+                "failure_count": 0,
+                "elapsed_seconds_mean": 1.0,
+            }
+        },
+    }
+
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="missing candidate_id_by_experiment",
+    ):
+        observations_from_queue_performance_summary(
+            legacy_summary,
+            runtime_identity=runtime_identity,
+            cache_identity=cache_identity,
+        )
+
+    observations = observations_from_queue_performance_summary(
+        legacy_summary,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+        candidate_id_by_experiment={"anonymous": "candidate_a"},
+    )
+
+    assert observations[0]["candidate_id"] == "candidate_a"
+
+
 def test_queue_performance_observations_do_not_override_scorer_observations() -> None:
     runtime_identity = {
         "runtime_tree_sha256": "d" * 64,
@@ -484,6 +528,7 @@ def test_queue_performance_observations_do_not_override_scorer_observations() ->
             "schema": "experiment_queue_performance_summary.v1",
             "queue_id": "byte_shave_queue",
             "event_count": 1,
+            "candidate_id_by_experiment": {"candidate_a": ["candidate_a"]},
             "by_resource_kind": {},
             "by_step": {
                 "candidate_a.materialize": {
