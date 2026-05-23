@@ -1,10 +1,10 @@
 <!--
-generated_at: 2026-05-23T01:55:00Z
-from_state_hash: dqs1_pairset_rank011_local_advisory_rank009_queue_20260523T0155Z
-regenerated_by: codex:dqs1_rank011_local_advisory_rank009_queue_20260523
-last_refreshed_at: 2026-05-23T01:55:00Z
-last_refreshed_by: codex:dqs1_rank011_local_advisory_rank009_queue_20260523
-last_refreshed_head: 3a0e89a60
+generated_at: 2026-05-23T02:06:56Z
+from_state_hash: dqs1_pairset_rank009_local_advisory_drop_two_queue_20260523T0206Z
+regenerated_by: codex:dqs1_rank009_local_advisory_drop_two_queue_20260523
+last_refreshed_at: 2026-05-23T02:06:56Z
+last_refreshed_by: codex:dqs1_rank009_local_advisory_drop_two_queue_20260523
+last_refreshed_head: e72c1181f
 last_refreshed_note: |
   Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
   and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
@@ -20,9 +20,10 @@ last_refreshed_note: |
   rank002/pair0109, rank003/pair0479, rank004/pair0098, rank005/pair0467,
   rank006/pair0544, rank014/pair0492, rank007/pair0059, rank029/pair0259,
   rank008/pair0496, rank028/pair0257, rank030/pair0412, rank012/pair0134,
-  and rank011/pair0555 completed local
+  rank011/pair0555, and rank009/pair0459 completed local
   plan/materialize/locality/advisory and are observe-only by drift/eureka
-  calibration, so the generated local-first queue now routes rank009/pair0459
+  calibration, so the generated local-first queue now routes drop-two
+  r029/r010 pairs 0259/0376
   for the same local-first custody gate.
 -->
 
@@ -334,11 +335,11 @@ last_refreshed_note: |
   for `pairset_drop_one_rank021_pair0371`. After rank023, rank024, rank018,
   rank017, rank016, rank025, rank015, rank001, rank002, rank003, rank004,
   rank005, rank006, rank014, rank007, rank029, rank008, rank028, rank030,
-  rank012, and rank011
+  rank012, rank011, and rank009
   local
   observe-only results, the original top-8 action summary is exhausted. A
   widened top-32 canonicalization artifact now exposes the next unobserved
-  candidate, `pairset_drop_one_rank009_pair0459`, for the same local-first
+  candidate, `pairset_drop_two_r029_010_p0259_0376`, for the same local-first
   custody gate. The response
   model remains planning-only, active only for `diversity_spaced` count rows,
   caps regression-only extrapolation at the best observed score, and requires
@@ -366,9 +367,9 @@ last_refreshed_note: |
   `configs/experiment_queues/dqs1_pairset_local_first.yaml`, with rank023,
   rank024, rank018, rank017, rank016, rank025, rank015, rank001, rank002,
   rank003, rank004, rank005, rank006, rank014, rank007, rank029, rank008,
-  rank028, rank030, rank012, and rank011 now
+  rank028, rank030, rank012, rank011, and rank009 now
   local-advisory-observed with matching eureka records; the checked-in queue is
-  routed to rank009/pair0459. Completed-local skip detection now requires both
+  routed to drop-two r029/r010 pairs 0259/0376. Completed-local skip detection now requires both
   local advisory custody and a matching drift/eureka record, and a positive
   eureka signal with `recommended_action=dispatch_exact_auth_anchor` fails
   closed instead of being skipped by the local-first rerouter.
@@ -460,6 +461,12 @@ last_refreshed_note: |
   an exact-eval spend trigger.
   Rank011 repeated the same local and drift-projected score band as rank012 and
   is also observe-only.
+  Rank009 locally scored `0.19203928295713674` `[macOS-CPU advisory]`,
+  projects to `0.1920287829571367`
+  `[contest-CPU drift-projected; false authority]`, and conservatively
+  projects to `0.19203178295713672`
+  `[contest-CPU drift-projected; false authority]`; it is observe-only and not
+  an exact-eval spend trigger.
   Rank023's eureka artifact is
   `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank023_pair0440_20260522T203717Z.json`;
   rank024's eureka artifact is
@@ -501,7 +508,9 @@ last_refreshed_note: |
   rank012's eureka artifact is
   `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank012_pair0134_20260523T012437Z.json`;
   rank011's eureka artifact is
-  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank011_pair0555_20260523T013925Z.json`.
+  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank011_pair0555_20260523T013925Z.json`;
+  rank009's eureka artifact is
+  `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank009_pair0459_20260523T015233Z.json`.
   After the strict eureka false-authority surface landed, historical observe-only
   eureka rows for rank001, rank002, rank003, rank004, rank005, rank006,
   rank014, rank015, rank016, rank017, rank018, rank023, rank024, and rank025
