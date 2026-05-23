@@ -12,7 +12,7 @@ from src.comma_lab.scheduler.dqs1_local_first_queue import (
     candidate_slug,
     find_latest_cross_family_action_summary,
 )
-from src.comma_lab.scheduler.experiment_queue import ExperimentQueueError
+from src.comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
 from src.tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
 
 
@@ -391,6 +391,33 @@ def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:
         == ".omx/custom_research/local_cpu_contest_drift_eureka_pairset_drop_one_rank023_pair0440_20260523T010203Z.json"
         for part in steps["local_cpu_contest_drift_eureka"]
     )
+
+
+def test_checked_in_dqs1_queue_keeps_eureka_append_only_contract() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    queue = load_queue_definition(
+        repo_root / "configs" / "experiment_queues" / "dqs1_pairset_local_first.yaml"
+    )
+    assert queue["queue_id"] == "dqs1_pairset_local_first"
+    assert len(queue["experiments"]) == 1
+    experiment = queue["experiments"][0]
+    candidate_id = experiment["id"]
+    steps = {step["id"]: step for step in experiment["steps"]}
+    eureka = steps["local_cpu_contest_drift_eureka"]
+    command = eureka["command"]
+    eureka_out = command[command.index("--eureka-out") + 1]
+    assert eureka_out.startswith(f".omx/research/local_cpu_contest_drift_eureka_{candidate_id}_")
+    assert eureka_out.endswith("Z.json")
+    assert "20260522T224218Z" not in eureka_out
+
+    false_authority = next(
+        condition
+        for condition in eureka["postconditions"]
+        if condition["type"] == "json_false_authority"
+    )
+    assert false_authority["path"] == eureka_out
+    assert false_authority["required_false"] == list(EUREKA_FALSE_AUTHORITY_FIELDS)
+    assert false_authority["false_or_missing"] == []
 
 
 def test_dqs1_queue_builder_fails_closed_on_authority_fields(tmp_path: Path) -> None:

@@ -78,7 +78,8 @@ def test_registry_filters_by_declared_target_axis_and_substrate() -> None:
     other_substrate_rows = registry.enumerate_candidates(substrate="not_registered")
 
     assert macos_rows
-    assert mlx_rows == []
+    assert mlx_rows
+    assert all("mlx_research_signal" in row["allowed_target_modes"] for row in mlx_rows)
     assert other_substrate_rows == []
     with pytest.raises(OptimizerSchedulerRegistryError, match="unknown target_mode"):
         registry.enumerate_candidates(target_mode="contest_exact_eval")

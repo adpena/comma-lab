@@ -41,6 +41,7 @@ KNOWN_TARGET_MODES: frozenset[str] = frozenset(
 DEFAULT_ALLOWED_TARGET_MODES: tuple[str, ...] = (
     "local_proxy_learning",
     "macos_cpu_advisory",
+    "mlx_research_signal",
     "contest_exact_eval_planning",
 )
 DEFAULT_ALLOWED_AXIS_TAGS: tuple[str, ...] = (
