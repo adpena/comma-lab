@@ -14,8 +14,8 @@ from comma_lab.scheduler.experiment_queue import (
     initialize_queue_state,
 )
 from comma_lab.scheduler.staircase_dag import (
-    build_storage_plan_payload,
     build_staircase_dag_from_experiment_queue,
+    build_storage_plan_payload,
     experiment_queue_status_map,
     parse_resource_pool_spec,
     plan_staircase_dispatch,
@@ -90,6 +90,15 @@ def test_build_queue_dag_plans_executor_specs_without_authority(tmp_path: Path) 
     assert set(selected) == {"cand_a.plan", "cand_b.plan"}
     assert all(task["pure"] is False for task in plan["dask_task_specs"])
     assert plan["dask_task_specs"][0]["resources"] == {"local_cpu": 1}
+    assert plan["dask_task_specs"][0]["queue_id"] == "staircase_fixture"
+    assert plan["dask_task_specs"][0]["experiment_id"] in {"cand_a", "cand_b"}
+    assert plan["dask_task_specs"][0]["step_id"] == "plan"
+    assert plan["dask_task_specs"][0]["step_hashes"]["definition_hash"]
+    assert plan["dask_task_specs"][0]["queue_state_writeback"]["required"] is True
+    assert (
+        plan["dask_task_specs"][0]["executor_boundary"]
+        == "planning_only_task_must_write_back_to_experiment_queue_state"
+    )
 
 
 def test_plan_uses_queue_state_and_unblocks_successors(tmp_path: Path) -> None:
@@ -167,6 +176,41 @@ def test_staircase_dag_preserves_cross_experiment_dependencies() -> None:
     ]
 
 
+def test_staircase_dag_skips_nonqueued_experiments() -> None:
+    queue = _queue()
+    queue["experiments"][0]["status"] = "paused"
+    queue["experiments"][1]["status"] = "disabled"
+
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="fixture_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 2, "local_mlx": 1}, "memory_gb": 128, "disk_gb": 80}
+        ],
+    )
+
+    assert dag["nodes"] == []
+    assert plan_staircase_dispatch(dag)["selected_count"] == 0
+
+
+def test_staircase_dag_respects_queue_control_pause() -> None:
+    queue = _queue()
+    queue["controls"]["mode"] = "paused"
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="fixture_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 2, "local_mlx": 1}, "memory_gb": 128, "disk_gb": 80}
+        ],
+    )
+
+    plan = plan_staircase_dispatch(dag, max_nodes=4)
+
+    assert plan["selected_count"] == 0
+    assert {row["reason"] for row in plan["blocked_nodes"]} == {"queue_control_not_running"}
+    assert {row["mode"] for row in plan["blocked_nodes"]} == {"paused"}
+
+
 def test_staircase_storage_plan_blocks_when_no_tier_selected(tmp_path: Path) -> None:
     storage = build_storage_plan_payload(
         repo_root=tmp_path,
@@ -201,11 +245,16 @@ def test_rejects_truthy_authority_in_dag_node() -> None:
 
 
 def test_parse_resource_pool_spec() -> None:
-    pool = parse_resource_pool_spec("bat00:local_cpu=8,cuda_gpu=1,memory_gb=32,disk_gb=64,tags=windows+cuda")
+    pool = parse_resource_pool_spec("bat00:local_cpu=8,local_cuda=1,memory_gb=32,disk_gb=64,tags=windows+cuda")
 
     assert pool["id"] == "bat00"
-    assert pool["slots"] == {"local_cpu": 8, "cuda_gpu": 1}
+    assert pool["slots"] == {"local_cpu": 8, "local_cuda": 1}
     assert pool["tags"] == ["windows", "cuda"]
+
+
+def test_parse_resource_pool_spec_rejects_unknown_resource_kind() -> None:
+    with pytest.raises(ExperimentQueueError, match="unsupported resource kind"):
+        parse_resource_pool_spec("bat00:local_cpu=8,cuda_gpu=1,memory_gb=32,disk_gb=64")
 
 
 def test_write_staircase_dag_refuses_silent_overwrite(tmp_path: Path) -> None:

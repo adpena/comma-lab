@@ -18,6 +18,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.byte_shaving_campaign_queue import (  # noqa: E402
+    build_materializer_execution_queue,
     compile_dqs1_byte_shaving_campaign,
     materializer_contexts_from_payload,
 )
@@ -86,6 +87,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="JSON byte_shaving_materializer_contexts.v1 file used to unblock proof-chain work rows.",
     )
     parser.add_argument("--materializer-work-queue-out", type=Path, default=None)
+    parser.add_argument(
+        "--materializer-execution-queue-out",
+        type=Path,
+        default=None,
+        help=(
+            "Write an experiment_queue.v1 file that runs executable "
+            "byte_shaving_materializer_work_queue.v1 rows through the shared worker."
+        ),
+    )
     parser.add_argument("--queue-out", type=Path, default=None)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument(
@@ -98,6 +108,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--allow-partial-materialization", action="store_true")
     parser.add_argument("--partial-materialization-rationale", default=None)
     parser.add_argument("--queue-id", default=DEFAULT_QUEUE_ID)
+    parser.add_argument(
+        "--materializer-execution-queue-id",
+        default="byte_shaving_materializer_local_proof_chain",
+    )
+    parser.add_argument("--materializer-execution-lane-id", default=None)
+    parser.add_argument("--materializer-execution-limit", type=int, default=None)
+    parser.add_argument("--materializer-execution-timeout-seconds", type=int, default=0)
     parser.add_argument("--results-root", default=DEFAULT_RESULTS_ROOT)
     parser.add_argument("--completed-results-root", action="append", default=[])
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
@@ -107,6 +124,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-action-summary-sha256")
     parser.add_argument("--expected-materializer-backlog-sha256")
     parser.add_argument("--expected-materializer-work-queue-sha256")
+    parser.add_argument("--expected-materializer-execution-queue-sha256")
     parser.add_argument("--expected-queue-sha256")
     return parser.parse_args(argv)
 
@@ -119,6 +137,10 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--queue-candidate-limit must be >= 1")
     if args.local_cpu_concurrency < 1:
         raise SystemExit("--local-cpu-concurrency must be >= 1")
+    if args.materializer_execution_limit is not None and args.materializer_execution_limit < 1:
+        raise SystemExit("--materializer-execution-limit must be >= 1")
+    if args.materializer_execution_timeout_seconds < 0:
+        raise SystemExit("--materializer-execution-timeout-seconds must be non-negative")
     if args.allow_partial_materialization and not str(
         args.partial_materialization_rationale or ""
     ).strip():
@@ -187,6 +209,37 @@ def main(argv: list[str] | None = None) -> int:
             expected_existing_sha256=args.expected_materializer_work_queue_sha256,
         )
 
+    materializer_execution_queue_payload = None
+    if args.materializer_execution_queue_out is not None:
+        try:
+            materializer_execution_queue = build_materializer_execution_queue(
+                compiled["materializer_work_queue"],
+                queue_id=args.materializer_execution_queue_id,
+                repo_root=args.repo_root,
+                lane_id=args.materializer_execution_lane_id,
+                source_work_queue_path=args.materializer_work_queue_out,
+                local_cpu_concurrency=args.local_cpu_concurrency,
+                step_timeout_seconds=args.materializer_execution_timeout_seconds,
+                limit=args.materializer_execution_limit,
+            )
+        except ExperimentQueueError as exc:
+            raise SystemExit(str(exc)) from exc
+        _write_json(
+            args.materializer_execution_queue_out,
+            materializer_execution_queue,
+            allow_overwrite=bool(args.overwrite_output),
+            expected_existing_sha256=args.expected_materializer_execution_queue_sha256,
+        )
+        materializer_execution_queue_payload = {
+            "queue_out": str(args.materializer_execution_queue_out),
+            "queue_id": materializer_execution_queue["queue_id"],
+            "experiment_count": len(materializer_execution_queue["experiments"]),
+            "selected_work_ids": [
+                experiment["metadata"]["work_id"]
+                for experiment in materializer_execution_queue["experiments"]
+            ],
+        }
+
     queue_payload = None
     if args.queue_out is not None:
         if int(compiled["blocked_row_count"]) > 0 and not args.allow_partial_materialization:
@@ -244,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
                     if args.materializer_work_queue_out is not None
                     else None
                 ),
+                "materializer_execution_queue": materializer_execution_queue_payload,
                 "executable_row_count": compiled["executable_row_count"],
                 "blocked_row_count": compiled["blocked_row_count"],
                 "materializer_backlog_row_count": compiled["materializer_backlog"][

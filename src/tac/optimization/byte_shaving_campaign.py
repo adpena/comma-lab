@@ -62,6 +62,7 @@ UNIT_KINDS: frozenset[str] = frozenset(
         "tensor",
         "packet_member",
         "scorer_response_row",
+        "scorer_inverse_surface_cell",
         "correction_target",
     }
 )
@@ -107,6 +108,10 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
         "materialize_scorer_response_candidate",
         "probe_followup_neighbor",
     ),
+    "scorer_inverse_surface_cell": (
+        "probe_inverse_scorer_surface_cell",
+        "materialize_inverse_scorer_cell_candidate",
+    ),
     "correction_target": (
         "apply_engineered_correction",
         "probe_correction_neighbor",
@@ -115,6 +120,8 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
 
 DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
     "materialize_scorer_response_candidate": 0,
+    "probe_inverse_scorer_surface_cell": 0,
+    "materialize_inverse_scorer_cell_candidate": 1,
     "probe_followup_neighbor": 1,
     "apply_engineered_correction": 5,
     "probe_correction_neighbor": 6,
@@ -384,6 +391,7 @@ def validate_signal_surface(payload: Mapping[str, Any]) -> None:
         )
         allows_zero_saved = _unit_kind(item) in {
             "scorer_response_row",
+            "scorer_inverse_surface_cell",
             "correction_target",
         }
         if saved is None or saved < 0 or (saved == 0 and not allows_zero_saved):
@@ -404,6 +412,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
     )
     allows_zero_saved = _unit_kind(unit) in {
         "scorer_response_row",
+        "scorer_inverse_surface_cell",
         "correction_target",
     }
     if saved_bytes is None or saved_bytes < 0 or (saved_bytes == 0 and not allows_zero_saved):

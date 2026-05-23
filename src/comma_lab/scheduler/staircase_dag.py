@@ -27,6 +27,7 @@ from comma_lab.scheduler.experiment_queue import (
     connect_state_readonly,
     default_state_path,
     load_queue_definition,
+    normalize_resource_kind,
 )
 from comma_lab.storage_tiers import (
     DEFAULT_RESERVE_FREE_GB,
@@ -79,7 +80,7 @@ DEFAULT_MACHINE_PRESETS: tuple[dict[str, Any], ...] = (
     {
         "id": "ryzen_3900x_rtx2070s",
         "label": "Ryzen 3900X + RTX 2070 Super",
-        "slots": {"local_cpu": 8, "cuda_gpu": 1},
+        "slots": {"local_cpu": 8, "local_cuda": 1},
         "memory_gb": 32.0,
         "disk_gb": 64.0,
         "tags": ["linux", "x86_64", "cuda", "lan"],
@@ -98,6 +99,7 @@ class StaircaseReadyNode:
     family: str
     stage: str
     machine_id: str | None
+    metadata: Mapping[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -110,6 +112,7 @@ class StaircaseReadyNode:
             "family": self.family,
             "stage": self.stage,
             "machine_id": self.machine_id,
+            "metadata": dict(self.metadata),
         }
 
 
@@ -171,6 +174,13 @@ def _optional_float(value: object, label: str) -> float | None:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ExperimentQueueError(f"{label} must be a number")
     return float(value)
+
+
+def _queue_control_mode(value: object) -> str:
+    mode = _require_text(value, "controls.mode")
+    if mode not in {"running", "paused", "frozen"}:
+        raise ExperimentQueueError("controls.mode must be one of ['frozen', 'paused', 'running']")
+    return mode
 
 
 def _normalize_storage_plan_payload(value: object) -> dict[str, Any] | None:
@@ -261,7 +271,10 @@ def _normalize_node(raw: Mapping[str, Any], *, index: int) -> dict[str, Any]:
                 f"{node_id}.dependencies",
             ),
             "priority": _non_negative_int(raw.get("priority"), f"{node_id}.priority", default=100),
-            "resource_kind": _require_text(raw.get("resource_kind", "local_cpu"), f"{node_id}.resource_kind"),
+            "resource_kind": normalize_resource_kind(
+                raw.get("resource_kind", "local_cpu"),
+                f"{node_id}.resource_kind",
+            ),
             "family": _require_text(raw.get("family", "default"), f"{node_id}.family"),
             "stage": _require_text(raw.get("stage", "candidate"), f"{node_id}.stage"),
             "expected_value": _optional_float(raw.get("expected_value"), f"{node_id}.expected_value"),
@@ -299,7 +312,7 @@ def normalize_resource_pools(raw_pools: Sequence[Mapping[str, Any]] | None) -> l
         slots = _mapping(raw_pool.get("slots"), f"{pool_id}.slots")
         normalized_slots: dict[str, int] = {}
         for kind, count in slots.items():
-            normalized_slots[_require_text(kind, f"{pool_id}.slots key")] = _non_negative_int(
+            normalized_slots[normalize_resource_kind(kind, f"{pool_id}.slots key")] = _non_negative_int(
                 count,
                 f"{pool_id}.slots.{kind}",
             )
@@ -330,8 +343,8 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
         raise ExperimentQueueError(str(exc)) from exc
     dag_id = _require_text(payload.get("dag_id"), "dag_id")
     raw_nodes = payload.get("nodes")
-    if not isinstance(raw_nodes, list) or not raw_nodes:
-        raise ExperimentQueueError("nodes must be a non-empty list")
+    if not isinstance(raw_nodes, list):
+        raise ExperimentQueueError("nodes must be a list")
     nodes = [
         _normalize_node(node, index=index)
         for index, node in enumerate(raw_nodes)
@@ -356,6 +369,7 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
             "dag_id": dag_id,
             "controls": {
                 "allow_cloud": bool(controls.get("allow_cloud", False)),
+                "mode": _queue_control_mode(controls.get("mode", "running")),
                 "max_ready_nodes": _non_negative_int(
                     controls.get("max_ready_nodes"),
                     "controls.max_ready_nodes",
@@ -429,6 +443,14 @@ def build_staircase_dag_from_experiment_queue(
         if not isinstance(experiment, Mapping):
             continue
         experiment_id = _require_text(experiment.get("id"), "experiment.id")
+        experiment_status = _require_text(
+            experiment.get("status", "queued"),
+            f"{experiment_id}.status",
+        )
+        if experiment_status not in {"queued", "paused", "frozen", "disabled"}:
+            raise ExperimentQueueError(f"{experiment_id}.status unsupported: {experiment_status!r}")
+        if experiment_status != "queued":
+            continue
         priority = _non_negative_int(experiment.get("priority"), f"{experiment_id}.priority", default=100)
         experiment_tags = _string_list(experiment.get("tags"), f"{experiment_id}.tags")
         family = str(experiment.get("lane_id") or (experiment_tags[0] if experiment_tags else experiment_id))
@@ -454,7 +476,10 @@ def build_staircase_dag_from_experiment_queue(
                         for required in _string_list(step.get("requires"), f"{experiment_id}.{step_id}.requires")
                     ],
                     "priority": priority,
-                    "resource_kind": str(resources.get("kind") or "local_cpu"),
+                    "resource_kind": normalize_resource_kind(
+                        resources.get("kind", "local_cpu"),
+                        f"{experiment_id}.{step_id}.resources.kind",
+                    ),
                     "family": family,
                     "stage": step_id,
                     "tags": experiment_tags,
@@ -474,6 +499,11 @@ def build_staircase_dag_from_experiment_queue(
         {
             "schema": STAIRCASE_DAG_SCHEMA,
             "dag_id": dag_id or f"{queue.get('queue_id')}_staircase",
+            "controls": {
+                "mode": str(
+                    _mapping(queue.get("controls"), "queue.controls").get("mode", "running")
+                ),
+            },
             "resource_pools": list(resource_pools or default_local_resource_pools()),
             "storage": dict(storage_plan) if storage_plan is not None else None,
             "nodes": nodes,
@@ -610,6 +640,7 @@ def plan_staircase_dispatch(
     if cap <= 0:
         cap = int(controls["max_ready_nodes"])
     cloud_ok = bool(controls["allow_cloud"] if allow_cloud is None else allow_cloud)
+    queue_mode = str(controls.get("mode") or "running")
     bucket_limit = (
         int(controls["diversity_bucket_limit"])
         if diversity_bucket_limit is None
@@ -631,6 +662,15 @@ def plan_staircase_dispatch(
         node_id = str(node["node_id"])
         status = _node_status(node_id, statuses)
         if status != "queued":
+            continue
+        if queue_mode != "running":
+            blocked.append(
+                {
+                    "node_id": node_id,
+                    "reason": "queue_control_not_running",
+                    "mode": queue_mode,
+                }
+            )
             continue
         if not storage_ready:
             blocked.append(
@@ -704,6 +744,7 @@ def plan_staircase_dispatch(
                 family=str(node["family"]),
                 stage=str(node["stage"]),
                 machine_id=machine_id,
+                metadata=dict(node.get("metadata") or {}),
             )
         )
 
@@ -731,18 +772,35 @@ def plan_staircase_dispatch(
                 family=str(node["family"]),
                 stage=str(node["stage"]),
                 machine_id=machine_id,
+                metadata=dict(node.get("metadata") or {}),
             )
         )
 
     storage_hint = _storage_hint(storage if isinstance(storage, Mapping) else None)
     dask_tasks = []
     for node in selected:
+        metadata = dict(node.metadata)
         task = {
             "key": f"{normalized['dag_id']}:{node.node_id}",
             "command": list(node.command),
             "resources": {node.resource_kind: 1},
             "machine_hint": node.machine_id,
             "pure": False,
+            "queue_id": metadata.get("queue_id"),
+            "experiment_id": metadata.get("experiment_id"),
+            "step_id": metadata.get("step_id"),
+            "step_hashes": metadata.get("step_hashes"),
+            "postconditions": list(metadata.get("postconditions") or []),
+            "queue_state_writeback": {
+                "required": True,
+                "queue_id": metadata.get("queue_id"),
+                "experiment_id": metadata.get("experiment_id"),
+                "step_id": metadata.get("step_id"),
+                "executor_must_claim_step_before_execution": True,
+                "executor_must_record_terminal_step_event": True,
+                "terminal_statuses": ["succeeded", "failed"],
+            },
+            "executor_boundary": "planning_only_task_must_write_back_to_experiment_queue_state",
         }
         if storage_hint is not None:
             task["storage_hint"] = storage_hint
@@ -876,8 +934,8 @@ __all__ = [
     "STAIRCASE_DAG_SCHEMA",
     "STAIRCASE_DISPATCH_PLAN_SCHEMA",
     "StaircaseReadyNode",
-    "build_storage_plan_payload",
     "build_staircase_dag_from_experiment_queue",
+    "build_storage_plan_payload",
     "default_local_resource_pools",
     "experiment_queue_status_map",
     "load_staircase_dag",

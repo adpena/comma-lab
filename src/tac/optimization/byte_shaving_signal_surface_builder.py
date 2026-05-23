@@ -34,6 +34,9 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.optimization.scorer_inverse_decision_surface import (
+    build_inverse_scorer_decision_surface,
+)
 from tac.optimization.scorer_response_dataset import (
     RATE_SCORE_PER_BYTE,
     ScorerResponseDatasetError,
@@ -487,6 +490,49 @@ def _scorer_response_units(
     return units
 
 
+def _inverse_scorer_surface(
+    path: Path,
+    repo_root: Path,
+    *,
+    max_units: int,
+    null_scorer_delta_epsilon: float,
+    fragile_scorer_delta_threshold: float,
+    allow_native_mlx_window_objective: bool,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    payload = _load_json_object(path)
+    try:
+        surface = build_inverse_scorer_decision_surface(
+            payload,
+            source_label=_repo_rel(path, repo_root),
+            max_units=max_units,
+            null_scorer_delta_epsilon=null_scorer_delta_epsilon,
+            fragile_scorer_delta_threshold=fragile_scorer_delta_threshold,
+            allow_native_mlx_window_objective=allow_native_mlx_window_objective,
+        )
+    except ScorerResponseDatasetError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+    ref = {
+        **_json_payload_ref(
+            path,
+            repo_root,
+            kind="scorer_inverse_decision_surface",
+            payload=surface,
+        ),
+        "source_row_count": surface["source_row_count"],
+        "cell_count": surface["cell_count"],
+        "emitted_unit_count": surface["emitted_unit_count"],
+        "decision_surface_classes": list(surface["decision_surface_classes"]),
+        "allow_native_mlx_window_objective": surface["allow_native_mlx_window_objective"],
+        "planning_scope": "compressed_scorer_coordinate",
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return ref, [dict(unit) for unit in _as_list(surface.get("units"))]
+
+
 def _xray_hook_refs(hooks: Sequence[str]) -> list[dict[str, Any]]:
     if not hooks:
         return []
@@ -645,6 +691,11 @@ def build_byte_shaving_signal_surface(
     auth_eval_paths: Sequence[str | Path] = (),
     mlx_calibration_paths: Sequence[str | Path] = (),
     scorer_response_paths: Sequence[str | Path] = (),
+    inverse_scorer_response_paths: Sequence[str | Path] = (),
+    inverse_scorer_max_units: int = 16,
+    inverse_scorer_null_delta_epsilon: float = 1e-6,
+    inverse_scorer_fragile_delta_threshold: float = 0.0,
+    inverse_scorer_allow_native_mlx_window_objective: bool = False,
     xray_hooks: Sequence[str] = (),
     canonical_equation_domains: Sequence[str] = (),
     canonical_equation_consumers: Sequence[str] = (),
@@ -665,6 +716,7 @@ def build_byte_shaving_signal_surface(
     auth_eval_refs: list[dict[str, Any]] = []
     mlx_calibration_refs: list[dict[str, Any]] = []
     scorer_response_refs: list[dict[str, Any]] = []
+    inverse_scorer_surface_refs: list[dict[str, Any]] = []
     engineered_correction_refs: list[dict[str, Any]] = []
 
     for index, raw_path in enumerate(candidate_queue_paths):
@@ -755,6 +807,29 @@ def build_byte_shaving_signal_surface(
                     seen=seen_unit_ids,
                 )
             )
+    for raw_path in inverse_scorer_response_paths:
+        path = _resolve_path(raw_path, repo)
+        if not path.is_file():
+            raise ByteShavingCampaignError(f"inverse scorer-response JSON not found: {path}")
+        inverse_ref, inverse_units = _inverse_scorer_surface(
+            path,
+            repo,
+            max_units=inverse_scorer_max_units,
+            null_scorer_delta_epsilon=inverse_scorer_null_delta_epsilon,
+            fragile_scorer_delta_threshold=inverse_scorer_fragile_delta_threshold,
+            allow_native_mlx_window_objective=(
+                inverse_scorer_allow_native_mlx_window_objective
+            ),
+        )
+        inverse_scorer_surface_refs.append(inverse_ref)
+        for unit in inverse_units:
+            units.append(
+                _dedupe_unit_id(
+                    unit,
+                    prefix=f"inverse_scorer_{len(inverse_scorer_surface_refs) - 1}",
+                    seen=seen_unit_ids,
+                )
+            )
 
     payload = {
         "schema": SIGNAL_SURFACE_SCHEMA,
@@ -766,6 +841,7 @@ def build_byte_shaving_signal_surface(
         "auth_eval_refs": auth_eval_refs,
         "mlx_calibration_refs": mlx_calibration_refs,
         "scorer_response_refs": scorer_response_refs,
+        "inverse_scorer_surface_refs": inverse_scorer_surface_refs,
         "engineered_correction_refs": engineered_correction_refs,
         "xray_refs": _xray_hook_refs(xray_hooks),
         "canonical_equation_refs": _canonical_equation_refs(

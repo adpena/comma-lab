@@ -17,6 +17,10 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.byte_range_entropy_recode_chain import (
+    CHAIN_MANIFEST_NAME,
+    CHAIN_SCHEMA,
+)
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY, PLAN_SCHEMA
 from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
 from tac.optimization.proxy_candidate_contract import (
@@ -34,17 +38,21 @@ from .byte_shaving_materializer_registry import (
     suggest_materializer_adapters,
 )
 from .dqs1_local_first_queue import SAFE_OPERATOR_ACTION, candidate_slug
-from .experiment_queue import ExperimentQueueError
+from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
 
 MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
 MATERIALIZER_BACKLOG_SCHEMA = "byte_shaving_materializer_backlog.v1"
 MATERIALIZER_CONTEXTS_SCHEMA = "byte_shaving_materializer_contexts.v1"
 MATERIALIZER_WORK_QUEUE_SCHEMA = "byte_shaving_materializer_work_queue.v1"
+MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA = (
+    "byte_shaving_materializer_execution_experiment_metadata.v1"
+)
 ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
-BYTE_RANGE_CHAIN_MANIFEST = "byte_range_entropy_recode_chain_manifest.json"
+BYTE_RANGE_CHAIN_MANIFEST = CHAIN_MANIFEST_NAME
+MATERIALIZER_EXECUTION_STEP_ID = "materialize_local_proof_chain"
 
 
 def _utc_now() -> str:
@@ -477,6 +485,8 @@ def _first_suggested_materializer(row: Mapping[str, Any]) -> Mapping[str, Any]:
 def _context_for_backlog_row(
     contexts: Mapping[str, Mapping[str, Any]],
     row: Mapping[str, Any],
+    *,
+    extra_keys: Sequence[str] = (),
 ) -> Mapping[str, Any]:
     keys = [
         str(row.get("backlog_key") or ""),
@@ -484,11 +494,37 @@ def _context_for_backlog_row(
         str(row.get("target_kind") or ""),
     ]
     keys.extend(str(item) for item in _as_list(row.get("source_unit_ids")))
-    for key in keys:
+    keys.extend(str(key) for key in extra_keys if str(key))
+    for key in ordered_unique(keys):
         context = contexts.get(key)
         if isinstance(context, Mapping):
             return context
     return {}
+
+
+def _context_matches_for_backlog_row(
+    contexts: Mapping[str, Mapping[str, Any]],
+    row: Mapping[str, Any],
+    *,
+    extra_keys: Sequence[str] = (),
+) -> list[tuple[str, Mapping[str, Any]]]:
+    keys = [
+        str(row.get("backlog_key") or ""),
+        str(row.get("materializer_id") or ""),
+        str(row.get("target_kind") or ""),
+    ]
+    keys.extend(str(item) for item in _as_list(row.get("source_unit_ids")))
+    keys.extend(str(key) for key in extra_keys if str(key))
+    matches: list[tuple[str, Mapping[str, Any]]] = []
+    for key in ordered_unique(keys):
+        context = contexts.get(key)
+        if not isinstance(context, Mapping):
+            continue
+        context_dict = dict(context)
+        if any(dict(existing) == context_dict for _existing_key, existing in matches):
+            continue
+        matches.append((key, context))
+    return matches
 
 
 def _path_context_value(context: Mapping[str, Any], key: str) -> str | None:
@@ -673,24 +709,49 @@ def build_materializer_work_queue(
         unit_kind = str(row.get("unit_kind") or "")
         operation_family = str(row.get("operation_family") or "")
         backlog_key = str(row.get("backlog_key") or f"{unit_kind}:{operation_family}:{rank}")
-        context = _context_for_backlog_row(context_map, row)
+        context_matches = _context_matches_for_backlog_row(
+            context_map,
+            row,
+            extra_keys=(
+                str(suggestion.get("materializer_id") or ""),
+                str(suggestion.get("target_kind") or ""),
+                materializer_id,
+                target_kind,
+            ),
+        )
         blockers: list[str] = []
+        if len(context_matches) > 1:
+            blockers.append(
+                "materializer_context_ambiguous:"
+                + ",".join(key for key, _context in context_matches)
+            )
+            context: Mapping[str, Any] = {}
+        else:
+            context = context_matches[0][1] if context_matches else {}
         command: list[str] = []
         postcondition: dict[str, Any] | None = None
+        telemetry: dict[str, Any] = {}
         if (
             unit_kind == "byte_range"
             and operation_family == "entropy_recode"
             and target_kind == "byte_range_entropy_recode_v1"
         ):
-            command, blockers = _byte_range_chain_command(context)
+            command, command_blockers = _byte_range_chain_command(context)
+            blockers.extend(command_blockers)
             if command:
                 postcondition = {
-                    "type": "json_file_key_equals",
+                    "type": "json_equals",
                     "path": str(
                         Path(context["output_dir"]) / BYTE_RANGE_CHAIN_MANIFEST
                     ),
                     "key": "schema",
-                    "value": "byte_range_entropy_recode_chain.v1",
+                    "equals": CHAIN_SCHEMA,
+                }
+                telemetry = {
+                    "artifact_paths": [str(context["output_dir"])],
+                    "recursive": True,
+                    "max_recursive_entries": 512,
+                    "include_postcondition_paths": True,
                 }
         else:
             blockers.append(
@@ -725,6 +786,7 @@ def build_materializer_work_queue(
                     "tool": BYTE_RANGE_CHAIN_TOOL if command else None,
                     "command": command,
                     "postconditions": [] if postcondition is None else [postcondition],
+                    "telemetry": telemetry,
                     "resource_kind": row.get("materialization_resource_kind")
                     or suggestion.get("materialization_resource_kind")
                     or "local_cpu",
@@ -766,6 +828,212 @@ def build_materializer_work_queue(
             if executable_rows
             else ("materializer_work_queue_has_no_executable_rows",)
         ),
+    )
+
+
+def _normalize_materializer_queue_postconditions(
+    value: Any,
+) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    postconditions: list[dict[str, Any]] = []
+    for index, raw_condition in enumerate(value):
+        if not isinstance(raw_condition, Mapping):
+            raise ExperimentQueueError(
+                f"materializer work row postconditions[{index}] must be an object"
+            )
+        condition = dict(raw_condition)
+        condition_type = str(condition.get("type") or "")
+        if condition_type == "json_file_key_equals":
+            if "value" not in condition:
+                raise ExperimentQueueError(
+                    "json_file_key_equals postcondition must include value"
+                )
+            condition = {
+                "type": "json_equals",
+                "path": condition.get("path"),
+                "key": condition.get("key"),
+                "equals": condition.get("value"),
+            }
+        postconditions.append(condition)
+    return postconditions
+
+
+def _materializer_execution_priority(row: Mapping[str, Any], fallback: int) -> int:
+    rank = _finite_int(row.get("work_rank"))
+    if rank is None or rank < 1:
+        return fallback
+    return rank
+
+
+def _materializer_execution_experiment_id(
+    row: Mapping[str, Any],
+    rank: int,
+    seen: set[str],
+) -> str:
+    raw = str(row.get("work_id") or row.get("backlog_key") or f"row_{rank}")
+    safe = re.sub(r"[^a-z0-9_]+", "_", raw.lower()).strip("_") or f"row_{rank}"
+    experiment_id = safe
+    if experiment_id not in seen:
+        seen.add(experiment_id)
+        return experiment_id
+    experiment_id = f"{safe}_r{rank:04d}"
+    if experiment_id in seen:
+        raise ExperimentQueueError(f"duplicate materializer execution experiment id: {safe}")
+    seen.add(experiment_id)
+    return experiment_id
+
+
+def build_materializer_execution_queue(
+    work_queue: Mapping[str, Any],
+    *,
+    queue_id: str,
+    repo_root: str | Path,
+    lane_id: str | None = None,
+    source_work_queue_path: str | Path | None = None,
+    local_cpu_concurrency: int = 1,
+    resource_concurrency: Mapping[str, int] | None = None,
+    step_timeout_seconds: int = 0,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """Compile executable materializer rows into ``experiment_queue.v1``."""
+
+    if work_queue.get("schema") != MATERIALIZER_WORK_QUEUE_SCHEMA:
+        raise ExperimentQueueError(f"expected schema {MATERIALIZER_WORK_QUEUE_SCHEMA}")
+    if isinstance(local_cpu_concurrency, bool) or local_cpu_concurrency < 1:
+        raise ExperimentQueueError("local_cpu_concurrency must be >= 1")
+    if isinstance(step_timeout_seconds, bool) or step_timeout_seconds < 0:
+        raise ExperimentQueueError("step_timeout_seconds must be non-negative")
+    if limit is not None and (isinstance(limit, bool) or limit < 1):
+        raise ExperimentQueueError("limit must be >= 1 when provided")
+
+    queue_id = str(queue_id or "").strip()
+    if not queue_id:
+        raise ExperimentQueueError("queue_id must be a non-empty string")
+    repo = Path(repo_root)
+    work_queue_ref = (
+        _repo_rel(Path(source_work_queue_path), repo)
+        if source_work_queue_path is not None
+        else None
+    )
+
+    source_rows = [item for item in _as_list(work_queue.get("rows")) if isinstance(item, Mapping)]
+    executable_rows: list[Mapping[str, Any]] = []
+    for index, row in enumerate(source_rows):
+        try:
+            require_no_truthy_authority_fields(
+                row,
+                context=f"materializer_work_queue.rows.{index}",
+            )
+        except ValueError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        if row.get("executable") is True:
+            executable_rows.append(row)
+    if limit is not None:
+        executable_rows = executable_rows[:limit]
+    if not executable_rows:
+        raise ExperimentQueueError("no executable materializer work rows")
+
+    resource_limits: dict[str, int] = {}
+    for key, value in (resource_concurrency or {}).items():
+        parsed_limit = _finite_int(value)
+        if parsed_limit is None or parsed_limit < 1:
+            raise ExperimentQueueError(f"resource_concurrency[{key!r}] must be >= 1")
+        resource_limits[str(key)] = parsed_limit
+
+    used_resource_kinds: set[str] = set()
+    experiments: list[dict[str, Any]] = []
+    seen_experiments: set[str] = set()
+    for rank, row in enumerate(executable_rows, start=1):
+        command = row.get("command")
+        if not isinstance(command, list) or not command:
+            raise ExperimentQueueError(f"materializer work row {rank} command must be non-empty")
+        command_items = [str(item) for item in command]
+        resource_kind = str(row.get("resource_kind") or "local_cpu")
+        if not resource_kind.startswith("local"):
+            raise ExperimentQueueError(
+                f"materializer work row {rank} uses non-local resource {resource_kind!r}"
+            )
+        used_resource_kinds.add(resource_kind)
+        experiment_id = _materializer_execution_experiment_id(
+            row,
+            rank,
+            seen_experiments,
+        )
+        metadata = apply_proxy_evidence_boundary(
+            {
+                "schema": MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
+                "source_work_queue_schema": work_queue.get("schema"),
+                "source_work_queue_path": work_queue_ref,
+                "source_plan_path": row.get("source_plan_path"),
+                "work_id": row.get("work_id"),
+                "work_rank": row.get("work_rank"),
+                "backlog_key": row.get("backlog_key"),
+                "backlog_rank": row.get("backlog_rank"),
+                "unit_kind": row.get("unit_kind"),
+                "operation_family": row.get("operation_family"),
+                "target_kind": row.get("target_kind"),
+                "materializer_id": row.get("materializer_id"),
+                "receiver_contract_id": row.get("receiver_contract_id"),
+                "receiver_contract_kind": row.get("receiver_contract_kind"),
+                "source_unit_ids": _as_list(row.get("source_unit_ids")),
+                "source_selection_ids": _as_list(row.get("source_selection_ids")),
+                "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
+                "expected_score_gain_sum": row.get("expected_score_gain_sum"),
+                "allowed_use": "local_materializer_proof_chain_only",
+                **FALSE_AUTHORITY,
+            },
+            dispatch_blockers=(
+                "materializer_execution_queue_local_proof_chain_only",
+                "exact_auth_eval_required_before_score_claim",
+            ),
+        )
+        experiments.append(
+            {
+                "id": experiment_id,
+                "lane_id": lane_id or row.get("lane_id"),
+                "priority": _materializer_execution_priority(row, rank),
+                "status": "queued",
+                "tags": [
+                    "byte-shaving",
+                    "materializer",
+                    "local-proof-chain",
+                    "no-score-authority",
+                ],
+                "metadata": metadata,
+                "steps": [
+                    {
+                        "id": MATERIALIZER_EXECUTION_STEP_ID,
+                        "kind": "command",
+                        "command": command_items,
+                        "requires": [],
+                        "resources": {"kind": resource_kind},
+                        "postconditions": _normalize_materializer_queue_postconditions(
+                            row.get("postconditions")
+                        ),
+                        "telemetry": dict(row.get("telemetry") or {}),
+                        "timeout_seconds": step_timeout_seconds,
+                    }
+                ],
+            }
+        )
+
+    for kind in sorted(used_resource_kinds):
+        resource_limits.setdefault(
+            kind,
+            local_cpu_concurrency if kind == "local_cpu" else 1,
+        )
+    return normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": resource_limits,
+            },
+            "experiments": experiments,
+        }
     )
 
 
@@ -1188,9 +1456,12 @@ __all__ = [
     "MATERIALIZATION_SCHEMA",
     "MATERIALIZER_BACKLOG_SCHEMA",
     "MATERIALIZER_CONTEXTS_SCHEMA",
+    "MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA",
+    "MATERIALIZER_EXECUTION_STEP_ID",
     "MATERIALIZER_WORK_QUEUE_SCHEMA",
     "PORTFOLIO_SCHEMA",
     "build_materializer_backlog",
+    "build_materializer_execution_queue",
     "build_materializer_work_queue",
     "compile_dqs1_byte_shaving_campaign",
     "materializer_contexts_from_payload",

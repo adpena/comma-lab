@@ -49210,6 +49210,88 @@
         }
       },
       "notes": "Load durable context files into byte_shaving_materializer_work_queue so backlog rows can emit executable proof-chain work without ad hoc Python callers"
+    },
+    {
+      "id": "lane_codex_materializer_work_queue_executor_bridge_20260523",
+      "name": "Materializer work queue executor bridge",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Materializer work rows compile to experiment_queue.v1 execution queues; queue worker emits artifact/log telemetry and performance summaries."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Focused pytest, ruff, py_compile, and DQS1 queue validate passed."
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_execution_queue_telemetry_20260523T172019Z_codex.md and codex_session_summary_20260523T172019Z_codex.md landed."
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Wire byte_shaving_materializer_work_queue.v1 rows into experiment_queue.v1 so byte-range proof chains can run through the existing queue/DAG worker instead of JSON-only planning."
+    },
+    {
+      "id": "lane_inverse_steganalysis_acquisition_surface_20260523",
+      "name": "Inverse steganalysis acquisition surface",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/scorer_inverse_decision_surface.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_signal_surface_builder.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_dqs1_postcondition_reconcile_inverse_scorer_surface_20260523T173612Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -49219,5 +49301,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T17:02:09Z"
+  "updated_at": "2026-05-23T17:36:55Z"
 }

@@ -6,10 +6,11 @@ import os
 import sqlite3
 import subprocess
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from posixpath import normpath
 from typing import Any
 
 QUEUE_SCHEMA = "experiment_queue.v1"
@@ -18,7 +19,14 @@ STATE_SCHEMA = "experiment_queue_state.v1"
 CONTROL_MODES = {"running", "paused", "frozen"}
 STEP_STATUSES = {"queued", "running", "succeeded", "failed", "blocked", "skipped"}
 BLOCKING_ORPHAN_STATUSES = {"queued", "running", "blocked"}
-LOCAL_RESOURCE_KINDS = {"local_cpu", "local_io_heavy", "local_mlx", "local_mps", "local"}
+LOCAL_RESOURCE_KINDS = {
+    "local_cpu",
+    "local_cuda",
+    "local_io_heavy",
+    "local_mlx",
+    "local_mps",
+    "local",
+}
 CLOUD_RESOURCE_KINDS = {"cloud_cpu", "cloud_gpu", "modal_cpu", "modal_gpu", "cuda_auth"}
 KNOWN_RESOURCE_KINDS = LOCAL_RESOURCE_KINDS | CLOUD_RESOURCE_KINDS
 
@@ -121,6 +129,25 @@ def _non_negative_int(value: object, label: str, *, default: int = 0) -> int:
     return value
 
 
+def _finite_int(value: object) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _finite_float(value: object) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed == parsed and parsed not in (float("inf"), float("-inf")) else None
+
+
 def _resource_kind_value(value: object, label: str) -> str:
     kind = _require_text(value, label)
     if kind in KNOWN_RESOURCE_KINDS or kind.startswith("cloud_"):
@@ -129,6 +156,12 @@ def _resource_kind_value(value: object, label: str) -> str:
         f"{label} unsupported resource kind {kind!r}; known kinds are "
         f"{sorted(KNOWN_RESOURCE_KINDS)}"
     )
+
+
+def normalize_resource_kind(value: object, label: str = "resource_kind") -> str:
+    """Return a queue-compatible resource kind or fail closed on taxonomy drift."""
+
+    return _resource_kind_value(value, label)
 
 
 def _load_json_compatible(path: Path) -> dict[str, Any]:
@@ -171,6 +204,17 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
                 f"{step_id}.postconditions[{condition_index}] must be an object"
             )
         normalized_postconditions.append(dict(condition))
+    telemetry = _optional_mapping(raw.get("telemetry"), f"{step_id}.telemetry")
+    telemetry_artifact_paths = _string_list(
+        telemetry.get("artifact_paths"),
+        f"{step_id}.telemetry.artifact_paths",
+    )
+    telemetry_recursive = bool(telemetry.get("recursive", False))
+    telemetry_max_entries = _non_negative_int(
+        telemetry.get("max_recursive_entries"),
+        f"{step_id}.telemetry.max_recursive_entries",
+        default=256,
+    )
     return {
         "id": step_id,
         "kind": kind,
@@ -179,6 +223,15 @@ def _normalize_step(raw: Mapping[str, Any], *, experiment_id: str, index: int) -
         "resources": {**resources, "kind": resource_kind},
         "postconditions": normalized_postconditions,
         "timeout_seconds": _non_negative_int(raw.get("timeout_seconds"), f"{step_id}.timeout_seconds"),
+        "telemetry": {
+            **telemetry,
+            "artifact_paths": telemetry_artifact_paths,
+            "recursive": telemetry_recursive,
+            "max_recursive_entries": telemetry_max_entries,
+            "include_postcondition_paths": bool(
+                telemetry.get("include_postcondition_paths", True)
+            ),
+        },
     }
 
 
@@ -327,6 +380,41 @@ def _assert_no_dependency_cycles(experiments: list[dict[str, Any]]) -> None:
         visit(key)
 
 
+def _downstream_step_ids_from_experiments(
+    experiments: Sequence[Mapping[str, Any]],
+    experiment_id: str,
+    step_id: str,
+) -> list[tuple[str, str]]:
+    step_keys = {
+        (str(experiment["id"]), str(step["id"]))
+        for experiment in experiments
+        for step in experiment["steps"]
+    }
+    root = (experiment_id, step_id)
+    if root not in step_keys:
+        raise ExperimentQueueError(f"unknown step: {experiment_id}.{step_id}")
+    requirements = {
+        (str(experiment["id"]), str(step["id"])): {
+            _resolve_step_ref(str(required), default_experiment_id=str(experiment["id"]))
+            for required in step.get("requires") or []
+        }
+        for experiment in experiments
+        for step in experiment["steps"]
+    }
+    out: list[tuple[str, str]] = []
+    seen = {root}
+    pending = [root]
+    while pending:
+        current = pending.pop(0)
+        for candidate_key, required_keys in requirements.items():
+            if candidate_key in seen or current not in required_keys:
+                continue
+            seen.add(candidate_key)
+            out.append(candidate_key)
+            pending.append(candidate_key)
+    return out
+
+
 def load_queue_definition(path: str | Path) -> dict[str, Any]:
     return normalize_queue_definition(_load_json_compatible(Path(path)))
 
@@ -437,6 +525,7 @@ def _step_hashes(
         "resources": dict(step.get("resources") or {}),
         "postconditions": postconditions,
         "timeout_seconds": int(step.get("timeout_seconds") or 0),
+        "telemetry": dict(step.get("telemetry") or {}),
     }
     if experiment_metadata:
         definition["experiment_metadata"] = dict(experiment_metadata)
@@ -455,6 +544,7 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
         "SELECT COUNT(*) AS count FROM step_state WHERE queue_id = ?",
         (queue_id,),
     ).fetchone()["count"]
+    _raise_on_running_definition_drift(conn, queue)
     conn.execute(
         """
         INSERT OR IGNORE INTO queue_controls(queue_id, mode, reason, updated_at_utc)
@@ -562,6 +652,56 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
                 event_type="step_definition_changed_requeued",
                 payload=event,
             )
+            for downstream_experiment_id, downstream_step_id in _downstream_step_ids_from_experiments(
+                queue["experiments"],
+                str(experiment["id"]),
+                str(step["id"]),
+            ):
+                downstream_row = conn.execute(
+                    """
+                    SELECT status
+                    FROM step_state
+                    WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                    """,
+                    (queue_id, downstream_experiment_id, downstream_step_id),
+                ).fetchone()
+                if downstream_row is None:
+                    continue
+                if str(downstream_row["status"]) == "running":
+                    raise ExperimentQueueError(
+                        f"{downstream_experiment_id}.{downstream_step_id} depends on changed "
+                        f"{experiment['id']}.{step['id']} while running; wait for the step to finish, "
+                        "then reinitialize or use a fresh state"
+                    )
+                downstream_event = {
+                    "previous_status": str(downstream_row["status"]),
+                    "definition_changed": False,
+                    "upstream_definition_changed": True,
+                    "upstream_experiment_id": str(experiment["id"]),
+                    "upstream_step_id": str(step["id"]),
+                }
+                conn.execute(
+                    """
+                    UPDATE step_state
+                    SET status = 'queued', updated_at_utc = ?, last_event_json = ?
+                    WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                    """,
+                    (
+                        now,
+                        _json_text(downstream_event),
+                        queue_id,
+                        downstream_experiment_id,
+                        downstream_step_id,
+                    ),
+                )
+                append_event(
+                    conn,
+                    queue_id=queue_id,
+                    experiment_id=downstream_experiment_id,
+                    step_id=downstream_step_id,
+                    event_type="step_dependency_definition_changed_requeued",
+                    payload=downstream_event,
+                )
     if int(prior_count) == 0:
         append_event(
             conn,
@@ -572,6 +712,61 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
             payload={"experiment_count": len(queue["experiments"])},
         )
     conn.commit()
+
+
+def _raise_on_running_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> None:
+    """Fail before mutating when definition drift would invalidate a running step."""
+
+    queue_id = str(queue["queue_id"])
+    for experiment in queue["experiments"]:
+        experiment_metadata = dict(experiment.get("metadata") or {})
+        for step in experiment["steps"]:
+            hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
+            row = conn.execute(
+                """
+                SELECT status, definition_hash, command_hash, postcondition_hash
+                FROM step_state
+                WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                """,
+                (queue_id, experiment["id"], step["id"]),
+            ).fetchone()
+            if row is None:
+                continue
+            previous_hashes = {
+                "definition_hash": row["definition_hash"],
+                "command_hash": row["command_hash"],
+                "postcondition_hash": row["postcondition_hash"],
+            }
+            changed_hash = any(
+                previous_hashes[key] is not None and previous_hashes[key] != hashes[key]
+                for key in hashes
+            )
+            if not changed_hash:
+                continue
+            if str(row["status"]) == "running":
+                raise ExperimentQueueError(
+                    f"{experiment['id']}.{step['id']} definition changed while running; "
+                    "wait for the step to finish, then rewind or use a fresh state"
+                )
+            for downstream_experiment_id, downstream_step_id in _downstream_step_ids_from_experiments(
+                queue["experiments"],
+                str(experiment["id"]),
+                str(step["id"]),
+            ):
+                downstream_row = conn.execute(
+                    """
+                    SELECT status
+                    FROM step_state
+                    WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                    """,
+                    (queue_id, downstream_experiment_id, downstream_step_id),
+                ).fetchone()
+                if downstream_row is not None and str(downstream_row["status"]) == "running":
+                    raise ExperimentQueueError(
+                        f"{downstream_experiment_id}.{downstream_step_id} depends on changed "
+                        f"{experiment['id']}.{step['id']} while running; wait for the step to finish, "
+                        "then reinitialize or use a fresh state"
+                    )
 
 
 def append_event(
@@ -829,6 +1024,14 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
         expected = condition.get("equals")
         payload = json.loads((repo_root / rel_path).read_text())
         return _json_pointer(payload, key) == expected
+    if condition_type == "json_file_key_equals":
+        rel_path = _require_text(condition.get("path"), "postcondition.path")
+        key = _require_text(condition.get("key"), "postcondition.key")
+        if "value" not in condition:
+            raise ExperimentQueueError("postcondition.value is required")
+        expected = condition.get("value")
+        payload = json.loads((repo_root / rel_path).read_text())
+        return _json_pointer(payload, key) == expected
     if condition_type == "json_false_authority":
         rel_path = _require_text(condition.get("path"), "postcondition.path")
         payload = json.loads((repo_root / rel_path).read_text())
@@ -1028,13 +1231,16 @@ def run_ready_step(
                 {"condition": _json_text(condition), "error": f"{type(exc).__name__}: {exc}"}
             )
     succeeded = returncode == 0 and not timed_out and not execution_error and not failed_conditions
+    telemetry = _step_telemetry_event(step, repo=repo, log_path=log_path)
     event = {
         "command": list(ready.command),
+        "resource_kind": ready.resource_kind,
         "returncode": returncode,
         "timed_out": timed_out,
         "execution_error": execution_error,
         "elapsed_seconds": elapsed,
         "log_path": str(log_path),
+        "telemetry": telemetry,
         "failed_postconditions": failed_conditions,
         "postcondition_errors": postcondition_errors,
     }
@@ -1127,6 +1333,145 @@ def _evaluate_postconditions(
     return failed_conditions, postcondition_errors
 
 
+def _repo_rel_path(path: Path, repo: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo.resolve()).as_posix()
+    except (OSError, ValueError):
+        return path.as_posix()
+
+
+def _resolve_output_artifact_path(path_value: str, *, repo: Path) -> Path:
+    path = Path(path_value)
+    return path if path.is_absolute() else repo / path
+
+
+def _directory_footprint(
+    path: Path,
+    *,
+    max_entries: int,
+) -> dict[str, Any]:
+    total_bytes = 0
+    entry_count = 0
+    truncated = False
+    for root, dirs, files in os.walk(path, followlinks=False):
+        entry_count += len(dirs) + len(files)
+        for name in files:
+            file_path = Path(root) / name
+            try:
+                total_bytes += file_path.stat().st_size
+            except OSError:
+                continue
+        if entry_count > max_entries:
+            truncated = True
+            break
+    return {
+        "recursive_bytes": total_bytes,
+        "recursive_entry_count": entry_count,
+        "recursive_truncated": truncated,
+        "recursive_entry_limit": max_entries,
+    }
+
+
+def _artifact_record(
+    path: Path,
+    *,
+    repo: Path,
+    recursive: bool,
+    max_entries: int,
+    source: str,
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "path": _repo_rel_path(path, repo),
+        "source": source,
+        "exists": path.exists(),
+    }
+    try:
+        stat = path.stat()
+    except OSError:
+        return record
+    record.update(
+        {
+            "bytes": stat.st_size,
+            "is_dir": path.is_dir(),
+            "is_file": path.is_file(),
+            "is_symlink": path.is_symlink(),
+            "mtime_utc": time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+                time.gmtime(stat.st_mtime),
+            ),
+        }
+    )
+    if recursive and path.is_dir():
+        record.update(_directory_footprint(path, max_entries=max_entries))
+    return record
+
+
+def _step_artifact_telemetry(
+    step: Mapping[str, Any],
+    *,
+    repo: Path,
+) -> list[dict[str, Any]]:
+    telemetry = step.get("telemetry") if isinstance(step.get("telemetry"), Mapping) else {}
+    recursive = bool(telemetry.get("recursive", False))
+    max_entries = int(telemetry.get("max_recursive_entries") or 256)
+    seen: set[Path] = set()
+    records: list[dict[str, Any]] = []
+
+    def add(path_value: str, *, source: str, recursive_path: bool) -> None:
+        path = _resolve_output_artifact_path(path_value, repo=repo)
+        try:
+            key = path.resolve()
+        except OSError:
+            key = path.absolute()
+        if key in seen:
+            return
+        seen.add(key)
+        records.append(
+            _artifact_record(
+                path,
+                repo=repo,
+                recursive=recursive_path,
+                max_entries=max_entries,
+                source=source,
+            )
+        )
+
+    for artifact_path in _string_list(
+        telemetry.get("artifact_paths"),
+        "telemetry.artifact_paths",
+    ):
+        add(artifact_path, source="step.telemetry.artifact_paths", recursive_path=recursive)
+
+    if bool(telemetry.get("include_postcondition_paths", True)):
+        for condition in [dict(condition) for condition in step.get("postconditions", [])]:
+            path_value = condition.get("path")
+            if isinstance(path_value, str) and path_value:
+                add(path_value, source="step.postconditions.path", recursive_path=False)
+    return records
+
+
+def _step_telemetry_event(
+    step: Mapping[str, Any],
+    *,
+    repo: Path,
+    log_path: Path,
+) -> dict[str, Any]:
+    try:
+        log_bytes = log_path.stat().st_size
+    except OSError:
+        log_bytes = None
+    artifacts = _step_artifact_telemetry(step, repo=repo)
+    return {
+        "schema": "experiment_queue_step_telemetry.v1",
+        "log_bytes": log_bytes,
+        "artifact_records": artifacts,
+        "artifact_record_count": len(artifacts),
+        "recursive_truncated": any(
+            bool(record.get("recursive_truncated")) for record in artifacts
+        ),
+    }
+
+
 def _start_ready_step_process(
     conn: sqlite3.Connection,
     queue: Mapping[str, Any],
@@ -1189,6 +1534,7 @@ def _start_ready_step_process(
             "timed_out": False,
             "execution_error": execution_error,
             "elapsed_seconds": time.monotonic() - started_monotonic,
+            "telemetry": _step_telemetry_event(step, repo=repo, log_path=log_path),
             "failed_postconditions": [],
             "postcondition_errors": [],
         }
@@ -1272,6 +1618,11 @@ def _finalize_running_step_process(
         repo=Path(repo_root),
     )
     succeeded = returncode == 0 and not timed_out and not execution_error and not failed_conditions
+    telemetry = _step_telemetry_event(
+        running.step,
+        repo=Path(repo_root),
+        log_path=running.log_path,
+    )
     event = {
         "command": list(ready.command),
         "pid": running.process.pid,
@@ -1282,6 +1633,7 @@ def _finalize_running_step_process(
         "execution_error": execution_error,
         "elapsed_seconds": elapsed,
         "log_path": str(running.log_path),
+        "telemetry": telemetry,
         "failed_postconditions": failed_conditions,
         "postcondition_errors": postcondition_errors,
     }
@@ -1800,30 +2152,11 @@ def _downstream_step_ids(
     experiment_id: str,
     step_id: str,
 ) -> list[tuple[str, str]]:
-    step_keys = _active_step_keys(queue)
-    root = (experiment_id, step_id)
-    if root not in step_keys:
-        raise ExperimentQueueError(f"unknown step: {experiment_id}.{step_id}")
-    requirements = {
-        (str(experiment["id"]), str(step["id"])): {
-            _resolve_step_ref(str(required), default_experiment_id=str(experiment["id"]))
-            for required in step.get("requires") or []
-        }
-        for experiment in queue["experiments"]
-        for step in experiment["steps"]
-    }
-    out: list[tuple[str, str]] = []
-    seen = {root}
-    pending = [root]
-    while pending:
-        current = pending.pop(0)
-        for candidate_key, required_keys in requirements.items():
-            if candidate_key in seen or current not in required_keys:
-                continue
-            seen.add(candidate_key)
-            out.append(candidate_key)
-            pending.append(candidate_key)
-    return out
+    return _downstream_step_ids_from_experiments(
+        queue["experiments"],
+        experiment_id,
+        step_id,
+    )
 
 
 def rewind_step(
@@ -1929,6 +2262,352 @@ def queue_summary(
     }
 
 
+def reconcile_satisfied_queued_steps(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    """Mark queued steps succeeded when their declared postconditions already pass.
+
+    This is intentionally artifact-backed: it only advances queued steps that
+    have at least one postcondition and whose current queue definition passes
+    every postcondition. It refreshes definition hashes at the same time, so
+    harmless timeout/resource/telemetry edits do not force redundant reruns.
+    """
+
+    repo = Path(repo_root)
+    queue_id = str(queue["queue_id"])
+    now = _utc_now()
+    reconciled: list[dict[str, Any]] = []
+    inspected = 0
+    dependency_blocked: list[dict[str, Any]] = []
+    for experiment in queue["experiments"]:
+        experiment_metadata = dict(experiment.get("metadata") or {})
+        for step in experiment["steps"]:
+            row = conn.execute(
+                """
+                SELECT status, attempts
+                FROM step_state
+                WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                """,
+                (queue_id, experiment["id"], step["id"]),
+            ).fetchone()
+            if row is None or str(row["status"]) != "queued":
+                continue
+            postconditions = [dict(item) for item in step.get("postconditions", [])]
+            if not postconditions:
+                continue
+            blockers = _dependency_reconciliation_blockers(
+                conn,
+                queue,
+                str(experiment["id"]),
+                step,
+                repo=repo,
+            )
+            if blockers:
+                dependency_blocked.append(
+                    {
+                        "experiment_id": str(experiment["id"]),
+                        "step_id": str(step["id"]),
+                        "blockers": blockers,
+                    }
+                )
+                continue
+            inspected += 1
+            failed_conditions, postcondition_errors = _evaluate_postconditions(
+                step,
+                repo=repo,
+            )
+            if failed_conditions or postcondition_errors:
+                continue
+            hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
+            event = {
+                "previous_status": str(row["status"]),
+                "reconcile_reason": "queued_step_postconditions_already_satisfied",
+                "postcondition_count": len(postconditions),
+                "attempts": int(row["attempts"] or 0),
+                "hashes": hashes,
+            }
+            conn.execute(
+                """
+                UPDATE step_state
+                SET status = 'succeeded', updated_at_utc = ?, last_event_json = ?,
+                    definition_hash = ?, command_hash = ?, postcondition_hash = ?
+                WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                """,
+                (
+                    now,
+                    _json_text(event),
+                    hashes["definition_hash"],
+                    hashes["command_hash"],
+                    hashes["postcondition_hash"],
+                    queue_id,
+                    experiment["id"],
+                    step["id"],
+                ),
+            )
+            append_event(
+                conn,
+                queue_id=queue_id,
+                experiment_id=str(experiment["id"]),
+                step_id=str(step["id"]),
+                event_type="step_reconciled_succeeded_from_postconditions",
+                payload=event,
+            )
+            reconciled.append(
+                {
+                    "experiment_id": str(experiment["id"]),
+                    "step_id": str(step["id"]),
+                    "postcondition_count": len(postconditions),
+                    "previous_status": str(row["status"]),
+                }
+            )
+    conn.commit()
+    return {
+        "schema": "experiment_queue_postcondition_reconciliation.v1",
+        "queue_id": queue_id,
+        "inspected_queued_postcondition_steps": inspected,
+        "reconciled_step_count": len(reconciled),
+        "reconciled_steps": reconciled,
+        "dependency_blocked_step_count": len(dependency_blocked),
+        "dependency_blocked_steps": dependency_blocked,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _dependency_reconciliation_blockers(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    experiment_id: str,
+    step: Mapping[str, Any],
+    *,
+    repo: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    step_lookup = _step_lookup_by_key(queue)
+    for required in step.get("requires") or []:
+        dep_experiment_id, dep_step_id = _resolve_step_ref(
+            str(required),
+            default_experiment_id=experiment_id,
+        )
+        dep_row = conn.execute(
+            """
+            SELECT status
+            FROM step_state
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            (queue["queue_id"], dep_experiment_id, dep_step_id),
+        ).fetchone()
+        if dep_row is None:
+            blockers.append(f"dependency_missing:{dep_experiment_id}.{dep_step_id}")
+            continue
+        if str(dep_row["status"]) != "succeeded":
+            blockers.append(
+                f"dependency_not_succeeded:{dep_experiment_id}.{dep_step_id}:{dep_row['status']}"
+            )
+            continue
+        dep_step = step_lookup.get((dep_experiment_id, dep_step_id))
+        if dep_step is None:
+            blockers.append(f"dependency_not_in_queue_definition:{dep_experiment_id}.{dep_step_id}")
+            continue
+        failed_conditions, postcondition_errors = _evaluate_postconditions(dep_step, repo=repo)
+        if failed_conditions or postcondition_errors:
+            blockers.append(f"dependency_postconditions_not_satisfied:{dep_experiment_id}.{dep_step_id}")
+    return blockers
+
+
+def _step_lookup_by_key(
+    queue: Mapping[str, Any],
+) -> dict[tuple[str, str], Mapping[str, Any]]:
+    return {
+        (str(experiment["id"]), str(step["id"])): step
+        for experiment in queue["experiments"]
+        for step in experiment["steps"]
+    }
+
+
+def _new_performance_bucket() -> dict[str, Any]:
+    return {
+        "run_count": 0,
+        "success_count": 0,
+        "failure_count": 0,
+        "elapsed_seconds_sum": 0.0,
+        "elapsed_seconds_min": None,
+        "elapsed_seconds_max": None,
+        "artifact_record_count": 0,
+        "artifact_record_bytes_sum": 0,
+        "artifact_record_raw_bytes_sum": 0,
+        "log_bytes_sum": 0,
+    }
+
+
+def _add_performance_sample(
+    bucket: dict[str, Any],
+    *,
+    succeeded: bool,
+    elapsed_seconds: float | None,
+    artifact_count: int,
+    artifact_bytes: int,
+    artifact_raw_bytes: int,
+    log_bytes: int | None,
+) -> None:
+    bucket["run_count"] += 1
+    if succeeded:
+        bucket["success_count"] += 1
+    else:
+        bucket["failure_count"] += 1
+    if elapsed_seconds is not None:
+        bucket["elapsed_seconds_sum"] += elapsed_seconds
+        current_min = bucket["elapsed_seconds_min"]
+        current_max = bucket["elapsed_seconds_max"]
+        bucket["elapsed_seconds_min"] = (
+            elapsed_seconds if current_min is None else min(current_min, elapsed_seconds)
+        )
+        bucket["elapsed_seconds_max"] = (
+            elapsed_seconds if current_max is None else max(current_max, elapsed_seconds)
+        )
+    bucket["artifact_record_count"] += artifact_count
+    bucket["artifact_record_bytes_sum"] += artifact_bytes
+    bucket["artifact_record_raw_bytes_sum"] += artifact_raw_bytes
+    if log_bytes is not None:
+        bucket["log_bytes_sum"] += log_bytes
+
+
+def _finalize_performance_bucket(bucket: dict[str, Any]) -> dict[str, Any]:
+    run_count = int(bucket["run_count"])
+    elapsed_sum = float(bucket["elapsed_seconds_sum"])
+    return {
+        **bucket,
+        "elapsed_seconds_mean": elapsed_sum / run_count if run_count else None,
+        "artifact_record_bytes_mean": (
+            int(bucket["artifact_record_bytes_sum"]) / run_count if run_count else None
+        ),
+        "artifact_record_raw_bytes_mean": (
+            int(bucket["artifact_record_raw_bytes_sum"]) / run_count if run_count else None
+        ),
+        "log_bytes_mean": int(bucket["log_bytes_sum"]) / run_count if run_count else None,
+    }
+
+
+def _telemetry_artifact_bytes(telemetry: Mapping[str, Any]) -> tuple[int, int, int]:
+    records = telemetry.get("artifact_records")
+    if not isinstance(records, list):
+        return 0, 0, 0
+    normalized_records = [record for record in records if isinstance(record, Mapping)]
+    recursive_dirs: list[str] = []
+    for record in normalized_records:
+        if bool(record.get("is_dir")) and _finite_int(record.get("recursive_bytes")) is not None:
+            path = _normalized_telemetry_record_path(record)
+            if path is not None:
+                recursive_dirs.append(path)
+    total = 0
+    raw_total = 0
+    count = 0
+    for record in normalized_records:
+        count += 1
+        value = record.get("recursive_bytes", record.get("bytes"))
+        parsed = _finite_int(value)
+        if parsed is not None:
+            raw_total += parsed
+        path = _normalized_telemetry_record_path(record)
+        if (
+            path is not None
+            and not bool(record.get("is_dir"))
+            and any(_telemetry_path_inside(path, root) for root in recursive_dirs)
+        ):
+            continue
+        if (
+            path is not None
+            and bool(record.get("is_dir"))
+            and any(root != path and _telemetry_path_inside(path, root) for root in recursive_dirs)
+        ):
+            continue
+        if parsed is not None:
+            total += parsed
+    return count, total, raw_total
+
+
+def _normalized_telemetry_record_path(record: Mapping[str, Any]) -> str | None:
+    path = record.get("path")
+    if not isinstance(path, str) or not path.strip():
+        return None
+    return normpath(path.strip())
+
+
+def _telemetry_path_inside(path: str, root: str) -> bool:
+    if path == root:
+        return False
+    return path.startswith(f"{root.rstrip('/')}/")
+
+
+def queue_performance_summary(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Aggregate completed step telemetry for acquisition and resource scheduling."""
+
+    queue_id = str(queue["queue_id"])
+    step_lookup = _step_lookup_by_key(queue)
+    by_resource: dict[str, dict[str, Any]] = {}
+    by_step: dict[str, dict[str, Any]] = {}
+    rows = conn.execute(
+        """
+        SELECT experiment_id, step_id, event_type, payload_json
+        FROM queue_events
+        WHERE queue_id = ? AND event_type IN ('step_succeeded', 'step_failed')
+        ORDER BY id
+        """,
+        (queue_id,),
+    ).fetchall()
+    for row in rows:
+        experiment_id = str(row["experiment_id"])
+        step_id = str(row["step_id"])
+        try:
+            payload = json.loads(row["payload_json"])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, Mapping):
+            continue
+        step = step_lookup.get((experiment_id, step_id), {})
+        resource_kind = str(payload.get("resource_kind") or _resource_kind(step))
+        telemetry = payload.get("telemetry") if isinstance(payload.get("telemetry"), Mapping) else {}
+        artifact_count, artifact_bytes, artifact_raw_bytes = _telemetry_artifact_bytes(telemetry)
+        log_bytes = _finite_int(telemetry.get("log_bytes")) if telemetry else None
+        elapsed = _finite_float(payload.get("elapsed_seconds"))
+        succeeded = str(row["event_type"]) == "step_succeeded"
+        for bucket_map, key in (
+            (by_resource, resource_kind),
+            (by_step, f"{experiment_id}.{step_id}"),
+        ):
+            bucket = bucket_map.setdefault(key, _new_performance_bucket())
+            _add_performance_sample(
+                bucket,
+                succeeded=succeeded,
+                elapsed_seconds=elapsed,
+                artifact_count=artifact_count,
+                artifact_bytes=artifact_bytes,
+                artifact_raw_bytes=artifact_raw_bytes,
+                log_bytes=log_bytes,
+            )
+    return {
+        "schema": "experiment_queue_performance_summary.v1",
+        "queue_id": queue_id,
+        "event_count": len(rows),
+        "by_resource_kind": {
+            key: _finalize_performance_bucket(value)
+            for key, value in sorted(by_resource.items())
+        },
+        "by_step": {
+            key: _finalize_performance_bucket(value)
+            for key, value in sorted(by_step.items())
+        },
+    }
+
+
 def queue_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[str, Any]:
     """Return queue definition drift without mutating SQLite state."""
 
@@ -2006,11 +2685,14 @@ __all__ = [
     "initialize_queue_state",
     "load_queue_definition",
     "normalize_queue_definition",
+    "normalize_resource_kind",
     "orphaned_step_rows",
     "queue_definition_drift",
+    "queue_performance_summary",
     "queue_resource_kinds",
     "queue_summary",
     "ready_steps",
+    "reconcile_satisfied_queued_steps",
     "resolve_worker_max_parallel",
     "retire_orphaned_steps",
     "rewind_step",

@@ -12,7 +12,10 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZATION_SCHEMA,
     MATERIALIZER_BACKLOG_SCHEMA,
     MATERIALIZER_CONTEXTS_SCHEMA,
+    MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA,
+    MATERIALIZER_EXECUTION_STEP_ID,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
+    build_materializer_execution_queue,
     build_materializer_work_queue,
     compile_dqs1_byte_shaving_campaign,
     materializer_contexts_from_payload,
@@ -30,7 +33,15 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     resolve_materializer,
     suggest_materializer_adapters,
 )
-from comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
+from comma_lab.scheduler.experiment_queue import (
+    ExperimentQueueError,
+    _condition_passes,
+    load_queue_definition,
+)
+from tac.optimization.byte_range_entropy_recode_chain import (
+    CHAIN_MANIFEST_NAME,
+    CHAIN_SCHEMA,
+)
 from tac.optimization.byte_shaving_campaign import (
     SIGNAL_SURFACE_SCHEMA,
     build_byte_shaving_campaign_plan,
@@ -692,14 +703,116 @@ def test_materializer_work_queue_builds_byte_range_chain_command(
     assert "--fail-if-receiver-blocked" in row["command"]
     assert row["postconditions"] == [
         {
-            "type": "json_file_key_equals",
-            "path": str(output_dir / "byte_range_entropy_recode_chain_manifest.json"),
+            "type": "json_equals",
+            "path": str(output_dir / CHAIN_MANIFEST_NAME),
             "key": "schema",
-            "value": "byte_range_entropy_recode_chain.v1",
+            "equals": CHAIN_SCHEMA,
         }
     ]
+    manifest = output_dir / CHAIN_MANIFEST_NAME
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"schema": CHAIN_SCHEMA}), encoding="utf-8")
+    assert _condition_passes(row["postconditions"][0], repo_root=Path("/")) is True
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_execution_queue_runs_executable_work_rows(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    output_dir = tmp_path / "chain_out"
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            backlog_row["backlog_key"]: {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(output_dir),
+                "source_archive": "archive.zip",
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="materializer_exec_fixture",
+        repo_root=tmp_path,
+        lane_id="lane_materializer_exec_fixture",
+        source_work_queue_path=tmp_path / "work_queue.json",
+        local_cpu_concurrency=3,
+        step_timeout_seconds=900,
+    )
+
+    assert execution_queue["schema"] == "experiment_queue.v1"
+    assert execution_queue["queue_id"] == "materializer_exec_fixture"
+    assert execution_queue["controls"]["max_concurrency"] == {"local_cpu": 3}
+    assert len(execution_queue["experiments"]) == 1
+    experiment = execution_queue["experiments"][0]
+    assert experiment["lane_id"] == "lane_materializer_exec_fixture"
+    assert experiment["metadata"]["schema"] == MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA
+    assert experiment["metadata"]["score_claim"] is False
+    assert experiment["metadata"]["promotion_eligible"] is False
+    assert experiment["metadata"]["ready_for_exact_eval_dispatch"] is False
+    step = experiment["steps"][0]
+    assert step["id"] == MATERIALIZER_EXECUTION_STEP_ID
+    assert step["resources"]["kind"] == "local_cpu"
+    assert step["timeout_seconds"] == 900
+    assert step["telemetry"]["artifact_paths"] == [str(output_dir)]
+    assert step["telemetry"]["recursive"] is True
+    assert step["command"][:2] == [
+        ".venv/bin/python",
+        "tools/run_byte_range_entropy_recode_chain.py",
+    ]
+    assert step["postconditions"] == [
+        {
+            "type": "json_equals",
+            "path": str(output_dir / CHAIN_MANIFEST_NAME),
+            "key": "schema",
+            "equals": CHAIN_SCHEMA,
+        }
+    ]
+
+
+def test_materializer_work_queue_matches_context_by_suggested_target_kind(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    output_dir = tmp_path / "chain_out"
+
+    queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND: {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(output_dir),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert queue["executable_row_count"] == 1
+    row = queue["rows"][0]
+    assert row["executable"] is True
+    assert row["target_kind"] == BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND
+    assert row["materialization_blockers"] == []
 
 
 def test_materializer_context_payload_maps_rows_to_multiple_lookup_keys(
@@ -731,6 +844,58 @@ def test_materializer_context_payload_maps_rows_to_multiple_lookup_keys(
         "zip_member_range_a",
     }
     assert contexts["zip_member_range_a"]["output_dir"] == str(output_dir)
+
+
+def test_materializer_work_queue_blocks_ambiguous_multi_context_backlog_row(
+    tmp_path: Path,
+) -> None:
+    backlog = {
+        "schema": MATERIALIZER_BACKLOG_SCHEMA,
+        "rows": [
+            {
+                "schema": "byte_shaving_materializer_backlog_row.v1",
+                "backlog_key": "byte_range_entropy_shared",
+                "gap_class": "adapter_not_executable",
+                "unit_kind": "byte_range",
+                "operation_family": "entropy_recode",
+                "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+                "materializer_id": BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
+                "materialization_resource_kind": "local_cpu",
+                "source_unit_ids": ["unit_a", "unit_b"],
+                "source_selection_ids": ["selection_a", "selection_b"],
+                "candidate_saved_bytes_sum": 64,
+                "expected_score_gain_sum": 0.0,
+                **_false_authority(),
+            }
+        ],
+        **_false_authority(),
+    }
+    queue = build_materializer_work_queue(
+        backlog,
+        repo_root=tmp_path,
+        contexts={
+            "unit_a": {
+                "schema_manifest": "schema_a.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime_a",
+                "output_dir": str(tmp_path / "out_a"),
+            },
+            "unit_b": {
+                "schema_manifest": "schema_b.json",
+                "beam_probe_reports": ["beam_b.json"],
+                "source_runtime_dir": "runtime_b",
+                "output_dir": str(tmp_path / "out_b"),
+            },
+        },
+    )
+
+    row = queue["rows"][0]
+    assert row["executable"] is False
+    assert any(
+        blocker.startswith("materializer_context_ambiguous:unit_a,unit_b")
+        for blocker in row["materialization_blockers"]
+    )
+    assert row["source_unit_ids"] == ["unit_a", "unit_b"]
 
 
 def test_materializer_context_payload_rejects_truthy_authority() -> None:
@@ -1025,6 +1190,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     portfolio = tmp_path / "portfolio.json"
     summary = tmp_path / "action_summary.json"
     work_queue = tmp_path / "materializer_work_queue.json"
+    execution_queue = tmp_path / "materializer_execution_queue.json"
     output_dir = tmp_path / "chain_out"
     plan_path.write_text(json.dumps(_byte_range_entropy_plan()), encoding="utf-8")
     contexts_path.write_text(
@@ -1061,6 +1227,14 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
             str(summary),
             "--materializer-work-queue-out",
             str(work_queue),
+            "--materializer-execution-queue-out",
+            str(execution_queue),
+            "--materializer-execution-queue-id",
+            "materializer_exec_fixture",
+            "--materializer-execution-lane-id",
+            "lane_materializer_exec_fixture",
+            "--materializer-execution-timeout-seconds",
+            "600",
             "--repo-root",
             str(tmp_path),
             "--candidate-limit",
@@ -1074,6 +1248,8 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     stdout = json.loads(result.stdout)
     assert stdout["materializer_contexts"] == str(contexts_path)
     assert stdout["materializer_work_queue_out"] == str(work_queue)
+    assert stdout["materializer_execution_queue"]["queue_out"] == str(execution_queue)
+    assert stdout["materializer_execution_queue"]["experiment_count"] == 1
     assert stdout["materializer_work_queue_row_count"] == 1
     payload = json.loads(work_queue.read_text(encoding="utf-8"))
     assert payload["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
@@ -1083,3 +1259,13 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     assert row["command"].count("--beam-probe-report") == 2
     assert row["command"][-2:] == ["--source-archive", "archive.zip"]
     assert row["ready_for_exact_eval_dispatch"] is False
+    loaded_execution_queue = load_queue_definition(execution_queue)
+    assert loaded_execution_queue["queue_id"] == "materializer_exec_fixture"
+    experiment = loaded_execution_queue["experiments"][0]
+    assert experiment["lane_id"] == "lane_materializer_exec_fixture"
+    assert experiment["metadata"]["schema"] == MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA
+    step = experiment["steps"][0]
+    assert step["id"] == MATERIALIZER_EXECUTION_STEP_ID
+    assert step["timeout_seconds"] == 600
+    assert step["telemetry"]["artifact_paths"] == [str(output_dir)]
+    assert step["postconditions"][0]["type"] == "json_equals"

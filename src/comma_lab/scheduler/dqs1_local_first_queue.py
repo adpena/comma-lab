@@ -255,9 +255,9 @@ def _scheduler_preflight_experiment(
             {
                 "id": "proactive_cleanup",
                 "requires": ["storage_tier_plan"],
-                "timeout_seconds": 600,
+                "timeout_seconds": 1200,
                 "command": cleanup_command,
-                "resources": {"kind": "local_cpu"},
+                "resources": {"kind": "local_io_heavy"},
                 "postconditions": [
                     {
                         "type": "json_false_authority",
@@ -981,7 +981,7 @@ def build_dqs1_local_first_queue(
             {
                 "id": "plan_raw_artifact_retention",
                 "requires": ["local_cpu_advisory"],
-                "timeout_seconds": 120,
+                "timeout_seconds": 1200,
                 "command": [
                     ".venv/bin/python",
                     "tools/compact_experiment_artifacts.py",
@@ -991,7 +991,7 @@ def build_dqs1_local_first_queue(
                     "--json-output",
                     raw_retention_plan,
                 ],
-                "resources": {"kind": "local_cpu"},
+                "resources": {"kind": "local_io_heavy"},
                 "postconditions": [
                     {
                         "type": "json_equals",
@@ -1094,7 +1094,7 @@ def build_dqs1_local_first_queue(
                 {
                     "id": "plan_mlx_delta_cache_retention",
                     "requires": ["local_mlx_advisory_response"],
-                    "timeout_seconds": 120,
+                    "timeout_seconds": 1200,
                     "command": [
                         ".venv/bin/python",
                         "tools/compact_experiment_artifacts.py",
@@ -1106,7 +1106,7 @@ def build_dqs1_local_first_queue(
                         "--json-output",
                         mlx_retention_plan,
                     ],
-                    "resources": {"kind": "local_cpu"},
+                    "resources": {"kind": "local_io_heavy"},
                     "postconditions": [
                         {
                             "type": "json_equals",

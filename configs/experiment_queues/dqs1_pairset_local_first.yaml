@@ -97,9 +97,9 @@
             "storage_tier_plan"
           ],
           "resources": {
-            "kind": "local_cpu"
+            "kind": "local_io_heavy"
           },
-          "timeout_seconds": 600
+          "timeout_seconds": 1200
         }
       ],
       "tags": [
@@ -387,9 +387,9 @@
             "local_cpu_advisory"
           ],
           "resources": {
-            "kind": "local_cpu"
+            "kind": "local_io_heavy"
           },
-          "timeout_seconds": 120
+          "timeout_seconds": 1200
         },
         {
           "command": [
@@ -731,9 +731,9 @@
             "local_cpu_advisory"
           ],
           "resources": {
-            "kind": "local_cpu"
+            "kind": "local_io_heavy"
           },
-          "timeout_seconds": 120
+          "timeout_seconds": 1200
         },
         {
           "command": [

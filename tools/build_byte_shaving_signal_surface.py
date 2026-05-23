@@ -35,6 +35,7 @@ def _render_markdown(surface: dict[str, Any]) -> str:
         f"- auth_eval_refs: `{len(surface.get('auth_eval_refs') or [])}`",
         f"- mlx_calibration_refs: `{len(surface.get('mlx_calibration_refs') or [])}`",
         f"- scorer_response_refs: `{len(surface.get('scorer_response_refs') or [])}`",
+        f"- inverse_scorer_surface_refs: `{len(surface.get('inverse_scorer_surface_refs') or [])}`",
         f"- engineered_correction_refs: `{len(surface.get('engineered_correction_refs') or [])}`",
         f"- xray_refs: `{len(surface.get('xray_refs') or [])}`",
         f"- canonical_equation_refs: `{len(surface.get('canonical_equation_refs') or [])}`",
@@ -83,6 +84,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--auth-eval", action="append", default=[])
     parser.add_argument("--mlx-calibration", action="append", default=[])
     parser.add_argument("--scorer-response", action="append", default=[])
+    parser.add_argument("--inverse-scorer-response", action="append", default=[])
+    parser.add_argument("--inverse-scorer-max-units", type=int, default=16)
+    parser.add_argument("--inverse-scorer-null-delta-epsilon", type=float, default=1e-6)
+    parser.add_argument("--inverse-scorer-fragile-delta-threshold", type=float, default=0.0)
+    parser.add_argument(
+        "--inverse-scorer-allow-native-mlx-window-objective",
+        action="store_true",
+        help=(
+            "Allow MLX scorer-response rows without normalized full-video fields as "
+            "planning-only native-window inverse-surface samples with an explicit blocker."
+        ),
+    )
     parser.add_argument("--xray-hook", action="append", default=[])
     parser.add_argument("--canonical-equation-domain", action="append", default=[])
     parser.add_argument("--canonical-equation-consumer", action="append", default=[])
@@ -115,6 +128,13 @@ def main(argv: list[str] | None = None) -> int:
             auth_eval_paths=args.auth_eval,
             mlx_calibration_paths=args.mlx_calibration,
             scorer_response_paths=args.scorer_response,
+            inverse_scorer_response_paths=args.inverse_scorer_response,
+            inverse_scorer_max_units=args.inverse_scorer_max_units,
+            inverse_scorer_null_delta_epsilon=args.inverse_scorer_null_delta_epsilon,
+            inverse_scorer_fragile_delta_threshold=args.inverse_scorer_fragile_delta_threshold,
+            inverse_scorer_allow_native_mlx_window_objective=(
+                args.inverse_scorer_allow_native_mlx_window_objective
+            ),
             xray_hooks=args.xray_hook,
             canonical_equation_domains=args.canonical_equation_domain,
             canonical_equation_consumers=args.canonical_equation_consumer,
@@ -137,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"wrote {args.output} "
         f"(units={len(surface['units'])}, "
-        f"refs={len(surface['source_signal_refs']) + len(surface['auth_eval_refs']) + len(surface['mlx_calibration_refs']) + len(surface['scorer_response_refs'])})"
+        f"refs={len(surface['source_signal_refs']) + len(surface['auth_eval_refs']) + len(surface['mlx_calibration_refs']) + len(surface['scorer_response_refs']) + len(surface['inverse_scorer_surface_refs'])})"
     )
     print(
         "score_claim=false promotion_eligible=false "

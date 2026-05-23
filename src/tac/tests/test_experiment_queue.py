@@ -17,9 +17,11 @@ from src.comma_lab.scheduler.experiment_queue import (
     initialize_queue_state,
     normalize_queue_definition,
     queue_definition_drift,
+    queue_performance_summary,
     queue_resource_kinds,
     queue_summary,
     ready_steps,
+    reconcile_satisfied_queued_steps,
     resolve_worker_max_parallel,
     retire_orphaned_steps,
     rewind_step,
@@ -142,6 +144,215 @@ def test_experiment_queue_executes_local_steps_and_gates_cloud(tmp_path: Path) -
         assert summary["status_counts"] == {"queued": 1, "succeeded": 2}
 
 
+def test_experiment_queue_accepts_legacy_json_file_key_equals_postcondition(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "artifact_dir"
+    manifest = artifact_dir / "manifest.json"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "legacy_postcondition_queue",
+            "controls": {
+                "mode": "running",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": "candidate_a",
+                    "priority": 1,
+                    "steps": [
+                        {
+                            "id": "write_manifest",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import json, pathlib; "
+                                    f"root = pathlib.Path({str(artifact_dir)!r}); "
+                                    "root.mkdir(parents=True); "
+                                    "(root / 'payload.bin').write_bytes(b'abcde'); "
+                                    f"pathlib.Path({str(manifest)!r}).write_text("
+                                    "json.dumps({'schema': 'chain.v1'}))"
+                                ),
+                            ],
+                            "resources": {"kind": "local_cpu"},
+                            "postconditions": [
+                                {
+                                    "type": "json_file_key_equals",
+                                    "path": str(manifest),
+                                    "key": "schema",
+                                    "value": "chain.v1",
+                                }
+                            ],
+                            "telemetry": {
+                                "artifact_paths": [str(artifact_dir)],
+                                "recursive": True,
+                                "max_recursive_entries": 8,
+                            },
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue)
+        result = run_ready_step(
+            conn,
+            queue,
+            ready[0],
+            repo_root=tmp_path,
+            execute=True,
+            log_root=tmp_path / "logs",
+        )
+        performance = queue_performance_summary(conn, queue)
+
+    assert result["succeeded"] is True
+    telemetry = result["telemetry"]
+    assert telemetry["schema"] == "experiment_queue_step_telemetry.v1"
+    assert telemetry["log_bytes"] is not None
+    assert telemetry["artifact_record_count"] == 2
+    records = {record["path"]: record for record in telemetry["artifact_records"]}
+    assert records["artifact_dir"]["recursive_bytes"] >= 5
+    assert records["artifact_dir/manifest.json"]["bytes"] > 0
+    assert performance["schema"] == "experiment_queue_performance_summary.v1"
+    assert performance["by_resource_kind"]["local_cpu"]["run_count"] == 1
+    assert performance["by_resource_kind"]["local_cpu"]["artifact_record_count"] == 2
+    assert performance["by_resource_kind"]["local_cpu"]["artifact_record_bytes_sum"] >= 5
+    assert (
+        performance["by_resource_kind"]["local_cpu"]["artifact_record_raw_bytes_sum"]
+        > performance["by_resource_kind"]["local_cpu"]["artifact_record_bytes_sum"]
+    )
+    assert (
+        performance["by_step"]["candidate_a.write_manifest"]["success_count"]
+        == 1
+    )
+
+
+def test_experiment_queue_reconciles_queued_steps_with_satisfied_postconditions(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "artifact.json"
+
+    def queue_with_timeout(timeout_seconds: int) -> dict[str, object]:
+        return normalize_queue_definition(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "postcondition_reconcile_queue",
+                "controls": {
+                    "mode": "running",
+                    "local_first": True,
+                    "max_concurrency": {"local_cpu": 1},
+                },
+                "experiments": [
+                    {
+                        "id": "candidate_a",
+                        "priority": 1,
+                        "steps": [
+                            {
+                                "id": "produce",
+                                "command": [sys.executable, "-c", "print('already done')"],
+                                "resources": {"kind": "local_cpu"},
+                                "timeout_seconds": timeout_seconds,
+                                "postconditions": [
+                                    {
+                                        "type": "json_equals",
+                                        "path": artifact.name,
+                                        "key": "schema",
+                                        "equals": "artifact.v1",
+                                    }
+                                ],
+                            },
+                            {
+                                "id": "consume",
+                                "requires": ["produce"],
+                                "command": [sys.executable, "-c", "print('ready')"],
+                                "resources": {"kind": "local_cpu"},
+                            },
+                        ],
+                    }
+                ],
+            }
+        )
+
+    artifact.write_text(json.dumps({"schema": "artifact.v1"}), encoding="utf-8")
+    queue_v1 = queue_with_timeout(10)
+    queue_v2 = queue_with_timeout(1200)
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue_v1)
+        initialize_queue_state(conn, queue_v2)
+        drift_before = queue_definition_drift(conn, queue_v2)
+        result = reconcile_satisfied_queued_steps(
+            conn,
+            queue_v2,
+            repo_root=tmp_path,
+        )
+        summary = queue_summary(conn, queue_v2, repo_root=tmp_path)
+        drift_after = queue_definition_drift(conn, queue_v2)
+
+    assert drift_before["changed_step_count"] == 0
+    assert result["schema"] == "experiment_queue_postcondition_reconciliation.v1"
+    assert result["reconciled_step_count"] == 1
+    assert result["reconciled_steps"][0]["step_id"] == "produce"
+    assert summary["status_counts"] == {"queued": 1, "succeeded": 1}
+    assert [step["step_id"] for step in summary["ready_steps"]] == ["consume"]
+    assert drift_after["changed_step_count"] == 0
+
+
+def test_experiment_queue_reconcile_respects_dependency_causality(
+    tmp_path: Path,
+) -> None:
+    consumer_artifact = tmp_path / "consumer.json"
+    consumer_artifact.write_text(json.dumps({"schema": "consumer.v1"}), encoding="utf-8")
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "dependency_reconcile_queue",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "candidate",
+                    "steps": [
+                        {
+                            "id": "produce",
+                            "command": [sys.executable, "-c", "print('producer not run')"],
+                            "postconditions": [{"type": "path_exists", "path": "producer.json"}],
+                        },
+                        {
+                            "id": "consume",
+                            "requires": ["produce"],
+                            "command": [sys.executable, "-c", "print('consumer already done')"],
+                            "postconditions": [
+                                {
+                                    "type": "json_equals",
+                                    "path": consumer_artifact.name,
+                                    "key": "schema",
+                                    "equals": "consumer.v1",
+                                }
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = reconcile_satisfied_queued_steps(conn, queue, repo_root=tmp_path)
+        summary = queue_summary(conn, queue, repo_root=tmp_path)
+
+    assert result["reconciled_step_count"] == 0
+    assert result["dependency_blocked_step_count"] == 1
+    assert result["dependency_blocked_steps"][0]["step_id"] == "consume"
+    assert summary["status_counts"] == {"queued": 2}
+
+
 def test_experiment_queue_pause_freeze_and_rewind(tmp_path: Path) -> None:
     queue = _queue(tmp_path)
     with connect_state(tmp_path / "queue.sqlite") as conn:
@@ -181,6 +392,54 @@ def test_experiment_queue_pause_freeze_and_rewind(tmp_path: Path) -> None:
         )
         assert [step.step_id for step in ready_steps(conn, queue)] == ["materialize"]
         assert queue_summary(conn, queue)["status_counts"] == {"queued": 3}
+
+
+def test_initialize_queue_state_requeues_dependents_on_upstream_definition_drift(
+    tmp_path: Path,
+) -> None:
+    queue = _queue(tmp_path)
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        for step_id in ("materialize", "local_advisory", "exact_anchor"):
+            conn.execute(
+                """
+                UPDATE step_state
+                SET status = 'succeeded'
+                WHERE queue_id = 'unit_queue'
+                  AND experiment_id = 'candidate_a'
+                  AND step_id = ?
+                """,
+                (step_id,),
+            )
+        conn.commit()
+        queue["experiments"][0]["steps"][0]["command"] = [
+            sys.executable,
+            "-c",
+            "print('definition changed')",
+        ]
+
+        initialize_queue_state(conn, queue)
+        rows = {
+            row["step_id"]: row
+            for row in conn.execute(
+                """
+                SELECT step_id, status, last_event_json
+                FROM step_state
+                WHERE queue_id = 'unit_queue' AND experiment_id = 'candidate_a'
+                """
+            ).fetchall()
+        }
+
+    assert rows["materialize"]["status"] == "queued"
+    assert rows["local_advisory"]["status"] == "queued"
+    assert rows["exact_anchor"]["status"] == "queued"
+    assert json.loads(rows["materialize"]["last_event_json"])["definition_changed"] is True
+    assert (
+        json.loads(rows["local_advisory"]["last_event_json"])[
+            "upstream_definition_changed"
+        ]
+        is True
+    )
 
 
 def test_experiment_queue_supports_cross_experiment_dependencies_and_rewind(
@@ -1285,6 +1544,174 @@ def test_experiment_queue_cli_requires_noncanonical_state_rationale(
     assert "isolated cli unit test state" in allowed.stdout
 
 
+def test_experiment_queue_cli_run_worker_exposes_max_experiments(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    queue_path = tmp_path / "queue.json"
+    state = tmp_path / ".omx" / "state" / "experiment_queue_cli_max_experiments.sqlite"
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "cli_max_experiments",
+                "controls": {
+                    "mode": "running",
+                    "max_concurrency": {"local_cpu": 2},
+                },
+                "experiments": [
+                    {
+                        "id": "candidate_a",
+                        "priority": 1,
+                        "steps": [
+                            {
+                                "id": "write",
+                                "command": [
+                                    sys.executable,
+                                    "-c",
+                                    f"import pathlib; pathlib.Path({str(first)!r}).write_text('a')",
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "id": "candidate_b",
+                        "priority": 2,
+                        "steps": [
+                            {
+                                "id": "write",
+                                "command": [
+                                    sys.executable,
+                                    "-c",
+                                    f"import pathlib; pathlib.Path({str(second)!r}).write_text('b')",
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "run-worker",
+            "--execute",
+            "--max-steps",
+            "2",
+            "--max-parallel",
+            "2",
+            "--max-experiments",
+            "1",
+            "--idle-sleep-seconds",
+            "0",
+            "--max-idle-cycles",
+            "0",
+            "--noncanonical-state-rationale",
+            "isolated cli unit test state",
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["max_experiments"] == 1
+    assert payload["steps_started"] == 1
+    assert first.exists()
+    assert not second.exists()
+
+
+def test_experiment_queue_cli_performance_is_read_only_on_definition_drift(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    marker = tmp_path / "marker.txt"
+
+    def queue_for(command_text: str) -> dict[str, object]:
+        return normalize_queue_definition(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "cli_performance_readonly",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "steps": [
+                            {
+                                "id": "write",
+                                "command": [
+                                    sys.executable,
+                                    "-c",
+                                    f"import pathlib; pathlib.Path({str(marker)!r}).write_text({command_text!r})",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+    state = tmp_path / "queue.sqlite"
+    queue_v1 = queue_for("v1")
+    queue_v2 = queue_for("v2")
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(json.dumps(queue_v2), encoding="utf-8")
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue_v1)
+        result = run_queue_worker(
+            conn,
+            queue_v1,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=1,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+        assert result["success_count"] == 1
+        before = queue_summary(conn, queue_v1)
+        event_count_before = conn.execute("SELECT COUNT(*) AS count FROM queue_events").fetchone()["count"]
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "performance",
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    with connect_state(state) as conn:
+        after = queue_summary(conn, queue_v2)
+        event_count_after = conn.execute("SELECT COUNT(*) AS count FROM queue_events").fetchone()["count"]
+        drift = queue_definition_drift(conn, queue_v2)
+    assert before["status_counts"] == {"succeeded": 1}
+    assert after["status_counts"] == {"succeeded": 1}
+    assert after["steps"][0]["last_event"] is not None
+    assert event_count_after == event_count_before
+    assert drift["changed_step_count"] == 1
+
+
 def test_experiment_queue_cli_validate_reports_auto_parallelism(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[3]
     queue_path = tmp_path / "queue.json"
@@ -1588,6 +2015,58 @@ def test_experiment_queue_refuses_definition_change_while_running(tmp_path: Path
 
         with pytest.raises(ExperimentQueueError, match="definition changed while running"):
             initialize_queue_state(conn, changed)
+
+
+def test_experiment_queue_refuses_upstream_drift_without_partial_mutation(
+    tmp_path: Path,
+) -> None:
+    queue = _queue(tmp_path)
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'succeeded'
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            ("unit_queue", "candidate_a", "materialize"),
+        )
+        conn.execute(
+            """
+            UPDATE step_state
+            SET status = 'running'
+            WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+            """,
+            ("unit_queue", "candidate_a", "local_advisory"),
+        )
+        conn.commit()
+        event_count_before = conn.execute("SELECT COUNT(*) AS count FROM queue_events").fetchone()["count"]
+        changed = _queue(tmp_path)
+        changed["experiments"][0]["steps"][0]["command"] = [
+            sys.executable,
+            "-c",
+            "print('changed upstream')",
+        ]
+
+        with pytest.raises(ExperimentQueueError, match="depends on changed"):
+            initialize_queue_state(conn, changed)
+        rows = {
+            row["step_id"]: row
+            for row in conn.execute(
+                """
+                SELECT step_id, status, last_event_json
+                FROM step_state
+                WHERE queue_id = ? AND experiment_id = ?
+                """,
+                ("unit_queue", "candidate_a"),
+            ).fetchall()
+        }
+        event_count_after = conn.execute("SELECT COUNT(*) AS count FROM queue_events").fetchone()["count"]
+
+    assert rows["materialize"]["status"] == "succeeded"
+    assert rows["local_advisory"]["status"] == "running"
+    assert rows["materialize"]["last_event_json"] is None
+    assert event_count_after == event_count_before
 
 
 def test_experiment_queue_summary_separates_orphaned_reroute_rows(

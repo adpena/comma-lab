@@ -30,12 +30,15 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     assert_canonical_state_for_execution,
     assert_no_orphaned_steps_for_execution,
     connect_state,
+    connect_state_readonly,
     default_state_path,
     initialize_queue_state,
     load_queue_definition,
     orphaned_step_rows,
+    queue_performance_summary,
     queue_summary,
     ready_steps,
+    reconcile_satisfied_queued_steps,
     resolve_worker_max_parallel,
     retire_orphaned_steps,
     rewind_step,
@@ -120,6 +123,14 @@ def cmd_status(args: argparse.Namespace) -> int:
         initialize_queue_state(conn, queue)
         summary = queue_summary(conn, queue, repo_root=REPO_ROOT)
     _json_print({"state": str(state), **summary})
+    return 0
+
+
+def cmd_performance(args: argparse.Namespace) -> int:
+    queue, state = _load(args)
+    with connect_state_readonly(state) as conn:
+        payload = queue_performance_summary(conn, queue)
+    _json_print({"state": str(state), **payload})
     return 0
 
 
@@ -247,6 +258,7 @@ def cmd_run_worker(args: argparse.Namespace) -> int:
                 noncanonical_state_rationale=noncanonical_rationale,
                 log_root=args.log_root,
                 stop_requested=lambda: bool(stop_signals),
+                max_experiments=args.max_experiments,
                 reload_queue=None
                 if args.no_reload_definition
                 else lambda: load_queue_definition(args.queue),
@@ -344,6 +356,21 @@ def cmd_reconcile_state(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reconcile_satisfied(args: argparse.Namespace) -> int:
+    queue, state = _load(args)
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        before = queue_summary(conn, queue, repo_root=REPO_ROOT)
+        reconciled = reconcile_satisfied_queued_steps(
+            conn,
+            queue,
+            repo_root=REPO_ROOT,
+        )
+        after = queue_summary(conn, queue, repo_root=REPO_ROOT)
+    _json_print({"state": str(state), "before": before, "after": after, **reconciled})
+    return 0
+
+
 def _blocking_orphan_count(conn: sqlite3.Connection, queue: dict) -> int:
     return sum(
         1
@@ -366,6 +393,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     sp = sub.add_parser("status")
     sp.set_defaults(func=cmd_status)
+
+    sp = sub.add_parser("performance", help="aggregate completed-step telemetry")
+    sp.set_defaults(func=cmd_performance)
 
     sp = sub.add_parser("observe", help="compact live queue telemetry and artifact view")
     sp.add_argument("--tail-lines", type=int, default=20)
@@ -412,6 +442,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     sp.add_argument("--log-root", default=None, help="override command log root")
     sp.add_argument("--max-steps", type=int, default=1, help="maximum steps to start")
+    sp.add_argument(
+        "--max-experiments",
+        type=int,
+        default=None,
+        help=(
+            "maximum distinct experiments to start in this worker run; useful for "
+            "bounded multi-candidate fan-out"
+        ),
+    )
     sp.add_argument(
         "--max-parallel",
         type=int,
@@ -485,6 +524,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp.add_argument("--reason", required=True)
     sp.add_argument("--output", default=None, help="append-only JSON audit artifact path")
     sp.set_defaults(func=cmd_reconcile_state)
+
+    sp = sub.add_parser(
+        "reconcile-satisfied",
+        help="mark queued steps succeeded when their postconditions already pass",
+    )
+    sp.set_defaults(func=cmd_reconcile_satisfied)
 
     return parser.parse_args(argv)
 

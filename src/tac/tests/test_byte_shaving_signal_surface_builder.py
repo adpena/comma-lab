@@ -206,6 +206,38 @@ def _mlx_response_row(*, projected_delta: float, raw_delta: float) -> dict[str, 
     }
 
 
+def _inverse_response_row(
+    *,
+    projected_delta: float,
+    scorer_delta: float,
+    saved_bytes: int,
+) -> dict[str, object]:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    return {
+        "schema": "scorer_response_row.v1",
+        "row_id": "inverse-row-a",
+        "candidate_id": "inverse-row-a",
+        "family": "decoder_q",
+        **false_authority,
+        "authority_source_score_claim": False,
+        "delta_vs_baseline_score": float(projected_delta),
+        "scorer_delta_vs_baseline": float(scorer_delta),
+        "observed_scorer_gain_vs_baseline": -float(scorer_delta),
+        "added_archive_bytes": -int(saved_bytes),
+        "byte_budget_margin_vs_break_even": float(saved_bytes),
+        "source_pair_window": [7, 8],
+        "diagnostic_seg_share": 0.15,
+        "diagnostic_pose_share": 0.85,
+    }
+
+
 def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     tmp_path: Path,
 ) -> None:
@@ -322,6 +354,68 @@ def test_builder_promotes_normalized_scorer_response_ref_to_ranked_unit(
     ]
 
 
+def test_builder_promotes_inverse_scorer_surface_cells_to_ranked_units(
+    tmp_path: Path,
+) -> None:
+    scorer = tmp_path / "scorer.json"
+    _scorer_response_dataset(
+        scorer,
+        rows=[
+            _inverse_response_row(
+                projected_delta=-0.0001,
+                scorer_delta=0.0,
+                saved_bytes=32,
+            )
+        ],
+    )
+
+    surface = build_byte_shaving_signal_surface(
+        repo_root=tmp_path,
+        campaign_id="fixture_surface",
+        inverse_scorer_response_paths=[scorer],
+    )
+    plan = build_byte_shaving_campaign_plan(surface, repo_root=tmp_path)
+
+    ref = surface["inverse_scorer_surface_refs"][0]
+    unit = surface["units"][0]
+    assert ref["kind"] == "scorer_inverse_decision_surface"
+    assert ref["decision_surface_classes"] == ["rate_only_null_space"]
+    assert unit["unit_kind"] == "scorer_inverse_surface_cell"
+    assert unit["decision_surface_class"] == "rate_only_null_space"
+    assert unit["dominant_receiver_axis"] == "pose"
+    assert unit["candidate_saved_bytes"] == 32
+    assert plan["ranked_units"][0]["unit_kind"] == "scorer_inverse_surface_cell"
+    assert plan["ranked_units"][0]["expected_delta_score"] == pytest.approx(-0.0001)
+    assert plan["score_claim"] is False
+
+
+def test_builder_inverse_surface_can_use_native_mlx_window_with_blocker(
+    tmp_path: Path,
+) -> None:
+    scorer = tmp_path / "scorer.json"
+    row = _mlx_response_row(projected_delta=-0.0001, raw_delta=-0.0001)
+    for key in (
+        "normalized_full_video_scorer_gain_vs_baseline",
+        "projected_full_video_delta_vs_baseline_score",
+        "break_even_added_bytes_from_normalized_full_video_gain",
+        "normalized_full_video_byte_budget_margin_vs_break_even",
+    ):
+        row.pop(key)
+    _scorer_response_dataset(scorer, rows=[row])
+
+    surface = build_byte_shaving_signal_surface(
+        repo_root=tmp_path,
+        campaign_id="fixture_surface",
+        inverse_scorer_response_paths=[scorer],
+        inverse_scorer_allow_native_mlx_window_objective=True,
+    )
+
+    ref = surface["inverse_scorer_surface_refs"][0]
+    assert ref["allow_native_mlx_window_objective"] is True
+    assert surface["units"][0]["unit_kind"] == "scorer_inverse_surface_cell"
+    assert surface["score_claim"] is False
+
+
 def test_builder_rejects_mlx_scorer_response_ref_missing_normalized_target(
     tmp_path: Path,
 ) -> None:
@@ -431,3 +525,40 @@ def test_cli_can_build_surface_from_scorer_response_only(tmp_path: Path) -> None
     assert surface["units"][0]["unit_kind"] == "scorer_response_row"
     assert surface["units"][0]["planning_value_scope"] == "normalized_full_video"
     assert surface["score_claim"] is False
+
+
+def test_cli_can_build_inverse_scorer_surface(tmp_path: Path) -> None:
+    scorer = tmp_path / "scorer.json"
+    output = tmp_path / "surface.json"
+    _scorer_response_dataset(
+        scorer,
+        rows=[
+            _inverse_response_row(
+                projected_delta=-0.0001,
+                scorer_delta=0.0,
+                saved_bytes=32,
+            )
+        ],
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--inverse-scorer-response",
+            str(scorer),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+            "--campaign-id",
+            "fixture_surface",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    surface = json.loads(output.read_text(encoding="utf-8"))
+    assert surface["inverse_scorer_surface_refs"][0]["emitted_unit_count"] == 1
+    assert surface["units"][0]["unit_kind"] == "scorer_inverse_surface_cell"

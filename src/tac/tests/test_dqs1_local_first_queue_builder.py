@@ -290,6 +290,8 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     )
     raw_retention = steps_by_id["plan_raw_artifact_retention"]
     assert raw_retention["requires"] == ["local_cpu_advisory"]
+    assert raw_retention["resources"]["kind"] == "local_io_heavy"
+    assert raw_retention["timeout_seconds"] == 1200
     assert "tools/compact_experiment_artifacts.py" in raw_retention["command"]
     assert "results/materialized/drop_rank024_pair0112/raw_artifact_retention_plan.json" in raw_retention["command"]
     assert "--include-kind" not in raw_retention["command"]
@@ -486,7 +488,8 @@ def test_dqs1_queue_builder_can_emit_local_mlx_advisory_debug_steps(
     assert false_authority["axis_equals"] == "[macOS-MLX research-signal]"
     retention = steps_by_id["plan_mlx_delta_cache_retention"]
     assert retention["requires"] == ["local_mlx_advisory_response"]
-    assert retention["resources"]["kind"] == "local_cpu"
+    assert retention["resources"]["kind"] == "local_io_heavy"
+    assert retention["timeout_seconds"] == 1200
     assert "tools/compact_experiment_artifacts.py" in retention["command"]
     assert "mlx_scorer_input_cache" in retention["command"]
     assert any(
@@ -530,6 +533,8 @@ def test_dqs1_queue_builder_can_emit_scheduler_preflight_gate(tmp_path: Path) ->
     ]
     assert "tools/plan_experiment_storage.py" in preflight["steps"][0]["command"]
     assert "tools/compact_experiment_artifacts.py" in preflight["steps"][1]["command"]
+    assert preflight["steps"][1]["resources"]["kind"] == "local_io_heavy"
+    assert preflight["steps"][1]["timeout_seconds"] == 1200
     candidate_steps = {
         step["id"]: step for step in result.queue["experiments"][1]["steps"]
     }
@@ -1038,6 +1043,9 @@ def test_checked_in_dqs1_queue_keeps_eureka_append_only_contract() -> None:
         assert "--global-timeout-seconds" in locality["command"]
         assert "--max-inflate-parallelism" in locality["command"]
         assert "--reuse-existing-inflates" in locality["command"]
+        raw_retention = steps["plan_raw_artifact_retention"]
+        assert raw_retention["resources"]["kind"] == "local_io_heavy"
+        assert raw_retention["timeout_seconds"] == 1200
         eureka = steps["local_cpu_contest_drift_eureka"]
         command = eureka["command"]
         eureka_out = command[command.index("--eureka-out") + 1]
