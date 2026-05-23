@@ -47,6 +47,19 @@ class ReadyStep:
         }
 
 
+@dataclass
+class RunningStepProcess:
+    ready_step: ReadyStep
+    step: dict[str, Any]
+    process: subprocess.Popen[bytes]
+    log_handle: Any
+    log_path: Path
+    started_monotonic: float
+    timeout_seconds: int
+    worker_run_id: str
+    terminate_requested_monotonic: float | None = None
+
+
 def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -865,6 +878,274 @@ def run_ready_step(
     return {"executed": True, "succeeded": succeeded, **event}
 
 
+def _make_worker_run_id(ready: ReadyStep) -> str:
+    payload = {
+        "queue_id": ready.queue_id,
+        "experiment_id": ready.experiment_id,
+        "step_id": ready.step_id,
+        "pid": os.getpid(),
+        "time_ns": time.time_ns(),
+    }
+    return hashlib.sha256(_json_text(payload).encode("utf-8")).hexdigest()[:16]
+
+
+def _make_step_log_path(
+    *,
+    repo: Path,
+    log_root: str | Path | None,
+    ready: ReadyStep,
+    worker_run_id: str,
+) -> Path:
+    ts = _utc_now().replace(":", "").replace("-", "")
+    resolved_log_root = (
+        Path(log_root) if log_root else repo / ".omx" / "state" / "experiment_queue_logs"
+    )
+    log_dir = resolved_log_root / ready.queue_id / ready.experiment_id / ready.step_id
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir / f"{ts}_{worker_run_id}.log"
+
+
+def _record_process_started(
+    conn: sqlite3.Connection,
+    *,
+    ready: ReadyStep,
+    event: Mapping[str, Any],
+) -> None:
+    conn.execute(
+        """
+        UPDATE step_state
+        SET status = 'running', updated_at_utc = ?, last_event_json = ?
+        WHERE queue_id = ? AND experiment_id = ? AND step_id = ? AND status = 'running'
+        """,
+        (
+            _utc_now(),
+            _json_text(dict(event)),
+            ready.queue_id,
+            ready.experiment_id,
+            ready.step_id,
+        ),
+    )
+    append_event(
+        conn,
+        queue_id=ready.queue_id,
+        experiment_id=ready.experiment_id,
+        step_id=ready.step_id,
+        event_type="step_process_started",
+        payload=event,
+    )
+    conn.commit()
+
+
+def _evaluate_postconditions(
+    step: Mapping[str, Any],
+    *,
+    repo: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    failed_conditions: list[dict[str, Any]] = []
+    postcondition_errors: list[dict[str, str]] = []
+    for condition in [dict(condition) for condition in step.get("postconditions", [])]:
+        try:
+            if not _condition_passes(condition, repo_root=repo):
+                failed_conditions.append(condition)
+        except (ExperimentQueueError, OSError, json.JSONDecodeError) as exc:
+            failed_conditions.append(condition)
+            postcondition_errors.append(
+                {"condition": _json_text(condition), "error": f"{type(exc).__name__}: {exc}"}
+            )
+    return failed_conditions, postcondition_errors
+
+
+def _start_ready_step_process(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    ready: ReadyStep,
+    *,
+    repo_root: str | Path,
+    log_root: str | Path | None = None,
+) -> tuple[RunningStepProcess | None, dict[str, Any] | None]:
+    repo = Path(repo_root)
+    step = _lookup_step(queue, ready.experiment_id, ready.step_id)
+    worker_run_id = _make_worker_run_id(ready)
+    log_path = _make_step_log_path(
+        repo=repo,
+        log_root=log_root,
+        ready=ready,
+        worker_run_id=worker_run_id,
+    )
+    timeout_seconds = int(step.get("timeout_seconds") or 0)
+    running_event = {
+        "command": list(ready.command),
+        "log_path": str(log_path),
+        "resource_kind": ready.resource_kind,
+        "worker_run_id": worker_run_id,
+        "timeout_seconds": timeout_seconds,
+        "parent_pid": os.getpid(),
+    }
+    claim_refused_reason = _claim_step_running(
+        conn,
+        queue_id=ready.queue_id,
+        experiment_id=ready.experiment_id,
+        step_id=ready.step_id,
+        event=running_event,
+    )
+    if claim_refused_reason:
+        return None, {
+            "executed": False,
+            "claim_refused": True,
+            "claim_refused_reason": claim_refused_reason,
+            "ready_step": ready.to_dict(),
+            **running_event,
+        }
+
+    log_handle = log_path.open("wb")
+    started_monotonic = time.monotonic()
+    try:
+        process = subprocess.Popen(
+            list(ready.command),
+            cwd=repo,
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            env=os.environ.copy(),
+        )
+    except OSError as exc:
+        execution_error = f"{type(exc).__name__}: {exc}"
+        log_handle.write(f"\n[experiment-queue] execution error: {execution_error}\n".encode())
+        log_handle.close()
+        event = {
+            **running_event,
+            "returncode": 127,
+            "timed_out": False,
+            "execution_error": execution_error,
+            "elapsed_seconds": time.monotonic() - started_monotonic,
+            "failed_postconditions": [],
+            "postcondition_errors": [],
+        }
+        _set_step_status(
+            conn,
+            queue_id=ready.queue_id,
+            experiment_id=ready.experiment_id,
+            step_id=ready.step_id,
+            status="failed",
+            event=event,
+        )
+        conn.commit()
+        return None, {"executed": True, "succeeded": False, **event}
+
+    started_event = {
+        **running_event,
+        "pid": process.pid,
+        "started_at_utc": _utc_now(),
+        "timeout_deadline_epoch_seconds": (
+            time.time() + timeout_seconds if timeout_seconds > 0 else None
+        ),
+    }
+    _record_process_started(conn, ready=ready, event=started_event)
+    return (
+        RunningStepProcess(
+            ready_step=ready,
+            step=step,
+            process=process,
+            log_handle=log_handle,
+            log_path=log_path,
+            started_monotonic=started_monotonic,
+            timeout_seconds=timeout_seconds,
+            worker_run_id=worker_run_id,
+        ),
+        None,
+    )
+
+
+def _finalize_running_step_process(
+    conn: sqlite3.Connection,
+    running: RunningStepProcess,
+    *,
+    repo_root: str | Path,
+    shutdown_grace_seconds: float = 5.0,
+) -> dict[str, Any] | None:
+    ready = running.ready_step
+    timed_out = False
+    execution_error: str | None = None
+    returncode = running.process.poll()
+    now = time.monotonic()
+    if (
+        returncode is None
+        and running.timeout_seconds > 0
+        and now - running.started_monotonic >= running.timeout_seconds
+    ):
+        timed_out = True
+        running.process.kill()
+        returncode = running.process.wait()
+        running.log_handle.write(
+            f"\n[experiment-queue] timeout after {running.timeout_seconds}s\n".encode()
+        )
+    if (
+        returncode is None
+        and running.terminate_requested_monotonic is not None
+        and now - running.terminate_requested_monotonic >= max(0.0, shutdown_grace_seconds)
+    ):
+        running.process.kill()
+        returncode = running.process.wait()
+        execution_error = "terminated_after_shutdown_grace"
+        running.log_handle.write(b"\n[experiment-queue] killed after shutdown grace\n")
+    if returncode is None:
+        return None
+
+    try:
+        running.log_handle.close()
+    except OSError:
+        pass
+    elapsed = time.monotonic() - running.started_monotonic
+    failed_conditions, postcondition_errors = _evaluate_postconditions(
+        running.step,
+        repo=Path(repo_root),
+    )
+    succeeded = returncode == 0 and not timed_out and not execution_error and not failed_conditions
+    event = {
+        "command": list(ready.command),
+        "pid": running.process.pid,
+        "resource_kind": ready.resource_kind,
+        "worker_run_id": running.worker_run_id,
+        "returncode": 124 if timed_out else returncode,
+        "timed_out": timed_out,
+        "execution_error": execution_error,
+        "elapsed_seconds": elapsed,
+        "log_path": str(running.log_path),
+        "failed_postconditions": failed_conditions,
+        "postcondition_errors": postcondition_errors,
+    }
+    _set_step_status(
+        conn,
+        queue_id=ready.queue_id,
+        experiment_id=ready.experiment_id,
+        step_id=ready.step_id,
+        status="succeeded" if succeeded else "failed",
+        event=event,
+    )
+    conn.commit()
+    return {"executed": True, "succeeded": succeeded, **event}
+
+
+def _request_running_process_termination(
+    running: RunningStepProcess,
+    *,
+    reason: str,
+) -> None:
+    if running.process.poll() is not None:
+        return
+    if running.terminate_requested_monotonic is not None:
+        return
+    running.terminate_requested_monotonic = time.monotonic()
+    try:
+        running.log_handle.write(f"\n[experiment-queue] terminate requested: {reason}\n".encode())
+        running.log_handle.flush()
+    except OSError:
+        pass
+    try:
+        running.process.terminate()
+    except OSError:
+        return
+
+
 def _active_step_keys(queue: Mapping[str, Any]) -> set[tuple[str, str]]:
     return {
         (str(experiment["id"]), str(step["id"]))
@@ -982,6 +1263,10 @@ def run_queue_worker(
     max_steps: int,
     idle_sleep_seconds: float = 5.0,
     max_idle_cycles: int = 1,
+    max_parallel: int = 1,
+    poll_interval_seconds: float = 0.25,
+    stop_policy: str = "drain",
+    shutdown_grace_seconds: float = 5.0,
     allow_cloud: bool = False,
     allow_orphaned_state: bool = False,
     orphaned_state_rationale: str | None = None,
@@ -1000,6 +1285,14 @@ def run_queue_worker(
         raise ExperimentQueueError("max_idle_cycles must be a non-negative integer")
     if idle_sleep_seconds < 0:
         raise ExperimentQueueError("idle_sleep_seconds must be non-negative")
+    if isinstance(max_parallel, bool) or not isinstance(max_parallel, int) or max_parallel <= 0:
+        raise ExperimentQueueError("max_parallel must be a positive integer")
+    if poll_interval_seconds < 0:
+        raise ExperimentQueueError("poll_interval_seconds must be non-negative")
+    if stop_policy not in {"drain", "terminate"}:
+        raise ExperimentQueueError("stop_policy must be 'drain' or 'terminate'")
+    if shutdown_grace_seconds < 0:
+        raise ExperimentQueueError("shutdown_grace_seconds must be non-negative")
 
     queue_id = str(queue["queue_id"])
     active_queue: Mapping[str, Any] = queue
@@ -1029,8 +1322,12 @@ def run_queue_worker(
         payload={
             "execute": execute,
             "max_steps": max_steps,
+            "max_parallel": max_parallel,
             "max_idle_cycles": max_idle_cycles,
             "idle_sleep_seconds": idle_sleep_seconds,
+            "poll_interval_seconds": poll_interval_seconds,
+            "stop_policy": stop_policy,
+            "shutdown_grace_seconds": shutdown_grace_seconds,
             "allow_cloud": allow_cloud,
             "allow_orphaned_state": allow_orphaned_state,
             "orphaned_state_rationale": orphaned_state_rationale,
@@ -1067,6 +1364,7 @@ def run_queue_worker(
             "queue_id": queue_id,
             "execute": False,
             "allow_cloud": allow_cloud,
+            "max_parallel": max_parallel,
             "orphaned_state_rationale": orphaned_state_rationale,
             "noncanonical_state_rationale": noncanonical_state_rationale,
             "started_at_utc": started_at,
@@ -1087,23 +1385,127 @@ def run_queue_worker(
     claim_refused_count = 0
     idle_cycles = 0
     stop_reason = "max_steps_reached"
+    running_processes: list[RunningStepProcess] = []
+    stop_seen = False
 
-    while steps_started < max_steps:
-        if stop_requested is not None and stop_requested():
-            stop_reason = "stop_requested"
+    def _notice_stop_requested() -> None:
+        nonlocal stop_reason, stop_seen
+        if stop_requested is None or not stop_requested() or stop_seen:
+            return
+        stop_reason = "stop_requested"
+        append_event(
+            conn,
+            queue_id=queue_id,
+            experiment_id=None,
+            step_id=None,
+            event_type="worker_stop_requested",
+            payload={
+                "steps_started": steps_started,
+                "running_count": len(running_processes),
+                "stop_policy": stop_policy,
+            },
+        )
+        conn.commit()
+        if stop_policy == "terminate":
+            for running in running_processes:
+                _request_running_process_termination(
+                    running,
+                    reason="worker_stop_requested",
+                )
+        stop_seen = True
+
+    while steps_started < max_steps or running_processes:
+        _notice_stop_requested()
+
+        for running in list(running_processes):
+            result = _finalize_running_step_process(
+                conn,
+                running,
+                repo_root=repo_root,
+                shutdown_grace_seconds=shutdown_grace_seconds,
+            )
+            if result is None:
+                continue
+            running_processes.remove(running)
+            ready_step = running.ready_step
+            step_result = {"ready_step": ready_step.to_dict(), **result}
+            step_results.append(step_result)
+            if result.get("succeeded"):
+                success_count += 1
+                continue
+
+            failure_count += 1
             append_event(
                 conn,
                 queue_id=queue_id,
-                experiment_id=None,
-                step_id=None,
-                event_type="worker_stop_requested",
-                payload={"steps_started": steps_started},
+                experiment_id=ready_step.experiment_id,
+                step_id=ready_step.step_id,
+                event_type="worker_step_failed",
+                payload=step_result,
             )
             conn.commit()
+
+        _notice_stop_requested()
+
+        if stop_seen:
+            if not running_processes:
+                break
+            if poll_interval_seconds:
+                time.sleep(poll_interval_seconds)
+            continue
+
+        if steps_started >= max_steps:
+            if running_processes:
+                if poll_interval_seconds:
+                    time.sleep(poll_interval_seconds)
+                continue
             break
 
-        ready = ready_steps(conn, _active_queue(), allow_cloud=allow_cloud)
-        if not ready:
+        launched_this_cycle = 0
+        while steps_started < max_steps and len(running_processes) < max_parallel:
+            ready = ready_steps(conn, _active_queue(), allow_cloud=allow_cloud)
+            if not ready:
+                break
+
+            idle_cycles = 0
+            ready_step = ready[0]
+            running, immediate_result = _start_ready_step_process(
+                conn,
+                active_queue,
+                ready_step,
+                repo_root=repo_root,
+                log_root=log_root,
+            )
+            if immediate_result is not None:
+                step_result = {"ready_step": ready_step.to_dict(), **immediate_result}
+                step_results.append(step_result)
+                if immediate_result.get("claim_refused"):
+                    claim_refused_count += 1
+                    continue
+                steps_started += 1
+                launched_this_cycle += 1
+                failure_count += 1
+                append_event(
+                    conn,
+                    queue_id=queue_id,
+                    experiment_id=ready_step.experiment_id,
+                    step_id=ready_step.step_id,
+                    event_type="worker_step_failed",
+                    payload=step_result,
+                )
+                conn.commit()
+                continue
+            if running is not None:
+                running_processes.append(running)
+                steps_started += 1
+                launched_this_cycle += 1
+
+        if running_processes:
+            if poll_interval_seconds:
+                time.sleep(poll_interval_seconds)
+            continue
+
+        if launched_this_cycle == 0:
             idle_cycles += 1
             append_event(
                 conn,
@@ -1120,38 +1522,6 @@ def run_queue_worker(
             time.sleep(idle_sleep_seconds)
             continue
 
-        idle_cycles = 0
-        ready_step = ready[0]
-        result = run_ready_step(
-            conn,
-            active_queue,
-            ready_step,
-            repo_root=repo_root,
-            execute=True,
-            log_root=log_root,
-        )
-        step_result = {"ready_step": ready_step.to_dict(), **result}
-        step_results.append(step_result)
-        if result.get("claim_refused"):
-            claim_refused_count += 1
-            continue
-
-        steps_started += 1
-        if result.get("succeeded"):
-            success_count += 1
-            continue
-
-        failure_count += 1
-        append_event(
-            conn,
-            queue_id=queue_id,
-            experiment_id=ready_step.experiment_id,
-            step_id=ready_step.step_id,
-            event_type="worker_step_failed",
-            payload=step_result,
-        )
-        conn.commit()
-
     append_event(
         conn,
         queue_id=queue_id,
@@ -1161,6 +1531,7 @@ def run_queue_worker(
         payload={
             "stop_reason": stop_reason,
             "steps_started": steps_started,
+            "max_parallel": max_parallel,
             "success_count": success_count,
             "failure_count": failure_count,
             "claim_refused_count": claim_refused_count,
@@ -1173,6 +1544,7 @@ def run_queue_worker(
         "queue_id": queue_id,
         "execute": True,
         "allow_cloud": allow_cloud,
+        "max_parallel": max_parallel,
         "orphaned_state_rationale": orphaned_state_rationale,
         "noncanonical_state_rationale": noncanonical_state_rationale,
         "started_at_utc": started_at,

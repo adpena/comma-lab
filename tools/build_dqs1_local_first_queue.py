@@ -93,6 +93,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="do not skip candidates whose local_cpu_advisory.json already exists",
     )
+    parser.add_argument(
+        "--candidate-limit",
+        type=int,
+        default=1,
+        help="number of independent safe DQS1 candidates to include in the queue",
+    )
+    parser.add_argument(
+        "--local-cpu-concurrency",
+        type=int,
+        default=1,
+        help="local_cpu resource concurrency to write into the generated queue",
+    )
     return parser.parse_args(argv)
 
 
@@ -129,6 +141,8 @@ def main(argv: list[str] | None = None) -> int:
         },
         exclude_candidate_ids=set(args.exclude_candidate),
         skip_completed_local_advisory=not args.include_completed_local_advisory,
+        candidate_limit=args.candidate_limit,
+        local_cpu_concurrency=args.local_cpu_concurrency,
     )
     output = Path(args.output)
     if args.write:
@@ -139,6 +153,9 @@ def main(argv: list[str] | None = None) -> int:
                 "output": str(output),
                 "queue_id": result.queue["queue_id"],
                 "selected_candidate_id": result.selection.candidate_id,
+                "selected_candidate_ids": [
+                    selection.candidate_id for selection in result.selections
+                ],
                 "selected_pair_indices": list(result.selection.selected_pair_indices),
                 "action_summary": str(result.selection.action_summary_path),
                 "portfolio": str(result.selection.portfolio_path),

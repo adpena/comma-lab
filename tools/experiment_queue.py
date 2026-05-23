@@ -199,8 +199,12 @@ def cmd_run_worker(args: argparse.Namespace) -> int:
                 repo_root=REPO_ROOT,
                 execute=args.execute,
                 max_steps=args.max_steps,
+                max_parallel=args.max_parallel,
                 idle_sleep_seconds=args.idle_sleep_seconds,
                 max_idle_cycles=args.max_idle_cycles,
+                poll_interval_seconds=args.poll_interval_seconds,
+                stop_policy=args.stop_policy,
+                shutdown_grace_seconds=args.shutdown_grace_seconds,
                 allow_cloud=args.allow_cloud,
                 allow_orphaned_state=orphaned_rationale is not None,
                 orphaned_state_rationale=orphaned_rationale,
@@ -324,6 +328,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp.add_argument("--log-root", default=None, help="override command log root")
     sp.add_argument("--max-steps", type=int, default=1, help="maximum steps to start")
     sp.add_argument(
+        "--max-parallel",
+        type=int,
+        default=1,
+        help="maximum subprocesses to keep running concurrently",
+    )
+    sp.add_argument(
         "--no-reload-definition",
         action="store_true",
         help="pin the queue definition loaded at startup instead of rereading between steps",
@@ -335,10 +345,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="sleep between idle polls before the idle limit is reached",
     )
     sp.add_argument(
+        "--poll-interval-seconds",
+        type=float,
+        default=0.25,
+        help="sleep between active subprocess polls",
+    )
+    sp.add_argument(
         "--max-idle-cycles",
         type=int,
         default=1,
         help="maximum no-ready-step polls before stopping",
+    )
+    sp.add_argument(
+        "--stop-policy",
+        choices=["drain", "terminate"],
+        default="drain",
+        help="on SIGINT/SIGTERM, drain running children or terminate them",
+    )
+    sp.add_argument(
+        "--shutdown-grace-seconds",
+        type=float,
+        default=5.0,
+        help="grace period before killing children after terminate stop-policy",
     )
     sp.set_defaults(func=cmd_run_worker)
 

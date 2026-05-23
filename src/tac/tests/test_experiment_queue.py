@@ -336,6 +336,235 @@ def test_experiment_queue_worker_runs_bounded_local_steps(tmp_path: Path) -> Non
         assert "worker_stopped" in events
 
 
+def test_experiment_queue_worker_runs_independent_steps_in_parallel(tmp_path: Path) -> None:
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "parallel_queue",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {"local_cpu": 2},
+            },
+            "experiments": [
+                {
+                    "id": "candidate_parallel",
+                    "steps": [
+                        {
+                            "id": "first",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib, time; "
+                                    "time.sleep(0.4); "
+                                    f"pathlib.Path({str(first)!r}).write_text('ok')"
+                                ),
+                            ],
+                        },
+                        {
+                            "id": "second",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib, time; "
+                                    "time.sleep(0.4); "
+                                    f"pathlib.Path({str(second)!r}).write_text('ok')"
+                                ),
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=2,
+            max_parallel=2,
+            poll_interval_seconds=0.01,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+
+        assert result["max_parallel"] == 2
+        assert result["steps_started"] == 2
+        assert result["success_count"] == 2
+        assert first.read_text() == "ok"
+        assert second.read_text() == "ok"
+        assert queue_summary(conn, queue)["status_counts"] == {"succeeded": 2}
+
+        started = [
+            (int(row["id"]), json.loads(row["payload_json"]))
+            for row in conn.execute(
+                "SELECT id, payload_json FROM queue_events WHERE event_type = 'step_process_started'"
+            ).fetchall()
+        ]
+        assert len(started) == 2
+        assert all(isinstance(event.get("pid"), int) for _id, event in started)
+        assert all(event.get("worker_run_id") for _id, event in started)
+        first_success_id = min(
+            int(row["id"])
+            for row in conn.execute(
+                "SELECT id FROM queue_events WHERE event_type = 'step_succeeded'"
+            ).fetchall()
+        )
+        assert max(event_id for event_id, _event in started) < first_success_id
+
+
+def test_experiment_queue_worker_respects_resource_limits_under_parallelism(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "first.txt"
+    second = tmp_path / "second.txt"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "parallel_resource_queue",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {"local_mlx": 1},
+            },
+            "experiments": [
+                {
+                    "id": "candidate_parallel_resource",
+                    "steps": [
+                        {
+                            "id": "first",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib, time; "
+                                    "time.sleep(0.25); "
+                                    f"pathlib.Path({str(first)!r}).write_text('ok')"
+                                ),
+                            ],
+                        },
+                        {
+                            "id": "second",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib, time; "
+                                    "time.sleep(0.25); "
+                                    f"pathlib.Path({str(second)!r}).write_text('ok')"
+                                ),
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=2,
+            max_parallel=2,
+            poll_interval_seconds=0.01,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+
+        assert result["success_count"] == 2
+        assert first.read_text() == "ok"
+        assert second.read_text() == "ok"
+        rows = conn.execute(
+            """
+            SELECT id, step_id, event_type
+            FROM queue_events
+            WHERE event_type IN ('step_process_started', 'step_succeeded')
+            ORDER BY id
+            """
+        ).fetchall()
+        ordered = [(str(row["step_id"]), str(row["event_type"])) for row in rows]
+        assert ordered == [
+            ("first", "step_process_started"),
+            ("first", "step_succeeded"),
+            ("second", "step_process_started"),
+            ("second", "step_succeeded"),
+        ]
+
+
+def test_experiment_queue_parallel_worker_finalizes_timeout_without_blocking_success(
+    tmp_path: Path,
+) -> None:
+    fast = tmp_path / "fast.txt"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "parallel_timeout_queue",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {"local_cpu": 2},
+            },
+            "experiments": [
+                {
+                    "id": "candidate_parallel_timeout",
+                    "steps": [
+                        {
+                            "id": "slow",
+                            "command": [sys.executable, "-c", "import time; time.sleep(5)"],
+                            "timeout_seconds": 1,
+                        },
+                        {
+                            "id": "fast",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(fast)!r}).write_text('ok')",
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=2,
+            max_parallel=2,
+            poll_interval_seconds=0.01,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+
+        assert result["success_count"] == 1
+        assert result["failure_count"] == 1
+        assert fast.read_text() == "ok"
+        assert queue_summary(conn, queue)["status_counts"] == {"failed": 1, "succeeded": 1}
+        timed_out = next(
+            item
+            for item in result["step_results"]
+            if item["ready_step"]["step_id"] == "slow"
+        )
+        assert timed_out["returncode"] == 124
+        assert timed_out["timed_out"] is True
+
+
 def test_experiment_queue_worker_records_failure_telemetry(tmp_path: Path) -> None:
     queue = normalize_queue_definition(
         {

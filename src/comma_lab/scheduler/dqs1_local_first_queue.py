@@ -80,6 +80,7 @@ class Dqs1QueueSelection:
 class Dqs1QueueBuildResult:
     queue: dict[str, Any]
     selection: Dqs1QueueSelection
+    selections: tuple[Dqs1QueueSelection, ...] = field(default_factory=tuple)
 
 
 def _json_load(path: Path) -> dict[str, Any]:
@@ -447,6 +448,27 @@ def select_dqs1_local_first_candidate(
     exclude_candidate_ids: set[str] | None = None,
     skip_completed_local_advisory: bool = True,
 ) -> Dqs1QueueSelection:
+    return select_dqs1_local_first_candidates(
+        action_summary_path,
+        repo_root=repo_root,
+        results_root=results_root,
+        exclude_candidate_ids=exclude_candidate_ids,
+        skip_completed_local_advisory=skip_completed_local_advisory,
+        candidate_limit=1,
+    )[0]
+
+
+def select_dqs1_local_first_candidates(
+    action_summary_path: str | Path,
+    *,
+    repo_root: str | Path,
+    results_root: str = DEFAULT_RESULTS_ROOT,
+    exclude_candidate_ids: set[str] | None = None,
+    skip_completed_local_advisory: bool = True,
+    candidate_limit: int = 1,
+) -> tuple[Dqs1QueueSelection, ...]:
+    if isinstance(candidate_limit, bool) or not isinstance(candidate_limit, int) or candidate_limit <= 0:
+        raise ExperimentQueueError("candidate_limit must be a positive integer")
     summary_path = Path(action_summary_path)
     if not summary_path.is_absolute():
         summary_path = Path(repo_root) / summary_path
@@ -465,6 +487,7 @@ def select_dqs1_local_first_candidate(
         (action for action in actions if isinstance(action, dict)),
         key=lambda action: int(action.get("operator_action_rank", 10**9)),
     )
+    selections: list[Dqs1QueueSelection] = []
     for action in sorted_actions:
         candidate_id_value = action.get("candidate_id")
         if not isinstance(candidate_id_value, str):
@@ -495,20 +518,27 @@ def select_dqs1_local_first_candidate(
             label=f"{current_candidate_id} portfolio row",
             require_all=True,
         )
-        return Dqs1QueueSelection(
-            candidate_id=current_candidate_id,
-            candidate_slug=candidate_slug(current_candidate_id),
-            selected_pair_indices=_selected_pair_indices(row, candidate_id=current_candidate_id),
-            action_summary_path=summary_path,
-            portfolio_path=portfolio_path,
-            operator_action_rank=(
-                int(action["operator_action_rank"])
-                if isinstance(action.get("operator_action_rank"), int)
-                and not isinstance(action.get("operator_action_rank"), bool)
-                else None
-            ),
-            skipped_candidates=tuple(skipped),
+        selections.append(
+            Dqs1QueueSelection(
+                candidate_id=current_candidate_id,
+                candidate_slug=candidate_slug(current_candidate_id),
+                selected_pair_indices=_selected_pair_indices(
+                    row,
+                    candidate_id=current_candidate_id,
+                ),
+                action_summary_path=summary_path,
+                portfolio_path=portfolio_path,
+                operator_action_rank=(
+                    int(action["operator_action_rank"])
+                    if isinstance(action.get("operator_action_rank"), int)
+                    and not isinstance(action.get("operator_action_rank"), bool)
+                    else None
+                ),
+                skipped_candidates=tuple(skipped),
+            )
         )
+        if len(selections) >= candidate_limit:
+            return tuple(selections)
 
     reasons = ", ".join(f"{item['candidate_id']}:{item['reason']}" for item in skipped)
     raise ExperimentQueueError(f"no safe DQS1 local-first candidate found; skipped {reasons}")
@@ -529,7 +559,14 @@ def build_dqs1_local_first_queue(
     drift_calibration_json: str = DEFAULT_DRIFT_CALIBRATION_JSON,
     eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
     eureka_run_id: str | None = None,
+    local_cpu_concurrency: int = 1,
 ) -> dict[str, Any]:
+    if (
+        isinstance(local_cpu_concurrency, bool)
+        or not isinstance(local_cpu_concurrency, int)
+        or local_cpu_concurrency <= 0
+    ):
+        raise ExperimentQueueError("local_cpu_concurrency must be a positive integer")
     date = lane_date or _lane_date_from_summary_path(selection.action_summary_path)
     selected_pairs = ",".join(str(index) for index in selection.selected_pair_indices)
     materialized_root = f"{results_root}/materialized/{selection.candidate_slug}"
@@ -549,7 +586,7 @@ def build_dqs1_local_first_queue(
             "mode": "running",
             "local_first": True,
             "max_concurrency": {
-                "local_cpu": 1,
+                "local_cpu": local_cpu_concurrency,
                 "local_mlx": 1,
                 "modal_cpu": 0,
                 "modal_gpu": 0,
@@ -722,6 +759,53 @@ def build_dqs1_local_first_queue(
     return normalize_queue_definition(queue)
 
 
+def build_dqs1_local_first_queue_from_selections(
+    selections: tuple[Dqs1QueueSelection, ...],
+    *,
+    lane_date: str | None = None,
+    queue_id: str = DEFAULT_QUEUE_ID,
+    results_root: str = DEFAULT_RESULTS_ROOT,
+    bridge_plan: str = DEFAULT_BRIDGE_PLAN,
+    base_submission_dir: str = DEFAULT_BASE_SUBMISSION_DIR,
+    global_mutated_archive: str = DEFAULT_GLOBAL_MUTATED_ARCHIVE,
+    upstream_dir: str = DEFAULT_UPSTREAM_DIR,
+    video_names_file: str = DEFAULT_VIDEO_NAMES_FILE,
+    frame_policy: str = DEFAULT_FRAME_POLICY,
+    drift_calibration_json: str = DEFAULT_DRIFT_CALIBRATION_JSON,
+    eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
+    eureka_run_id: str | None = None,
+    local_cpu_concurrency: int = 1,
+) -> dict[str, Any]:
+    if not selections:
+        raise ExperimentQueueError("at least one DQS1 queue selection is required")
+    queues = [
+        build_dqs1_local_first_queue(
+            selection,
+            lane_date=lane_date,
+            queue_id=queue_id,
+            results_root=results_root,
+            bridge_plan=bridge_plan,
+            base_submission_dir=base_submission_dir,
+            global_mutated_archive=global_mutated_archive,
+            upstream_dir=upstream_dir,
+            video_names_file=video_names_file,
+            frame_policy=frame_policy,
+            drift_calibration_json=drift_calibration_json,
+            eureka_output_dir=eureka_output_dir,
+            eureka_run_id=eureka_run_id,
+            local_cpu_concurrency=local_cpu_concurrency,
+        )
+        for selection in selections
+    ]
+    queue = dict(queues[0])
+    queue["experiments"] = [
+        experiment
+        for candidate_queue in queues
+        for experiment in candidate_queue["experiments"]
+    ]
+    return normalize_queue_definition(queue)
+
+
 def build_queue_from_action_summary(
     action_summary_path: str | Path,
     *,
@@ -738,17 +822,20 @@ def build_queue_from_action_summary(
     eureka_run_id: str | None = None,
     exclude_candidate_ids: set[str] | None = None,
     skip_completed_local_advisory: bool = True,
+    candidate_limit: int = 1,
+    local_cpu_concurrency: int = 1,
 ) -> Dqs1QueueBuildResult:
-    selection = select_dqs1_local_first_candidate(
+    selections = select_dqs1_local_first_candidates(
         action_summary_path,
         repo_root=repo_root,
         results_root=results_root,
         exclude_candidate_ids=exclude_candidate_ids,
         skip_completed_local_advisory=skip_completed_local_advisory,
+        candidate_limit=candidate_limit,
     )
     return Dqs1QueueBuildResult(
-        queue=build_dqs1_local_first_queue(
-            selection,
+        queue=build_dqs1_local_first_queue_from_selections(
+            selections,
             results_root=results_root,
             bridge_plan=bridge_plan,
             base_submission_dir=base_submission_dir,
@@ -759,6 +846,8 @@ def build_queue_from_action_summary(
             drift_calibration_json=drift_calibration_json,
             eureka_output_dir=eureka_output_dir,
             eureka_run_id=eureka_run_id,
+            local_cpu_concurrency=local_cpu_concurrency,
         ),
-        selection=selection,
+        selection=selections[0],
+        selections=selections,
     )

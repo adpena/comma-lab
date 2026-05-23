@@ -75,6 +75,10 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
                     {
                         "command": ["python", "-c", "print('hello queue')"],
                         "log_path": str(log_path),
+                        "pid": 12345,
+                        "worker_run_id": "workerabc",
+                        "timeout_seconds": 60,
+                        "timeout_deadline_epoch_seconds": 1_779_494_400.0,
                     }
                 ),
             ),
@@ -90,6 +94,10 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     running = observation["running_steps"][0]
 
     assert observation["schema"] == "experiment_queue_observation.v1"
+    assert running["pid"] == 12345
+    assert running["worker_run_id"] == "workerabc"
+    assert running["timeout_seconds"] == 60
+    assert running["timeout_deadline_epoch_seconds"] == 1_779_494_400.0
     assert running["log_tail"] == ["second"]
     assert running["expected_artifacts"][0]["exists"] is True
     assert running["expected_artifacts"][0]["json_schema"] == "artifact.v1"

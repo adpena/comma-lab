@@ -230,6 +230,54 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     )
 
 
+def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        candidate_limit=2,
+        local_cpu_concurrency=2,
+    )
+
+    assert [selection.candidate_id for selection in result.selections] == [
+        "pairset_drop_one_rank023_pair0440",
+        "pairset_drop_one_rank024_pair0112",
+    ]
+    assert result.selection.candidate_id == "pairset_drop_one_rank023_pair0440"
+    assert result.queue["controls"]["max_concurrency"]["local_cpu"] == 2
+    assert result.queue["controls"]["max_concurrency"]["modal_gpu"] == 0
+    assert [experiment["id"] for experiment in result.queue["experiments"]] == [
+        "pairset_drop_one_rank023_pair0440",
+        "pairset_drop_one_rank024_pair0112",
+    ]
+    materialize_commands = {
+        experiment["id"]: {
+            step["id"]: step["command"]
+            for step in experiment["steps"]
+        }["materialize"]
+        for experiment in result.queue["experiments"]
+    }
+    assert any(
+        "materialized/drop_rank023_pair0440/submission_dir" in part
+        for part in materialize_commands["pairset_drop_one_rank023_pair0440"]
+    )
+    assert any(
+        "materialized/drop_rank024_pair0112/submission_dir" in part
+        for part in materialize_commands["pairset_drop_one_rank024_pair0112"]
+    )
+    assert all(
+        condition["type"] == "json_false_authority"
+        for experiment in result.queue["experiments"]
+        for step in experiment["steps"]
+        for condition in step["postconditions"]
+        if condition["type"] == "json_false_authority"
+    )
+
+
 def test_dqs1_queue_builder_refuses_to_skip_positive_eureka_candidate(
     tmp_path: Path,
 ) -> None:
