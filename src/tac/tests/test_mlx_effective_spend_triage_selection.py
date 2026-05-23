@@ -36,6 +36,8 @@ def _row(
     family: str = "mlx_decoder_q",
     predicted: float = 1.0e-4,
     score_claim: bool = False,
+    raw_delta: float | None = None,
+    raw_scorer_delta: float | None = None,
 ) -> dict:
     full_gain = gain / 600.0 if normalized_gain is None else normalized_gain
     return {
@@ -55,8 +57,10 @@ def _row(
         "pair_indices": [10, 11],
         "source_path": f"candidate_pair_{row_id}.json",
         "window_baseline_source_path": f"baseline_pair_{row_id}.json",
-        "delta_vs_baseline_score": -gain,
-        "scorer_delta_vs_baseline": -gain,
+        "delta_vs_baseline_score": -gain if raw_delta is None else raw_delta,
+        "scorer_delta_vs_baseline": (
+            -gain if raw_scorer_delta is None else raw_scorer_delta
+        ),
         "observed_scorer_gain_vs_baseline": gain,
         "byte_budget_margin_vs_break_even": gain / RATE_SCORE_PER_BYTE,
         "break_even_added_bytes_from_scorer_gain": gain / RATE_SCORE_PER_BYTE,
@@ -175,6 +179,9 @@ def test_selection_uses_observed_strict_gated_rows_not_positive_predictions() ->
         selection["selected_rows"][0]["normalized_full_video_scorer_gain_vs_baseline"]
         / RATE_SCORE_PER_BYTE
     )
+    assert selection["selection_policy"]["planning_value_accessor"] == (
+        "scorer_response_planning_value_for_target"
+    )
 
 
 def test_selection_can_require_negative_predictions_when_requested() -> None:
@@ -188,6 +195,71 @@ def test_selection_can_require_negative_predictions_when_requested() -> None:
 
     assert selection["summary"]["eligible_row_count"] == 1
     assert selection["selected_rows"][0]["row_id"] == "second"
+
+
+def test_selection_uses_canonical_planning_values_not_raw_window_aliases() -> None:
+    dataset = _dataset()
+    dataset["rows"][0] = _row(
+        "raw_alias_bad",
+        gain=0.012,
+        raw_delta=0.5,
+        raw_scorer_delta=0.5,
+    )
+
+    selection = build_mlx_effective_spend_triage_selection(
+        dataset,
+        _plan(),
+        top_k=2,
+        families=["mlx_decoder_q"],
+    )
+
+    selected = selection["selected_rows"][0]
+    assert selected["row_id"] == "raw_alias_bad"
+    assert selected["observed_delta_vs_baseline_score"] == pytest.approx(0.5)
+    assert selected["selection_projected_full_video_delta_vs_baseline_score"] == (
+        pytest.approx(-0.00002)
+    )
+    assert selected["selection_planning_value_accessor"] == (
+        "scorer_response_planning_value_for_target"
+    )
+    assert selected["selection_planning_value_scope"] == "normalized_full_video"
+    assert "total_delta_not_calibrated_improvement" not in (
+        selection["summary"]["rejection_counts"]
+    )
+    assert "scorer_delta_not_calibrated_improvement" not in (
+        selection["summary"]["rejection_counts"]
+    )
+
+
+def test_selection_require_prediction_negative_normalizes_planning_alias() -> None:
+    dataset = _dataset()
+    dataset["rows"] = [
+        _row(
+            "raw_prediction_alias_bad",
+            gain=0.012,
+            raw_delta=0.5,
+            raw_scorer_delta=0.5,
+        )
+    ]
+
+    selection = build_mlx_effective_spend_triage_selection(
+        dataset,
+        _plan(),
+        top_k=2,
+        families=["mlx_decoder_q"],
+        prediction_field="delta_vs_baseline_score",
+        require_prediction_negative=True,
+    )
+
+    selected = selection["selected_rows"][0]
+    assert selected["row_id"] == "raw_prediction_alias_bad"
+    assert selected["prediction_field"] == "delta_vs_baseline_score"
+    assert selected["predicted_delta_vs_baseline_score"] == pytest.approx(-0.00002)
+    assert selected["prediction_value_accessor"] == (
+        "scorer_response_planning_value_for_target"
+    )
+    assert selected["prediction_value_scope"] == "normalized_full_video"
+    assert "prediction_not_negative" not in selection["summary"]["rejection_counts"]
 
 
 def test_selection_min_observed_gain_can_only_raise_calibrated_gap() -> None:

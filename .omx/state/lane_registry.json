@@ -48595,6 +48595,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_mlx_effective_spend_triage_planning_accessor_guard_20260523",
+      "name": "Codex MLX effective spend triage normalized planning accessor guard",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/mlx_effective_spend_triage_selection.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "pytest 148 passed; ruff passed; git diff --check clean; lane validate clean; review_tracker policy-check clean"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "Locke xhigh sidecar found prediction alias trapdoor; patched and review_tracker two-pass policy-check clean"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_mlx_effective_spend_triage_planning_accessor_guard_20260523T083505Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_codex_cross_family_manual_mlx_boundary_guard_20260523",
+      "name": "Codex cross-family manual MLX boundary guard",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/cross_family_candidate_portfolio.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "pytest 148 passed; ruff passed; git diff --check clean; lane validate clean; review_tracker policy-check clean"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "Kant xhigh sidecar found manual MLX source-kind spoof; patched and review_tracker two-pass policy-check clean"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_cross_family_manual_mlx_boundary_guard_20260523T083505Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -48604,5 +48686,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T08:28:08Z"
+  "updated_at": "2026-05-23T08:43:49Z"
 }

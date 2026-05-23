@@ -52,6 +52,17 @@ _EXACT_AXIS_ALIASES = {
     "contest-CUDA": "contest_cuda",
     "[contest-CUDA]": "contest_cuda",
 }
+_NORMALIZED_OBJECTIVE_FIELDS = (
+    "normalized_full_video_scorer_gain_vs_baseline",
+    "projected_full_video_delta_vs_baseline_score",
+    "break_even_added_bytes_from_normalized_full_video_gain",
+    "normalized_full_video_byte_budget_margin_vs_break_even",
+)
+_RESERVED_FORMAL_SOURCE_KINDS = frozenset(
+    {
+        "mlx_effective_spend_triage_selection",
+    }
+)
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -504,47 +515,114 @@ def _hfv2_candidate_rows(
     ]
 
 
+def _has_normalized_objective_fields(row: Mapping[str, Any]) -> bool:
+    return any(row.get(key) is not None for key in _NORMALIZED_OBJECTIVE_FIELDS)
+
+
+def _is_mlx_like_manual_candidate(
+    row: Mapping[str, Any],
+    *,
+    family: str,
+    source_kind: str,
+) -> bool:
+    return (
+        family.startswith("mlx_")
+        or source_kind.startswith("mlx_")
+        or row.get("source_schema") == "mlx_scorer_response.v1"
+        or row.get("axis") == "[macOS-MLX research-signal]"
+        or row.get("source_evidence_tag") == "[macOS-MLX research-signal]"
+    )
+
+
 def _manual_candidate_rows(
     manual_candidates: Sequence[Mapping[str, Any]] | None,
+    *,
+    incumbent_score: float,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for index, row in enumerate(manual_candidates or ()):
         _require_false_authority(row, label=f"manual candidate {index}")
         candidate_id = str(row.get("candidate_id") or row.get("id") or "")
         family = str(row.get("family") or row.get("family_id") or "")
+        source_kind = str(row.get("source_kind") or "manual_candidate")
         if not candidate_id or not family:
             raise CrossFamilyCandidatePortfolioError(
                 f"manual candidate {index} missing candidate_id or family"
             )
-        if any(
-            row.get(key) is not None
-            for key in (
-                "normalized_full_video_scorer_gain_vs_baseline",
-                "projected_full_video_delta_vs_baseline_score",
-                "break_even_added_bytes_from_normalized_full_video_gain",
-                "normalized_full_video_byte_budget_margin_vs_break_even",
+        if source_kind in _RESERVED_FORMAL_SOURCE_KINDS:
+            raise CrossFamilyCandidatePortfolioError(
+                f"manual candidate {candidate_id} cannot use reserved formal "
+                f"source_kind {source_kind!r}; use the matching typed input"
             )
-        ):
+        normalized_metrics: dict[str, float] | None = None
+        is_mlx_like = _is_mlx_like_manual_candidate(
+            row,
+            family=family,
+            source_kind=source_kind,
+        )
+        if is_mlx_like and not _has_normalized_objective_fields(row):
+            raise CrossFamilyCandidatePortfolioError(
+                f"manual MLX candidate {candidate_id} requires normalized "
+                "full-video objective fields; use --mlx-selection for formal "
+                "MLX spend-triage rows"
+            )
+        if is_mlx_like or _has_normalized_objective_fields(row):
             try:
-                require_normalized_full_video_objective(
+                normalized_metrics = require_normalized_full_video_objective(
                     row,
                     label=f"{candidate_id}.normalized_objective",
                 )
             except NormalizedObjectiveError as exc:
                 raise CrossFamilyCandidatePortfolioError(str(exc)) from exc
+        predicted_score_mean = _finite_float(
+            row.get("predicted_score_mean", row.get("score_mean")),
+            label=f"{candidate_id}.predicted_score_mean",
+        )
+        source_metadata = (
+            dict(row["source_metadata"])
+            if isinstance(row.get("source_metadata"), Mapping)
+            else {}
+        )
+        if is_mlx_like and normalized_metrics is not None:
+            normalized_score_mean = incumbent_score + normalized_metrics[
+                "projected_delta"
+            ]
+            if not math.isclose(
+                predicted_score_mean,
+                normalized_score_mean,
+                rel_tol=1.0e-9,
+                abs_tol=1.0e-12,
+            ):
+                raise CrossFamilyCandidatePortfolioError(
+                    f"manual MLX candidate {candidate_id}.predicted_score_mean "
+                    "must match incumbent_score + "
+                    "projected_full_video_delta_vs_baseline_score"
+                )
+            source_metadata.update(
+                {
+                    "planning_value_scope": "normalized_full_video",
+                    "normalized_full_video_scorer_gain_vs_baseline": (
+                        normalized_metrics["normalized_gain"]
+                    ),
+                    "projected_full_video_delta_vs_baseline_score": (
+                        normalized_metrics["projected_delta"]
+                    ),
+                    "normalized_full_video_byte_budget_margin_vs_break_even": (
+                        normalized_metrics["normalized_margin"]
+                    ),
+                    "manual_mlx_requires_formal_selection_for_operator_action": True,
+                }
+            )
         out.append(
             _candidate(
                 candidate_id=candidate_id,
                 family=family,
-                predicted_score_mean=_finite_float(
-                    row.get("predicted_score_mean", row.get("score_mean")),
-                    label=f"{candidate_id}.predicted_score_mean",
-                ),
+                predicted_score_mean=predicted_score_mean,
                 predicted_score_variance=_finite_float(
                     row.get("predicted_score_variance", row.get("score_variance", 1e-6)),
                     label=f"{candidate_id}.predicted_score_variance",
                 ),
-                source_kind=str(row.get("source_kind") or "manual_candidate"),
+                source_kind=source_kind,
                 source_rank=(
                     int(row["source_rank"])
                     if row.get("source_rank") is not None
@@ -565,11 +643,7 @@ def _manual_candidate_rows(
                     if isinstance(row.get("family_couplings"), Mapping)
                     else None
                 ),
-                source_metadata=(
-                    row.get("source_metadata")
-                    if isinstance(row.get("source_metadata"), Mapping)
-                    else None
-                ),
+                source_metadata=source_metadata or None,
             )
         )
     return out
@@ -1728,7 +1802,12 @@ def build_cross_family_candidate_portfolio(
                 source_artifact_path=path,
             )
         )
-    candidates.extend(_manual_candidate_rows(manual_candidates))
+    candidates.extend(
+        _manual_candidate_rows(
+            manual_candidates,
+            incumbent_score=incumbent,
+        )
+    )
 
     if not candidates:
         raise CrossFamilyCandidatePortfolioError("no candidates supplied")

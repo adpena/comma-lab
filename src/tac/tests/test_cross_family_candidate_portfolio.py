@@ -762,6 +762,47 @@ def test_portfolio_rejects_manual_mlx_normalized_objective_bypass() -> None:
         )
 
 
+def test_portfolio_rejects_manual_mlx_window_without_normalized_objective() -> None:
+    with pytest.raises(
+        CrossFamilyCandidatePortfolioError,
+        match="manual MLX candidate manual_mlx_window requires normalized full-video objective",
+    ):
+        build_cross_family_candidate_portfolio(
+            incumbent_score=0.2,
+            manual_candidates=[
+                {
+                    **_false_authority(),
+                    "candidate_id": "manual_mlx_window",
+                    "family": "mlx_decoder_q",
+                    "predicted_score_mean": 0.19,
+                    "predicted_score_variance": 1.0e-6,
+                    "delta_vs_baseline_score": -0.01,
+                    "source_n_samples": 1,
+                }
+            ],
+        )
+
+
+def test_portfolio_rejects_manual_mlx_source_kind_spoof() -> None:
+    with pytest.raises(
+        CrossFamilyCandidatePortfolioError,
+        match="cannot use reserved formal source_kind",
+    ):
+        build_cross_family_candidate_portfolio(
+            incumbent_score=0.2,
+            manual_candidates=[
+                {
+                    **_false_authority(),
+                    "candidate_id": "manual_source_kind_spoof",
+                    "family": "manual_decoder_q",
+                    "source_kind": "mlx_effective_spend_triage_selection",
+                    "predicted_score_mean": 0.19,
+                    "predicted_score_variance": 1.0e-6,
+                }
+            ],
+        )
+
+
 def test_cross_family_portfolio_cli_writes_deterministic_outputs(
     tmp_path: Path,
 ) -> None:

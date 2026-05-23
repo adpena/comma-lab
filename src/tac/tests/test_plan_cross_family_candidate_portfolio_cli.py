@@ -239,3 +239,43 @@ def test_cli_require_active_pairset_model_fails_closed_without_observations(
     assert "pairset observation response model inactive" in result.stderr
     assert "at least two exact-axis pairset observations" in result.stderr
     assert not json_out.exists()
+
+
+def test_cli_rejects_manual_mlx_candidate_without_normalized_objective(
+    tmp_path: Path,
+) -> None:
+    candidate_path = tmp_path / "manual_mlx_candidate.json"
+    json_out = tmp_path / "portfolio.json"
+    _write_json(
+        candidate_path,
+        {
+            **_false_authority(),
+            "candidate_id": "manual_mlx_window",
+            "family": "mlx_decoder_q",
+            "predicted_score_mean": 0.19,
+            "predicted_score_variance": 1.0e-6,
+            "delta_vs_baseline_score": -0.01,
+            "source_n_samples": 1,
+        },
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "plan_cross_family_candidate_portfolio.py"),
+            "--incumbent-score",
+            "0.195",
+            "--candidate-json",
+            str(candidate_path),
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "manual MLX candidate manual_mlx_window requires normalized" in result.stderr
+    assert not json_out.exists()

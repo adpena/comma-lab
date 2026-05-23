@@ -14,13 +14,29 @@ from tac.optimization.normalized_objective import (
     normalized_full_video_objective_metrics,
 )
 from tac.optimization.scorer_response_dataset import (
+    ScorerResponseDatasetError,
     render_authority_markdown_block,
+    scorer_response_planning_value_for_target,
 )
 
 SCHEMA = "mlx_effective_spend_triage_candidate_selection.v1"
 ROW_SCHEMA = "mlx_effective_spend_triage_candidate_row.v1"
 TOOL = "tac.optimization.mlx_effective_spend_triage_selection"
 DEFAULT_PREDICTION_FIELD = "ll_predicted_delta_vs_baseline_score"
+_PLANNING_TARGET_FIELDS = frozenset(
+    {
+        "delta_vs_baseline_score",
+        "projected_full_video_delta_vs_baseline_score",
+        "observed_scorer_gain_vs_baseline",
+        "normalized_full_video_scorer_gain_vs_baseline",
+        "scorer_delta_vs_baseline",
+        "scorer_delta",
+        "break_even_added_bytes_from_scorer_gain",
+        "break_even_added_bytes_from_normalized_full_video_gain",
+        "byte_budget_margin_vs_break_even",
+        "normalized_full_video_byte_budget_margin_vs_break_even",
+    }
+)
 
 _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
@@ -190,8 +206,54 @@ def _normalized_scope_metrics(row: dict[str, Any]) -> tuple[dict[str, float], li
     return {
         "normalized_gain": metrics["normalized_gain"],
         "projected_delta": metrics["projected_delta"],
+        "break_even_added_bytes": metrics["break_even_added_bytes"],
         "normalized_margin": metrics["normalized_margin"],
     }, blockers
+
+
+def _planning_value(
+    row: dict[str, Any],
+    target: str,
+    *,
+    label: str,
+    blockers: list[str],
+) -> float | None:
+    """Return the canonical planner value and convert failures to row blockers."""
+
+    try:
+        return scorer_response_planning_value_for_target(row, target, label=label)
+    except ScorerResponseDatasetError:
+        blockers.append(f"{target}_planning_value_unavailable")
+        return None
+
+
+def _prediction_value(
+    row: dict[str, Any],
+    prediction_field: str,
+    *,
+    label: str,
+    blockers: list[str] | None = None,
+) -> float | None:
+    """Return prediction-like values, normalizing planner-target aliases for MLX."""
+
+    if prediction_field in _PLANNING_TARGET_FIELDS:
+        try:
+            return scorer_response_planning_value_for_target(
+                row,
+                prediction_field,
+                label=label,
+            )
+        except ScorerResponseDatasetError:
+            if blockers is not None:
+                blockers.append(f"{prediction_field}_prediction_value_unavailable")
+            return None
+    return _as_float(row.get(prediction_field))
+
+
+def _prediction_value_scope(prediction_field: str) -> str:
+    if prediction_field in _PLANNING_TARGET_FIELDS:
+        return "normalized_full_video"
+    return "direct_prediction_field"
 
 
 def _is_candidate_row(
@@ -218,20 +280,41 @@ def _is_candidate_row(
     if row.get("source_schema") != "mlx_scorer_response.v1":
         blockers.append("source_schema_not_mlx_scorer_response")
 
-    total_delta = _as_float(row.get("delta_vs_baseline_score"))
-    scorer_delta = _as_float(row.get("scorer_delta_vs_baseline"))
-    observed_gain = _as_float(row.get("observed_scorer_gain_vs_baseline"))
-    margin = _as_float(row.get("byte_budget_margin_vs_break_even"))
+    label = str(row.get("row_id") or row.get("candidate_id") or "row")
+    total_delta = _planning_value(
+        row,
+        "delta_vs_baseline_score",
+        label=label,
+        blockers=blockers,
+    )
+    scorer_delta = _planning_value(
+        row,
+        "scorer_delta_vs_baseline",
+        label=label,
+        blockers=blockers,
+    )
+    observed_gain = _planning_value(
+        row,
+        "observed_scorer_gain_vs_baseline",
+        label=label,
+        blockers=blockers,
+    )
+    margin = _planning_value(
+        row,
+        "byte_budget_margin_vs_break_even",
+        label=label,
+        blockers=blockers,
+    )
     normalized, normalized_blockers = _normalized_scope_metrics(row)
     blockers.extend(normalized_blockers)
     if total_delta is None or total_delta >= -min_observed_gain:
-        blockers.append("total_delta_not_calibrated_improvement")
+        blockers.append("planning_delta_not_calibrated_improvement")
     if scorer_delta is None or scorer_delta >= -min_observed_gain:
-        blockers.append("scorer_delta_not_calibrated_improvement")
+        blockers.append("planning_scorer_delta_not_calibrated_improvement")
     if observed_gain is None or observed_gain < min_observed_gain:
-        blockers.append("observed_gain_below_calibrated_gap")
+        blockers.append("planning_scorer_gain_below_calibrated_gap")
     if margin is None or margin < 0.0:
-        blockers.append("byte_budget_margin_negative_or_missing")
+        blockers.append("planning_byte_budget_margin_negative_or_missing")
     if normalized["normalized_gain"] < min_observed_gain:
         blockers.append("normalized_full_video_gain_below_calibrated_gap")
     if normalized["projected_delta"] >= -min_observed_gain:
@@ -252,7 +335,12 @@ def _is_candidate_row(
         ):
             blockers.append("source_pair_window_not_singleton")
 
-    predicted_delta = _as_float(row.get(prediction_field))
+    predicted_delta = _prediction_value(
+        row,
+        prediction_field,
+        label=label,
+        blockers=blockers,
+    )
     if require_prediction_negative and (
         predicted_delta is None or predicted_delta >= 0.0
     ):
@@ -267,7 +355,8 @@ def _selection_row(
     min_observed_gain: float,
     prediction_field: str,
 ) -> dict[str, Any]:
-    predicted_delta = _as_float(row.get(prediction_field))
+    label = str(row.get("row_id") or row.get("candidate_id") or "row")
+    predicted_delta = _prediction_value(row, prediction_field, label=label)
     normalized, _blockers = _normalized_scope_metrics(row)
     return {
         "schema": ROW_SCHEMA,
@@ -282,6 +371,8 @@ def _selection_row(
         "archive_materialization_required": True,
         "requires_exact_auth_eval_before_score_claim": True,
         "selection_basis": "normalized_full_video_mlx_singleton_response_gain",
+        "selection_planning_value_accessor": "scorer_response_planning_value_for_target",
+        "selection_planning_value_scope": "normalized_full_video",
         "row_id": row.get("row_id"),
         "family": row.get("family"),
         "candidate_id": row.get("candidate_id"),
@@ -314,18 +405,18 @@ def _selection_row(
             "observed_scorer_gain_vs_baseline"
         ),
         "full_video_denominator": row.get("full_video_denominator"),
-        "normalized_full_video_scorer_gain_vs_baseline": row.get(
-            "normalized_full_video_scorer_gain_vs_baseline"
-        ),
-        "projected_full_video_delta_vs_baseline_score": row.get(
-            "projected_full_video_delta_vs_baseline_score"
-        ),
-        "break_even_added_bytes_from_normalized_full_video_gain": row.get(
-            "break_even_added_bytes_from_normalized_full_video_gain"
-        ),
-        "normalized_full_video_byte_budget_margin_vs_break_even": row.get(
-            "normalized_full_video_byte_budget_margin_vs_break_even"
-        ),
+        "normalized_full_video_scorer_gain_vs_baseline": normalized[
+            "normalized_gain"
+        ],
+        "projected_full_video_delta_vs_baseline_score": normalized[
+            "projected_delta"
+        ],
+        "break_even_added_bytes_from_normalized_full_video_gain": normalized[
+            "break_even_added_bytes"
+        ],
+        "normalized_full_video_byte_budget_margin_vs_break_even": normalized[
+            "normalized_margin"
+        ],
         "byte_budget_margin_vs_break_even": row.get(
             "byte_budget_margin_vs_break_even"
         ),
@@ -337,6 +428,12 @@ def _selection_row(
         "added_archive_bytes": row.get("added_archive_bytes"),
         "calibrated_min_mlx_gap_for_spend_triage": min_observed_gain,
         "prediction_field": prediction_field,
+        "prediction_value_accessor": (
+            "scorer_response_planning_value_for_target"
+            if prediction_field in _PLANNING_TARGET_FIELDS
+            else "direct_field"
+        ),
+        "prediction_value_scope": _prediction_value_scope(prediction_field),
         "predicted_delta_vs_baseline_score": predicted_delta,
         "selection_normalized_full_video_gain": normalized["normalized_gain"],
         "selection_projected_full_video_delta_vs_baseline_score": normalized[
@@ -488,6 +585,8 @@ def build_mlx_effective_spend_triage_selection(
                 "normalized_full_video_byte_budget_margin_vs_break_even_desc",
                 "row_id_asc",
             ],
+            "planning_value_accessor": "scorer_response_planning_value_for_target",
+            "planning_value_scope": "normalized_full_video",
         },
         "summary": {
             "dataset_row_count": len(rows),
