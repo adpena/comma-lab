@@ -1581,7 +1581,10 @@ def test_next_probe_plan_effective_mlx_spend_triage_gate_passes_only_after_datas
     )
     for index, row in enumerate(dataset["rows"]):
         value = -float(index + 1) / 1000.0
-        row["delta_vs_baseline_score"] = value
+        if row["family"] == "mlx_scorer_response":
+            _set_mlx_projected_delta(row, projected_delta=value, raw_delta=value)
+        else:
+            row["delta_vs_baseline_score"] = value
         row["predicted_delta_vs_baseline_score"] = value
 
     plan = build_next_probe_plan(
@@ -2578,6 +2581,33 @@ def _current_response_dataset_payload() -> dict:
     }
 
 
+def _set_mlx_projected_delta(
+    row: dict,
+    *,
+    projected_delta: float,
+    raw_delta: float,
+) -> None:
+    normalized_gain = -float(projected_delta)
+    row.update(
+        {
+            "delta_vs_baseline_score": float(raw_delta),
+            "scorer_delta_vs_baseline": float(raw_delta),
+            "observed_scorer_gain_vs_baseline": normalized_gain,
+            "added_archive_bytes": 0,
+            "source_n_samples": 600,
+            "full_video_denominator": 600,
+            "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+            "projected_full_video_delta_vs_baseline_score": float(projected_delta),
+            "break_even_added_bytes_from_normalized_full_video_gain": (
+                normalized_gain / RATE_SCORE_PER_BYTE
+            ),
+            "normalized_full_video_byte_budget_margin_vs_break_even": (
+                normalized_gain / RATE_SCORE_PER_BYTE
+            ),
+        }
+    )
+
+
 def _validation_dataset(
     *,
     families: tuple[str, ...],
@@ -2610,6 +2640,26 @@ def _validation_dataset(
                     "byte_budget_margin_vs_break_even": None,
                     "archive_bytes": 100,
                 }
+                if family == "mlx_scorer_response":
+                    normalized_gain = -value
+                    row.update(
+                        {
+                            "observed_scorer_gain_vs_baseline": normalized_gain,
+                            "added_archive_bytes": 0,
+                            "source_n_samples": 600,
+                            "full_video_denominator": 600,
+                            "normalized_full_video_scorer_gain_vs_baseline": (
+                                normalized_gain
+                            ),
+                            "projected_full_video_delta_vs_baseline_score": value,
+                            "break_even_added_bytes_from_normalized_full_video_gain": (
+                                normalized_gain / RATE_SCORE_PER_BYTE
+                            ),
+                            "normalized_full_video_byte_budget_margin_vs_break_even": (
+                                normalized_gain / RATE_SCORE_PER_BYTE
+                            ),
+                        }
+                    )
                 if include_prediction:
                     row["predicted_delta_vs_baseline_score"] = value
                 rows.append(row)
@@ -2751,6 +2801,50 @@ def test_out_of_fold_linear_predictions_can_satisfy_validation_gate() -> None:
     assert gate["passing_prediction_fields"] == ["ll_predicted_delta_vs_baseline_score"]
 
 
+def test_out_of_fold_linear_predictions_reject_mlx_missing_normalized_objective() -> None:
+    dataset = _validation_dataset(families=("mlx_scorer_response",), rows_per_fold=4)
+    for row in dataset["rows"]:
+        for field in (
+            "normalized_full_video_scorer_gain_vs_baseline",
+            "projected_full_video_delta_vs_baseline_score",
+            "break_even_added_bytes_from_normalized_full_video_gain",
+            "normalized_full_video_byte_budget_margin_vs_break_even",
+        ):
+            row.pop(field, None)
+
+    with pytest.raises(
+        ScorerResponseDatasetError,
+        match="missing normalized full-video objective",
+    ):
+        attach_out_of_fold_linear_predictions(dataset)
+
+
+def test_out_of_fold_linear_predictions_use_mlx_projected_full_video_target() -> None:
+    dataset = _validation_dataset(families=("mlx_scorer_response",), rows_per_fold=4)
+    for row in dataset["rows"]:
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        pair_start = fold * 4 + offset
+        projected_delta = 0.001 + 0.00001 * pair_start
+        _set_mlx_projected_delta(row, projected_delta=projected_delta, raw_delta=-10.0)
+        row["source_pair_window"] = [pair_start, pair_start + 1]
+
+    predicted = attach_out_of_fold_linear_predictions(dataset)
+    metrics = predicted["prediction_fit"]["candidate_family_metrics"][
+        "mlx_scorer_response"
+    ]
+
+    assert predicted["prediction_fit"]["target_value_accessor"] == (
+        "scorer_response_planning_value_for_target"
+    )
+    assert predicted["prediction_fit"]["score_claim_valid"] is False
+    assert predicted["summary"]["improved_total_score_count"] == 0
+    assert metrics["score_claim_valid"] is False
+    assert metrics["observed_improvement_count"] == 0
+    assert metrics["top_k"]["8"]["mean_observed_delta_in_predicted_top_k"] > 0.0
+    assert metrics["spend_triage_usable"] is False
+
+
 def test_validation_gate_surfaces_control_masked_candidate_family_failure() -> None:
     dataset = _validation_dataset(
         families=("mlx_fec6_auth_parent", "mlx_decoder_q"),
@@ -2845,6 +2939,74 @@ def test_validation_gate_marks_candidate_family_spend_triage_usable_when_real_si
     assert evaluation["candidate_family_spend_triage_usable"] is True
     assert candidate_metrics["overall_pearson_r"] == pytest.approx(1.0)
     assert candidate_metrics["top_k"]["8"]["overlap_count"] == 8
+
+
+def test_validation_gate_blocks_mlx_missing_normalized_objective() -> None:
+    dataset = _validation_dataset(
+        families=("mlx_scorer_response",),
+        rows_per_fold=12,
+        include_prediction=True,
+    )
+    for row in dataset["rows"]:
+        for field in (
+            "normalized_full_video_scorer_gain_vs_baseline",
+            "projected_full_video_delta_vs_baseline_score",
+            "break_even_added_bytes_from_normalized_full_video_gain",
+            "normalized_full_video_byte_budget_margin_vs_break_even",
+        ):
+            row.pop(field, None)
+
+    gate = build_scorer_response_validation_gate(
+        dataset,
+        min_rows=10,
+        min_families=1,
+    )
+
+    assert gate["status"] == "blocked"
+    assert gate["prediction_spend_triage_usable"] is False
+    assert any(
+        "missing normalized full-video objective" in blocker
+        for blocker in gate["blockers"]
+    )
+
+
+def test_validation_gate_uses_projected_full_video_delta_for_mlx_target() -> None:
+    dataset = _validation_dataset(families=("mlx_scorer_response",), rows_per_fold=12)
+    for row in dataset["rows"]:
+        fold = int(row["holdout_fold"])
+        offset = int(row["candidate_id"].split("-")[-1])
+        pair_start = fold * 12 + offset
+        projected_delta = 0.001 + 0.000001 * pair_start
+        _set_mlx_projected_delta(row, projected_delta=projected_delta, raw_delta=-10.0)
+        row["predicted_delta_vs_baseline_score"] = projected_delta
+
+    gate = build_scorer_response_validation_gate(
+        dataset,
+        min_rows=10,
+        min_families=1,
+        required_spend_triage_families=("mlx_scorer_response",),
+    )
+    evaluation = next(
+        item
+        for item in gate["prediction_evaluations"]
+        if item["field"] == "predicted_delta_vs_baseline_score"
+    )
+    metrics = evaluation["candidate_family_metrics"]["mlx_scorer_response"]
+
+    assert gate["status"] == "passed"
+    assert gate["thresholds"]["planning_target_accessor"] == (
+        "scorer_response_planning_value_for_target"
+    )
+    assert gate["prediction_spend_triage_usable"] is False
+    assert gate["required_family_spend_triage_blockers"] == [
+        "required_family_oof_gate_blocked:mlx_scorer_response"
+    ]
+    assert gate["family_spend_triage_gates"]["mlx_scorer_response"][
+        "score_claim_valid"
+    ] is False
+    assert metrics["score_claim_valid"] is False
+    assert metrics["observed_improvement_count"] == 0
+    assert metrics["top_k"]["8"]["mean_observed_delta_in_predicted_top_k"] > 0.0
 
 
 def test_expanded_oof_predictions_support_group_hash_folds_without_authority() -> None:

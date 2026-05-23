@@ -3635,6 +3635,7 @@ def build_scorer_response_validation_gate(
             continue
         fold_counts[fold] = fold_counts.get(fold, 0) + 1
         family_folds.setdefault(family, set()).add(fold)
+    planning_target_blockers = _planning_target_blockers(rows, target=target)
 
     required_set = set(folds_required)
     global_folds_present = {fold for fold in fold_counts if fold in required_set}
@@ -3645,17 +3646,21 @@ def build_scorer_response_validation_gate(
         if required_set.issubset(folds)
     )
 
-    prediction_evaluations = [
-        _evaluate_prediction_field(
-            rows=rows,
-            field=str(field),
-            target=target,
-            required_folds=folds_required,
-            min_prediction_pairs_per_fold=min_prediction_pairs_per_fold,
-            min_pearson_r=min_pearson_r,
-        )
-        for field in prediction_fields
-    ]
+    prediction_evaluations = (
+        []
+        if planning_target_blockers
+        else [
+            _evaluate_prediction_field(
+                rows=rows,
+                field=str(field),
+                target=target,
+                required_folds=folds_required,
+                min_prediction_pairs_per_fold=min_prediction_pairs_per_fold,
+                min_pearson_r=min_pearson_r,
+            )
+            for field in prediction_fields
+        ]
+    )
     prediction_evaluations = [
         item for item in prediction_evaluations if item["present_pair_count"] > 0
     ]
@@ -3710,6 +3715,7 @@ def build_scorer_response_validation_gate(
             blockers.append("missing_axis_target")
         if len(axis_counts) != 1:
             blockers.append(f"mixed_axis_targets:{sorted(axis_counts)}")
+    blockers.extend(planning_target_blockers)
     if not prediction_evaluations:
         blockers.append("no_prediction_fields_present")
     elif not passing_predictions:
@@ -3759,6 +3765,9 @@ def build_scorer_response_validation_gate(
             "min_prediction_pairs_per_fold": int(min_prediction_pairs_per_fold),
             "min_pearson_r": float(min_pearson_r),
             "require_single_axis": bool(require_single_axis),
+            "planning_target_accessor": (
+                "scorer_response_planning_value_for_target"
+            ),
             "candidate_family_min_pearson_r": (
                 PREDICTION_CANDIDATE_FAMILY_MIN_PEARSON_R
             ),
@@ -3812,6 +3821,30 @@ def fold_count_for_family(rows: list[dict[str, Any]], family: str, fold: int) ->
     )
 
 
+def _planning_target_blockers(
+    rows: list[dict[str, Any]],
+    *,
+    target: str,
+) -> list[str]:
+    blockers: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict) or not _is_mlx_scorer_response_row(row):
+            continue
+        row_id = str(row.get("row_id") or "<unknown>")
+        try:
+            value = scorer_response_planning_value_for_target(
+                row,
+                target,
+                label=row_id,
+            )
+        except ScorerResponseDatasetError as exc:
+            blockers.append(f"invalid_planning_target:{row_id}:{exc}")
+            continue
+        if value is None:
+            blockers.append(f"missing_planning_target:{row_id}:{target}")
+    return blockers
+
+
 def _evaluate_prediction_field(
     *,
     rows: list[dict[str, Any]],
@@ -3831,7 +3864,11 @@ def _evaluate_prediction_field(
             if _as_int(row.get("holdout_fold")) != fold:
                 continue
             pred = _as_float(row.get(field))
-            observed = _as_float(row.get(target))
+            observed = scorer_response_planning_value_for_target(
+                row,
+                target,
+                label=str(row.get("row_id") or "<unknown>"),
+            )
             if pred is None or observed is None:
                 continue
             xs.append(pred)
@@ -3926,6 +3963,7 @@ def _family_spend_triage_gates(
                 "exact_eval_dispatch_selection_without_family_gate",
             ],
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "rank_or_kill_eligible": False,
@@ -3963,7 +4001,11 @@ def _candidate_family_prediction_metrics(
                 if _as_int(row.get("holdout_fold")) != fold:
                     continue
                 pred = _as_float(row.get(field))
-                observed = _as_float(row.get(target))
+                observed = scorer_response_planning_value_for_target(
+                    row,
+                    target,
+                    label=str(row.get("row_id") or "<unknown>"),
+                )
                 if pred is None or observed is None:
                     continue
                 xs.append(pred)
@@ -4009,6 +4051,7 @@ def _candidate_family_prediction_metrics(
             "top_k": top_k,
             "spend_triage_usable": spend_triage_usable,
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "rank_or_kill_eligible": False,
@@ -4026,7 +4069,11 @@ def _candidate_family_top_k_metrics(
     pairs: list[tuple[str, float, float]] = []
     for row in rows:
         pred = _as_float(row.get(field))
-        observed = _as_float(row.get(target))
+        observed = scorer_response_planning_value_for_target(
+            row,
+            target,
+            label=str(row.get("row_id") or "<unknown>"),
+        )
         if pred is None or observed is None:
             continue
         pairs.append((str(row.get("row_id")), pred, observed))
@@ -5030,6 +5077,47 @@ def _planning_scope(row: dict[str, Any]) -> str:
     return "native_row_missing_normalized_full_video_objective"
 
 
+def scorer_response_planning_value_for_target(
+    row: dict[str, Any],
+    target: str,
+    *,
+    label: str = "row",
+) -> float | None:
+    """Return the canonical planner/training value for a response target."""
+
+    if not _is_mlx_scorer_response_row(row):
+        return _as_float(row.get(target))
+    if _mlx_normalized_objective_for_planning(row) is None:
+        raise ScorerResponseDatasetError(
+            f"{label}: mlx_scorer_response row missing normalized full-video objective"
+        )
+    if target in {
+        "delta_vs_baseline_score",
+        "projected_full_video_delta_vs_baseline_score",
+    }:
+        return _planning_delta_vs_baseline(row)
+    if target in {
+        "observed_scorer_gain_vs_baseline",
+        "normalized_full_video_scorer_gain_vs_baseline",
+    }:
+        return _planning_scorer_gain(row)
+    if target in {"scorer_delta_vs_baseline", "scorer_delta"}:
+        return _planning_scorer_delta_vs_baseline(row)
+    if target in {
+        "break_even_added_bytes_from_scorer_gain",
+        "break_even_added_bytes_from_normalized_full_video_gain",
+    }:
+        return _planning_break_even_bytes(row)
+    if target in {
+        "byte_budget_margin_vs_break_even",
+        "normalized_full_video_byte_budget_margin_vs_break_even",
+    }:
+        return _planning_byte_budget_margin(row)
+    raise ScorerResponseDatasetError(
+        f"{label}: unsupported MLX scorer-response planning target {target!r}"
+    )
+
+
 def _planning_delta_vs_baseline(row: dict[str, Any]) -> float | None:
     normalized = _mlx_normalized_objective_for_planning(row)
     if normalized is not None:
@@ -5182,7 +5270,11 @@ def feature_correlations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             ys: list[float] = []
             for row in rows:
                 x = _as_float(row.get(feature))
-                y = _as_float(row.get(target))
+                y = scorer_response_planning_value_for_target(
+                    row,
+                    target,
+                    label=str(row.get("row_id") or "<unknown>"),
+                )
                 if x is not None and y is not None:
                     xs.append(x)
                     ys.append(y)

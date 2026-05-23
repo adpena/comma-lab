@@ -14,6 +14,7 @@ from tac.optimization.scorer_response_dataset import (
     ScorerResponseDatasetError,
     feature_correlations,
     normalize_legacy_response_dataset_authority,
+    scorer_response_planning_value_for_target,
     summarize_rows,
 )
 
@@ -125,7 +126,20 @@ def attach_out_of_fold_linear_predictions(
 
     candidate_designs = _candidate_design_matrices(rows, model_family=model_family)
     feature_names = candidate_designs[0]["feature_names"]
-    y = np.asarray([_required_float(row.get(target), f"{target} for {row.get('row_id')}") for row in rows], dtype=np.float64)
+    y = np.asarray(
+        [
+            _required_float(
+                scorer_response_planning_value_for_target(
+                    row,
+                    target,
+                    label=str(row.get("row_id") or "<unknown>"),
+                ),
+                f"{target} for {row.get('row_id')}",
+            )
+            for row in rows
+        ],
+        dtype=np.float64,
+    )
     folds = _folds_for_rows(
         rows,
         fold_strategy=fold_strategy,
@@ -204,6 +218,7 @@ def attach_out_of_fold_linear_predictions(
     out["prediction_fit"] = {
         "schema": schema,
         "target": target,
+        "target_value_accessor": "scorer_response_planning_value_for_target",
         "prediction_field": prediction_field,
         "model_family": model_family,
         "ridge_lambda": float(ridge_lambda),
@@ -223,6 +238,7 @@ def attach_out_of_fold_linear_predictions(
             prediction_field=prediction_field,
         ),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
@@ -615,7 +631,11 @@ def _candidate_family_metrics(
                 if _optional_int(row.get("holdout_fold")) != fold:
                     continue
                 pred = _optional_float(row.get(prediction_field), default=None)
-                actual = _optional_float(row.get(target), default=None)
+                actual = scorer_response_planning_value_for_target(
+                    row,
+                    target,
+                    label=str(row.get("row_id") or "<unknown>"),
+                )
                 if pred is None or actual is None:
                     continue
                 fold_predictions.append(pred)
@@ -665,6 +685,7 @@ def _candidate_family_metrics(
             "top_k": top_k_metrics,
             "spend_triage_usable": spend_triage_usable,
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "rank_or_kill_eligible": False,
@@ -682,7 +703,11 @@ def _top_k_metrics(
     pairs = []
     for row in rows:
         pred = _optional_float(row.get(prediction_field), default=None)
-        actual = _optional_float(row.get(target), default=None)
+        actual = scorer_response_planning_value_for_target(
+            row,
+            target,
+            label=str(row.get("row_id") or "<unknown>"),
+        )
         if pred is None or actual is None:
             continue
         pairs.append((str(row.get("row_id")), pred, actual))
