@@ -45,6 +45,7 @@ class MaterializerAdapter:
     implementation_module: str = ""
     plan_function: str = ""
     materialize_function: str = ""
+    receiver_proof_function: str = ""
     receiver_verify_function: str = ""
 
 
@@ -93,6 +94,7 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         plan_function="build_byte_range_entropy_recode_plan",
         materialize_function="materialize_byte_range_entropy_recode_candidate",
+        receiver_proof_function="build_byte_range_entropy_recode_receiver_proof",
         receiver_verify_function=(
             "verify_byte_range_entropy_recode_receiver_contract"
         ),
@@ -307,6 +309,7 @@ def registry_manifest() -> dict[str, Any]:
                 "implementation_module": adapter.implementation_module,
                 "plan_function": adapter.plan_function,
                 "materialize_function": adapter.materialize_function,
+                "receiver_proof_function": adapter.receiver_proof_function,
                 "receiver_verify_function": adapter.receiver_verify_function,
                 "description": adapter.description,
             }

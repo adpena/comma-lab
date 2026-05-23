@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 import brotli
@@ -18,13 +21,20 @@ from tac.optimization.byte_range_entropy_recode_materializer import (
     RECEIVER_PROOF_SCHEMA,
     TARGET_KIND,
     build_byte_range_entropy_recode_plan,
+    build_byte_range_entropy_recode_receiver_proof,
     materialize_byte_range_entropy_recode_candidate,
     verify_byte_range_entropy_recode_receiver_contract,
 )
 from tac.pr103_arithmetic_transform_plan import (
+    CANDIDATE_SCHEMA as PR103_CANDIDATE_SCHEMA,
+)
+from tac.pr103_arithmetic_transform_plan import (
     build_pr103_arithmetic_histogram_beam_probe,
 )
-from tac.repo_io import sha256_bytes
+from tac.repo_io import sha256_bytes, sha256_file, write_json
+
+REPO = Path(__file__).resolve().parents[3]
+PROOF_SCRIPT = REPO / "tools" / "build_byte_range_entropy_recode_receiver_proof.py"
 
 
 def test_byte_range_entropy_recode_plan_requires_runtime_proof() -> None:
@@ -128,6 +138,169 @@ def test_pr103_backed_byte_range_entropy_materializer_emits_byte_closed_candidat
     )
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+
+    receiver_proof = {
+        "schema": RECEIVER_PROOF_SCHEMA,
+        "ready_for_exact_eval_runtime": True,
+        "archive_member_name": report["archive_member_name"],
+        "candidate_archive_sha256": report["candidate_archive"]["sha256"],
+        "candidate_member_sha256": report["candidate_archive"]["member_sha256"],
+        "archive_byte_ranges": report["archive_byte_ranges"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+    }
+    proven_report = materialize_byte_range_entropy_recode_candidate(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam,),
+        output_archive=tmp_path / "candidate_with_receiver_proof.zip",
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        runtime_consumption_proof=receiver_proof,
+    )
+
+    assert proven_report["receiver_contract_satisfied"] is True
+    assert "candidate_runtime_adapter_missing" not in proven_report[
+        "readiness_blockers"
+    ]
+    assert "byte_range_entropy_recode_receiver_contract_not_satisfied" not in proven_report[
+        "readiness_blockers"
+    ]
+    assert "candidate_inflate_output_parity_missing" in proven_report[
+        "readiness_blockers"
+    ]
+
+
+def test_byte_range_entropy_receiver_proof_transcodes_pr103_runtime_adapter(
+    tmp_path: Path,
+) -> None:
+    fixture = _receiver_proof_fixture(tmp_path)
+
+    proof = build_byte_range_entropy_recode_receiver_proof(
+        runtime_adapter_manifest=fixture["runtime_adapter_manifest"],
+        repo_root=tmp_path,
+    )
+
+    assert proof["schema"] == RECEIVER_PROOF_SCHEMA
+    assert proof["ready_for_exact_eval_runtime"] is True
+    assert proof["candidate_archive_sha256"] == sha256_file(fixture["candidate_archive"])
+    assert proof["candidate_member_sha256"] == "b" * 64
+    assert proof["archive_byte_ranges"] == [_expected_receiver_range()]
+    verification = verify_byte_range_entropy_recode_receiver_contract(
+        runtime_consumption_proof=proof,
+        required_archive_member_name="x",
+        required_candidate_archive_sha256=sha256_file(fixture["candidate_archive"]),
+        required_candidate_member_sha256="b" * 64,
+    )
+    assert verification["receiver_contract_satisfied"] is True
+    assert verification["blockers"] == []
+
+
+def test_byte_range_entropy_receiver_proof_cli_writes_json(tmp_path: Path) -> None:
+    fixture = _receiver_proof_fixture(tmp_path)
+    json_out = tmp_path / "receiver_proof.json"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(PROOF_SCRIPT),
+            "--runtime-adapter-manifest",
+            str(fixture["runtime_adapter_manifest"]),
+            "--json-out",
+            str(json_out),
+            "--fail-if-not-ready",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    proof = json.loads(json_out.read_text(encoding="utf-8"))
+    assert proof["schema"] == RECEIVER_PROOF_SCHEMA
+    assert proof["ready_for_exact_eval_runtime"] is True
+    assert proof["tool_run_manifest"]["ready_for_exact_eval_dispatch"] is False
+    assert proof["archive_byte_ranges"] == [_expected_receiver_range()]
+
+
+def _receiver_proof_fixture(tmp_path: Path) -> dict[str, Path]:
+    candidate_archive = tmp_path / "candidate.zip"
+    write_stored_single_member_zip(candidate_archive, member_name="x", payload=b"abcdefgh")
+    candidate_manifest = {
+        "schema": PR103_CANDIDATE_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "candidate_archive": {
+            "path": "candidate.zip",
+            "bytes": candidate_archive.stat().st_size,
+            "sha256": sha256_file(candidate_archive),
+            "member_name": "x",
+            "member_sha256": "b" * 64,
+        },
+        "section_diffs": [
+            {
+                "name": "ac_histograms_brotli",
+                "source_start": 2,
+                "source_end": 6,
+                "source_bytes": 4,
+                "source_sha256": "c" * 64,
+                "candidate_start": 2,
+                "candidate_end": 5,
+                "candidate_bytes": 3,
+                "candidate_sha256": "d" * 64,
+                "byte_delta": -1,
+                "changed": True,
+            }
+        ],
+    }
+    candidate_manifest_path = tmp_path / "candidate_manifest.json"
+    write_json(candidate_manifest_path, candidate_manifest)
+    runtime_adapter_manifest = {
+        "schema": "pr103_lc_ac_runtime_adapter_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "candidate_manifest": {
+            "path": "candidate_manifest.json",
+            "bytes": candidate_manifest_path.stat().st_size,
+            "sha256": sha256_file(candidate_manifest_path),
+        },
+        "candidate_archive": {
+            "path": "candidate.zip",
+            "bytes": candidate_archive.stat().st_size,
+            "sha256": sha256_file(candidate_archive),
+        },
+        "runtime_consumption_probe": {"passed": True},
+        "decoder_state_parity_proof": {"passed": True},
+        "runtime_tree_sha256": "e" * 64,
+        "readiness_blockers": ["full_frame_render_output_parity_missing"],
+    }
+    runtime_adapter_manifest_path = tmp_path / "runtime_adapter_manifest.json"
+    write_json(runtime_adapter_manifest_path, runtime_adapter_manifest)
+    return {
+        "candidate_archive": candidate_archive,
+        "candidate_manifest": candidate_manifest_path,
+        "runtime_adapter_manifest": runtime_adapter_manifest_path,
+    }
+
+
+def _expected_receiver_range() -> dict[str, object]:
+    return {
+        "schema": "byte_range_entropy_recode_archive_range_v1",
+        "archive_member_name": "x",
+        "section_name": "ac_histograms_brotli",
+        "source_start": 2,
+        "source_end": 6,
+        "source_bytes": 4,
+        "source_sha256": "c" * 64,
+        "candidate_start": 2,
+        "candidate_end": 5,
+        "candidate_bytes": 3,
+        "candidate_sha256": "d" * 64,
+        "byte_delta": -1,
+    }
 
 
 def _probe_fixture(tmp_path: Path) -> dict:

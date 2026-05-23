@@ -29,7 +29,7 @@ from tac.pr103_arithmetic_transform_plan import (
     Pr103ArithmeticTransformPlanError,
     materialize_pr103_arithmetic_histogram_candidate,
 )
-from tac.repo_io import read_json
+from tac.repo_io import read_json, sha256_file
 
 PLAN_SCHEMA = "byte_range_entropy_recode_plan_v1"
 CANDIDATE_SCHEMA = "byte_range_entropy_recode_candidate_v1"
@@ -154,9 +154,16 @@ def materialize_byte_range_entropy_recode_candidate(
             candidate_label="byte_range_entropy_recode_candidate",
         )
 
+    pr103_blockers = [str(item) for item in pr103_report.get("readiness_blockers") or []]
+    if receiver_verification["receiver_contract_satisfied"] is True:
+        pr103_blockers = [
+            blocker
+            for blocker in pr103_blockers
+            if blocker != "candidate_runtime_adapter_missing"
+        ]
     readiness_blockers = _ordered_unique(
         [
-            *[str(item) for item in pr103_report.get("readiness_blockers") or []],
+            *pr103_blockers,
             *receiver_verification["blockers"],
             *(
                 []
@@ -186,6 +193,90 @@ def materialize_byte_range_entropy_recode_candidate(
         ),
         "readiness_blockers": readiness_blockers,
         "ready_for_archive_preflight": False,
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_byte_range_entropy_recode_receiver_proof(
+    *,
+    runtime_adapter_manifest: str | Path | Mapping[str, Any],
+    candidate_manifest: str | Path | Mapping[str, Any] | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Convert a PR103 runtime-adapter manifest into the byte-range proof."""
+
+    repo = Path(repo_root) if repo_root is not None else Path.cwd()
+    adapter, adapter_record = _load_runtime_adapter_manifest(
+        runtime_adapter_manifest,
+        repo=repo,
+    )
+    candidate, candidate_record = _load_candidate_manifest_for_adapter(
+        adapter,
+        candidate_manifest=candidate_manifest,
+        repo=repo,
+        adapter_record=adapter_record,
+    )
+    adapter_candidate = _mapping(adapter.get("candidate_archive"))
+    candidate_archive = _mapping(candidate.get("candidate_archive"))
+    archive_member_name = _clean_str(candidate_archive.get("member_name"))
+    archive_byte_ranges = _changed_archive_byte_ranges(
+        candidate,
+        archive_member_name=archive_member_name,
+    )
+    runtime_probe = _mapping(adapter.get("runtime_consumption_probe"))
+    decoder_parity = _mapping(adapter.get("decoder_state_parity_proof"))
+    blockers = _ordered_unique(
+        [
+            *(
+                []
+                if adapter.get("score_claim") is False
+                else ["runtime_adapter_manifest_must_not_claim_score"]
+            ),
+            *(
+                []
+                if adapter.get("dispatch_attempted") is False
+                else ["runtime_adapter_manifest_must_not_dispatch"]
+            ),
+            *(
+                []
+                if runtime_probe.get("passed") is True
+                else ["runtime_consumption_probe_not_passed"]
+            ),
+            *(
+                []
+                if decoder_parity.get("passed") is True
+                else ["decoder_state_parity_not_passed"]
+            ),
+            *(
+                []
+                if _clean_str(adapter_candidate.get("sha256"))
+                == _clean_str(candidate_archive.get("sha256"))
+                else ["runtime_adapter_candidate_archive_sha_mismatch"]
+            ),
+            *(
+                []
+                if _clean_str(adapter_candidate.get("sha256"))
+                else ["runtime_adapter_candidate_archive_sha_missing"]
+            ),
+            *(["archive_member_name_missing"] if not archive_member_name else []),
+            *(["archive_byte_ranges_missing"] if not archive_byte_ranges else []),
+        ]
+    )
+    return {
+        "schema": RECEIVER_PROOF_SCHEMA,
+        "receiver_contract_id": RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+        "ready_for_exact_eval_runtime": not blockers,
+        "runtime_adapter_manifest": adapter_record,
+        "candidate_manifest": candidate_record,
+        "archive_member_name": archive_member_name,
+        "archive_byte_ranges": archive_byte_ranges,
+        "candidate_archive_sha256": _clean_str(candidate_archive.get("sha256")),
+        "candidate_member_sha256": _clean_str(candidate_archive.get("member_sha256")),
+        "runtime_tree_sha256": _clean_str(adapter.get("runtime_tree_sha256")),
+        "runtime_consumption_probe": runtime_probe,
+        "decoder_state_parity_proof": decoder_parity,
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 
@@ -334,6 +425,119 @@ def _load_optional_mapping(value: str | Path | Mapping[str, Any] | None) -> dict
     return payload
 
 
+def _load_runtime_adapter_manifest(
+    value: str | Path | Mapping[str, Any],
+    *,
+    repo: Path,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    payload, record = _load_required_mapping_with_record(
+        value,
+        repo=repo,
+        label="runtime adapter manifest",
+    )
+    if payload.get("schema") != "pr103_lc_ac_runtime_adapter_v1":
+        raise ByteRangeEntropyRecodeMaterializerError(
+            "runtime adapter manifest must have schema pr103_lc_ac_runtime_adapter_v1"
+        )
+    return payload, record
+
+
+def _load_candidate_manifest_for_adapter(
+    adapter: Mapping[str, Any],
+    *,
+    candidate_manifest: str | Path | Mapping[str, Any] | None,
+    repo: Path,
+    adapter_record: Mapping[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if candidate_manifest is not None:
+        payload, record = _load_required_mapping_with_record(
+            candidate_manifest,
+            repo=repo,
+            label="candidate manifest",
+        )
+    else:
+        manifest_ref = _mapping(adapter.get("candidate_manifest"))
+        path_text = _clean_str(manifest_ref.get("path"))
+        if not path_text:
+            raise ByteRangeEntropyRecodeMaterializerError(
+                "runtime adapter manifest missing candidate_manifest.path"
+            )
+        manifest_path = _candidate_manifest_path_from_adapter_record(
+            path_text,
+            adapter_record=adapter_record,
+            repo=repo,
+        )
+        payload, record = _load_required_mapping_with_record(
+            manifest_path,
+            repo=repo,
+            label="candidate manifest",
+        )
+        expected_sha = _clean_str(manifest_ref.get("sha256"))
+        if expected_sha and record.get("sha256") != expected_sha:
+            raise ByteRangeEntropyRecodeMaterializerError(
+                "candidate manifest sha256 does not match runtime adapter record"
+            )
+    if payload.get("schema") != PR103_CANDIDATE_SCHEMA:
+        raise ByteRangeEntropyRecodeMaterializerError(
+            f"candidate manifest must have schema {PR103_CANDIDATE_SCHEMA}"
+        )
+    if payload.get("score_claim") is True or payload.get("dispatch_attempted") is True:
+        raise ByteRangeEntropyRecodeMaterializerError(
+            "candidate manifest must be a no-score local artifact"
+        )
+    return payload, record
+
+
+def _candidate_manifest_path_from_adapter_record(
+    path_text: str,
+    *,
+    adapter_record: Mapping[str, Any],
+    repo: Path,
+) -> Path:
+    path = Path(path_text)
+    if path.is_absolute():
+        return path
+    repo_path = repo / path
+    if repo_path.exists():
+        return repo_path
+    adapter_path_text = _clean_str(adapter_record.get("path"))
+    if adapter_path_text:
+        adapter_path = Path(adapter_path_text)
+        if not adapter_path.is_absolute():
+            adapter_path = repo / adapter_path
+        sibling_path = adapter_path.parent / path
+        if sibling_path.exists():
+            return sibling_path
+    return repo_path
+
+
+def _load_required_mapping_with_record(
+    value: str | Path | Mapping[str, Any],
+    *,
+    repo: Path,
+    label: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if isinstance(value, Mapping):
+        return dict(value), {"provided_inline": True, "path": "", "sha256": ""}
+    path = _resolve_existing_repo_path(value, repo=repo)
+    try:
+        payload = read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ByteRangeEntropyRecodeMaterializerError(
+            f"{label} unreadable: {path}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ByteRangeEntropyRecodeMaterializerError(
+            f"{label} is not a JSON object: {path}"
+        )
+    return payload, {
+        "provided_inline": False,
+        "path": path.relative_to(repo).as_posix() if _path_is_relative_to(path, repo) else path.as_posix(),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
+
+
 def _resolve_repo_path(value: Any, repo: Path) -> Path | None:
     text = _clean_str(value)
     if not text:
@@ -342,6 +546,23 @@ def _resolve_repo_path(value: Any, repo: Path) -> Path | None:
     if not path.is_absolute():
         path = repo / path
     return path if path.exists() else None
+
+
+def _resolve_existing_repo_path(value: str | Path, *, repo: Path) -> Path:
+    path = Path(value)
+    if not path.is_absolute():
+        path = repo / path
+    if not path.exists():
+        raise ByteRangeEntropyRecodeMaterializerError(f"path does not exist: {path}")
+    return path
+
+
+def _path_is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
@@ -374,6 +595,7 @@ __all__ = [
     "TARGET_KIND",
     "ByteRangeEntropyRecodeMaterializerError",
     "build_byte_range_entropy_recode_plan",
+    "build_byte_range_entropy_recode_receiver_proof",
     "materialize_byte_range_entropy_recode_candidate",
     "verify_byte_range_entropy_recode_receiver_contract",
 ]

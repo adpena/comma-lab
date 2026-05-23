@@ -224,6 +224,7 @@ def _suggested_materializer_rows(
             "implementation_module": adapter.implementation_module,
             "plan_function": adapter.plan_function,
             "materialize_function": adapter.materialize_function,
+            "receiver_proof_function": adapter.receiver_proof_function,
             "receiver_verify_function": adapter.receiver_verify_function,
             "description": adapter.description,
         }

@@ -119,6 +119,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         "implementation_module": "comma_lab.scheduler.byte_shaving_campaign_queue",
         "plan_function": "",
         "materialize_function": "",
+        "receiver_proof_function": "",
         "receiver_verify_function": "",
         "operation_family": "drop_pair",
         "receiver_contract_id": DQS1_RECEIVER_CONTRACT_ID,
@@ -141,6 +142,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         ),
         "plan_function": "build_byte_range_entropy_recode_plan",
         "materialize_function": "materialize_byte_range_entropy_recode_candidate",
+        "receiver_proof_function": "build_byte_range_entropy_recode_receiver_proof",
         "receiver_verify_function": (
             "verify_byte_range_entropy_recode_receiver_contract"
         ),
@@ -580,6 +582,9 @@ def test_compile_dqs1_byte_shaving_plan_suggests_byte_range_entropy_target_kind(
             ),
             "plan_function": "build_byte_range_entropy_recode_plan",
             "materialize_function": "materialize_byte_range_entropy_recode_candidate",
+            "receiver_proof_function": (
+                "build_byte_range_entropy_recode_receiver_proof"
+            ),
             "receiver_verify_function": (
                 "verify_byte_range_entropy_recode_receiver_contract"
             ),
