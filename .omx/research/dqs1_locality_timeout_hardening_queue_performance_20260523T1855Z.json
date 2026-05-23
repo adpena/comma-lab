@@ -1,0 +1,3919 @@
+{
+  "by_resource_kind": {
+    "local_cpu": {
+      "artifact_record_bytes_mean": 10.686868686868687,
+      "artifact_record_bytes_sum": 2116,
+      "artifact_record_count": 1,
+      "artifact_record_raw_bytes_mean": 10.686868686868687,
+      "artifact_record_raw_bytes_sum": 2116,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 916.2875947089633,
+      "elapsed_seconds_mean": 132.18576464687933,
+      "elapsed_seconds_min": 0.04487445799168199,
+      "elapsed_seconds_sum": 26172.78140008211,
+      "failure_count": 6,
+      "log_bytes_mean": 49.792929292929294,
+      "log_bytes_sum": 9859,
+      "resource_kind_counts": {
+        "local_cpu": 198
+      },
+      "run_count": 198,
+      "success_count": 192
+    },
+    "local_io_heavy": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 411.09687350003514,
+      "elapsed_seconds_mean": 145.88102978320094,
+      "elapsed_seconds_min": 8.12857866595732,
+      "elapsed_seconds_sum": 729.4051489160047,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_io_heavy": 5
+      },
+      "run_count": 5,
+      "success_count": 5
+    },
+    "local_mlx": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_mlx",
+      "elapsed_seconds_max": 34.805533417034894,
+      "elapsed_seconds_mean": 34.805533417034894,
+      "elapsed_seconds_min": 34.805533417034894,
+      "elapsed_seconds_sum": 34.805533417034894,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_mlx": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    }
+  },
+  "by_step": {
+    "dqs1_scheduler_preflight.proactive_cleanup": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 11.096576375013683,
+      "elapsed_seconds_mean": 11.096576375013683,
+      "elapsed_seconds_min": 11.096576375013683,
+      "elapsed_seconds_sum": 11.096576375013683,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "dqs1_scheduler_preflight.storage_tier_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5168904169695452,
+      "elapsed_seconds_mean": 0.5168904169695452,
+      "elapsed_seconds_min": 0.5168904169695452,
+      "elapsed_seconds_sum": 0.5168904169695452,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank001_pair0501.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 516.3198652499705,
+      "elapsed_seconds_mean": 516.3198652499705,
+      "elapsed_seconds_min": 516.3198652499705,
+      "elapsed_seconds_sum": 516.3198652499705,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank001_pair0501.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 144.9149534170283,
+      "elapsed_seconds_mean": 144.9149534170283,
+      "elapsed_seconds_min": 144.9149534170283,
+      "elapsed_seconds_sum": 144.9149534170283,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank001_pair0501.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.49436137499287724,
+      "elapsed_seconds_mean": 0.49436137499287724,
+      "elapsed_seconds_min": 0.49436137499287724,
+      "elapsed_seconds_sum": 0.49436137499287724,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank001_pair0501.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7324332499993034,
+      "elapsed_seconds_mean": 0.7324332499993034,
+      "elapsed_seconds_min": 0.7324332499993034,
+      "elapsed_seconds_sum": 0.7324332499993034,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank002_pair0109.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 510.8055777080008,
+      "elapsed_seconds_mean": 510.8055777080008,
+      "elapsed_seconds_min": 510.8055777080008,
+      "elapsed_seconds_sum": 510.8055777080008,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank002_pair0109.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 142.8906128340168,
+      "elapsed_seconds_mean": 142.8906128340168,
+      "elapsed_seconds_min": 142.8906128340168,
+      "elapsed_seconds_sum": 142.8906128340168,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank002_pair0109.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.4529817499569617,
+      "elapsed_seconds_mean": 0.4529817499569617,
+      "elapsed_seconds_min": 0.4529817499569617,
+      "elapsed_seconds_sum": 0.4529817499569617,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank002_pair0109.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6446067499928176,
+      "elapsed_seconds_mean": 0.6446067499928176,
+      "elapsed_seconds_min": 0.6446067499928176,
+      "elapsed_seconds_sum": 0.6446067499928176,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank003_pair0479.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 477.6799997499911,
+      "elapsed_seconds_mean": 477.6799997499911,
+      "elapsed_seconds_min": 477.6799997499911,
+      "elapsed_seconds_sum": 477.6799997499911,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank003_pair0479.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 142.42889354203362,
+      "elapsed_seconds_mean": 142.42889354203362,
+      "elapsed_seconds_min": 142.42889354203362,
+      "elapsed_seconds_sum": 142.42889354203362,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank003_pair0479.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.45310620800592005,
+      "elapsed_seconds_mean": 0.45310620800592005,
+      "elapsed_seconds_min": 0.45310620800592005,
+      "elapsed_seconds_sum": 0.45310620800592005,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank003_pair0479.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6431449160445482,
+      "elapsed_seconds_mean": 0.6431449160445482,
+      "elapsed_seconds_min": 0.6431449160445482,
+      "elapsed_seconds_sum": 0.6431449160445482,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank004_pair0098.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 500.93135245796293,
+      "elapsed_seconds_mean": 500.93135245796293,
+      "elapsed_seconds_min": 500.93135245796293,
+      "elapsed_seconds_sum": 500.93135245796293,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank004_pair0098.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 144.32152262504678,
+      "elapsed_seconds_mean": 144.32152262504678,
+      "elapsed_seconds_min": 144.32152262504678,
+      "elapsed_seconds_sum": 144.32152262504678,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank004_pair0098.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5303233750164509,
+      "elapsed_seconds_mean": 0.5303233750164509,
+      "elapsed_seconds_min": 0.5303233750164509,
+      "elapsed_seconds_sum": 0.5303233750164509,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank004_pair0098.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7260370000149123,
+      "elapsed_seconds_mean": 0.7260370000149123,
+      "elapsed_seconds_min": 0.7260370000149123,
+      "elapsed_seconds_sum": 0.7260370000149123,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank005_pair0467.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 512.5196482499596,
+      "elapsed_seconds_mean": 512.5196482499596,
+      "elapsed_seconds_min": 512.5196482499596,
+      "elapsed_seconds_sum": 512.5196482499596,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank005_pair0467.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 151.0490742919501,
+      "elapsed_seconds_mean": 151.0490742919501,
+      "elapsed_seconds_min": 151.0490742919501,
+      "elapsed_seconds_sum": 151.0490742919501,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank005_pair0467.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5421394579461776,
+      "elapsed_seconds_mean": 0.5421394579461776,
+      "elapsed_seconds_min": 0.5421394579461776,
+      "elapsed_seconds_sum": 0.5421394579461776,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank005_pair0467.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7117644590325654,
+      "elapsed_seconds_mean": 0.7117644590325654,
+      "elapsed_seconds_min": 0.7117644590325654,
+      "elapsed_seconds_sum": 0.7117644590325654,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank006_pair0544.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 509.24658887501573,
+      "elapsed_seconds_mean": 509.24658887501573,
+      "elapsed_seconds_min": 509.24658887501573,
+      "elapsed_seconds_sum": 509.24658887501573,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank006_pair0544.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 147.91498983296333,
+      "elapsed_seconds_mean": 147.91498983296333,
+      "elapsed_seconds_min": 147.91498983296333,
+      "elapsed_seconds_sum": 147.91498983296333,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank006_pair0544.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6318760419962928,
+      "elapsed_seconds_mean": 0.6318760419962928,
+      "elapsed_seconds_min": 0.6318760419962928,
+      "elapsed_seconds_sum": 0.6318760419962928,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank006_pair0544.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7279731250018813,
+      "elapsed_seconds_mean": 0.7279731250018813,
+      "elapsed_seconds_min": 0.7279731250018813,
+      "elapsed_seconds_sum": 0.7279731250018813,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank007_pair0059.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 493.0372563340352,
+      "elapsed_seconds_mean": 493.0372563340352,
+      "elapsed_seconds_min": 493.0372563340352,
+      "elapsed_seconds_sum": 493.0372563340352,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank007_pair0059.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 143.77609979198314,
+      "elapsed_seconds_mean": 143.77609979198314,
+      "elapsed_seconds_min": 143.77609979198314,
+      "elapsed_seconds_sum": 143.77609979198314,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank007_pair0059.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5158063329872675,
+      "elapsed_seconds_mean": 0.5158063329872675,
+      "elapsed_seconds_min": 0.5158063329872675,
+      "elapsed_seconds_sum": 0.5158063329872675,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank007_pair0059.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7451916669961065,
+      "elapsed_seconds_mean": 0.7451916669961065,
+      "elapsed_seconds_min": 0.7451916669961065,
+      "elapsed_seconds_sum": 0.7451916669961065,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank008_pair0496.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 556.6898357080063,
+      "elapsed_seconds_mean": 556.6898357080063,
+      "elapsed_seconds_min": 556.6898357080063,
+      "elapsed_seconds_sum": 556.6898357080063,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank008_pair0496.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 162.06390233297134,
+      "elapsed_seconds_mean": 162.06390233297134,
+      "elapsed_seconds_min": 162.06390233297134,
+      "elapsed_seconds_sum": 162.06390233297134,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank008_pair0496.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5771214159904048,
+      "elapsed_seconds_mean": 0.5771214159904048,
+      "elapsed_seconds_min": 0.5771214159904048,
+      "elapsed_seconds_sum": 0.5771214159904048,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank008_pair0496.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7798064579837956,
+      "elapsed_seconds_mean": 0.7798064579837956,
+      "elapsed_seconds_min": 0.7798064579837956,
+      "elapsed_seconds_sum": 0.7798064579837956,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank009_pair0459.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 501.6217568749562,
+      "elapsed_seconds_mean": 501.6217568749562,
+      "elapsed_seconds_min": 501.6217568749562,
+      "elapsed_seconds_sum": 501.6217568749562,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank009_pair0459.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.08137366699520499,
+      "elapsed_seconds_mean": 0.08137366699520499,
+      "elapsed_seconds_min": 0.08137366699520499,
+      "elapsed_seconds_sum": 0.08137366699520499,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank009_pair0459.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 146.23644554201746,
+      "elapsed_seconds_mean": 146.23644554201746,
+      "elapsed_seconds_min": 146.23644554201746,
+      "elapsed_seconds_sum": 146.23644554201746,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank009_pair0459.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.4480054580490105,
+      "elapsed_seconds_mean": 0.4480054580490105,
+      "elapsed_seconds_min": 0.4480054580490105,
+      "elapsed_seconds_sum": 0.4480054580490105,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank009_pair0459.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6290990829584189,
+      "elapsed_seconds_mean": 0.6290990829584189,
+      "elapsed_seconds_min": 0.6290990829584189,
+      "elapsed_seconds_sum": 0.6290990829584189,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank011_pair0555.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 494.19138154096436,
+      "elapsed_seconds_mean": 494.19138154096436,
+      "elapsed_seconds_min": 494.19138154096436,
+      "elapsed_seconds_sum": 494.19138154096436,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank011_pair0555.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.04797479201806709,
+      "elapsed_seconds_mean": 0.04797479201806709,
+      "elapsed_seconds_min": 0.04797479201806709,
+      "elapsed_seconds_sum": 0.04797479201806709,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank011_pair0555.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 147.37810174998594,
+      "elapsed_seconds_mean": 147.37810174998594,
+      "elapsed_seconds_min": 147.37810174998594,
+      "elapsed_seconds_sum": 147.37810174998594,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank011_pair0555.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5093240829883143,
+      "elapsed_seconds_mean": 0.5093240829883143,
+      "elapsed_seconds_min": 0.5093240829883143,
+      "elapsed_seconds_sum": 0.5093240829883143,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank011_pair0555.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7295640840311535,
+      "elapsed_seconds_mean": 0.7295640840311535,
+      "elapsed_seconds_min": 0.7295640840311535,
+      "elapsed_seconds_sum": 0.7295640840311535,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank012_pair0134.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 502.34997541701887,
+      "elapsed_seconds_mean": 502.34997541701887,
+      "elapsed_seconds_min": 502.34997541701887,
+      "elapsed_seconds_sum": 502.34997541701887,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank012_pair0134.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.04657175001921132,
+      "elapsed_seconds_mean": 0.04657175001921132,
+      "elapsed_seconds_min": 0.04657175001921132,
+      "elapsed_seconds_sum": 0.04657175001921132,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank012_pair0134.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 144.03337958303746,
+      "elapsed_seconds_mean": 144.03337958303746,
+      "elapsed_seconds_min": 144.03337958303746,
+      "elapsed_seconds_sum": 144.03337958303746,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank012_pair0134.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5040247089928016,
+      "elapsed_seconds_mean": 0.5040247089928016,
+      "elapsed_seconds_min": 0.5040247089928016,
+      "elapsed_seconds_sum": 0.5040247089928016,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank012_pair0134.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6868659580359235,
+      "elapsed_seconds_mean": 0.6868659580359235,
+      "elapsed_seconds_min": 0.6868659580359235,
+      "elapsed_seconds_sum": 0.6868659580359235,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank014_pair0492.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 550.2968774579931,
+      "elapsed_seconds_mean": 550.2968774579931,
+      "elapsed_seconds_min": 550.2968774579931,
+      "elapsed_seconds_sum": 550.2968774579931,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank014_pair0492.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 145.57146645803005,
+      "elapsed_seconds_mean": 145.57146645803005,
+      "elapsed_seconds_min": 145.57146645803005,
+      "elapsed_seconds_sum": 145.57146645803005,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank014_pair0492.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5276154169696383,
+      "elapsed_seconds_mean": 0.5276154169696383,
+      "elapsed_seconds_min": 0.5276154169696383,
+      "elapsed_seconds_sum": 0.5276154169696383,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank014_pair0492.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7593085410189815,
+      "elapsed_seconds_mean": 0.7593085410189815,
+      "elapsed_seconds_min": 0.7593085410189815,
+      "elapsed_seconds_sum": 0.7593085410189815,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank015_pair0068.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 494.78020858298987,
+      "elapsed_seconds_mean": 494.78020858298987,
+      "elapsed_seconds_min": 494.78020858298987,
+      "elapsed_seconds_sum": 494.78020858298987,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank015_pair0068.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 138.67378041602205,
+      "elapsed_seconds_mean": 138.67378041602205,
+      "elapsed_seconds_min": 138.67378041602205,
+      "elapsed_seconds_sum": 138.67378041602205,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank015_pair0068.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.47478899999987334,
+      "elapsed_seconds_mean": 0.47478899999987334,
+      "elapsed_seconds_min": 0.47478899999987334,
+      "elapsed_seconds_sum": 0.47478899999987334,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank015_pair0068.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6758404590073042,
+      "elapsed_seconds_mean": 0.6758404590073042,
+      "elapsed_seconds_min": 0.6758404590073042,
+      "elapsed_seconds_sum": 0.6758404590073042,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank016_pair0229.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 507.4315183330327,
+      "elapsed_seconds_mean": 507.4315183330327,
+      "elapsed_seconds_min": 507.4315183330327,
+      "elapsed_seconds_sum": 507.4315183330327,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank016_pair0229.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 141.3325950000435,
+      "elapsed_seconds_mean": 141.3325950000435,
+      "elapsed_seconds_min": 141.3325950000435,
+      "elapsed_seconds_sum": 141.3325950000435,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank016_pair0229.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.503670958976727,
+      "elapsed_seconds_mean": 0.503670958976727,
+      "elapsed_seconds_min": 0.503670958976727,
+      "elapsed_seconds_sum": 0.503670958976727,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank016_pair0229.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7212066249921918,
+      "elapsed_seconds_mean": 0.7212066249921918,
+      "elapsed_seconds_min": 0.7212066249921918,
+      "elapsed_seconds_sum": 0.7212066249921918,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank017_pair0242.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 480.02570199995534,
+      "elapsed_seconds_mean": 480.02570199995534,
+      "elapsed_seconds_min": 480.02570199995534,
+      "elapsed_seconds_sum": 480.02570199995534,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank017_pair0242.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 147.81565854203654,
+      "elapsed_seconds_mean": 147.81565854203654,
+      "elapsed_seconds_min": 147.81565854203654,
+      "elapsed_seconds_sum": 147.81565854203654,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank017_pair0242.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5399139579967596,
+      "elapsed_seconds_mean": 0.5399139579967596,
+      "elapsed_seconds_min": 0.5399139579967596,
+      "elapsed_seconds_sum": 0.5399139579967596,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank017_pair0242.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7765557080274448,
+      "elapsed_seconds_mean": 0.7765557080274448,
+      "elapsed_seconds_min": 0.7765557080274448,
+      "elapsed_seconds_sum": 0.7765557080274448,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank018_pair0588.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 514.7173388749943,
+      "elapsed_seconds_mean": 514.7173388749943,
+      "elapsed_seconds_min": 514.7173388749943,
+      "elapsed_seconds_sum": 514.7173388749943,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank018_pair0588.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 141.513956083043,
+      "elapsed_seconds_mean": 141.513956083043,
+      "elapsed_seconds_min": 141.513956083043,
+      "elapsed_seconds_sum": 141.513956083043,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank018_pair0588.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5327067080070265,
+      "elapsed_seconds_mean": 0.5327067080070265,
+      "elapsed_seconds_min": 0.5327067080070265,
+      "elapsed_seconds_sum": 0.5327067080070265,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank018_pair0588.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6953275830019265,
+      "elapsed_seconds_mean": 0.6953275830019265,
+      "elapsed_seconds_min": 0.6953275830019265,
+      "elapsed_seconds_sum": 0.6953275830019265,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank023_pair0440.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 1.0155390839790925,
+      "elapsed_seconds_mean": 1.0155390839790925,
+      "elapsed_seconds_min": 1.0155390839790925,
+      "elapsed_seconds_sum": 1.0155390839790925,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank023_pair0440.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 752.7764656249783,
+      "elapsed_seconds_mean": 752.7764656249783,
+      "elapsed_seconds_min": 752.7764656249783,
+      "elapsed_seconds_sum": 752.7764656249783,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank023_pair0440.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.2686745829996653,
+      "elapsed_seconds_mean": 0.2686745829996653,
+      "elapsed_seconds_min": 0.2686745829996653,
+      "elapsed_seconds_sum": 0.2686745829996653,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank023_pair0440.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 901.2052206660155,
+      "elapsed_seconds_mean": 353.9441146523265,
+      "elapsed_seconds_min": 8.12857866595732,
+      "elapsed_seconds_sum": 1061.8323439569795,
+      "failure_count": 1,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1,
+        "local_io_heavy": 2
+      },
+      "run_count": 3,
+      "success_count": 2
+    },
+    "pairset_drop_one_rank023_pair0440.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 1.0167599159758538,
+      "elapsed_seconds_mean": 0.7436504369834438,
+      "elapsed_seconds_min": 0.4705409579910338,
+      "elapsed_seconds_sum": 1.4873008739668876,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "success_count": 2
+    },
+    "pairset_drop_one_rank023_pair0440.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 1.0132774589583278,
+      "elapsed_seconds_mean": 0.8379871459619608,
+      "elapsed_seconds_min": 0.6626968329655938,
+      "elapsed_seconds_sum": 1.6759742919239216,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "success_count": 2
+    },
+    "pairset_drop_one_rank023_pair0440.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 411.09687350003514,
+      "elapsed_seconds_mean": 265.65296891651815,
+      "elapsed_seconds_min": 120.20906433300115,
+      "elapsed_seconds_sum": 531.3059378330363,
+      "failure_count": 1,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1,
+        "local_io_heavy": 1
+      },
+      "run_count": 2,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank024_pair0112.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 1.014043292030692,
+      "elapsed_seconds_mean": 1.014043292030692,
+      "elapsed_seconds_min": 1.014043292030692,
+      "elapsed_seconds_sum": 1.014043292030692,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank024_pair0112.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 916.2875947089633,
+      "elapsed_seconds_mean": 721.7309314584709,
+      "elapsed_seconds_min": 527.1742682079785,
+      "elapsed_seconds_sum": 1443.4618629169418,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "success_count": 2
+    },
+    "pairset_drop_one_rank024_pair0112.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 1058.0,
+      "artifact_record_bytes_sum": 2116,
+      "artifact_record_count": 1,
+      "artifact_record_raw_bytes_mean": 1058.0,
+      "artifact_record_raw_bytes_sum": 2116,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5041907919803634,
+      "elapsed_seconds_mean": 0.38276329200016335,
+      "elapsed_seconds_min": 0.26133579201996326,
+      "elapsed_seconds_sum": 0.7655265840003267,
+      "failure_count": 1,
+      "log_bytes_mean": 4929.5,
+      "log_bytes_sum": 9859,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank024_pair0112.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_io_heavy",
+      "elapsed_seconds_max": 901.284704041027,
+      "elapsed_seconds_mean": 352.98861872201087,
+      "elapsed_seconds_min": 8.308042332995683,
+      "elapsed_seconds_sum": 1058.9658561660326,
+      "failure_count": 1,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1,
+        "local_io_heavy": 2
+      },
+      "run_count": 3,
+      "success_count": 2
+    },
+    "pairset_drop_one_rank024_pair0112.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 1.0143972500227392,
+      "elapsed_seconds_mean": 0.7510683749860618,
+      "elapsed_seconds_min": 0.4877394999493845,
+      "elapsed_seconds_sum": 1.5021367499721237,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "success_count": 2
+    },
+    "pairset_drop_one_rank024_pair0112.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 1.0107814579969272,
+      "elapsed_seconds_mean": 0.8360255415027495,
+      "elapsed_seconds_min": 0.6612696250085719,
+      "elapsed_seconds_sum": 1.672051083005499,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "success_count": 2
+    },
+    "pairset_drop_one_rank024_pair0112.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.25716733402805403,
+      "elapsed_seconds_mean": 0.25716733402805403,
+      "elapsed_seconds_min": 0.25716733402805403,
+      "elapsed_seconds_sum": 0.25716733402805403,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank025_pair0026.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 501.85673399997177,
+      "elapsed_seconds_mean": 501.85673399997177,
+      "elapsed_seconds_min": 501.85673399997177,
+      "elapsed_seconds_sum": 501.85673399997177,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank025_pair0026.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 149.0248157089809,
+      "elapsed_seconds_mean": 149.0248157089809,
+      "elapsed_seconds_min": 149.0248157089809,
+      "elapsed_seconds_sum": 149.0248157089809,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank025_pair0026.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5287119169952348,
+      "elapsed_seconds_mean": 0.5287119169952348,
+      "elapsed_seconds_min": 0.5287119169952348,
+      "elapsed_seconds_sum": 0.5287119169952348,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank025_pair0026.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7452369579696096,
+      "elapsed_seconds_mean": 0.7452369579696096,
+      "elapsed_seconds_min": 0.7452369579696096,
+      "elapsed_seconds_sum": 0.7452369579696096,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank028_pair0257.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 486.1458313749754,
+      "elapsed_seconds_mean": 486.1458313749754,
+      "elapsed_seconds_min": 486.1458313749754,
+      "elapsed_seconds_sum": 486.1458313749754,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank028_pair0257.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.045111540996003896,
+      "elapsed_seconds_mean": 0.045111540996003896,
+      "elapsed_seconds_min": 0.045111540996003896,
+      "elapsed_seconds_sum": 0.045111540996003896,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank028_pair0257.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 147.3714061670471,
+      "elapsed_seconds_mean": 147.3714061670471,
+      "elapsed_seconds_min": 147.3714061670471,
+      "elapsed_seconds_sum": 147.3714061670471,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank028_pair0257.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.47699737502261996,
+      "elapsed_seconds_mean": 0.47699737502261996,
+      "elapsed_seconds_min": 0.47699737502261996,
+      "elapsed_seconds_sum": 0.47699737502261996,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank028_pair0257.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6699575840029866,
+      "elapsed_seconds_mean": 0.6699575840029866,
+      "elapsed_seconds_min": 0.6699575840029866,
+      "elapsed_seconds_sum": 0.6699575840029866,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank029_pair0259.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 543.8939440000104,
+      "elapsed_seconds_mean": 543.8939440000104,
+      "elapsed_seconds_min": 543.8939440000104,
+      "elapsed_seconds_sum": 543.8939440000104,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank029_pair0259.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 143.3554958330351,
+      "elapsed_seconds_mean": 143.3554958330351,
+      "elapsed_seconds_min": 143.3554958330351,
+      "elapsed_seconds_sum": 143.3554958330351,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank029_pair0259.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5596793749718927,
+      "elapsed_seconds_mean": 0.5596793749718927,
+      "elapsed_seconds_min": 0.5596793749718927,
+      "elapsed_seconds_sum": 0.5596793749718927,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank029_pair0259.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7322344160056673,
+      "elapsed_seconds_mean": 0.7322344160056673,
+      "elapsed_seconds_min": 0.7322344160056673,
+      "elapsed_seconds_sum": 0.7322344160056673,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank030_pair0412.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 521.0666187499883,
+      "elapsed_seconds_mean": 521.0666187499883,
+      "elapsed_seconds_min": 521.0666187499883,
+      "elapsed_seconds_sum": 521.0666187499883,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank030_pair0412.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.04606216604588553,
+      "elapsed_seconds_mean": 0.04606216604588553,
+      "elapsed_seconds_min": 0.04606216604588553,
+      "elapsed_seconds_sum": 0.04606216604588553,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank030_pair0412.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 148.42826166696614,
+      "elapsed_seconds_mean": 148.42826166696614,
+      "elapsed_seconds_min": 148.42826166696614,
+      "elapsed_seconds_sum": 148.42826166696614,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank030_pair0412.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5520569169893861,
+      "elapsed_seconds_mean": 0.5520569169893861,
+      "elapsed_seconds_min": 0.5520569169893861,
+      "elapsed_seconds_sum": 0.5520569169893861,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_one_rank030_pair0412.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7335773750091903,
+      "elapsed_seconds_mean": 0.7335773750091903,
+      "elapsed_seconds_min": 0.7335773750091903,
+      "elapsed_seconds_sum": 0.7335773750091903,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_003_p0376_0479.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5231097500072792,
+      "elapsed_seconds_mean": 0.5231097500072792,
+      "elapsed_seconds_min": 0.5231097500072792,
+      "elapsed_seconds_sum": 0.5231097500072792,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_003_p0376_0479.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 482.37291733402526,
+      "elapsed_seconds_mean": 482.37291733402526,
+      "elapsed_seconds_min": 482.37291733402526,
+      "elapsed_seconds_sum": 482.37291733402526,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_003_p0376_0479.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.2652100840350613,
+      "elapsed_seconds_mean": 0.2652100840350613,
+      "elapsed_seconds_min": 0.2652100840350613,
+      "elapsed_seconds_sum": 0.2652100840350613,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_003_p0376_0479.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 139.018205499975,
+      "elapsed_seconds_mean": 139.018205499975,
+      "elapsed_seconds_min": 139.018205499975,
+      "elapsed_seconds_sum": 139.018205499975,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_003_p0376_0479.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5222731250105426,
+      "elapsed_seconds_mean": 0.5222731250105426,
+      "elapsed_seconds_min": 0.5222731250105426,
+      "elapsed_seconds_sum": 0.5222731250105426,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_003_p0376_0479.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7709428329835646,
+      "elapsed_seconds_mean": 0.7709428329835646,
+      "elapsed_seconds_min": 0.7709428329835646,
+      "elapsed_seconds_sum": 0.7709428329835646,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_003_p0376_0479.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 4.928396667004563,
+      "elapsed_seconds_mean": 4.928396667004563,
+      "elapsed_seconds_min": 4.928396667004563,
+      "elapsed_seconds_sum": 4.928396667004563,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_005_p0376_0467.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5265912920003757,
+      "elapsed_seconds_mean": 0.5265912920003757,
+      "elapsed_seconds_min": 0.5265912920003757,
+      "elapsed_seconds_sum": 0.5265912920003757,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_005_p0376_0467.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 482.9414834160125,
+      "elapsed_seconds_mean": 482.9414834160125,
+      "elapsed_seconds_min": 482.9414834160125,
+      "elapsed_seconds_sum": 482.9414834160125,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_005_p0376_0467.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.26259875000687316,
+      "elapsed_seconds_mean": 0.26259875000687316,
+      "elapsed_seconds_min": 0.26259875000687316,
+      "elapsed_seconds_sum": 0.26259875000687316,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_005_p0376_0467.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 140.08603487501387,
+      "elapsed_seconds_mean": 140.08603487501387,
+      "elapsed_seconds_min": 140.08603487501387,
+      "elapsed_seconds_sum": 140.08603487501387,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_005_p0376_0467.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5262110420153476,
+      "elapsed_seconds_mean": 0.5262110420153476,
+      "elapsed_seconds_min": 0.5262110420153476,
+      "elapsed_seconds_sum": 0.5262110420153476,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_005_p0376_0467.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7712767909979448,
+      "elapsed_seconds_mean": 0.7712767909979448,
+      "elapsed_seconds_min": 0.7712767909979448,
+      "elapsed_seconds_sum": 0.7712767909979448,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_005_p0376_0467.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 1.3045424169977196,
+      "elapsed_seconds_mean": 1.3045424169977196,
+      "elapsed_seconds_min": 1.3045424169977196,
+      "elapsed_seconds_sum": 1.3045424169977196,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_008_p0376_0496.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5252336669946089,
+      "elapsed_seconds_mean": 0.5252336669946089,
+      "elapsed_seconds_min": 0.5252336669946089,
+      "elapsed_seconds_sum": 0.5252336669946089,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_008_p0376_0496.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 501.8782616669778,
+      "elapsed_seconds_mean": 501.8782616669778,
+      "elapsed_seconds_min": 501.8782616669778,
+      "elapsed_seconds_sum": 501.8782616669778,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_008_p0376_0496.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.2593613750068471,
+      "elapsed_seconds_mean": 0.2593613750068471,
+      "elapsed_seconds_min": 0.2593613750068471,
+      "elapsed_seconds_sum": 0.2593613750068471,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_008_p0376_0496.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 140.34969766699942,
+      "elapsed_seconds_mean": 140.34969766699942,
+      "elapsed_seconds_min": 140.34969766699942,
+      "elapsed_seconds_sum": 140.34969766699942,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_008_p0376_0496.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5257798340171576,
+      "elapsed_seconds_mean": 0.5257798340171576,
+      "elapsed_seconds_min": 0.5257798340171576,
+      "elapsed_seconds_sum": 0.5257798340171576,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_008_p0376_0496.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7765190419740975,
+      "elapsed_seconds_mean": 0.7765190419740975,
+      "elapsed_seconds_min": 0.7765190419740975,
+      "elapsed_seconds_sum": 0.7765190419740975,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_008_p0376_0496.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 5.088476834003814,
+      "elapsed_seconds_mean": 5.088476834003814,
+      "elapsed_seconds_min": 5.088476834003814,
+      "elapsed_seconds_sum": 5.088476834003814,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_009_p0376_0459.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5247227920335717,
+      "elapsed_seconds_mean": 0.5247227920335717,
+      "elapsed_seconds_min": 0.5247227920335717,
+      "elapsed_seconds_sum": 0.5247227920335717,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_009_p0376_0459.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 482.0514114170219,
+      "elapsed_seconds_mean": 482.0514114170219,
+      "elapsed_seconds_min": 482.0514114170219,
+      "elapsed_seconds_sum": 482.0514114170219,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_009_p0376_0459.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.26400008297059685,
+      "elapsed_seconds_mean": 0.26400008297059685,
+      "elapsed_seconds_min": 0.26400008297059685,
+      "elapsed_seconds_sum": 0.26400008297059685,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_009_p0376_0459.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 138.81742037495133,
+      "elapsed_seconds_mean": 138.81742037495133,
+      "elapsed_seconds_min": 138.81742037495133,
+      "elapsed_seconds_sum": 138.81742037495133,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_009_p0376_0459.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.526346625003498,
+      "elapsed_seconds_mean": 0.526346625003498,
+      "elapsed_seconds_min": 0.526346625003498,
+      "elapsed_seconds_sum": 0.526346625003498,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_009_p0376_0459.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7848382079973817,
+      "elapsed_seconds_mean": 0.7848382079973817,
+      "elapsed_seconds_min": 0.7848382079973817,
+      "elapsed_seconds_sum": 0.7848382079973817,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r010_009_p0376_0459.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 4.932419791992288,
+      "elapsed_seconds_mean": 4.932419791992288,
+      "elapsed_seconds_min": 4.932419791992288,
+      "elapsed_seconds_sum": 4.932419791992288,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_020_p0257_0430.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5217046670150012,
+      "elapsed_seconds_mean": 0.5217046670150012,
+      "elapsed_seconds_min": 0.5217046670150012,
+      "elapsed_seconds_sum": 0.5217046670150012,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_020_p0257_0430.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 477.76187462505186,
+      "elapsed_seconds_mean": 477.76187462505186,
+      "elapsed_seconds_min": 477.76187462505186,
+      "elapsed_seconds_sum": 477.76187462505186,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_020_p0257_0430.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.25877766602206975,
+      "elapsed_seconds_mean": 0.25877766602206975,
+      "elapsed_seconds_min": 0.25877766602206975,
+      "elapsed_seconds_sum": 0.25877766602206975,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_020_p0257_0430.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 133.5576256249915,
+      "elapsed_seconds_mean": 133.5576256249915,
+      "elapsed_seconds_min": 133.5576256249915,
+      "elapsed_seconds_sum": 133.5576256249915,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_020_p0257_0430.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5229811670142226,
+      "elapsed_seconds_mean": 0.5229811670142226,
+      "elapsed_seconds_min": 0.5229811670142226,
+      "elapsed_seconds_sum": 0.5229811670142226,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_020_p0257_0430.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.781927666044794,
+      "elapsed_seconds_mean": 0.781927666044794,
+      "elapsed_seconds_min": 0.781927666044794,
+      "elapsed_seconds_sum": 0.781927666044794,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_020_p0257_0430.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 4.938536332978401,
+      "elapsed_seconds_mean": 4.938536332978401,
+      "elapsed_seconds_min": 4.938536332978401,
+      "elapsed_seconds_sum": 4.938536332978401,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_023_p0257_0440.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5254214580054395,
+      "elapsed_seconds_mean": 0.5254214580054395,
+      "elapsed_seconds_min": 0.5254214580054395,
+      "elapsed_seconds_sum": 0.5254214580054395,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_023_p0257_0440.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 479.55382470804034,
+      "elapsed_seconds_mean": 479.55382470804034,
+      "elapsed_seconds_min": 479.55382470804034,
+      "elapsed_seconds_sum": 479.55382470804034,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_023_p0257_0440.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.26125720801064745,
+      "elapsed_seconds_mean": 0.26125720801064745,
+      "elapsed_seconds_min": 0.26125720801064745,
+      "elapsed_seconds_sum": 0.26125720801064745,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_023_p0257_0440.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 137.4443956670002,
+      "elapsed_seconds_mean": 137.4443956670002,
+      "elapsed_seconds_min": 137.4443956670002,
+      "elapsed_seconds_sum": 137.4443956670002,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_023_p0257_0440.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5275656669982709,
+      "elapsed_seconds_mean": 0.5275656669982709,
+      "elapsed_seconds_min": 0.5275656669982709,
+      "elapsed_seconds_sum": 0.5275656669982709,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_023_p0257_0440.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7839717920287512,
+      "elapsed_seconds_mean": 0.7839717920287512,
+      "elapsed_seconds_min": 0.7839717920287512,
+      "elapsed_seconds_sum": 0.7839717920287512,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_023_p0257_0440.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 4.934889749973081,
+      "elapsed_seconds_mean": 4.934889749973081,
+      "elapsed_seconds_min": 4.934889749973081,
+      "elapsed_seconds_sum": 4.934889749973081,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_026_p0257_0320.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 530.5053802910261,
+      "elapsed_seconds_mean": 530.5053802910261,
+      "elapsed_seconds_min": 530.5053802910261,
+      "elapsed_seconds_sum": 530.5053802910261,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_026_p0257_0320.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.07442812505178154,
+      "elapsed_seconds_mean": 0.07442812505178154,
+      "elapsed_seconds_min": 0.07442812505178154,
+      "elapsed_seconds_sum": 0.07442812505178154,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_026_p0257_0320.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 163.5822937079938,
+      "elapsed_seconds_mean": 163.5822937079938,
+      "elapsed_seconds_min": 163.5822937079938,
+      "elapsed_seconds_sum": 163.5822937079938,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_026_p0257_0320.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5269123750040308,
+      "elapsed_seconds_mean": 0.5269123750040308,
+      "elapsed_seconds_min": 0.5269123750040308,
+      "elapsed_seconds_sum": 0.5269123750040308,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_026_p0257_0320.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7298689589952119,
+      "elapsed_seconds_mean": 0.7298689589952119,
+      "elapsed_seconds_min": 0.7298689589952119,
+      "elapsed_seconds_sum": 0.7298689589952119,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_027_p0257_0378.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 488.15232766699046,
+      "elapsed_seconds_mean": 488.15232766699046,
+      "elapsed_seconds_min": 488.15232766699046,
+      "elapsed_seconds_sum": 488.15232766699046,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_027_p0257_0378.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.047912957961671054,
+      "elapsed_seconds_mean": 0.047912957961671054,
+      "elapsed_seconds_min": 0.047912957961671054,
+      "elapsed_seconds_sum": 0.047912957961671054,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_027_p0257_0378.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 139.85988075000932,
+      "elapsed_seconds_mean": 139.85988075000932,
+      "elapsed_seconds_min": 139.85988075000932,
+      "elapsed_seconds_sum": 139.85988075000932,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_027_p0257_0378.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.502789499994833,
+      "elapsed_seconds_mean": 0.502789499994833,
+      "elapsed_seconds_min": 0.502789499994833,
+      "elapsed_seconds_sum": 0.502789499994833,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r028_027_p0257_0378.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.697229957964737,
+      "elapsed_seconds_mean": 0.697229957964737,
+      "elapsed_seconds_min": 0.697229957964737,
+      "elapsed_seconds_sum": 0.697229957964737,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_010_p0259_0376.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 502.28838220902253,
+      "elapsed_seconds_mean": 502.28838220902253,
+      "elapsed_seconds_min": 502.28838220902253,
+      "elapsed_seconds_sum": 502.28838220902253,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_010_p0259_0376.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.0480945419985801,
+      "elapsed_seconds_mean": 0.0480945419985801,
+      "elapsed_seconds_min": 0.0480945419985801,
+      "elapsed_seconds_sum": 0.0480945419985801,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_010_p0259_0376.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 147.8443872500211,
+      "elapsed_seconds_mean": 147.8443872500211,
+      "elapsed_seconds_min": 147.8443872500211,
+      "elapsed_seconds_sum": 147.8443872500211,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_010_p0259_0376.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.4931364170042798,
+      "elapsed_seconds_mean": 0.4931364170042798,
+      "elapsed_seconds_min": 0.4931364170042798,
+      "elapsed_seconds_sum": 0.4931364170042798,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_010_p0259_0376.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7002661669976078,
+      "elapsed_seconds_mean": 0.7002661669976078,
+      "elapsed_seconds_min": 0.7002661669976078,
+      "elapsed_seconds_sum": 0.7002661669976078,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_013_p0259_0327.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 492.2268459170009,
+      "elapsed_seconds_mean": 492.2268459170009,
+      "elapsed_seconds_min": 492.2268459170009,
+      "elapsed_seconds_sum": 492.2268459170009,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_013_p0259_0327.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.07224424998275936,
+      "elapsed_seconds_mean": 0.07224424998275936,
+      "elapsed_seconds_min": 0.07224424998275936,
+      "elapsed_seconds_sum": 0.07224424998275936,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_013_p0259_0327.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 142.46805458300514,
+      "elapsed_seconds_mean": 142.46805458300514,
+      "elapsed_seconds_min": 142.46805458300514,
+      "elapsed_seconds_sum": 142.46805458300514,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_013_p0259_0327.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.4968347499961965,
+      "elapsed_seconds_mean": 0.4968347499961965,
+      "elapsed_seconds_min": 0.4968347499961965,
+      "elapsed_seconds_sum": 0.4968347499961965,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_013_p0259_0327.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7200298749958165,
+      "elapsed_seconds_mean": 0.7200298749958165,
+      "elapsed_seconds_min": 0.7200298749958165,
+      "elapsed_seconds_sum": 0.7200298749958165,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_017_p0259_0242.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5251943329931237,
+      "elapsed_seconds_mean": 0.5251943329931237,
+      "elapsed_seconds_min": 0.5251943329931237,
+      "elapsed_seconds_sum": 0.5251943329931237,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_017_p0259_0242.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 479.59904983401066,
+      "elapsed_seconds_mean": 479.59904983401066,
+      "elapsed_seconds_min": 479.59904983401066,
+      "elapsed_seconds_sum": 479.59904983401066,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_017_p0259_0242.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.26118791702901945,
+      "elapsed_seconds_mean": 0.26118791702901945,
+      "elapsed_seconds_min": 0.26118791702901945,
+      "elapsed_seconds_sum": 0.26118791702901945,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_017_p0259_0242.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 133.71716558298795,
+      "elapsed_seconds_mean": 133.71716558298795,
+      "elapsed_seconds_min": 133.71716558298795,
+      "elapsed_seconds_sum": 133.71716558298795,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_017_p0259_0242.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5268000829964876,
+      "elapsed_seconds_mean": 0.5268000829964876,
+      "elapsed_seconds_min": 0.5268000829964876,
+      "elapsed_seconds_sum": 0.5268000829964876,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_017_p0259_0242.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7848025839775801,
+      "elapsed_seconds_mean": 0.7848025839775801,
+      "elapsed_seconds_min": 0.7848025839775801,
+      "elapsed_seconds_sum": 0.7848025839775801,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_017_p0259_0242.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 4.948066291981377,
+      "elapsed_seconds_mean": 4.948066291981377,
+      "elapsed_seconds_min": 4.948066291981377,
+      "elapsed_seconds_sum": 4.948066291981377,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5133291659876704,
+      "elapsed_seconds_mean": 0.5133291659876704,
+      "elapsed_seconds_min": 0.5133291659876704,
+      "elapsed_seconds_sum": 0.5133291659876704,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.build_mlx_local_advisory_cache": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 5.442180458980147,
+      "elapsed_seconds_mean": 5.442180458980147,
+      "elapsed_seconds_min": 5.442180458980147,
+      "elapsed_seconds_sum": 5.442180458980147,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 483.5153815409867,
+      "elapsed_seconds_mean": 483.5153815409867,
+      "elapsed_seconds_min": 483.5153815409867,
+      "elapsed_seconds_sum": 483.5153815409867,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.2616450830246322,
+      "elapsed_seconds_mean": 0.2616450830246322,
+      "elapsed_seconds_min": 0.2616450830246322,
+      "elapsed_seconds_sum": 0.2616450830246322,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.local_mlx_advisory_response": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_mlx",
+      "elapsed_seconds_max": 34.805533417034894,
+      "elapsed_seconds_mean": 34.805533417034894,
+      "elapsed_seconds_min": 34.805533417034894,
+      "elapsed_seconds_sum": 34.805533417034894,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_mlx": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 137.94490416598273,
+      "elapsed_seconds_mean": 137.94490416598273,
+      "elapsed_seconds_min": 137.94490416598273,
+      "elapsed_seconds_sum": 137.94490416598273,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5220332499593496,
+      "elapsed_seconds_mean": 0.5220332499593496,
+      "elapsed_seconds_min": 0.5220332499593496,
+      "elapsed_seconds_sum": 0.5220332499593496,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.plan_mlx_delta_cache_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 5.70372904103715,
+      "elapsed_seconds_mean": 5.70372904103715,
+      "elapsed_seconds_min": 5.70372904103715,
+      "elapsed_seconds_sum": 5.70372904103715,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7821181250037625,
+      "elapsed_seconds_mean": 0.782020457991166,
+      "elapsed_seconds_min": 0.7819227909785695,
+      "elapsed_seconds_sum": 1.564040915982332,
+      "failure_count": 1,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 2
+      },
+      "run_count": 2,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_020_p0259_0430.select_mlx_windows": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.2633750829845667,
+      "elapsed_seconds_mean": 0.2633750829845667,
+      "elapsed_seconds_min": 0.2633750829845667,
+      "elapsed_seconds_sum": 0.2633750829845667,
+      "failure_count": 1,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 0
+    },
+    "pairset_drop_two_r029_021_p0259_0371.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 505.3472439580364,
+      "elapsed_seconds_mean": 505.3472439580364,
+      "elapsed_seconds_min": 505.3472439580364,
+      "elapsed_seconds_sum": 505.3472439580364,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_021_p0259_0371.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.04487445799168199,
+      "elapsed_seconds_mean": 0.04487445799168199,
+      "elapsed_seconds_min": 0.04487445799168199,
+      "elapsed_seconds_sum": 0.04487445799168199,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_021_p0259_0371.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 143.39127550000558,
+      "elapsed_seconds_mean": 143.39127550000558,
+      "elapsed_seconds_min": 143.39127550000558,
+      "elapsed_seconds_sum": 143.39127550000558,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_021_p0259_0371.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.4480866660014726,
+      "elapsed_seconds_mean": 0.4480866660014726,
+      "elapsed_seconds_min": 0.4480866660014726,
+      "elapsed_seconds_sum": 0.4480866660014726,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_021_p0259_0371.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.6716493749991059,
+      "elapsed_seconds_mean": 0.6716493749991059,
+      "elapsed_seconds_min": 0.6716493749991059,
+      "elapsed_seconds_sum": 0.6716493749991059,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_023_p0259_0440.build_bridge_plan": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.5221327500184998,
+      "elapsed_seconds_mean": 0.5221327500184998,
+      "elapsed_seconds_min": 0.5221327500184998,
+      "elapsed_seconds_sum": 0.5221327500184998,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_023_p0259_0440.local_cpu_advisory": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 478.8498906670138,
+      "elapsed_seconds_mean": 478.8498906670138,
+      "elapsed_seconds_min": 478.8498906670138,
+      "elapsed_seconds_sum": 478.8498906670138,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_023_p0259_0440.local_cpu_contest_drift_eureka": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.25362191698513925,
+      "elapsed_seconds_mean": 0.25362191698513925,
+      "elapsed_seconds_min": 0.25362191698513925,
+      "elapsed_seconds_sum": 0.25362191698513925,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_023_p0259_0440.locality_controls": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 133.5957253749948,
+      "elapsed_seconds_mean": 133.5957253749948,
+      "elapsed_seconds_min": 133.5957253749948,
+      "elapsed_seconds_sum": 133.5957253749948,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_023_p0259_0440.materialize": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.522711707977578,
+      "elapsed_seconds_mean": 0.522711707977578,
+      "elapsed_seconds_min": 0.522711707977578,
+      "elapsed_seconds_sum": 0.522711707977578,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_023_p0259_0440.plan_packet": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 0.7817764169885777,
+      "elapsed_seconds_mean": 0.7817764169885777,
+      "elapsed_seconds_min": 0.7817764169885777,
+      "elapsed_seconds_sum": 0.7817764169885777,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    },
+    "pairset_drop_two_r029_023_p0259_0440.plan_raw_artifact_retention": {
+      "artifact_record_bytes_mean": 0.0,
+      "artifact_record_bytes_sum": 0,
+      "artifact_record_count": 0,
+      "artifact_record_raw_bytes_mean": 0.0,
+      "artifact_record_raw_bytes_sum": 0,
+      "dominant_resource_kind": "local_cpu",
+      "elapsed_seconds_max": 4.922529500036035,
+      "elapsed_seconds_mean": 4.922529500036035,
+      "elapsed_seconds_min": 4.922529500036035,
+      "elapsed_seconds_sum": 4.922529500036035,
+      "failure_count": 0,
+      "log_bytes_mean": 0.0,
+      "log_bytes_sum": 0,
+      "resource_kind_counts": {
+        "local_cpu": 1
+      },
+      "run_count": 1,
+      "success_count": 1
+    }
+  },
+  "event_count": 204,
+  "promotion_eligible": false,
+  "queue_id": "dqs1_pairset_local_first",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "experiment_queue_performance_summary.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "state": "/Users/adpena/Projects/pact/.omx/state/experiment_queue_dqs1_pairset_local_first.sqlite",
+  "telemetry_only": true
+}
