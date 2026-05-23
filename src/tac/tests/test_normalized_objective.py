@@ -7,6 +7,7 @@ from tac.optimization.normalized_objective import (
     RATE_SCORE_PER_BYTE,
     NormalizedObjectiveError,
     compute_normalized_full_video_gain,
+    require_normalized_full_video_gain,
     require_normalized_full_video_objective,
 )
 
@@ -50,6 +51,16 @@ def test_normalized_objective_rejects_raw_gain_disguised_as_full_video() -> None
                     0.012 / RATE_SCORE_PER_BYTE
                 ),
             }
+        )
+
+
+def test_normalized_gain_guard_rejects_alias_boundary_mismatch() -> None:
+    with pytest.raises(NormalizedObjectiveError, match="normalized_full_video_gain_mismatch"):
+        require_normalized_full_video_gain(
+            observed_gain=0.012,
+            source_n_samples=1,
+            normalized_gain=0.012,
+            full_video_denominator=600,
         )
 
 

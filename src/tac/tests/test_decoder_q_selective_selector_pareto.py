@@ -100,6 +100,17 @@ def test_selector_pareto_rejects_true_authority_in_work_unit() -> None:
         build_selector_pareto_plan(bridge)
 
 
+def test_selector_pareto_rejects_mismatched_normalized_gain() -> None:
+    bridge = _bridge()
+    bridge["work_units"][0]["normalized_full_video_gain"] = 0.010  # type: ignore[index]
+
+    with pytest.raises(
+        DecoderQSelectiveSelectorParetoError,
+        match="normalized_full_video_gain_mismatch",
+    ):
+        build_selector_pareto_plan(bridge)
+
+
 def test_selector_pareto_rejects_non_integral_pair_window() -> None:
     bridge = _bridge()
     bridge["work_units"][0]["pair_window"] = [10.9, 11.9]  # type: ignore[index]

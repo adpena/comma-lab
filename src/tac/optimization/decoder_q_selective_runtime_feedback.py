@@ -13,6 +13,10 @@ from tac.optimization.decoder_q_selective_runtime_packet import (
     CONTEST_RATE_DENOMINATOR_BYTES,
     FEC6_PAIR_COUNT,
 )
+from tac.optimization.normalized_objective import (
+    NormalizedObjectiveError,
+    require_normalized_full_video_gain,
+)
 
 SCHEMA = "decoder_q_selective_runtime_feedback.v1"
 SIGN_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
@@ -179,11 +183,17 @@ def _sum_mlx_gains(
     normalized_total = 0.0
     for index, unit in enumerate(bridge_plan.get("work_units", [])):
         if not isinstance(unit, dict):
-            continue
+            raise DecoderQSelectiveRuntimeFeedbackError(f"work unit {index} must be object")
         window = unit.get("pair_window")
-        if not isinstance(window, list) or not window:
-            continue
+        if not isinstance(window, list) or len(window) != 2:
+            raise DecoderQSelectiveRuntimeFeedbackError(f"work unit {index} pair_window invalid")
         start = _as_int(window[0], label=f"work unit {index} pair_window[0]")
+        end = _as_int(window[1], label=f"work unit {index} pair_window[1]")
+        if end != start + 1:
+            raise DecoderQSelectiveRuntimeFeedbackError(
+                "selective feedback v1 only supports singleton pair windows; "
+                f"got {window}"
+            )
         if start in selected_set:
             denominator = _as_int(
                 unit.get("full_video_denominator"),
@@ -193,14 +203,26 @@ def _sum_mlx_gains(
                 raise DecoderQSelectiveRuntimeFeedbackError(
                     f"work unit {index} full_video_denominator must be {FEC6_PAIR_COUNT}"
                 )
-            raw_total += _as_float(
+            observed_gain = _as_float(
                 unit.get("observed_mlx_window_gain"),
                 label=f"work unit {index} observed_mlx_window_gain",
             )
-            normalized_total += _as_float(
+            normalized_gain = _as_float(
                 unit.get("normalized_full_video_gain"),
                 label=f"work unit {index} normalized_full_video_gain",
             )
+            try:
+                require_normalized_full_video_gain(
+                    observed_gain=observed_gain,
+                    source_n_samples=end - start,
+                    normalized_gain=normalized_gain,
+                    full_video_denominator=denominator,
+                    label=f"work unit {index}",
+                )
+            except NormalizedObjectiveError as exc:
+                raise DecoderQSelectiveRuntimeFeedbackError(str(exc)) from exc
+            raw_total += observed_gain
+            normalized_total += normalized_gain
     return {
         "observed_mlx_window_gain_sum": raw_total,
         "normalized_full_video_gain_sum": normalized_total,

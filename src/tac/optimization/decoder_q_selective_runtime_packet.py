@@ -27,6 +27,10 @@ from tac.optimization.fec6_decoder_mutations import (
     prepare_decoder_blob,
     probe_q_mutation,
 )
+from tac.optimization.normalized_objective import (
+    NormalizedObjectiveError,
+    require_normalized_full_video_gain,
+)
 from tac.optimization.scorer_response_dataset import render_authority_markdown_block
 from tac.pr101_split_brotli_codec import CONV4_STORAGE_PERMS
 
@@ -296,6 +300,12 @@ def _selected_mlx_gain_sums(
         if not isinstance(window, list) or len(window) != 2:
             raise DecoderQSelectiveRuntimePacketError(f"work unit {index} pair_window invalid")
         start = _as_int(window[0], label=f"work unit {index} pair_window[0]")
+        end = _as_int(window[1], label=f"work unit {index} pair_window[1]")
+        if end != start + 1:
+            raise DecoderQSelectiveRuntimePacketError(
+                "selective packet v1 only supports singleton pair windows; "
+                f"got {window}"
+            )
         if start not in selected_pair_set:
             continue
         denominator = _as_int(
@@ -306,14 +316,26 @@ def _selected_mlx_gain_sums(
             raise DecoderQSelectiveRuntimePacketError(
                 f"work unit {index} full_video_denominator must be {FEC6_PAIR_COUNT}"
             )
-        raw_window_gain_sum += _as_float(
+        observed_gain = _as_float(
             unit.get("observed_mlx_window_gain"),
             label=f"work unit {index} observed_mlx_window_gain",
         )
-        normalized_full_video_gain_sum += _as_float(
+        normalized_gain = _as_float(
             unit.get("normalized_full_video_gain"),
             label=f"work unit {index} normalized_full_video_gain",
         )
+        try:
+            require_normalized_full_video_gain(
+                observed_gain=observed_gain,
+                source_n_samples=end - start,
+                normalized_gain=normalized_gain,
+                full_video_denominator=denominator,
+                label=f"work unit {index}",
+            )
+        except NormalizedObjectiveError as exc:
+            raise DecoderQSelectiveRuntimePacketError(str(exc)) from exc
+        raw_window_gain_sum += observed_gain
+        normalized_full_video_gain_sum += normalized_gain
     return {
         "window": raw_window_gain_sum,
         "normalized": normalized_full_video_gain_sum,

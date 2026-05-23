@@ -138,6 +138,27 @@ def require_normalized_full_video_objective(
     return metrics
 
 
+def require_normalized_full_video_gain(
+    *,
+    observed_gain: float,
+    source_n_samples: int,
+    normalized_gain: float,
+    full_video_denominator: int = CONTEST_EXACT_SAMPLE_COUNT,
+    label: str = "row",
+    abs_tol: float = DEFAULT_ABS_TOL,
+) -> float:
+    """Return the recomputed full-video gain or raise on inconsistent aliases."""
+
+    recomputed_gain = compute_normalized_full_video_gain(
+        observed_gain,
+        source_n_samples,
+        full_video_denominator=full_video_denominator,
+    )
+    if not _close(float(normalized_gain), recomputed_gain, abs_tol=abs_tol):
+        raise NormalizedObjectiveError(f"{label}: normalized_full_video_gain_mismatch")
+    return recomputed_gain
+
+
 def _as_float(value: Any) -> float | None:
     if value is None:
         return None

@@ -270,6 +270,25 @@ def test_packet_plan_preserves_false_authority_and_trailer_byte_accounting(
             repo_root=tmp_path,
         )
 
+    mismatched_normalized = {
+        **bridge_plan,
+        "work_units": [
+            {
+                **bridge_plan["work_units"][0],
+                "normalized_full_video_gain": 0.002,
+            }
+        ],
+    }
+    with pytest.raises(
+        packet.DecoderQSelectiveRuntimePacketError,
+        match="normalized_full_video_gain_mismatch",
+    ):
+        packet.build_decoder_q_selective_runtime_packet_plan(
+            mismatched_normalized,
+            base_archive=base_archive,
+            repo_root=tmp_path,
+        )
+
     bridge_plan["work_units"].append(
         {
             **_false_authority(),

@@ -191,6 +191,24 @@ def test_feedback_rejects_missing_raw_sha() -> None:
         )
 
 
+def test_feedback_rejects_mismatched_normalized_gain() -> None:
+    bridge = _bridge()
+    bridge["work_units"][0]["normalized_full_video_gain"] = 0.010  # type: ignore[index]
+
+    with pytest.raises(
+        DecoderQSelectiveRuntimeFeedbackError,
+        match="normalized_full_video_gain_mismatch",
+    ):
+        build_decoder_q_selective_runtime_feedback(
+            bridge_plan=bridge,
+            materialization_manifest=_manifest(),
+            locality_controls=_locality(),
+            advisory_result=_advisory(0.99),
+            local_baseline_score=1.0,
+            min_dispatch_edge=0.02,
+        )
+
+
 def test_feedback_rejects_pair_and_frame_mismatches() -> None:
     locality = _locality()
     locality["selected_pair_indices"] = [3]

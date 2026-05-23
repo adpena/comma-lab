@@ -59,13 +59,20 @@ import datetime as _dt
 import json
 import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - non-POSIX fallback is best-effort.
+    fcntl = None  # type: ignore[assignment]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 REGISTRY_REL = ".omx/state/lane_registry.json"
 AUDIT_LOG_REL = ".omx/state/lane_maturity_audit.log"
+LOCK_REL = ".omx/state/lane_maturity.lock"
 REPORT_REL = "reports/lane_maturity.md"
 
 EXPECTED_SCHEMA_VERSION = 1
@@ -114,8 +121,28 @@ def _audit_log_path(repo_root: Path | None = None) -> Path:
     return (repo_root or REPO_ROOT) / AUDIT_LOG_REL
 
 
+def _lock_path(repo_root: Path | None = None) -> Path:
+    return (repo_root or REPO_ROOT) / LOCK_REL
+
+
 def _report_path(repo_root: Path | None = None) -> Path:
     return (repo_root or REPO_ROOT) / REPORT_REL
+
+
+@contextmanager
+def _mutation_lock(repo_root: Path | None = None):
+    """Serialize lane-registry load/modify/save/audit transactions."""
+
+    path = _lock_path(repo_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as handle:
+        if fcntl is not None:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if fcntl is not None:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def load_registry(repo_root: Path | None = None) -> dict[str, Any]:
@@ -191,7 +218,13 @@ def save_registry(data: dict[str, Any], repo_root: Path | None = None) -> None:
     path = _registry_path(repo_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     data["updated_at"] = _now_iso()
-    path.write_text(json.dumps(data, indent=2, sort_keys=False) + "\n")
+    payload = json.dumps(data, indent=2, sort_keys=False) + "\n"
+    tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{id(data)}.tmp")
+    with tmp_path.open("w") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp_path, path)
 
 
 def append_audit_log(record: dict[str, Any], repo_root: Path | None = None) -> None:
@@ -199,6 +232,8 @@ def append_audit_log(record: dict[str, Any], repo_root: Path | None = None) -> N
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a") as f:
         f.write(json.dumps(record, sort_keys=True) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
 
 
 # ── Level computation ────────────────────────────────────────────────────
@@ -721,25 +756,26 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_mark(args: argparse.Namespace) -> int:
-    data = load_registry()
-    before = json.dumps(
-        next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
-        sort_keys=True,
-    )
-    try:
-        lane = mark_gate(data, args.lane_id, args.gate, args.evidence)
-    except ValueError as e:
-        print(_red(f"ERROR: {e}"), file=sys.stderr)
-        return 2
-    save_registry(data)
-    after = json.dumps(lane, sort_keys=True)
-    append_audit_log({
-        "timestamp": _now_iso(),
-        "command": "mark",
-        "args": {"lane_id": args.lane_id, "gate": args.gate, "evidence": args.evidence},
-        "before_state": before,
-        "after_state": after,
-    })
+    with _mutation_lock():
+        data = load_registry()
+        before = json.dumps(
+            next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
+            sort_keys=True,
+        )
+        try:
+            lane = mark_gate(data, args.lane_id, args.gate, args.evidence)
+        except ValueError as e:
+            print(_red(f"ERROR: {e}"), file=sys.stderr)
+            return 2
+        save_registry(data)
+        after = json.dumps(lane, sort_keys=True)
+        append_audit_log({
+            "timestamp": _now_iso(),
+            "command": "mark",
+            "args": {"lane_id": args.lane_id, "gate": args.gate, "evidence": args.evidence},
+            "before_state": before,
+            "after_state": after,
+        })
     print(_green(
         f"OK — {args.lane_id}.{args.gate} = true (level now L{lane['level']})"
     ))
@@ -747,29 +783,30 @@ def cmd_mark(args: argparse.Namespace) -> int:
 
 
 def cmd_unmark(args: argparse.Namespace) -> int:
-    data = load_registry()
-    before = json.dumps(
-        next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
-        sort_keys=True,
-    )
-    try:
-        lane = unmark_gate(data, args.lane_id, args.gate, args.reason)
-    except ValueError as e:
-        print(_red(f"ERROR: {e}"), file=sys.stderr)
-        return 2
-    save_registry(data)
-    after = json.dumps(lane, sort_keys=True)
-    append_audit_log({
-        "timestamp": _now_iso(),
-        "command": "unmark",
-        "args": {
-            "lane_id": args.lane_id,
-            "gate": args.gate,
-            "reason": args.reason,
-        },
-        "before_state": before,
-        "after_state": after,
-    })
+    with _mutation_lock():
+        data = load_registry()
+        before = json.dumps(
+            next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
+            sort_keys=True,
+        )
+        try:
+            lane = unmark_gate(data, args.lane_id, args.gate, args.reason)
+        except ValueError as e:
+            print(_red(f"ERROR: {e}"), file=sys.stderr)
+            return 2
+        save_registry(data)
+        after = json.dumps(lane, sort_keys=True)
+        append_audit_log({
+            "timestamp": _now_iso(),
+            "command": "unmark",
+            "args": {
+                "lane_id": args.lane_id,
+                "gate": args.gate,
+                "reason": args.reason,
+            },
+            "before_state": before,
+            "after_state": after,
+        })
     print(_yellow(
         f"OK — {args.lane_id}.{args.gate} = false "
         f"(level now L{lane['level']}); reason: {args.reason}"
@@ -778,23 +815,24 @@ def cmd_unmark(args: argparse.Namespace) -> int:
 
 
 def cmd_add_lane(args: argparse.Namespace) -> int:
-    data = load_registry()
-    try:
-        lane = add_lane(data, args.lane_id, args.name, args.phase, args.notes)
-    except ValueError as e:
-        print(_red(f"ERROR: {e}"), file=sys.stderr)
-        return 2
-    save_registry(data)
-    append_audit_log({
-        "timestamp": _now_iso(),
-        "command": "add-lane",
-        "args": {
-            "lane_id": args.lane_id, "name": args.name,
-            "phase": args.phase, "notes": args.notes,
-        },
-        "before_state": "null",
-        "after_state": json.dumps(lane, sort_keys=True),
-    })
+    with _mutation_lock():
+        data = load_registry()
+        try:
+            lane = add_lane(data, args.lane_id, args.name, args.phase, args.notes)
+        except ValueError as e:
+            print(_red(f"ERROR: {e}"), file=sys.stderr)
+            return 2
+        save_registry(data)
+        append_audit_log({
+            "timestamp": _now_iso(),
+            "command": "add-lane",
+            "args": {
+                "lane_id": args.lane_id, "name": args.name,
+                "phase": args.phase, "notes": args.notes,
+            },
+            "before_state": "null",
+            "after_state": json.dumps(lane, sort_keys=True),
+        })
     print(_green(f"OK — added lane {args.lane_id} at L0 (phase {args.phase})"))
     return 0
 
@@ -832,30 +870,31 @@ def _coerce_set_field_value(field: str, raw: str) -> Any:
 
 
 def cmd_set_field(args: argparse.Namespace) -> int:
-    data = load_registry()
-    before = json.dumps(
-        next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
-        sort_keys=True,
-    )
-    try:
-        coerced = _coerce_set_field_value(args.field, args.value)
-        lane = set_field(data, args.lane_id, args.field, coerced)
-    except ValueError as e:
-        print(_red(f"ERROR: {e}"), file=sys.stderr)
-        return 2
-    save_registry(data)
-    after = json.dumps(lane, sort_keys=True)
-    append_audit_log({
-        "timestamp": _now_iso(),
-        "command": "set-field",
-        "args": {
-            "lane_id": args.lane_id,
-            "field": args.field,
-            "value": coerced,
-        },
-        "before_state": before,
-        "after_state": after,
-    })
+    with _mutation_lock():
+        data = load_registry()
+        before = json.dumps(
+            next((lane_entry for lane_entry in data["lanes"] if lane_entry["id"] == args.lane_id), None),
+            sort_keys=True,
+        )
+        try:
+            coerced = _coerce_set_field_value(args.field, args.value)
+            lane = set_field(data, args.lane_id, args.field, coerced)
+        except ValueError as e:
+            print(_red(f"ERROR: {e}"), file=sys.stderr)
+            return 2
+        save_registry(data)
+        after = json.dumps(lane, sort_keys=True)
+        append_audit_log({
+            "timestamp": _now_iso(),
+            "command": "set-field",
+            "args": {
+                "lane_id": args.lane_id,
+                "field": args.field,
+                "value": coerced,
+            },
+            "before_state": before,
+            "after_state": after,
+        })
     print(_green(
         f"OK — {args.lane_id}.{args.field} = {coerced!r}"
     ))

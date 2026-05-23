@@ -18,6 +18,10 @@ from tac.optimization.decoder_q_selective_runtime_packet import (
     affected_frames_for_pairs,
     choose_dqs1_pair_encoding,
 )
+from tac.optimization.normalized_objective import (
+    NormalizedObjectiveError,
+    require_normalized_full_video_gain,
+)
 
 SCHEMA = "decoder_q_selective_selector_pareto.v1"
 TOOL = "tac.optimization.decoder_q_selective_selector_pareto"
@@ -92,7 +96,8 @@ def _bridge_units(bridge_plan: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(window, list) or len(window) != 2:
             raise DecoderQSelectiveSelectorParetoError(f"work unit {index} pair_window invalid")
         pair = _as_int(window[0], label=f"work unit {index} pair_window[0]")
-        if _as_int(window[1], label=f"work unit {index} pair_window[1]") != pair + 1:
+        end = _as_int(window[1], label=f"work unit {index} pair_window[1]")
+        if end != pair + 1:
             raise DecoderQSelectiveSelectorParetoError(
                 "selector Pareto v1 requires singleton pair windows"
             )
@@ -111,18 +116,30 @@ def _bridge_units(bridge_plan: dict[str, Any]) -> list[dict[str, Any]]:
             raise DecoderQSelectiveSelectorParetoError(
                 f"work unit {index} full_video_denominator must be {FEC6_PAIR_COUNT}"
             )
+        observed_gain = _as_float(
+            unit.get("observed_mlx_window_gain"),
+            label=f"work unit {index} observed_mlx_window_gain",
+        )
+        normalized_gain = _as_float(
+            unit.get("normalized_full_video_gain"),
+            label=f"work unit {index} normalized_full_video_gain",
+        )
+        try:
+            require_normalized_full_video_gain(
+                observed_gain=observed_gain,
+                source_n_samples=end - pair,
+                normalized_gain=normalized_gain,
+                full_video_denominator=denominator,
+                label=f"work unit {index}",
+            )
+        except NormalizedObjectiveError as exc:
+            raise DecoderQSelectiveSelectorParetoError(str(exc)) from exc
         normalized.append(
             {
                 "rank": _as_int(unit.get("rank", index + 1), label=f"work unit {index} rank"),
                 "pair_index": pair,
-                "observed_mlx_window_gain": _as_float(
-                    unit.get("observed_mlx_window_gain"),
-                    label=f"work unit {index} observed_mlx_window_gain",
-                ),
-                "normalized_full_video_gain": _as_float(
-                    unit.get("normalized_full_video_gain"),
-                    label=f"work unit {index} normalized_full_video_gain",
-                ),
+                "observed_mlx_window_gain": observed_gain,
+                "normalized_full_video_gain": normalized_gain,
                 "full_video_denominator": denominator,
                 "unit_id": unit.get("unit_id"),
             }
