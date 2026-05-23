@@ -51,6 +51,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.optimizer_scheduler_registry",
         "OptimizerSchedulerTelemetryRecord",
     ),
+    "OptimizerSignalAtomError": (
+        "tac.optimization.optimizer_signal_atoms",
+        "OptimizerSignalAtomError",
+    ),
     "ParameterClassification": (
         "tac.optimization.parameter_group_lr_policy",
         "ParameterClassification",
@@ -95,6 +99,14 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "build_optimizer_scheduler_telemetry_record": (
         "tac.optimization.optimizer_scheduler_registry",
         "build_optimizer_scheduler_telemetry_record",
+    ),
+    "build_optimizer_signal_atom_ledger": (
+        "tac.optimization.optimizer_signal_atoms",
+        "build_optimizer_signal_atom_ledger",
+    ),
+    "build_atoms_from_optimizer_signal_source": (
+        "tac.optimization.optimizer_signal_atoms",
+        "build_atoms_from_optimizer_signal_source",
     ),
     "build_parameter_group_lr_policy_fingerprint": (
         "tac.optimization.parameter_group_lr_policy",
