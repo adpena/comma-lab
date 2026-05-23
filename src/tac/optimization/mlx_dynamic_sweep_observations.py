@@ -434,11 +434,22 @@ def normalize_observation_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "notes",
         "run_id",
         "selected_pair_indices",
+        "selected_pair_count",
+        "selector_kind",
+        "acquisition_operation",
         "source_schema",
         "sweep_rank",
         "source_row",
         "planner_artifact_path",
         "planner_artifact_sha256",
+        "baseline_candidate_id",
+        "baseline_artifact_path",
+        "baseline_artifact_sha256",
+        "baseline_score",
+        "baseline_archive_size_bytes",
+        "score_delta_vs_baseline",
+        "archive_byte_delta_vs_baseline",
+        "component_delta_baseline_policy",
     )
     for key in passthrough_keys:
         if key in row and row.get(key) is not None:

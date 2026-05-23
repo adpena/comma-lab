@@ -1,0 +1,346 @@
+{
+  "execution": {
+    "action": "delete",
+    "cold_store_contract": null,
+    "cold_store_root": null,
+    "executed_bytes": 25637045658,
+    "executed_count": 8,
+    "generated_at_utc": "2026-05-23T12:30:38.951481+00:00",
+    "journal_path": ".omx/research/dqs1_artifact_retention_drop_two_r010_queue_stop_20260523T123000Z.journal.jsonl",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rows": [
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json",
+          "manifest_sha256": "2607f70e150fda18bd4dfb9b5f8680667a75beca5afbabef1988e0d92f097847",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work/global_mutated/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json",
+          "manifest_sha256": "2607f70e150fda18bd4dfb9b5f8680667a75beca5afbabef1988e0d92f097847",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work/parent/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "7d470d06782e72c7bafece0ef2e39fc3f00e66e15cac878c14e8d1b0dd949793",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json",
+          "manifest_sha256": "2607f70e150fda18bd4dfb9b5f8680667a75beca5afbabef1988e0d92f097847",
+          "raw_sha256": "fada0ed8b95ac9c0d198d2c9c0b054bbfd0c88f74ee3b3b46d34fe18fead6f2e"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work/selective/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "808cfa0353d99d47120598764819c153040d2feda895b205fb47da0b1b4d71f9",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "aede7130d633802d7acff85768333e0040cd7fd4faa91cbe69668d2827da5103",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "faa76e477b41d5348b6a4acf7537eda3505a797eaeb421b52a3c78c526d74f59",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "262dd13a501fe90a0520f96c00d9f210a663af7e6d9daf6655425b699c81859d"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_controls.json",
+          "manifest_sha256": "352eda9c1ba06d30711e24999af11c5b98dcd683b988ef1757fa4c372a1ff25b",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work/global_mutated/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_controls.json",
+          "manifest_sha256": "352eda9c1ba06d30711e24999af11c5b98dcd683b988ef1757fa4c372a1ff25b",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work/parent/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "808cfa0353d99d47120598764819c153040d2feda895b205fb47da0b1b4d71f9",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_controls.json",
+          "manifest_sha256": "352eda9c1ba06d30711e24999af11c5b98dcd683b988ef1757fa4c372a1ff25b",
+          "raw_sha256": "6ff00574972be85859304015a7c308cf1ad83d4e53c161c8a422848d7c8a81a0"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work/selective/inflated",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      },
+      {
+        "action": "delete",
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "808cfa0353d99d47120598764819c153040d2feda895b205fb47da0b1b4d71f9",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "aede7130d633802d7acff85768333e0040cd7fd4faa91cbe69668d2827da5103",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "faa76e477b41d5348b6a4acf7537eda3505a797eaeb421b52a3c78c526d74f59",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "262dd13a501fe90a0520f96c00d9f210a663af7e6d9daf6655425b699c81859d"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/extracted",
+        "preflight_revalidated": true,
+        "status": "deleted"
+      }
+    ],
+    "schema": "comma_lab.artifact_retention_execution.v1",
+    "score_claim": false
+  },
+  "plan": {
+    "blocked_candidate_count": 0,
+    "blocked_candidates": [],
+    "candidate_count": 8,
+    "candidates": [
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json",
+          "manifest_sha256": "2607f70e150fda18bd4dfb9b5f8680667a75beca5afbabef1988e0d92f097847",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json",
+          "manifest_sha256": "2607f70e150fda18bd4dfb9b5f8680667a75beca5afbabef1988e0d92f097847",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work/parent/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "7d470d06782e72c7bafece0ef2e39fc3f00e66e15cac878c14e8d1b0dd949793",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_controls.json",
+          "manifest_sha256": "2607f70e150fda18bd4dfb9b5f8680667a75beca5afbabef1988e0d92f097847",
+          "raw_sha256": "fada0ed8b95ac9c0d198d2c9c0b054bbfd0c88f74ee3b3b46d34fe18fead6f2e"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467/locality_work/selective/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "808cfa0353d99d47120598764819c153040d2feda895b205fb47da0b1b4d71f9",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "aede7130d633802d7acff85768333e0040cd7fd4faa91cbe69668d2827da5103",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "faa76e477b41d5348b6a4acf7537eda3505a797eaeb421b52a3c78c526d74f59",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "262dd13a501fe90a0520f96c00d9f210a663af7e6d9daf6655425b699c81859d"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_controls.json",
+          "manifest_sha256": "352eda9c1ba06d30711e24999af11c5b98dcd683b988ef1757fa4c372a1ff25b",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_controls.json",
+          "manifest_sha256": "352eda9c1ba06d30711e24999af11c5b98dcd683b988ef1757fa4c372a1ff25b",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work/parent/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "808cfa0353d99d47120598764819c153040d2feda895b205fb47da0b1b4d71f9",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_controls.json",
+          "manifest_sha256": "352eda9c1ba06d30711e24999af11c5b98dcd683b988ef1757fa4c372a1ff25b",
+          "raw_sha256": "6ff00574972be85859304015a7c308cf1ad83d4e53c161c8a422848d7c8a81a0"
+        },
+        "certified_rebuildable": true,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/locality_work/selective/inflated"
+      },
+      {
+        "blockers": [],
+        "bytes": 178458,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "808cfa0353d99d47120598764819c153040d2feda895b205fb47da0b1b4d71f9",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "aede7130d633802d7acff85768333e0040cd7fd4faa91cbe69668d2827da5103",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "faa76e477b41d5348b6a4acf7537eda3505a797eaeb421b52a3c78c526d74f59",
+          "kind": "local_cpu_advisory_extracted_scratch",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "262dd13a501fe90a0520f96c00d9f210a663af7e6d9daf6655425b699c81859d"
+        },
+        "certified_rebuildable": true,
+        "kind": "local_cpu_advisory_extracted_scratch",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459/local_cpu_advisory_work/extracted"
+      }
+    ],
+    "exclude_paths": [],
+    "generated_at_utc": "2026-05-23T12:30:30.328907+00:00",
+    "include_kinds": [
+      "local_cpu_advisory_extracted_scratch",
+      "local_cpu_advisory_inflated_raw",
+      "locality_inflated_raw"
+    ],
+    "min_bytes": 1,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repo_root": "/Users/adpena/Projects/pact",
+    "roots": [
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_009_p0376_0459",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_005_p0376_0467"
+    ],
+    "schema": "comma_lab.artifact_retention_plan.v1",
+    "score_claim": false,
+    "total_reclaimable_bytes": 25637045658
+  }
+}

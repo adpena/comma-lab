@@ -196,6 +196,8 @@ def test_cli_writes_action_summary_and_response_model_markdown(
     assert stdout["summary_json_out"] == str(summary_out)
     assert summary["schema"] == "cross_family_candidate_portfolio_action_summary.v1"
     assert summary["score_claim"] is False
+    assert summary["dispatch_attempted"] is False
+    assert summary["gpu_launched"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert model["active"] is True
     assert model["score_claim"] is False
@@ -204,6 +206,8 @@ def test_cli_writes_action_summary_and_response_model_markdown(
         row["ready_for_exact_eval_dispatch"] is False
         for row in summary["top_operator_actions"]
     )
+    assert all(row["dispatch_attempted"] is False for row in summary["top_operator_actions"])
+    assert all(row["gpu_launched"] is False for row in summary["top_operator_actions"])
     markdown = md_out.read_text(encoding="utf-8")
     assert "## CLI Action Summary" in markdown
     assert "### Observation Response Model" in markdown

@@ -339,6 +339,98 @@ def test_experiment_queue_worker_runs_bounded_local_steps(tmp_path: Path) -> Non
         assert "worker_stopped" in events
 
 
+def test_experiment_queue_worker_limits_started_experiments(tmp_path: Path) -> None:
+    first_a = tmp_path / "candidate_a_first.txt"
+    second_a = tmp_path / "candidate_a_second.txt"
+    first_b = tmp_path / "candidate_b_first.txt"
+    second_b = tmp_path / "candidate_b_second.txt"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "candidate_window_queue",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": "candidate_a",
+                    "priority": 1,
+                    "steps": [
+                        {
+                            "id": "first",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(first_a)!r}).write_text('ok')",
+                            ],
+                            "postconditions": [{"type": "path_exists", "path": first_a.name}],
+                        },
+                        {
+                            "id": "second",
+                            "requires": ["first"],
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(second_a)!r}).write_text('ok')",
+                            ],
+                            "postconditions": [{"type": "path_exists", "path": second_a.name}],
+                        },
+                    ],
+                },
+                {
+                    "id": "candidate_b",
+                    "priority": 2,
+                    "steps": [
+                        {
+                            "id": "first",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(first_b)!r}).write_text('ok')",
+                            ],
+                            "postconditions": [{"type": "path_exists", "path": first_b.name}],
+                        },
+                        {
+                            "id": "second",
+                            "requires": ["first"],
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(second_b)!r}).write_text('ok')",
+                            ],
+                            "postconditions": [{"type": "path_exists", "path": second_b.name}],
+                        },
+                    ],
+                },
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=10,
+            max_experiments=1,
+            idle_sleep_seconds=0,
+            max_idle_cycles=1,
+            log_root=tmp_path / "logs",
+        )
+
+        assert result["stop_reason"] == "idle_limit_reached"
+        assert result["steps_started"] == 2
+        assert result["started_experiment_ids"] == ["candidate_a"]
+        assert first_a.read_text() == "ok"
+        assert second_a.read_text() == "ok"
+        assert not first_b.exists()
+        assert not second_b.exists()
+        assert queue_summary(conn, queue)["status_counts"] == {"queued": 2, "succeeded": 2}
+
+
 def test_experiment_queue_worker_runs_independent_steps_in_parallel(tmp_path: Path) -> None:
     first = tmp_path / "first.txt"
     second = tmp_path / "second.txt"

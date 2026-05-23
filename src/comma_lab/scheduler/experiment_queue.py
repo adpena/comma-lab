@@ -1336,6 +1336,7 @@ def run_queue_worker(
     log_root: str | Path | None = None,
     stop_requested: Callable[[], bool] | None = None,
     reload_queue: Callable[[], Mapping[str, Any]] | None = None,
+    max_experiments: int | None = None,
 ) -> dict[str, Any]:
     if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps < 0:
         raise ExperimentQueueError("max_steps must be a non-negative integer")
@@ -1357,6 +1358,12 @@ def run_queue_worker(
         raise ExperimentQueueError("stop_policy must be 'drain' or 'terminate'")
     if shutdown_grace_seconds < 0:
         raise ExperimentQueueError("shutdown_grace_seconds must be non-negative")
+    if max_experiments is not None and (
+        isinstance(max_experiments, bool)
+        or not isinstance(max_experiments, int)
+        or max_experiments <= 0
+    ):
+        raise ExperimentQueueError("max_experiments must be a positive integer or None")
 
     queue_id = str(queue["queue_id"])
     active_queue: Mapping[str, Any] = queue
@@ -1412,16 +1419,36 @@ def run_queue_worker(
             "allow_orphaned_state": allow_orphaned_state,
             "orphaned_state_rationale": orphaned_state_rationale,
             "noncanonical_state_rationale": noncanonical_state_rationale,
+            "max_experiments": max_experiments,
         },
     )
     conn.commit()
 
-    if not execute:
-        planned = [
-            step.to_dict()
-            for step in ready_steps(conn, _active_queue(), allow_cloud=allow_cloud)
+    worker_experiment_ids: set[str] = set()
+
+    def _eligible_ready_steps() -> list[ReadyStep]:
+        ready = ready_steps(conn, _active_queue(), allow_cloud=allow_cloud)
+        if max_experiments is None:
+            return ready
+        return [
+            step
+            for step in ready
+            if step.experiment_id in worker_experiment_ids
+            or len(worker_experiment_ids) < max_experiments
         ]
-        selected = planned[:max_steps] if max_steps else []
+
+    if not execute:
+        selected: list[dict[str, object]] = []
+        planned = _eligible_ready_steps()
+        if max_steps:
+            for step in planned:
+                if len(selected) >= max_steps:
+                    break
+                if max_experiments is not None and step.experiment_id not in worker_experiment_ids:
+                    if len(worker_experiment_ids) >= max_experiments:
+                        continue
+                    worker_experiment_ids.add(step.experiment_id)
+                selected.append(step.to_dict())
         append_event(
             conn,
             queue_id=queue_id,
@@ -1447,6 +1474,8 @@ def run_queue_worker(
             "max_parallel": max_parallel,
             "requested_max_parallel": requested_max_parallel,
             "resource_limits": resource_limits,
+            "max_experiments": max_experiments,
+            "started_experiment_ids": sorted(worker_experiment_ids),
             "orphaned_state_rationale": orphaned_state_rationale,
             "noncanonical_state_rationale": noncanonical_state_rationale,
             "started_at_utc": started_at,
@@ -1545,7 +1574,7 @@ def run_queue_worker(
 
         launched_this_cycle = 0
         while steps_started < max_steps and len(running_processes) < max_parallel:
-            ready = ready_steps(conn, _active_queue(), allow_cloud=allow_cloud)
+            ready = _eligible_ready_steps()
             if not ready:
                 break
 
@@ -1564,6 +1593,7 @@ def run_queue_worker(
                 if immediate_result.get("claim_refused"):
                     claim_refused_count += 1
                     continue
+                worker_experiment_ids.add(ready_step.experiment_id)
                 steps_started += 1
                 launched_this_cycle += 1
                 failure_count += 1
@@ -1578,6 +1608,7 @@ def run_queue_worker(
                 conn.commit()
                 continue
             if running is not None:
+                worker_experiment_ids.add(ready_step.experiment_id)
                 running_processes.append(running)
                 steps_started += 1
                 launched_this_cycle += 1
@@ -1616,6 +1647,8 @@ def run_queue_worker(
             "requested_max_parallel": requested_max_parallel,
             "max_parallel": max_parallel,
             "resource_limits": resource_limits,
+            "max_experiments": max_experiments,
+            "started_experiment_ids": sorted(worker_experiment_ids),
             "success_count": success_count,
             "failure_count": failure_count,
             "claim_refused_count": claim_refused_count,
@@ -1631,6 +1664,8 @@ def run_queue_worker(
         "max_parallel": max_parallel,
         "requested_max_parallel": requested_max_parallel,
         "resource_limits": resource_limits,
+        "max_experiments": max_experiments,
+        "started_experiment_ids": sorted(worker_experiment_ids),
         "orphaned_state_rationale": orphaned_state_rationale,
         "noncanonical_state_rationale": noncanonical_state_rationale,
         "started_at_utc": started_at,

@@ -40,6 +40,8 @@ FALSE_AUTHORITY_FIELDS = (
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
     "promotable",
+    "dispatch_attempted",
+    "gpu_launched",
 )
 
 

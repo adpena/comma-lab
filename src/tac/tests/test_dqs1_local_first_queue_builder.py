@@ -103,6 +103,43 @@ def _write_summary(repo: Path) -> Path:
     return summary
 
 
+def _write_cross_family_summary(repo: Path) -> Path:
+    summary_dir = (
+        repo
+        / "experiments"
+        / "results"
+        / "cross_family_candidate_portfolio"
+        / "20260523T121036Z_full_drop_two_local_harvest"
+    )
+    summary_dir.mkdir(parents=True)
+    portfolio = summary_dir / "portfolio.json"
+    portfolio.write_text(
+        json.dumps(
+            {
+                "operator_action_rows": [
+                    _row("pairset_drop_one_rank023_pair0440", [1, 2, 440]),
+                    _row("pairset_drop_one_rank024_pair0112", [1, 2, 112]),
+                ]
+            }
+        )
+    )
+    summary = summary_dir / "action_summary.json"
+    summary.write_text(
+        json.dumps(
+            {
+                **_false_authority(),
+                "schema": "cross_family_candidate_portfolio_action_summary.v1",
+                "json_out": str(portfolio),
+                "top_operator_actions": [
+                    _action("pairset_drop_one_rank023_pair0440", 1),
+                    _action("pairset_drop_one_rank024_pair0112", 2),
+                ],
+            }
+        )
+    )
+    return summary
+
+
 def _write_completed_local_advisory(
     repo: Path,
     *,
@@ -246,6 +283,20 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
         }
         for condition in raw_retention["postconditions"]
     )
+
+
+def test_dqs1_queue_builder_accepts_cross_family_action_summary_schema(
+    tmp_path: Path,
+) -> None:
+    summary = _write_cross_family_summary(tmp_path)
+
+    result = build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
+
+    assert result.selection.candidate_id == "pairset_drop_one_rank023_pair0440"
+    assert result.selection.portfolio_path == summary.parent / "portfolio.json"
+    plan_step = result.queue["experiments"][0]["steps"][1]
+    assert plan_step["id"] == "plan_packet"
+    assert plan_step["command"][-1] == "1,2,440"
 
 
 def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(

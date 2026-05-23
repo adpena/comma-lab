@@ -434,6 +434,7 @@ def main(argv: list[str] | None = None) -> int:
                     log_root=args.log_root,
                     stop_requested=lambda: bool(stop_signals),
                     reload_queue=lambda: load_queue_definition(queue_path),
+                    max_experiments=1,
                 )
                 summary = queue_summary(conn, queue)
             total_steps += int(worker.get("steps_started") or 0)

@@ -70,6 +70,10 @@ _REQUIRED_FALSE_AUTHORITY_FIELDS = (
 _TIMESTAMP_RE = re.compile(r"(20\d{6}T\d{4,6}Z)")
 _DROP_ONE_CANDIDATE_RE = re.compile(r"^pairset_drop_one_(rank\d{3}_pair\d{4})$")
 _PAIRSET_CANDIDATE_RE = re.compile(r"^pairset_[a-z0-9][a-z0-9_]*$")
+_SAFE_ACTION_SUMMARY_SCHEMAS = {
+    "pairset_component_marginal_canonicalization_summary.v1",
+    "cross_family_candidate_portfolio_action_summary.v1",
+}
 
 
 @dataclass(frozen=True)
@@ -166,7 +170,7 @@ def _require_false_authority(
 
 
 def _is_dqs1_safe_action_summary(summary: dict[str, Any]) -> bool:
-    if summary.get("schema") != "pairset_component_marginal_canonicalization_summary.v1":
+    if summary.get("schema") not in _SAFE_ACTION_SUMMARY_SCHEMAS:
         return False
     try:
         _require_false_authority(summary, label="action summary", require_all=True)
@@ -201,9 +205,9 @@ def _resolve_portfolio_path(
     *,
     repo_root: Path,
 ) -> Path:
-    portfolio_json = summary.get("portfolio_json")
+    portfolio_json = summary.get("portfolio_json") or summary.get("json_out")
     if not isinstance(portfolio_json, str) or not portfolio_json.strip():
-        raise ExperimentQueueError(f"{action_summary_path}: missing portfolio_json")
+        raise ExperimentQueueError(f"{action_summary_path}: missing portfolio_json/json_out")
     portfolio_path = Path(portfolio_json)
     candidates = [portfolio_path] if portfolio_path.is_absolute() else [
         repo_root / portfolio_path,
