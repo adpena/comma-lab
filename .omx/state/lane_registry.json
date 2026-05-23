@@ -49297,15 +49297,15 @@
       "id": "lane_inverse_scorer_action_functional_cli_20260523",
       "name": "Inverse scorer action functional CLI",
       "phase": 0.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "tools/build_inverse_steganalysis_action_functional.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/inverse_steganalysis_action_functional_20260523_codex.json"
         },
         "contest_cuda": {
           "status": false,
@@ -49325,7 +49325,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_inverse_queue_performance_action_bridge_20260523T180351Z_codex.md"
+          "evidence": ".omx/research/codex_session_summary_20260523T180629Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -49342,5 +49342,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T18:04:27Z"
+  "updated_at": "2026-05-23T18:07:19Z"
 }
