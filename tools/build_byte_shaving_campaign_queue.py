@@ -77,6 +77,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--materialization-out", type=Path, required=True)
     parser.add_argument("--portfolio-out", type=Path, required=True)
     parser.add_argument("--action-summary-out", type=Path, required=True)
+    parser.add_argument("--materializer-backlog-out", type=Path, default=None)
     parser.add_argument("--queue-out", type=Path, default=None)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument(
@@ -96,6 +97,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-materialization-sha256")
     parser.add_argument("--expected-portfolio-sha256")
     parser.add_argument("--expected-action-summary-sha256")
+    parser.add_argument("--expected-materializer-backlog-sha256")
     parser.add_argument("--expected-queue-sha256")
     return parser.parse_args(argv)
 
@@ -150,6 +152,13 @@ def main(argv: list[str] | None = None) -> int:
         allow_overwrite=bool(args.overwrite_output),
         expected_existing_sha256=args.expected_action_summary_sha256,
     )
+    if args.materializer_backlog_out is not None:
+        _write_json(
+            args.materializer_backlog_out,
+            compiled["materializer_backlog"],
+            allow_overwrite=bool(args.overwrite_output),
+            expected_existing_sha256=args.expected_materializer_backlog_sha256,
+        )
 
     queue_payload = None
     if args.queue_out is not None:
@@ -193,8 +202,16 @@ def main(argv: list[str] | None = None) -> int:
                 "materialization_out": str(args.materialization_out),
                 "portfolio_out": str(args.portfolio_out),
                 "action_summary_out": str(args.action_summary_out),
+                "materializer_backlog_out": (
+                    str(args.materializer_backlog_out)
+                    if args.materializer_backlog_out is not None
+                    else None
+                ),
                 "executable_row_count": compiled["executable_row_count"],
                 "blocked_row_count": compiled["blocked_row_count"],
+                "materializer_backlog_row_count": compiled["materializer_backlog"][
+                    "backlog_row_count"
+                ],
                 "queue": queue_payload,
                 "score_claim": False,
                 "promotion_eligible": False,

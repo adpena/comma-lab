@@ -10,11 +10,14 @@ import pytest
 
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZATION_SCHEMA,
+    MATERIALIZER_BACKLOG_SCHEMA,
     compile_dqs1_byte_shaving_campaign,
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     DQS1_DROP_PAIR_MATERIALIZER,
     DQS1_PAIRSET_TARGET_KIND,
+    DQS1_RECEIVER_CONTRACT_ID,
+    DQS1_RECEIVER_CONTRACT_KIND,
     registry_manifest,
     resolve_materializer,
 )
@@ -101,13 +104,24 @@ def test_byte_shaving_materializer_registry_exposes_only_dqs1_drop_pair_adapter(
         {
             "description": "Compile pair-unit drop operations into DQS1 pairset local-first queue rows.",
             "executable": True,
+            "cooperative_receiver_required": True,
             "materializer_id": DQS1_DROP_PAIR_MATERIALIZER,
+            "materialization_resource_kind": "local_cpu",
             "operation_family": "drop_pair",
+            "receiver_contract_id": DQS1_RECEIVER_CONTRACT_ID,
+            "receiver_contract_kind": DQS1_RECEIVER_CONTRACT_KIND,
             "required_context_fields": ["dqs1_base_pair_indices"],
             "target_kind": DQS1_PAIRSET_TARGET_KIND,
             "unit_kind": "pair",
         }
     ]
+    grammar_registry = manifest["cooperative_receiver_grammar_registry"]
+    assert (
+        grammar_registry["schema"]
+        == "cooperative_receiver_packet_grammar_registry_hook.v1"
+    )
+    assert grammar_registry["known_grammar_count"] >= 1
+    assert grammar_registry["score_claim"] is False
 
     resolved = resolve_materializer(
         operation={
@@ -121,6 +135,9 @@ def test_byte_shaving_materializer_registry_exposes_only_dqs1_drop_pair_adapter(
     assert resolved.executable is True
     assert resolved.materializer_id == DQS1_DROP_PAIR_MATERIALIZER
     assert resolved.target_kind == DQS1_PAIRSET_TARGET_KIND
+    assert resolved.receiver_contract_id == DQS1_RECEIVER_CONTRACT_ID
+    assert resolved.receiver_contract_kind == DQS1_RECEIVER_CONTRACT_KIND
+    assert resolved.cooperative_receiver_required is True
     assert resolved.blockers == ()
 
 
@@ -157,6 +174,67 @@ def test_byte_shaving_materializer_registry_allows_explicit_dqs1_target_kind() -
     assert resolved.blockers == ()
 
 
+def test_compile_dqs1_byte_shaving_plan_preserves_explicit_target_kind(
+    tmp_path: Path,
+) -> None:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "dqs1_target_kind_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_dqs1_target_kind_fixture",
+        "combo_beam_width": 8,
+        "max_combo_count": 8,
+        "dqs1_base_pair_indices": [101, 320, 371, 501],
+        "units": [
+            {
+                "unit_id": "pair0371",
+                "unit_kind": "pair",
+                "candidate_saved_bytes": 1000,
+                "predicted_quality_score_cost": 0.00001,
+                "confidence": 0.95,
+                "operations": [
+                    {
+                        "operation_id": "drop_pair0371",
+                        "operation_family": "drop_pair",
+                        "target_kind": DQS1_PAIRSET_TARGET_KIND,
+                    }
+                ],
+            },
+            {
+                "unit_id": "pair0320",
+                "unit_kind": "pair",
+                "candidate_saved_bytes": 900,
+                "predicted_quality_score_cost": 0.00001,
+                "confidence": 0.9,
+                "operations": [
+                    {
+                        "operation_id": "drop_pair0320",
+                        "operation_family": "drop_pair",
+                        "target_kind": DQS1_PAIRSET_TARGET_KIND,
+                    }
+                ],
+            },
+        ],
+        **_false_authority(),
+    }
+    plan = build_byte_shaving_campaign_plan(surface, max_k=2)
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+
+    assert compiled["executable_row_count"] >= 1
+    assert all(
+        resolution["materializer_id"] == DQS1_DROP_PAIR_MATERIALIZER
+        and resolution["target_kind"] == DQS1_PAIRSET_TARGET_KIND
+        for row in compiled["executable_rows"]
+        for resolution in row["materializer_resolutions"]
+    )
+
+
 def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_ops(
     tmp_path: Path,
 ) -> None:
@@ -173,9 +251,28 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     )
 
     assert compiled["schema"] == MATERIALIZATION_SCHEMA
+    assert compiled["materializer_backlog"]["schema"] == MATERIALIZER_BACKLOG_SCHEMA
     assert compiled["score_claim"] is False
     assert compiled["executable_row_count"] >= 1
     assert compiled["blocked_row_count"] >= 1
+    backlog_row = next(
+        row
+        for row in compiled["materializer_backlog"]["rows"]
+        if row["unit_kind"] == "byte_range"
+        and row["operation_family"] == "null_remove_or_seed"
+    )
+    assert backlog_row["gap_class"] == "target_kind_required"
+    assert (
+        backlog_row["receiver_contract_status"]
+        == "receiver_target_contract_required"
+    )
+    assert backlog_row["receiver_contract_id"] is None
+    assert backlog_row["blocked_row_count"] >= 1
+    assert backlog_row["candidate_saved_bytes_sum"] > 0
+    assert "byte_null_run_a" in backlog_row["source_unit_ids"]
+    assert compiled["action_summary"]["materializer_backlog_summary"][
+        "backlog_row_count"
+    ] == compiled["materializer_backlog"]["backlog_row_count"]
     assert any(
         "materializer_target_kind_required:byte_range:null_remove_or_seed"
         in row["materialization_blockers"]
@@ -190,6 +287,10 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     assert {unit["unit_id"] for unit in both["source_units"]} == {"pair0320", "pair0371"}
     assert all(
         resolution["materializer_id"] == DQS1_DROP_PAIR_MATERIALIZER
+        for resolution in both["materializer_resolutions"]
+    )
+    assert all(
+        resolution["receiver_contract_id"] == DQS1_RECEIVER_CONTRACT_ID
         for resolution in both["materializer_resolutions"]
     )
     action = next(
@@ -207,6 +308,10 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     assert portfolio_row["source_metadata"]["materializer_resolutions"] == both[
         "materializer_resolutions"
     ]
+    assert portfolio_row["source_metadata"]["receiver_contracts"] == [
+        DQS1_RECEIVER_CONTRACT_ID
+    ]
+    assert portfolio_row["source_metadata"]["cooperative_receiver_required"] is True
     assert {unit["unit_id"] for unit in portfolio_row["source_metadata"]["source_units"]} == {
         "pair0320",
         "pair0371",
@@ -264,6 +369,29 @@ def test_compile_dqs1_byte_shaving_plan_blocks_selected_unit_blockers(
         in row["materialization_blockers"]
         for row in compiled["blocked_rows"]
     )
+    blocker_backlog = next(
+        row
+        for row in compiled["materializer_backlog"]["rows"]
+        if row["gap_class"] == "source_unit_blocked"
+        and row["unit_kind"] == "pair"
+        and row["operation_family"] == "drop_pair"
+    )
+    assert blocker_backlog["materializer_id"] == DQS1_DROP_PAIR_MATERIALIZER
+    assert blocker_backlog["target_kind"] == DQS1_PAIRSET_TARGET_KIND
+    assert blocker_backlog["receiver_contract_id"] == DQS1_RECEIVER_CONTRACT_ID
+    assert (
+        blocker_backlog["receiver_contract_status"]
+        == "receiver_contract_registered_but_source_blocked"
+    )
+    expected_blocker_count = sum(
+        "selected_unit_blocker:pair0371:requires_full_frame_parity"
+        in row["materialization_blockers"]
+        for row in compiled["blocked_rows"]
+    )
+    assert blocker_backlog["blocked_row_count"] == expected_blocker_count
+    assert blocker_backlog["blocker_counts"] == {
+        "selected_unit_blocker:pair0371:requires_full_frame_parity": expected_blocker_count
+    }
     assert all(
         "pair0371" not in {unit["unit_id"] for unit in row["source_units"]}
         for row in compiled["executable_rows"]
@@ -388,6 +516,7 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
     materialization = tmp_path / "materialization.json"
     portfolio = tmp_path / "portfolio.json"
     summary = tmp_path / "action_summary.json"
+    backlog = tmp_path / "materializer_backlog.json"
     queue = tmp_path / "queue.json"
     plan_path.write_text(json.dumps(_pair_drop_plan()), encoding="utf-8")
 
@@ -403,6 +532,8 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
             str(portfolio),
             "--action-summary-out",
             str(summary),
+            "--materializer-backlog-out",
+            str(backlog),
             "--queue-out",
             str(queue),
             "--repo-root",
@@ -428,10 +559,17 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
 
     stdout = json.loads(result.stdout)
     assert stdout["executable_row_count"] >= 1
+    assert stdout["materializer_backlog_out"] == str(backlog)
+    assert stdout["materializer_backlog_row_count"] >= 1
     assert stdout["queue"]["experiment_count"] == 2
     assert materialization.is_file()
     assert portfolio.is_file()
     assert summary.is_file()
+    assert backlog.is_file()
+    assert (
+        json.loads(backlog.read_text(encoding="utf-8"))["schema"]
+        == MATERIALIZER_BACKLOG_SCHEMA
+    )
     loaded = load_queue_definition(queue)
     assert loaded["controls"]["max_concurrency"]["local_cpu"] == 2
     assert len(loaded["experiments"]) == 2

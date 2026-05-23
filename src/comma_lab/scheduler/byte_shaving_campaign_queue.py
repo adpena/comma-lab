@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import re
 import time
+from collections import Counter
 from collections.abc import Mapping, Sequence
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +35,7 @@ from .dqs1_local_first_queue import SAFE_OPERATOR_ACTION, candidate_slug
 from .experiment_queue import ExperimentQueueError
 
 MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
+MATERIALIZER_BACKLOG_SCHEMA = "byte_shaving_materializer_backlog.v1"
 ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
@@ -61,6 +64,16 @@ def _finite_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed
+
+
+def _finite_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if isfinite(parsed) else None
 
 
 def _validate_pair_indices(values: Sequence[int], *, label: str) -> tuple[int, ...]:
@@ -144,6 +157,267 @@ def _iter_plan_rows(payload: Mapping[str, Any]) -> list[tuple[str, Mapping[str, 
     return rows
 
 
+def _unit_blockers_by_id(source_units: Sequence[Mapping[str, Any]]) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for unit in source_units:
+        unit_id = str(unit.get("unit_id") or "")
+        if not unit_id:
+            continue
+        out[unit_id] = ordered_unique(str(item) for item in _as_list(unit.get("blockers")))
+    return out
+
+
+def _units_by_id(source_units: Sequence[Mapping[str, Any]]) -> dict[str, Mapping[str, Any]]:
+    return {
+        str(unit.get("unit_id") or ""): unit
+        for unit in source_units
+        if str(unit.get("unit_id") or "")
+    }
+
+
+def _resolution_gap_class(resolution: Mapping[str, Any], blockers: Sequence[str]) -> str:
+    joined = "\n".join(blockers)
+    if "materializer_target_kind_required:" in joined:
+        return "target_kind_required"
+    if "materializer_not_registered:" in joined:
+        return "adapter_not_registered"
+    if "materializer_unit_kind_mismatch:" in joined:
+        return "adapter_unit_kind_mismatch"
+    if "materializer_operation_family_mismatch:" in joined:
+        return "adapter_operation_family_mismatch"
+    if "materializer_target_kind_mismatch:" in joined:
+        return "adapter_target_kind_mismatch"
+    if "operation_family_missing:" in joined:
+        return "operation_family_missing"
+    if "unknown_operation_family:" in joined:
+        return "unknown_operation_family"
+    if any(str(item) for item in _as_list(resolution.get("selected_operation_blockers"))):
+        return "selected_operation_blocked"
+    return "source_unit_blocked"
+
+
+def _backlog_key(resolution: Mapping[str, Any], gap_class: str) -> str:
+    unit_kind = str(resolution.get("unit_kind") or "<missing>")
+    family = str(resolution.get("operation_family") or "<missing>")
+    target = str(resolution.get("target_kind") or "<target_tbd>")
+    materializer = str(resolution.get("materializer_id") or "<materializer_tbd>")
+    return f"{gap_class}:{target}:{unit_kind}:{family}:{materializer}"
+
+
+def _receiver_contract_status(resolution: Mapping[str, Any], gap_class: str) -> str:
+    if resolution.get("receiver_contract_id") and gap_class == "source_unit_blocked":
+        return "receiver_contract_registered_but_source_blocked"
+    if resolution.get("receiver_contract_id") and gap_class == "selected_operation_blocked":
+        return "receiver_contract_registered_but_operation_blocked"
+    if gap_class == "target_kind_required":
+        return "receiver_target_contract_required"
+    if gap_class == "adapter_not_registered":
+        return "receiver_adapter_contract_missing"
+    if gap_class in {
+        "adapter_unit_kind_mismatch",
+        "adapter_operation_family_mismatch",
+        "adapter_target_kind_mismatch",
+    }:
+        return "receiver_contract_mismatch"
+    if gap_class in {"operation_family_missing", "unknown_operation_family"}:
+        return "receiver_operation_contract_invalid"
+    return "receiver_contract_blocked"
+
+
+def _backlog_row_sort_key(row: Mapping[str, Any]) -> tuple[float, int, int, str]:
+    return (
+        -float(row.get("expected_score_gain_sum") or 0.0),
+        -int(row.get("candidate_saved_bytes_sum") or 0),
+        -int(row.get("blocked_row_count") or 0),
+        str(row.get("backlog_key") or ""),
+    )
+
+
+def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Aggregate blocked materialization rows into ranked adapter work orders."""
+
+    rows: dict[str, dict[str, Any]] = {}
+    seen_selection_by_key: dict[str, set[str]] = {}
+    seen_unit_by_key: dict[str, set[str]] = {}
+    for row in compiled_rows:
+        if row.get("executable") is True:
+            continue
+        selection_id = str(row.get("selection_id") or row.get("candidate_id") or "")
+        row_saved_bytes = _finite_int(row.get("candidate_saved_bytes")) or 0
+        row_expected_gain = _finite_float(row.get("expected_score_gain")) or 0.0
+        expected_delta = _finite_float(row.get("expected_delta_score"))
+        source_units = [
+            unit for unit in _as_list(row.get("source_units")) if isinstance(unit, Mapping)
+        ]
+        unit_blockers = _unit_blockers_by_id(source_units)
+        source_units_by_id = _units_by_id(source_units)
+        resolutions = [
+            item for item in _as_list(row.get("materializer_resolutions")) if isinstance(item, Mapping)
+        ]
+        gain_share = row_expected_gain / float(max(1, len(resolutions)))
+        saved_share = row_saved_bytes // max(1, len(resolutions))
+        for resolution in resolutions:
+            unit_id = str(resolution.get("unit_id") or "")
+            unit_saved_bytes = _finite_int(
+                source_units_by_id.get(unit_id, {}).get("candidate_saved_bytes")
+            )
+            saved_bytes = unit_saved_bytes if unit_saved_bytes is not None else saved_share
+            resolution_blockers = ordered_unique(
+                [
+                    *[str(item) for item in _as_list(resolution.get("blockers"))],
+                    *[
+                        f"selected_operation_blocker:{resolution.get('unit_id') or '<missing>'}:{item}"
+                        for item in _as_list(resolution.get("selected_operation_blockers"))
+                    ],
+                    *[
+                        f"selected_unit_blocker:{resolution.get('unit_id') or '<missing>'}:{item}"
+                        for item in unit_blockers.get(str(resolution.get("unit_id") or ""), [])
+                    ],
+                ]
+            )
+            if not resolution_blockers:
+                continue
+            gap_class = _resolution_gap_class(resolution, resolution_blockers)
+            receiver_contract_status = _receiver_contract_status(resolution, gap_class)
+            key = _backlog_key(resolution, gap_class)
+            current = rows.get(key)
+            if current is None:
+                current = {
+                    "schema": "byte_shaving_materializer_backlog_row.v1",
+                    "backlog_key": key,
+                    "gap_class": gap_class,
+                    "target_kind": resolution.get("target_kind"),
+                    "materializer_id": resolution.get("materializer_id"),
+                    "receiver_contract_id": resolution.get("receiver_contract_id"),
+                    "receiver_contract_kind": resolution.get("receiver_contract_kind"),
+                    "receiver_contract_status": receiver_contract_status,
+                    "cooperative_receiver_required": bool(
+                        resolution.get("cooperative_receiver_required")
+                    ),
+                    "materialization_resource_kind": resolution.get(
+                        "materialization_resource_kind"
+                    ),
+                    "unit_kind": resolution.get("unit_kind"),
+                    "operation_family": resolution.get("operation_family"),
+                    "blocked_row_count": 0,
+                    "blocked_resolution_count": 0,
+                    "selected_operation_count": 0,
+                    "affected_unit_count": 0,
+                    "candidate_saved_bytes_sum": 0,
+                    "expected_score_gain_sum": 0.0,
+                    "best_expected_score_gain": None,
+                    "best_expected_delta_score": None,
+                    "best_candidate_saved_bytes": 0,
+                    "blocker_counts": {},
+                    "source_unit_ids": [],
+                    "source_selection_ids": [],
+                    "source_selection_samples": [],
+                    **FALSE_AUTHORITY,
+                }
+                rows[key] = current
+                seen_selection_by_key[key] = set()
+                seen_unit_by_key[key] = set()
+            current["blocked_resolution_count"] = (
+                int(current["blocked_resolution_count"]) + 1
+            )
+            current["selected_operation_count"] = int(current["selected_operation_count"]) + 1
+            current["candidate_saved_bytes_sum"] = int(current["candidate_saved_bytes_sum"]) + saved_bytes
+            current["expected_score_gain_sum"] = float(current["expected_score_gain_sum"]) + gain_share
+            best_gain = _finite_float(current.get("best_expected_score_gain"))
+            if best_gain is None or gain_share > best_gain:
+                current["best_expected_score_gain"] = gain_share
+                current["best_expected_delta_score"] = expected_delta
+                current["best_candidate_saved_bytes"] = saved_bytes
+            blocker_counts = Counter(current["blocker_counts"])
+            blocker_counts.update(resolution_blockers)
+            current["blocker_counts"] = dict(sorted(blocker_counts.items()))
+            if unit_id and unit_id not in seen_unit_by_key[key]:
+                seen_unit_by_key[key].add(unit_id)
+                current["source_unit_ids"].append(unit_id)
+                current["affected_unit_count"] = len(seen_unit_by_key[key])
+            if selection_id and selection_id not in seen_selection_by_key[key]:
+                seen_selection_by_key[key].add(selection_id)
+                current["source_selection_ids"].append(selection_id)
+                current["blocked_row_count"] = len(seen_selection_by_key[key])
+            samples = current["source_selection_samples"]
+            if len(samples) < 8:
+                samples.append(
+                    {
+                        "selection_id": selection_id,
+                        "selection_kind": row.get("selection_kind"),
+                        "unit_id": unit_id,
+                        "candidate_saved_bytes": saved_bytes,
+                        "expected_score_gain": gain_share,
+                        "expected_delta_score": expected_delta,
+                    }
+                )
+
+    ranked_rows = sorted(rows.values(), key=_backlog_row_sort_key)
+    for rank, backlog_row in enumerate(ranked_rows, start=1):
+        backlog_row["backlog_rank"] = rank
+        backlog_row["implementation_priority_score"] = (
+            float(backlog_row["expected_score_gain_sum"])
+            + float(backlog_row["candidate_saved_bytes_sum"]) * 1e-9
+            + float(backlog_row["blocked_row_count"]) * 1e-6
+        )
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": MATERIALIZER_BACKLOG_SCHEMA,
+            "tool": TOOL_NAME,
+            "generated_at_utc": _utc_now(),
+            "backlog_row_count": len(ranked_rows),
+            "rows": ranked_rows,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=(
+            "materializer_backlog_is_planning_only",
+            "requires_adapter_implementation_before_queue_dispatch",
+        ),
+    )
+
+
+def summarize_materializer_backlog(backlog: Mapping[str, Any], *, limit: int = 8) -> dict[str, Any]:
+    rows = [item for item in _as_list(backlog.get("rows")) if isinstance(item, Mapping)]
+    top_rows = rows[: max(0, limit)]
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": "byte_shaving_materializer_backlog_summary.v1",
+            "source_schema": backlog.get("schema"),
+            "backlog_row_count": len(rows),
+            "top_backlog_rows": [
+                {
+                    "backlog_rank": row.get("backlog_rank"),
+                    "backlog_key": row.get("backlog_key"),
+                    "gap_class": row.get("gap_class"),
+                    "unit_kind": row.get("unit_kind"),
+                    "operation_family": row.get("operation_family"),
+                    "target_kind": row.get("target_kind"),
+                    "materializer_id": row.get("materializer_id"),
+                    "receiver_contract_id": row.get("receiver_contract_id"),
+                    "receiver_contract_kind": row.get("receiver_contract_kind"),
+                    "receiver_contract_status": row.get("receiver_contract_status"),
+                    "cooperative_receiver_required": row.get(
+                        "cooperative_receiver_required"
+                    ),
+                    "materialization_resource_kind": row.get(
+                        "materialization_resource_kind"
+                    ),
+                    "blocked_row_count": row.get("blocked_row_count"),
+                    "blocked_resolution_count": row.get("blocked_resolution_count"),
+                    "selected_operation_count": row.get("selected_operation_count"),
+                    "affected_unit_count": row.get("affected_unit_count"),
+                    "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
+                    "expected_score_gain_sum": row.get("expected_score_gain_sum"),
+                    "implementation_priority_score": row.get("implementation_priority_score"),
+                }
+                for row in top_rows
+            ],
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=("materializer_backlog_summary_is_planning_only",),
+    )
+
+
 def _materialize_row(
     *,
     payload: Mapping[str, Any],
@@ -194,6 +468,10 @@ def _materialize_row(
                 "explicit_materializer": resolution.explicit_materializer,
                 "materializer_id": resolution.materializer_id,
                 "target_kind": resolution.target_kind,
+                "receiver_contract_id": resolution.receiver_contract_id,
+                "receiver_contract_kind": resolution.receiver_contract_kind,
+                "cooperative_receiver_required": resolution.cooperative_receiver_required,
+                "materialization_resource_kind": resolution.materialization_resource_kind,
                 "executable": resolution.executable,
                 "blockers": list(resolution.blockers),
                 "selected_operation_blockers": operation_blockers,
@@ -353,17 +631,10 @@ def compile_dqs1_byte_shaving_campaign(
         isinstance(candidate_limit, bool) or candidate_limit < 1
     ):
         raise ExperimentQueueError("candidate_limit must be >= 1 when provided")
-    if allow_partial_materialization and not str(
-        partial_materialization_rationale or ""
-    ).strip():
-        raise ExperimentQueueError(
-            "partial_materialization_rationale is required when partial materialization is allowed"
-        )
     rationale = str(partial_materialization_rationale or "").strip()
     if allow_partial_materialization and not rationale:
         raise ExperimentQueueError(
-            "allow_partial_materialization requires a non-empty "
-            "partial_materialization_rationale"
+            "partial_materialization_rationale is required when partial materialization is allowed"
         )
     repo = Path(repo_root)
     base_pairs = _base_pair_indices(payload, base_pair_indices)
@@ -394,6 +665,8 @@ def compile_dqs1_byte_shaving_campaign(
     if candidate_limit is not None:
         executable_rows = executable_rows[:candidate_limit]
     blocked_rows = [row for row in compiled_rows if row["executable"] is not True]
+    materializer_backlog = build_materializer_backlog(compiled_rows)
+    materializer_backlog_summary = summarize_materializer_backlog(materializer_backlog)
     partial_materialization_blockers: list[str] = []
     if blocked_rows and executable_rows and not allow_partial_materialization:
         partial_materialization_blockers.append(
@@ -423,6 +696,15 @@ def compile_dqs1_byte_shaving_campaign(
             "source_plan_path": plan_ref,
             "source_plan_schema": payload.get("schema"),
             "materializer_registry_schema": REGISTRY_SCHEMA,
+            "receiver_contracts": ordered_unique(
+                resolution["receiver_contract_id"]
+                for resolution in row["materializer_resolutions"]
+                if resolution.get("receiver_contract_id")
+            ),
+            "cooperative_receiver_required": any(
+                bool(resolution.get("cooperative_receiver_required"))
+                for resolution in row["materializer_resolutions"]
+            ),
             "allowed_use": "dqs1_local_first_materialization_only",
             **FALSE_AUTHORITY,
         }
@@ -476,6 +758,7 @@ def compile_dqs1_byte_shaving_campaign(
             "partial_materialization_allowed": bool(allow_partial_materialization),
             "partial_materialization_rationale": rationale or None,
             "partial_materialization_blockers": partial_materialization_blockers,
+            "materializer_backlog_summary": materializer_backlog_summary,
             **FALSE_AUTHORITY,
         },
         dispatch_blockers=(
@@ -499,6 +782,7 @@ def compile_dqs1_byte_shaving_campaign(
             "partial_materialization_allowed": bool(allow_partial_materialization),
             "partial_materialization_rationale": rationale or None,
             "partial_materialization_blockers": partial_materialization_blockers,
+            "materializer_backlog_summary": materializer_backlog_summary,
             **FALSE_AUTHORITY,
         },
         dispatch_blockers=(
@@ -522,6 +806,8 @@ def compile_dqs1_byte_shaving_campaign(
             "partial_materialization_allowed": bool(allow_partial_materialization),
             "partial_materialization_rationale": rationale or None,
             "partial_materialization_blockers": partial_materialization_blockers,
+            "materializer_backlog": materializer_backlog,
+            "materializer_backlog_summary": materializer_backlog_summary,
             "executable_rows": executable_rows,
             "blocked_rows": blocked_rows,
             "portfolio": portfolio,
@@ -538,6 +824,9 @@ def compile_dqs1_byte_shaving_campaign(
 __all__ = [
     "ACTION_SUMMARY_SCHEMA",
     "MATERIALIZATION_SCHEMA",
+    "MATERIALIZER_BACKLOG_SCHEMA",
     "PORTFOLIO_SCHEMA",
+    "build_materializer_backlog",
     "compile_dqs1_byte_shaving_campaign",
+    "summarize_materializer_backlog",
 ]

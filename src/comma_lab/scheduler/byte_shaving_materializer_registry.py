@@ -14,10 +14,13 @@ from typing import Any
 
 from tac.optimization.byte_shaving_campaign import DEFAULT_OPERATION_FAMILIES
 from tac.optimization.proxy_candidate_contract import ordered_unique
+from tac.packet_compiler.cooperative_receiver_grammars import compiler_hook_rows
 
 REGISTRY_SCHEMA = "byte_shaving_materializer_registry.v1"
 DQS1_DROP_PAIR_MATERIALIZER = "dqs1_pairset_drop_pair_adapter"
 DQS1_PAIRSET_TARGET_KIND = "dqs1_pairset_drop_pair"
+DQS1_RECEIVER_CONTRACT_ID = "dqs1_pairset_decoderq_receiver.v1"
+DQS1_RECEIVER_CONTRACT_KIND = "archive_charged_pairset_runtime_selector"
 
 
 @dataclass(frozen=True)
@@ -30,6 +33,10 @@ class MaterializerAdapter:
     target_kind: str
     executable: bool
     description: str
+    receiver_contract_id: str
+    receiver_contract_kind: str
+    cooperative_receiver_required: bool
+    materialization_resource_kind: str
     required_context_fields: tuple[str, ...] = ()
 
 
@@ -44,6 +51,10 @@ class MaterializerResolution:
     explicit_materializer: str | None
     materializer_id: str | None
     target_kind: str | None
+    receiver_contract_id: str | None
+    receiver_contract_kind: str | None
+    cooperative_receiver_required: bool
+    materialization_resource_kind: str | None
     executable: bool
     blockers: tuple[str, ...]
     adapter: MaterializerAdapter | None = None
@@ -57,6 +68,10 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         target_kind=DQS1_PAIRSET_TARGET_KIND,
         executable=True,
         description="Compile pair-unit drop operations into DQS1 pairset local-first queue rows.",
+        receiver_contract_id=DQS1_RECEIVER_CONTRACT_ID,
+        receiver_contract_kind=DQS1_RECEIVER_CONTRACT_KIND,
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
         required_context_fields=("dqs1_base_pair_indices",),
     ),
 )
@@ -177,6 +192,18 @@ def resolve_materializer(
         explicit_materializer=explicit_materializer,
         materializer_id=adapter.materializer_id if adapter is not None else explicit_materializer,
         target_kind=adapter.target_kind if adapter is not None else explicit_target_kind,
+        receiver_contract_id=(
+            adapter.receiver_contract_id if adapter is not None else None
+        ),
+        receiver_contract_kind=(
+            adapter.receiver_contract_kind if adapter is not None else None
+        ),
+        cooperative_receiver_required=(
+            bool(adapter.cooperative_receiver_required) if adapter is not None else False
+        ),
+        materialization_resource_kind=(
+            adapter.materialization_resource_kind if adapter is not None else None
+        ),
         executable=adapter is not None and adapter.executable and not blockers,
         blockers=tuple(blockers),
         adapter=adapter,
@@ -186,6 +213,7 @@ def resolve_materializer(
 def registry_manifest() -> dict[str, Any]:
     """Return a machine-readable registry view for tests and runbooks."""
 
+    cooperative_receiver_hooks = compiler_hook_rows()
     return {
         "schema": REGISTRY_SCHEMA,
         "adapters": [
@@ -195,11 +223,22 @@ def registry_manifest() -> dict[str, Any]:
                 "operation_family": adapter.operation_family,
                 "target_kind": adapter.target_kind,
                 "executable": adapter.executable,
+                "receiver_contract_id": adapter.receiver_contract_id,
+                "receiver_contract_kind": adapter.receiver_contract_kind,
+                "cooperative_receiver_required": adapter.cooperative_receiver_required,
+                "materialization_resource_kind": adapter.materialization_resource_kind,
                 "required_context_fields": list(adapter.required_context_fields),
                 "description": adapter.description,
             }
             for adapter in _ADAPTERS
         ],
+        "cooperative_receiver_grammar_registry": {
+            "schema": "cooperative_receiver_packet_grammar_registry_hook.v1",
+            "known_grammar_count": len(cooperative_receiver_hooks),
+            "compiler_hook_rows": cooperative_receiver_hooks,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "known_operation_families": sorted(KNOWN_OPERATION_FAMILIES),
     }
 
@@ -207,6 +246,8 @@ def registry_manifest() -> dict[str, Any]:
 __all__ = [
     "DQS1_DROP_PAIR_MATERIALIZER",
     "DQS1_PAIRSET_TARGET_KIND",
+    "DQS1_RECEIVER_CONTRACT_ID",
+    "DQS1_RECEIVER_CONTRACT_KIND",
     "KNOWN_OPERATION_FAMILIES",
     "REGISTRY_SCHEMA",
     "MaterializerAdapter",

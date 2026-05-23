@@ -1,6 +1,8 @@
 from .byte_shaving_materializer_registry import (
     DQS1_DROP_PAIR_MATERIALIZER,
     DQS1_PAIRSET_TARGET_KIND,
+    DQS1_RECEIVER_CONTRACT_ID,
+    DQS1_RECEIVER_CONTRACT_KIND,
     REGISTRY_SCHEMA,
     registry_manifest,
     resolve_materializer,
@@ -44,6 +46,8 @@ from .models import (
 __all__ = [
     "DQS1_DROP_PAIR_MATERIALIZER",
     "DQS1_PAIRSET_TARGET_KIND",
+    "DQS1_RECEIVER_CONTRACT_ID",
+    "DQS1_RECEIVER_CONTRACT_KIND",
     "REGISTRY_SCHEMA",
     "BudgetReport",
     "BudgetSpec",

@@ -241,10 +241,29 @@ def _operation_confidence(operation: Mapping[str, Any], unit: Mapping[str, Any])
     return min(1.0, max(0.0, raw))
 
 
+def _operation_target_kind(operation: Mapping[str, Any]) -> str | None:
+    value = str(operation.get("target_kind") or operation.get("materializer_target_kind") or "").strip()
+    if value:
+        return value
+    params = operation.get("params")
+    if isinstance(params, Mapping):
+        value = str(params.get("target_kind") or params.get("materializer_target_kind") or "").strip()
+        if value:
+            return value
+    return None
+
+
 def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> list[dict[str, Any]]:
     explicit_operations = [item for item in _as_list(unit.get("operations")) if isinstance(item, Mapping)]
     raw_operations: list[Mapping[str, Any]] = explicit_operations or [
-        {"operation_family": family} for family in _operation_families(unit)
+        {
+            "operation_family": family,
+            "materializer": unit.get("materializer"),
+            "target_kind": unit.get("target_kind")
+            or unit.get("materializer_target_kind"),
+            "params": _mapping(unit.get("operation_params") or unit.get("params")),
+        }
+        for family in _operation_families(unit)
     ]
 
     out: list[dict[str, Any]] = []
@@ -277,6 +296,7 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
             "confidence_adjusted_gain": gain * confidence,
             "gain_per_byte": gain / float(saved_bytes) if saved_bytes > 0 else 0.0,
             "materializer": operation.get("materializer"),
+            "target_kind": _operation_target_kind(operation),
             "operation_params": dict(_mapping(operation.get("params"))),
             "blockers": ordered_unique(
                 str(item) for item in _as_list(operation.get("blockers"))
@@ -367,6 +387,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_operation_id": best_operation["operation_id"],
         "recommended_operation_family": best_operation["operation_family"],
         "recommended_operation_materializer": best_operation["materializer"],
+        "recommended_operation_target_kind": best_operation["target_kind"],
         "recommended_operation_params": best_operation["operation_params"],
         "operation_families": ordered_unique(
             str(row["operation_family"]) for row in operation_candidates
@@ -472,6 +493,7 @@ def _selection_from_unit(unit: Mapping[str, Any], operation: Mapping[str, Any]) 
         "quality_cost_score": float(operation["quality_cost_score"]),
         "confidence": float(operation["confidence"]),
         "materializer": operation.get("materializer"),
+        "target_kind": operation.get("target_kind"),
         "params": operation.get("operation_params") or {},
         "blockers": ordered_unique(
             [
@@ -543,6 +565,7 @@ def _combo_row(
                 "operation_id": str(selection["operation_id"]),
                 "operation_family": str(selection["operation_family"]),
                 "materializer": selection.get("materializer"),
+                "target_kind": selection.get("target_kind"),
                 "params": selection.get("params") or {},
                 "blockers": _as_list(selection.get("blockers")),
             }
@@ -690,6 +713,7 @@ def _prefix_rows(
                     "operation_id": str(row["recommended_operation_id"]),
                     "operation_family": str(row["recommended_operation_family"]),
                     "materializer": row.get("recommended_operation_materializer"),
+                    "target_kind": row.get("recommended_operation_target_kind"),
                     "params": row.get("recommended_operation_params") or {},
                     "blockers": _as_list(row.get("blockers")),
                 }
@@ -819,6 +843,55 @@ def build_signal_surface_from_candidate_queue(
     except ValueError as exc:
         raise ByteShavingCampaignError(str(exc)) from exc
     units: list[dict[str, Any]] = []
+
+    def queue_row_operations(row: Mapping[str, Any]) -> list[dict[str, Any]]:
+        consumer_payload = row.get("consumer_payload")
+        if not isinstance(consumer_payload, Mapping):
+            consumer_payload = {}
+        raw_operations = (
+            row.get("operations")
+            or row.get("selected_operations")
+            or consumer_payload.get("selected_operations")
+            or []
+        )
+        operations = [
+            dict(item) for item in _as_list(raw_operations) if isinstance(item, Mapping)
+        ]
+        operation_families = ordered_unique(
+            str(item)
+            for item in _as_list(row.get("operation_families"))
+            if str(item)
+        )
+        row_operation_family = str(
+            row.get("operation_family")
+            or row.get("operation")
+            or (operation_families[0] if operation_families else "")
+        ).strip()
+        row_materializer = row.get("materializer")
+        row_target_kind = row.get("target_kind") or row.get("materializer_target_kind")
+        row_params = dict(
+            _mapping(row.get("operation_params") or row.get("params") or row.get("op_params"))
+        )
+        if not operations and (row_operation_family or row_materializer or row_target_kind):
+            operations.append(
+                {
+                    "operation_id": row.get("operation_id")
+                    or row_operation_family
+                    or "queue_row_operation",
+                    "operation_family": row_operation_family,
+                }
+            )
+        for operation in operations:
+            if row_materializer is not None and operation.get("materializer") is None:
+                operation["materializer"] = row_materializer
+            if row_target_kind is not None and operation.get("target_kind") is None:
+                operation["target_kind"] = row_target_kind
+            if row_params and not isinstance(operation.get("params"), Mapping):
+                operation["params"] = row_params
+            if not str(operation.get("operation_family") or "").strip() and row_operation_family:
+                operation["operation_family"] = row_operation_family
+        return operations
+
     for row in _as_list(queue_payload.get("top_k")):
         if not isinstance(row, Mapping):
             continue
@@ -837,6 +910,16 @@ def build_signal_surface_from_candidate_queue(
         )
         if bytes_value is None or bytes_value <= 0:
             continue
+        operations = queue_row_operations(row)
+        operation_families = (
+            row.get("operation_families")
+            or ordered_unique(
+                str(item.get("operation_family") or "")
+                for item in operations
+                if str(item.get("operation_family") or "")
+            )
+            or []
+        )
         units.append({
             "unit_id": str(row.get("candidate_id") or f"queue_row_{len(units)}"),
             "unit_kind": row.get("unit_kind") or "archive_section",
@@ -847,7 +930,11 @@ def build_signal_surface_from_candidate_queue(
             )
             or 0.0,
             "confidence": _finite_float(row.get("confidence")) or 0.5,
-            "operation_families": row.get("operation_families") or [],
+            "operation_families": operation_families,
+            "operations": operations,
+            "materializer": row.get("materializer"),
+            "target_kind": row.get("target_kind") or row.get("materializer_target_kind"),
+            "operation_params": row.get("operation_params") or row.get("params"),
             "score_axis": row.get("score_axis") or row.get("dominant_axis"),
             "evidence_grade": row.get("evidence_grade"),
             "evidence_semantics": row.get("evidence_semantics"),

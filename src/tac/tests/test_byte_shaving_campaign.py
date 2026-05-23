@@ -149,6 +149,11 @@ def test_candidate_queue_surface_preserves_calibration_and_rejects_authority() -
             {
                 "candidate_id": "drop_bytes",
                 "source_candidate_id": "trained_seed7",
+                "unit_kind": "byte_range",
+                "operation_family": "entropy_recode",
+                "target_kind": "byte_range_entropy_coder_v1",
+                "materializer": "byte_range_entropy_coder_adapter",
+                "operation_params": {"codec": "range"},
                 "candidate_saved_bytes": 101,
                 "predicted_quality_score_cost": 0.00001,
                 "confidence": 0.7,
@@ -183,6 +188,14 @@ def test_candidate_queue_surface_preserves_calibration_and_rejects_authority() -
     assert ranked["master_gradient_signal"] == {"anchor_count": 1}
     assert ranked["canonical_equation_provenance"] == {"equation_id": "fixture_v1"}
     assert ranked["atom_ids"] == ["atom_1"]
+    assert ranked["recommended_operation_family"] == "entropy_recode"
+    assert ranked["recommended_operation_materializer"] == "byte_range_entropy_coder_adapter"
+    assert ranked["recommended_operation_target_kind"] == "byte_range_entropy_coder_v1"
+    assert ranked["recommended_operation_params"] == {"codec": "range"}
+    selected = plan["recommended_prefix"]["selected_operations"][0]
+    assert selected["materializer"] == "byte_range_entropy_coder_adapter"
+    assert selected["target_kind"] == "byte_range_entropy_coder_v1"
+    assert selected["params"] == {"codec": "range"}
 
     queue["top_k"][0]["score_claim"] = True
     with pytest.raises(ByteShavingCampaignError, match="score_claim"):
