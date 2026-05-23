@@ -71,6 +71,88 @@ def _scorer_response_dataset(path: Path) -> None:
     )
 
 
+def _review_packet(axis: str, *, score: float, baseline: float, aggregate: str) -> dict[str, object]:
+    exact_cuda = axis == "contest_cuda"
+    return {
+        "schema": "tac_result_review_packet_v1",
+        "tool": "tools/build_result_review_packet.py",
+        "technique": "ias1_runtime_parity_top4",
+        "lane_id": f"lane_{axis}",
+        "job_id": f"job_{axis}",
+        "source_json_path": f"experiments/results/{axis}/contest_auth_eval.json",
+        "source_json_sha256": "1" * 64,
+        "score_claim": False,
+        "score_axis": axis,
+        "score_claim_valid": exact_cuda,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "family_falsified": False,
+        "method_family_retired": False,
+        "measured_config_status": (
+            "measured_config_retired" if exact_cuda else "contest_cpu_result_reviewed"
+        ),
+        "failure_class": "legitimate_score_regression_or_component_collapse",
+        "baseline_score": baseline,
+        "canonical_score": score,
+        "exact_cuda_evidence": exact_cuda,
+        "exact_cpu_evidence": not exact_cuda,
+        "custody": {
+            "archive_bytes": 181_232,
+            "archive_sha256": "2" * 64,
+            "device": "cuda" if exact_cuda else "cpu",
+            "gpu_model": "Tesla T4" if exact_cuda else "",
+            "n_samples": 600,
+            "inflate_script": "/tmp/submission/inflate.sh",
+            "command": [],
+        },
+        "dispatch_claim_state": {
+            "terminal_status_recorded": True,
+            "latest_status": f"completed_{axis}",
+        },
+        "runtime_custody": {
+            "runtime_manifest_present": True,
+            "runtime_tree_sha256": ("3" if exact_cuda else "4") * 64,
+            "runtime_content_tree_sha256": "5" * 64,
+            "runtime_file_count": 12,
+            "runtime_files_listed": True,
+            "payload_closure_fields_present": True,
+            "inflate_script_sha256": "6" * 64,
+            "inflated_output_manifest_sha256": ("7" if exact_cuda else "8") * 64,
+            "inflated_output_aggregate_sha256": aggregate,
+        },
+        "score_recomputation": {
+            "available": True,
+            "matches_reported": True,
+            "avg_segnet_dist": 0.0006,
+            "avg_posenet_dist": 0.00003,
+            "rate_term": 0.12067494979223735,
+            "recomputed_score": score,
+            "reported_score": score,
+            "abs_delta_vs_reported": 0.0,
+        },
+        "engineering_forensic_audit": {
+            "schema": "engineering_forensic_audit_v1",
+            "custody_reviewed": True,
+            "axis_reviewed": True,
+            "runtime_config_reviewed": True,
+            "archive_runtime_closure_reviewed": True,
+            "score_formula_reviewed": True,
+            "dispatch_claim_reviewed": True,
+            "engineering_or_config_bug_found": False,
+            "audit_blockers": [],
+            "classification_after_audit": (
+                "measured_config_retired_only"
+                if exact_cuda
+                else "contest_cpu_axis_reviewed_cuda_pending"
+            ),
+            "dead_or_family_falsification_allowed": False,
+            "measured_config_retirement_allowed": exact_cuda,
+        },
+        "reactivation_criteria": ["byte-closed implementation change required"],
+    }
+
+
 def test_inverse_surface_cells_become_action_atoms_and_water_buckets(
     tmp_path: Path,
 ) -> None:
@@ -191,6 +273,73 @@ def test_cli_builds_inverse_action_functional_from_scorer_response(
     assert action["cells"][0]["priority"]["elapsed_seconds"] == 2.25
     assert action["cells"][0]["priority"]["artifact_bytes"] == 4096
     assert "Selected Water Buckets" in md_out.read_text(encoding="utf-8")
+
+
+def test_cli_accepts_paired_exact_auth_calibration_packets(tmp_path: Path) -> None:
+    scorer = tmp_path / "scorer.json"
+    cpu_packet = tmp_path / "cpu_review.json"
+    cuda_packet = tmp_path / "cuda_review.json"
+    output = tmp_path / "action.json"
+    _scorer_response_dataset(scorer)
+    cpu_packet.write_text(
+        json.dumps(
+            _review_packet(
+                "contest_cpu",
+                score=0.1938,
+                baseline=0.1920,
+                aggregate="a" * 64,
+            )
+        ),
+        encoding="utf-8",
+    )
+    cuda_packet.write_text(
+        json.dumps(
+            _review_packet(
+                "contest_cuda",
+                score=0.228,
+                baseline=0.205,
+                aggregate="b" * 64,
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--scorer-response",
+            str(scorer),
+            "--candidate-id",
+            "ias1_runtime_parity_top4",
+            "--exact-auth-calibration-packet",
+            str(cpu_packet),
+            "--exact-auth-calibration-packet",
+            str(cuda_packet),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+            "--total-byte-budget",
+            "64",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    action = json.loads(output.read_text(encoding="utf-8"))
+    assert action["water_bucket"]["selected_count"] == 0
+    assert action["cells"][0]["best_observation_id"].startswith(
+        "exact_auth_calibration_ias1_runtime_parity_top4_"
+    )
+    assert action["cells"][0]["priority"]["expected_score_gain"] == 0.0
+    assert action["cells"][0]["priority"]["calibration_penalty"] == pytest.approx(
+        (0.1938 - 0.1920) + (0.228 - 0.205)
+    )
+    assert action["observation_feedback"]["exact_auth_calibration_count"] == 1
+    assert action["score_claim"] is False
+    assert action["rank_or_kill_eligible"] is False
 
 
 def test_cli_requires_identity_for_queue_performance_summary(tmp_path: Path) -> None:

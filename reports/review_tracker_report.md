@@ -1,10 +1,10 @@
-# Code Review Tracker Report — 2026-05-23 20:19 UTC
+# Code Review Tracker Report — 2026-05-23 20:36 UTC
 
 ## Summary
 
 - **Total entities**: 75250
-- **Reviewed**: 65036 (86%)
-- **Unreviewed**: 10214
+- **Reviewed**: 65037 (86%)
+- **Unreviewed**: 10213
 - **Stale**: 0
 - **Needs fix**: 0
 
@@ -45,6 +45,8 @@
 
 ## Recent Review Activity
 
+- `tac.tests.test_inverse_steganalysis_acquisition::test_queue_performance_candidate_map_can_expand_bundle_steps` — marked_reviewed by council ()
+- `tac.tests.test_inverse_steganalysis_acquisition::test_queue_performance_candidate_map_can_expand_bundle_steps` — marked_reviewed by council ()
 - `tac.tests.test_recover_modal_auth_eval_tool::_load_tool` — marked_reviewed by codex (ias1_recovery_idempotence_review)
 - `tac.tests.test_recover_modal_auth_eval_tool::_write_auth_eval` — marked_reviewed by codex (ias1_recovery_idempotence_review)
 - `tac.tests.test_recover_modal_auth_eval_tool::test_terminal_status_uses_exact_readiness_cuda_prefix` — marked_reviewed by codex (ias1_recovery_idempotence_review)
@@ -62,6 +64,4 @@
 - `tac.tests.test_byte_shaving_campaign_queue::test_byte_shaving_materializer_registry_refuses_implicit_dqs1_pair_drop` — marked_reviewed by codex (ias1_scheduler_storage_preflight_review)
 - `tac.tests.test_byte_shaving_campaign_queue::test_byte_shaving_materializer_registry_allows_explicit_dqs1_target_kind` — marked_reviewed by codex (ias1_scheduler_storage_preflight_review)
 - `tac.tests.test_byte_shaving_campaign_queue::test_byte_shaving_materializer_registry_allows_inverse_action_probe_target_kind` — marked_reviewed by codex (ias1_scheduler_storage_preflight_review)
-- `tac.tests.test_byte_shaving_campaign_queue::test_compile_dqs1_byte_shaving_plan_classifies_byte_range_entropy_contract_gap` — marked_reviewed by codex (ias1_scheduler_storage_preflight_review)
 - `tac.tests.test_byte_shaving_campaign_queue::test_compile_dqs1_byte_shaving_plan_suggests_byte_range_entropy_target_kind` — marked_reviewed by codex (ias1_scheduler_storage_preflight_review)
-- `tac.tests.test_byte_shaving_campaign_queue::test_materializer_work_queue_builds_byte_range_chain_command` — marked_reviewed by codex (ias1_scheduler_storage_preflight_review)

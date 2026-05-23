@@ -23,6 +23,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
     action_atoms_from_inverse_scorer_surface,
     build_discrete_scorer_action_functional,
     observations_from_queue_performance_summary,
+    paired_exact_auth_calibration_observations_from_review_packets,
 )
 from tac.optimization.scorer_inverse_decision_surface import (  # noqa: E402
     build_inverse_scorer_decision_surface,
@@ -119,6 +120,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--inverse-scorer-surface", action="append", default=[])
     parser.add_argument("--atom", action="append", default=[])
     parser.add_argument("--observation", action="append", default=[])
+    parser.add_argument("--exact-auth-calibration-packet", action="append", default=[])
+    parser.add_argument("--exact-auth-calibration-candidate-id", default=None)
     parser.add_argument("--queue-performance-summary", action="append", default=[])
     parser.add_argument("--queue-performance-runtime-identity", type=Path, default=None)
     parser.add_argument("--queue-performance-cache-identity", type=Path, default=None)
@@ -184,6 +187,24 @@ def main(argv: list[str] | None = None) -> int:
         for raw_path in args.observation:
             path = Path(raw_path)
             observations.extend(_as_rows(_load_json(path), path=path, key="observations"))
+        if args.exact_auth_calibration_packet:
+            calibration_candidate_id = (
+                args.exact_auth_calibration_candidate_id or args.candidate_id
+            )
+            if calibration_candidate_id is None:
+                raise SystemExit(
+                    "--exact-auth-calibration-candidate-id or --candidate-id "
+                    "is required with --exact-auth-calibration-packet"
+                )
+            packet_paths = [Path(raw_path) for raw_path in args.exact_auth_calibration_packet]
+            observations.extend(
+                paired_exact_auth_calibration_observations_from_review_packets(
+                    [_load_mapping(path, label="exact auth calibration packet") for path in packet_paths],
+                    candidate_id=calibration_candidate_id,
+                    packet_paths=[_repo_rel(path, args.repo_root) for path in packet_paths],
+                    source_path=",".join(_repo_rel(path, args.repo_root) for path in packet_paths),
+                )
+            )
         if args.queue_performance_summary:
             if args.queue_performance_runtime_identity is None:
                 raise SystemExit(

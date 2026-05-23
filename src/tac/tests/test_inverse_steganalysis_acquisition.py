@@ -17,6 +17,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     normalize_inverse_steganalysis_atom,
     normalize_inverse_steganalysis_observation,
     observations_from_queue_performance_summary,
+    paired_exact_auth_calibration_observations_from_review_packets,
 )
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 
@@ -75,6 +76,114 @@ def _observation(candidate_id: str = "candidate_a", **overrides: object) -> dict
     }
     row.update(overrides)
     return row
+
+
+def _review_packet(
+    axis: str,
+    *,
+    score: float,
+    baseline_score: float,
+    archive_sha256: str = "1" * 64,
+    archive_bytes: int = 181_232,
+    runtime_content_tree_sha256: str = "2" * 64,
+    inflated_output_aggregate_sha256: str = "3" * 64,
+) -> dict[str, object]:
+    exact_cuda = axis == "contest_cuda"
+    exact_cpu = axis == "contest_cpu"
+    status = (
+        "measured_config_retired"
+        if exact_cuda and score > baseline_score
+        else "exact_cuda_result_reviewed"
+        if exact_cuda
+        else "contest_cpu_result_reviewed"
+    )
+    failure_class = (
+        "legitimate_score_regression_or_component_collapse"
+        if status == "measured_config_retired"
+        else "contest_cpu_public_leaderboard_anchor_cuda_pending"
+        if exact_cpu
+        else "not_negative_against_supplied_baseline"
+    )
+    return {
+        "schema": "tac_result_review_packet_v1",
+        "tool": "tools/build_result_review_packet.py",
+        "technique": "ias1_runtime_parity_top4",
+        "lane_id": f"lane_ias1_{axis}",
+        "job_id": f"job_ias1_{axis}",
+        "source_json_path": f"experiments/results/{axis}/contest_auth_eval.json",
+        "source_json_sha256": "4" * 64,
+        "score_claim": False,
+        "score_axis": axis,
+        "score_claim_valid": exact_cuda,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "family_falsified": False,
+        "method_family_retired": False,
+        "measured_config_status": status,
+        "failure_class": failure_class,
+        "baseline_score": baseline_score,
+        "canonical_score": score,
+        "exact_cuda_evidence": exact_cuda,
+        "exact_cpu_evidence": exact_cpu,
+        "custody": {
+            "archive_bytes": archive_bytes,
+            "archive_sha256": archive_sha256,
+            "device": "cuda" if exact_cuda else "cpu",
+            "gpu_model": "Tesla T4" if exact_cuda else "",
+            "n_samples": 600,
+            "inflate_script": "/tmp/submission/inflate.sh",
+            "command": ["experiments/contest_auth_eval.py", "--device", axis],
+        },
+        "dispatch_claim_state": {
+            "terminal_status_recorded": True,
+            "latest_status": f"completed_{axis}_modal_auth_eval_recovered",
+        },
+        "runtime_custody": {
+            "runtime_manifest_present": True,
+            "runtime_tree_sha256": ("5" if exact_cuda else "6") * 64,
+            "runtime_content_tree_sha256": runtime_content_tree_sha256,
+            "runtime_file_count": 12,
+            "runtime_files_listed": True,
+            "payload_closure_fields_present": True,
+            "inflate_script_sha256": "7" * 64,
+            "inflated_output_manifest_sha256": ("8" if exact_cuda else "9") * 64,
+            "inflated_output_aggregate_sha256": inflated_output_aggregate_sha256,
+        },
+        "score_recomputation": {
+            "available": True,
+            "matches_reported": True,
+            "avg_segnet_dist": 0.00055979 if exact_cpu else 0.00066252,
+            "avg_posenet_dist": 0.00002943 if exact_cpu else 0.00016845,
+            "rate_term": 0.12067494979223735,
+            "recomputed_score": score,
+            "reported_score": score,
+            "abs_delta_vs_reported": 0.0,
+        },
+        "engineering_forensic_audit": {
+            "schema": "engineering_forensic_audit_v1",
+            "custody_reviewed": True,
+            "axis_reviewed": True,
+            "runtime_config_reviewed": True,
+            "archive_runtime_closure_reviewed": True,
+            "score_formula_reviewed": True,
+            "dispatch_claim_reviewed": True,
+            "engineering_or_config_bug_found": False,
+            "audit_blockers": [],
+            "classification_after_audit": (
+                "measured_config_retired_only"
+                if status == "measured_config_retired"
+                else "contest_cpu_axis_reviewed_cuda_pending"
+                if exact_cpu
+                else "exact_cuda_result_reviewed_no_negative_status_change"
+            ),
+            "dead_or_family_falsification_allowed": False,
+            "measured_config_retirement_allowed": status == "measured_config_retired",
+        },
+        "reactivation_criteria": [
+            "provide a byte-closed implementation change before redispatch"
+        ],
+    }
 
 
 def test_atom_normalization_is_false_authority_only() -> None:
@@ -407,6 +516,102 @@ def test_queue_performance_observations_do_not_override_scorer_observations() ->
     assert plan["ranked_atoms"][0]["best_observation_id"] == "obs_scorer_candidate_a"
     assert plan["ranked_atoms"][0]["priority"]["elapsed_seconds"] == pytest.approx(30.0)
     assert plan["ranked_atoms"][0]["priority"]["resource_kind"] == "local_cpu"
+
+
+def test_paired_exact_auth_calibration_demotes_regressed_measured_config() -> None:
+    observations = paired_exact_auth_calibration_observations_from_review_packets(
+        [
+            _review_packet(
+                "contest_cpu",
+                score=0.19380912393883232,
+                baseline_score=0.192028283,
+                inflated_output_aggregate_sha256="a" * 64,
+            ),
+            _review_packet(
+                "contest_cuda",
+                score=0.2279696105246996,
+                baseline_score=0.205330029,
+                inflated_output_aggregate_sha256="b" * 64,
+            ),
+        ],
+        candidate_id="ias1_runtime_parity_top4",
+        packet_paths=[
+            ".omx/research/ias1_cpu_result_review.json",
+            ".omx/research/ias1_cuda_result_review.json",
+        ],
+    )
+    scorer_observation = _observation(
+        "ias1_runtime_parity_top4",
+        observed_score_gain=0.01,
+        calibration_error=0.0,
+    )
+
+    action = build_discrete_scorer_action_functional(
+        [
+            _atom(
+                "ias1_runtime_parity_top4",
+                predicted_score_gain=0.005,
+                first_order_marginal_effect=0.005,
+                uncertainty=0.0,
+            )
+        ],
+        observations=[scorer_observation, *observations],
+        total_byte_budget=1024,
+    )
+    cell = action["cells"][0]
+    calibration = observations[0]["exact_auth_calibration"]
+
+    assert observations[0]["observation_kind"] == "paired_exact_auth_calibration"
+    assert observations[0]["observed_score_gain"] == 0.0
+    assert observations[0]["calibration_error"] == pytest.approx(
+        (0.19380912393883232 - 0.192028283)
+        + (0.2279696105246996 - 0.205330029)
+    )
+    assert calibration["pair_status"] == (
+        "paired_exact_auth_regressed_vs_axis_baselines"
+    )
+    assert calibration["axis_rows"]["contest_cpu"]["score_delta_status"] == (
+        "regresses_vs_axis_baseline"
+    )
+    assert calibration["axis_rows"]["contest_cuda"]["score_delta_status"] == (
+        "regresses_vs_axis_baseline"
+    )
+    assert calibration["score_claim"] is False
+    assert calibration["rank_or_kill_eligible"] is False
+    assert cell["best_observation_id"] == observations[0]["observation_id"]
+    assert cell["best_observation_kind"] == "paired_exact_auth_calibration"
+    assert cell["exact_auth_calibration"]["pair_status"] == (
+        "paired_exact_auth_regressed_vs_axis_baselines"
+    )
+    assert cell["priority"]["expected_score_gain"] == 0.0
+    assert action["observation_feedback"]["exact_auth_calibration_count"] == 1
+    assert action["water_bucket"]["selected_count"] == 0
+    assert action["score_claim"] is False
+    assert action["rank_or_kill_eligible"] is False
+
+
+def test_paired_exact_auth_calibration_requires_shared_archive_custody() -> None:
+    with pytest.raises(
+        InverseSteganalysisAcquisitionError,
+        match="share archive_sha256",
+    ):
+        paired_exact_auth_calibration_observations_from_review_packets(
+            [
+                _review_packet(
+                    "contest_cpu",
+                    score=0.193,
+                    baseline_score=0.192,
+                    archive_sha256="a" * 64,
+                ),
+                _review_packet(
+                    "contest_cuda",
+                    score=0.228,
+                    baseline_score=0.205,
+                    archive_sha256="b" * 64,
+                ),
+            ],
+            candidate_id="ias1_runtime_parity_top4",
+        )
 
 
 def test_discrete_action_functional_water_fills_positive_euler_cells() -> None:

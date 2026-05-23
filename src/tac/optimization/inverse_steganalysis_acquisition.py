@@ -28,6 +28,7 @@ from tac.optimization.proxy_candidate_contract import (
 SCHEMA = "inverse_steganalysis_acquisition_plan.v1"
 ATOM_SCHEMA = "inverse_steganalysis_atom.v1"
 OBSERVATION_SCHEMA = "inverse_steganalysis_observation.v1"
+EXACT_AUTH_CALIBRATION_SCHEMA = "inverse_steganalysis_exact_auth_calibration.v1"
 QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary.v1"
 PRIORITY_SCHEMA = "inverse_steganalysis_acquisition_priority.v1"
 ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
@@ -80,10 +81,12 @@ SCALE_TO_SCOPE_AXIS = {
 }
 RUNTIME_IDENTITY_KEYS = frozenset(
     {
+        "runtime_content_tree_sha256",
         "runtime_tree_sha256",
         "runtime_manifest_sha256",
         "runtime_sha256",
         "inflate_runtime_sha256",
+        "inflate_script_sha256",
         "scorer_runtime_sha256",
         "scorer_version",
         "runtime_contract_sha256",
@@ -121,6 +124,7 @@ RESOURCE_MULTIPLIERS: dict[str, float] = {
     "remote_cpu": 3.0,
     "modal_t4": 4.0,
     "remote_gpu": 5.0,
+    "exact_auth_calibration": 8.0,
     "contest_exact_eval": 8.0,
 }
 DEFAULT_RESOURCE_MULTIPLIER = 2.0
@@ -268,6 +272,12 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "forbidden_use": "score_claim_or_promotion_or_rank_kill_authority",
         "tool": TOOL,
     }
+    if row.get("exact_auth_calibration") is not None:
+        if not isinstance(row.get("exact_auth_calibration"), Mapping):
+            raise InverseSteganalysisAcquisitionError(
+                "exact_auth_calibration must be an object"
+            )
+        out["exact_auth_calibration"] = dict(row["exact_auth_calibration"])
     return _false_authority(
         out,
         "inverse_steganalysis_observation_is_not_score_authority",
@@ -383,6 +393,122 @@ def observations_from_queue_performance_summary(
                 )
             )
     return observations
+
+
+def paired_exact_auth_calibration_observations_from_review_packets(
+    packets: Sequence[Mapping[str, Any]],
+    *,
+    candidate_id: str,
+    packet_paths: Sequence[str] | None = None,
+    observation_id: str | None = None,
+    source_path: str | None = None,
+) -> list[dict[str, Any]]:
+    """Convert paired CPU/CUDA result-review packets into calibration signal.
+
+    The returned observation is intentionally not a contest-axis observation.
+    It is a false-authority trust-region update for the inverse-steganalysis
+    planner. The exact auth scores remain nested metadata so downstream
+    consumers cannot confuse this with a score claim or rank/kill surface.
+    """
+
+    candidate = _text(candidate_id, "candidate_id")
+    if not isinstance(packets, Sequence) or isinstance(packets, bytes | str):
+        raise InverseSteganalysisAcquisitionError("packets must be a sequence")
+    packet_rows = [dict(packet) for packet in packets]
+    if len(packet_rows) != 2:
+        raise InverseSteganalysisAcquisitionError(
+            "paired exact-auth calibration requires exactly two review packets"
+        )
+    paths = [str(path) for path in (packet_paths or [])]
+    if packet_paths is not None and len(paths) != len(packet_rows):
+        raise InverseSteganalysisAcquisitionError(
+            "packet_paths length must match packets length"
+        )
+
+    by_axis = {_review_packet_axis(packet): packet for packet in packet_rows}
+    if set(by_axis) != {"contest_cpu", "contest_cuda"}:
+        raise InverseSteganalysisAcquisitionError(
+            "paired exact-auth calibration requires one contest_cpu and one contest_cuda packet"
+        )
+    path_by_axis = {
+        _review_packet_axis(packet): paths[index] if index < len(paths) else None
+        for index, packet in enumerate(packet_rows)
+    }
+    _validate_paired_exact_auth_packets(by_axis)
+
+    axis_rows = {
+        axis: _exact_auth_axis_calibration_row(
+            packet,
+            axis=axis,
+            packet_path=path_by_axis.get(axis),
+        )
+        for axis, packet in sorted(by_axis.items())
+    }
+    regression_penalty = sum(
+        max(0.0, float(row["delta_vs_axis_baseline"]))
+        for row in axis_rows.values()
+    )
+    improvement_gain = sum(
+        max(0.0, -float(row["delta_vs_axis_baseline"]))
+        for row in axis_rows.values()
+    )
+    observed_score_gain = 0.0 if regression_penalty > 0.0 else improvement_gain
+    pair_status = (
+        "paired_exact_auth_regressed_vs_axis_baselines"
+        if regression_penalty > 0.0
+        else "paired_exact_auth_improved_vs_axis_baselines"
+        if improvement_gain > 0.0
+        else "paired_exact_auth_tied_axis_baselines"
+    )
+    custody = _paired_exact_auth_custody(by_axis)
+    runtime_identity = _paired_exact_auth_runtime_identity(by_axis)
+    cache_identity = _paired_exact_auth_cache_identity(by_axis)
+    source = source_path or ",".join(path for path in paths if path) or None
+    raw = {
+        "observation_id": observation_id
+        or f"exact_auth_calibration_{_slug(candidate)}_{_slug(custody['archive_sha256'])}",
+        "observation_kind": "paired_exact_auth_calibration",
+        "candidate_id": candidate,
+        "axis": "[paired exact-auth calibration]",
+        "source_path": source,
+        "runtime_identity": runtime_identity,
+        "cache_identity": cache_identity,
+        "observed_score_gain": observed_score_gain,
+        "calibration_error": regression_penalty,
+        "artifact_bytes": custody["archive_bytes"],
+        "resource_kind": "exact_auth_calibration",
+    }
+    observation = normalize_inverse_steganalysis_observation(raw)
+    observation["exact_auth_calibration"] = _false_authority(
+        {
+            "schema": EXACT_AUTH_CALIBRATION_SCHEMA,
+            "candidate_id": candidate,
+            "pair_status": pair_status,
+            "archive_sha256": custody["archive_sha256"],
+            "archive_bytes": custody["archive_bytes"],
+            "n_samples": custody["n_samples"],
+            "axis_rows": axis_rows,
+            "regression_penalty_sum": regression_penalty,
+            "improvement_gain_sum": improvement_gain,
+            "observed_score_gain_policy": (
+                "zero_when_any_exact_auth_axis_regresses_vs_baseline"
+            ),
+            "runtime_identity": runtime_identity,
+            "cache_identity": cache_identity,
+            "packet_paths": [
+                path_by_axis[axis]
+                for axis in ("contest_cpu", "contest_cuda")
+                if path_by_axis.get(axis)
+            ],
+            "allowed_use": (
+                "planner_calibration_only_measured_config_not_family_retirement"
+            ),
+        },
+        "exact_auth_calibration_is_planning_only",
+        "does_not_convert_cpu_to_cuda_or_cuda_to_cpu",
+        "measured_config_only_no_family_falsification",
+    )
+    return [observation]
 
 
 def compute_acquisition_priority(
@@ -626,6 +752,15 @@ def build_discrete_scorer_action_functional(
                     "water_bucket_selectable": residual > 0.0 and not blocked,
                     "discontinuity_guard": guard,
                     "best_observation_id": None if best_obs is None else best_obs["observation_id"],
+                    "best_observation_kind": (
+                        None if best_obs is None else best_obs.get("observation_kind")
+                    ),
+                    "exact_auth_calibration": (
+                        best_obs.get("exact_auth_calibration")
+                        if isinstance(best_obs, Mapping)
+                        and isinstance(best_obs.get("exact_auth_calibration"), Mapping)
+                        else None
+                    ),
                     "priority": priority,
                 },
                 "inverse_steganalysis_action_cell_is_planning_only",
@@ -673,6 +808,7 @@ def build_discrete_scorer_action_functional(
                 "stationarity_rule": "select positive euler_lagrange_residual cells under byte budget and guard barriers",
                 "lambda_rate": lambda_rate,
             },
+            "observation_feedback": _observation_feedback_summary(obs_rows),
             "integral_totals": {
                 "cell_count": len(cells),
                 "blocked_cell_count": blocked_cells,
@@ -833,10 +969,12 @@ def _best_observation(atom: Mapping[str, Any], observations: Sequence[Mapping[st
     if not observations:
         return None
 
-    def key(row: Mapping[str, Any]) -> tuple[int, float, float, float, str]:
+    def key(row: Mapping[str, Any]) -> tuple[int, int, float, float, float, str]:
         priority = compute_acquisition_priority(atom, row)
+        exact_auth_calibration = row.get("observation_kind") == "paired_exact_auth_calibration"
         has_score_observation = row.get("observed_score_gain") is not None
         return (
+            int(exact_auth_calibration),
             int(has_score_observation),
             float(priority["acquisition_priority"]),
             float(priority["expected_score_gain"]),
@@ -845,6 +983,56 @@ def _best_observation(atom: Mapping[str, Any], observations: Sequence[Mapping[st
         )
 
     return dict(max(observations, key=key))
+
+
+def _observation_feedback_summary(
+    observations: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    kind_counts: dict[str, int] = {}
+    exact_auth_refs: list[dict[str, Any]] = []
+    for row in observations:
+        kind = str(row.get("observation_kind") or "generic_observation")
+        kind_counts[kind] = kind_counts.get(kind, 0) + 1
+        calibration = row.get("exact_auth_calibration")
+        if isinstance(calibration, Mapping):
+            exact_auth_refs.append(
+                _false_authority(
+                    {
+                        "schema": calibration.get("schema"),
+                        "candidate_id": calibration.get("candidate_id"),
+                        "pair_status": calibration.get("pair_status"),
+                        "archive_sha256": calibration.get("archive_sha256"),
+                        "archive_bytes": calibration.get("archive_bytes"),
+                        "axes": sorted(
+                            str(axis)
+                            for axis in (
+                                calibration.get("axis_rows", {})
+                                if isinstance(calibration.get("axis_rows"), Mapping)
+                                else {}
+                            )
+                        ),
+                        "regression_penalty_sum": calibration.get(
+                            "regression_penalty_sum"
+                        ),
+                        "improvement_gain_sum": calibration.get(
+                            "improvement_gain_sum"
+                        ),
+                        "packet_paths": calibration.get("packet_paths") or [],
+                    },
+                    "exact_auth_calibration_ref_is_planning_metadata_only",
+                )
+            )
+    return _false_authority(
+        {
+            "schema": "inverse_steganalysis_observation_feedback.v1",
+            "observation_count": len(observations),
+            "observation_kind_counts": dict(sorted(kind_counts.items())),
+            "exact_auth_calibration_count": len(exact_auth_refs),
+            "exact_auth_calibration_refs": exact_auth_refs,
+            "allowed_use": "action_functional_calibration_interpretability_only",
+        },
+        "observation_feedback_is_not_score_authority",
+    )
 
 
 def _false_authority(row: Mapping[str, Any], *blockers: str) -> dict[str, Any]:
@@ -1114,6 +1302,280 @@ def _decision_surface_risk(decision_class: str) -> float:
     return 0.4
 
 
+def _review_packet_axis(packet: Mapping[str, Any]) -> str:
+    if packet.get("schema") != "tac_result_review_packet_v1":
+        raise InverseSteganalysisAcquisitionError(
+            "review packet schema must be tac_result_review_packet_v1"
+        )
+    axis = _text(packet.get("score_axis"), "review_packet.score_axis")
+    if axis not in {"contest_cpu", "contest_cuda"}:
+        raise InverseSteganalysisAcquisitionError(
+            f"unsupported review packet score_axis {axis!r}"
+        )
+    if axis == "contest_cpu" and packet.get("exact_cpu_evidence") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            "contest_cpu review packet must have exact_cpu_evidence=true"
+        )
+    if axis == "contest_cuda" and packet.get("exact_cuda_evidence") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            "contest_cuda review packet must have exact_cuda_evidence=true"
+        )
+    return axis
+
+
+def _validate_paired_exact_auth_packets(by_axis: Mapping[str, Mapping[str, Any]]) -> None:
+    archive_sha = _review_packet_archive_sha(by_axis["contest_cpu"])
+    archive_bytes = _review_packet_archive_bytes(by_axis["contest_cpu"])
+    n_samples = _review_packet_n_samples(by_axis["contest_cpu"])
+    runtime_content = _runtime_custody_text(
+        by_axis["contest_cpu"],
+        "runtime_content_tree_sha256",
+        required=True,
+    )
+    for axis, packet in sorted(by_axis.items()):
+        _validate_exact_auth_packet_for_calibration(packet, axis=axis)
+        if _review_packet_archive_sha(packet) != archive_sha:
+            raise InverseSteganalysisAcquisitionError(
+                "paired exact-auth packets must share archive_sha256"
+            )
+        if _review_packet_archive_bytes(packet) != archive_bytes:
+            raise InverseSteganalysisAcquisitionError(
+                "paired exact-auth packets must share archive_bytes"
+            )
+        if _review_packet_n_samples(packet) != n_samples:
+            raise InverseSteganalysisAcquisitionError(
+                "paired exact-auth packets must share n_samples"
+            )
+        packet_runtime_content = _runtime_custody_text(
+            packet,
+            "runtime_content_tree_sha256",
+            required=True,
+        )
+        if packet_runtime_content != runtime_content:
+            raise InverseSteganalysisAcquisitionError(
+                "paired exact-auth packets must share runtime_content_tree_sha256"
+            )
+
+
+def _validate_exact_auth_packet_for_calibration(
+    packet: Mapping[str, Any],
+    *,
+    axis: str,
+) -> None:
+    if packet.get("score_claim") is not False:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} review packet score_claim must be false"
+        )
+    for key in ("promotion_eligible", "rank_or_kill_eligible", "ready_for_exact_eval_dispatch"):
+        if packet.get(key) is not False:
+            raise InverseSteganalysisAcquisitionError(
+                f"{axis} review packet {key} must be false"
+            )
+    if packet.get("family_falsified") is True or packet.get("method_family_retired") is True:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} review packet must not retire a family"
+        )
+    status = _text(
+        packet.get("measured_config_status"),
+        f"{axis}.measured_config_status",
+    )
+    if status.startswith("indeterminate"):
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} review packet status is indeterminate"
+        )
+    baseline = packet.get("baseline_score")
+    if baseline is None:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} review packet baseline_score is required"
+        )
+    _float(baseline, f"{axis}.baseline_score", minimum=0.0)
+    _float(packet.get("canonical_score"), f"{axis}.canonical_score", minimum=0.0)
+    recompute = _packet_mapping(packet, "score_recomputation")
+    if recompute.get("available") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} score recomputation must be available"
+        )
+    if recompute.get("matches_reported") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} score recomputation must match reported score"
+        )
+    audit = _packet_mapping(packet, "engineering_forensic_audit")
+    if audit.get("engineering_or_config_bug_found") is True:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} engineering forensic audit has blockers"
+        )
+    if audit.get("score_formula_reviewed") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} engineering forensic audit must review score formula"
+        )
+    if audit.get("archive_runtime_closure_reviewed") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} engineering forensic audit must review runtime closure"
+        )
+    claim = _packet_mapping(packet, "dispatch_claim_state")
+    if claim.get("terminal_status_recorded") is not True:
+        raise InverseSteganalysisAcquisitionError(
+            f"{axis} review packet must have a terminal dispatch claim"
+        )
+    _runtime_custody_text(packet, "runtime_content_tree_sha256", required=True)
+    _runtime_custody_text(packet, "inflated_output_aggregate_sha256", required=True)
+
+
+def _packet_mapping(packet: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = packet.get(key)
+    if not isinstance(value, Mapping):
+        raise InverseSteganalysisAcquisitionError(f"review packet {key} must be an object")
+    return value
+
+
+def _review_packet_archive_sha(packet: Mapping[str, Any]) -> str:
+    custody = _packet_mapping(packet, "custody")
+    value = _text(custody.get("archive_sha256"), "review_packet.custody.archive_sha256")
+    _sha256_value(value, "review_packet.custody.archive_sha256")
+    return value
+
+
+def _review_packet_archive_bytes(packet: Mapping[str, Any]) -> int:
+    custody = _packet_mapping(packet, "custody")
+    return _int(
+        custody.get("archive_bytes"),
+        "review_packet.custody.archive_bytes",
+        minimum=1,
+    )
+
+
+def _review_packet_n_samples(packet: Mapping[str, Any]) -> int:
+    custody = _packet_mapping(packet, "custody")
+    return _int(
+        custody.get("n_samples"),
+        "review_packet.custody.n_samples",
+        minimum=1,
+    )
+
+
+def _runtime_custody_text(
+    packet: Mapping[str, Any],
+    key: str,
+    *,
+    required: bool,
+) -> str | None:
+    custody = _packet_mapping(packet, "runtime_custody")
+    value = _optional_text(custody.get(key))
+    if required and value is None:
+        raise InverseSteganalysisAcquisitionError(
+            f"review_packet.runtime_custody.{key} is required"
+        )
+    if value is not None and key.endswith("sha256"):
+        _sha256_value(value, f"review_packet.runtime_custody.{key}")
+    return value
+
+
+def _paired_exact_auth_custody(
+    by_axis: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    cpu = by_axis["contest_cpu"]
+    return {
+        "archive_sha256": _review_packet_archive_sha(cpu),
+        "archive_bytes": _review_packet_archive_bytes(cpu),
+        "n_samples": _review_packet_n_samples(cpu),
+    }
+
+
+def _paired_exact_auth_runtime_identity(
+    by_axis: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    common_content = _runtime_custody_text(
+        by_axis["contest_cpu"],
+        "runtime_content_tree_sha256",
+        required=True,
+    )
+    by_axis_identity: dict[str, dict[str, Any]] = {}
+    for axis, packet in sorted(by_axis.items()):
+        fields: dict[str, Any] = {}
+        for key in (
+            "runtime_tree_sha256",
+            "runtime_content_tree_sha256",
+            "inflate_script_sha256",
+            "inflated_output_manifest_sha256",
+        ):
+            value = _runtime_custody_text(packet, key, required=False)
+            if value:
+                fields[key] = value
+        by_axis_identity[axis] = fields
+    return {
+        "runtime_content_tree_sha256": common_content,
+        "by_axis": by_axis_identity,
+    }
+
+
+def _paired_exact_auth_cache_identity(
+    by_axis: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    aggregates = {
+        axis: _runtime_custody_text(
+            packet,
+            "inflated_output_aggregate_sha256",
+            required=True,
+        )
+        for axis, packet in sorted(by_axis.items())
+    }
+    return {"inflated_outputs_aggregate_sha256": aggregates}
+
+
+def _exact_auth_axis_calibration_row(
+    packet: Mapping[str, Any],
+    *,
+    axis: str,
+    packet_path: str | None,
+) -> dict[str, Any]:
+    score = _float(packet.get("canonical_score"), f"{axis}.canonical_score", minimum=0.0)
+    baseline = _float(packet.get("baseline_score"), f"{axis}.baseline_score", minimum=0.0)
+    delta = score - baseline
+    recompute = _packet_mapping(packet, "score_recomputation")
+    row = {
+        "axis": axis,
+        "score": score,
+        "axis_baseline_score": baseline,
+        "delta_vs_axis_baseline": delta,
+        "score_delta_status": (
+            "regresses_vs_axis_baseline"
+            if delta > 0.0
+            else "improves_vs_axis_baseline"
+            if delta < 0.0
+            else "ties_axis_baseline"
+        ),
+        "measured_config_status": packet.get("measured_config_status"),
+        "failure_class": packet.get("failure_class"),
+        "source_json_path": packet.get("source_json_path"),
+        "review_packet_path": packet_path,
+        "review_packet_score_valid_flag": bool(packet.get("score_claim_valid")),
+        "component_terms": {
+            "avg_segnet_dist": recompute.get("avg_segnet_dist"),
+            "avg_posenet_dist": recompute.get("avg_posenet_dist"),
+            "rate_term": recompute.get("rate_term"),
+            "recomputed_score": recompute.get("recomputed_score"),
+        },
+        "runtime_content_tree_sha256": _runtime_custody_text(
+            packet,
+            "runtime_content_tree_sha256",
+            required=True,
+        ),
+        "inflated_output_aggregate_sha256": _runtime_custody_text(
+            packet,
+            "inflated_output_aggregate_sha256",
+            required=True,
+        ),
+        "dispatch_claim_latest_status": _packet_mapping(
+            packet,
+            "dispatch_claim_state",
+        ).get("latest_status"),
+    }
+    return _false_authority(
+        row,
+        "exact_auth_axis_row_is_nested_calibration_metadata_only",
+    )
+
+
 def _looks_like_contest_auth_axis(axis: str) -> bool:
     return axis in CONTEST_AUTH_SCORE_AXES or any(
         axis.startswith(prefix) for prefix in CONTEST_AUTH_SCORE_AXIS_PREFIXES
@@ -1309,4 +1771,5 @@ __all__ = [
     "normalize_inverse_steganalysis_atom",
     "normalize_inverse_steganalysis_observation",
     "observations_from_queue_performance_summary",
+    "paired_exact_auth_calibration_observations_from_review_packets",
 ]
