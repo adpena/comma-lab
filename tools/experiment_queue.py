@@ -109,7 +109,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     queue, state = _load(args)
     with connect_state(state) as conn:
         initialize_queue_state(conn, queue)
-        summary = queue_summary(conn, queue)
+        summary = queue_summary(conn, queue, repo_root=REPO_ROOT)
     _json_print({"state": str(state), **summary})
     return 0
 
@@ -118,7 +118,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     queue, state = _load(args)
     with connect_state(state) as conn:
         initialize_queue_state(conn, queue)
-        summary = queue_summary(conn, queue)
+        summary = queue_summary(conn, queue, repo_root=REPO_ROOT)
     _json_print({"state": str(state), **summary})
     return 0
 
@@ -143,7 +143,12 @@ def cmd_next(args: argparse.Namespace) -> int:
     queue, state = _load(args)
     with connect_state(state) as conn:
         initialize_queue_state(conn, queue)
-        ready = ready_steps(conn, queue, allow_cloud=args.allow_cloud)
+        ready = ready_steps(
+            conn,
+            queue,
+            allow_cloud=args.allow_cloud,
+            repo_root=REPO_ROOT,
+        )
     _json_print({"state": str(state), "ready_steps": [step.to_dict() for step in ready]})
     return 0
 
@@ -173,7 +178,12 @@ def cmd_run_once(args: argparse.Namespace) -> int:
                 queue,
                 allow_orphaned_state=orphaned_rationale is not None,
             )
-        ready = ready_steps(conn, queue, allow_cloud=args.allow_cloud)
+        ready = ready_steps(
+            conn,
+            queue,
+            allow_cloud=args.allow_cloud,
+            repo_root=REPO_ROOT,
+        )
         if not ready:
             _json_print({"state": str(state), "executed": False, "reason": "no_ready_steps"})
             return 0
@@ -260,7 +270,7 @@ def cmd_control(args: argparse.Namespace) -> int:
     with connect_state(state) as conn:
         initialize_queue_state(conn, queue)
         set_control_mode(conn, queue["queue_id"], args.mode, reason=args.reason)
-        summary = queue_summary(conn, queue)
+        summary = queue_summary(conn, queue, repo_root=REPO_ROOT)
     _json_print({"state": str(state), **summary})
     return 0
 
@@ -278,7 +288,7 @@ def cmd_rewind(args: argparse.Namespace) -> int:
             queue=queue,
             cascade=not args.no_cascade,
         )
-        summary = queue_summary(conn, queue)
+        summary = queue_summary(conn, queue, repo_root=REPO_ROOT)
     _json_print({"state": str(state), **summary})
     return 0
 
@@ -288,7 +298,7 @@ def cmd_retire_orphans(args: argparse.Namespace) -> int:
     with connect_state(state) as conn:
         initialize_queue_state(conn, queue)
         retired = retire_orphaned_steps(conn, queue, reason=args.reason)
-        summary = queue_summary(conn, queue)
+        summary = queue_summary(conn, queue, repo_root=REPO_ROOT)
     _json_print({"state": str(state), "retired_steps": retired, **summary})
     return 0
 
@@ -299,10 +309,10 @@ def cmd_reconcile_state(args: argparse.Namespace) -> int:
     assert reason is not None
     with connect_state(state) as conn:
         initialize_queue_state(conn, queue)
-        before = queue_summary(conn, queue)
+        before = queue_summary(conn, queue, repo_root=REPO_ROOT)
         blocking_before = _blocking_orphan_count(conn, queue)
         retired = retire_orphaned_steps(conn, queue, reason=reason)
-        after = queue_summary(conn, queue)
+        after = queue_summary(conn, queue, repo_root=REPO_ROOT)
         blocking_after = _blocking_orphan_count(conn, queue)
     payload = {
         "schema": STATE_RECONCILIATION_SCHEMA,

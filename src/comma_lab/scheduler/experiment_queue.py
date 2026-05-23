@@ -715,11 +715,18 @@ def ready_steps(
     queue: Mapping[str, Any],
     *,
     allow_cloud: bool = False,
+    repo_root: str | Path | None = None,
 ) -> list[ReadyStep]:
     queue_id = str(queue["queue_id"])
     if control_mode(conn, queue_id) != "running":
         return []
     state = _state_rows(conn, queue_id)
+    repo = Path(repo_root) if repo_root is not None else None
+    steps_by_key = {
+        (str(experiment["id"]), str(step["id"])): step
+        for experiment in queue["experiments"]
+        for step in experiment["steps"]
+    }
     running_by_resource: dict[str, int] = {}
     for experiment in queue["experiments"]:
         for step in experiment["steps"]:
@@ -747,11 +754,26 @@ def ready_steps(
                 _resolve_step_ref(str(required), default_experiment_id=str(experiment["id"]))
                 for required in (step.get("requires") or [])
             ]
-            if any(
-                state.get(required_key) is None
-                or state[required_key]["status"] != "succeeded"
-                for required_key in requirements
-            ):
+            dependency_blocked = False
+            for required_key in requirements:
+                required_row = state.get(required_key)
+                if required_row is None or required_row["status"] != "succeeded":
+                    dependency_blocked = True
+                    break
+                if repo is None:
+                    continue
+                required_step = steps_by_key.get(required_key)
+                if required_step is None:
+                    dependency_blocked = True
+                    break
+                failed_conditions, _postcondition_errors = _evaluate_postconditions(
+                    required_step,
+                    repo=repo,
+                )
+                if failed_conditions:
+                    dependency_blocked = True
+                    break
+            if dependency_blocked:
                 continue
             out.append(
                 ReadyStep(
@@ -1515,7 +1537,12 @@ def run_queue_worker(
     worker_experiment_ids: set[str] = set()
 
     def _eligible_ready_steps() -> list[ReadyStep]:
-        ready = ready_steps(conn, _active_queue(), allow_cloud=allow_cloud)
+        ready = ready_steps(
+            conn,
+            _active_queue(),
+            allow_cloud=allow_cloud,
+            repo_root=repo_root,
+        )
         if max_experiments is None:
             return ready
         return [
@@ -1837,7 +1864,12 @@ def rewind_step(
     conn.commit()
 
 
-def queue_summary(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[str, Any]:
+def queue_summary(
+    conn: sqlite3.Connection,
+    queue: Mapping[str, Any],
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
     queue_id = str(queue["queue_id"])
     active_keys = _active_step_keys(queue)
     rows = conn.execute(
@@ -1868,7 +1900,10 @@ def queue_summary(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[st
         "step_count": len(active_rows),
         "orphaned_step_count": len(orphaned_rows),
         "status_counts": by_status,
-        "ready_steps": [step.to_dict() for step in ready_steps(conn, queue)],
+        "ready_steps": [
+            step.to_dict()
+            for step in ready_steps(conn, queue, repo_root=repo_root)
+        ],
         "steps": [
             {
                 "experiment_id": row["experiment_id"],

@@ -283,7 +283,7 @@ def observe_experiment_queue(
 
     try:
         with connect_state_readonly(state_path) as conn:
-            summary = queue_summary(conn, queue)
+            summary = queue_summary(conn, queue, repo_root=repo_root)
             definition_drift = queue_definition_drift(conn, queue)
     except ExperimentQueueError:
         summary = {
