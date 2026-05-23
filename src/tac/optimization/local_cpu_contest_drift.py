@@ -18,7 +18,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from tac.optimization.proxy_candidate_contract import apply_proxy_evidence_boundary
+from tac.optimization.proxy_candidate_contract import (
+    PROXY_FALSE_AUTHORITY_FIELDS,
+    apply_proxy_evidence_boundary,
+)
 
 TRUST_REGION_DQS1_FEC6 = "dqs1_fec6_like_same_archive_segnet_rounding"
 EUREKA_SIGNAL_SCHEMA = "local_cpu_contest_drift_eureka_signal.v1"
@@ -29,6 +32,18 @@ DQS1_FEC6_MAX_SEGNET_DELTA = 5.0e-7
 DQS1_FEC6_MAX_ABS_POSENET_DELTA = 5.0e-12
 DQS1_FEC6_MAX_ABS_RATE_DELTA = 5.0e-12
 EMPTY_CALIBRATION_GUARD_BAND = 1.0
+EUREKA_EXTRA_FALSE_AUTHORITY_FIELDS = (
+    "score_claim_valid",
+    "gpu_launched",
+)
+EUREKA_FALSE_AUTHORITY_FIELDS = tuple(
+    dict.fromkeys(
+        (
+            *PROXY_FALSE_AUTHORITY_FIELDS.keys(),
+            *EUREKA_EXTRA_FALSE_AUTHORITY_FIELDS,
+        )
+    )
+)
 
 LOCAL_CPU_ADVISORY_AXIS_LABELS = frozenset(
     {
@@ -355,6 +370,8 @@ def build_eureka_signal(
             "eureka_margin": margin,
             "recommended_action": urgency,
             "source_artifact": source_artifact,
+            "score_claim_valid": False,
+            "gpu_launched": False,
             "authority": "false_authority_exact_eval_spend_trigger_only",
         },
         dispatch_blockers=(
@@ -363,6 +380,30 @@ def build_eureka_signal(
             *trust_region_blockers,
         ),
     )
+
+
+def eureka_false_authority_violations(payload: Mapping[str, Any]) -> list[str]:
+    """Return eureka authority fields that are missing or not exactly false."""
+
+    violations: list[str] = []
+    for field in EUREKA_FALSE_AUTHORITY_FIELDS:
+        if payload.get(field) is not False:
+            violations.append(field)
+    return violations
+
+
+def require_eureka_false_authority(
+    payload: Mapping[str, Any],
+    *,
+    context: str = "eureka signal",
+) -> None:
+    """Fail closed unless every eureka authority field is explicitly false."""
+
+    violations = eureka_false_authority_violations(payload)
+    if violations:
+        raise LocalCPUContestDriftError(
+            f"{context} must set authority field(s) exactly false: {', '.join(violations)}"
+        )
 
 
 def _anchor_from_mapping(payload: Mapping[str, Any]) -> PairedDriftAnchor:
@@ -565,6 +606,7 @@ def paired_anchor_from_json_files(
 
 __all__ = [
     "CALIBRATION_SCHEMA",
+    "EUREKA_FALSE_AUTHORITY_FIELDS",
     "EUREKA_SIGNAL_SCHEMA",
     "TRUST_REGION_DQS1_FEC6",
     "DriftCalibration",
@@ -576,7 +618,9 @@ __all__ = [
     "build_eureka_signal_from_local_json_file",
     "build_eureka_signal_from_local_payload",
     "calibration_from_mapping",
+    "eureka_false_authority_violations",
     "fit_drift_calibration",
     "load_calibration_json",
     "paired_anchor_from_json_files",
+    "require_eureka_false_authority",
 ]

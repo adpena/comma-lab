@@ -26,6 +26,7 @@
   "eureka_trigger": false,
   "exact_cuda_auth_eval": false,
   "field_selection_ready_for_exact_eval_dispatch": false,
+  "gpu_launched": false,
   "guard_band": 3e-06,
   "local_axis": "macOS-CPU advisory",
   "local_score": 0.19204028295713674,
@@ -39,6 +40,7 @@
   "score_affecting_payload_changed": false,
   "score_claim": false,
   "score_claim_eligible": false,
+  "score_claim_valid": false,
   "source_artifact": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_rank007_pair0059/local_cpu_advisory.json",
   "target_axis": "contest-CPU",
   "target_modes": [

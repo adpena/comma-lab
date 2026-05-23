@@ -16,6 +16,10 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.canonical_frontier_pointer import (  # noqa: E402
+    CANONICAL_FRONTIER_POINTER_PATH,
+    load_canonical_frontier_pointer_lenient,
+)
 from tac.optimization.local_cpu_contest_drift import (  # noqa: E402
     TRUST_REGION_DQS1_FEC6,
     build_eureka_signal,
@@ -23,6 +27,7 @@ from tac.optimization.local_cpu_contest_drift import (  # noqa: E402
     fit_drift_calibration,
     load_calibration_json,
     paired_anchor_from_json_files,
+    require_eureka_false_authority,
 )
 
 
@@ -30,6 +35,33 @@ def _write_json(path: str | Path, payload: object) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n")
+
+
+def _auth_frontier_score_from_args(args: argparse.Namespace) -> float | None:
+    if args.auth_frontier_score is not None:
+        return float(args.auth_frontier_score)
+    if not args.auth_frontier_score_from_pointer:
+        return None
+
+    pointer_path = Path(args.canonical_frontier_pointer)
+    if not pointer_path.is_absolute():
+        pointer_path = REPO_ROOT / pointer_path
+    pointer = load_canonical_frontier_pointer_lenient(
+        repo_root=REPO_ROOT,
+        path=pointer_path,
+    )
+    if pointer is None:
+        raise SystemExit(
+            "--auth-frontier-score-from-pointer could not load "
+            f"{args.canonical_frontier_pointer}; run tools/refresh_canonical_frontier.py"
+        )
+    anchor = pointer.our_local_frontier_contest_cpu
+    if anchor is None:
+        raise SystemExit(
+            "--auth-frontier-score-from-pointer requires "
+            "our_local_frontier_contest_cpu in the canonical frontier pointer"
+        )
+    return float(anchor.score)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -77,6 +109,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="current auth frontier score for eureka signal",
     )
     parser.add_argument(
+        "--auth-frontier-score-from-pointer",
+        action="store_true",
+        help=(
+            "load the current contest-CPU auth frontier from "
+            ".omx/state/canonical_frontier_pointer.json"
+        ),
+    )
+    parser.add_argument(
+        "--canonical-frontier-pointer",
+        default=str(CANONICAL_FRONTIER_POINTER_PATH),
+        help="canonical frontier pointer path used with --auth-frontier-score-from-pointer",
+    )
+    parser.add_argument(
         "--min-margin",
         type=float,
         default=0.0,
@@ -108,15 +153,17 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
 
     if args.eureka_out:
-        if not args.candidate_id or args.auth_frontier_score is None:
+        auth_frontier_score = _auth_frontier_score_from_args(args)
+        if not args.candidate_id or auth_frontier_score is None:
             raise SystemExit(
-                "--eureka-out requires --candidate-id and --auth-frontier-score"
+                "--eureka-out requires --candidate-id and either "
+                "--auth-frontier-score or --auth-frontier-score-from-pointer"
             )
         if args.candidate_local_json:
             signal = build_eureka_signal_from_local_json_file(
                 candidate_id=args.candidate_id,
                 local_path=args.candidate_local_json,
-                auth_frontier_score=args.auth_frontier_score,
+                auth_frontier_score=auth_frontier_score,
                 calibration=calibration,
                 candidate_trust_region=args.candidate_trust_region,
                 min_margin=args.min_margin,
@@ -129,12 +176,16 @@ def main(argv: list[str] | None = None) -> int:
             signal = build_eureka_signal(
                 candidate_id=args.candidate_id,
                 local_score=args.local_score,
-                auth_frontier_score=args.auth_frontier_score,
+                auth_frontier_score=auth_frontier_score,
                 calibration=calibration,
                 min_margin=args.min_margin,
                 source_artifact=args.source_artifact,
                 candidate_trust_region=args.candidate_trust_region,
             )
+        require_eureka_false_authority(
+            signal,
+            context=f"{args.candidate_id} generated eureka signal",
+        )
         _write_json(args.eureka_out, signal)
     return 0
 

@@ -17,6 +17,8 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
+    DEFAULT_DRIFT_CALIBRATION_JSON,
+    DEFAULT_EUREKA_OUTPUT_DIR,
     DEFAULT_QUEUE_ID,
     DEFAULT_RESULTS_ROOT,
     ExperimentQueueError,
@@ -62,6 +64,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--video-names-file", default=None, help="public-test video names file")
     parser.add_argument("--frame-policy", default=None, help="DQS1 frame policy")
     parser.add_argument(
+        "--drift-calibration-json",
+        default=DEFAULT_DRIFT_CALIBRATION_JSON,
+        help="local CPU to contest CPU drift calibration JSON used by the eureka step",
+    )
+    parser.add_argument(
+        "--eureka-output-dir",
+        default=DEFAULT_EUREKA_OUTPUT_DIR,
+        help="directory for canonical local CPU contest drift eureka signals",
+    )
+    parser.add_argument(
         "--exclude-candidate",
         action="append",
         default=[],
@@ -95,6 +107,8 @@ def main(argv: list[str] | None = None) -> int:
                 "upstream_dir": args.upstream_dir,
                 "video_names_file": args.video_names_file,
                 "frame_policy": args.frame_policy,
+                "drift_calibration_json": args.drift_calibration_json,
+                "eureka_output_dir": args.eureka_output_dir,
             }.items()
             if value is not None
         },

@@ -9,6 +9,13 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.local_cpu_contest_drift import (
+    EUREKA_FALSE_AUTHORITY_FIELDS,
+    EUREKA_SIGNAL_SCHEMA,
+    LocalCPUContestDriftError,
+    require_eureka_false_authority,
+)
+
 from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
 
 DEFAULT_QUEUE_ID = "dqs1_pairset_local_first"
@@ -31,8 +38,12 @@ DEFAULT_GLOBAL_MUTATED_ARCHIVE = (
 DEFAULT_UPSTREAM_DIR = "upstream"
 DEFAULT_VIDEO_NAMES_FILE = "upstream/public_test_video_names.txt"
 DEFAULT_FRAME_POLICY = "pair_all_frames"
+DEFAULT_DRIFT_CALIBRATION_JSON = (
+    ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json"
+)
+DEFAULT_EUREKA_OUTPUT_DIR = ".omx/research"
 SAFE_OPERATOR_ACTION = "materialize_pairset_archive_and_run_local_controls"
-LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA = "local_cpu_contest_drift_eureka_signal.v1"
+LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA = EUREKA_SIGNAL_SCHEMA
 
 _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
@@ -324,7 +335,6 @@ def _candidate_eureka_signal_action(
     ):
         try:
             signal = _json_load(signal_path)
-            _require_false_authority(signal, label=f"{candidate_id} eureka signal")
         except ExperimentQueueError:
             continue
         if signal.get("schema") != LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA:
@@ -357,6 +367,13 @@ def _candidate_eureka_signal_action(
             continue
         if signal.get("target_axis") != "contest-CPU":
             continue
+        try:
+            require_eureka_false_authority(
+                signal,
+                context=f"{signal_path} {candidate_id} eureka signal",
+            )
+        except LocalCPUContestDriftError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
         eureka_trigger = signal.get("eureka_trigger")
         recommended_action = signal.get("recommended_action")
         if eureka_trigger is False and recommended_action == "observe_only":
@@ -371,11 +388,25 @@ def _candidate_eureka_signal_action(
     return None
 
 
-def _lane_date_from_summary_path(action_summary_path: Path) -> str:
+def _summary_timestamp_from_path(action_summary_path: Path) -> str:
     match = _TIMESTAMP_RE.search(str(action_summary_path))
     if match:
-        return match.group(1)[:8]
-    return datetime.now(UTC).strftime("%Y%m%d")
+        return match.group(1)
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _lane_date_from_summary_path(action_summary_path: Path) -> str:
+    return _summary_timestamp_from_path(action_summary_path)[:8]
+
+
+def _eureka_signal_path(
+    selection: Dqs1QueueSelection,
+    *,
+    eureka_output_dir: str,
+) -> str:
+    timestamp = _summary_timestamp_from_path(selection.action_summary_path)
+    filename = f"local_cpu_contest_drift_eureka_{selection.candidate_id}_{timestamp}.json"
+    return f"{eureka_output_dir.rstrip('/')}/{filename}"
 
 
 def _false_authority_postcondition(
@@ -396,6 +427,15 @@ def _false_authority_postcondition(
         condition["axis_key"] = axis_key
         condition["axis_equals"] = axis_equals
     return condition
+
+
+def _eureka_false_authority_postcondition(path: str) -> dict[str, Any]:
+    return {
+        "type": "json_false_authority",
+        "path": path,
+        "required_false": list(EUREKA_FALSE_AUTHORITY_FIELDS),
+        "false_or_missing": [],
+    }
 
 
 def select_dqs1_local_first_candidate(
@@ -485,12 +525,15 @@ def build_dqs1_local_first_queue(
     upstream_dir: str = DEFAULT_UPSTREAM_DIR,
     video_names_file: str = DEFAULT_VIDEO_NAMES_FILE,
     frame_policy: str = DEFAULT_FRAME_POLICY,
+    drift_calibration_json: str = DEFAULT_DRIFT_CALIBRATION_JSON,
+    eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
 ) -> dict[str, Any]:
     date = lane_date or _lane_date_from_summary_path(selection.action_summary_path)
     selected_pairs = ",".join(str(index) for index in selection.selected_pair_indices)
     materialized_root = f"{results_root}/materialized/{selection.candidate_slug}"
     packet_plan = f"{results_root}/selector_pareto/packet_plans/{selection.candidate_slug}.json"
     packet_plan_md = f"{results_root}/selector_pareto/packet_plans/{selection.candidate_slug}.md"
+    eureka_signal = _eureka_signal_path(selection, eureka_output_dir=eureka_output_dir)
     experiment_id = selection.candidate_id
 
     queue = {
@@ -636,6 +679,36 @@ def build_dqs1_local_first_queue(
                             )
                         ],
                     },
+                    {
+                        "id": "local_cpu_contest_drift_eureka",
+                        "requires": ["local_cpu_advisory"],
+                        "timeout_seconds": 120,
+                        "command": [
+                            ".venv/bin/python",
+                            "tools/calibrate_local_cpu_contest_drift.py",
+                            "--calibration-json",
+                            drift_calibration_json,
+                            "--candidate-id",
+                            experiment_id,
+                            "--candidate-local-json",
+                            f"{materialized_root}/local_cpu_advisory.json",
+                            "--auth-frontier-score-from-pointer",
+                            "--eureka-out",
+                            eureka_signal,
+                            "--min-margin",
+                            "0.0",
+                        ],
+                        "resources": {"kind": "local_cpu"},
+                        "postconditions": [
+                            {
+                                "type": "json_equals",
+                                "path": eureka_signal,
+                                "key": "schema",
+                                "equals": LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA,
+                            },
+                            _eureka_false_authority_postcondition(eureka_signal),
+                        ],
+                    },
                 ],
             }
         ],
@@ -654,6 +727,8 @@ def build_queue_from_action_summary(
     upstream_dir: str = DEFAULT_UPSTREAM_DIR,
     video_names_file: str = DEFAULT_VIDEO_NAMES_FILE,
     frame_policy: str = DEFAULT_FRAME_POLICY,
+    drift_calibration_json: str = DEFAULT_DRIFT_CALIBRATION_JSON,
+    eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
     exclude_candidate_ids: set[str] | None = None,
     skip_completed_local_advisory: bool = True,
 ) -> Dqs1QueueBuildResult:
@@ -674,6 +749,8 @@ def build_queue_from_action_summary(
             upstream_dir=upstream_dir,
             video_names_file=video_names_file,
             frame_policy=frame_policy,
+            drift_calibration_json=drift_calibration_json,
+            eureka_output_dir=eureka_output_dir,
         ),
         selection=selection,
     )

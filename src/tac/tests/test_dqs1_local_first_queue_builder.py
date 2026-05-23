@@ -13,6 +13,7 @@ from src.comma_lab.scheduler.dqs1_local_first_queue import (
     find_latest_cross_family_action_summary,
 )
 from src.comma_lab.scheduler.experiment_queue import ExperimentQueueError
+from src.tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
 
 
 def _false_authority() -> dict[str, object]:
@@ -22,10 +23,20 @@ def _false_authority() -> dict[str, object]:
         "promotable": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
+        "score_claim_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "field_selection_ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
         "gpu_launched": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
     }
+
+
+def _eureka_false_authority() -> dict[str, object]:
+    return dict.fromkeys(EUREKA_FALSE_AUTHORITY_FIELDS, False)
 
 
 def _action(candidate_id: str, rank: int) -> dict[str, object]:
@@ -143,7 +154,7 @@ def _write_eureka_signal(
     signal.write_text(
         json.dumps(
             {
-                **_false_authority(),
+                **_eureka_false_authority(),
                 "schema": "local_cpu_contest_drift_eureka_signal.v1",
                 "candidate_id": candidate_id,
                 "candidate_archive_sha256": archive_sha,
@@ -181,8 +192,28 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     assert experiment["tags"] == ["dqs1", "pairset", "local-first", "no-score-authority"]
     assert result.queue["controls"]["max_concurrency"]["modal_gpu"] == 0
     assert {step["resources"]["kind"] for step in experiment["steps"]} == {"local_cpu"}
+    steps_by_id = {step["id"]: step for step in experiment["steps"]}
+    assert list(steps_by_id) == [
+        "plan_packet",
+        "materialize",
+        "locality_controls",
+        "local_cpu_advisory",
+        "local_cpu_contest_drift_eureka",
+    ]
     selected_pairs_arg = experiment["steps"][0]["command"][-1]
     assert selected_pairs_arg == "1,2,112"
+    eureka_step = steps_by_id["local_cpu_contest_drift_eureka"]
+    assert eureka_step["requires"] == ["local_cpu_advisory"]
+    assert "tools/calibrate_local_cpu_contest_drift.py" in eureka_step["command"]
+    assert "--auth-frontier-score-from-pointer" in eureka_step["command"]
+    assert "--eureka-out" in eureka_step["command"]
+    false_authority = next(
+        condition
+        for condition in eureka_step["postconditions"]
+        if condition["type"] == "json_false_authority"
+    )
+    assert false_authority["required_false"] == list(EUREKA_FALSE_AUTHORITY_FIELDS)
+    assert false_authority["false_or_missing"] == []
     assert any(
         condition["type"] == "json_false_authority"
         for step in experiment["steps"]
@@ -205,6 +236,44 @@ def test_dqs1_queue_builder_refuses_to_skip_positive_eureka_candidate(
     )
 
     with pytest.raises(ExperimentQueueError, match="requests exact auth dispatch"):
+        build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
+
+
+def test_dqs1_queue_builder_fails_closed_on_incomplete_eureka_authority(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    signal_path = _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
+    )
+    signal = json.loads(signal_path.read_text())
+    signal.pop("gpu_launched")
+    signal_path.write_text(json.dumps(signal))
+
+    with pytest.raises(ExperimentQueueError, match="gpu_launched"):
+        build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
+
+
+def test_dqs1_queue_builder_fails_closed_on_truthy_eureka_authority(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    signal_path = _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
+    )
+    signal = json.loads(signal_path.read_text())
+    signal["score_claim_valid"] = True
+    signal_path.write_text(json.dumps(signal))
+
+    with pytest.raises(ExperimentQueueError, match="score_claim_valid"):
         build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
 
 
@@ -303,6 +372,8 @@ def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:
         upstream_dir="custom_upstream",
         video_names_file="custom_names.txt",
         frame_policy="single_last_frame",
+        drift_calibration_json="calibration/custom.json",
+        eureka_output_dir=".omx/custom_research",
     )
 
     steps = {step["id"]: step["command"] for step in result.queue["experiments"][0]["steps"]}
@@ -313,6 +384,12 @@ def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:
     assert "single_last_frame" in steps["locality_controls"]
     assert "custom_upstream" in steps["local_cpu_advisory"]
     assert "custom_names.txt" in steps["local_cpu_advisory"]
+    assert "calibration/custom.json" in steps["local_cpu_contest_drift_eureka"]
+    assert any(
+        part
+        == ".omx/custom_research/local_cpu_contest_drift_eureka_pairset_drop_one_rank023_pair0440_20260522T202400Z.json"
+        for part in steps["local_cpu_contest_drift_eureka"]
+    )
 
 
 def test_dqs1_queue_builder_fails_closed_on_authority_fields(tmp_path: Path) -> None:

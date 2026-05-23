@@ -2,20 +2,25 @@
 from __future__ import annotations
 
 import json
+from argparse import Namespace
 from pathlib import Path
 
 import pytest
 
 from src.tac.optimization.local_cpu_contest_drift import (
+    EUREKA_FALSE_AUTHORITY_FIELDS,
     TRUST_REGION_DQS1_FEC6,
     LocalCPUContestDriftError,
     PairedDriftAnchor,
     build_eureka_signal,
     build_eureka_signal_from_local_json_file,
+    eureka_false_authority_violations,
     fit_drift_calibration,
     load_calibration_json,
     paired_anchor_from_json_files,
+    require_eureka_false_authority,
 )
+from tools import calibrate_local_cpu_contest_drift as drift_cli
 
 
 def _anchor(archive: str, delta: float) -> PairedDriftAnchor:
@@ -129,6 +134,38 @@ def test_eureka_signal_requires_stable_margin_and_remains_proxy() -> None:
     assert signal["score_claim"] is False
     assert signal["promotion_eligible"] is False
     assert signal["ready_for_exact_eval_dispatch"] is False
+    assert eureka_false_authority_violations(signal) == []
+    require_eureka_false_authority(signal)
+    for field in EUREKA_FALSE_AUTHORITY_FIELDS:
+        assert signal[field] is False
+
+
+def test_eureka_false_authority_requires_all_fields_exactly_false() -> None:
+    calibration = fit_drift_calibration(
+        [
+            _anchor("a" * 64, 0.000010),
+            _anchor("b" * 64, 0.000011),
+            _anchor("c" * 64, 0.000012),
+        ]
+    )
+    signal = build_eureka_signal(
+        candidate_id="candidate",
+        local_score=0.192010,
+        auth_frontier_score=0.192028,
+        calibration=calibration,
+    )
+
+    missing = dict(signal)
+    missing.pop("score_claim_valid")
+    assert "score_claim_valid" in eureka_false_authority_violations(missing)
+    with pytest.raises(LocalCPUContestDriftError, match="score_claim_valid"):
+        require_eureka_false_authority(missing)
+
+    truthy = dict(signal)
+    truthy["gpu_launched"] = True
+    assert "gpu_launched" in eureka_false_authority_violations(truthy)
+    with pytest.raises(LocalCPUContestDriftError, match="gpu_launched"):
+        require_eureka_false_authority(truthy, context="rank007 eureka")
 
 
 def test_eureka_signal_blocks_candidate_trust_region_mismatch() -> None:
@@ -184,6 +221,43 @@ def test_eureka_from_calibration_and_local_json_file(tmp_path: Path) -> None:
     assert signal["candidate_archive_sha256"] == "d" * 64
     assert signal["candidate_trust_region_matches_calibration"] is True
     assert signal["score_claim"] is False
+
+
+def test_cli_auth_frontier_score_can_come_from_canonical_pointer(tmp_path: Path) -> None:
+    pointer_path = tmp_path / "canonical_frontier_pointer.json"
+    pointer_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "canonical_frontier_pointer_v1_20260519",
+                "our_local_frontier_contest_cpu": {
+                    "score": 0.19202828295713675,
+                    "axis": "contest_cpu",
+                    "archive_sha256": "a" * 64,
+                    "lane_id": "lane",
+                    "hardware_substrate": "linux_x86_64_cpu",
+                    "measured_at_utc": "2026-05-22T18:14:49Z",
+                    "evidence_grade": "[contest-CPU]",
+                },
+                "our_local_frontier_contest_cuda": None,
+                "submitted_pr_number_for_current_frontier": None,
+                "upstream_leaderboard_snapshot": None,
+                "upstream_leaderboard_snapshot_at_utc": None,
+                "last_refreshed_utc": "2026-05-22T18:14:49Z",
+                "auto_update_on_dispatch_completion": True,
+                "pointer_refresh_command": ".venv/bin/python tools/refresh_canonical_frontier.py",
+                "refresh_provenance": {},
+            }
+        )
+    )
+    args = Namespace(
+        auth_frontier_score=None,
+        auth_frontier_score_from_pointer=True,
+        canonical_frontier_pointer=pointer_path.as_posix(),
+    )
+
+    assert drift_cli._auth_frontier_score_from_args(args) == pytest.approx(
+        0.19202828295713675
+    )
 
 
 def test_load_calibration_json_refits_embedded_anchors(tmp_path: Path) -> None:
