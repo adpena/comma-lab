@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,30 @@ from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
 )
 from comma_lab.scheduler.experiment_queue import ExperimentQueueError  # noqa: E402
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
+
+AUTO_LOCAL_CPU_CONCURRENCY = "auto"
+
+
+def _auto_local_cpu_concurrency(*, cpu_count: int | None = None) -> int:
+    count = os.cpu_count() if cpu_count is None else cpu_count
+    if count is None or count < 1:
+        return 1
+    return count
+
+
+def _parse_local_cpu_concurrency(value: str) -> int:
+    text = str(value).strip().lower()
+    if text == AUTO_LOCAL_CPU_CONCURRENCY:
+        return _auto_local_cpu_concurrency()
+    try:
+        parsed = int(text)
+    except ValueError as exc:
+        raise SystemExit(
+            "--local-cpu-concurrency must be a positive integer or 'auto'"
+        ) from exc
+    if parsed < 1:
+        raise SystemExit("--local-cpu-concurrency must be >= 1 or 'auto'")
+    return parsed
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -225,7 +250,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--results-root", default=DEFAULT_RESULTS_ROOT)
     parser.add_argument("--completed-results-root", action="append", default=[])
-    parser.add_argument("--local-cpu-concurrency", type=int, default=2)
+    parser.add_argument(
+        "--local-cpu-concurrency",
+        default=AUTO_LOCAL_CPU_CONCURRENCY,
+        help=(
+            "local_cpu resource cap for generated queues; use 'auto' to use "
+            "os.cpu_count() on this machine"
+        ),
+    )
     parser.add_argument("--overwrite-output", action="store_true")
     parser.add_argument("--expected-materialization-sha256")
     parser.add_argument("--expected-portfolio-sha256")
@@ -243,8 +275,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--candidate-limit must be >= 1")
     if args.queue_candidate_limit < 1:
         raise SystemExit("--queue-candidate-limit must be >= 1")
-    if args.local_cpu_concurrency < 1:
-        raise SystemExit("--local-cpu-concurrency must be >= 1")
+    local_cpu_concurrency = _parse_local_cpu_concurrency(args.local_cpu_concurrency)
     if args.materializer_execution_limit is not None and args.materializer_execution_limit < 1:
         raise SystemExit("--materializer-execution-limit must be >= 1")
     if args.materializer_execution_timeout_seconds < 0:
@@ -326,7 +357,7 @@ def main(argv: list[str] | None = None) -> int:
                 repo_root=args.repo_root,
                 lane_id=args.materializer_execution_lane_id,
                 source_work_queue_path=args.materializer_work_queue_out,
-                local_cpu_concurrency=args.local_cpu_concurrency,
+                local_cpu_concurrency=local_cpu_concurrency,
                 resource_concurrency=_parse_resource_concurrency(
                     args.materializer_resource_concurrency
                 ),
@@ -404,7 +435,7 @@ def main(argv: list[str] | None = None) -> int:
             queue_id=args.queue_id,
             completed_results_roots=tuple(args.completed_results_root),
             candidate_limit=args.queue_candidate_limit,
-            local_cpu_concurrency=args.local_cpu_concurrency,
+            local_cpu_concurrency=local_cpu_concurrency,
             include_scheduler_preflight=args.include_scheduler_preflight,
             scheduler_storage_tiers=tuple(args.scheduler_storage_tier),
             scheduler_storage_workload_subdir=args.scheduler_storage_workload_subdir,
@@ -462,6 +493,8 @@ def main(argv: list[str] | None = None) -> int:
                     else None
                 ),
                 "materializer_execution_queue": materializer_execution_queue_payload,
+                "local_cpu_concurrency": local_cpu_concurrency,
+                "local_cpu_concurrency_requested": str(args.local_cpu_concurrency),
                 "executable_row_count": compiled["executable_row_count"],
                 "blocked_row_count": compiled["blocked_row_count"],
                 "materializer_backlog_row_count": compiled["materializer_backlog"][

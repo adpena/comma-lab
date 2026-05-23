@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import subprocess
 import sys
@@ -68,6 +69,41 @@ from tac.optimization.inverse_scorer_cell_chain import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_byte_shaving_campaign_queue.py"
+
+
+def _load_queue_builder_tool_module():
+    spec = importlib.util.spec_from_file_location(
+        "build_byte_shaving_campaign_queue_tool",
+        TOOL,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    original_path = list(sys.path)
+    try:
+        sys.path.insert(0, str(REPO_ROOT))
+        sys.path.insert(0, str(REPO_ROOT / "tools"))
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = original_path
+    return module
+
+
+def test_build_queue_tool_auto_local_cpu_concurrency_resolves_machine_capacity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_queue_builder_tool_module()
+
+    assert module._auto_local_cpu_concurrency(cpu_count=12) == 12
+    assert module._auto_local_cpu_concurrency(cpu_count=0) == 1
+
+    monkeypatch.setattr(module.os, "cpu_count", lambda: 9)
+    assert module._parse_local_cpu_concurrency("auto") == 9
+    assert module._parse_local_cpu_concurrency("7") == 7
+    with pytest.raises(SystemExit):
+        module._parse_local_cpu_concurrency("0")
+    with pytest.raises(SystemExit):
+        module._parse_local_cpu_concurrency("tiny")
 
 
 def _schema_postcondition(path: Path, schema: str) -> dict[str, object]:
