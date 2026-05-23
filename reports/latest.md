@@ -448,6 +448,12 @@ last_refreshed_note: |
   `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank014_pair0492_20260523T000000Z.json`;
   rank007's eureka artifact is
   `.omx/research/local_cpu_contest_drift_eureka_pairset_drop_one_rank007_pair0059_20260523T001509Z.json`.
+  After the strict eureka false-authority surface landed, historical observe-only
+  eureka rows for rank001, rank002, rank003, rank004, rank005, rank006,
+  rank014, rank015, rank016, rank017, rank018, rank023, rank024, and rank025
+  were backfilled with append-only `20260523T002700Z` artifacts so queue
+  routing can use complete false-authority records without overwriting the
+  original historical artifacts.
 
 ### Top-5 per axis (sanity / promotion-candidate queue)
 
