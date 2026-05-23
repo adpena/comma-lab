@@ -27,6 +27,11 @@ FALSE_AUTHORITY_FIELDS = (
     "rank_or_kill_eligible",
     "promotable",
 )
+ADVISORY_FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "promotion_eligible",
+    "ready_for_exact_eval_dispatch",
+)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -71,12 +76,60 @@ def _target_mass(row: dict[str, Any]) -> float:
     return 0.0
 
 
-def _false_authority_blockers(payload: dict[str, Any], *, label: str) -> list[str]:
+def _false_authority_blockers(
+    payload: dict[str, Any],
+    *,
+    label: str,
+    required_fields: tuple[str, ...] = FALSE_AUTHORITY_FIELDS,
+    missing_is_blocker: bool = True,
+) -> list[str]:
     blockers: list[str] = []
-    for field in FALSE_AUTHORITY_FIELDS:
+    for field in required_fields:
+        if field not in payload:
+            if missing_is_blocker:
+                blockers.append(f"{label}_{field}_missing_or_not_false")
+            continue
         if payload.get(field) is not False:
             blockers.append(f"{label}_{field}_missing_or_not_false")
     return blockers
+
+
+def _nested(mapping: dict[str, Any], *keys: str) -> Any:
+    value: Any = mapping
+    for key in keys:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def _archive_sha256(
+    row: dict[str, Any],
+    advisory: dict[str, Any],
+    manifest: dict[str, Any],
+) -> Any:
+    return (
+        advisory.get("archive_sha256")
+        or _nested(advisory, "archive", "sha256")
+        or manifest.get("archive_sha256")
+        or manifest.get("archive_zip_sha256")
+        or manifest.get("archive_bin_sha256")
+        or row.get("archive_sha256")
+    )
+
+
+def _advisory_sample_evidence(row: dict[str, Any], advisory: dict[str, Any]) -> Any:
+    raw_comparison = row.get("raw_comparison")
+    return (
+        advisory.get("n_samples")
+        or advisory.get("samples")
+        or advisory.get("frame_count")
+        or (
+            raw_comparison.get("frame_count")
+            if isinstance(raw_comparison, dict)
+            else None
+        )
+    )
 
 
 def _advisory_custody_blockers(
@@ -87,29 +140,40 @@ def _advisory_custody_blockers(
 ) -> list[str]:
     blockers: list[str] = []
     blockers.extend(_false_authority_blockers(row, label="row"))
-    blockers.extend(_false_authority_blockers(advisory, label="advisory_eval"))
+    blockers.extend(
+        _false_authority_blockers(
+            advisory,
+            label="advisory_eval",
+            required_fields=ADVISORY_FALSE_AUTHORITY_FIELDS,
+        )
+    )
+    blockers.extend(
+        _false_authority_blockers(
+            advisory,
+            label="advisory_eval",
+            required_fields=tuple(
+                field
+                for field in FALSE_AUTHORITY_FIELDS
+                if field not in ADVISORY_FALSE_AUTHORITY_FIELDS
+            ),
+            missing_is_blocker=False,
+        )
+    )
     if advisory.get("returncode") != 0:
         blockers.append("advisory_eval_returncode_not_zero")
     if advisory.get("canonical_score") is None:
         blockers.append("advisory_eval_canonical_score_missing")
-    if not advisory.get("score_axis"):
+    if not (advisory.get("score_axis") or advisory.get("axis")):
         blockers.append("advisory_eval_score_axis_missing")
-    if not (advisory.get("evidence_grade") or advisory.get("evidence_tag")):
+    if not (
+        advisory.get("evidence_grade")
+        or advisory.get("evidence_tag")
+        or advisory.get("axis")
+    ):
         blockers.append("advisory_eval_evidence_grade_missing")
-    if not (
-        advisory.get("archive_sha256")
-        or manifest.get("archive_sha256")
-        or row.get("archive_sha256")
-    ):
+    if not _archive_sha256(row, advisory, manifest):
         blockers.append("archive_sha256_missing")
-    if not (
-        advisory.get("runtime_tree_sha256")
-        or advisory.get("runtime_sha256")
-        or manifest.get("runtime_tree_sha256")
-        or row.get("runtime_tree_sha256")
-    ):
-        blockers.append("runtime_tree_sha256_missing")
-    if not (advisory.get("n_samples") or advisory.get("samples")):
+    if not _advisory_sample_evidence(row, advisory):
         blockers.append("sample_count_missing")
     manifest_id = str(mutation_row.get("mutation_id") or row.get("candidate_id") or "")
     if manifest_id and str(row.get("candidate_id")) != manifest_id:

@@ -71,6 +71,22 @@ def test_greenup_import_refuses_issue_only_bullet_fallback(tmp_path: Path, monke
     assert _review_status(module, file_path="src/tac/fake_impl.py") == "unreviewed"
 
 
+def test_greenup_import_refuses_not_clean_bullet(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "TRACKER_DB", tmp_path / "review_tracker.duckdb")
+    monkeypatch.setattr(module, "TRACKER_JSON", tmp_path / "review_tracker.json")
+    _insert_entity(module, file_path="src/tac/not_clean_impl.py")
+    pass_file = tmp_path / "greenup.md"
+    pass_file.write_text(
+        "- src/tac/not_clean_impl.py -- NOT CLEAN: needs follow-up\n",
+        encoding="utf-8",
+    )
+
+    module.cmd_greenup_import(str(pass_file))
+
+    assert _review_status(module, file_path="src/tac/not_clean_impl.py") == "unreviewed"
+
+
 def test_greenup_import_marks_clean_verdict_only(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     monkeypatch.setattr(module, "TRACKER_DB", tmp_path / "review_tracker.duckdb")

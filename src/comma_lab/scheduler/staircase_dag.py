@@ -828,12 +828,31 @@ def _storage_preflight_artifact_blockers(
                 ):
                     if plan.get(field) is not False:
                         blockers.append(f"cleanup_plan_{field}_missing_or_not_false")
+                if "candidate_count" not in plan:
+                    blockers.append("cleanup_plan_candidate_count_missing")
+                if "total_reclaimable_bytes" not in plan:
+                    blockers.append("cleanup_plan_total_reclaimable_bytes_missing")
             else:
                 blockers.append("cleanup_plan_plan_object_missing")
-            if "executed_count" not in cleanup_payload:
-                blockers.append("cleanup_plan_executed_count_missing")
-            if "local_bytes_reclaimed" not in cleanup_payload:
-                blockers.append("cleanup_plan_local_bytes_reclaimed_missing")
+            execution = cleanup_payload.get("execution")
+            if execution is None:
+                pass
+            elif isinstance(execution, Mapping):
+                for field in (
+                    "score_claim",
+                    "promotion_eligible",
+                    "ready_for_exact_eval_dispatch",
+                ):
+                    if execution.get(field) is not False:
+                        blockers.append(
+                            f"cleanup_execution_{field}_missing_or_not_false"
+                        )
+                if "executed_count" not in execution:
+                    blockers.append("cleanup_execution_executed_count_missing")
+                if "local_bytes_reclaimed" not in execution:
+                    blockers.append("cleanup_execution_local_bytes_reclaimed_missing")
+            else:
+                blockers.append("cleanup_plan_execution_malformed")
     return blockers
 
 

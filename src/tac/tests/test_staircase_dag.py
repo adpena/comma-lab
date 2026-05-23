@@ -374,9 +374,10 @@ def test_staircase_dag_accepts_succeeded_preflight_with_valid_artifacts(
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
+                    "candidate_count": 0,
+                    "total_reclaimable_bytes": 0,
                 },
-                "executed_count": 0,
-                "local_bytes_reclaimed": 0,
+                "execution": None,
             }
         ),
         encoding="utf-8",
@@ -397,6 +398,55 @@ def test_staircase_dag_accepts_succeeded_preflight_with_valid_artifacts(
     assert task["storage_preflight_dependencies"][0]["storage_plan_artifact_path"] == str(
         storage_plan
     )
+
+
+def test_staircase_dag_accepts_real_compaction_dry_run_artifact(
+    tmp_path: Path,
+) -> None:
+    queue, status_map, storage_plan, cleanup_plan = _storage_preflight_queue(tmp_path)
+    storage_plan.write_text(
+        json.dumps(
+            {
+                "selected_workload_root": str(tmp_path / "workload"),
+                "selected_workload_root_matches_expected": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    scan_root = tmp_path / "empty-results"
+    scan_root.mkdir()
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "compact_experiment_artifacts.py"),
+            str(scan_root),
+            "--repo-root",
+            str(tmp_path),
+            "--min-bytes",
+            "1",
+            "--json-output",
+            str(cleanup_plan),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+    )
+    assert result.returncode == 0, result.stderr
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="fixture_real_cleanup_preflight_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 1, "local_io_heavy": 1}, "memory_gb": 128, "disk_gb": 80}
+        ],
+    )
+
+    plan = plan_staircase_dispatch(dag, status_map=status_map)
+
+    assert plan["selected_count"] == 1
+    assert plan["dask_task_specs"][0]["experiment_id"] == "materialize"
 
 
 def test_staircase_storage_plan_blocks_when_no_tier_selected(tmp_path: Path) -> None:

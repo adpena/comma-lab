@@ -29,6 +29,7 @@ LOCAL_RESOURCE_KINDS = {
 }
 CLOUD_RESOURCE_KINDS = {"cloud_cpu", "cloud_gpu", "modal_cpu", "modal_gpu", "cuda_auth"}
 KNOWN_RESOURCE_KINDS = LOCAL_RESOURCE_KINDS | CLOUD_RESOURCE_KINDS
+SHA256_HEX = frozenset("0123456789abcdef")
 
 
 class ExperimentQueueError(ValueError):
@@ -1056,16 +1057,252 @@ def _json_pointer(payload: Any, key: str) -> Any:
     return current
 
 
+def _resolve_postcondition_path(path_value: str, *, repo_root: Path) -> Path:
+    path = Path(path_value)
+    return path if path.is_absolute() else repo_root / path
+
+
+def _is_sha256(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip().lower()
+    return len(text) == 64 and all(ch in SHA256_HEX for ch in text)
+
+
+def _positive_int(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int) and value > 0:
+        return value
+    if isinstance(value, float) and value.is_integer() and value > 0:
+        return int(value)
+    if isinstance(value, str) and value.strip().isdigit():
+        parsed = int(value.strip())
+        return parsed if parsed > 0 else None
+    return None
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _artifact_record_valid(record: Any, *, repo_root: Path) -> bool:
+    if not isinstance(record, Mapping):
+        return False
+    path_value = record.get("path")
+    if not isinstance(path_value, str) or not path_value.strip():
+        return False
+    expected_sha = record.get("sha256")
+    expected_bytes = _positive_int(record.get("bytes"))
+    if not _is_sha256(expected_sha) or expected_bytes is None:
+        return False
+    path = _resolve_postcondition_path(path_value, repo_root=repo_root)
+    if not path.is_file() or path.is_symlink():
+        return False
+    return path.stat().st_size == expected_bytes and _sha256_file(path) == str(expected_sha).lower()
+
+
+def _false_authority_payload_valid(
+    payload: Mapping[str, Any],
+    *,
+    required_false: Sequence[str],
+    false_or_missing: Sequence[str],
+) -> bool:
+    for key in required_false:
+        try:
+            if _json_pointer(payload, key) is not False:
+                return False
+        except ExperimentQueueError:
+            return False
+    for key in false_or_missing:
+        try:
+            value = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            continue
+        if value is not False:
+            return False
+    return True
+
+
+def _nonempty_value(value: Any) -> bool:
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Mapping | list | tuple | set):
+        return bool(value)
+    return value is not None
+
+
+def _json_completion_contract(
+    condition: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> bool:
+    rel_path = _require_text(condition.get("path"), "postcondition.path")
+    payload = json.loads(_resolve_postcondition_path(rel_path, repo_root=repo_root).read_text())
+    if not isinstance(payload, Mapping):
+        return False
+    for status in _string_list(
+        condition.get("forbidden_statuses", ["failed"]),
+        "postcondition.forbidden_statuses",
+    ):
+        if payload.get("status") == status:
+            return False
+    required_equals = _optional_mapping(
+        condition.get("required_equals"),
+        "postcondition.required_equals",
+    )
+    for key, expected in required_equals.items():
+        try:
+            actual = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            return False
+        if actual != expected:
+            return False
+    for key in _string_list(condition.get("required_true"), "postcondition.required_true"):
+        try:
+            value = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            return False
+        if value is not True:
+            return False
+    for key in _string_list(condition.get("required_false"), "postcondition.required_false"):
+        try:
+            value = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            return False
+        if value is not False:
+            return False
+    for key in _string_list(
+        condition.get("false_or_missing"),
+        "postcondition.false_or_missing",
+    ):
+        try:
+            value = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            continue
+        if value is not False:
+            return False
+    for key in _string_list(
+        condition.get("required_nonempty"),
+        "postcondition.required_nonempty",
+    ):
+        try:
+            value = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            return False
+        if not _nonempty_value(value):
+            return False
+    for key in _string_list(
+        condition.get("required_positive_int"),
+        "postcondition.required_positive_int",
+    ):
+        try:
+            value = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            return False
+        if _positive_int(value) is None:
+            return False
+    for key in _string_list(
+        condition.get("required_sha256"),
+        "postcondition.required_sha256",
+    ):
+        try:
+            value = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            return False
+        if not _is_sha256(value):
+            return False
+    for key in _string_list(
+        condition.get("required_artifact_records"),
+        "postcondition.required_artifact_records",
+    ):
+        try:
+            record = _json_pointer(payload, key)
+        except ExperimentQueueError:
+            return False
+        if not _artifact_record_valid(record, repo_root=repo_root):
+            return False
+    return True
+
+
+def _materializer_chain_complete(
+    condition: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> bool:
+    rel_path = _require_text(condition.get("path"), "postcondition.path")
+    payload = json.loads(_resolve_postcondition_path(rel_path, repo_root=repo_root).read_text())
+    if not isinstance(payload, Mapping):
+        return False
+    expected_schema = _require_text(condition.get("schema"), "postcondition.schema")
+    if payload.get("schema") != expected_schema:
+        return False
+    if payload.get("byte_closed_candidate_emitted") is not True:
+        return False
+    if payload.get("runtime_adapter_ready") is not True:
+        return False
+    if payload.get("receiver_contract_satisfied") is not True:
+        return False
+    if payload.get("candidate_runtime_adapter_blocker_cleared") is not True:
+        return False
+    if payload.get("readiness_blockers"):
+        return False
+    if not _is_sha256(payload.get("candidate_archive_sha256")):
+        return False
+    if _positive_int(payload.get("candidate_archive_bytes")) is None:
+        return False
+    if not _artifact_record_valid(payload.get("candidate_archive"), repo_root=repo_root):
+        return False
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, Mapping) or not artifacts:
+        return False
+    for record in artifacts.values():
+        if not _artifact_record_valid(record, repo_root=repo_root):
+            return False
+    chain_steps = payload.get("chain_steps")
+    if not isinstance(chain_steps, list) or not chain_steps:
+        return False
+    for step in chain_steps:
+        if not isinstance(step, Mapping) or step.get("status") != "succeeded":
+            return False
+        artifact = step.get("artifact")
+        if artifact is not None and not _artifact_record_valid(artifact, repo_root=repo_root):
+            return False
+    required_false = _string_list(
+        condition.get(
+            "required_false",
+            ["score_claim", "promotion_eligible", "rank_or_kill_eligible"],
+        ),
+        "postcondition.required_false",
+    )
+    false_or_missing = _string_list(
+        condition.get(
+            "false_or_missing",
+            ["ready_for_exact_eval_dispatch", "dispatch_attempted", "gpu_launched"],
+        ),
+        "postcondition.false_or_missing",
+    )
+    return _false_authority_payload_valid(
+        payload,
+        required_false=required_false,
+        false_or_missing=false_or_missing,
+    )
+
+
 def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
     condition_type = _require_text(condition.get("type"), "postcondition.type")
     if condition_type == "path_exists":
         rel_path = _require_text(condition.get("path"), "postcondition.path")
-        return (repo_root / rel_path).exists()
+        return _resolve_postcondition_path(rel_path, repo_root=repo_root).exists()
     if condition_type == "json_equals":
         rel_path = _require_text(condition.get("path"), "postcondition.path")
         key = _require_text(condition.get("key"), "postcondition.key")
         expected = condition.get("equals")
-        payload = json.loads((repo_root / rel_path).read_text())
+        payload = json.loads(_resolve_postcondition_path(rel_path, repo_root=repo_root).read_text())
         return _json_pointer(payload, key) == expected
     if condition_type == "json_file_key_equals":
         rel_path = _require_text(condition.get("path"), "postcondition.path")
@@ -1073,11 +1310,11 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
         if "value" not in condition:
             raise ExperimentQueueError("postcondition.value is required")
         expected = condition.get("value")
-        payload = json.loads((repo_root / rel_path).read_text())
+        payload = json.loads(_resolve_postcondition_path(rel_path, repo_root=repo_root).read_text())
         return _json_pointer(payload, key) == expected
     if condition_type == "json_false_authority":
         rel_path = _require_text(condition.get("path"), "postcondition.path")
-        payload = json.loads((repo_root / rel_path).read_text())
+        payload = json.loads(_resolve_postcondition_path(rel_path, repo_root=repo_root).read_text())
         if not isinstance(payload, Mapping):
             return False
         required_false = _string_list(
@@ -1108,6 +1345,10 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
             if actual_axis != expected_axis:
                 return False
         return True
+    if condition_type == "json_completion_contract":
+        return _json_completion_contract(condition, repo_root=repo_root)
+    if condition_type == "materializer_chain_complete":
+        return _materializer_chain_complete(condition, repo_root=repo_root)
     raise ExperimentQueueError(f"unsupported postcondition type: {condition_type!r}")
 
 

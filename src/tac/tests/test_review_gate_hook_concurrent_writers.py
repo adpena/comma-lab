@@ -602,6 +602,43 @@ class HookCheckStagedFilesFallbackTests(unittest.TestCase):
             msg=f"blocking={blocking}, warnings={warnings}",
         )
 
+    def test_db_exists_but_corrupt_json_blocks_standard_file(self):
+        """A locked/unreadable DB plus no JSON evidence cannot green-light standard code."""
+        self.fake_db.write_bytes(b"not a duckdb database")
+        self.fake_json.write_text("{ not valid json")
+        policy = {
+            "rigor": {"standard": {"min_consecutive_clean_passes": 2}},
+            "file_policies": [
+                {"pattern": "src/tac/*.py", "rigor": "standard"},
+            ],
+        }
+
+        blocking, warnings, stats = self._run_hook_with_fake_paths(
+            ["src/tac/x.py"],
+            policy=policy,
+        )
+
+        self.assertEqual(stats.get("source"), "none")
+        self.assertEqual(stats.get("violations"), 1)
+        self.assertTrue(
+            any("POLICY_UNPROVEN_NO_REVIEW_STATE" in line for line in blocking),
+            msg=f"blocking={blocking}, warnings={warnings}",
+        )
+
+    def test_tracked_review_gate_files_includes_scripts(self):
+        tracked = self.hook._tracked_review_gate_files(
+            [
+                "scripts/pre_submission_compliance_check.py",
+                "docs/not_python.md",
+                "src/tac/x.py",
+            ]
+        )
+
+        self.assertEqual(
+            tracked,
+            ["scripts/pre_submission_compliance_check.py", "src/tac/x.py"],
+        )
+
     def test_corrupt_json_treated_as_missing(self):
         """A corrupt JSON snapshot is treated like missing (degraded skip)."""
         self.fake_json.write_text("{ not valid json")

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -67,6 +68,48 @@ from tac.optimization.inverse_scorer_cell_chain import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL = REPO_ROOT / "tools" / "build_byte_shaving_campaign_queue.py"
+
+
+def _schema_postcondition(path: Path, schema: str) -> dict[str, object]:
+    return {
+        "type": "json_equals",
+        "path": str(path),
+        "key": "schema",
+        "equals": schema,
+    }
+
+
+def _assert_typed_postconditions(
+    postconditions: list[dict[str, object]],
+    *,
+    path: Path,
+    schema: str,
+    chain: bool = False,
+) -> None:
+    assert postconditions[0] == _schema_postcondition(path, schema)
+    assert any(
+        condition.get("type") == "json_completion_contract"
+        and condition.get("path") == str(path)
+        and condition.get("required_equals", {}).get("schema") == schema
+        for condition in postconditions
+    )
+    if chain:
+        assert any(
+            condition.get("type") == "materializer_chain_complete"
+            and condition.get("path") == str(path)
+            and condition.get("schema") == schema
+            for condition in postconditions
+        )
+
+
+def _write_artifact(path: Path, payload: bytes = b"artifact") -> dict[str, object]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    return {
+        "path": str(path),
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
 
 
 def _false_authority() -> dict[str, bool]:
@@ -826,20 +869,117 @@ def test_materializer_work_queue_builds_byte_range_chain_command(
     ]
     assert row["command"].count("--beam-probe-report") == 2
     assert "--fail-if-receiver-blocked" in row["command"]
-    assert row["postconditions"] == [
-        {
-            "type": "json_equals",
-            "path": str(output_dir / CHAIN_MANIFEST_NAME),
-            "key": "schema",
-            "equals": CHAIN_SCHEMA,
-        }
-    ]
+    chain_manifest = output_dir / CHAIN_MANIFEST_NAME
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=chain_manifest,
+        schema=CHAIN_SCHEMA,
+        chain=True,
+    )
     manifest = output_dir / CHAIN_MANIFEST_NAME
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"schema": CHAIN_SCHEMA}), encoding="utf-8")
     assert _condition_passes(row["postconditions"][0], repo_root=Path("/")) is True
+    assert _condition_passes(row["postconditions"][1], repo_root=Path("/")) is False
+    assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is False
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_chain_completion_contract_rejects_schema_only_and_failure(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "chain_manifest.json"
+    postconditions = [
+        _schema_postcondition(manifest, CHAIN_SCHEMA),
+        {
+            "type": "json_completion_contract",
+            "path": str(manifest),
+            "required_equals": {"schema": CHAIN_SCHEMA},
+            "required_true": [
+                "byte_closed_candidate_emitted",
+                "runtime_adapter_ready",
+                "receiver_proof_ready",
+                "receiver_contract_satisfied",
+                "candidate_runtime_adapter_blocker_cleared",
+            ],
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+            ],
+            "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched",
+            ],
+            "required_sha256": ["candidate_archive_sha256"],
+            "required_positive_int": ["candidate_archive_bytes"],
+            "required_artifact_records": ["candidate_archive"],
+            "forbidden_statuses": ["failed"],
+        },
+        {
+            "type": "materializer_chain_complete",
+            "path": str(manifest),
+            "schema": CHAIN_SCHEMA,
+        },
+    ]
+
+    manifest.write_text(json.dumps({"schema": CHAIN_SCHEMA}), encoding="utf-8")
+    assert _condition_passes(postconditions[0], repo_root=tmp_path) is True
+    assert _condition_passes(postconditions[1], repo_root=tmp_path) is False
+    assert _condition_passes(postconditions[2], repo_root=tmp_path) is False
+
+    manifest.write_text(
+        json.dumps({"schema": CHAIN_SCHEMA, "status": "failed"}),
+        encoding="utf-8",
+    )
+    assert _condition_passes(postconditions[0], repo_root=tmp_path) is True
+    assert _condition_passes(postconditions[1], repo_root=tmp_path) is False
+    assert _condition_passes(postconditions[2], repo_root=tmp_path) is False
+
+    archive = _write_artifact(tmp_path / "candidate_archive.zip", b"archive-bytes")
+    candidate_manifest = _write_artifact(tmp_path / "candidate_manifest.json")
+    receiver_proof = _write_artifact(tmp_path / "receiver_proof.json")
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": CHAIN_SCHEMA,
+                "candidate_archive": archive,
+                "candidate_archive_sha256": archive["sha256"],
+                "candidate_archive_bytes": archive["bytes"],
+                "byte_closed_candidate_emitted": True,
+                "runtime_adapter_ready": True,
+                "receiver_proof_ready": True,
+                "receiver_contract_satisfied": True,
+                "candidate_runtime_adapter_blocker_cleared": True,
+                "readiness_blockers": [],
+                "artifacts": {
+                    "candidate_manifest": candidate_manifest,
+                    "receiver_proof": receiver_proof,
+                },
+                "chain_steps": [
+                    {
+                        "step_id": "materialize_candidate",
+                        "status": "succeeded",
+                        "artifact": candidate_manifest,
+                    },
+                    {
+                        "step_id": "build_receiver_proof",
+                        "status": "succeeded",
+                        "artifact": receiver_proof,
+                    },
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert _condition_passes(postconditions[1], repo_root=tmp_path) is True
+    assert _condition_passes(postconditions[2], repo_root=tmp_path) is True
 
 
 def test_inverse_surface_cells_compile_to_action_functional_work_queue(
@@ -905,14 +1045,11 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
     ]
     assert ["--scorer-response", str(scorer_response)] == row["command"][4:6]
     assert "--inverse-scorer-allow-native-mlx-window-objective" in row["command"]
-    assert row["postconditions"] == [
-        {
-            "type": "json_equals",
-            "path": str(action_output),
-            "key": "schema",
-            "equals": "inverse_steganalysis_discrete_action_functional.v1",
-        }
-    ]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=action_output,
+        schema="inverse_steganalysis_discrete_action_functional.v1",
+    )
     assert row["telemetry"]["artifact_paths"] == [str(action_output), str(action_md)]
     assert "inverse_action_functional_is_not_candidate_archive" in row["dispatch_blockers"]
     assert row["score_claim"] is False
@@ -1043,14 +1180,11 @@ def test_inverse_action_cells_compile_to_candidate_materializer_work_queue(
         str(template),
     ]
     assert "--atom-id" in row["command"]
-    assert row["postconditions"] == [
-        {
-            "type": "json_equals",
-            "path": str(manifest),
-            "key": "schema",
-            "equals": "inverse_scorer_cell_candidate_v1",
-        }
-    ]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=manifest,
+        schema="inverse_scorer_cell_candidate_v1",
+    )
     assert row["telemetry"]["artifact_paths"] == [str(candidate), str(manifest)]
     assert "inverse_scorer_cell_candidate_requires_receiver_proof" in row["dispatch_blockers"]
     assert row["score_claim"] is False
@@ -1129,14 +1263,12 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     assert "--min-free-bytes" in row["command"]
     assert "--source-inflate-output-dir" in row["command"]
     assert "--candidate-inflate-output-dir" in row["command"]
-    assert row["postconditions"] == [
-        {
-            "type": "json_equals",
-            "path": str(output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME),
-            "key": "schema",
-            "equals": "inverse_scorer_cell_candidate_chain_v1",
-        }
-    ]
+    _assert_typed_postconditions(
+        row["postconditions"],
+        path=output_dir / INVERSE_CELL_CHAIN_MANIFEST_NAME,
+        schema="inverse_scorer_cell_candidate_chain_v1",
+        chain=True,
+    )
     assert row["telemetry"]["artifact_paths"] == [
         str(output_dir),
         str(source_inflate_output_dir),
@@ -1186,6 +1318,7 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
 
 def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     compiled = compile_dqs1_byte_shaving_campaign(
         _byte_range_entropy_plan(),
@@ -1297,6 +1430,42 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
     assert (
         "storage_preflight_dependency_is_advisory_only"
         in storage_dependency["dispatch_blockers"]
+    )
+    monkeypatch.chdir(tmp_path)
+    storage_artifact = Path(storage_dependency["storage_plan_artifact_path"])
+    cleanup_artifact = Path(storage_dependency["cleanup_plan_artifact_path"])
+    storage_artifact.parent.mkdir(parents=True, exist_ok=True)
+    cleanup_artifact.parent.mkdir(parents=True, exist_ok=True)
+    storage_artifact.write_text(
+        json.dumps(
+            {
+                "selected_workload_root": str(tmp_path / "materializer_results"),
+                "selected_workload_root_matches_expected": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    cleanup_artifact.write_text(
+        json.dumps(
+            {
+                "plan": {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "candidate_count": 0,
+                    "total_reclaimable_bytes": 0,
+                },
+                "execution": {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "executed_count": 0,
+                    "local_bytes_reclaimed": 0,
+                },
+            }
+        ),
+        encoding="utf-8",
     )
 
     plan = plan_staircase_dispatch(
@@ -1480,14 +1649,12 @@ def test_materializer_execution_queue_runs_executable_work_rows(
         ".venv/bin/python",
         "tools/run_byte_range_entropy_recode_chain.py",
     ]
-    assert step["postconditions"] == [
-        {
-            "type": "json_equals",
-            "path": str(output_dir / CHAIN_MANIFEST_NAME),
-            "key": "schema",
-            "equals": CHAIN_SCHEMA,
-        }
-    ]
+    _assert_typed_postconditions(
+        step["postconditions"],
+        path=output_dir / CHAIN_MANIFEST_NAME,
+        schema=CHAIN_SCHEMA,
+        chain=True,
+    )
 
 
 def test_materializer_execution_queue_wraps_inverse_action_work_rows(
@@ -1536,14 +1703,11 @@ def test_materializer_execution_queue_wraps_inverse_action_work_rows(
         "--output",
         str(action_output),
     ]
-    assert step["postconditions"] == [
-        {
-            "type": "json_equals",
-            "path": str(action_output),
-            "key": "schema",
-            "equals": "inverse_steganalysis_discrete_action_functional.v1",
-        }
-    ]
+    _assert_typed_postconditions(
+        step["postconditions"],
+        path=action_output,
+        schema="inverse_steganalysis_discrete_action_functional.v1",
+    )
 
 
 def test_materializer_work_queue_matches_context_by_suggested_target_kind(

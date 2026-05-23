@@ -66,6 +66,18 @@ POLICY_PATH = REPO_ROOT / ".omx" / "state" / "review_policy.json"
 # the commit for ~8s (the review_tracker default), we wait ~1.5s and then fall
 # through to the JSON snapshot. Override via REVIEW_GATE_HOOK_RETRY_SECONDS.
 DEFAULT_HOOK_RETRY_SECONDS = 1.5
+TRACKED_PREFIXES = (
+    "src/tac/",
+    "src/comma_lab/",
+    "experiments/",
+    "submissions/",
+    "tools/",
+    "scripts/",
+)
+
+
+def _tracked_review_gate_files(staged_files: list[str]) -> list[str]:
+    return [f for f in staged_files if any(f.startswith(p) for p in TRACKED_PREFIXES)]
 
 
 def get_staged_py_files() -> list[str]:
@@ -132,6 +144,41 @@ def _try_connect_tracker_db(rt_module, retry_seconds: float):
         return con, None
     except Exception as exc:
         return None, exc
+
+
+def _missing_review_state_blockers(
+    rt_module,
+    staged_files: list[str],
+    policy: dict,
+    *,
+    db_err: object,
+) -> tuple[list[str], list[str], dict]:
+    """Fail closed for critical/standard files when no review state is readable."""
+    blocking: list[str] = []
+    warnings: list[str] = [
+        "review_tracker DB locked/unreadable + no JSON snapshot — review gate degraded",
+        f"  (last DB error: {db_err})",
+    ]
+    stats = {"source": "none", "total": 0, "compliant": 0, "violations": 0, "needs_fix": 0}
+    get_rigor_for_file = rt_module.get_rigor_for_file
+    for fp in staged_files:
+        rigor = get_rigor_for_file(fp, policy)
+        rigor_name = rigor.get("_name", "relaxed")
+        if rigor_name in ("critical", "standard"):
+            stats["violations"] += 1
+            blocking.extend(
+                [
+                    f"  [{rigor_name.upper()}] {fp}",
+                    "    [POLICY_UNPROVEN_NO_REVIEW_STATE] DuckDB unavailable "
+                    "and JSON snapshot missing/corrupt; cannot prove review policy",
+                ]
+            )
+        else:
+            warnings.append(
+                f"  [{rigor_name.upper()}] {fp}: review state unavailable; "
+                "policy evidence not checked"
+            )
+    return blocking, warnings, stats
 
 
 def _check_staged_via_duckdb(
@@ -345,10 +392,12 @@ def check_staged_files(staged_files: list[str]) -> tuple[list[str], list[str], d
                 "No tracker DB — run: python tools/review_tracker.py scan",
             ], {"source": "none"}
         # DB exists but couldn't be opened AND no JSON snapshot.
-        return [], [
-            "review_tracker DB locked + no JSON snapshot — review gate degraded",
-            f"  (last DB error: {db_err})",
-        ], {"source": "none"}
+        return _missing_review_state_blockers(
+            rt_module,
+            staged_files,
+            policy,
+            db_err=db_err,
+        )
 
     blocking, warnings, stats = _check_staged_via_json_snapshot(
         rt_module, snapshot, staged_files, policy
@@ -377,8 +426,7 @@ def main() -> int:
     if not staged:
         return 0
 
-    tracked_prefixes = ("src/tac/", "src/comma_lab/", "experiments/", "submissions/", "tools/")
-    tracked = [f for f in staged if any(f.startswith(p) for p in tracked_prefixes)]
+    tracked = _tracked_review_gate_files(staged)
     if not tracked:
         return 0
 

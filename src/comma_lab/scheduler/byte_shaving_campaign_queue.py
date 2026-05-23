@@ -974,6 +974,121 @@ def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
     return tuple(blockers)
 
 
+def _materializer_chain_postconditions(
+    *,
+    manifest_path: str,
+    schema: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "json_equals",
+            "path": manifest_path,
+            "key": "schema",
+            "equals": schema,
+        },
+        {
+            "type": "json_completion_contract",
+            "path": manifest_path,
+            "required_equals": {"schema": schema},
+            "required_true": [
+                "byte_closed_candidate_emitted",
+                "runtime_adapter_ready",
+                "receiver_proof_ready",
+                "receiver_contract_satisfied",
+                "candidate_runtime_adapter_blocker_cleared",
+            ],
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+            ],
+            "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched",
+            ],
+            "required_sha256": ["candidate_archive_sha256"],
+            "required_positive_int": ["candidate_archive_bytes"],
+            "required_artifact_records": ["candidate_archive"],
+            "forbidden_statuses": ["failed"],
+        },
+        {
+            "type": "materializer_chain_complete",
+            "path": manifest_path,
+            "schema": schema,
+        },
+    ]
+
+
+def _materializer_candidate_postconditions(
+    *,
+    manifest_path: str,
+    schema: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "json_equals",
+            "path": manifest_path,
+            "key": "schema",
+            "equals": schema,
+        },
+        {
+            "type": "json_completion_contract",
+            "path": manifest_path,
+            "required_equals": {"schema": schema},
+            "required_true": ["byte_closed_candidate_emitted"],
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+            ],
+            "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched",
+            ],
+            "required_sha256": ["candidate_archive.sha256"],
+            "required_positive_int": ["candidate_archive.bytes"],
+            "required_artifact_records": ["candidate_archive"],
+            "forbidden_statuses": ["failed"],
+        },
+    ]
+
+
+def _planning_artifact_postconditions(
+    *,
+    manifest_path: str,
+    schema: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "json_equals",
+            "path": manifest_path,
+            "key": "schema",
+            "equals": schema,
+        },
+        {
+            "type": "json_completion_contract",
+            "path": manifest_path,
+            "required_equals": {"schema": schema},
+            "required_true": ["planning_only", "candidate_generation_only"],
+            "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+            ],
+            "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched",
+            ],
+            "required_positive_int": ["integral_totals.cell_count"],
+            "required_nonempty": ["water_bucket"],
+            "forbidden_statuses": ["failed"],
+        },
+    ]
+
+
 def build_materializer_work_queue(
     backlog: Mapping[str, Any],
     *,
@@ -1022,7 +1137,7 @@ def build_materializer_work_queue(
         else:
             context = context_matches[0][1] if context_matches else {}
         command: list[str] = []
-        postcondition: dict[str, Any] | None = None
+        postconditions: list[dict[str, Any]] = []
         telemetry: dict[str, Any] = {}
         if (
             unit_kind == "byte_range"
@@ -1032,14 +1147,12 @@ def build_materializer_work_queue(
             command, command_blockers = _byte_range_chain_command(context)
             blockers.extend(command_blockers)
             if command:
-                postcondition = {
-                    "type": "json_equals",
-                    "path": str(
+                postconditions = _materializer_chain_postconditions(
+                    manifest_path=str(
                         Path(context["output_dir"]) / BYTE_RANGE_CHAIN_MANIFEST
                     ),
-                    "key": "schema",
-                    "equals": CHAIN_SCHEMA,
-                }
+                    schema=CHAIN_SCHEMA,
+                )
                 telemetry = {
                     "artifact_paths": [str(context["output_dir"])],
                     "recursive": True,
@@ -1057,12 +1170,10 @@ def build_materializer_work_queue(
             blockers.extend(command_blockers)
             output = _path_context_value(context, "output")
             if command and output is not None:
-                postcondition = {
-                    "type": "json_equals",
-                    "path": output,
-                    "key": "schema",
-                    "equals": INVERSE_ACTION_FUNCTIONAL_SCHEMA,
-                }
+                postconditions = _planning_artifact_postconditions(
+                    manifest_path=output,
+                    schema=INVERSE_ACTION_FUNCTIONAL_SCHEMA,
+                )
         elif (
             unit_kind == "scorer_inverse_surface_cell"
             and operation_family == "materialize_inverse_scorer_cell_candidate"
@@ -1077,19 +1188,15 @@ def build_materializer_work_queue(
                 output_dir = _path_context_value(context, "output_dir")
             manifest_out = _path_context_value(context, "manifest_out")
             if command and output_dir is not None:
-                postcondition = {
-                    "type": "json_equals",
-                    "path": str(Path(output_dir) / INVERSE_SCORER_CELL_CHAIN_MANIFEST),
-                    "key": "schema",
-                    "equals": INVERSE_SCORER_CELL_CHAIN_SCHEMA,
-                }
+                postconditions = _materializer_chain_postconditions(
+                    manifest_path=str(Path(output_dir) / INVERSE_SCORER_CELL_CHAIN_MANIFEST),
+                    schema=INVERSE_SCORER_CELL_CHAIN_SCHEMA,
+                )
             elif command and manifest_out is not None:
-                postcondition = {
-                    "type": "json_equals",
-                    "path": manifest_out,
-                    "key": "schema",
-                    "equals": INVERSE_SCORER_CELL_CANDIDATE_SCHEMA,
-                }
+                postconditions = _materializer_candidate_postconditions(
+                    manifest_path=manifest_out,
+                    schema=INVERSE_SCORER_CELL_CANDIDATE_SCHEMA,
+                )
         else:
             blockers.append(
                 f"materializer_work_queue_adapter_missing:{unit_kind}:{operation_family}:{target_kind or '<target_tbd>'}"
@@ -1122,7 +1229,7 @@ def build_materializer_work_queue(
                     ),
                     "tool": command[1] if command else None,
                     "command": command,
-                    "postconditions": [] if postcondition is None else [postcondition],
+                    "postconditions": postconditions,
                     "telemetry": telemetry,
                     "resource_kind": row.get("materialization_resource_kind")
                     or suggestion.get("materialization_resource_kind")

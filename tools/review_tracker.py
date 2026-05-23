@@ -48,7 +48,7 @@ TRACKER_DB = REPO_ROOT / ".omx" / "state" / "review_tracker.duckdb"
 EXPERIMENTS_ROOT = REPO_ROOT / "experiments"
 POLICY_PATH = REPO_ROOT / ".omx" / "state" / "review_policy.json"
 
-SCAN_PREFIXES = ("src/tac/", "experiments/", "tools/", "submissions/")
+SCAN_PREFIXES = ("src/tac/", "experiments/", "tools/", "submissions/", "scripts/")
 SCAN_EXCLUDE_GLOBS = (
     "experiments/results/**",
     "experiments/tmp/**",
@@ -279,7 +279,13 @@ def _tracked_reviewable_python_files() -> list[Path]:
         return _reviewable_python_paths_from_git_output(out)
 
     candidates: list[Path] = []
-    for scan_dir in [TAC_ROOT, EXPERIMENTS_ROOT, REPO_ROOT / "tools", REPO_ROOT / "submissions"]:
+    for scan_dir in [
+        TAC_ROOT,
+        EXPERIMENTS_ROOT,
+        REPO_ROOT / "tools",
+        REPO_ROOT / "submissions",
+        REPO_ROOT / "scripts",
+    ]:
         if not scan_dir.exists():
             continue
         for py_file in scan_dir.rglob("*.py"):
@@ -1301,7 +1307,14 @@ def cmd_greenup_import(pass_file: str) -> None:
     content = path.read_text()
     pass_name = path.stem
 
-    clean_files = re.findall(r"-\s+(\S+\.py)\s+.*\bCLEAN\b", content)
+    clean_files = []
+    for line in content.splitlines():
+        match = re.match(r"^\s*-\s+(\S+\.py)\s+(?:--|—)\s*(.+?)\s*$", line)
+        if not match:
+            continue
+        verdict = match.group(2).strip().upper()
+        if verdict == "CLEAN":
+            clean_files.append(match.group(1))
 
     if not clean_files:
         print("No CLEAN verdict files found in pass file")
@@ -1550,7 +1563,11 @@ def cmd_selftest() -> None:
     print("  [6/7] Greenup pattern matching...")
     try:
         test_content = "- src/tac/training.py — CLEAN\n- experiments/benchmark_int4.py — CLEAN\n- bad line"
-        matches = re.findall(r"-\s+(\S+\.py)\s+.*CLEAN", test_content)
+        matches = [
+            line.split("—", 1)[0].lstrip("-").strip()
+            for line in test_content.splitlines()
+            if re.match(r"^\s*-\s+\S+\.py\s+(?:--|—)\s*CLEAN\s*$", line)
+        ]
         assert len(matches) == 2, f"Expected 2 matches, got {len(matches)}"
         assert "src/tac/training.py" in matches
         print(f"    PASS: {len(matches)} clean files parsed")
@@ -1886,7 +1903,7 @@ def cmd_greenup_ingest(result_file: str, reviewer: str = "council",
         fname = fname.strip().strip("`").replace("\\", "/")
         verdict = verdict.strip().upper()
 
-        is_clean = "CLEAN" in verdict and "NOT" not in verdict and "ISSUES" not in verdict
+        is_clean = verdict == "CLEAN"
 
         # Match on full path first, fallback to suffix — with ambiguity guard
         rows = con.execute(
