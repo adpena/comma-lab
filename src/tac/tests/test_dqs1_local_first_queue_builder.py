@@ -159,7 +159,7 @@ def _write_eureka_signal(
         / "research"
         / f"local_cpu_contest_drift_eureka_{candidate_id}_20260522T000000Z.json"
     )
-    signal.parent.mkdir(parents=True)
+    signal.parent.mkdir(parents=True, exist_ok=True)
     signal.write_text(
         json.dumps(
             {
@@ -501,6 +501,55 @@ def test_dqs1_harvest_observe_only_reroutes_queue(tmp_path: Path) -> None:
     assert harvest.rerouted_queue["experiments"][0]["id"] == "pairset_drop_one_rank024_pair0112"
     written = load_queue_definition(queue_path)
     assert written["experiments"][0]["id"] == "pairset_drop_one_rank024_pair0112"
+
+
+def test_dqs1_harvest_observe_only_all_candidates_consumed_returns_no_reroute(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        eureka_run_id="20260522T000000Z",
+    )
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(json.dumps(result.queue))
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
+    )
+    advisory_2, _archive_2, archive_sha_2 = _write_completed_local_advisory(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank024_pair0112",
+    )
+    _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank024_pair0112",
+        advisory=advisory_2,
+        archive_sha=archive_sha_2,
+    )
+    prior_queue_sha = sha256(queue_path.read_bytes()).hexdigest()
+
+    harvest = build_dqs1_harvest_result(
+        queue_path=queue_path,
+        repo_root=tmp_path,
+        timestamp="20260523T010203Z",
+        reroute_observe_only=True,
+        output_queue_path=queue_path,
+        expected_output_queue_sha256=prior_queue_sha,
+        results_root="results",
+    )
+
+    assert harvest.harvest_record["schema"] == HARVEST_SCHEMA
+    assert harvest.harvest_record["candidate_id"] == "pairset_drop_one_rank023_pair0440"
+    assert harvest.harvest_record["recommended_action"] == "observe_only"
+    assert harvest.exact_auth_request is None
+    assert harvest.rerouted_queue is None
+    assert sha256(queue_path.read_bytes()).hexdigest() == prior_queue_sha
 
 
 def test_dqs1_harvest_positive_eureka_creates_exact_auth_request(tmp_path: Path) -> None:

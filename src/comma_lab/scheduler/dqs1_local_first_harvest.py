@@ -25,6 +25,7 @@ from .experiment_queue import ExperimentQueueError, load_queue_definition
 HARVEST_SCHEMA = "dqs1_local_first_harvest.v1"
 EXACT_AUTH_ANCHOR_REQUEST_SCHEMA = "exact_auth_anchor_request.v1"
 DEFAULT_QUEUE_PATH = "configs/experiment_queues/dqs1_pairset_local_first.yaml"
+NO_SAFE_DQS1_CANDIDATE_PREFIX = "no safe DQS1 local-first candidate found"
 
 
 @dataclass(frozen=True)
@@ -274,14 +275,24 @@ def build_dqs1_harvest_result(
             if str(action_summary) == "latest"
             else _resolve(action_summary, repo_root=repo)
         )
-        reroute = build_queue_from_action_summary(
-            summary_path,
-            repo_root=repo,
-            results_root=results_root,
-            eureka_run_id=stamp,
-        )
-        rerouted_queue = reroute.queue
+        try:
+            reroute = build_queue_from_action_summary(
+                summary_path,
+                repo_root=repo,
+                results_root=results_root,
+                eureka_run_id=stamp,
+            )
+            rerouted_queue = reroute.queue
+        except ExperimentQueueError as exc:
+            if not str(exc).startswith(NO_SAFE_DQS1_CANDIDATE_PREFIX):
+                raise
         if output_queue_path is not None:
+            if rerouted_queue is None:
+                return Dqs1HarvestResult(
+                    harvest_record=harvest,
+                    exact_auth_request=exact_request,
+                    rerouted_queue=None,
+                )
             output_path = _resolve(output_queue_path, repo_root=repo)
             allow_overwrite = output_path.exists()
             if allow_overwrite and expected_output_queue_sha256 is None:
