@@ -1,0 +1,1745 @@
+{
+  "execution": null,
+  "plan": {
+    "blocked_candidate_count": 113,
+    "blocked_candidates": [
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 7347892298,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_l2_sparse_aware_encoders_landing"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 7324819200,
+        "certificate": {
+          "direct_raw_file_count": 2,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/z7_mamba2_score_aware_600pair_mps_10epoch_20260519T1535Z/inflate_verify"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 7324819200,
+        "certificate": {
+          "direct_raw_file_count": 2,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/z7_mamba2_score_aware_600pair_mps_verifyfix_20260519T1521Z/inflate_verify"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3663839305,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_a_landed/eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662933234,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "contest_auth_eval_cpu_workdir",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr95_local_mps_integrated_auth_bridge_smoke_20260519T175800Z/contest_auth_eval_cpu_workdir"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662884320,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "contest_auth_eval_cpu_workdir",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr95_local_mps_stage1_50ep_bridge_20260519T215303Z/contest_auth_eval_cpu_workdir"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662788555,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "auth_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_gold_master_gradient_null_byte_removal_smoke_20260521T010155Z/V_BASELINE/auth_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662785367,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "local_macos_cpu_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_frame_exploit_selector_fec2_compact_exact_k8_cpu_overlay_20260514_codex/local_macos_cpu_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662785325,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "local_macos_cpu_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514_codex/local_macos_cpu_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662782986,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr106_r2_pr101_pr103_grammar_measurement_20260511T180000Z/inflate_probe_scratch"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662778957,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "macos_cpu_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_blocks3_7bit_20260509_codex/macos_cpu_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662778723,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "macos_cpu_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_blocks4_7bit_20260509_codex/macos_cpu_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662778241,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "macos_cpu_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_target176000_20260509_codex/macos_cpu_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662778016,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "macos_cpu_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_target174000_20260509_codex/macos_cpu_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662777406,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "macos_cpu_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_blocks0_7bit_20260509/macos_cpu_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662766276,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr107_cpu_eval_20260508/eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662736804,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "auth_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_workdir_no_certifier"
+        ],
+        "bytes": 3662728380,
+        "certificate": {
+          "kind": "blocked_unknown_raw_surface",
+          "known_raw_workdir_name": "auth_eval_work",
+          "nested_raw_bytes": 3662409600,
+          "nested_raw_file_count": 1,
+          "reason": "known raw workdir contains raw outputs but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T024250Z/auth_eval_work"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": ".omx/tmp/pr101_grammar_baseline_cpu_out"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": ".omx/tmp/pr101_grammar_local_smoke_out"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": ".omx/tmp/z3_v2_inflate_test/out_dir"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/a1_segguard_kl0p5_l1p02_macos_cpu_advisory_20260509_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/a1_sidecar_resumable_codex_20260509T_local/exact_inflate_sh_smoke/out"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "7bbba307b1432d8d885e22533fdda9ab5cc87a6025510b2d5098084895284897",
+          "command": null,
+          "eval_path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "d974fa608d890220ab4c8a7755168dd36de55b001275484c58a9cb746f8a4c09",
+          "inflated_outputs_manifest_path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "82ba5b7c6e0ed04788ed8b97c119c45946c2d569e07c7dbec83cd1fc9180ab3b"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/d1_local_inflate_a1_baseline_20260515_codex"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/d1_local_inflate_cert_sparse96_b3k_green_20260515_codex"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/d1_local_inflate_negative_green_b3k_20260515_codex"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/d1_local_inflate_pair_mask_cpu600p135_20260515_codex"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/d1_local_inflate_pair_mask_cpu600p235pn_20260515_codex"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/dual_device_auth_eval/pr103_pr106_cpu_raw_manifest_20260511T0335Z/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/hfv1_sidecar_candidates_20260520_codex/pose_top8_alpha00045_radius070/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_a_landed/eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_l2_sparse_aware_encoders_landing/c3_sparse_empty_smoke/output_dir"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_local_hardware_aggressive_sweep_20260513/a1_inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_local_hardware_aggressive_sweep_20260513_20260513T212901Z/cpu_a1/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_local_hardware_aggressive_sweep_20260513_20260513T212901Z/mps_a1/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_local_hardware_aggressive_sweep_20260513_20260513T212901Z/mps_pr106/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_local_hardware_maximization_sweep_20260513_20260513T210232Z/work_a1_baseline_600pair/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_macos_cpu_proxy_empirical_validation_20260513_20260513T154314Z/a1/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_macos_cpu_proxy_empirical_validation_20260513_20260513T154314Z/pr101/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_macos_cpu_proxy_empirical_validation_20260513_20260513T154314Z/pr102/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_macos_cpu_proxy_empirical_validation_20260513_20260513T154314Z/pr107/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lane_w_criterion_3_a1_base_l2_hinton_saliency_materialization/a1_inflate_smoke/output"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T024250Z/auth_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/lightning_batch/lossy-coarsening-cuda-20260508T0312-noproject/auth_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/local_auth_eval/hdm8_baseline_macos_cpu_20260514T153900Z/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/local_auth_eval/pr101_frame_exploit_selector_all_none_macos_cpu_20260514T1855_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/local_auth_eval/pr101_frame_exploit_selector_compact_k16_macos_cpu_20260514T1909_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/local_auth_eval/pr101_frame_exploit_selector_compact_k4_macos_cpu_20260514T1916_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/local_auth_eval/pr101_frame_exploit_selector_compact_k8_macos_cpu_20260514T1909_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/local_auth_eval/pr101_frame_exploit_selector_fes1_macos_cpu_20260514T1855_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/m5max_sweep_constrained_coord_search_20260509T142645Z/_calibration/_calibration_anchor/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/m5max_sweep_constrained_coord_search_20260509T142645Z/v_n0_50_p0_00_n0_50/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/m5max_sweep_constrained_coord_search_20260509T142645Z/v_n0_50_p0_00_n1_00/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/m5max_sweep_constrained_coord_search_20260509T142645Z/v_n0_50_p0_00_p0_00/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/m5max_sweep_constrained_coord_search_20260509T142645Z/v_n0_50_p0_00_p0_50/work/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_controls.json",
+          "manifest_sha256": "475d98aeb8db993a59c85b305f353635b0a9881480607d3489acc074a5ebd2b7",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_controls.json",
+          "manifest_sha256": "475d98aeb8db993a59c85b305f353635b0a9881480607d3489acc074a5ebd2b7",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work/parent/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_controls.json",
+          "manifest_sha256": "475d98aeb8db993a59c85b305f353635b0a9881480607d3489acc074a5ebd2b7",
+          "raw_sha256": "ad8232e27709cc62b976c3b06c3dc7da9d772e510b5f7acab7e4a639ba658387"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work/selective/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k024_materialization_20260522T173059Z/locality_work_rerun_20260522T1738Z/global_mutated/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k024_materialization_20260522T173059Z/locality_work_rerun_20260522T1738Z/parent/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k024_materialization_20260522T173059Z/locality_work_rerun_20260522T1738Z/selective/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_singleton_pair501.json",
+          "manifest_sha256": "aee3b8a71d7ccb633a705d52bc5aff943f00c7642c4b23a7863aaeacbbef3877",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_singleton_pair501.json",
+          "manifest_sha256": "aee3b8a71d7ccb633a705d52bc5aff943f00c7642c4b23a7863aaeacbbef3877",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work/parent/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "c5f0966f6dbecbf6039a6d98c97ff320cc3b8909a331232595196d7cffd97e64",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_singleton_pair501.json",
+          "manifest_sha256": "aee3b8a71d7ccb633a705d52bc5aff943f00c7642c4b23a7863aaeacbbef3877",
+          "raw_sha256": "c5bf6b13d599872e4ba429543983dbdf12525c5fa9f932c360d3da9d9ca39a52"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work/selective/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/mlx_public_frontier_calibration_20260522T023053Z/pr101/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/mlx_public_frontier_calibration_20260522T023053Z/pr103/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/mlx_same_axis_decoderq_d1f1e56e042692f2_20260522T031205Z/inflate_controls/candidates/d1f1e56e042692f2/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_a5_channel_qbits_dp_qsum200_macos_cpu_advisory_20260509_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_a5_q7_boundary_lowmargin_max_runtime_packet_20260509_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "7163499abb7475ee937338e9c79f22d3c326b53c34f7dbaa2b8ed1c872d67190",
+          "command": null,
+          "eval_path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "879e64de84a970ea30b068d151d5a624ec8dfc199e28600b9a375a78a3258ab3",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "d89ceb1d127016598f86058769887c4bac80befe4e60751395ed23bb7b6a76c5"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "5b1f6e190f9051357d4c24b2e87fb4cf5bc6e2dc88b397d2f3c16972e7476536",
+          "command": null,
+          "eval_path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "cc8e917e5db47c4c60ed16a9b07fb3c126f8343dad394269c765d50e2c6b682a",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "00e2541d8b10bad0e6c429de7a5a23b6b06252162e474b016a199205d27591b2"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_a5_q7_seg_binaryq_runtime_packet_20260509_codex/work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_fec6_lfv1_hfv1_integrated_adapter_20260520_codex/official_inflate_control/outputs/identity"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_fec6_lfv1_hfv1_integrated_adapter_20260520_codex/official_inflate_control/outputs/no_sidecar"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_fec6_lfv1_hfv1_integrated_adapter_20260520_codex/official_inflate_control/outputs/nonidentity_boundary"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_fec6_lfv1_hfv1_integrated_adapter_20260520_codex/official_inflate_control/outputs/seed_top16_component_hardpairs"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "cde5a1e0ad49ec56856a8b1f0e4d7c329193955211d0f9fe314366d992c4c737",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "cabb6bf693f2267c5eb6c26edcab88e8b43e9d517d031f6ef7964b89a4a84a14",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "8ae931a1637974396f4f1dc86d021034f792aa87e974690715264a92fec56387"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "dd725682e8dca781c908f826c117395c39cdffeba4ec2525f7799839eda3bfde",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "be48e81700ee1dad00c481e5f06ba92c5e7facac45c08f5532069467f855901e",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "c7e1bd281e02ba5a32716999cd3032999ad94bc317ba86b86cd1ceb2cb1b00b4"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "1ffb328240ccb9a067b1203258274c3edfba9f0a98212f1ce1c0a40b3e016501",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "06f3dd5a144e2994c47cf0784f1b0981746936d8f4336f6cef76279db700ce31",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "e9781799ced4d83428044fa4aa3af4faf469af3e026564776c5e6568204a8f4a"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "39dbfd05d4861c6c5ea12e7bfc8fba17e8249dcc761e9c44943eeba8d56c6ade",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "38d4d737a55c86bd00ac67d3ea6783729a5ca95062be5cb0a96d259b2902a69e",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "cf57f305176034c21027f1592c263f71e045d09d1c65c572ebee5d37bf5722b3"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "28f4e0ee3ede86f323b484e36711fd01204ad101517f40ef32000417d2e4a896",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "0207f20d09541951ee021e85641c2a23fd58111c54d7e6da0143724e7355ce78",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "c9dbb46ac9e24278c9f0d1b565e458510308fd71cd8b41e616407e773b517634"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_frame_exploit_selector_fec2_compact_exact_k8_cpu_overlay_20260514_codex/local_macos_cpu_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514_codex/local_macos_cpu_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/local_macos_cpu_advisory_smoke_20260519T143400Z_workdir/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/local_macos_cpu_advisory_smoke_20260519T143700Z_workdir/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr101_gold_master_gradient_null_byte_removal_smoke_20260521T010155Z/V_BASELINE/auth_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr107_cpu_eval_20260508/eval_work/submission/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_inflate_controls_20260520_codex/baseline/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/hfv1_candidates/lfv1_pose_top8_alpha00045_radius070_budget160/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/hfv1_candidates/lfv1v2_pose_top8_alpha00002_radius070_budget160/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr95_local_mps_integrated_auth_bridge_smoke_20260519T175800Z/contest_auth_eval_cpu_workdir/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr95_local_mps_source_faithful_stage1_25ep_20260519T161718Z/local_cpu_advisory_eval/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr95_local_mps_stage1_50ep_bridge_20260519T215303Z/contest_auth_eval_cpu_workdir/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/smoke_residual_pr106_20260511T180013Z/c3/output"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/smoke_residual_pr106_20260511T180013Z/pr106_r2/output"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/smoke_residual_pr106_20260511T180013Z/wavelet/output"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track1_phase_a1_score_gradient_20260508T230020Z_modal/macos_cpu_advisory_work_after_python_patch/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+          "command": null,
+          "eval_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "05675255053c4cfd29fea4f7f381d600534d419ef02c95e7d9fddd381bd4b289",
+          "inflated_outputs_manifest_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "ccb7562d61146a46619719ff7562295d981b6468a61d11578ee9db8acdf96115"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "55d4a4a0d0ad9915e9b74c679ad8ea31e81f4383f60c132bf017e6df40301111",
+          "command": null,
+          "eval_path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "6b72e0840a12804eb96e83c14e9fe964ea1f35d5e5cd62ce9d3891dad8c6e0dd",
+          "inflated_outputs_manifest_path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "e37b088cc38760bfb00790386c4441d6c4b079fd9282523ae7784232c37f1c4b"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_blocks0_7bit_20260509/macos_cpu_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_blocks3_7bit_20260509_codex/macos_cpu_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_blocks4_7bit_20260509_codex/macos_cpu_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_target164000_20260509_codex/macos_cpu_eval_work_retry1/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_target174000_20260509_codex/macos_cpu_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/track4_uniward_stc_hessian_a1_target176000_20260509_codex/macos_cpu_eval_work/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/full_output"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/z6_candidate4c_full600_zeroepoch_packet_codex_20260518T104201Z/z6_identity_inflate_output_comparison_runtime_source_custody_compact_20260518_codex/identity_output"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "submissions/robust_current/eval_runs/verify_136_original/submission/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "direct_raw_file_count": 1,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "submissions/robust_current/eval_runs/verify_correct_ckpt/submission/inflated"
+      },
+      {
+        "blockers": [
+          "unknown_raw_surface_no_certifier"
+        ],
+        "bytes": 1415579637,
+        "certificate": {
+          "direct_raw_file_count": 12,
+          "kind": "blocked_unknown_raw_surface",
+          "reason": "raw files detected but no known retention certificate matched"
+        },
+        "certified_rebuildable": false,
+        "kind": "blocked_unknown_raw_surface",
+        "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex"
+      }
+    ],
+    "candidate_count": 0,
+    "candidates": [],
+    "exclude_paths": [],
+    "generated_at_utc": "2026-05-23T15:44:50.701682+00:00",
+    "include_kinds": [
+      "local_cpu_advisory_extracted_scratch",
+      "local_cpu_advisory_inflated_raw",
+      "locality_inflated_raw"
+    ],
+    "min_bytes": 1073741824,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repo_root": "/Users/adpena/Projects/pact",
+    "roots": [
+      "experiments/results",
+      ".omx/tmp",
+      "submissions/robust_current/eval_runs"
+    ],
+    "schema": "comma_lab.artifact_retention_plan.v1",
+    "score_claim": false,
+    "total_reclaimable_bytes": 0
+  }
+}
