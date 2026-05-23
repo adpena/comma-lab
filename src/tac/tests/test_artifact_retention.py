@@ -5,7 +5,11 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
+import comma_lab.artifact_retention as retention
 from comma_lab.artifact_retention import (
+    ArtifactRetentionError,
     build_retention_plan,
     execute_retention_plan,
     load_json_object,
@@ -177,7 +181,8 @@ def test_retention_matches_named_locality_controls_work_manifest(tmp_path: Path)
 
 
 def test_retention_moves_local_cpu_advisory_scratch(tmp_path: Path) -> None:
-    work = tmp_path / "candidate_b" / "dqs1_pair501_cpu_advisory_work_venv"
+    repo = tmp_path / "repo"
+    work = repo / "candidate_b" / "dqs1_pair501_cpu_advisory_work_venv"
     inflated = work / "inflated"
     _write(inflated / "0.raw", b"r" * 16)
     _write(work / "archive.zip", b"zip")
@@ -213,19 +218,72 @@ def test_retention_moves_local_cpu_advisory_scratch(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     cold_store = tmp_path / "cold"
+    cold_store.mkdir()
 
     plan = build_retention_plan(
-        [tmp_path / "candidate_b"],
-        repo_root=tmp_path,
+        [repo / "candidate_b"],
+        repo_root=repo,
         min_bytes=1,
     )
     execution = execute_retention_plan(plan, action="move", cold_store_root=cold_store)
 
     assert execution["executed_count"] == 1
+    assert execution["cold_store_contract"]["write_probe_passed"] is True
     assert not inflated.exists()
     moved = cold_store / plan.candidates[0].path
     assert (moved / "0.raw").read_bytes() == b"r" * 16
+    assert execution["rows"][0]["cold_store_verification"]["source_digest"]["sha256"]
     assert load_json_object(work / "contest_auth_eval.json")["n_samples"] == 600
+
+
+def test_retention_move_rejects_cold_store_inside_repo(tmp_path: Path) -> None:
+    inflated = _write_locality_candidate(tmp_path)
+    cold_store = tmp_path / "cold"
+    cold_store.mkdir()
+    plan = build_retention_plan([tmp_path], repo_root=tmp_path, min_bytes=1)
+
+    with pytest.raises(ArtifactRetentionError, match="outside repo_root"):
+        execute_retention_plan(plan, action="move", cold_store_root=cold_store)
+
+    assert inflated.exists()
+
+
+def test_retention_move_copy_failure_journals_and_preserves_source(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    inflated = _write_locality_candidate(repo)
+    cold_store = tmp_path / "cold"
+    cold_store.mkdir()
+    journal = tmp_path / "retention.journal.jsonl"
+    plan = build_retention_plan([repo], repo_root=repo, min_bytes=1)
+    original_digest = retention.directory_digest
+
+    def mismatching_destination_digest(path: Path) -> dict[str, object]:
+        digest = original_digest(path)
+        if ".partial-" in path.name:
+            digest = dict(digest)
+            digest["sha256"] = "0" * 64
+        return digest
+
+    monkeypatch.setattr(retention, "directory_digest", mismatching_destination_digest)
+
+    with pytest.raises(ArtifactRetentionError, match="copy verification failed"):
+        execute_retention_plan(
+            plan,
+            action="move",
+            cold_store_root=cold_store,
+            journal_path=journal,
+        )
+
+    assert inflated.exists()
+    assert not any(cold_store.rglob("*.partial-*"))
+    events = [
+        json.loads(line)["event"]
+        for line in journal.read_text(encoding="utf-8").splitlines()
+    ]
+    assert events == ["start", "candidate_start", "candidate_error", "candidate_end"]
 
 
 def test_retention_blocks_mutated_locality_raw_after_manifest(tmp_path: Path) -> None:

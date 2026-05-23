@@ -633,6 +633,15 @@ def execute_retention_plan(
     if action == "move" and cold_store_root is None:
         raise ArtifactRetentionError("move action requires cold_store_root")
     repo_root = Path(plan.repo_root)
+    cold_store_contract = (
+        validate_cold_store_root(
+            cold_store_root,
+            repo_root=repo_root,
+            required_bytes=plan.total_reclaimable_bytes,
+        )
+        if action == "move" and cold_store_root is not None
+        else None
+    )
     rows: list[dict[str, Any]] = []
     if journal_path is not None:
         _append_journal(
@@ -644,6 +653,7 @@ def execute_retention_plan(
                 "action": action,
                 "candidate_count": len(plan.candidates),
                 "plan_schema": plan.schema,
+                "cold_store_contract": cold_store_contract,
             },
         )
     for candidate in plan.candidates:
@@ -653,41 +663,48 @@ def execute_retention_plan(
         row["preflight_revalidated"] = False
         if journal_path is not None:
             _append_journal(journal_path, {"event": "candidate_start", "row": row})
-        if not source.exists():
-            row["status"] = "skipped_missing"
-            rows.append(row)
-            if journal_path is not None:
-                _append_journal(journal_path, {"event": "candidate_end", "row": row})
-            continue
-        revalidation_blockers = _execution_revalidation_blockers(
-            source,
-            candidate,
-            repo_root,
-        )
-        if revalidation_blockers:
-            row["status"] = "skipped_revalidation_failed"
-            row["revalidation_blockers"] = revalidation_blockers
-            rows.append(row)
-            if journal_path is not None:
-                _append_journal(journal_path, {"event": "candidate_end", "row": row})
-            continue
-        row["preflight_revalidated"] = True
-        if action == "delete":
-            _delete_certified_tree(source, repo_root=repo_root, bytes_estimate=candidate.bytes)
-            row["status"] = "deleted"
-        else:
-            assert cold_store_root is not None
-            destination = cold_store_root / candidate.path
-            if destination.exists():
-                raise ArtifactRetentionError(f"cold-store destination exists: {destination}")
-            _copy_verify_then_delete(
+        try:
+            if not source.exists():
+                row["status"] = "skipped_missing"
+                rows.append(row)
+                if journal_path is not None:
+                    _append_journal(journal_path, {"event": "candidate_end", "row": row})
+                continue
+            revalidation_blockers = _execution_revalidation_blockers(
                 source,
-                destination,
-                repo_root=repo_root,
-                bytes_estimate=candidate.bytes,
+                candidate,
+                repo_root,
             )
-            row["status"] = "moved"
-            row["cold_store_path"] = str(destination)
+            if revalidation_blockers:
+                row["status"] = "skipped_revalidation_failed"
+                row["revalidation_blockers"] = revalidation_blockers
+                rows.append(row)
+                if journal_path is not None:
+                    _append_journal(journal_path, {"event": "candidate_end", "row": row})
+                continue
+            row["preflight_revalidated"] = True
+            if action == "delete":
+                _delete_certified_tree(source, repo_root=repo_root, bytes_estimate=candidate.bytes)
+                row["status"] = "deleted"
+            else:
+                assert cold_store_root is not None
+                destination = cold_store_root / candidate.path
+                verification = _copy_verify_then_delete(
+                    source,
+                    destination,
+                    repo_root=repo_root,
+                    bytes_estimate=candidate.bytes,
+                )
+                row["status"] = "moved"
+                row["cold_store_path"] = str(destination)
+                row["cold_store_verification"] = verification
+        except Exception as exc:
+            row["status"] = "error"
+            row["error"] = f"{type(exc).__name__}: {exc}"
+            if journal_path is not None:
+                _append_journal(journal_path, {"event": "candidate_error", "row": row})
+                _append_journal(journal_path, {"event": "candidate_end", "row": row})
+            raise
         rows.append(row)
         if journal_path is not None:
             _append_journal(journal_path, {"event": "candidate_end", "row": row})
@@ -696,6 +713,7 @@ def execute_retention_plan(
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "action": action,
         "cold_store_root": None if cold_store_root is None else str(cold_store_root),
+        "cold_store_contract": cold_store_contract,
         "journal_path": None if journal_path is None else str(journal_path),
         "executed_count": sum(1 for row in rows if row.get("status") in {"deleted", "moved"}),
         "executed_bytes": sum(
@@ -716,12 +734,84 @@ def _append_journal(path: Path, payload: dict[str, Any]) -> None:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
 
 
+def validate_cold_store_root(
+    cold_store_root: Path | None,
+    *,
+    repo_root: Path,
+    required_bytes: int,
+) -> dict[str, Any]:
+    """Validate a cold-store root before any source tree is moved."""
+
+    if cold_store_root is None:
+        raise ArtifactRetentionError("cold_store_root is required")
+    root = cold_store_root.expanduser().resolve()
+    repo = repo_root.expanduser().resolve()
+    if not root.exists():
+        raise ArtifactRetentionError(f"cold-store root does not exist: {root}")
+    if root.is_symlink():
+        raise ArtifactRetentionError(f"cold-store root must not be a symlink: {root}")
+    if not root.is_dir():
+        raise ArtifactRetentionError(f"cold-store root is not a directory: {root}")
+    try:
+        root.relative_to(repo)
+    except ValueError:
+        pass
+    else:
+        raise ArtifactRetentionError(
+            f"cold-store root must be outside repo_root: root={root}:repo={repo}"
+        )
+    usage = shutil.disk_usage(root)
+    if usage.free < required_bytes:
+        raise ArtifactRetentionError(
+            f"cold-store free space insufficient: free={usage.free}:required={required_bytes}"
+        )
+    root_stat = root.stat()
+    repo_stat = repo.stat()
+    probe_path = root / (
+        f".artifact_retention_write_probe_{os.getpid()}_"
+        f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.tmp"
+    )
+    probe_payload = b"comma_lab_artifact_retention_cold_store_probe_v1\n"
+    try:
+        with probe_path.open("wb") as handle:
+            handle.write(probe_payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if probe_path.read_bytes() != probe_payload:
+            raise ArtifactRetentionError("cold-store write probe readback mismatch")
+    finally:
+        try:
+            probe_path.unlink()
+        except FileNotFoundError:
+            pass
+    return {
+        "schema": "comma_lab.artifact_retention_cold_store_contract.v1",
+        "path": str(root),
+        "repo_root": str(repo),
+        "required_bytes": int(required_bytes),
+        "free_bytes": int(usage.free),
+        "device_id": int(root_stat.st_dev),
+        "repo_device_id": int(repo_stat.st_dev),
+        "same_device_as_repo": root_stat.st_dev == repo_stat.st_dev,
+        "write_probe_passed": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _execution_revalidation_blockers(
     source: Path,
     candidate: RetentionCandidate,
     repo_root: Path,
 ) -> list[str]:
     blockers: list[str] = []
+    if Path(candidate.path).is_absolute():
+        blockers.append("candidate_path_absolute")
+    try:
+        source.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        blockers.append("source_outside_repo_root")
     if not candidate.certified_rebuildable:
         blockers.append("candidate_not_certified_rebuildable")
     if source.is_symlink():
@@ -749,6 +839,10 @@ def _execution_revalidation_blockers(
 
 
 def _delete_certified_tree(source: Path, *, repo_root: Path, bytes_estimate: int) -> None:
+    try:
+        source.resolve().relative_to(repo_root.resolve())
+    except ValueError as exc:
+        raise ArtifactRetentionError(f"refusing to delete outside repo_root: {source}") from exc
     experiments_results = (repo_root / "experiments/results").resolve()
     resolved = source.resolve()
     try:
@@ -784,20 +878,42 @@ def _copy_verify_then_delete(
     *,
     repo_root: Path,
     bytes_estimate: int,
-) -> None:
-    probe = destination.parent
-    while not probe.exists() and probe != probe.parent:
-        probe = probe.parent
-    free = shutil.disk_usage(probe).free
-    if free < bytes_estimate:
+) -> dict[str, Any]:
+    destination = destination.resolve()
+    partial_destination = destination.with_name(
+        f"{destination.name}.partial-{os.getpid()}-"
+        f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}"
+    )
+    if destination.exists():
+        raise ArtifactRetentionError(f"cold-store destination exists: {destination}")
+    if partial_destination.exists():
         raise ArtifactRetentionError(
-            f"cold-store free space insufficient: free={free}:required={bytes_estimate}"
+            f"cold-store partial destination exists: {partial_destination}"
         )
     source_digest = directory_digest(source)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source, destination, symlinks=False)
-    destination_digest = directory_digest(destination)
-    if source_digest["sha256"] != destination_digest["sha256"]:
+    try:
+        shutil.copytree(source, partial_destination, symlinks=False)
+        destination_digest = directory_digest(partial_destination)
+        if source_digest["sha256"] != destination_digest["sha256"]:
+            raise ArtifactRetentionError("cold-store copy verification failed")
+        partial_destination.replace(destination)
+    except Exception:
+        shutil.rmtree(partial_destination, ignore_errors=True)
+        if destination.exists():
+            shutil.rmtree(destination, ignore_errors=True)
+        raise
+    final_digest = directory_digest(destination)
+    if source_digest["sha256"] != final_digest["sha256"]:
         shutil.rmtree(destination, ignore_errors=True)
         raise ArtifactRetentionError("cold-store copy verification failed")
     _delete_certified_tree(source, repo_root=repo_root, bytes_estimate=bytes_estimate)
+    return {
+        "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+        "source_digest": source_digest,
+        "destination_digest": final_digest,
+        "bytes_estimate": int(bytes_estimate),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }

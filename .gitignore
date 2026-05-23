@@ -93,6 +93,7 @@ reports/mlx_scorer_input_cache*/
 reports/mlx_scorer_response*/
 reports/mlx_scorer_response_profile*/
 reports/mlx_scorer_batch_invariance*/
+.omx/state/artifact_retention_journals/
 reports/mlx_scorer_production_contract*/
 reports/mlx_scorer_response_execution_plan*/
 modal_*_auth_tensors_*/
