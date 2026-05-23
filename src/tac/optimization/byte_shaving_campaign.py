@@ -473,6 +473,12 @@ def _selection_from_unit(unit: Mapping[str, Any], operation: Mapping[str, Any]) 
         "confidence": float(operation["confidence"]),
         "materializer": operation.get("materializer"),
         "params": operation.get("operation_params") or {},
+        "blockers": ordered_unique(
+            [
+                *[str(item) for item in _as_list(unit.get("blockers"))],
+                *[str(item) for item in _as_list(operation.get("blockers"))],
+            ]
+        ),
     }
 
 
@@ -538,6 +544,7 @@ def _combo_row(
                 "operation_family": str(selection["operation_family"]),
                 "materializer": selection.get("materializer"),
                 "params": selection.get("params") or {},
+                "blockers": _as_list(selection.get("blockers")),
             }
             for selection in selections
         ],
@@ -684,6 +691,7 @@ def _prefix_rows(
                     "operation_family": str(row["recommended_operation_family"]),
                     "materializer": row.get("recommended_operation_materializer"),
                     "params": row.get("recommended_operation_params") or {},
+                    "blockers": _as_list(row.get("blockers")),
                 }
                 for row in selected
             ],

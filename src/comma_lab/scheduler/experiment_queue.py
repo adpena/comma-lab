@@ -234,7 +234,6 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
             if step_id in seen_step_ids:
                 duplicate_step_ids.add(step_id)
             seen_step_ids.add(step_id)
-        step_ids = seen_step_ids
         if duplicate_step_ids:
             duplicates = sorted(duplicate_step_ids)
             raise ExperimentQueueError(
@@ -247,6 +246,10 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
                 "priority": priority,
                 "lane_id": raw_experiment.get("lane_id"),
                 "tags": _string_list(raw_experiment.get("tags"), f"{experiment_id}.tags"),
+                "metadata": _optional_mapping(
+                    raw_experiment.get("metadata"),
+                    f"{experiment_id}.metadata",
+                ),
                 "steps": steps,
             }
         )
@@ -419,7 +422,11 @@ def _create_schema(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def _step_hashes(step: Mapping[str, Any]) -> dict[str, str]:
+def _step_hashes(
+    step: Mapping[str, Any],
+    *,
+    experiment_metadata: Mapping[str, Any] | None = None,
+) -> dict[str, str]:
     command = [str(item) for item in step.get("command", [])]
     postconditions = [dict(item) for item in step.get("postconditions", [])]
     definition = {
@@ -431,6 +438,8 @@ def _step_hashes(step: Mapping[str, Any]) -> dict[str, str]:
         "postconditions": postconditions,
         "timeout_seconds": int(step.get("timeout_seconds") or 0),
     }
+    if experiment_metadata:
+        definition["experiment_metadata"] = dict(experiment_metadata)
     return {
         "definition_hash": _sha256_json(definition),
         "command_hash": _sha256_json(command),
@@ -454,8 +463,9 @@ def initialize_queue_state(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
         (queue_id, mode, "initialized_from_queue_definition", now),
     )
     for experiment in queue["experiments"]:
+        experiment_metadata = dict(experiment.get("metadata") or {})
         for step in experiment["steps"]:
-            hashes = _step_hashes(step)
+            hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
             row = conn.execute(
                 """
                 SELECT status, definition_hash, command_hash, postcondition_hash
@@ -1892,8 +1902,9 @@ def queue_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -
     changed_steps: list[dict[str, Any]] = []
     missing_hash_steps: list[dict[str, Any]] = []
     for experiment in queue["experiments"]:
+        experiment_metadata = dict(experiment.get("metadata") or {})
         for step in experiment["steps"]:
-            hashes = _step_hashes(step)
+            hashes = _step_hashes(step, experiment_metadata=experiment_metadata)
             row = conn.execute(
                 """
                 SELECT status, definition_hash, command_hash, postcondition_hash

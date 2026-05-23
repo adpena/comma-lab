@@ -1,0 +1,84 @@
+{
+  "blocked_row_count": 36,
+  "campaign_id": "byte_shaving_campaign",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "exact_auth_eval_required_before_score_claim"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executable_row_count": 0,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "generated_at_utc": "2026-05-23T15:08:02Z",
+  "gpu_launched": false,
+  "lane_id": "master_gradient_byte_shaving_planning",
+  "materializer_registry": {
+    "adapters": [
+      {
+        "description": "Compile pair-unit drop operations into DQS1 pairset local-first queue rows.",
+        "executable": true,
+        "materializer_id": "dqs1_pairset_drop_pair_adapter",
+        "operation_family": "drop_pair",
+        "required_context_fields": [
+          "dqs1_base_pair_indices"
+        ],
+        "target_kind": "dqs1_pairset_drop_pair",
+        "unit_kind": "pair"
+      }
+    ],
+    "known_operation_families": [
+      "delta_encode",
+      "drop_frame",
+      "drop_pair",
+      "entropy_recode",
+      "factorize_tensor",
+      "literal_elide",
+      "lower_frame_precision",
+      "lower_pair_precision",
+      "materialize_scorer_response_candidate",
+      "member_merge",
+      "member_recompress",
+      "member_reorder",
+      "null_remove_or_seed",
+      "probe_followup_neighbor",
+      "proceduralize_pair_residual",
+      "prune_tensor",
+      "quantize_tensor",
+      "section_entropy_recode",
+      "section_header_elide",
+      "section_proceduralize",
+      "section_reorder",
+      "shared_codebook_tensor",
+      "substitute_frame",
+      "substitute_pair",
+      "temporal_predict_frame",
+      "zip_header_elide"
+    ],
+    "schema": "byte_shaving_materializer_registry.v1"
+  },
+  "partial_materialization_allowed": false,
+  "partial_materialization_blockers": [],
+  "partial_materialization_rationale": null,
+  "portfolio_json": ".omx/research/byte_shaving_campaign_master_gradient_materializer_registry_portfolio_20260523T150754Z.json",
+  "promotable": false,
+  "promotion_eligible": false,
+  "queueable_row_count": 0,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "cross_family_candidate_portfolio_action_summary.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue",
+  "top_operator_actions": []
+}

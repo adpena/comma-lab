@@ -6,11 +6,19 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZATION_SCHEMA,
     compile_dqs1_byte_shaving_campaign,
 )
-from comma_lab.scheduler.experiment_queue import load_queue_definition
+from comma_lab.scheduler.byte_shaving_materializer_registry import (
+    DQS1_DROP_PAIR_MATERIALIZER,
+    DQS1_PAIRSET_TARGET_KIND,
+    registry_manifest,
+    resolve_materializer,
+)
+from comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
 from tac.optimization.byte_shaving_campaign import (
     SIGNAL_SURFACE_SCHEMA,
     build_byte_shaving_campaign_plan,
@@ -53,6 +61,7 @@ def _pair_drop_plan() -> dict[str, object]:
                     {
                         "operation_id": "drop_pair0371",
                         "operation_family": "drop_pair",
+                        "materializer": DQS1_DROP_PAIR_MATERIALIZER,
                     }
                 ],
             },
@@ -66,6 +75,7 @@ def _pair_drop_plan() -> dict[str, object]:
                     {
                         "operation_id": "drop_pair0320",
                         "operation_family": "drop_pair",
+                        "materializer": DQS1_DROP_PAIR_MATERIALIZER,
                     }
                 ],
             },
@@ -83,6 +93,70 @@ def _pair_drop_plan() -> dict[str, object]:
     return build_byte_shaving_campaign_plan(surface, max_k=3)
 
 
+def test_byte_shaving_materializer_registry_exposes_only_dqs1_drop_pair_adapter() -> None:
+    manifest = registry_manifest()
+
+    assert manifest["schema"] == "byte_shaving_materializer_registry.v1"
+    assert manifest["adapters"] == [
+        {
+            "description": "Compile pair-unit drop operations into DQS1 pairset local-first queue rows.",
+            "executable": True,
+            "materializer_id": DQS1_DROP_PAIR_MATERIALIZER,
+            "operation_family": "drop_pair",
+            "required_context_fields": ["dqs1_base_pair_indices"],
+            "target_kind": DQS1_PAIRSET_TARGET_KIND,
+            "unit_kind": "pair",
+        }
+    ]
+
+    resolved = resolve_materializer(
+        operation={
+            "unit_id": "pair0371",
+            "operation_id": "drop_pair0371",
+            "operation_family": "drop_pair",
+            "materializer": DQS1_DROP_PAIR_MATERIALIZER,
+        },
+        unit={"unit_id": "pair0371", "unit_kind": "pair"},
+    )
+    assert resolved.executable is True
+    assert resolved.materializer_id == DQS1_DROP_PAIR_MATERIALIZER
+    assert resolved.target_kind == DQS1_PAIRSET_TARGET_KIND
+    assert resolved.blockers == ()
+
+
+def test_byte_shaving_materializer_registry_refuses_implicit_dqs1_pair_drop() -> None:
+    resolved = resolve_materializer(
+        operation={
+            "unit_id": "pair0371",
+            "operation_id": "drop_pair0371",
+            "operation_family": "drop_pair",
+        },
+        unit={"unit_id": "pair0371", "unit_kind": "pair"},
+    )
+
+    assert resolved.executable is False
+    assert resolved.materializer_id is None
+    assert resolved.target_kind is None
+    assert "materializer_target_kind_required:pair:drop_pair" in resolved.blockers
+
+
+def test_byte_shaving_materializer_registry_allows_explicit_dqs1_target_kind() -> None:
+    resolved = resolve_materializer(
+        operation={
+            "unit_id": "pair0371",
+            "operation_id": "drop_pair0371",
+            "operation_family": "drop_pair",
+            "target_kind": DQS1_PAIRSET_TARGET_KIND,
+        },
+        unit={"unit_id": "pair0371", "unit_kind": "pair"},
+    )
+
+    assert resolved.executable is True
+    assert resolved.materializer_id == DQS1_DROP_PAIR_MATERIALIZER
+    assert resolved.target_kind == DQS1_PAIRSET_TARGET_KIND
+    assert resolved.blockers == ()
+
+
 def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_ops(
     tmp_path: Path,
 ) -> None:
@@ -94,6 +168,8 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
         base_pair_indices=[101, 320, 371, 501],
         candidate_limit=8,
         portfolio_json="portfolio.json",
+        allow_partial_materialization=True,
+        partial_materialization_rationale="unit-test mixed fixture",
     )
 
     assert compiled["schema"] == MATERIALIZATION_SCHEMA
@@ -101,7 +177,7 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     assert compiled["executable_row_count"] >= 1
     assert compiled["blocked_row_count"] >= 1
     assert any(
-        "unsupported_operation_family:null_remove_or_seed"
+        "materializer_target_kind_required:byte_range:null_remove_or_seed"
         in row["materialization_blockers"]
         for row in compiled["blocked_rows"]
     )
@@ -112,6 +188,10 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
     )
     assert both["selected_pair_indices"] == [101, 501]
     assert {unit["unit_id"] for unit in both["source_units"]} == {"pair0320", "pair0371"}
+    assert all(
+        resolution["materializer_id"] == DQS1_DROP_PAIR_MATERIALIZER
+        for resolution in both["materializer_resolutions"]
+    )
     action = next(
         row
         for row in compiled["action_summary"]["top_operator_actions"]
@@ -124,6 +204,9 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
         if row["candidate_id"] == both["candidate_id"]
     )
     assert portfolio_row["source_metadata"]["selected_pair_indices"] == [101, 501]
+    assert portfolio_row["source_metadata"]["materializer_resolutions"] == both[
+        "materializer_resolutions"
+    ]
     assert {unit["unit_id"] for unit in portfolio_row["source_metadata"]["source_units"]} == {
         "pair0320",
         "pair0371",
@@ -148,7 +231,150 @@ def test_compile_dqs1_byte_shaving_plan_blocks_drop_pair_on_non_pair_unit(
     )
 
     assert any(
-        "unsupported_unit_kind:pair0371:byte_range" in row["materialization_blockers"]
+        f"materializer_unit_kind_mismatch:{DQS1_DROP_PAIR_MATERIALIZER}:"
+        "pair0371:byte_range:expected_pair" in row["materialization_blockers"]
+        for row in compiled["blocked_rows"]
+    )
+    assert all(
+        "pair0371" not in {unit["unit_id"] for unit in row["source_units"]}
+        for row in compiled["executable_rows"]
+    )
+
+
+def test_compile_dqs1_byte_shaving_plan_blocks_selected_unit_blockers(
+    tmp_path: Path,
+) -> None:
+    plan = _pair_drop_plan()
+    for unit in plan["ranked_units"]:
+        if unit["unit_id"] == "pair0371":
+            unit["blockers"] = ["requires_full_frame_parity"]
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=8,
+        portfolio_json="portfolio.json",
+        allow_partial_materialization=True,
+        partial_materialization_rationale="unit-test only",
+    )
+
+    assert any(
+        "selected_unit_blocker:pair0371:requires_full_frame_parity"
+        in row["materialization_blockers"]
+        for row in compiled["blocked_rows"]
+    )
+    assert all(
+        "pair0371" not in {unit["unit_id"] for unit in row["source_units"]}
+        for row in compiled["executable_rows"]
+    )
+
+
+def test_compile_dqs1_byte_shaving_plan_blocks_mixed_materialized_and_unmaterialized_ops(
+    tmp_path: Path,
+) -> None:
+    plan = _pair_drop_plan()
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=8,
+        portfolio_json="portfolio.json",
+    )
+
+    mixed = [
+        row
+        for row in compiled["blocked_rows"]
+        if "byte_null_run_a" in row["selected_unit_ids"]
+        and {"pair0320", "pair0371"} & set(row["selected_unit_ids"])
+    ]
+    assert mixed
+    assert all(row["executable"] is False for row in mixed)
+    assert compiled["queueable_row_count"] == 0
+    assert compiled["action_summary"]["top_operator_actions"] == []
+    assert "partial_materialization_requires_explicit_allow" in compiled[
+        "partial_materialization_blockers"
+    ]
+    assert any(
+        "materializer_target_kind_required:byte_range:null_remove_or_seed"
+        in row["materialization_blockers"]
+        for row in mixed
+    )
+    assert all(
+        "byte_null_run_a" not in {
+            unit["unit_id"]
+            for unit in row["source_metadata"]["source_units"]
+        }
+        for row in compiled["portfolio"]["operator_action_rows"]
+    )
+
+
+def test_compile_dqs1_byte_shaving_plan_requires_partial_materialization_rationale(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ExperimentQueueError, match="partial_materialization_rationale"):
+        compile_dqs1_byte_shaving_campaign(
+            _pair_drop_plan(),
+            repo_root=tmp_path,
+            base_pair_indices=[101, 320, 371, 501],
+            allow_partial_materialization=True,
+        )
+
+
+def test_compile_dqs1_byte_shaving_plan_blocks_explicit_unknown_materializer(
+    tmp_path: Path,
+) -> None:
+    plan = _pair_drop_plan()
+    for ladder in ("combination_ladder", "sweep_ladder"):
+        for row in plan[ladder]:
+            for operation in row["selected_operations"]:
+                if operation["unit_id"] == "pair0371":
+                    operation["materializer"] = "experimental_unregistered_materializer"
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=8,
+        portfolio_json="portfolio.json",
+    )
+
+    assert any(
+        "materializer_not_registered:experimental_unregistered_materializer"
+        in row["materialization_blockers"]
+        for row in compiled["blocked_rows"]
+    )
+    assert all(
+        "pair0371" not in {unit["unit_id"] for unit in row["source_units"]}
+        for row in compiled["executable_rows"]
+    )
+
+
+def test_compile_dqs1_byte_shaving_plan_blocks_spoofed_registered_materializer(
+    tmp_path: Path,
+) -> None:
+    plan = _pair_drop_plan()
+    for unit in plan["ranked_units"]:
+        if unit["unit_id"] == "pair0371":
+            unit["unit_kind"] = "byte_range"
+    for ladder in ("combination_ladder", "sweep_ladder"):
+        for row in plan[ladder]:
+            for operation in row["selected_operations"]:
+                if operation["unit_id"] == "pair0371":
+                    operation["materializer"] = DQS1_DROP_PAIR_MATERIALIZER
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        base_pair_indices=[101, 320, 371, 501],
+        candidate_limit=8,
+        portfolio_json="portfolio.json",
+    )
+
+    assert any(
+        f"materializer_unit_kind_mismatch:{DQS1_DROP_PAIR_MATERIALIZER}:"
+        "pair0371:byte_range:expected_pair" in row["materialization_blockers"]
         for row in compiled["blocked_rows"]
     )
     assert all(
@@ -187,6 +413,9 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
             "4",
             "--queue-candidate-limit",
             "2",
+            "--allow-partial-materialization",
+            "--partial-materialization-rationale",
+            "unit-test mixed fixture",
             "--results-root",
             "results",
             "--local-cpu-concurrency",
@@ -208,5 +437,10 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
     assert len(loaded["experiments"]) == 2
     assert all(
         experiment["id"].startswith("pairset_byte_shave_")
+        for experiment in loaded["experiments"]
+    )
+    assert all(
+        experiment["metadata"]["source_metadata"]["materializer_registry_schema"]
+        == "byte_shaving_materializer_registry.v1"
         for experiment in loaded["experiments"]
     )

@@ -26,6 +26,7 @@ from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     build_queue_from_action_summary,
 )
 from comma_lab.scheduler.experiment_queue import ExperimentQueueError  # noqa: E402
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -35,12 +36,22 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )
+def _write_json(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    allow_overwrite: bool = False,
+    expected_existing_sha256: str | None = None,
+) -> None:
+    try:
+        write_json_artifact(
+            path,
+            payload,
+            allow_overwrite=allow_overwrite,
+            expected_existing_sha256=expected_existing_sha256,
+        )
+    except ArtifactWriteError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def _parse_pair_indices(value: str | None) -> list[int] | None:
@@ -75,10 +86,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--candidate-limit", type=int, default=8)
     parser.add_argument("--queue-candidate-limit", type=int, default=2)
+    parser.add_argument("--allow-partial-materialization", action="store_true")
+    parser.add_argument("--partial-materialization-rationale", default=None)
     parser.add_argument("--queue-id", default=DEFAULT_QUEUE_ID)
     parser.add_argument("--results-root", default=DEFAULT_RESULTS_ROOT)
     parser.add_argument("--completed-results-root", action="append", default=[])
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
+    parser.add_argument("--overwrite-output", action="store_true")
+    parser.add_argument("--expected-materialization-sha256")
+    parser.add_argument("--expected-portfolio-sha256")
+    parser.add_argument("--expected-action-summary-sha256")
+    parser.add_argument("--expected-queue-sha256")
     return parser.parse_args(argv)
 
 
@@ -90,6 +108,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--queue-candidate-limit must be >= 1")
     if args.local_cpu_concurrency < 1:
         raise SystemExit("--local-cpu-concurrency must be >= 1")
+    if args.allow_partial_materialization and not str(
+        args.partial_materialization_rationale or ""
+    ).strip():
+        raise SystemExit(
+            "--allow-partial-materialization requires --partial-materialization-rationale"
+        )
     if not args.plan.is_file():
         raise SystemExit(f"--plan does not exist: {args.plan}")
 
@@ -102,18 +126,42 @@ def main(argv: list[str] | None = None) -> int:
             base_pair_indices=_parse_pair_indices(args.base_pair_indices),
             candidate_limit=args.candidate_limit,
             portfolio_json=str(args.portfolio_out),
+            allow_partial_materialization=bool(args.allow_partial_materialization),
+            partial_materialization_rationale=args.partial_materialization_rationale,
         )
     except ExperimentQueueError as exc:
         raise SystemExit(str(exc)) from exc
 
-    _write_json(args.materialization_out, compiled)
-    _write_json(args.portfolio_out, compiled["portfolio"])
-    _write_json(args.action_summary_out, compiled["action_summary"])
+    _write_json(
+        args.materialization_out,
+        compiled,
+        allow_overwrite=bool(args.overwrite_output),
+        expected_existing_sha256=args.expected_materialization_sha256,
+    )
+    _write_json(
+        args.portfolio_out,
+        compiled["portfolio"],
+        allow_overwrite=bool(args.overwrite_output),
+        expected_existing_sha256=args.expected_portfolio_sha256,
+    )
+    _write_json(
+        args.action_summary_out,
+        compiled["action_summary"],
+        allow_overwrite=bool(args.overwrite_output),
+        expected_existing_sha256=args.expected_action_summary_sha256,
+    )
 
     queue_payload = None
     if args.queue_out is not None:
+        if int(compiled["blocked_row_count"]) > 0 and not args.allow_partial_materialization:
+            raise SystemExit(
+                "blocked byte-shaving materialization rows present; refusing partial "
+                "queue build without --allow-partial-materialization and rationale"
+            )
         if int(compiled["executable_row_count"]) <= 0:
             raise SystemExit("no executable DQS1 byte-shaving rows; refusing to build queue")
+        if int(compiled["queueable_row_count"]) <= 0:
+            raise SystemExit("no queueable DQS1 byte-shaving rows; refusing to build queue")
         queue_result = build_queue_from_action_summary(
             args.action_summary_out,
             repo_root=args.repo_root,
@@ -123,7 +171,12 @@ def main(argv: list[str] | None = None) -> int:
             candidate_limit=args.queue_candidate_limit,
             local_cpu_concurrency=args.local_cpu_concurrency,
         )
-        _write_json(args.queue_out, queue_result.queue)
+        _write_json(
+            args.queue_out,
+            queue_result.queue,
+            allow_overwrite=bool(args.overwrite_output),
+            expected_existing_sha256=args.expected_queue_sha256,
+        )
         queue_payload = {
             "queue_out": str(args.queue_out),
             "queue_id": queue_result.queue["queue_id"],

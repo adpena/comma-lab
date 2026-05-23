@@ -16,6 +16,7 @@ from src.comma_lab.scheduler.experiment_queue import (
     default_state_path,
     initialize_queue_state,
     normalize_queue_definition,
+    queue_definition_drift,
     queue_resource_kinds,
     queue_summary,
     ready_steps,
@@ -1429,6 +1430,71 @@ def test_experiment_queue_requeues_succeeded_step_when_definition_changes(
 
         assert summary["status_counts"] == {"queued": 1}
         assert summary["ready_steps"][0]["step_id"] == "same_step"
+        assert summary["steps"][0]["last_event"]["definition_changed"] is True
+
+
+def test_experiment_queue_requeues_succeeded_step_when_experiment_metadata_changes(
+    tmp_path: Path,
+) -> None:
+    marker = tmp_path / "first.txt"
+
+    def queue_for(source_sha: str) -> dict[str, object]:
+        return normalize_queue_definition(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "metadata_hash_queue",
+                "controls": {"mode": "running"},
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "metadata": {
+                            "schema": "unit_metadata.v1",
+                            "source_archive_sha256": source_sha,
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "rank_or_kill_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        },
+                        "steps": [
+                            {
+                                "id": "same_step",
+                                "command": [
+                                    sys.executable,
+                                    "-c",
+                                    f"import pathlib; pathlib.Path({str(marker)!r}).write_text('ok')",
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        queue = queue_for("a" * 64)
+        initialize_queue_state(conn, queue)
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=1,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+        assert result["success_count"] == 1
+        assert queue_summary(conn, queue)["status_counts"] == {"succeeded": 1}
+
+        changed = queue_for("b" * 64)
+        drift = queue_definition_drift(conn, changed)
+        assert drift["changed_step_count"] == 1
+        assert drift["changed_steps"][0]["step_id"] == "same_step"
+
+        initialize_queue_state(conn, changed)
+        summary = queue_summary(conn, changed)
+
+        assert summary["status_counts"] == {"queued": 1}
         assert summary["steps"][0]["last_event"]["definition_changed"] is True
 
 

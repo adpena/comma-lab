@@ -250,11 +250,13 @@ def build_dqs1_harvest_result(
     stamp = timestamp or _utc_stamp()
     recommended_action = str(eureka["recommended_action"])
     local_score = float(eureka["local_score"])
+    source_metadata = experiment.get("metadata") if isinstance(experiment.get("metadata"), dict) else {}
     harvest = apply_proxy_evidence_boundary(
         {
             "schema": HARVEST_SCHEMA,
             "candidate_id": resolved_candidate_id,
             "queue_path": str(queue_file),
+            "queue_experiment_metadata": source_metadata,
             "local_cpu_advisory_path": str(advisory_path),
             "eureka_signal_path": str(eureka_path),
             "candidate_archive_path": _archive_path_from_advisory(advisory),

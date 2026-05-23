@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: MIT
 """Compile byte-shaving campaign plans into executable local-first queues.
 
-This module intentionally starts with a narrow adapter: DQS1 pairset
-``drop_pair`` selections can become the same local-first queue actions used by
-the hand-built DQS1 loop. Other operation families remain explicit blockers
-until their archive/runtime materializers exist.
+The executable surface is deliberately narrower than the planner. Materializer
+resolution happens through ``byte_shaving_materializer_registry`` so DQS1
+``drop_pair`` selections can become queue actions while frame, tensor, byte,
+archive, scorer-response, and future substrate operations fail closed with
+typed missing-materializer blockers.
 """
 from __future__ import annotations
 
@@ -22,6 +23,12 @@ from tac.optimization.proxy_candidate_contract import (
     require_no_truthy_authority_fields,
 )
 
+from .byte_shaving_materializer_registry import (
+    DQS1_PAIRSET_TARGET_KIND,
+    REGISTRY_SCHEMA,
+    registry_manifest,
+    resolve_materializer,
+)
 from .dqs1_local_first_queue import SAFE_OPERATOR_ACTION, candidate_slug
 from .experiment_queue import ExperimentQueueError
 
@@ -29,7 +36,6 @@ MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
 ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
-SUPPORTED_DQS1_OPERATION_FAMILIES = frozenset({"drop_pair"})
 
 
 def _utc_now() -> str:
@@ -163,27 +169,57 @@ def _materialize_row(
     if not selected_operations:
         blockers.append("selected_operations_missing")
 
-    unsupported = sorted(
-        {
-            str(operation.get("operation_family") or "")
-            for operation in selected_operations
-            if str(operation.get("operation_family") or "") not in SUPPORTED_DQS1_OPERATION_FAMILIES
-        }
-    )
-    if unsupported:
-        blockers.append("unsupported_operation_family:" + ",".join(unsupported))
-    if base_pairs is None:
-        blockers.append("dqs1_base_pair_indices_required")
-
     dropped_pairs: list[int] = []
+    dqs1_operation_count = 0
+    materializer_resolutions: list[dict[str, Any]] = []
     source_units: list[dict[str, Any]] = []
     for operation in selected_operations:
         unit_id = str(operation.get("unit_id") or "")
         unit = units_by_id.get(unit_id)
+        operation_blockers = ordered_unique(
+            str(item) for item in _as_list(operation.get("blockers"))
+        )
+        blockers.extend(
+            f"selected_operation_blocker:{unit_id or '<missing>'}:{blocker}"
+            for blocker in operation_blockers
+        )
+        resolution = resolve_materializer(operation=operation, unit=unit)
+        blockers.extend(resolution.blockers)
+        materializer_resolutions.append(
+            {
+                "unit_id": resolution.unit_id,
+                "unit_kind": resolution.unit_kind,
+                "operation_id": resolution.operation_id,
+                "operation_family": resolution.operation_family,
+                "explicit_materializer": resolution.explicit_materializer,
+                "materializer_id": resolution.materializer_id,
+                "target_kind": resolution.target_kind,
+                "executable": resolution.executable,
+                "blockers": list(resolution.blockers),
+                "selected_operation_blockers": operation_blockers,
+            }
+        )
         if unit is None:
-            blockers.append(f"selected_unit_missing_from_ranked_units:{unit_id or '<missing>'}")
+            pass
         else:
             unit_kind = str(unit.get("unit_kind") or "")
+            unit_blockers = ordered_unique(
+                [
+                    *[str(item) for item in _as_list(unit.get("blockers"))],
+                    *[
+                        str(item)
+                        for item in _as_list(unit.get("materialization_blockers"))
+                    ],
+                    *[
+                        str(item)
+                        for item in _as_list(unit.get("candidate_trust_region_blockers"))
+                    ],
+                ]
+            )
+            blockers.extend(
+                f"selected_unit_blocker:{unit_id}:{blocker}"
+                for blocker in unit_blockers
+            )
             source_units.append(
                 {
                     "unit_id": unit_id,
@@ -197,10 +233,12 @@ def _materialize_row(
                     "candidate_trust_region_blockers": unit.get(
                         "candidate_trust_region_blockers"
                     ),
+                    "blockers": unit_blockers,
                 }
             )
-            if unit_kind != "pair":
-                blockers.append(f"unsupported_unit_kind:{unit_id}:{unit_kind}")
+        if resolution.target_kind != DQS1_PAIRSET_TARGET_KIND:
+            continue
+        dqs1_operation_count += 1
         pair_index = _pair_index_from_operation(operation)
         if pair_index is None:
             blockers.append(f"pair_index_missing:{operation.get('unit_id') or operation.get('operation_id')}")
@@ -209,10 +247,22 @@ def _materialize_row(
             blockers.append(f"pair_index_out_of_range:{pair_index}")
             continue
         dropped_pairs.append(pair_index)
+    target_kinds = ordered_unique(
+        resolution["target_kind"]
+        for resolution in materializer_resolutions
+        if resolution["target_kind"]
+    )
+    unsupported_targets = [
+        target for target in target_kinds if target != DQS1_PAIRSET_TARGET_KIND
+    ]
+    if unsupported_targets:
+        blockers.append("unsupported_materializer_target:" + ",".join(unsupported_targets))
+    if dqs1_operation_count and base_pairs is None:
+        blockers.append("dqs1_base_pair_indices_required")
     dropped_pairs = sorted(set(dropped_pairs))
-    if len(dropped_pairs) != len(selected_operations) and not unsupported:
+    if dqs1_operation_count and len(dropped_pairs) != dqs1_operation_count:
         blockers.append("dropped_pair_indices_do_not_match_selected_operations")
-    if base_pairs is not None:
+    if base_pairs is not None and dqs1_operation_count:
         missing = [pair for pair in dropped_pairs if pair not in set(base_pairs)]
         if missing:
             blockers.append("dropped_pair_not_in_base:" + ",".join(str(pair) for pair in missing))
@@ -253,6 +303,9 @@ def _materialize_row(
         "selected_unit_ids": _as_list(row.get("selected_unit_ids")),
         "operation_families": _as_list(row.get("operation_families")),
         "source_dispatch_blockers": source_dispatch_blockers,
+        "materializer_registry_schema": REGISTRY_SCHEMA,
+        "materializer_resolutions": materializer_resolutions,
+        "materializer_target_kinds": target_kinds,
         "source_units": source_units,
         "base_pair_indices": list(base_pairs or []),
         "dropped_pair_indices": dropped_pairs,
@@ -285,6 +338,8 @@ def compile_dqs1_byte_shaving_campaign(
     base_pair_indices: Sequence[int] | None = None,
     candidate_limit: int | None = None,
     portfolio_json: str | None = None,
+    allow_partial_materialization: bool = False,
+    partial_materialization_rationale: str | None = None,
 ) -> dict[str, Any]:
     """Compile supported DQS1 pair drops into queue-builder action surfaces."""
 
@@ -298,6 +353,18 @@ def compile_dqs1_byte_shaving_campaign(
         isinstance(candidate_limit, bool) or candidate_limit < 1
     ):
         raise ExperimentQueueError("candidate_limit must be >= 1 when provided")
+    if allow_partial_materialization and not str(
+        partial_materialization_rationale or ""
+    ).strip():
+        raise ExperimentQueueError(
+            "partial_materialization_rationale is required when partial materialization is allowed"
+        )
+    rationale = str(partial_materialization_rationale or "").strip()
+    if allow_partial_materialization and not rationale:
+        raise ExperimentQueueError(
+            "allow_partial_materialization requires a non-empty "
+            "partial_materialization_rationale"
+        )
     repo = Path(repo_root)
     base_pairs = _base_pair_indices(payload, base_pair_indices)
     units_by_id = {
@@ -327,10 +394,20 @@ def compile_dqs1_byte_shaving_campaign(
     if candidate_limit is not None:
         executable_rows = executable_rows[:candidate_limit]
     blocked_rows = [row for row in compiled_rows if row["executable"] is not True]
+    partial_materialization_blockers: list[str] = []
+    if blocked_rows and executable_rows and not allow_partial_materialization:
+        partial_materialization_blockers.append(
+            "partial_materialization_requires_explicit_allow"
+        )
+    queueable_rows = (
+        executable_rows
+        if allow_partial_materialization or not partial_materialization_blockers
+        else []
+    )
 
     portfolio_rows = []
     top_actions = []
-    for rank, row in enumerate(executable_rows, start=1):
+    for rank, row in enumerate(queueable_rows, start=1):
         metadata = {
             "schema": "byte_shaving_campaign_dqs1_source_metadata.v1",
             "selector_kind": "byte_shaving_campaign_drop_pair",
@@ -339,70 +416,123 @@ def compile_dqs1_byte_shaving_campaign(
             "base_pair_indices": row["base_pair_indices"],
             "dropped_pair_indices": row["dropped_pair_indices"],
             "selected_operations": row["selected_operations"],
+            "materializer_resolutions": row["materializer_resolutions"],
             "source_units": row["source_units"],
             "selection_kind": row["selection_kind"],
             "selection_id": row["selection_id"],
             "source_plan_path": plan_ref,
             "source_plan_schema": payload.get("schema"),
+            "materializer_registry_schema": REGISTRY_SCHEMA,
             "allowed_use": "dqs1_local_first_materialization_only",
             **FALSE_AUTHORITY,
         }
-        portfolio_rows.append({
-            "candidate_id": row["candidate_id"],
-            "operator_next_action": SAFE_OPERATOR_ACTION,
-            "operator_action_rank": rank,
-            "source_kind": "byte_shaving_campaign_dqs1_materialization",
-            "source_metadata": metadata,
-            "expected_delta_score": row.get("expected_delta_score"),
-            "expected_score_gain": row.get("expected_score_gain"),
-            "candidate_saved_bytes": row.get("candidate_saved_bytes"),
-            **FALSE_AUTHORITY,
-        })
-        top_actions.append({
-            "candidate_id": row["candidate_id"],
-            "operator_next_action": SAFE_OPERATOR_ACTION,
-            "operator_action_rank": rank,
-            "source_kind": "byte_shaving_campaign_dqs1_materialization",
-            **FALSE_AUTHORITY,
-        })
+        portfolio_rows.append(
+            apply_proxy_evidence_boundary(
+                {
+                    "candidate_id": row["candidate_id"],
+                    "operator_next_action": SAFE_OPERATOR_ACTION,
+                    "operator_action_rank": rank,
+                    "source_kind": "byte_shaving_campaign_dqs1_materialization",
+                    "source_metadata": metadata,
+                    "local_materialization_ready": True,
+                    "expected_delta_score": row.get("expected_delta_score"),
+                    "expected_score_gain": row.get("expected_score_gain"),
+                    "candidate_saved_bytes": row.get("candidate_saved_bytes"),
+                    **FALSE_AUTHORITY,
+                },
+                dispatch_blockers=(
+                    "dqs1_local_first_materialization_only",
+                    "exact_auth_eval_required_before_score_claim",
+                ),
+            )
+        )
+        top_actions.append(
+            apply_proxy_evidence_boundary(
+                {
+                    "candidate_id": row["candidate_id"],
+                    "operator_next_action": SAFE_OPERATOR_ACTION,
+                    "operator_action_rank": rank,
+                    "source_kind": "byte_shaving_campaign_dqs1_materialization",
+                    "local_materialization_ready": True,
+                    **FALSE_AUTHORITY,
+                },
+                dispatch_blockers=(
+                    "dqs1_local_first_materialization_only",
+                    "exact_auth_eval_required_before_score_claim",
+                ),
+            )
+        )
 
-    portfolio = {
-        "schema": PORTFOLIO_SCHEMA,
-        "tool": TOOL_NAME,
-        "generated_at_utc": _utc_now(),
-        "source_plan_path": plan_ref,
-        "operator_action_rows": portfolio_rows,
-        "blocked_rows": blocked_rows,
-        **FALSE_AUTHORITY,
-    }
-    action_summary = {
-        "schema": ACTION_SUMMARY_SCHEMA,
-        "tool": TOOL_NAME,
-        "generated_at_utc": _utc_now(),
-        "campaign_id": payload.get("campaign_id"),
-        "lane_id": payload.get("lane_id"),
-        "portfolio_json": portfolio_json,
-        "top_operator_actions": top_actions,
-        "blocked_row_count": len(blocked_rows),
-        "executable_row_count": len(executable_rows),
-        **FALSE_AUTHORITY,
-    }
-    return {
-        "schema": MATERIALIZATION_SCHEMA,
-        "tool": TOOL_NAME,
-        "generated_at_utc": _utc_now(),
-        "source_plan_path": plan_ref,
-        "candidate_limit": candidate_limit,
-        "base_pair_indices": list(base_pairs or []),
-        "compiled_row_count": len(compiled_rows),
-        "executable_row_count": len(executable_rows),
-        "blocked_row_count": len(blocked_rows),
-        "executable_rows": executable_rows,
-        "blocked_rows": blocked_rows,
-        "portfolio": portfolio,
-        "action_summary": action_summary,
-        **FALSE_AUTHORITY,
-    }
+    portfolio = apply_proxy_evidence_boundary(
+        {
+            "schema": PORTFOLIO_SCHEMA,
+            "tool": TOOL_NAME,
+            "generated_at_utc": _utc_now(),
+            "source_plan_path": plan_ref,
+            "materializer_registry": registry_manifest(),
+            "operator_action_rows": portfolio_rows,
+            "blocked_rows": blocked_rows,
+            "queueable_row_count": len(queueable_rows),
+            "partial_materialization_allowed": bool(allow_partial_materialization),
+            "partial_materialization_rationale": rationale or None,
+            "partial_materialization_blockers": partial_materialization_blockers,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=(
+            partial_materialization_blockers
+            or ["exact_auth_eval_required_before_score_claim"]
+        ),
+    )
+    action_summary = apply_proxy_evidence_boundary(
+        {
+            "schema": ACTION_SUMMARY_SCHEMA,
+            "tool": TOOL_NAME,
+            "generated_at_utc": _utc_now(),
+            "campaign_id": payload.get("campaign_id"),
+            "lane_id": payload.get("lane_id"),
+            "portfolio_json": portfolio_json,
+            "materializer_registry": registry_manifest(),
+            "top_operator_actions": top_actions,
+            "blocked_row_count": len(blocked_rows),
+            "executable_row_count": len(executable_rows),
+            "queueable_row_count": len(queueable_rows),
+            "partial_materialization_allowed": bool(allow_partial_materialization),
+            "partial_materialization_rationale": rationale or None,
+            "partial_materialization_blockers": partial_materialization_blockers,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=(
+            partial_materialization_blockers
+            or ["exact_auth_eval_required_before_score_claim"]
+        ),
+    )
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": MATERIALIZATION_SCHEMA,
+            "tool": TOOL_NAME,
+            "generated_at_utc": _utc_now(),
+            "source_plan_path": plan_ref,
+            "candidate_limit": candidate_limit,
+            "base_pair_indices": list(base_pairs or []),
+            "materializer_registry": registry_manifest(),
+            "compiled_row_count": len(compiled_rows),
+            "executable_row_count": len(executable_rows),
+            "blocked_row_count": len(blocked_rows),
+            "queueable_row_count": len(queueable_rows),
+            "partial_materialization_allowed": bool(allow_partial_materialization),
+            "partial_materialization_rationale": rationale or None,
+            "partial_materialization_blockers": partial_materialization_blockers,
+            "executable_rows": executable_rows,
+            "blocked_rows": blocked_rows,
+            "portfolio": portfolio,
+            "action_summary": action_summary,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=(
+            partial_materialization_blockers
+            or ["exact_auth_eval_required_before_score_claim"]
+        ),
+    )
 
 
 __all__ = [

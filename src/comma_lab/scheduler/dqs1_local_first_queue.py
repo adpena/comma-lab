@@ -86,6 +86,7 @@ class Dqs1QueueSelection:
     action_summary_path: Path
     portfolio_path: Path
     operator_action_rank: int | None = None
+    source_metadata: dict[str, Any] = field(default_factory=dict)
     skipped_candidates: tuple[dict[str, str], ...] = field(default_factory=tuple)
 
 
@@ -717,6 +718,9 @@ def select_dqs1_local_first_candidates(
             label=f"{current_candidate_id} portfolio row",
             require_all=True,
         )
+        metadata = row.get("source_metadata")
+        if not isinstance(metadata, dict):
+            raise ExperimentQueueError(f"{current_candidate_id}: missing source_metadata")
         selections.append(
             Dqs1QueueSelection(
                 candidate_id=current_candidate_id,
@@ -727,6 +731,7 @@ def select_dqs1_local_first_candidates(
                 ),
                 action_summary_path=summary_path,
                 portfolio_path=portfolio_path,
+                source_metadata=dict(metadata),
                 operator_action_rank=(
                     int(action["operator_action_rank"])
                     if isinstance(action.get("operator_action_rank"), int)
@@ -1169,6 +1174,18 @@ def build_dqs1_local_first_queue(
                 "priority": _candidate_priority(experiment_id, selection.operator_action_rank),
                 "lane_id": f"lane_dqs1_{experiment_id}_local_first_{date}",
                 "tags": ["dqs1", "pairset", "local-first", "no-score-authority"],
+                "metadata": {
+                    "schema": "dqs1_local_first_experiment_metadata.v1",
+                    "source_metadata": selection.source_metadata,
+                    "action_summary_path": str(selection.action_summary_path),
+                    "portfolio_path": str(selection.portfolio_path),
+                    "selected_pair_indices": list(selection.selected_pair_indices),
+                    "source_custody_preserved": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
                 "steps": steps,
             }
         ],

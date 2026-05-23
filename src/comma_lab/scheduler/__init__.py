@@ -1,3 +1,10 @@
+from .byte_shaving_materializer_registry import (
+    DQS1_DROP_PAIR_MATERIALIZER,
+    DQS1_PAIRSET_TARGET_KIND,
+    REGISTRY_SCHEMA,
+    registry_manifest,
+    resolve_materializer,
+)
 from .experiment_queue import (
     ExperimentQueueError,
     ReadyStep,
@@ -35,6 +42,9 @@ from .models import (
 )
 
 __all__ = [
+    "DQS1_DROP_PAIR_MATERIALIZER",
+    "DQS1_PAIRSET_TARGET_KIND",
+    "REGISTRY_SCHEMA",
     "BudgetReport",
     "BudgetSpec",
     "BudgetUsage",
@@ -58,7 +68,9 @@ __all__ = [
     "orphaned_step_rows",
     "queue_summary",
     "ready_steps",
+    "registry_manifest",
     "render_observation_markdown",
+    "resolve_materializer",
     "retire_orphaned_steps",
     "rewind_step",
     "run_queue_worker",
