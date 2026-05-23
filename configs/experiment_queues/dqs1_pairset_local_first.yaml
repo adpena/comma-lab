@@ -3,6 +3,7 @@
     "local_first": true,
     "max_concurrency": {
       "local_cpu": 2,
+      "local_io_heavy": 1,
       "local_mlx": 1,
       "modal_cpu": 0,
       "modal_gpu": 0
@@ -255,7 +256,12 @@
             "--frame-policy",
             "pair_all_frames",
             "--timeout-seconds",
-            "600",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
             "--work-dir",
             "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_rank023_pair0440/locality_work",
             "--json-out",
@@ -291,9 +297,9 @@
             "materialize"
           ],
           "resources": {
-            "kind": "local_cpu"
+            "kind": "local_io_heavy"
           },
-          "timeout_seconds": 900
+          "timeout_seconds": 960
         },
         {
           "command": [
@@ -594,7 +600,12 @@
             "--frame-policy",
             "pair_all_frames",
             "--timeout-seconds",
-            "600",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
             "--work-dir",
             "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_rank024_pair0112/locality_work",
             "--json-out",
@@ -630,9 +641,9 @@
             "materialize"
           ],
           "resources": {
-            "kind": "local_cpu"
+            "kind": "local_io_heavy"
           },
-          "timeout_seconds": 900
+          "timeout_seconds": 960
         },
         {
           "command": [

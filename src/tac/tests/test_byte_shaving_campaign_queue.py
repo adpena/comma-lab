@@ -11,6 +11,8 @@ import pytest
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZATION_SCHEMA,
     MATERIALIZER_BACKLOG_SCHEMA,
+    MATERIALIZER_WORK_QUEUE_SCHEMA,
+    build_materializer_work_queue,
     compile_dqs1_byte_shaving_campaign,
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
@@ -327,6 +329,7 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
 
     assert compiled["schema"] == MATERIALIZATION_SCHEMA
     assert compiled["materializer_backlog"]["schema"] == MATERIALIZER_BACKLOG_SCHEMA
+    assert compiled["materializer_work_queue"]["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
     assert compiled["score_claim"] is False
     assert compiled["executable_row_count"] >= 1
     assert compiled["blocked_row_count"] >= 1
@@ -525,6 +528,19 @@ def test_compile_dqs1_byte_shaving_plan_classifies_byte_range_entropy_contract_g
     assert backlog_row["blocker_counts"] == {
         f"materializer_not_executable:{BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER}": 1
     }
+    work_row = next(
+        row
+        for row in compiled["materializer_work_queue"]["rows"]
+        if row["unit_kind"] == "byte_range"
+        and row["operation_family"] == "entropy_recode"
+    )
+    assert work_row["tool"] is None
+    assert work_row["executable"] is False
+    assert work_row["target_kind"] == BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND
+    assert any(
+        blocker.startswith("materializer_context_missing:")
+        for blocker in work_row["materialization_blockers"]
+    )
 
 
 def test_compile_dqs1_byte_shaving_plan_suggests_byte_range_entropy_target_kind(
@@ -598,6 +614,87 @@ def test_compile_dqs1_byte_shaving_plan_suggests_byte_range_entropy_target_kind(
             "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
         }
     ]
+
+
+def test_materializer_work_queue_builds_byte_range_chain_command(
+    tmp_path: Path,
+) -> None:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "byte_range_entropy_work_queue_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_byte_range_entropy_work_queue_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "zip_member_range_a",
+                "unit_kind": "byte_range",
+                "candidate_saved_bytes": 777,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "entropy_recode_zip_member_range_a",
+                        "operation_family": "entropy_recode",
+                        "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+                    }
+                ],
+            },
+        ],
+        **_false_authority(),
+    }
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    output_dir = tmp_path / "chain_out"
+
+    queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            backlog_row["backlog_key"]: {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json", "beam_b.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(output_dir),
+                "source_archive": "archive.zip",
+                "member_name": "0.bin",
+                "min_free_bytes": 123,
+                "fail_if_receiver_blocked": True,
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert queue["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
+    assert queue["executable_row_count"] == 1
+    row = queue["rows"][0]
+    assert row["executable"] is True
+    assert row["tool"] == "tools/run_byte_range_entropy_recode_chain.py"
+    assert row["command"][:4] == [
+        ".venv/bin/python",
+        "tools/run_byte_range_entropy_recode_chain.py",
+        "--schema-manifest",
+        "schema.json",
+    ]
+    assert row["command"].count("--beam-probe-report") == 2
+    assert "--fail-if-receiver-blocked" in row["command"]
+    assert row["postconditions"] == [
+        {
+            "type": "json_file_key_equals",
+            "path": str(output_dir / "byte_range_entropy_recode_chain_manifest.json"),
+            "key": "schema",
+            "value": "byte_range_entropy_recode_chain.v1",
+        }
+    ]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_compile_dqs1_byte_shaving_plan_blocks_drop_pair_on_non_pair_unit(

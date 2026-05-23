@@ -88,6 +88,35 @@ def _render_markdown(plan: dict[str, Any]) -> str:
         )
     lines.extend([
         "",
+        "## Bounded Permutation Priors",
+        "| rank | combo | top sequence | inversion penalty |",
+        "|---:|---|---|---:|",
+    ])
+    for rank, row in enumerate(plan.get("permutation_ladder", [])[:8], start=1):
+        permutations = row.get("permutations") or []
+        top = permutations[0] if permutations else {}
+        sequence = " -> ".join(
+            item.get("operation_family", "")
+            for item in top.get("operation_sequence", [])
+        )
+        lines.append(
+            "| {rank} | `{combo}` | `{sequence}` | {penalty} |".format(
+                rank=rank,
+                combo=row.get("combo_id"),
+                sequence=sequence,
+                penalty=top.get("prior_order_inversion_count", ""),
+            )
+        )
+    policy = plan.get("search_space_policy") or {}
+    lines.extend([
+        "",
+        "## Search Policy",
+        f"- combination_search: `{policy.get('combination_search')}`",
+        f"- permutation_search: `{policy.get('permutation_search')}`",
+        f"- non_bruteforce_principle: `{policy.get('non_bruteforce_principle')}`",
+    ])
+    lines.extend([
+        "",
         "## Authority Boundary",
         "- score_claim: `false`",
         "- promotion_eligible: `false`",

@@ -3,6 +3,7 @@ members = [
   "crates/inflate-cli",
   "crates/python-ast-indexer",
   "crates/qma-codec",
+  "crates/raw-locality-compare",
   "crates/raw-writer",
   "crates/residual-codec",
   "crates/stbm1br-codec",

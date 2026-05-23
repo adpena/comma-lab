@@ -18,7 +18,7 @@ STATE_SCHEMA = "experiment_queue_state.v1"
 CONTROL_MODES = {"running", "paused", "frozen"}
 STEP_STATUSES = {"queued", "running", "succeeded", "failed", "blocked", "skipped"}
 BLOCKING_ORPHAN_STATUSES = {"queued", "running", "blocked"}
-LOCAL_RESOURCE_KINDS = {"local_cpu", "local_mlx", "local_mps", "local"}
+LOCAL_RESOURCE_KINDS = {"local_cpu", "local_io_heavy", "local_mlx", "local_mps", "local"}
 CLOUD_RESOURCE_KINDS = {"cloud_cpu", "cloud_gpu", "modal_cpu", "modal_gpu", "cuda_auth"}
 KNOWN_RESOURCE_KINDS = LOCAL_RESOURCE_KINDS | CLOUD_RESOURCE_KINDS
 

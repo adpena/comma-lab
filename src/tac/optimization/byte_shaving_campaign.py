@@ -15,6 +15,7 @@ import json
 import math
 import time
 from collections.abc import Iterable, Mapping, Sequence
+from itertools import permutations
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,9 @@ SIGNAL_SURFACE_SCHEMA = "byte_shaving_signal_surface.v1"
 PLAN_SCHEMA = "byte_shaving_campaign_plan.v1"
 TOOL_NAME = "tools/plan_byte_shaving_campaign.py"
 RATE_MULTIPLIER = 25.0
+ENGINEERED_CORRECTION_TARGETING_SCHEMA = (
+    "master_gradient_consumer_engineered_correction_targeting_v1"
+)
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -58,6 +62,7 @@ UNIT_KINDS: frozenset[str] = frozenset(
         "tensor",
         "packet_member",
         "scorer_response_row",
+        "correction_target",
     }
 )
 
@@ -102,6 +107,41 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
         "materialize_scorer_response_candidate",
         "probe_followup_neighbor",
     ),
+    "correction_target": (
+        "apply_engineered_correction",
+        "probe_correction_neighbor",
+    ),
+}
+
+DEFAULT_OPERATION_ORDER_PRIORS: dict[str, int] = {
+    "materialize_scorer_response_candidate": 0,
+    "probe_followup_neighbor": 1,
+    "apply_engineered_correction": 5,
+    "probe_correction_neighbor": 6,
+    "drop_pair": 10,
+    "drop_frame": 10,
+    "substitute_pair": 20,
+    "substitute_frame": 20,
+    "temporal_predict_frame": 20,
+    "proceduralize_pair_residual": 20,
+    "section_proceduralize": 20,
+    "lower_pair_precision": 30,
+    "lower_frame_precision": 30,
+    "quantize_tensor": 30,
+    "prune_tensor": 30,
+    "factorize_tensor": 30,
+    "shared_codebook_tensor": 30,
+    "delta_encode": 40,
+    "entropy_recode": 40,
+    "section_entropy_recode": 40,
+    "member_recompress": 40,
+    "literal_elide": 50,
+    "null_remove_or_seed": 50,
+    "section_header_elide": 50,
+    "section_reorder": 50,
+    "zip_header_elide": 50,
+    "member_reorder": 50,
+    "member_merge": 50,
 }
 
 
@@ -342,7 +382,10 @@ def validate_signal_surface(payload: Mapping[str, Any]) -> None:
             if item.get("saved_bytes") is not None
             else item.get("bytes")
         )
-        allows_zero_saved = _unit_kind(item) == "scorer_response_row"
+        allows_zero_saved = _unit_kind(item) in {
+            "scorer_response_row",
+            "correction_target",
+        }
         if saved is None or saved < 0 or (saved == 0 and not allows_zero_saved):
             raise ByteShavingCampaignError(
                 f"units[{index}] requires positive candidate_saved_bytes/saved_bytes/bytes"
@@ -359,7 +402,10 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         if unit.get("saved_bytes") is not None
         else unit.get("bytes")
     )
-    allows_zero_saved = _unit_kind(unit) == "scorer_response_row"
+    allows_zero_saved = _unit_kind(unit) in {
+        "scorer_response_row",
+        "correction_target",
+    }
     if saved_bytes is None or saved_bytes < 0 or (saved_bytes == 0 and not allows_zero_saved):
         raise ByteShavingCampaignError("unit requires positive saved bytes")
     operation_candidates = _operation_candidates(unit, saved_bytes)
@@ -409,6 +455,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "xray_signal": unit.get("xray_signal"),
         "master_gradient_signal": unit.get("master_gradient_signal"),
+        "engineered_correction_signal": unit.get("engineered_correction_signal"),
         "canonical_equation_provenance": unit.get("canonical_equation_provenance"),
         "atom_ids": ordered_unique(str(item) for item in _as_list(unit.get("atom_ids"))),
         "candidate_trust_region_blockers": ordered_unique(
@@ -562,6 +609,7 @@ def _combo_row(
         "selected_operations": [
             {
                 "unit_id": str(selection["unit_id"]),
+                "unit_kind": str(selection.get("unit_kind") or ""),
                 "operation_id": str(selection["operation_id"]),
                 "operation_family": str(selection["operation_family"]),
                 "materializer": selection.get("materializer"),
@@ -587,6 +635,167 @@ def _state_sort_key(row: Mapping[str, Any]) -> tuple[float, float, int, str]:
         -int(row["candidate_saved_bytes"]),
         ",".join(str(value) for value in _as_list(row.get("selected_unit_ids"))),
     )
+
+
+def _operation_order_priors(payload: Mapping[str, Any]) -> dict[str, int]:
+    priors = dict(DEFAULT_OPERATION_ORDER_PRIORS)
+    raw = payload.get("operation_order_priors")
+    if isinstance(raw, Mapping):
+        for family, priority in raw.items():
+            parsed = _finite_int(priority)
+            if parsed is not None:
+                priors[str(family)] = parsed
+    else:
+        for item in _as_list(raw):
+            if not isinstance(item, Mapping):
+                continue
+            family = str(item.get("operation_family") or item.get("family") or "")
+            parsed = _finite_int(item.get("priority"))
+            if family and parsed is not None:
+                priors[family] = parsed
+    return dict(sorted(priors.items()))
+
+
+def _operation_priority(
+    operation: Mapping[str, Any],
+    priors: Mapping[str, int],
+) -> int:
+    return int(priors.get(str(operation.get("operation_family") or ""), 100))
+
+
+def _permutation_penalty(
+    operations: Sequence[Mapping[str, Any]],
+    *,
+    priors: Mapping[str, int],
+) -> int:
+    priorities = [_operation_priority(operation, priors) for operation in operations]
+    inversions = 0
+    for left in range(len(priorities)):
+        for right in range(left + 1, len(priorities)):
+            if priorities[left] > priorities[right]:
+                inversions += 1
+    return inversions
+
+
+def _operation_sequence_record(
+    operations: Sequence[Mapping[str, Any]],
+    *,
+    priors: Mapping[str, int],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "unit_id": str(operation.get("unit_id") or ""),
+            "operation_id": str(operation.get("operation_id") or ""),
+            "operation_family": str(operation.get("operation_family") or ""),
+            "unit_kind": str(operation.get("unit_kind") or ""),
+            "order_priority": _operation_priority(operation, priors),
+            "materializer": operation.get("materializer"),
+            "target_kind": operation.get("target_kind"),
+        }
+        for operation in operations
+    ]
+
+
+def _bounded_operation_permutations(
+    operations: Sequence[Mapping[str, Any]],
+    *,
+    priors: Mapping[str, int],
+    max_ops: int,
+    max_permutations: int,
+) -> list[tuple[int, tuple[Mapping[str, Any], ...]]]:
+    prefix = tuple(operations[:max_ops])
+    if not prefix:
+        return []
+    unique: dict[tuple[tuple[str, str], ...], tuple[int, tuple[Mapping[str, Any], ...]]] = {}
+    for perm in permutations(prefix):
+        key = tuple(
+            (str(item.get("unit_id") or ""), str(item.get("operation_id") or ""))
+            for item in perm
+        )
+        penalty = _permutation_penalty(perm, priors=priors)
+        unique[key] = (penalty, perm)
+    return sorted(
+        unique.values(),
+        key=lambda item: (
+            item[0],
+            [
+                (
+                    _operation_priority(operation, priors),
+                    str(operation.get("operation_family") or ""),
+                    str(operation.get("unit_id") or ""),
+                )
+                for operation in item[1]
+            ],
+        ),
+    )[:max_permutations]
+
+
+def _permutation_ladder(
+    combo_rows: Sequence[Mapping[str, Any]],
+    payload: Mapping[str, Any],
+    *,
+    operation_order_priors: Mapping[str, int],
+) -> list[dict[str, Any]]:
+    max_combo_rows = max(1, int(payload.get("max_permutation_combo_count") or 8))
+    max_ops = max(1, min(8, int(payload.get("max_permutation_ops") or 6)))
+    max_permutations = max(1, int(payload.get("max_permutations_per_combo") or 24))
+    rows: list[dict[str, Any]] = []
+    for combo_rank, combo in enumerate(combo_rows[:max_combo_rows], start=1):
+        operations = [
+            item
+            for item in _as_list(combo.get("selected_operations"))
+            if isinstance(item, Mapping)
+        ]
+        bounded = _bounded_operation_permutations(
+            operations,
+            priors=operation_order_priors,
+            max_ops=min(max_ops, len(operations)),
+            max_permutations=max_permutations,
+        )
+        suffix = operations[min(max_ops, len(operations)) :]
+        permutation_rows = []
+        for order_rank, (penalty, prefix) in enumerate(bounded, start=1):
+            sequence = [*prefix, *suffix]
+            permutation_rows.append(
+                {
+                    "order_rank": order_rank,
+                    "operation_sequence": _operation_sequence_record(
+                        sequence,
+                        priors=operation_order_priors,
+                    ),
+                    "prior_order_inversion_count": penalty,
+                    "permuted_operation_count": len(prefix),
+                    "fixed_suffix_count": len(suffix),
+                    "planning_notes": [
+                        "operation_order_is_prior_not_score_claim",
+                        "bounded_permutation_search_avoids_factorial_explosion",
+                    ],
+                    **FALSE_AUTHORITY,
+                }
+            )
+        rows.append(
+            {
+                "schema": "byte_shaving_operation_permutation_row.v1",
+                "combo_rank": combo_rank,
+                "combo_id": combo.get("combo_id"),
+                "selected_unit_ids": _as_list(combo.get("selected_unit_ids")),
+                "expected_delta_score": combo.get("expected_delta_score"),
+                "candidate_saved_bytes": combo.get("candidate_saved_bytes"),
+                "operation_count": len(operations),
+                "permutation_policy": {
+                    "max_ops_permuted": max_ops,
+                    "max_permutations_per_combo": max_permutations,
+                    "order_prior_source": "payload.operation_order_priors_or_default",
+                },
+                "permutations": permutation_rows,
+                "dispatch_blockers": [
+                    *BASE_BLOCKERS,
+                    "permutation_order_requires_materialization_and_empirical_probe",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
 
 
 def _combo_ladder(
@@ -710,6 +919,7 @@ def _prefix_rows(
             "selected_operations": [
                 {
                     "unit_id": str(row["unit_id"]),
+                    "unit_kind": str(row.get("unit_kind") or ""),
                     "operation_id": str(row["recommended_operation_id"]),
                     "operation_family": str(row["recommended_operation_family"]),
                     "materializer": row.get("recommended_operation_materializer"),
@@ -759,6 +969,7 @@ def build_byte_shaving_campaign_plan(
     repo_root = repo_root or Path.cwd()
     ranked = _rank_units([item for item in _as_list(payload.get("units")) if isinstance(item, Mapping)])
     conflicts = _conflict_sets(payload)
+    operation_order_priors = _operation_order_priors(payload)
     prefix_rows = _prefix_rows(
         ranked,
         _sweep_ladder_counts(len(ranked), max_k=max_k),
@@ -771,6 +982,11 @@ def build_byte_shaving_campaign_plan(
         max_ops_per_unit=int(payload.get("max_combo_ops_per_unit") or 3),
         beam_width=int(payload.get("combo_beam_width") or 64),
         max_combos=int(payload.get("max_combo_count") or 32),
+    )
+    permutation_rows = _permutation_ladder(
+        combo_rows,
+        payload,
+        operation_order_priors=operation_order_priors,
     )
     best = _best_nonpositive_prefix(prefix_rows)
     best_combo = _best_nonpositive_prefix(combo_rows)
@@ -794,8 +1010,10 @@ def build_byte_shaving_campaign_plan(
         "sweep_ladder": prefix_rows,
         "recommended_prefix": dict(best) if best is not None else None,
         "combination_ladder": combo_rows,
+        "permutation_ladder": permutation_rows,
         "recommended_combination": dict(best_combo) if best_combo is not None else None,
         "operation_menu": DEFAULT_OPERATION_FAMILIES,
+        "operation_order_priors": operation_order_priors,
         "combination_policy": {
             "max_units_considered": int(payload.get("max_combo_units_considered") or 32),
             "max_ops_per_unit": int(payload.get("max_combo_ops_per_unit") or 3),
@@ -806,6 +1024,28 @@ def build_byte_shaving_campaign_plan(
                 "for scorer-axis and runtime externalities"
             ),
             "conflicts_mode": "unit conflict sets cannot co-occur in one combo",
+        },
+        "search_space_policy": {
+            "unit_layers": sorted(UNIT_KINDS),
+            "operation_layers": {
+                unit_kind: list(families)
+                for unit_kind, families in sorted(DEFAULT_OPERATION_FAMILIES.items())
+            },
+            "scorer_interaction_terms": [
+                "rate_delta_score",
+                "quality_cost_score",
+                "predicted_seg_score_cost",
+                "predicted_pose_score_cost",
+                "master_gradient_score_cost",
+                "interaction_delta_score",
+            ],
+            "combination_search": "bounded_beam_over_units_and_operation_alternatives",
+            "permutation_search": "bounded_operation_order_permutations_for_top_combos",
+            "non_bruteforce_principle": (
+                "rank by rate-distortion prior, component/scorer marginal costs, "
+                "explicit interactions, conflicts, and confidence before any local "
+                "or exact scorer spend"
+            ),
         },
         "dispatch_blockers": ordered_unique(
             [*BASE_BLOCKERS, *[str(item) for item in _as_list(payload.get("blockers"))]]
@@ -969,6 +1209,152 @@ def build_signal_surface_from_candidate_queue(
         "auth_eval_refs": _as_list(queue_payload.get("auth_eval_refs")),
         "mlx_calibration_refs": _as_list(queue_payload.get("mlx_calibration_refs")),
         "scorer_response_refs": _as_list(queue_payload.get("scorer_response_refs")),
+        "units": units,
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_signal_surface_from_engineered_correction_targeting(
+    targeting_payload: Mapping[str, Any],
+    *,
+    campaign_id: str = "engineered_correction_targeting_surface",
+    max_targets: int | None = None,
+    default_predicted_quality_score_delta: float = 0.0,
+) -> dict[str, Any]:
+    """Bridge legacy engineered-correction targeting into the modern planner.
+
+    Engineered-correction targets spend correction bytes to buy quality. They
+    are therefore modeled as zero-saved-byte planning units unless an upstream
+    empirical row supplies an explicit score delta. This keeps the signal
+    discoverable for combinations without pretending it is byte-saving or
+    promotion-ready.
+    """
+
+    if targeting_payload.get("schema") != ENGINEERED_CORRECTION_TARGETING_SCHEMA:
+        raise ByteShavingCampaignError(
+            f"expected {ENGINEERED_CORRECTION_TARGETING_SCHEMA}"
+        )
+    try:
+        require_no_truthy_authority_fields(
+            targeting_payload,
+            context="engineered_correction_targeting_byte_shaving_surface",
+        )
+    except ValueError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+    if max_targets is not None and max_targets < 1:
+        raise ByteShavingCampaignError("max_targets must be >= 1")
+    default_delta = _finite_float(default_predicted_quality_score_delta)
+    if default_delta is None:
+        raise ByteShavingCampaignError(
+            "default_predicted_quality_score_delta must be finite"
+        )
+
+    targets = [
+        item
+        for item in _as_list(targeting_payload.get("top_per_pair_targets"))
+        if isinstance(item, Mapping)
+    ]
+    if max_targets is not None:
+        targets = targets[:max_targets]
+    units: list[dict[str, Any]] = []
+    archive_sha = targeting_payload.get("archive_sha256")
+    confidence = _finite_float(targeting_payload.get("confidence"))
+    for index, target in enumerate(targets):
+        pair_index = _finite_int(target.get("pair_index"))
+        byte_index = _finite_int(target.get("byte_index"))
+        if pair_index is None or pair_index < 0 or byte_index is None or byte_index < 0:
+            continue
+        variance_rank = _finite_int(target.get("per_pair_variance_rank"))
+        magnitude = _finite_float(target.get("per_pair_distortion_magnitude")) or 0.0
+        unit_id = f"engineered_correction_pair{pair_index:04d}_byte{byte_index:08d}"
+        operation = {
+            "operation_id": "apply_engineered_correction",
+            "operation_family": "apply_engineered_correction",
+            "candidate_saved_bytes": 0,
+            "predicted_quality_score_delta": default_delta,
+            "materializer": "engineered_correction_sidecar_patch",
+            "target_kind": "engineered_correction_target_v1",
+            "params": {
+                "pair_index": pair_index,
+                "byte_index": byte_index,
+                "per_pair_distortion_magnitude": magnitude,
+                "per_pair_variance_rank": variance_rank,
+                "archive_sha256": archive_sha,
+            },
+            "blockers": [
+                "engineered_correction_target_requires_correction_synthesis",
+                "engineered_correction_target_requires_readiness_audit",
+                "engineered_correction_target_requires_runtime_consumption_proof",
+                "engineered_correction_target_requires_exact_auth_eval",
+            ],
+        }
+        units.append({
+            "unit_id": unit_id,
+            "unit_kind": "correction_target",
+            "source_index": index,
+            "source_span": [byte_index, byte_index + 1],
+            "candidate_saved_bytes": 0,
+            "predicted_quality_score_delta": default_delta,
+            "confidence": confidence if confidence is not None else 0.5,
+            "operation_families": ["apply_engineered_correction"],
+            "operations": [operation],
+            "score_axis": targeting_payload.get("measurement_axis"),
+            "evidence_grade": "[predicted]",
+            "evidence_semantics": (
+                "legacy_engineered_correction_targeting_subsumed_by_"
+                "byte_shaving_surface"
+            ),
+            "source_candidate_id": targeting_payload.get("consumer_id"),
+            "master_gradient_signal": {
+                "archive_sha256": archive_sha,
+                "measurement_axis": targeting_payload.get("measurement_axis"),
+                "measurement_hardware": targeting_payload.get("measurement_hardware"),
+                "consumer_id": targeting_payload.get("consumer_id"),
+            },
+            "engineered_correction_signal": {
+                "schema": ENGINEERED_CORRECTION_TARGETING_SCHEMA,
+                "pair_index": pair_index,
+                "byte_index": byte_index,
+                "per_pair_distortion_magnitude": magnitude,
+                "per_pair_variance_rank": variance_rank,
+                "targets_per_pair": targeting_payload.get("targets_per_pair"),
+                "total_targets": targeting_payload.get("total_targets"),
+                "planning_role": "quality_spend_target_not_byte_savings",
+            },
+            "blockers": [
+                "engineered_correction_target_is_planning_only",
+                "requires_correction_artifact_before_local_patch",
+                "requires_engineered_correction_readiness_audit",
+                "requires_exact_auth_eval_before_score_claim",
+            ],
+        })
+    if not units:
+        raise ByteShavingCampaignError(
+            "engineered correction targeting payload has no plannable targets"
+        )
+    return {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": campaign_id,
+        "source_signal_refs": [
+            {
+                "kind": "engineered_correction_targeting",
+                "schema": targeting_payload.get("schema"),
+                "consumer_id": targeting_payload.get("consumer_id"),
+                "archive_sha256": archive_sha,
+                "measurement_axis": targeting_payload.get("measurement_axis"),
+                "measurement_hardware": targeting_payload.get("measurement_hardware"),
+                "n_bytes": targeting_payload.get("n_bytes"),
+                "n_pairs": targeting_payload.get("n_pairs"),
+                "targets_per_pair": targeting_payload.get("targets_per_pair"),
+                "total_targets": targeting_payload.get("total_targets"),
+                "surface_unit_count": len(units),
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
         "units": units,
         **FALSE_AUTHORITY,
     }
@@ -1210,6 +1596,7 @@ __all__ = [
     "ByteShavingCampaignError",
     "build_byte_shaving_campaign_plan",
     "build_signal_surface_from_candidate_queue",
+    "build_signal_surface_from_engineered_correction_targeting",
     "build_signal_surface_from_master_gradient_anchor",
     "normalize_unit_signal",
     "validate_signal_surface",

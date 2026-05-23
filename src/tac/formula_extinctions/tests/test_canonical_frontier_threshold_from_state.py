@@ -34,8 +34,10 @@ def test_delegates_to_frontier_scan():
         hardware_substrate = "linux_x86_64_cpu"
         archive_sha256 = "fake_sha"
 
-    with patch("tac.frontier_scan.collect_all_anchors", return_value=[FakeAnchor()]), \
-         patch("tac.frontier_scan.best_per_axis", return_value=FakeAnchor()):
+    with (
+        patch("tac.frontier_scan.collect_all_anchors", return_value=[FakeAnchor()]),
+        patch("tac.frontier_scan.best_per_axis", return_value={"contest_cpu": [FakeAnchor()]}),
+    ):
         r = canonical_frontier_threshold_from_state(
             FrontierThresholdInput(repo_root=Path("/tmp"), axis="cpu")
         )
@@ -45,12 +47,14 @@ def test_delegates_to_frontier_scan():
 
 def test_raises_when_no_qualifying_anchor():
     """RuntimeError when no qualifying anchor found."""
-    with patch("tac.frontier_scan.collect_all_anchors", return_value=[]), \
-         patch("tac.frontier_scan.best_per_axis", return_value=None):
-        with pytest.raises(RuntimeError, match="No qualifying"):
-            canonical_frontier_threshold_from_state(
-                FrontierThresholdInput(repo_root=Path("/tmp"), axis="cpu")
-            )
+    with (
+        patch("tac.frontier_scan.collect_all_anchors", return_value=[]),
+        patch("tac.frontier_scan.best_per_axis", return_value={}),
+        pytest.raises(RuntimeError, match="No qualifying"),
+    ):
+        canonical_frontier_threshold_from_state(
+            FrontierThresholdInput(repo_root=Path("/tmp"), axis="cpu")
+        )
 
 
 def test_citation_catalog_316():
@@ -62,8 +66,10 @@ def test_citation_catalog_316():
         hardware_substrate = "linux_x86_64_cpu"
         archive_sha256 = "fake_sha"
 
-    with patch("tac.frontier_scan.collect_all_anchors", return_value=[FakeAnchor()]), \
-         patch("tac.frontier_scan.best_per_axis", return_value=FakeAnchor()):
+    with (
+        patch("tac.frontier_scan.collect_all_anchors", return_value=[FakeAnchor()]),
+        patch("tac.frontier_scan.best_per_axis", return_value={"contest_cuda": [FakeAnchor()]}),
+    ):
         r = canonical_frontier_threshold_from_state(
             FrontierThresholdInput(repo_root=Path("/tmp"), axis="cuda")
         )

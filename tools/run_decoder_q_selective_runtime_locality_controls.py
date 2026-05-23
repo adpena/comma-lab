@@ -14,13 +14,17 @@ It does not run the scorer and never emits score authority.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
+import contextlib
 import hashlib
 import json
+import math
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import zipfile
 from dataclasses import dataclass
@@ -44,6 +48,7 @@ SCHEMA = "decoder_q_selective_runtime_locality_controls.v1"
 PRODUCER = "tools/run_decoder_q_selective_runtime_locality_controls.py"
 DEFAULT_VIDEO_NAMES_FILE = REPO_ROOT / "upstream" / "public_test_video_names.txt"
 DEFAULT_FRAME_COUNT = 1200
+INFLATE_MANIFEST_NAME = ".locality_inflate_manifest.json"
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -65,6 +70,88 @@ class InflateTarget:
     runtime_dir: Path
     archive_zip: Path
     archive_source: str
+
+
+class PhaseRecorder:
+    def __init__(self, progress_jsonl: Path | None = None) -> None:
+        self.phases: list[dict[str, Any]] = []
+        self.progress_jsonl = progress_jsonl
+        self._lock = threading.Lock()
+
+    def append_event(self, event: dict[str, Any]) -> None:
+        if self.progress_jsonl is None:
+            return
+        row = {
+            "schema": "decoder_q_selective_runtime_locality_progress.v1",
+            "producer": PRODUCER,
+            "written_epoch_seconds": time.time(),
+            **event,
+        }
+        with self._lock:
+            self.progress_jsonl.parent.mkdir(parents=True, exist_ok=True)
+            with self.progress_jsonl.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(row, sort_keys=True) + "\n")
+
+    @contextlib.contextmanager
+    def timed(self, name: str, **metadata: Any):
+        started = time.monotonic()
+        record: dict[str, Any] = {
+            "name": name,
+            "status": "running",
+            "started_epoch_seconds": time.time(),
+            **metadata,
+        }
+        with self._lock:
+            self.phases.append(record)
+        self.append_event({"event": "phase_started", **record})
+        try:
+            yield record
+        except Exception as exc:
+            record["status"] = "failed"
+            record["error_type"] = type(exc).__name__
+            record["error"] = str(exc)
+            raise
+        else:
+            record["status"] = "succeeded"
+        finally:
+            record["elapsed_seconds"] = time.monotonic() - started
+            record["ended_epoch_seconds"] = time.time()
+            self.append_event({"event": "phase_finished", **record})
+
+
+class GlobalDeadline:
+    def __init__(self, timeout_seconds: int | None) -> None:
+        self.timeout_seconds = timeout_seconds
+        self.started_monotonic = time.monotonic()
+        self.deadline_monotonic = (
+            None
+            if timeout_seconds is None or timeout_seconds <= 0
+            else self.started_monotonic + timeout_seconds
+        )
+
+    def remaining_seconds(self) -> float | None:
+        if self.deadline_monotonic is None:
+            return None
+        return max(0.0, self.deadline_monotonic - time.monotonic())
+
+    def subprocess_timeout(self, requested_seconds: int) -> int:
+        if requested_seconds <= 0:
+            raise SelectiveRuntimeControlError("--timeout-seconds must be positive")
+        remaining = self.remaining_seconds()
+        if remaining is None:
+            return requested_seconds
+        if remaining <= 0:
+            raise SelectiveRuntimeControlError(
+                f"global timeout expired after {self.timeout_seconds}s"
+            )
+        return max(1, min(requested_seconds, math.floor(remaining)))
+
+    def check(self, phase: str) -> None:
+        remaining = self.remaining_seconds()
+        if remaining is not None and remaining <= 0:
+            raise SelectiveRuntimeControlError(
+                f"{phase} exceeded global timeout {self.timeout_seconds}s"
+            )
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -158,6 +245,11 @@ def read_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise SelectiveRuntimeControlError(f"{path}: expected JSON object")
     return payload
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(dumps_json(payload), encoding="utf-8")
 
 
 def read_single_stored_member_payload(archive_zip: Path) -> tuple[str, bytes]:
@@ -301,6 +393,100 @@ def _hex_region_hashes(region_hashes: dict[str, hashlib._Hash]) -> dict[str, str
     return {name: digest.hexdigest() for name, digest in region_hashes.items()}
 
 
+def _digest_region_hashes(region_hashes: dict[str, hashlib._Hash]) -> dict[str, str]:
+    return {name: digest.hexdigest() for name, digest in region_hashes.items()}
+
+
+def _native_raw_compare_binary() -> Path | None:
+    env_path = os.environ.get("PACT_RAW_LOCALITY_COMPARE_BIN")
+    candidates = []
+    if env_path:
+        candidates.append(Path(env_path))
+    candidates.extend(
+        [
+            REPO_ROOT / "runtime-rs" / "target" / "release" / "raw-locality-compare",
+            REPO_ROOT / "runtime-rs" / "target" / "debug" / "raw-locality-compare",
+        ]
+    )
+    for path in candidates:
+        if path.is_file() and os.access(path, os.X_OK):
+            return path
+    return None
+
+
+def _native_raw_compare(
+    *,
+    parent_raw: Path,
+    global_mutated_raw: Path,
+    selective_raw: Path,
+    selected_frame_indices: list[int],
+    frame_count: int,
+    frame_bytes: int | None,
+    rel_path: str,
+    sample_limit: int,
+    deadline: GlobalDeadline | None,
+    backend: str,
+) -> dict[str, Any] | None:
+    binary = _native_raw_compare_binary()
+    if binary is None:
+        if backend == "rust":
+            raise SelectiveRuntimeControlError(
+                "raw compare backend 'rust' requested but runtime-rs raw-locality-compare "
+                "binary is not built"
+            )
+        return None
+    cmd = [
+        str(binary),
+        "--parent",
+        str(parent_raw),
+        "--global-mutated",
+        str(global_mutated_raw),
+        "--selective",
+        str(selective_raw),
+        "--selected-frames",
+        ",".join(str(index) for index in selected_frame_indices),
+        "--frame-count",
+        str(frame_count),
+        "--raw-path",
+        rel_path,
+        "--sample-limit",
+        str(sample_limit),
+    ]
+    if frame_bytes is not None:
+        cmd.extend(["--frame-bytes", str(frame_bytes)])
+    timeout = None
+    if deadline is not None:
+        remaining = deadline.remaining_seconds()
+        if remaining is not None:
+            if remaining <= 0:
+                raise SelectiveRuntimeControlError(
+                    f"native raw compare exceeded global timeout {deadline.timeout_seconds}s"
+                )
+            timeout = remaining
+    try:
+        proc = subprocess.run(
+            cmd,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise SelectiveRuntimeControlError(
+            f"native raw compare timed out after {timeout:.1f}s"
+        ) from exc
+    if proc.returncode != 0:
+        raise SelectiveRuntimeControlError(
+            f"native raw compare failed with exit {proc.returncode}: {proc.stderr[-2000:]}"
+        )
+    payload = json.loads(proc.stdout)
+    if not isinstance(payload, dict):
+        raise SelectiveRuntimeControlError("native raw compare emitted non-object JSON")
+    payload["raw_compare_backend"] = "rust"
+    payload["raw_compare_binary"] = str(binary.resolve())
+    return payload
+
+
 def _hash_frame_sample(
     *,
     frame_index: int,
@@ -326,8 +512,30 @@ def compare_raw_triplet(
     frame_bytes: int | None = None,
     rel_path: str = "0.raw",
     sample_limit: int = 8,
+    deadline: GlobalDeadline | None = None,
+    raw_compare_backend: str = "auto",
 ) -> dict[str, Any]:
     """Compare one parent/global/selective raw triplet frame by frame."""
+
+    if raw_compare_backend not in {"auto", "python", "rust"}:
+        raise SelectiveRuntimeControlError(
+            f"unsupported raw compare backend: {raw_compare_backend!r}"
+        )
+    if raw_compare_backend in {"auto", "rust"}:
+        native = _native_raw_compare(
+            parent_raw=parent_raw,
+            global_mutated_raw=global_mutated_raw,
+            selective_raw=selective_raw,
+            selected_frame_indices=selected_frame_indices,
+            frame_count=frame_count,
+            frame_bytes=frame_bytes,
+            rel_path=rel_path,
+            sample_limit=sample_limit,
+            deadline=deadline,
+            backend=raw_compare_backend,
+        )
+        if native is not None:
+            return native
 
     if frame_count <= 0:
         raise SelectiveRuntimeControlError("frame_count must be positive")
@@ -355,11 +563,6 @@ def compare_raw_triplet(
         "global_mutated": global_mutated_raw.stat().st_size,
         "selective": selective_raw.stat().st_size,
     }
-    file_hashes = {
-        "parent": sha256_file(parent_raw),
-        "global_mutated": sha256_file(global_mutated_raw),
-        "selective": sha256_file(selective_raw),
-    }
     blockers: list[str] = []
     mismatch_counts = {
         "missing_raw_file_count": 0,
@@ -369,6 +572,11 @@ def compare_raw_triplet(
     }
 
     if len(set(sizes.values())) != 1:
+        file_hashes = {
+            "parent": sha256_file(parent_raw),
+            "global_mutated": sha256_file(global_mutated_raw),
+            "selective": sha256_file(selective_raw),
+        }
         mismatch_counts["raw_size_mismatch_count"] = 1
         blockers.append(f"raw_size_mismatch:{rel_path}")
         return {
@@ -387,6 +595,11 @@ def compare_raw_triplet(
     raw_size = sizes["parent"]
     if frame_bytes is None:
         if raw_size % frame_count:
+            file_hashes = {
+                "parent": sha256_file(parent_raw),
+                "global_mutated": sha256_file(global_mutated_raw),
+                "selective": sha256_file(selective_raw),
+            }
             mismatch_counts["raw_size_mismatch_count"] = 1
             blockers.append(f"raw_size_not_divisible_by_frame_count:{rel_path}")
             return {
@@ -407,6 +620,11 @@ def compare_raw_triplet(
 
     expected_size = frame_bytes * frame_count
     if raw_size != expected_size:
+        file_hashes = {
+            "parent": sha256_file(parent_raw),
+            "global_mutated": sha256_file(global_mutated_raw),
+            "selective": sha256_file(selective_raw),
+        }
         mismatch_counts["raw_size_mismatch_count"] = 1
         blockers.append(f"raw_size_does_not_match_frame_geometry:{rel_path}")
         return {
@@ -426,6 +644,11 @@ def compare_raw_triplet(
         frame for frame in selected_frame_indices if frame < 0 or frame >= frame_count
     ]
     if invalid_frames:
+        file_hashes = {
+            "parent": sha256_file(parent_raw),
+            "global_mutated": sha256_file(global_mutated_raw),
+            "selective": sha256_file(selective_raw),
+        }
         blockers.append(f"selected_frame_index_out_of_range:{invalid_frames}")
         return {
             "raw_path": rel_path,
@@ -441,6 +664,7 @@ def compare_raw_triplet(
         }
 
     selected_set = set(selected_frame_indices)
+    raw_file_hashes = _empty_region_hashes()
     selected_hashes = _empty_region_hashes()
     unselected_hashes = _empty_region_hashes()
     selected_samples: list[dict[str, Any]] = []
@@ -452,6 +676,8 @@ def compare_raw_triplet(
         selective_raw.open("rb") as selective_handle,
     ):
         for frame_index in range(frame_count):
+            if deadline is not None and frame_index % 16 == 0:
+                deadline.check(f"compare:{rel_path}")
             parent_frame = parent_handle.read(frame_bytes)
             global_frame = global_handle.read(frame_bytes)
             selective_frame = selective_handle.read(frame_bytes)
@@ -462,6 +688,9 @@ def compare_raw_triplet(
             ):
                 blockers.append(f"short_raw_read:{rel_path}:{frame_index}")
                 break
+            raw_file_hashes["parent"].update(parent_frame)
+            raw_file_hashes["global_mutated"].update(global_frame)
+            raw_file_hashes["selective"].update(selective_frame)
 
             if frame_index in selected_set:
                 selected_hashes["parent"].update(parent_frame)
@@ -508,7 +737,7 @@ def compare_raw_triplet(
         "compared_selected_frame_count": len(selected_set),
         "compared_unselected_frame_count": frame_count - len(selected_set),
         "hashes": {
-            "raw_files": file_hashes,
+            "raw_files": _digest_region_hashes(raw_file_hashes),
             "selected_frames": _hex_region_hashes(selected_hashes),
             "unselected_frames": _hex_region_hashes(unselected_hashes),
         },
@@ -528,6 +757,8 @@ def compare_inflated_outputs(
     selected_frame_indices: list[int],
     frame_count: int,
     frame_bytes: int | None,
+    deadline: GlobalDeadline | None = None,
+    raw_compare_backend: str = "auto",
 ) -> dict[str, Any]:
     raw_results: list[dict[str, Any]] = []
     aggregate_counts = {
@@ -547,6 +778,8 @@ def compare_inflated_outputs(
             frame_count=frame_count,
             frame_bytes=frame_bytes,
             rel_path=rel.as_posix(),
+            deadline=deadline,
+            raw_compare_backend=raw_compare_backend,
         )
         raw_results.append(result)
         for key in aggregate_counts:
@@ -610,12 +843,91 @@ def _runtime_entrypoint(runtime_dir: Path) -> tuple[list[str], str, Path]:
     )
 
 
+def _inflate_manifest_path(work_root: Path, label: str) -> Path:
+    return work_root / label / INFLATE_MANIFEST_NAME
+
+
+def _target_identity(
+    target: InflateTarget,
+    *,
+    video_names_file: Path,
+    entry_kind: str,
+    entry_path: Path,
+) -> dict[str, Any]:
+    return {
+        "label": target.label,
+        "runtime_dir": str(target.runtime_dir.resolve()),
+        "archive_zip": str(target.archive_zip.resolve()),
+        "archive_source": target.archive_source,
+        "archive_bytes": target.archive_zip.stat().st_size,
+        "archive_sha256": sha256_file(target.archive_zip),
+        "entrypoint_kind": entry_kind,
+        "entrypoint_path": str(entry_path.resolve()),
+        "entrypoint_sha256": sha256_file(entry_path),
+        "video_names_file": str(video_names_file.resolve()),
+    }
+
+
+def _expected_output_paths(output_dir: Path, video_names: list[str]) -> list[Path]:
+    return [_child_path(output_dir, raw_relpath_for_video_name(name)) for name in video_names]
+
+
+def _raw_output_sizes(output_dir: Path, video_names: list[str]) -> dict[str, int]:
+    sizes: dict[str, int] = {}
+    for name in video_names:
+        rel = raw_relpath_for_video_name(name)
+        path = _child_path(output_dir, rel)
+        if not path.is_file():
+            raise SelectiveRuntimeControlError(f"missing inflated raw output: {path}")
+        sizes[rel.as_posix()] = path.stat().st_size
+    return sizes
+
+
+def _manifest_outputs_match(
+    manifest: dict[str, Any],
+    *,
+    output_dir: Path,
+    video_names: list[str],
+) -> bool:
+    raw_sizes = manifest.get("raw_output_bytes")
+    if not isinstance(raw_sizes, dict):
+        return False
+    try:
+        current_sizes = _raw_output_sizes(output_dir, video_names)
+    except SelectiveRuntimeControlError:
+        return False
+    parsed_sizes: dict[str, int] = {}
+    try:
+        for key, value in raw_sizes.items():
+            if isinstance(value, bool):
+                return False
+            parsed_sizes[str(key)] = int(value)
+    except (TypeError, ValueError):
+        return False
+    return parsed_sizes == current_sizes
+
+
+def _archive_dir_matches_target(target: InflateTarget, archive_dir: Path) -> bool:
+    if not archive_dir.is_dir():
+        return False
+    try:
+        member_name, member_data = read_single_stored_member_payload(target.archive_zip)
+    except (OSError, zipfile.BadZipFile, SelectiveRuntimeControlError):
+        return False
+    extracted = archive_dir / member_name
+    return extracted.is_file() and sha256_file(extracted) == sha256_bytes(member_data)
+
+
 def run_inflate_target(
     target: InflateTarget,
     *,
     work_root: Path,
     video_names_file: Path,
+    video_names: list[str],
     timeout_seconds: int,
+    deadline: GlobalDeadline | None = None,
+    reuse_existing_inflates: bool = False,
+    recorder: PhaseRecorder | None = None,
 ) -> dict[str, Any]:
     if not target.runtime_dir.is_dir():
         raise SelectiveRuntimeControlError(
@@ -628,10 +940,88 @@ def run_inflate_target(
 
     archive_dir = work_root / target.label / "archive"
     output_dir = work_root / target.label / "inflated"
+    entry_cmd, entry_kind, entry_path = _runtime_entrypoint(target.runtime_dir)
+    identity = _target_identity(
+        target,
+        video_names_file=video_names_file,
+        entry_kind=entry_kind,
+        entry_path=entry_path,
+    )
+    manifest_path = _inflate_manifest_path(work_root, target.label)
+    if reuse_existing_inflates and manifest_path.is_file():
+        manifest = read_json_object(manifest_path)
+        if (
+            manifest.get("schema")
+            == "decoder_q_selective_runtime_locality_inflate_manifest.v1"
+            and manifest.get("target_identity") == identity
+            and _manifest_outputs_match(
+                manifest,
+                output_dir=output_dir,
+                video_names=video_names,
+            )
+        ):
+            cached = dict(manifest["run"])
+            cached["reused_existing_inflate"] = True
+            cached["reuse_mode"] = "manifest_verified"
+            cached["manifest_path"] = str(manifest_path.resolve())
+            if recorder is not None:
+                recorder.append_event(
+                    {
+                        "event": "inflate_reused",
+                        "target": target.label,
+                        "reuse_mode": "manifest_verified",
+                    }
+                )
+            return cached
+
+    if reuse_existing_inflates and all(
+        path.is_file() and path.stat().st_size > 0
+        for path in _expected_output_paths(output_dir, video_names)
+    ) and _archive_dir_matches_target(target, archive_dir):
+        raw_sizes = _raw_output_sizes(output_dir, video_names)
+        cached = {
+            **identity,
+            "archive_member_count": 1,
+            "command": None,
+            "returncode": 0,
+            "elapsed_seconds": 0.0,
+            "stdout_sha256": None,
+            "stderr_sha256": None,
+            "stdout_tail": "",
+            "stderr_tail": "",
+            "output_dir": str(output_dir),
+            "reused_existing_inflate": True,
+            "reuse_mode": "legacy_archive_member_verified",
+            "raw_output_bytes": raw_sizes,
+        }
+        manifest = {
+            "schema": "decoder_q_selective_runtime_locality_inflate_manifest.v1",
+            "target_identity": identity,
+            "run": cached,
+            "raw_output_bytes": raw_sizes,
+            "legacy_reuse_without_prior_manifest": True,
+            **FALSE_AUTHORITY,
+        }
+        write_json(manifest_path, manifest)
+        if recorder is not None:
+            recorder.append_event(
+                {
+                    "event": "inflate_reused",
+                    "target": target.label,
+                    "reuse_mode": "legacy_archive_member_verified",
+                }
+            )
+        return {**cached, "manifest_path": str(manifest_path.resolve())}
+
+    if deadline is not None:
+        deadline.check(f"inflate:{target.label}")
+
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir)
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
     members = extract_zip_safely(target.archive_zip, archive_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    entry_cmd, entry_kind, entry_path = _runtime_entrypoint(target.runtime_dir)
     cmd = [*entry_cmd, str(archive_dir), str(output_dir), str(video_names_file)]
     env = os.environ.copy()
     env.setdefault("PYTHONDONTWRITEBYTECODE", "1")
@@ -641,39 +1031,44 @@ def run_inflate_target(
     env.setdefault("COMMA_CHALLENGE_ROOT", str(REPO_ROOT / "upstream"))
     env.setdefault("UV_PROJECT_ENVIRONMENT", str(work_root / target.label / "uv_env"))
 
-    start = time.monotonic()
-    try:
-        proc = subprocess.run(
-            cmd,
-            cwd=str(target.runtime_dir),
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=timeout_seconds,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise SelectiveRuntimeControlError(
-            f"{target.label} inflate timed out after {timeout_seconds}s"
-        ) from exc
-    elapsed = time.monotonic() - start
+    effective_timeout = (
+        deadline.subprocess_timeout(timeout_seconds)
+        if deadline is not None
+        else timeout_seconds
+    )
+    active_recorder = recorder if recorder is not None else PhaseRecorder()
+    with active_recorder.timed(
+        "inflate",
+        target=target.label,
+        timeout_seconds=effective_timeout,
+        requested_timeout_seconds=timeout_seconds,
+    ):
+        start = time.monotonic()
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=str(target.runtime_dir),
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=effective_timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise SelectiveRuntimeControlError(
+                f"{target.label} inflate timed out after {effective_timeout}s"
+            ) from exc
+        elapsed = time.monotonic() - start
     if proc.returncode != 0:
         raise SelectiveRuntimeControlError(
             f"{target.label} {entry_kind} failed with exit {proc.returncode}: "
             f"{proc.stderr[-2000:]}"
         )
 
-    return {
-        "label": target.label,
-        "runtime_dir": str(target.runtime_dir.resolve()),
-        "archive_zip": str(target.archive_zip.resolve()),
-        "archive_source": target.archive_source,
-        "archive_bytes": target.archive_zip.stat().st_size,
-        "archive_sha256": sha256_file(target.archive_zip),
+    raw_sizes = _raw_output_sizes(output_dir, video_names)
+    run = {
+        **identity,
         "archive_member_count": len(members),
-        "entrypoint_kind": entry_kind,
-        "entrypoint_path": str(entry_path.resolve()),
-        "entrypoint_sha256": sha256_file(entry_path),
         "command": cmd,
         "returncode": proc.returncode,
         "elapsed_seconds": elapsed,
@@ -682,7 +1077,66 @@ def run_inflate_target(
         "stdout_tail": proc.stdout[-2000:],
         "stderr_tail": proc.stderr[-2000:],
         "output_dir": str(output_dir),
+        "raw_output_bytes": raw_sizes,
+        "reused_existing_inflate": False,
+        "reuse_mode": "fresh",
     }
+    write_json(
+        manifest_path,
+        {
+            "schema": "decoder_q_selective_runtime_locality_inflate_manifest.v1",
+            "target_identity": identity,
+            "run": run,
+            "raw_output_bytes": raw_sizes,
+            **FALSE_AUTHORITY,
+        },
+    )
+    return {**run, "manifest_path": str(manifest_path.resolve())}
+
+
+def run_inflate_targets(
+    targets: list[InflateTarget],
+    *,
+    work_root: Path,
+    video_names_file: Path,
+    video_names: list[str],
+    timeout_seconds: int,
+    deadline: GlobalDeadline | None,
+    max_parallelism: int,
+    reuse_existing_inflates: bool,
+    recorder: PhaseRecorder,
+) -> dict[str, dict[str, Any]]:
+    if max_parallelism <= 0:
+        raise SelectiveRuntimeControlError("--max-inflate-parallelism must be positive")
+    runs: dict[str, dict[str, Any]] = {}
+    with recorder.timed(
+        "inflate_targets",
+        target_count=len(targets),
+        max_parallelism=max_parallelism,
+        reuse_existing_inflates=reuse_existing_inflates,
+    ):
+        workers = min(max_parallelism, len(targets))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {
+                pool.submit(
+                    run_inflate_target,
+                    target,
+                    work_root=work_root,
+                    video_names_file=video_names_file,
+                    video_names=video_names,
+                    timeout_seconds=timeout_seconds,
+                    deadline=deadline,
+                    reuse_existing_inflates=reuse_existing_inflates,
+                    recorder=recorder,
+                ): target.label
+                for target in targets
+            }
+            for future in concurrent.futures.as_completed(futures):
+                label = futures[future]
+                if deadline is not None:
+                    deadline.check(f"inflate:{label}")
+                runs[label] = future.result()
+    return runs
 
 
 def build_report(
@@ -699,6 +1153,10 @@ def build_report(
     work_root: Path,
     timeout_seconds: int,
     work_dir_preserved: bool,
+    global_timeout_seconds: int | None = None,
+    max_inflate_parallelism: int = 1,
+    reuse_existing_inflates: bool = False,
+    raw_compare_backend: str = "auto",
 ) -> dict[str, Any]:
     if (global_mutated_submission_dir is None) == (global_mutated_archive is None):
         raise SelectiveRuntimeControlError(
@@ -709,6 +1167,10 @@ def build_report(
     selective_submission_dir = selective_submission_dir.resolve()
     video_names_file = video_names_file.resolve()
     work_root = work_root.resolve()
+    work_root.mkdir(parents=True, exist_ok=True)
+    progress_jsonl = work_root / "locality_controls_progress.jsonl"
+    recorder = PhaseRecorder(progress_jsonl=progress_jsonl)
+    deadline = GlobalDeadline(global_timeout_seconds)
     global_mutated_submission_dir = (
         None
         if global_mutated_submission_dir is None
@@ -718,16 +1180,18 @@ def build_report(
         None if global_mutated_archive is None else global_mutated_archive.resolve()
     )
 
-    selected_frame_indices = selected_frame_indices_for_pairs(
-        selected_pairs,
-        frame_policy=frame_policy,
-    )
-    video_names = read_video_names(video_names_file)
-    selective_contract = validate_selective_runtime_contract(
-        selective_submission_dir=selective_submission_dir,
-        selected_pairs=selected_pairs,
-        frame_policy=frame_policy,
-    )
+    with recorder.timed("load_inputs"):
+        selected_frame_indices = selected_frame_indices_for_pairs(
+            selected_pairs,
+            frame_policy=frame_policy,
+        )
+        video_names = read_video_names(video_names_file)
+    with recorder.timed("validate_selective_runtime_contract"):
+        selective_contract = validate_selective_runtime_contract(
+            selective_submission_dir=selective_submission_dir,
+            selected_pairs=selected_pairs,
+            frame_policy=frame_policy,
+        )
 
     parent_target = InflateTarget(
         label="parent",
@@ -757,24 +1221,31 @@ def build_report(
         archive_source="selective_submission_dir/archive.zip",
     )
 
-    runs = {
-        target.label: run_inflate_target(
-            target,
-            work_root=work_root,
-            video_names_file=video_names_file,
-            timeout_seconds=timeout_seconds,
-        )
-        for target in (parent_target, global_target, selective_target)
-    }
-    comparison = compare_inflated_outputs(
-        parent_dir=Path(runs["parent"]["output_dir"]),
-        global_mutated_dir=Path(runs["global_mutated"]["output_dir"]),
-        selective_dir=Path(runs["selective"]["output_dir"]),
+    targets = [parent_target, global_target, selective_target]
+    runs = run_inflate_targets(
+        targets,
+        work_root=work_root,
+        video_names_file=video_names_file,
         video_names=video_names,
-        selected_frame_indices=selected_frame_indices,
-        frame_count=frame_count,
-        frame_bytes=frame_bytes,
+        timeout_seconds=timeout_seconds,
+        deadline=deadline,
+        max_parallelism=max_inflate_parallelism,
+        reuse_existing_inflates=reuse_existing_inflates,
+        recorder=recorder,
     )
+    deadline.check("compare")
+    with recorder.timed("compare_inflated_outputs"):
+        comparison = compare_inflated_outputs(
+            parent_dir=Path(runs["parent"]["output_dir"]),
+            global_mutated_dir=Path(runs["global_mutated"]["output_dir"]),
+            selective_dir=Path(runs["selective"]["output_dir"]),
+            video_names=video_names,
+            selected_frame_indices=selected_frame_indices,
+            frame_count=frame_count,
+            frame_bytes=frame_bytes,
+            deadline=deadline,
+            raw_compare_backend=raw_compare_backend,
+        )
 
     blockers = [
         "score_claim_false_locality_control_only",
@@ -785,6 +1256,13 @@ def build_report(
     if not work_dir_preserved:
         for run in report_runs.values():
             run["output_dir"] = None
+    recorder.append_event(
+        {
+            "event": "report_built",
+            "locality_controls_passed": comparison["locality_controls_passed"],
+            "blocker_count": len(set(blockers)),
+        }
+    )
     return {
         "schema": SCHEMA,
         "producer": PRODUCER,
@@ -802,6 +1280,15 @@ def build_report(
         "video_names": video_names,
         "work_dir": str(work_root) if work_dir_preserved else None,
         "work_dir_preserved": work_dir_preserved,
+        "progress_jsonl": str(progress_jsonl) if work_dir_preserved else None,
+        "timeout_policy": {
+            "per_inflate_timeout_seconds": timeout_seconds,
+            "global_timeout_seconds": global_timeout_seconds,
+            "max_inflate_parallelism": max_inflate_parallelism,
+            "reuse_existing_inflates": reuse_existing_inflates,
+            "raw_compare_backend": raw_compare_backend,
+        },
+        "phase_timings": recorder.phases,
         "targets": report_runs,
         "hashes": {
             result["raw_path"]: result["hashes"]
@@ -838,6 +1325,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Bytes per RGB frame. If omitted, infer from raw size / frame-count.",
     )
     parser.add_argument("--timeout-seconds", type=int, default=1800)
+    parser.add_argument(
+        "--global-timeout-seconds",
+        type=int,
+        default=0,
+        help="Whole-run wall-clock budget. 0 disables the runner-level global deadline.",
+    )
+    parser.add_argument(
+        "--max-inflate-parallelism",
+        type=int,
+        default=1,
+        help="Number of parent/global/selective inflates to run concurrently.",
+    )
+    parser.add_argument(
+        "--reuse-existing-inflates",
+        action="store_true",
+        help="Reuse completed per-target inflate outputs in --work-dir when identity checks pass.",
+    )
+    parser.add_argument(
+        "--raw-compare-backend",
+        choices=["auto", "python", "rust"],
+        default="auto",
+        help="Raw locality comparison backend. auto uses Rust when the binary is available.",
+    )
     parser.add_argument("--work-dir", type=Path)
     parser.add_argument("--json-out", type=Path)
     return parser.parse_args(argv)
@@ -846,6 +1356,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        if args.timeout_seconds <= 0:
+            raise SelectiveRuntimeControlError("--timeout-seconds must be positive")
+        if args.global_timeout_seconds < 0:
+            raise SelectiveRuntimeControlError("--global-timeout-seconds must be non-negative")
+        if args.max_inflate_parallelism <= 0:
+            raise SelectiveRuntimeControlError("--max-inflate-parallelism must be positive")
         selected_pairs = parse_selected_pairs(args.selected_pairs)
         if args.work_dir is None:
             with tempfile.TemporaryDirectory(prefix="dqs1_locality_controls_") as tmp:
@@ -862,6 +1378,14 @@ def main(argv: list[str] | None = None) -> int:
                     work_root=Path(tmp),
                     timeout_seconds=args.timeout_seconds,
                     work_dir_preserved=False,
+                    global_timeout_seconds=(
+                        args.global_timeout_seconds
+                        if args.global_timeout_seconds > 0
+                        else None
+                    ),
+                    max_inflate_parallelism=args.max_inflate_parallelism,
+                    reuse_existing_inflates=args.reuse_existing_inflates,
+                    raw_compare_backend=args.raw_compare_backend,
                 )
         else:
             args.work_dir.mkdir(parents=True, exist_ok=True)
@@ -878,6 +1402,14 @@ def main(argv: list[str] | None = None) -> int:
                 work_root=args.work_dir,
                 timeout_seconds=args.timeout_seconds,
                 work_dir_preserved=True,
+                global_timeout_seconds=(
+                    args.global_timeout_seconds
+                    if args.global_timeout_seconds > 0
+                    else None
+                ),
+                max_inflate_parallelism=args.max_inflate_parallelism,
+                reuse_existing_inflates=args.reuse_existing_inflates,
+                raw_compare_backend=args.raw_compare_backend,
             )
     except (OSError, json.JSONDecodeError, SelectiveRuntimeControlError) as exc:
         print(f"FATAL: {exc}", file=sys.stderr)

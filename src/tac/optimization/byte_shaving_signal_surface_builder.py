@@ -26,6 +26,7 @@ from tac.optimization.byte_shaving_campaign import (
     SIGNAL_SURFACE_SCHEMA,
     ByteShavingCampaignError,
     build_signal_surface_from_candidate_queue,
+    build_signal_surface_from_engineered_correction_targeting,
     build_signal_surface_from_master_gradient_anchor,
     validate_signal_surface,
 )
@@ -182,6 +183,49 @@ def _master_gradient_surface(
         for unit in _as_list(surface.get("units"))
         if isinstance(unit, Mapping)
     ], dict(surface)
+
+
+def _engineered_correction_targeting_surface(
+    path: Path,
+    repo_root: Path,
+    *,
+    campaign_id: str,
+    index: int,
+    max_targets: int | None,
+    default_predicted_quality_score_delta: float,
+) -> tuple[list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
+    payload = _load_json_object(path)
+    surface = build_signal_surface_from_engineered_correction_targeting(
+        payload,
+        campaign_id=f"{campaign_id}_engineered_correction_targeting_{index}",
+        max_targets=max_targets,
+        default_predicted_quality_score_delta=default_predicted_quality_score_delta,
+    )
+    ref = {
+        **_json_payload_ref(
+            path,
+            repo_root,
+            kind="engineered_correction_targeting",
+            payload=payload,
+        ),
+        "consumer_id": payload.get("consumer_id"),
+        "archive_sha256": payload.get("archive_sha256"),
+        "measurement_axis": payload.get("measurement_axis"),
+        "measurement_hardware": payload.get("measurement_hardware"),
+        "targets_per_pair": payload.get("targets_per_pair"),
+        "total_targets": payload.get("total_targets"),
+        "surface_unit_count": len(_as_list(surface.get("units"))),
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return [
+        dict(unit)
+        for unit in _as_list(surface.get("units"))
+        if isinstance(unit, Mapping)
+    ], dict(surface), [ref]
 
 
 def _auth_eval_ref(path: Path, repo_root: Path) -> dict[str, Any]:
@@ -588,6 +632,9 @@ def build_byte_shaving_signal_surface(
     repo_root: str | Path = ".",
     campaign_id: str = "byte_shaving_signal_surface",
     candidate_queue_paths: Sequence[str | Path] = (),
+    engineered_correction_targeting_paths: Sequence[str | Path] = (),
+    engineered_correction_max_targets: int | None = None,
+    engineered_correction_default_predicted_quality_score_delta: float = 0.0,
     master_gradient_archive_sha256s: Sequence[str] = (),
     master_gradient_ledger_path: str | Path | None = None,
     master_gradient_axis: str | None = None,
@@ -618,6 +665,7 @@ def build_byte_shaving_signal_surface(
     auth_eval_refs: list[dict[str, Any]] = []
     mlx_calibration_refs: list[dict[str, Any]] = []
     scorer_response_refs: list[dict[str, Any]] = []
+    engineered_correction_refs: list[dict[str, Any]] = []
 
     for index, raw_path in enumerate(candidate_queue_paths):
         path = _resolve_path(raw_path, repo)
@@ -637,6 +685,33 @@ def build_byte_shaving_signal_surface(
         _extend_refs(auth_eval_refs, refs["auth_eval_refs"])
         _extend_refs(mlx_calibration_refs, refs["mlx_calibration_refs"])
         _extend_refs(scorer_response_refs, refs["scorer_response_refs"])
+
+    for index, raw_path in enumerate(engineered_correction_targeting_paths):
+        path = _resolve_path(raw_path, repo)
+        if not path.is_file():
+            raise ByteShavingCampaignError(
+                f"engineered correction targeting JSON not found: {path}"
+            )
+        ec_units, ec_surface, refs = _engineered_correction_targeting_surface(
+            path,
+            repo,
+            campaign_id=campaign_id,
+            index=index,
+            max_targets=engineered_correction_max_targets,
+            default_predicted_quality_score_delta=(
+                engineered_correction_default_predicted_quality_score_delta
+            ),
+        )
+        for unit in ec_units:
+            units.append(
+                _dedupe_unit_id(
+                    unit,
+                    prefix=f"engineered_correction_{index}",
+                    seen=seen_unit_ids,
+                )
+            )
+        _extend_refs(source_signal_refs, _as_list(ec_surface.get("source_signal_refs")))
+        _extend_refs(engineered_correction_refs, refs)
 
     for index, archive_sha256 in enumerate(master_gradient_archive_sha256s):
         mg_units, mg_surface = _master_gradient_surface(
@@ -691,6 +766,7 @@ def build_byte_shaving_signal_surface(
         "auth_eval_refs": auth_eval_refs,
         "mlx_calibration_refs": mlx_calibration_refs,
         "scorer_response_refs": scorer_response_refs,
+        "engineered_correction_refs": engineered_correction_refs,
         "xray_refs": _xray_hook_refs(xray_hooks),
         "canonical_equation_refs": _canonical_equation_refs(
             repo_root=repo,

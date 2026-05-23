@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from tac.archive_byte_profile import build_candidate_diff_manifest
+from tac.hnerv_lowlevel_packer import read_strict_single_member_zip
 from tac.hnerv_pr103_lc_ac_schema import (
     AC_STREAM_SPECS,
     HI_SYMBOL_COUNT,
@@ -29,10 +30,11 @@ from tac.pr103_arithmetic_transform_plan import (
     Pr103ArithmeticTransformPlanError,
     materialize_pr103_arithmetic_histogram_candidate,
 )
-from tac.repo_io import read_json, sha256_file
+from tac.repo_io import read_json, sha256_bytes, sha256_file
 
 PLAN_SCHEMA = "byte_range_entropy_recode_plan_v1"
 CANDIDATE_SCHEMA = "byte_range_entropy_recode_candidate_v1"
+VERIFIED_CANDIDATE_SCHEMA = "byte_range_entropy_recode_candidate_receiver_verified_v1"
 RECEIVER_PROOF_SCHEMA = "byte_range_entropy_recode_receiver_proof_v1"
 MATERIALIZER_ID = "byte_range_entropy_recode_adapter"
 TARGET_KIND = "byte_range_entropy_recode_v1"
@@ -281,6 +283,93 @@ def build_byte_range_entropy_recode_receiver_proof(
     }
 
 
+def verify_byte_range_entropy_recode_candidate_manifest(
+    *,
+    candidate_manifest: str | Path | Mapping[str, Any],
+    runtime_consumption_proof: str | Path | Mapping[str, Any],
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Verify an existing materialized candidate without rewriting its archive."""
+
+    repo = Path(repo_root) if repo_root is not None else Path.cwd()
+    candidate, candidate_record = _load_required_mapping_with_record(
+        candidate_manifest,
+        repo=repo,
+        label="byte-range candidate manifest",
+    )
+    if candidate.get("schema") != CANDIDATE_SCHEMA:
+        raise ByteRangeEntropyRecodeMaterializerError(
+            f"candidate manifest must have schema {CANDIDATE_SCHEMA}"
+        )
+    candidate_archive = _mapping(candidate.get("candidate_archive"))
+    archive_member_name = _clean_str(candidate.get("archive_member_name"))
+    candidate_sha = _clean_str(candidate_archive.get("sha256"))
+    candidate_member_sha = _clean_str(candidate_archive.get("member_sha256"))
+    archive_byte_ranges = _normalize_byte_ranges(candidate.get("archive_byte_ranges"))
+    receiver_verification = verify_byte_range_entropy_recode_receiver_contract(
+        runtime_consumption_proof=runtime_consumption_proof,
+        required_archive_member_name=archive_member_name,
+        required_candidate_archive_sha256=candidate_sha or None,
+        required_candidate_member_sha256=candidate_member_sha or None,
+    )
+    custody = _candidate_archive_custody(
+        candidate_archive,
+        required_member_name=archive_member_name,
+        repo=repo,
+    )
+    original_blockers = [
+        str(item) for item in candidate.get("readiness_blockers") or [] if str(item)
+    ]
+    if (
+        receiver_verification["receiver_contract_satisfied"] is True
+        and not custody["blockers"]
+    ):
+        original_blockers = [
+            blocker
+            for blocker in original_blockers
+            if blocker
+            not in {
+                "candidate_runtime_adapter_missing",
+                "byte_range_entropy_recode_receiver_contract_not_satisfied",
+                "runtime_consumption_proof_missing",
+            }
+        ]
+    readiness_blockers = _ordered_unique(
+        [
+            *original_blockers,
+            *receiver_verification["blockers"],
+            *custody["blockers"],
+            *(
+                []
+                if receiver_verification["receiver_contract_satisfied"] is True
+                and not custody["blockers"]
+                else ["byte_range_entropy_recode_receiver_contract_not_satisfied"]
+            ),
+        ]
+    )
+    return {
+        "schema": VERIFIED_CANDIDATE_SCHEMA,
+        "source_candidate_schema": candidate.get("schema"),
+        "materializer_id": MATERIALIZER_ID,
+        "target_kind": TARGET_KIND,
+        "receiver_contract_id": RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+        "source_candidate_manifest": candidate_record,
+        "archive_member_name": archive_member_name,
+        "archive_byte_ranges": archive_byte_ranges,
+        "candidate_archive": candidate_archive,
+        "candidate_archive_custody": custody,
+        "receiver_verification": receiver_verification,
+        "receiver_contract_satisfied": (
+            receiver_verification["receiver_contract_satisfied"] is True
+            and not custody["blockers"]
+        ),
+        "readiness_blockers": readiness_blockers,
+        "ready_for_archive_preflight": False,
+        **FALSE_AUTHORITY,
+    }
+
+
 def verify_byte_range_entropy_recode_receiver_contract(
     *,
     runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
@@ -334,6 +423,52 @@ def verify_byte_range_entropy_recode_receiver_contract(
         ),
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
+    }
+
+
+def _candidate_archive_custody(
+    record: Mapping[str, Any],
+    *,
+    required_member_name: str,
+    repo: Path,
+) -> dict[str, Any]:
+    path = _resolve_repo_path(record.get("path"), repo)
+    blockers: list[str] = []
+    if path is None:
+        blockers.append("candidate_archive_path_missing_or_unreadable")
+        return {
+            "path": _clean_str(record.get("path")),
+            "exists": False,
+            "blockers": blockers,
+        }
+    expected_sha = _clean_str(record.get("sha256"))
+    expected_bytes = record.get("bytes")
+    actual_sha = sha256_file(path)
+    actual_bytes = path.stat().st_size
+    if expected_sha and actual_sha != expected_sha:
+        blockers.append("candidate_archive_sha_mismatch")
+    if expected_bytes is not None and int(expected_bytes) != actual_bytes:
+        blockers.append("candidate_archive_bytes_mismatch")
+    try:
+        member = read_strict_single_member_zip(path)
+    except Exception:  # pragma: no cover - exact zip error type is not stable
+        member = None
+        blockers.append("candidate_archive_single_member_read_failed")
+    expected_member_sha = _clean_str(record.get("member_sha256"))
+    if member is not None:
+        actual_member_sha = sha256_bytes(member.payload)
+        if required_member_name and member.member_name != required_member_name:
+            blockers.append("candidate_archive_member_name_mismatch")
+        if expected_member_sha and actual_member_sha != expected_member_sha:
+            blockers.append("candidate_archive_member_sha_mismatch")
+    return {
+        "path": path.relative_to(repo).as_posix() if _path_is_relative_to(path, repo) else path.as_posix(),
+        "exists": True,
+        "bytes": actual_bytes,
+        "sha256": actual_sha,
+        "member_name": member.member_name if member is not None else "",
+        "member_sha256": sha256_bytes(member.payload) if member is not None else "",
+        "blockers": _ordered_unique(blockers),
     }
 
 
@@ -593,9 +728,11 @@ __all__ = [
     "RECEIVER_PROOF_SCHEMA",
     "REQUIRED_CONTEXT_FIELDS",
     "TARGET_KIND",
+    "VERIFIED_CANDIDATE_SCHEMA",
     "ByteRangeEntropyRecodeMaterializerError",
     "build_byte_range_entropy_recode_plan",
     "build_byte_range_entropy_recode_receiver_proof",
     "materialize_byte_range_entropy_recode_candidate",
+    "verify_byte_range_entropy_recode_candidate_manifest",
     "verify_byte_range_entropy_recode_receiver_contract",
 ]

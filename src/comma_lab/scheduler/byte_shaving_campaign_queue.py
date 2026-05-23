@@ -38,9 +38,12 @@ from .experiment_queue import ExperimentQueueError
 
 MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
 MATERIALIZER_BACKLOG_SCHEMA = "byte_shaving_materializer_backlog.v1"
+MATERIALIZER_WORK_QUEUE_SCHEMA = "byte_shaving_materializer_work_queue.v1"
 ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
+BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
+BYTE_RANGE_CHAIN_MANIFEST = "byte_range_entropy_recode_chain_manifest.json"
 
 
 def _utc_now() -> str:
@@ -458,6 +461,238 @@ def summarize_materializer_backlog(backlog: Mapping[str, Any], *, limit: int = 8
     )
 
 
+def _materializer_work_id(backlog_key: str) -> str:
+    safe = re.sub(r"[^a-z0-9_]+", "_", backlog_key.lower()).strip("_")
+    return f"materializer_work_{safe or 'row'}"
+
+
+def _first_suggested_materializer(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    suggestions = [
+        item for item in _as_list(row.get("suggested_materializers")) if isinstance(item, Mapping)
+    ]
+    return suggestions[0] if suggestions else {}
+
+
+def _context_for_backlog_row(
+    contexts: Mapping[str, Mapping[str, Any]],
+    row: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    keys = [
+        str(row.get("backlog_key") or ""),
+        str(row.get("materializer_id") or ""),
+        str(row.get("target_kind") or ""),
+    ]
+    keys.extend(str(item) for item in _as_list(row.get("source_unit_ids")))
+    for key in keys:
+        context = contexts.get(key)
+        if isinstance(context, Mapping):
+            return context
+    return {}
+
+
+def _path_context_value(context: Mapping[str, Any], key: str) -> str | None:
+    value = context.get(key)
+    if isinstance(value, Path):
+        return value.as_posix()
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
+def _path_list_context_value(context: Mapping[str, Any], key: str) -> list[str]:
+    value = context.get(key)
+    if isinstance(value, (str, Path)):
+        item = _path_context_value(context, key)
+        return [] if item is None else [item]
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        out: list[str] = []
+        for item in value:
+            if isinstance(item, Path):
+                out.append(item.as_posix())
+            elif isinstance(item, str) and item.strip():
+                out.append(item)
+        return out
+    return []
+
+
+def _byte_range_chain_command(context: Mapping[str, Any]) -> tuple[list[str], list[str]]:
+    blockers: list[str] = []
+    schema_manifest = _path_context_value(context, "schema_manifest")
+    if schema_manifest is None:
+        blockers.append("materializer_context_missing:schema_manifest")
+    beam_probe_reports = _path_list_context_value(context, "beam_probe_reports")
+    if not beam_probe_reports:
+        blockers.append("materializer_context_missing:beam_probe_reports")
+    source_runtime_dir = _path_context_value(context, "source_runtime_dir")
+    if source_runtime_dir is None:
+        blockers.append("materializer_context_missing:source_runtime_dir")
+    output_dir = _path_context_value(context, "output_dir")
+    if output_dir is None:
+        blockers.append("materializer_context_missing:output_dir")
+    if blockers:
+        return [], blockers
+
+    assert schema_manifest is not None
+    assert source_runtime_dir is not None
+    assert output_dir is not None
+    command = [
+        ".venv/bin/python",
+        BYTE_RANGE_CHAIN_TOOL,
+        "--schema-manifest",
+        schema_manifest,
+        "--source-runtime-dir",
+        source_runtime_dir,
+        "--output-dir",
+        output_dir,
+    ]
+    for report in beam_probe_reports:
+        command.extend(["--beam-probe-report", report])
+    optional_path_flags = (
+        ("global_combo_report", "--global-combo-report"),
+        ("source_archive", "--source-archive"),
+    )
+    for key, flag in optional_path_flags:
+        value = _path_context_value(context, key)
+        if value is not None:
+            command.extend([flag, value])
+    member_name = context.get("member_name")
+    if isinstance(member_name, str) and member_name.strip():
+        command.extend(["--member-name", member_name])
+    retune_section = context.get("retune_brotli_section")
+    if isinstance(retune_section, str) and retune_section.strip():
+        command.extend(["--retune-brotli-section", retune_section])
+    min_free_bytes = _finite_int(context.get("min_free_bytes"))
+    if min_free_bytes is not None:
+        command.extend(["--min-free-bytes", str(min_free_bytes)])
+    if context.get("fail_if_receiver_blocked") is True:
+        command.append("--fail-if-receiver-blocked")
+    return command, []
+
+
+def build_materializer_work_queue(
+    backlog: Mapping[str, Any],
+    *,
+    repo_root: str | Path,
+    contexts: Mapping[str, Mapping[str, Any]] | None = None,
+    source_plan_path: str | None = None,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """Convert materializer backlog rows into fail-closed local proof-chain work."""
+
+    if backlog.get("schema") != MATERIALIZER_BACKLOG_SCHEMA:
+        raise ExperimentQueueError(f"expected schema {MATERIALIZER_BACKLOG_SCHEMA}")
+    if limit is not None and (isinstance(limit, bool) or limit < 1):
+        raise ExperimentQueueError("limit must be >= 1 when provided")
+    repo = Path(repo_root)
+    context_map = contexts or {}
+    rows = [item for item in _as_list(backlog.get("rows")) if isinstance(item, Mapping)]
+    if limit is not None:
+        rows = rows[:limit]
+
+    work_rows: list[dict[str, Any]] = []
+    for rank, row in enumerate(rows, start=1):
+        suggestion = _first_suggested_materializer(row)
+        materializer_id = str(row.get("materializer_id") or suggestion.get("materializer_id") or "")
+        target_kind = str(row.get("target_kind") or suggestion.get("target_kind") or "")
+        unit_kind = str(row.get("unit_kind") or "")
+        operation_family = str(row.get("operation_family") or "")
+        backlog_key = str(row.get("backlog_key") or f"{unit_kind}:{operation_family}:{rank}")
+        context = _context_for_backlog_row(context_map, row)
+        blockers: list[str] = []
+        command: list[str] = []
+        postcondition: dict[str, Any] | None = None
+        if (
+            unit_kind == "byte_range"
+            and operation_family == "entropy_recode"
+            and target_kind == "byte_range_entropy_recode_v1"
+        ):
+            command, blockers = _byte_range_chain_command(context)
+            if command:
+                postcondition = {
+                    "type": "json_file_key_equals",
+                    "path": str(
+                        Path(context["output_dir"]) / BYTE_RANGE_CHAIN_MANIFEST
+                    ),
+                    "key": "schema",
+                    "value": "byte_range_entropy_recode_chain.v1",
+                }
+        else:
+            blockers.append(
+                f"materializer_work_queue_adapter_missing:{unit_kind}:{operation_family}:{target_kind or '<target_tbd>'}"
+            )
+        if not context:
+            blockers.append(f"materializer_context_missing:{backlog_key}")
+        blockers = ordered_unique(blockers)
+        executable = not blockers
+        work_rows.append(
+            apply_proxy_evidence_boundary(
+                {
+                    "schema": "byte_shaving_materializer_work_row.v1",
+                    "work_id": _materializer_work_id(backlog_key),
+                    "work_rank": rank,
+                    "backlog_key": backlog_key,
+                    "backlog_rank": row.get("backlog_rank"),
+                    "source_plan_path": source_plan_path,
+                    "repo_root": _repo_rel(repo, repo),
+                    "unit_kind": unit_kind,
+                    "operation_family": operation_family,
+                    "target_kind": target_kind or None,
+                    "materializer_id": materializer_id or None,
+                    "receiver_contract_id": (
+                        row.get("receiver_contract_id")
+                        or suggestion.get("receiver_contract_id")
+                    ),
+                    "receiver_contract_kind": (
+                        row.get("receiver_contract_kind")
+                        or suggestion.get("receiver_contract_kind")
+                    ),
+                    "tool": BYTE_RANGE_CHAIN_TOOL if command else None,
+                    "command": command,
+                    "postconditions": [] if postcondition is None else [postcondition],
+                    "resource_kind": row.get("materialization_resource_kind")
+                    or suggestion.get("materialization_resource_kind")
+                    or "local_cpu",
+                    "source_unit_ids": _as_list(row.get("source_unit_ids")),
+                    "source_selection_ids": _as_list(row.get("source_selection_ids")),
+                    "candidate_saved_bytes_sum": row.get("candidate_saved_bytes_sum"),
+                    "expected_score_gain_sum": row.get("expected_score_gain_sum"),
+                    "executable": executable,
+                    "materialization_blockers": blockers,
+                    **FALSE_AUTHORITY,
+                },
+                dispatch_blockers=(
+                    (
+                        "materializer_work_queue_local_proof_chain_only",
+                        "exact_auth_eval_required_before_score_claim",
+                    )
+                    if executable
+                    else blockers
+                ),
+            )
+        )
+    executable_rows = [row for row in work_rows if row["executable"] is True]
+    blocked_rows = [row for row in work_rows if row["executable"] is not True]
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": MATERIALIZER_WORK_QUEUE_SCHEMA,
+            "tool": TOOL_NAME,
+            "generated_at_utc": _utc_now(),
+            "source_backlog_schema": backlog.get("schema"),
+            "source_plan_path": source_plan_path,
+            "row_count": len(work_rows),
+            "executable_row_count": len(executable_rows),
+            "blocked_row_count": len(blocked_rows),
+            "rows": work_rows,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=(
+            []
+            if executable_rows
+            else ("materializer_work_queue_has_no_executable_rows",)
+        ),
+    )
+
+
 def _materialize_row(
     *,
     payload: Mapping[str, Any],
@@ -708,6 +943,11 @@ def compile_dqs1_byte_shaving_campaign(
     blocked_rows = [row for row in compiled_rows if row["executable"] is not True]
     materializer_backlog = build_materializer_backlog(compiled_rows)
     materializer_backlog_summary = summarize_materializer_backlog(materializer_backlog)
+    materializer_work_queue = build_materializer_work_queue(
+        materializer_backlog,
+        repo_root=repo,
+        source_plan_path=plan_ref,
+    )
     partial_materialization_blockers: list[str] = []
     if blocked_rows and executable_rows and not allow_partial_materialization:
         partial_materialization_blockers.append(
@@ -800,6 +1040,7 @@ def compile_dqs1_byte_shaving_campaign(
             "partial_materialization_rationale": rationale or None,
             "partial_materialization_blockers": partial_materialization_blockers,
             "materializer_backlog_summary": materializer_backlog_summary,
+            "materializer_work_queue": materializer_work_queue,
             **FALSE_AUTHORITY,
         },
         dispatch_blockers=(
@@ -824,6 +1065,7 @@ def compile_dqs1_byte_shaving_campaign(
             "partial_materialization_rationale": rationale or None,
             "partial_materialization_blockers": partial_materialization_blockers,
             "materializer_backlog_summary": materializer_backlog_summary,
+            "materializer_work_queue": materializer_work_queue,
             **FALSE_AUTHORITY,
         },
         dispatch_blockers=(
@@ -849,6 +1091,7 @@ def compile_dqs1_byte_shaving_campaign(
             "partial_materialization_blockers": partial_materialization_blockers,
             "materializer_backlog": materializer_backlog,
             "materializer_backlog_summary": materializer_backlog_summary,
+            "materializer_work_queue": materializer_work_queue,
             "executable_rows": executable_rows,
             "blocked_rows": blocked_rows,
             "portfolio": portfolio,
@@ -866,8 +1109,10 @@ __all__ = [
     "ACTION_SUMMARY_SCHEMA",
     "MATERIALIZATION_SCHEMA",
     "MATERIALIZER_BACKLOG_SCHEMA",
+    "MATERIALIZER_WORK_QUEUE_SCHEMA",
     "PORTFOLIO_SCHEMA",
     "build_materializer_backlog",
+    "build_materializer_work_queue",
     "compile_dqs1_byte_shaving_campaign",
     "summarize_materializer_backlog",
 ]

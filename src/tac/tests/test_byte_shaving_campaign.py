@@ -14,6 +14,7 @@ from tac.optimization.byte_shaving_campaign import (
     ByteShavingCampaignError,
     build_byte_shaving_campaign_plan,
     build_signal_surface_from_candidate_queue,
+    build_signal_surface_from_engineered_correction_targeting,
     build_signal_surface_from_master_gradient_anchor,
     validate_signal_surface,
 )
@@ -109,6 +110,31 @@ def test_plan_builds_combination_ladder_with_interactions_and_conflicts() -> Non
     assert combo["expected_delta_score"] == pytest.approx(
         -25.0 * 1620 / CONTEST_ORIGINAL_BYTES + 0.00015 - 0.00001
     )
+    assert plan["search_space_policy"]["combination_search"] == (
+        "bounded_beam_over_units_and_operation_alternatives"
+    )
+    assert plan["search_space_policy"]["permutation_search"] == (
+        "bounded_operation_order_permutations_for_top_combos"
+    )
+    assert "pair" in plan["search_space_policy"]["unit_layers"]
+    assert "drop_pair" in plan["operation_order_priors"]
+
+
+def test_plan_exposes_bounded_operation_permutation_ladder() -> None:
+    surface = _surface()
+    surface["operation_order_priors"] = {
+        "null_remove_or_seed": 1,
+        "drop_pair": 5,
+    }
+    plan = build_byte_shaving_campaign_plan(surface, max_k=3)
+    permutation_row = plan["permutation_ladder"][0]
+    best_order = permutation_row["permutations"][0]["operation_sequence"]
+
+    assert permutation_row["schema"] == "byte_shaving_operation_permutation_row.v1"
+    assert best_order[0]["operation_family"] == "null_remove_or_seed"
+    assert best_order[1]["operation_family"] == "drop_pair"
+    assert permutation_row["permutations"][0]["prior_order_inversion_count"] == 0
+    assert permutation_row["score_claim"] is False
 
 
 def test_prefix_ladder_marks_conflicting_prefixes_and_does_not_recommend_them() -> None:
@@ -200,6 +226,52 @@ def test_candidate_queue_surface_preserves_calibration_and_rejects_authority() -
     queue["top_k"][0]["score_claim"] = True
     with pytest.raises(ByteShavingCampaignError, match="score_claim"):
         build_signal_surface_from_candidate_queue(queue)
+
+
+def test_engineered_correction_targeting_subsumes_legacy_sidecar() -> None:
+    sidecar = {
+        "schema": "master_gradient_consumer_engineered_correction_targeting_v1",
+        "consumer_id": "engineered_correction_targeting",
+        "archive_sha256": "a" * 64,
+        "measurement_axis": "contest_cuda",
+        "measurement_hardware": "linux_x86_64_t4",
+        "n_bytes": 128,
+        "n_pairs": 2,
+        "targets_per_pair": 1,
+        "total_targets": 2,
+        "top_per_pair_targets": [
+            {
+                "pair_index": 0,
+                "byte_index": 7,
+                "per_pair_distortion_magnitude": 0.25,
+                "per_pair_variance_rank": 3,
+            },
+            {
+                "pair_index": 1,
+                "byte_index": 11,
+                "per_pair_distortion_magnitude": 0.5,
+                "per_pair_variance_rank": 1,
+            },
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    surface = build_signal_surface_from_engineered_correction_targeting(
+        sidecar,
+        default_predicted_quality_score_delta=-0.0002,
+    )
+    plan = build_byte_shaving_campaign_plan(surface)
+    ranked = plan["ranked_units"][0]
+
+    assert surface["units"][0]["unit_kind"] == "correction_target"
+    assert ranked["recommended_operation_family"] == "apply_engineered_correction"
+    assert ranked["candidate_saved_bytes"] == 0
+    assert ranked["expected_delta_score"] == pytest.approx(-0.0002)
+    assert ranked["engineered_correction_signal"]["byte_index"] == 7
+    assert plan["score_claim"] is False
 
 
 def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:

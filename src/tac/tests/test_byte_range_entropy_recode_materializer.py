@@ -14,6 +14,12 @@ from tac.hnerv_pr103_lc_ac_schema import (
     Pr103LcAcLayout,
     encode_pr103_merged_ac_stream,
 )
+from tac.optimization.byte_range_entropy_recode_chain import (
+    BYTE_RANGE_CANDIDATE_MANIFEST_NAME,
+    CHAIN_SCHEMA,
+    PR103_CANDIDATE_MANIFEST_NAME,
+    build_byte_range_entropy_recode_chain,
+)
 from tac.optimization.byte_range_entropy_recode_materializer import (
     CANDIDATE_SCHEMA,
     MATERIALIZER_ID,
@@ -226,6 +232,51 @@ def test_byte_range_entropy_receiver_proof_cli_writes_json(tmp_path: Path) -> No
     assert proof["archive_byte_ranges"] == [_expected_receiver_range()]
 
 
+def test_byte_range_entropy_chain_runs_materialize_adapter_proof_verify(
+    tmp_path: Path,
+) -> None:
+    fixture = _probe_fixture(tmp_path)
+    beam = build_pr103_arithmetic_histogram_beam_probe(
+        schema_manifest=fixture["manifest"],
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+        target_label="fixture.weight0",
+        top_symbols=2,
+        deltas=(-1, 1),
+        rounds=2,
+        beam_width=2,
+    )
+    runtime = _write_chain_runtime(tmp_path / "runtime", fixture["layout"])
+
+    chain = build_byte_range_entropy_recode_chain(
+        schema_manifest=fixture["manifest"],
+        beam_probe_reports=(beam,),
+        source_runtime_dir=runtime,
+        output_dir=tmp_path / "chain",
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+
+    assert chain["schema"] == CHAIN_SCHEMA
+    assert chain["byte_closed_candidate_emitted"] is True
+    assert chain["receiver_contract_satisfied"] is True
+    assert chain["candidate_runtime_adapter_blocker_cleared"] is True
+    assert "candidate_runtime_adapter_missing" not in chain["readiness_blockers"]
+    assert "candidate_inflate_output_parity_missing" in chain["readiness_blockers"]
+    assert "inflate_or_full_frame_parity" in chain["next_required_gates"]
+    chain_dir = tmp_path / "chain"
+    assert chain_dir.joinpath(BYTE_RANGE_CANDIDATE_MANIFEST_NAME).is_file()
+    assert chain_dir.joinpath(PR103_CANDIDATE_MANIFEST_NAME).is_file()
+    assert chain_dir.joinpath("byte_range_entropy_recode_chain_manifest.json").is_file()
+    assert chain["artifacts"]["byte_range_candidate_manifest"]["sha256"]
+    assert chain["artifacts"]["pr103_candidate_manifest"]["sha256"]
+    assert chain["score_claim"] is False
+
+
 def _receiver_proof_fixture(tmp_path: Path) -> dict[str, Path]:
     candidate_archive = tmp_path / "candidate.zip"
     write_stored_single_member_zip(candidate_archive, member_name="x", payload=b"abcdefgh")
@@ -395,3 +446,54 @@ def _probe_fixture(tmp_path: Path) -> dict:
         "stream_specs": stream_specs,
         "hi_symbol_count": hi_symbol_count,
     }
+
+
+def _write_chain_runtime(runtime: Path, layout: Pr103LcAcLayout) -> Path:
+    runtime.mkdir()
+    runtime.joinpath("inflate.py").write_text(
+        f"""
+from __future__ import annotations
+
+import brotli
+import numpy as np
+
+SCA_LEN = {layout.scales_fp16}
+BR_LEN = {layout.non_ac_weights_brotli}
+HIST_LEN = {layout.ac_histograms_brotli}
+MERGED_AC_LEN = {layout.merged_range_coded_weights_and_hi_latents}
+LATENT_META_LEN = {layout.latent_min_scale_fp16}
+LO_LEN = {layout.latent_low_bytes_brotli}
+HI_HIST_LEN = {layout.latent_hi_histogram_brotli}
+
+
+def parse_archive(blob):
+    o = 0
+    sca = blob[o:o + SCA_LEN]; o += SCA_LEN
+    br = blob[o:o + BR_LEN]; o += BR_LEN
+    hists_b = blob[o:o + HIST_LEN]; o += HIST_LEN
+    merged_ac = blob[o:o + MERGED_AC_LEN]; o += MERGED_AC_LEN
+    mins_scales = blob[o:o + LATENT_META_LEN]; o += LATENT_META_LEN
+    lo_b = blob[o:o + LO_LEN]; o += LO_LEN
+    hi_hist_b = blob[o:o + HI_HIST_LEN]; o += HI_HIST_LEN
+    wrp_b = blob[o:]
+    return sca, br, hists_b, merged_ac, mins_scales, lo_b, hi_hist_b, wrp_b
+
+
+def build_state_dict(br_b, hists_b, merged_ac, sca, hi_hist):
+    return {{"w": np.zeros(4, dtype=np.float32)}}, np.asarray([0], dtype=np.uint16)
+
+
+def decode_latents(mins_scales, lo_b, hi_decoded):
+    return np.zeros((1, 1), dtype=np.float32)
+
+
+def apply_corrections(latents, wrp_b):
+    return latents
+""".lstrip(),
+        encoding="utf-8",
+    )
+    runtime.joinpath("inflate.sh").write_text(
+        '#!/usr/bin/env bash\nHERE="$(cd "$(dirname "$0")" && pwd)"\nSRC="$1"\nDST="$2"\npython "$HERE/inflate.py" "$SRC" "$DST"\n',
+        encoding="utf-8",
+    )
+    return runtime

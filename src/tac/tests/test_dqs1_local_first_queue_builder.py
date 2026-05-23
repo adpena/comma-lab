@@ -238,7 +238,11 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     assert experiment["lane_id"] == "lane_dqs1_pairset_drop_one_rank024_pair0112_local_first_20260522"
     assert experiment["tags"] == ["dqs1", "pairset", "local-first", "no-score-authority"]
     assert result.queue["controls"]["max_concurrency"]["modal_gpu"] == 0
-    assert {step["resources"]["kind"] for step in experiment["steps"]} == {"local_cpu"}
+    assert result.queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
+    assert {step["resources"]["kind"] for step in experiment["steps"]} == {
+        "local_cpu",
+        "local_io_heavy",
+    }
     steps_by_id = {step["id"]: step for step in experiment["steps"]}
     assert list(steps_by_id) == [
         "build_bridge_plan",
@@ -251,6 +255,20 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     ]
     assert steps_by_id["build_bridge_plan"]["requires"] == []
     assert steps_by_id["plan_packet"]["requires"] == ["build_bridge_plan"]
+    locality = steps_by_id["locality_controls"]
+    assert locality["resources"]["kind"] == "local_io_heavy"
+    assert locality["timeout_seconds"] == 960
+    locality_command = locality["command"]
+    assert locality_command[locality_command.index("--timeout-seconds") + 1] == "540"
+    assert (
+        locality_command[locality_command.index("--global-timeout-seconds") + 1]
+        == "840"
+    )
+    assert (
+        locality_command[locality_command.index("--max-inflate-parallelism") + 1]
+        == "3"
+    )
+    assert "--reuse-existing-inflates" in locality_command
     selected_pairs_arg = steps_by_id["plan_packet"]["command"][-1]
     assert selected_pairs_arg == "1,2,112"
     eureka_step = steps_by_id["local_cpu_contest_drift_eureka"]
@@ -362,6 +380,7 @@ def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(
     ]
     assert result.selection.candidate_id == "pairset_drop_one_rank023_pair0440"
     assert result.queue["controls"]["max_concurrency"]["local_cpu"] == 2
+    assert result.queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
     assert result.queue["controls"]["max_concurrency"]["modal_gpu"] == 0
     assert [experiment["id"] for experiment in result.queue["experiments"]] == [
         "pairset_drop_one_rank023_pair0440",
@@ -1009,9 +1028,16 @@ def test_checked_in_dqs1_queue_keeps_eureka_append_only_contract() -> None:
     ]
     assert len(candidate_experiments) >= 2
     assert queue["controls"]["max_concurrency"]["local_cpu"] >= 2
+    assert queue["controls"]["max_concurrency"]["local_io_heavy"] == 1
     for experiment in candidate_experiments:
         candidate_id = experiment["id"]
         steps = {step["id"]: step for step in experiment["steps"]}
+        locality = steps["locality_controls"]
+        assert locality["resources"]["kind"] == "local_io_heavy"
+        assert locality["timeout_seconds"] == 960
+        assert "--global-timeout-seconds" in locality["command"]
+        assert "--max-inflate-parallelism" in locality["command"]
+        assert "--reuse-existing-inflates" in locality["command"]
         eureka = steps["local_cpu_contest_drift_eureka"]
         command = eureka["command"]
         eureka_out = command[command.index("--eureka-out") + 1]

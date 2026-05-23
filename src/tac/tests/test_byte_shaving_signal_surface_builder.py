@@ -50,6 +50,43 @@ def _candidate_queue(path: Path) -> None:
     )
 
 
+def _engineered_correction_targeting(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "master_gradient_consumer_engineered_correction_targeting_v1",
+                "consumer_id": "engineered_correction_targeting",
+                "archive_sha256": "e" * 64,
+                "measurement_axis": "contest_cuda",
+                "measurement_hardware": "linux_x86_64_t4",
+                "n_bytes": 128,
+                "n_pairs": 2,
+                "targets_per_pair": 1,
+                "total_targets": 2,
+                "top_per_pair_targets": [
+                    {
+                        "pair_index": 0,
+                        "byte_index": 7,
+                        "per_pair_distortion_magnitude": 0.25,
+                        "per_pair_variance_rank": 3,
+                    },
+                    {
+                        "pair_index": 1,
+                        "byte_index": 11,
+                        "per_pair_distortion_magnitude": 0.5,
+                        "per_pair_variance_rank": 1,
+                    },
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _auth_eval(path: Path) -> None:
     path.write_text(
         json.dumps(
@@ -173,9 +210,11 @@ def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     tmp_path: Path,
 ) -> None:
     queue = tmp_path / "queue.json"
+    engineered = tmp_path / "engineered.json"
     auth = tmp_path / "auth.json"
     mlx = tmp_path / "mlx.json"
     _candidate_queue(queue)
+    _engineered_correction_targeting(engineered)
     _auth_eval(auth)
     _mlx_calibration(mlx)
 
@@ -183,6 +222,8 @@ def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
         repo_root=tmp_path,
         campaign_id="fixture_surface",
         candidate_queue_paths=[queue],
+        engineered_correction_targeting_paths=[engineered],
+        engineered_correction_max_targets=1,
         auth_eval_paths=[auth],
         mlx_calibration_paths=[mlx],
         xray_hooks=["bit_allocator"],
@@ -195,9 +236,11 @@ def test_builder_merges_queue_and_sanitized_refs_into_plannable_surface(
     assert surface["auth_eval_refs"][0]["source_score_claim_present"] is True
     assert "score_claim" not in surface["auth_eval_refs"][0]["metrics"]
     assert surface["source_signal_refs"][0]["score_claim_valid"] is False
+    assert surface["engineered_correction_refs"][0]["surface_unit_count"] == 1
     assert surface["mlx_calibration_refs"][0]["score_claim"] is False
     assert surface["mlx_calibration_refs"][0]["score_claim_valid"] is False
     assert surface["xray_refs"][0]["primitive_count"] >= 0
+    assert any(unit["unit_kind"] == "correction_target" for unit in surface["units"])
     assert plan["ranked_units"][0]["unit_id"] == "drop_pair_0371"
     assert plan["score_claim"] is False
 
@@ -321,9 +364,11 @@ def test_builder_rejects_truthy_proxy_sources(tmp_path: Path) -> None:
 
 def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
+    engineered = tmp_path / "engineered.json"
     output = tmp_path / "surface.json"
     md_out = tmp_path / "surface.md"
     _candidate_queue(queue)
+    _engineered_correction_targeting(engineered)
 
     result = subprocess.run(
         [
@@ -331,6 +376,10 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
             str(TOOL),
             "--candidate-queue",
             str(queue),
+            "--engineered-correction-targeting",
+            str(engineered),
+            "--engineered-correction-max-targets",
+            "1",
             "--output",
             str(output),
             "--md-out",
@@ -348,6 +397,7 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     assert "score_claim=false" in result.stdout
     surface = json.loads(output.read_text(encoding="utf-8"))
     assert surface["units"][0]["unit_id"] == "drop_pair_0371"
+    assert surface["engineered_correction_refs"][0]["surface_unit_count"] == 1
     assert "Authority Boundary" in md_out.read_text(encoding="utf-8")
 
 

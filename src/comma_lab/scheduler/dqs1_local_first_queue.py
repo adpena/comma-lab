@@ -898,7 +898,7 @@ def build_dqs1_local_first_queue(
         {
             "id": "locality_controls",
             "requires": ["materialize"],
-            "timeout_seconds": 900,
+            "timeout_seconds": 960,
             "command": [
                 ".venv/bin/python",
                 "tools/run_decoder_q_selective_runtime_locality_controls.py",
@@ -913,13 +913,18 @@ def build_dqs1_local_first_queue(
                 "--frame-policy",
                 frame_policy,
                 "--timeout-seconds",
-                "600",
+                "540",
+                "--global-timeout-seconds",
+                "840",
+                "--max-inflate-parallelism",
+                "3",
+                "--reuse-existing-inflates",
                 "--work-dir",
                 f"{materialized_root}/locality_work",
                 "--json-out",
                 f"{materialized_root}/locality_controls.json",
             ],
-            "resources": {"kind": "local_cpu"},
+            "resources": {"kind": "local_io_heavy"},
             "postconditions": [
                 {
                     "type": "json_equals",
@@ -1163,6 +1168,7 @@ def build_dqs1_local_first_queue(
             "local_first": True,
             "max_concurrency": {
                 "local_cpu": local_cpu_concurrency,
+                "local_io_heavy": 1,
                 "local_mlx": 1,
                 "modal_cpu": 0,
                 "modal_gpu": 0,

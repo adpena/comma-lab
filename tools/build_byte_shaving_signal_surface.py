@@ -35,6 +35,7 @@ def _render_markdown(surface: dict[str, Any]) -> str:
         f"- auth_eval_refs: `{len(surface.get('auth_eval_refs') or [])}`",
         f"- mlx_calibration_refs: `{len(surface.get('mlx_calibration_refs') or [])}`",
         f"- scorer_response_refs: `{len(surface.get('scorer_response_refs') or [])}`",
+        f"- engineered_correction_refs: `{len(surface.get('engineered_correction_refs') or [])}`",
         f"- xray_refs: `{len(surface.get('xray_refs') or [])}`",
         f"- canonical_equation_refs: `{len(surface.get('canonical_equation_refs') or [])}`",
         f"- atom_refs: `{len(surface.get('atom_refs') or [])}`",
@@ -61,6 +62,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lane-id", default="byte_shaving_signal_surface")
     parser.add_argument("--frontier-axis", default="[planning-only]")
     parser.add_argument("--candidate-queue", action="append", default=[])
+    parser.add_argument("--engineered-correction-targeting", action="append", default=[])
+    parser.add_argument("--engineered-correction-max-targets", type=int, default=None)
+    parser.add_argument(
+        "--engineered-correction-default-delta",
+        type=float,
+        default=0.0,
+        help=(
+            "Planning-only predicted score delta for each correction target. "
+            "Use 0 until an empirical calibration row exists."
+        ),
+    )
     parser.add_argument("--master-gradient-archive-sha", action="append", default=[])
     parser.add_argument("--master-gradient-ledger", type=Path, default=None)
     parser.add_argument("--master-gradient-axis", default=None)
@@ -88,6 +100,11 @@ def main(argv: list[str] | None = None) -> int:
             lane_id=args.lane_id,
             frontier_axis=args.frontier_axis,
             candidate_queue_paths=args.candidate_queue,
+            engineered_correction_targeting_paths=args.engineered_correction_targeting,
+            engineered_correction_max_targets=args.engineered_correction_max_targets,
+            engineered_correction_default_predicted_quality_score_delta=(
+                args.engineered_correction_default_delta
+            ),
             master_gradient_archive_sha256s=args.master_gradient_archive_sha,
             master_gradient_ledger_path=args.master_gradient_ledger,
             master_gradient_axis=args.master_gradient_axis,

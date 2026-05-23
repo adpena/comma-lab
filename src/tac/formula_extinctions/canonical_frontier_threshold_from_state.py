@@ -15,10 +15,9 @@ This module is the DERIVATION helper (NOT a modification to
 
 The formula:
 
-    threshold_cpu = best_per_axis(all_anchors, axis="cpu", filter_qualifying=True)
-                    .score
-    threshold_cuda = best_per_axis(all_anchors, axis="cuda", filter_qualifying=True)
-                     .score
+    best = best_per_axis(all_anchors)
+    threshold_cpu = best["contest_cpu"][0].score
+    threshold_cuda = best["contest_cuda"][0].score
 
 with 1:1 contest-compliant hardware filter (Linux x86_64 for CPU; NVIDIA
 T4/A100/4090/H100/A10G/L40S for CUDA) per CLAUDE.md "Submission auth eval —
@@ -127,10 +126,13 @@ def canonical_frontier_threshold_from_state(
         If no qualifying anchors exist for the requested axis.
     """
     # Lazy-import to avoid circulars
-    from tac.frontier_scan import collect_all_anchors, best_per_axis
+    from tac.frontier_scan import best_per_axis, collect_all_anchors
 
     anchors = collect_all_anchors(inputs.repo_root)
-    best = best_per_axis(anchors, axis=inputs.axis, filter_qualifying=True)
+    best_by_axis = best_per_axis(anchors)
+    axis_key = "contest_cpu" if inputs.axis == "cpu" else "contest_cuda"
+    best_list = best_by_axis.get(axis_key) or []
+    best = best_list[0] if best_list else None
 
     if best is None:
         raise RuntimeError(
@@ -175,7 +177,7 @@ def _emit_atom(
     inputs: FrontierThresholdInput,
     threshold: float,
     best: Any,
-) -> "Atom":
+) -> Atom:
     """Lazy-import atom builder."""
     from tac.atom.builders import build_arbitrary_value_atom
     from tac.atom.types import ResolutionPath
