@@ -11,9 +11,11 @@ import pytest
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZATION_SCHEMA,
     MATERIALIZER_BACKLOG_SCHEMA,
+    MATERIALIZER_CONTEXTS_SCHEMA,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
     build_materializer_work_queue,
     compile_dqs1_byte_shaving_campaign,
+    materializer_contexts_from_payload,
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
     BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
@@ -101,6 +103,35 @@ def _pair_drop_plan() -> dict[str, object]:
         **_false_authority(),
     }
     return build_byte_shaving_campaign_plan(surface, max_k=3)
+
+
+def _byte_range_entropy_plan() -> dict[str, object]:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "byte_range_entropy_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_byte_range_entropy_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "zip_member_range_a",
+                "unit_kind": "byte_range",
+                "candidate_saved_bytes": 777,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "entropy_recode_zip_member_range_a",
+                        "operation_family": "entropy_recode",
+                        "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+                    }
+                ],
+            },
+        ],
+        **_false_authority(),
+    }
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
 
 
 def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contracts() -> None:
@@ -619,34 +650,8 @@ def test_compile_dqs1_byte_shaving_plan_suggests_byte_range_entropy_target_kind(
 def test_materializer_work_queue_builds_byte_range_chain_command(
     tmp_path: Path,
 ) -> None:
-    surface = {
-        "schema": SIGNAL_SURFACE_SCHEMA,
-        "campaign_id": "byte_range_entropy_work_queue_fixture",
-        "candidate_id": "fixture_seed",
-        "lane_id": "lane_byte_range_entropy_work_queue_fixture",
-        "combo_beam_width": 4,
-        "max_combo_count": 4,
-        "units": [
-            {
-                "unit_id": "zip_member_range_a",
-                "unit_kind": "byte_range",
-                "candidate_saved_bytes": 777,
-                "predicted_quality_score_cost": 0.0,
-                "confidence": 0.8,
-                "operations": [
-                    {
-                        "operation_id": "entropy_recode_zip_member_range_a",
-                        "operation_family": "entropy_recode",
-                        "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
-                    }
-                ],
-            },
-        ],
-        **_false_authority(),
-    }
-    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
     compiled = compile_dqs1_byte_shaving_campaign(
-        plan,
+        _byte_range_entropy_plan(),
         repo_root=tmp_path,
         candidate_limit=4,
         portfolio_json="portfolio.json",
@@ -695,6 +700,55 @@ def test_materializer_work_queue_builds_byte_range_chain_command(
     ]
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_materializer_context_payload_maps_rows_to_multiple_lookup_keys(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "chain_out"
+    contexts = materializer_contexts_from_payload(
+        {
+            "schema": MATERIALIZER_CONTEXTS_SCHEMA,
+            "rows": [
+                {
+                    "backlog_key": "backlog_a",
+                    "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+                    "source_unit_ids": ["zip_member_range_a"],
+                    "context": {
+                        "schema_manifest": "schema.json",
+                        "beam_probe_reports": ["beam.json"],
+                        "source_runtime_dir": "runtime",
+                        "output_dir": str(output_dir),
+                    },
+                }
+            ],
+        }
+    )
+
+    assert set(contexts) == {
+        BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+        "backlog_a",
+        "zip_member_range_a",
+    }
+    assert contexts["zip_member_range_a"]["output_dir"] == str(output_dir)
+
+
+def test_materializer_context_payload_rejects_truthy_authority() -> None:
+    with pytest.raises(ExperimentQueueError, match="score_claim"):
+        materializer_contexts_from_payload(
+            {
+                "schema": MATERIALIZER_CONTEXTS_SCHEMA,
+                "contexts": {
+                    "zip_member_range_a": {
+                        "schema_manifest": "schema.json",
+                        "beam_probe_reports": ["beam.json"],
+                        "source_runtime_dir": "runtime",
+                        "output_dir": "out",
+                        "score_claim": True,
+                    }
+                },
+            }
+        )
 
 
 def test_compile_dqs1_byte_shaving_plan_blocks_drop_pair_on_non_pair_unit(
@@ -960,3 +1014,72 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
         == "byte_shaving_materializer_registry.v1"
         for experiment in loaded["experiments"]
     )
+
+
+def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "plan.json"
+    contexts_path = tmp_path / "contexts.json"
+    materialization = tmp_path / "materialization.json"
+    portfolio = tmp_path / "portfolio.json"
+    summary = tmp_path / "action_summary.json"
+    work_queue = tmp_path / "materializer_work_queue.json"
+    output_dir = tmp_path / "chain_out"
+    plan_path.write_text(json.dumps(_byte_range_entropy_plan()), encoding="utf-8")
+    contexts_path.write_text(
+        json.dumps(
+            {
+                "schema": MATERIALIZER_CONTEXTS_SCHEMA,
+                "contexts": {
+                    "zip_member_range_a": {
+                        "schema_manifest": "schema.json",
+                        "beam_probe_reports": ["beam_a.json", "beam_b.json"],
+                        "source_runtime_dir": "runtime",
+                        "output_dir": str(output_dir),
+                        "source_archive": "archive.zip",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--plan",
+            str(plan_path),
+            "--materializer-contexts",
+            str(contexts_path),
+            "--materialization-out",
+            str(materialization),
+            "--portfolio-out",
+            str(portfolio),
+            "--action-summary-out",
+            str(summary),
+            "--materializer-work-queue-out",
+            str(work_queue),
+            "--repo-root",
+            str(tmp_path),
+            "--candidate-limit",
+            "4",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    assert stdout["materializer_contexts"] == str(contexts_path)
+    assert stdout["materializer_work_queue_out"] == str(work_queue)
+    assert stdout["materializer_work_queue_row_count"] == 1
+    payload = json.loads(work_queue.read_text(encoding="utf-8"))
+    assert payload["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
+    assert payload["executable_row_count"] == 1
+    row = payload["rows"][0]
+    assert row["executable"] is True
+    assert row["command"].count("--beam-probe-report") == 2
+    assert row["command"][-2:] == ["--source-archive", "archive.zip"]
+    assert row["ready_for_exact_eval_dispatch"] is False

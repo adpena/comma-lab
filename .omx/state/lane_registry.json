@@ -49169,6 +49169,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_materializer_context_file_queue_bridge_20260523",
+      "name": "Materializer context file queue bridge",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/comma_lab/scheduler/byte_shaving_campaign_queue.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_context_file_queue_bridge_20260523T170150Z_codex.md"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_context_file_queue_bridge_20260523T170150Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Load durable context files into byte_shaving_materializer_work_queue so backlog rows can emit executable proof-chain work without ad hoc Python callers"
     }
   ],
   "level_rules": {
@@ -49178,5 +49219,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T16:53:43Z"
+  "updated_at": "2026-05-23T17:02:09Z"
 }

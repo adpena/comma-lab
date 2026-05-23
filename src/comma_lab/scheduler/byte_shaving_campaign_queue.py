@@ -38,6 +38,7 @@ from .experiment_queue import ExperimentQueueError
 
 MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
 MATERIALIZER_BACKLOG_SCHEMA = "byte_shaving_materializer_backlog.v1"
+MATERIALIZER_CONTEXTS_SCHEMA = "byte_shaving_materializer_contexts.v1"
 MATERIALIZER_WORK_QUEUE_SCHEMA = "byte_shaving_materializer_work_queue.v1"
 ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
@@ -515,6 +516,81 @@ def _path_list_context_value(context: Mapping[str, Any], key: str) -> list[str]:
     return []
 
 
+def _context_keys_from_row(row: Mapping[str, Any]) -> list[str]:
+    keys: list[str] = []
+    raw_keys = row.get("context_keys")
+    if isinstance(raw_keys, str):
+        keys.append(raw_keys)
+    elif isinstance(raw_keys, Sequence) and not isinstance(raw_keys, (bytes, bytearray)):
+        keys.extend(str(item) for item in raw_keys if str(item))
+    for key in ("backlog_key", "materializer_id", "target_kind", "source_unit_id"):
+        value = row.get(key)
+        if isinstance(value, str) and value:
+            keys.append(value)
+    source_unit_ids = row.get("source_unit_ids")
+    if isinstance(source_unit_ids, str):
+        keys.append(source_unit_ids)
+    elif isinstance(source_unit_ids, Sequence) and not isinstance(source_unit_ids, (bytes, bytearray)):
+        keys.extend(str(item) for item in source_unit_ids if str(item))
+    return ordered_unique(keys)
+
+
+def materializer_contexts_from_payload(
+    payload: Mapping[str, Any],
+) -> dict[str, Mapping[str, Any]]:
+    """Parse a durable materializer-context file into lookup keys.
+
+    Context rows are keyed by backlog key, materializer id, target kind, or
+    source unit id. This keeps operator-authored context files small while still
+    allowing the work-queue compiler to match future backlog rows without
+    hand-written Python glue.
+    """
+
+    if payload.get("schema") != MATERIALIZER_CONTEXTS_SCHEMA:
+        raise ExperimentQueueError(f"expected schema {MATERIALIZER_CONTEXTS_SCHEMA}")
+    contexts: dict[str, Mapping[str, Any]] = {}
+    mapping_contexts = payload.get("contexts")
+    if isinstance(mapping_contexts, Mapping):
+        for key, context in mapping_contexts.items():
+            if not isinstance(context, Mapping):
+                raise ExperimentQueueError(f"context {key!r} must be an object")
+            try:
+                require_no_truthy_authority_fields(
+                    context,
+                    context=f"materializer_contexts.contexts.{key}",
+                )
+            except ValueError as exc:
+                raise ExperimentQueueError(str(exc)) from exc
+            contexts[str(key)] = dict(context)
+
+    for index, row in enumerate(_as_list(payload.get("rows"))):
+        if not isinstance(row, Mapping):
+            raise ExperimentQueueError(f"materializer context row {index} must be an object")
+        context = row.get("context")
+        if not isinstance(context, Mapping):
+            raise ExperimentQueueError(
+                f"materializer context row {index} must include object field 'context'"
+            )
+        try:
+            require_no_truthy_authority_fields(
+                context,
+                context=f"materializer_contexts.rows.{index}.context",
+            )
+        except ValueError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        keys = _context_keys_from_row(row)
+        if not keys:
+            raise ExperimentQueueError(
+                f"materializer context row {index} must declare at least one key"
+            )
+        for key in keys:
+            contexts[key] = dict(context)
+
+    if not contexts:
+        raise ExperimentQueueError("materializer context payload contains no contexts")
+    return contexts
+
+
 def _byte_range_chain_command(context: Mapping[str, Any]) -> tuple[list[str], list[str]]:
     blockers: list[str] = []
     schema_manifest = _path_context_value(context, "schema_manifest")
@@ -894,6 +970,7 @@ def compile_dqs1_byte_shaving_campaign(
     portfolio_json: str | None = None,
     allow_partial_materialization: bool = False,
     partial_materialization_rationale: str | None = None,
+    materializer_contexts: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Compile supported DQS1 pair drops into queue-builder action surfaces."""
 
@@ -946,6 +1023,7 @@ def compile_dqs1_byte_shaving_campaign(
     materializer_work_queue = build_materializer_work_queue(
         materializer_backlog,
         repo_root=repo,
+        contexts=materializer_contexts,
         source_plan_path=plan_ref,
     )
     partial_materialization_blockers: list[str] = []
@@ -1109,10 +1187,12 @@ __all__ = [
     "ACTION_SUMMARY_SCHEMA",
     "MATERIALIZATION_SCHEMA",
     "MATERIALIZER_BACKLOG_SCHEMA",
+    "MATERIALIZER_CONTEXTS_SCHEMA",
     "MATERIALIZER_WORK_QUEUE_SCHEMA",
     "PORTFOLIO_SCHEMA",
     "build_materializer_backlog",
     "build_materializer_work_queue",
     "compile_dqs1_byte_shaving_campaign",
+    "materializer_contexts_from_payload",
     "summarize_materializer_backlog",
 ]

@@ -41,12 +41,19 @@
   - `--materializer-work-queue-out`;
   - byte-range entropy proof-chain commands emit only when required context is present.
 
+- Added durable materializer context-file ingestion:
+  - `byte_shaving_materializer_contexts.v1`;
+  - `materializer_contexts_from_payload(...)`;
+  - `--materializer-contexts`;
+  - strict rejection of truthy score/promotion/dispatch authority in context files.
+
 ## Verification
 
 - 45 tests passed across byte-range materializer/chain, byte-shaving campaign/builder/queue, and PR103 adapter.
 - 178 tests passed across cathedral consumer contract and master-gradient consumer wire-in.
 - 37 tests passed across DQS1 locality controls and local-first queue builder.
 - Rust `cargo test -p raw-locality-compare` passed.
+- 20 byte-shaving campaign queue tests passed after context-file ingestion.
 - Raw compare profile: Python 0.2658s vs Rust release 0.4176s cold / 0.2725s warm on a 402,653,184-byte synthetic triplet.
 - Ruff passed for touched planner, builder, materializer, queue, scheduler, and control surfaces.
 - `git diff --check` passed.
@@ -60,6 +67,7 @@ Three xhigh explorer subagents were harvested and closed:
 - MLX/auth-eval/master-gradient/X-ray/equation/atom/frontier orphaned signal.
 
 Concrete P0/P1 findings converted this session: engineered-correction targeting enters the byte-shaving signal surface, materializer backlog now emits a work-queue surface, and the broken canonical frontier threshold helper was repaired.
+Follow-up continuation converted the work queue from Python-only context plumbing into a durable operator-facing context-file contract.
 
 ## Next Codex Move
 

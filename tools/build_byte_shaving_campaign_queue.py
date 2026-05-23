@@ -19,6 +19,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.byte_shaving_campaign_queue import (  # noqa: E402
     compile_dqs1_byte_shaving_campaign,
+    materializer_contexts_from_payload,
 )
 from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     DEFAULT_QUEUE_ID,
@@ -78,6 +79,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--portfolio-out", type=Path, required=True)
     parser.add_argument("--action-summary-out", type=Path, required=True)
     parser.add_argument("--materializer-backlog-out", type=Path, default=None)
+    parser.add_argument(
+        "--materializer-contexts",
+        type=Path,
+        default=None,
+        help="JSON byte_shaving_materializer_contexts.v1 file used to unblock proof-chain work rows.",
+    )
     parser.add_argument("--materializer-work-queue-out", type=Path, default=None)
     parser.add_argument("--queue-out", type=Path, default=None)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
@@ -122,6 +129,16 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"--plan does not exist: {args.plan}")
 
     plan = _load_json(args.plan)
+    materializer_contexts = None
+    if args.materializer_contexts is not None:
+        if not args.materializer_contexts.is_file():
+            raise SystemExit(f"--materializer-contexts does not exist: {args.materializer_contexts}")
+        try:
+            materializer_contexts = materializer_contexts_from_payload(
+                _load_json(args.materializer_contexts)
+            )
+        except ExperimentQueueError as exc:
+            raise SystemExit(str(exc)) from exc
     try:
         compiled = compile_dqs1_byte_shaving_campaign(
             plan,
@@ -132,6 +149,7 @@ def main(argv: list[str] | None = None) -> int:
             portfolio_json=str(args.portfolio_out),
             allow_partial_materialization=bool(args.allow_partial_materialization),
             partial_materialization_rationale=args.partial_materialization_rationale,
+            materializer_contexts=materializer_contexts,
         )
     except ExperimentQueueError as exc:
         raise SystemExit(str(exc)) from exc
@@ -214,6 +232,11 @@ def main(argv: list[str] | None = None) -> int:
                 "materializer_backlog_out": (
                     str(args.materializer_backlog_out)
                     if args.materializer_backlog_out is not None
+                    else None
+                ),
+                "materializer_contexts": (
+                    str(args.materializer_contexts)
+                    if args.materializer_contexts is not None
                     else None
                 ),
                 "materializer_work_queue_out": (
