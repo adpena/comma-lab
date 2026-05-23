@@ -49,6 +49,7 @@ from comma_lab.scheduler.experiment_queue import (
     load_queue_definition,
 )
 from comma_lab.scheduler.staircase_dag import (
+    STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA,
     build_staircase_dag_from_experiment_queue,
     plan_staircase_dispatch,
 )
@@ -1206,6 +1207,60 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
     assert materializer_step["requires"] == [
         f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
     ]
+
+    dag = build_staircase_dag_from_experiment_queue(
+        execution_queue,
+        dag_id="materializer_storage_preflight_dag_fixture",
+    )
+    materializer_node_id = (
+        f"{execution_queue['experiments'][1]['id']}.{MATERIALIZER_EXECUTION_STEP_ID}"
+    )
+    by_node_id = {node["node_id"]: node for node in dag["nodes"]}
+    storage_dependency = by_node_id[materializer_node_id]["metadata"][
+        "storage_preflight_dependency"
+    ]
+    assert storage_dependency["schema"] == STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA
+    assert storage_dependency["dependency_node_id"] == (
+        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
+    )
+    assert storage_dependency["storage_plan_node_id"] == (
+        f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.storage_tier_plan"
+    )
+    assert (
+        storage_dependency["storage_plan_artifact_path"]
+        == storage_step["postconditions"][0]["path"]
+    )
+    assert (
+        storage_dependency["cleanup_plan_artifact_path"]
+        == cleanup_step["postconditions"][0]["path"]
+    )
+    assert storage_dependency["artifact_paths"] == [
+        storage_step["postconditions"][0]["path"],
+        cleanup_step["postconditions"][0]["path"],
+    ]
+    assert storage_dependency["score_claim"] is False
+    assert storage_dependency["promotion_eligible"] is False
+    assert storage_dependency["rank_or_kill_eligible"] is False
+    assert storage_dependency["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "storage_preflight_dependency_is_advisory_only"
+        in storage_dependency["dispatch_blockers"]
+    )
+
+    plan = plan_staircase_dispatch(
+        dag,
+        status_map={
+            f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.storage_tier_plan": "succeeded",
+            f"{MATERIALIZER_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup": "succeeded",
+        },
+        max_nodes=1,
+    )
+    task = plan["dask_task_specs"][0]
+    assert task["experiment_id"] == execution_queue["experiments"][1]["id"]
+    assert task["storage_preflight_dependency"] == storage_dependency
+    assert task["storage_preflight_dependencies"] == [storage_dependency]
+    assert task["experiment_metadata"]["score_claim"] is False
+    assert task["experiment_metadata"]["ready_for_exact_eval_dispatch"] is False
 
 
 def test_materializer_execution_queue_blocks_outputs_outside_storage_root(

@@ -1,10 +1,10 @@
-# Code Review Tracker Report — 2026-05-23 20:05 UTC
+# Code Review Tracker Report — 2026-05-23 20:18 UTC
 
 ## Summary
 
-- **Total entities**: 75247
-- **Reviewed**: 65029 (86%)
-- **Unreviewed**: 10218
+- **Total entities**: 75250
+- **Reviewed**: 65036 (86%)
+- **Unreviewed**: 10214
 - **Stale**: 0
 - **Needs fix**: 0
 
@@ -45,23 +45,23 @@
 
 ## Recent Review Activity
 
-- `tac.tests.test_optimizer_exact_readiness::test_active_floor_score_tracks_score_frontier_not_rate_only_anchor` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_load_parallel_dispatch_tool` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_write_json` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_write_archive` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_make_submission` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_make_queue` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_mark_queue_row_as_inverse_scorer_chain` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_hdm8_selector_gate` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_selector_cuda_transfer_calibration` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_mark_submission_as_hdm8_selector` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_write_pr101_runtime_proof` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::_add_required_runtime_proof_fields` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::test_promotes_byte_closed_candidate_without_score_claim` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::test_refuses_inverse_scorer_chain_without_strict_full_frame_parity` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::test_refuses_inverse_scorer_chain_without_exact_auth_score_boundary` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::test_refuses_inverse_scorer_chain_with_self_asserted_unbacked_parity` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::test_refuses_inverse_scorer_chain_with_truthy_false_authority_fields` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::test_promotes_inverse_scorer_chain_only_after_parity_and_auth_boundary` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::test_refuses_hdm8_selector_without_passing_cuda_component_gate` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
-- `tac.tests.test_optimizer_exact_readiness::test_promotes_hdm8_selector_after_passing_cuda_component_gate` — marked_reviewed by codex (codex_inverse_queue_storage_review_pass1)
+- `tac.tests.test_recover_modal_auth_eval_tool::_load_tool` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::_write_auth_eval` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::test_terminal_status_uses_exact_readiness_cuda_prefix` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::test_terminal_notes_include_exact_custody_fields` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::test_auth_eval_artifact_path_accepts_adjudicated_fallback` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::test_maybe_update_posterior_routes_auth_eval_artifact` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::test_main_requires_auditable_no_close_reason` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::test_main_fails_loud_when_terminal_metadata_lacks_claim_fields` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::test_main_allows_no_close_only_with_auditable_reason` — marked_reviewed by council ()
+- `tac.tests.test_recover_modal_auth_eval_tool::test_main_skips_duplicate_terminal_recovery_without_posterior_touch` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::_false_authority` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::_pair_drop_plan` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::test_byte_shaving_materializer_registry_registers_byte_range_entropy_fail_closed` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::test_byte_shaving_materializer_registry_registers_inverse_scorer_fail_closed` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::test_compile_dqs1_byte_shaving_plan_preserves_explicit_target_kind` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::test_compile_dqs1_byte_shaving_plan_suggests_registered_byte_range_contract` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::test_compile_dqs1_byte_shaving_plan_classifies_byte_range_entropy_contract_gap` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::test_compile_dqs1_byte_shaving_plan_suggests_byte_range_entropy_target_kind` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::test_materializer_work_queue_builds_byte_range_chain_command` — marked_reviewed by council ()
+- `tac.tests.test_byte_shaving_campaign_queue::test_inverse_surface_cells_compile_to_action_functional_work_queue` — marked_reviewed by council ()

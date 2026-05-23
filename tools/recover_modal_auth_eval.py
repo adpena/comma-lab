@@ -27,6 +27,7 @@ from tac.continual_learning import (  # noqa: E402
     contest_result_from_auth_eval_payload,
     posterior_update_locked_from_auth_eval_json,
 )
+from tac.deploy.claims import is_terminal_status  # noqa: E402
 from tac.deploy.modal.auth_eval import (  # noqa: E402
     ClaimSpec,
     read_spawn_metadata,
@@ -81,6 +82,62 @@ def _missing_claim_metadata_fields(metadata: dict) -> list[str]:
     if not isinstance(metadata.get("instance_job_id"), str) or not metadata.get("instance_job_id"):
         missing.append("instance_job_id")
     return missing
+
+
+def _claim_rows_for_job(
+    *,
+    repo_root: Path,
+    claim_spec: ClaimSpec,
+) -> list[dict[str, str]]:
+    claims_path = repo_root / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    if not claims_path.is_file():
+        return []
+    rows: list[dict[str, str]] = []
+    for line in claims_path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        if "timestamp_utc" in line and "lane_id" in line:
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 8:
+            continue
+        row = {
+            "timestamp_utc": cells[0],
+            "agent": cells[1],
+            "lane_id": cells[2],
+            "platform": cells[3],
+            "instance_job_id": cells[4],
+            "predicted_eta_utc": cells[5],
+            "status": cells[6],
+            "notes": cells[7],
+        }
+        if (
+            row["lane_id"] == claim_spec.lane_id
+            and row["instance_job_id"] == claim_spec.instance_job_id
+        ):
+            rows.append(row)
+    return rows
+
+
+def _matching_terminal_claim_already_recorded(
+    *,
+    repo_root: Path,
+    claim_spec: ClaimSpec,
+    status: str,
+    summary: dict,
+) -> bool:
+    rows = _claim_rows_for_job(repo_root=repo_root, claim_spec=claim_spec)
+    if not rows:
+        return False
+    newest = rows[0]
+    if not is_terminal_status(newest["status"]):
+        return False
+    if newest["status"] != status:
+        return False
+    result_json = summary.get("result_json")
+    if isinstance(result_json, str) and result_json:
+        return f"result_json={result_json}" in newest["notes"]
+    return True
 
 
 def _auth_eval_artifact_path(summary: dict) -> Path | None:
@@ -188,19 +245,10 @@ def main(argv: list[str] | None = None) -> int:
     if summary.get("status") == "pending":
         return 4
 
-    posterior_note = (
-        "posterior_update=skipped_by_flag"
-        if args.no_posterior_update
-        else _maybe_update_posterior(summary, metadata)
-    )
-
-    if args.no_close_claim:
-        print(
-            "[recover-modal] terminal dispatch-claim closure suppressed: "
-            f"{skip_close_reason}",
-            file=sys.stderr,
-        )
-    else:
+    claim_spec = None
+    status = ""
+    existing_terminal_claim = False
+    if not args.no_close_claim:
         claim_spec = _claim_spec_from_metadata(metadata)
         status = _terminal_status(summary, metadata)
         if claim_spec is None:
@@ -220,6 +268,37 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return CLAIM_CLOSURE_ERROR_RC
+        existing_terminal_claim = _matching_terminal_claim_already_recorded(
+            repo_root=REPO_ROOT,
+            claim_spec=claim_spec,
+            status=status,
+            summary=summary,
+        )
+
+    if existing_terminal_claim:
+        posterior_note = "posterior_update=skipped_existing_terminal_claim"
+    else:
+        posterior_note = (
+            "posterior_update=skipped_by_flag"
+            if args.no_posterior_update
+            else _maybe_update_posterior(summary, metadata)
+        )
+
+    if args.no_close_claim:
+        print(
+            "[recover-modal] terminal dispatch-claim closure suppressed: "
+            f"{skip_close_reason}",
+            file=sys.stderr,
+        )
+    elif existing_terminal_claim:
+        print(
+            "[recover-modal] terminal dispatch-claim already closed for "
+            f"lane_id={claim_spec.lane_id} job={claim_spec.instance_job_id}; "
+            "skipping duplicate posterior update and claim row",
+            file=sys.stderr,
+        )
+    else:
+        assert claim_spec is not None
         terminal_modal_auth_eval_claim(
             repo_root=REPO_ROOT,
             spec=claim_spec,

@@ -43,6 +43,7 @@ from tac.repo_io import ArtifactWriteError, write_json_artifact
 
 STAIRCASE_DAG_SCHEMA = "staircase_dag.v1"
 STAIRCASE_DISPATCH_PLAN_SCHEMA = "staircase_dispatch_plan.v1"
+STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA = "staircase_storage_preflight_dependency.v1"
 
 DEFAULT_MACHINE_PRESETS: tuple[dict[str, Any], ...] = (
     {
@@ -298,6 +299,113 @@ def _queue_dependency_node_id(ref: str, *, default_experiment_id: str) -> str:
     )
 
 
+def _command_flag_value(command: object, flag: str) -> str | None:
+    if not isinstance(command, list):
+        return None
+    for index, item in enumerate(command):
+        if str(item) == flag and index + 1 < len(command):
+            value = str(command[index + 1]).strip()
+            return value or None
+    return None
+
+
+def _step_postcondition_paths(step: Mapping[str, Any]) -> list[str]:
+    paths: list[str] = []
+    postconditions = step.get("postconditions")
+    if not isinstance(postconditions, list):
+        return paths
+    for condition in postconditions:
+        if not isinstance(condition, Mapping):
+            continue
+        path = condition.get("path")
+        if isinstance(path, str) and path.strip():
+            paths.append(path.strip())
+    return paths
+
+
+def _storage_preflight_artifact_path(
+    step: Mapping[str, Any],
+    *,
+    command_flag: str,
+) -> str | None:
+    for path in _step_postcondition_paths(step):
+        return path
+    return _command_flag_value(step.get("command"), command_flag)
+
+
+def _is_storage_preflight_experiment(experiment: Mapping[str, Any]) -> bool:
+    tags = {str(tag) for tag in experiment.get("tags", []) if isinstance(tag, str)}
+    if {"scheduler-preflight", "storage", "cleanup"}.issubset(tags):
+        return True
+    steps = [step for step in experiment.get("steps", []) if isinstance(step, Mapping)]
+    has_storage_step = any(
+        step.get("id") == "storage_tier_plan"
+        and "tools/plan_experiment_storage.py"
+        in [str(item) for item in step.get("command", [])]
+        for step in steps
+    )
+    has_cleanup_step = any(
+        step.get("id") == "proactive_cleanup"
+        and "tools/compact_experiment_artifacts.py"
+        in [str(item) for item in step.get("command", [])]
+        for step in steps
+    )
+    return has_storage_step and has_cleanup_step
+
+
+def _storage_preflight_dependencies_from_queue(queue: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    preflights: dict[str, dict[str, Any]] = {}
+    for experiment in queue.get("experiments", []):
+        if not isinstance(experiment, Mapping) or not _is_storage_preflight_experiment(experiment):
+            continue
+        experiment_id = _require_text(experiment.get("id"), "storage preflight experiment.id")
+        steps = [step for step in experiment.get("steps", []) if isinstance(step, Mapping)]
+        by_step_id = {str(step.get("id")): step for step in steps if isinstance(step.get("id"), str)}
+        storage_step = by_step_id.get("storage_tier_plan")
+        cleanup_step = by_step_id.get("proactive_cleanup")
+        if storage_step is None or cleanup_step is None:
+            raise ExperimentQueueError(
+                f"{experiment_id}: storage preflight must include storage_tier_plan and proactive_cleanup steps"
+            )
+        storage_plan_path = _storage_preflight_artifact_path(
+            storage_step,
+            command_flag="--output",
+        )
+        cleanup_plan_path = _storage_preflight_artifact_path(
+            cleanup_step,
+            command_flag="--json-output",
+        )
+        if storage_plan_path is None or cleanup_plan_path is None:
+            raise ExperimentQueueError(
+                f"{experiment_id}: storage preflight steps must expose storage and cleanup artifact paths"
+            )
+        storage_node_id = f"{experiment_id}.storage_tier_plan"
+        cleanup_node_id = f"{experiment_id}.proactive_cleanup"
+        payload = apply_proxy_evidence_boundary(
+            {
+                "schema": STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA,
+                "dependency_node_id": cleanup_node_id,
+                "cleanup_node_id": cleanup_node_id,
+                "storage_plan_node_id": storage_node_id,
+                "storage_plan_artifact_path": storage_plan_path,
+                "cleanup_plan_artifact_path": cleanup_plan_path,
+                "artifact_paths": [storage_plan_path, cleanup_plan_path],
+                "advisory_scope": "storage_preflight_dependency_only",
+                "executor_contract": {
+                    "dependency_must_succeed_before_execution": True,
+                    "executor_must_not_treat_preflight_as_score_authority": True,
+                    "executor_must_read_artifacts_as_advisory_storage_plans": True,
+                },
+            },
+            dispatch_blockers=[
+                "storage_preflight_dependency_is_advisory_only",
+                "storage_preflight_does_not_grant_score_authority",
+            ],
+        )
+        preflights[cleanup_node_id] = payload
+    return preflights
+
+
 def normalize_resource_pools(raw_pools: Sequence[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
     pools = list(raw_pools or default_local_resource_pools())
     normalized: list[dict[str, Any]] = []
@@ -435,6 +543,7 @@ def build_staircase_dag_from_experiment_queue(
     storage_plan: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     nodes: list[dict[str, Any]] = []
+    storage_preflights = _storage_preflight_dependencies_from_queue(queue)
     for experiment in queue.get("experiments", []):
         if not isinstance(experiment, Mapping):
             continue
@@ -479,14 +588,24 @@ def build_staircase_dag_from_experiment_queue(
                 "receiver_contract_kind": experiment_metadata.get("receiver_contract_kind"),
                 "allowed_use": experiment_metadata.get("allowed_use"),
             }
+            dependencies = [
+                _queue_dependency_node_id(str(required), default_experiment_id=experiment_id)
+                for required in _string_list(step.get("requires"), f"{experiment_id}.{step_id}.requires")
+            ]
+            storage_dependencies = [
+                storage_preflights[dependency]
+                for dependency in dependencies
+                if dependency in storage_preflights
+            ]
+            if storage_dependencies:
+                metadata["storage_preflight_dependencies"] = storage_dependencies
+                if len(storage_dependencies) == 1:
+                    metadata["storage_preflight_dependency"] = storage_dependencies[0]
             nodes.append(
                 {
                     "id": f"{experiment_id}.{step_id}",
                     "command": list(step.get("command") or []),
-                    "dependencies": [
-                        _queue_dependency_node_id(str(required), default_experiment_id=experiment_id)
-                        for required in _string_list(step.get("requires"), f"{experiment_id}.{step_id}.requires")
-                    ],
+                    "dependencies": dependencies,
                     "priority": priority,
                     "resource_kind": normalize_resource_kind(
                         resources.get("kind", "local_cpu"),
@@ -821,6 +940,15 @@ def plan_staircase_dispatch(
         }
         if storage_hint is not None:
             task["storage_hint"] = storage_hint
+        if isinstance(metadata.get("storage_preflight_dependency"), Mapping):
+            task["storage_preflight_dependency"] = dict(metadata["storage_preflight_dependency"])
+        storage_preflight_dependencies = metadata.get("storage_preflight_dependencies")
+        if isinstance(storage_preflight_dependencies, list):
+            task["storage_preflight_dependencies"] = [
+                dict(dependency)
+                for dependency in storage_preflight_dependencies
+                if isinstance(dependency, Mapping)
+            ]
         dask_tasks.append(task)
     plan = apply_proxy_evidence_boundary(
         {
@@ -950,6 +1078,7 @@ __all__ = [
     "DEFAULT_MACHINE_PRESETS",
     "STAIRCASE_DAG_SCHEMA",
     "STAIRCASE_DISPATCH_PLAN_SCHEMA",
+    "STORAGE_PREFLIGHT_DEPENDENCY_SCHEMA",
     "StaircaseReadyNode",
     "build_staircase_dag_from_experiment_queue",
     "build_storage_plan_payload",

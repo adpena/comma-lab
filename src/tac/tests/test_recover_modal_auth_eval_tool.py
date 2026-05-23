@@ -194,3 +194,72 @@ def test_main_allows_no_close_only_with_auditable_reason(monkeypatch, tmp_path: 
 
     assert rc == 0
     assert "duplicate terminal row already recorded" in capsys.readouterr().err
+
+
+def test_main_skips_duplicate_terminal_recovery_without_posterior_touch(
+    monkeypatch,
+    tmp_path: Path,
+    capsys,
+) -> None:
+    tool = _load_tool()
+    claims_path = tmp_path / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    claims_path.parent.mkdir(parents=True, exist_ok=True)
+    result_json = str(tmp_path / "modal_cuda_auth_eval_result.json")
+    claims_path.write_text(
+        "\n".join(
+            [
+                "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |",
+                "|---|---|---|---|---|---|---|---|",
+                (
+                    "| 2026-05-23T20:11:04Z | codex:modal_auth_eval | lane_cuda | modal | job_cuda | "
+                    "2026-05-23T20:11:04Z | completed_contest_cuda_modal_auth_eval_recovered | "
+                    f"Modal auth eval recovered; passed=True; result_json={result_json}; "
+                    "posterior_update=accepted |"
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(tool, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        tool,
+        "read_spawn_metadata",
+        lambda _out_dir: {
+            "axis": "contest_cuda",
+            "lane_id": "lane_cuda",
+            "instance_job_id": "job_cuda",
+            "claim_agent": "codex:modal_auth_eval",
+            "claim_platform": "modal",
+        },
+    )
+    monkeypatch.setattr(
+        tool,
+        "recover_modal_auth_eval",
+        lambda **_kwargs: {
+            "status": "recovered",
+            "passed": True,
+            "score_claim": True,
+            "result_json": result_json,
+        },
+    )
+    monkeypatch.setattr(
+        tool,
+        "posterior_update_locked_from_auth_eval_json",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("posterior update must be skipped")
+        ),
+    )
+    monkeypatch.setattr(
+        tool,
+        "terminal_modal_auth_eval_claim",
+        lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("terminal claim must be skipped")
+        ),
+    )
+
+    rc = tool.main(["--output-dir", str(tmp_path)])
+
+    assert rc == 0
+    assert "already closed" in capsys.readouterr().err

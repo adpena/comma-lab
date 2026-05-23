@@ -49718,12 +49718,12 @@
           "evidence": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/inverse_scorer_exact_eval_queue_20260523T195836Z/exact_ready_queue.json"
         },
         "contest_cuda": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/modal_auth_eval/ias1_runtime_parity_top4_cuda_20260523T200708Z/modal_cuda_auth_eval_result.json"
         },
         "contest_cpu": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/modal_auth_eval_cpu/ias1_runtime_parity_top4_cpu_20260523T200708Z/modal_cpu_auth_eval_result.json"
         },
         "strict_preflight": {
           "status": true,
@@ -49735,7 +49735,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_inverse_scorer_exact_eval_queue_bridge_20260523T194703Z_codex.md"
+          "evidence": ".omx/research/codex_findings_ias1_exact_auth_harvest_and_scheduler_dag_metadata_20260523T201556Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -49776,7 +49776,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/codex_findings_scheduler_storage_preflight_materializer_20260523T200010Z_codex.md"
+          "evidence": ".omx/research/codex_findings_ias1_exact_auth_harvest_and_scheduler_dag_metadata_20260523T201556Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -49784,6 +49784,47 @@
         }
       },
       "notes": "Canonical scheduler/materializer storage preflight lane; supersedes lane_materializer_scheduler_storage_preflight_20260523 alias."
+    },
+    {
+      "id": "codex_ias1_exact_eval_pair_harvest_recovery_idempotence_20260523",
+      "name": "IAS1 exact eval pair harvest and recovery idempotence",
+      "phase": 0.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/recover_modal_auth_eval.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/inverse_scorer_exact_eval_queue_20260523T195836Z/exact_ready_queue.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "experiments/results/modal_auth_eval/ias1_runtime_parity_top4_cuda_20260523T200708Z/modal_cuda_auth_eval_result.json"
+        },
+        "contest_cpu": {
+          "status": true,
+          "evidence": "experiments/results/modal_auth_eval_cpu/ias1_runtime_parity_top4_cpu_20260523T200708Z/modal_cpu_auth_eval_result.json"
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_recover_modal_auth_eval_tool.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_ias1_exact_auth_harvest_and_scheduler_dag_metadata_20260523T201556Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -49793,5 +49834,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T20:01:36Z"
+  "updated_at": "2026-05-23T20:17:29Z"
 }
