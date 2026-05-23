@@ -7,6 +7,11 @@ from pathlib import Path
 
 import pytest
 
+from src.comma_lab.scheduler.dqs1_local_first_harvest import (
+    EXACT_AUTH_ANCHOR_REQUEST_SCHEMA,
+    HARVEST_SCHEMA,
+    build_dqs1_harvest_result,
+)
 from src.comma_lab.scheduler.dqs1_local_first_queue import (
     build_queue_from_action_summary,
     candidate_slug,
@@ -127,6 +132,9 @@ def _write_completed_local_advisory(
                     "archive_path": str(archive),
                     "archive_sha256": archive_sha,
                     "archive_size_bytes": archive.stat().st_size,
+                    "platform_system": "Darwin",
+                    "platform_machine": "arm64",
+                    "device": "cpu",
                 },
             }
         )
@@ -237,6 +245,86 @@ def test_dqs1_queue_builder_refuses_to_skip_positive_eureka_candidate(
 
     with pytest.raises(ExperimentQueueError, match="requests exact auth dispatch"):
         build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
+
+
+def test_dqs1_harvest_observe_only_reroutes_queue(tmp_path: Path) -> None:
+    summary = _write_summary(tmp_path)
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        eureka_run_id="20260522T000000Z",
+    )
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(json.dumps(result.queue))
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
+    )
+
+    harvest = build_dqs1_harvest_result(
+        queue_path=queue_path,
+        repo_root=tmp_path,
+        timestamp="20260523T010203Z",
+        reroute_observe_only=True,
+        output_queue_path=queue_path,
+        results_root="results",
+    )
+
+    assert harvest.harvest_record["schema"] == HARVEST_SCHEMA
+    assert harvest.harvest_record["candidate_id"] == "pairset_drop_one_rank023_pair0440"
+    assert harvest.harvest_record["recommended_action"] == "observe_only"
+    assert harvest.harvest_record["score_claim"] is False
+    assert harvest.harvest_record["promotion_eligible"] is False
+    assert harvest.exact_auth_request is None
+    assert harvest.rerouted_queue is not None
+    assert harvest.rerouted_queue["experiments"][0]["id"] == "pairset_drop_one_rank024_pair0112"
+    written = load_queue_definition(queue_path)
+    assert written["experiments"][0]["id"] == "pairset_drop_one_rank024_pair0112"
+
+
+def test_dqs1_harvest_positive_eureka_creates_exact_auth_request(tmp_path: Path) -> None:
+    summary = _write_summary(tmp_path)
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        eureka_run_id="20260522T000000Z",
+    )
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(json.dumps(result.queue))
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
+        eureka_trigger=True,
+        recommended_action="dispatch_exact_auth_anchor",
+    )
+
+    harvest = build_dqs1_harvest_result(
+        queue_path=queue_path,
+        repo_root=tmp_path,
+        timestamp="20260523T010203Z",
+        reroute_observe_only=True,
+        output_queue_path=queue_path,
+        results_root="results",
+    )
+
+    assert harvest.harvest_record["recommended_action"] == "dispatch_exact_auth_anchor"
+    assert harvest.rerouted_queue is None
+    assert harvest.exact_auth_request is not None
+    request = harvest.exact_auth_request
+    assert request["schema"] == EXACT_AUTH_ANCHOR_REQUEST_SCHEMA
+    assert request["candidate_id"] == "pairset_drop_one_rank023_pair0440"
+    assert request["requested_axes"] == ["contest-CPU", "contest-CUDA"]
+    assert request["score_claim"] is False
+    assert request["promotion_eligible"] is False
+    assert request["ready_for_exact_eval_dispatch"] is False
 
 
 def test_dqs1_queue_builder_fails_closed_on_incomplete_eureka_authority(
