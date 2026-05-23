@@ -789,6 +789,80 @@ def test_candidate_queue_rejects_mlx_dynamic_sweep_nested_authority(
         build_candidate_queue([plan], repo_root=tmp_path)
 
 
+def test_candidate_queue_rejects_mlx_dynamic_sweep_normalized_gain_mismatch(
+    tmp_path: Path,
+) -> None:
+    plan = _write_json(
+        tmp_path / "mlx_dynamic_plan_bad_normalized_gain.json",
+        {
+            "schema": "mlx_dynamic_learned_sweep_plan.v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "ranked_sweep_rows": [
+                {
+                    "schema": "mlx_dynamic_learned_sweep_row.v1",
+                    "candidate_id": "prefix_k032",
+                    "sweep_config_id": "mlx_local_response",
+                    "optimization_pass_id": "micro",
+                    "family": "decoder_q_selective_dqs1",
+                    "acquisition_value": 0.0125,
+                    "non_authoritative_mlx_gain_sum": 0.03,
+                    "non_authoritative_normalized_full_video_gain_sum": 18.0,
+                    "non_authoritative_mlx_window_gain_sum": 18.0,
+                    "full_video_denominator": 600,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="non_authoritative_normalized_full_video_gain_sum mismatch",
+    ):
+        build_candidate_queue([plan], repo_root=tmp_path)
+
+
+def test_candidate_queue_rejects_optimizer_pairing_without_accepted_parent(
+    tmp_path: Path,
+) -> None:
+    plan = _write_json(
+        tmp_path / "mlx_dynamic_plan_orphan_pairing.json",
+        {
+            "schema": "mlx_dynamic_learned_sweep_plan.v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "optimizer_scheduler_pairings": [
+                {
+                    "schema": "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing.v1",
+                    "queue_candidate_id": "prefix_k032::local::micro::optimizer_scheduler::adamw",
+                    "parent_queue_candidate_id": "prefix_k032::local::micro",
+                    "candidate_id": "prefix_k032",
+                    "sweep_config_id": "local",
+                    "optimization_pass_id": "micro",
+                    "family": "decoder_q_selective_dqs1",
+                    "optimizer_scheduler_descriptor_id": "adamw",
+                    "rank_score": -0.01,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(ValueError, match="parent_queue_candidate_id not accepted"):
+        build_candidate_queue([plan], repo_root=tmp_path)
+
+
 def test_candidate_queue_accepts_local_cpu_eureka_as_spend_triage_only(
     tmp_path: Path,
 ) -> None:

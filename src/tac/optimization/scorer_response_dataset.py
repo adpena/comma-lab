@@ -248,6 +248,15 @@ def _validate_core_false_authority(payload: dict[str, Any], *, label: str) -> No
             raise ScorerResponseDatasetError(f"{label} {key} must be false")
 
 
+def _validate_score_claim_valid_if_present(
+    payload: dict[str, Any],
+    *,
+    label: str,
+) -> None:
+    if "score_claim_valid" in payload and payload.get("score_claim_valid") is not False:
+        raise ScorerResponseDatasetError(f"{label} score_claim_valid must be false")
+
+
 def _backfill_extended_false_authority(
     payload: dict[str, Any],
     *,
@@ -283,6 +292,7 @@ def normalize_legacy_response_dataset_authority(
     repairs: list[dict[str, str]] = []
 
     _validate_core_false_authority(normalized, label="scorer-response dataset")
+    _validate_score_claim_valid_if_present(normalized, label="scorer-response dataset")
     _backfill_extended_false_authority(
         normalized,
         label="scorer-response dataset",
@@ -292,6 +302,10 @@ def normalize_legacy_response_dataset_authority(
     if not isinstance(authority, dict):
         raise ScorerResponseDatasetError("scorer-response dataset authority must be a JSON object")
     _validate_core_false_authority(authority, label="scorer-response dataset authority")
+    _validate_score_claim_valid_if_present(
+        authority,
+        label="scorer-response dataset authority",
+    )
     _backfill_extended_false_authority(
         authority,
         label="scorer-response dataset authority",
@@ -308,6 +322,7 @@ def normalize_legacy_response_dataset_authority(
             raise ScorerResponseDatasetError(f"scorer-response row {index} schema mismatch")
         label = f"scorer-response row {index}"
         _validate_core_false_authority(row, label=label)
+        _validate_score_claim_valid_if_present(row, label=label)
         _backfill_extended_false_authority(row, label=label, repairs=repairs)
         if "authority_source_score_claim" not in row or row.get("authority_source_score_claim") is None:
             raise ScorerResponseDatasetError(
@@ -323,6 +338,7 @@ def normalize_legacy_response_dataset_authority(
         "producer": TOOL,
         "source_label": source_label,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
@@ -1039,6 +1055,7 @@ def normalize_response_row(
         "candidate_id": candidate_id,
         "axis": advisory.get("axis"),
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
@@ -1112,7 +1129,7 @@ def normalize_response_row(
         "target_raw_sha256": _get_path(candidate, ("inputs", "target_raw_sha256")),
         **local,
     }
-    _require_normalized_objective_if_present(row, label=row_id)
+    require_scorer_response_normalized_objective_if_present(row, label=row_id)
     return row
 
 
@@ -4196,11 +4213,31 @@ def build_next_probe_plan(
                 }
             )
 
-    mlx_row_items = [
-        row
-        for row in rows
-        if _is_mlx_scorer_response_row(row)
-    ]
+    mlx_row_items: list[dict[str, Any]] = []
+    mlx_rows_missing_normalized_objective: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict) or not _is_mlx_scorer_response_row(row):
+            continue
+        if _mlx_normalized_objective_for_planning(row) is None:
+            mlx_rows_missing_normalized_objective.append(row)
+        else:
+            mlx_row_items.append(row)
+    if mlx_rows_missing_normalized_objective:
+        prohibitions.append(
+            {
+                "rule": "do_not_use_mlx_rows_without_normalized_full_video_objective",
+                "reason": (
+                    "MLX scorer-response rows must carry the canonical "
+                    "normalized full-video objective before they can influence "
+                    "planner best rows, probe inputs, production-contract "
+                    "coverage, or exact-eval spend triage."
+                ),
+                "input_rows": [
+                    row.get("row_id")
+                    for row in mlx_rows_missing_normalized_objective[:8]
+                ],
+            }
+        )
     mlx_torch_parity_sweep_gate = None
     if mlx_torch_parity_sweep is not None:
         mlx_torch_parity_sweep_gate = build_mlx_torch_parity_sweep_gate(
@@ -4961,11 +4998,13 @@ def _has_normalized_objective_fields(row: dict[str, Any]) -> bool:
     return any(row.get(key) is not None for key in _NORMALIZED_OBJECTIVE_OUTPUT_FIELDS)
 
 
-def _require_normalized_objective_if_present(
+def require_scorer_response_normalized_objective_if_present(
     row: dict[str, Any],
     *,
     label: str,
 ) -> dict[str, float] | None:
+    """Validate scorer-response normalized objective fields when a row carries them."""
+
     if not _has_normalized_objective_fields(row):
         return None
     try:
@@ -4977,7 +5016,7 @@ def _require_normalized_objective_if_present(
 def _mlx_normalized_objective_for_planning(row: dict[str, Any]) -> dict[str, float] | None:
     if not _is_mlx_scorer_response_row(row):
         return None
-    return _require_normalized_objective_if_present(
+    return require_scorer_response_normalized_objective_if_present(
         row,
         label=str(row.get("row_id") or "mlx scorer-response row"),
     )
@@ -4992,18 +5031,24 @@ def _planning_scope(row: dict[str, Any]) -> str:
 
 
 def _planning_delta_vs_baseline(row: dict[str, Any]) -> float | None:
-    if _mlx_normalized_objective_for_planning(row) is not None:
+    normalized = _mlx_normalized_objective_for_planning(row)
+    if normalized is not None:
         value = _as_float(row.get("projected_full_video_delta_vs_baseline_score"))
         if value is not None:
             return value
+    if _is_mlx_scorer_response_row(row):
+        return None
     return _as_float(row.get("delta_vs_baseline_score"))
 
 
 def _planning_scorer_gain(row: dict[str, Any]) -> float | None:
-    if _mlx_normalized_objective_for_planning(row) is not None:
+    normalized = _mlx_normalized_objective_for_planning(row)
+    if normalized is not None:
         value = _as_float(row.get("normalized_full_video_scorer_gain_vs_baseline"))
         if value is not None:
             return value
+    if _is_mlx_scorer_response_row(row):
+        return None
     return _as_float(row.get("observed_scorer_gain_vs_baseline"))
 
 
@@ -5011,22 +5056,30 @@ def _planning_scorer_delta_vs_baseline(row: dict[str, Any]) -> float | None:
     gain = _planning_scorer_gain(row)
     if gain is not None:
         return -gain
+    if _is_mlx_scorer_response_row(row):
+        return None
     return _as_float(row.get("scorer_delta_vs_baseline"))
 
 
 def _planning_break_even_bytes(row: dict[str, Any]) -> float | None:
-    if _mlx_normalized_objective_for_planning(row) is not None:
+    normalized = _mlx_normalized_objective_for_planning(row)
+    if normalized is not None:
         value = _as_float(row.get("break_even_added_bytes_from_normalized_full_video_gain"))
         if value is not None:
             return value
+    if _is_mlx_scorer_response_row(row):
+        return None
     return _as_float(row.get("break_even_added_bytes_from_scorer_gain"))
 
 
 def _planning_byte_budget_margin(row: dict[str, Any]) -> float | None:
-    if _mlx_normalized_objective_for_planning(row) is not None:
+    normalized = _mlx_normalized_objective_for_planning(row)
+    if normalized is not None:
         value = _as_float(row.get("normalized_full_video_byte_budget_margin_vs_break_even"))
         if value is not None:
             return value
+    if _is_mlx_scorer_response_row(row):
+        return None
     return _as_float(row.get("byte_budget_margin_vs_break_even"))
 
 

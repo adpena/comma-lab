@@ -9,6 +9,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_FALSE_AUTHORITY_FIELDS,
     EUREKA_SIGNAL_SCHEMA,
@@ -235,7 +236,17 @@ def _selected_pair_indices(row: dict[str, Any], *, candidate_id: str) -> tuple[i
         raise ExperimentQueueError(
             f"{candidate_id}: selected_pair_count={selected_count} but got {len(selected)} indices"
         )
-    return tuple(int(item) for item in selected)
+    pairs = tuple(int(item) for item in selected)
+    if len(set(pairs)) != len(pairs):
+        raise ExperimentQueueError(f"{candidate_id}: selected_pair_indices contains duplicates")
+    if tuple(sorted(pairs)) != pairs:
+        raise ExperimentQueueError(f"{candidate_id}: selected_pair_indices must be sorted ascending")
+    out_of_range = [pair for pair in pairs if not 0 <= pair < FEC6_PAIR_COUNT]
+    if out_of_range:
+        raise ExperimentQueueError(
+            f"{candidate_id}: selected_pair_indices out of range 0..{FEC6_PAIR_COUNT - 1}: {out_of_range}"
+        )
+    return pairs
 
 
 def _candidate_completed_locally(

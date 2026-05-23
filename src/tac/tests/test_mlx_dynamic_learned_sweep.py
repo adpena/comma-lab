@@ -238,6 +238,75 @@ def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
     ]
 
 
+def test_dynamic_sweep_rejects_selector_normalized_gain_sum_mismatch() -> None:
+    selector = _selector_pareto()
+    selector["candidates"][0]["non_authoritative_normalized_full_video_gain_sum"] = 18.0
+
+    with pytest.raises(
+        MLXDynamicLearnedSweepError,
+        match="non_authoritative_normalized_full_video_gain_sum mismatch",
+    ):
+        build_mlx_dynamic_learned_sweep_plan(
+            incumbent_score=0.1920513168811056,
+            selector_pareto=selector,
+            top_k=4,
+        )
+
+
+def test_dynamic_sweep_rejects_explicit_candidate_normalized_gain_alias_drift() -> None:
+    payload = {
+        "schema": "explicit_dynamic_candidates.v1",
+        "candidates": [
+            {
+                "candidate_id": "explicit_pairset",
+                "family": "decoder_q_selective_dqs1",
+                "predicted_score_mean": 0.19203,
+                "non_authoritative_mlx_gain_sum": 18.0,
+                "non_authoritative_normalized_full_video_gain_sum": 0.03,
+                "non_authoritative_mlx_window_gain_sum": 18.0,
+                "full_video_denominator": 600,
+                **_false_authority(),
+            }
+        ],
+    }
+
+    with pytest.raises(
+        MLXDynamicLearnedSweepError,
+        match="non_authoritative_mlx_gain_sum must equal normalized",
+    ):
+        build_mlx_dynamic_learned_sweep_plan(
+            incumbent_score=0.1920513168811056,
+            candidate_payloads=[payload],
+            top_k=4,
+        )
+
+
+def test_dynamic_sweep_rejects_explicit_candidate_missing_full_video_denominator() -> None:
+    payload = {
+        "schema": "explicit_dynamic_candidates.v1",
+        "candidates": [
+            {
+                "candidate_id": "explicit_pairset",
+                "family": "decoder_q_selective_dqs1",
+                "predicted_score_mean": 0.19203,
+                "non_authoritative_normalized_full_video_gain_sum": 0.03,
+                "non_authoritative_mlx_window_gain_sum": 18.0,
+                **_false_authority(),
+            }
+        ],
+    }
+
+    with pytest.raises(
+        MLXDynamicLearnedSweepError,
+        match="full_video_denominator must be an integer",
+    ):
+        build_mlx_dynamic_learned_sweep_plan(
+            incumbent_score=0.1920513168811056,
+            candidate_payloads=[payload],
+            top_k=4,
+        )
+
+
 def test_dynamic_sweep_does_not_treat_inherited_exact_estimate_as_candidate_specific() -> None:
     plan = build_mlx_dynamic_learned_sweep_plan(
         incumbent_score=0.1920513168811056,

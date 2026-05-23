@@ -12,6 +12,7 @@ from tac.optimization.decoder_q_selective_window_bridge import (
     build_decoder_q_selective_window_bridge_plan,
     render_decoder_q_selective_window_bridge_markdown,
 )
+from tac.optimization.normalized_objective import RATE_SCORE_PER_BYTE
 
 
 def _false_authority() -> dict:
@@ -41,6 +42,8 @@ def _row(tmp_path: Path, *, rank: int, start: int, gain: float) -> dict:
     baseline_path = tmp_path / f"baseline_pair_{start:04d}_{start + 1:04d}.json"
     candidate_path.write_text(json.dumps({"pair": [start, start + 1]}), encoding="utf-8")
     baseline_path.write_text(json.dumps({"baseline": [start, start + 1]}), encoding="utf-8")
+    normalized_gain = gain / 600.0
+    normalized_break_even = normalized_gain / RATE_SCORE_PER_BYTE
     return {
         "schema": "mlx_effective_spend_triage_candidate_row.v1",
         **_false_authority(),
@@ -57,9 +60,13 @@ def _row(tmp_path: Path, *, rank: int, start: int, gain: float) -> dict:
         "source_n_samples": 1,
         "source_batch_pairs": 1,
         "full_video_denominator": 600,
-        "normalized_full_video_scorer_gain_vs_baseline": gain / 600.0,
-        "projected_full_video_delta_vs_baseline_score": -(gain / 600.0),
-        "normalized_full_video_byte_budget_margin_vs_break_even": gain,
+        "added_archive_bytes": 0,
+        "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+        "projected_full_video_delta_vs_baseline_score": -normalized_gain,
+        "break_even_added_bytes_from_normalized_full_video_gain": (
+            normalized_break_even
+        ),
+        "normalized_full_video_byte_budget_margin_vs_break_even": normalized_break_even,
         "source_path": str(candidate_path),
         "window_baseline_source_path": str(baseline_path),
         "archive_sha256": "a" * 64,
@@ -159,6 +166,9 @@ def test_bridge_plan_preserves_false_authority_and_requires_dqs1_materialization
     assert plan["work_units"][0]["observed_mlx_window_gain"] == pytest.approx(0.002)
     assert "observed_mlx_gain" not in plan["work_units"][0]
     assert plan["work_units"][0]["normalized_full_video_gain"] == pytest.approx(0.002 / 600.0)
+    assert plan["work_units"][0][
+        "break_even_added_bytes_from_normalized_full_video_gain"
+    ] == pytest.approx((0.002 / 600.0) / RATE_SCORE_PER_BYTE)
     assert "byte_budget_margin_vs_break_even" not in plan["work_units"][0]
     assert plan["coalesced_runs"][0]["pair_window"] == [10, 12]
     assert "local_mlx_gain_sum_non_authoritative" not in plan["coalesced_runs"][0]
@@ -202,6 +212,28 @@ def test_bridge_rejects_non_improving_projected_full_video_delta(tmp_path: Path)
     with pytest.raises(
         DecoderQSelectiveWindowBridgeError,
         match="projected full-video delta must be negative",
+    ):
+        build_decoder_q_selective_window_bridge_plan(
+            selection,
+            manifest,
+            repo_root=tmp_path,
+            lane_id="lane_decoder_q_bridge_test",
+        )
+
+
+def test_bridge_rejects_normalized_break_even_mismatch(tmp_path: Path) -> None:
+    selection = _selection(tmp_path)
+    manifest = _manifest(tmp_path)
+    for row in selection["selected_rows"]:
+        row["archive_sha256"] = manifest["archive_zip_sha256"]
+    selection["selected_rows"][0]["break_even_added_bytes_from_normalized_full_video_gain"] = (
+        selection["selected_rows"][0]["observed_scorer_gain_vs_baseline"]
+        / RATE_SCORE_PER_BYTE
+    )
+
+    with pytest.raises(
+        DecoderQSelectiveWindowBridgeError,
+        match="normalized_full_video_break_even_mismatch",
     ):
         build_decoder_q_selective_window_bridge_plan(
             selection,

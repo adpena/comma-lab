@@ -313,6 +313,10 @@ def _mlx_candidate_rows(
             row.get("normalized_full_video_byte_budget_margin_vs_break_even"),
             label=f"{candidate_id}.normalized_full_video_byte_budget_margin_vs_break_even",
         )
+        normalized_break_even = _finite_float(
+            row.get("break_even_added_bytes_from_normalized_full_video_gain"),
+            label=f"{candidate_id}.break_even_added_bytes_from_normalized_full_video_gain",
+        )
         predicted_delta = row.get("predicted_delta_vs_baseline_score")
         disagreement = 0.0
         if predicted_delta is not None:
@@ -353,6 +357,9 @@ def _mlx_candidate_rows(
                     "pair_indices": row.get("pair_indices"),
                     "projected_full_video_delta_vs_baseline_score": observed_delta,
                     "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+                    "break_even_added_bytes_from_normalized_full_video_gain": (
+                        normalized_break_even
+                    ),
                     "predicted_delta_vs_baseline_score": predicted_delta,
                     "normalized_full_video_byte_budget_margin_vs_break_even": normalized_margin,
                     "planning_value_scope": "normalized_full_video",
@@ -509,6 +516,22 @@ def _manual_candidate_rows(
             raise CrossFamilyCandidatePortfolioError(
                 f"manual candidate {index} missing candidate_id or family"
             )
+        if any(
+            row.get(key) is not None
+            for key in (
+                "normalized_full_video_scorer_gain_vs_baseline",
+                "projected_full_video_delta_vs_baseline_score",
+                "break_even_added_bytes_from_normalized_full_video_gain",
+                "normalized_full_video_byte_budget_margin_vs_break_even",
+            )
+        ):
+            try:
+                require_normalized_full_video_objective(
+                    row,
+                    label=f"{candidate_id}.normalized_objective",
+                )
+            except NormalizedObjectiveError as exc:
+                raise CrossFamilyCandidatePortfolioError(str(exc)) from exc
         out.append(
             _candidate(
                 candidate_id=candidate_id,

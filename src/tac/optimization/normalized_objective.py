@@ -53,6 +53,9 @@ def normalized_full_video_objective_metrics(
     added_archive_bytes = _as_float(row.get("added_archive_bytes"))
     normalized_gain = _as_float(row.get("normalized_full_video_scorer_gain_vs_baseline"))
     projected_delta = _as_float(row.get("projected_full_video_delta_vs_baseline_score"))
+    break_even_bytes = _as_float(
+        row.get("break_even_added_bytes_from_normalized_full_video_gain")
+    )
     normalized_margin = _as_float(
         row.get("normalized_full_video_byte_budget_margin_vs_break_even")
     )
@@ -72,6 +75,8 @@ def normalized_full_video_objective_metrics(
         blockers.append("normalized_full_video_gain_missing")
     if projected_delta is None:
         blockers.append("projected_full_video_delta_missing")
+    if break_even_bytes is None:
+        blockers.append("normalized_full_video_break_even_missing")
     if normalized_margin is None:
         blockers.append("normalized_full_video_margin_missing")
 
@@ -98,10 +103,16 @@ def normalized_full_video_objective_metrics(
             abs_tol=abs_tol,
         ):
             blockers.append("normalized_full_video_gain_mismatch")
+        recomputed_break_even_bytes = recomputed_gain / RATE_SCORE_PER_BYTE
+        if break_even_bytes is not None and not _close(
+            break_even_bytes,
+            recomputed_break_even_bytes,
+            abs_tol=abs_tol,
+        ):
+            blockers.append("normalized_full_video_break_even_mismatch")
     if added_archive_bytes is not None:
         rate_delta = RATE_SCORE_PER_BYTE * added_archive_bytes
         recomputed_projected_delta = rate_delta - recomputed_gain
-        recomputed_break_even_bytes = recomputed_gain / RATE_SCORE_PER_BYTE
         recomputed_margin = recomputed_break_even_bytes - added_archive_bytes
         if projected_delta is not None and not _close(
             projected_delta,

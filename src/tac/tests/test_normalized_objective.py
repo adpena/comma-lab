@@ -25,6 +25,9 @@ def test_normalized_objective_recomputes_singleton_window_units() -> None:
             "projected_full_video_delta_vs_baseline_score": (
                 13 * RATE_SCORE_PER_BYTE - normalized_gain
             ),
+            "break_even_added_bytes_from_normalized_full_video_gain": (
+                normalized_gain / RATE_SCORE_PER_BYTE
+            ),
             "normalized_full_video_byte_budget_margin_vs_break_even": (
                 normalized_gain / RATE_SCORE_PER_BYTE - 13
             ),
@@ -34,6 +37,9 @@ def test_normalized_objective_recomputes_singleton_window_units() -> None:
     assert metrics["normalized_gain"] == pytest.approx(normalized_gain)
     assert metrics["normalized_margin"] == pytest.approx(
         normalized_gain / RATE_SCORE_PER_BYTE - 13
+    )
+    assert metrics["break_even_added_bytes"] == pytest.approx(
+        normalized_gain / RATE_SCORE_PER_BYTE
     )
 
 
@@ -47,8 +53,36 @@ def test_normalized_objective_rejects_raw_gain_disguised_as_full_video() -> None
                 "added_archive_bytes": 0,
                 "normalized_full_video_scorer_gain_vs_baseline": 0.012,
                 "projected_full_video_delta_vs_baseline_score": -0.012,
+                "break_even_added_bytes_from_normalized_full_video_gain": (
+                    0.012 / RATE_SCORE_PER_BYTE
+                ),
                 "normalized_full_video_byte_budget_margin_vs_break_even": (
                     0.012 / RATE_SCORE_PER_BYTE
+                ),
+            }
+        )
+
+
+def test_normalized_objective_rejects_break_even_mismatch() -> None:
+    raw_gain = 0.012
+    normalized_gain = raw_gain / 600.0
+    with pytest.raises(
+        NormalizedObjectiveError,
+        match="normalized_full_video_break_even_mismatch",
+    ):
+        require_normalized_full_video_objective(
+            {
+                "observed_scorer_gain_vs_baseline": raw_gain,
+                "source_n_samples": 1,
+                "full_video_denominator": 600,
+                "added_archive_bytes": 0,
+                "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+                "projected_full_video_delta_vs_baseline_score": -normalized_gain,
+                "break_even_added_bytes_from_normalized_full_video_gain": (
+                    raw_gain / RATE_SCORE_PER_BYTE
+                ),
+                "normalized_full_video_byte_budget_margin_vs_break_even": (
+                    normalized_gain / RATE_SCORE_PER_BYTE
                 ),
             }
         )

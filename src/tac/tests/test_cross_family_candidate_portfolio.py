@@ -45,6 +45,9 @@ def _mlx_selection() -> dict[str, object]:
                 "projected_full_video_delta_vs_baseline_score": -0.00002,
                 "full_video_denominator": 600,
                 "normalized_full_video_scorer_gain_vs_baseline": 0.00002,
+                "break_even_added_bytes_from_normalized_full_video_gain": (
+                    0.00002 / RATE_SCORE_PER_BYTE
+                ),
                 "normalized_full_video_byte_budget_margin_vs_break_even": (
                     0.00002 / RATE_SCORE_PER_BYTE
                 ),
@@ -696,6 +699,23 @@ def test_portfolio_rejects_mlx_selection_with_inconsistent_normalized_objective(
         )
 
 
+def test_portfolio_rejects_mlx_selection_with_break_even_mismatch() -> None:
+    selection = _mlx_selection()
+    row = selection["selected_rows"][0]  # type: ignore[index]
+    row["break_even_added_bytes_from_normalized_full_video_gain"] = (  # type: ignore[index]
+        0.012 / RATE_SCORE_PER_BYTE
+    )
+
+    with pytest.raises(
+        CrossFamilyCandidatePortfolioError,
+        match="normalized_full_video_break_even_mismatch",
+    ):
+        build_cross_family_candidate_portfolio(
+            incumbent_score=0.2,
+            mlx_selections=[selection],
+        )
+
+
 def test_portfolio_requires_mlx_selection_boundary_markers() -> None:
     selection = _mlx_selection()
     row = selection["selected_rows"][0]  # type: ignore[index]
@@ -708,6 +728,37 @@ def test_portfolio_requires_mlx_selection_boundary_markers() -> None:
         build_cross_family_candidate_portfolio(
             incumbent_score=0.2,
             mlx_selections=[selection],
+        )
+
+
+def test_portfolio_rejects_manual_mlx_normalized_objective_bypass() -> None:
+    with pytest.raises(
+        CrossFamilyCandidatePortfolioError,
+        match="normalized_full_video_gain_mismatch",
+    ):
+        build_cross_family_candidate_portfolio(
+            incumbent_score=0.2,
+            manual_candidates=[
+                {
+                    **_false_authority(),
+                    "candidate_id": "manual_mlx_bypass",
+                    "family": "mlx_decoder_q",
+                    "predicted_score_mean": 0.199,
+                    "predicted_score_variance": 1.0e-6,
+                    "observed_scorer_gain_vs_baseline": 0.012,
+                    "source_n_samples": 1,
+                    "full_video_denominator": 600,
+                    "added_archive_bytes": 0,
+                    "normalized_full_video_scorer_gain_vs_baseline": 0.012,
+                    "projected_full_video_delta_vs_baseline_score": -0.012,
+                    "break_even_added_bytes_from_normalized_full_video_gain": (
+                        0.012 / RATE_SCORE_PER_BYTE
+                    ),
+                    "normalized_full_video_byte_budget_margin_vs_break_even": (
+                        0.012 / RATE_SCORE_PER_BYTE
+                    ),
+                }
+            ],
         )
 
 

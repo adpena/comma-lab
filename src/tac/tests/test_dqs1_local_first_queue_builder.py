@@ -278,6 +278,35 @@ def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(
     )
 
 
+@pytest.mark.parametrize(
+    ("selected_pair_indices", "match"),
+    [
+        ([1, 1, 2], "contains duplicates"),
+        ([-1, 2], "out of range"),
+        ([600], "out of range"),
+        ([2, 1], "sorted ascending"),
+    ],
+)
+def test_dqs1_queue_builder_rejects_malformed_selected_pair_indices(
+    tmp_path: Path,
+    selected_pair_indices: list[int],
+    match: str,
+) -> None:
+    summary = _write_summary(tmp_path)
+    portfolio = tmp_path / "portfolio.json"
+    payload = json.loads(portfolio.read_text())
+    payload["operator_action_rows"][0]["source_metadata"][
+        "selected_pair_indices"
+    ] = selected_pair_indices
+    payload["operator_action_rows"][0]["source_metadata"][
+        "selected_pair_count"
+    ] = len(selected_pair_indices)
+    portfolio.write_text(json.dumps(payload))
+
+    with pytest.raises(ExperimentQueueError, match=match):
+        build_queue_from_action_summary(summary, repo_root=tmp_path, results_root="results")
+
+
 def test_dqs1_queue_builder_refuses_to_skip_positive_eureka_candidate(
     tmp_path: Path,
 ) -> None:

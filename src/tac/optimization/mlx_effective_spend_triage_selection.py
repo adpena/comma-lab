@@ -24,6 +24,7 @@ DEFAULT_PREDICTION_FIELD = "ll_predicted_delta_vs_baseline_score"
 
 _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
+    "score_claim_valid",
     "promotion_eligible",
     "ready_for_exact_eval_dispatch",
     "rank_or_kill_eligible",
@@ -318,6 +319,9 @@ def _selection_row(
         ),
         "projected_full_video_delta_vs_baseline_score": row.get(
             "projected_full_video_delta_vs_baseline_score"
+        ),
+        "break_even_added_bytes_from_normalized_full_video_gain": row.get(
+            "break_even_added_bytes_from_normalized_full_video_gain"
         ),
         "normalized_full_video_byte_budget_margin_vs_break_even": row.get(
             "normalized_full_video_byte_budget_margin_vs_break_even"

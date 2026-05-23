@@ -370,6 +370,7 @@ def _mlx_response_row(
     posenet_sha256: str | None = None,
     segnet_sha256: str | None = None,
 ) -> dict:
+    normalized = _normalized_mlx_objective_fields()
     row = {
         "schema": "scorer_response_row.v1",
         "row_id": row_id,
@@ -385,10 +386,12 @@ def _mlx_response_row(
         "source_n_samples": 600,
         "source_pair_window": pair_window,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
+        **normalized,
     }
     if source_run_id is not None:
         row["source_run_id"] = source_run_id
@@ -403,6 +406,31 @@ def _mlx_response_row(
     if segnet_sha256 is not None:
         row["source_segnet_sha256"] = segnet_sha256
     return row
+
+
+def _normalized_mlx_objective_fields(
+    *,
+    observed_gain: float = 1.0e-6,
+    source_n_samples: int = 600,
+    added_archive_bytes: int = 0,
+) -> dict[str, float | int]:
+    normalized_gain = observed_gain * source_n_samples / 600.0
+    return {
+        "observed_scorer_gain_vs_baseline": observed_gain,
+        "source_n_samples": source_n_samples,
+        "added_archive_bytes": added_archive_bytes,
+        "full_video_denominator": 600,
+        "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+        "projected_full_video_delta_vs_baseline_score": (
+            added_archive_bytes * RATE_SCORE_PER_BYTE - normalized_gain
+        ),
+        "break_even_added_bytes_from_normalized_full_video_gain": (
+            normalized_gain / RATE_SCORE_PER_BYTE
+        ),
+        "normalized_full_video_byte_budget_margin_vs_break_even": (
+            normalized_gain / RATE_SCORE_PER_BYTE - added_archive_bytes
+        ),
+    }
 
 
 def _mlx_cache_auth_audit_payload(
@@ -509,17 +537,20 @@ def _attach_mlx_identity_to_rows(dataset: dict) -> dict:
     for row in dataset["rows"]:
         if row.get("family") != "mlx_scorer_response":
             continue
+        observed_gain = abs(float(row.get("scorer_delta_vs_baseline") or 1.0e-6))
         row["archive_sha256"] = "a" * 64
         row["source_inflated_outputs_aggregate_sha256"] = "e" * 64
         row["source_batch_pairs"] = 1
         row["source_n_samples"] = 600
         row["source_pair_window"] = [0, 600]
+        row.update(_normalized_mlx_objective_fields(observed_gain=observed_gain))
     return dataset
 
 
 def _response_dataset_with_rows(rows: list[dict]) -> dict:
     false_authority = {
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
@@ -635,6 +666,10 @@ def test_build_response_dataset_accepts_direct_mlx_scorer_response_payload(tmp_p
         row["projected_full_video_delta_vs_baseline_score"],
         row["rate_delta_vs_baseline"] - expected_normalized_gain,
     )
+    assert math.isclose(
+        row["break_even_added_bytes_from_normalized_full_video_gain"],
+        expected_normalized_gain / RATE_SCORE_PER_BYTE,
+    )
 
 
 def test_build_response_dataset_preserves_zero_source_start_pair(tmp_path) -> None:
@@ -688,11 +723,13 @@ def test_build_response_dataset_rejects_invalid_mlx_response_family(tmp_path) ->
 def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
     false_authority = {
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
         "promotable": False,
     }
+    normalized_gain = 1.0e-6
     plan = build_next_probe_plan(
         {
             "schema": "scorer_response_dataset.v1",
@@ -704,6 +741,17 @@ def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
                     "family": "mlx_scorer_response",
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
+                    "observed_scorer_gain_vs_baseline": normalized_gain,
+                    "added_archive_bytes": 0,
+                    "full_video_denominator": 600,
+                    "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+                    "projected_full_video_delta_vs_baseline_score": -normalized_gain,
+                    "break_even_added_bytes_from_normalized_full_video_gain": (
+                        normalized_gain / RATE_SCORE_PER_BYTE
+                    ),
+                    "normalized_full_video_byte_budget_margin_vs_break_even": (
+                        normalized_gain / RATE_SCORE_PER_BYTE
+                    ),
                     "byte_budget_margin_vs_break_even": None,
                     "archive_sha256": "a" * 64,
                     "source_inflated_outputs_aggregate_sha256": "e" * 64,
@@ -736,9 +784,62 @@ def test_next_probe_plan_prioritizes_mlx_response_harvest() -> None:
     )
 
 
+def test_next_probe_plan_excludes_mlx_rows_missing_normalized_objective() -> None:
+    false_authority = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    plan = build_next_probe_plan(
+        {
+            "schema": "scorer_response_dataset.v1",
+            "summary": {"row_count": 1},
+            "rows": [
+                {
+                    "schema": "scorer_response_row.v1",
+                    "row_id": "mlx-row-missing-normalized-objective",
+                    "family": "mlx_scorer_response",
+                    "delta_vs_baseline_score": -0.05,
+                    "scorer_delta_vs_baseline": -0.05,
+                    "observed_scorer_gain_vs_baseline": 0.05,
+                    "byte_budget_margin_vs_break_even": 1_000_000.0,
+                    "archive_sha256": "a" * 64,
+                    "source_inflated_outputs_aggregate_sha256": "e" * 64,
+                    "source_batch_pairs": 1,
+                    "source_n_samples": 1,
+                    "source_pair_window": [0, 1],
+                    **false_authority,
+                }
+            ],
+        },
+        mlx_torch_parity_sweep=_mlx_parity_sweep_payload(passed=True),
+        mlx_score_calibration=_mlx_score_calibration_payload(),
+        mlx_production_contract=_mlx_production_contract_payload(),
+    )
+
+    assert plan["best_total_row"] is None
+    assert plan["best_scorer_row"] is None
+    assert plan["best_byte_budget_margin_row"] is None
+    assert {
+        item["rule"] for item in plan["prohibitions"]
+    } >= {
+        "do_not_use_mlx_rows_without_normalized_full_video_objective",
+    }
+    assert "mlx-row-missing-normalized-objective" not in {
+        row_id
+        for probe in plan["probes"]
+        for row_id in probe.get("input_rows", [])
+    }
+    assert not any(probe["probe_id"].startswith("ll_mlx_") for probe in plan["probes"])
+
+
 def test_next_probe_plan_rejects_mismatched_mlx_normalized_objective() -> None:
     false_authority = {
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
@@ -756,6 +857,9 @@ def test_next_probe_plan_rejects_mismatched_mlx_normalized_objective() -> None:
         "added_archive_bytes": 0,
         "normalized_full_video_scorer_gain_vs_baseline": 0.012,
         "projected_full_video_delta_vs_baseline_score": -0.012,
+        "break_even_added_bytes_from_normalized_full_video_gain": (
+            0.012 / RATE_SCORE_PER_BYTE
+        ),
         "normalized_full_video_byte_budget_margin_vs_break_even": (
             0.012 / RATE_SCORE_PER_BYTE
         ),
@@ -1568,6 +1672,7 @@ def test_next_probe_plan_effective_mlx_spend_triage_gate_surfaces_contract_cover
 def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:
     false_authority = {
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "rank_or_kill_eligible": False,
@@ -1585,6 +1690,7 @@ def test_next_probe_plan_requires_mlx_parity_sweep_for_mlx_rows() -> None:
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
                     "byte_budget_margin_vs_break_even": None,
+                    **_normalized_mlx_objective_fields(),
                     **false_authority,
                 }
             ],
@@ -1625,6 +1731,7 @@ def test_next_probe_plan_attaches_passing_mlx_score_calibration_gate() -> None:
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
                     "byte_budget_margin_vs_break_even": None,
+                    **_normalized_mlx_objective_fields(),
                     **false_authority,
                 }
             ],
@@ -1673,6 +1780,7 @@ def test_next_probe_plan_gates_explicit_mlx_response_family_by_source_schema() -
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
                     "byte_budget_margin_vs_break_even": None,
+                    **_normalized_mlx_objective_fields(),
                     **false_authority,
                 }
             ],
@@ -1709,6 +1817,7 @@ def test_next_probe_plan_blocks_uncertain_mlx_score_calibration_gate() -> None:
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
                     "byte_budget_margin_vs_break_even": None,
+                    **_normalized_mlx_objective_fields(),
                     **false_authority,
                 }
             ],
@@ -1746,6 +1855,7 @@ def test_next_probe_plan_blocks_failed_mlx_production_contract() -> None:
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
                     "byte_budget_margin_vs_break_even": None,
+                    **_normalized_mlx_objective_fields(),
                     **false_authority,
                 }
             ],
@@ -1784,6 +1894,7 @@ def test_next_probe_plan_blocks_failed_mlx_parity_sweep_without_override() -> No
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
                     "byte_budget_margin_vs_break_even": None,
+                    **_normalized_mlx_objective_fields(),
                     **false_authority,
                 }
             ],
@@ -1820,6 +1931,7 @@ def test_next_probe_plan_allows_failed_mlx_parity_sweep_with_research_override()
                     "delta_vs_baseline_score": 1.0e-6,
                     "scorer_delta_vs_baseline": 1.0e-6,
                     "byte_budget_margin_vs_break_even": None,
+                    **_normalized_mlx_objective_fields(),
                     **false_authority,
                 }
             ],
@@ -2561,6 +2673,15 @@ def test_normalize_legacy_response_dataset_authority_refuses_core_or_source_ambi
         assert "score_claim" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected missing core authority rejection")
+
+    invalid_score_claim_valid = _current_response_dataset_payload()
+    invalid_score_claim_valid["rows"][0]["score_claim_valid"] = True
+    try:
+        normalize_legacy_response_dataset_authority(invalid_score_claim_valid)
+    except ScorerResponseDatasetError as exc:
+        assert "score_claim_valid" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected score_claim_valid authority rejection")
 
     source_claim = _current_response_dataset_payload()
     source_claim["rows"][0]["authority_source_score_claim"] = "true"
@@ -3506,6 +3627,10 @@ def test_response_dataset_computes_break_even_bytes_for_scorer_gain(tmp_path) ->
     assert math.isclose(
         row["normalized_full_video_scorer_gain_vs_baseline"],
         3.0 * RATE_SCORE_PER_BYTE,
+    )
+    assert math.isclose(
+        row["break_even_added_bytes_from_normalized_full_video_gain"],
+        3.0,
     )
     assert math.isclose(row["required_scorer_gain_for_added_bytes"], 2.0 * RATE_SCORE_PER_BYTE)
     assert row["scorer_gain_shortfall_to_break_even"] == 0.0

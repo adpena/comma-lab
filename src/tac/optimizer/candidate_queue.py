@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_SIGNAL_SCHEMA,
     LocalCPUContestDriftError,
@@ -136,6 +137,55 @@ def _shaish(value: Any) -> str | None:
         if all(ch in "0123456789abcdef" for ch in text):
             return text
     return None
+
+
+def _validate_mlx_dynamic_normalized_gain_sum(
+    row: Mapping[str, Any],
+    *,
+    context: str,
+) -> None:
+    normalized_raw = row.get("non_authoritative_normalized_full_video_gain_sum")
+    mlx_alias_raw = row.get("non_authoritative_mlx_gain_sum")
+    window_raw = row.get("non_authoritative_mlx_window_gain_sum")
+    if normalized_raw is None and mlx_alias_raw is None and window_raw is None:
+        return
+    denominator = _as_int(row.get("full_video_denominator"))
+    if denominator != CONTEST_EXACT_SAMPLE_COUNT:
+        raise ValueError(
+            f"{context}.full_video_denominator must be {CONTEST_EXACT_SAMPLE_COUNT}"
+        )
+    normalized = _as_float(normalized_raw)
+    window = _as_float(window_raw)
+    if normalized is None:
+        raise ValueError(
+            f"{context}.non_authoritative_normalized_full_video_gain_sum must be finite"
+        )
+    if window is None:
+        raise ValueError(
+            f"{context}.non_authoritative_mlx_window_gain_sum must be finite"
+        )
+    expected = window / float(denominator)
+    if not math.isclose(normalized, expected, rel_tol=1.0e-9, abs_tol=1.0e-12):
+        raise ValueError(
+            f"{context}.non_authoritative_normalized_full_video_gain_sum mismatch"
+        )
+    if mlx_alias_raw is not None:
+        mlx_alias = _as_float(mlx_alias_raw)
+        if mlx_alias is None:
+            raise ValueError(f"{context}.non_authoritative_mlx_gain_sum must be finite")
+        if not math.isclose(mlx_alias, normalized, rel_tol=1.0e-9, abs_tol=1.0e-12):
+            raise ValueError(
+                f"{context}.non_authoritative_mlx_gain_sum must equal normalized full-video gain sum"
+            )
+
+
+def _mlx_dynamic_parent_queue_candidate_id(source: Mapping[str, Any]) -> str | None:
+    source_candidate_id = str(source.get("candidate_id") or "")
+    config_id = str(source.get("sweep_config_id") or "")
+    pass_id = str(source.get("optimization_pass_id") or "")
+    if not source_candidate_id or not config_id or not pass_id:
+        return None
+    return f"{source_candidate_id}::{config_id}::{pass_id}"
 
 
 def _ordered_unique(values: Iterable[str]) -> list[str]:
@@ -619,6 +669,22 @@ def _mlx_dynamic_learned_sweep_candidates(
     payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    ranked_sources = [
+        source
+        for source in payload.get("ranked_sweep_rows") or []
+        if isinstance(source, Mapping)
+    ]
+    accepted_parent_queue_ids: set[str] = set()
+    for index, source in enumerate(ranked_sources):
+        if source.get("schema") != "mlx_dynamic_learned_sweep_row.v1":
+            continue
+        _validate_mlx_dynamic_normalized_gain_sum(
+            source,
+            context=f"ranked_sweep_rows[{index}]",
+        )
+        parent_id = _mlx_dynamic_parent_queue_candidate_id(source)
+        if parent_id is not None:
+            accepted_parent_queue_ids.add(parent_id)
     for recipe in payload.get("optimizer_scheduler_candidates") or []:
         if not isinstance(recipe, Mapping):
             continue
@@ -697,6 +763,12 @@ def _mlx_dynamic_learned_sweep_candidates(
         queue_candidate_id = str(source.get("queue_candidate_id") or "")
         if not queue_candidate_id:
             continue
+        parent_queue_candidate_id = str(source.get("parent_queue_candidate_id") or "")
+        if parent_queue_candidate_id not in accepted_parent_queue_ids:
+            raise ValueError(
+                "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing "
+                f"parent_queue_candidate_id not accepted: {parent_queue_candidate_id}"
+            )
         row = dict(source)
         row.update(
             {
@@ -764,12 +836,16 @@ def _mlx_dynamic_learned_sweep_candidates(
             ],
         )
         rows.append(row)
-    for source in payload.get("ranked_sweep_rows") or []:
+    for index, source in enumerate(ranked_sources):
         if not isinstance(source, Mapping):
             continue
         require_no_truthy_authority_fields(
             source,
             context="mlx_dynamic_learned_sweep_row",
+        )
+        _validate_mlx_dynamic_normalized_gain_sum(
+            source,
+            context=f"ranked_sweep_rows[{index}]",
         )
         source_candidate_id = str(source.get("candidate_id") or "")
         config_id = str(source.get("sweep_config_id") or "")

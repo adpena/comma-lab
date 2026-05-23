@@ -16,6 +16,10 @@ from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
+from tac.optimization.normalized_objective import (
+    NormalizedObjectiveError,
+    require_normalized_full_video_objective,
+)
 from tac.optimization.scorer_response_dataset import render_authority_markdown_block
 
 SCHEMA = "decoder_q_selective_window_bridge_plan.v1"
@@ -198,6 +202,10 @@ def _validate_selection(selection: dict[str, Any]) -> list[dict[str, Any]]:
             < 0
         ):
             raise DecoderQSelectiveWindowBridgeError(f"{label} margin must be non-negative")
+        try:
+            require_normalized_full_video_objective(row, label=f"{label} normalized objective")
+        except NormalizedObjectiveError as exc:
+            raise DecoderQSelectiveWindowBridgeError(str(exc)) from exc
         validated.append(row)
     return validated
 
@@ -381,7 +389,12 @@ def _build_window_unit(
         "projected_full_video_delta_vs_baseline_score": row.get(
             "projected_full_video_delta_vs_baseline_score"
         ),
+        "break_even_added_bytes_from_normalized_full_video_gain": row.get(
+            "break_even_added_bytes_from_normalized_full_video_gain"
+        ),
         "normalized_full_video_byte_budget_margin_vs_break_even": margin,
+        "added_archive_bytes": row.get("added_archive_bytes"),
+        "observed_scorer_gain_vs_baseline": observed_gain,
         "predicted_delta_vs_baseline_score": row.get(
             "predicted_delta_vs_baseline_score"
         ),

@@ -10,6 +10,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.bayesian_experimental_design import expected_improvement_minimize
 from tac.optimization.mlx_dynamic_sweep_observations import (
@@ -115,6 +116,55 @@ def _metadata_value(row: Mapping[str, Any], keys: Sequence[str]) -> Any:
         if key in row:
             return row.get(key)
     return None
+
+
+def _as_int(value: Any, *, label: str) -> int:
+    if isinstance(value, bool):
+        raise MLXDynamicLearnedSweepError(f"{label} must be an integer")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise MLXDynamicLearnedSweepError(f"{label} must be an integer") from exc
+    if parsed != value and not (isinstance(value, str) and str(parsed) == value):
+        raise MLXDynamicLearnedSweepError(f"{label} must be integral")
+    return parsed
+
+
+def _validate_normalized_gain_sum(row: Mapping[str, Any], *, label: str) -> None:
+    """Guard aggregate MLX gain aliases before dynamic-sweep admission."""
+
+    normalized_raw = row.get("non_authoritative_normalized_full_video_gain_sum")
+    mlx_alias_raw = row.get("non_authoritative_mlx_gain_sum")
+    window_raw = row.get("non_authoritative_mlx_window_gain_sum")
+    if normalized_raw is None and mlx_alias_raw is None and window_raw is None:
+        return
+    denominator = _as_int(row.get("full_video_denominator"), label=f"{label} full_video_denominator")
+    if denominator != CONTEST_EXACT_SAMPLE_COUNT:
+        raise MLXDynamicLearnedSweepError(
+            f"{label} full_video_denominator must be {CONTEST_EXACT_SAMPLE_COUNT}"
+        )
+    normalized = _as_float(
+        normalized_raw,
+        label=f"{label} non_authoritative_normalized_full_video_gain_sum",
+    )
+    window = _as_float(
+        window_raw,
+        label=f"{label} non_authoritative_mlx_window_gain_sum",
+    )
+    expected = window / float(denominator)
+    if not math.isclose(normalized, expected, rel_tol=1.0e-9, abs_tol=1.0e-12):
+        raise MLXDynamicLearnedSweepError(
+            f"{label} non_authoritative_normalized_full_video_gain_sum mismatch"
+        )
+    if mlx_alias_raw is not None:
+        mlx_alias = _as_float(
+            mlx_alias_raw,
+            label=f"{label} non_authoritative_mlx_gain_sum",
+        )
+        if not math.isclose(mlx_alias, normalized, rel_tol=1.0e-9, abs_tol=1.0e-12):
+            raise MLXDynamicLearnedSweepError(
+                f"{label} non_authoritative_mlx_gain_sum must equal normalized full-video gain sum"
+            )
 
 
 def default_execution_configs() -> list[dict[str, Any]]:
@@ -354,6 +404,8 @@ def _selector_pareto_candidates(
         if not isinstance(row, Mapping):
             continue
         _require_false_authority(row, label=f"selector candidate {index}")
+        row_label = str(row.get("selector_id") or f"selector candidate {index}")
+        _validate_normalized_gain_sum(row, label=row_label)
         estimate = row.get("exact_cpu_calibrated_estimate")
         if (
             isinstance(estimate, Mapping)
@@ -501,6 +553,8 @@ def _explicit_candidates(
         if not isinstance(row, Mapping):
             continue
         _require_false_authority(row, label=f"candidate {index}")
+        row_label = str(row.get("candidate_id") or row.get("id") or f"candidate {index}")
+        _validate_normalized_gain_sum(row, label=row_label)
         predicted_score = _as_float(
             row.get("predicted_score_mean", row.get("score_mean")),
             label=f"candidate {index} predicted_score_mean",

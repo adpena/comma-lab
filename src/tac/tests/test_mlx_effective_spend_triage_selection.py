@@ -63,6 +63,9 @@ def _row(
         "full_video_denominator": 600,
         "normalized_full_video_scorer_gain_vs_baseline": full_gain,
         "projected_full_video_delta_vs_baseline_score": -full_gain,
+        "break_even_added_bytes_from_normalized_full_video_gain": (
+            full_gain / RATE_SCORE_PER_BYTE
+        ),
         "normalized_full_video_byte_budget_margin_vs_break_even": (
             full_gain / RATE_SCORE_PER_BYTE
         ),
@@ -166,6 +169,12 @@ def test_selection_uses_observed_strict_gated_rows_not_positive_predictions() ->
     assert selection["selected_rows"][0]["selection_basis"] == (
         "normalized_full_video_mlx_singleton_response_gain"
     )
+    assert selection["selected_rows"][0][
+        "break_even_added_bytes_from_normalized_full_video_gain"
+    ] == pytest.approx(
+        selection["selected_rows"][0]["normalized_full_video_scorer_gain_vs_baseline"]
+        / RATE_SCORE_PER_BYTE
+    )
 
 
 def test_selection_can_require_negative_predictions_when_requested() -> None:
@@ -234,6 +243,23 @@ def test_selection_recomputes_normalized_objective_and_rejects_projected_mismatc
     )
 
 
+def test_selection_recomputes_normalized_objective_and_rejects_break_even_mismatch() -> None:
+    dataset = _dataset()
+    dataset["rows"][0]["break_even_added_bytes_from_normalized_full_video_gain"] = (
+        dataset["rows"][0]["observed_scorer_gain_vs_baseline"] / RATE_SCORE_PER_BYTE
+    )
+
+    selection = build_mlx_effective_spend_triage_selection(dataset, _plan(), top_k=4)
+
+    assert [row["row_id"] for row in selection["selected_rows"]] == ["second"]
+    assert (
+        selection["summary"]["rejection_counts"][
+            "normalized_full_video_break_even_mismatch"
+        ]
+        == 1
+    )
+
+
 def test_selection_blocks_non_oof_or_failed_effective_gate() -> None:
     with pytest.raises(MLXEffectiveSpendTriageSelectionError, match="must be strict_pass"):
         build_mlx_effective_spend_triage_selection(
@@ -262,6 +288,30 @@ def test_selection_blocks_rows_with_score_authority() -> None:
 
     assert [row["row_id"] for row in selection["selected_rows"]] == ["second"]
     assert selection["summary"]["rejection_counts"]["score_claim_not_false"] == 1
+
+
+def test_selection_blocks_score_claim_valid_authority_at_plan_dataset_and_row() -> None:
+    plan = _plan()
+    plan["score_claim_valid"] = True
+    with pytest.raises(
+        MLXEffectiveSpendTriageSelectionError,
+        match="plan score_claim_valid must be explicit false",
+    ):
+        build_mlx_effective_spend_triage_selection(_dataset(), plan, top_k=4)
+
+    dataset = _dataset()
+    dataset["score_claim_valid"] = True
+    with pytest.raises(
+        MLXEffectiveSpendTriageSelectionError,
+        match="dataset score_claim_valid must be explicit false",
+    ):
+        build_mlx_effective_spend_triage_selection(dataset, _plan(), top_k=4)
+
+    dataset = _dataset()
+    dataset["rows"][0]["score_claim_valid"] = True
+    selection = build_mlx_effective_spend_triage_selection(dataset, _plan(), top_k=4)
+    assert [row["row_id"] for row in selection["selected_rows"]] == ["second"]
+    assert selection["summary"]["rejection_counts"]["score_claim_valid_not_false"] == 1
 
 
 def test_selection_cli_writes_false_authority_manifest(tmp_path: Path) -> None:
