@@ -48677,6 +48677,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_byte_shaving_scorer_response_unit_wire_in_20260523",
+      "name": "Codex byte-shaving scorer-response normalized unit wire-in",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/byte_shaving_signal_surface_builder.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "pytest 150 passed; ruff passed; git diff --check clean; review_tracker policy-check clean; lane validate clean"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "Kant sidecar P2 orphaned-signal finding converted to scorer-response units; review_tracker two-pass policy-check clean"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_byte_shaving_scorer_response_unit_wire_in_20260523T085030Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -48686,5 +48727,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T08:43:49Z"
+  "updated_at": "2026-05-23T08:52:04Z"
 }

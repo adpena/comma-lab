@@ -34,6 +34,7 @@ from tac.optimization.proxy_candidate_contract import (
     require_no_truthy_authority_fields,
 )
 from tac.optimization.scorer_response_dataset import (
+    RATE_SCORE_PER_BYTE,
     ScorerResponseDatasetError,
     normalize_legacy_response_dataset_authority,
     scorer_response_planning_value_for_target,
@@ -321,6 +322,127 @@ def _scorer_response_planning_summary(
     }
 
 
+def _safe_unit_token(value: Any, *, fallback: str) -> str:
+    raw = str(value or fallback).strip() or fallback
+    out = "".join(ch if ch.isalnum() else "_" for ch in raw.lower())
+    return out.strip("_") or fallback
+
+
+def _scorer_response_units(
+    path: Path,
+    repo_root: Path,
+    *,
+    index: int,
+) -> list[dict[str, Any]]:
+    payload = _load_json_object(path)
+    try:
+        require_no_truthy_authority_fields(
+            payload,
+            context="byte_shaving_scorer_response_units",
+        )
+        normalized = normalize_legacy_response_dataset_authority(
+            payload,
+            source_label=_repo_rel(path, repo_root),
+        )
+    except ValueError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+    except ScorerResponseDatasetError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+    rows = normalized.get("rows")
+    if not isinstance(rows, list):
+        raise ByteShavingCampaignError(f"{path}: scorer-response rows[] missing")
+
+    units: list[dict[str, Any]] = []
+    for row_index, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            raise ByteShavingCampaignError(
+                f"{path}: scorer-response row {row_index} must be object"
+            )
+        row_payload = dict(row)
+        label = str(row_payload.get("row_id") or row_payload.get("candidate_id") or path)
+        try:
+            projected_delta = scorer_response_planning_value_for_target(
+                row_payload,
+                "delta_vs_baseline_score",
+                label=label,
+            )
+            normalized_gain = scorer_response_planning_value_for_target(
+                row_payload,
+                "observed_scorer_gain_vs_baseline",
+                label=label,
+            )
+            normalized_margin = scorer_response_planning_value_for_target(
+                row_payload,
+                "byte_budget_margin_vs_break_even",
+                label=label,
+            )
+        except ScorerResponseDatasetError as exc:
+            raise ByteShavingCampaignError(str(exc)) from exc
+        if projected_delta is None:
+            continue
+        added_archive_bytes = row_payload.get("added_archive_bytes")
+        saved_bytes = 0
+        if isinstance(added_archive_bytes, int | float) and added_archive_bytes < 0:
+            saved_bytes = round(abs(float(added_archive_bytes)))
+        rate_delta = -RATE_SCORE_PER_BYTE * float(saved_bytes)
+        quality_delta = float(projected_delta) - rate_delta
+        token = _safe_unit_token(
+            row_payload.get("candidate_id") or row_payload.get("row_id"),
+            fallback=f"row_{index}_{row_index}",
+        )
+        operation = {
+            "operation_id": "materialize_scorer_response_candidate",
+            "operation_family": "materialize_scorer_response_candidate",
+            "candidate_saved_bytes": saved_bytes,
+            "predicted_quality_score_delta": quality_delta,
+            "materializer": row_payload.get("source_path"),
+            "params": {
+                "source_row_id": row_payload.get("row_id"),
+                "source_candidate_id": row_payload.get("candidate_id"),
+                "source_path": row_payload.get("source_path"),
+                "pair_indices": row_payload.get("pair_indices"),
+                "source_pair_window": row_payload.get("source_pair_window"),
+            },
+            "blockers": [
+                "scorer_response_unit_requires_byte_closed_materializer",
+                "scorer_response_unit_requires_runtime_consumption_proof",
+                "scorer_response_unit_requires_exact_auth_eval_before_score_claim",
+            ],
+        }
+        units.append(
+            {
+                "unit_id": f"scorer_response_{token}",
+                "unit_kind": "scorer_response_row",
+                "candidate_saved_bytes": saved_bytes,
+                "predicted_quality_score_delta": quality_delta,
+                "confidence": row_payload.get("confidence", 0.5),
+                "operation_families": ["materialize_scorer_response_candidate"],
+                "operations": [operation],
+                "source_candidate_id": row_payload.get("candidate_id"),
+                "source_paths": [_repo_rel(path, repo_root)],
+                "source_index": row_index,
+                "score_axis": row_payload.get("axis") or row_payload.get("source_evidence_tag"),
+                "evidence_grade": row_payload.get("source_evidence_grade"),
+                "evidence_semantics": "scorer_response_normalized_full_video_planning_unit",
+                "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+                "projected_full_video_delta_vs_baseline_score": projected_delta,
+                "normalized_full_video_byte_budget_margin_vs_break_even": (
+                    normalized_margin
+                ),
+                "added_archive_bytes": added_archive_bytes,
+                "planning_value_accessor": "scorer_response_planning_value_for_target",
+                "planning_value_scope": "normalized_full_video",
+                "blockers": [
+                    "scorer_response_unit_is_planning_only",
+                    "requires_materializer_before_candidate_archive",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return units
+
+
 def _xray_hook_refs(hooks: Sequence[str]) -> list[dict[str, Any]]:
     if not hooks:
         return []
@@ -550,6 +672,14 @@ def build_byte_shaving_signal_surface(
         if not path.is_file():
             raise ByteShavingCampaignError(f"scorer-response JSON not found: {path}")
         scorer_response_refs.append(_scorer_response_ref(path, repo))
+        for unit in _scorer_response_units(path, repo, index=len(scorer_response_refs) - 1):
+            units.append(
+                _dedupe_unit_id(
+                    unit,
+                    prefix=f"scorer_response_{len(scorer_response_refs) - 1}",
+                    seen=seen_unit_ids,
+                )
+            )
 
     payload = {
         "schema": SIGNAL_SURFACE_SCHEMA,

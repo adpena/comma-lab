@@ -222,6 +222,17 @@ def test_builder_canonicalizes_scorer_response_ref_planning_targets(
 
     ref = surface["scorer_response_refs"][0]
     summary = ref["planning_summary"]
+    scorer_unit = next(
+        unit
+        for unit in surface["units"]
+        if unit["unit_kind"] == "scorer_response_row"
+    )
+    plan = build_byte_shaving_campaign_plan(surface, repo_root=tmp_path)
+    ranked_scorer_unit = next(
+        unit
+        for unit in plan["ranked_units"]
+        if unit["unit_kind"] == "scorer_response_row"
+    )
     assert ref["planning_target_accessor"] == "scorer_response_planning_value_for_target"
     assert ref["score_claim_valid"] is False
     assert ref["mlx_scorer_response_row_count"] == 1
@@ -229,6 +240,43 @@ def test_builder_canonicalizes_scorer_response_ref_planning_targets(
     assert summary["improved_scorer_term_count"] == 0
     assert summary["best_delta"]["delta_vs_baseline_score"] == 0.001
     assert summary["best_scorer_delta"]["scorer_delta_vs_baseline"] == 0.001
+    assert scorer_unit["projected_full_video_delta_vs_baseline_score"] == 0.001
+    assert scorer_unit["planning_value_scope"] == "normalized_full_video"
+    assert ranked_scorer_unit["expected_delta_score"] == pytest.approx(0.001)
+    assert ranked_scorer_unit["recommended_operation_family"] == (
+        "materialize_scorer_response_candidate"
+    )
+
+
+def test_builder_promotes_normalized_scorer_response_ref_to_ranked_unit(
+    tmp_path: Path,
+) -> None:
+    scorer = tmp_path / "scorer.json"
+    _scorer_response_dataset(
+        scorer,
+        rows=[_mlx_response_row(projected_delta=-0.001, raw_delta=10.0)],
+    )
+
+    surface = build_byte_shaving_signal_surface(
+        repo_root=tmp_path,
+        campaign_id="fixture_surface",
+        scorer_response_paths=[scorer],
+    )
+    plan = build_byte_shaving_campaign_plan(surface, repo_root=tmp_path)
+
+    assert surface["units"][0]["unit_kind"] == "scorer_response_row"
+    assert surface["units"][0]["candidate_saved_bytes"] == 0
+    assert surface["units"][0]["projected_full_video_delta_vs_baseline_score"] == (
+        pytest.approx(-0.001)
+    )
+    assert surface["units"][0]["planning_value_accessor"] == (
+        "scorer_response_planning_value_for_target"
+    )
+    assert plan["ranked_units"][0]["unit_kind"] == "scorer_response_row"
+    assert plan["ranked_units"][0]["expected_delta_score"] == pytest.approx(-0.001)
+    assert plan["recommended_prefix"]["selected_unit_ids"] == [
+        surface["units"][0]["unit_id"]
+    ]
 
 
 def test_builder_rejects_mlx_scorer_response_ref_missing_normalized_target(
@@ -301,3 +349,35 @@ def test_cli_writes_surface_and_markdown(tmp_path: Path) -> None:
     surface = json.loads(output.read_text(encoding="utf-8"))
     assert surface["units"][0]["unit_id"] == "drop_pair_0371"
     assert "Authority Boundary" in md_out.read_text(encoding="utf-8")
+
+
+def test_cli_can_build_surface_from_scorer_response_only(tmp_path: Path) -> None:
+    scorer = tmp_path / "scorer.json"
+    output = tmp_path / "surface.json"
+    _scorer_response_dataset(
+        scorer,
+        rows=[_mlx_response_row(projected_delta=-0.001, raw_delta=10.0)],
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--scorer-response",
+            str(scorer),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+            "--campaign-id",
+            "fixture_surface",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    surface = json.loads(output.read_text(encoding="utf-8"))
+    assert surface["units"][0]["unit_kind"] == "scorer_response_row"
+    assert surface["units"][0]["planning_value_scope"] == "normalized_full_video"
+    assert surface["score_claim"] is False

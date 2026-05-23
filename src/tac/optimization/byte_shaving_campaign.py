@@ -50,7 +50,15 @@ BASE_BLOCKERS: tuple[str, ...] = (
 )
 
 UNIT_KINDS: frozenset[str] = frozenset(
-    {"pair", "frame", "byte_range", "archive_section", "tensor", "packet_member"}
+    {
+        "pair",
+        "frame",
+        "byte_range",
+        "archive_section",
+        "tensor",
+        "packet_member",
+        "scorer_response_row",
+    }
 )
 
 DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
@@ -89,6 +97,10 @@ DEFAULT_OPERATION_FAMILIES: dict[str, tuple[str, ...]] = {
         "member_recompress",
         "member_reorder",
         "member_merge",
+    ),
+    "scorer_response_row": (
+        "materialize_scorer_response_candidate",
+        "probe_followup_neighbor",
     ),
 }
 
@@ -148,6 +160,15 @@ def _rate_delta_for_saved_bytes(saved_bytes: int) -> float:
 
 
 def _quality_cost(unit: Mapping[str, Any]) -> float:
+    explicit_delta = _finite_float(
+        unit.get("predicted_quality_score_delta")
+        if unit.get("predicted_quality_score_delta") is not None
+        else unit.get("quality_delta_score")
+        if unit.get("quality_delta_score") is not None
+        else unit.get("predicted_non_rate_delta_score")
+    )
+    if explicit_delta is not None:
+        return explicit_delta
     explicit = _finite_float(unit.get("predicted_quality_score_cost"))
     if explicit is not None:
         return max(0.0, explicit)
@@ -161,6 +182,15 @@ def _quality_cost_with_fallback(
     operation: Mapping[str, Any],
     unit: Mapping[str, Any],
 ) -> float:
+    explicit_delta = _finite_float(
+        operation.get("predicted_quality_score_delta")
+        if operation.get("predicted_quality_score_delta") is not None
+        else operation.get("quality_delta_score")
+        if operation.get("quality_delta_score") is not None
+        else operation.get("predicted_non_rate_delta_score")
+    )
+    if explicit_delta is not None:
+        return explicit_delta
     explicit = _finite_float(operation.get("predicted_quality_score_cost"))
     if explicit is not None:
         return max(0.0, explicit)
@@ -245,7 +275,7 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
             "expected_score_gain": gain,
             "confidence": confidence,
             "confidence_adjusted_gain": gain * confidence,
-            "gain_per_byte": gain / float(saved_bytes),
+            "gain_per_byte": gain / float(saved_bytes) if saved_bytes > 0 else 0.0,
             "materializer": operation.get("materializer"),
             "operation_params": dict(_mapping(operation.get("params"))),
             "blockers": ordered_unique(
@@ -292,7 +322,8 @@ def validate_signal_surface(payload: Mapping[str, Any]) -> None:
             if item.get("saved_bytes") is not None
             else item.get("bytes")
         )
-        if saved is None or saved <= 0:
+        allows_zero_saved = _unit_kind(item) == "scorer_response_row"
+        if saved is None or saved < 0 or (saved == 0 and not allows_zero_saved):
             raise ByteShavingCampaignError(
                 f"units[{index}] requires positive candidate_saved_bytes/saved_bytes/bytes"
             )
@@ -308,7 +339,8 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         if unit.get("saved_bytes") is not None
         else unit.get("bytes")
     )
-    if saved_bytes is None or saved_bytes <= 0:
+    allows_zero_saved = _unit_kind(unit) == "scorer_response_row"
+    if saved_bytes is None or saved_bytes < 0 or (saved_bytes == 0 and not allows_zero_saved):
         raise ByteShavingCampaignError("unit requires positive saved bytes")
     operation_candidates = _operation_candidates(unit, saved_bytes)
     best_operation = operation_candidates[0]
