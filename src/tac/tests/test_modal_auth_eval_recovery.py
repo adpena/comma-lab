@@ -113,6 +113,37 @@ def test_write_spawn_metadata_and_recover_artifacts(tmp_path: Path) -> None:
     assert persisted["returncode"] == 0
 
 
+def test_write_spawn_metadata_forces_false_authority_extra_fields(
+    tmp_path: Path,
+) -> None:
+    write_spawn_metadata(
+        out_dir=tmp_path,
+        tool="experiments/modal_auth_eval.py",
+        app="comma-auth-eval",
+        axis="contest_cuda",
+        call_id="fc-test",
+        local_request={"archive_sha256": "a" * 64},
+        result_json_name="modal_cuda_auth_eval_result.json",
+        extra={
+            "score_claim": True,
+            "score_claim_valid": True,
+            "promotion_eligible": True,
+            "promotable": True,
+            "rank_or_kill_eligible": True,
+            "ready_for_exact_eval_dispatch": True,
+        },
+    )
+
+    payload = json.loads((tmp_path / "modal_auth_eval_spawn.json").read_text())
+
+    assert payload["score_claim"] is False
+    assert payload["score_claim_valid"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["promotable"] is False
+    assert payload["rank_or_kill_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
 def test_recover_prefers_canonical_auth_eval_claim_flags(tmp_path: Path) -> None:
     write_spawn_metadata(
         out_dir=tmp_path,
@@ -314,7 +345,9 @@ def test_recover_contest_cuda_requires_canonical_auth_eval_artifact(
         modal_module=_fake_modal(result),
     )
 
-    assert summary["status"] == "recovered"
+    assert summary["status"] == "recovered_missing_canonical_auth_eval_artifact"
+    assert summary["passed"] is False
+    assert summary["returncode"] == 97
     assert summary["score_claim"] is False
     assert summary["promotion_eligible"] is False
     assert summary["diagnostic_blockers"] == [

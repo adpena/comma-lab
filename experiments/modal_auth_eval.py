@@ -199,8 +199,16 @@ def _validate_uploaded_runtime_tree_expectation(
     submission_dir_path: Path | None,
     inflate_sh_rel: str,
 ) -> None:
-    if not expected_runtime_tree_sha256 or submission_dir_path is None:
+    if submission_dir_path is None:
         return
+    expected_runtime_tree_sha256 = str(expected_runtime_tree_sha256 or "").strip().lower()
+    if not expected_runtime_tree_sha256:
+        raise SystemExit(
+            "FATAL: --expected-runtime-tree-sha256 is required when "
+            "--submission-dir is uploaded. Compute the Modal-projected runtime "
+            "tree hash with the canonical runtime manifest helper before "
+            "dispatch."
+        )
     remote_tree_sha256, content_tree_sha256 = _expected_uploaded_runtime_tree_sha256(
         submission_dir_path=submission_dir_path,
         inflate_sh_rel=inflate_sh_rel,

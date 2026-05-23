@@ -71,10 +71,12 @@ def test_parallel_dispatch_ready_flag_still_requires_live_custody(tmp_path: Path
     inflate = submission / "inflate.sh"
     inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
     inflate.chmod(inflate.stat().st_mode | stat.S_IXUSR)
-    runtime_tree_sha256 = runtime_dependency_manifest(
+    runtime_manifest = runtime_dependency_manifest(
         submission,
         REPO_ROOT,
-    )["runtime_tree_sha256"]
+    )
+    runtime_tree_sha256 = runtime_manifest["runtime_tree_sha256"]
+    runtime_content_tree_sha256 = runtime_manifest["runtime_content_tree_sha256"]
 
     candidate = {
         "candidate_id": "ready_flag_without_live_custody",
@@ -87,6 +89,7 @@ def test_parallel_dispatch_ready_flag_still_requires_live_custody(tmp_path: Path
         "score_claim_verified": False,
         "archive_path": str(submission / "archive.zip"),
         "runtime_tree_sha256": runtime_tree_sha256,
+        "runtime_content_tree_sha256": runtime_content_tree_sha256,
         "candidate_archive_sha256": archive_sha,
         "candidate_archive_bytes": archive_bytes,
         "score_affecting_payload_changed": True,
@@ -120,10 +123,12 @@ def test_parallel_dispatch_refuses_stale_exact_ready_terminal_claim(tmp_path: Pa
             "score_claim": False,
         },
     )
-    runtime_tree_sha256 = runtime_dependency_manifest(
+    runtime_manifest = runtime_dependency_manifest(
         submission,
         REPO_ROOT,
-    )["runtime_tree_sha256"]
+    )
+    runtime_tree_sha256 = runtime_manifest["runtime_tree_sha256"]
+    runtime_content_tree_sha256 = runtime_manifest["runtime_content_tree_sha256"]
     queue = _write_json(
         tmp_path / "exact_ready_queue.json",
         {
@@ -142,6 +147,7 @@ def test_parallel_dispatch_refuses_stale_exact_ready_terminal_claim(tmp_path: Pa
                     "submission_dir": str(submission),
                     "inflate_sh_path": str(inflate),
                     "runtime_tree_sha256": runtime_tree_sha256,
+                    "runtime_content_tree_sha256": runtime_content_tree_sha256,
                     "candidate_archive_sha256": archive_sha,
                     "candidate_archive_bytes": archive_bytes,
                     "score_affecting_payload_changed": True,

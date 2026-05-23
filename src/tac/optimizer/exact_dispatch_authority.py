@@ -240,6 +240,20 @@ def exact_dispatch_authority(
         and str(declared_runtime_sha).lower() != str(actual_runtime_sha).lower()
     ):
         blockers.append("runtime_tree_sha256_mismatch")
+    declared_runtime_content_sha = row.get("runtime_content_tree_sha256")
+    actual_runtime_content_sha = (
+        runtime_manifest.get("runtime_content_tree_sha256")
+        if isinstance(runtime_manifest, Mapping)
+        else None
+    )
+    if not is_sha256(declared_runtime_content_sha):
+        blockers.append("runtime_content_tree_sha256_missing_or_invalid")
+    elif (
+        is_sha256(actual_runtime_content_sha)
+        and str(declared_runtime_content_sha).lower()
+        != str(actual_runtime_content_sha).lower()
+    ):
+        blockers.append("runtime_content_tree_sha256_mismatch")
 
     deduped = tuple(dict.fromkeys(str(blocker) for blocker in blockers if str(blocker)))
     return ExactDispatchAuthorityVerdict(

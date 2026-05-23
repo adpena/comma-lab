@@ -232,6 +232,30 @@ def _mark_queue_row_as_inverse_scorer_chain(
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _add_source_archive_delta(
+    queue: Path,
+    *,
+    archive_sha: str,
+    source_archive_bytes: int,
+    rate_only_control: bool = False,
+) -> None:
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row["source_archive_bytes"] = source_archive_bytes
+    row["source_archive_sha256"] = "0" * 64
+    row["score_affecting_change_proof"] = {
+        "archive_changed": True,
+        "byte_different": True,
+        "source_archive_bytes": source_archive_bytes,
+        "candidate_archive_bytes": row["candidate_archive_bytes"],
+        "source_archive_sha256": "0" * 64,
+        "candidate_archive_sha256": archive_sha,
+    }
+    if rate_only_control:
+        row["rate_only_control"] = True
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def _hdm8_selector_gate(
     *,
     archive_sha: str,
@@ -363,6 +387,7 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert "predicted_contest_cpu_gha" not in row
     assert row["dispatch_blockers"] == []
     assert row["runtime_tree_sha256"]
+    assert row["runtime_content_tree_sha256"]
     assert row["score_affecting_payload_changed"] is True
     assert row["charged_bits_changed"] is True
     assert row["cpu_or_proxy_score_not_cuda_evidence"] is True
@@ -501,6 +526,68 @@ def test_promotes_inverse_scorer_chain_only_after_parity_and_auth_boundary(
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["cuda_gap_review_required_before_promotion"] is True
+
+
+def test_refuses_inverse_scorer_full_frame_parity_byte_increase_without_rate_only_control(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _mark_queue_row_as_inverse_scorer_chain(
+        queue,
+        strict_full_frame_parity=True,
+        exact_auth_boundary=True,
+    )
+    _add_source_archive_delta(
+        queue,
+        archive_sha=archive_sha,
+        source_archive_bytes=archive_bytes - 1,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert any(
+        blocker.startswith(
+            "inverse_scorer_full_frame_parity_byte_increase_without_rate_only_control"
+        )
+        for blocker in result["report"]["blockers"]
+    )
+    assert result["report"]["facts"]["realized_archive_byte_delta"] == 1
+
+
+def test_allows_inverse_scorer_rate_only_control_with_full_frame_parity_byte_increase(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _mark_queue_row_as_inverse_scorer_chain(
+        queue,
+        strict_full_frame_parity=True,
+        exact_auth_boundary=True,
+    )
+    _add_source_archive_delta(
+        queue,
+        archive_sha=archive_sha,
+        source_archive_bytes=archive_bytes - 1,
+        rate_only_control=True,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    assert result["promoted_queue"] is not None
+    assert result["report"]["facts"]["realized_archive_byte_delta"] == 1
 
 
 def test_refuses_hdm8_selector_without_passing_cuda_component_gate(tmp_path: Path) -> None:
@@ -1249,6 +1336,50 @@ def test_refuses_runtime_mismatch_without_score_affecting_runtime_change(
     assert result["promoted_queue"] is None
     assert any(
         blocker.startswith("same_lane_terminal_runtime_mismatch_for_same_archive")
+        for blocker in result["report"]["blockers"]
+    )
+
+
+def test_refuses_runtime_content_mismatch_without_score_affecting_runtime_change(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    initial = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+    row = initial["promoted_queue"]["dispatch_ready"][0]
+    runtime_sha = row["runtime_tree_sha256"]
+    runtime_content_sha = row["runtime_content_tree_sha256"]
+    old_runtime_content_sha = (
+        "0" * 64 if runtime_content_sha != "0" * 64 else "1" * 64
+    )
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        f"| 2026-05-10T00:01:00Z | test | fixture_lane | modal | job1 |  | completed_contest_cuda_auth_eval_negative | archive_sha={archive_sha}; score_recomputed=41.35 |\n"
+        f"| 2026-05-10T00:00:00Z | test | fixture_lane | modal | job1 |  | active_dispatching | archive_sha={archive_sha}; runtime_tree_sha={runtime_sha}; runtime_content_tree_sha256={old_runtime_content_sha}; score_claim=false_until_modal_validation |\n",
+        encoding="utf-8",
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["promoted_queue"] is None
+    assert any(
+        blocker.startswith(
+            "same_lane_terminal_runtime_content_mismatch_for_same_archive"
+        )
         for blocker in result["report"]["blockers"]
     )
 

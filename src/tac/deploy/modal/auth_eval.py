@@ -145,12 +145,11 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def complete_false_authority_fields(payload: dict[str, Any]) -> dict[str, Any]:
-    """Fill the standard false-authority fields on non-authoritative payloads."""
+    """Force false-authority fields on non-authoritative Modal payloads."""
 
     out = dict(payload)
-    if out.get("score_claim") is False and out.get("promotion_eligible") is False:
-        for key, value in FALSE_AUTHORITY_FIELDS.items():
-            out.setdefault(key, value)
+    for key, value in FALSE_AUTHORITY_FIELDS.items():
+        out[key] = value
     return out
 
 
@@ -780,17 +779,37 @@ def recover_modal_auth_eval(
         result_without_artifacts=result_without_artifacts,
         score_axis=str(metadata.get("axis") or ""),
     )
+    diagnostic_blockers = claim_flags.get("diagnostic_blockers")
+    diagnostic_blocker_list = (
+        diagnostic_blockers if isinstance(diagnostic_blockers, list) else []
+    )
+    canonical_artifact_blockers = {
+        "missing_canonical_contest_auth_eval_json",
+        "invalid_canonical_contest_auth_eval_json",
+    }
+    canonical_artifact_failed = bool(
+        canonical_artifact_blockers.intersection(str(item) for item in diagnostic_blocker_list)
+    )
+    recovered_status = "recovered"
+    recovered_passed = bool(result_without_artifacts.get("passed"))
+    recovered_returncode = result_without_artifacts.get("returncode")
+    if recovered_passed and canonical_artifact_failed:
+        recovered_passed = False
+        recovered_status = "recovered_missing_canonical_auth_eval_artifact"
+        if "invalid_canonical_contest_auth_eval_json" in diagnostic_blocker_list:
+            recovered_status = "recovered_invalid_canonical_auth_eval_artifact"
+        recovered_returncode = 97
 
     summary = {
         "schema_version": "modal_auth_eval_recover_summary_v1",
-        "status": "recovered",
+        "status": recovered_status,
         "call_id": resolved_call_id,
         "output_dir": str(out_dir),
         "recovered_at_utc": utc_now(),
         "result_json": str(out_dir / result_name),
         "artifact_names": artifact_names,
-        "passed": bool(result_without_artifacts.get("passed")),
-        "returncode": result_without_artifacts.get("returncode"),
+        "passed": recovered_passed,
+        "returncode": recovered_returncode,
         "score_claim": claim_flags["score_claim"],
         "promotion_eligible": claim_flags["promotion_eligible"],
         "score_recomputed_from_components": result_without_artifacts.get(

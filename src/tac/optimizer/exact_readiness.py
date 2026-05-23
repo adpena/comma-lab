@@ -115,6 +115,9 @@ TERMINAL_SCORE_RE = re.compile(
 TERMINAL_RUNTIME_TREE_SHA_RE = re.compile(
     r"(?:runtime_tree_sha256|runtime_tree_sha)=([0-9a-fA-F]{64})"
 )
+TERMINAL_RUNTIME_CONTENT_TREE_SHA_RE = re.compile(
+    r"(?:runtime_content_tree_sha256|runtime_content_tree_sha)=([0-9a-fA-F]{64})"
+)
 TRUE_CHANGE_FIELDS = (
     "score_affecting_payload_changed",
     "charged_bits_changed",
@@ -282,6 +285,45 @@ def candidate_archive_byte_values(row: Mapping[str, Any]) -> dict[str, int]:
         if parsed is not None:
             values[key] = parsed
     return values
+
+
+def source_archive_byte_value(row: Mapping[str, Any]) -> int | None:
+    mappings: list[Mapping[str, Any]] = [row]
+    for key in SCORE_AFFECTING_PROOF_OBJECT_KEYS:
+        value = row.get(key)
+        if isinstance(value, Mapping):
+            mappings.append(value)
+    for mapping in mappings:
+        for key in (
+            "source_archive_bytes",
+            "input_archive_bytes",
+            "old_archive_bytes",
+        ):
+            parsed = as_positive_int(mapping.get(key))
+            if parsed is not None:
+                return parsed
+    return None
+
+
+def is_rate_only_control(row: Mapping[str, Any]) -> bool:
+    if as_bool(row.get("rate_only_control")) is True:
+        return True
+    for key in (
+        "control_kind",
+        "exact_eval_control_kind",
+        "dispatch_control_kind",
+        "experiment_kind",
+    ):
+        value = row.get(key)
+        if isinstance(value, str) and value.strip().lower() == "rate_only_control":
+            return True
+    tags = row.get("tags")
+    if isinstance(tags, list | tuple | set):
+        return any(
+            isinstance(tag, str) and tag.strip().lower() == "rate_only_control"
+            for tag in tags
+        )
+    return False
 
 
 def find_candidate(queue: Mapping[str, Any], candidate_id: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -712,6 +754,13 @@ def _terminal_claim_runtime_tree_shas(notes: str) -> set[str]:
     return {match.lower() for match in TERMINAL_RUNTIME_TREE_SHA_RE.findall(notes)}
 
 
+def _terminal_claim_runtime_content_tree_shas(notes: str) -> set[str]:
+    return {
+        match.lower()
+        for match in TERMINAL_RUNTIME_CONTENT_TREE_SHA_RE.findall(notes)
+    }
+
+
 def _terminal_claim_score(notes: str) -> float | None:
     match = TERMINAL_SCORE_RE.search(notes)
     if match is None:
@@ -729,6 +778,7 @@ def terminal_claim_result_conflicts(
     dispatch_claims_path: Path | None,
     active_floor_score: float | None = ACTIVE_FLOOR_SCORE,
     runtime_tree_sha256: str | None = None,
+    runtime_content_tree_sha256: str | None = None,
     score_affecting_runtime_changed: bool | None = None,
     block_runtime_mismatch_for_same_archive: bool = False,
 ) -> list[str]:
@@ -754,6 +804,11 @@ def terminal_claim_result_conflicts(
     candidate_runtime_sha = (
         runtime_tree_sha256.lower() if is_sha256(runtime_tree_sha256) else None
     )
+    candidate_runtime_content_sha = (
+        runtime_content_tree_sha256.lower()
+        if is_sha256(runtime_content_tree_sha256)
+        else None
+    )
     for key, row in latest_rows.items():
         if row["lane_id"] != lane_id or not claim_status_terminal(row["status"]):
             continue
@@ -764,6 +819,13 @@ def terminal_claim_result_conflicts(
         terminal_runtime_shas = _terminal_claim_runtime_tree_shas(row.get("notes", ""))
         claim_runtime_shas = _terminal_claim_runtime_tree_shas(notes)
         runtime_shas_for_match = terminal_runtime_shas or claim_runtime_shas
+        terminal_runtime_content_shas = _terminal_claim_runtime_content_tree_shas(
+            row.get("notes", "")
+        )
+        claim_runtime_content_shas = _terminal_claim_runtime_content_tree_shas(notes)
+        runtime_content_shas_for_match = (
+            terminal_runtime_content_shas or claim_runtime_content_shas
+        )
         if candidate_runtime_sha is not None and runtime_shas_for_match:
             if candidate_runtime_sha not in runtime_shas_for_match:
                 if block_runtime_mismatch_for_same_archive:
@@ -782,6 +844,28 @@ def terminal_claim_result_conflicts(
                     )
                 continue
         elif score_affecting_runtime_changed is True and candidate_runtime_sha is not None:
+            continue
+        if candidate_runtime_content_sha is not None and runtime_content_shas_for_match:
+            if candidate_runtime_content_sha not in runtime_content_shas_for_match:
+                if block_runtime_mismatch_for_same_archive:
+                    blockers.append(
+                        "same_lane_terminal_runtime_content_mismatch_for_same_archive:"
+                        f"{candidate_runtime_content_sha}:terminal_runtime_content="
+                        f"{','.join(sorted(runtime_content_shas_for_match))}:{claim_id}"
+                    )
+                elif terminal_runtime_content_shas:
+                    continue
+                elif score_affecting_runtime_changed is not True:
+                    blockers.append(
+                        "same_lane_terminal_runtime_content_mismatch_for_same_archive:"
+                        f"{candidate_runtime_content_sha}:terminal_runtime_content="
+                        f"{','.join(sorted(runtime_content_shas_for_match))}:{claim_id}"
+                    )
+                continue
+        elif (
+            score_affecting_runtime_changed is True
+            and candidate_runtime_content_sha is not None
+        ):
             continue
         status = row["status"].lower()
         if status.startswith("refused_dispatch"):
@@ -1016,6 +1100,28 @@ def readiness_blockers(
             if int(zipwire.get("member_count") or 0) < 1:
                 blockers.append("archive_zip_empty")
 
+    source_bytes = source_archive_byte_value(row)
+    if source_bytes is not None:
+        facts["source_archive_bytes"] = source_bytes
+    if (
+        _is_inverse_scorer_cell_candidate_chain(row)
+        and source_bytes is not None
+        and isinstance(facts.get("archive_bytes"), int)
+        and _has_strict_inverse_scorer_full_frame_parity(
+            row,
+            repo_root=repo_root,
+            queue_dir=queue_dir,
+        )
+    ):
+        archive_byte_delta = int(facts["archive_bytes"]) - source_bytes
+        facts["realized_archive_byte_delta"] = archive_byte_delta
+        facts["inverse_scorer_full_frame_output_parity"] = True
+        if archive_byte_delta > 0 and not is_rate_only_control(row):
+            blockers.append(
+                "inverse_scorer_full_frame_parity_byte_increase_without_rate_only_control:"
+                f"{facts['archive_bytes']}>{source_bytes}"
+            )
+
     if submission_dir is None and archive_path is not None:
         submission_dir = archive_path.parent
     if submission_dir is None or not submission_dir.is_dir():
@@ -1094,11 +1200,20 @@ def readiness_blockers(
         runtime_manifest.get("runtime_tree_sha256")
     ):
         blockers.append("runtime_tree_sha256_missing")
+    if not isinstance(runtime_manifest, dict) or not is_sha256(
+        runtime_manifest.get("runtime_content_tree_sha256")
+    ):
+        blockers.append("runtime_content_tree_sha256_missing")
     facts["runtime_manifest"] = runtime_manifest
 
     if isinstance(effective_lane_id, str) and effective_lane_id.strip():
         candidate_runtime_sha = (
             runtime_manifest.get("runtime_tree_sha256")
+            if isinstance(runtime_manifest, Mapping)
+            else None
+        )
+        candidate_runtime_content_sha = (
+            runtime_manifest.get("runtime_content_tree_sha256")
             if isinstance(runtime_manifest, Mapping)
             else None
         )
@@ -1112,6 +1227,9 @@ def readiness_blockers(
                 active_floor_score=active_floor_score,
                 runtime_tree_sha256=candidate_runtime_sha
                 if isinstance(candidate_runtime_sha, str)
+                else None,
+                runtime_content_tree_sha256=candidate_runtime_content_sha
+                if isinstance(candidate_runtime_content_sha, str)
                 else None,
                 score_affecting_runtime_changed=as_bool(
                     row.get("score_affecting_runtime_changed")
@@ -1217,6 +1335,9 @@ def promoted_row(
         "inflate_sh_path": repo_rel(inflate_sh, repo_root),
         "archive_manifest_path": repo_rel(manifest_path, repo_root),
         "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
+        "runtime_content_tree_sha256": runtime_manifest[
+            "runtime_content_tree_sha256"
+        ],
         "runtime_manifest": runtime_manifest,
         "runtime_consumption_proof_path": repo_rel(
             facts["runtime_consumption_proof_path"],
@@ -1332,6 +1453,11 @@ def promote_candidate_for_exact_eval(
             else None,
             "archive_sha256": facts.get("archive_sha256"),
             "archive_bytes": facts.get("archive_bytes"),
+            "source_archive_bytes": facts.get("source_archive_bytes"),
+            "realized_archive_byte_delta": facts.get("realized_archive_byte_delta"),
+            "inverse_scorer_full_frame_output_parity": facts.get(
+                "inverse_scorer_full_frame_output_parity"
+            ),
             "submission_dir": repo_rel(facts["submission_dir"], repo_root)
             if isinstance(facts.get("submission_dir"), Path)
             else None,

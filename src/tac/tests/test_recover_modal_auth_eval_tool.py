@@ -61,6 +61,21 @@ def test_terminal_status_uses_exact_readiness_cuda_prefix() -> None:
     assert status == "completed_contest_cuda_modal_auth_eval_recovered"
 
 
+def test_terminal_status_fails_missing_canonical_artifact() -> None:
+    tool = _load_tool()
+
+    status = tool._terminal_status(
+        {
+            "status": "recovered_missing_canonical_auth_eval_artifact",
+            "passed": False,
+            "score_claim": False,
+        },
+        {"axis": "contest_cuda"},
+    )
+
+    assert status == "failed_modal_auth_eval_missing_canonical_artifact"
+
+
 def test_terminal_notes_include_exact_custody_fields(tmp_path: Path) -> None:
     tool = _load_tool()
     _write_auth_eval(tmp_path / "contest_auth_eval.json")
@@ -94,6 +109,22 @@ def test_auth_eval_artifact_path_accepts_adjudicated_fallback(tmp_path: Path) ->
     )
 
     assert artifact == tmp_path / "contest_auth_eval.adjudicated.json"
+
+
+def test_auth_eval_artifact_path_rejects_modal_result_json_fallback(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    _write_auth_eval(tmp_path / "modal_cuda_auth_eval_result.json")
+
+    artifact = tool._auth_eval_artifact_path(
+        {
+            "output_dir": str(tmp_path),
+            "result_json": str(tmp_path / "modal_cuda_auth_eval_result.json"),
+        }
+    )
+
+    assert artifact is None
 
 
 def test_maybe_update_posterior_routes_auth_eval_artifact(monkeypatch, tmp_path: Path) -> None:
@@ -263,3 +294,47 @@ def test_main_skips_duplicate_terminal_recovery_without_posterior_touch(
 
     assert rc == 0
     assert "already closed" in capsys.readouterr().err
+
+
+def test_main_returns_nonzero_for_missing_canonical_artifact(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    close_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        tool,
+        "read_spawn_metadata",
+        lambda _out_dir: {
+            "axis": "contest_cuda",
+            "lane_id": "lane_cuda",
+            "instance_job_id": "job_cuda",
+            "claim_agent": "codex:modal_auth_eval",
+            "claim_platform": "modal",
+        },
+    )
+    monkeypatch.setattr(
+        tool,
+        "recover_modal_auth_eval",
+        lambda **_kwargs: {
+            "status": "recovered_missing_canonical_auth_eval_artifact",
+            "passed": False,
+            "returncode": 97,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "diagnostic_blockers": ["missing_canonical_contest_auth_eval_json"],
+        },
+    )
+    monkeypatch.setattr(
+        tool,
+        "terminal_modal_auth_eval_claim",
+        lambda **kwargs: close_calls.append(kwargs),
+    )
+
+    rc = tool.main(["--output-dir", str(tmp_path), "--no-posterior-update"])
+
+    assert rc == 97
+    assert close_calls[0]["status"] == (
+        "failed_modal_auth_eval_missing_canonical_artifact"
+    )

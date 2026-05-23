@@ -594,6 +594,43 @@ def test_modal_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtime(
     assert content_hash in message
 
 
+def test_modal_auth_eval_requires_runtime_hash_for_uploaded_runtime(
+    mod,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"archive bytes")
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\npython inflate.py\n")
+    (runtime / "inflate.py").write_text("print('ok')\n")
+
+    monkeypatch.setattr(
+        mod,
+        "_expected_uploaded_runtime_tree_sha256",
+        lambda **_kwargs: pytest.fail("runtime hash should be required before hashing"),
+    )
+    monkeypatch.setattr(
+        mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **_kwargs: pytest.fail("claim should not be recorded before hash validation"),
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        mod.main(
+            str(archive),
+            str(tmp_path / "out"),
+            inflate_sh="inflate.sh",
+            submission_dir=str(runtime),
+            lane_id="lane_unit_modal_auth_eval_runtime_hash_required",  # FAKE_LANE_OK:test-fixture lane_id
+            instance_job_id="job_unit_modal_auth_eval_runtime_hash_required",
+            pair_group_id="pair_unit_modal_auth_eval",
+        )
+
+    assert "--expected-runtime-tree-sha256 is required" in str(exc.value)
+
+
 def test_modal_cpu_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtime(
     tmp_path,
     monkeypatch,
@@ -636,6 +673,44 @@ def test_modal_cpu_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtim
     assert "uploaded --submission-dir runtime tree" in message
     assert remote_hash in message
     assert content_hash in message
+
+
+def test_modal_cpu_auth_eval_requires_runtime_hash_for_uploaded_runtime(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    pytest.importorskip("modal", reason="modal SDK not installed")
+    cpu_mod = _load_cpu_module()
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"archive bytes")
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\npython inflate.py\n")
+    (runtime / "inflate.py").write_text("print('ok')\n")
+
+    monkeypatch.setattr(
+        cpu_mod,
+        "_expected_uploaded_runtime_tree_sha256",
+        lambda **_kwargs: pytest.fail("runtime hash should be required before hashing"),
+    )
+    monkeypatch.setattr(
+        cpu_mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **_kwargs: pytest.fail("claim should not be recorded before hash validation"),
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        cpu_mod.main(
+            str(archive),
+            str(tmp_path / "out"),
+            inflate_sh="inflate.sh",
+            submission_dir=str(runtime),
+            lane_id="lane_unit_modal_cpu_auth_eval_runtime_hash_required",  # FAKE_LANE_OK:test-fixture lane_id
+            instance_job_id="job_unit_modal_cpu_auth_eval_runtime_hash_required",
+            pair_group_id="pair_unit_modal_auth_eval",
+        )
+
+    assert "--expected-runtime-tree-sha256 is required" in str(exc.value)
 
 
 def test_modal_runtime_upload_skips_host_metadata_files(tmp_path):

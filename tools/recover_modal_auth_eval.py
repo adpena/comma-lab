@@ -40,6 +40,15 @@ def _terminal_status(summary: dict, metadata: dict) -> str:
     if summary.get("status") == "pending":
         return ""
     axis = str(metadata.get("axis") or "")
+    if summary.get("status") in {
+        "recovered_missing_canonical_auth_eval_artifact",
+        "recovered_invalid_canonical_auth_eval_artifact",
+    }:
+        return (
+            "failed_modal_cpu_auth_eval_missing_canonical_artifact"
+            if axis == "contest_cpu"
+            else "failed_modal_auth_eval_missing_canonical_artifact"
+        )
     if summary.get("passed"):
         if axis == "contest_cuda" and summary.get("score_claim") is True:
             return "completed_contest_cuda_modal_auth_eval_recovered"
@@ -144,11 +153,6 @@ def _auth_eval_artifact_path(summary: dict) -> Path | None:
     out_dir = Path(str(summary.get("output_dir") or ""))
     for name in ("contest_auth_eval.json", "contest_auth_eval.adjudicated.json"):
         candidate = out_dir / name
-        if candidate.is_file():
-            return candidate
-    result_json = summary.get("result_json")
-    if isinstance(result_json, str) and result_json:
-        candidate = Path(result_json)
         if candidate.is_file():
             return candidate
     return None

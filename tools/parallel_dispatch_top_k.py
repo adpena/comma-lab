@@ -51,6 +51,7 @@ sys.path.insert(0, str(REPO / "src"))
 
 from tac.auth_eval_result import parse_auth_eval_score_claim  # noqa: E402
 from tac.exact_eval_custody import (  # noqa: E402
+    extract_observed_runtime_content_tree_sha256,
     extract_runtime_tree_sha256,
     is_sha256_hex,
 )
@@ -350,6 +351,10 @@ def _candidate_runtime_tree_sha256(candidate: dict) -> str:
     return extract_runtime_tree_sha256(candidate)
 
 
+def _candidate_runtime_content_tree_sha256(candidate: dict) -> str:
+    return extract_observed_runtime_content_tree_sha256(candidate)
+
+
 def _candidate_exact_score(candidate: dict) -> float | None:
     for key in ("contest_cuda_score", "final_score", "contest_score", "score"):
         parsed = _coerce_float(candidate.get(key))
@@ -635,6 +640,9 @@ def _runtime_custody_blockers(candidate: dict) -> list[str]:
     runtime_tree_sha256 = _candidate_runtime_tree_sha256(candidate)
     if not _is_sha256(runtime_tree_sha256):
         return ["runtime_tree_sha256_missing_or_invalid"]
+    runtime_content_tree_sha256 = _candidate_runtime_content_tree_sha256(candidate)
+    if not _is_sha256(runtime_content_tree_sha256):
+        return ["runtime_content_tree_sha256_missing_or_invalid"]
     return []
 
 
