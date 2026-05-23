@@ -11,10 +11,12 @@ import numpy as np
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
 from tac.local_acceleration.mlx_scorer_response import (
+    AUDIT_STAMP_DEREFERENCE_BLOCKER,
     BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER,
     CACHE_INTEGRITY_BLOCKER,
     CANDIDATE_CACHE_TRANSFER_BLOCKER,
     GPU_RESEARCH_SIGNAL_BLOCKER,
+    LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER,
     build_mlx_scorer_response_payload,
     load_scorer_input_cache,
 )
@@ -128,6 +130,102 @@ def test_mlx_scorer_response_cli_rejects_unaudited_candidate_cache(tmp_path: Pat
     assert CANDIDATE_CACHE_TRANSFER_BLOCKER in completed.stderr
 
 
+def test_mlx_scorer_response_cli_rejects_missing_auth_audit_stamp_file(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(
+        tmp_path / "reference",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    candidate_dir = _write_test_cache(
+        tmp_path / "candidate",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    audit_path = candidate_dir / "auth_eval_identity_audit.json"
+    audit_path.unlink()
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1",
+            "--output",
+            str(tmp_path / "mlx_response.json"),
+            "--repo-root",
+            str(REPO),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert CANDIDATE_CACHE_TRANSFER_BLOCKER in completed.stderr
+    assert AUDIT_STAMP_DEREFERENCE_BLOCKER in completed.stderr
+    assert "auth_eval_identity_audit_path_not_found" in completed.stderr
+
+
+def test_mlx_scorer_response_cli_rejects_stale_auth_audit_cache_identity(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(
+        tmp_path / "reference",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    candidate_dir = _write_test_cache(
+        tmp_path / "candidate",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    audit_path = candidate_dir / "auth_eval_identity_audit.json"
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    audit["cache"]["archive_sha256"] = "z" * 64
+    audit_path.write_text(json.dumps(audit, sort_keys=True) + "\n", encoding="utf-8")
+    _refresh_stamp_sha(candidate_dir / "manifest.json", "auth_eval_identity_audit", audit_path)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1",
+            "--output",
+            str(tmp_path / "mlx_response.json"),
+            "--repo-root",
+            str(REPO),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert AUDIT_STAMP_DEREFERENCE_BLOCKER in completed.stderr
+    assert "auth_eval_identity_audit_audit_cache_archive_sha256_mismatch" in completed.stderr
+
+
 def test_mlx_scorer_response_local_advisory_identity_has_limited_allowed_uses(
     tmp_path: Path,
 ) -> None:
@@ -181,6 +279,58 @@ def test_mlx_scorer_response_local_advisory_identity_has_limited_allowed_uses(
         "local_speed_quality_delta_measurement",
     ]
     assert "prepaid_dispatch_spend_filter_after_score_calibration" not in contract["allowed_uses"]
+
+
+def test_mlx_scorer_response_local_advisory_stamp_must_dereference(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(
+        tmp_path / "reference",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    candidate_dir = _write_test_cache(
+        tmp_path / "candidate",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+        audited=False,
+    )
+    _stamp_local_cpu_advisory_identity(candidate_dir)
+    (candidate_dir / "local_cpu_advisory_cache_identity_audit.json").write_text(
+        "tampered\n",
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1",
+            "--output",
+            str(tmp_path / "mlx_response.json"),
+            "--repo-root",
+            str(REPO),
+            "--allow-local-cpu-advisory-cache-identity",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER in completed.stderr
+    assert AUDIT_STAMP_DEREFERENCE_BLOCKER in completed.stderr
+    assert "local_cpu_advisory_cache_identity_audit_sha256_mismatch" in completed.stderr
 
 
 def test_mlx_scorer_response_cli_rejects_mutated_cache_after_manifest_stamp(
@@ -453,15 +603,64 @@ def _write_test_cache(
         inflated_outputs_aggregate_sha256="b" * 64,
         raw_sha256="c" * 64,
     )
+    if audited:
+        _stamp_auth_eval_identity(path)
     return path
+
+
+def _stamp_auth_eval_identity(path: Path) -> None:
+    manifest_path = path / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    audit_path = path / "auth_eval_identity_audit.json"
+    audit = {
+        "schema_version": "mlx_scorer_input_cache_auth_eval_audit.v1",
+        "verdict": "PASS_CACHE_AUTH_EVAL_IDENTITY",
+        "passed": True,
+        "identity_residual": 0,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "cache": {
+            "archive_sha256": manifest["archive_sha256"],
+            "inflated_outputs_aggregate_sha256": manifest[
+                "inflated_outputs_aggregate_sha256"
+            ],
+            "raw_sha256": manifest["raw_sha256"],
+            "pair_count": manifest["pair_count"],
+            "hash_domain": manifest["hash_domain"],
+            "segnet_last_rgb_shape": manifest["segnet_last_rgb_shape"],
+            "posenet_yuv6_pair_shape": manifest["posenet_yuv6_pair_shape"],
+            "pair_indices_shape": manifest["pair_indices_shape"],
+            "array_sha256": manifest["array_sha256"],
+        },
+    }
+    audit_path.write_text(json.dumps(audit, sort_keys=True) + "\n", encoding="utf-8")
+    manifest["eligible_for_local_mlx_transfer_calibration"] = True
+    manifest["auth_eval_identity_audit"] = {
+        "schema_version": audit["schema_version"],
+        "path": str(audit_path),
+        "sha256": _file_sha256(audit_path),
+        "verdict": audit["verdict"],
+        "passed": True,
+        "identity_residual": 0,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _stamp_local_cpu_advisory_identity(path: Path) -> None:
     manifest_path = path / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    manifest["eligible_for_local_mlx_local_advisory_debug"] = True
-    manifest["eligible_for_local_mlx_transfer_calibration"] = False
-    manifest["local_cpu_advisory_cache_identity_audit"] = {
+    audit_path = path / "local_cpu_advisory_cache_identity_audit.json"
+    audit = {
         "schema_version": "mlx_scorer_input_cache_local_cpu_advisory_audit.v1",
         "verdict": "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
         "passed": True,
@@ -471,5 +670,47 @@ def _stamp_local_cpu_advisory_identity(path: Path) -> None:
         "promotable": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "cache": {
+            "archive_sha256": manifest["archive_sha256"],
+            "inflated_outputs_aggregate_sha256": manifest[
+                "inflated_outputs_aggregate_sha256"
+            ],
+            "raw_sha256": manifest["raw_sha256"],
+            "pair_count": manifest["pair_count"],
+            "hash_domain": manifest["hash_domain"],
+            "array_sha256": manifest["array_sha256"],
+        },
+    }
+    audit_path.write_text(json.dumps(audit, sort_keys=True) + "\n", encoding="utf-8")
+    manifest["eligible_for_local_mlx_local_advisory_debug"] = True
+    manifest["eligible_for_local_mlx_transfer_calibration"] = False
+    manifest["local_cpu_advisory_cache_identity_audit"] = {
+        "schema_version": audit["schema_version"],
+        "path": str(audit_path),
+        "sha256": _file_sha256(audit_path),
+        "verdict": audit["verdict"],
+        "passed": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
     manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _refresh_stamp_sha(manifest_path: Path, stamp_key: str, audit_path: Path) -> None:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest[stamp_key]["sha256"] = _file_sha256(audit_path)
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _file_sha256(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()

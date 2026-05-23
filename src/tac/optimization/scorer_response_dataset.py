@@ -22,6 +22,7 @@ from typing import Any
 
 from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.local_acceleration.mlx_cache_audit import cache_audit_stamp_blockers
 from tac.local_acceleration.mlx_production_contract import (
     BUNDLE_PASS_VERDICT as MLX_PRODUCTION_CONTRACT_BUNDLE_PASS_VERDICT,
 )
@@ -701,6 +702,19 @@ def _require_auth_audited_mlx_window(payload: dict[str, Any], *, label: str) -> 
     if audit.get("identity_residual") != 0:
         raise ScorerResponseDatasetError(
             f"{label} candidate cache auth_eval_identity_audit residual must be 0"
+        )
+    stamp_blockers = cache_audit_stamp_blockers(
+        candidate,
+        cache_root=candidate.get("path"),
+        stamp_key="auth_eval_identity_audit",
+        expected_verdict="PASS_CACHE_AUTH_EVAL_IDENTITY",
+        require_identity_residual_zero=True,
+        require_cache_shapes=True,
+    )
+    if stamp_blockers:
+        raise ScorerResponseDatasetError(
+            f"{label} candidate cache auth_eval_identity_audit dereference failed: "
+            + ", ".join(stamp_blockers)
         )
     audit_payload = _load_auth_eval_identity_audit_payload(audit, label=label)
     candidate_arrays = _candidate_array_identity(payload, label=label)

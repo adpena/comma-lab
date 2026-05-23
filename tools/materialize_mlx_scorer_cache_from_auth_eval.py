@@ -39,6 +39,9 @@ from tac.local_acceleration.mlx_cache_audit import (  # noqa: E402
 from tac.local_acceleration.mlx_preprocess import write_scorer_input_cache_from_raw_file  # noqa: E402
 from tac.repo_io import read_json, write_json  # noqa: E402
 
+OWNED_DIRECTORY_MARKER = ".mlx_scorer_cache_materializer_owned.json"
+TOOL_NAME = "tools/materialize_mlx_scorer_cache_from_auth_eval.py"
+
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -141,16 +144,8 @@ def main(argv: list[str] | None = None) -> int:
 
     output_cache = args.output_cache_dir.resolve()
     work_dir = args.work_dir.resolve()
-    if work_dir.exists():
-        if not args.force:
-            raise SystemExit(f"--work-dir already exists; pass --force to replace: {work_dir}")
-        shutil.rmtree(work_dir)
-    if output_cache.exists():
-        if not args.force:
-            raise SystemExit(
-                f"--output-cache-dir already exists; pass --force to replace: {output_cache}"
-            )
-        shutil.rmtree(output_cache)
+    _prepare_owned_directory(work_dir, force=args.force, label="work_dir")
+    _prepare_owned_directory(output_cache, force=args.force, label="output_cache_dir")
 
     archive_sha = _sha256(archive, prefix=0)
     expected_archive = _auth_archive_sha256(auth_eval)
@@ -176,7 +171,6 @@ def main(argv: list[str] | None = None) -> int:
 
     extracted_dir = work_dir / "archive"
     inflated_dir = work_dir / "inflated"
-    work_dir.mkdir(parents=True, exist_ok=True)
     local_inflate_env = _local_inflate_env_bridge(work_dir)
     members = _extract_archive(archive, extracted_dir)
     _validate_archive_members(members)
@@ -191,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
 
     provenance: dict[str, Any] = {
         "schema_version": "mlx_scorer_cache_materialize_from_auth_eval.v1",
-        "tool": "tools/materialize_mlx_scorer_cache_from_auth_eval.py",
+        "tool": TOOL_NAME,
         "auth_eval_dir": str(auth_dir),
         "archive_path": str(archive),
         "archive_sha256": archive_sha,
@@ -317,9 +311,10 @@ def _main_downloaded_tensor_cache(
             raise SystemExit(
                 f"--output-cache-dir already exists; pass --force to replace: {output_cache}"
             )
-        shutil.rmtree(output_cache)
+        _delete_owned_directory(output_cache, label="output_cache_dir")
     if not same_output:
         shutil.copytree(source_cache, output_cache)
+        _write_owned_marker(output_cache, label="output_cache_dir")
     write_json(output_cache / "manifest.json", normalized_manifest)
     cache_manifest = _finalize_cache_after_audit(
         output_cache=output_cache,
@@ -360,6 +355,55 @@ def _load_local_request(auth_dir: Path) -> dict[str, Any]:
         if isinstance(payload, dict):
             return payload
     raise SystemExit(f"no modal_*_auth_eval_local_request.json found in {auth_dir}")
+
+
+def _prepare_owned_directory(path: Path, *, force: bool, label: str) -> None:
+    if path.exists():
+        if not force:
+            raise SystemExit(
+                f"--{label.replace('_', '-')} already exists; pass --force to replace: {path}"
+            )
+        _delete_owned_directory(path, label=label)
+    path.mkdir(parents=True, exist_ok=True)
+    _write_owned_marker(path, label=label)
+
+
+def _write_owned_marker(path: Path, *, label: str) -> None:
+    write_json(
+        path / OWNED_DIRECTORY_MARKER,
+        {
+            "schema_version": "mlx_scorer_cache_materializer_owned_directory.v1",
+            "tool": TOOL_NAME,
+            "label": label,
+            "path": str(path),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+
+def _delete_owned_directory(path: Path, *, label: str, ignore_errors: bool = False) -> None:
+    if not path.exists():
+        return
+    if not path.is_dir():
+        raise SystemExit(f"refusing to replace non-directory {label}: {path}")
+    marker_path = path / OWNED_DIRECTORY_MARKER
+    try:
+        marker = _read_object(marker_path)
+    except (OSError, json.JSONDecodeError, SystemExit) as exc:
+        if ignore_errors:
+            return
+        raise SystemExit(
+            f"refusing --force delete for {label} without owned-directory marker: {marker_path}"
+        ) from exc
+    if (
+        marker.get("schema_version") != "mlx_scorer_cache_materializer_owned_directory.v1"
+        or marker.get("tool") != TOOL_NAME
+        or marker.get("label") != label
+    ):
+        raise SystemExit(f"refusing --force delete for {label}; marker does not match tool ownership")
+    shutil.rmtree(path, ignore_errors=ignore_errors)
 
 
 def _validate_downloaded_tensor_cache(
@@ -668,7 +712,7 @@ def _finalize_cache_after_audit(
     manifest_path = output_cache / "manifest.json"
     if audit.get("passed") is not True:
         if delete_on_fail:
-            shutil.rmtree(output_cache, ignore_errors=True)
+            _delete_owned_directory(output_cache, label="output_cache_dir", ignore_errors=True)
         return {}
 
     manifest = _read_object(manifest_path)

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 __all__ = [
     "audit_mlx_scorer_input_cache_against_auth_eval",
     "audit_mlx_scorer_input_cache_against_local_cpu_advisory",
+    "cache_audit_stamp_blockers",
     "write_cache_audit",
 ]
 
@@ -221,6 +223,128 @@ def write_cache_audit(audit: dict[str, Any], path: str | Path) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def cache_audit_stamp_blockers(
+    cache_manifest: dict[str, Any],
+    *,
+    cache_root: str | Path | None,
+    stamp_key: str,
+    expected_verdict: str,
+    require_identity_residual_zero: bool = True,
+    require_cache_shapes: bool = True,
+) -> list[str]:
+    """Verify an embedded cache-audit stamp by loading its referenced audit JSON."""
+
+    stamp = cache_manifest.get(stamp_key)
+    if stamp is None:
+        return [f"{stamp_key}_missing"]
+    if not isinstance(stamp, dict):
+        return [f"{stamp_key}_not_object"]
+    blockers: list[str] = []
+    if stamp.get("verdict") != expected_verdict:
+        blockers.append(f"{stamp_key}_verdict_not_{expected_verdict}")
+    if stamp.get("passed") is not True:
+        blockers.append(f"{stamp_key}_passed_not_true")
+    if require_identity_residual_zero and stamp.get("identity_residual") != 0:
+        blockers.append(f"{stamp_key}_identity_residual_not_zero")
+    _append_manifest_authority_blockers(blockers, stamp, prefix=stamp_key)
+
+    audit_path = _stamp_path(cache_root=cache_root, stamp=stamp)
+    expected_sha = _string(stamp.get("sha256"))
+    if audit_path is None:
+        blockers.append(f"{stamp_key}_path_missing")
+    elif not audit_path.is_file():
+        blockers.append(f"{stamp_key}_path_not_found")
+    if expected_sha is None:
+        blockers.append(f"{stamp_key}_sha256_missing")
+    audit: dict[str, Any] | None = None
+    if audit_path is not None and audit_path.is_file() and expected_sha is not None:
+        actual_sha = _sha256_file(audit_path)
+        if actual_sha != expected_sha:
+            blockers.append(f"{stamp_key}_sha256_mismatch")
+        else:
+            try:
+                payload = json.loads(audit_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                blockers.append(f"{stamp_key}_audit_json_invalid:{type(exc).__name__}")
+            else:
+                if not isinstance(payload, dict):
+                    blockers.append(f"{stamp_key}_audit_json_not_object")
+                else:
+                    audit = payload
+    if audit is None:
+        return blockers
+    if audit.get("verdict") != expected_verdict:
+        blockers.append(f"{stamp_key}_audit_verdict_not_{expected_verdict}")
+    if audit.get("passed") is not True:
+        blockers.append(f"{stamp_key}_audit_passed_not_true")
+    if require_identity_residual_zero and audit.get("identity_residual") != 0:
+        blockers.append(f"{stamp_key}_audit_identity_residual_not_zero")
+    _append_manifest_authority_blockers(blockers, audit, prefix=f"{stamp_key}_audit")
+    blockers.extend(
+        _audit_cache_identity_blockers(
+            cache_manifest,
+            audit.get("cache"),
+            stamp_key=stamp_key,
+            require_cache_shapes=require_cache_shapes,
+        )
+    )
+    return blockers
+
+
+def _stamp_path(*, cache_root: str | Path | None, stamp: dict[str, Any]) -> Path | None:
+    raw = _string(stamp.get("path"))
+    if raw is None:
+        return None
+    path = Path(raw).expanduser()
+    if path.is_absolute():
+        return path
+    if cache_root is None:
+        return path.resolve()
+    return (Path(cache_root) / path).resolve()
+
+
+def _audit_cache_identity_blockers(
+    cache_manifest: dict[str, Any],
+    audit_cache: Any,
+    *,
+    stamp_key: str,
+    require_cache_shapes: bool,
+) -> list[str]:
+    if not isinstance(audit_cache, dict):
+        return [f"{stamp_key}_audit_cache_missing"]
+    blockers: list[str] = []
+    comparisons: dict[str, Any] = {
+        "archive_sha256": _string(cache_manifest.get("archive_sha256")),
+        "inflated_outputs_aggregate_sha256": _string(
+            cache_manifest.get("inflated_outputs_aggregate_sha256")
+        ),
+        "raw_sha256": _string(cache_manifest.get("raw_sha256")),
+        "pair_count": _int(cache_manifest.get("pair_count")),
+        "hash_domain": _manifest_hash_domain(cache_manifest),
+        "array_sha256": _hash_mapping(cache_manifest.get("array_sha256")),
+    }
+    if require_cache_shapes:
+        comparisons.update(
+            {
+                "segnet_last_rgb_shape": cache_manifest.get("segnet_last_rgb_shape"),
+                "posenet_yuv6_pair_shape": cache_manifest.get("posenet_yuv6_pair_shape"),
+                "pair_indices_shape": cache_manifest.get("pair_indices_shape"),
+            }
+        )
+    for key, expected in comparisons.items():
+        if audit_cache.get(key) != expected:
+            blockers.append(f"{stamp_key}_audit_cache_{key}_mismatch")
+    return blockers
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def audit_mlx_scorer_input_cache_against_local_cpu_advisory(

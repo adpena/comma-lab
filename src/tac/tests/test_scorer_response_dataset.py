@@ -108,6 +108,11 @@ def _mlx_response_payload() -> dict:
                 "archive_sha256": None,
                 "inflated_outputs_aggregate_sha256": None,
                 "raw_sha256": None,
+                "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+                "pair_count": 600,
+                "segnet_last_rgb_shape": [600, 3, 384, 512],
+                "posenet_yuv6_pair_shape": [600, 12, 192, 256],
+                "pair_indices_shape": [600, 2],
                 "array_sha256": {
                     "pair_indices": "0" * 64,
                     "posenet_yuv6_pair": "1" * 64,
@@ -118,6 +123,11 @@ def _mlx_response_payload() -> dict:
                 "archive_sha256": "a" * 64,
                 "inflated_outputs_aggregate_sha256": "e" * 64,
                 "raw_sha256": "b" * 64,
+                "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+                "pair_count": 600,
+                "segnet_last_rgb_shape": [600, 3, 384, 512],
+                "posenet_yuv6_pair_shape": [600, 12, 192, 256],
+                "pair_indices_shape": [600, 2],
                 "array_sha256": {
                     "pair_indices": "0" * 64,
                     "posenet_yuv6_pair": "3" * 64,
@@ -434,6 +444,9 @@ def _mlx_cache_auth_audit_payload(
             "raw_sha256": raw_sha256,
             "pair_count": 600,
             "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+            "segnet_last_rgb_shape": [600, 3, 384, 512],
+            "posenet_yuv6_pair_shape": [600, 12, 192, 256],
+            "pair_indices_shape": [600, 2],
             "array_sha256": cache_hashes,
         },
         "auth_eval": {
@@ -1923,7 +1936,7 @@ def test_build_windowed_mlx_response_dataset_rejects_copied_audit_stamp(
 
     assert dataset["rows"] == []
     assert any(
-        "candidate cache arrays do not match dereferenced auth audit cache arrays"
+        "auth_eval_identity_audit_audit_cache_array_sha256_mismatch"
         in item["reason"]
         for item in dataset["skipped"]
     )

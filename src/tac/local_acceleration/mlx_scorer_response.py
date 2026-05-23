@@ -21,6 +21,7 @@ import numpy as np
 
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.local_acceleration.mlx_cache_audit import cache_audit_stamp_blockers
 from tac.local_acceleration.mlx_scorer_adapters import (
     run_mlx_distortion_scorer_nchw,
     scorer_distortion_components_numpy,
@@ -41,6 +42,7 @@ LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER = (
     "mlx_scorer_response_local_advisory_cache_identity_requires_explicit_allowance"
 )
 CACHE_INTEGRITY_BLOCKER = "mlx_scorer_input_cache_integrity_failed"
+AUDIT_STAMP_DEREFERENCE_BLOCKER = "mlx_scorer_response_cache_audit_stamp_dereference_failed"
 
 
 @dataclass(frozen=True)
@@ -499,22 +501,40 @@ def _validate_candidate_transfer_cache(
 ) -> str:
     manifest = candidate.manifest
     audit = manifest.get("auth_eval_identity_audit")
+    audit_blockers = cache_audit_stamp_blockers(
+        manifest,
+        cache_root=candidate.root,
+        stamp_key="auth_eval_identity_audit",
+        expected_verdict="PASS_CACHE_AUTH_EVAL_IDENTITY",
+        require_identity_residual_zero=True,
+        require_cache_shapes=True,
+    )
     audit_ok = (
         manifest.get("eligible_for_local_mlx_transfer_calibration") is True
         and isinstance(audit, dict)
         and audit.get("verdict") == "PASS_CACHE_AUTH_EVAL_IDENTITY"
         and audit.get("passed") is True
         and audit.get("identity_residual") == 0
+        and not audit_blockers
     )
     if audit_ok:
         return "auth_eval_identity"
     local_audit = manifest.get("local_cpu_advisory_cache_identity_audit")
+    local_audit_blockers = cache_audit_stamp_blockers(
+        manifest,
+        cache_root=candidate.root,
+        stamp_key="local_cpu_advisory_cache_identity_audit",
+        expected_verdict="PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
+        require_identity_residual_zero=False,
+        require_cache_shapes=False,
+    )
     local_audit_ok = (
         allow_local_cpu_advisory_cache_identity
         and manifest.get("eligible_for_local_mlx_local_advisory_debug") is True
         and isinstance(local_audit, dict)
         and local_audit.get("verdict") == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
         and local_audit.get("passed") is True
+        and not local_audit_blockers
     )
     if local_audit_ok:
         return "local_cpu_advisory_identity"
@@ -526,16 +546,26 @@ def _validate_candidate_transfer_cache(
         and local_audit.get("verdict") == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
         and local_audit.get("passed") is True
     ):
+        detail = (
+            f"; {AUDIT_STAMP_DEREFERENCE_BLOCKER}: {', '.join(local_audit_blockers)}"
+            if local_audit_blockers
+            else ""
+        )
         raise ValueError(
             f"{LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER}: candidate cache has only "
             "local CPU-advisory identity, not contest auth-axis identity; pass "
             "allow_local_cpu_advisory_cache_identity=True for local debug/speed "
-            "delta runs"
+            f"delta runs{detail}"
         )
+    detail = (
+        f"; {AUDIT_STAMP_DEREFERENCE_BLOCKER}: {', '.join(audit_blockers)}"
+        if isinstance(audit, dict) and audit_blockers
+        else ""
+    )
     raise ValueError(
         f"{CANDIDATE_CACHE_TRANSFER_BLOCKER}: candidate cache must be stamped by "
         "tools/materialize_mlx_scorer_cache_from_auth_eval.py or an equivalent "
-        "PASS_CACHE_AUTH_EVAL_IDENTITY audit before response scoring"
+        f"PASS_CACHE_AUTH_EVAL_IDENTITY audit before response scoring{detail}"
     )
 
 

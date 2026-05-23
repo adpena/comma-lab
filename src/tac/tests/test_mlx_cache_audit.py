@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -14,6 +15,7 @@ from tac.local_acceleration.mlx_cache_audit import (
     PASS_VERDICT,
     audit_mlx_scorer_input_cache_against_auth_eval,
     audit_mlx_scorer_input_cache_against_local_cpu_advisory,
+    cache_audit_stamp_blockers,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -187,6 +189,14 @@ def _reference_manifest(*, array_hashes: dict[str, str] | None = None) -> dict[s
     }
 
 
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def test_cache_audit_passes_matching_identity() -> None:
     audit = audit_mlx_scorer_input_cache_against_auth_eval(
         _cache(),
@@ -357,6 +367,71 @@ def test_cache_audit_cli_stamps_cache_manifest_on_pass(tmp_path: Path) -> None:
     assert stamp["passed"] is True
     assert stamp["identity_residual"] == 0
     assert len(stamp["sha256"]) == 64
+
+
+def test_cache_audit_stamp_validator_rejects_missing_referenced_audit(
+    tmp_path: Path,
+) -> None:
+    manifest = _cache()
+    manifest["auth_eval_identity_audit"] = {
+        "schema_version": "mlx_scorer_input_cache_auth_eval_audit.v1",
+        "path": str(tmp_path / "missing.json"),
+        "sha256": "0" * 64,
+        "verdict": PASS_VERDICT,
+        "passed": True,
+        "identity_residual": 0,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    blockers = cache_audit_stamp_blockers(
+        manifest,
+        cache_root=tmp_path,
+        stamp_key="auth_eval_identity_audit",
+        expected_verdict=PASS_VERDICT,
+    )
+
+    assert "auth_eval_identity_audit_path_not_found" in blockers
+
+
+def test_cache_audit_stamp_validator_rejects_stale_cache_identity(
+    tmp_path: Path,
+) -> None:
+    manifest = _cache()
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(
+        manifest,
+        _auth_with_scorer_input_hash(),
+    )
+    audit["cache"]["raw_sha256"] = "z" * 64
+    audit_path = tmp_path / "audit.json"
+    audit_path.write_text(json.dumps(audit, sort_keys=True) + "\n", encoding="utf-8")
+    manifest["auth_eval_identity_audit"] = {
+        "schema_version": "mlx_scorer_input_cache_auth_eval_audit.v1",
+        "path": str(audit_path),
+        "sha256": _file_sha256(audit_path),
+        "verdict": PASS_VERDICT,
+        "passed": True,
+        "identity_residual": 0,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    blockers = cache_audit_stamp_blockers(
+        manifest,
+        cache_root=tmp_path,
+        stamp_key="auth_eval_identity_audit",
+        expected_verdict=PASS_VERDICT,
+    )
+
+    assert "auth_eval_identity_audit_audit_cache_raw_sha256_mismatch" in blockers
 
 
 def test_cache_audit_alias_cli_writes_output(tmp_path: Path) -> None:

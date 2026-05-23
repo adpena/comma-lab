@@ -53498,6 +53498,10 @@ _CHECK_207_GUARD_TOKENS = (
     "rmtree_within_namespace",
     "ensure_within_namespace",
     "ensure_under_results_namespace",
+    "_prepare_owned_directory",
+    "_delete_owned_directory",
+    "_validate_export_output_path",
+    "_validate_output_dir",
     "validate_force_delete_path",
     "guard_force_delete",
     "UnsafeRmtreeRefusedError",
@@ -53519,11 +53523,11 @@ _CHECK_207_CANONICAL_HELPERS = frozenset({
 def _check_207_iter_build_tool_files(
     tools_dir: Path,
 ) -> list[Path]:
-    """Return tools/build_*.py and tools/promote_*.py files."""
+    """Return tools whose user-facing commands can materialize/delete trees."""
     if not tools_dir.exists():
         return []
     files: list[Path] = []
-    for pattern in ("build_*.py", "promote_*.py"):
+    for pattern in ("build_*.py", "materialize_*.py", "promote_*.py"):
         for path in tools_dir.glob(pattern):
             if path.is_file():
                 files.append(path)

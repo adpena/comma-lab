@@ -200,6 +200,7 @@ def test_failed_audit_deletes_materialized_cache(tmp_path: Path) -> None:
     tool = _load_tool()
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir()
+    tool._write_owned_marker(cache_dir, label="output_cache_dir")
     (cache_dir / "manifest.json").write_text("{}", encoding="utf-8")
     audit_path = tmp_path / "audit.json"
     audit_path.write_text(json.dumps({"passed": False}), encoding="utf-8")
@@ -214,6 +215,56 @@ def test_failed_audit_deletes_materialized_cache(tmp_path: Path) -> None:
 
     assert manifest == {}
     assert not cache_dir.exists()
+
+
+def test_failed_audit_preserves_unowned_preexisting_cache(tmp_path: Path) -> None:
+    tool = _load_tool()
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "manifest.json").write_text("{}", encoding="utf-8")
+    audit_path = tmp_path / "audit.json"
+    audit_path.write_text(json.dumps({"passed": False}), encoding="utf-8")
+
+    manifest = tool._finalize_cache_after_audit(
+        output_cache=cache_dir,
+        audit_output=audit_path,
+        audit={"passed": False, "verdict": "FAIL_CACHE_AUTH_EVAL_IDENTITY"},
+        auth_dir=tmp_path / "auth",
+        auth_eval_path=tmp_path / "auth" / "contest_auth_eval.json",
+    )
+
+    assert manifest == {}
+    assert cache_dir.exists()
+    assert (cache_dir / "manifest.json").exists()
+
+
+def test_force_replace_requires_owned_directory_marker(tmp_path: Path) -> None:
+    tool = _load_tool()
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    (work_dir / "partner.txt").write_text("do-not-delete", encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="without owned-directory marker"):
+        tool._prepare_owned_directory(work_dir, force=True, label="work_dir")
+
+    assert (work_dir / "partner.txt").exists()
+
+
+def test_force_replace_accepts_owned_directory_marker(tmp_path: Path) -> None:
+    tool = _load_tool()
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    tool._write_owned_marker(work_dir, label="work_dir")
+    (work_dir / "old.txt").write_text("replaceable", encoding="utf-8")
+
+    tool._prepare_owned_directory(work_dir, force=True, label="work_dir")
+
+    assert work_dir.exists()
+    assert not (work_dir / "old.txt").exists()
+    marker = json.loads(
+        (work_dir / tool.OWNED_DIRECTORY_MARKER).read_text(encoding="utf-8")
+    )
+    assert marker["tool"] == tool.TOOL_NAME
 
 
 def test_passing_audit_stamps_materialized_cache_manifest(monkeypatch, tmp_path: Path) -> None:

@@ -50,6 +50,20 @@ def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _validate_output_dir(path: Path) -> Path:
+    resolved = path.resolve()
+    allowed_root = (REPO_ROOT / "experiments" / "results").resolve()
+    try:
+        resolved.relative_to(allowed_root)
+    except ValueError as exc:
+        raise SystemExit(
+            f"output directory must be inside experiments/results: {resolved}"
+        ) from exc
+    if resolved == allowed_root:
+        raise SystemExit("output directory cannot be experiments/results itself")
+    return resolved
+
+
 def _run_trainer(
     *,
     output_dir: Path,
@@ -191,7 +205,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    output_dir = args.output_dir
+    output_dir = _validate_output_dir(args.output_dir)
     if output_dir.exists():
         if not args.force:
             raise SystemExit(f"output directory exists; pass --force: {output_dir}")

@@ -200,3 +200,19 @@ def test_retention_reports_unknown_raw_surface(tmp_path: Path) -> None:
         and "unknown_raw_surface_no_certifier" in row.blockers
         for row in plan.blocked_candidates
     )
+
+
+def test_retention_reports_known_nested_raw_workdir(tmp_path: Path) -> None:
+    workdir = tmp_path / "candidate_d" / "contest_auth_eval_cpu_workdir"
+    raw_dir = workdir / "nested" / "inflated"
+    _write(raw_dir / "0.raw", b"r" * 8)
+
+    plan = build_retention_plan([tmp_path], repo_root=tmp_path, min_bytes=1)
+
+    assert any(
+        row.path == workdir.relative_to(tmp_path).as_posix()
+        and row.kind == "blocked_unknown_raw_surface"
+        and "unknown_raw_workdir_no_certifier" in row.blockers
+        and row.certificate["nested_raw_file_count"] == 1
+        for row in plan.blocked_candidates
+    )

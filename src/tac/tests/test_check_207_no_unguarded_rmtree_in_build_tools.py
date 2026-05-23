@@ -29,11 +29,9 @@ import pytest
 
 from tac.preflight import (
     PreflightError,
-    _check_207_collect_violations_in_file,
     _check_207_iter_build_tool_files,
     check_no_unguarded_rmtree_in_build_tools,
 )
-
 
 # ─── Fixture: synthetic tools/ directory ────────────────────────────────
 
@@ -84,6 +82,21 @@ def test_unguarded_promote_tool_also_flagged(fake_tools_root):
     )
     assert len(v) == 1
     assert "promote_widget.py" in v[0]
+
+
+def test_unguarded_materialize_tool_also_flagged(fake_tools_root):
+    body = (
+        "import shutil\n"
+        "def go(args):\n"
+        "    if args.force:\n"
+        "        shutil.rmtree(args.output_cache_dir)\n"
+    )
+    _write_tool(fake_tools_root, "materialize_bad.py", body)
+    v = check_no_unguarded_rmtree_in_build_tools(
+        repo_root=fake_tools_root, strict=False
+    )
+    assert len(v) == 1
+    assert "materialize_bad.py" in v[0]
 
 
 # ─── Negative: rmtree without --force is OUT OF SCOPE ──────────────────
@@ -195,7 +208,7 @@ def test_strict_mode_raises_preflight_error(fake_tools_root):
         "        shutil.rmtree(args.out_dir)\n"
     )
     _write_tool(fake_tools_root, "build_dirty_strict.py", body)
-    with pytest.raises(PreflightError, match="unguarded shutil.rmtree"):
+    with pytest.raises(PreflightError, match=r"unguarded shutil\.rmtree"):
         check_no_unguarded_rmtree_in_build_tools(
             repo_root=fake_tools_root, strict=True
         )
@@ -222,12 +235,14 @@ def test_strict_mode_passes_when_clean(fake_tools_root):
 
 def test_iter_build_tool_files_filters_correctly(fake_tools_root):
     _write_tool(fake_tools_root, "build_a.py", "import shutil\n")
+    _write_tool(fake_tools_root, "materialize_a.py", "import shutil\n")
     _write_tool(fake_tools_root, "promote_b.py", "import shutil\n")
     _write_tool(fake_tools_root, "make_c.py", "import shutil\n")  # NOT matched
     _write_tool(fake_tools_root, "build_a.txt", "")  # NOT matched
     files = _check_207_iter_build_tool_files(fake_tools_root / "tools")
     rel = sorted(f.name for f in files)
     assert "build_a.py" in rel
+    assert "materialize_a.py" in rel
     assert "promote_b.py" in rel
     assert "make_c.py" not in rel
     assert "build_a.txt" not in rel
@@ -362,6 +377,7 @@ def test_live_repo_count_is_zero():
 def test_orchestrator_callsite_is_strict_true():
     """The strict-flip MUST be wired in preflight_all() per Catalog #176."""
     import inspect
+
     from tac import preflight
     src = inspect.getsource(preflight.preflight_all)
     assert "check_no_unguarded_rmtree_in_build_tools" in src

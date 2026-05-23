@@ -23,6 +23,16 @@ SCHEMA = "comma_lab.artifact_retention_plan.v1"
 EXECUTION_SCHEMA = "comma_lab.artifact_retention_execution.v1"
 EXECUTION_JOURNAL_SCHEMA = "comma_lab.artifact_retention_execution_journal.v1"
 UNKNOWN_RAW_KIND = "blocked_unknown_raw_surface"
+KNOWN_RAW_WORKDIR_NAMES = frozenset(
+    {
+        "auth_eval_work",
+        "eval_work",
+        "contest_auth_eval_workdir",
+        "contest_auth_eval_cpu_workdir",
+        "contest_auth_eval_cuda_workdir",
+        "local_macos_cpu_eval_work",
+    }
+)
 
 DEFAULT_RETENTION_KINDS = frozenset(
     {
@@ -490,6 +500,48 @@ def _certify_unknown_raw_surface(path: Path, repo_root: Path) -> RetentionCandid
     )
 
 
+def _certify_unknown_raw_workdir(path: Path, repo_root: Path) -> RetentionCandidate | None:
+    if path.name not in KNOWN_RAW_WORKDIR_NAMES and not path.name.endswith(
+        (
+            "_auth_eval_work",
+            "_eval_work",
+            "_auth_eval_workdir",
+            "_cpu_workdir",
+            "_cuda_workdir",
+        )
+    ):
+        return None
+    try:
+        raw_files = sorted(p for p in path.rglob("*.raw") if p.is_file() and not p.is_symlink())
+    except OSError:
+        return None
+    if not raw_files:
+        return None
+    raw_bytes = 0
+    for raw_file in raw_files:
+        try:
+            raw_bytes += raw_file.stat().st_size
+        except OSError:
+            continue
+    return RetentionCandidate(
+        path=_rel(path, repo_root),
+        kind=UNKNOWN_RAW_KIND,
+        bytes=directory_size_bytes(path),
+        certified_rebuildable=False,
+        certificate={
+            "kind": UNKNOWN_RAW_KIND,
+            "known_raw_workdir_name": path.name,
+            "nested_raw_file_count": len(raw_files),
+            "nested_raw_bytes": raw_bytes,
+            "reason": (
+                "known raw workdir contains raw outputs but no known retention "
+                "certificate matched"
+            ),
+        },
+        blockers=["unknown_raw_workdir_no_certifier"],
+    )
+
+
 def _iter_candidate_dirs(root: Path) -> Iterable[Path]:
     if root.is_dir():
         for dirpath, dirnames, _filenames in os.walk(root):
@@ -540,7 +592,9 @@ def build_retention_plan(
                 if candidate is not None:
                     break
             if candidate is None:
-                unknown = _certify_unknown_raw_surface(path, repo_root)
+                unknown = _certify_unknown_raw_workdir(path, repo_root)
+                if unknown is None:
+                    unknown = _certify_unknown_raw_surface(path, repo_root)
                 if unknown is not None and unknown.bytes >= min_bytes:
                     blocked.append(unknown)
                 continue
