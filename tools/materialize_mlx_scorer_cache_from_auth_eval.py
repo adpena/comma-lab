@@ -483,6 +483,15 @@ def _manifest_without_local_audit_stamp(manifest: dict[str, Any]) -> dict[str, A
 
 def _complete_false_authority_contract(manifest: dict[str, Any]) -> dict[str, Any]:
     for field in AUTHORITY_FALSE_FIELDS:
+        if (
+            field in manifest
+            and manifest.get(field) is not None
+            and manifest.get(field) is not False
+        ):
+            raise SystemExit(
+                "downloaded tensor cache manifest authority field "
+                f"{field} must be false"
+            )
         manifest[field] = False
     return manifest
 

@@ -360,6 +360,23 @@ def test_cache_audit_accepts_auth_eval_tensor_manifest() -> None:
     assert audit["identity_residual"] == 0
 
 
+def test_cache_audit_rejects_auth_eval_tensor_manifest_authority_claim() -> None:
+    auth = _auth_with_scorer_input_tensor_manifest()
+    provenance = auth["provenance"]
+    assert isinstance(provenance, dict)
+    manifest = provenance["scorer_input_cache_tensor_manifest"]
+    assert isinstance(manifest, dict)
+    payload = manifest["payload"]
+    assert isinstance(payload, dict)
+    payload["score_claim"] = True
+
+    audit = audit_mlx_scorer_input_cache_against_auth_eval(_cache(), auth)
+
+    assert audit["passed"] is False
+    assert audit["eligible_for_local_mlx_transfer_calibration"] is False
+    assert "auth_scorer_input_manifest_score_claim_not_false" in audit["blockers"]
+
+
 def test_cache_audit_rejects_stale_auth_eval_tensor_manifest_archive_identity() -> None:
     auth = _auth_with_scorer_input_tensor_manifest()
     provenance = auth["provenance"]

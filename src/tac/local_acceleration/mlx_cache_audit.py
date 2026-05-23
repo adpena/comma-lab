@@ -301,6 +301,12 @@ def _append_auth_scorer_input_manifest_blockers(
     manifest_raw_sha = _string(manifest.get("raw_sha256"))
     manifest_pair_count = _int(manifest.get("pair_count"))
 
+    _append_manifest_authority_blockers(
+        blockers,
+        manifest,
+        prefix="auth_scorer_input_manifest",
+    )
+
     if require_full_cache_identity and not manifest_archive_sha:
         blockers.append("auth_scorer_input_manifest_archive_sha256_missing")
     if manifest_archive_sha and auth_archive_sha and manifest_archive_sha != auth_archive_sha:
@@ -333,6 +339,17 @@ def _append_auth_scorer_input_manifest_blockers(
             "auth_scorer_input_manifest_pair_count_mismatch:"
             f"manifest={manifest_pair_count}:auth={auth_n_samples}"
         )
+
+
+def _append_manifest_authority_blockers(
+    blockers: list[str],
+    manifest: dict[str, Any],
+    *,
+    prefix: str,
+) -> None:
+    for field in AUTHORITY_FALSE_FIELDS:
+        if field in manifest and manifest.get(field) is not False:
+            blockers.append(f"{prefix}_{field}_not_false")
 
 
 def _archive_sha256(payload: dict[str, Any]) -> str | None:

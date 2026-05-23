@@ -328,3 +328,24 @@ def test_downloaded_tensor_cache_mode_rejects_artifact_sha_mismatch(tmp_path: Pa
             },
             auth_eval=_auth_eval_with_tensor_manifest(payload, manifest_sha256=manifest_sha),
         )
+
+
+def test_downloaded_tensor_cache_mode_rejects_source_authority_claim(tmp_path: Path) -> None:
+    tool = _load_tool()
+    source_cache = tmp_path / "downloaded"
+    source_cache.mkdir()
+    payload = _tensor_manifest_payload(source_cache, include_score_claim_valid=True)
+    payload["score_claim"] = True
+    write_json(source_cache / "manifest.json", payload)
+    manifest_sha = _file_sha256(source_cache / "manifest.json")
+
+    with pytest.raises(SystemExit, match="authority field score_claim must be false"):
+        tool._validate_downloaded_tensor_cache(
+            downloaded_cache_dir=source_cache,
+            tensor_volume_manifest={
+                "schema_version": "modal_auth_eval_tensor_volume_manifest.v1",
+                "manifest_sha256": manifest_sha,
+                "payload": payload,
+            },
+            auth_eval=_auth_eval_with_tensor_manifest(payload, manifest_sha256=manifest_sha),
+        )
