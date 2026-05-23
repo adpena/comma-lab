@@ -48718,6 +48718,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_frontier_scan_reports_latest_table_parser_guard_20260523",
+      "name": "reports_latest_table_parser_guard",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/frontier_scan.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/preflight.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_frontier_scan_reports_latest_table_parser_guard_20260523T085733Z_codex.md"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_frontier_scan_reports_latest_table_parser_guard_20260523T085733Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -48727,5 +48768,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-23T08:52:04Z"
+  "updated_at": "2026-05-23T08:59:32Z"
 }

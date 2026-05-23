@@ -236,6 +236,56 @@ def test_scan_reports_latest_md_extracts_axis_tagged_citations(tmp_path):
     assert cited["contest_cuda"] == pytest.approx(0.22636)
 
 
+def test_scan_reports_latest_md_prefers_current_best_table_over_prose_deltas(
+    tmp_path,
+):
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "latest.md").write_text(
+        "# Report\n\n"
+        "### Current best - last rechecked 2026-05-22T18:51Z\n\n"
+        "| Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |\n"
+        "|---|---|---|---|---|\n"
+        "| **`[contest-CPU Linux x86_64]`** | **0.1920282830** | "
+        "`7a0da5d0fc32` | linux_x86_64_cpu | `lane_cpu` |\n"
+        "| **`[contest-CUDA T4]`** | **0.2053300290** | "
+        "`9cb989cef519` | linux_x86_64_t4 | `lane_cuda` |\n\n"
+        "A local advisory row was `-0.0000010605785158157577` lower while "
+        "mentioning the Linux x86_64 `[contest-CPU]` frontier.\n"
+        "A compact DQS1 row was `0.000022368065015737626` below a prior "
+        "`[contest-CPU]` frontier and had an exact `[contest-CUDA T4]` "
+        "replay note.\n",
+        encoding="utf-8",
+    )
+
+    cited = scan_reports_latest_md(tmp_path)
+
+    assert cited == {
+        "contest_cpu": pytest.approx(0.1920282830),
+        "contest_cuda": pytest.approx(0.2053300290),
+    }
+
+
+def test_scan_reports_latest_md_does_not_fallback_when_current_best_is_malformed(
+    tmp_path,
+):
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "latest.md").write_text(
+        "# Report\n\n"
+        "### Current best - last rechecked 2026-05-22T18:51Z\n\n"
+        "| Axis | Best score |\n"
+        "|---|---|\n"
+        "| missing axis label | missing score |\n\n"
+        "Historical prose says `0.000001` `[contest-CPU]` and "
+        "`0.000022` `[contest-CUDA T4]`, but that is not the generated "
+        "current-frontier table.\n",
+        encoding="utf-8",
+    )
+
+    assert scan_reports_latest_md(tmp_path) == {}
+
+
 def test_scan_reports_latest_md_empty_on_no_axis_tag(tmp_path):
     reports = tmp_path / "reports"
     reports.mkdir()

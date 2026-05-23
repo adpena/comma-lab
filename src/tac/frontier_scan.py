@@ -497,27 +497,63 @@ def _score_before_axis_citations(text: str, cited: dict[str, float]) -> None:
 
 def _markdown_table_citations(text: str, cited: dict[str, float]) -> None:
     for line in text.splitlines():
-        if not line.lstrip().startswith("|"):
+        _markdown_table_line_citations(line, cited)
+
+
+def _markdown_table_line_citations(line: str, cited: dict[str, float]) -> None:
+    if not line.lstrip().startswith("|"):
+        return
+    line_lower = line.lower()
+    for axis_token, axis_key in _AXIS_TOKENS:
+        if axis_token not in line_lower:
             continue
-        line_lower = line.lower()
-        for axis_token, axis_key in _AXIS_TOKENS:
-            if axis_token not in line_lower:
+        cells = [cell.strip() for cell in line.split("|") if cell.strip()]
+        score_cells = [
+            cell
+            for index, cell in enumerate(cells)
+            if axis_token in cell.lower()
+            for cell in cells[index + 1 : index + 2]
+        ]
+        for cell in score_cells:
+            m = re.search(r"\b(0\.[0-9]+)\b", cell)
+            if not m:
                 continue
-            cells = [cell.strip() for cell in line.split("|") if cell.strip()]
-            score_cells = [
-                cell
-                for index, cell in enumerate(cells)
-                if axis_token in cell.lower()
-                for cell in cells[index + 1 : index + 2]
-            ]
-            for cell in score_cells:
-                m = re.search(r"\b(0\.[0-9]+)\b", cell)
-                if not m:
-                    continue
-                try:
-                    _record_cited_score(cited, axis_key, float(m.group(1)))
-                except ValueError:
-                    continue
+            try:
+                _record_cited_score(cited, axis_key, float(m.group(1)))
+            except ValueError:
+                continue
+
+
+_MARKDOWN_HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+")
+_CURRENT_BEST_HEADING_RE = re.compile(r"^\s{0,3}#{2,6}\s+current\s+best\b", re.I)
+
+
+def _reports_latest_current_best_table_citations(text: str) -> dict[str, float] | None:
+    """Parse the authoritative reports/latest.md current-frontier table.
+
+    ``reports/latest.md`` is a long historical control surface. It deliberately
+    carries advisory deltas and old comparisons that are axis-tagged prose, so
+    the best-score citation for Catalog #316 must come from the generated
+    ``### Current best`` table when that table exists.
+    """
+
+    cited: dict[str, float] = {}
+    in_current_best = False
+    saw_table = False
+    for line in text.splitlines():
+        if not in_current_best:
+            if _CURRENT_BEST_HEADING_RE.match(line):
+                in_current_best = True
+            continue
+        if _MARKDOWN_HEADING_RE.match(line):
+            break
+        if not line.lstrip().startswith("|"):
+            if saw_table and line.strip():
+                break
+            continue
+        saw_table = True
+        _markdown_table_line_citations(line, cited)
+    return cited if in_current_best else None
 
 
 def _previous_line_axis_citations(text: str, cited: dict[str, float]) -> None:
@@ -576,6 +612,17 @@ def scan_reports_latest_md(repo_root: Path | str) -> dict[str, float]:
     Catalog #316 to detect drift between citation surface and canonical
     state.
     """
+    repo_root = Path(repo_root)
+    path = repo_root / "reports/latest.md"
+    if not path.is_file():
+        return {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    current_best = _reports_latest_current_best_table_citations(text)
+    if current_best is not None:
+        return current_best
     return scan_frontier_citation_surface(repo_root, "reports/latest.md")
 
 
@@ -641,10 +688,12 @@ def build_frontier_scan_payload(repo_root: Path | str) -> dict[str, object]:
     repo_root = Path(repo_root)
     all_anchors = collect_all_anchors(repo_root)
     best = best_per_axis(all_anchors)
-    citation_surfaces = {
-        path: scan_frontier_citation_surface(repo_root, path)
-        for path in FRONTIER_CITATION_SURFACE_PATHS
-    }
+    citation_surfaces = {}
+    for path in FRONTIER_CITATION_SURFACE_PATHS:
+        if path == "reports/latest.md":
+            citation_surfaces[path] = scan_reports_latest_md(repo_root)
+        else:
+            citation_surfaces[path] = scan_frontier_citation_surface(repo_root, path)
     cited = citation_surfaces.get("reports/latest.md", {})
     surface_drift = {
         path: [
