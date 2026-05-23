@@ -20,6 +20,7 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
     DEFAULT_DRIFT_CALIBRATION_JSON,
     DEFAULT_EUREKA_OUTPUT_DIR,
+    DEFAULT_MLX_REFERENCE_CACHE_DIR,
     DEFAULT_QUEUE_ID,
     DEFAULT_RESULTS_ROOT,
     ExperimentQueueError,
@@ -122,6 +123,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=1,
         help="local_cpu resource concurrency to write into the generated queue",
     )
+    parser.add_argument(
+        "--include-mlx-local-advisory-debug",
+        action="store_true",
+        help=(
+            "add local MLX candidate-cache and scorer-response steps after the "
+            "local CPU advisory"
+        ),
+    )
+    parser.add_argument(
+        "--allow-large-mlx-cache",
+        action="store_true",
+        help="required with --include-mlx-local-advisory-debug for full DQS1 caches",
+    )
+    parser.add_argument(
+        "--mlx-reference-cache-dir",
+        default=DEFAULT_MLX_REFERENCE_CACHE_DIR,
+        help="reference scorer-input cache for MLX response runs",
+    )
+    parser.add_argument("--mlx-device", choices=("cpu", "gpu"), default="gpu")
+    parser.add_argument("--mlx-batch-pairs", type=int, default=1)
+    parser.add_argument("--mlx-cache-batch-pairs", type=int, default=8)
     return parser.parse_args(argv)
 
 
@@ -160,6 +182,12 @@ def main(argv: list[str] | None = None) -> int:
         skip_completed_local_advisory=not args.include_completed_local_advisory,
         candidate_limit=args.candidate_limit,
         local_cpu_concurrency=args.local_cpu_concurrency,
+        include_mlx_local_advisory_debug=args.include_mlx_local_advisory_debug,
+        allow_large_mlx_cache=args.allow_large_mlx_cache,
+        mlx_reference_cache_dir=args.mlx_reference_cache_dir,
+        mlx_device=args.mlx_device,
+        mlx_batch_pairs=args.mlx_batch_pairs,
+        mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
     )
     output = Path(args.output)
     if args.write:

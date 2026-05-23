@@ -281,6 +281,79 @@ def test_mlx_scorer_response_local_advisory_identity_has_limited_allowed_uses(
     assert "prepaid_dispatch_spend_filter_after_score_calibration" not in contract["allowed_uses"]
 
 
+def test_mlx_scorer_response_from_local_advisory_cli_uses_advisory_archive_size(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(
+        tmp_path / "reference",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    candidate_dir = _write_test_cache(
+        tmp_path / "candidate",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+        audited=False,
+    )
+    _stamp_local_cpu_advisory_identity(candidate_dir)
+    advisory = tmp_path / "local_cpu_advisory.json"
+    advisory.write_text(
+        json.dumps(
+            {
+                "score_axis": "cpu_advisory",
+                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+                "archive_size_bytes": 1234,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "promotable": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "mlx_response.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_from_local_advisory.py"),
+            "--local-cpu-advisory",
+            str(advisory),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(REPO),
+            "--device",
+            "cpu",
+            "--allow-local-cpu-advisory-cache-identity",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(completed.stdout)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    expected_rate_score = 25.0 * 1234 / ORIGINAL_VIDEO_BYTES
+    assert stdout["archive_size_bytes"] == 1234
+    assert payload["source_local_cpu_advisory"]["path"] == str(advisory)
+    assert payload["source_local_cpu_advisory"]["score_claim"] is False
+    assert payload["score_claim"] is False
+    assert abs(payload["canonical_score"] - expected_rate_score) < 1.0e-12
+
+
 def test_mlx_scorer_response_local_advisory_stamp_must_dereference(
     tmp_path: Path,
 ) -> None:

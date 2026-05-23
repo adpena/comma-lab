@@ -1,32 +1,22 @@
 {
-  "schema": "experiment_queue.v1",
-  "queue_id": "dqs1_pairset_local_first",
   "controls": {
-    "mode": "running",
     "local_first": true,
     "max_concurrency": {
       "local_cpu": 1,
       "local_mlx": 1,
       "modal_cpu": 0,
       "modal_gpu": 0
-    }
+    },
+    "mode": "running"
   },
   "experiments": [
     {
       "id": "pairset_drop_two_r029_020_p0259_0430",
-      "status": "queued",
-      "priority": 28,
       "lane_id": "lane_dqs1_pairset_drop_two_r029_020_p0259_0430_local_first_20260522",
-      "tags": [
-        "dqs1",
-        "pairset",
-        "local-first",
-        "no-score-authority"
-      ],
+      "priority": 28,
+      "status": "queued",
       "steps": [
         {
-          "id": "plan_packet",
-          "kind": "command",
           "command": [
             ".venv/bin/python",
             "tools/plan_decoder_q_selective_runtime_packet.py",
@@ -43,31 +33,31 @@
             "--selected-pairs",
             "26,59,68,98,109,112,134,151,167,229,242,257,296,320,327,371,376,378,412,440,459,467,479,492,496,501,520,544,555,588"
           ],
-          "requires": [],
-          "resources": {
-            "kind": "local_cpu"
-          },
+          "id": "plan_packet",
+          "kind": "command",
           "postconditions": [
             {
-              "type": "json_false_authority",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
               "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r029_020_p0259_0430.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
                 "rank_or_kill_eligible"
               ],
-              "false_or_missing": [
-                "ready_for_exact_eval_dispatch",
-                "dispatch_attempted",
-                "gpu_launched"
-              ]
+              "type": "json_false_authority"
             }
           ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
           "timeout_seconds": 0
         },
         {
-          "id": "materialize",
-          "kind": "command",
           "command": [
             ".venv/bin/python",
             "tools/materialize_decoder_q_selective_runtime_candidate.py",
@@ -80,8 +70,25 @@
             "--frame-policy",
             "pair_all_frames",
             "--manifest-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/materialization_manifest.json",
-            "--force"
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
           ],
           "requires": [
             "plan_packet"
@@ -89,27 +96,9 @@
           "resources": {
             "kind": "local_cpu"
           },
-          "postconditions": [
-            {
-              "type": "json_false_authority",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/materialization_manifest.json",
-              "required_false": [
-                "score_claim",
-                "promotion_eligible",
-                "rank_or_kill_eligible"
-              ],
-              "false_or_missing": [
-                "ready_for_exact_eval_dispatch",
-                "dispatch_attempted",
-                "gpu_launched"
-              ]
-            }
-          ],
           "timeout_seconds": 0
         },
         {
-          "id": "locality_controls",
-          "kind": "command",
           "command": [
             ".venv/bin/python",
             "tools/run_decoder_q_selective_runtime_locality_controls.py",
@@ -130,41 +119,41 @@
             "--json-out",
             "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/locality_controls.json"
           ],
-          "requires": [
-            "materialize"
-          ],
-          "resources": {
-            "kind": "local_cpu"
-          },
+          "id": "locality_controls",
+          "kind": "command",
           "postconditions": [
             {
-              "type": "json_equals",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/locality_controls.json",
+              "equals": true,
               "key": "locality_controls_passed",
-              "equals": true
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/locality_controls.json",
+              "type": "json_equals"
             },
             {
-              "type": "json_false_authority",
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
               "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/locality_controls.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
                 "rank_or_kill_eligible"
               ],
-              "false_or_missing": [
-                "ready_for_exact_eval_dispatch",
-                "dispatch_attempted",
-                "gpu_launched"
-              ],
-              "axis_key": "score_axis",
-              "axis_equals": "[locality-control no-score]"
+              "type": "json_false_authority"
             }
           ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
           "timeout_seconds": 900
         },
         {
-          "id": "local_cpu_advisory",
-          "kind": "command",
           "command": [
             ".venv/bin/python",
             "experiments/contest_auth_eval.py",
@@ -188,35 +177,151 @@
             "900",
             "--keep-work-dir"
           ],
-          "requires": [
-            "locality_controls"
-          ],
-          "resources": {
-            "kind": "local_cpu"
-          },
+          "id": "local_cpu_advisory",
+          "kind": "command",
           "postconditions": [
             {
-              "type": "json_false_authority",
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
               "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/local_cpu_advisory.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
                 "rank_or_kill_eligible"
               ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
+            "--local-cpu-advisory",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/local_cpu_advisory.json",
+            "--output-cache-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_cache",
+            "--audit-output",
+            ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+            "--expected-pair-count",
+            "600",
+            "--batch-pairs",
+            "8",
+            "--allow-large-tensor-cache",
+            "--stamp-cache-manifest-on-pass"
+          ],
+          "id": "build_mlx_local_advisory_cache",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "passed",
+              "path": ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+              "type": "json_equals"
+            },
+            {
               "false_or_missing": [
                 "ready_for_exact_eval_dispatch",
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "axis_key": "score_axis",
-              "axis_equals": "cpu_advisory"
+              "path": ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            },
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_cache/manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
             }
           ],
-          "timeout_seconds": 1200
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "timeout_seconds": 1800
         },
         {
-          "id": "local_cpu_contest_drift_eureka",
+          "command": [
+            ".venv/bin/python",
+            "tools/run_mlx_scorer_response_from_local_advisory.py",
+            "--local-cpu-advisory",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/local_cpu_advisory.json",
+            "--reference-cache-dir",
+            "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600",
+            "--candidate-cache-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_cache",
+            "--output",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_response_gpu_b1_full600.json",
+            "--repo-root",
+            ".",
+            "--batch-pairs",
+            "1",
+            "--device",
+            "gpu",
+            "--allow-local-cpu-advisory-cache-identity",
+            "--components-dir",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_components_gpu_b1_full600",
+            "--response-family",
+            "dqs1_local_advisory_debug",
+            "--allow-gpu-research-signal"
+          ],
+          "id": "local_mlx_advisory_response",
           "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "[macOS-MLX research-signal]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_response_gpu_b1_full600.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_mlx_local_advisory_cache"
+          ],
+          "resources": {
+            "kind": "local_mlx"
+          },
+          "timeout_seconds": 600
+        },
+        {
           "command": [
             ".venv/bin/python",
             "tools/calibrate_local_cpu_contest_drift.py",
@@ -228,26 +333,22 @@
             "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/local_cpu_advisory.json",
             "--auth-frontier-score-from-pointer",
             "--eureka-out",
-            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T045043Z.json",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
             "--min-margin",
             "0.0"
           ],
-          "requires": [
-            "local_cpu_advisory"
-          ],
-          "resources": {
-            "kind": "local_cpu"
-          },
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
           "postconditions": [
             {
-              "type": "json_equals",
-              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T045043Z.json",
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
               "key": "schema",
-              "equals": "local_cpu_contest_drift_eureka_signal.v1"
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+              "type": "json_equals"
             },
             {
-              "type": "json_false_authority",
-              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T045043Z.json",
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
               "required_false": [
                 "ready_for_exact_eval_dispatch",
                 "dispatch_attempted",
@@ -264,12 +365,26 @@
                 "charged_bits_changed",
                 "gpu_launched"
               ],
-              "false_or_missing": []
+              "type": "json_false_authority"
             }
           ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
           "timeout_seconds": 120
         }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
       ]
     }
-  ]
+  ],
+  "queue_id": "dqs1_pairset_local_first",
+  "schema": "experiment_queue.v1"
 }

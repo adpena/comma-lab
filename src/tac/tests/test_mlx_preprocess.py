@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from hashlib import sha256
 from pathlib import Path
 
 import numpy as np
@@ -475,6 +476,87 @@ def test_contest_auth_eval_hash_artifact_updates_provenance(tmp_path: Path) -> N
     )
     assert outside_manifest["hash_only"] is True
     assert (tmp_path / "outside_hashes.json").is_file()
+
+
+def test_build_mlx_cache_from_local_advisory_cli_stamps_manifest(tmp_path: Path) -> None:
+    h, w = CAMERA_HW
+    inflated = tmp_path / "inflated"
+    inflated.mkdir()
+    raw_path = inflated / "0.raw"
+    frames = np.zeros((2, h, w, 3), dtype=np.uint8)
+    frames[1, ...] = 255
+    raw_path.write_bytes(frames.tobytes())
+    raw_sha = sha256(raw_path.read_bytes()).hexdigest()
+    advisory = tmp_path / "local_cpu_advisory.json"
+    advisory.write_text(
+        json.dumps(
+            {
+                "score_axis": "cpu_advisory",
+                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+                "archive_size_bytes": 123,
+                "n_samples": 1,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "promotable": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "provenance": {
+                    "archive_sha256": "a" * 64,
+                    "inflated_output_manifest": {
+                        "payload": {
+                            "inflated_dir": str(inflated),
+                            "aggregate_sha256": "b" * 64,
+                            "files": [
+                                {
+                                    "relative_path": "0.raw",
+                                    "exists": True,
+                                    "sha256": raw_sha,
+                                }
+                            ],
+                        }
+                    },
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    output_cache = tmp_path / "cache"
+    audit_output = tmp_path / "audit.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_scorer_input_cache_from_local_advisory.py"),
+            "--local-cpu-advisory",
+            str(advisory),
+            "--output-cache-dir",
+            str(output_cache),
+            "--audit-output",
+            str(audit_output),
+            "--expected-pair-count",
+            "1",
+            "--batch-pairs",
+            "1",
+            "--stamp-cache-manifest-on-pass",
+        ],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    stdout = json.loads(completed.stdout)
+    manifest = json.loads((output_cache / "manifest.json").read_text(encoding="utf-8"))
+    audit = json.loads(audit_output.read_text(encoding="utf-8"))
+    assert stdout["audit_passed"] is True
+    assert manifest["pair_count"] == 1
+    assert manifest["raw_sha256"] == raw_sha
+    assert manifest["eligible_for_local_mlx_local_advisory_debug"] is True
+    assert manifest["eligible_for_local_mlx_transfer_calibration"] is False
+    assert manifest["local_cpu_advisory_cache_identity_audit"]["passed"] is True
+    assert audit["verdict"] == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
+    assert audit["score_claim"] is False
 
 
 def test_contest_auth_eval_tensor_artifact_is_guarded_and_updates_provenance(

@@ -43,6 +43,7 @@ DEFAULT_DRIFT_CALIBRATION_JSON = (
     ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json"
 )
 DEFAULT_EUREKA_OUTPUT_DIR = ".omx/research"
+DEFAULT_MLX_REFERENCE_CACHE_DIR = "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
 SAFE_OPERATOR_ACTION = "materialize_pairset_archive_and_run_local_controls"
 LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA = EUREKA_SIGNAL_SCHEMA
 
@@ -422,6 +423,17 @@ def _eureka_signal_path(
     return f"{eureka_output_dir.rstrip('/')}/{filename}"
 
 
+def _mlx_local_advisory_cache_audit_path(
+    selection: Dqs1QueueSelection,
+    *,
+    eureka_output_dir: str,
+    eureka_run_id: str | None = None,
+) -> str:
+    timestamp = eureka_run_id or _summary_timestamp_from_path(selection.action_summary_path)
+    filename = f"mlx_delta_cache_local_cpu_advisory_identity_{selection.candidate_slug}_{timestamp}.json"
+    return f"{eureka_output_dir.rstrip('/')}/{filename}"
+
+
 def _false_authority_postcondition(
     path: str,
     *,
@@ -571,6 +583,12 @@ def build_dqs1_local_first_queue(
     eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
     eureka_run_id: str | None = None,
     local_cpu_concurrency: int = 1,
+    include_mlx_local_advisory_debug: bool = False,
+    allow_large_mlx_cache: bool = False,
+    mlx_reference_cache_dir: str = DEFAULT_MLX_REFERENCE_CACHE_DIR,
+    mlx_device: str = "gpu",
+    mlx_batch_pairs: int = 1,
+    mlx_cache_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     if (
         isinstance(local_cpu_concurrency, bool)
@@ -578,6 +596,25 @@ def build_dqs1_local_first_queue(
         or local_cpu_concurrency <= 0
     ):
         raise ExperimentQueueError("local_cpu_concurrency must be a positive integer")
+    if mlx_device not in {"cpu", "gpu"}:
+        raise ExperimentQueueError("mlx_device must be 'cpu' or 'gpu'")
+    if isinstance(mlx_batch_pairs, bool) or not isinstance(mlx_batch_pairs, int) or mlx_batch_pairs <= 0:
+        raise ExperimentQueueError("mlx_batch_pairs must be a positive integer")
+    if mlx_batch_pairs != 1:
+        raise ExperimentQueueError(
+            "mlx_batch_pairs must remain 1 until the MLX batch-shape invariance gate passes"
+        )
+    if (
+        isinstance(mlx_cache_batch_pairs, bool)
+        or not isinstance(mlx_cache_batch_pairs, int)
+        or mlx_cache_batch_pairs <= 0
+    ):
+        raise ExperimentQueueError("mlx_cache_batch_pairs must be a positive integer")
+    if include_mlx_local_advisory_debug and not allow_large_mlx_cache:
+        raise ExperimentQueueError(
+            "include_mlx_local_advisory_debug requires allow_large_mlx_cache=True "
+            "because DQS1 full-sample tensor caches are multi-GB artifacts"
+        )
     date = lane_date or _lane_date_from_summary_path(selection.action_summary_path)
     selected_pairs = ",".join(str(index) for index in selection.selected_pair_indices)
     materialized_root = f"{results_root}/materialized/{selection.candidate_slug}"
@@ -588,7 +625,249 @@ def build_dqs1_local_first_queue(
         eureka_output_dir=eureka_output_dir,
         eureka_run_id=eureka_run_id,
     )
+    mlx_cache_audit = _mlx_local_advisory_cache_audit_path(
+        selection,
+        eureka_output_dir=eureka_output_dir,
+        eureka_run_id=eureka_run_id,
+    )
     experiment_id = selection.candidate_id
+    mlx_cache_dir = f"{materialized_root}/mlx_delta_cache"
+    mlx_response = f"{materialized_root}/mlx_delta_response_{mlx_device}_b{mlx_batch_pairs}_full600.json"
+    mlx_components_dir = f"{materialized_root}/mlx_delta_components_{mlx_device}_b{mlx_batch_pairs}_full600"
+
+    steps: list[dict[str, Any]] = [
+        {
+            "id": "plan_packet",
+            "command": [
+                ".venv/bin/python",
+                "tools/plan_decoder_q_selective_runtime_packet.py",
+                "--bridge-plan",
+                bridge_plan,
+                "--base-archive",
+                f"{base_submission_dir}/archive.zip",
+                "--json-out",
+                packet_plan,
+                "--md-out",
+                packet_plan_md,
+                "--frame-policy",
+                frame_policy,
+                "--selected-pairs",
+                selected_pairs,
+            ],
+            "resources": {"kind": "local_cpu"},
+            "postconditions": [
+                _false_authority_postcondition(packet_plan)
+            ],
+        },
+        {
+            "id": "materialize",
+            "requires": ["plan_packet"],
+            "command": [
+                ".venv/bin/python",
+                "tools/materialize_decoder_q_selective_runtime_candidate.py",
+                "--plan",
+                packet_plan,
+                "--base-submission-dir",
+                base_submission_dir,
+                "--output-dir",
+                f"{materialized_root}/submission_dir",
+                "--frame-policy",
+                frame_policy,
+                "--manifest-output",
+                f"{materialized_root}/materialization_manifest.json",
+            ],
+            "resources": {"kind": "local_cpu"},
+            "postconditions": [
+                _false_authority_postcondition(
+                    f"{materialized_root}/materialization_manifest.json"
+                )
+            ],
+        },
+        {
+            "id": "locality_controls",
+            "requires": ["materialize"],
+            "timeout_seconds": 900,
+            "command": [
+                ".venv/bin/python",
+                "tools/run_decoder_q_selective_runtime_locality_controls.py",
+                "--parent-submission-dir",
+                base_submission_dir,
+                "--global-mutated-archive",
+                global_mutated_archive,
+                "--selective-submission-dir",
+                f"{materialized_root}/submission_dir",
+                "--selected-pairs",
+                selected_pairs,
+                "--frame-policy",
+                frame_policy,
+                "--timeout-seconds",
+                "600",
+                "--work-dir",
+                f"{materialized_root}/locality_work",
+                "--json-out",
+                f"{materialized_root}/locality_controls.json",
+            ],
+            "resources": {"kind": "local_cpu"},
+            "postconditions": [
+                {
+                    "type": "json_equals",
+                    "path": f"{materialized_root}/locality_controls.json",
+                    "key": "locality_controls_passed",
+                    "equals": True,
+                },
+                _false_authority_postcondition(
+                    f"{materialized_root}/locality_controls.json",
+                    axis_key="score_axis",
+                    axis_equals="[locality-control no-score]",
+                ),
+            ],
+        },
+        {
+            "id": "local_cpu_advisory",
+            "requires": ["locality_controls"],
+            "timeout_seconds": 1200,
+            "command": [
+                ".venv/bin/python",
+                "experiments/contest_auth_eval.py",
+                "--archive",
+                f"{materialized_root}/submission_dir/archive.zip",
+                "--inflate-sh",
+                f"{materialized_root}/submission_dir/inflate.sh",
+                "--upstream-dir",
+                upstream_dir,
+                "--video-names-file",
+                video_names_file,
+                "--device",
+                "cpu",
+                "--work-dir",
+                f"{materialized_root}/local_cpu_advisory_work",
+                "--json-out",
+                f"{materialized_root}/local_cpu_advisory.json",
+                "--inflate-timeout",
+                "600",
+                "--evaluate-timeout",
+                "900",
+                "--keep-work-dir",
+            ],
+            "resources": {"kind": "local_cpu"},
+            "postconditions": [
+                _false_authority_postcondition(
+                    f"{materialized_root}/local_cpu_advisory.json",
+                    axis_key="score_axis",
+                    axis_equals="cpu_advisory",
+                )
+            ],
+        },
+    ]
+    if include_mlx_local_advisory_debug:
+        build_mlx_cache_command = [
+            ".venv/bin/python",
+            "tools/build_mlx_scorer_input_cache_from_local_advisory.py",
+            "--local-cpu-advisory",
+            f"{materialized_root}/local_cpu_advisory.json",
+            "--output-cache-dir",
+            mlx_cache_dir,
+            "--audit-output",
+            mlx_cache_audit,
+            "--expected-pair-count",
+            "600",
+            "--batch-pairs",
+            str(mlx_cache_batch_pairs),
+            "--allow-large-tensor-cache",
+            "--stamp-cache-manifest-on-pass",
+        ]
+        run_mlx_response_command = [
+            ".venv/bin/python",
+            "tools/run_mlx_scorer_response_from_local_advisory.py",
+            "--local-cpu-advisory",
+            f"{materialized_root}/local_cpu_advisory.json",
+            "--reference-cache-dir",
+            mlx_reference_cache_dir,
+            "--candidate-cache-dir",
+            mlx_cache_dir,
+            "--output",
+            mlx_response,
+            "--repo-root",
+            ".",
+            "--batch-pairs",
+            str(mlx_batch_pairs),
+            "--device",
+            mlx_device,
+            "--allow-local-cpu-advisory-cache-identity",
+            "--components-dir",
+            mlx_components_dir,
+            "--response-family",
+            "dqs1_local_advisory_debug",
+        ]
+        if mlx_device == "gpu":
+            run_mlx_response_command.append("--allow-gpu-research-signal")
+        steps.extend(
+            [
+                {
+                    "id": "build_mlx_local_advisory_cache",
+                    "requires": ["local_cpu_advisory"],
+                    "timeout_seconds": 1800,
+                    "command": build_mlx_cache_command,
+                    "resources": {"kind": "local_cpu"},
+                    "postconditions": [
+                        {
+                            "type": "json_equals",
+                            "path": mlx_cache_audit,
+                            "key": "passed",
+                            "equals": True,
+                        },
+                        _false_authority_postcondition(mlx_cache_audit),
+                        _false_authority_postcondition(f"{mlx_cache_dir}/manifest.json"),
+                    ],
+                },
+                {
+                    "id": "local_mlx_advisory_response",
+                    "requires": ["build_mlx_local_advisory_cache"],
+                    "timeout_seconds": 600,
+                    "command": run_mlx_response_command,
+                    "resources": {"kind": "local_mlx"},
+                    "postconditions": [
+                        _false_authority_postcondition(
+                            mlx_response,
+                            axis_key="score_axis",
+                            axis_equals="[macOS-MLX research-signal]",
+                        )
+                    ],
+                },
+            ]
+        )
+    steps.append(
+        {
+            "id": "local_cpu_contest_drift_eureka",
+            "requires": ["local_cpu_advisory"],
+            "timeout_seconds": 120,
+            "command": [
+                ".venv/bin/python",
+                "tools/calibrate_local_cpu_contest_drift.py",
+                "--calibration-json",
+                drift_calibration_json,
+                "--candidate-id",
+                experiment_id,
+                "--candidate-local-json",
+                f"{materialized_root}/local_cpu_advisory.json",
+                "--auth-frontier-score-from-pointer",
+                "--eureka-out",
+                eureka_signal,
+                "--min-margin",
+                "0.0",
+            ],
+            "resources": {"kind": "local_cpu"},
+            "postconditions": [
+                {
+                    "type": "json_equals",
+                    "path": eureka_signal,
+                    "key": "schema",
+                    "equals": LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA,
+                },
+                _eureka_false_authority_postcondition(eureka_signal),
+            ],
+        }
+    )
 
     queue = {
         "schema": QUEUE_SCHEMA,
@@ -609,160 +888,7 @@ def build_dqs1_local_first_queue(
                 "priority": _candidate_priority(experiment_id, selection.operator_action_rank),
                 "lane_id": f"lane_dqs1_{experiment_id}_local_first_{date}",
                 "tags": ["dqs1", "pairset", "local-first", "no-score-authority"],
-                "steps": [
-                    {
-                        "id": "plan_packet",
-                        "command": [
-                            ".venv/bin/python",
-                            "tools/plan_decoder_q_selective_runtime_packet.py",
-                            "--bridge-plan",
-                            bridge_plan,
-                            "--base-archive",
-                            f"{base_submission_dir}/archive.zip",
-                            "--json-out",
-                            packet_plan,
-                            "--md-out",
-                            packet_plan_md,
-                            "--frame-policy",
-                            frame_policy,
-                            "--selected-pairs",
-                            selected_pairs,
-                        ],
-                        "resources": {"kind": "local_cpu"},
-                        "postconditions": [
-                            _false_authority_postcondition(packet_plan)
-                        ],
-                    },
-                    {
-                        "id": "materialize",
-                        "requires": ["plan_packet"],
-                        "command": [
-                            ".venv/bin/python",
-                            "tools/materialize_decoder_q_selective_runtime_candidate.py",
-                            "--plan",
-                            packet_plan,
-                            "--base-submission-dir",
-                            base_submission_dir,
-                            "--output-dir",
-                            f"{materialized_root}/submission_dir",
-                            "--frame-policy",
-                            frame_policy,
-                            "--manifest-output",
-                            f"{materialized_root}/materialization_manifest.json",
-                        ],
-                        "resources": {"kind": "local_cpu"},
-                        "postconditions": [
-                            _false_authority_postcondition(
-                                f"{materialized_root}/materialization_manifest.json"
-                            )
-                        ],
-                    },
-                    {
-                        "id": "locality_controls",
-                        "requires": ["materialize"],
-                        "timeout_seconds": 900,
-                        "command": [
-                            ".venv/bin/python",
-                            "tools/run_decoder_q_selective_runtime_locality_controls.py",
-                            "--parent-submission-dir",
-                            base_submission_dir,
-                            "--global-mutated-archive",
-                            global_mutated_archive,
-                            "--selective-submission-dir",
-                            f"{materialized_root}/submission_dir",
-                            "--selected-pairs",
-                            selected_pairs,
-                            "--frame-policy",
-                            frame_policy,
-                            "--timeout-seconds",
-                            "600",
-                            "--work-dir",
-                            f"{materialized_root}/locality_work",
-                            "--json-out",
-                            f"{materialized_root}/locality_controls.json",
-                        ],
-                        "resources": {"kind": "local_cpu"},
-                        "postconditions": [
-                            {
-                                "type": "json_equals",
-                                "path": f"{materialized_root}/locality_controls.json",
-                                "key": "locality_controls_passed",
-                                "equals": True,
-                            },
-                            _false_authority_postcondition(
-                                f"{materialized_root}/locality_controls.json",
-                                axis_key="score_axis",
-                                axis_equals="[locality-control no-score]",
-                            ),
-                        ],
-                    },
-                    {
-                        "id": "local_cpu_advisory",
-                        "requires": ["locality_controls"],
-                        "timeout_seconds": 1200,
-                        "command": [
-                            ".venv/bin/python",
-                            "experiments/contest_auth_eval.py",
-                            "--archive",
-                            f"{materialized_root}/submission_dir/archive.zip",
-                            "--inflate-sh",
-                            f"{materialized_root}/submission_dir/inflate.sh",
-                            "--upstream-dir",
-                            upstream_dir,
-                            "--video-names-file",
-                            video_names_file,
-                            "--device",
-                            "cpu",
-                            "--work-dir",
-                            f"{materialized_root}/local_cpu_advisory_work",
-                            "--json-out",
-                            f"{materialized_root}/local_cpu_advisory.json",
-                            "--inflate-timeout",
-                            "600",
-                            "--evaluate-timeout",
-                            "900",
-                            "--keep-work-dir",
-                        ],
-                        "resources": {"kind": "local_cpu"},
-                        "postconditions": [
-                            _false_authority_postcondition(
-                                f"{materialized_root}/local_cpu_advisory.json",
-                                axis_key="score_axis",
-                                axis_equals="cpu_advisory",
-                            )
-                        ],
-                    },
-                    {
-                        "id": "local_cpu_contest_drift_eureka",
-                        "requires": ["local_cpu_advisory"],
-                        "timeout_seconds": 120,
-                        "command": [
-                            ".venv/bin/python",
-                            "tools/calibrate_local_cpu_contest_drift.py",
-                            "--calibration-json",
-                            drift_calibration_json,
-                            "--candidate-id",
-                            experiment_id,
-                            "--candidate-local-json",
-                            f"{materialized_root}/local_cpu_advisory.json",
-                            "--auth-frontier-score-from-pointer",
-                            "--eureka-out",
-                            eureka_signal,
-                            "--min-margin",
-                            "0.0",
-                        ],
-                        "resources": {"kind": "local_cpu"},
-                        "postconditions": [
-                            {
-                                "type": "json_equals",
-                                "path": eureka_signal,
-                                "key": "schema",
-                                "equals": LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA,
-                            },
-                            _eureka_false_authority_postcondition(eureka_signal),
-                        ],
-                    },
-                ],
+                "steps": steps,
             }
         ],
     }
@@ -785,6 +911,12 @@ def build_dqs1_local_first_queue_from_selections(
     eureka_output_dir: str = DEFAULT_EUREKA_OUTPUT_DIR,
     eureka_run_id: str | None = None,
     local_cpu_concurrency: int = 1,
+    include_mlx_local_advisory_debug: bool = False,
+    allow_large_mlx_cache: bool = False,
+    mlx_reference_cache_dir: str = DEFAULT_MLX_REFERENCE_CACHE_DIR,
+    mlx_device: str = "gpu",
+    mlx_batch_pairs: int = 1,
+    mlx_cache_batch_pairs: int = 8,
 ) -> dict[str, Any]:
     if not selections:
         raise ExperimentQueueError("at least one DQS1 queue selection is required")
@@ -804,6 +936,12 @@ def build_dqs1_local_first_queue_from_selections(
             eureka_output_dir=eureka_output_dir,
             eureka_run_id=eureka_run_id,
             local_cpu_concurrency=local_cpu_concurrency,
+            include_mlx_local_advisory_debug=include_mlx_local_advisory_debug,
+            allow_large_mlx_cache=allow_large_mlx_cache,
+            mlx_reference_cache_dir=mlx_reference_cache_dir,
+            mlx_device=mlx_device,
+            mlx_batch_pairs=mlx_batch_pairs,
+            mlx_cache_batch_pairs=mlx_cache_batch_pairs,
         )
         for selection in selections
     ]
@@ -834,6 +972,12 @@ def build_queue_from_action_summary(
     skip_completed_local_advisory: bool = True,
     candidate_limit: int = 1,
     local_cpu_concurrency: int = 1,
+    include_mlx_local_advisory_debug: bool = False,
+    allow_large_mlx_cache: bool = False,
+    mlx_reference_cache_dir: str = DEFAULT_MLX_REFERENCE_CACHE_DIR,
+    mlx_device: str = "gpu",
+    mlx_batch_pairs: int = 1,
+    mlx_cache_batch_pairs: int = 8,
 ) -> Dqs1QueueBuildResult:
     selections = select_dqs1_local_first_candidates(
         action_summary_path,
@@ -857,6 +1001,12 @@ def build_queue_from_action_summary(
             eureka_output_dir=eureka_output_dir,
             eureka_run_id=eureka_run_id,
             local_cpu_concurrency=local_cpu_concurrency,
+            include_mlx_local_advisory_debug=include_mlx_local_advisory_debug,
+            allow_large_mlx_cache=allow_large_mlx_cache,
+            mlx_reference_cache_dir=mlx_reference_cache_dir,
+            mlx_device=mlx_device,
+            mlx_batch_pairs=mlx_batch_pairs,
+            mlx_cache_batch_pairs=mlx_cache_batch_pairs,
         ),
         selection=selections[0],
         selections=selections,

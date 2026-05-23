@@ -278,6 +278,94 @@ def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(
     )
 
 
+def test_dqs1_queue_builder_can_emit_local_mlx_advisory_debug_steps(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        eureka_run_id="20260523T010203Z",
+        include_mlx_local_advisory_debug=True,
+        allow_large_mlx_cache=True,
+        mlx_reference_cache_dir="reference/full600",
+        mlx_device="gpu",
+    )
+
+    experiment = result.queue["experiments"][0]
+    steps_by_id = {step["id"]: step for step in experiment["steps"]}
+    assert list(steps_by_id) == [
+        "plan_packet",
+        "materialize",
+        "locality_controls",
+        "local_cpu_advisory",
+        "build_mlx_local_advisory_cache",
+        "local_mlx_advisory_response",
+        "local_cpu_contest_drift_eureka",
+    ]
+    build_cache = steps_by_id["build_mlx_local_advisory_cache"]
+    assert build_cache["requires"] == ["local_cpu_advisory"]
+    assert build_cache["resources"]["kind"] == "local_cpu"
+    assert "tools/build_mlx_scorer_input_cache_from_local_advisory.py" in build_cache["command"]
+    assert "--allow-large-tensor-cache" in build_cache["command"]
+    audit_output = build_cache["command"][build_cache["command"].index("--audit-output") + 1]
+    assert audit_output == (
+        ".omx/research/"
+        "mlx_delta_cache_local_cpu_advisory_identity_drop_rank023_pair0440_20260523T010203Z.json"
+    )
+    assert any(
+        condition == {"type": "json_equals", "path": audit_output, "key": "passed", "equals": True}
+        for condition in build_cache["postconditions"]
+    )
+
+    mlx_response = steps_by_id["local_mlx_advisory_response"]
+    assert mlx_response["requires"] == ["build_mlx_local_advisory_cache"]
+    assert mlx_response["resources"]["kind"] == "local_mlx"
+    assert "tools/run_mlx_scorer_response_from_local_advisory.py" in mlx_response["command"]
+    assert "reference/full600" in mlx_response["command"]
+    assert "--allow-gpu-research-signal" in mlx_response["command"]
+    assert "--allow-local-cpu-advisory-cache-identity" in mlx_response["command"]
+    false_authority = next(
+        condition
+        for condition in mlx_response["postconditions"]
+        if condition["type"] == "json_false_authority"
+    )
+    assert false_authority["axis_key"] == "score_axis"
+    assert false_authority["axis_equals"] == "[macOS-MLX research-signal]"
+
+
+def test_dqs1_queue_builder_requires_explicit_large_mlx_cache_ack(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    with pytest.raises(ExperimentQueueError, match="allow_large_mlx_cache"):
+        build_queue_from_action_summary(
+            summary,
+            repo_root=tmp_path,
+            results_root="results",
+            include_mlx_local_advisory_debug=True,
+        )
+
+
+def test_dqs1_queue_builder_rejects_mlx_batch_shape_before_gate(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    with pytest.raises(ExperimentQueueError, match="batch-shape invariance"):
+        build_queue_from_action_summary(
+            summary,
+            repo_root=tmp_path,
+            results_root="results",
+            include_mlx_local_advisory_debug=True,
+            allow_large_mlx_cache=True,
+            mlx_batch_pairs=2,
+        )
+
+
 @pytest.mark.parametrize(
     ("selected_pair_indices", "match"),
     [
