@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import signal
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -24,6 +25,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.experiment_queue import (  # noqa: E402
+    BLOCKING_ORPHAN_STATUSES,
     ExperimentQueueError,
     assert_canonical_state_for_execution,
     assert_no_orphaned_steps_for_execution,
@@ -31,6 +33,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     default_state_path,
     initialize_queue_state,
     load_queue_definition,
+    orphaned_step_rows,
     queue_summary,
     ready_steps,
     resolve_worker_max_parallel,
@@ -44,8 +47,10 @@ from comma_lab.scheduler.experiment_queue_observer import (  # noqa: E402
     observe_experiment_queue,
     render_observation_markdown,
 )
+from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 _PLACEHOLDER_RATIONALES = {"", "n/a", "na", "none", "test", "true", "yes", "because"}
+STATE_RECONCILIATION_SCHEMA = "experiment_queue_state_reconciliation.v1"
 
 
 def _json_print(payload: object) -> None:
@@ -288,6 +293,55 @@ def cmd_retire_orphans(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reconcile_state(args: argparse.Namespace) -> int:
+    queue, state = _load(args)
+    reason = _rationale_text(args.reason, label="--reason")
+    assert reason is not None
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        before = queue_summary(conn, queue)
+        blocking_before = _blocking_orphan_count(conn, queue)
+        retired = retire_orphaned_steps(conn, queue, reason=reason)
+        after = queue_summary(conn, queue)
+        blocking_after = _blocking_orphan_count(conn, queue)
+    payload = {
+        "schema": STATE_RECONCILIATION_SCHEMA,
+        "queue_id": queue["queue_id"],
+        "state": str(state),
+        "reason": reason,
+        "blocking_orphan_count_before": blocking_before,
+        "blocking_orphan_count_after": blocking_after,
+        "retired_step_count": len(retired),
+        "retired_steps": retired,
+        "before": before,
+        "after": after,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if args.output is not None:
+        try:
+            artifact = write_json_artifact(args.output, payload)
+        except ArtifactWriteError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
+        payload["artifact"] = {
+            "path": artifact.path,
+            "bytes": artifact.bytes_written,
+            "sha256": artifact.sha256,
+        }
+    _json_print(payload)
+    return 0
+
+
+def _blocking_orphan_count(conn: sqlite3.Connection, queue: dict) -> int:
+    return sum(
+        1
+        for row in orphaned_step_rows(conn, queue)
+        if str(row["status"]) in BLOCKING_ORPHAN_STATUSES
+    )
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", required=True, help="queue definition JSON or JSON-compatible YAML")
@@ -413,6 +467,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp = sub.add_parser("retire-orphans")
     sp.add_argument("--reason", required=True)
     sp.set_defaults(func=cmd_retire_orphans)
+
+    sp = sub.add_parser(
+        "reconcile-state",
+        help="retire stale blocking orphans and optionally write an audit artifact",
+    )
+    sp.add_argument("--reason", required=True)
+    sp.add_argument("--output", default=None, help="append-only JSON audit artifact path")
+    sp.set_defaults(func=cmd_reconcile_state)
 
     return parser.parse_args(argv)
 

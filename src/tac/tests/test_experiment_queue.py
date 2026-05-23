@@ -839,6 +839,96 @@ def test_experiment_queue_can_retire_blocking_orphaned_steps(tmp_path: Path) -> 
         assert summary["orphaned_steps"][0]["status"] == "skipped"
 
 
+def test_experiment_queue_cli_reconcile_state_writes_audit_artifact(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    state = tmp_path / "queue.sqlite"
+    first_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "cli_reconcile",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "old_candidate",
+                    "steps": [
+                        {
+                            "id": "plan",
+                            "command": [sys.executable, "-c", "print('old')"],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    second_queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "cli_reconcile",
+            "controls": {"mode": "running"},
+            "experiments": [
+                {
+                    "id": "new_candidate",
+                    "steps": [
+                        {
+                            "id": "plan",
+                            "command": [sys.executable, "-c", "print('new')"],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(json.dumps(second_queue), encoding="utf-8")
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, first_queue)
+
+    output = tmp_path / "reconciliation.json"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "--state",
+            str(state),
+            "reconcile-state",
+            "--reason",
+            "unit test queue reroute state reconciliation",
+            "--output",
+            str(output),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    artifact = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["schema"] == "experiment_queue_state_reconciliation.v1"
+    assert payload["blocking_orphan_count_before"] == 1
+    assert payload["blocking_orphan_count_after"] == 0
+    assert payload["retired_step_count"] == 1
+    assert artifact["retired_steps"] == [
+        {
+            "experiment_id": "old_candidate",
+            "step_id": "plan",
+            "previous_status": "queued",
+            "new_status": "skipped",
+        }
+    ]
+    assert artifact["before"]["orphaned_step_count"] == 1
+    assert artifact["after"]["orphaned_step_count"] == 1
+    assert artifact["after"]["orphaned_steps"][0]["status"] == "skipped"
+    assert artifact["after"]["status_counts"] == {"queued": 1}
+    assert artifact["score_claim"] is False
+    assert artifact["promotion_eligible"] is False
+
+
 def test_experiment_queue_false_authority_postcondition_blocks_leaks(tmp_path: Path) -> None:
     advisory = tmp_path / "advisory.json"
     queue = normalize_queue_definition(
