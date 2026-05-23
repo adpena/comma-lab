@@ -35,12 +35,20 @@ VERIFIED_CANDIDATE_SCHEMA = "inverse_scorer_cell_candidate_receiver_verified_v1"
 RECEIVER_PROOF_SCHEMA = "inverse_scorer_cell_receiver_proof_v1"
 RECEIVER_VERIFICATION_SCHEMA = "inverse_scorer_cell_receiver_verification_v1"
 RUNTIME_ADAPTER_SCHEMA = "inverse_scorer_cell_runtime_adapter_v1"
+RUNTIME_ADAPTER_SOURCE_SCHEMA = "inverse_scorer_cell_runtime_adapter_source_v1"
+RUNTIME_CONSUMPTION_PROBE_SCHEMA = "inverse_scorer_cell_runtime_consumption_probe_v1"
+DESCRIPTOR_CONSUMPTION_SCHEMA = "inverse_scorer_cell_descriptor_consumption_v1"
 DESCRIPTOR_SCHEMA = "inverse_scorer_cell_descriptor_v1"
 MATERIALIZER_ID = "inverse_scorer_cell_candidate_adapter"
 TARGET_KIND = "inverse_scorer_cell_candidate_v1"
 RECEIVER_CONTRACT_ID = "inverse_scorer_cell_receiver.v1"
 RECEIVER_CONTRACT_KIND = "inverse_scorer_coordinate_candidate"
 IAS1_MAGIC = b"IAS1"
+DESCRIPTOR_ONLY_EXACT_RUNTIME_BLOCKERS = (
+    "inflate_runtime_consumption_proof_missing",
+    "full_frame_inflate_output_parity_required_before_promotion",
+    "exact_auth_eval_required_before_score_claim",
+)
 REQUIRED_CONTEXT_FIELDS = (
     "raw_contest_video_digest",
     "candidate_archive_template",
@@ -80,11 +88,15 @@ def build_inverse_scorer_cell_candidate_plan(
         inverse_action_functional,
         repo,
     )
-    selected_cells = _selected_action_cells(
-        action,
-        atom_ids=atom_ids,
-        selected_limit=selected_limit,
-    ) if action is not None else []
+    selected_cells = (
+        _selected_action_cells(
+            action,
+            atom_ids=atom_ids,
+            selected_limit=selected_limit,
+        )
+        if action is not None
+        else []
+    )
     if action is None:
         blockers.append("inverse_action_functional_missing")
     elif not selected_cells:
@@ -141,9 +153,7 @@ def materialize_inverse_scorer_cell_candidate(
     )
     digest = _normalize_raw_digest(raw_contest_video_digest)
     if not digest:
-        raise InverseScorerCellMaterializerError(
-            "raw_contest_video_digest must be non-empty"
-        )
+        raise InverseScorerCellMaterializerError("raw_contest_video_digest must be non-empty")
     action, action_record = _load_action_functional_record(
         inverse_action_functional,
         repo,
@@ -154,9 +164,7 @@ def materialize_inverse_scorer_cell_candidate(
         selected_limit=selected_limit,
     )
     if not selected_cells:
-        raise InverseScorerCellMaterializerError(
-            "inverse action functional contains no selected cells"
-        )
+        raise InverseScorerCellMaterializerError("inverse action functional contains no selected cells")
     try:
         template = read_strict_single_member_zip(template_path)
     except HnervLowlevelPackError as exc:
@@ -246,9 +254,7 @@ def materialize_inverse_scorer_cell_candidate(
             "inverse_scorer_cell_descriptor": descriptor_record,
             "selected_cells": selected_cells,
             "receiver_verification": receiver_verification,
-            "receiver_contract_satisfied": (
-                receiver_verification["receiver_contract_satisfied"] is True
-            ),
+            "receiver_contract_satisfied": (receiver_verification["receiver_contract_satisfied"] is True),
             "readiness_blockers": readiness_blockers,
             "ready_for_archive_preflight": False,
             **FALSE_AUTHORITY,
@@ -272,9 +278,11 @@ def build_inverse_scorer_cell_receiver_proof(
         label="runtime adapter manifest",
     )
     if adapter.get("schema") != RUNTIME_ADAPTER_SCHEMA:
-        raise InverseScorerCellMaterializerError(
-            f"runtime adapter manifest must have schema {RUNTIME_ADAPTER_SCHEMA}"
-        )
+        raise InverseScorerCellMaterializerError(f"runtime adapter manifest must have schema {RUNTIME_ADAPTER_SCHEMA}")
+    try:
+        require_no_truthy_authority_fields(adapter, context="runtime adapter manifest")
+    except ValueError as exc:
+        raise InverseScorerCellMaterializerError(str(exc)) from exc
     candidate, candidate_record = _candidate_manifest_for_adapter(
         adapter,
         candidate_manifest=candidate_manifest,
@@ -285,30 +293,56 @@ def build_inverse_scorer_cell_receiver_proof(
     descriptor = _mapping(candidate.get("inverse_scorer_cell_descriptor"))
     descriptor_consumption = _mapping(adapter.get("descriptor_consumption"))
     runtime_probe = _mapping(adapter.get("runtime_consumption_probe"))
-    selected_atom_ids = [
-        str(item) for item in descriptor.get("selected_atom_ids") or [] if str(item)
-    ]
+    adapter_candidate = _mapping(adapter.get("candidate_archive"))
+    runtime_source = _mapping(adapter.get("runtime_source_manifest"))
+    selected_atom_ids = [str(item) for item in descriptor.get("selected_atom_ids") or [] if str(item)]
+    adapter_blockers = [str(item) for item in adapter.get("readiness_blockers") or []]
+    expected_descriptor_json_sha = _clean_str(descriptor.get("json_sha256"))
+    exact_runtime_blockers = ordered_unique(
+        [
+            *[str(item) for item in adapter.get("exact_runtime_blockers") or []],
+            *DESCRIPTOR_ONLY_EXACT_RUNTIME_BLOCKERS,
+        ]
+    )
     blockers = ordered_unique(
         [
+            *(["runtime_adapter_manifest_has_blockers"] if adapter_blockers else []),
+            *([] if adapter.get("score_claim") is False else ["runtime_adapter_manifest_must_not_claim_score"]),
+            *([] if adapter.get("promotion_eligible") is False else ["runtime_adapter_manifest_must_not_promote"]),
             *(
                 []
-                if adapter.get("score_claim") is False
-                else ["runtime_adapter_manifest_must_not_claim_score"]
+                if adapter.get("rank_or_kill_eligible") is False
+                else ["runtime_adapter_manifest_must_not_rank_or_kill"]
+            ),
+            *([] if adapter.get("dispatch_attempted") is False else ["runtime_adapter_manifest_must_not_dispatch"]),
+            *([] if _clean_str(adapter.get("runtime_tree_sha256")) else ["runtime_adapter_tree_sha_missing"]),
+            *(
+                []
+                if runtime_source.get("schema") == RUNTIME_ADAPTER_SOURCE_SCHEMA
+                else ["runtime_adapter_source_manifest_schema_mismatch"]
             ),
             *(
                 []
-                if adapter.get("dispatch_attempted") is False
-                else ["runtime_adapter_manifest_must_not_dispatch"]
+                if _clean_str(runtime_source.get("runtime_content_tree_sha256"))
+                == _clean_str(adapter.get("runtime_tree_sha256"))
+                else ["runtime_adapter_source_tree_sha_mismatch"]
             ),
             *(
                 []
-                if runtime_probe.get("passed") is True
-                else ["runtime_consumption_probe_not_passed"]
+                if runtime_probe.get("schema") == RUNTIME_CONSUMPTION_PROBE_SCHEMA
+                else ["runtime_consumption_probe_schema_mismatch"]
             ),
             *(
                 []
-                if descriptor_consumption.get("passed") is True
-                else ["descriptor_consumption_not_passed"]
+                if descriptor_consumption.get("schema") == DESCRIPTOR_CONSUMPTION_SCHEMA
+                else ["descriptor_consumption_schema_mismatch"]
+            ),
+            *([] if runtime_probe.get("passed") is True else ["runtime_consumption_probe_not_passed"]),
+            *([] if descriptor_consumption.get("passed") is True else ["descriptor_consumption_not_passed"]),
+            *(
+                []
+                if descriptor_consumption.get("packet_at_member_tail") is True
+                else ["descriptor_consumption_packet_not_at_member_tail"]
             ),
             *(
                 []
@@ -318,9 +352,42 @@ def build_inverse_scorer_cell_receiver_proof(
             ),
             *(
                 []
-                if _clean_str(_mapping(adapter.get("candidate_archive")).get("sha256"))
-                == _clean_str(candidate_archive.get("sha256"))
+                if not expected_descriptor_json_sha
+                or _clean_str(descriptor_consumption.get("descriptor_json_sha256")) == expected_descriptor_json_sha
+                else ["descriptor_consumption_json_sha_mismatch"]
+            ),
+            *(
+                []
+                if descriptor_consumption.get("packet_offset") == descriptor.get("packet_offset")
+                else ["descriptor_consumption_offset_mismatch"]
+            ),
+            *(
+                []
+                if descriptor_consumption.get("packet_bytes") == descriptor.get("packet_bytes")
+                else ["descriptor_consumption_packet_bytes_mismatch"]
+            ),
+            *(
+                []
+                if _normalize_raw_digest(descriptor_consumption.get("raw_contest_video_digest"))
+                == _normalize_raw_digest(candidate.get("raw_contest_video_digest"))
+                else ["descriptor_consumption_raw_digest_mismatch"]
+            ),
+            *(
+                []
+                if _clean_str_list(descriptor_consumption.get("selected_atom_ids")) == selected_atom_ids
+                else ["descriptor_consumption_selected_atom_ids_mismatch"]
+            ),
+            *(
+                []
+                if _clean_str(adapter_candidate.get("sha256")) == _clean_str(candidate_archive.get("sha256"))
                 else ["runtime_adapter_candidate_archive_sha_mismatch"]
+            ),
+            *(
+                []
+                if _clean_str(adapter_candidate.get("member_sha256"))
+                and _clean_str(adapter_candidate.get("member_sha256"))
+                == _clean_str(candidate_archive.get("member_sha256"))
+                else ["runtime_adapter_candidate_member_sha_mismatch"]
             ),
             *(["descriptor_selected_atom_ids_missing"] if not selected_atom_ids else []),
         ]
@@ -330,23 +397,138 @@ def build_inverse_scorer_cell_receiver_proof(
             "schema": RECEIVER_PROOF_SCHEMA,
             "receiver_contract_id": RECEIVER_CONTRACT_ID,
             "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
-            "ready_for_exact_eval_runtime": not blockers,
+            "ready_for_receiver_verification": not blockers,
+            "descriptor_receiver_contract_satisfied": not blockers,
+            "ready_for_exact_eval_runtime": False,
             "runtime_adapter_manifest": adapter_record,
             "candidate_manifest": candidate_record,
             "candidate_archive_sha256": _clean_str(candidate_archive.get("sha256")),
-            "candidate_member_sha256": _clean_str(
-                candidate_archive.get("member_sha256")
-            ),
+            "candidate_member_sha256": _clean_str(candidate_archive.get("member_sha256")),
             "descriptor_packet_sha256": _clean_str(descriptor.get("packet_sha256")),
             "raw_contest_video_digest": candidate.get("raw_contest_video_digest"),
             "selected_atom_ids": selected_atom_ids,
             "runtime_tree_sha256": _clean_str(adapter.get("runtime_tree_sha256")),
             "runtime_consumption_probe": runtime_probe,
             "descriptor_consumption": descriptor_consumption,
+            "runtime_adapter_blockers": adapter_blockers,
             "blockers": blockers,
+            "exact_runtime_blockers": exact_runtime_blockers,
             **FALSE_AUTHORITY,
         },
-        dispatch_blockers=blockers,
+        dispatch_blockers=[*blockers, *exact_runtime_blockers],
+    )
+
+
+def build_inverse_scorer_cell_runtime_adapter_manifest(
+    *,
+    candidate_manifest: str | Path | Mapping[str, Any],
+    repo_root: str | Path | None = None,
+    runtime_source_paths: Sequence[str | Path] = (),
+) -> dict[str, Any]:
+    """Build a canonical IAS1 descriptor-consumption adapter manifest.
+
+    This is a receiver-contract proof, not a full-frame inflate or score proof.
+    It confirms that the candidate archive member contains the declared IAS1
+    descriptor packet at the declared byte offset and that the canonical
+    receiver can parse the packet back into the selected inverse-scorer cells.
+    """
+
+    repo = Path(repo_root) if repo_root is not None else Path.cwd()
+    candidate, candidate_record = _load_required_mapping_with_record(
+        candidate_manifest,
+        repo=repo,
+        label="inverse-scorer cell candidate manifest",
+    )
+    if candidate.get("schema") != CANDIDATE_SCHEMA:
+        raise InverseScorerCellMaterializerError(f"candidate manifest must have schema {CANDIDATE_SCHEMA}")
+    try:
+        require_no_truthy_authority_fields(candidate, context="candidate manifest")
+    except ValueError as exc:
+        raise InverseScorerCellMaterializerError(str(exc)) from exc
+
+    candidate_archive = _mapping(candidate.get("candidate_archive"))
+    descriptor_record = _mapping(candidate.get("inverse_scorer_cell_descriptor"))
+    archive_path = _candidate_archive_path_from_manifest_record(
+        candidate_archive,
+        manifest_record=candidate_record,
+        repo=repo,
+    )
+    custody = _candidate_archive_custody(
+        candidate_archive,
+        repo=repo,
+        resolved_path=archive_path,
+    )
+    archive_member: dict[str, Any] = {}
+    descriptor_consumption: dict[str, Any]
+    blockers = [str(item) for item in custody.get("blockers") or []]
+    if archive_path is None:
+        blockers.append("candidate_archive_path_missing_or_unreadable")
+        descriptor_consumption = _failed_descriptor_consumption("candidate_archive_path_missing_or_unreadable")
+    else:
+        try:
+            member = read_strict_single_member_zip(archive_path)
+        except HnervLowlevelPackError as exc:
+            blockers.append("candidate_archive_single_member_read_failed")
+            descriptor_consumption = _failed_descriptor_consumption(str(exc))
+        else:
+            archive_member = {
+                "member_name": member.member_name,
+                "member_bytes": member.member_bytes,
+                "member_sha256": sha256_bytes(member.payload),
+            }
+            descriptor_consumption = _descriptor_consumption_probe(
+                member.payload,
+                descriptor_record=descriptor_record,
+                candidate=candidate,
+            )
+            blockers.extend(str(item) for item in descriptor_consumption.get("blockers") or [])
+
+    blockers = ordered_unique(blockers)
+    runtime_source = _runtime_adapter_source_manifest(
+        repo,
+        runtime_source_paths=runtime_source_paths,
+    )
+    runtime_probe = {
+        "schema": RUNTIME_CONSUMPTION_PROBE_SCHEMA,
+        "probe_kind": "canonical_ias1_descriptor_parse_and_digest",
+        "passed": not blockers,
+        "scorer_executed": False,
+        "full_frame_output_parity_proven": False,
+        "exact_auth_eval_executed": False,
+        "descriptor_consumption_passed": (descriptor_consumption.get("passed") is True),
+        "blockers": blockers,
+    }
+    exact_runtime_blockers = list(DESCRIPTOR_ONLY_EXACT_RUNTIME_BLOCKERS)
+    return apply_proxy_evidence_boundary(
+        {
+            "schema": RUNTIME_ADAPTER_SCHEMA,
+            "receiver_contract_id": RECEIVER_CONTRACT_ID,
+            "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
+            "runtime_adapter_kind": "canonical_ias1_descriptor_receiver",
+            "candidate_manifest": candidate_record,
+            "candidate_archive": {
+                "path": _clean_str(candidate_archive.get("path")),
+                "bytes": candidate_archive.get("bytes"),
+                "sha256": _clean_str(candidate_archive.get("sha256")),
+                **archive_member,
+            },
+            "runtime_source_manifest": runtime_source,
+            "runtime_tree_sha256": runtime_source["runtime_content_tree_sha256"],
+            "runtime_consumption_probe": runtime_probe,
+            "descriptor_consumption": descriptor_consumption,
+            "ready_for_descriptor_receiver": not blockers,
+            "descriptor_receiver_contract_satisfied": not blockers,
+            "ready_for_exact_eval_runtime": False,
+            "receiver_contract_satisfied": not blockers,
+            "readiness_blockers": blockers,
+            "exact_runtime_blockers": exact_runtime_blockers,
+            **FALSE_AUTHORITY,
+        },
+        dispatch_blockers=[
+            *blockers,
+            "inverse_scorer_cell_runtime_adapter_is_not_score_authority",
+            *exact_runtime_blockers,
+        ],
     )
 
 
@@ -365,31 +547,47 @@ def verify_inverse_scorer_cell_candidate_manifest(
         label="inverse-scorer cell candidate manifest",
     )
     if candidate.get("schema") != CANDIDATE_SCHEMA:
-        raise InverseScorerCellMaterializerError(
-            f"candidate manifest must have schema {CANDIDATE_SCHEMA}"
-        )
+        raise InverseScorerCellMaterializerError(f"candidate manifest must have schema {CANDIDATE_SCHEMA}")
     candidate_archive = _mapping(candidate.get("candidate_archive"))
     descriptor = _mapping(candidate.get("inverse_scorer_cell_descriptor"))
-    custody = _candidate_archive_custody(candidate_archive, repo=repo)
+    archive_path = _candidate_archive_path_from_manifest_record(
+        candidate_archive,
+        manifest_record=candidate_record,
+        repo=repo,
+    )
+    custody = _candidate_archive_custody(
+        candidate_archive,
+        repo=repo,
+        resolved_path=archive_path,
+    )
     receiver_verification = verify_inverse_scorer_cell_receiver_contract(
         runtime_consumption_proof=runtime_consumption_proof,
         required_candidate_archive_sha256=_clean_str(candidate_archive.get("sha256")),
         required_candidate_member_sha256=_clean_str(candidate_archive.get("member_sha256")),
         required_descriptor_packet_sha256=_clean_str(descriptor.get("packet_sha256")),
         required_raw_contest_video_digest=candidate.get("raw_contest_video_digest"),
-        required_selected_atom_ids=[
-            str(item) for item in descriptor.get("selected_atom_ids") or []
-        ],
+        required_selected_atom_ids=_clean_str_list(descriptor.get("selected_atom_ids")),
     )
+    original_blockers = [str(item) for item in candidate.get("readiness_blockers") or []]
+    if receiver_verification["receiver_contract_satisfied"] is True and not custody["blockers"]:
+        original_blockers = [
+            blocker
+            for blocker in original_blockers
+            if blocker
+            not in {
+                "runtime_consumption_proof_missing",
+                "runtime_consumption_proof_not_ready",
+                "inverse_scorer_cell_receiver_contract_not_satisfied",
+            }
+        ]
     readiness_blockers = ordered_unique(
         [
-            *[str(item) for item in candidate.get("readiness_blockers") or []],
+            *original_blockers,
             *custody["blockers"],
             *receiver_verification["blockers"],
             *(
                 []
-                if receiver_verification["receiver_contract_satisfied"] is True
-                and not custody["blockers"]
+                if receiver_verification["receiver_contract_satisfied"] is True and not custody["blockers"]
                 else ["inverse_scorer_cell_receiver_contract_not_satisfied"]
             ),
         ]
@@ -408,8 +606,7 @@ def verify_inverse_scorer_cell_candidate_manifest(
             "inverse_scorer_cell_descriptor": descriptor,
             "receiver_verification": receiver_verification,
             "receiver_contract_satisfied": (
-                receiver_verification["receiver_contract_satisfied"] is True
-                and not custody["blockers"]
+                receiver_verification["receiver_contract_satisfied"] is True and not custody["blockers"]
             ),
             "readiness_blockers": readiness_blockers,
             "ready_for_archive_preflight": False,
@@ -437,6 +634,13 @@ def verify_inverse_scorer_cell_receiver_contract(
     else:
         if proof.get("schema") != RECEIVER_PROOF_SCHEMA:
             blockers.append("runtime_consumption_proof_schema_mismatch")
+        try:
+            require_no_truthy_authority_fields(
+                proof,
+                context="runtime_consumption_proof",
+            )
+        except ValueError:
+            blockers.append("runtime_consumption_proof_has_truthy_authority_field")
         for key, blocker in (
             ("score_claim", "runtime_consumption_proof_must_not_claim_score"),
             ("promotion_eligible", "runtime_consumption_proof_must_not_promote"),
@@ -444,7 +648,10 @@ def verify_inverse_scorer_cell_receiver_contract(
         ):
             if proof.get(key) is not False:
                 blockers.append(blocker)
-        if proof.get("ready_for_exact_eval_runtime") is not True:
+        if (
+            proof.get("ready_for_receiver_verification") is not True
+            or proof.get("descriptor_receiver_contract_satisfied") is not True
+        ):
             blockers.append("runtime_consumption_proof_not_ready")
         _match_text(
             blockers,
@@ -465,16 +672,13 @@ def verify_inverse_scorer_cell_receiver_contract(
             "runtime_consumption_proof_descriptor_sha_mismatch",
         )
         required_digest = _normalize_raw_digest(required_raw_contest_video_digest)
-        if required_digest and _normalize_raw_digest(
-            proof.get("raw_contest_video_digest")
-        ) != required_digest:
+        if required_digest and _normalize_raw_digest(proof.get("raw_contest_video_digest")) != required_digest:
             blockers.append("runtime_consumption_proof_raw_digest_mismatch")
-        proof_atoms = [str(item) for item in proof.get("selected_atom_ids") or []]
+        proof_atoms = _clean_str_list(proof.get("selected_atom_ids"))
         if not proof_atoms:
             blockers.append("runtime_consumption_proof_selected_atom_ids_missing")
-        missing_atoms = [
-            atom for atom in required_selected_atom_ids if str(atom) not in proof_atoms
-        ]
+        required_atoms = _clean_str_list(required_selected_atom_ids)
+        missing_atoms = [atom for atom in required_atoms if atom not in proof_atoms]
         if missing_atoms:
             blockers.append("runtime_consumption_proof_selected_atom_ids_mismatch")
 
@@ -485,15 +689,9 @@ def verify_inverse_scorer_cell_receiver_contract(
             "receiver_contract_kind": RECEIVER_CONTRACT_KIND,
             "receiver_contract_satisfied": not blockers,
             "proof_schema": proof.get("schema") if proof is not None else None,
-            "proof_candidate_archive_sha256": (
-                proof.get("candidate_archive_sha256") if proof is not None else ""
-            ),
-            "proof_candidate_member_sha256": (
-                proof.get("candidate_member_sha256") if proof is not None else ""
-            ),
-            "proof_descriptor_packet_sha256": (
-                proof.get("descriptor_packet_sha256") if proof is not None else ""
-            ),
+            "proof_candidate_archive_sha256": (proof.get("candidate_archive_sha256") if proof is not None else ""),
+            "proof_candidate_member_sha256": (proof.get("candidate_member_sha256") if proof is not None else ""),
+            "proof_descriptor_packet_sha256": (proof.get("descriptor_packet_sha256") if proof is not None else ""),
             "blockers": ordered_unique(blockers),
             **FALSE_AUTHORITY,
         },
@@ -523,6 +721,197 @@ def unpack_inverse_scorer_cell_descriptor(packet: bytes) -> dict[str, Any]:
     if not isinstance(parsed, dict) or parsed.get("schema") != DESCRIPTOR_SCHEMA:
         raise InverseScorerCellMaterializerError("IAS1 descriptor schema mismatch")
     return parsed
+
+
+def _descriptor_consumption_probe(
+    member_payload: bytes,
+    *,
+    descriptor_record: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    offset = _optional_int(
+        descriptor_record.get("packet_offset"),
+        label="packet_offset",
+        blocker="descriptor_packet_offset_invalid",
+        blockers=blockers,
+        minimum=0,
+    )
+    packet_bytes = _optional_int(
+        descriptor_record.get("packet_bytes"),
+        label="packet_bytes",
+        blocker="descriptor_packet_bytes_invalid",
+        blockers=blockers,
+        minimum=8,
+    )
+    if offset is None or packet_bytes is None:
+        return _descriptor_consumption_record(
+            passed=False,
+            blockers=blockers,
+            packet_offset=offset,
+            packet_bytes=packet_bytes,
+        )
+    packet_end = offset + packet_bytes
+    if packet_end > len(member_payload):
+        blockers.append("descriptor_packet_range_out_of_bounds")
+        return _descriptor_consumption_record(
+            passed=False,
+            blockers=blockers,
+            packet_offset=offset,
+            packet_bytes=packet_bytes,
+            member_bytes=len(member_payload),
+        )
+    packet = member_payload[offset:packet_end]
+    packet_sha = sha256_bytes(packet)
+    expected_packet_sha = _clean_str(descriptor_record.get("packet_sha256"))
+    if expected_packet_sha and packet_sha != expected_packet_sha:
+        blockers.append("descriptor_packet_sha_mismatch")
+    if packet_end != len(member_payload):
+        blockers.append("descriptor_packet_not_at_member_tail")
+    try:
+        descriptor = unpack_inverse_scorer_cell_descriptor(packet)
+    except (InverseScorerCellMaterializerError, json.JSONDecodeError) as exc:
+        blockers.append("descriptor_packet_parse_failed")
+        return _descriptor_consumption_record(
+            passed=False,
+            blockers=blockers,
+            packet_offset=offset,
+            packet_bytes=packet_bytes,
+            member_bytes=len(member_payload),
+            descriptor_packet_sha256=packet_sha,
+            parse_error=f"{type(exc).__name__}: {exc}",
+        )
+    descriptor_json = _canonical_json_bytes(descriptor)
+    descriptor_json_sha = sha256_bytes(descriptor_json)
+    expected_json_sha = _clean_str(descriptor_record.get("json_sha256"))
+    if expected_json_sha and descriptor_json_sha != expected_json_sha:
+        blockers.append("descriptor_json_sha_mismatch")
+    if _normalize_raw_digest(descriptor.get("raw_contest_video_digest")) != _normalize_raw_digest(
+        candidate.get("raw_contest_video_digest")
+    ):
+        blockers.append("descriptor_raw_digest_mismatch")
+    manifest_atoms = _clean_str_list(descriptor_record.get("selected_atom_ids"))
+    raw_descriptor_cells = descriptor.get("selected_cells")
+    if isinstance(raw_descriptor_cells, Sequence) and not isinstance(
+        raw_descriptor_cells,
+        (str, bytes, bytearray),
+    ):
+        descriptor_rows = raw_descriptor_cells
+    else:
+        blockers.append("descriptor_selected_cells_invalid")
+        descriptor_rows = []
+    descriptor_atoms = [
+        atom_id
+        for row in descriptor_rows
+        if isinstance(row, Mapping)
+        for atom_id in (_clean_str(row.get("atom_id")),)
+        if atom_id
+    ]
+    if descriptor_atoms != manifest_atoms:
+        blockers.append("descriptor_selected_atom_ids_mismatch")
+    selected_count = _optional_int(
+        descriptor_record.get("selected_cell_count"),
+        label="selected_cell_count",
+        blocker="descriptor_selected_cell_count_invalid",
+        blockers=blockers,
+        minimum=0,
+    )
+    if selected_count is not None and selected_count != len(descriptor_atoms):
+        blockers.append("descriptor_selected_cell_count_mismatch")
+    return _descriptor_consumption_record(
+        passed=not blockers,
+        blockers=blockers,
+        packet_offset=offset,
+        packet_bytes=packet_bytes,
+        member_bytes=len(member_payload),
+        descriptor_packet_sha256=packet_sha,
+        descriptor_json_sha256=descriptor_json_sha,
+        selected_atom_ids=descriptor_atoms,
+        raw_contest_video_digest=descriptor.get("raw_contest_video_digest"),
+    )
+
+
+def _descriptor_consumption_record(
+    *,
+    passed: bool,
+    blockers: Sequence[str],
+    packet_offset: int | None = None,
+    packet_bytes: int | None = None,
+    member_bytes: int | None = None,
+    descriptor_packet_sha256: str = "",
+    descriptor_json_sha256: str = "",
+    selected_atom_ids: Sequence[str] = (),
+    raw_contest_video_digest: Any = "",
+    parse_error: str = "",
+) -> dict[str, Any]:
+    return {
+        "schema": DESCRIPTOR_CONSUMPTION_SCHEMA,
+        "passed": bool(passed),
+        "packet_offset": packet_offset,
+        "packet_bytes": packet_bytes,
+        "member_bytes": member_bytes,
+        "packet_at_member_tail": (
+            packet_offset is not None
+            and packet_bytes is not None
+            and member_bytes is not None
+            and packet_offset + packet_bytes == member_bytes
+        ),
+        "descriptor_packet_sha256": descriptor_packet_sha256,
+        "descriptor_json_sha256": descriptor_json_sha256,
+        "selected_atom_ids": [str(item) for item in selected_atom_ids],
+        "raw_contest_video_digest": raw_contest_video_digest,
+        "parse_error": parse_error,
+        "blockers": ordered_unique(blockers),
+    }
+
+
+def _failed_descriptor_consumption(reason: str) -> dict[str, Any]:
+    return _descriptor_consumption_record(passed=False, blockers=[reason])
+
+
+def _optional_int(
+    value: Any,
+    *,
+    label: str,
+    blocker: str,
+    blockers: list[str],
+    minimum: int,
+) -> int | None:
+    try:
+        return _int(value, label, minimum=minimum)
+    except InverseScorerCellMaterializerError:
+        blockers.append(blocker)
+        return None
+
+
+def _runtime_adapter_source_manifest(
+    repo: Path,
+    *,
+    runtime_source_paths: Sequence[str | Path] = (),
+) -> dict[str, Any]:
+    files = []
+    paths = [Path(path) for path in runtime_source_paths]
+    if not paths:
+        paths = [Path(__file__)]
+    for path in paths:
+        if not path.is_absolute():
+            path = repo / path
+        if not path.is_file():
+            raise InverseScorerCellMaterializerError(f"runtime source path is not a file: {path}")
+        files.append(
+            {
+                "path": repo_relative(path, repo),
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            }
+        )
+    tree_payload = _canonical_json_bytes({"files": files})
+    return {
+        "schema": RUNTIME_ADAPTER_SOURCE_SCHEMA,
+        "files": files,
+        "runtime_source_tree_sha256": sha256_bytes(tree_payload),
+        "runtime_content_tree_sha256": sha256_bytes(tree_payload),
+    }
 
 
 def _descriptor_payload(
@@ -562,16 +951,13 @@ def _selected_action_cells(
         )
     except ValueError as exc:
         raise InverseScorerCellMaterializerError(str(exc)) from exc
-    if selected_limit is not None and (
-        isinstance(selected_limit, bool) or selected_limit < 1
-    ):
+    if selected_limit is not None and (isinstance(selected_limit, bool) or selected_limit < 1):
         raise InverseScorerCellMaterializerError("selected_limit must be >= 1")
     wanted = {str(atom_id) for atom_id in atom_ids if str(atom_id)}
     selected = [
         _normalize_selected_cell(row)
         for row in _mapping(action.get("water_bucket")).get("selected_cells") or []
-        if isinstance(row, Mapping)
-        and (not wanted or str(row.get("atom_id")) in wanted)
+        if isinstance(row, Mapping) and (not wanted or str(row.get("atom_id")) in wanted)
     ]
     if selected_limit is not None:
         selected = selected[:selected_limit]
@@ -597,8 +983,9 @@ def _candidate_archive_custody(
     record: Mapping[str, Any],
     *,
     repo: Path,
+    resolved_path: Path | None = None,
 ) -> dict[str, Any]:
-    path = _resolve_optional_path(record.get("path"), repo)
+    path = resolved_path or _resolve_optional_path(record.get("path"), repo)
     blockers: list[str] = []
     if path is None:
         blockers.append("candidate_archive_path_missing_or_unreadable")
@@ -608,7 +995,16 @@ def _candidate_archive_custody(
     expected_sha = _clean_str(record.get("sha256"))
     if expected_sha and actual_sha != expected_sha:
         blockers.append("candidate_archive_sha_mismatch")
-    if record.get("bytes") is not None and int(record["bytes"]) != actual_bytes:
+    expected_bytes = None
+    if record.get("bytes") is not None:
+        expected_bytes = _optional_int(
+            record.get("bytes"),
+            label="candidate_archive.bytes",
+            blocker="candidate_archive_bytes_invalid",
+            blockers=blockers,
+            minimum=0,
+        )
+    if expected_bytes is not None and expected_bytes != actual_bytes:
         blockers.append("candidate_archive_bytes_mismatch")
     try:
         member = read_strict_single_member_zip(path)
@@ -646,9 +1042,7 @@ def _candidate_manifest_for_adapter(
         manifest_ref = _mapping(adapter.get("candidate_manifest"))
         path_text = _clean_str(manifest_ref.get("path"))
         if not path_text:
-            raise InverseScorerCellMaterializerError(
-                "runtime adapter manifest missing candidate_manifest.path"
-            )
+            raise InverseScorerCellMaterializerError("runtime adapter manifest missing candidate_manifest.path")
         manifest_path = _candidate_manifest_path_from_adapter_record(
             path_text,
             adapter_record=adapter_record,
@@ -661,13 +1055,9 @@ def _candidate_manifest_for_adapter(
         )
         expected_sha = _clean_str(manifest_ref.get("sha256"))
         if expected_sha and record.get("sha256") != expected_sha:
-            raise InverseScorerCellMaterializerError(
-                "candidate manifest sha256 does not match runtime adapter record"
-            )
+            raise InverseScorerCellMaterializerError("candidate manifest sha256 does not match runtime adapter record")
     if payload.get("schema") != CANDIDATE_SCHEMA:
-        raise InverseScorerCellMaterializerError(
-            f"candidate manifest must have schema {CANDIDATE_SCHEMA}"
-        )
+        raise InverseScorerCellMaterializerError(f"candidate manifest must have schema {CANDIDATE_SCHEMA}")
     try:
         require_no_truthy_authority_fields(payload, context="candidate manifest")
     except ValueError as exc:
@@ -757,13 +1147,9 @@ def _load_optional_mapping(value: str | Path | Mapping[str, Any] | None) -> dict
     try:
         payload = read_json(path)
     except (OSError, json.JSONDecodeError) as exc:
-        raise InverseScorerCellMaterializerError(
-            f"runtime consumption proof unreadable: {path}"
-        ) from exc
+        raise InverseScorerCellMaterializerError(f"runtime consumption proof unreadable: {path}") from exc
     if not isinstance(payload, dict):
-        raise InverseScorerCellMaterializerError(
-            f"runtime consumption proof is not a JSON object: {path}"
-        )
+        raise InverseScorerCellMaterializerError(f"runtime consumption proof is not a JSON object: {path}")
     return payload
 
 
@@ -788,6 +1174,32 @@ def _candidate_manifest_path_from_adapter_record(
         if sibling_path.exists():
             return sibling_path
     return repo_path
+
+
+def _candidate_archive_path_from_manifest_record(
+    record: Mapping[str, Any],
+    *,
+    manifest_record: Mapping[str, Any],
+    repo: Path,
+) -> Path | None:
+    path_text = _clean_str(record.get("path"))
+    if not path_text:
+        return None
+    path = Path(path_text)
+    if path.is_absolute():
+        return path if path.exists() else None
+    repo_path = repo / path
+    if repo_path.exists():
+        return repo_path
+    manifest_path_text = _clean_str(manifest_record.get("path"))
+    if manifest_path_text:
+        manifest_path = Path(manifest_path_text)
+        if not manifest_path.is_absolute():
+            manifest_path = repo / manifest_path
+        sibling_path = manifest_path.parent / path
+        if sibling_path.exists():
+            return sibling_path
+    return repo_path if repo_path.exists() else None
 
 
 def _resolve_existing_path(value: str | Path, repo: Path) -> Path:
@@ -823,17 +1235,13 @@ def _refuse_overwrite_unless_expected(
     if not path.exists():
         return
     if not allow_overwrite:
-        raise InverseScorerCellMaterializerError(
-            f"{path}: already exists; pass allow_overwrite with expected sha"
-        )
+        raise InverseScorerCellMaterializerError(f"{path}: already exists; pass allow_overwrite with expected sha")
     if not expected_sha256:
         raise InverseScorerCellMaterializerError(
             f"{path}: expected_existing_output_sha256 is required before overwrite"
         )
     if sha256_file(path) != expected_sha256:
-        raise InverseScorerCellMaterializerError(
-            f"{path}: existing sha256 does not match expected"
-        )
+        raise InverseScorerCellMaterializerError(f"{path}: existing sha256 does not match expected")
 
 
 def _normalize_raw_digest(value: str | Mapping[str, Any] | Any) -> str:
@@ -854,9 +1262,10 @@ def _normalize_raw_digest(value: str | Mapping[str, Any] | Any) -> str:
         ):
             text = _clean_str(value.get(key))
             if text:
-                return text
-        return json.dumps(value, sort_keys=True, separators=(",", ":"))
-    return _clean_str(value)
+                return text if _is_sha256_hex(text) else ""
+        return ""
+    text = _clean_str(value)
+    return text if _is_sha256_hex(text) else ""
 
 
 def _match_text(
@@ -870,9 +1279,7 @@ def _match_text(
 
 
 def _canonical_json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode(
-        "utf-8"
-    )
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
 def _int(value: Any, label: str, *, minimum: int | None = None) -> int:
@@ -903,6 +1310,16 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _clean_str_list(value: Any) -> list[str]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return []
+    return [text for item in value for text in (_clean_str(item),) if text]
+
+
+def _is_sha256_hex(value: str) -> bool:
+    return len(value) == 64 and all(char in "0123456789abcdefABCDEF" for char in value)
+
+
 def _clean_str(value: Any) -> str:
     return str(value).strip() if value is not None else ""
 
@@ -920,11 +1337,14 @@ __all__ = [
     "RECEIVER_VERIFICATION_SCHEMA",
     "REQUIRED_CONTEXT_FIELDS",
     "RUNTIME_ADAPTER_SCHEMA",
+    "RUNTIME_ADAPTER_SOURCE_SCHEMA",
+    "RUNTIME_CONSUMPTION_PROBE_SCHEMA",
     "TARGET_KIND",
     "VERIFIED_CANDIDATE_SCHEMA",
     "InverseScorerCellMaterializerError",
     "build_inverse_scorer_cell_candidate_plan",
     "build_inverse_scorer_cell_receiver_proof",
+    "build_inverse_scorer_cell_runtime_adapter_manifest",
     "materialize_inverse_scorer_cell_candidate",
     "pack_inverse_scorer_cell_descriptor",
     "unpack_inverse_scorer_cell_descriptor",

@@ -303,6 +303,65 @@ def test_queue_performance_observations_calibrate_acquisition_denominator() -> N
         )
 
 
+def test_queue_performance_candidate_map_can_expand_bundle_steps() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {
+        "cache_sha256": "e" * 64,
+    }
+    performance = {
+        "schema": "experiment_queue_performance_summary.v1",
+        "queue_id": "byte_shave_queue",
+        "event_count": 1,
+        "by_resource_kind": {},
+        "by_step": {
+            "bundle.materialize": {
+                "run_count": 1,
+                "success_count": 1,
+                "failure_count": 0,
+                "resource_kind_counts": {"local_mlx": 1},
+                "elapsed_seconds_mean": 4.25,
+                "artifact_record_bytes_mean": 8192.0,
+            }
+        },
+    }
+
+    observations = observations_from_queue_performance_summary(
+        performance,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+        candidate_id_by_experiment={"bundle": ["candidate_a", "candidate_b"]},
+    )
+    action = build_discrete_scorer_action_functional(
+        [_atom("candidate_a"), _atom("candidate_b")],
+        observations=observations,
+    )
+    cells_by_candidate = {cell["candidate_id"]: cell for cell in action["cells"]}
+
+    assert [observation["candidate_id"] for observation in observations] == [
+        "candidate_a",
+        "candidate_b",
+    ]
+    assert observations[0]["observation_id"] == (
+        "queue_perf_byte_shave_queue_bundle_materialize_candidate_a"
+    )
+    assert observations[1]["observation_id"] == (
+        "queue_perf_byte_shave_queue_bundle_materialize_candidate_b"
+    )
+    assert cells_by_candidate["candidate_a"]["best_observation_id"] == (
+        observations[0]["observation_id"]
+    )
+    assert cells_by_candidate["candidate_b"]["best_observation_id"] == (
+        observations[1]["observation_id"]
+    )
+    assert cells_by_candidate["candidate_a"]["priority"]["elapsed_seconds"] == pytest.approx(
+        4.25
+    )
+    assert cells_by_candidate["candidate_b"]["priority"]["artifact_bytes"] == 8192
+
+
 def test_queue_performance_observations_do_not_override_scorer_observations() -> None:
     runtime_identity = {
         "runtime_tree_sha256": "d" * 64,

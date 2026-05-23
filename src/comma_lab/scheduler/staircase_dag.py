@@ -345,11 +345,7 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
     raw_nodes = payload.get("nodes")
     if not isinstance(raw_nodes, list):
         raise ExperimentQueueError("nodes must be a list")
-    nodes = [
-        _normalize_node(node, index=index)
-        for index, node in enumerate(raw_nodes)
-        if isinstance(node, Mapping)
-    ]
+    nodes = [_normalize_node(node, index=index) for index, node in enumerate(raw_nodes) if isinstance(node, Mapping)]
     if len(nodes) != len(raw_nodes):
         raise ExperimentQueueError("nodes must contain only objects")
     node_ids = [str(node["node_id"]) for node in nodes]
@@ -454,14 +450,16 @@ def build_staircase_dag_from_experiment_queue(
         priority = _non_negative_int(experiment.get("priority"), f"{experiment_id}.priority", default=100)
         experiment_tags = _string_list(experiment.get("tags"), f"{experiment_id}.tags")
         family = str(experiment.get("lane_id") or (experiment_tags[0] if experiment_tags else experiment_id))
+        experiment_metadata = dict(experiment.get("metadata") or {})
         for step in experiment.get("steps", []):
             if not isinstance(step, Mapping):
                 continue
             step_id = _require_text(step.get("id"), f"{experiment_id}.step.id")
             resources = _mapping(step.get("resources"), f"{experiment_id}.{step_id}.resources")
+            step_telemetry = dict(step.get("telemetry") or {})
             step_hashes = _step_hashes(
                 step,
-                experiment_metadata=dict(experiment.get("metadata") or {}),
+                experiment_metadata=experiment_metadata,
             )
             metadata = {
                 "queue_id": queue.get("queue_id"),
@@ -469,7 +467,17 @@ def build_staircase_dag_from_experiment_queue(
                 "step_id": step_id,
                 "step_hashes": step_hashes,
                 "postconditions": list(step.get("postconditions") or []),
+                "timeout_seconds": step.get("timeout_seconds"),
                 "resource_requirements": resources,
+                "step_telemetry": step_telemetry,
+                "experiment_metadata": experiment_metadata,
+                "unit_kind": experiment_metadata.get("unit_kind"),
+                "operation_family": experiment_metadata.get("operation_family"),
+                "target_kind": experiment_metadata.get("target_kind"),
+                "materializer_id": experiment_metadata.get("materializer_id"),
+                "receiver_contract_id": experiment_metadata.get("receiver_contract_id"),
+                "receiver_contract_kind": experiment_metadata.get("receiver_contract_kind"),
+                "allowed_use": experiment_metadata.get("allowed_use"),
             }
             nodes.append(
                 {
@@ -504,9 +512,7 @@ def build_staircase_dag_from_experiment_queue(
             "schema": STAIRCASE_DAG_SCHEMA,
             "dag_id": dag_id or f"{queue.get('queue_id')}_staircase",
             "controls": {
-                "mode": str(
-                    _mapping(queue.get("controls"), "queue.controls").get("mode", "running")
-                ),
+                "mode": str(_mapping(queue.get("controls"), "queue.controls").get("mode", "running")),
             },
             "resource_pools": list(resource_pools or default_local_resource_pools()),
             "storage": dict(storage_plan) if storage_plan is not None else None,
@@ -646,9 +652,7 @@ def plan_staircase_dispatch(
     cloud_ok = bool(controls["allow_cloud"] if allow_cloud is None else allow_cloud)
     queue_mode = str(controls.get("mode") or "running")
     bucket_limit = (
-        int(controls["diversity_bucket_limit"])
-        if diversity_bucket_limit is None
-        else int(diversity_bucket_limit)
+        int(controls["diversity_bucket_limit"]) if diversity_bucket_limit is None else int(diversity_bucket_limit)
     )
 
     running = _running_counts(nodes, statuses, running_assignments)
@@ -696,9 +700,7 @@ def plan_staircase_dispatch(
             )
             continue
         missing_deps = [
-            str(dep)
-            for dep in node.get("dependencies", [])
-            if _node_status(str(dep), statuses) != "succeeded"
+            str(dep) for dep in node.get("dependencies", []) if _node_status(str(dep), statuses) != "succeeded"
         ]
         if missing_deps:
             blocked.append({"node_id": node_id, "reason": "dependencies_not_succeeded", "dependencies": missing_deps})
@@ -795,6 +797,16 @@ def plan_staircase_dispatch(
             "step_id": metadata.get("step_id"),
             "step_hashes": metadata.get("step_hashes"),
             "postconditions": list(metadata.get("postconditions") or []),
+            "timeout_seconds": metadata.get("timeout_seconds"),
+            "telemetry": dict(metadata.get("step_telemetry") or {}),
+            "experiment_metadata": dict(metadata.get("experiment_metadata") or {}),
+            "unit_kind": metadata.get("unit_kind"),
+            "operation_family": metadata.get("operation_family"),
+            "target_kind": metadata.get("target_kind"),
+            "materializer_id": metadata.get("materializer_id"),
+            "receiver_contract_id": metadata.get("receiver_contract_id"),
+            "receiver_contract_kind": metadata.get("receiver_contract_kind"),
+            "allowed_use": metadata.get("allowed_use"),
             "queue_state_writeback": {
                 "required": True,
                 "queue_id": metadata.get("queue_id"),

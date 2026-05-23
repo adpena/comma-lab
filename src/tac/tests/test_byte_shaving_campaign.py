@@ -134,7 +134,15 @@ def _inverse_action_payload() -> dict[str, object]:
 
 
 def test_plan_builds_combination_ladder_with_interactions_and_conflicts() -> None:
-    plan = build_byte_shaving_campaign_plan(_surface(), max_k=3)
+    surface = _surface()
+    surface["inverse_scorer_surface_refs"] = [
+        {
+            "kind": "inverse_scorer_surface",
+            "path": "experiments/results/inverse_surface.json",
+            "sha256": "d" * 64,
+        }
+    ]
+    plan = build_byte_shaving_campaign_plan(surface, max_k=3)
     combo = plan["recommended_combination"]
 
     assert plan["schema"] == "byte_shaving_campaign_plan.v1"
@@ -143,17 +151,12 @@ def test_plan_builds_combination_ladder_with_interactions_and_conflicts() -> Non
     assert combo["candidate_saved_bytes"] == 1620
     assert combo["active_interactions"][0]["interaction_id"] == "pair_null_synergy"
     assert "tensor_head7" not in combo["selected_unit_ids"]
-    assert combo["expected_delta_score"] == pytest.approx(
-        -25.0 * 1620 / CONTEST_ORIGINAL_BYTES + 0.00015 - 0.00001
-    )
-    assert plan["search_space_policy"]["combination_search"] == (
-        "bounded_beam_over_units_and_operation_alternatives"
-    )
-    assert plan["search_space_policy"]["permutation_search"] == (
-        "bounded_operation_order_permutations_for_top_combos"
-    )
+    assert combo["expected_delta_score"] == pytest.approx(-25.0 * 1620 / CONTEST_ORIGINAL_BYTES + 0.00015 - 0.00001)
+    assert plan["search_space_policy"]["combination_search"] == ("bounded_beam_over_units_and_operation_alternatives")
+    assert plan["search_space_policy"]["permutation_search"] == ("bounded_operation_order_permutations_for_top_combos")
     assert "pair" in plan["search_space_policy"]["unit_layers"]
     assert "drop_pair" in plan["operation_order_priors"]
+    assert plan["inverse_scorer_surface_refs"] == surface["inverse_scorer_surface_refs"]
 
 
 def test_plan_exposes_bounded_operation_permutation_ladder() -> None:
@@ -272,18 +275,10 @@ def test_inverse_action_functional_converts_to_plannable_surface() -> None:
     assert surface["units"][0]["unit_kind"] == "scorer_inverse_surface_cell"
     assert surface["units"][0]["candidate_saved_bytes"] == 0
     assert ranked["expected_delta_score"] == pytest.approx(-0.0004)
-    assert ranked["recommended_operation_family"] == (
-        "materialize_inverse_scorer_cell_candidate"
-    )
-    assert ranked["recommended_operation_materializer"] == (
-        "inverse_scorer_cell_candidate_adapter"
-    )
-    assert ranked["recommended_operation_target_kind"] == (
-        "inverse_scorer_cell_candidate_v1"
-    )
-    assert plan["recommended_prefix"]["selected_unit_ids"] == [
-        "inverse_action_inverse_surface_pair0007"
-    ]
+    assert ranked["recommended_operation_family"] == ("materialize_inverse_scorer_cell_candidate")
+    assert ranked["recommended_operation_materializer"] == ("inverse_scorer_cell_candidate_adapter")
+    assert ranked["recommended_operation_target_kind"] == ("inverse_scorer_cell_candidate_v1")
+    assert plan["recommended_prefix"]["selected_unit_ids"] == ["inverse_action_inverse_surface_pair0007"]
     assert plan["score_claim"] is False
 
 
@@ -387,9 +382,7 @@ def test_cli_can_plan_from_inverse_action_functional(tmp_path: Path) -> None:
 
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["schema"] == "byte_shaving_campaign_plan.v1"
-    assert payload["ranked_units"][0]["recommended_operation_family"] == (
-        "materialize_inverse_scorer_cell_candidate"
-    )
+    assert payload["ranked_units"][0]["recommended_operation_family"] == ("materialize_inverse_scorer_cell_candidate")
     assert payload["score_claim"] is False
 
 
@@ -415,21 +408,23 @@ def test_master_gradient_anchor_builds_planning_only_byte_surface(tmp_path: Path
     )
     ledger = state / "master_gradient_anchors.jsonl"
     ledger.write_text(
-        json.dumps({
-            "schema_version": "master_gradient_anchor_v1",
-            "archive_sha256": archive_sha,
-            "gradient_array_path": ".omx/state/mg.npy",
-            "gradient_tensor_kind": "aggregate_per_byte_v1",
-            "measurement_axis": "[macOS-CPU advisory]",
-            "measurement_hardware": "darwin_arm64_local_cpu_advisory",
-            "measurement_call_id": "local-test",
-            "measurement_utc": "2026-05-23T00:00:00Z",
-            "n_bytes": 5,
-            "n_pairs_used": 1,
-            "n_pairs_total": 5,
-            "scored_archive_sha256": archive_sha,
-            "scored_archive_bytes": 123,
-        })
+        json.dumps(
+            {
+                "schema_version": "master_gradient_anchor_v1",
+                "archive_sha256": archive_sha,
+                "gradient_array_path": ".omx/state/mg.npy",
+                "gradient_tensor_kind": "aggregate_per_byte_v1",
+                "measurement_axis": "[macOS-CPU advisory]",
+                "measurement_hardware": "darwin_arm64_local_cpu_advisory",
+                "measurement_call_id": "local-test",
+                "measurement_utc": "2026-05-23T00:00:00Z",
+                "n_bytes": 5,
+                "n_pairs_used": 1,
+                "n_pairs_total": 5,
+                "scored_archive_sha256": archive_sha,
+                "scored_archive_bytes": 123,
+            }
+        )
         + "\n",
         encoding="utf-8",
     )
@@ -463,17 +458,19 @@ def test_cli_can_plan_from_master_gradient_anchor(tmp_path: Path) -> None:
         np.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32),
     )
     (state / "master_gradient_anchors.jsonl").write_text(
-        json.dumps({
-            "schema_version": "master_gradient_anchor_v1",
-            "archive_sha256": archive_sha,
-            "gradient_array_path": ".omx/state/mg.npy",
-            "gradient_tensor_kind": "aggregate_per_byte_v1",
-            "measurement_axis": "[macOS-CPU advisory]",
-            "measurement_hardware": "darwin_arm64_local_cpu_advisory",
-            "measurement_call_id": "local-test",
-            "measurement_utc": "2026-05-23T00:00:00Z",
-            "n_bytes": 3,
-        })
+        json.dumps(
+            {
+                "schema_version": "master_gradient_anchor_v1",
+                "archive_sha256": archive_sha,
+                "gradient_array_path": ".omx/state/mg.npy",
+                "gradient_tensor_kind": "aggregate_per_byte_v1",
+                "measurement_axis": "[macOS-CPU advisory]",
+                "measurement_hardware": "darwin_arm64_local_cpu_advisory",
+                "measurement_call_id": "local-test",
+                "measurement_utc": "2026-05-23T00:00:00Z",
+                "n_bytes": 3,
+            }
+        )
         + "\n",
         encoding="utf-8",
     )

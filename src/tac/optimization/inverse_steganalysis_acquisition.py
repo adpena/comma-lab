@@ -301,13 +301,25 @@ def observations_from_queue_performance_summary(
     by_step = summary.get("by_step")
     if not isinstance(by_step, Mapping):
         raise InverseSteganalysisAcquisitionError("summary.by_step must be an object")
-    candidate_lookup = {
-        _text(key, "candidate_id_by_experiment key"): _text(
-            value,
-            "candidate_id_by_experiment value",
-        )
-        for key, value in dict(candidate_id_by_experiment or {}).items()
-    }
+    candidate_lookup: dict[str, tuple[str, ...]] = {}
+    for raw_key, raw_value in dict(candidate_id_by_experiment or {}).items():
+        key = _text(raw_key, "candidate_id_by_experiment key")
+        if isinstance(raw_value, str):
+            values = (_text(raw_value, "candidate_id_by_experiment value"),)
+        elif isinstance(raw_value, Sequence) and not isinstance(raw_value, bytes):
+            values = tuple(
+                _text(value, f"candidate_id_by_experiment[{key!r}][{index}]")
+                for index, value in enumerate(raw_value)
+            )
+            if not values:
+                raise InverseSteganalysisAcquisitionError(
+                    f"candidate_id_by_experiment[{key!r}] must not be empty"
+                )
+        else:
+            raise InverseSteganalysisAcquisitionError(
+                f"candidate_id_by_experiment[{key!r}] must be a string or list"
+            )
+        candidate_lookup[key] = values
 
     observations: list[dict[str, Any]] = []
     for bucket_key, bucket in sorted(by_step.items(), key=lambda item: str(item[0])):
@@ -321,7 +333,6 @@ def observations_from_queue_performance_summary(
         )
         if run_count == 0:
             continue
-        candidate_id = candidate_lookup.get(experiment_id, experiment_id)
         resource_kind = _resource(
             bucket.get("dominant_resource_kind")
             or _dominant_resource_from_counts(bucket.get("resource_kind_counts"))
@@ -334,37 +345,43 @@ def observations_from_queue_performance_summary(
             exclusive=True,
         )
         artifact_bytes = _queue_performance_artifact_bytes(bucket)
-        observations.append(
-            normalize_inverse_steganalysis_observation(
-                {
-                    "observation_id": (
-                        f"queue_perf_{_slug(queue_id)}_"
-                        f"{_slug(experiment_id)}_{_slug(step_id)}"
-                    ),
-                    "observation_kind": "queue_performance_step",
-                    "candidate_id": candidate_id,
-                    "axis": axis,
-                    "source_path": source_path,
-                    "queue_id": queue_id,
-                    "experiment_id": experiment_id,
-                    "step_id": step_id,
-                    "performance_bucket_key": str(bucket_key),
-                    "performance_summary_schema": QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
-                    "runtime_identity": runtime_identity,
-                    "cache_identity": cache_identity,
-                    "elapsed_seconds": elapsed_seconds,
-                    "artifact_bytes": artifact_bytes,
-                    "resource_kind": resource_kind,
-                    "run_count": run_count,
-                    "success_count": bucket.get("success_count"),
-                    "failure_count": bucket.get("failure_count"),
-                    "artifact_record_count": bucket.get("artifact_record_count"),
-                    "artifact_record_raw_bytes_mean": bucket.get(
-                        "artifact_record_raw_bytes_mean"
-                    ),
-                }
-            )
+        candidate_ids = candidate_lookup.get(experiment_id, (experiment_id,))
+        base_observation_id = (
+            f"queue_perf_{_slug(queue_id)}_"
+            f"{_slug(experiment_id)}_{_slug(step_id)}"
         )
+        for candidate_id in candidate_ids:
+            observation_id = base_observation_id
+            if len(candidate_ids) > 1:
+                observation_id = f"{base_observation_id}_{_slug(candidate_id)}"
+            observations.append(
+                normalize_inverse_steganalysis_observation(
+                    {
+                        "observation_id": observation_id,
+                        "observation_kind": "queue_performance_step",
+                        "candidate_id": candidate_id,
+                        "axis": axis,
+                        "source_path": source_path,
+                        "queue_id": queue_id,
+                        "experiment_id": experiment_id,
+                        "step_id": step_id,
+                        "performance_bucket_key": str(bucket_key),
+                        "performance_summary_schema": QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+                        "runtime_identity": runtime_identity,
+                        "cache_identity": cache_identity,
+                        "elapsed_seconds": elapsed_seconds,
+                        "artifact_bytes": artifact_bytes,
+                        "resource_kind": resource_kind,
+                        "run_count": run_count,
+                        "success_count": bucket.get("success_count"),
+                        "failure_count": bucket.get("failure_count"),
+                        "artifact_record_count": bucket.get("artifact_record_count"),
+                        "artifact_record_raw_bytes_mean": bucket.get(
+                            "artifact_record_raw_bytes_mean"
+                        ),
+                    }
+                )
+            )
     return observations
 
 

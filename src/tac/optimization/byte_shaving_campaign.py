@@ -31,9 +31,7 @@ PLAN_SCHEMA = "byte_shaving_campaign_plan.v1"
 TOOL_NAME = "tools/plan_byte_shaving_campaign.py"
 INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 RATE_MULTIPLIER = 25.0
-ENGINEERED_CORRECTION_TARGETING_SCHEMA = (
-    "master_gradient_consumer_engineered_correction_targeting_v1"
-)
+ENGINEERED_CORRECTION_TARGETING_SCHEMA = "master_gradient_consumer_engineered_correction_targeting_v1"
 
 FALSE_AUTHORITY: dict[str, bool] = {
     "score_claim": False,
@@ -307,8 +305,7 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
         {
             "operation_family": family,
             "materializer": unit.get("materializer"),
-            "target_kind": unit.get("target_kind")
-            or unit.get("materializer_target_kind"),
+            "target_kind": unit.get("target_kind") or unit.get("materializer_target_kind"),
             "params": _mapping(unit.get("operation_params") or unit.get("params")),
         }
         for family in _operation_families(unit)
@@ -328,30 +325,26 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
         expected_delta = rate_delta + quality_cost
         gain = -expected_delta
         confidence = _operation_confidence(operation, unit)
-        blockers = ordered_unique(
-            str(item) for item in _as_list(operation.get("blockers"))
+        blockers = ordered_unique(str(item) for item in _as_list(operation.get("blockers")))
+        out.append(
+            {
+                "operation_id": str(operation.get("operation_id") or operation.get("id") or f"{family}_{index}"),
+                "operation_family": family,
+                "candidate_saved_bytes": saved_bytes,
+                "rate_delta_score": rate_delta,
+                "quality_cost_score": quality_cost,
+                "expected_delta_score": expected_delta,
+                "expected_score_gain": gain,
+                "confidence": confidence,
+                "confidence_adjusted_gain": gain * confidence,
+                "gain_per_byte": gain / float(saved_bytes) if saved_bytes > 0 else 0.0,
+                "operation_priority": int(DEFAULT_OPERATION_ORDER_PRIORS.get(family, 100)),
+                "materializer": operation.get("materializer"),
+                "target_kind": _operation_target_kind(operation),
+                "operation_params": dict(_mapping(operation.get("params"))),
+                "blockers": blockers,
+            }
         )
-        out.append({
-            "operation_id": str(
-                operation.get("operation_id")
-                or operation.get("id")
-                or f"{family}_{index}"
-            ),
-            "operation_family": family,
-            "candidate_saved_bytes": saved_bytes,
-            "rate_delta_score": rate_delta,
-            "quality_cost_score": quality_cost,
-            "expected_delta_score": expected_delta,
-            "expected_score_gain": gain,
-            "confidence": confidence,
-            "confidence_adjusted_gain": gain * confidence,
-            "gain_per_byte": gain / float(saved_bytes) if saved_bytes > 0 else 0.0,
-            "operation_priority": int(DEFAULT_OPERATION_ORDER_PRIORS.get(family, 100)),
-            "materializer": operation.get("materializer"),
-            "target_kind": _operation_target_kind(operation),
-            "operation_params": dict(_mapping(operation.get("params"))),
-            "blockers": blockers,
-        })
     return sorted(
         out,
         key=lambda row: (
@@ -400,9 +393,7 @@ def validate_signal_surface(payload: Mapping[str, Any]) -> None:
             "correction_target",
         }
         if saved is None or saved < 0 or (saved == 0 and not allows_zero_saved):
-            raise ByteShavingCampaignError(
-                f"units[{index}] requires positive candidate_saved_bytes/saved_bytes/bytes"
-            )
+            raise ByteShavingCampaignError(f"units[{index}] requires positive candidate_saved_bytes/saved_bytes/bytes")
 
 
 def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
@@ -434,10 +425,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
     blockers = ordered_unique(
         [
             *[str(item) for item in _as_list(unit.get("blockers"))],
-            *[
-                str(item)
-                for item in _as_list(best_operation.get("blockers"))
-            ],
+            *[str(item) for item in _as_list(best_operation.get("blockers"))],
         ]
     )
     row = {
@@ -459,9 +447,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_operation_target_kind": best_operation["target_kind"],
         "recommended_operation_priority": best_operation["operation_priority"],
         "recommended_operation_params": best_operation["operation_params"],
-        "operation_families": ordered_unique(
-            str(row["operation_family"]) for row in operation_candidates
-        ),
+        "operation_families": ordered_unique(str(row["operation_family"]) for row in operation_candidates),
         "operation_candidates": operation_candidates,
         "score_axis": unit.get("score_axis") or unit.get("dominant_axis"),
         "evidence_grade": unit.get("evidence_grade"),
@@ -474,9 +460,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         "target_axis": unit.get("target_axis"),
         "local_score": unit.get("local_score"),
         "projected_contest_score": unit.get("projected_contest_score"),
-        "conservative_projected_contest_score": unit.get(
-            "conservative_projected_contest_score"
-        ),
+        "conservative_projected_contest_score": unit.get("conservative_projected_contest_score"),
         "xray_signal": unit.get("xray_signal"),
         "master_gradient_signal": unit.get("master_gradient_signal"),
         "engineered_correction_signal": unit.get("engineered_correction_signal"),
@@ -508,11 +492,7 @@ def _rank_units(units: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
 def _conflict_sets(payload: Mapping[str, Any]) -> list[set[str]]:
     conflicts: list[set[str]] = []
     for item in _as_list(payload.get("conflicts")):
-        raw_ids: Any = (
-            item.get("unit_ids") or item.get("units")
-            if isinstance(item, Mapping)
-            else item
-        )
+        raw_ids: Any = item.get("unit_ids") or item.get("units") if isinstance(item, Mapping) else item
         ids = {str(value) for value in _as_list(raw_ids) if str(value)}
         if len(ids) >= 2:
             conflicts.append(ids)
@@ -531,19 +511,20 @@ def _interaction_rows(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
         unit_ids = ordered_unique(str(value) for value in _as_list(item.get("unit_ids") or item.get("units")))
         if len(unit_ids) < 2:
             continue
-        rows.append({
-            "interaction_id": str(item.get("interaction_id") or item.get("id") or f"interaction_{index}"),
-            "unit_ids": unit_ids,
-            "operation_families": ordered_unique(
-                str(value)
-                for value in _as_list(item.get("operation_families") or item.get("operations"))
-            ),
-            "delta_score": _finite_float(item.get("delta_score")) or 0.0,
-            "quality_cost_delta_score": _finite_float(item.get("quality_cost_delta_score")) or 0.0,
-            "extra_saved_bytes": _finite_int(item.get("extra_saved_bytes")) or 0,
-            "shared_overhead_bytes": _finite_int(item.get("shared_overhead_bytes")) or 0,
-            "rationale": item.get("rationale"),
-        })
+        rows.append(
+            {
+                "interaction_id": str(item.get("interaction_id") or item.get("id") or f"interaction_{index}"),
+                "unit_ids": unit_ids,
+                "operation_families": ordered_unique(
+                    str(value) for value in _as_list(item.get("operation_families") or item.get("operations"))
+                ),
+                "delta_score": _finite_float(item.get("delta_score")) or 0.0,
+                "quality_cost_delta_score": _finite_float(item.get("quality_cost_delta_score")) or 0.0,
+                "extra_saved_bytes": _finite_int(item.get("extra_saved_bytes")) or 0,
+                "shared_overhead_bytes": _finite_int(item.get("shared_overhead_bytes")) or 0,
+                "rationale": item.get("rationale"),
+            }
+        )
     return rows
 
 
@@ -581,9 +562,7 @@ def _active_interactions(
         required_units = {str(value) for value in _as_list(interaction.get("unit_ids"))}
         if not required_units or not required_units.issubset(selected_unit_ids):
             continue
-        required_families = {
-            str(value) for value in _as_list(interaction.get("operation_families"))
-        }
+        required_families = {str(value) for value in _as_list(interaction.get("operation_families"))}
         if required_families and not required_families.issubset(selected_families):
             continue
         active.append(dict(interaction))
@@ -602,8 +581,7 @@ def _combo_row(
     overhead = sum(int(interaction.get("shared_overhead_bytes") or 0) for interaction in active)
     total_saved = max(0, base_saved + extra_saved - overhead)
     quality_cost = sum(float(selection["quality_cost_score"]) for selection in selections) + sum(
-        float(interaction.get("quality_cost_delta_score") or 0.0)
-        for interaction in active
+        float(interaction.get("quality_cost_delta_score") or 0.0) for interaction in active
     )
     direct_delta = sum(float(interaction.get("delta_score") or 0.0) for interaction in active)
     rate_delta = _rate_delta_for_saved_bytes(total_saved)
@@ -640,9 +618,7 @@ def _combo_row(
             for selection in selections
         ],
         "active_interactions": active,
-        "operation_families": ordered_unique(
-            str(selection["operation_family"]) for selection in selections
-        ),
+        "operation_families": ordered_unique(str(selection["operation_family"]) for selection in selections),
         "dispatch_blockers": list(BASE_BLOCKERS),
         **FALSE_AUTHORITY,
     }
@@ -728,10 +704,7 @@ def _bounded_operation_permutations(
         return []
     unique: dict[tuple[tuple[str, str], ...], tuple[int, tuple[Mapping[str, Any], ...]]] = {}
     for perm in permutations(prefix):
-        key = tuple(
-            (str(item.get("unit_id") or ""), str(item.get("operation_id") or ""))
-            for item in perm
-        )
+        key = tuple((str(item.get("unit_id") or ""), str(item.get("operation_id") or "")) for item in perm)
         penalty = _permutation_penalty(perm, priors=priors)
         unique[key] = (penalty, perm)
     return sorted(
@@ -761,11 +734,7 @@ def _permutation_ladder(
     max_permutations = max(1, int(payload.get("max_permutations_per_combo") or 24))
     rows: list[dict[str, Any]] = []
     for combo_rank, combo in enumerate(combo_rows[:max_combo_rows], start=1):
-        operations = [
-            item
-            for item in _as_list(combo.get("selected_operations"))
-            if isinstance(item, Mapping)
-        ]
+        operations = [item for item in _as_list(combo.get("selected_operations")) if isinstance(item, Mapping)]
         bounded = _bounded_operation_permutations(
             operations,
             priors=operation_order_priors,
@@ -835,11 +804,9 @@ def _combo_ladder(
     completed: dict[tuple[tuple[str, str], ...], dict[str, Any]] = {}
     for unit in ranked_units[:max_units_considered]:
         next_states = list(states)
-        unit_operations = [
-            item
-            for item in _as_list(unit.get("operation_candidates"))
-            if isinstance(item, Mapping)
-        ][:max_ops_per_unit]
+        unit_operations = [item for item in _as_list(unit.get("operation_candidates")) if isinstance(item, Mapping)][
+            :max_ops_per_unit
+        ]
         for state in states:
             for operation in unit_operations:
                 selection = _selection_from_unit(unit, operation)
@@ -848,12 +815,7 @@ def _combo_ladder(
                     continue
                 candidate_state = [*state, selection]
                 if len(candidate_state) >= 2:
-                    key = tuple(
-                        sorted(
-                            (str(item["unit_id"]), str(item["operation_id"]))
-                            for item in candidate_state
-                        )
-                    )
+                    key = tuple(sorted((str(item["unit_id"]), str(item["operation_id"])) for item in candidate_state))
                     row = _combo_row(
                         candidate_state,
                         interactions=interactions,
@@ -872,15 +834,17 @@ def _combo_ladder(
                     conflicts,
                 )
             ],
-            key=lambda state: _state_sort_key(
-                _combo_row(
-                    state,
-                    interactions=interactions,
-                    combo_id="state",
+            key=lambda state: (
+                _state_sort_key(
+                    _combo_row(
+                        state,
+                        interactions=interactions,
+                        combo_id="state",
+                    )
                 )
-            )
-            if state
-            else (0.0, 0.0, 0, ""),
+                if state
+                else (0.0, 0.0, 0, "")
+            ),
         )
         states = ranked_states[:beam_width]
     return sorted(completed.values(), key=_state_sort_key)[:max_combos]
@@ -898,11 +862,7 @@ def _sweep_ladder_counts(n_units: int, *, max_k: int | None) -> list[int]:
 
 def _conflict_violation_ids(unit_ids: Sequence[str], conflicts: Sequence[set[str]]) -> list[list[str]]:
     selected = set(unit_ids)
-    return [
-        sorted(selected & conflict)
-        for conflict in conflicts
-        if len(selected & conflict) >= 2
-    ]
+    return [sorted(selected & conflict) for conflict in conflicts if len(selected & conflict) >= 2]
 
 
 def _prefix_rows(
@@ -923,38 +883,40 @@ def _prefix_rows(
         blockers = list(BASE_BLOCKERS)
         if conflict_violations:
             blockers.append("prefix_selection_violates_conflict_sets")
-        rows.append({
-            "sweep_id": f"top_{count:04d}",
-            "unit_count": count,
-            "candidate_saved_bytes": saved_bytes,
-            "rate_delta_score": rate_delta,
-            "quality_cost_score": quality_cost,
-            "expected_delta_score": expected_delta,
-            "expected_score_gain": -expected_delta,
-            "operation_families": ordered_unique(
-                str(row.get("recommended_operation_family") or family)
-                for row in selected
-                for family in _as_list(row.get("operation_families"))
-            ),
-            "selected_operations": [
-                {
-                    "unit_id": str(row["unit_id"]),
-                    "unit_kind": str(row.get("unit_kind") or ""),
-                    "operation_id": str(row["recommended_operation_id"]),
-                    "operation_family": str(row["recommended_operation_family"]),
-                    "materializer": row.get("recommended_operation_materializer"),
-                    "target_kind": row.get("recommended_operation_target_kind"),
-                    "params": row.get("recommended_operation_params") or {},
-                    "blockers": _as_list(row.get("blockers")),
-                    **FALSE_AUTHORITY,
-                }
-                for row in selected
-            ],
-            "selected_unit_ids": selected_unit_ids,
-            "conflict_violations": conflict_violations,
-            "dispatch_blockers": blockers,
-            **FALSE_AUTHORITY,
-        })
+        rows.append(
+            {
+                "sweep_id": f"top_{count:04d}",
+                "unit_count": count,
+                "candidate_saved_bytes": saved_bytes,
+                "rate_delta_score": rate_delta,
+                "quality_cost_score": quality_cost,
+                "expected_delta_score": expected_delta,
+                "expected_score_gain": -expected_delta,
+                "operation_families": ordered_unique(
+                    str(row.get("recommended_operation_family") or family)
+                    for row in selected
+                    for family in _as_list(row.get("operation_families"))
+                ),
+                "selected_operations": [
+                    {
+                        "unit_id": str(row["unit_id"]),
+                        "unit_kind": str(row.get("unit_kind") or ""),
+                        "operation_id": str(row["recommended_operation_id"]),
+                        "operation_family": str(row["recommended_operation_family"]),
+                        "materializer": row.get("recommended_operation_materializer"),
+                        "target_kind": row.get("recommended_operation_target_kind"),
+                        "params": row.get("recommended_operation_params") or {},
+                        "blockers": _as_list(row.get("blockers")),
+                        **FALSE_AUTHORITY,
+                    }
+                    for row in selected
+                ],
+                "selected_unit_ids": selected_unit_ids,
+                "conflict_violations": conflict_violations,
+                "dispatch_blockers": blockers,
+                **FALSE_AUTHORITY,
+            }
+        )
     return rows
 
 
@@ -962,8 +924,7 @@ def _best_nonpositive_prefix(prefix_rows: Sequence[Mapping[str, Any]]) -> Mappin
     viable = [
         row
         for row in prefix_rows
-        if float(row.get("expected_delta_score") or 0.0) < 0.0
-        and not row.get("conflict_violations")
+        if float(row.get("expected_delta_score") or 0.0) < 0.0 and not row.get("conflict_violations")
     ]
     if not viable:
         return None
@@ -1011,9 +972,7 @@ def build_byte_shaving_campaign_plan(
     )
     best = _best_nonpositive_prefix(prefix_rows)
     best_combo = _best_nonpositive_prefix(combo_rows)
-    source_paths = (
-        [_repo_rel(source_path, repo_root)] if source_path is not None else []
-    )
+    source_paths = [_repo_rel(source_path, repo_root)] if source_path is not None else []
     plan = {
         "schema": PLAN_SCHEMA,
         "tool": TOOL_NAME,
@@ -1026,6 +985,7 @@ def build_byte_shaving_campaign_plan(
         "auth_eval_refs": _as_list(payload.get("auth_eval_refs")),
         "mlx_calibration_refs": _as_list(payload.get("mlx_calibration_refs")),
         "scorer_response_refs": _as_list(payload.get("scorer_response_refs")),
+        "inverse_scorer_surface_refs": _as_list(payload.get("inverse_scorer_surface_refs")),
         "frontier_axis": payload.get("frontier_axis") or "[planning-only]",
         "ranked_units": ranked,
         "sweep_ladder": prefix_rows,
@@ -1049,8 +1009,7 @@ def build_byte_shaving_campaign_plan(
         "search_space_policy": {
             "unit_layers": sorted(UNIT_KINDS),
             "operation_layers": {
-                unit_kind: list(families)
-                for unit_kind, families in sorted(DEFAULT_OPERATION_FAMILIES.items())
+                unit_kind: list(families) for unit_kind, families in sorted(DEFAULT_OPERATION_FAMILIES.items())
             },
             "scorer_interaction_terms": [
                 "rate_delta_score",
@@ -1074,9 +1033,7 @@ def build_byte_shaving_campaign_plan(
         "evidence_boundary": {
             "planning_only": True,
             "rate_delta_formula": f"-25 * saved_bytes / {CONTEST_ORIGINAL_BYTES}",
-            "quality_cost_source": (
-                "predicted_quality_score_cost or seg/pose/master-gradient score costs"
-            ),
+            "quality_cost_source": ("predicted_quality_score_cost or seg/pose/master-gradient score costs"),
             "next_gate": (
                 "materialize selected operation family, run locality/inflate "
                 "controls, then exact auth eval before any score claim"
@@ -1110,35 +1067,20 @@ def build_signal_surface_from_candidate_queue(
         if not isinstance(consumer_payload, Mapping):
             consumer_payload = {}
         raw_operations = (
-            row.get("operations")
-            or row.get("selected_operations")
-            or consumer_payload.get("selected_operations")
-            or []
+            row.get("operations") or row.get("selected_operations") or consumer_payload.get("selected_operations") or []
         )
-        operations = [
-            dict(item) for item in _as_list(raw_operations) if isinstance(item, Mapping)
-        ]
-        operation_families = ordered_unique(
-            str(item)
-            for item in _as_list(row.get("operation_families"))
-            if str(item)
-        )
+        operations = [dict(item) for item in _as_list(raw_operations) if isinstance(item, Mapping)]
+        operation_families = ordered_unique(str(item) for item in _as_list(row.get("operation_families")) if str(item))
         row_operation_family = str(
-            row.get("operation_family")
-            or row.get("operation")
-            or (operation_families[0] if operation_families else "")
+            row.get("operation_family") or row.get("operation") or (operation_families[0] if operation_families else "")
         ).strip()
         row_materializer = row.get("materializer")
         row_target_kind = row.get("target_kind") or row.get("materializer_target_kind")
-        row_params = dict(
-            _mapping(row.get("operation_params") or row.get("params") or row.get("op_params"))
-        )
+        row_params = dict(_mapping(row.get("operation_params") or row.get("params") or row.get("op_params")))
         if not operations and (row_operation_family or row_materializer or row_target_kind):
             operations.append(
                 {
-                    "operation_id": row.get("operation_id")
-                    or row_operation_family
-                    or "queue_row_operation",
+                    "operation_id": row.get("operation_id") or row_operation_family or "queue_row_operation",
                     "operation_family": row_operation_family,
                 }
             )
@@ -1181,46 +1123,40 @@ def build_signal_surface_from_candidate_queue(
             )
             or []
         )
-        units.append({
-            "unit_id": str(row.get("candidate_id") or f"queue_row_{len(units)}"),
-            "unit_kind": row.get("unit_kind") or "archive_section",
-            "candidate_saved_bytes": bytes_value,
-            "predicted_quality_score_cost": _finite_float(
-                row.get("predicted_quality_score_cost")
-                or row.get("quality_cost_score")
-            )
-            or 0.0,
-            "confidence": _finite_float(row.get("confidence")) or 0.5,
-            "operation_families": operation_families,
-            "operations": operations,
-            "materializer": row.get("materializer"),
-            "target_kind": row.get("target_kind") or row.get("materializer_target_kind"),
-            "operation_params": row.get("operation_params") or row.get("params"),
-            "score_axis": row.get("score_axis") or row.get("dominant_axis"),
-            "evidence_grade": row.get("evidence_grade"),
-            "evidence_semantics": row.get("evidence_semantics"),
-            "source_paths": _as_list(row.get("source_paths")),
-            "source_candidate_id": row.get("source_candidate_id"),
-            "candidate_archive_sha256": row.get("candidate_archive_sha256")
-            or row.get("archive_sha256"),
-            "candidate_archive_bytes": row.get("candidate_archive_bytes")
-            or row.get("archive_bytes"),
-            "candidate_trust_region_blockers": _as_list(
-                row.get("candidate_trust_region_blockers")
-            ),
-            "local_axis": row.get("local_axis"),
-            "target_axis": row.get("target_axis"),
-            "local_score": row.get("local_score"),
-            "projected_contest_score": row.get("projected_contest_score"),
-            "conservative_projected_contest_score": row.get(
-                "conservative_projected_contest_score"
-            ),
-            "master_gradient_signal": row.get("master_gradient_signal")
-            or row.get("master_gradient_provenance"),
-            "canonical_equation_provenance": row.get("canonical_equation_provenance"),
-            "atom_ids": _as_list(row.get("atom_ids")),
-            "blockers": row.get("dispatch_blockers") or [],
-        })
+        units.append(
+            {
+                "unit_id": str(row.get("candidate_id") or f"queue_row_{len(units)}"),
+                "unit_kind": row.get("unit_kind") or "archive_section",
+                "candidate_saved_bytes": bytes_value,
+                "predicted_quality_score_cost": _finite_float(
+                    row.get("predicted_quality_score_cost") or row.get("quality_cost_score")
+                )
+                or 0.0,
+                "confidence": _finite_float(row.get("confidence")) or 0.5,
+                "operation_families": operation_families,
+                "operations": operations,
+                "materializer": row.get("materializer"),
+                "target_kind": row.get("target_kind") or row.get("materializer_target_kind"),
+                "operation_params": row.get("operation_params") or row.get("params"),
+                "score_axis": row.get("score_axis") or row.get("dominant_axis"),
+                "evidence_grade": row.get("evidence_grade"),
+                "evidence_semantics": row.get("evidence_semantics"),
+                "source_paths": _as_list(row.get("source_paths")),
+                "source_candidate_id": row.get("source_candidate_id"),
+                "candidate_archive_sha256": row.get("candidate_archive_sha256") or row.get("archive_sha256"),
+                "candidate_archive_bytes": row.get("candidate_archive_bytes") or row.get("archive_bytes"),
+                "candidate_trust_region_blockers": _as_list(row.get("candidate_trust_region_blockers")),
+                "local_axis": row.get("local_axis"),
+                "target_axis": row.get("target_axis"),
+                "local_score": row.get("local_score"),
+                "projected_contest_score": row.get("projected_contest_score"),
+                "conservative_projected_contest_score": row.get("conservative_projected_contest_score"),
+                "master_gradient_signal": row.get("master_gradient_signal") or row.get("master_gradient_provenance"),
+                "canonical_equation_provenance": row.get("canonical_equation_provenance"),
+                "atom_ids": _as_list(row.get("atom_ids")),
+                "blockers": row.get("dispatch_blockers") or [],
+            }
+        )
     if not units:
         raise ByteShavingCampaignError("optimizer queue has no rows with saved-byte estimates")
     return {
@@ -1230,6 +1166,7 @@ def build_signal_surface_from_candidate_queue(
         "auth_eval_refs": _as_list(queue_payload.get("auth_eval_refs")),
         "mlx_calibration_refs": _as_list(queue_payload.get("mlx_calibration_refs")),
         "scorer_response_refs": _as_list(queue_payload.get("scorer_response_refs")),
+        "inverse_scorer_surface_refs": _as_list(queue_payload.get("inverse_scorer_surface_refs")),
         "units": units,
         **FALSE_AUTHORITY,
     }
@@ -1252,9 +1189,7 @@ def build_signal_surface_from_engineered_correction_targeting(
     """
 
     if targeting_payload.get("schema") != ENGINEERED_CORRECTION_TARGETING_SCHEMA:
-        raise ByteShavingCampaignError(
-            f"expected {ENGINEERED_CORRECTION_TARGETING_SCHEMA}"
-        )
+        raise ByteShavingCampaignError(f"expected {ENGINEERED_CORRECTION_TARGETING_SCHEMA}")
     try:
         require_no_truthy_authority_fields(
             targeting_payload,
@@ -1266,15 +1201,9 @@ def build_signal_surface_from_engineered_correction_targeting(
         raise ByteShavingCampaignError("max_targets must be >= 1")
     default_delta = _finite_float(default_predicted_quality_score_delta)
     if default_delta is None:
-        raise ByteShavingCampaignError(
-            "default_predicted_quality_score_delta must be finite"
-        )
+        raise ByteShavingCampaignError("default_predicted_quality_score_delta must be finite")
 
-    targets = [
-        item
-        for item in _as_list(targeting_payload.get("top_per_pair_targets"))
-        if isinstance(item, Mapping)
-    ]
+    targets = [item for item in _as_list(targeting_payload.get("top_per_pair_targets")) if isinstance(item, Mapping)]
     if max_targets is not None:
         targets = targets[:max_targets]
     units: list[dict[str, Any]] = []
@@ -1309,50 +1238,47 @@ def build_signal_surface_from_engineered_correction_targeting(
                 "engineered_correction_target_requires_exact_auth_eval",
             ],
         }
-        units.append({
-            "unit_id": unit_id,
-            "unit_kind": "correction_target",
-            "source_index": index,
-            "source_span": [byte_index, byte_index + 1],
-            "candidate_saved_bytes": 0,
-            "predicted_quality_score_delta": default_delta,
-            "confidence": confidence if confidence is not None else 0.5,
-            "operation_families": ["apply_engineered_correction"],
-            "operations": [operation],
-            "score_axis": targeting_payload.get("measurement_axis"),
-            "evidence_grade": "[predicted]",
-            "evidence_semantics": (
-                "legacy_engineered_correction_targeting_subsumed_by_"
-                "byte_shaving_surface"
-            ),
-            "source_candidate_id": targeting_payload.get("consumer_id"),
-            "master_gradient_signal": {
-                "archive_sha256": archive_sha,
-                "measurement_axis": targeting_payload.get("measurement_axis"),
-                "measurement_hardware": targeting_payload.get("measurement_hardware"),
-                "consumer_id": targeting_payload.get("consumer_id"),
-            },
-            "engineered_correction_signal": {
-                "schema": ENGINEERED_CORRECTION_TARGETING_SCHEMA,
-                "pair_index": pair_index,
-                "byte_index": byte_index,
-                "per_pair_distortion_magnitude": magnitude,
-                "per_pair_variance_rank": variance_rank,
-                "targets_per_pair": targeting_payload.get("targets_per_pair"),
-                "total_targets": targeting_payload.get("total_targets"),
-                "planning_role": "quality_spend_target_not_byte_savings",
-            },
-            "blockers": [
-                "engineered_correction_target_is_planning_only",
-                "requires_correction_artifact_before_local_patch",
-                "requires_engineered_correction_readiness_audit",
-                "requires_exact_auth_eval_before_score_claim",
-            ],
-        })
-    if not units:
-        raise ByteShavingCampaignError(
-            "engineered correction targeting payload has no plannable targets"
+        units.append(
+            {
+                "unit_id": unit_id,
+                "unit_kind": "correction_target",
+                "source_index": index,
+                "source_span": [byte_index, byte_index + 1],
+                "candidate_saved_bytes": 0,
+                "predicted_quality_score_delta": default_delta,
+                "confidence": confidence if confidence is not None else 0.5,
+                "operation_families": ["apply_engineered_correction"],
+                "operations": [operation],
+                "score_axis": targeting_payload.get("measurement_axis"),
+                "evidence_grade": "[predicted]",
+                "evidence_semantics": ("legacy_engineered_correction_targeting_subsumed_by_byte_shaving_surface"),
+                "source_candidate_id": targeting_payload.get("consumer_id"),
+                "master_gradient_signal": {
+                    "archive_sha256": archive_sha,
+                    "measurement_axis": targeting_payload.get("measurement_axis"),
+                    "measurement_hardware": targeting_payload.get("measurement_hardware"),
+                    "consumer_id": targeting_payload.get("consumer_id"),
+                },
+                "engineered_correction_signal": {
+                    "schema": ENGINEERED_CORRECTION_TARGETING_SCHEMA,
+                    "pair_index": pair_index,
+                    "byte_index": byte_index,
+                    "per_pair_distortion_magnitude": magnitude,
+                    "per_pair_variance_rank": variance_rank,
+                    "targets_per_pair": targeting_payload.get("targets_per_pair"),
+                    "total_targets": targeting_payload.get("total_targets"),
+                    "planning_role": "quality_spend_target_not_byte_savings",
+                },
+                "blockers": [
+                    "engineered_correction_target_is_planning_only",
+                    "requires_correction_artifact_before_local_patch",
+                    "requires_engineered_correction_readiness_audit",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+            }
         )
+    if not units:
+        raise ByteShavingCampaignError("engineered correction targeting payload has no plannable targets")
     return {
         "schema": SIGNAL_SURFACE_SCHEMA,
         "campaign_id": campaign_id,
@@ -1460,9 +1386,7 @@ def build_signal_surface_from_master_gradient_anchor(
         sensitivity = np.abs(arr).sum(axis=2).mean(axis=1).astype(np.float64)
         tensor_kind = "per_pair_per_byte_v1_mean_abs"
     else:
-        raise ByteShavingCampaignError(
-            f"master-gradient array must have shape (N, 3) or (N, P, 3); got {arr.shape}"
-        )
+        raise ByteShavingCampaignError(f"master-gradient array must have shape (N, 3) or (N, P, 3); got {arr.shape}")
     if sensitivity.size == 0:
         raise ByteShavingCampaignError("master-gradient array is empty")
     declared_n = _finite_int(anchor.get("n_bytes"))
@@ -1482,15 +1406,17 @@ def build_signal_surface_from_master_gradient_anchor(
         sensitivity_sum = float(span_sensitivity.sum())
         length = end - start
         quality_cost = max(0.0, sensitivity_sum * quality_cost_multiplier)
-        span_rows.append({
-            "start": start,
-            "end": end,
-            "length": length,
-            "mean_sensitivity": float(span_sensitivity.mean()),
-            "max_sensitivity": float(span_sensitivity.max()),
-            "sensitivity_sum": sensitivity_sum,
-            "quality_cost": quality_cost,
-        })
+        span_rows.append(
+            {
+                "start": start,
+                "end": end,
+                "length": length,
+                "mean_sensitivity": float(span_sensitivity.mean()),
+                "max_sensitivity": float(span_sensitivity.max()),
+                "sensitivity_sum": sensitivity_sum,
+                "quality_cost": quality_cost,
+            }
+        )
     span_rows.sort(
         key=lambda row: (
             float(row["quality_cost"]),
@@ -1513,63 +1439,65 @@ def build_signal_surface_from_master_gradient_anchor(
         saved_bytes = int(row["length"])
         quality_cost = float(row["quality_cost"])
         mean_sensitivity = float(row["mean_sensitivity"])
-        units.append({
-            "unit_id": f"mg_byte_span_{start:07d}_{end:07d}",
-            "unit_kind": "byte_range",
-            "source_index": start,
-            "source_span": {"start": start, "end_exclusive": end},
-            "candidate_saved_bytes": saved_bytes,
-            "predicted_quality_score_cost": quality_cost,
-            "confidence": 0.55 if mean_sensitivity == 0.0 else 0.35,
-            "operation_families": [
-                "null_remove_or_seed",
-                "entropy_recode",
-                "delta_encode",
-            ],
-            "operations": [
-                {
-                    "operation_id": "null_remove_or_seed",
-                    "operation_family": "null_remove_or_seed",
-                    "candidate_saved_bytes": saved_bytes,
-                    "predicted_quality_score_cost": quality_cost,
-                    "blockers": blockers,
+        units.append(
+            {
+                "unit_id": f"mg_byte_span_{start:07d}_{end:07d}",
+                "unit_kind": "byte_range",
+                "source_index": start,
+                "source_span": {"start": start, "end_exclusive": end},
+                "candidate_saved_bytes": saved_bytes,
+                "predicted_quality_score_cost": quality_cost,
+                "confidence": 0.55 if mean_sensitivity == 0.0 else 0.35,
+                "operation_families": [
+                    "null_remove_or_seed",
+                    "entropy_recode",
+                    "delta_encode",
+                ],
+                "operations": [
+                    {
+                        "operation_id": "null_remove_or_seed",
+                        "operation_family": "null_remove_or_seed",
+                        "candidate_saved_bytes": saved_bytes,
+                        "predicted_quality_score_cost": quality_cost,
+                        "blockers": blockers,
+                    },
+                    {
+                        "operation_id": "entropy_recode",
+                        "operation_family": "entropy_recode",
+                        "candidate_saved_bytes": saved_bytes,
+                        "predicted_quality_score_cost": quality_cost,
+                        "blockers": blockers,
+                    },
+                    {
+                        "operation_id": "delta_encode",
+                        "operation_family": "delta_encode",
+                        "candidate_saved_bytes": max(1, saved_bytes // 2),
+                        "predicted_quality_score_cost": quality_cost * 0.5,
+                        "blockers": blockers,
+                    },
+                ],
+                "master_gradient_score_cost": quality_cost,
+                "master_gradient_signal": {
+                    "archive_sha256": archive_sha256,
+                    "measurement_axis": anchor.get("measurement_axis"),
+                    "measurement_hardware": anchor.get("measurement_hardware"),
+                    "measurement_call_id": anchor.get("measurement_call_id"),
+                    "gradient_tensor_kind": anchor.get("gradient_tensor_kind") or tensor_kind,
+                    "gradient_array_path": _repo_rel(npy_path, repo),
+                    "low_sensitivity_quantile": low_sensitivity_quantile,
+                    "threshold": threshold,
+                    "span_sensitivity_sum": float(row["sensitivity_sum"]),
+                    "span_mean_sensitivity": mean_sensitivity,
+                    "span_max_sensitivity": float(row["max_sensitivity"]),
+                    "quality_cost_multiplier": quality_cost_multiplier,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
                 },
-                {
-                    "operation_id": "entropy_recode",
-                    "operation_family": "entropy_recode",
-                    "candidate_saved_bytes": saved_bytes,
-                    "predicted_quality_score_cost": quality_cost,
-                    "blockers": blockers,
-                },
-                {
-                    "operation_id": "delta_encode",
-                    "operation_family": "delta_encode",
-                    "candidate_saved_bytes": max(1, saved_bytes // 2),
-                    "predicted_quality_score_cost": quality_cost * 0.5,
-                    "blockers": blockers,
-                },
-            ],
-            "master_gradient_score_cost": quality_cost,
-            "master_gradient_signal": {
-                "archive_sha256": archive_sha256,
-                "measurement_axis": anchor.get("measurement_axis"),
-                "measurement_hardware": anchor.get("measurement_hardware"),
-                "measurement_call_id": anchor.get("measurement_call_id"),
-                "gradient_tensor_kind": anchor.get("gradient_tensor_kind") or tensor_kind,
-                "gradient_array_path": _repo_rel(npy_path, repo),
-                "low_sensitivity_quantile": low_sensitivity_quantile,
-                "threshold": threshold,
-                "span_sensitivity_sum": float(row["sensitivity_sum"]),
-                "span_mean_sensitivity": mean_sensitivity,
-                "span_max_sensitivity": float(row["max_sensitivity"]),
-                "quality_cost_multiplier": quality_cost_multiplier,
-                "score_claim": False,
-                "promotion_eligible": False,
-                "ready_for_exact_eval_dispatch": False,
-            },
-            "score_axis": anchor.get("measurement_axis"),
-            "blockers": blockers,
-        })
+                "score_axis": anchor.get("measurement_axis"),
+                "blockers": blockers,
+            }
+        )
     if not units:
         raise ByteShavingCampaignError("master-gradient anchor produced no byte-range units")
     return {
@@ -1622,11 +1550,7 @@ def build_signal_surface_from_inverse_action_functional(
     except ValueError as exc:
         raise ByteShavingCampaignError(str(exc)) from exc
     water_bucket = _mapping(action_payload.get("water_bucket"))
-    selected_cells = [
-        item
-        for item in _as_list(water_bucket.get("selected_cells"))
-        if isinstance(item, Mapping)
-    ]
+    selected_cells = [item for item in _as_list(water_bucket.get("selected_cells")) if isinstance(item, Mapping)]
     full_cells_by_atom = {
         str(item.get("atom_id") or ""): item
         for item in _as_list(action_payload.get("cells"))
@@ -1701,13 +1625,9 @@ def build_signal_surface_from_inverse_action_functional(
             {
                 "kind": "inverse_steganalysis_action_functional",
                 "schema": action_payload.get("schema"),
-                "cell_count": _mapping(action_payload.get("integral_totals")).get(
-                    "cell_count"
-                ),
+                "cell_count": _mapping(action_payload.get("integral_totals")).get("cell_count"),
                 "selected_count": water_bucket.get("selected_count"),
-                "selected_expected_score_gain": water_bucket.get(
-                    "selected_expected_score_gain"
-                ),
+                "selected_expected_score_gain": water_bucket.get("selected_expected_score_gain"),
                 **FALSE_AUTHORITY,
             }
         ],

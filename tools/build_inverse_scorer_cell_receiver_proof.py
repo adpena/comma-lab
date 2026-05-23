@@ -40,11 +40,8 @@ def main(argv: list[str] | None = None) -> int:
             candidate_manifest=args.candidate_manifest,
             repo_root=args.repo_root,
         )
-        if args.fail_if_not_ready and proof["ready_for_exact_eval_runtime"] is not True:
-            raise SystemExit(
-                "inverse scorer cell receiver proof not ready: "
-                + ",".join(proof.get("blockers") or [])
-            )
+        if args.fail_if_not_ready and proof["ready_for_receiver_verification"] is not True:
+            raise SystemExit("inverse scorer cell receiver proof not ready: " + ",".join(proof.get("blockers") or []))
         write_json_artifact(
             args.json_out,
             proof,
@@ -59,9 +56,8 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "schema": "inverse_scorer_cell_receiver_proof_result.v1",
                 "json_out": str(args.json_out),
-                "ready_for_exact_eval_runtime": proof[
-                    "ready_for_exact_eval_runtime"
-                ],
+                "ready_for_receiver_verification": proof["ready_for_receiver_verification"],
+                "ready_for_exact_eval_runtime": proof["ready_for_exact_eval_runtime"],
                 "blockers": proof.get("blockers") or [],
                 "score_claim": False,
                 "promotion_eligible": False,

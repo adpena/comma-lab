@@ -23,6 +23,12 @@ from tac.optimization.byte_range_entropy_recode_chain import (
 )
 from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY, PLAN_SCHEMA
 from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
+from tac.optimization.inverse_scorer_cell_chain import (
+    CHAIN_MANIFEST_NAME as INVERSE_SCORER_CELL_CHAIN_MANIFEST,
+)
+from tac.optimization.inverse_scorer_cell_chain import (
+    CHAIN_SCHEMA as INVERSE_SCORER_CELL_CHAIN_SCHEMA,
+)
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     ordered_unique,
@@ -55,6 +61,7 @@ TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
 INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 INVERSE_SCORER_CELL_TOOL = "tools/materialize_inverse_scorer_cell_candidate.py"
+INVERSE_SCORER_CELL_CHAIN_TOOL = "tools/run_inverse_scorer_cell_candidate_chain.py"
 BYTE_RANGE_CHAIN_MANIFEST = CHAIN_MANIFEST_NAME
 INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 INVERSE_SCORER_CELL_CANDIDATE_SCHEMA = "inverse_scorer_cell_candidate_v1"
@@ -787,11 +794,14 @@ def _inverse_scorer_cell_candidate_command(
     raw_digest = context.get("raw_contest_video_digest")
     if not isinstance(raw_digest, str) or not raw_digest.strip():
         blockers.append("materializer_context_missing:raw_contest_video_digest")
+    output_dir = _path_context_value(context, "chain_output_dir")
+    if output_dir is None:
+        output_dir = _path_context_value(context, "output_dir")
     output_archive = _path_context_value(context, "output_archive")
-    if output_archive is None:
+    if output_dir is None and output_archive is None:
         blockers.append("materializer_context_missing:output_archive")
     manifest_out = _path_context_value(context, "manifest_out")
-    if manifest_out is None:
+    if output_dir is None and manifest_out is None:
         blockers.append("materializer_context_missing:manifest_out")
     if blockers:
         return [], blockers, {}
@@ -799,25 +809,44 @@ def _inverse_scorer_cell_candidate_command(
     assert template is not None
     assert action_functional is not None
     assert isinstance(raw_digest, str)
-    assert output_archive is not None
-    assert manifest_out is not None
-    command = [
-        ".venv/bin/python",
-        INVERSE_SCORER_CELL_TOOL,
-        "--candidate-archive-template",
-        template,
-        "--inverse-action-functional",
-        action_functional,
-        "--raw-contest-video-digest",
-        raw_digest,
-        "--output-archive",
-        output_archive,
-        "--manifest-out",
-        manifest_out,
-    ]
-    runtime_proof = _path_context_value(context, "runtime_consumption_proof")
-    if runtime_proof is not None:
-        command.extend(["--runtime-consumption-proof", runtime_proof])
+    if output_dir is not None:
+        command = [
+            ".venv/bin/python",
+            INVERSE_SCORER_CELL_CHAIN_TOOL,
+            "--candidate-archive-template",
+            template,
+            "--inverse-action-functional",
+            action_functional,
+            "--raw-contest-video-digest",
+            raw_digest,
+            "--output-dir",
+            output_dir,
+        ]
+        min_free_bytes = _finite_int(context.get("min_free_bytes"))
+        if min_free_bytes is not None:
+            command.extend(["--min-free-bytes", str(min_free_bytes)])
+        if context.get("fail_if_receiver_blocked") is True:
+            command.append("--fail-if-receiver-blocked")
+    else:
+        assert output_archive is not None
+        assert manifest_out is not None
+        command = [
+            ".venv/bin/python",
+            INVERSE_SCORER_CELL_TOOL,
+            "--candidate-archive-template",
+            template,
+            "--inverse-action-functional",
+            action_functional,
+            "--raw-contest-video-digest",
+            raw_digest,
+            "--output-archive",
+            output_archive,
+            "--manifest-out",
+            manifest_out,
+        ]
+        runtime_proof = _path_context_value(context, "runtime_consumption_proof")
+        if runtime_proof is not None:
+            command.extend(["--runtime-consumption-proof", runtime_proof])
     for atom_id in _path_list_context_value(context, "atom_id"):
         command.extend(["--atom-id", atom_id])
     for atom_id in _path_list_context_value(context, "atom_ids"):
@@ -825,14 +854,21 @@ def _inverse_scorer_cell_candidate_command(
     selected_limit = _finite_int(context.get("selected_limit"))
     if selected_limit is not None:
         command.extend(["--selected-limit", str(selected_limit)])
-    if context.get("allow_overwrite") is True:
+    if output_dir is None and context.get("allow_overwrite") is True:
         command.append("--allow-overwrite")
-    expected_output_sha = context.get("expected_output_sha256")
-    if isinstance(expected_output_sha, str) and expected_output_sha.strip():
-        command.extend(["--expected-output-sha256", expected_output_sha])
-    expected_manifest_sha = context.get("expected_manifest_sha256")
-    if isinstance(expected_manifest_sha, str) and expected_manifest_sha.strip():
-        command.extend(["--expected-manifest-sha256", expected_manifest_sha])
+        expected_output_sha = context.get("expected_output_sha256")
+        if isinstance(expected_output_sha, str) and expected_output_sha.strip():
+            command.extend(["--expected-output-sha256", expected_output_sha])
+        expected_manifest_sha = context.get("expected_manifest_sha256")
+        if isinstance(expected_manifest_sha, str) and expected_manifest_sha.strip():
+            command.extend(["--expected-manifest-sha256", expected_manifest_sha])
+    if output_dir is not None:
+        return command, [], {
+            "artifact_paths": [output_dir],
+            "recursive": True,
+            "max_recursive_entries": 512,
+            "include_postcondition_paths": True,
+        }
     return command, [], {
         "artifact_paths": [output_archive, manifest_out],
         "include_postcondition_paths": True,
@@ -957,8 +993,18 @@ def build_materializer_work_queue(
                 context
             )
             blockers.extend(command_blockers)
+            output_dir = _path_context_value(context, "chain_output_dir")
+            if output_dir is None:
+                output_dir = _path_context_value(context, "output_dir")
             manifest_out = _path_context_value(context, "manifest_out")
-            if command and manifest_out is not None:
+            if command and output_dir is not None:
+                postcondition = {
+                    "type": "json_equals",
+                    "path": str(Path(output_dir) / INVERSE_SCORER_CELL_CHAIN_MANIFEST),
+                    "key": "schema",
+                    "equals": INVERSE_SCORER_CELL_CHAIN_SCHEMA,
+                }
+            elif command and manifest_out is not None:
                 postcondition = {
                     "type": "json_equals",
                     "path": manifest_out,
