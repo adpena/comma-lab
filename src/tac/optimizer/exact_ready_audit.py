@@ -27,6 +27,7 @@ from tac.optimizer.exact_readiness import (
     sha256_file,
     terminal_claim_result_conflicts,
     utc_now,
+    validate_serialized_archive_delta_contract,
 )
 from tac.zipwire_archive import inspect_zip_headers
 
@@ -375,6 +376,13 @@ def _ready_row_live_custody_blockers(
                         "ready_row_archive_bytes_mismatch:"
                         f"{actual_archive_bytes}!={expected_bytes}"
                     )
+            delta_blockers, delta_facts = validate_serialized_archive_delta_contract(
+                row,
+                actual_candidate_archive_bytes=actual_archive_bytes,
+            )
+            blockers.extend(f"ready_row_{blocker}" for blocker in delta_blockers)
+            if delta_facts:
+                facts["serialized_archive_delta"] = delta_facts
             try:
                 zipwire = inspect_zip_headers(archive_path)
             except (OSError, ValueError) as exc:

@@ -31,6 +31,14 @@ from tac.hnerv_frontier_defaults import (
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
+from tac.optimization.serialized_archive_economics import (
+    CANDIDATE_ARCHIVE_LARGER_BLOCKER,
+    MISSING_ARCHIVE_BYTES_BLOCKER,
+    MODELED_SAVINGS_WITHOUT_REALIZED_BLOCKER,
+    SERIALIZED_ARCHIVE_DELTA_SCHEMA,
+    SERIALIZED_SAVINGS_NOT_POSITIVE_BLOCKER,
+    serialized_archive_delta_blockers,
+)
 from tac.zipwire_archive import inspect_zip_headers
 
 QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
@@ -222,6 +230,20 @@ def as_positive_int(value: Any) -> int | None:
     return None
 
 
+def as_integral(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if text and text.lstrip("-").isdigit():
+            return int(text)
+    return None
+
+
 def as_bool(value: Any) -> bool | None:
     if isinstance(value, bool):
         return value
@@ -293,6 +315,9 @@ def source_archive_byte_value(row: Mapping[str, Any]) -> int | None:
         value = row.get(key)
         if isinstance(value, Mapping):
             mappings.append(value)
+    delta = row.get("serialized_archive_delta")
+    if isinstance(delta, Mapping):
+        mappings.append(delta)
     for mapping in mappings:
         for key in (
             "source_archive_bytes",
@@ -308,6 +333,12 @@ def source_archive_byte_value(row: Mapping[str, Any]) -> int | None:
 def is_rate_only_control(row: Mapping[str, Any]) -> bool:
     if as_bool(row.get("rate_only_control")) is True:
         return True
+    delta = row.get("serialized_archive_delta")
+    if isinstance(delta, Mapping):
+        if as_bool(delta.get("rate_only_control")) is True:
+            return True
+        if str(delta.get("status") or "").strip().lower() == "rate_only_control":
+            return True
     for key in (
         "control_kind",
         "exact_eval_control_kind",
@@ -364,6 +395,9 @@ def score_affecting_change_proof(row: Mapping[str, Any]) -> tuple[bool, list[str
         value = row.get(key)
         if isinstance(value, Mapping):
             proof_mappings.append(value)
+    delta = row.get("serialized_archive_delta")
+    if isinstance(delta, Mapping):
+        proof_mappings.append(delta)
 
     proofs: list[str] = []
     explicit_false: list[str] = []
@@ -392,6 +426,131 @@ def score_affecting_change_proof(row: Mapping[str, Any]) -> tuple[bool, list[str
     if explicit_false:
         return False, sorted(set(explicit_false))
     return False, []
+
+
+def _expected_serialized_delta_status(
+    *,
+    source_bytes: int | None,
+    candidate_bytes: int | None,
+    rate_only_control: bool,
+) -> str:
+    if source_bytes is None or candidate_bytes is None:
+        return "missing_archive_bytes"
+    realized_saved = source_bytes - candidate_bytes
+    if rate_only_control:
+        return "rate_only_control"
+    if realized_saved > 0:
+        return "realized_saving"
+    if realized_saved == 0:
+        return "zero_delta"
+    return "realized_cost"
+
+
+def validate_serialized_archive_delta_contract(
+    row: Mapping[str, Any],
+    *,
+    actual_candidate_archive_bytes: int | None = None,
+) -> tuple[list[str], dict[str, Any]]:
+    """Validate canonical archive-byte economics if a row carries the contract."""
+
+    raw = row.get("serialized_archive_delta")
+    if raw is None:
+        return [], {}
+    if not isinstance(raw, Mapping):
+        return ["serialized_archive_delta_not_object"], {"present": True}
+
+    blockers = serialized_archive_delta_blockers(raw)
+    schema = raw.get("schema")
+    source_bytes = as_positive_int(raw.get("source_archive_bytes"))
+    candidate_bytes = as_positive_int(raw.get("candidate_archive_bytes"))
+    declared_delta = as_integral(raw.get("archive_delta_bytes"))
+    declared_saved = as_integral(raw.get("realized_saved_bytes"))
+    require_realized_saving = as_bool(raw.get("require_realized_saving")) is True
+    rate_only_control = as_bool(raw.get("rate_only_control")) is True
+    status = str(raw.get("status") or "").strip()
+    expected_status = _expected_serialized_delta_status(
+        source_bytes=source_bytes,
+        candidate_bytes=candidate_bytes,
+        rate_only_control=rate_only_control,
+    )
+    facts: dict[str, Any] = {
+        "present": True,
+        "schema": schema,
+        "status": status or None,
+        "expected_status": expected_status,
+        "source_archive_bytes": source_bytes,
+        "candidate_archive_bytes": candidate_bytes,
+        "archive_delta_bytes": declared_delta,
+        "realized_saved_bytes": declared_saved,
+        "require_realized_saving": require_realized_saving,
+        "rate_only_control": rate_only_control,
+        "contract_blockers": list(blockers),
+    }
+
+    if schema != SERIALIZED_ARCHIVE_DELTA_SCHEMA:
+        blockers.append(f"serialized_archive_delta_schema_unsupported:{schema!r}")
+    if not status:
+        blockers.append("serialized_archive_delta_status_missing")
+    elif status != expected_status:
+        blockers.append(
+            f"serialized_archive_delta_status_mismatch:{status}!={expected_status}"
+        )
+    if source_bytes is None or candidate_bytes is None:
+        blockers.append(MISSING_ARCHIVE_BYTES_BLOCKER)
+    else:
+        computed_delta = candidate_bytes - source_bytes
+        computed_saved = source_bytes - candidate_bytes
+        facts["computed_archive_delta_bytes"] = computed_delta
+        facts["computed_realized_saved_bytes"] = computed_saved
+        if declared_delta is None:
+            blockers.append("serialized_archive_delta_archive_delta_bytes_missing")
+        elif declared_delta != computed_delta:
+            blockers.append(
+                "serialized_archive_delta_archive_delta_bytes_mismatch:"
+                f"{declared_delta}!={computed_delta}"
+            )
+        if declared_saved is None:
+            blockers.append("serialized_archive_delta_realized_saved_bytes_missing")
+        elif declared_saved != computed_saved:
+            blockers.append(
+                "serialized_archive_delta_realized_saved_bytes_mismatch:"
+                f"{declared_saved}!={computed_saved}"
+            )
+        savings_realized = as_bool(raw.get("savings_realized"))
+        expected_savings_realized = computed_saved > 0
+        facts["savings_realized"] = savings_realized
+        facts["expected_savings_realized"] = expected_savings_realized
+        if savings_realized is None:
+            blockers.append("serialized_archive_delta_savings_realized_missing")
+        elif savings_realized != expected_savings_realized:
+            blockers.append(
+                "serialized_archive_delta_savings_realized_mismatch:"
+                f"{savings_realized}!={expected_savings_realized}"
+            )
+        if actual_candidate_archive_bytes is not None and (
+            candidate_bytes != actual_candidate_archive_bytes
+        ):
+            blockers.append(
+                "serialized_archive_delta_candidate_bytes_mismatch:"
+                f"{candidate_bytes}!={actual_candidate_archive_bytes}"
+            )
+
+    if require_realized_saving and expected_status != "realized_saving":
+        if expected_status == "realized_cost":
+            blockers.append(CANDIDATE_ARCHIVE_LARGER_BLOCKER)
+        else:
+            blockers.append(SERIALIZED_SAVINGS_NOT_POSITIVE_BLOCKER)
+
+    modeled_saved = as_integral(raw.get("modeled_saved_bytes"))
+    if (
+        modeled_saved is not None
+        and modeled_saved > 0
+        and not rate_only_control
+        and expected_status != "realized_saving"
+    ):
+        blockers.append(MODELED_SAVINGS_WITHOUT_REALIZED_BLOCKER)
+
+    return sorted(set(blockers)), facts
 
 
 def manifest_sha(payload: Mapping[str, Any]) -> str | None:
@@ -1128,6 +1287,18 @@ def readiness_blockers(
             if int(zipwire.get("member_count") or 0) < 1:
                 blockers.append("archive_zip_empty")
 
+    serialized_delta_blockers, serialized_delta_facts = (
+        validate_serialized_archive_delta_contract(
+            row,
+            actual_candidate_archive_bytes=facts.get("archive_bytes")
+            if isinstance(facts.get("archive_bytes"), int)
+            else None,
+        )
+    )
+    blockers.extend(serialized_delta_blockers)
+    if serialized_delta_facts:
+        facts["serialized_archive_delta"] = serialized_delta_facts
+
     source_bytes = source_archive_byte_value(row)
     if source_bytes is not None:
         facts["source_archive_bytes"] = source_bytes
@@ -1405,6 +1576,7 @@ def promoted_row(
         "score_affecting_change_proofs": list(
             facts.get("score_affecting_change_proofs") or []
         ),
+        "serialized_archive_delta": source_row.get("serialized_archive_delta"),
         "readiness_gate_tool": TOOL_NAME,
         "readiness_gate_generated_at_utc": utc_now(),
         "operator_override_reason": operator_override_reason,
@@ -1492,6 +1664,7 @@ def promote_candidate_for_exact_eval(
             "archive_bytes": facts.get("archive_bytes"),
             "source_archive_bytes": facts.get("source_archive_bytes"),
             "realized_archive_byte_delta": facts.get("realized_archive_byte_delta"),
+            "serialized_archive_delta": facts.get("serialized_archive_delta"),
             "inverse_scorer_full_frame_output_parity": facts.get(
                 "inverse_scorer_full_frame_output_parity"
             ),
@@ -1579,5 +1752,7 @@ __all__ = [
     "ACTIVE_SCORE_FRONTIER_SCORE",
     "QUEUE_SCHEMA",
     "ExactReadinessError",
+    "as_integral",
     "promote_candidate_for_exact_eval",
+    "validate_serialized_archive_delta_contract",
 ]

@@ -16,6 +16,12 @@ from tac.hdm8_selector_cuda_gate import (
     HDM8_SELECTOR_CUDA_COMPONENT_GATE_SCHEMA,
     SELECTOR_CUDA_TRANSFER_CALIBRATION_SCHEMA,
 )
+from tac.optimization.serialized_archive_economics import (
+    CANDIDATE_ARCHIVE_LARGER_BLOCKER,
+    MISSING_ARCHIVE_BYTES_BLOCKER,
+    MODELED_SAVINGS_WITHOUT_REALIZED_BLOCKER,
+    build_serialized_archive_delta_contract,
+)
 from tac.optimizer.exact_readiness import (
     ACTIVE_FLOOR_ARCHIVE_BYTES,
     ACTIVE_FLOOR_SCORE,
@@ -260,6 +266,29 @@ def _add_source_archive_delta(
     queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _add_serialized_archive_delta(
+    queue: Path,
+    *,
+    source_archive_bytes: int | None,
+    candidate_archive_bytes: int | None,
+    modeled_saved_bytes: int | None = None,
+    require_realized_saving: bool = True,
+    rate_only_control: bool = False,
+) -> dict[str, object]:
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    contract = build_serialized_archive_delta_contract(
+        source_archive_bytes=source_archive_bytes,
+        candidate_archive_bytes=candidate_archive_bytes,
+        modeled_saved_bytes=modeled_saved_bytes,
+        require_realized_saving=require_realized_saving,
+        rate_only_control=rate_only_control,
+    )
+    row["serialized_archive_delta"] = contract
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return contract
+
+
 def _hdm8_selector_gate(
     *,
     archive_sha: str,
@@ -397,6 +426,126 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert row["cpu_or_proxy_score_not_cuda_evidence"] is True
     assert row["cuda_gap_review_required_before_promotion"] is True
     assert promoted["evidence_boundary"]["cpu_or_proxy_score_not_cuda_evidence"] is True
+
+
+def test_refuses_serialized_archive_delta_missing_bytes_contract(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _add_serialized_archive_delta(
+        queue,
+        source_archive_bytes=None,
+        candidate_archive_bytes=None,
+        modeled_saved_bytes=128,
+        require_realized_saving=True,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert MISSING_ARCHIVE_BYTES_BLOCKER in result["report"]["blockers"]
+    assert MODELED_SAVINGS_WITHOUT_REALIZED_BLOCKER in result["report"]["blockers"]
+    assert (
+        result["report"]["facts"]["serialized_archive_delta"]["status"]
+        == "missing_archive_bytes"
+    )
+
+
+def test_promotes_realized_serialized_archive_saving_and_preserves_contract(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.pop("score_affecting_payload_changed")
+    row.pop("charged_bits_changed")
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    contract = _add_serialized_archive_delta(
+        queue,
+        source_archive_bytes=archive_bytes + 17,
+        candidate_archive_bytes=archive_bytes,
+        modeled_saved_bytes=17,
+        require_realized_saving=True,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    promoted_row = result["promoted_queue"]["dispatch_ready"][0]
+    assert promoted_row["serialized_archive_delta"] == contract
+    assert (
+        result["report"]["facts"]["serialized_archive_delta"]["computed_realized_saved_bytes"]
+        == 17
+    )
+    assert (
+        "source_archive_bytes!=candidate_archive_bytes"
+        in result["report"]["facts"]["score_affecting_change_proofs"]
+    )
+
+
+def test_refuses_required_serialized_archive_saving_when_candidate_is_larger(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _add_serialized_archive_delta(
+        queue,
+        source_archive_bytes=archive_bytes - 1,
+        candidate_archive_bytes=archive_bytes,
+        require_realized_saving=True,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert CANDIDATE_ARCHIVE_LARGER_BLOCKER in result["report"]["blockers"]
+    assert (
+        result["report"]["facts"]["serialized_archive_delta"]["expected_status"]
+        == "realized_cost"
+    )
+
+
+def test_refuses_serialized_archive_delta_candidate_byte_mismatch(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _add_serialized_archive_delta(
+        queue,
+        source_archive_bytes=archive_bytes + 9,
+        candidate_archive_bytes=archive_bytes + 1,
+        require_realized_saving=True,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert (
+        f"serialized_archive_delta_candidate_bytes_mismatch:"
+        f"{archive_bytes + 1}!={archive_bytes}"
+    ) in result["report"]["blockers"]
 
 
 def test_refuses_inverse_scorer_chain_without_strict_full_frame_parity(
@@ -691,6 +840,53 @@ def test_exact_ready_audit_refuses_stale_hdm8_selector_gate_regression(
     blockers = audit["stale_ready_rows"][0]["blockers"]
     assert any(
         blocker.startswith("ready_row_hdm8_selector_cuda_component_gate_not_passed")
+        for blocker in blockers
+    )
+
+
+def test_exact_ready_audit_refuses_stale_serialized_archive_delta_contract(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _add_serialized_archive_delta(
+        queue,
+        source_archive_bytes=archive_bytes + 5,
+        candidate_archive_bytes=archive_bytes,
+        require_realized_saving=True,
+    )
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+    exact_ready = tmp_path / "exact_ready_queue.json"
+    promoted = result["promoted_queue"]
+    promoted["dispatch_ready"][0]["serialized_archive_delta"]["candidate_archive_bytes"] = (
+        archive_bytes + 1
+    )
+    exact_ready.write_text(json.dumps(promoted, indent=2, sort_keys=True))
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n",
+        encoding="utf-8",
+    )
+
+    audit = audit_exact_ready_queue(
+        exact_ready,
+        repo_root=tmp_path,
+        dispatch_claims_path=claims,
+    )
+
+    assert audit["stale_ready_rows"]
+    blockers = audit["stale_ready_rows"][0]["blockers"]
+    assert any(
+        blocker.startswith(
+            "ready_row_serialized_archive_delta_candidate_bytes_mismatch"
+        )
         for blocker in blockers
     )
 
