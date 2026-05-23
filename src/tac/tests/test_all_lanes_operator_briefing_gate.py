@@ -287,6 +287,86 @@ def test_operator_briefing_dispatch_gate_rejects_invalid_claim_summary() -> None
     assert "dispatch_claim_summary:invalid_lane_id_count:1" in failures
 
 
+def test_operator_briefing_dispatch_gate_rejects_inverse_scorer_false_readiness() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    payload["non_dispatchable_readiness_artifacts"] = [
+        {
+            "kind": "inverse_scorer_cell_candidate_chain",
+            "receiver_contract_satisfied": True,
+            "inflate_parity_satisfied": False,
+            "ready_for_exact_eval_dispatch": True,
+            "score_claim": True,
+            "promotion_eligible": True,
+            "rank_or_kill_eligible": True,
+            "dispatch_blockers": ["exact_auth_eval_required_before_score_claim"],
+        }
+    ]
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "non_dispatchable_readiness_artifacts:"
+        "inverse_scorer_cell_candidate_chain:ready_for_exact_eval_dispatch_not_false"
+    ) in failures
+    assert (
+        "non_dispatchable_readiness_artifacts:"
+        "inverse_scorer_cell_candidate_chain:score_claim_not_false"
+    ) in failures
+    assert (
+        "non_dispatchable_readiness_artifacts:"
+        "inverse_scorer_cell_candidate_chain:promotion_eligible_true"
+    ) in failures
+    assert (
+        "non_dispatchable_readiness_artifacts:"
+        "inverse_scorer_cell_candidate_chain:rank_or_kill_eligible_true"
+    ) in failures
+    assert (
+        "non_dispatchable_readiness_artifacts:"
+        "inverse_scorer_cell_candidate_chain:missing_parity_blocker"
+    ) in failures
+
+
+def test_operator_briefing_dispatch_gate_requires_inverse_scorer_exact_auth_blocker() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    payload["non_dispatchable_readiness_artifacts"] = [
+        {
+            "kind": "inverse_scorer_cell_candidate_chain",
+            "receiver_contract_satisfied": True,
+            "inflate_parity_satisfied": True,
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "dispatch_blockers": [],
+        }
+    ]
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "non_dispatchable_readiness_artifacts:"
+        "inverse_scorer_cell_candidate_chain:missing_exact_auth_blocker"
+    ) in failures
+
+
 def test_operator_briefing_dispatch_gate_rejects_missing_structured_readiness() -> None:
     module = _load_all_lanes_module()
     payload = {

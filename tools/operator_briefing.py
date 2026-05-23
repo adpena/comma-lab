@@ -49,6 +49,8 @@ PR91_HPM1_READINESS_ARTIFACT = (
 PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
     REPO_ROOT / "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
 )
+INVERSE_SCORER_CHAIN_SCAN_ROOT = REPO_ROOT / "experiments/results"
+INVERSE_SCORER_CHAIN_MANIFEST_NAME = "inverse_scorer_cell_candidate_chain_manifest.json"
 DISPATCH_CLAIMS = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 EXACT_READY_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
@@ -778,13 +780,129 @@ def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
     }
 
 
+def _discover_inverse_scorer_cell_chain_manifests() -> list[Path]:
+    candidates: list[Path] = []
+    for pattern in (
+        INVERSE_SCORER_CHAIN_MANIFEST_NAME,
+        f"*/{INVERSE_SCORER_CHAIN_MANIFEST_NAME}",
+        f"*/*/{INVERSE_SCORER_CHAIN_MANIFEST_NAME}",
+    ):
+        candidates.extend(INVERSE_SCORER_CHAIN_SCAN_ROOT.glob(pattern))
+    return sorted(
+        {path for path in candidates if path.is_file()},
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+
+
+def _inverse_scorer_cell_chain_readiness_artifacts(
+    *,
+    limit: int = 3,
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for path in _discover_inverse_scorer_cell_chain_manifests()[:limit]:
+        payload = _load_json_file(path)
+        blockers = [
+            str(item)
+            for item in payload.get("readiness_blockers", [])
+            if str(item)
+        ]
+        candidate_archive = payload.get("candidate_archive")
+        if not isinstance(candidate_archive, dict):
+            candidate_archive = {}
+        next_gates = [
+            str(item)
+            for item in payload.get("next_required_gates", [])
+            if str(item)
+        ]
+        has_error = bool(payload.get("_error"))
+        receiver_ready = payload.get("receiver_contract_satisfied") is True
+        parity_ready = payload.get("inflate_parity_satisfied") is True
+        state = (
+            "AUDIT_ERROR_FAIL_CLOSED"
+            if has_error
+            else (
+                "BLOCKED_EXACT_AUTH_EVAL"
+                if receiver_ready and parity_ready
+                else "BLOCKED_PARITY_OR_RUNTIME"
+            )
+        )
+        rows.append(
+            {
+                "kind": "inverse_scorer_cell_candidate_chain",
+                "name": "IAS1 inverse-scorer candidate proof chain",
+                "state": state,
+                "artifact_path": _repo_rel(path),
+                "artifact_sha256": _sha256_file(path) if path.is_file() else "",
+                "candidate_archive": candidate_archive,
+                "candidate_archive_sha256": payload.get("candidate_archive_sha256") or "",
+                "candidate_archive_bytes": payload.get("candidate_archive_bytes"),
+                "runtime_adapter_ready": payload.get("runtime_adapter_ready") is True,
+                "receiver_proof_ready": payload.get("receiver_proof_ready") is True,
+                "receiver_contract_satisfied": receiver_ready,
+                "inflate_parity_satisfied": parity_ready,
+                "candidate_runtime_adapter_blocker_cleared": (
+                    payload.get("candidate_runtime_adapter_blocker_cleared") is True
+                ),
+                "full_frame_or_shell_parity_required": (
+                    payload.get("full_frame_or_shell_parity_required") is True
+                ),
+                "next_required_gates": next_gates,
+                "readiness_blockers": blockers,
+                "dispatch_blockers": [
+                    str(item)
+                    for item in payload.get("dispatch_blockers", blockers)
+                    if str(item)
+                ],
+                "ready_for_exact_eval_dispatch": False,
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "audit_errors": [str(payload["_error"])] if has_error else [],
+                "summary": (
+                    "IAS1 descriptor receiver evidence is visible to the operator; "
+                    "full-frame inflate parity and contest auth eval remain explicit gates."
+                ),
+                "next_patch": (
+                    "Attach a strict inflate parity proof, then route the same archive/runtime "
+                    "through claimed contest CPU/CUDA auth eval before any score language."
+                ),
+            }
+        )
+    return rows
+
+
 def _non_dispatchable_readiness_artifacts() -> list[dict[str, object]]:
-    return [_load_pr91_hpm1_readiness_artifact()]
+    return [
+        _load_pr91_hpm1_readiness_artifact(),
+        *_inverse_scorer_cell_chain_readiness_artifacts(),
+    ]
 
 
 def _format_non_dispatchable_readiness_artifacts() -> str:
     lines = []
     for artifact in _non_dispatchable_readiness_artifacts():
+        if artifact.get("kind") == "inverse_scorer_cell_candidate_chain":
+            blockers = ", ".join(str(item) for item in artifact["dispatch_blockers"])
+            gates = ", ".join(str(item) for item in artifact["next_required_gates"])
+            lines.append(
+                f"  • {artifact['kind']} — {artifact['name']}\n"
+                f"    state {artifact['state']}   ready_for_exact_eval_dispatch=false\n"
+                f"    chain artifact: {artifact['artifact_path']}\n"
+                f"    candidate sha: {artifact['candidate_archive_sha256']} "
+                f"bytes={artifact['candidate_archive_bytes']}\n"
+                f"    receiver: adapter={artifact['runtime_adapter_ready']} "
+                f"proof={artifact['receiver_proof_ready']} "
+                f"contract={artifact['receiver_contract_satisfied']}\n"
+                f"    parity: satisfied={artifact['inflate_parity_satisfied']} "
+                f"required={artifact['full_frame_or_shell_parity_required']}\n"
+                f"    next gates: {gates if gates else '(none)'}\n"
+                f"    blockers: {blockers if blockers else '(none)'}\n"
+                f"    summary: {artifact['summary']}\n"
+                f"    next patch: {artifact['next_patch']}"
+            )
+            continue
         blockers = ", ".join(str(item) for item in artifact["dispatch_blockers"])
         lines.append(
             f"  • {artifact['kind']} — {artifact['name']}\n"
@@ -1101,6 +1219,14 @@ def _load_json_file(path: Path) -> dict[str, object]:
     except (OSError, json.JSONDecodeError) as exc:
         return {"_error": f"{_repo_rel(path)} unreadable JSON: {exc}"}
     return payload if isinstance(payload, dict) else {"_error": f"{_repo_rel(path)} is not a JSON object"}
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _embedded_canonical_payload_hash(payload: dict[str, object]) -> str:

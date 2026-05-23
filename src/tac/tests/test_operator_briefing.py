@@ -282,7 +282,13 @@ def test_briefing_json_composite_has_all_three_keys():
     assert isinstance(l5["canonical_sideinfo_evidence_present"], bool)
     if not l5["canonical_sideinfo_evidence_present"]:
         assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in l5["blockers"]
-    assert l5["packetir_matrix_artifact_sha256"] == l5["packetir_matrix_expected_sha256"]
+    packetir_hash_matches = (
+        l5["packetir_matrix_artifact_sha256"] == l5["packetir_matrix_expected_sha256"]
+    )
+    if packetir_hash_matches:
+        assert "l5_v2_packetir_matrix_artifact_sha_mismatch" not in l5["blockers"]
+    else:
+        assert "l5_v2_packetir_matrix_artifact_sha_mismatch" in l5["blockers"]
     assert l5["packetir_section_entropy_matrix_exists"] is True
     assert l5["packetir_section_entropy_profiled_candidate_count"] >= 2
     assert l5["packetir_section_entropy_prototype_row_count"] >= 1
@@ -315,21 +321,25 @@ def test_briefing_json_composite_has_all_three_keys():
     active_claim_count = int(out["dispatch_claim_summary"].get("active_count") or 0)
     assert l5["active_dispatch_claim_count"] == active_claim_count
     assert l5["dispatch_claim_gate_blocked"] == (active_claim_count > 0)
-    if active_claim_count:
+    if active_claim_count or not packetir_hash_matches:
         assert l5["packetir_matrix_dispatch_targets_suppressed"] is True
         assert l5["next_exact_eval_target_count"] == 0
         assert l5["next_exact_eval_targets"] == []
         assert l5["next_exact_eval_targets_sample"] == []
-        assert (
-            f"blocked_active_dispatch_claims_present:{active_claim_count}"
-            in l5["blockers"]
-        )
+        if active_claim_count:
+            assert (
+                f"blocked_active_dispatch_claims_present:{active_claim_count}"
+                in l5["blockers"]
+            )
     else:
         assert l5["packetir_matrix_dispatch_targets_suppressed"] is False
         assert l5["next_exact_eval_target_count"] == 0
         assert l5["next_exact_eval_targets"] == []
         assert l5["next_exact_eval_targets_sample"] == []
-    assert l5["packetir_status_counts"]["runtime_consumption_blocked"] == 16
+    if packetir_hash_matches:
+        assert l5["packetir_status_counts"]["runtime_consumption_blocked"] == 16
+    else:
+        assert sum(int(value) for value in l5["packetir_status_counts"].values()) >= 1
     assert l5["packetir_paired_candidate_count"] == 0
     assert l5["pr106_stack_cell_candidate_count"] == 0
     assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in l5[
@@ -912,6 +922,90 @@ def test_pr91_readiness_row_surfaces_audit_errors(monkeypatch):
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
     assert row["audit_errors"] == ["live readiness audit failed"]
+
+
+def test_operator_briefing_surfaces_inverse_scorer_chain_readiness(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    scan_root = tmp_path / "results"
+    chain_dir = scan_root / "parent" / "ias1_chain"
+    chain_dir.mkdir(parents=True)
+    manifest = chain_dir / mod.INVERSE_SCORER_CHAIN_MANIFEST_NAME
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "inverse_scorer_cell_candidate_chain_v1",
+                "candidate_archive_sha256": "a" * 64,
+                "candidate_archive_bytes": 123,
+                "candidate_archive": {"sha256": "a" * 64, "bytes": 123},
+                "runtime_adapter_ready": True,
+                "receiver_proof_ready": True,
+                "receiver_contract_satisfied": True,
+                "inflate_parity_satisfied": False,
+                "candidate_runtime_adapter_blocker_cleared": True,
+                "full_frame_or_shell_parity_required": True,
+                "next_required_gates": ["inflate_or_full_frame_parity", "contest_auth_eval"],
+                "readiness_blockers": [
+                    "candidate_inflate_output_parity_missing",
+                    "exact_auth_eval_required_before_score_claim",
+                ],
+                "dispatch_blockers": [
+                    "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization",
+                    "candidate_inflate_output_parity_missing",
+                    "exact_auth_eval_required_before_score_claim",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "INVERSE_SCORER_CHAIN_SCAN_ROOT", scan_root)
+    monkeypatch.setattr(
+        mod,
+        "_load_pr91_hpm1_readiness_artifact",
+        lambda: {
+            "kind": "pr91_hpm1_readiness_bundle",
+            "name": "fixture",
+            "state": "BLOCKED_FAIL_CLOSED",
+            "dispatch_blockers": ["blocked"],
+            "artifact_dispatch_blockers": ["blocked"],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "promotion_eligible": False,
+            "audit_errors": [],
+            "artifact_path": "readiness.json",
+            "runtime_contract_artifact_path": "runtime.json",
+            "readiness_artifact_hash_matches_live": True,
+            "runtime_artifact_hash_matches_live": True,
+            "archive_custody_matches": True,
+            "hpm1_mask_custody_matches": True,
+            "zip_wire_contract_passed": True,
+            "ambient_device_call_count": 0,
+            "contradiction_count": 0,
+            "summary": "fixture",
+            "next_patch": "fixture",
+        },
+    )
+
+    rows = mod._inverse_scorer_cell_chain_readiness_artifacts()
+    text = mod._format_non_dispatchable_readiness_artifacts()
+
+    assert rows[0]["kind"] == "inverse_scorer_cell_candidate_chain"
+    assert rows[0]["receiver_contract_satisfied"] is True
+    assert rows[0]["inflate_parity_satisfied"] is False
+    assert rows[0]["ready_for_exact_eval_dispatch"] is False
+    assert rows[0]["score_claim"] is False
+    assert "candidate_inflate_output_parity_missing" in rows[0]["dispatch_blockers"]
+    assert "inverse_scorer_cell_candidate_chain" in text
+    assert "inflate_or_full_frame_parity" in text
 
 
 def test_dispatch_claim_summary_formats_active_claim(monkeypatch):

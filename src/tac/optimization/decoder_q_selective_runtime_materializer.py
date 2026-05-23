@@ -353,7 +353,7 @@ def build_selective_inflate_py(base_inflate_text: str) -> str:
     out = _replace_once(
         out,
         "from pathlib import Path\n\nimport torch",
-        "from pathlib import Path\n\nimport numpy as np\nimport torch",
+        "from pathlib import Path\n\nimport json\nimport numpy as np\nimport torch",
         label="numpy import",
     )
     out = _replace_once(
@@ -376,6 +376,7 @@ def build_selective_inflate_py(base_inflate_text: str) -> str:
         "OUTER_MAGIC = b\"FP11\"\n",
         """OUTER_MAGIC = b"FP11"
 DQS1_MAGIC = b"DQS1"
+IAS1_MAGIC = b"IAS1"
 DQS1_FRAME_POLICY_BY_CODE = {1: "pair_all_frames", 2: "segnet_last_frame_only"}
 DQS1_PAIR_ENCODING_BY_CODE = {0: "raw_u16", 1: "sorted_gap_uleb"}
 
@@ -385,7 +386,7 @@ DQS1_PAIR_ENCODING_BY_CODE = {0: "raw_u16", 1: "sorted_gap_uleb"}
 
     start = out.index("def parse_pr101_frame_selector_archive(")
     end = out.index("\ndef apply_dynamic_mode(", start)
-    replacement = r'''def parse_dqs1_payload(payload: bytes) -> dict[str, object]:
+    replacement = r'''def parse_dqs1_payload_prefix(payload: bytes) -> tuple[dict[str, object], int]:
     if len(payload) < 11:
         raise ValueError("DQS1 payload truncated")
     if payload[:4] != DQS1_MAGIC:
@@ -437,12 +438,13 @@ DQS1_PAIR_ENCODING_BY_CODE = {0: "raw_u16", 1: "sorted_gap_uleb"}
 
     if pair_encoding == "raw_u16":
         expected_len = 11 + count * 2
-        if len(payload) != expected_len:
-            raise ValueError(f"DQS1 payload length mismatch: expected {expected_len}, got {len(payload)}")
+        if len(payload) < expected_len:
+            raise ValueError(f"DQS1 payload truncated: expected at least {expected_len}, got {len(payload)}")
         pair_indices = [
             int(struct.unpack_from("<H", payload, 11 + offset * 2)[0])
             for offset in range(count)
         ]
+        offset = expected_len
     elif pair_encoding == "sorted_gap_uleb":
         pair_indices = []
         previous = None
@@ -456,8 +458,6 @@ DQS1_PAIR_ENCODING_BY_CODE = {0: "raw_u16", 1: "sorted_gap_uleb"}
                 raise ValueError("DQS1 selected pair outside u16 range")
             pair_indices.append(int(pair_index))
             previous = int(pair_index)
-        if offset != len(payload):
-            raise ValueError("DQS1 payload has trailing pair-index bytes")
     else:
         raise ValueError(f"unsupported DQS1 pair encoding {pair_encoding!r}")
     if pair_indices != sorted(pair_indices):
@@ -477,12 +477,54 @@ DQS1_PAIR_ENCODING_BY_CODE = {0: "raw_u16", 1: "sorted_gap_uleb"}
         "q_offset": q_offset,
         "delta": delta,
         "pair_indices": tuple(pair_indices),
+        "payload_bytes": offset,
+    }, offset
+
+
+def parse_dqs1_payload(payload: bytes) -> dict[str, object]:
+    packet, offset = parse_dqs1_payload_prefix(payload)
+    if offset != len(payload):
+        raise ValueError("DQS1 payload has trailing bytes")
+    return packet
+
+
+def parse_ias1_descriptor_payload(payload: bytes) -> dict[str, object]:
+    if len(payload) < 8:
+        raise ValueError("IAS1 descriptor payload truncated")
+    if payload[:4] != IAS1_MAGIC:
+        raise ValueError(f"IAS1 magic mismatch: {payload[:4]!r}")
+    json_len = int.from_bytes(payload[4:8], "little")
+    packet_len = 8 + json_len
+    if len(payload) != packet_len:
+        raise ValueError(f"IAS1 descriptor length mismatch: expected {packet_len}, got {len(payload)}")
+    descriptor = json.loads(payload[8:packet_len].decode("utf-8"))
+    if not isinstance(descriptor, dict) or descriptor.get("schema") != "inverse_scorer_cell_descriptor_v1":
+        raise ValueError("IAS1 descriptor schema mismatch")
+    selected = descriptor.get("selected_cells")
+    selected_atom_ids = []
+    if isinstance(selected, list):
+        for row in selected:
+            if isinstance(row, dict) and str(row.get("atom_id") or ""):
+                selected_atom_ids.append(str(row["atom_id"]))
+    return {
+        "schema": "inverse_scorer_cell_descriptor_consumption_v1",
+        "packet_bytes": len(payload),
+        "json_bytes": json_len,
+        "raw_contest_video_digest": descriptor.get("raw_contest_video_digest"),
+        "selected_atom_ids": tuple(selected_atom_ids),
     }
 
 
 def parse_pr101_frame_selector_archive(
     bin_bytes: bytes,
-) -> tuple[bytes, str, list[int], tuple[tuple[str, tuple[int, ...], int], ...], dict[str, object] | None]:
+) -> tuple[
+    bytes,
+    str,
+    list[int],
+    tuple[tuple[str, tuple[int, ...], int], ...],
+    dict[str, object] | None,
+    dict[str, object] | None,
+]:
     if len(bin_bytes) < 10:
         raise ValueError("PR101 frame-selector wrapper truncated before header")
     magic = bin_bytes[:4]
@@ -504,11 +546,18 @@ def parse_pr101_frame_selector_archive(
     if len(selector_payload) != selector_len:
         raise ValueError("FES1 selector payload truncated")
     dqs1_packet = None
+    ias1_descriptor = None
     if pos != len(bin_bytes):
-        dqs1_packet = parse_dqs1_payload(bin_bytes[pos:])
-        pos = len(bin_bytes)
+        if bin_bytes[pos : pos + 4] == DQS1_MAGIC:
+            dqs1_packet, consumed = parse_dqs1_payload_prefix(bin_bytes[pos:])
+            pos += consumed
+        if pos != len(bin_bytes):
+            if bin_bytes[pos : pos + 4] != IAS1_MAGIC:
+                raise ValueError(f"unexpected archive tail after FES1/DQS1 selector: {bin_bytes[pos:pos + 4]!r}")
+            ias1_descriptor = parse_ias1_descriptor_payload(bin_bytes[pos:])
+            pos = len(bin_bytes)
     selector_kind, selector_codes, selector_specs = unpack_pr101_selector(selector_payload)
-    return source_payload, selector_kind, selector_codes, selector_specs, dqs1_packet
+    return source_payload, selector_kind, selector_codes, selector_specs, dqs1_packet, ias1_descriptor
 
 
 def _tensor_index_for_stored_q_offset(q_offset: int, shape: tuple[int, ...], storage_index: int) -> tuple[int, ...]:
@@ -581,14 +630,14 @@ def apply_dqs1_patch_to_decoder_state(
                 "source_payload, selector_kind, selector_codes, selector_specs = parse_pr101_frame_selector_archive(Path(src_bin).read_bytes())\n"
                 "    decoder_sd, latents, meta = parse_archive(source_payload)\n\n"
                 "    device = torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")",
-                "source_payload, selector_kind, selector_codes, selector_specs, dqs1_packet = parse_pr101_frame_selector_archive(Path(src_bin).read_bytes())\n"
+                "source_payload, selector_kind, selector_codes, selector_specs, dqs1_packet, ias1_descriptor = parse_pr101_frame_selector_archive(Path(src_bin).read_bytes())\n"
                 "    decoder_sd, latents, meta = parse_archive(source_payload)\n\n"
                 "    device = torch.device(\"cuda\" if torch.cuda.is_available() else \"cpu\")",
             ),
             (
                 "source_payload, selector_kind, selector_codes, selector_specs = parse_pr101_frame_selector_archive(src_path.read_bytes())\n"
                 "    decoder_sd, latents, meta = parse_archive(source_payload)\n",
-                "source_payload, selector_kind, selector_codes, selector_specs, dqs1_packet = parse_pr101_frame_selector_archive(src_path.read_bytes())\n"
+                "source_payload, selector_kind, selector_codes, selector_specs, dqs1_packet, ias1_descriptor = parse_pr101_frame_selector_archive(src_path.read_bytes())\n"
                 "    decoder_sd, latents, meta = parse_archive(source_payload)\n",
             ),
         ],

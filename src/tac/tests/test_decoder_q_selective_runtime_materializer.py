@@ -167,10 +167,14 @@ def test_selective_inflate_patch_compiles_and_contains_runtime_hooks(
 
     compile(patched, "inflate.py", "exec")
     assert "DQS1_MAGIC = b\"DQS1\"" in patched
+    assert "IAS1_MAGIC = b\"IAS1\"" in patched
     assert 'DQS1_PAIR_ENCODING_BY_CODE = {0: "raw_u16", 1: "sorted_gap_uleb"}' in patched
     assert 'pair_encoding == "sorted_gap_uleb"' in patched
+    assert "parse_dqs1_payload_prefix" in patched
+    assert "parse_ias1_descriptor_payload" in patched
     assert "apply_dqs1_patch_to_decoder_state" in patched
-    assert "selector_codes, selector_specs, dqs1_packet" in patched
+    assert "selector_codes, selector_specs, dqs1_packet, ias1_descriptor" in patched
+    assert "unexpected archive tail after FES1/DQS1 selector" in patched
     assert "mutated_decoder = None" in patched
     assert "selected_pairs: set[int] = set()" in patched
     assert "decoded[selected_local_tensor] = mutated_decoded[selected_local_tensor]" in patched

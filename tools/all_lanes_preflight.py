@@ -785,6 +785,35 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                 failures.append(
                     f"non_dispatchable_readiness_artifacts:{kind}:score_claim_not_false"
                 )
+            if artifact.get("promotion_eligible") is True:
+                failures.append(
+                    f"non_dispatchable_readiness_artifacts:{kind}:promotion_eligible_true"
+                )
+            if artifact.get("rank_or_kill_eligible") is True:
+                failures.append(
+                    f"non_dispatchable_readiness_artifacts:{kind}:rank_or_kill_eligible_true"
+                )
+            if kind == "inverse_scorer_cell_candidate_chain":
+                artifact_blockers = {
+                    str(item)
+                    for item in artifact.get("dispatch_blockers", [])
+                    if str(item)
+                }
+                parity_satisfied = artifact.get("inflate_parity_satisfied") is True
+                if not parity_satisfied and "candidate_inflate_output_parity_missing" not in artifact_blockers:
+                    failures.append(
+                        "non_dispatchable_readiness_artifacts:"
+                        "inverse_scorer_cell_candidate_chain:missing_parity_blocker"
+                    )
+                if (
+                    artifact.get("receiver_contract_satisfied") is True
+                    and parity_satisfied
+                    and "exact_auth_eval_required_before_score_claim" not in artifact_blockers
+                ):
+                    failures.append(
+                        "non_dispatchable_readiness_artifacts:"
+                        "inverse_scorer_cell_candidate_chain:missing_exact_auth_blocker"
+                    )
     l5 = payload.get("l5_v2_frontier_readiness")
     if not isinstance(l5, dict):
         failures.append("l5_v2_frontier_readiness_missing_or_not_object")

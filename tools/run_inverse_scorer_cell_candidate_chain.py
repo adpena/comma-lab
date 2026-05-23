@@ -34,7 +34,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--atom-id", action="append", default=[])
     parser.add_argument("--selected-limit", type=int, default=None)
     parser.add_argument("--min-free-bytes", type=int, default=0)
+    parser.add_argument("--source-inflate-output-dir", type=Path)
+    parser.add_argument("--candidate-inflate-output-dir", type=Path)
+    parser.add_argument("--inflate-runtime-dir", type=Path)
+    parser.add_argument("--source-archive-for-parity", type=Path)
+    parser.add_argument("--inflate-timeout-seconds", type=int, default=3600)
+    parser.add_argument("--inflate-work-dir", type=Path)
+    parser.add_argument("--keep-inflate-work-dir", action="store_true")
     parser.add_argument("--fail-if-receiver-blocked", action="store_true")
+    parser.add_argument("--fail-if-inflate-parity-blocked", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -53,6 +61,13 @@ def main(argv: list[str] | None = None) -> int:
             selected_limit=args.selected_limit,
             repo_root=REPO_ROOT,
             min_free_bytes=args.min_free_bytes,
+            source_inflate_output_dir=args.source_inflate_output_dir,
+            candidate_inflate_output_dir=args.candidate_inflate_output_dir,
+            inflate_runtime_dir=args.inflate_runtime_dir,
+            source_archive_for_parity=args.source_archive_for_parity,
+            inflate_timeout_seconds=args.inflate_timeout_seconds,
+            inflate_work_dir=args.inflate_work_dir,
+            keep_inflate_work_dir=args.keep_inflate_work_dir,
         )
     except (OSError, InverseScorerCellChainError) as exc:
         print(f"FATAL: inverse-scorer cell candidate chain failed: {exc}", file=sys.stderr)
@@ -76,6 +91,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(json_text(chain), end="")
     if args.fail_if_receiver_blocked and chain.get("receiver_contract_satisfied") is not True:
+        return 1
+    if args.fail_if_inflate_parity_blocked and chain.get("inflate_parity_satisfied") is not True:
         return 1
     return 0
 

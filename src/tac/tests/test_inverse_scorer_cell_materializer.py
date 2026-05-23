@@ -16,6 +16,12 @@ from tac.optimization.inverse_scorer_cell_chain import (
     CHAIN_SCHEMA,
     build_inverse_scorer_cell_candidate_chain,
 )
+from tac.optimization.inverse_scorer_cell_inflate_parity import (
+    INFLATE_PARITY_PROBE_SCHEMA,
+    build_inverse_scorer_cell_inflate_parity_probe,
+    build_inverse_scorer_cell_inflate_parity_probe_from_archives,
+    verify_inverse_scorer_cell_inflate_parity_probe,
+)
 from tac.optimization.inverse_scorer_cell_materializer import (
     CANDIDATE_SCHEMA,
     DESCRIPTOR_SCHEMA,
@@ -39,6 +45,7 @@ REPO = Path(__file__).resolve().parents[3]
 MATERIALIZE_SCRIPT = REPO / "tools" / "materialize_inverse_scorer_cell_candidate.py"
 PROOF_SCRIPT = REPO / "tools" / "build_inverse_scorer_cell_receiver_proof.py"
 ADAPTER_SCRIPT = REPO / "tools" / "build_inverse_scorer_cell_runtime_adapter_manifest.py"
+PARITY_SCRIPT = REPO / "tools" / "build_inverse_scorer_cell_inflate_parity_probe.py"
 CHAIN_SCRIPT = REPO / "tools" / "run_inverse_scorer_cell_candidate_chain.py"
 
 
@@ -80,6 +87,53 @@ def _action_functional() -> dict[str, object]:
 
 def _write_template_archive(path: Path) -> None:
     write_stored_single_member_zip(path, member_name="x", payload=b"base-payload")
+
+
+def _write_output_tree(path: Path, payload: bytes = b"frame-bytes") -> None:
+    (path / "frames").mkdir(parents=True)
+    (path / "frames" / "000000.raw").write_bytes(payload)
+
+
+def _write_constant_inflate_runtime(path: Path) -> None:
+    path.mkdir(parents=True)
+    inflate = path / "inflate.sh"
+    inflate.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                "OUT=\"$2\"",
+                "mkdir -p \"$OUT/frames\"",
+                "printf 'frame-bytes' > \"$OUT/frames/000000.raw\"",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    inflate.chmod(0o755)
+
+
+def _write_fake_inflate_runtime(path: Path) -> None:
+    path.mkdir(parents=True)
+    inflate = path / "inflate.sh"
+    inflate.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                "data_dir=\"$1\"",
+                "out_dir=\"$2\"",
+                "file_list=\"$3\"",
+                "mkdir -p \"$out_dir/frames\"",
+                "test -f \"$data_dir/x\"",
+                "test -s \"$file_list\"",
+                "printf frame-bytes > \"$out_dir/frames/000000.raw\"",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    inflate.chmod(0o755)
 
 
 def test_inverse_scorer_cell_plan_requires_receiver_proof(tmp_path: Path) -> None:
@@ -342,6 +396,256 @@ def test_runtime_adapter_manifest_consumes_ias1_packet_and_verifies_candidate(
     assert verified["ready_for_exact_eval_dispatch"] is False
 
 
+def test_inflate_parity_probe_clears_only_candidate_parity_blocker(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    source_out = tmp_path / "source_out"
+    candidate_out = tmp_path / "candidate_out"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    _write_output_tree(source_out)
+    _write_output_tree(candidate_out)
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+    adapter = build_inverse_scorer_cell_runtime_adapter_manifest(
+        candidate_manifest=candidate_manifest,
+        repo_root=tmp_path,
+        runtime_source_paths=[__file__],
+    )
+    proof = build_inverse_scorer_cell_receiver_proof(
+        runtime_adapter_manifest=adapter,
+        candidate_manifest=candidate_manifest,
+        repo_root=tmp_path,
+    )
+    parity = build_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        source_output_dir=source_out,
+        candidate_output_dir=candidate_out,
+        repo_root=tmp_path,
+    )
+    verified = verify_inverse_scorer_cell_candidate_manifest(
+        candidate_manifest=candidate_manifest,
+        runtime_consumption_proof=proof,
+        inflate_parity_probe=parity,
+        repo_root=tmp_path,
+    )
+
+    assert parity["schema"] == INFLATE_PARITY_PROBE_SCHEMA
+    assert parity["full_frame_inflate_output_parity_claim"] is True
+    assert parity["inverse_scorer_cell_descriptor"]["packet_sha256"] == (
+        manifest["inverse_scorer_cell_descriptor"]["packet_sha256"]
+    )
+    assert verified["inflate_parity_satisfied"] is True
+    assert "candidate_inflate_output_parity_missing" not in verified["readiness_blockers"]
+    assert "exact_auth_eval_required_before_score_claim" in verified["readiness_blockers"]
+    assert verified["score_claim"] is False
+    assert verified["promotion_eligible"] is False
+    assert verified["rank_or_kill_eligible"] is False
+    assert verified["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inflate_parity_probe_from_archives_runs_actual_inflate(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_dir = tmp_path / "runtime"
+    _write_template_archive(template)
+    _write_fake_inflate_runtime(runtime_dir)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+        candidate_manifest=candidate_manifest,
+        inflate_runtime_dir=runtime_dir,
+        repo_root=tmp_path,
+        timeout_seconds=30,
+    )
+    verification = verify_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        inflate_parity_probe=parity,
+        repo_root=tmp_path,
+    )
+
+    assert parity["schema"] == INFLATE_PARITY_PROBE_SCHEMA
+    assert parity["source_inflate_run"]["returncode"] == 0
+    assert parity["candidate_inflate_run"]["returncode"] == 0
+    assert parity["source_inflate_run"]["full_frame_file_list_claim"] is True
+    assert parity["full_frame_inflate_output_parity_claim"] is True
+    assert parity["work_dir_retained"] is False
+    assert verification["inflate_parity_satisfied"] is True
+    assert parity["score_claim"] is False
+    assert parity["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inflate_parity_probe_fails_closed_on_output_mismatch(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    source_out = tmp_path / "source_out"
+    candidate_out = tmp_path / "candidate_out"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    _write_output_tree(source_out, b"source")
+    _write_output_tree(candidate_out, b"candidate")
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        source_output_dir=source_out,
+        candidate_output_dir=candidate_out,
+        repo_root=tmp_path,
+    )
+    verification = verify_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        inflate_parity_probe=parity,
+        repo_root=tmp_path,
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is False
+    assert "inflate_output_bytes_not_identical" in parity["blockers"]
+    assert verification["inflate_parity_satisfied"] is False
+    assert "candidate_inflate_output_parity_missing" in verification["blockers"]
+
+
+def test_inflate_parity_probe_rejects_descriptor_sha_mismatch_and_truthy_authority(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    source_out = tmp_path / "source_out"
+    candidate_out = tmp_path / "candidate_out"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    _write_output_tree(source_out)
+    _write_output_tree(candidate_out)
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+    parity = build_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        source_output_dir=source_out,
+        candidate_output_dir=candidate_out,
+        repo_root=tmp_path,
+    )
+    parity["inverse_scorer_cell_descriptor"]["packet_sha256"] = "0" * 64
+    parity["nested"] = {"ready_for_exact_eval_dispatch": True}
+
+    verification = verify_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        inflate_parity_probe=parity,
+        repo_root=tmp_path,
+    )
+
+    assert verification["inflate_parity_satisfied"] is False
+    assert "inflate_parity_descriptor_packet_sha_mismatch" in verification["blockers"]
+    assert "inflate_parity_probe_has_truthy_authority_field" in verification["blockers"]
+
+
+def test_inflate_parity_probe_records_missing_artifact_blockers(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        source_output_dir=tmp_path / "missing_source_out",
+        candidate_output_dir=tmp_path / "missing_candidate_out",
+        repo_root=tmp_path,
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is False
+    assert "source_inflate_output_dir_missing" in parity["blockers"]
+    assert "candidate_inflate_output_dir_missing" in parity["blockers"]
+
+
+def test_inflate_parity_probe_from_archives_runs_shell_runtime(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_dir = tmp_path / "runtime"
+    work_dir = tmp_path / "parity_work"
+    _write_template_archive(template)
+    _write_constant_inflate_runtime(runtime_dir)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+        candidate_manifest=candidate_manifest,
+        inflate_runtime_dir=runtime_dir,
+        source_archive=template,
+        candidate_archive=output,
+        repo_root=tmp_path,
+        work_dir=work_dir,
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is True
+    assert parity["source_inflate_run"]["returncode"] == 0
+    assert parity["candidate_inflate_run"]["returncode"] == 0
+    assert parity["inflate_runtime"]["inflate_sh_sha256"]
+    assert parity["work_dir_retained"] is False
+    assert not work_dir.exists()
+
+
 def test_runtime_adapter_manifest_fails_closed_on_descriptor_sha_mismatch(
     tmp_path: Path,
 ) -> None:
@@ -582,6 +886,56 @@ def test_inverse_scorer_cell_receiver_proof_cli_writes_json(tmp_path: Path) -> N
     assert proof["ready_for_exact_eval_runtime"] is False
 
 
+def test_inverse_scorer_cell_inflate_parity_cli_writes_json(tmp_path: Path) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    source_out = tmp_path / "source_out"
+    candidate_out = tmp_path / "candidate_out"
+    parity_out = tmp_path / "inflate_parity.json"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    _write_output_tree(source_out)
+    _write_output_tree(candidate_out)
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(PARITY_SCRIPT),
+            "--candidate-manifest",
+            str(candidate_manifest),
+            "--source-output-dir",
+            str(source_out),
+            "--candidate-output-dir",
+            str(candidate_out),
+            "--json-out",
+            str(parity_out),
+            "--repo-root",
+            str(tmp_path),
+            "--fail-if-blocked",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    parity = json.loads(parity_out.read_text(encoding="utf-8"))
+    assert parity["schema"] == INFLATE_PARITY_PROBE_SCHEMA
+    assert parity["full_frame_inflate_output_parity_claim"] is True
+    assert parity["score_claim"] is False
+
+
 def test_inverse_scorer_cell_chain_clears_receiver_blockers_only(
     tmp_path: Path,
 ) -> None:
@@ -610,6 +964,71 @@ def test_inverse_scorer_cell_chain_clears_receiver_blockers_only(
     assert "candidate_inflate_output_parity_missing" in chain["readiness_blockers"]
     assert "exact_auth_eval_required_before_score_claim" in chain["readiness_blockers"]
     assert chain["score_claim"] is False
+    assert chain["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_scorer_cell_chain_can_attach_inflate_parity_probe(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    source_out = tmp_path / "source_out"
+    candidate_out = tmp_path / "candidate_out"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    _write_output_tree(source_out)
+    _write_output_tree(candidate_out)
+
+    chain = build_inverse_scorer_cell_candidate_chain(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_dir=tmp_path / "chain_with_parity",
+        selected_limit=1,
+        repo_root=tmp_path,
+        source_inflate_output_dir=source_out,
+        candidate_inflate_output_dir=candidate_out,
+    )
+
+    assert chain["receiver_contract_satisfied"] is True
+    assert chain["inflate_parity_satisfied"] is True
+    assert "inflate_parity_probe" in chain["artifacts"]
+    assert "candidate_inflate_output_parity_missing" not in chain["readiness_blockers"]
+    assert "exact_auth_eval_required_before_score_claim" in chain["readiness_blockers"]
+    assert any(
+        step["step_id"] == "build_inflate_parity_probe"
+        and step["full_frame_inflate_output_parity_claim"] is True
+        for step in chain["chain_steps"]
+    )
+    assert chain["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inverse_scorer_cell_chain_can_run_inflate_runtime_parity(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    runtime_dir = tmp_path / "runtime"
+    _write_template_archive(template)
+    _write_fake_inflate_runtime(runtime_dir)
+    write_json(action, _action_functional())
+
+    chain = build_inverse_scorer_cell_candidate_chain(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_dir=tmp_path / "chain_with_runtime_parity",
+        selected_limit=1,
+        repo_root=tmp_path,
+        inflate_runtime_dir=runtime_dir,
+        inflate_timeout_seconds=30,
+    )
+
+    assert chain["receiver_contract_satisfied"] is True
+    assert chain["inflate_parity_satisfied"] is True
+    assert "candidate_inflate_output_parity_missing" not in chain["readiness_blockers"]
+    assert "exact_auth_eval_required_before_score_claim" in chain["readiness_blockers"]
+    assert chain["artifacts"]["inflate_parity_probe"]["path"].endswith("inflate_parity_probe.json")
     assert chain["ready_for_exact_eval_dispatch"] is False
 
 

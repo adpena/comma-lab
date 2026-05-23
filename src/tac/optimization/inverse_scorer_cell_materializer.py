@@ -536,6 +536,7 @@ def verify_inverse_scorer_cell_candidate_manifest(
     *,
     candidate_manifest: str | Path | Mapping[str, Any],
     runtime_consumption_proof: str | Path | Mapping[str, Any],
+    inflate_parity_probe: str | Path | Mapping[str, Any] | None = None,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Verify an existing inverse-scorer cell candidate manifest."""
@@ -568,6 +569,26 @@ def verify_inverse_scorer_cell_candidate_manifest(
         required_raw_contest_video_digest=candidate.get("raw_contest_video_digest"),
         required_selected_atom_ids=_clean_str_list(descriptor.get("selected_atom_ids")),
     )
+    parity_verification: dict[str, Any] = {
+        "schema": "inverse_scorer_cell_inflate_parity_verification_v1",
+        "inflate_parity_satisfied": False,
+        "blockers": ["inflate_parity_probe_not_provided"],
+        **FALSE_AUTHORITY,
+    }
+    if inflate_parity_probe is not None:
+        from tac.optimization.inverse_scorer_cell_inflate_parity import (
+            PARITY_BLOCKER,
+            verify_inverse_scorer_cell_inflate_parity_probe,
+        )
+
+        parity_verification = verify_inverse_scorer_cell_inflate_parity_probe(
+            candidate_manifest=candidate,
+            inflate_parity_probe=inflate_parity_probe,
+            repo_root=repo,
+        )
+    else:
+        PARITY_BLOCKER = "candidate_inflate_output_parity_missing"
+
     original_blockers = [str(item) for item in candidate.get("readiness_blockers") or []]
     if receiver_verification["receiver_contract_satisfied"] is True and not custody["blockers"]:
         original_blockers = [
@@ -580,11 +601,17 @@ def verify_inverse_scorer_cell_candidate_manifest(
                 "inverse_scorer_cell_receiver_contract_not_satisfied",
             }
         ]
+    if parity_verification.get("inflate_parity_satisfied") is True:
+        original_blockers = [blocker for blocker in original_blockers if blocker != PARITY_BLOCKER]
+    elif inflate_parity_probe is not None and PARITY_BLOCKER not in original_blockers:
+        original_blockers.append(PARITY_BLOCKER)
+    parity_blockers = [] if inflate_parity_probe is None else _clean_str_list(parity_verification.get("blockers"))
     readiness_blockers = ordered_unique(
         [
             *original_blockers,
             *custody["blockers"],
             *receiver_verification["blockers"],
+            *parity_blockers,
             *(
                 []
                 if receiver_verification["receiver_contract_satisfied"] is True and not custody["blockers"]
@@ -605,9 +632,11 @@ def verify_inverse_scorer_cell_candidate_manifest(
             "candidate_archive_custody": custody,
             "inverse_scorer_cell_descriptor": descriptor,
             "receiver_verification": receiver_verification,
+            "inflate_parity_verification": parity_verification,
             "receiver_contract_satisfied": (
                 receiver_verification["receiver_contract_satisfied"] is True and not custody["blockers"]
             ),
+            "inflate_parity_satisfied": parity_verification.get("inflate_parity_satisfied") is True,
             "readiness_blockers": readiness_blockers,
             "ready_for_archive_preflight": False,
             **FALSE_AUTHORITY,

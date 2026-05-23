@@ -1010,6 +1010,8 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     action = tmp_path / "inverse_action.json"
     template = tmp_path / "template.zip"
     output_dir = tmp_path / "inverse_cell_chain"
+    source_inflate_output_dir = tmp_path / "source_inflate_out"
+    candidate_inflate_output_dir = tmp_path / "candidate_inflate_out"
     action.write_text(
         json.dumps(
             {
@@ -1052,6 +1054,8 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
                 "inverse_action_functional": str(action),
                 "raw_contest_video_digest": "f" * 64,
                 "output_dir": str(output_dir),
+                "source_inflate_output_dir": str(source_inflate_output_dir),
+                "candidate_inflate_output_dir": str(candidate_inflate_output_dir),
                 "atom_ids": ["inverse_surface_pair0007"],
                 "selected_limit": 1,
                 "min_free_bytes": 123,
@@ -1070,6 +1074,8 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
         str(template),
     ]
     assert "--min-free-bytes" in row["command"]
+    assert "--source-inflate-output-dir" in row["command"]
+    assert "--candidate-inflate-output-dir" in row["command"]
     assert row["postconditions"] == [
         {
             "type": "json_equals",
@@ -1078,8 +1084,13 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
             "equals": "inverse_scorer_cell_candidate_chain_v1",
         }
     ]
-    assert row["telemetry"]["artifact_paths"] == [str(output_dir)]
+    assert row["telemetry"]["artifact_paths"] == [
+        str(output_dir),
+        str(source_inflate_output_dir),
+        str(candidate_inflate_output_dir),
+    ]
     assert row["telemetry"]["recursive"] is True
+    assert row["telemetry"]["parity_probe_required"] is True
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -1107,8 +1118,13 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
     assert task["materializer_id"] == INVERSE_SCORER_CELL_MATERIALIZER
     assert task["receiver_contract_id"] == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID
     assert task["receiver_contract_kind"] == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND
-    assert task["telemetry"]["artifact_paths"] == [str(output_dir)]
+    assert task["telemetry"]["artifact_paths"] == [
+        str(output_dir),
+        str(source_inflate_output_dir),
+        str(candidate_inflate_output_dir),
+    ]
     assert task["telemetry"]["recursive"] is True
+    assert task["telemetry"]["parity_probe_required"] is True
     assert task["experiment_metadata"]["score_claim"] is False
     assert task["experiment_metadata"]["ready_for_exact_eval_dispatch"] is False
 

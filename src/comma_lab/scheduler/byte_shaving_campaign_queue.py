@@ -825,8 +825,33 @@ def _inverse_scorer_cell_candidate_command(
         min_free_bytes = _finite_int(context.get("min_free_bytes"))
         if min_free_bytes is not None:
             command.extend(["--min-free-bytes", str(min_free_bytes)])
+        source_inflate_output_dir = _path_context_value(context, "source_inflate_output_dir")
+        if source_inflate_output_dir is not None:
+            command.extend(["--source-inflate-output-dir", source_inflate_output_dir])
+        candidate_inflate_output_dir = _path_context_value(
+            context,
+            "candidate_inflate_output_dir",
+        )
+        if candidate_inflate_output_dir is not None:
+            command.extend(["--candidate-inflate-output-dir", candidate_inflate_output_dir])
+        inflate_runtime_dir = _path_context_value(context, "inflate_runtime_dir")
+        if inflate_runtime_dir is not None:
+            command.extend(["--inflate-runtime-dir", inflate_runtime_dir])
+        source_archive_for_parity = _path_context_value(context, "source_archive_for_parity")
+        if source_archive_for_parity is not None:
+            command.extend(["--source-archive-for-parity", source_archive_for_parity])
+        inflate_timeout_seconds = _finite_int(context.get("inflate_timeout_seconds"))
+        if inflate_timeout_seconds is not None:
+            command.extend(["--inflate-timeout-seconds", str(inflate_timeout_seconds)])
+        inflate_work_dir = _path_context_value(context, "inflate_work_dir")
+        if inflate_work_dir is not None:
+            command.extend(["--inflate-work-dir", inflate_work_dir])
+        if context.get("keep_inflate_work_dir") is True:
+            command.append("--keep-inflate-work-dir")
         if context.get("fail_if_receiver_blocked") is True:
             command.append("--fail-if-receiver-blocked")
+        if context.get("fail_if_inflate_parity_blocked") is True:
+            command.append("--fail-if-inflate-parity-blocked")
     else:
         assert output_archive is not None
         assert manifest_out is not None
@@ -863,11 +888,25 @@ def _inverse_scorer_cell_candidate_command(
         if isinstance(expected_manifest_sha, str) and expected_manifest_sha.strip():
             command.extend(["--expected-manifest-sha256", expected_manifest_sha])
     if output_dir is not None:
+        artifact_paths = [output_dir]
+        for optional_path in (
+            _path_context_value(context, "source_inflate_output_dir"),
+            _path_context_value(context, "candidate_inflate_output_dir"),
+            _path_context_value(context, "inflate_runtime_dir"),
+            _path_context_value(context, "inflate_work_dir"),
+        ):
+            if optional_path is not None:
+                artifact_paths.append(optional_path)
         return command, [], {
-            "artifact_paths": [output_dir],
+            "artifact_paths": artifact_paths,
             "recursive": True,
             "max_recursive_entries": 512,
             "include_postcondition_paths": True,
+            "parity_probe_required": (
+                _path_context_value(context, "source_inflate_output_dir") is not None
+                or _path_context_value(context, "candidate_inflate_output_dir") is not None
+                or _path_context_value(context, "inflate_runtime_dir") is not None
+            ),
         }
     return command, [], {
         "artifact_paths": [output_archive, manifest_out],
