@@ -60,8 +60,9 @@ UTC: 2026-05-23T19:19:04Z
   `src/tac/tests/test_exact_dispatch_authority.py`
   `src/tac/tests/test_inverse_scorer_cell_materializer.py`
   `src/tac/tests/test_optimizer_exact_readiness.py`
+  `src/tac/tests/test_byte_shaving_campaign_queue.py`
   `src/tac/tests/test_operator_briefing.py`
-  `src/tac/tests/test_all_lanes_operator_briefing_gate.py`: 147 passed.
+  `src/tac/tests/test_all_lanes_operator_briefing_gate.py`: 178 passed.
 - Adversarial exact-readiness follow-up:
   `src/tac/tests/test_optimizer_exact_readiness.py`: 34 passed.
 - `ruff check` on changed source/tests/tools: passed.
