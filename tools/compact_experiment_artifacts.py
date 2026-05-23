@@ -69,7 +69,19 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--action", choices=("delete", "move"), default="delete")
-    parser.add_argument("--cold-store-root", type=Path)
+    parser.add_argument(
+        "--cold-store-root",
+        type=Path,
+        action="append",
+        default=[],
+        help="cold-store root for move execution; repeat for tiered water-bucket moves",
+    )
+    parser.add_argument(
+        "--cold-store-reserve-gb",
+        type=float,
+        default=0.0,
+        help="free GiB to preserve on each cold-store tier after planned moves",
+    )
     return parser.parse_args(argv)
 
 
@@ -107,7 +119,9 @@ def main(argv: list[str] | None = None) -> int:
         payload["execution"] = execute_retention_plan(
             plan,
             action=args.action,
-            cold_store_root=args.cold_store_root,
+            cold_store_root=args.cold_store_root[0] if len(args.cold_store_root) == 1 else None,
+            cold_store_roots=args.cold_store_root if len(args.cold_store_root) != 1 else None,
+            cold_store_reserve_bytes=int(max(args.cold_store_reserve_gb, 0.0) * (1024**3)),
             journal_path=journal_path,
         )
     text = dumps_json(payload)

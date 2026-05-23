@@ -94,6 +94,25 @@ def _string_list(value: object, label: str) -> list[str]:
     return [_require_text(item, f"{label}[{index}]") for index, item in enumerate(value)]
 
 
+def _resolve_step_ref(ref: str, *, default_experiment_id: str) -> tuple[str, str]:
+    """Resolve a queue dependency ref to ``(experiment_id, step_id)``."""
+
+    text = _require_text(ref, "step reference")
+    if "." not in text:
+        return default_experiment_id, text
+    experiment_id, step_id = text.split(".", 1)
+    return (
+        _require_text(experiment_id, "step reference experiment_id"),
+        _require_text(step_id, "step reference step_id"),
+    )
+
+
+def _format_step_ref(experiment_id: str, step_id: str, *, default_experiment_id: str) -> str:
+    if experiment_id == default_experiment_id:
+        return step_id
+    return f"{experiment_id}.{step_id}"
+
+
 def _non_negative_int(value: object, label: str, *, default: int = 0) -> int:
     if value is None:
         return default
@@ -221,12 +240,6 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
             raise ExperimentQueueError(
                 f"{experiment_id}.steps contains duplicate step id(s): {duplicates}"
             )
-        for step in steps:
-            unknown = sorted(set(step["requires"]) - step_ids)
-            if unknown:
-                raise ExperimentQueueError(
-                    f"{experiment_id}.{step['id']} requires unknown step(s): {unknown}"
-                )
         normalized_experiments.append(
             {
                 "id": experiment_id,
@@ -237,6 +250,43 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
                 "steps": steps,
             }
         )
+    valid_step_keys = {
+        (str(experiment["id"]), str(step["id"]))
+        for experiment in normalized_experiments
+        for step in experiment["steps"]
+    }
+    for experiment in normalized_experiments:
+        experiment_id = str(experiment["id"])
+        for step in experiment["steps"]:
+            unknown: list[str] = []
+            normalized_requires: list[str] = []
+            for required in step["requires"]:
+                required_experiment_id, required_step_id = _resolve_step_ref(
+                    str(required),
+                    default_experiment_id=experiment_id,
+                )
+                if (required_experiment_id, required_step_id) not in valid_step_keys:
+                    unknown.append(
+                        _format_step_ref(
+                            required_experiment_id,
+                            required_step_id,
+                            default_experiment_id=experiment_id,
+                        )
+                    )
+                    continue
+                normalized_requires.append(
+                    _format_step_ref(
+                        required_experiment_id,
+                        required_step_id,
+                        default_experiment_id=experiment_id,
+                    )
+                )
+            if unknown:
+                raise ExperimentQueueError(
+                    f"{experiment_id}.{step['id']} requires unknown step(s): {sorted(unknown)}"
+                )
+            step["requires"] = normalized_requires
+    _assert_no_dependency_cycles(normalized_experiments)
     return {
         "schema": QUEUE_SCHEMA,
         "queue_id": queue_id,
@@ -247,6 +297,31 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
         },
         "experiments": normalized_experiments,
     }
+
+
+def _assert_no_dependency_cycles(experiments: list[dict[str, Any]]) -> None:
+    by_key = {
+        (str(experiment["id"]), str(step["id"])): step
+        for experiment in experiments
+        for step in experiment["steps"]
+    }
+    memo: set[tuple[str, str]] = set()
+    active: set[tuple[str, str]] = set()
+
+    def visit(key: tuple[str, str]) -> None:
+        if key in memo:
+            return
+        if key in active:
+            raise ExperimentQueueError(f"dependency cycle detected at {key[0]}.{key[1]}")
+        active.add(key)
+        experiment_id, _step_id = key
+        for required in by_key[key].get("requires") or []:
+            visit(_resolve_step_ref(str(required), default_experiment_id=experiment_id))
+        active.remove(key)
+        memo.add(key)
+
+    for key in by_key:
+        visit(key)
 
 
 def load_queue_definition(path: str | Path) -> dict[str, Any]:
@@ -658,11 +733,14 @@ def ready_steps(
             limit = int(max_concurrency.get(kind, 1))
             if running_by_resource.get(kind, 0) >= limit:
                 continue
-            requirements = step.get("requires") or []
+            requirements = [
+                _resolve_step_ref(str(required), default_experiment_id=str(experiment["id"]))
+                for required in (step.get("requires") or [])
+            ]
             if any(
-                state.get((str(experiment["id"]), str(required))) is None
-                or state[(str(experiment["id"]), str(required))]["status"] != "succeeded"
-                for required in requirements
+                state.get(required_key) is None
+                or state[required_key]["status"] != "succeeded"
+                for required_key in requirements
             ):
                 continue
             out.append(
@@ -1684,27 +1762,31 @@ def _downstream_step_ids(
     queue: Mapping[str, Any],
     experiment_id: str,
     step_id: str,
-) -> list[str]:
-    for experiment in queue["experiments"]:
-        if str(experiment["id"]) != experiment_id:
-            continue
-        requirements = {
-            str(step["id"]): {str(required) for required in step.get("requires") or []}
-            for step in experiment["steps"]
+) -> list[tuple[str, str]]:
+    step_keys = _active_step_keys(queue)
+    root = (experiment_id, step_id)
+    if root not in step_keys:
+        raise ExperimentQueueError(f"unknown step: {experiment_id}.{step_id}")
+    requirements = {
+        (str(experiment["id"]), str(step["id"])): {
+            _resolve_step_ref(str(required), default_experiment_id=str(experiment["id"]))
+            for required in step.get("requires") or []
         }
-        out: list[str] = []
-        seen = {step_id}
-        pending = [step_id]
-        while pending:
-            current = pending.pop(0)
-            for candidate_id, required_ids in requirements.items():
-                if candidate_id in seen or current not in required_ids:
-                    continue
-                seen.add(candidate_id)
-                out.append(candidate_id)
-                pending.append(candidate_id)
-        return out
-    raise ExperimentQueueError(f"unknown experiment: {experiment_id}")
+        for experiment in queue["experiments"]
+        for step in experiment["steps"]
+    }
+    out: list[tuple[str, str]] = []
+    seen = {root}
+    pending = [root]
+    while pending:
+        current = pending.pop(0)
+        for candidate_key, required_keys in requirements.items():
+            if candidate_key in seen or current not in required_keys:
+                continue
+            seen.add(candidate_key)
+            out.append(candidate_key)
+            pending.append(candidate_key)
+    return out
 
 
 def rewind_step(
@@ -1718,12 +1800,13 @@ def rewind_step(
     cascade: bool = True,
 ) -> None:
     downstream = _downstream_step_ids(queue, experiment_id, step_id) if queue and cascade else []
-    for current_step_id in [step_id, *downstream]:
+    for current_experiment_id, current_step_id in [(experiment_id, step_id), *downstream]:
         event = {
             "reason": reason,
+            "root_experiment_id": experiment_id,
             "root_step_id": step_id,
             "cascade": cascade,
-            "cascade_rewound": current_step_id != step_id,
+            "cascade_rewound": (current_experiment_id, current_step_id) != (experiment_id, step_id),
         }
         conn.execute(
             """
@@ -1731,12 +1814,12 @@ def rewind_step(
             SET status = 'queued', updated_at_utc = ?, last_event_json = ?
             WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
             """,
-            (_utc_now(), _json_text(event), queue_id, experiment_id, current_step_id),
+            (_utc_now(), _json_text(event), queue_id, current_experiment_id, current_step_id),
         )
         append_event(
             conn,
             queue_id=queue_id,
-            experiment_id=experiment_id,
+            experiment_id=current_experiment_id,
             step_id=current_step_id,
             event_type="step_rewound",
             payload=event,

@@ -9,6 +9,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB, DEFAULT_TIERS
 from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
 from tac.optimization.local_cpu_contest_drift import (
     EUREKA_FALSE_AUTHORITY_FIELDS,
@@ -49,6 +50,7 @@ DEFAULT_DRIFT_CALIBRATION_JSON = (
 )
 DEFAULT_EUREKA_OUTPUT_DIR = ".omx/research"
 DEFAULT_MLX_REFERENCE_CACHE_DIR = "experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID = "dqs1_scheduler_preflight"
 SAFE_OPERATOR_ACTION = "materialize_pairset_archive_and_run_local_controls"
 LOCAL_CPU_CONTEST_DRIFT_EUREKA_SCHEMA = EUREKA_SIGNAL_SCHEMA
 
@@ -144,6 +146,132 @@ def _candidate_priority(candidate_id: str, operator_action_rank: int | None) -> 
         if match:
             return int(match.group(1))
     return 100
+
+
+def _results_root_storage_workload_subdir(results_root: str, explicit: str | None) -> str:
+    if explicit:
+        return explicit
+    path = Path(results_root).expanduser()
+    if not path.is_absolute():
+        return path.as_posix()
+    for _name, root in DEFAULT_TIERS:
+        try:
+            return path.resolve(strict=False).relative_to(Path(root).resolve(strict=False)).as_posix()
+        except ValueError:
+            continue
+    return path.name
+
+
+def _expected_results_root(results_root: str) -> str:
+    path = Path(results_root).expanduser()
+    if not path.is_absolute():
+        return str(path)
+    return str(path.resolve(strict=False))
+
+
+def _scheduler_preflight_experiment(
+    *,
+    date: str,
+    results_root: str,
+    storage_tiers: tuple[str, ...] = (),
+    storage_workload_subdir: str | None = None,
+    storage_expected_workload_root: str | None = None,
+    storage_reserve_free_gb: float = DEFAULT_RESERVE_FREE_GB,
+    storage_expected_bytes: int = 0,
+    proactive_cleanup_roots: tuple[str, ...] = (),
+    proactive_cleanup_execute: bool = False,
+    proactive_cleanup_action: str = "move",
+    proactive_cleanup_min_bytes: str = "1",
+    proactive_cleanup_cold_store_roots: tuple[str, ...] = (),
+    proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
+) -> dict[str, Any]:
+    storage_plan = f".omx/research/dqs1_local_first_storage_plan_{date}.json"
+    cleanup_plan = f".omx/research/dqs1_local_first_proactive_cleanup_{date}.json"
+    workload_subdir = _results_root_storage_workload_subdir(results_root, storage_workload_subdir)
+    expected_root = (
+        storage_expected_workload_root
+        if storage_expected_workload_root is not None
+        else (_expected_results_root(results_root) if Path(results_root).expanduser().is_absolute() else None)
+    )
+    storage_command = [
+        ".venv/bin/python",
+        "tools/plan_experiment_storage.py",
+        "--output",
+        storage_plan,
+        "--workload-subdir",
+        workload_subdir,
+        "--reserve-free-gb",
+        str(storage_reserve_free_gb),
+        "--requested-bytes",
+        str(storage_expected_bytes),
+        "--create",
+    ]
+    if expected_root is not None:
+        storage_command.extend(["--expected-workload-root", expected_root])
+    for spec in storage_tiers:
+        storage_command.extend(["--storage-tier", spec])
+
+    cleanup_roots = proactive_cleanup_roots or (
+        "experiments/results",
+        ".omx/tmp",
+        "submissions/robust_current/eval_runs",
+    )
+    cleanup_command = [
+        ".venv/bin/python",
+        "tools/compact_experiment_artifacts.py",
+        *cleanup_roots,
+        "--min-bytes",
+        str(proactive_cleanup_min_bytes),
+        "--json-output",
+        cleanup_plan,
+    ]
+    if proactive_cleanup_execute:
+        cleanup_command.extend(["--execute", "--action", proactive_cleanup_action])
+        cleanup_command.extend(["--cold-store-reserve-gb", str(proactive_cleanup_cold_store_reserve_gb)])
+        for cold_store_root in proactive_cleanup_cold_store_roots:
+            cleanup_command.extend(["--cold-store-root", cold_store_root])
+    return {
+        "id": DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID,
+        "priority": 0,
+        "lane_id": f"lane_dqs1_scheduler_preflight_{date}",
+        "tags": ["dqs1", "scheduler-preflight", "storage", "cleanup", "no-score-authority"],
+        "steps": [
+            {
+                "id": "storage_tier_plan",
+                "timeout_seconds": 120,
+                "command": storage_command,
+                "resources": {"kind": "local_cpu"},
+                "postconditions": [
+                    {
+                        "type": "json_equals",
+                        "path": storage_plan,
+                        "key": "selected_workload_root_matches_expected",
+                        "equals": True,
+                    },
+                    _false_authority_postcondition(storage_plan),
+                ],
+            },
+            {
+                "id": "proactive_cleanup",
+                "requires": ["storage_tier_plan"],
+                "timeout_seconds": 600,
+                "command": cleanup_command,
+                "resources": {"kind": "local_cpu"},
+                "postconditions": [
+                    {
+                        "type": "json_false_authority",
+                        "path": cleanup_plan,
+                        "required_false": [
+                            "plan.score_claim",
+                            "plan.promotion_eligible",
+                            "plan.ready_for_exact_eval_dispatch",
+                        ],
+                        "false_or_missing": [],
+                    }
+                ],
+            },
+        ],
+    }
 
 
 def _require_false_authority(
@@ -338,6 +466,36 @@ def _candidate_completed_locally(
     return eureka_action == "observe_only"
 
 
+def _completion_roots(results_root: str, completed_results_roots: tuple[str, ...]) -> tuple[str, ...]:
+    roots: list[str] = [results_root]
+    roots.extend(completed_results_roots)
+    out: list[str] = []
+    seen: set[str] = set()
+    for root in roots:
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(key)
+    return tuple(out)
+
+
+def _candidate_completed_in_roots(
+    *,
+    repo_root: Path,
+    results_roots: tuple[str, ...],
+    candidate_id: str,
+) -> str | None:
+    for root in results_roots:
+        if _candidate_completed_locally(
+            repo_root=repo_root,
+            results_root=root,
+            candidate_id=candidate_id,
+        ):
+            return root
+    return None
+
+
 def _candidate_eureka_signal_action(
     *,
     repo_root: Path,
@@ -477,6 +635,7 @@ def select_dqs1_local_first_candidate(
     *,
     repo_root: str | Path,
     results_root: str = DEFAULT_RESULTS_ROOT,
+    completed_results_roots: tuple[str, ...] = (),
     exclude_candidate_ids: set[str] | None = None,
     skip_completed_local_advisory: bool = True,
 ) -> Dqs1QueueSelection:
@@ -484,6 +643,7 @@ def select_dqs1_local_first_candidate(
         action_summary_path,
         repo_root=repo_root,
         results_root=results_root,
+        completed_results_roots=completed_results_roots,
         exclude_candidate_ids=exclude_candidate_ids,
         skip_completed_local_advisory=skip_completed_local_advisory,
         candidate_limit=1,
@@ -495,6 +655,7 @@ def select_dqs1_local_first_candidates(
     *,
     repo_root: str | Path,
     results_root: str = DEFAULT_RESULTS_ROOT,
+    completed_results_roots: tuple[str, ...] = (),
     exclude_candidate_ids: set[str] | None = None,
     skip_completed_local_advisory: bool = True,
     candidate_limit: int = 1,
@@ -513,6 +674,7 @@ def select_dqs1_local_first_candidates(
 
     portfolio_path = _resolve_portfolio_path(summary_path, summary, repo_root=Path(repo_root))
     excluded = exclude_candidate_ids or set()
+    completion_roots = _completion_roots(results_root, completed_results_roots)
     skipped: list[dict[str, str]] = []
 
     sorted_actions = sorted(
@@ -537,13 +699,18 @@ def select_dqs1_local_first_candidates(
         if current_candidate_id in excluded:
             skipped.append({"candidate_id": current_candidate_id, "reason": "explicitly_excluded"})
             continue
-        if skip_completed_local_advisory and _candidate_completed_locally(
-            repo_root=Path(repo_root),
-            results_root=results_root,
-            candidate_id=current_candidate_id,
-        ):
-            skipped.append({"candidate_id": current_candidate_id, "reason": "local_advisory_exists"})
-            continue
+        if skip_completed_local_advisory:
+            completed_root = _candidate_completed_in_roots(
+                repo_root=Path(repo_root),
+                results_roots=completion_roots,
+                candidate_id=current_candidate_id,
+            )
+            if completed_root is not None:
+                skip_row = {"candidate_id": current_candidate_id, "reason": "local_advisory_exists"}
+                if len(completion_roots) > 1:
+                    skip_row["completed_results_root"] = completed_root
+                skipped.append(skip_row)
+                continue
         row = _load_portfolio_row(portfolio_path, current_candidate_id)
         _require_false_authority(
             row,
@@ -601,6 +768,7 @@ def build_dqs1_local_first_queue(
     mlx_cache_batch_pairs: int = 8,
     include_raw_retention_plan: bool = True,
     include_mlx_retention_plan: bool = True,
+    preflight_dependency: str | None = None,
 ) -> dict[str, Any]:
     if (
         isinstance(local_cpu_concurrency, bool)
@@ -654,6 +822,7 @@ def build_dqs1_local_first_queue(
     steps: list[dict[str, Any]] = [
         {
             "id": "build_bridge_plan",
+            **({"requires": [preflight_dependency]} if preflight_dependency else {}),
             "command": [
                 ".venv/bin/python",
                 "tools/build_decoder_q_selective_window_bridge_plan.py",
@@ -1004,6 +1173,8 @@ def build_dqs1_local_first_queue(
             }
         ],
     }
+    if preflight_dependency:
+        return queue
     return normalize_queue_definition(queue)
 
 
@@ -1032,13 +1203,31 @@ def build_dqs1_local_first_queue_from_selections(
     mlx_cache_batch_pairs: int = 8,
     include_raw_retention_plan: bool = True,
     include_mlx_retention_plan: bool = True,
+    include_scheduler_preflight: bool = False,
+    scheduler_storage_tiers: tuple[str, ...] = (),
+    scheduler_storage_workload_subdir: str | None = None,
+    scheduler_storage_expected_workload_root: str | None = None,
+    scheduler_storage_reserve_free_gb: float = DEFAULT_RESERVE_FREE_GB,
+    scheduler_storage_expected_bytes: int = 0,
+    scheduler_proactive_cleanup_roots: tuple[str, ...] = (),
+    scheduler_proactive_cleanup_execute: bool = False,
+    scheduler_proactive_cleanup_action: str = "move",
+    scheduler_proactive_cleanup_min_bytes: str = "1",
+    scheduler_proactive_cleanup_cold_store_roots: tuple[str, ...] = (),
+    scheduler_proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
 ) -> dict[str, Any]:
     if not selections:
         raise ExperimentQueueError("at least one DQS1 queue selection is required")
+    date = lane_date or _lane_date_from_summary_path(selections[0].action_summary_path)
+    preflight_dependency = (
+        f"{DEFAULT_SCHEDULER_PREFLIGHT_EXPERIMENT_ID}.proactive_cleanup"
+        if include_scheduler_preflight
+        else None
+    )
     queues = [
         build_dqs1_local_first_queue(
             selection,
-            lane_date=lane_date,
+            lane_date=date,
             queue_id=queue_id,
             results_root=results_root,
             mlx_effective_selection=mlx_effective_selection,
@@ -1060,15 +1249,34 @@ def build_dqs1_local_first_queue_from_selections(
             mlx_cache_batch_pairs=mlx_cache_batch_pairs,
             include_raw_retention_plan=include_raw_retention_plan,
             include_mlx_retention_plan=include_mlx_retention_plan,
+            preflight_dependency=preflight_dependency,
         )
         for selection in selections
     ]
     queue = dict(queues[0])
-    queue["experiments"] = [
+    preflight_experiments = [
+        _scheduler_preflight_experiment(
+            date=date,
+            results_root=results_root,
+            storage_tiers=scheduler_storage_tiers,
+            storage_workload_subdir=scheduler_storage_workload_subdir,
+            storage_expected_workload_root=scheduler_storage_expected_workload_root,
+            storage_reserve_free_gb=scheduler_storage_reserve_free_gb,
+            storage_expected_bytes=scheduler_storage_expected_bytes,
+            proactive_cleanup_roots=scheduler_proactive_cleanup_roots,
+            proactive_cleanup_execute=scheduler_proactive_cleanup_execute,
+            proactive_cleanup_action=scheduler_proactive_cleanup_action,
+            proactive_cleanup_min_bytes=scheduler_proactive_cleanup_min_bytes,
+            proactive_cleanup_cold_store_roots=scheduler_proactive_cleanup_cold_store_roots,
+            proactive_cleanup_cold_store_reserve_gb=scheduler_proactive_cleanup_cold_store_reserve_gb,
+        )
+    ] if include_scheduler_preflight else []
+    queue["experiments"] = list(preflight_experiments)
+    queue["experiments"].extend(
         experiment
         for candidate_queue in queues
         for experiment in candidate_queue["experiments"]
-    ]
+    )
     return normalize_queue_definition(queue)
 
 
@@ -1077,6 +1285,8 @@ def build_queue_from_action_summary(
     *,
     repo_root: str | Path,
     results_root: str = DEFAULT_RESULTS_ROOT,
+    queue_id: str = DEFAULT_QUEUE_ID,
+    completed_results_roots: tuple[str, ...] = (),
     mlx_effective_selection: str = DEFAULT_MLX_EFFECTIVE_SELECTION,
     decoder_q_candidate_manifest: str = DEFAULT_DECODER_Q_CANDIDATE_MANIFEST,
     base_submission_dir: str = DEFAULT_BASE_SUBMISSION_DIR,
@@ -1099,11 +1309,24 @@ def build_queue_from_action_summary(
     mlx_cache_batch_pairs: int = 8,
     include_raw_retention_plan: bool = True,
     include_mlx_retention_plan: bool = True,
+    include_scheduler_preflight: bool = False,
+    scheduler_storage_tiers: tuple[str, ...] = (),
+    scheduler_storage_workload_subdir: str | None = None,
+    scheduler_storage_expected_workload_root: str | None = None,
+    scheduler_storage_reserve_free_gb: float = DEFAULT_RESERVE_FREE_GB,
+    scheduler_storage_expected_bytes: int = 0,
+    scheduler_proactive_cleanup_roots: tuple[str, ...] = (),
+    scheduler_proactive_cleanup_execute: bool = False,
+    scheduler_proactive_cleanup_action: str = "move",
+    scheduler_proactive_cleanup_min_bytes: str = "1",
+    scheduler_proactive_cleanup_cold_store_roots: tuple[str, ...] = (),
+    scheduler_proactive_cleanup_cold_store_reserve_gb: float = DEFAULT_RESERVE_FREE_GB,
 ) -> Dqs1QueueBuildResult:
     selections = select_dqs1_local_first_candidates(
         action_summary_path,
         repo_root=repo_root,
         results_root=results_root,
+        completed_results_roots=completed_results_roots,
         exclude_candidate_ids=exclude_candidate_ids,
         skip_completed_local_advisory=skip_completed_local_advisory,
         candidate_limit=candidate_limit,
@@ -1111,6 +1334,7 @@ def build_queue_from_action_summary(
     return Dqs1QueueBuildResult(
         queue=build_dqs1_local_first_queue_from_selections(
             selections,
+            queue_id=queue_id,
             results_root=results_root,
             mlx_effective_selection=mlx_effective_selection,
             decoder_q_candidate_manifest=decoder_q_candidate_manifest,
@@ -1131,6 +1355,18 @@ def build_queue_from_action_summary(
             mlx_cache_batch_pairs=mlx_cache_batch_pairs,
             include_raw_retention_plan=include_raw_retention_plan,
             include_mlx_retention_plan=include_mlx_retention_plan,
+            include_scheduler_preflight=include_scheduler_preflight,
+            scheduler_storage_tiers=scheduler_storage_tiers,
+            scheduler_storage_workload_subdir=scheduler_storage_workload_subdir,
+            scheduler_storage_expected_workload_root=scheduler_storage_expected_workload_root,
+            scheduler_storage_reserve_free_gb=scheduler_storage_reserve_free_gb,
+            scheduler_storage_expected_bytes=scheduler_storage_expected_bytes,
+            scheduler_proactive_cleanup_roots=scheduler_proactive_cleanup_roots,
+            scheduler_proactive_cleanup_execute=scheduler_proactive_cleanup_execute,
+            scheduler_proactive_cleanup_action=scheduler_proactive_cleanup_action,
+            scheduler_proactive_cleanup_min_bytes=scheduler_proactive_cleanup_min_bytes,
+            scheduler_proactive_cleanup_cold_store_roots=scheduler_proactive_cleanup_cold_store_roots,
+            scheduler_proactive_cleanup_cold_store_reserve_gb=scheduler_proactive_cleanup_cold_store_reserve_gb,
         ),
         selection=selections[0],
         selections=selections,

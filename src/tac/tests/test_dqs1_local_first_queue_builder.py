@@ -285,6 +285,49 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     )
 
 
+def test_dqs1_queue_builder_skips_completed_candidate_from_extra_results_root(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    advisory, _archive, archive_sha = _write_completed_local_advisory(tmp_path)
+    source_completed = tmp_path / "results" / "materialized" / candidate_slug(
+        "pairset_drop_one_rank023_pair0440"
+    )
+    legacy_root = tmp_path / "legacy_results"
+    legacy_completed = legacy_root / "materialized" / candidate_slug(
+        "pairset_drop_one_rank023_pair0440"
+    )
+    legacy_completed.parent.mkdir(parents=True)
+    source_completed.replace(legacy_completed)
+    advisory = legacy_completed / "local_cpu_advisory.json"
+    archive = legacy_completed / "submission_dir" / "archive.zip"
+    payload = json.loads(advisory.read_text(encoding="utf-8"))
+    payload["provenance"]["archive_path"] = str(archive)
+    advisory.write_text(json.dumps(payload), encoding="utf-8")
+    _write_eureka_signal(
+        tmp_path,
+        candidate_id="pairset_drop_one_rank023_pair0440",
+        advisory=advisory,
+        archive_sha=archive_sha,
+    )
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="external_results",
+        completed_results_roots=(str(legacy_root),),
+    )
+
+    assert result.selection.candidate_id == "pairset_drop_one_rank024_pair0112"
+    assert result.selection.skipped_candidates == (
+        {
+            "candidate_id": "pairset_drop_one_rank023_pair0440",
+            "reason": "local_advisory_exists",
+            "completed_results_root": str(legacy_root),
+        },
+    )
+
+
 def test_dqs1_queue_builder_accepts_cross_family_action_summary_schema(
     tmp_path: Path,
 ) -> None:
@@ -435,6 +478,44 @@ def test_dqs1_queue_builder_can_emit_local_mlx_advisory_debug_steps(
         }
         for condition in retention["postconditions"]
     )
+
+
+def test_dqs1_queue_builder_can_emit_scheduler_preflight_gate(tmp_path: Path) -> None:
+    summary = _write_summary(tmp_path)
+
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+        include_scheduler_preflight=True,
+        scheduler_storage_workload_subdir="experiments/results/dqs1_local_first",
+        scheduler_storage_expected_workload_root=(
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first"
+        ),
+        scheduler_storage_tiers=("vertigo=/Volumes/VertigoDataTier/pact",),
+        scheduler_proactive_cleanup_roots=("experiments/results", ".omx/tmp"),
+        scheduler_proactive_cleanup_cold_store_roots=(
+            "/Volumes/VertigoDataTier/pact/cold_store",
+        ),
+    )
+
+    assert [experiment["id"] for experiment in result.queue["experiments"]][:2] == [
+        "dqs1_scheduler_preflight",
+        "pairset_drop_one_rank023_pair0440",
+    ]
+    preflight = result.queue["experiments"][0]
+    assert [step["id"] for step in preflight["steps"]] == [
+        "storage_tier_plan",
+        "proactive_cleanup",
+    ]
+    assert "tools/plan_experiment_storage.py" in preflight["steps"][0]["command"]
+    assert "tools/compact_experiment_artifacts.py" in preflight["steps"][1]["command"]
+    candidate_steps = {
+        step["id"]: step for step in result.queue["experiments"][1]["steps"]
+    }
+    assert candidate_steps["build_bridge_plan"]["requires"] == [
+        "dqs1_scheduler_preflight.proactive_cleanup"
+    ]
 
 
 def test_dqs1_queue_builder_requires_explicit_large_mlx_cache_ack(
@@ -859,8 +940,13 @@ def test_checked_in_dqs1_queue_keeps_eureka_append_only_contract() -> None:
         repo_root / "configs" / "experiment_queues" / "dqs1_pairset_local_first.yaml"
     )
     assert queue["queue_id"] == "dqs1_pairset_local_first"
-    assert len(queue["experiments"]) == 1
-    experiment = queue["experiments"][0]
+    candidate_experiments = [
+        experiment
+        for experiment in queue["experiments"]
+        if experiment["id"] != "dqs1_scheduler_preflight"
+    ]
+    assert len(candidate_experiments) == 1
+    experiment = candidate_experiments[0]
     candidate_id = experiment["id"]
     steps = {step["id"]: step for step in experiment["steps"]}
     eureka = steps["local_cpu_contest_drift_eureka"]

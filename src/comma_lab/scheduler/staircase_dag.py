@@ -28,6 +28,12 @@ from comma_lab.scheduler.experiment_queue import (
     default_state_path,
     load_queue_definition,
 )
+from comma_lab.storage_tiers import (
+    DEFAULT_RESERVE_FREE_GB,
+    DEFAULT_WORKLOAD_SUBDIR,
+    parse_storage_tier_specs,
+    plan_experiment_storage,
+)
 from tac.optimization.proxy_candidate_contract import (
     apply_proxy_evidence_boundary,
     require_no_truthy_authority_fields,
@@ -137,6 +143,12 @@ def _mapping(value: object, label: str, *, default: Mapping[str, Any] | None = N
     return dict(value)
 
 
+def _optional_mapping(value: object, label: str) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    return _mapping(value, label)
+
+
 def _non_negative_int(value: object, label: str, *, default: int = 0) -> int:
     if value is None:
         return default
@@ -159,6 +171,75 @@ def _optional_float(value: object, label: str) -> float | None:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ExperimentQueueError(f"{label} must be a number")
     return float(value)
+
+
+def _normalize_storage_plan_payload(value: object) -> dict[str, Any] | None:
+    storage = _optional_mapping(value, "storage")
+    if storage is None:
+        return None
+    try:
+        require_no_truthy_authority_fields(storage, context="staircase_dag.storage")
+    except ValueError as exc:
+        raise ExperimentQueueError(str(exc)) from exc
+    schema = _require_text(storage.get("schema"), "storage.schema")
+    selected = storage.get("selected_workload_root")
+    if selected is not None and not isinstance(selected, str):
+        raise ExperimentQueueError("storage.selected_workload_root must be a string or null")
+    tiers = storage.get("tiers")
+    if tiers is not None and not isinstance(tiers, list):
+        raise ExperimentQueueError("storage.tiers must be a list when present")
+    payload = apply_proxy_evidence_boundary(
+        {
+            **storage,
+            "schema": schema,
+            "storage_required": bool(storage.get("storage_required", True)),
+            "executor_contract": {
+                **_mapping(storage.get("executor_contract"), "storage.executor_contract"),
+                "must_write_bulk_outputs_under_selected_workload_root": True,
+                "local_disk_fallback_requires_explicit_allow_local_disk": True,
+            },
+        },
+        dispatch_blockers=["storage_plan_is_planning_only"],
+    )
+    return payload
+
+
+def build_storage_plan_payload(
+    *,
+    repo_root: str | Path,
+    storage_tiers: Sequence[str] | None = None,
+    workload_subdir: str = DEFAULT_WORKLOAD_SUBDIR,
+    requested_bytes: int = 0,
+    min_free_bytes: int = 0,
+    reserve_free_gb: float = DEFAULT_RESERVE_FREE_GB,
+    allow_local_disk: bool = False,
+    create: bool = False,
+) -> dict[str, Any]:
+    """Build a false-authority storage waterfall payload for a staircase DAG."""
+
+    specs = parse_storage_tier_specs(
+        list(storage_tiers or []),
+        repo_root=Path(repo_root),
+        reserve_free_gb=reserve_free_gb,
+        allow_local_disk=allow_local_disk,
+    )
+    plan = plan_experiment_storage(
+        specs,
+        workload_subdir=workload_subdir,
+        requested_bytes=requested_bytes,
+        min_free_bytes=min_free_bytes,
+        create=create,
+    )
+    return _normalize_storage_plan_payload(
+        {
+            **plan.to_dict(),
+            "storage_required": True,
+            "executor_contract": {
+                "must_write_bulk_outputs_under_selected_workload_root": True,
+                "local_disk_fallback_requires_explicit_allow_local_disk": True,
+            },
+        }
+    )
 
 
 def _normalize_node(raw: Mapping[str, Any], *, index: int) -> dict[str, Any]:
@@ -193,6 +274,17 @@ def _normalize_node(raw: Mapping[str, Any], *, index: int) -> dict[str, Any]:
     return row
 
 
+def _queue_dependency_node_id(ref: str, *, default_experiment_id: str) -> str:
+    text = _require_text(ref, "step dependency")
+    if "." not in text:
+        return f"{default_experiment_id}.{text}"
+    experiment_id, step_id = text.split(".", 1)
+    return (
+        f"{_require_text(experiment_id, 'step dependency experiment_id')}."
+        f"{_require_text(step_id, 'step dependency step_id')}"
+    )
+
+
 def normalize_resource_pools(raw_pools: Sequence[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
     pools = list(raw_pools or default_local_resource_pools())
     normalized: list[dict[str, Any]] = []
@@ -213,16 +305,18 @@ def normalize_resource_pools(raw_pools: Sequence[Mapping[str, Any]] | None) -> l
             )
         if not any(normalized_slots.values()):
             raise ExperimentQueueError(f"{pool_id}.slots must contain at least one positive slot")
-        normalized.append(
-            {
-                "id": pool_id,
-                "label": str(raw_pool.get("label") or pool_id),
-                "slots": normalized_slots,
-                "memory_gb": _positive_float(raw_pool.get("memory_gb"), f"{pool_id}.memory_gb", default=1.0),
-                "disk_gb": _positive_float(raw_pool.get("disk_gb"), f"{pool_id}.disk_gb", default=1.0),
-                "tags": _string_list(raw_pool.get("tags"), f"{pool_id}.tags"),
-            }
-        )
+        row = {
+            "id": pool_id,
+            "label": str(raw_pool.get("label") or pool_id),
+            "slots": normalized_slots,
+            "memory_gb": _positive_float(raw_pool.get("memory_gb"), f"{pool_id}.memory_gb", default=1.0),
+            "disk_gb": _positive_float(raw_pool.get("disk_gb"), f"{pool_id}.disk_gb", default=1.0),
+            "tags": _string_list(raw_pool.get("tags"), f"{pool_id}.tags"),
+        }
+        storage = _normalize_storage_plan_payload(raw_pool.get("storage"))
+        if storage is not None:
+            row["storage"] = storage
+        normalized.append(row)
     return normalized
 
 
@@ -255,6 +349,7 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
         if unknown:
             raise ExperimentQueueError(f"{node['node_id']} depends on unknown node(s): {unknown}")
     controls = _mapping(payload.get("controls"), "controls")
+    storage = _normalize_storage_plan_payload(payload.get("storage"))
     normalized = apply_proxy_evidence_boundary(
         {
             "schema": STAIRCASE_DAG_SCHEMA,
@@ -275,6 +370,7 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
             "resource_pools": normalize_resource_pools(
                 payload.get("resource_pools") if isinstance(payload.get("resource_pools"), list) else None
             ),
+            "storage": storage,
             "nodes": nodes,
             "source_refs": list(payload.get("source_refs") or []),
         },
@@ -285,6 +381,7 @@ def normalize_staircase_dag(payload: Mapping[str, Any]) -> dict[str, Any]:
             "dag_id": normalized["dag_id"],
             "controls": normalized["controls"],
             "resource_pools": normalized["resource_pools"],
+            "storage": normalized["storage"],
             "nodes": normalized["nodes"],
             "source_refs": normalized["source_refs"],
         }
@@ -325,6 +422,7 @@ def build_staircase_dag_from_experiment_queue(
     dag_id: str | None = None,
     source_path: str | Path | None = None,
     resource_pools: Sequence[Mapping[str, Any]] | None = None,
+    storage_plan: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     nodes: list[dict[str, Any]] = []
     for experiment in queue.get("experiments", []):
@@ -345,13 +443,14 @@ def build_staircase_dag_from_experiment_queue(
                 "step_id": step_id,
                 "step_hashes": _step_hashes(step),
                 "postconditions": list(step.get("postconditions") or []),
+                "resource_requirements": resources,
             }
             nodes.append(
                 {
                     "id": f"{experiment_id}.{step_id}",
                     "command": list(step.get("command") or []),
                     "dependencies": [
-                        f"{experiment_id}.{required}"
+                        _queue_dependency_node_id(str(required), default_experiment_id=experiment_id)
                         for required in _string_list(step.get("requires"), f"{experiment_id}.{step_id}.requires")
                     ],
                     "priority": priority,
@@ -376,6 +475,7 @@ def build_staircase_dag_from_experiment_queue(
             "schema": STAIRCASE_DAG_SCHEMA,
             "dag_id": dag_id or f"{queue.get('queue_id')}_staircase",
             "resource_pools": list(resource_pools or default_local_resource_pools()),
+            "storage": dict(storage_plan) if storage_plan is not None else None,
             "nodes": nodes,
             "source_refs": refs,
         }
@@ -499,6 +599,13 @@ def plan_staircase_dispatch(
     nodes = list(normalized["nodes"])
     depths = _dependency_depths(nodes)
     controls = normalized["controls"]
+    storage = normalized.get("storage")
+    storage_required = isinstance(storage, Mapping) and bool(storage.get("storage_required", True))
+    storage_ready = (
+        not storage_required
+        or not isinstance(storage, Mapping)
+        or isinstance(storage.get("selected_workload_root"), str)
+    )
     cap = max_nodes if max_nodes is not None else int(controls["max_ready_nodes"])
     if cap <= 0:
         cap = int(controls["max_ready_nodes"])
@@ -524,6 +631,15 @@ def plan_staircase_dispatch(
         node_id = str(node["node_id"])
         status = _node_status(node_id, statuses)
         if status != "queued":
+            continue
+        if not storage_ready:
+            blocked.append(
+                {
+                    "node_id": node_id,
+                    "reason": "no_eligible_storage_tier",
+                    "storage": _storage_blocker_summary(storage),
+                }
+            )
             continue
         resource_kind = str(node["resource_kind"])
         if _is_cloud_resource(resource_kind) and not cloud_ok:
@@ -618,16 +734,19 @@ def plan_staircase_dispatch(
             )
         )
 
-    dask_tasks = [
-        {
+    storage_hint = _storage_hint(storage if isinstance(storage, Mapping) else None)
+    dask_tasks = []
+    for node in selected:
+        task = {
             "key": f"{normalized['dag_id']}:{node.node_id}",
             "command": list(node.command),
             "resources": {node.resource_kind: 1},
             "machine_hint": node.machine_id,
             "pure": False,
         }
-        for node in selected
-    ]
+        if storage_hint is not None:
+            task["storage_hint"] = storage_hint
+        dask_tasks.append(task)
     plan = apply_proxy_evidence_boundary(
         {
             "schema": STAIRCASE_DISPATCH_PLAN_SCHEMA,
@@ -639,6 +758,7 @@ def plan_staircase_dispatch(
             "selected_nodes": [node.to_dict() for node in selected],
             "blocked_nodes": blocked,
             "resource_pools": normalized["resource_pools"],
+            "storage": storage,
             "dask_task_specs": dask_tasks,
             "executor_boundary": "planning_only_dask_or_local_executor_must_write_back_to_queue_state",
             "source_refs": normalized["source_refs"],
@@ -656,9 +776,45 @@ def plan_staircase_dispatch(
             "selected_nodes": plan["selected_nodes"],
             "blocked_nodes": plan["blocked_nodes"],
             "resource_pools": plan["resource_pools"],
+            "storage": plan["storage"],
         }
     )
     return plan
+
+
+def _storage_hint(storage: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if storage is None:
+        return None
+    selected = storage.get("selected_workload_root")
+    if not isinstance(selected, str):
+        return None
+    return {
+        "selected_tier": storage.get("selected_tier"),
+        "selected_root": storage.get("selected_root"),
+        "selected_workload_root": selected,
+        "workload_subdir": storage.get("workload_subdir"),
+        "executor_must_write_bulk_outputs_under_selected_workload_root": True,
+    }
+
+
+def _storage_blocker_summary(storage: object) -> dict[str, Any]:
+    if not isinstance(storage, Mapping):
+        return {"blockers": ["storage_plan_missing"]}
+    blockers: list[str] = []
+    tiers = storage.get("tiers")
+    if isinstance(tiers, list):
+        for tier in tiers:
+            if not isinstance(tier, Mapping):
+                continue
+            tier_blockers = tier.get("blockers")
+            if isinstance(tier_blockers, list):
+                blockers.extend(f"{tier.get('name', 'tier')}:{item}" for item in tier_blockers)
+    return {
+        "schema": storage.get("schema"),
+        "selected_tier": storage.get("selected_tier"),
+        "selected_workload_root": storage.get("selected_workload_root"),
+        "blockers": blockers or ["selected_workload_root_missing"],
+    }
 
 
 def parse_resource_pool_spec(spec: str) -> dict[str, Any]:
@@ -720,6 +876,7 @@ __all__ = [
     "STAIRCASE_DAG_SCHEMA",
     "STAIRCASE_DISPATCH_PLAN_SCHEMA",
     "StaircaseReadyNode",
+    "build_storage_plan_payload",
     "build_staircase_dag_from_experiment_queue",
     "default_local_resource_pools",
     "experiment_queue_status_map",

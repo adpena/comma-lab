@@ -362,6 +362,64 @@ def test_retention_move_copy_failure_journals_and_preserves_source(
     assert events == ["start", "candidate_start", "candidate_error", "candidate_end"]
 
 
+def test_retention_tiered_move_uses_first_cold_store_root(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    inflated = _write_locality_candidate(repo)
+    cold_fast = tmp_path / "cold_fast"
+    cold_slow = tmp_path / "cold_slow"
+    cold_fast.mkdir()
+    cold_slow.mkdir()
+    plan = build_retention_plan([repo], repo_root=repo, min_bytes=1)
+
+    execution = execute_retention_plan(
+        plan,
+        action="move",
+        cold_store_roots=[cold_fast, cold_slow],
+    )
+
+    assert execution["tiered_cold_store"] is True
+    assert execution["executed_count"] == 1
+    assert execution["rows"][0]["cold_store_tier_index"] == 0
+    assert execution["rows"][0]["cold_store_root"] == str(cold_fast)
+    assert execution["local_bytes_reclaimed"] == 0
+    assert not inflated.exists()
+    assert (cold_fast / plan.candidates[0].path / "0.raw").is_file()
+    assert not any(cold_slow.rglob("0.raw"))
+
+
+def test_retention_tiered_move_respects_cold_store_reserve(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    inflated = _write_locality_candidate(repo)
+    cold = tmp_path / "cold"
+    cold.mkdir()
+    plan = build_retention_plan([repo], repo_root=repo, min_bytes=1)
+
+    with pytest.raises(ArtifactRetentionError, match="cold-store free space insufficient"):
+        execute_retention_plan(
+            plan,
+            action="move",
+            cold_store_roots=[cold],
+            cold_store_reserve_bytes=10**18,
+        )
+    assert inflated.exists()
+
+
+def test_retention_can_delete_certified_external_source_under_plan_root(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    external_root = tmp_path / "external_results"
+    inflated = _write_locality_candidate(external_root)
+    plan = build_retention_plan([external_root], repo_root=repo, min_bytes=1)
+
+    assert Path(plan.candidates[0].path).is_absolute()
+
+    execution = execute_retention_plan(plan, action="delete")
+
+    assert execution["executed_count"] == 1
+    assert not inflated.exists()
+
+
 def test_retention_blocks_mutated_locality_raw_after_manifest(tmp_path: Path) -> None:
     inflated = _write_locality_candidate(tmp_path)
     (inflated / "0.raw").write_bytes(b"mutated")

@@ -53,6 +53,8 @@ experiments/queue_state*.db-*
 *.safetensors
 experiments/cache/
 experiments/postfilter_weights/
+experiments/external_results/
+experiments/cold_store/
 workspace/tools/
 
 # Model checkpoints and large tensors (use Git LFS or external storage instead)

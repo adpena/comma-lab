@@ -67,9 +67,17 @@ def _arg_after(command: list[Any], flag: str, *, step_id: str) -> str:
 
 def _single_experiment(queue: dict[str, Any]) -> dict[str, Any]:
     experiments = queue.get("experiments")
-    if not isinstance(experiments, list) or len(experiments) != 1:
-        raise ExperimentQueueError("DQS1 local-first harvest expects exactly one experiment")
-    experiment = experiments[0]
+    if not isinstance(experiments, list):
+        raise ExperimentQueueError("DQS1 local-first harvest expects an experiment list")
+    candidate_experiments = [
+        experiment
+        for experiment in experiments
+        if isinstance(experiment, dict)
+        and experiment.get("id") != "dqs1_scheduler_preflight"
+    ]
+    if len(candidate_experiments) != 1:
+        raise ExperimentQueueError("DQS1 local-first harvest expects exactly one candidate experiment")
+    experiment = candidate_experiments[0]
     if not isinstance(experiment, dict):
         raise ExperimentQueueError("DQS1 experiment must be an object")
     return experiment

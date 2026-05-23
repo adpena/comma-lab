@@ -182,6 +182,80 @@ def test_experiment_queue_pause_freeze_and_rewind(tmp_path: Path) -> None:
         assert queue_summary(conn, queue)["status_counts"] == {"queued": 3}
 
 
+def test_experiment_queue_supports_cross_experiment_dependencies_and_rewind(
+    tmp_path: Path,
+) -> None:
+    gate = tmp_path / "gate.txt"
+    candidate = tmp_path / "candidate.txt"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "cross_dependency_queue",
+            "controls": {"mode": "running", "max_concurrency": {"local_cpu": 2}},
+            "experiments": [
+                {
+                    "id": "preflight",
+                    "priority": 0,
+                    "steps": [
+                        {
+                            "id": "cleanup",
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(gate)!r}).write_text('ok')",
+                            ],
+                            "postconditions": [{"type": "path_exists", "path": gate.name}],
+                        }
+                    ],
+                },
+                {
+                    "id": "candidate_a",
+                    "priority": 1,
+                    "steps": [
+                        {
+                            "id": "materialize",
+                            "requires": ["preflight.cleanup"],
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(candidate)!r}).write_text('ok')",
+                            ],
+                            "postconditions": [{"type": "path_exists", "path": candidate.name}],
+                        }
+                    ],
+                },
+            ],
+        }
+    )
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue)
+        assert [(step.experiment_id, step.step_id) for step in ready] == [("preflight", "cleanup")]
+
+        result = run_ready_step(
+            conn,
+            queue,
+            ready[0],
+            repo_root=tmp_path,
+            execute=True,
+            log_root=tmp_path / "logs",
+        )
+        assert result["succeeded"] is True
+        assert [(step.experiment_id, step.step_id) for step in ready_steps(conn, queue)] == [
+            ("candidate_a", "materialize")
+        ]
+
+        rewind_step(
+            conn,
+            "cross_dependency_queue",
+            "preflight",
+            "cleanup",
+            reason="rerun storage cleanup",
+            queue=queue,
+        )
+        assert queue_summary(conn, queue)["status_counts"] == {"queued": 2}
+
+
 def test_experiment_queue_timeout_marks_failed_not_running(tmp_path: Path) -> None:
     queue = normalize_queue_definition(
         {

@@ -48,6 +48,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=f"configs/experiment_queues/{DEFAULT_QUEUE_ID}.yaml",
         help="queue definition output path",
     )
+    parser.add_argument("--queue-id", default=DEFAULT_QUEUE_ID)
     parser.add_argument(
         "--write",
         action="store_true",
@@ -73,6 +74,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--results-root",
         default=DEFAULT_RESULTS_ROOT,
         help="DQS1 result root used for materialized candidate paths",
+    )
+    parser.add_argument(
+        "--completed-results-root",
+        action="append",
+        default=[],
+        help=(
+            "additional result root whose completed local advisories should be "
+            "treated as already observed when selecting the next candidate"
+        ),
     )
     parser.add_argument(
         "--mlx-effective-selection",
@@ -168,6 +178,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="do not add the post-response mlx_delta_cache retention planning step",
     )
+    parser.add_argument(
+        "--include-scheduler-preflight",
+        action="store_true",
+        help="add one cross-experiment storage/cleanup preflight node that gates candidate work",
+    )
+    parser.add_argument("--scheduler-storage-tier", action="append", default=[], metavar="NAME=PATH")
+    parser.add_argument("--scheduler-storage-workload-subdir", default=None)
+    parser.add_argument("--scheduler-storage-expected-workload-root", default=None)
+    parser.add_argument("--scheduler-storage-reserve-free-gb", type=float, default=40.0)
+    parser.add_argument("--scheduler-storage-expected-bytes", type=int, default=0)
+    parser.add_argument("--scheduler-proactive-cleanup-root", action="append", default=[])
+    parser.add_argument("--scheduler-proactive-cleanup-execute", action="store_true")
+    parser.add_argument("--scheduler-proactive-cleanup-action", choices=("move", "delete"), default="move")
+    parser.add_argument("--scheduler-proactive-cleanup-min-bytes", default="1")
+    parser.add_argument("--scheduler-proactive-cleanup-cold-store-root", action="append", default=[])
+    parser.add_argument("--scheduler-proactive-cleanup-cold-store-reserve-gb", type=float, default=40.0)
     return parser.parse_args(argv)
 
 
@@ -182,6 +208,8 @@ def main(argv: list[str] | None = None) -> int:
         action_summary,
         repo_root=REPO_ROOT,
         results_root=args.results_root,
+        queue_id=args.queue_id,
+        completed_results_roots=tuple(args.completed_results_root),
         **{
             key: value
             for key, value in {
@@ -215,6 +243,18 @@ def main(argv: list[str] | None = None) -> int:
         mlx_cache_batch_pairs=args.mlx_cache_batch_pairs,
         include_raw_retention_plan=not args.skip_raw_retention_plan,
         include_mlx_retention_plan=not args.skip_mlx_retention_plan,
+        include_scheduler_preflight=args.include_scheduler_preflight,
+        scheduler_storage_tiers=tuple(args.scheduler_storage_tier),
+        scheduler_storage_workload_subdir=args.scheduler_storage_workload_subdir,
+        scheduler_storage_expected_workload_root=args.scheduler_storage_expected_workload_root,
+        scheduler_storage_reserve_free_gb=args.scheduler_storage_reserve_free_gb,
+        scheduler_storage_expected_bytes=args.scheduler_storage_expected_bytes,
+        scheduler_proactive_cleanup_roots=tuple(args.scheduler_proactive_cleanup_root),
+        scheduler_proactive_cleanup_execute=args.scheduler_proactive_cleanup_execute,
+        scheduler_proactive_cleanup_action=args.scheduler_proactive_cleanup_action,
+        scheduler_proactive_cleanup_min_bytes=args.scheduler_proactive_cleanup_min_bytes,
+        scheduler_proactive_cleanup_cold_store_roots=tuple(args.scheduler_proactive_cleanup_cold_store_root),
+        scheduler_proactive_cleanup_cold_store_reserve_gb=args.scheduler_proactive_cleanup_cold_store_reserve_gb,
     )
     output = Path(args.output)
     if args.write:

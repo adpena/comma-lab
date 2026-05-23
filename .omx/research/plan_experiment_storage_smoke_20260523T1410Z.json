@@ -1,0 +1,37 @@
+{
+  "blockers": [],
+  "expected_workload_root": null,
+  "generated_at_utc": "20260523T140932Z",
+  "min_free_bytes": 0,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requested_bytes": 0,
+  "schema": "comma_lab.experiment_storage_tier_plan.v1",
+  "score_claim": false,
+  "selected_root": "/Volumes/VertigoDataTier/pact",
+  "selected_tier": "vertigo",
+  "selected_workload_root": "/Volumes/VertigoDataTier/pact/experiments/results/smoke",
+  "selected_workload_root_matches_expected": true,
+  "storage_required": true,
+  "tiers": [
+    {
+      "allow_local_disk": false,
+      "blockers": [],
+      "eligible": true,
+      "exists": true,
+      "free_bytes": 1864755597312,
+      "name": "vertigo",
+      "parent_exists": true,
+      "priority": 0,
+      "requested_bytes": 0,
+      "reserve_free_bytes": 42949672960,
+      "root": "/Volumes/VertigoDataTier/pact",
+      "total_bytes": 2000189177856,
+      "usable_bytes": 1821805924352,
+      "workload_root": "/Volumes/VertigoDataTier/pact/experiments/results/smoke",
+      "writable": true
+    }
+  ],
+  "workload_subdir": "experiments/results/smoke"
+}

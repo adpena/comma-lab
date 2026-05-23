@@ -849,26 +849,155 @@ def build_retention_plan(
     )
 
 
+def _normalize_move_roots(
+    *,
+    cold_store_root: Path | None,
+    cold_store_roots: Iterable[Path] | None,
+) -> list[Path]:
+    roots: list[Path] = []
+    if cold_store_roots is not None:
+        roots.extend(Path(root) for root in cold_store_roots)
+    if cold_store_root is not None:
+        roots.insert(0, Path(cold_store_root))
+    out: list[Path] = []
+    seen: set[Path] = set()
+    for root in roots:
+        resolved = root.expanduser().resolve(strict=False)
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        out.append(root)
+    return out
+
+
+def _validate_move_roots(
+    roots: list[Path],
+    *,
+    repo_root: Path,
+    required_bytes: int,
+    tiered: bool,
+    reserve_bytes: int,
+) -> list[dict[str, Any]]:
+    contracts: list[dict[str, Any]] = []
+    for index, root in enumerate(roots):
+        contract = validate_cold_store_root(
+            root,
+            repo_root=repo_root,
+            required_bytes=reserve_bytes if tiered else required_bytes + reserve_bytes,
+        )
+        contract["tier_index"] = index
+        contract["reserve_bytes"] = int(reserve_bytes)
+        contracts.append(contract)
+    return contracts
+
+
+def _allowed_source_roots(plan: RetentionPlan, *, repo_root: Path) -> list[Path]:
+    roots = [repo_root]
+    roots.extend(Path(root) for root in plan.roots)
+    out: list[Path] = []
+    seen: set[Path] = set()
+    for root in roots:
+        resolved = root.expanduser().resolve(strict=False)
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        out.append(root)
+    return out
+
+
+def _candidate_source_path(candidate: RetentionCandidate, *, repo_root: Path) -> Path:
+    path = Path(candidate.path)
+    return path if path.is_absolute() else repo_root / path
+
+
+def _is_under_any(path: Path, roots: Iterable[Path]) -> bool:
+    try:
+        resolved = path.resolve()
+    except OSError:
+        resolved = path.resolve(strict=False)
+    for root in roots:
+        try:
+            resolved.relative_to(root.resolve(strict=False))
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _cold_store_relative_path(
+    candidate_path: str,
+    *,
+    repo_root: Path,
+    allowed_source_roots: Iterable[Path],
+) -> Path:
+    path = Path(candidate_path)
+    if not path.is_absolute():
+        return path
+    resolved = path.resolve(strict=False)
+    repo = repo_root.resolve(strict=False)
+    try:
+        return resolved.relative_to(repo)
+    except ValueError:
+        pass
+    for root in allowed_source_roots:
+        root_resolved = root.resolve(strict=False)
+        try:
+            rel = resolved.relative_to(root_resolved)
+        except ValueError:
+            continue
+        root_slug = "_".join(part for part in root_resolved.parts if part and part != "/")
+        return Path("__external__") / root_slug / rel
+    return Path("__absolute__") / Path(*resolved.parts[1:])
+
+
+def _select_cold_store_root(
+    candidate: RetentionCandidate,
+    *,
+    roots: list[Path],
+    planned_free_by_tier: dict[int, int],
+    reserve_bytes: int,
+) -> tuple[int, Path, int] | None:
+    for index, root in enumerate(roots):
+        free_before = int(planned_free_by_tier.get(index, 0))
+        if free_before - int(candidate.bytes) >= int(reserve_bytes):
+            return index, root, free_before
+    return None
+
+
 def execute_retention_plan(
     plan: RetentionPlan,
     *,
     action: str,
     cold_store_root: Path | None = None,
+    cold_store_roots: Iterable[Path] | None = None,
+    cold_store_reserve_bytes: int = 0,
     journal_path: Path | None = None,
 ) -> dict[str, Any]:
     if action not in {"delete", "move"}:
         raise ArtifactRetentionError("action must be delete or move")
-    if action == "move" and cold_store_root is None:
+    move_roots = _normalize_move_roots(
+        cold_store_root=cold_store_root,
+        cold_store_roots=cold_store_roots,
+    )
+    tiered_cold_store = cold_store_roots is not None
+    if action == "move" and not move_roots:
         raise ArtifactRetentionError("move action requires cold_store_root")
+    if isinstance(cold_store_reserve_bytes, bool) or int(cold_store_reserve_bytes) < 0:
+        raise ArtifactRetentionError("cold_store_reserve_bytes must be non-negative")
     repo_root = Path(plan.repo_root)
+    allowed_source_roots = _allowed_source_roots(plan, repo_root=repo_root)
+    cold_store_contracts = _validate_move_roots(
+        move_roots,
+        repo_root=repo_root,
+        required_bytes=plan.total_reclaimable_bytes,
+        tiered=tiered_cold_store,
+        reserve_bytes=int(cold_store_reserve_bytes),
+    )
+    planned_free_by_tier = {
+        index: int(contract["free_bytes"]) for index, contract in enumerate(cold_store_contracts)
+    }
     cold_store_contract = (
-        validate_cold_store_root(
-            cold_store_root,
-            repo_root=repo_root,
-            required_bytes=plan.total_reclaimable_bytes,
-        )
-        if action == "move" and cold_store_root is not None
-        else None
+        cold_store_contracts[0] if len(cold_store_contracts) == 1 and not tiered_cold_store else None
     )
     rows: list[dict[str, Any]] = []
     if journal_path is not None:
@@ -882,10 +1011,12 @@ def execute_retention_plan(
                 "candidate_count": len(plan.candidates),
                 "plan_schema": plan.schema,
                 "cold_store_contract": cold_store_contract,
+                "cold_store_contracts": cold_store_contracts,
+                "tiered_cold_store": tiered_cold_store,
             },
         )
     for candidate in plan.candidates:
-        source = repo_root / candidate.path
+        source = _candidate_source_path(candidate, repo_root=repo_root)
         row = candidate.to_dict()
         row["action"] = action
         row["preflight_revalidated"] = False
@@ -902,6 +1033,7 @@ def execute_retention_plan(
                 source,
                 candidate,
                 repo_root,
+                allowed_source_roots=allowed_source_roots,
             )
             if revalidation_blockers:
                 row["status"] = "skipped_revalidation_failed"
@@ -912,20 +1044,52 @@ def execute_retention_plan(
                 continue
             row["preflight_revalidated"] = True
             if action == "delete":
-                _delete_certified_tree(source, repo_root=repo_root, bytes_estimate=candidate.bytes)
+                _delete_certified_tree(
+                    source,
+                    repo_root=repo_root,
+                    bytes_estimate=candidate.bytes,
+                    allowed_source_roots=allowed_source_roots,
+                )
                 row["status"] = "deleted"
             else:
-                assert cold_store_root is not None
-                destination = cold_store_root / candidate.path
+                selected = _select_cold_store_root(
+                    candidate,
+                    roots=move_roots,
+                    planned_free_by_tier=planned_free_by_tier,
+                    reserve_bytes=int(cold_store_reserve_bytes),
+                )
+                if selected is None:
+                    row["status"] = "skipped_no_cold_store_capacity"
+                    rows.append(row)
+                    if journal_path is not None:
+                        _append_journal(journal_path, {"event": "candidate_end", "row": row})
+                    continue
+                tier_index, selected_root, free_before = selected
+                destination = selected_root / _cold_store_relative_path(
+                    candidate.path,
+                    repo_root=repo_root,
+                    allowed_source_roots=allowed_source_roots,
+                )
                 verification = _copy_verify_then_delete(
                     source,
                     destination,
                     repo_root=repo_root,
                     bytes_estimate=candidate.bytes,
+                    allowed_source_roots=allowed_source_roots,
                 )
+                planned_free_by_tier[tier_index] = free_before - int(candidate.bytes)
                 row["status"] = "moved"
+                row["cold_store_tier_index"] = tier_index
+                row["cold_store_root"] = str(selected_root)
                 row["cold_store_path"] = str(destination)
+                row["cold_store_free_bytes_before_planned"] = free_before
+                row["cold_store_free_bytes_after_planned"] = planned_free_by_tier[tier_index]
+                row["cold_store_reserve_bytes"] = int(cold_store_reserve_bytes)
                 row["cold_store_verification"] = verification
+                contract = cold_store_contracts[tier_index]
+                row["local_bytes_reclaimed"] = (
+                    0 if contract.get("same_device_as_repo") is True else int(candidate.bytes)
+                )
         except Exception as exc:
             row["status"] = "error"
             row["error"] = f"{type(exc).__name__}: {exc}"
@@ -941,11 +1105,25 @@ def execute_retention_plan(
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "action": action,
         "cold_store_root": None if cold_store_root is None else str(cold_store_root),
+        "cold_store_roots": [str(root) for root in move_roots],
         "cold_store_contract": cold_store_contract,
+        "cold_store_contracts": cold_store_contracts,
+        "cold_store_reserve_bytes": int(cold_store_reserve_bytes),
+        "tiered_cold_store": tiered_cold_store,
         "journal_path": None if journal_path is None else str(journal_path),
         "executed_count": sum(1 for row in rows if row.get("status") in {"deleted", "moved"}),
+        "skipped_count": sum(1 for row in rows if str(row.get("status") or "").startswith("skipped")),
         "executed_bytes": sum(
             int(row.get("bytes") or 0)
+            for row in rows
+            if row.get("status") in {"deleted", "moved"}
+        ),
+        "local_bytes_reclaimed": sum(
+            (
+                int(row.get("bytes") or 0)
+                if row.get("status") == "deleted"
+                else int(row.get("local_bytes_reclaimed") or 0)
+            )
             for row in rows
             if row.get("status") in {"deleted", "moved"}
         ),
@@ -1032,14 +1210,12 @@ def _execution_revalidation_blockers(
     source: Path,
     candidate: RetentionCandidate,
     repo_root: Path,
+    *,
+    allowed_source_roots: Iterable[Path],
 ) -> list[str]:
     blockers: list[str] = []
-    if Path(candidate.path).is_absolute():
-        blockers.append("candidate_path_absolute")
-    try:
-        source.resolve().relative_to(repo_root.resolve())
-    except ValueError:
-        blockers.append("source_outside_repo_root")
+    if not _is_under_any(source, allowed_source_roots):
+        blockers.append("source_outside_allowed_roots")
     if not candidate.certified_rebuildable:
         blockers.append("candidate_not_certified_rebuildable")
     if source.is_symlink():
@@ -1066,11 +1242,18 @@ def _execution_revalidation_blockers(
     return blockers
 
 
-def _delete_certified_tree(source: Path, *, repo_root: Path, bytes_estimate: int) -> None:
-    try:
-        source.resolve().relative_to(repo_root.resolve())
-    except ValueError as exc:
-        raise ArtifactRetentionError(f"refusing to delete outside repo_root: {source}") from exc
+def _delete_certified_tree(
+    source: Path,
+    *,
+    repo_root: Path,
+    bytes_estimate: int,
+    allowed_source_roots: Iterable[Path] | None = None,
+) -> None:
+    allowed_roots = [repo_root]
+    if allowed_source_roots is not None:
+        allowed_roots.extend(allowed_source_roots)
+    if not _is_under_any(source, allowed_roots):
+        raise ArtifactRetentionError(f"refusing to delete outside allowed roots: {source}")
     experiments_results = (repo_root / "experiments/results").resolve()
     resolved = source.resolve()
     try:
@@ -1106,6 +1289,7 @@ def _copy_verify_then_delete(
     *,
     repo_root: Path,
     bytes_estimate: int,
+    allowed_source_roots: Iterable[Path] | None = None,
 ) -> dict[str, Any]:
     destination = destination.resolve()
     partial_destination = destination.with_name(
@@ -1135,7 +1319,12 @@ def _copy_verify_then_delete(
     if source_digest["sha256"] != final_digest["sha256"]:
         shutil.rmtree(destination, ignore_errors=True)
         raise ArtifactRetentionError("cold-store copy verification failed")
-    _delete_certified_tree(source, repo_root=repo_root, bytes_estimate=bytes_estimate)
+    _delete_certified_tree(
+        source,
+        repo_root=repo_root,
+        bytes_estimate=bytes_estimate,
+        allowed_source_roots=allowed_source_roots,
+    )
     return {
         "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
         "source_digest": source_digest,

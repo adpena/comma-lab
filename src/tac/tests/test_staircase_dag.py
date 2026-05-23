@@ -14,6 +14,7 @@ from comma_lab.scheduler.experiment_queue import (
     initialize_queue_state,
 )
 from comma_lab.scheduler.staircase_dag import (
+    build_storage_plan_payload,
     build_staircase_dag_from_experiment_queue,
     experiment_queue_status_map,
     parse_resource_pool_spec,
@@ -130,6 +131,60 @@ def test_plan_uses_queue_state_and_unblocks_successors(tmp_path: Path) -> None:
 
     assert [node["node_id"] for node in plan["selected_nodes"]] == ["cand_a.score", "cand_b.plan"]
     assert plan["dask_task_specs"][0]["resources"] == {"local_mlx": 1}
+
+
+def test_staircase_dag_preserves_cross_experiment_dependencies() -> None:
+    queue = _queue()
+    queue["experiments"].insert(
+        0,
+        {
+            "id": "preflight",
+            "priority": 0,
+            "steps": [
+                {
+                    "id": "cleanup",
+                    "command": ["python", "-c", "print('cleanup')"],
+                    "resources": {"kind": "local_cpu"},
+                }
+            ],
+        },
+    )
+    queue["experiments"][1]["steps"][0]["requires"] = ["preflight.cleanup"]
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="fixture_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 2, "local_mlx": 1}, "memory_gb": 128, "disk_gb": 80}
+        ],
+    )
+    by_id = {node["node_id"]: node for node in dag["nodes"]}
+
+    assert by_id["cand_a.plan"]["dependencies"] == ["preflight.cleanup"]
+    plan = plan_staircase_dispatch(dag, max_nodes=4)
+    assert [node["node_id"] for node in plan["selected_nodes"]] == [
+        "preflight.cleanup",
+        "cand_b.plan",
+    ]
+
+
+def test_staircase_storage_plan_blocks_when_no_tier_selected(tmp_path: Path) -> None:
+    storage = build_storage_plan_payload(
+        repo_root=tmp_path,
+        storage_tiers=["missing=/definitely/not/a/real/storage/tier"],
+        workload_subdir="experiments/results",
+    )
+    dag = build_staircase_dag_from_experiment_queue(
+        _queue(),
+        dag_id="fixture_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 2, "local_mlx": 1}, "memory_gb": 128, "disk_gb": 80}
+        ],
+        storage_plan=storage,
+    )
+    plan = plan_staircase_dispatch(dag)
+
+    assert plan["selected_count"] == 0
+    assert {row["reason"] for row in plan["blocked_nodes"]} == {"no_eligible_storage_tier"}
 
 
 def test_rejects_truthy_authority_in_dag_node() -> None:

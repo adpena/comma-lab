@@ -11,36 +11,43 @@
   },
   "experiments": [
     {
-      "id": "pairset_drop_two_r010_008_p0376_0496",
-      "lane_id": "lane_dqs1_pairset_drop_two_r010_008_p0376_0496_local_first_20260523",
-      "priority": 26,
+      "id": "dqs1_scheduler_preflight",
+      "lane_id": "lane_dqs1_scheduler_preflight_20260523",
+      "priority": 0,
       "status": "queued",
       "steps": [
         {
           "command": [
             ".venv/bin/python",
-            "tools/build_decoder_q_selective_window_bridge_plan.py",
-            "--selection",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
-            "--candidate-manifest",
-            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
-            "--lane-id",
-            "lane_dqs1_pairset_drop_two_r010_008_p0376_0496_local_first_20260523",
-            "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/decoder_q_selective_window_bridge_plan.json",
-            "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/decoder_q_selective_window_bridge_plan.md"
+            "tools/plan_experiment_storage.py",
+            "--output",
+            ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+            "--workload-subdir",
+            "experiments/results/dqs1_local_first",
+            "--reserve-free-gb",
+            "40.0",
+            "--requested-bytes",
+            "0",
+            "--create",
+            "--expected-workload-root",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first"
           ],
-          "id": "build_bridge_plan",
+          "id": "storage_tier_plan",
           "kind": "command",
           "postconditions": [
+            {
+              "equals": true,
+              "key": "selected_workload_root_matches_expected",
+              "path": ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+              "type": "json_equals"
+            },
             {
               "false_or_missing": [
                 "ready_for_exact_eval_dispatch",
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/decoder_q_selective_window_bridge_plan.json",
+              "path": ".omx/research/dqs1_local_first_storage_plan_20260523.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -53,6 +60,96 @@
           "resources": {
             "kind": "local_cpu"
           },
+          "timeout_seconds": 120
+        },
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results",
+            ".omx/tmp",
+            "submissions/robust_current/eval_runs",
+            "--min-bytes",
+            "1073741824",
+            "--json-output",
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json"
+          ],
+          "id": "proactive_cleanup",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "storage_tier_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "timeout_seconds": 600
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "scheduler-preflight",
+        "storage",
+        "cleanup",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_drop_two_r010_001_p0376_0501",
+      "lane_id": "lane_dqs1_pairset_drop_two_r010_001_p0376_0501_local_first_20260523",
+      "priority": 27,
+      "status": "queued",
+      "steps": [
+        {
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r010_001_p0376_0501_local_first_20260523",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "dqs1_scheduler_preflight.proactive_cleanup"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
           "timeout_seconds": 0
         },
         {
@@ -60,17 +157,17 @@
             ".venv/bin/python",
             "tools/plan_decoder_q_selective_runtime_packet.py",
             "--bridge-plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/decoder_q_selective_window_bridge_plan.json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
             "--base-archive",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_008_p0376_0496.json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
             "--md-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_008_p0376_0496.md",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.md",
             "--frame-policy",
             "pair_all_frames",
             "--selected-pairs",
-            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,479,492,501,520,544,555,588"
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,479,492,496,520,544,555,588"
           ],
           "id": "plan_packet",
           "kind": "command",
@@ -81,7 +178,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_008_p0376_0496.json",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -103,15 +200,15 @@
             ".venv/bin/python",
             "tools/materialize_decoder_q_selective_runtime_candidate.py",
             "--plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/selector_pareto/packet_plans/drop_two_r010_008_p0376_0496.json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
             "--base-submission-dir",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
             "--output-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/submission_dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/submission_dir",
             "--frame-policy",
             "pair_all_frames",
             "--manifest-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/materialization_manifest.json"
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/materialization_manifest.json"
           ],
           "id": "materialize",
           "kind": "command",
@@ -122,7 +219,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/materialization_manifest.json",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/materialization_manifest.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -148,17 +245,17 @@
             "--global-mutated-archive",
             "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
             "--selective-submission-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/submission_dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/submission_dir",
             "--selected-pairs",
-            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,479,492,501,520,544,555,588",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,479,492,496,520,544,555,588",
             "--frame-policy",
             "pair_all_frames",
             "--timeout-seconds",
             "600",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/locality_work",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/locality_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/locality_controls.json"
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/locality_controls.json"
           ],
           "id": "locality_controls",
           "kind": "command",
@@ -166,7 +263,7 @@
             {
               "equals": true,
               "key": "locality_controls_passed",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/locality_controls.json",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/locality_controls.json",
               "type": "json_equals"
             },
             {
@@ -177,7 +274,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/locality_controls.json",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/locality_controls.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -199,9 +296,9 @@
             ".venv/bin/python",
             "experiments/contest_auth_eval.py",
             "--archive",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/submission_dir/archive.zip",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/submission_dir/archive.zip",
             "--inflate-sh",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/submission_dir/inflate.sh",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/submission_dir/inflate.sh",
             "--upstream-dir",
             "upstream",
             "--video-names-file",
@@ -209,9 +306,9 @@
             "--device",
             "cpu",
             "--work-dir",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/local_cpu_advisory_work",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory_work",
             "--json-out",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/local_cpu_advisory.json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
             "--inflate-timeout",
             "600",
             "--evaluate-timeout",
@@ -229,7 +326,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/local_cpu_advisory.json",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -250,11 +347,11 @@
           "command": [
             ".venv/bin/python",
             "tools/compact_experiment_artifacts.py",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501",
             "--min-bytes",
             "1",
             "--json-output",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/raw_artifact_retention_plan.json"
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json"
           ],
           "id": "plan_raw_artifact_retention",
           "kind": "command",
@@ -262,12 +359,12 @@
             {
               "equals": 0,
               "key": "plan.blocked_candidate_count",
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/raw_artifact_retention_plan.json",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/raw_artifact_retention_plan.json",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json",
               "required_false": [
                 "plan.score_claim",
                 "plan.promotion_eligible",
@@ -291,12 +388,12 @@
             "--calibration-json",
             ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
             "--candidate-id",
-            "pairset_drop_two_r010_008_p0376_0496",
+            "pairset_drop_two_r010_001_p0376_0501",
             "--candidate-local-json",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r010_008_p0376_0496/local_cpu_advisory.json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
             "--auth-frontier-score-from-pointer",
             "--eureka-out",
-            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_008_p0376_0496_20260523T130945Z.json",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260523T140957Z.json",
             "--min-margin",
             "0.0"
           ],
@@ -306,12 +403,12 @@
             {
               "equals": "local_cpu_contest_drift_eureka_signal.v1",
               "key": "schema",
-              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_008_p0376_0496_20260523T130945Z.json",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260523T140957Z.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_008_p0376_0496_20260523T130945Z.json",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260523T140957Z.json",
               "required_false": [
                 "ready_for_exact_eval_dispatch",
                 "dispatch_attempted",

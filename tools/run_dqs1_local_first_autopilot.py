@@ -112,7 +112,7 @@ def _execute_candidate_artifact_retention(
     candidate_id: str,
     stamp: str,
     action: str,
-    cold_store_root: Path | None,
+    cold_store_roots: list[Path] | None,
     min_bytes: int,
     include_mlx_cache: bool,
     repo_root: Path = REPO_ROOT,
@@ -141,6 +141,7 @@ def _execute_candidate_artifact_retention(
         "candidate_root": str(candidate_root),
         "timestamp_utc": stamp,
         "action": action,
+        "cold_store_roots": [] if cold_store_roots is None else [str(path) for path in cold_store_roots],
         "include_mlx_cache": include_mlx_cache,
         "plan": plan.to_dict(),
         "execution": None,
@@ -163,7 +164,16 @@ def _execute_candidate_artifact_retention(
             payload["execution"] = execute_retention_plan(
                 plan,
                 action=action,
-                cold_store_root=cold_store_root,
+                cold_store_root=(
+                    cold_store_roots[0]
+                    if cold_store_roots is not None and len(cold_store_roots) == 1
+                    else None
+                ),
+                cold_store_roots=(
+                    cold_store_roots
+                    if cold_store_roots is not None and len(cold_store_roots) != 1
+                    else None
+                ),
                 journal_path=journal_path,
             )
         except ArtifactRetentionError as exc:
@@ -329,8 +339,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--retention-cold-store-root",
         type=Path,
-        default=None,
-        help="external cold-store root required when --retention-action=move",
+        action="append",
+        default=[],
+        help="external cold-store root required when --retention-action=move; repeat for tiered moves",
     )
     parser.add_argument(
         "--retention-min-bytes",
@@ -501,7 +512,7 @@ def main(argv: list[str] | None = None) -> int:
                     candidate_id=str(harvest.harvest_record["candidate_id"]),
                     stamp=stamp,
                     action=args.retention_action,
-                    cold_store_root=args.retention_cold_store_root,
+                    cold_store_roots=args.retention_cold_store_root,
                     min_bytes=args.retention_min_bytes,
                     include_mlx_cache=args.include_mlx_cache_retention,
                     repo_root=REPO_ROOT,

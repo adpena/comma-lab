@@ -1,0 +1,333 @@
+{
+  "blocked_count": 8,
+  "blocked_nodes": [
+    {
+      "dependencies": [
+        "dqs1_scheduler_preflight.storage_tier_plan"
+      ],
+      "node_id": "dqs1_scheduler_preflight.proactive_cleanup",
+      "reason": "dependencies_not_succeeded"
+    },
+    {
+      "dependencies": [
+        "dqs1_scheduler_preflight.proactive_cleanup"
+      ],
+      "node_id": "pairset_drop_two_r010_001_p0376_0501.build_bridge_plan",
+      "reason": "dependencies_not_succeeded"
+    },
+    {
+      "dependencies": [
+        "pairset_drop_two_r010_001_p0376_0501.build_bridge_plan"
+      ],
+      "node_id": "pairset_drop_two_r010_001_p0376_0501.plan_packet",
+      "reason": "dependencies_not_succeeded"
+    },
+    {
+      "dependencies": [
+        "pairset_drop_two_r010_001_p0376_0501.plan_packet"
+      ],
+      "node_id": "pairset_drop_two_r010_001_p0376_0501.materialize",
+      "reason": "dependencies_not_succeeded"
+    },
+    {
+      "dependencies": [
+        "pairset_drop_two_r010_001_p0376_0501.materialize"
+      ],
+      "node_id": "pairset_drop_two_r010_001_p0376_0501.locality_controls",
+      "reason": "dependencies_not_succeeded"
+    },
+    {
+      "dependencies": [
+        "pairset_drop_two_r010_001_p0376_0501.locality_controls"
+      ],
+      "node_id": "pairset_drop_two_r010_001_p0376_0501.local_cpu_advisory",
+      "reason": "dependencies_not_succeeded"
+    },
+    {
+      "dependencies": [
+        "pairset_drop_two_r010_001_p0376_0501.local_cpu_advisory"
+      ],
+      "node_id": "pairset_drop_two_r010_001_p0376_0501.plan_raw_artifact_retention",
+      "reason": "dependencies_not_succeeded"
+    },
+    {
+      "dependencies": [
+        "pairset_drop_two_r010_001_p0376_0501.local_cpu_advisory"
+      ],
+      "node_id": "pairset_drop_two_r010_001_p0376_0501.local_cpu_contest_drift_eureka",
+      "reason": "dependencies_not_succeeded"
+    }
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dag_hash": "006013ad231e8e7f016b6852508c00c0c14b19e36e138c1c8148dd2faeddbea3",
+  "dag_id": "dqs1_pairset_local_first_staircase",
+  "dask_task_specs": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/plan_experiment_storage.py",
+        "--output",
+        ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+        "--workload-subdir",
+        "experiments/results/dqs1_local_first",
+        "--reserve-free-gb",
+        "40.0",
+        "--requested-bytes",
+        "0",
+        "--create",
+        "--expected-workload-root",
+        "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first"
+      ],
+      "key": "dqs1_pairset_local_first_staircase:dqs1_scheduler_preflight.storage_tier_plan",
+      "machine_hint": "m5_max_128gb",
+      "pure": false,
+      "resources": {
+        "local_cpu": 1
+      },
+      "storage_hint": {
+        "executor_must_write_bulk_outputs_under_selected_workload_root": true,
+        "selected_root": "/Volumes/VertigoDataTier/pact",
+        "selected_tier": "vertigo",
+        "selected_workload_root": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+        "workload_subdir": "experiments/results/dqs1_local_first"
+      }
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "staircase_dispatch_plan_is_planning_only",
+    "executor_must_update_canonical_queue_state",
+    "score_authority_requires_exact_auth_eval_axis"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executor_boundary": "planning_only_dask_or_local_executor_must_write_back_to_queue_state",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "plan_hash": "71f40cab374308aa206f6f25e1e0750eaaac99c19db187cf5abe43556cc3f34d",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_count": 1,
+  "ready_for_exact_eval_dispatch": false,
+  "resource_pools": [
+    {
+      "disk_gb": 80.0,
+      "id": "m5_max_128gb",
+      "label": "M5 Max local workstation",
+      "memory_gb": 128.0,
+      "slots": {
+        "local_cpu": 8,
+        "local_mlx": 1
+      },
+      "tags": [
+        "darwin",
+        "arm64",
+        "unified_memory",
+        "primary"
+      ]
+    },
+    {
+      "disk_gb": 12.0,
+      "id": "m1_macbook_pro_8gb",
+      "label": "M1 MacBook Pro",
+      "memory_gb": 8.0,
+      "slots": {
+        "local_cpu": 2,
+        "local_mlx": 1
+      },
+      "tags": [
+        "darwin",
+        "arm64",
+        "edge"
+      ]
+    },
+    {
+      "disk_gb": 8.0,
+      "id": "raspberry_pi4_8gb",
+      "label": "Raspberry Pi 4",
+      "memory_gb": 8.0,
+      "slots": {
+        "local_cpu": 1
+      },
+      "tags": [
+        "linux",
+        "aarch64",
+        "edge",
+        "slow"
+      ]
+    },
+    {
+      "disk_gb": 16.0,
+      "id": "intel_mac_mini_8gb",
+      "label": "Intel Mac mini",
+      "memory_gb": 8.0,
+      "slots": {
+        "local_cpu": 2
+      },
+      "tags": [
+        "darwin",
+        "x86_64",
+        "edge"
+      ]
+    },
+    {
+      "disk_gb": 64.0,
+      "id": "ryzen_3900x_rtx2070s",
+      "label": "Ryzen 3900X + RTX 2070 Super",
+      "memory_gb": 32.0,
+      "slots": {
+        "cuda_gpu": 1,
+        "local_cpu": 8
+      },
+      "tags": [
+        "linux",
+        "x86_64",
+        "cuda",
+        "lan"
+      ]
+    }
+  ],
+  "schema": "staircase_dispatch_plan.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "selected_count": 1,
+  "selected_nodes": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "tools/plan_experiment_storage.py",
+        "--output",
+        ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+        "--workload-subdir",
+        "experiments/results/dqs1_local_first",
+        "--reserve-free-gb",
+        "40.0",
+        "--requested-bytes",
+        "0",
+        "--create",
+        "--expected-workload-root",
+        "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first"
+      ],
+      "dependencies": [],
+      "family": "lane_dqs1_scheduler_preflight_20260523",
+      "machine_id": "m5_max_128gb",
+      "node_id": "dqs1_scheduler_preflight.storage_tier_plan",
+      "priority": 0,
+      "resource_kind": "local_cpu",
+      "stage": "storage_tier_plan",
+      "utility": 1.0
+    }
+  ],
+  "source_refs": [
+    {
+      "kind": "experiment_queue",
+      "path": "configs/experiment_queues/dqs1_pairset_local_first.yaml",
+      "queue_hash": "b412c32c8bd3547107423cb4690f930a5a360b0a4fe67a7df2644f0fae8b86c8",
+      "queue_id": "dqs1_pairset_local_first"
+    }
+  ],
+  "storage": {
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "deployment_target": "desktop_research",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "storage_plan_is_planning_only"
+    ],
+    "exact_cuda_auth_eval": false,
+    "executor_contract": {
+      "local_disk_fallback_requires_explicit_allow_local_disk": true,
+      "must_write_bulk_outputs_under_selected_workload_root": true
+    },
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "generated_at_utc": "20260523T141014Z",
+    "min_free_bytes": 0,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "requested_bytes": 0,
+    "schema": "comma_lab.experiment_storage_tier_plan.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "selected_root": "/Volumes/VertigoDataTier/pact",
+    "selected_tier": "vertigo",
+    "selected_workload_root": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+    "storage_required": true,
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ],
+    "tiers": [
+      {
+        "allow_local_disk": false,
+        "blockers": [],
+        "eligible": true,
+        "exists": true,
+        "free_bytes": 1864755609600,
+        "name": "vertigo",
+        "parent_exists": true,
+        "priority": 0,
+        "requested_bytes": 0,
+        "reserve_free_bytes": 42949672960,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "total_bytes": 2000189177856,
+        "usable_bytes": 1821805936640,
+        "workload_root": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+        "writable": true
+      },
+      {
+        "allow_local_disk": false,
+        "blockers": [],
+        "eligible": true,
+        "exists": false,
+        "free_bytes": 1491334332416,
+        "name": "apdatastore",
+        "parent_exists": true,
+        "priority": 1,
+        "requested_bytes": 0,
+        "reserve_free_bytes": 42949672960,
+        "root": "/Volumes/APDataStore/pact",
+        "total_bytes": 2000333438976,
+        "usable_bytes": 1448384659456,
+        "workload_root": "/Volumes/APDataStore/pact/experiments/results/dqs1_local_first",
+        "writable": true
+      },
+      {
+        "allow_local_disk": false,
+        "blockers": [
+          "local_disk_tier_disabled"
+        ],
+        "eligible": false,
+        "exists": true,
+        "free_bytes": 72795258880,
+        "name": "local",
+        "parent_exists": true,
+        "priority": 2,
+        "requested_bytes": 0,
+        "reserve_free_bytes": 42949672960,
+        "root": "/Users/adpena/Projects/pact",
+        "total_bytes": 1995165736960,
+        "usable_bytes": 29845585920,
+        "workload_root": "/Users/adpena/Projects/pact/experiments/results/dqs1_local_first",
+        "writable": true
+      }
+    ],
+    "workload_subdir": "experiments/results/dqs1_local_first"
+  },
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

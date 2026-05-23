@@ -25,6 +25,7 @@ ensure_repo_imports(REPO_ROOT)
 from comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition  # noqa: E402
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
     DEFAULT_MACHINE_PRESETS,
+    build_storage_plan_payload,
     build_staircase_dag_from_experiment_queue,
     experiment_queue_status_map,
     load_staircase_dag,
@@ -56,6 +57,21 @@ def _resource_pools(args: argparse.Namespace) -> list[dict]:
     return []
 
 
+def _storage_plan(args: argparse.Namespace) -> dict | None:
+    if not getattr(args, "storage_waterfall", False):
+        return None
+    return build_storage_plan_payload(
+        repo_root=REPO_ROOT,
+        storage_tiers=args.storage_tier,
+        workload_subdir=args.storage_workload_subdir,
+        requested_bytes=args.storage_expected_bytes,
+        min_free_bytes=args.storage_min_free_bytes,
+        reserve_free_gb=args.storage_reserve_gb,
+        allow_local_disk=args.allow_local_storage_tier,
+        create=args.create_storage_dirs,
+    )
+
+
 def cmd_machine_presets(_args: argparse.Namespace) -> int:
     _json_print(
         {
@@ -77,6 +93,7 @@ def cmd_from_queue(args: argparse.Namespace) -> int:
         dag_id=args.dag_id,
         source_path=args.queue,
         resource_pools=_resource_pools(args) or None,
+        storage_plan=_storage_plan(args),
     )
     if args.output:
         write_staircase_dag(args.output, dag)
@@ -94,6 +111,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
             dag_id=args.dag_id,
             source_path=args.queue,
             resource_pools=_resource_pools(args) or None,
+            storage_plan=_storage_plan(args),
         )
     else:
         raise ExperimentQueueError("plan requires --dag or --queue")
@@ -143,6 +161,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         help="id:local_cpu=4,local_mlx=1,memory_gb=128,disk_gb=80,tags=darwin+mlx",
     )
+    _add_storage_args(from_queue)
     from_queue.set_defaults(func=cmd_from_queue)
 
     plan = sub.add_parser("plan", help="select ready DAG nodes for execution")
@@ -163,8 +182,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         help="id:local_cpu=4,local_mlx=1,memory_gb=128,disk_gb=80,tags=darwin+mlx",
     )
+    _add_storage_args(plan)
     plan.set_defaults(func=cmd_plan)
     return parser.parse_args(argv)
+
+
+def _add_storage_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--storage-waterfall",
+        action="store_true",
+        help="attach a storage-tier plan to the DAG and block dispatch if no tier is eligible",
+    )
+    parser.add_argument("--storage-tier", action="append", default=[], metavar="NAME=PATH")
+    parser.add_argument("--storage-workload-subdir", default="experiments/results")
+    parser.add_argument("--storage-reserve-gb", type=float, default=40.0)
+    parser.add_argument("--storage-expected-bytes", type=int, default=0)
+    parser.add_argument("--storage-min-free-bytes", type=int, default=0)
+    parser.add_argument("--allow-local-storage-tier", action="store_true")
+    parser.add_argument("--create-storage-dirs", action="store_true")
 
 
 def main(argv: list[str] | None = None) -> int:
