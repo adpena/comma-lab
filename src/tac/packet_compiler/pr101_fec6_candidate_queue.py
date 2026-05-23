@@ -253,6 +253,7 @@ def packetir_byte_accounting(
         "sections": rows,
         "byte_accounting_blockers": accounting_blockers,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -284,6 +285,7 @@ def _mapping_list(value: Any) -> list[dict[str, Any]]:
 def _false_authority_flags() -> dict[str, bool]:
     return {
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -525,8 +527,10 @@ def build_pr101_fec6_packetir_candidate_queue(
                 - PR101_LATENT_BLOB_LEN,
             ),
             "required_runtime_consumed_section": "pr101_sidecar_blob",
-            "blockers": list(DEFAULT_OPERATOR_BLOCKERS)
-            + ["sidecar_only_materializer_missing"],
+            "blockers": [
+                *DEFAULT_OPERATOR_BLOCKERS,
+                "sidecar_only_materializer_missing",
+            ],
             "consumer_surfaces": list(RUNTIME_CONSUMER_SURFACES)
             + list(QUEUE_CONSUMER_SURFACES),
             **_false_authority_flags(),
@@ -547,8 +551,10 @@ def build_pr101_fec6_packetir_candidate_queue(
                 "pr101_latent_blob",
                 "pr101_sidecar_blob",
             ],
-            "blockers": list(DEFAULT_OPERATOR_BLOCKERS)
-            + ["latent_sidecar_runtime_adapter_missing"],
+            "blockers": [
+                *DEFAULT_OPERATOR_BLOCKERS,
+                "latent_sidecar_runtime_adapter_missing",
+            ],
             "consumer_surfaces": list(RUNTIME_CONSUMER_SURFACES)
             + list(QUEUE_CONSUMER_SURFACES),
             **_false_authority_flags(),
@@ -616,6 +622,7 @@ def render_pr101_fec6_packetir_candidate_queue_markdown(
         f"- Operator candidate count: `{queue.get('operator_candidate_count')}`",
         f"- Materialized new archives: `{queue.get('materialized_new_archive_count')}`",
         f"- Score claim: `{queue.get('score_claim')}`",
+        f"- Score claim valid: `{queue.get('score_claim_valid')}`",
         f"- Promotion eligible: `{queue.get('promotion_eligible')}`",
         f"- Ready for exact eval dispatch: `{queue.get('ready_for_exact_eval_dispatch')}`",
         "",

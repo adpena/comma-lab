@@ -532,6 +532,7 @@ def _packetir_primitives(repo_root: Path) -> list[dict[str, Any]]:
 
 _FALSE_AUTHORITY_FIELDS = (
     "score_claim",
+    "score_claim_valid",
     "promotion_eligible",
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
@@ -684,6 +685,7 @@ def _candidate_queue_row(
     row["runtime_consumption_proven"] = runtime_consumption_proven
     row["blockers"] = blockers
     row["score_claim"] = False
+    row["score_claim_valid"] = False
     row["promotion_eligible"] = False
     row["ready_for_exact_eval_dispatch"] = False
     if payload:

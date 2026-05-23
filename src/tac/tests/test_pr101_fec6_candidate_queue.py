@@ -8,6 +8,10 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from tac.cathedral_consumers.packetir_candidate_queue_consumer import (
+    consume_candidate,
+    consume_queue,
+)
 from tac.packet_compiler.pr101_fec6_candidate_queue import (
     PR101_FEC6_BYTE_ACCOUNTING_SCHEMA,
     PR101_FEC6_CANDIDATE_QUEUE_SCHEMA,
@@ -119,9 +123,11 @@ def test_candidate_queue_accounts_bytes_and_stays_nonpromotional(
     # F1 v2 contract: top-level blockers MUST surface missing runtime proof.
     assert "runtime_byte_consumption_noop_detector_missing" in queue["blockers"]
     assert queue["score_claim"] is False
+    assert queue["score_claim_valid"] is False
     assert queue["promotion_eligible"] is False
     assert queue["ready_for_exact_eval_dispatch"] is False
     assert queue["byte_accounting"]["schema"] == PR101_FEC6_BYTE_ACCOUNTING_SCHEMA
+    assert queue["byte_accounting"]["score_claim_valid"] is False
     # Parser-domain truth still holds — primary section lengths sum to member bytes.
     assert queue["byte_accounting"]["all_payload_bytes_accounted"] is True
     assert queue["byte_accounting"]["parser_byte_accounting_passed"] is True
@@ -136,6 +142,9 @@ def test_candidate_queue_accounts_bytes_and_stays_nonpromotional(
     assert "pr101_sidecar_only_runtime_probe" in candidate_ids
     assert "pr101_latent_plus_sidecar_runtime_adapter_probe" in candidate_ids
     assert all(candidate["score_claim"] is False for candidate in queue["candidates"])
+    assert all(
+        candidate["score_claim_valid"] is False for candidate in queue["candidates"]
+    )
     assert all(candidate["consumer_surfaces"] for candidate in queue["candidates"])
 
 
@@ -256,6 +265,46 @@ def test_candidate_queue_markdown_names_consumers(tmp_path: Path) -> None:
     assert "PR101/FEC6 PacketIR Candidate Queue" in markdown
     assert "tac.cathedral_consumers.packetir_candidate_queue_consumer" in markdown
     assert "fec6_selector_entropy_recode_probe" in markdown
+    assert "Score claim valid: `False`" in markdown
+
+
+def test_packetir_consumer_blocks_score_claim_valid_overclaim() -> None:
+    candidate = {
+        "candidate_id": "bad_packetir_overclaim",
+        "consumer_surfaces": [
+            "tac.cathedral_consumers.packetir_candidate_queue_consumer"
+        ],
+        "blockers": [],
+        "runtime_consumption_proven": True,
+        "score_claim_valid": True,
+    }
+
+    verdict = consume_candidate(candidate)
+
+    assert verdict["score_claim_valid"] is False
+    assert "score_claim_valid_overclaimed" in verdict["blockers"]
+
+    queue = {
+        "schema": PR101_FEC6_CANDIDATE_QUEUE_SCHEMA,
+        "score_claim_valid": True,
+        "byte_accounting": {"runtime_consumption_proven": True},
+        "candidates": [
+            {
+                "candidate_id": "observability_only",
+                "consumer_surfaces": [
+                    "tac.cathedral_consumers.packetir_candidate_queue_consumer"
+                ],
+                "blockers": [],
+                "runtime_consumption_proven": True,
+                "score_claim_valid": False,
+            }
+        ],
+    }
+
+    result = consume_queue(queue)
+
+    assert result["score_claim_valid"] is False
+    assert "score_claim_valid_overclaimed" in result["blockers"]
 
 
 def test_candidate_queue_cli_writes_json_and_markdown(tmp_path: Path) -> None:

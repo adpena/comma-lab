@@ -25,6 +25,7 @@ CONSUMER_HOOK_NUMBERS = (
 
 _AUTHORITY_FIELDS = (
     "score_claim",
+    "score_claim_valid",
     "promotion_eligible",
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
@@ -83,12 +84,11 @@ def consume_candidate(
         blockers.append("consumer_surfaces_missing")
         surfaces = []
     runtime_proven = candidate.get("runtime_consumption_proven")
-    if runtime_consumption_proven_required:
-        if runtime_proven is not True:
-            if _RUNTIME_PROVEN_BLOCKER not in blockers:
-                blockers.append(_RUNTIME_PROVEN_BLOCKER)
-            if "runtime_consumption_proven_required_but_false" not in blockers:
-                blockers.append("runtime_consumption_proven_required_but_false")
+    if runtime_consumption_proven_required and runtime_proven is not True:
+        if _RUNTIME_PROVEN_BLOCKER not in blockers:
+            blockers.append(_RUNTIME_PROVEN_BLOCKER)
+        if "runtime_consumption_proven_required_but_false" not in blockers:
+            blockers.append("runtime_consumption_proven_required_but_false")
     candidate_id = str(candidate.get("candidate_id") or "unknown_packetir_candidate")
     rationale = (
         "tac.packet_compiler PacketIR candidate queue consumed as "
@@ -105,6 +105,7 @@ def consume_candidate(
         "promotable": False,
         "confidence": 0.0 if blockers else 0.25,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "runtime_consumption_proven": runtime_proven is True,
@@ -169,6 +170,7 @@ def consume_queue(
         "promotable": False,
         "confidence": 0.0 if blockers else 0.25,
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "queue_runtime_consumption_proven": queue_runtime_proven,

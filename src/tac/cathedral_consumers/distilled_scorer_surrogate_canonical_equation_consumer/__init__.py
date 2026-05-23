@@ -15,10 +15,14 @@ never marks a candidate promotable, and never dispatches work.
 from __future__ import annotations
 
 import math
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from tac.cathedral.consumer_contract import HookNumber
-
+from tac.optimization.scorer_response_dataset import (
+    ScorerResponseDatasetError,
+    scorer_response_planning_value_for_target,
+)
 
 CONSUMER_NAME = "distilled_scorer_surrogate_canonical_equation_consumer"
 CONSUMER_VERSION = "0.1.0"
@@ -70,6 +74,9 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     unsafe = _first_unsafe_row(rows)
     if unsafe is not None:
         return _blocked_signal(unsafe)
+    invalid_planning_row = _first_invalid_planning_row(rows)
+    if invalid_planning_row is not None:
+        return _blocked_signal(invalid_planning_row)
 
     best_total = _best_numeric_row(rows, "delta_vs_baseline_score", lower_is_better=True)
     best_scorer = _best_numeric_row(rows, "scorer_delta_vs_baseline", lower_is_better=True)
@@ -77,14 +84,14 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     n_improved_total = sum(
         1
         for row in rows
-        if _finite_float(row.get("delta_vs_baseline_score")) is not None
-        and float(row["delta_vs_baseline_score"]) < 0.0
+        if (value := _planning_value(row, "delta_vs_baseline_score")) is not None
+        and value < 0.0
     )
     n_improved_scorer = sum(
         1
         for row in rows
-        if _finite_float(row.get("scorer_delta_vs_baseline")) is not None
-        and float(row["scorer_delta_vs_baseline"]) < 0.0
+        if (value := _planning_value(row, "scorer_delta_vs_baseline")) is not None
+        and value < 0.0
     )
 
     return {
@@ -107,6 +114,7 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         "row_family": ROW_FAMILY,
         "row_count": len(rows),
         "row_ids": row_ids,
+        "planning_target_accessor": "scorer_response_planning_value_for_target",
         "improved_total_score_count": n_improved_total,
         "improved_scorer_term_count": n_improved_scorer,
         "best_total_row": best_total,
@@ -174,6 +182,18 @@ def _first_unsafe_row(rows: list[Mapping[str, Any]]) -> Mapping[str, Any] | None
     return None
 
 
+def _first_invalid_planning_row(
+    rows: list[Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    for row in rows:
+        for field in ("delta_vs_baseline_score", "scorer_delta_vs_baseline"):
+            try:
+                _planning_value(row, field)
+            except ScorerResponseDatasetError as exc:
+                return {"row": row, "field": field, "error": str(exc)}
+    return None
+
+
 def _best_numeric_row(
     rows: list[Mapping[str, Any]],
     field: str,
@@ -183,7 +203,7 @@ def _best_numeric_row(
     best: Mapping[str, Any] | None = None
     best_value: float | None = None
     for row in rows:
-        value = _finite_float(row.get(field))
+        value = _planning_value(row, field)
         if value is None:
             continue
         if best is None or (
@@ -194,10 +214,22 @@ def _best_numeric_row(
                 "candidate_id": row.get("candidate_id"),
                 "family": row.get("family"),
                 field: value,
+                "planning_target_accessor": (
+                    "scorer_response_planning_value_for_target"
+                ),
                 "added_archive_bytes": row.get("added_archive_bytes"),
             }
             best_value = value
     return best
+
+
+def _planning_value(row: Mapping[str, Any], field: str) -> float | None:
+    value = scorer_response_planning_value_for_target(
+        dict(row),
+        field,
+        label=str(row.get("row_id") or row.get("candidate_id") or "distilled row"),
+    )
+    return _finite_float(value)
 
 
 def _finite_float(value: Any) -> float | None:
@@ -212,12 +244,14 @@ def _finite_float(value: Any) -> float | None:
 
 def _blocked_signal(unsafe: Mapping[str, Any]) -> Mapping[str, Any]:
     field = unsafe.get("field")
+    error = unsafe.get("error")
     row = unsafe.get("row") if isinstance(unsafe.get("row"), Mapping) else {}
     return {
         "predicted_delta_adjustment": 0.0,
         "rationale": (
             "distilled scorer surrogate consumer refused source row with "
-            f"{field}=true; keep LL/distillation evidence fail-closed [predicted]"
+            f"{field}={error or 'true'}; keep LL/distillation evidence "
+            "fail-closed [predicted]"
         ),
         "axis_tag": "[predicted]",
         "promotable": False,
@@ -231,6 +265,7 @@ def _blocked_signal(unsafe: Mapping[str, Any]) -> Mapping[str, Any]:
         "canonical_equation_id": CANONICAL_EQUATION_ID,
         "row_id": row.get("row_id"),
         "blocked_field": field,
+        "blocked_error": error,
     }
 
 

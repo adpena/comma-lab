@@ -98,6 +98,7 @@ def _valid_candidate_queue_payload(
         "operator_candidate_count": 0,
         "blockers": [],
         "score_claim": False,
+        "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -135,6 +136,7 @@ def _valid_candidate_queue_payload(
                 else ["runtime_byte_consumption_noop_detector_missing"]
             ),
             "score_claim": False,
+            "score_claim_valid": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },
@@ -150,6 +152,7 @@ def _valid_candidate_queue_payload(
                 ],
                 "blockers": [],
                 "score_claim": False,
+                "score_claim_valid": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -434,6 +437,7 @@ def test_pr101_fec6_matrix_records_candidate_queue_when_present(tmp_path: Path) 
     assert matrix["candidate_queue"]["exists"] is True
     assert matrix["candidate_queue"]["candidate_byte_accounting_present"] is True
     assert matrix["candidate_queue"]["score_claim"] is False
+    assert matrix["candidate_queue"]["score_claim_valid"] is False
     assert (
         matrix["status"]
         == "parser_profile_no_compiler_identity_candidate_queue_present_needs_review"
@@ -517,6 +521,7 @@ def test_pr101_fec6_matrix_blocks_overclaiming_candidate_queue(
     spec = _fixture_spec(tmp_path, include_queue=True)
     queue_path = Path(spec.candidate_queue_path)
     payload = json.loads(queue_path.read_text(encoding="utf-8"))
+    payload["score_claim_valid"] = True
     payload["candidates"][0]["ready_for_exact_eval_dispatch"] = True
     _write_json(queue_path, payload)
 
@@ -528,6 +533,9 @@ def test_pr101_fec6_matrix_blocks_overclaiming_candidate_queue(
         "ready_for_exact_eval_dispatch_overclaimed" in blocker
         for blocker in matrix["candidate_queue"]["blockers"]
     )
+    assert "candidate_queue_score_claim_valid_overclaimed" in matrix["candidate_queue"][
+        "blockers"
+    ]
 
 
 def test_pr101_fec6_matrix_blocks_bad_compiler_manifest(tmp_path: Path) -> None:
