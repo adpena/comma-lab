@@ -62,8 +62,9 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         default=[],
         help=(
-            "Additional source dispatch_blocker string the bridge may clear "
-            "after exact-readiness custody checks."
+            "Additional source dispatch_blocker string the bridge may clear. "
+            "Fails closed unless the scheduler allowlist permits it and an "
+            "operator override reason is supplied."
         ),
     )
     parser.add_argument(
@@ -106,6 +107,22 @@ def main(argv: list[str] | None = None) -> int:
     ):
         raise SystemExit(
             "provide at least one of --work-queue, --chain-manifest, or --chain-root"
+        )
+    bridge_option_without_bridge = (
+        args.exact_readiness_out_dir is None
+        and (
+            args.exact_readiness_bridge_report_out is not None
+            or bool(args.exact_readiness_candidate_id)
+            or bool(args.exact_readiness_allow_source_blocker)
+            or args.exact_readiness_dispatch_claims_path is not None
+            or args.exact_readiness_allow_above_active_floor_dispatch
+            or args.exact_readiness_operator_override_reason is not None
+            or args.exact_readiness_require_ready
+        )
+    )
+    if bridge_option_without_bridge:
+        raise SystemExit(
+            "--exact-readiness-out-dir is required when using exact-readiness bridge options"
         )
 
     result = harvest_materializer_chain_manifests(

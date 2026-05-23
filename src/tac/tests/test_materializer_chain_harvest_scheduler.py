@@ -8,6 +8,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from comma_lab.scheduler.byte_shaving_campaign_queue import (
     MATERIALIZER_EXECUTION_STEP_ID,
     MATERIALIZER_WORK_QUEUE_SCHEMA,
@@ -28,6 +30,7 @@ from tac.optimization.byte_range_entropy_recode_chain import (
     CHAIN_MANIFEST_NAME,
     CHAIN_SCHEMA,
 )
+from tac.optimization.proxy_candidate_contract import truthy_authority_field_violations
 from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
 )
@@ -144,7 +147,66 @@ def _chain_manifest(
     return _write_json(external_root / CHAIN_MANIFEST_NAME, payload)
 
 
-def _exact_ready_chain_manifest(repo: Path) -> Path:
+def _write_runtime_bound_pr101_proof(
+    submission: Path,
+    *,
+    archive_sha: str,
+    stale_inflate_sh_sha: bool = False,
+) -> Path:
+    inflate_sh_sha = hashlib.sha256((submission / "inflate.sh").read_bytes()).hexdigest()
+    if stale_inflate_sh_sha:
+        inflate_sh_sha = "0" * 64 if inflate_sh_sha != "0" * 64 else "1" * 64
+    inflate_py_sha = hashlib.sha256((submission / "inflate.py").read_bytes()).hexdigest()
+    manifest_path = _write_json(
+        submission / "runtime_packet_manifest.json",
+        {
+            "schema": "pr101_kaggle_proxy_runtime_packet_v1",
+            "packet_dir": str(submission),
+            "runtime_custody": {
+                "runtime_files": [
+                    {"relpath": "inflate.sh", "sha256": inflate_sh_sha},
+                    {"relpath": "inflate.py", "sha256": inflate_py_sha},
+                ],
+            },
+        },
+    )
+    return _write_json(
+        submission / "runtime_consumption_proof.json",
+        {
+            "schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+            "proof_kind": "fixture_runtime_bound_pr101_proof",
+            "manifest_path": str(manifest_path),
+            "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            "packet_dir": str(submission),
+            "runtime_consumption_proven_for_supported_bias_params": True,
+            "inflate_sh_routes_to_packet_inflate_py": True,
+            "archive_unchanged_proof": {
+                "archive_sha256": archive_sha,
+            },
+            "inflate_wrapper_route_proof": {
+                "wrapper_invoked_packet_inflate_py": True,
+                "inflate_sh_sha256": inflate_sh_sha,
+                "packet_inflate_py_sha256": inflate_py_sha,
+            },
+            "inflate_static_bias_patch_proof": {
+                "inflate_sha256": inflate_py_sha,
+            },
+            "inflate_runtime_bias_logic_proof": {
+                "packet_inflate_function_executed": True,
+                "inflate_py_sha256": inflate_py_sha,
+            },
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
+        },
+    )
+
+
+def _exact_ready_chain_manifest(
+    repo: Path,
+    *,
+    stale_runtime_proof: bool = False,
+) -> Path:
     source_archive = _write_zip_archive(
         repo / "source" / "archive.zip",
         "0.bin",
@@ -157,7 +219,21 @@ def _exact_ready_chain_manifest(repo: Path) -> Path:
         b"candidate",
     )
     inflate = submission / "inflate.sh"
-    inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
+    inflate_py = submission / "inflate.py"
+    inflate_py.write_text(
+        "#!/usr/bin/env python3\n"
+        "from pathlib import Path\n"
+        "import sys\n"
+        "Path(sys.argv[2]).write_bytes(b'')\n",
+        encoding="utf-8",
+    )
+    inflate.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "SCRIPT_DIR=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n"
+        "python \"$SCRIPT_DIR/inflate.py\" \"$1\" \"$2\"\n",
+        encoding="utf-8",
+    )
     inflate.chmod(inflate.stat().st_mode | 0o100)
     (submission / "report.txt").write_text(
         "candidate archive ready for exact eval\n",
@@ -171,19 +247,10 @@ def _exact_ready_chain_manifest(repo: Path) -> Path:
             "candidate_archive": {"member_name": "0.bin"},
         },
     )
-    runtime_proof = _write_json(
-        submission / "runtime_consumption_proof.json",
-        {
-            "schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
-            "runtime_consumption_proven_for_supported_bias_params": True,
-            "inflate_sh_routes_to_packet_inflate_py": True,
-            "archive_unchanged_proof": {
-                "archive_sha256": candidate_archive["sha256"],
-            },
-            "score_claim": False,
-            "ready_for_exact_eval_dispatch": False,
-            "dispatch_attempted": False,
-        },
+    runtime_proof = _write_runtime_bound_pr101_proof(
+        submission,
+        archive_sha=str(candidate_archive["sha256"]),
+        stale_inflate_sh_sha=stale_runtime_proof,
     )
     (repo / "upstream").mkdir(parents=True, exist_ok=True)
     (repo / "upstream" / "evaluate.py").write_text("# fixture\n", encoding="utf-8")
@@ -447,9 +514,11 @@ def test_exact_readiness_bridge_promotes_valid_harvested_source_queue(
     assert bridge["schema"] == EXACT_READINESS_BRIDGE_SCHEMA
     assert bridge["ready_candidate_count"] == 1
     assert bridge["ready_for_exact_eval_dispatch"] is False
+    assert truthy_authority_field_violations(bridge) == []
     row = bridge["rows"][0]
     assert row["candidate_id"] == "exact_ready_materializer_candidate"
-    assert row["ready_for_exact_eval_dispatch"] is True
+    assert row["readiness_verdict"] == "exact_ready_queue_written"
+    assert row["exact_ready_queue_written"] is True
     exact_ready_queue = json.loads(
         (repo / row["exact_ready_queue_path"]).read_text(encoding="utf-8")
     )
@@ -486,6 +555,88 @@ def test_exact_readiness_bridge_writes_blocked_report_without_ready_queue(
     assert row["exact_ready_queue_path"] is None
     assert row["blockers"]
     assert (repo / row["exact_readiness_report_path"]).is_file()
+
+
+def test_exact_readiness_bridge_blocks_stale_runtime_consumption_proof(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo, stale_runtime_proof=True)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+
+    bridge = run_exact_readiness_bridge_for_harvested_queue(
+        repo_root=repo,
+        source_queue_path=source_queue_out,
+        exact_readiness_out_dir=repo / "exact_readiness",
+        active_floor_archive_bytes=None,
+    )
+
+    assert bridge["ready_candidate_count"] == 0
+    blockers = bridge["rows"][0]["blockers"]
+    assert "runtime_consumption_proof_inflate_sh_sha_mismatch" in blockers
+    assert bridge["rows"][0]["exact_ready_queue_path"] is None
+
+
+def test_exact_readiness_bridge_refuses_unallowlisted_source_blocker_clear(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    _write_json(source_queue_out, harvest_result["source_queue"])
+
+    with pytest.raises(
+        Exception,
+        match="exact_readiness_extra_source_blocker_not_allowlisted:"
+        "candidate_archive_missing",
+    ):
+        run_exact_readiness_bridge_for_harvested_queue(
+            repo_root=repo,
+            source_queue_path=source_queue_out,
+            exact_readiness_out_dir=repo / "exact_readiness",
+            allow_source_blockers=["candidate_archive_missing"],
+            operator_override_reason="fixture",
+            active_floor_archive_bytes=None,
+        )
+
+
+def test_exact_readiness_bridge_refuses_duplicate_candidate_ids(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _exact_ready_chain_manifest(repo)
+    source_queue_out = repo / "source_queue.json"
+    harvest_result = harvest_materializer_chain_manifests(
+        repo_root=repo,
+        chain_manifest_paths=[chain],
+    )
+    queue = harvest_result["source_queue"]
+    queue["top_k"].append(dict(queue["top_k"][0]))
+    _write_json(source_queue_out, queue)
+
+    with pytest.raises(
+        Exception,
+        match="exact_readiness_duplicate_candidate_id:"
+        "exact_ready_materializer_candidate",
+    ):
+        run_exact_readiness_bridge_for_harvested_queue(
+            repo_root=repo,
+            source_queue_path=source_queue_out,
+            exact_readiness_out_dir=repo / "exact_readiness",
+            active_floor_archive_bytes=None,
+        )
 
 
 def test_harvest_cli_can_run_explicit_exact_readiness_bridge(
@@ -528,3 +679,34 @@ def test_harvest_cli_can_run_explicit_exact_readiness_bridge(
     assert bridge["candidate_count"] == 1
     assert bridge["ready_candidate_count"] == 0
     assert "exact-readiness bridge: ready=0/1" in completed.stdout
+
+
+def test_harvest_cli_refuses_require_ready_without_bridge_dir(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    chain = _chain_manifest(tmp_path / "external")
+    source_queue_out = repo / "source_queue.json"
+    report_out = repo / "harvest_report.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--repo-root",
+            str(repo),
+            "--chain-manifest",
+            str(chain),
+            "--source-queue-out",
+            str(source_queue_out),
+            "--report-out",
+            str(report_out),
+            "--exact-readiness-require-ready",
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode != 0
+    assert "--exact-readiness-out-dir is required" in completed.stderr

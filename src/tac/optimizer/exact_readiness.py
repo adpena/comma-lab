@@ -809,13 +809,20 @@ def source_blocker_violations(
     extra_clearable_source_blockers: Iterable[str] = (),
 ) -> list[str]:
     clearable = set(CLEARABLE_SOURCE_BLOCKERS)
-    clearable.update(str(item) for item in extra_clearable_source_blockers if str(item))
+    clearable.update(
+        str(item)
+        for item in extra_clearable_source_blockers
+        if str(item)
+        and not any(
+            str(item).startswith(prefix) for prefix in BLOCKED_SOURCE_BLOCKER_PREFIXES
+        )
+    )
     violations: list[str] = []
     for blocker in source_blockers(row):
-        if blocker in clearable:
-            continue
         if any(blocker.startswith(prefix) for prefix in BLOCKED_SOURCE_BLOCKER_PREFIXES):
             violations.append(f"blocked_source_dispatch_blocker:{blocker}")
+        elif blocker in clearable:
+            continue
         else:
             violations.append(f"unknown_uncleared_source_dispatch_blocker:{blocker}")
     return violations
@@ -1100,6 +1107,111 @@ def default_manifest_path(submission_dir: Path) -> Path:
     return submission_dir / "archive_manifest.json"
 
 
+def _same_resolved_path(left: Path, right: Path) -> bool:
+    return left.resolve(strict=False) == right.resolve(strict=False)
+
+
+def _mapping_at(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = payload.get(key)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _runtime_consumption_pr101_binding_blockers(
+    proof_raw: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+    submission_dir: Path | None,
+) -> tuple[list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    facts: dict[str, Any] = {}
+    if submission_dir is None:
+        blockers.append("runtime_consumption_proof_submission_dir_missing")
+        return blockers, facts
+
+    packet_dir = resolve_path(
+        proof_raw.get("packet_dir"),
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    )
+    facts["runtime_consumption_proof_packet_dir"] = packet_dir
+    if packet_dir is None:
+        blockers.append("runtime_consumption_proof_packet_dir_missing")
+    elif not _same_resolved_path(packet_dir, submission_dir):
+        blockers.append("runtime_consumption_proof_packet_dir_mismatch")
+
+    manifest_path = resolve_path(
+        proof_raw.get("manifest_path"),
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    )
+    facts["runtime_consumption_proof_manifest_path"] = manifest_path
+    if manifest_path is None:
+        blockers.append("runtime_consumption_proof_manifest_path_missing")
+    elif not manifest_path.is_file():
+        blockers.append("runtime_consumption_proof_manifest_file_missing")
+    else:
+        manifest_sha = proof_raw.get("manifest_sha256")
+        if is_sha256(manifest_sha):
+            actual_manifest_sha = sha256_file(manifest_path)
+            facts["runtime_consumption_proof_manifest_sha256"] = actual_manifest_sha
+            if actual_manifest_sha != str(manifest_sha).lower():
+                blockers.append("runtime_consumption_proof_manifest_sha_mismatch")
+        else:
+            blockers.append("runtime_consumption_proof_manifest_sha_missing")
+
+    inflate_sh = submission_dir / "inflate.sh"
+    route_proof = _mapping_at(proof_raw, "inflate_wrapper_route_proof")
+    expected_inflate_sh_sha = route_proof.get("inflate_sh_sha256")
+    if not inflate_sh.is_file():
+        blockers.append("runtime_consumption_proof_inflate_sh_file_missing")
+    else:
+        actual_inflate_sh_sha = sha256_file(inflate_sh)
+        facts["runtime_consumption_proof_actual_inflate_sh_sha256"] = (
+            actual_inflate_sh_sha
+        )
+        if not is_sha256(expected_inflate_sh_sha):
+            blockers.append("runtime_consumption_proof_inflate_sh_sha_missing")
+        elif actual_inflate_sh_sha != str(expected_inflate_sh_sha).lower():
+            blockers.append("runtime_consumption_proof_inflate_sh_sha_mismatch")
+
+    if route_proof.get("wrapper_invoked_packet_inflate_py") is not True:
+        blockers.append("runtime_consumption_proof_wrapper_route_not_proven")
+
+    static_proof = _mapping_at(proof_raw, "inflate_static_bias_patch_proof")
+    runtime_proof = _mapping_at(proof_raw, "inflate_runtime_bias_logic_proof")
+    expected_inflate_py_shas = {
+        str(value).lower()
+        for value in (
+            static_proof.get("inflate_sha256"),
+            route_proof.get("packet_inflate_py_sha256"),
+            runtime_proof.get("inflate_py_sha256"),
+        )
+        if is_sha256(value)
+    }
+    if not expected_inflate_py_shas:
+        blockers.append("runtime_consumption_proof_inflate_py_sha_missing")
+    else:
+        inflate_py = submission_dir / "inflate.py"
+        if not inflate_py.is_file():
+            blockers.append("runtime_consumption_proof_inflate_py_file_missing")
+        else:
+            actual_inflate_py_sha = sha256_file(inflate_py)
+            facts["runtime_consumption_proof_actual_inflate_py_sha256"] = (
+                actual_inflate_py_sha
+            )
+            mismatches = sorted(
+                sha for sha in expected_inflate_py_shas if sha != actual_inflate_py_sha
+            )
+            if mismatches:
+                blockers.append("runtime_consumption_proof_inflate_py_sha_mismatch")
+
+    if runtime_proof.get("packet_inflate_function_executed") is not True:
+        blockers.append("runtime_consumption_proof_runtime_logic_not_proven")
+
+    return blockers, facts
+
+
 def validate_runtime_consumption_proof(
     row: Mapping[str, Any],
     *,
@@ -1174,6 +1286,14 @@ def validate_runtime_consumption_proof(
                 blockers.append(
                     f"runtime_consumption_proof_false_authority_violation:{false_authority_field}"
                 )
+        binding_blockers, binding_facts = _runtime_consumption_pr101_binding_blockers(
+            proof_raw,
+            repo_root=repo_root,
+            queue_dir=queue_dir,
+            submission_dir=submission_dir,
+        )
+        blockers.extend(binding_blockers)
+        facts.update(binding_facts)
     else:
         blockers.append("runtime_consumption_proof_schema_unsupported")
 

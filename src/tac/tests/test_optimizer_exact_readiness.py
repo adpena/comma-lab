@@ -80,9 +80,20 @@ def _make_submission(repo: Path) -> tuple[Path, int, str]:
     submission = repo / "experiments/results/exact_ready_fixture"
     archive = submission / "archive.zip"
     archive_bytes, archive_sha = _write_archive(archive)
+    inflate_py = submission / "inflate.py"
+    inflate_py.write_text(
+        "#!/usr/bin/env python3\n"
+        "from pathlib import Path\n"
+        "import sys\n"
+        "Path(sys.argv[2]).write_bytes(b'')\n",
+        encoding="utf-8",
+    )
     inflate = submission / "inflate.sh"
     inflate.write_text(
-        "#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "SCRIPT_DIR=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n"
+        "python \"$SCRIPT_DIR/inflate.py\" \"$1\" \"$2\"\n",
         encoding="utf-8",
     )
     inflate.chmod(inflate.stat().st_mode | stat.S_IXUSR)
@@ -363,17 +374,51 @@ def _write_pr101_runtime_proof(
     archive_sha: str,
     *,
     proven: bool = True,
+    stale_inflate_sh_sha: bool = False,
 ) -> Path:
+    inflate_sh_sha = hashlib.sha256((submission / "inflate.sh").read_bytes()).hexdigest()
+    if stale_inflate_sh_sha:
+        inflate_sh_sha = "0" * 64 if inflate_sh_sha != "0" * 64 else "1" * 64
+    inflate_py_sha = hashlib.sha256((submission / "inflate.py").read_bytes()).hexdigest()
+    manifest = _write_json(
+        submission / "runtime_packet_manifest.json",
+        {
+            "schema": "pr101_kaggle_proxy_runtime_packet_v1",
+            "packet_dir": str(submission),
+            "runtime_custody": {
+                "runtime_files": [
+                    {"relpath": "inflate.sh", "sha256": inflate_sh_sha},
+                    {"relpath": "inflate.py", "sha256": inflate_py_sha},
+                ],
+            },
+        },
+    )
     return _write_json(
         submission / "runtime_consumption_proof.json",
         {
             "schema": "pr101_kaggle_proxy_runtime_consumption_proof_v1",
+            "proof_kind": "fixture_runtime_bound_pr101_proof",
+            "manifest_path": str(manifest),
+            "manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+            "packet_dir": str(submission),
             "score_claim": False,
             "ready_for_exact_eval_dispatch": False,
             "dispatch_attempted": False,
             "inflate_sh_routes_to_packet_inflate_py": True,
             "runtime_consumption_proven_for_supported_bias_params": proven,
             "archive_unchanged_proof": {"archive_sha256": archive_sha},
+            "inflate_wrapper_route_proof": {
+                "wrapper_invoked_packet_inflate_py": True,
+                "inflate_sh_sha256": inflate_sh_sha,
+                "packet_inflate_py_sha256": inflate_py_sha,
+            },
+            "inflate_static_bias_patch_proof": {
+                "inflate_sha256": inflate_py_sha,
+            },
+            "inflate_runtime_bias_logic_proof": {
+                "packet_inflate_function_executed": True,
+                "inflate_py_sha256": inflate_py_sha,
+            },
         },
     )
 
@@ -951,6 +996,33 @@ def test_refuses_pr101_runtime_packet_when_runtime_consumption_not_proven(
 
     assert result["promoted_queue"] is None
     assert "runtime_consumption_proof_not_proven" in result["report"]["blockers"]
+
+
+def test_refuses_pr101_runtime_packet_when_proof_not_bound_to_inflate_sh(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _write_pr101_runtime_proof(
+        submission,
+        archive_sha,
+        proven=True,
+        stale_inflate_sh_sha=True,
+    )
+    _add_required_runtime_proof_fields(queue, submission, tmp_path, status="present")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert (
+        "runtime_consumption_proof_inflate_sh_sha_mismatch"
+        in result["report"]["blockers"]
+    )
 
 
 def test_promotes_pr101_runtime_packet_with_runtime_consumption_proof(

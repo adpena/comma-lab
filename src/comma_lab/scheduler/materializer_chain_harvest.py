@@ -70,6 +70,9 @@ MATERIALIZER_HARVEST_CLEARABLE_SOURCE_BLOCKERS = (
     "byte_range_entropy_recode_chain_is_not_dispatch_authorization",
     "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization",
 )
+MATERIALIZER_BRIDGE_OPERATOR_CLEARABLE_SOURCE_BLOCKER_ALLOWLIST: frozenset[str] = (
+    frozenset()
+)
 CHAIN_MANIFEST_NAME_BY_SCHEMA = {
     BYTE_RANGE_CHAIN_SCHEMA: BYTE_RANGE_CHAIN_MANIFEST_NAME,
     INVERSE_SCORER_CELL_CHAIN_SCHEMA: INVERSE_SCORER_CELL_CHAIN_MANIFEST_NAME,
@@ -214,6 +217,11 @@ def run_exact_readiness_bridge_for_harvested_queue(
         raise ExperimentQueueError(
             f"expected optimizer_candidate_queue_v1, got {queue_payload.get('schema')!r}"
         )
+    dispatch_ready_rows = queue_payload.get("dispatch_ready")
+    if isinstance(dispatch_ready_rows, list) and dispatch_ready_rows:
+        raise ExperimentQueueError(
+            "exact_readiness_bridge_source_queue_must_not_have_dispatch_ready_rows"
+        )
     candidate_filter = {str(candidate_id) for candidate_id in candidate_ids if str(candidate_id)}
     rows = [
         row
@@ -233,12 +241,17 @@ def run_exact_readiness_bridge_for_harvested_queue(
             )
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    extra_clearable_source_blockers = _validated_bridge_extra_clearable_source_blockers(
+        allow_source_blockers,
+        operator_override_reason=operator_override_reason,
+    )
     clearable_source_blockers = ordered_unique(
         [
             *MATERIALIZER_HARVEST_CLEARABLE_SOURCE_BLOCKERS,
-            *[str(item) for item in allow_source_blockers if str(item)],
+            *extra_clearable_source_blockers,
         ]
     )
+    _require_bridge_source_queue_identity(rows, candidate_filter=candidate_filter)
     resolved_dispatch_claims_path = (
         _resolve_path(dispatch_claims_path, repo_root=repo)
         if dispatch_claims_path is not None
@@ -294,7 +307,8 @@ def run_exact_readiness_bridge_for_harvested_queue(
         report_rows.append(
             {
                 "candidate_id": candidate_id,
-                "ready_for_exact_eval_dispatch": ready,
+                "readiness_verdict": "exact_ready_queue_written" if ready else "blocked",
+                "exact_ready_queue_written": ready,
                 "exact_readiness_report_path": _repo_rel(per_candidate_report_path, repo),
                 "exact_ready_queue_path": _repo_rel(exact_ready_queue_path, repo)
                 if ready
@@ -303,7 +317,7 @@ def run_exact_readiness_bridge_for_harvested_queue(
             }
         )
 
-    return apply_proxy_evidence_boundary(
+    report = apply_proxy_evidence_boundary(
         {
             "schema": EXACT_READINESS_BRIDGE_SCHEMA,
             "tool": EXACT_READINESS_BRIDGE_TOOL,
@@ -314,6 +328,7 @@ def run_exact_readiness_bridge_for_harvested_queue(
             "ready_candidate_count": ready_count,
             "blocked_candidate_count": len(rows) - ready_count,
             "clearable_source_blockers": clearable_source_blockers,
+            "operator_clearable_source_blockers": extra_clearable_source_blockers,
             "dispatch_claims_path": _repo_rel(resolved_dispatch_claims_path, repo),
             "rows": report_rows,
             "score_claim": False,
@@ -327,6 +342,63 @@ def run_exact_readiness_bridge_for_harvested_queue(
             "lane_claim_required_before_gpu_or_remote_eval",
         ],
     )
+    require_no_truthy_authority_fields(
+        report,
+        context="materializer_chain_exact_readiness_bridge_report",
+    )
+    return report
+
+
+def _validated_bridge_extra_clearable_source_blockers(
+    blockers: Sequence[str],
+    *,
+    operator_override_reason: str | None,
+) -> list[str]:
+    extras = ordered_unique(str(item) for item in blockers if str(item))
+    if not extras:
+        return []
+    if not operator_override_reason:
+        raise ExperimentQueueError(
+            "exact_readiness_extra_source_blocker_requires_operator_override_reason"
+        )
+    not_allowed = [
+        blocker
+        for blocker in extras
+        if blocker not in MATERIALIZER_BRIDGE_OPERATOR_CLEARABLE_SOURCE_BLOCKER_ALLOWLIST
+    ]
+    if not_allowed:
+        raise ExperimentQueueError(
+            "exact_readiness_extra_source_blocker_not_allowlisted:"
+            + ",".join(sorted(not_allowed))
+        )
+    return extras
+
+
+def _require_bridge_source_queue_identity(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    candidate_filter: set[str],
+) -> None:
+    seen: set[str] = set()
+    duplicate_ids: set[str] = set()
+    missing_ids = 0
+    for row in rows:
+        candidate_id = str(row.get("candidate_id") or "")
+        if not candidate_id:
+            missing_ids += 1
+            continue
+        if candidate_id in seen:
+            duplicate_ids.add(candidate_id)
+        seen.add(candidate_id)
+    if missing_ids:
+        raise ExperimentQueueError("exact_readiness_candidate_id_missing_in_source_row")
+    if duplicate_ids:
+        raise ExperimentQueueError(
+            "exact_readiness_duplicate_candidate_id:"
+            + ",".join(sorted(duplicate_ids))
+        )
+    if candidate_filter and not rows:
+        raise ExperimentQueueError("exact_readiness_candidate_filter_matched_no_rows")
 
 
 def _discover_chain_manifest_candidates(
