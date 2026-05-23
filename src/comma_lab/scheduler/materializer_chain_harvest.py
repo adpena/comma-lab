@@ -123,10 +123,13 @@ def harvest_materializer_chain_manifests(
             "schema": HARVEST_SCHEMA,
             "tool": TOOL_NAME,
             "generated_at_utc": _utc_now(),
-            "work_queue_path": _repo_rel(Path(work_queue_path), repo)
+            "work_queue_path": _repo_rel(_resolve_path(work_queue_path, repo_root=repo), repo)
             if work_queue_path is not None
             else None,
-            "experiment_queue_state_path": _repo_rel(Path(experiment_queue_state_path), repo)
+            "experiment_queue_state_path": _repo_rel(
+                _resolve_path(experiment_queue_state_path, repo_root=repo),
+                repo,
+            )
             if experiment_queue_state_path is not None
             else None,
             "experiment_queue_id": experiment_queue_id,
@@ -166,7 +169,7 @@ def _discover_chain_manifest_candidates(
         discoveries.extend(
             _work_queue_manifest_candidates(
                 _load_json(_resolve_path(work_queue_path, repo_root=repo_root)),
-                work_queue_path=Path(work_queue_path),
+                work_queue_path=_resolve_path(work_queue_path, repo_root=repo_root),
                 repo_root=repo_root,
             )
         )
