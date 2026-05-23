@@ -240,6 +240,8 @@ def _units_by_id(source_units: Sequence[Mapping[str, Any]]) -> dict[str, Mapping
 
 def _resolution_gap_class(resolution: Mapping[str, Any], blockers: Sequence[str]) -> str:
     joined = "\n".join(blockers)
+    if "non_dqs1_target_requires_materializer_work_queue:" in joined:
+        return "materializer_work_queue_required"
     if "materializer_target_kind_required:" in joined:
         return "target_kind_required"
     if "materializer_not_registered:" in joined:
@@ -313,6 +315,8 @@ def _receiver_contract_status(resolution: Mapping[str, Any], gap_class: str) -> 
         "adapter_target_kind_mismatch",
     }:
         return "receiver_contract_mismatch"
+    if gap_class == "materializer_work_queue_required":
+        return "receiver_contract_registered_for_materializer_work_queue"
     if gap_class in {"operation_family_missing", "unknown_operation_family"}:
         return "receiver_operation_contract_invalid"
     return "receiver_contract_blocked"
@@ -1493,7 +1497,17 @@ def _materialize_row(
             for blocker in operation_blockers
         )
         resolution = resolve_materializer(operation=operation, unit=unit)
-        blockers.extend(resolution.blockers)
+        resolution_blockers = list(resolution.blockers)
+        if (
+            resolution.target_kind
+            and resolution.target_kind != DQS1_PAIRSET_TARGET_KIND
+            and resolution.executable
+        ):
+            resolution_blockers.append(
+                "non_dqs1_target_requires_materializer_work_queue:"
+                f"{resolution.target_kind}"
+            )
+        blockers.extend(resolution_blockers)
         materializer_resolutions.append(
             {
                 "unit_id": resolution.unit_id,
@@ -1508,7 +1522,7 @@ def _materialize_row(
                 "cooperative_receiver_required": resolution.cooperative_receiver_required,
                 "materialization_resource_kind": resolution.materialization_resource_kind,
                 "executable": resolution.executable,
-                "blockers": list(resolution.blockers),
+                "blockers": resolution_blockers,
                 "selected_operation_blockers": operation_blockers,
             }
         )

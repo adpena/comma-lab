@@ -54,12 +54,13 @@ def _write_chain_fixture(
     source_archive = chain_dir / "source.zip"
     candidate_archive = chain_dir / "candidate.zip"
     parity_probe = chain_dir / "inflate_parity_probe.json"
-    _write_zip(source_archive, b"source")
-    _write_zip(candidate_archive, b"candidate-ias1")
+    source_payload = b"source-ias1-baseline"
     candidate_payload = b"candidate-ias1"
+    _write_zip(source_archive, source_payload)
+    _write_zip(candidate_archive, candidate_payload)
     if unchanged_archive:
         candidate_archive.write_bytes(source_archive.read_bytes())
-        candidate_payload = b"source"
+        candidate_payload = source_payload
     candidate_record = {
         "path": candidate_path_override or candidate_archive.relative_to(repo).as_posix(),
         "bytes": candidate_archive.stat().st_size,
@@ -73,8 +74,8 @@ def _write_chain_fixture(
         "bytes": source_archive.stat().st_size,
         "sha256": _sha(source_archive),
         "member_name": "x",
-        "member_bytes": len(b"source"),
-        "member_sha256": hashlib.sha256(b"source").hexdigest(),
+        "member_bytes": len(source_payload),
+        "member_sha256": hashlib.sha256(source_payload).hexdigest(),
     }
     if parity_backed:
         source_tree = {

@@ -919,6 +919,56 @@ def test_inverse_surface_cells_compile_to_action_functional_work_queue(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_non_dqs1_executable_materializers_do_not_emit_dqs1_portfolio_rows(
+    tmp_path: Path,
+) -> None:
+    scorer_response = tmp_path / "scorer_response.json"
+    action_output = tmp_path / "inverse_action.json"
+    action_md = tmp_path / "inverse_action.md"
+    scorer_response.write_text(
+        json.dumps({"schema": "scorer_response_dataset.v1", "rows": []}),
+        encoding="utf-8",
+    )
+    plan = _inverse_surface_plan()
+    plan["ranked_units"][0]["blockers"] = []
+    plan["sweep_ladder"][0]["selected_operations"][0]["blockers"] = []
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+        materializer_contexts={
+            INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND: {
+                "scorer_response": str(scorer_response),
+                "output": str(action_output),
+                "md_out": str(action_md),
+                "total_byte_budget": 64,
+            }
+        },
+    )
+
+    assert compiled["executable_row_count"] == 0
+    assert compiled["queueable_row_count"] == 0
+    assert compiled["portfolio"]["operator_action_rows"] == []
+    assert compiled["action_summary"]["top_operator_actions"] == []
+    assert any(
+        f"non_dqs1_target_requires_materializer_work_queue:{INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND}"
+        in row["materialization_blockers"]
+        for row in compiled["blocked_rows"]
+    )
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    assert backlog_row["gap_class"] == "materializer_work_queue_required"
+    assert backlog_row["target_kind"] == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
+    assert backlog_row["receiver_contract_status"] == (
+        "receiver_contract_registered_for_materializer_work_queue"
+    )
+    work_row = compiled["materializer_work_queue"]["rows"][0]
+    assert work_row["executable"] is True
+    assert work_row["tool"] == "tools/build_inverse_steganalysis_action_functional.py"
+    assert "inverse_action_functional_is_not_candidate_archive" in work_row["dispatch_blockers"]
+
+
 def test_inverse_action_cells_compile_to_candidate_materializer_work_queue(
     tmp_path: Path,
 ) -> None:
