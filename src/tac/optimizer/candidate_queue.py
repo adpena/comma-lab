@@ -60,6 +60,12 @@ from tac.optimization.serialized_archive_economics import (
     build_serialized_archive_delta_contract,
     serialized_archive_delta_blockers,
 )
+from tac.optimizer.materializer_chain_harvest import (
+    SUPPORTED_CHAIN_SCHEMAS as MATERIALIZER_CHAIN_SCHEMAS,
+)
+from tac.optimizer.materializer_chain_harvest import (
+    adapt_materializer_chain_manifest_to_candidate,
+)
 
 QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 TOOL_NAME = "tools/build_optimizer_candidate_queue.py"
@@ -79,10 +85,7 @@ SCORE_AFFECTING_BOOLEAN_FIELDS: frozenset[str] = frozenset(
         "score_affecting_runtime_changed",
     }
 )
-UNKNOWN_CANDIDATES_REASON = (
-    "unsupported_candidates_schema_requires_explicit_adapter_or_"
-    "codec_op_param_sweep_manifest_v1"
-)
+UNKNOWN_CANDIDATES_REASON = "unsupported_candidates_schema_requires_explicit_adapter_or_codec_op_param_sweep_manifest_v1"
 
 
 @dataclass(frozen=True)
@@ -215,11 +218,15 @@ def _source_schema(payload: Any) -> str:
     return type(payload).__name__
 
 
-def _base_candidate(candidate_id: str, *, source_path: Path, repo_root: Path) -> dict[str, Any]:
-    return apply_proxy_evidence_boundary({
-        "candidate_id": candidate_id,
-        "source_paths": [_repo_rel(source_path, repo_root)],
-    })
+def _base_candidate(
+    candidate_id: str, *, source_path: Path, repo_root: Path
+) -> dict[str, Any]:
+    return apply_proxy_evidence_boundary(
+        {
+            "candidate_id": candidate_id,
+            "source_paths": [_repo_rel(source_path, repo_root)],
+        }
+    )
 
 
 def _add_blockers(row: dict[str, Any], blockers: Iterable[str]) -> None:
@@ -228,7 +235,9 @@ def _add_blockers(row: dict[str, Any], blockers: Iterable[str]) -> None:
     )
 
 
-def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+def _merge_candidate(
+    existing: dict[str, Any], incoming: dict[str, Any]
+) -> dict[str, Any]:
     merged = dict(existing)
     for key, value in incoming.items():
         if key == "source_paths" or key == "dispatch_blockers":
@@ -244,7 +253,10 @@ def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> dict
             if old is None or (new is not None and new < old):
                 merged[key] = value
         elif value is not None and (
-            key not in merged or merged.get(key) in (None, "", [], {}) or key in {
+            key not in merged
+            or merged.get(key) in (None, "", [], {})
+            or key
+            in {
                 "macos_cpu_score",
                 "rank_score_field",
                 "queue_priority",
@@ -269,7 +281,9 @@ def _candidate_identity_key(row: Mapping[str, Any]) -> tuple[str, ...]:
     )
     params = row.get("candidate_params")
     if family_or_schema_present and isinstance(params, Mapping):
-        params_key = json.dumps(params, sort_keys=True, separators=(",", ":"), default=str)
+        params_key = json.dumps(
+            params, sort_keys=True, separators=(",", ":"), default=str
+        )
     else:
         params_key = ""
     return tuple(
@@ -327,8 +341,12 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def _annotate_archive_candidate_verification(row: dict[str, Any], repo_root: Path) -> None:
-    archive_path = _resolve_repo_path(row.get("candidate_archive_path") or row.get("archive_path"), repo_root)
+def _annotate_archive_candidate_verification(
+    row: dict[str, Any], repo_root: Path
+) -> None:
+    archive_path = _resolve_repo_path(
+        row.get("candidate_archive_path") or row.get("archive_path"), repo_root
+    )
     submission_dir = _resolve_repo_path(row.get("submission_dir"), repo_root)
     if archive_path is None and submission_dir is not None:
         archive_path = submission_dir / "archive.zip"
@@ -336,8 +354,14 @@ def _annotate_archive_candidate_verification(row: dict[str, Any], repo_root: Pat
         return
 
     blockers: list[str] = []
-    archive_sha = _shaish(row.get("candidate_archive_sha256") or row.get("archive_sha256"))
-    archive_bytes = _as_int(row.get("candidate_archive_bytes") or row.get("archive_bytes") or row.get("archive_size_bytes"))
+    archive_sha = _shaish(
+        row.get("candidate_archive_sha256") or row.get("archive_sha256")
+    )
+    archive_bytes = _as_int(
+        row.get("candidate_archive_bytes")
+        or row.get("archive_bytes")
+        or row.get("archive_size_bytes")
+    )
     if archive_path is None or not archive_path.is_file():
         blockers.append("candidate_archive_path_unverified")
     if archive_sha is None:
@@ -349,7 +373,11 @@ def _annotate_archive_candidate_verification(row: dict[str, Any], repo_root: Pat
             blockers.append("candidate_archive_sha256_mismatch")
     if archive_bytes is None:
         blockers.append("candidate_archive_bytes_missing")
-    elif archive_path is not None and archive_path.is_file() and archive_path.stat().st_size != archive_bytes:
+    elif (
+        archive_path is not None
+        and archive_path.is_file()
+        and archive_path.stat().st_size != archive_bytes
+    ):
         blockers.append("candidate_archive_bytes_mismatch")
 
     if blockers:
@@ -383,13 +411,21 @@ def _a1_rollup_candidates(
     for variant in payload.get("variants") or []:
         if not isinstance(variant, Mapping):
             continue
-        candidate_id = str(variant.get("variant_id") or variant.get("candidate_id") or "")
+        candidate_id = str(
+            variant.get("variant_id") or variant.get("candidate_id") or ""
+        )
         if not candidate_id:
             continue
-        manifest = _read_optional_manifest(variant.get("build_manifest_relpath"), repo_root)
-        row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+        manifest = _read_optional_manifest(
+            variant.get("build_manifest_relpath"), repo_root
+        )
+        row = _base_candidate(
+            candidate_id, source_path=source_path, repo_root=repo_root
+        )
         archive_path = manifest.get("archive_path")
-        archive_sha = _shaish(manifest.get("archive_sha256") or variant.get("archive_sha256"))
+        archive_sha = _shaish(
+            manifest.get("archive_sha256") or variant.get("archive_sha256")
+        )
         archive_bytes = _as_int(manifest.get("archive_size_bytes"))
         submission_dir = None
         if isinstance(archive_path, str) and archive_path:
@@ -397,7 +433,9 @@ def _a1_rollup_candidates(
             submission_dir = archive.parent.as_posix()
         row.update(
             {
-                "lane_id": payload.get("lane_id", "lane_pr101_bias_constrained_coord_search"),
+                "lane_id": payload.get(
+                    "lane_id", "lane_pr101_bias_constrained_coord_search"
+                ),
                 "lane_class": "a1_pr101_bias_coord_search",
                 "candidate_family": "a1_inflate_time_bias_coordinate_search",
                 "evidence_semantics": "a1_runtime_variant_planning_only",
@@ -413,7 +451,9 @@ def _a1_rollup_candidates(
                 "archive_bytes": archive_bytes,
                 "archive_size_bytes": archive_bytes,
                 "candidate_archive_bytes": archive_bytes,
-                "archive_unchanged_from_a1": manifest.get("archive_unchanged_from_a1", True),
+                "archive_unchanged_from_a1": manifest.get(
+                    "archive_unchanged_from_a1", True
+                ),
                 "inflate_py_sha256": manifest.get("inflate_py_sha256_new")
                 or variant.get("inflate_py_sha256"),
                 "score_affecting_runtime_changed": True,
@@ -437,7 +477,9 @@ def _m5max_candidates(
     payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    summary = payload.get("summary") if isinstance(payload.get("summary"), Mapping) else {}
+    summary = (
+        payload.get("summary") if isinstance(payload.get("summary"), Mapping) else {}
+    )
     queues = (
         ("auto_promote_gha_queue", "auto_promote_gha"),
         ("operator_decision_queue", "operator_decision"),
@@ -450,7 +492,9 @@ def _m5max_candidates(
             if not candidate_id:
                 continue
             rank_score = _as_float(item.get("predicted_contest_cpu_gha"))
-            row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+            row = _base_candidate(
+                candidate_id, source_path=source_path, repo_root=repo_root
+            )
             row.update(
                 {
                     "lane_class": "a1_pr101_bias_coord_search",
@@ -460,7 +504,8 @@ def _m5max_candidates(
                     "rank_score_field": "predicted_contest_cpu_gha",
                     "macos_cpu_score": _as_float(item.get("macos_cpu_score")),
                     "predicted_contest_cpu_gha": rank_score,
-                    "ranking_evidence_grade": item.get("tag") or "[macOS-CPU calibrated]",
+                    "ranking_evidence_grade": item.get("tag")
+                    or "[macOS-CPU calibrated]",
                     "evidence_semantics": "macos_cpu_calibrated_ranking_not_dispatch_evidence",
                 }
             )
@@ -480,7 +525,9 @@ def _codec_search_report_candidates(
     rows: list[dict[str, Any]] = []
     op_class = str(payload.get("op_class") or "codec_op")
     op_module = str(payload.get("op_module") or "")
-    evidence_semantics = str(payload.get("evidence_semantics") or "cpu_codec_op_search_forensic")
+    evidence_semantics = str(
+        payload.get("evidence_semantics") or "cpu_codec_op_search_forensic"
+    )
     evidence_grade = str(payload.get("evidence_grade") or "[CPU-prep]")
     tool = str(payload.get("tool") or source_path.name)
     for ev in payload.get("all_evaluations") or []:
@@ -490,7 +537,9 @@ def _codec_search_report_candidates(
         if eval_idx is None:
             continue
         candidate_id = f"{op_class.lower()}_eval_{eval_idx:05d}"
-        row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+        row = _base_candidate(
+            candidate_id, source_path=source_path, repo_root=repo_root
+        )
         row.update(
             {
                 "lane_class": op_class.lower(),
@@ -510,7 +559,9 @@ def _codec_search_report_candidates(
                 "materialized_payload_path": ev.get("materialized_payload_path"),
                 "materialized_payload_bytes": ev.get("materialized_payload_bytes"),
                 "materialized_payload_sha256": ev.get("materialized_payload_sha256"),
-                "materialized_payload_contract": ev.get("materialized_payload_contract"),
+                "materialized_payload_contract": ev.get(
+                    "materialized_payload_contract"
+                ),
                 "decode_coverage_status": ev.get("decode_coverage_status"),
                 "evidence_semantics": evidence_semantics,
                 "evidence_grade": evidence_grade,
@@ -541,7 +592,9 @@ def _codec_param_manifest_candidates(
         candidate_id = str(cand.get("candidate_id") or "")
         if not candidate_id:
             continue
-        row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+        row = _base_candidate(
+            candidate_id, source_path=source_path, repo_root=repo_root
+        )
         row.update(dict(cand))
         row.update(
             {
@@ -551,7 +604,9 @@ def _codec_param_manifest_candidates(
                 "dispatch_attempted": False,
                 "score_claim": False,
                 "promotion_eligible": False,
-                "rank_score": _as_float(cand.get("predicted_score")),  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
+                "rank_score": _as_float(
+                    cand.get("predicted_score")
+                ),  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                 "rank_score_field": "predicted_score",  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                 "evidence_semantics": cand.get("evidence_semantics")
                 or payload.get("evidence_semantics")
@@ -587,7 +642,9 @@ def _meta_lagrangian_candidates(
         candidate_id = str(cand.get("candidate_id") or "")
         if not candidate_id:
             continue
-        row = _base_candidate(candidate_id, source_path=source_path, repo_root=repo_root)
+        row = _base_candidate(
+            candidate_id, source_path=source_path, repo_root=repo_root
+        )
         row.update(dict(cand))
         row.update(
             {
@@ -597,13 +654,17 @@ def _meta_lagrangian_candidates(
                 "dispatch_attempted": False,
                 "score_claim": False,
                 "promotion_eligible": False,
-                "rank_score": _as_float(cand.get("proxy_score") or cand.get("lagrangian")),
+                "rank_score": _as_float(
+                    cand.get("proxy_score") or cand.get("lagrangian")
+                ),
                 "rank_score_field": "proxy_score",
                 "evidence_semantics": payload.get("evidence_semantics")
                 or "local_proxy_prediction_forensic",
             }
         )
-        _add_blockers(row, ["proxy_score_is_not_score_evidence", "candidate_archive_missing"])
+        _add_blockers(
+            row, ["proxy_score_is_not_score_evidence", "candidate_archive_missing"]
+        )
         row = apply_proxy_evidence_boundary(row)
         rows.append(row)
     return rows
@@ -625,9 +686,7 @@ def _optimizer_guided_queue_candidates(
     source_contract = payload.get("profile_contract")
     profile_contract = source_contract if isinstance(source_contract, Mapping) else {}
     profile_blockers = [
-        str(item)
-        for item in profile_contract.get("dispatch_blockers", [])
-        if str(item)
+        str(item) for item in profile_contract.get("dispatch_blockers", []) if str(item)
     ]
     for cand in source_rows:
         if not isinstance(cand, Mapping):
@@ -646,15 +705,21 @@ def _optimizer_guided_queue_candidates(
                 "source_paths": [_repo_rel(source_path, repo_root)],
                 "profile": cand.get("profile") or source_profile,
                 "optimizer": cand.get("optimizer") or source_optimizer,
-                "optimizer_status": cand.get("optimizer_status") or source_optimizer_status,
-                "optimizer_tool": payload.get("tool") or "tools/build_optimizer_guided_candidate_queue.py",
+                "optimizer_status": cand.get("optimizer_status")
+                or source_optimizer_status,
+                "optimizer_tool": payload.get("tool")
+                or "tools/build_optimizer_guided_candidate_queue.py",
                 "candidate_params": dict(candidate_params),
                 "op_params": dict(cand.get("op_params") or candidate_params),
-                "rank_score": _as_float(cand.get("rank_score") or cand.get("proxy_objective")),
-                "rank_score_field": cand.get("rank_score_field") or "proxy_objective_not_score",
+                "rank_score": _as_float(
+                    cand.get("rank_score") or cand.get("proxy_objective")
+                ),
+                "rank_score_field": cand.get("rank_score_field")
+                or "proxy_objective_not_score",
                 "evidence_semantics": cand.get("evidence_semantics")
                 or "offline_optimizer_guided_proxy_queue_not_exact_auth_eval",
-                "evidence_grade": cand.get("evidence_grade") or "[offline-proxy-planning-only]",
+                "evidence_grade": cand.get("evidence_grade")
+                or "[offline-proxy-planning-only]",
             }
         )
         row = apply_proxy_evidence_boundary(
@@ -707,7 +772,8 @@ def _mlx_dynamic_learned_sweep_candidates(
             "lane_id": "optimizer_scheduler_registry_planning",
             "lane_class": "optimizer_scheduler_recipe",
             "candidate_family": "optimizer_scheduler_recipe",
-            "optimizer_tool": payload.get("tool") or "tools/plan_mlx_dynamic_learned_sweep.py",
+            "optimizer_tool": payload.get("tool")
+            or "tools/plan_mlx_dynamic_learned_sweep.py",
             "descriptor_id": descriptor_id,
             "optimizer": recipe.get("optimizer"),
             "scheduler": recipe.get("scheduler"),
@@ -730,12 +796,16 @@ def _mlx_dynamic_learned_sweep_candidates(
                     "optimizer": recipe.get("optimizer"),
                     "scheduler": recipe.get("scheduler"),
                     "config_sha256": recipe.get("config_sha256"),
-                    "parameter_group_lr_policy": recipe.get("parameter_group_lr_policy"),
+                    "parameter_group_lr_policy": recipe.get(
+                        "parameter_group_lr_policy"
+                    ),
                     "parameter_group_lr_policy_sha256": recipe.get(
                         "parameter_group_lr_policy_sha256"
                     ),
                     "allowed_axis_tags": list(recipe.get("allowed_axis_tags") or []),
-                    "allowed_target_modes": list(recipe.get("allowed_target_modes") or []),
+                    "allowed_target_modes": list(
+                        recipe.get("allowed_target_modes") or []
+                    ),
                     "solver_stack_wire_in": recipe.get("solver_stack_wire_in"),
                 },
                 "score_claim": False,
@@ -762,7 +832,10 @@ def _mlx_dynamic_learned_sweep_candidates(
             source,
             context="mlx_dynamic_learned_sweep_optimizer_scheduler_pairing",
         )
-        if source.get("schema") != "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing.v1":
+        if (
+            source.get("schema")
+            != "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing.v1"
+        ):
             continue
         queue_candidate_id = str(source.get("queue_candidate_id") or "")
         if not queue_candidate_id:
@@ -779,15 +852,19 @@ def _mlx_dynamic_learned_sweep_candidates(
                 "candidate_id": queue_candidate_id,
                 "source_candidate_id": source.get("candidate_id"),
                 "source_paths": [_repo_rel(source_path, repo_root)],
-                "lane_id": source.get("lane_id") or "mlx_dynamic_optimizer_scheduler_pairing",
+                "lane_id": source.get("lane_id")
+                or "mlx_dynamic_optimizer_scheduler_pairing",
                 "lane_class": source.get("family") or "optimizer_scheduler_pairing",
                 "candidate_family": "optimizer_scheduler_paired_sweep_recipe",
-                "optimizer_tool": payload.get("tool") or "tools/plan_mlx_dynamic_learned_sweep.py",
+                "optimizer_tool": payload.get("tool")
+                or "tools/plan_mlx_dynamic_learned_sweep.py",
                 "descriptor_id": source.get("optimizer_scheduler_descriptor_id"),
                 "optimizer": source.get("optimizer"),
                 "scheduler": source.get("scheduler"),
                 "config_sha256": source.get("optimizer_scheduler_config_sha256"),
-                "parameter_group_lr_policy_id": source.get("parameter_group_lr_policy_id"),
+                "parameter_group_lr_policy_id": source.get(
+                    "parameter_group_lr_policy_id"
+                ),
                 "parameter_group_lr_policy_sha256": source.get(
                     "parameter_group_lr_policy_sha256"
                 ),
@@ -802,7 +879,9 @@ def _mlx_dynamic_learned_sweep_candidates(
                 "consumer_payload": {
                     "schema": "optimizer_scheduler_pairing_candidate_payload.v1",
                     "optimizer_scheduler_pairing": {
-                        "parent_queue_candidate_id": source.get("parent_queue_candidate_id"),
+                        "parent_queue_candidate_id": source.get(
+                            "parent_queue_candidate_id"
+                        ),
                         "source_candidate_id": source.get("candidate_id"),
                         "sweep_config_id": source.get("sweep_config_id"),
                         "optimization_pass_id": source.get("optimization_pass_id"),
@@ -818,7 +897,9 @@ def _mlx_dynamic_learned_sweep_candidates(
                         "parameter_group_lr_policy_sha256": source.get(
                             "parameter_group_lr_policy_sha256"
                         ),
-                        "paired_ablation_contract": source.get("paired_ablation_contract"),
+                        "paired_ablation_contract": source.get(
+                            "paired_ablation_contract"
+                        ),
                         "solver_stack_wire_in": source.get("solver_stack_wire_in"),
                     },
                     "score_claim": False,
@@ -863,11 +944,15 @@ def _mlx_dynamic_learned_sweep_candidates(
                 "candidate_id": f"{source_candidate_id}::{config_id}::{pass_id}",
                 "source_candidate_id": source_candidate_id,
                 "source_paths": [_repo_rel(source_path, repo_root)],
-                "lane_id": source.get("lane_id") or "mlx_dynamic_learned_sweep_planning",
+                "lane_id": source.get("lane_id")
+                or "mlx_dynamic_learned_sweep_planning",
                 "lane_class": source.get("family") or "mlx_dynamic_learned_sweep",
                 "candidate_family": source.get("family") or "mlx_dynamic_learned_sweep",
-                "optimizer_tool": payload.get("tool") or "tools/plan_mlx_dynamic_learned_sweep.py",
-                "rank_score": -acquisition_value if acquisition_value is not None else None,
+                "optimizer_tool": payload.get("tool")
+                or "tools/plan_mlx_dynamic_learned_sweep.py",
+                "rank_score": -acquisition_value
+                if acquisition_value is not None
+                else None,
                 "rank_score_field": "negative_acquisition_value_proxy_not_score",
                 "evidence_semantics": (
                     "mlx_dynamic_learned_sweep_plan_proxy_not_exact_auth_eval"
@@ -1001,7 +1086,9 @@ def _byte_shaving_campaign_candidates(
     auth_eval_refs = list(payload.get("auth_eval_refs") or [])
     mlx_calibration_refs = list(payload.get("mlx_calibration_refs") or [])
     scorer_response_refs = list(payload.get("scorer_response_refs") or [])
-    plan_blockers = [str(item) for item in payload.get("dispatch_blockers", []) if str(item)]
+    plan_blockers = [
+        str(item) for item in payload.get("dispatch_blockers", []) if str(item)
+    ]
     rows: list[dict[str, Any]] = []
 
     def append_plan_row(kind: str, item: Mapping[str, Any]) -> None:
@@ -1013,7 +1100,9 @@ def _byte_shaving_campaign_candidates(
             context=f"byte_shaving_campaign_plan.{kind}.{row_id}",
         )
         selected_operations = list(item.get("selected_operations") or [])
-        selected_unit_ids = [str(value) for value in item.get("selected_unit_ids", []) if str(value)]
+        selected_unit_ids = [
+            str(value) for value in item.get("selected_unit_ids", []) if str(value)
+        ]
         candidate_id = f"{campaign_id}::{kind}::{row_id}"
         expected_delta = _as_float(item.get("expected_delta_score"))
         candidate_saved_bytes = _as_int(item.get("candidate_saved_bytes"))
@@ -1029,7 +1118,8 @@ def _byte_shaving_campaign_candidates(
             "lane_class": "byte_shaving_campaign",
             "candidate_family": "post_training_byte_shaving_plan",
             "param_schema": "byte_shaving_campaign_operation_selection_v1",
-            "optimizer_tool": payload.get("tool") or "tools/plan_byte_shaving_campaign.py",
+            "optimizer_tool": payload.get("tool")
+            or "tools/plan_byte_shaving_campaign.py",
             "selection_kind": kind,
             "selection_id": row_id,
             "candidate_params": {
@@ -1132,9 +1222,11 @@ def _kaggle_proxy_sweep_candidates(
             or best.get("candidate_family")
             or "pr101_proxy_config_search",
             "param_schema": payload.get("param_schema") or best.get("param_schema"),
-            "optimizer_tool": payload.get("tool") or "tools/build_kaggle_proxy_sweep_kernel.py",
+            "optimizer_tool": payload.get("tool")
+            or "tools/build_kaggle_proxy_sweep_kernel.py",
             "optimizer": payload.get("optimizer") or best.get("optimizer"),
-            "optimizer_status": payload.get("optimizer_status") or best.get("optimizer_status"),
+            "optimizer_status": payload.get("optimizer_status")
+            or best.get("optimizer_status"),
             "trial_index": _as_int(best.get("trial_index")),
             "op_params": dict(best.get("params") or {}),
             "proxy_components": dict(best.get("proxy_components") or {}),
@@ -1151,11 +1243,7 @@ def _kaggle_proxy_sweep_candidates(
     _add_blockers(
         row,
         [
-            *[
-                str(item)
-                for item in payload.get("dispatch_blockers", [])
-                if str(item)
-            ],
+            *[str(item) for item in payload.get("dispatch_blockers", []) if str(item)],
             "kaggle_proxy_output_requires_archive_builder_promotion",
             "kaggle_proxy_result_is_not_rank_or_kill_evidence",
         ],
@@ -1169,7 +1257,9 @@ def _pr101_kaggle_proxy_runtime_packet_candidates(
     packet_archive = payload.get("packet_archive")
     runtime_custody = payload.get("runtime_custody")
     runtime_patch = payload.get("runtime_patch")
-    if not isinstance(packet_archive, Mapping) or not isinstance(runtime_custody, Mapping):
+    if not isinstance(packet_archive, Mapping) or not isinstance(
+        runtime_custody, Mapping
+    ):
         return []
 
     candidate_id = str(payload.get("candidate_id") or "")
@@ -1198,7 +1288,9 @@ def _pr101_kaggle_proxy_runtime_packet_candidates(
         else None
     )
     runtime_tree_sha = _shaish(runtime_custody.get("runtime_tree_sha256"))
-    runtime_consumption_proof_path = source_path.parent / "runtime_consumption_proof.json"
+    runtime_consumption_proof_path = (
+        source_path.parent / "runtime_consumption_proof.json"
+    )
     runtime_consumption_proof_present = runtime_consumption_proof_path.is_file()
     row = _base_candidate(
         f"{candidate_id}_pr101_proxy_runtime_packet",
@@ -1221,7 +1313,9 @@ def _pr101_kaggle_proxy_runtime_packet_candidates(
             "candidate_archive_bytes": archive_bytes,
             "source_archive_sha256": source_archive_sha,
             "source_archive_bytes": source_archive_bytes,
-            "archive_unchanged_from_source": bool(payload.get("archive_changed") is False),
+            "archive_unchanged_from_source": bool(
+                payload.get("archive_changed") is False
+            ),
             "runtime_tree_sha256": runtime_tree_sha,
             "runtime_manifest_path": _repo_rel(source_path, repo_root),
             "runtime_consumption_proof_required": True,
@@ -1233,7 +1327,9 @@ def _pr101_kaggle_proxy_runtime_packet_candidates(
             if runtime_consumption_proof_present
             else "missing",
             "candidate_params": dict(payload.get("runtime_consumed_params") or {}),
-            "runtime_patch": dict(runtime_patch) if isinstance(runtime_patch, Mapping) else {},
+            "runtime_patch": dict(runtime_patch)
+            if isinstance(runtime_patch, Mapping)
+            else {},
             "score_affecting_payload_changed": False,
             "charged_bits_changed": False,
             "score_affecting_runtime_changed": True,
@@ -1248,7 +1344,11 @@ def _pr101_kaggle_proxy_runtime_packet_candidates(
             "exact_cuda_auth_eval_missing",
             "requires_exact_eval_readiness_gate",
             "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
-            *([] if runtime_consumption_proof_present else ["runtime_consumption_proof_missing"]),
+            *(
+                []
+                if runtime_consumption_proof_present
+                else ["runtime_consumption_proof_missing"]
+            ),
         ],
     )
     return [row]
@@ -1399,17 +1499,23 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
     if schema in {"codec_op_cma_search_report_v1", "codec_op_optuna_search_report_v1"}:
         return SourceExtraction(
             schema=schema,
-            rows=_codec_search_report_candidates(payload, source_path=path, repo_root=repo_root),
+            rows=_codec_search_report_candidates(
+                payload, source_path=path, repo_root=repo_root
+            ),
         )
     if schema == "codec_op_param_sweep_manifest.v1":
         return SourceExtraction(
             schema=schema,
-            rows=_codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root),
+            rows=_codec_param_manifest_candidates(
+                payload, source_path=path, repo_root=repo_root
+            ),
         )
     if schema == "meta_lagrangian_search_v1":
         return SourceExtraction(
             schema=schema,
-            rows=_meta_lagrangian_candidates(payload, source_path=path, repo_root=repo_root),
+            rows=_meta_lagrangian_candidates(
+                payload, source_path=path, repo_root=repo_root
+            ),
         )
     if schema == "optimizer_guided_candidate_queue_v1":
         return SourceExtraction(
@@ -1437,6 +1543,17 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
                 source_path=path,
                 repo_root=repo_root,
             ),
+        )
+    if schema in MATERIALIZER_CHAIN_SCHEMAS:
+        return SourceExtraction(
+            schema=schema,
+            rows=[
+                adapt_materializer_chain_manifest_to_candidate(
+                    payload,
+                    source_path=path,
+                    repo_root=repo_root,
+                )
+            ],
         )
     if schema == EUREKA_SIGNAL_SCHEMA:
         return SourceExtraction(
@@ -1483,7 +1600,9 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
     if schema == "pr101_kaggle_proxy_sweep_v1":
         return SourceExtraction(
             schema=schema,
-            rows=_kaggle_proxy_sweep_candidates(payload, source_path=path, repo_root=repo_root),
+            rows=_kaggle_proxy_sweep_candidates(
+                payload, source_path=path, repo_root=repo_root
+            ),
         )
     if schema == "pr101_kaggle_proxy_runtime_packet_v1":
         return SourceExtraction(
@@ -1509,7 +1628,8 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
         )
     if (
         schema == "pr103_hidden_gem_release_surface_manifest_v1"
-        or payload.get("tool") == "inline_local_materialize_pr103_ac_hidden_gem_candidate"
+        or payload.get("tool")
+        == "inline_local_materialize_pr103_ac_hidden_gem_candidate"
     ):
         return SourceExtraction(
             schema=schema,
@@ -1547,11 +1667,13 @@ def build_candidate_queue(
         if extraction.unsupported_reason:
             source_entry["status"] = "unsupported"
             source_entry["unsupported_reason"] = extraction.unsupported_reason
-            unsupported_sources.append({
-                "path": _repo_rel(path, repo_root),
-                "schema": extraction.schema,
-                "reason": extraction.unsupported_reason,
-            })
+            unsupported_sources.append(
+                {
+                    "path": _repo_rel(path, repo_root),
+                    "schema": extraction.schema,
+                    "reason": extraction.unsupported_reason,
+                }
+            )
         else:
             source_entry["status"] = "supported"
         source_schemas.append(source_entry)
@@ -1574,25 +1696,27 @@ def build_candidate_queue(
     dispatch_ready = [
         row for row in sorted_rows if row.get("ready_for_exact_eval_dispatch") is True
     ]
-    return _json_safe({
-        "schema": QUEUE_SCHEMA,
-        "tool": TOOL_NAME,
-        "generated_at_utc": _utc_now(),
-        "source_schemas": source_schemas,
-        "unsupported_sources": unsupported_sources,
-        "n_candidates": len(merged),
-        "top_k_count": len(sorted_rows),
-        "dispatch_ready_count": len(dispatch_ready),
-        "dispatch_ready": dispatch_ready,
-        "top_k": sorted_rows,
-        "top_k_forensic": sorted_rows,
-        "evidence_boundary": {
-            "planning_only_by_default": True,
-            "ready_for_exact_eval_dispatch_default": False,
-            "proxy_or_macos_cpu_rows_must_not_promote_score": True,
-            "next_gate": "materialize byte-closed archive/runtime custody, then exact eval readiness gate",
-        },
-    })
+    return _json_safe(
+        {
+            "schema": QUEUE_SCHEMA,
+            "tool": TOOL_NAME,
+            "generated_at_utc": _utc_now(),
+            "source_schemas": source_schemas,
+            "unsupported_sources": unsupported_sources,
+            "n_candidates": len(merged),
+            "top_k_count": len(sorted_rows),
+            "dispatch_ready_count": len(dispatch_ready),
+            "dispatch_ready": dispatch_ready,
+            "top_k": sorted_rows,
+            "top_k_forensic": sorted_rows,
+            "evidence_boundary": {
+                "planning_only_by_default": True,
+                "ready_for_exact_eval_dispatch_default": False,
+                "proxy_or_macos_cpu_rows_must_not_promote_score": True,
+                "next_gate": "materialize byte-closed archive/runtime custody, then exact eval readiness gate",
+            },
+        }
+    )
 
 
 __all__ = [

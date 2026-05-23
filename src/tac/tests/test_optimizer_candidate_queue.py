@@ -13,14 +13,109 @@ from tac.optimization.optimizer_training_signal_bridge import (
     validate_optimizer_training_signal_wire_in,
 )
 from tac.optimization.proxy_candidate_contract import validate_proxy_candidate
+from tac.optimization.serialized_archive_economics import (
+    build_serialized_archive_delta_contract,
+)
 from tac.optimizer import candidate_queue as candidate_queue_module
 from tac.optimizer.candidate_queue import QUEUE_SCHEMA, build_candidate_queue
+from tac.optimizer.materializer_chain_harvest import MaterializerChainHarvestError
 
 
 def _write_json(path: Path, payload: object) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return path
+
+
+def _file_record(repo: Path, path: Path) -> dict[str, object]:
+    return {
+        "path": path.relative_to(repo).as_posix(),
+        "bytes": path.stat().st_size,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+
+
+def _write_bytes(repo: Path, path: Path, data: bytes) -> dict[str, object]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return _file_record(repo, path)
+
+
+def _materializer_chain_manifest(
+    repo: Path,
+    *,
+    authority_overrides: dict[str, object] | None = None,
+    delta_overrides: dict[str, object] | None = None,
+    artifact_overrides: dict[str, object] | None = None,
+) -> Path:
+    source_archive = _write_bytes(
+        repo, repo / "inputs/source.zip", b"source archive bytes"
+    )
+    candidate_archive = _write_bytes(repo, repo / "outputs/archive.zip", b"candidate")
+    artifact = _write_json(
+        repo / "outputs/candidate_manifest.json",
+        {"schema": "fixture_materializer_artifact_v1"},
+    )
+    artifact_record = _file_record(repo, artifact)
+    serialized_archive_delta = build_serialized_archive_delta_contract(
+        source_archive=source_archive,
+        candidate_archive=candidate_archive,
+        require_realized_saving=True,
+    )
+    if delta_overrides:
+        serialized_archive_delta.update(delta_overrides)
+    artifact_payload = {
+        "candidate_manifest": artifact_record,
+        **(artifact_overrides or {}),
+    }
+    payload: dict[str, object] = {
+        "schema": "byte_range_entropy_recode_chain_v1",
+        "candidate_id": "fixture_materializer_candidate",
+        "lane_id": "fixture_materializer_lane",
+        "source_archive": source_archive,
+        "source_archive_sha256": source_archive["sha256"],
+        "source_archive_bytes": source_archive["bytes"],
+        "candidate_archive": candidate_archive,
+        "candidate_archive_sha256": candidate_archive["sha256"],
+        "candidate_archive_bytes": candidate_archive["bytes"],
+        "serialized_archive_delta": serialized_archive_delta,
+        "byte_closed_candidate_emitted": True,
+        "runtime_adapter_ready": True,
+        "receiver_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "readiness_blockers": ["exact_cuda_auth_eval_missing"],
+        "dispatch_blockers": [
+            "byte_range_entropy_recode_chain_is_not_dispatch_authorization",
+            "exact_cuda_auth_eval_missing",
+        ],
+        "artifacts": artifact_payload,
+        "chain_steps": [
+            {
+                "step_id": "materialize_candidate",
+                "status": "succeeded",
+                "artifact": artifact_record,
+            }
+        ],
+        "next_required_gates": ["contest_auth_eval"],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+        "local_cpu_anchor": {
+            "score_axis": "[macOS-CPU advisory]",
+            "score": 0.1928,
+        },
+    }
+    if authority_overrides:
+        payload.update(authority_overrides)
+    return _write_json(repo / "outputs/chain_manifest.json", payload)
 
 
 def test_a1_rollup_merges_m5_ranking_without_dispatch_overclaim(tmp_path: Path) -> None:
@@ -105,7 +200,10 @@ def test_a1_rollup_merges_m5_ranking_without_dispatch_overclaim(tmp_path: Path) 
     best = queue["top_k"][0]
     assert best["ready_for_exact_eval_dispatch"] is False
     assert best["score_claim"] is False
-    assert best["archive_path"] == "experiments/results/coord/v_b/submission_dir/archive.zip"
+    assert (
+        best["archive_path"]
+        == "experiments/results/coord/v_b/submission_dir/archive.zip"
+    )
     assert best["candidate_archive_sha256"] == "c" * 64
     assert best["predicted_contest_cpu_gha"] == 0.19279
     assert "macos_cpu_is_not_contest_cuda_evidence" in best["dispatch_blockers"]
@@ -243,6 +341,135 @@ def test_merge_candidate_or_preserves_score_affecting_booleans() -> None:
     assert reversed_merge["score_affecting_runtime_changed"] is True
 
 
+def test_materializer_chain_manifest_becomes_custody_checked_planning_row(
+    tmp_path: Path,
+) -> None:
+    manifest = _materializer_chain_manifest(tmp_path)
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert queue["n_candidates"] == 1
+    assert queue["dispatch_ready_count"] == 0
+    assert row["candidate_id"] == "fixture_materializer_candidate"
+    assert row["candidate_family"] == "byte_range_entropy_recode"
+    assert row["archive_candidate_verified"] is True
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["score_affecting_payload_changed"] is True
+    assert row["charged_bits_changed"] is True
+    assert row["serialized_archive_delta"]["status"] == "realized_saving"
+    assert (
+        row["serialized_archive_delta_validated"]["expected_status"]
+        == "realized_saving"
+    )
+    assert row["score_affecting_change_proof"]["archive_changed"] is True
+    assert row["local_advisory_axes"][0]["score_axis"] == "[macOS-CPU advisory]"
+    assert (
+        "materializer_chain_is_not_dispatch_authorization" in row["dispatch_blockers"]
+    )
+    assert (
+        "exact_auth_eval_result_required_before_score_claim" in row["dispatch_blockers"]
+    )
+
+
+def test_materializer_chain_truthy_authority_fails_closed(tmp_path: Path) -> None:
+    manifest = _materializer_chain_manifest(
+        tmp_path,
+        authority_overrides={"score_claim": True},
+    )
+
+    with pytest.raises(MaterializerChainHarvestError, match="score_claim=truthy"):
+        build_candidate_queue([manifest], repo_root=tmp_path)
+
+
+def test_materializer_chain_delta_mismatch_fails_closed(tmp_path: Path) -> None:
+    manifest = _materializer_chain_manifest(
+        tmp_path,
+        delta_overrides={"candidate_archive_bytes": 999},
+    )
+
+    with pytest.raises(
+        MaterializerChainHarvestError,
+        match="serialized_archive_delta_candidate_bytes_mismatch",
+    ):
+        build_candidate_queue([manifest], repo_root=tmp_path)
+
+
+def test_materializer_chain_delta_source_mismatch_fails_closed(tmp_path: Path) -> None:
+    manifest = _materializer_chain_manifest(tmp_path)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    candidate_bytes = payload["candidate_archive"]["bytes"]
+    false_source_bytes = 999
+    payload["serialized_archive_delta"].update(
+        {
+            "source_archive_bytes": false_source_bytes,
+            "archive_delta_bytes": candidate_bytes - false_source_bytes,
+            "realized_saved_bytes": false_source_bytes - candidate_bytes,
+            "savings_realized": True,
+            "status": "realized_saving",
+        }
+    )
+    _write_json(manifest, payload)
+
+    with pytest.raises(
+        MaterializerChainHarvestError,
+        match="serialized_archive_delta_source_bytes_mismatch",
+    ):
+        build_candidate_queue([manifest], repo_root=tmp_path)
+
+
+def test_materializer_chain_missing_delta_fails_closed(tmp_path: Path) -> None:
+    manifest = _materializer_chain_manifest(tmp_path)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload.pop("serialized_archive_delta")
+    _write_json(manifest, payload)
+
+    with pytest.raises(
+        MaterializerChainHarvestError,
+        match="serialized_archive_delta_missing",
+    ):
+        build_candidate_queue([manifest], repo_root=tmp_path)
+
+
+def test_materializer_chain_artifact_hash_mismatch_fails_closed(
+    tmp_path: Path,
+) -> None:
+    manifest = _materializer_chain_manifest(
+        tmp_path,
+        artifact_overrides={
+            "corrupt_artifact": {
+                "path": "outputs/candidate_manifest.json",
+                "bytes": 1,
+                "sha256": "0" * 64,
+            }
+        },
+    )
+
+    with pytest.raises(
+        MaterializerChainHarvestError, match=r"corrupt_artifact.*sha256"
+    ):
+        build_candidate_queue([manifest], repo_root=tmp_path)
+
+
+def test_materializer_chain_symlink_artifact_fails_closed(tmp_path: Path) -> None:
+    manifest = _materializer_chain_manifest(tmp_path)
+    target = tmp_path / "outputs/candidate_manifest.json"
+    link = tmp_path / "outputs/candidate_manifest_link.json"
+    link.symlink_to(target)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    symlink_record = _file_record(tmp_path, target)
+    symlink_record["path"] = link.relative_to(tmp_path).as_posix()
+    payload["artifacts"]["symlink_artifact"] = symlink_record
+    _write_json(manifest, payload)
+
+    with pytest.raises(
+        MaterializerChainHarvestError,
+        match="artifact:symlink_artifact_file_is_symlink",
+    ):
+        build_candidate_queue([manifest], repo_root=tmp_path)
+
+
 def test_codec_search_report_rows_are_payload_planning_not_archive_dispatch(
     tmp_path: Path,
 ) -> None:
@@ -328,7 +555,11 @@ def test_stale_archive_path_does_not_outrank_materialized_payload(
     queue = build_candidate_queue([stale_archive, report], repo_root=tmp_path, top_k=2)
 
     assert queue["top_k"][0]["candidate_id"] == "fixturecodecop_eval_00000"
-    stale = next(row for row in queue["top_k"] if row["candidate_id"] == "stale_archive_candidate")
+    stale = next(
+        row
+        for row in queue["top_k"]
+        if row["candidate_id"] == "stale_archive_candidate"
+    )
     assert stale["archive_candidate_verified"] is False
     assert stale["candidate_archive_path_unverified"] is True
     assert "candidate_archive_path_unverified" in stale["dispatch_blockers"]
@@ -470,12 +701,19 @@ def test_optimizer_guided_queue_schema_is_adapted_as_proxy_only(
     assert row["op_params"] == row["candidate_params"]
     assert row["rank_score_field"] == "proxy_objective_not_score"
     assert "sidecar_param_requires_archive_builder_support" in row["dispatch_blockers"]
-    assert "optimizer_guided_queue_requires_archive_materialization" in row["dispatch_blockers"]
-    assert "optimizer_guided_row_has_no_runtime_consumption_proof" in row["dispatch_blockers"]
+    assert (
+        "optimizer_guided_queue_requires_archive_materialization"
+        in row["dispatch_blockers"]
+    )
+    assert (
+        "optimizer_guided_row_has_no_runtime_consumption_proof"
+        in row["dispatch_blockers"]
+    )
     assert validate_optimizer_training_signal_wire_in(row["solver_stack_wire_in"]) == []
-    assert row["solver_stack_wire_in"]["cathedral_autopilot_wire_in"][
-        "dispatch_ready"
-    ] is False
+    assert (
+        row["solver_stack_wire_in"]["cathedral_autopilot_wire_in"]["dispatch_ready"]
+        is False
+    )
     assert row["solver_stack_wire_in"]["atom_wire_in"]["atom_kind"] == "meta_lagrangian"
     assert validate_proxy_candidate(row) == []
 
@@ -504,8 +742,7 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
     )
     pairing_wire_in = build_optimizer_training_signal_wire_in(
         candidate_id=(
-            "prefix_k032::mlx_local_response::micro::optimizer_scheduler::"
-            "muon_adamw_cosine_representation"
+            "prefix_k032::mlx_local_response::micro::optimizer_scheduler::muon_adamw_cosine_representation"
         ),
         profile_id="mlx_dynamic_learned_sweep_optimizer_pairing",
         lane_id="mlx_dynamic_learned_sweep_planning",
@@ -590,8 +827,7 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
                 {
                     "schema": "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing.v1",
                     "queue_candidate_id": (
-                        "prefix_k032::mlx_local_response::micro::optimizer_scheduler::"
-                        "muon_adamw_cosine_representation"
+                        "prefix_k032::mlx_local_response::micro::optimizer_scheduler::muon_adamw_cosine_representation"
                     ),
                     "candidate_id": "prefix_k032",
                     "parent_queue_candidate_id": "prefix_k032::mlx_local_response::micro",
@@ -666,20 +902,29 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
     assert "mlx_dynamic_learned_sweep_plan_is_proxy_signal" in row["dispatch_blockers"]
     assert row["solver_stack_wire_in"]["candidate_id"] == row["candidate_id"]
     assert validate_optimizer_training_signal_wire_in(row["solver_stack_wire_in"]) == []
-    assert row["consumer_payload"]["mlx_dynamic_learned_sweep"]["source_candidate_id"] == (
-        "prefix_k032"
-    )
+    assert row["consumer_payload"]["mlx_dynamic_learned_sweep"][
+        "source_candidate_id"
+    ] == ("prefix_k032")
     assert validate_proxy_candidate(row) == []
     recipe = next(
         item
         for item in queue["top_k"]
-        if item["candidate_id"] == "optimizer_scheduler::muon_adamw_cosine_representation"
+        if item["candidate_id"]
+        == "optimizer_scheduler::muon_adamw_cosine_representation"
     )
-    assert recipe["parameter_group_lr_policy_id"] == "embedding_theta1_hidden_muon_adamw"
+    assert (
+        recipe["parameter_group_lr_policy_id"] == "embedding_theta1_hidden_muon_adamw"
+    )
     assert recipe["ready_for_exact_eval_dispatch"] is False
     assert recipe["score_claim"] is False
-    assert recipe["consumer_payload"]["optimizer_scheduler_recipe"]["config_sha256"] == "a" * 64
-    assert "requires_training_telemetry_before_candidate_selection" in recipe["dispatch_blockers"]
+    assert (
+        recipe["consumer_payload"]["optimizer_scheduler_recipe"]["config_sha256"]
+        == "a" * 64
+    )
+    assert (
+        "requires_training_telemetry_before_candidate_selection"
+        in recipe["dispatch_blockers"]
+    )
     assert validate_proxy_candidate(recipe) == []
     pairing = next(
         item
@@ -692,18 +937,29 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
     assert pairing["source_candidate_id"] == "prefix_k032"
     assert pairing["config_sha256"] == "a" * 64
     assert pairing["parameter_group_lr_policy_sha256"] == "b" * 64
-    assert pairing["consumer_payload"]["optimizer_scheduler_pairing"][
-        "parent_queue_candidate_id"
-    ] == "prefix_k032::mlx_local_response::micro"
+    assert (
+        pairing["consumer_payload"]["optimizer_scheduler_pairing"][
+            "parent_queue_candidate_id"
+        ]
+        == "prefix_k032::mlx_local_response::micro"
+    )
     assert pairing["consumer_payload"]["optimizer_scheduler_pairing"][
         "paired_ablation_contract"
-    ]["tool_wiring"]["freezing_surfaces"] == ["src/tac/freezing/swa_checkpoint_averaging.py"]
-    assert "requires_same_seed_local_ablation_before_recipe_posterior_update" in pairing[
-        "dispatch_blockers"
+    ]["tool_wiring"]["freezing_surfaces"] == [
+        "src/tac/freezing/swa_checkpoint_averaging.py"
     ]
-    assert validate_optimizer_training_signal_wire_in(
-        pairing["consumer_payload"]["optimizer_scheduler_pairing"]["solver_stack_wire_in"]
-    ) == []
+    assert (
+        "requires_same_seed_local_ablation_before_recipe_posterior_update"
+        in pairing["dispatch_blockers"]
+    )
+    assert (
+        validate_optimizer_training_signal_wire_in(
+            pairing["consumer_payload"]["optimizer_scheduler_pairing"][
+                "solver_stack_wire_in"
+            ]
+        )
+        == []
+    )
     assert validate_proxy_candidate(pairing) == []
 
 
@@ -895,10 +1151,14 @@ def test_candidate_queue_accepts_local_cpu_eureka_as_spend_triage_only(
     assert row["exact_auth_anchor_requested"] is True
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
-    assert row["rank_score_field"] == "conservative_projected_contest_score_false_authority"
-    assert "positive_eureka_requires_manual_exact_auth_anchor_claim" in row[
-        "dispatch_blockers"
-    ]
+    assert (
+        row["rank_score_field"]
+        == "conservative_projected_contest_score_false_authority"
+    )
+    assert (
+        "positive_eureka_requires_manual_exact_auth_anchor_claim"
+        in row["dispatch_blockers"]
+    )
     assert validate_proxy_candidate(row) == []
 
 
@@ -914,11 +1174,19 @@ def test_candidate_queue_accepts_byte_shaving_campaign_plan_as_planning_only(
             "candidate_id": "seed7",
             "lane_id": "boostnerv_post_train_shave",
             "frontier_axis": "[macOS-MLX research-signal]",
-            "source_signal_refs": [{"kind": "master_gradient_anchor", "archive_sha256": "a" * 64}],
+            "source_signal_refs": [
+                {"kind": "master_gradient_anchor", "archive_sha256": "a" * 64}
+            ],
             "auth_eval_refs": [{"kind": "contest_cpu_anchor", "path": "auth.json"}],
-            "mlx_calibration_refs": [{"kind": "strict_calibration", "path": "mlx_cal.json"}],
-            "scorer_response_refs": [{"kind": "scorer_response_dataset", "path": "rows.json"}],
-            "dispatch_blockers": ["requires_byte_closed_materialization_before_dispatch"],
+            "mlx_calibration_refs": [
+                {"kind": "strict_calibration", "path": "mlx_cal.json"}
+            ],
+            "scorer_response_refs": [
+                {"kind": "scorer_response_dataset", "path": "rows.json"}
+            ],
+            "dispatch_blockers": [
+                "requires_byte_closed_materialization_before_dispatch"
+            ],
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
@@ -1036,7 +1304,9 @@ def test_candidate_queue_rejects_byte_shaving_campaign_nested_authority(
         },
     )
 
-    with pytest.raises(ValueError, match=r"selected_operations\[0\]\.promotable=truthy"):
+    with pytest.raises(
+        ValueError, match=r"selected_operations\[0\]\.promotable=truthy"
+    ):
         build_candidate_queue([plan], repo_root=tmp_path)
 
 
@@ -1088,8 +1358,7 @@ def test_unknown_candidates_schema_is_not_ranked_by_generic_numeric_fields(
             "path": "unknown_candidate_rows.json",
             "schema": "future_optimizer_rows_without_adapter_v1",
             "reason": (
-                "unsupported_candidates_schema_requires_explicit_adapter_or_"
-                "codec_op_param_sweep_manifest_v1"
+                "unsupported_candidates_schema_requires_explicit_adapter_or_codec_op_param_sweep_manifest_v1"
             ),
         }
     ]
@@ -1156,7 +1425,10 @@ def test_kaggle_proxy_manifest_becomes_canonical_non_dispatchable_queue_row(
     assert row["promotion_eligible"] is False
     assert row["rank_or_kill_eligible"] is False
     assert "kaggle_proxy_substrate_not_contest_exact_eval" in row["dispatch_blockers"]
-    assert "kaggle_proxy_output_requires_archive_builder_promotion" in row["dispatch_blockers"]
+    assert (
+        "kaggle_proxy_output_requires_archive_builder_promotion"
+        in row["dispatch_blockers"]
+    )
     assert validate_proxy_candidate(row) == []
     assert queue["dispatch_ready_count"] == 0
 
@@ -1250,7 +1522,9 @@ def test_pr101_kaggle_proxy_runtime_packet_becomes_byte_closed_planning_row(
     assert row["charged_bits_changed"] is False
     assert row["runtime_consumption_proof_required"] is True
     assert row["runtime_consumption_proof_status"] == "missing"
-    assert row["runtime_consumption_proof_path"].endswith("/runtime_consumption_proof.json")
+    assert row["runtime_consumption_proof_path"].endswith(
+        "/runtime_consumption_proof.json"
+    )
     assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
     assert "exact_cuda_auth_eval_missing" in row["dispatch_blockers"]
     assert "requires_exact_eval_readiness_gate" in row["dispatch_blockers"]
@@ -1370,7 +1644,9 @@ def test_concrete_eval_queue_outranks_lower_numeric_proxy_score(tmp_path: Path) 
             "variants": [
                 {
                     "variant_id": "v_real",
-                    "build_manifest_relpath": rollup_manifest.relative_to(tmp_path).as_posix(),
+                    "build_manifest_relpath": rollup_manifest.relative_to(
+                        tmp_path
+                    ).as_posix(),
                 }
             ],
         },
