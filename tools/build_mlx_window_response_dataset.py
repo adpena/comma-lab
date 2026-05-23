@@ -78,9 +78,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--require-auth-audited-windows",
         action="store_true",
+        default=True,
         help=(
             "Require candidate and baseline windows to carry passing auth-cache "
             "identity audits and matching reference tensor identities."
+        ),
+    )
+    parser.add_argument(
+        "--allow-unaudited-mlx-debug-dataset",
+        action="store_false",
+        dest="require_auth_audited_windows",
+        help=(
+            "Opt out of auth-cache window audits for explicit research/debug datasets. "
+            "Rows remain non-authoritative and are not spend-triage or promotion inputs."
         ),
     )
     return parser.parse_args(argv)

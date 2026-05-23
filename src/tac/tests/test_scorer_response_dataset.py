@@ -1791,6 +1791,7 @@ def test_build_windowed_mlx_response_dataset_uses_matching_window_baseline(tmp_p
     dataset = build_windowed_mlx_response_dataset(
         candidate_paths=[candidate_path],
         baseline_paths=[baseline_path],
+        require_auth_audited_windows=False,
     )
 
     assert dataset["score_claim"] is False
@@ -1836,6 +1837,7 @@ def test_build_windowed_mlx_response_dataset_accepts_reference_cache_baseline_id
     dataset = build_windowed_mlx_response_dataset(
         candidate_paths=[candidate_path],
         baseline_paths=[baseline_path],
+        require_auth_audited_windows=False,
     )
 
     assert dataset["summary"]["row_count"] == 1
@@ -1993,6 +1995,7 @@ def test_build_windowed_mlx_response_dataset_skips_missing_window_baseline(tmp_p
     dataset = build_windowed_mlx_response_dataset(
         candidate_paths=[candidate_path],
         baseline_paths=[baseline_path],
+        require_auth_audited_windows=False,
     )
 
     assert dataset["rows"] == []
@@ -2017,6 +2020,7 @@ def test_build_windowed_mlx_response_dataset_rejects_duplicate_baseline_window(
     dataset = build_windowed_mlx_response_dataset(
         candidate_paths=[candidate_path],
         baseline_paths=[baseline_a_path, baseline_b_path],
+        require_auth_audited_windows=False,
     )
 
     assert dataset["rows"] == []
@@ -2045,6 +2049,7 @@ def test_build_mlx_window_response_dataset_cli(tmp_path) -> None:
             str(candidate_path),
             "--baseline-response",
             str(baseline_path),
+            "--allow-unaudited-mlx-debug-dataset",
             "--json-out",
             str(json_out),
             "--md-out",
@@ -2072,6 +2077,39 @@ def test_build_mlx_window_response_dataset_cli_fails_empty_by_default(tmp_path) 
     candidate["pair_window"] = [20, 24]
     candidate_path = tmp_path / "candidate.json"
     candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_mlx_window_response_dataset.py"),
+            "--candidate-response",
+            str(candidate_path),
+            "--baseline-response",
+            str(baseline_path),
+            "--json-out",
+            str(tmp_path / "dataset.json"),
+        ],
+        cwd=REPO,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 2
+    assert "no usable MLX window response rows produced" in completed.stderr
+
+
+def test_build_mlx_window_response_dataset_cli_requires_auth_audit_by_default(
+    tmp_path,
+) -> None:
+    baseline = _mlx_response_payload()
+    baseline["canonical_score"] = 0.9
+    baseline["score_recomputed_from_components"] = 0.9
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(_mlx_response_payload()), encoding="utf-8")
 
     completed = subprocess.run(
         [
@@ -3381,6 +3419,7 @@ def test_response_dataset_computes_break_even_bytes_for_scorer_gain(tmp_path) ->
     score = 1.0 - RATE_SCORE_PER_BYTE
     payload = {
         "schema": "sparse_residual_oracle_smoke.v1",
+        "n_samples": 600,
         "candidate": {
             "advisory_eval": _advisory(score, 102, 0.001, 0.01),
             "plan": {"packed_bytes": 2},
@@ -3396,6 +3435,11 @@ def test_response_dataset_computes_break_even_bytes_for_scorer_gain(tmp_path) ->
     assert math.isclose(row["rate_delta_vs_baseline"], 2.0 * RATE_SCORE_PER_BYTE)
     assert math.isclose(row["scorer_delta_vs_baseline"], -3.0 * RATE_SCORE_PER_BYTE)
     assert math.isclose(row["observed_scorer_gain_vs_baseline"], 3.0 * RATE_SCORE_PER_BYTE)
+    assert row["full_video_denominator"] == 600
+    assert math.isclose(
+        row["normalized_full_video_scorer_gain_vs_baseline"],
+        3.0 * RATE_SCORE_PER_BYTE,
+    )
     assert math.isclose(row["required_scorer_gain_for_added_bytes"], 2.0 * RATE_SCORE_PER_BYTE)
     assert row["scorer_gain_shortfall_to_break_even"] == 0.0
     assert math.isclose(row["break_even_added_bytes_from_scorer_gain"], 3.0)

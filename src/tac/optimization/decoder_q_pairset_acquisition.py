@@ -320,6 +320,15 @@ def _candidate_row(
     predicted_score_mean = source_selector.get("predicted_score_mean")
     predicted = float(predicted_score_mean) if predicted_score_mean is not None else None
     diversity = _diversity_score(stats["pair_indices"])
+    source_selector_pairs = list(source_selector.get("selected_pair_indices") or [])
+    candidate_matches_source_selector = (
+        tuple(stats["pair_indices"]) == tuple(_canonical_pair_indices(
+            source_selector_pairs,
+            label=f"{source_selector['selector_id']} selected_pair_indices",
+        ))
+        if source_selector_pairs
+        else False
+    )
     row: dict[str, Any] = {
         "schema": CANDIDATE_SCHEMA,
         "selector_id": acquisition_id,
@@ -355,11 +364,26 @@ def _candidate_row(
         row["acquisition_operation"] = operation
     if predicted is not None:
         row["predicted_score_mean"] = predicted
-        row["predicted_score_source"] = "source_selector_inherited_non_authoritative"
+        row["predicted_score_source"] = (
+            "source_selector_candidate_specific_non_authoritative"
+            if candidate_matches_source_selector
+            else "source_selector_inherited_non_authoritative"
+        )
+        row["predicted_score_scope"] = (
+            "candidate_specific"
+            if candidate_matches_source_selector
+            else "source_selector_scope_not_child_candidate"
+        )
     exact_estimate = source_selector.get("exact_cpu_calibrated_estimate")
     if isinstance(exact_estimate, Mapping):
-        row["exact_cpu_calibrated_estimate"] = dict(exact_estimate)
-        row["exact_cpu_calibrated_estimate_scope"] = "source_selector_inherited_non_authoritative"
+        if candidate_matches_source_selector:
+            row["exact_cpu_calibrated_estimate"] = dict(exact_estimate)
+            row["exact_cpu_calibrated_estimate_scope"] = "candidate_specific"
+        else:
+            row["source_selector_exact_cpu_calibrated_estimate"] = dict(exact_estimate)
+            row["source_selector_exact_cpu_calibrated_estimate_scope"] = (
+                "source_selector_scope_not_child_candidate"
+            )
     _require_acquisition_false_authority(row, label=acquisition_id)
     return row
 

@@ -30,21 +30,30 @@ def _bridge() -> dict[str, object]:
                 **_false_authority(),
                 "rank": 1,
                 "pair_window": [10, 11],
+                "observed_mlx_window_gain": 0.010,
                 "observed_mlx_gain": 0.010,
+                "normalized_full_video_gain": 0.010 / 600.0,
+                "full_video_denominator": 600,
                 "unit_id": "u10",
             },
             {
                 **_false_authority(),
                 "rank": 2,
                 "pair_window": [20, 21],
+                "observed_mlx_window_gain": 0.005,
                 "observed_mlx_gain": 0.005,
+                "normalized_full_video_gain": 0.005 / 600.0,
+                "full_video_denominator": 600,
                 "unit_id": "u20",
             },
             {
                 **_false_authority(),
                 "rank": 3,
                 "pair_window": [30, 31],
+                "observed_mlx_window_gain": 0.001,
                 "observed_mlx_gain": 0.001,
+                "normalized_full_video_gain": 0.001 / 600.0,
+                "full_video_denominator": 600,
                 "unit_id": "u30",
             },
         ],
@@ -75,6 +84,10 @@ def test_selector_pareto_builds_prefix_singleton_and_drop_one_rows() -> None:
     assert top["pareto_frontier"] is True
     assert top["selected_pair_indices"] == [10, 20, 30]
     assert top["payload_bytes"] == 14
+    assert top["non_authoritative_mlx_window_gain_sum"] == pytest.approx(0.016)
+    assert top["non_authoritative_normalized_full_video_gain_sum"] == pytest.approx(
+        0.016 / 600.0
+    )
     assert top["exact_cpu_calibrated_estimate"]["predicted_score"] == pytest.approx(0.99)
     assert plan["exact_cpu_calibration"]["score_claim"] is False
 

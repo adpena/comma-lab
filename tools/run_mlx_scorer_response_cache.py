@@ -64,6 +64,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--allow-local-cpu-advisory-cache-identity",
+        action="store_true",
+        help=(
+            "Permit candidate caches stamped by the local CPU-advisory identity "
+            "audit. This is for local CPU-vs-MLX debugging only and does not "
+            "unlock auth-axis transfer calibration or spend triage."
+        ),
+    )
+    parser.add_argument(
         "--progress-every",
         type=int,
         default=0,
@@ -102,6 +111,7 @@ def main(argv: list[str] | None = None) -> int:
             allow_gpu_research_signal=args.allow_gpu_research_signal,
             allow_batch_shape_research_signal=args.allow_batch_shape_research_signal,
             allow_unaudited_candidate_cache_debug=args.allow_unaudited_candidate_cache_debug,
+            allow_local_cpu_advisory_cache_identity=args.allow_local_cpu_advisory_cache_identity,
             response_family=args.response_family,
         )
     except (OSError, ValueError, NotImplementedError) as exc:

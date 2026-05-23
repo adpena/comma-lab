@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -331,6 +332,32 @@ def test_stale_archive_path_does_not_outrank_materialized_payload(
     assert stale["archive_candidate_verified"] is False
     assert stale["candidate_archive_path_unverified"] is True
     assert "candidate_archive_path_unverified" in stale["dispatch_blockers"]
+
+
+def test_archive_candidate_verification_hashes_archive_before_verified(
+    tmp_path: Path,
+) -> None:
+    release = tmp_path / "release_surface"
+    release.mkdir()
+    archive = release / "archive.zip"
+    archive.write_bytes(b"real archive bytes")
+    actual_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    manifest = _write_json(
+        tmp_path / "hnerv_manifest.json",
+        {
+            "schema": "hnerv_lowlevel_exact_eval_candidate_manifest_v1",
+            "candidate_id": "hash_mismatch_candidate",
+            "candidate_archive_sha256": "f" * 64,
+            "candidate_archive_bytes": archive.stat().st_size,
+        },
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path, top_k=1)
+    row = queue["top_k"][0]
+
+    assert row["archive_candidate_verified"] is False
+    assert row["candidate_archive_sha256_observed"] == actual_sha
+    assert "candidate_archive_sha256_mismatch" in row["dispatch_blockers"]
 
 
 def test_predicted_param_sweep_manifest_is_forced_non_dispatchable(

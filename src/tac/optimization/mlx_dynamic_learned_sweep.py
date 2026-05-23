@@ -325,10 +325,17 @@ def _variance_from_candidate(
                 raise MLXDynamicLearnedSweepError(f"{key} must be non-negative")
             return max(variance, 0.0)
     estimate = row.get("exact_cpu_calibrated_estimate")
-    if isinstance(estimate, Mapping):
+    if isinstance(estimate, Mapping) and _exact_estimate_is_candidate_specific(row):
         delta = abs(float(estimate.get("predicted_delta_vs_base", 0.0)))
         return max(default_score_variance, (0.25 * delta) ** 2)
     return default_score_variance
+
+
+def _exact_estimate_is_candidate_specific(row: Mapping[str, Any]) -> bool:
+    scope = row.get("exact_cpu_calibrated_estimate_scope")
+    if scope is None:
+        return True
+    return str(scope) == "candidate_specific"
 
 
 def _selector_pareto_candidates(
@@ -348,7 +355,11 @@ def _selector_pareto_candidates(
             continue
         _require_false_authority(row, label=f"selector candidate {index}")
         estimate = row.get("exact_cpu_calibrated_estimate")
-        if isinstance(estimate, Mapping) and estimate.get("predicted_score") is not None:
+        if (
+            isinstance(estimate, Mapping)
+            and estimate.get("predicted_score") is not None
+            and _exact_estimate_is_candidate_specific(row)
+        ):
             predicted_score = _as_float(
                 estimate["predicted_score"],
                 label=f"{row.get('selector_id')} predicted_score",
@@ -377,7 +388,17 @@ def _selector_pareto_candidates(
                 ),
                 "prediction_source": mean_source,
                 "non_authoritative_mlx_gain_sum": row.get("non_authoritative_mlx_gain_sum"),
+                "non_authoritative_normalized_full_video_gain_sum": row.get(
+                    "non_authoritative_normalized_full_video_gain_sum"
+                ),
+                "non_authoritative_mlx_window_gain_sum": row.get(
+                    "non_authoritative_mlx_window_gain_sum"
+                ),
+                "full_video_denominator": row.get("full_video_denominator"),
                 "exact_cpu_calibrated_estimate": estimate if isinstance(estimate, Mapping) else None,
+                "exact_cpu_calibrated_estimate_scope": row.get(
+                    "exact_cpu_calibrated_estimate_scope"
+                ),
                 "component_axis_context": _metadata_value(
                     row,
                     (
@@ -494,9 +515,26 @@ def _explicit_candidates(
                     row,
                     default_score_variance=default_score_variance,
                 ),
-                "prediction_source": row.get("prediction_source") or "explicit_candidate_row",
+                "prediction_source": (
+                    row.get("prediction_source")
+                    or row.get("predicted_score_source")
+                    or "explicit_candidate_row"
+                ),
+                "prediction_scope": row.get("predicted_score_scope"),
+                "exact_cpu_calibrated_estimate_scope": row.get(
+                    "exact_cpu_calibrated_estimate_scope"
+                ),
                 "payload_bytes": row.get("payload_bytes") or row.get("archive_size_bytes"),
                 "selected_pair_indices": row.get("selected_pair_indices") or row.get("pair_indices"),
+                "selected_pair_count": row.get("selected_pair_count"),
+                "non_authoritative_mlx_gain_sum": row.get("non_authoritative_mlx_gain_sum"),
+                "non_authoritative_normalized_full_video_gain_sum": row.get(
+                    "non_authoritative_normalized_full_video_gain_sum"
+                ),
+                "non_authoritative_mlx_window_gain_sum": row.get(
+                    "non_authoritative_mlx_window_gain_sum"
+                ),
+                "full_video_denominator": row.get("full_video_denominator"),
                 "component_axis_context": _metadata_value(
                     row,
                     (
@@ -784,6 +822,10 @@ def _row_for_config(
         "pass_expected_improvement_weight": pass_expected_weight,
         "pass_exploration_weight": pass_exploration_weight,
         "prediction_source": candidate.get("prediction_source"),
+        "prediction_scope": candidate.get("prediction_scope"),
+        "exact_cpu_calibrated_estimate_scope": candidate.get(
+            "exact_cpu_calibrated_estimate_scope"
+        ),
         "source_schema": candidate.get("source_schema"),
         "selector_kind": candidate.get("selector_kind"),
         "selected_pair_count": candidate.get("selected_pair_count"),
@@ -791,6 +833,13 @@ def _row_for_config(
         "payload_bytes": candidate.get("payload_bytes"),
         "pair_encoding": candidate.get("pair_encoding"),
         "non_authoritative_mlx_gain_sum": candidate.get("non_authoritative_mlx_gain_sum"),
+        "non_authoritative_normalized_full_video_gain_sum": candidate.get(
+            "non_authoritative_normalized_full_video_gain_sum"
+        ),
+        "non_authoritative_mlx_window_gain_sum": candidate.get(
+            "non_authoritative_mlx_window_gain_sum"
+        ),
+        "full_video_denominator": candidate.get("full_video_denominator"),
         "component_axis_context": candidate.get("component_axis_context"),
         "segnet_context": candidate.get("segnet_context"),
         "posenet_context": candidate.get("posenet_context"),

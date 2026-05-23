@@ -1,0 +1,441 @@
+{
+  "execution": null,
+  "plan": {
+    "blocked_candidate_count": 20,
+    "blocked_candidates": [
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "7bbba307b1432d8d885e22533fdda9ab5cc87a6025510b2d5098084895284897",
+          "command": null,
+          "eval_path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "d974fa608d890220ab4c8a7755168dd36de55b001275484c58a9cb746f8a4c09",
+          "inflated_outputs_manifest_path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "82ba5b7c6e0ed04788ed8b97c119c45946c2d569e07c7dbec83cd1fc9180ab3b"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/cross_paradigm_admm_x_op1_static_surface_codex_20260508/cross_paradigm_admm_x_op1_finalizer_20260508T185236Z/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "inflated_manifest_files_missing"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_pair501_cpu_advisory_work_venv/archive.zip",
+          "archive_zip_sha256": "788a7459fbcc70e6002e556e35dfcfae1b172ac01bde62fe68396994ff595803",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_pair501_cpu_advisory_work_venv/contest_auth_eval.json",
+          "eval_sha256": "075b6eab2dc83fd379b49ce8d12322b2a5b0bfc951712527e23260dcef62a109",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_pair501_cpu_advisory_work_venv/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "980c618356fce611d76c20d0af1a5f7f4e929b90d6256f1c2ab08e7fd6d11178",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_pair501_cpu_advisory_work_venv/provenance.json",
+          "provenance_sha256": "d8afe0167609c557ca9530539b1172cb83464cce5aee171358d914c17ae2071c"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_pair501_cpu_advisory_work_venv/inflated"
+      },
+      {
+        "blockers": [
+          "inflated_manifest_files_missing"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_cpu_advisory_work_venv/archive.zip",
+          "archive_zip_sha256": "3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_cpu_advisory_work_venv/contest_auth_eval.json",
+          "eval_sha256": "9b4519fea64589f86494ad1adf22af24a3fdd2c3982b1bb2a60a13af588b688d",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_cpu_advisory_work_venv/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "af052f07d136cc2de44475f28ff4a5767e8ddea9e0585b0f5cdee9839b7929e1",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_cpu_advisory_work_venv/provenance.json",
+          "provenance_sha256": "22f01ac74259c5b932206fb605b73c65c0ad213ca6faad2f51f5e4e68a4f47fe"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_cpu_advisory_work_venv/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_controls.json",
+          "manifest_sha256": "475d98aeb8db993a59c85b305f353635b0a9881480607d3489acc074a5ebd2b7",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_controls.json",
+          "manifest_sha256": "475d98aeb8db993a59c85b305f353635b0a9881480607d3489acc074a5ebd2b7",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work/parent/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "3c4e15bfe7ae1004ad23e89a52c2836e609c1f99e25b58f45c01747226705d59",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_controls.json",
+          "manifest_sha256": "475d98aeb8db993a59c85b305f353635b0a9881480607d3489acc074a5ebd2b7",
+          "raw_sha256": "ad8232e27709cc62b976c3b06c3dc7da9d772e510b5f7acab7e4a639ba658387"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/dqs1_top32_locality_work/selective/inflated"
+      },
+      {
+        "blockers": [
+          "inflated_manifest_files_missing"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "3700c18fa726c70515d746359682a538a7b2f52db46edfabb1164733b86b45d8",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory_work/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "349be88a5cf86f58512cc5746d997133b37c43da043b300feee031464229798d",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "974aa4b76fc17fd6618a4a32059ee7c4400cce374bfcd6cc1423628ed969f8eb"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "inflated_manifest_files_missing"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k002_materialization_20260522T162726Z/dqs1_pairset_diversity_k002_cpu_advisory_work_venv/archive.zip",
+          "archive_zip_sha256": "4432525de41c9df0c9edecab0447fa3320d9d5e5047675fced069ca8213e630e",
+          "command": null,
+          "eval_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k002_materialization_20260522T162726Z/dqs1_pairset_diversity_k002_cpu_advisory_work_venv/contest_auth_eval.json",
+          "eval_sha256": "a2ceb3e38e08e980e9c11f887b9f18284fbfe9662bf0a66010bade61f53784e4",
+          "inflated_outputs_manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k002_materialization_20260522T162726Z/dqs1_pairset_diversity_k002_cpu_advisory_work_venv/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "3429283fdf2044981235373f33e05a8a9370d7f71fdd618abb455d2e8b8f5963",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k002_materialization_20260522T162726Z/dqs1_pairset_diversity_k002_cpu_advisory_work_venv/provenance.json",
+          "provenance_sha256": "931514b235a84dbc2dc0832b59332ca7a789ebb2c329457287dc14bca9795a05"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_diversity_k002_materialization_20260522T162726Z/dqs1_pairset_diversity_k002_cpu_advisory_work_venv/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "022ac0f391bc9408c357575496c3b680fc5cf9da6ca85d23c3ff994c370a1347",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "global_mutated",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_singleton_pair501.json",
+          "manifest_sha256": "aee3b8a71d7ccb633a705d52bc5aff943f00c7642c4b23a7863aaeacbbef3877",
+          "raw_sha256": "5cae18b3430b733309306d658568c038d1a30c63fbb56e735124068ddf7520d2"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work/global_mutated/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "parent",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_singleton_pair501.json",
+          "manifest_sha256": "aee3b8a71d7ccb633a705d52bc5aff943f00c7642c4b23a7863aaeacbbef3877",
+          "raw_sha256": "d1afc583b01ff4a7aaa844d4f03ece3ed381d56763a06cb2c5e011526e5f868c"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work/parent/inflated"
+      },
+      {
+        "blockers": [
+          "locality_controls_not_passed",
+          "locality_mismatch_counts_not_zero"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_sha256": "c5f0966f6dbecbf6039a6d98c97ff320cc3b8909a331232595196d7cffd97e64",
+          "entrypoint_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c",
+          "kind": "locality_inflated_raw",
+          "label": "selective",
+          "locality_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work",
+          "manifest_path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_singleton_pair501.json",
+          "manifest_sha256": "aee3b8a71d7ccb633a705d52bc5aff943f00c7642c4b23a7863aaeacbbef3877",
+          "raw_sha256": "c5bf6b13d599872e4ba429543983dbdf12525c5fa9f932c360d3da9d9ca39a52"
+        },
+        "certified_rebuildable": false,
+        "kind": "locality_inflated_raw",
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/selective_runtime_materializer_probe_singleton_pair501/locality_controls_work/selective/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "7163499abb7475ee937338e9c79f22d3c326b53c34f7dbaa2b8ed1c872d67190",
+          "command": null,
+          "eval_path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "879e64de84a970ea30b068d151d5a624ec8dfc199e28600b9a375a78a3258ab3",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "d89ceb1d127016598f86058769887c4bac80befe4e60751395ed23bb7b6a76c5"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_a5_q7_boundary_runtime_packet_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "5b1f6e190f9051357d4c24b2e87fb4cf5bc6e2dc88b397d2f3c16972e7476536",
+          "command": null,
+          "eval_path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "cc8e917e5db47c4c60ed16a9b07fb3c126f8343dad394269c765d50e2c6b682a",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "00e2541d8b10bad0e6c429de7a5a23b6b06252162e474b016a199205d27591b2"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_a5_q7_low_margin_runtime_packet_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "cde5a1e0ad49ec56856a8b1f0e4d7c329193955211d0f9fe314366d992c4c737",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "cabb6bf693f2267c5eb6c26edcab88e8b43e9d517d031f6ef7964b89a4a84a14",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "8ae931a1637974396f4f1dc86d021034f792aa87e974690715264a92fec56387"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_20260508_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "dd725682e8dca781c908f826c117395c39cdffeba4ec2525f7799839eda3bfde",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "be48e81700ee1dad00c481e5f06ba92c5e7facac45c08f5532069467f855901e",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "c7e1bd281e02ba5a32716999cd3032999ad94bc317ba86b86cd1ceb2cb1b00b4"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "1ffb328240ccb9a067b1203258274c3edfba9f0a98212f1ce1c0a40b3e016501",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "06f3dd5a144e2994c47cf0784f1b0981746936d8f4336f6cef76279db700ce31",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "e9781799ced4d83428044fa4aa3af4faf469af3e026564776c5e6568204a8f4a"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q6_low0p45_seg_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "39dbfd05d4861c6c5ea12e7bfc8fba17e8249dcc761e9c44943eeba8d56c6ade",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "38d4d737a55c86bd00ac67d3ea6783729a5ca95062be5cb0a96d259b2902a69e",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "cf57f305176034c21027f1592c263f71e045d09d1c65c572ebee5d37bf5722b3"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_all_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "28f4e0ee3ede86f323b484e36711fd01204ad101517f40ef32000417d2e4a896",
+          "command": null,
+          "eval_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "0207f20d09541951ee021e85641c2a23fd58111c54d7e6da0143724e7355ce78",
+          "inflated_outputs_manifest_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "c9dbb46ac9e24278c9f0d1b565e458510308fd71cd8b41e616407e773b517634"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/pr101_frame_conditional_runtime_packet_trust_q7_low0p85_seg_20260509_codex/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+          "command": null,
+          "eval_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "05675255053c4cfd29fea4f7f381d600534d419ef02c95e7d9fddd381bd4b289",
+          "inflated_outputs_manifest_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "ccb7562d61146a46619719ff7562295d981b6468a61d11578ee9db8acdf96115"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal/macos_cpu_advisory_work/inflated"
+      },
+      {
+        "blockers": [
+          "missing:inflated_outputs_manifest.json",
+          "local_advisory_score_claim_not_false"
+        ],
+        "bytes": 3662409600,
+        "certificate": {
+          "archive_zip_path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/archive.zip",
+          "archive_zip_sha256": "55d4a4a0d0ad9915e9b74c679ad8ea31e81f4383f60c132bf017e6df40301111",
+          "command": null,
+          "eval_path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/contest_auth_eval.json",
+          "eval_sha256": "6b72e0840a12804eb96e83c14e9fe964ea1f35d5e5cd62ce9d3891dad8c6e0dd",
+          "inflated_outputs_manifest_path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/inflated_outputs_manifest.json",
+          "kind": "local_cpu_advisory_inflated_raw",
+          "provenance_path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/provenance.json",
+          "provenance_sha256": "e37b088cc38760bfb00790386c4441d6c4b079fd9282523ae7784232c37f1c4b"
+        },
+        "certified_rebuildable": false,
+        "kind": "local_cpu_advisory_inflated_raw",
+        "path": "experiments/results/track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal/macos_cpu_advisory_work/inflated"
+      }
+    ],
+    "candidate_count": 0,
+    "candidates": [],
+    "exclude_paths": [],
+    "generated_at_utc": "2026-05-23T05:27:27.997581+00:00",
+    "include_kinds": [
+      "local_cpu_advisory_extracted_scratch",
+      "local_cpu_advisory_inflated_raw",
+      "locality_inflated_raw"
+    ],
+    "min_bytes": 1073741824,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "repo_root": "/Users/adpena/Projects/pact",
+    "roots": [
+      "experiments/results"
+    ],
+    "schema": "comma_lab.artifact_retention_plan.v1",
+    "score_claim": false,
+    "total_reclaimable_bytes": 0
+  }
+}

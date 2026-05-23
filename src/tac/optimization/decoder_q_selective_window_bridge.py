@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
 from tac.optimization.scorer_response_dataset import render_authority_markdown_block
 
 SCHEMA = "decoder_q_selective_window_bridge_plan.v1"
@@ -164,12 +165,18 @@ def _validate_selection(selection: dict[str, Any]) -> list[dict[str, Any]]:
             )
         if row.get("family") != "mlx_decoder_q":
             raise DecoderQSelectiveWindowBridgeError(f"{label} family must be mlx_decoder_q")
-        if row.get("selection_basis") != "observed_strict_gated_mlx_singleton_response_gain":
+        if row.get("selection_basis") != "normalized_full_video_mlx_singleton_response_gain":
             raise DecoderQSelectiveWindowBridgeError(f"{label} selection_basis mismatch")
         _validate_pair_window(row, label=label)
         if _as_float(row.get("observed_scorer_gain_vs_baseline"), label=f"{label} gain") <= 0:
             raise DecoderQSelectiveWindowBridgeError(f"{label} gain must be positive")
-        if _as_float(row.get("byte_budget_margin_vs_break_even"), label=f"{label} margin") < 0:
+        if (
+            _as_float(
+                row.get("normalized_full_video_byte_budget_margin_vs_break_even"),
+                label=f"{label} normalized margin",
+            )
+            < 0
+        ):
             raise DecoderQSelectiveWindowBridgeError(f"{label} margin must be non-negative")
         validated.append(row)
     return validated
@@ -292,9 +299,42 @@ def _build_window_unit(
         row.get("observed_scorer_gain_vs_baseline"),
         label=f"row {row.get('rank')} observed gain",
     )
+    source_n_samples = _as_int(
+        row.get("source_n_samples"),
+        label=f"row {row.get('rank')} source_n_samples",
+    )
+    window_n_samples = end - start
+    if source_n_samples != window_n_samples:
+        raise DecoderQSelectiveWindowBridgeError(
+            "selected row source_n_samples must match pair_window width: "
+            f"row={row.get('rank')} source_n_samples={source_n_samples} "
+            f"pair_window={[start, end]}"
+        )
+    denominator = _as_int(
+        row.get("full_video_denominator"),
+        label=f"row {row.get('rank')} full_video_denominator",
+    )
+    if denominator != FEC6_PAIR_COUNT:
+        raise DecoderQSelectiveWindowBridgeError(
+            f"row {row.get('rank')} full_video_denominator must be {FEC6_PAIR_COUNT}"
+        )
+    normalized_gain = observed_gain * float(source_n_samples) / float(denominator)
+    upstream_normalized_gain = row.get(
+        "normalized_full_video_scorer_gain_vs_baseline"
+    )
+    upstream_value = _as_float(
+        upstream_normalized_gain,
+        label=f"row {row.get('rank')} normalized gain",
+    )
+    if not math.isclose(upstream_value, normalized_gain, rel_tol=0.0, abs_tol=1e-15):
+        raise DecoderQSelectiveWindowBridgeError(
+            "selected row normalized_full_video_scorer_gain_vs_baseline "
+            f"mismatch: row={row.get('rank')} upstream={upstream_value} "
+            f"computed={normalized_gain}"
+        )
     margin = _as_float(
-        row.get("byte_budget_margin_vs_break_even"),
-        label=f"row {row.get('rank')} byte margin",
+        row.get("normalized_full_video_byte_budget_margin_vs_break_even"),
+        label=f"row {row.get('rank')} normalized byte margin",
     )
     rank = _as_int(row.get("rank"), label="row rank")
     return {
@@ -313,7 +353,18 @@ def _build_window_unit(
         "pair_window": [start, end],
         "materialized_decoder_q_candidate_id": candidate["candidate_id"],
         "archive_sha256": archive_sha,
+        "observed_mlx_window_gain": observed_gain,
         "observed_mlx_gain": observed_gain,
+        "source_n_samples": source_n_samples,
+        "full_video_denominator": denominator,
+        "normalized_full_video_gain": normalized_gain,
+        "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
+        "projected_full_video_delta_vs_baseline_score": row.get(
+            "projected_full_video_delta_vs_baseline_score"
+        ),
+        "normalized_full_video_byte_budget_margin_vs_break_even": row.get(
+            "normalized_full_video_byte_budget_margin_vs_break_even"
+        ),
         "byte_budget_margin_vs_break_even": margin,
         "predicted_delta_vs_baseline_score": row.get(
             "predicted_delta_vs_baseline_score"
@@ -372,7 +423,10 @@ def _coalesce_window_runs(
             return
         assert active_start is not None and active_end is not None
         ranks = sorted(int(unit["rank"]) for unit in active)
-        gain_sum = sum(float(unit["observed_mlx_gain"]) for unit in active)
+        raw_gain_sum = sum(float(unit["observed_mlx_window_gain"]) for unit in active)
+        normalized_gain_sum = sum(
+            float(unit["normalized_full_video_gain"]) for unit in active
+        )
         runs.append(
             {
                 "schema": "decoder_q_selective_window_run.v1",
@@ -388,7 +442,12 @@ def _coalesce_window_runs(
                 "window_count": len(active),
                 "source_ranks": ranks,
                 "unit_ids": [str(unit["unit_id"]) for unit in active],
-                "local_mlx_gain_sum_non_authoritative": gain_sum,
+                "local_mlx_window_gain_sum_non_authoritative": raw_gain_sum,
+                "local_mlx_gain_sum_non_authoritative": raw_gain_sum,
+                "normalized_full_video_gain_sum_non_authoritative": (
+                    normalized_gain_sum
+                ),
+                "full_video_denominator": FEC6_PAIR_COUNT,
                 "gain_additivity_assumption": (
                     "not_assumed_batch_behavior_requires_runtime_probe"
                 ),
@@ -492,7 +551,9 @@ def build_decoder_q_selective_window_bridge_plan(
             "selected_archive_sha256_count": len(selected_archive_shas),
             "selected_archive_sha256": selected_archive_shas,
             "top_pair_window": top_unit["pair_window"],
-            "top_observed_mlx_gain": top_unit["observed_mlx_gain"],
+            "top_observed_mlx_window_gain": top_unit["observed_mlx_window_gain"],
+            "top_observed_mlx_gain": top_unit["observed_mlx_window_gain"],
+            "top_normalized_full_video_gain": top_unit["normalized_full_video_gain"],
             "top_byte_budget_margin_vs_break_even": top_unit[
                 "byte_budget_margin_vs_break_even"
             ],
@@ -552,7 +613,8 @@ def render_decoder_q_selective_window_bridge_markdown(plan: dict[str, Any]) -> s
         f"- Archive SHA-256: `{candidate.get('archive_zip_sha256')}`",
         f"- Mutation: `{mutation.get('tensor_name')}` q_offset=`{mutation.get('q_offset')}` delta=`{mutation.get('delta')}`",
         f"- Top window: `{summary.get('top_pair_window')}`",
-        f"- Top observed gain: `{summary.get('top_observed_mlx_gain')}` `[macOS-MLX research-signal]`",
+        f"- Top observed window gain: `{summary.get('top_observed_mlx_window_gain')}` `[macOS-MLX research-signal]`",
+        f"- Top normalized full-video gain: `{summary.get('top_normalized_full_video_gain')}` `[macOS-MLX research-signal]`",
         "",
     ]
     lines.extend(render_authority_markdown_block(plan))
@@ -570,11 +632,13 @@ def render_decoder_q_selective_window_bridge_markdown(plan: dict[str, Any]) -> s
             continue
         lines.append(
             "- rank={rank} unit=`{unit}` pair=`{pair}` gain=`{gain}` "
-            "margin=`{margin}` prediction_agrees=`{agree}`".format(
+            "normalized_full_video_gain=`{normalized}` margin=`{margin}` "
+            "prediction_agrees=`{agree}`".format(
                 rank=unit.get("rank"),
                 unit=unit.get("unit_id"),
                 pair=unit.get("pair_window"),
-                gain=unit.get("observed_mlx_gain"),
+                gain=unit.get("observed_mlx_window_gain"),
+                normalized=unit.get("normalized_full_video_gain"),
                 margin=unit.get("byte_budget_margin_vs_break_even"),
                 agree=unit.get("prediction_agrees_with_observed_gain"),
             )
@@ -585,12 +649,16 @@ def render_decoder_q_selective_window_bridge_markdown(plan: dict[str, Any]) -> s
             continue
         lines.append(
             "- run=`{run}` pair=`{pair}` windows=`{count}` ranks=`{ranks}` "
-            "gain_sum_non_authoritative=`{gain}`".format(
+            "window_gain_sum_non_authoritative=`{gain}` "
+            "normalized_gain_sum_non_authoritative=`{normalized}`".format(
                 run=run.get("run_id"),
                 pair=run.get("pair_window"),
                 count=run.get("window_count"),
                 ranks=run.get("source_ranks"),
-                gain=run.get("local_mlx_gain_sum_non_authoritative"),
+                gain=run.get("local_mlx_window_gain_sum_non_authoritative"),
+                normalized=run.get(
+                    "normalized_full_video_gain_sum_non_authoritative"
+                ),
             )
         )
     lines.extend(["", "## Required Next Steps", ""])

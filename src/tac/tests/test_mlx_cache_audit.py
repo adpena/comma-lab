@@ -8,9 +8,12 @@ from pathlib import Path
 
 from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES, contest_formula_score
 from tac.local_acceleration.mlx_cache_audit import (
+    FAIL_LOCAL_CPU_ADVISORY_VERDICT,
     FAIL_VERDICT,
+    PASS_LOCAL_CPU_ADVISORY_VERDICT,
     PASS_VERDICT,
     audit_mlx_scorer_input_cache_against_auth_eval,
+    audit_mlx_scorer_input_cache_against_local_cpu_advisory,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -92,6 +95,34 @@ def _auth(
     }
 
 
+def _local_cpu_advisory(
+    *,
+    aggregate: str = "b" * 64,
+    raw_sha: str = "r" * 64,
+    n_samples: int = 600,
+    score_axis: str = "cpu_advisory",
+) -> dict[str, object]:
+    payload = _auth(
+        aggregate=aggregate,
+        n_samples=n_samples,
+        evidence_grade="macOS-CPU advisory",
+        score_axis=score_axis,
+    )
+    payload["score_claim"] = False
+    payload["score_claim_valid"] = False
+    payload["cpu_leaderboard_reproduction_eligible"] = False
+    provenance = payload["provenance"]
+    assert isinstance(provenance, dict)
+    provenance["platform_system"] = "Darwin"
+    provenance["platform_machine"] = "arm64"
+    manifest = provenance["inflated_output_manifest"]
+    assert isinstance(manifest, dict)
+    manifest_payload = manifest["payload"]
+    assert isinstance(manifest_payload, dict)
+    manifest_payload["files"] = [{"sha256": raw_sha}]
+    return payload
+
+
 def _auth_with_scorer_input_hash(
     *,
     array_hashes: dict[str, str] | None = None,
@@ -171,6 +202,32 @@ def test_cache_audit_passes_matching_identity() -> None:
     assert "local_mlx_training_transfer_calibration" in audit["allowed_use"]
     assert audit["auth_eval_contract"]["evidence_grade"] == "contest-CPU"
     assert audit["auth_eval_contract"]["score_axis"] == "contest_cpu"
+
+
+def test_local_cpu_advisory_cache_audit_passes_but_not_transfer_calibration() -> None:
+    audit = audit_mlx_scorer_input_cache_against_local_cpu_advisory(
+        _cache(),
+        _local_cpu_advisory(),
+    )
+
+    assert audit["passed"] is True
+    assert audit["verdict"] == PASS_LOCAL_CPU_ADVISORY_VERDICT
+    assert audit["eligible_for_local_mlx_transfer_calibration"] is False
+    assert audit["eligible_for_local_mlx_local_advisory_debug"] is True
+    assert "local_speed_quality_delta_measurement" in audit["allowed_use"]
+    assert "exact_eval_spend_triage_calibration" in audit["forbidden_use"]
+    assert audit["score_claim"] is False
+
+
+def test_local_cpu_advisory_cache_audit_rejects_raw_identity_mismatch() -> None:
+    audit = audit_mlx_scorer_input_cache_against_local_cpu_advisory(
+        _cache(),
+        _local_cpu_advisory(raw_sha="z" * 64),
+    )
+
+    assert audit["passed"] is False
+    assert audit["verdict"] == FAIL_LOCAL_CPU_ADVISORY_VERDICT
+    assert "raw_sha256_mismatch_or_missing" in audit["blockers"]
 
 
 def test_cache_audit_fails_inflated_aggregate_mismatch() -> None:

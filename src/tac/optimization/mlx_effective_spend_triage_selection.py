@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 from typing import Any
 
+from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.scorer_response_dataset import (
     render_authority_markdown_block,
@@ -181,6 +182,29 @@ def _validate_dataset(dataset: dict[str, Any]) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)]
 
 
+def _normalized_scope_metrics(row: dict[str, Any]) -> tuple[dict[str, float], list[str]]:
+    blockers: list[str] = []
+    denominator = row.get("full_video_denominator")
+    if denominator != CONTEST_EXACT_SAMPLE_COUNT:
+        blockers.append("full_video_denominator_missing_or_not_contest_sample_count")
+    normalized_gain = _as_float(row.get("normalized_full_video_scorer_gain_vs_baseline"))
+    projected_delta = _as_float(row.get("projected_full_video_delta_vs_baseline_score"))
+    normalized_margin = _as_float(
+        row.get("normalized_full_video_byte_budget_margin_vs_break_even")
+    )
+    if normalized_gain is None:
+        blockers.append("normalized_full_video_gain_missing")
+    if projected_delta is None:
+        blockers.append("projected_full_video_delta_missing")
+    if normalized_margin is None:
+        blockers.append("normalized_full_video_margin_missing")
+    return {
+        "normalized_gain": 0.0 if normalized_gain is None else normalized_gain,
+        "projected_delta": 0.0 if projected_delta is None else projected_delta,
+        "normalized_margin": 0.0 if normalized_margin is None else normalized_margin,
+    }, blockers
+
+
 def _is_candidate_row(
     row: dict[str, Any],
     *,
@@ -209,6 +233,8 @@ def _is_candidate_row(
     scorer_delta = _as_float(row.get("scorer_delta_vs_baseline"))
     observed_gain = _as_float(row.get("observed_scorer_gain_vs_baseline"))
     margin = _as_float(row.get("byte_budget_margin_vs_break_even"))
+    normalized, normalized_blockers = _normalized_scope_metrics(row)
+    blockers.extend(normalized_blockers)
     if total_delta is None or total_delta >= -min_observed_gain:
         blockers.append("total_delta_not_calibrated_improvement")
     if scorer_delta is None or scorer_delta >= -min_observed_gain:
@@ -217,6 +243,12 @@ def _is_candidate_row(
         blockers.append("observed_gain_below_calibrated_gap")
     if margin is None or margin < 0.0:
         blockers.append("byte_budget_margin_negative_or_missing")
+    if normalized["normalized_gain"] < min_observed_gain:
+        blockers.append("normalized_full_video_gain_below_calibrated_gap")
+    if normalized["projected_delta"] >= -min_observed_gain:
+        blockers.append("projected_full_video_delta_not_calibrated_improvement")
+    if normalized["normalized_margin"] < 0.0:
+        blockers.append("normalized_full_video_margin_negative")
 
     if require_singleton_windows:
         if row.get("source_batch_pairs") != 1:
@@ -247,6 +279,7 @@ def _selection_row(
     prediction_field: str,
 ) -> dict[str, Any]:
     predicted_delta = _as_float(row.get(prediction_field))
+    normalized, _blockers = _normalized_scope_metrics(row)
     return {
         "schema": ROW_SCHEMA,
         "rank": rank,
@@ -259,7 +292,7 @@ def _selection_row(
         "candidate_generation_only": True,
         "archive_materialization_required": True,
         "requires_exact_auth_eval_before_score_claim": True,
-        "selection_basis": "observed_strict_gated_mlx_singleton_response_gain",
+        "selection_basis": "normalized_full_video_mlx_singleton_response_gain",
         "row_id": row.get("row_id"),
         "family": row.get("family"),
         "candidate_id": row.get("candidate_id"),
@@ -291,9 +324,21 @@ def _selection_row(
         "observed_scorer_gain_vs_baseline": row.get(
             "observed_scorer_gain_vs_baseline"
         ),
+        "full_video_denominator": row.get("full_video_denominator"),
+        "normalized_full_video_scorer_gain_vs_baseline": row.get(
+            "normalized_full_video_scorer_gain_vs_baseline"
+        ),
+        "projected_full_video_delta_vs_baseline_score": row.get(
+            "projected_full_video_delta_vs_baseline_score"
+        ),
+        "normalized_full_video_byte_budget_margin_vs_break_even": row.get(
+            "normalized_full_video_byte_budget_margin_vs_break_even"
+        ),
         "byte_budget_margin_vs_break_even": row.get(
             "byte_budget_margin_vs_break_even"
         ),
+        "source_n_samples": row.get("source_n_samples"),
+        "source_batch_pairs": row.get("source_batch_pairs"),
         "break_even_added_bytes_from_scorer_gain": row.get(
             "break_even_added_bytes_from_scorer_gain"
         ),
@@ -301,6 +346,13 @@ def _selection_row(
         "calibrated_min_mlx_gap_for_spend_triage": min_observed_gain,
         "prediction_field": prediction_field,
         "predicted_delta_vs_baseline_score": predicted_delta,
+        "selection_normalized_full_video_gain": normalized["normalized_gain"],
+        "selection_projected_full_video_delta_vs_baseline_score": normalized[
+            "projected_delta"
+        ],
+        "selection_normalized_full_video_byte_budget_margin": normalized[
+            "normalized_margin"
+        ],
         "prediction_agrees_with_observed_gain": (
             None if predicted_delta is None else predicted_delta < 0.0
         ),
@@ -362,8 +414,8 @@ def build_mlx_effective_spend_triage_selection(
 
     eligible.sort(
         key=lambda row: (
-            -float(row["observed_scorer_gain_vs_baseline"]),
-            -float(row["byte_budget_margin_vs_break_even"]),
+            -_normalized_scope_metrics(row)[0]["normalized_gain"],
+            -_normalized_scope_metrics(row)[0]["normalized_margin"],
             str(row.get("row_id")),
         )
     )
@@ -382,9 +434,10 @@ def build_mlx_effective_spend_triage_selection(
         )
 
     gains = [
-        float(row["observed_scorer_gain_vs_baseline"])
+        _normalized_scope_metrics(row)[0]["normalized_gain"]
         for row in eligible
-        if _as_float(row.get("observed_scorer_gain_vs_baseline")) is not None
+        if _as_float(row.get("normalized_full_video_scorer_gain_vs_baseline"))
+        is not None
     ]
     prediction_agree_count = sum(
         1 for row in selected if row["prediction_agrees_with_observed_gain"] is True
@@ -439,8 +492,8 @@ def build_mlx_effective_spend_triage_selection(
             "require_prediction_negative": require_prediction_negative,
             "require_singleton_windows": require_singleton_windows,
             "sort": [
-                "observed_scorer_gain_vs_baseline_desc",
-                "byte_budget_margin_vs_break_even_desc",
+                "normalized_full_video_scorer_gain_vs_baseline_desc",
+                "normalized_full_video_byte_budget_margin_vs_break_even_desc",
                 "row_id_asc",
             ],
         },

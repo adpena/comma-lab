@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import struct
 import zipfile
 from collections.abc import Sequence
@@ -105,6 +106,16 @@ def _as_int(value: Any, *, label: str) -> int:
         raise DecoderQSelectiveRuntimePacketError(f"{label} must be an integer") from exc
     if result != value and not (isinstance(value, str) and str(result) == value):
         raise DecoderQSelectiveRuntimePacketError(f"{label} must be integral")
+    return result
+
+
+def _as_float(value: Any, *, label: str) -> float:
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as exc:
+        raise DecoderQSelectiveRuntimePacketError(f"{label} must be numeric") from exc
+    if not math.isfinite(result):
+        raise DecoderQSelectiveRuntimePacketError(f"{label} must be finite")
     return result
 
 
@@ -269,6 +280,44 @@ def _selected_pair_indices(
     if len(set(pairs)) != len(pairs):
         raise DecoderQSelectiveRuntimePacketError("selected pair indices contain duplicates")
     return _canonical_pair_indices(sorted(pairs))
+
+
+def _selected_mlx_gain_sums(
+    bridge_plan: dict[str, Any],
+    pair_indices: Sequence[int],
+) -> dict[str, float]:
+    selected_pair_set = set(pair_indices)
+    raw_window_gain_sum = 0.0
+    normalized_full_video_gain_sum = 0.0
+    for index, unit in enumerate(bridge_plan["work_units"]):
+        if not isinstance(unit, dict):
+            raise DecoderQSelectiveRuntimePacketError(f"work unit {index} must be object")
+        window = unit.get("pair_window")
+        if not isinstance(window, list) or len(window) != 2:
+            raise DecoderQSelectiveRuntimePacketError(f"work unit {index} pair_window invalid")
+        start = _as_int(window[0], label=f"work unit {index} pair_window[0]")
+        if start not in selected_pair_set:
+            continue
+        denominator = _as_int(
+            unit.get("full_video_denominator"),
+            label=f"work unit {index} full_video_denominator",
+        )
+        if denominator != FEC6_PAIR_COUNT:
+            raise DecoderQSelectiveRuntimePacketError(
+                f"work unit {index} full_video_denominator must be {FEC6_PAIR_COUNT}"
+            )
+        raw_window_gain_sum += _as_float(
+            unit.get("observed_mlx_window_gain"),
+            label=f"work unit {index} observed_mlx_window_gain",
+        )
+        normalized_full_video_gain_sum += _as_float(
+            unit.get("normalized_full_video_gain"),
+            label=f"work unit {index} normalized_full_video_gain",
+        )
+    return {
+        "window": raw_window_gain_sum,
+        "normalized": normalized_full_video_gain_sum,
+    }
 
 
 def affected_frames_for_pairs(pair_indices: Sequence[int], *, frame_policy: str) -> list[int]:
@@ -640,14 +689,9 @@ def build_decoder_q_selective_runtime_packet_plan(
 
     descriptor_len = len(packet_payload)
     rate_delta = 25.0 * descriptor_len / CONTEST_RATE_DENOMINATOR_BYTES
-    selected_pair_set = set(pair_indices)
-    observed_gain_sum = 0.0
-    for unit in bridge_plan["work_units"]:
-        window = unit.get("pair_window")
-        if isinstance(window, list) and window:
-            start = int(window[0])
-            if start in selected_pair_set:
-                observed_gain_sum += float(unit.get("observed_mlx_gain", 0.0))
+    gain_sums = _selected_mlx_gain_sums(bridge_plan, pair_indices)
+    observed_window_gain_sum = gain_sums["window"]
+    normalized_full_video_gain_sum = gain_sums["normalized"]
     return {
         "schema": SCHEMA,
         "producer": TOOL,
@@ -710,8 +754,15 @@ def build_decoder_q_selective_runtime_packet_plan(
             "estimated_archive_byte_delta_if_appended_to_member": descriptor_len,
             "estimated_archive_byte_delta_if_wrapped_member": descriptor_len,
             "estimated_rate_score_delta": rate_delta,
-            "non_authoritative_mlx_gain_sum": observed_gain_sum,
-            "net_gain_after_rate_if_mlx_additive_non_authoritative": observed_gain_sum - rate_delta,
+            "non_authoritative_mlx_window_gain_sum": observed_window_gain_sum,
+            "non_authoritative_normalized_full_video_gain_sum": (
+                normalized_full_video_gain_sum
+            ),
+            "non_authoritative_mlx_gain_sum": normalized_full_video_gain_sum,
+            "net_gain_after_rate_if_mlx_additive_non_authoritative": (
+                normalized_full_video_gain_sum - rate_delta
+            ),
+            "full_video_denominator": FEC6_PAIR_COUNT,
         },
         "diff_profile": {
             "decoder_blob_diff_bytes_full_recompressed_candidate": sum(
@@ -773,7 +824,8 @@ def render_decoder_q_selective_runtime_packet_markdown(plan: dict[str, Any]) -> 
         f"- DQS1 payload bytes: `{packet.get('payload_bytes')}`",
         f"- Pair-index payload bytes: `{packet.get('pair_index_payload_bytes')}`",
         f"- Estimated rate delta: `{packet.get('estimated_rate_score_delta')}`",
-        f"- Non-authoritative MLX gain sum: `{packet.get('non_authoritative_mlx_gain_sum')}`",
+        f"- Non-authoritative MLX window gain sum: `{packet.get('non_authoritative_mlx_window_gain_sum')}`",
+        f"- Non-authoritative normalized full-video gain sum: `{packet.get('non_authoritative_normalized_full_video_gain_sum')}`",
         f"- Mutation: `{mutation.get('tensor_name')}` q_offset=`{mutation.get('q_offset')}` delta=`{mutation.get('delta')}`",
         "",
     ]

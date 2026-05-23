@@ -37,6 +37,9 @@ BATCH_SHAPE_RESEARCH_SIGNAL_BLOCKER = (
 CANDIDATE_CACHE_TRANSFER_BLOCKER = (
     "mlx_scorer_response_candidate_cache_requires_passing_auth_identity_audit"
 )
+LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER = (
+    "mlx_scorer_response_local_advisory_cache_identity_requires_explicit_allowance"
+)
 CACHE_INTEGRITY_BLOCKER = "mlx_scorer_input_cache_integrity_failed"
 
 
@@ -104,6 +107,7 @@ def build_mlx_scorer_response_payload(
     allow_gpu_research_signal: bool = False,
     allow_batch_shape_research_signal: bool = False,
     allow_unaudited_candidate_cache_debug: bool = False,
+    allow_local_cpu_advisory_cache_identity: bool = False,
     response_family: str | None = None,
 ) -> dict[str, Any]:
     """Run MLX scorer responses for reference/candidate caches and summarize metrics."""
@@ -140,9 +144,10 @@ def build_mlx_scorer_response_payload(
     reference = load_scorer_input_cache(reference_cache_dir)
     candidate = load_scorer_input_cache(candidate_cache_dir)
     _validate_cache_pairing(reference, candidate)
-    _validate_candidate_transfer_cache(
+    candidate_cache_identity_mode = _validate_candidate_transfer_cache(
         candidate,
         allow_unaudited_candidate_cache_debug=allow_unaudited_candidate_cache_debug,
+        allow_local_cpu_advisory_cache_identity=allow_local_cpu_advisory_cache_identity,
     )
 
     started = time.time()
@@ -284,16 +289,19 @@ def build_mlx_scorer_response_payload(
             "unaudited_candidate_cache_debug_allowed": bool(
                 allow_unaudited_candidate_cache_debug
             ),
+            "local_cpu_advisory_cache_identity_allowed": bool(
+                allow_local_cpu_advisory_cache_identity
+            ),
+            "candidate_cache_identity_mode": candidate_cache_identity_mode,
             "candidate_cache_transfer_blocker": CANDIDATE_CACHE_TRANSFER_BLOCKER,
+            "local_advisory_cache_identity_blocker": LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER,
             "gpu_batch_pairs_allowed_without_invariance_override": 1,
             "batch_pairs_allowed_without_invariance_override": 1,
-            "allowed_uses": [
-                "local_mlx_training_gradient_shaping",
-                "local_sweep_reranking_after_transfer_and_score_calibration",
-                "candidate_generation_prior",
-                "signal_exposure",
-                "prepaid_dispatch_spend_filter_after_score_calibration",
-            ],
+            "allowed_uses": _allowed_uses_for_device_contract(
+                candidate_cache_identity_mode=candidate_cache_identity_mode,
+                device_type=device_type,
+                batch_pairs=batch_pairs_int,
+            ),
             "forbidden_uses": [
                 "auth_eval",
                 "score_claim",
@@ -304,6 +312,37 @@ def build_mlx_scorer_response_payload(
             ],
         },
     }
+
+
+def _allowed_uses_for_device_contract(
+    *,
+    candidate_cache_identity_mode: str,
+    device_type: str,
+    batch_pairs: int,
+) -> list[str]:
+    if candidate_cache_identity_mode == "local_cpu_advisory_identity":
+        return [
+            "local_mlx_debug_against_matching_local_cpu_advisory_raw",
+            "local_speed_quality_delta_measurement",
+        ]
+    if candidate_cache_identity_mode == "unaudited_debug_override":
+        return [
+            "local_tensor_ingestion_debug_only",
+            "non_authoritative_component_smoke",
+        ]
+    if device_type == "gpu" or batch_pairs != 1:
+        return [
+            "local_mlx_research_signal_after_cpu_anchor",
+            "batch_shape_or_device_drift_probe",
+            "candidate_generation_prior",
+        ]
+    return [
+        "local_mlx_training_gradient_shaping",
+        "local_sweep_reranking_after_transfer_and_score_calibration",
+        "candidate_generation_prior",
+        "signal_exposure",
+        "prepaid_dispatch_spend_filter_after_score_calibration",
+    ]
 
 
 def write_mlx_scorer_response_payload(payload: dict[str, Any], output: str | Path) -> None:
@@ -456,7 +495,8 @@ def _validate_candidate_transfer_cache(
     candidate: ScorerInputCache,
     *,
     allow_unaudited_candidate_cache_debug: bool,
-) -> None:
+    allow_local_cpu_advisory_cache_identity: bool,
+) -> str:
     manifest = candidate.manifest
     audit = manifest.get("auth_eval_identity_audit")
     audit_ok = (
@@ -467,9 +507,31 @@ def _validate_candidate_transfer_cache(
         and audit.get("identity_residual") == 0
     )
     if audit_ok:
-        return
+        return "auth_eval_identity"
+    local_audit = manifest.get("local_cpu_advisory_cache_identity_audit")
+    local_audit_ok = (
+        allow_local_cpu_advisory_cache_identity
+        and manifest.get("eligible_for_local_mlx_local_advisory_debug") is True
+        and isinstance(local_audit, dict)
+        and local_audit.get("verdict") == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
+        and local_audit.get("passed") is True
+    )
+    if local_audit_ok:
+        return "local_cpu_advisory_identity"
     if allow_unaudited_candidate_cache_debug:
-        return
+        return "unaudited_debug_override"
+    if (
+        manifest.get("eligible_for_local_mlx_local_advisory_debug") is True
+        and isinstance(local_audit, dict)
+        and local_audit.get("verdict") == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
+        and local_audit.get("passed") is True
+    ):
+        raise ValueError(
+            f"{LOCAL_ADVISORY_CACHE_IDENTITY_BLOCKER}: candidate cache has only "
+            "local CPU-advisory identity, not contest auth-axis identity; pass "
+            "allow_local_cpu_advisory_cache_identity=True for local debug/speed "
+            "delta runs"
+        )
     raise ValueError(
         f"{CANDIDATE_CACHE_TRANSFER_BLOCKER}: candidate cache must be stamped by "
         "tools/materialize_mlx_scorer_cache_from_auth_eval.py or an equivalent "

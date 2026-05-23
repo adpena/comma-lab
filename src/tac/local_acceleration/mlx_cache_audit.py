@@ -20,12 +20,16 @@ from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 
 __all__ = [
     "audit_mlx_scorer_input_cache_against_auth_eval",
+    "audit_mlx_scorer_input_cache_against_local_cpu_advisory",
     "write_cache_audit",
 ]
 
 SCHEMA_VERSION = "mlx_scorer_input_cache_auth_eval_audit.v1"
+LOCAL_CPU_ADVISORY_SCHEMA_VERSION = "mlx_scorer_input_cache_local_cpu_advisory_audit.v1"
 PASS_VERDICT = "PASS_CACHE_AUTH_EVAL_IDENTITY"
 FAIL_VERDICT = "FAIL_CACHE_AUTH_EVAL_IDENTITY"
+PASS_LOCAL_CPU_ADVISORY_VERDICT = "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
+FAIL_LOCAL_CPU_ADVISORY_VERDICT = "FAIL_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
 AUTH_EVAL_AXIS_BY_GRADE = CONTEST_AUTH_AXIS_BY_EVIDENCE_GRADE
 AUTHORITY_FALSE_FIELDS = (
     "score_claim",
@@ -219,6 +223,125 @@ def write_cache_audit(audit: dict[str, Any], path: str | Path) -> None:
     out.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def audit_mlx_scorer_input_cache_against_local_cpu_advisory(
+    cache_manifest: dict[str, Any],
+    advisory_payload: dict[str, Any],
+    *,
+    expected_pair_count: int | None = FULL_CONTEST_SAMPLE_COUNT,
+) -> dict[str, Any]:
+    """Return pass/fail cache identity audit for a local CPU advisory payload.
+
+    This is deliberately weaker than :func:`audit_mlx_scorer_input_cache_against_auth_eval`:
+    it proves local raw/cache custody for MLX debugging, not contest-axis transfer
+    calibration.  Downstream exact-eval spend triage must continue to require the
+    strict auth-eval identity audit.
+    """
+
+    blockers: list[str] = []
+    metrics = eval_metric_summary(advisory_payload)
+    provenance = advisory_payload.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+        blockers.append("local_advisory_provenance_missing")
+    cache_archive_sha = _string(cache_manifest.get("archive_sha256"))
+    advisory_archive_sha = _string(provenance.get("archive_sha256"))
+    cache_inflated_sha = _string(cache_manifest.get("inflated_outputs_aggregate_sha256"))
+    advisory_inflated_sha = _local_advisory_inflated_outputs_sha256(advisory_payload)
+    cache_raw_sha = _string(cache_manifest.get("raw_sha256"))
+    advisory_raw_sha = _local_advisory_raw_sha256(advisory_payload)
+    cache_pair_count = _int(cache_manifest.get("pair_count"))
+    advisory_n_samples = _int(metrics.get("n_samples"))
+    expected = expected_pair_count if expected_pair_count is not None else advisory_n_samples
+
+    if advisory_payload.get("score_axis") != "cpu_advisory":
+        blockers.append("local_advisory_score_axis_not_cpu_advisory")
+    if advisory_payload.get("score_claim") is not False:
+        blockers.append("local_advisory_score_claim_not_false")
+    for field in AUTHORITY_FALSE_FIELDS:
+        if cache_manifest.get(field) is not False:
+            blockers.append(f"cache_manifest_{field}_not_false")
+    if not cache_archive_sha or cache_archive_sha != advisory_archive_sha:
+        blockers.append("archive_sha256_mismatch_or_missing")
+    if not cache_inflated_sha or cache_inflated_sha != advisory_inflated_sha:
+        blockers.append("inflated_outputs_aggregate_sha256_mismatch_or_missing")
+    if not cache_raw_sha or cache_raw_sha != advisory_raw_sha:
+        blockers.append("raw_sha256_mismatch_or_missing")
+    if cache_pair_count is None:
+        blockers.append("cache_pair_count_missing")
+    elif expected is not None and cache_pair_count != expected:
+        blockers.append(f"cache_pair_count_mismatch:cache={cache_pair_count}:expected={expected}")
+    if advisory_n_samples is None:
+        blockers.append("local_advisory_n_samples_missing")
+    elif expected is not None and advisory_n_samples != expected:
+        blockers.append(
+            f"local_advisory_n_samples_mismatch:advisory={advisory_n_samples}:expected={expected}"
+        )
+    _append_required_cache_manifest_blockers(blockers, cache_manifest)
+
+    passed = not blockers
+    return {
+        "schema_version": LOCAL_CPU_ADVISORY_SCHEMA_VERSION,
+        "verdict": PASS_LOCAL_CPU_ADVISORY_VERDICT if passed else FAIL_LOCAL_CPU_ADVISORY_VERDICT,
+        "passed": passed,
+        "blockers": blockers,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "eligible_for_local_mlx_transfer_calibration": False,
+        "eligible_for_local_mlx_local_advisory_debug": passed,
+        "cache": {
+            "archive_sha256": cache_archive_sha,
+            "inflated_outputs_aggregate_sha256": cache_inflated_sha,
+            "raw_sha256": cache_raw_sha,
+            "pair_count": cache_pair_count,
+            "array_sha256": cache_manifest.get("array_sha256"),
+            "hash_domain": _manifest_hash_domain(cache_manifest),
+        },
+        "local_cpu_advisory": {
+            "archive_sha256": advisory_archive_sha,
+            "inflated_outputs_aggregate_sha256": advisory_inflated_sha,
+            "raw_file_sha256": advisory_raw_sha,
+            "n_samples": advisory_n_samples,
+            "score": metrics.get("score"),
+            "pose_avg": metrics.get("pose_avg"),
+            "seg_avg": metrics.get("seg_avg"),
+            "score_axis": advisory_payload.get("score_axis"),
+            "evidence_grade": advisory_payload.get("evidence_grade"),
+            "platform_system": provenance.get("platform_system"),
+            "platform_machine": provenance.get("platform_machine"),
+        },
+        "allowed_use": (
+            [
+                "local_mlx_debug_against_matching_local_cpu_advisory_raw",
+                "local_speed_quality_delta_measurement",
+            ]
+            if passed
+            else [
+                "local_tensor_ingestion_debug_only",
+                "do_not_use_for_local_mlx_cpu_advisory_comparison",
+            ]
+        ),
+        "forbidden_use": [
+            "auth_eval",
+            "score_claim",
+            "promotion",
+            "rank_or_kill",
+            "exact_eval_spend_triage_calibration",
+            "replacement_for_contest_cpu_or_cuda_auth_eval",
+        ],
+        "authority_status": (
+            "This audit proves local advisory raw/cache identity only. It is not a "
+            "contest auth-axis cache identity and must not unlock score claims or "
+            "exact-eval spend triage."
+        ),
+    }
+
+
 def _append_auth_eval_authority_blockers(
     blockers: list[str],
     payload: dict[str, Any],
@@ -352,6 +475,22 @@ def _append_manifest_authority_blockers(
             blockers.append(f"{prefix}_{field}_not_false")
 
 
+def _append_required_cache_manifest_blockers(
+    blockers: list[str],
+    manifest: dict[str, Any],
+) -> None:
+    if _manifest_hash_domain(manifest) is None:
+        blockers.append("cache_manifest_hash_domain_missing")
+    hashes = _hash_mapping(manifest.get("array_sha256"))
+    for key in ("segnet_last_rgb", "posenet_yuv6_pair", "pair_indices"):
+        if key not in hashes:
+            blockers.append(f"cache_manifest_array_sha256_{key}_missing")
+    shapes = _shape_mapping(manifest)
+    for key in ("segnet_last_rgb", "posenet_yuv6_pair", "pair_indices"):
+        if key not in shapes:
+            blockers.append(f"cache_manifest_{key}_shape_missing")
+
+
 def _archive_sha256(payload: dict[str, Any]) -> str | None:
     value = _string(payload.get("archive_sha256"))
     if value:
@@ -378,6 +517,14 @@ def _inflated_outputs_aggregate_sha256(payload: dict[str, Any]) -> str | None:
                 return value
         return _string(manifest.get("aggregate_sha256"))
     return None
+
+
+def _local_advisory_inflated_outputs_sha256(payload: dict[str, Any]) -> str | None:
+    return _inflated_outputs_aggregate_sha256(payload)
+
+
+def _local_advisory_raw_sha256(payload: dict[str, Any]) -> str | None:
+    return _first_raw_file_sha256(payload)
 
 
 def _first_raw_file_sha256(payload: dict[str, Any]) -> str | None:

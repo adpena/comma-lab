@@ -28,8 +28,20 @@ def _bridge() -> dict[str, object]:
         "schema": "decoder_q_selective_window_bridge_plan.v1",
         **_false_authority(),
         "work_units": [
-            {"pair_window": [3, 4], "observed_mlx_gain": 0.010},
-            {"pair_window": [7, 8], "observed_mlx_gain": 0.005},
+            {
+                "pair_window": [3, 4],
+                "observed_mlx_window_gain": 0.010,
+                "observed_mlx_gain": 0.010,
+                "normalized_full_video_gain": 0.010 / 600.0,
+                "full_video_denominator": 600,
+            },
+            {
+                "pair_window": [7, 8],
+                "observed_mlx_window_gain": 0.005,
+                "observed_mlx_gain": 0.005,
+                "normalized_full_video_gain": 0.005 / 600.0,
+                "full_video_denominator": 600,
+            },
         ],
     }
 
@@ -122,7 +134,9 @@ def test_feedback_builds_fail_closed_transfer_metrics() -> None:
     assert feedback["decision"]["exact_dispatch_suppression_allowed"] is False
     assert feedback["decision"]["local_spend_triage_positive"] is False
     assert feedback["advisory"]["score_delta_vs_local_baseline"] == pytest.approx(-0.01)
-    assert feedback["mlx_transfer"]["observed_mlx_gain_sum"] == pytest.approx(0.015)
+    assert feedback["mlx_transfer"]["observed_mlx_window_gain_sum"] == pytest.approx(0.015)
+    assert feedback["mlx_transfer"]["normalized_full_video_gain_sum"] == pytest.approx(0.015 / 600.0)
+    assert feedback["mlx_transfer"]["observed_mlx_gain_sum"] == pytest.approx(0.015 / 600.0)
     assert feedback["custody"]["advisory_raw_sha256"] == "b" * 64
     assert feedback["custody"]["locality_selective_raw_sha256"] == "b" * 64
     assert feedback["sign_calibration_label"]["observed_score_delta_sign"] == -1

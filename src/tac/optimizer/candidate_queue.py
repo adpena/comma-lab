@@ -10,6 +10,7 @@ gate proves byte-closed archive/runtime custody.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import time
@@ -264,6 +265,14 @@ def _resolve_repo_path(path_value: Any, repo_root: Path) -> Path | None:
     return path
 
 
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def _annotate_archive_candidate_verification(row: dict[str, Any], repo_root: Path) -> None:
     archive_path = _resolve_repo_path(row.get("candidate_archive_path") or row.get("archive_path"), repo_root)
     submission_dir = _resolve_repo_path(row.get("submission_dir"), repo_root)
@@ -279,6 +288,11 @@ def _annotate_archive_candidate_verification(row: dict[str, Any], repo_root: Pat
         blockers.append("candidate_archive_path_unverified")
     if archive_sha is None:
         blockers.append("candidate_archive_sha256_missing")
+    elif archive_path is not None and archive_path.is_file():
+        actual_sha = _sha256_file(archive_path)
+        row["candidate_archive_sha256_observed"] = actual_sha
+        if actual_sha != archive_sha:
+            blockers.append("candidate_archive_sha256_mismatch")
     if archive_bytes is None:
         blockers.append("candidate_archive_bytes_missing")
     elif archive_path is not None and archive_path.is_file() and archive_path.stat().st_size != archive_bytes:

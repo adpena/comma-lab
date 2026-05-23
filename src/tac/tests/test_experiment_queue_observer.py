@@ -140,3 +140,51 @@ def test_observer_marks_existing_artifact_failed_when_postcondition_fails(
     assert artifact_record["postcondition_passed"] is False
     markdown = render_observation_markdown(observation)
     assert "0/1" in markdown
+
+
+def test_observer_reports_definition_drift_without_mutating_state(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "artifact.json"
+    state = tmp_path / "queue.sqlite"
+    queue = _queue(artifact)
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        before = conn.execute(
+            """
+            SELECT status, command_hash
+            FROM step_state
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """
+        ).fetchone()
+
+    changed_queue = _queue(artifact)
+    changed_queue["experiments"][0]["steps"][0]["command"] = [
+        "python",
+        "-c",
+        "print('changed')",
+    ]
+
+    observation = observe_experiment_queue(
+        changed_queue,
+        state_path=state,
+        repo_root=tmp_path,
+        tail_lines=1,
+    )
+
+    assert observation["observe_read_only"] is True
+    assert observation["definition_drift"]["changed_step_count"] == 1
+    with connect_state(state) as conn:
+        after = conn.execute(
+            """
+            SELECT status, command_hash
+            FROM step_state
+            WHERE queue_id = 'observer_test'
+              AND experiment_id = 'exp0'
+              AND step_id = 'smoke'
+            """
+        ).fetchone()
+    assert after["status"] == before["status"]
+    assert after["command_hash"] == before["command_hash"]

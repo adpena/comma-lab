@@ -9,6 +9,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.decoder_q_selective_runtime_packet import (
+    CONTEST_RATE_DENOMINATOR_BYTES,
+    FEC6_PAIR_COUNT,
+)
+
 SCHEMA = "decoder_q_selective_runtime_feedback.v1"
 SIGN_SCHEMA = "decoder_q_surface_sign_calibration_labels.v1"
 TOOL = "tac.optimization.decoder_q_selective_runtime_feedback"
@@ -166,9 +171,12 @@ def _affected_frames_from_manifest(manifest: dict[str, Any]) -> list[int]:
     return [_as_int(frame, label="DQS1 affected frame") for frame in frames]
 
 
-def _sum_observed_mlx_gain(bridge_plan: dict[str, Any], selected_pairs: list[int]) -> float:
+def _sum_mlx_gains(
+    bridge_plan: dict[str, Any], selected_pairs: list[int]
+) -> dict[str, float]:
     selected_set = set(selected_pairs)
-    total = 0.0
+    raw_total = 0.0
+    normalized_total = 0.0
     for index, unit in enumerate(bridge_plan.get("work_units", [])):
         if not isinstance(unit, dict):
             continue
@@ -177,11 +185,26 @@ def _sum_observed_mlx_gain(bridge_plan: dict[str, Any], selected_pairs: list[int
             continue
         start = _as_int(window[0], label=f"work unit {index} pair_window[0]")
         if start in selected_set:
-            total += _as_float(
-                unit.get("observed_mlx_gain", 0.0),
-                label=f"work unit {index} observed_mlx_gain",
+            denominator = _as_int(
+                unit.get("full_video_denominator"),
+                label=f"work unit {index} full_video_denominator",
             )
-    return total
+            if denominator != FEC6_PAIR_COUNT:
+                raise DecoderQSelectiveRuntimeFeedbackError(
+                    f"work unit {index} full_video_denominator must be {FEC6_PAIR_COUNT}"
+                )
+            raw_total += _as_float(
+                unit.get("observed_mlx_window_gain"),
+                label=f"work unit {index} observed_mlx_window_gain",
+            )
+            normalized_total += _as_float(
+                unit.get("normalized_full_video_gain"),
+                label=f"work unit {index} normalized_full_video_gain",
+            )
+    return {
+        "observed_mlx_window_gain_sum": raw_total,
+        "normalized_full_video_gain_sum": normalized_total,
+    }
 
 
 def _archive_sha_from_advisory(advisory: dict[str, Any]) -> str:
@@ -318,9 +341,15 @@ def build_decoder_q_selective_runtime_feedback(
     min_dispatch_edge = _as_float(min_dispatch_edge, label="min dispatch edge")
     score_delta = advisory_score - local_baseline_score
     advisory_improvement = local_baseline_score - advisory_score
-    observed_mlx_gain_sum = _sum_observed_mlx_gain(bridge_plan, selected_pairs)
-    rate_delta = 25.0 * _as_int(dqs1.get("payload_bytes"), label="DQS1 payload bytes") / 37_545_489
-    net_mlx_gain_after_rate = observed_mlx_gain_sum - rate_delta
+    mlx_gains = _sum_mlx_gains(bridge_plan, selected_pairs)
+    observed_mlx_window_gain_sum = mlx_gains["observed_mlx_window_gain_sum"]
+    normalized_full_video_gain_sum = mlx_gains["normalized_full_video_gain_sum"]
+    rate_delta = (
+        25.0
+        * _as_int(dqs1.get("payload_bytes"), label="DQS1 payload bytes")
+        / CONTEST_RATE_DENOMINATOR_BYTES
+    )
+    net_mlx_gain_after_rate = normalized_full_video_gain_sum - rate_delta
     transfer_efficiency = (
         advisory_improvement / net_mlx_gain_after_rate
         if net_mlx_gain_after_rate > 0.0
@@ -401,9 +430,13 @@ def build_decoder_q_selective_runtime_feedback(
             "evidence_grade": advisory_result.get("evidence_grade"),
         },
         "mlx_transfer": {
-            "observed_mlx_gain_sum": observed_mlx_gain_sum,
+            "observed_mlx_window_gain_sum": observed_mlx_window_gain_sum,
+            "normalized_full_video_gain_sum": normalized_full_video_gain_sum,
+            "observed_mlx_gain_sum": normalized_full_video_gain_sum,
+            "full_video_denominator": FEC6_PAIR_COUNT,
             "rate_delta_from_payload_bytes": rate_delta,
             "net_mlx_gain_after_rate": net_mlx_gain_after_rate,
+            "net_normalized_full_video_gain_after_rate": net_mlx_gain_after_rate,
             "advisory_to_mlx_transfer_efficiency": transfer_efficiency,
         },
         "decision": {
@@ -469,7 +502,8 @@ def render_decoder_q_selective_runtime_feedback_markdown(feedback: dict[str, Any
         "- Delta vs local baseline "
         f"`[{advisory.get('evidence_grade')}; non-authoritative]`: "
         f"`{advisory.get('score_delta_vs_local_baseline')}`",
-        f"- MLX gain sum: `{mlx.get('observed_mlx_gain_sum')}`",
+        f"- MLX window gain sum: `{mlx.get('observed_mlx_window_gain_sum')}`",
+        f"- MLX normalized full-video gain sum: `{mlx.get('normalized_full_video_gain_sum')}`",
         f"- Net MLX gain after rate: `{mlx.get('net_mlx_gain_after_rate')}`",
         f"- Advisory/MLX transfer efficiency: `{mlx.get('advisory_to_mlx_transfer_efficiency')}`",
         f"- Exact dispatch recommended by this local advisory artifact: `{decision.get('dispatch_recommended')}`",

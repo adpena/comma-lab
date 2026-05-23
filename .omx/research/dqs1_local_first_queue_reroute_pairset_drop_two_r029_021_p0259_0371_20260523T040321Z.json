@@ -1,0 +1,16 @@
+{
+  "candidate_id": "pairset_drop_two_r029_021_p0259_0371",
+  "harvest_record_path": ".omx/research/dqs1_local_first_harvest_pairset_drop_two_r029_021_p0259_0371_20260523T040321Z.json",
+  "new_queue_sha256": "d2fdc80afa7804b3b281dd6acfeb602f02d55a02616632df30938082e8dca242",
+  "previous_queue_sha256": "7f56d11b9fe0794ac31308b889af6d89f85e4d3f7c7466f203ae72e15da7ba8c",
+  "promotion_eligible": false,
+  "queue_path": "configs/experiment_queues/dqs1_pairset_local_first.yaml",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rerouted_queue_experiment_ids": [
+    "pairset_drop_two_r029_013_p0259_0327"
+  ],
+  "schema": "dqs1_local_first_queue_reroute_record.v1",
+  "score_claim": false,
+  "source_eureka_signal_path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_021_p0259_0371_20260523T024540Z.json"
+}

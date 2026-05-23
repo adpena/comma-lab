@@ -1,0 +1,390 @@
+{
+  "anchor": {
+    "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+    "archive_size_bytes": 178558,
+    "authority_fields": {
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_claim_valid": false
+    },
+    "avg_posenet_dist": 2.943e-05,
+    "avg_segnet_dist": 0.00055991,
+    "canonical_score": 0.19204061709818365,
+    "elapsed_seconds": 529.525059083011,
+    "evidence_grade": "macOS-CPU advisory",
+    "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+    "inflated_outputs_aggregate_sha256": null,
+    "n_samples": 600,
+    "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory_work/contest_auth_eval.json",
+    "score_axis": "cpu_advisory"
+  },
+  "authority_status": "Quality/speed deltas are local MLX debugging and acquisition evidence only. Exact contest CPU/CUDA auth eval remains required for score claims, promotion, rank/kill decisions, and dispatch readiness.",
+  "calibration": {
+    "available": true,
+    "blockers": [],
+    "decision_band": 8.801772121230789e-05,
+    "decision_band_basis": "safety_factor_times_max_abs_mlx_minus_cpu_or_local",
+    "max_abs_mlx_minus_cpu": 1.7603544242461577e-05,
+    "max_abs_mlx_minus_local_cpu": 1.603544242445576e-06,
+    "mean_mlx_minus_cpu": 3.1974523323555215e-06,
+    "mean_mlx_minus_local_cpu": 9.505789157112273e-07,
+    "path": "experiments/results/mlx_public_frontier_calibration_20260522T023053Z/calibration_summary.json",
+    "rank_inversions": {
+      "cuda_cpu": 0,
+      "mlx_cpu": 0,
+      "mlx_cuda": null
+    },
+    "row_count": 4,
+    "safety_factor": 5.0,
+    "schema_version": "mlx_public_frontier_score_calibration.v1"
+  },
+  "candidate_generation_only": true,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "frontier": {
+    "anchor_minus_frontier": 1.2334141046899116e-05,
+    "available": true,
+    "frontier_score": 0.19202828295713675,
+    "mlx_rows_minus_frontier": [
+      {
+        "authority": "non_authoritative",
+        "axis": "[macOS-MLX research-signal]",
+        "label": "mlx_delta_response_cpu_b1_full600",
+        "score_minus_frontier": 1.3795962533036388e-05
+      },
+      {
+        "authority": "non_authoritative",
+        "axis": "[macOS-MLX research-signal]",
+        "label": "mlx_delta_response_gpu_b1_full600",
+        "score_minus_frontier": 0.00041050614725651746
+      },
+      {
+        "authority": "non_authoritative",
+        "axis": "[macOS-MLX research-signal]",
+        "label": "mlx_delta_response_gpu_b2_full600",
+        "score_minus_frontier": 0.0019267325355795117
+      },
+      {
+        "authority": "non_authoritative",
+        "axis": "[macOS-MLX research-signal]",
+        "label": "mlx_delta_response_gpu_b4_full600",
+        "score_minus_frontier": 0.0019267325355795117
+      },
+      {
+        "authority": "non_authoritative",
+        "axis": "[macOS-MLX research-signal]",
+        "label": "mlx_delta_response_gpu_b8_full600",
+        "score_minus_frontier": 0.002304811336050372
+      }
+    ]
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requires_exact_eval_before_promotion": true,
+  "rows": [
+    {
+      "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+      "avg_posenet_dist": 2.943115048177939e-05,
+      "avg_segnet_dist": 0.000559921265084995,
+      "batch_pairs": 1,
+      "blockers": [
+        "candidate_cache_missing_pass_cache_auth_eval_identity"
+      ],
+      "calibration_gap_ratio": 0.016608263267929944,
+      "candidate_cache_identity": {
+        "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+        "eligible_for_local_mlx_transfer_calibration": false,
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+        "pair_count": 600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_cache",
+        "raw_sha256": "e160e4aee033d49c31c2b5c30bffc37618faed56fde639e86744b88f04c73235"
+      },
+      "candidate_cache_identity_audited": false,
+      "canonical_score": 0.1920420789196698,
+      "component_hashes": {
+        "posenet_sha256": "c18bc8cc7de347930b0d5c891427be163e7f594998a957b5c090f303b25a9998",
+        "segnet_sha256": "8b0a8081e13d246f9b61b0a17835b06039b6152423cf0ee94a0c9c40f0abc24a"
+      },
+      "device_type": "cpu",
+      "elapsed_seconds": 519.6593539714813,
+      "hardware_substrate": "MLX cpu",
+      "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+      "label": "mlx_delta_response_cpu_b1_full600",
+      "n_samples": 600,
+      "pair_window": [
+        0,
+        600
+      ],
+      "pairs_per_second": 1.1546025206984492,
+      "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_response_cpu_b1_full600.json",
+      "posenet_dist_delta": 1.150481779390092e-09,
+      "recommended_use": "diagnostic_drift_probe_only",
+      "score_abs_delta": 1.4618214861372714e-06,
+      "score_component_delta": {
+        "pose": 3.35312986647629e-07,
+        "rate": 0.0,
+        "segnet": 1.1265084994926781e-06,
+        "sum": 1.4618214861403071e-06
+      },
+      "score_delta": 1.4618214861372714e-06,
+      "segnet_dist_delta": 1.1265084994926781e-08,
+      "speedup_vs_anchor_elapsed": 1.0189849466503995,
+      "spend_triage_allowed": false
+    },
+    {
+      "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+      "avg_posenet_dist": 2.9431087536693212e-05,
+      "avg_segnet_dist": 0.0005638885503867641,
+      "batch_pairs": 1,
+      "blockers": [
+        "candidate_cache_missing_pass_cache_auth_eval_identity",
+        "mlx_gpu_response_requires_separate_cpu_transfer_calibration",
+        "score_delta_exceeds_calibration_decision_band"
+      ],
+      "calibration_gap_ratio": 4.523770903465975,
+      "candidate_cache_identity": {
+        "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+        "eligible_for_local_mlx_transfer_calibration": false,
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+        "pair_count": 600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_cache",
+        "raw_sha256": "e160e4aee033d49c31c2b5c30bffc37618faed56fde639e86744b88f04c73235"
+      },
+      "candidate_cache_identity_audited": false,
+      "canonical_score": 0.19243878910439327,
+      "component_hashes": {
+        "posenet_sha256": "03f0548bc4eab97e87aa9394fc98eeccdb065def8f81f9ee5bde055a0c5eebbd",
+        "segnet_sha256": "8678b9795178f263b4571aef857aec9604124f6168ca4e5e03d6c1d823d3a307"
+      },
+      "device_type": "gpu",
+      "elapsed_seconds": 32.56462001800537,
+      "hardware_substrate": "MLX gpu",
+      "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+      "label": "mlx_delta_response_gpu_b1_full600",
+      "n_samples": 600,
+      "pair_window": [
+        0,
+        600
+      ],
+      "pairs_per_second": 18.42490407283281,
+      "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_response_gpu_b1_full600.json",
+      "posenet_dist_delta": 1.0875366932113146e-09,
+      "recommended_use": "diagnostic_drift_probe_only",
+      "score_abs_delta": 0.00039817200620961835,
+      "score_component_delta": {
+        "pose": 3.169675332585775e-07,
+        "rate": 0.0,
+        "segnet": 0.00039785503867640183,
+        "sum": 0.0003981720062096604
+      },
+      "score_delta": 0.00039817200620961835,
+      "segnet_dist_delta": 3.978550386764018e-06,
+      "speedup_vs_anchor_elapsed": 16.260747362942674,
+      "spend_triage_allowed": false
+    },
+    {
+      "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+      "avg_posenet_dist": 3.346261977621149e-05,
+      "avg_segnet_dist": 0.0005676778167253361,
+      "batch_pairs": 2,
+      "blockers": [
+        "candidate_cache_missing_pass_cache_auth_eval_identity",
+        "mlx_gpu_response_requires_separate_cpu_transfer_calibration",
+        "mlx_non_singleton_batch_shape_requires_passing_invariance_gate",
+        "score_delta_exceeds_calibration_decision_band"
+      ],
+      "calibration_gap_ratio": 21.750147222226815,
+      "candidate_cache_identity": {
+        "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+        "eligible_for_local_mlx_transfer_calibration": false,
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+        "pair_count": 600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_cache",
+        "raw_sha256": "e160e4aee033d49c31c2b5c30bffc37618faed56fde639e86744b88f04c73235"
+      },
+      "candidate_cache_identity_audited": false,
+      "canonical_score": 0.19395501549271627,
+      "component_hashes": {
+        "posenet_sha256": "5da6de9cd80ee69d3b52b6f9f5ee4f5b0778eae28073efb1db74c955955e2051",
+        "segnet_sha256": "0617902d61ab1f35feffa735350f03d93f0c75ff8bd4c6d76495dfb3b3903d3e"
+      },
+      "device_type": "gpu",
+      "elapsed_seconds": 28.46426510810852,
+      "hardware_substrate": "MLX gpu",
+      "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+      "label": "mlx_delta_response_gpu_b2_full600",
+      "n_samples": 600,
+      "pair_window": [
+        0,
+        600
+      ],
+      "pairs_per_second": 21.079061683875338,
+      "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_response_gpu_b2_full600.json",
+      "posenet_dist_delta": 4.0326197762114905e-06,
+      "recommended_use": "diagnostic_drift_probe_only",
+      "score_abs_delta": 0.0019143983945326126,
+      "score_component_delta": {
+        "pose": 0.0011376167219990137,
+        "rate": 0.0,
+        "segnet": 0.0007767816725336011,
+        "sum": 0.0019143983945326148
+      },
+      "score_delta": 0.0019143983945326126,
+      "segnet_dist_delta": 7.767816725336011e-06,
+      "speedup_vs_anchor_elapsed": 18.603152305947535,
+      "spend_triage_allowed": false
+    },
+    {
+      "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+      "avg_posenet_dist": 3.346261977621149e-05,
+      "avg_segnet_dist": 0.0005676778167253361,
+      "batch_pairs": 4,
+      "blockers": [
+        "candidate_cache_missing_pass_cache_auth_eval_identity",
+        "mlx_gpu_response_requires_separate_cpu_transfer_calibration",
+        "mlx_non_singleton_batch_shape_requires_passing_invariance_gate",
+        "score_delta_exceeds_calibration_decision_band"
+      ],
+      "calibration_gap_ratio": 21.750147222226815,
+      "candidate_cache_identity": {
+        "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+        "eligible_for_local_mlx_transfer_calibration": false,
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+        "pair_count": 600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_cache",
+        "raw_sha256": "e160e4aee033d49c31c2b5c30bffc37618faed56fde639e86744b88f04c73235"
+      },
+      "candidate_cache_identity_audited": false,
+      "canonical_score": 0.19395501549271627,
+      "component_hashes": {
+        "posenet_sha256": "5da6de9cd80ee69d3b52b6f9f5ee4f5b0778eae28073efb1db74c955955e2051",
+        "segnet_sha256": "0617902d61ab1f35feffa735350f03d93f0c75ff8bd4c6d76495dfb3b3903d3e"
+      },
+      "device_type": "gpu",
+      "elapsed_seconds": 30.11502695083618,
+      "hardware_substrate": "MLX gpu",
+      "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+      "label": "mlx_delta_response_gpu_b4_full600",
+      "n_samples": 600,
+      "pair_window": [
+        0,
+        600
+      ],
+      "pairs_per_second": 19.92360826970272,
+      "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_response_gpu_b4_full600.json",
+      "posenet_dist_delta": 4.0326197762114905e-06,
+      "recommended_use": "diagnostic_drift_probe_only",
+      "score_abs_delta": 0.0019143983945326126,
+      "score_component_delta": {
+        "pose": 0.0011376167219990137,
+        "rate": 0.0,
+        "segnet": 0.0007767816725336011,
+        "sum": 0.0019143983945326148
+      },
+      "score_delta": 0.0019143983945326126,
+      "segnet_dist_delta": 7.767816725336011e-06,
+      "speedup_vs_anchor_elapsed": 17.583416410268498,
+      "spend_triage_allowed": false
+    },
+    {
+      "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+      "avg_posenet_dist": 3.346261977621149e-05,
+      "avg_segnet_dist": 0.0005714586047300449,
+      "batch_pairs": 8,
+      "blockers": [
+        "candidate_cache_missing_pass_cache_auth_eval_identity",
+        "mlx_gpu_response_requires_separate_cpu_transfer_calibration",
+        "mlx_non_singleton_batch_shape_requires_passing_invariance_gate",
+        "score_delta_exceeds_calibration_decision_band"
+      ],
+      "calibration_gap_ratio": 26.045632213924055,
+      "candidate_cache_identity": {
+        "archive_sha256": "d91eca066318db62e687acabe6198c22bf421ee80f92c5001d7e4cfe67bffbf4",
+        "eligible_for_local_mlx_transfer_calibration": false,
+        "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+        "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+        "pair_count": 600,
+        "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_cache",
+        "raw_sha256": "e160e4aee033d49c31c2b5c30bffc37618faed56fde639e86744b88f04c73235"
+      },
+      "candidate_cache_identity_audited": false,
+      "canonical_score": 0.19433309429318713,
+      "component_hashes": {
+        "posenet_sha256": "5da6de9cd80ee69d3b52b6f9f5ee4f5b0778eae28073efb1db74c955955e2051",
+        "segnet_sha256": "834e526b2fae95d3056109a8e089151bf75eff2e3ccd5c10b29ae06421fcafbc"
+      },
+      "device_type": "gpu",
+      "elapsed_seconds": 38.621593952178955,
+      "hardware_substrate": "MLX gpu",
+      "inflated_outputs_aggregate_sha256": "b78d70233f39f36aa9ac6ee621f4dd0e2e2d9c4d87a08f3206ed521080843896",
+      "label": "mlx_delta_response_gpu_b8_full600",
+      "n_samples": 600,
+      "pair_window": [
+        0,
+        600
+      ],
+      "pairs_per_second": 15.535350528072888,
+      "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_response_gpu_b8_full600.json",
+      "posenet_dist_delta": 4.0326197762114905e-06,
+      "recommended_use": "diagnostic_drift_probe_only",
+      "score_abs_delta": 0.002292477195003473,
+      "score_component_delta": {
+        "pose": 0.0011376167219990137,
+        "rate": 0.0,
+        "segnet": 0.00115486047300448,
+        "sum": 0.0022924771950034936
+      },
+      "score_delta": 0.002292477195003473,
+      "segnet_dist_delta": 1.15486047300448e-05,
+      "speedup_vs_anchor_elapsed": 13.71059567708847,
+      "spend_triage_allowed": false
+    }
+  ],
+  "run_id": "dqs1_drop_two_r028_026_mlx_quality_speed_delta",
+  "schema_version": "mlx_quality_speed_delta.v1",
+  "score_axis": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "summary": {
+    "all_rows_blocked_for_spend_triage": true,
+    "any_gpu_or_batch_shape_research_row": true,
+    "any_singleton_cpu_row": true,
+    "best_speed_row": {
+      "batch_pairs": 2,
+      "canonical_score": 0.19395501549271627,
+      "device_type": "gpu",
+      "elapsed_seconds": 28.46426510810852,
+      "label": "mlx_delta_response_gpu_b2_full600",
+      "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_response_gpu_b2_full600.json",
+      "score_delta": 0.0019143983945326126,
+      "speedup_vs_anchor_elapsed": 18.603152305947535
+    },
+    "blockers": [
+      "candidate_cache_missing_pass_cache_auth_eval_identity",
+      "mlx_gpu_response_requires_separate_cpu_transfer_calibration",
+      "mlx_non_singleton_batch_shape_requires_passing_invariance_gate",
+      "score_delta_exceeds_calibration_decision_band"
+    ],
+    "blocking_reason_count": 4,
+    "row_count": 5,
+    "smallest_abs_score_delta_row": {
+      "batch_pairs": 1,
+      "canonical_score": 0.1920420789196698,
+      "device_type": "cpu",
+      "elapsed_seconds": 519.6593539714813,
+      "label": "mlx_delta_response_cpu_b1_full600",
+      "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/mlx_delta_response_cpu_b1_full600.json",
+      "score_delta": 1.4618214861372714e-06,
+      "speedup_vs_anchor_elapsed": 1.0189849466503995
+    }
+  }
+}

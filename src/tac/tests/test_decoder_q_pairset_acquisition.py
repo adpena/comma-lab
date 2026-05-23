@@ -254,8 +254,23 @@ def test_pairset_acquisition_preserves_selector_metadata_and_valid_pairs() -> No
     assert prefix["source_selector_kind"] == "top_rank_prefix"
     assert prefix["payload_byte_estimate"] == prefix["payload_bytes"]
     assert prefix["predicted_score_mean"] == pytest.approx(0.1919)
+    assert prefix["predicted_score_scope"] == "candidate_specific"
     assert prefix["exact_cpu_calibrated_estimate"]["predicted_score"] == pytest.approx(0.1919)
+    assert prefix["exact_cpu_calibrated_estimate_scope"] == "candidate_specific"
     assert prefix["exact_cpu_calibrated_estimate"]["score_claim"] is False
+
+    drop_one = next(
+        row
+        for row in plan["candidates"]  # type: ignore[index]
+        if row["selector_kind"] == "drop_one_from_best"
+    )
+    assert drop_one["predicted_score_scope"] == "source_selector_scope_not_child_candidate"
+    assert "exact_cpu_calibrated_estimate" not in drop_one
+    assert drop_one["source_selector_exact_cpu_calibrated_estimate"]["score_claim"] is False
+    assert (
+        drop_one["source_selector_exact_cpu_calibrated_estimate_scope"]
+        == "source_selector_scope_not_child_candidate"
+    )
 
     for row in plan["candidates"]:  # type: ignore[index]
         pairs = row["selected_pair_indices"]

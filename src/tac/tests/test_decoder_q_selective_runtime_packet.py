@@ -186,12 +186,18 @@ def test_packet_plan_preserves_false_authority_and_trailer_byte_accounting(
             {
                 **_false_authority(),
                 "pair_window": [2, 3],
+                "observed_mlx_window_gain": 0.002,
                 "observed_mlx_gain": 0.002,
+                "normalized_full_video_gain": 0.002 / 600.0,
+                "full_video_denominator": 600,
             },
             {
                 **_false_authority(),
                 "pair_window": [5, 6],
+                "observed_mlx_window_gain": 0.001,
                 "observed_mlx_gain": 0.001,
+                "normalized_full_video_gain": 0.001 / 600.0,
+                "full_video_denominator": 600,
             },
         ],
     }
@@ -244,13 +250,34 @@ def test_packet_plan_preserves_false_authority_and_trailer_byte_accounting(
 
     assert selected["selective_packet"]["selected_pair_indices"] == [5]
     assert selected["selective_packet"]["payload_bytes"] == 12
-    assert selected["selective_packet"]["non_authoritative_mlx_gain_sum"] == pytest.approx(0.001)
+    assert selected["selective_packet"]["non_authoritative_mlx_window_gain_sum"] == pytest.approx(0.001)
+    assert selected["selective_packet"]["non_authoritative_mlx_gain_sum"] == pytest.approx(0.001 / 600.0)
+    assert selected["selective_packet"]["non_authoritative_normalized_full_video_gain_sum"] == pytest.approx(0.001 / 600.0)
+
+    missing_normalized = {
+        **bridge_plan,
+        "work_units": [
+            {
+                **bridge_plan["work_units"][0],
+                "normalized_full_video_gain": None,
+            }
+        ],
+    }
+    with pytest.raises(packet.DecoderQSelectiveRuntimePacketError, match="normalized_full_video_gain"):
+        packet.build_decoder_q_selective_runtime_packet_plan(
+            missing_normalized,
+            base_archive=base_archive,
+            repo_root=tmp_path,
+        )
 
     bridge_plan["work_units"].append(
         {
             **_false_authority(),
             "pair_window": [600, 601],
+            "observed_mlx_window_gain": 0.001,
             "observed_mlx_gain": 0.001,
+            "normalized_full_video_gain": 0.001 / 600.0,
+            "full_video_denominator": 600,
         }
     )
     with pytest.raises(packet.DecoderQSelectiveRuntimePacketError, match="FEC6 range"):

@@ -272,6 +272,17 @@ def connect_state(path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+def connect_state_readonly(path: str | Path) -> sqlite3.Connection:
+    """Open an existing queue state without creating tables or mutating rows."""
+
+    state_path = Path(path)
+    if not state_path.is_file():
+        raise ExperimentQueueError(f"queue state does not exist: {state_path}")
+    conn = sqlite3.connect(f"file:{state_path.resolve()}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
 def _create_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(
         """
@@ -1297,17 +1308,84 @@ def queue_summary(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[st
     }
 
 
+def queue_definition_drift(conn: sqlite3.Connection, queue: Mapping[str, Any]) -> dict[str, Any]:
+    """Return queue definition drift without mutating SQLite state."""
+
+    queue_id = str(queue["queue_id"])
+    missing_steps: list[dict[str, Any]] = []
+    changed_steps: list[dict[str, Any]] = []
+    missing_hash_steps: list[dict[str, Any]] = []
+    for experiment in queue["experiments"]:
+        for step in experiment["steps"]:
+            hashes = _step_hashes(step)
+            row = conn.execute(
+                """
+                SELECT status, definition_hash, command_hash, postcondition_hash
+                FROM step_state
+                WHERE queue_id = ? AND experiment_id = ? AND step_id = ?
+                """,
+                (queue_id, experiment["id"], step["id"]),
+            ).fetchone()
+            identity = {
+                "experiment_id": str(experiment["id"]),
+                "step_id": str(step["id"]),
+            }
+            if row is None:
+                missing_steps.append({**identity, "new_hashes": hashes})
+                continue
+            previous_hashes = {
+                "definition_hash": row["definition_hash"],
+                "command_hash": row["command_hash"],
+                "postcondition_hash": row["postcondition_hash"],
+            }
+            missing_hash = any(value is None for value in previous_hashes.values())
+            changed_hash = any(
+                previous_hashes[key] is not None and previous_hashes[key] != hashes[key]
+                for key in hashes
+            )
+            if missing_hash and not changed_hash:
+                missing_hash_steps.append(
+                    {
+                        **identity,
+                        "status": str(row["status"]),
+                        "previous_hashes": previous_hashes,
+                        "new_hashes": hashes,
+                    }
+                )
+            elif changed_hash:
+                changed_steps.append(
+                    {
+                        **identity,
+                        "status": str(row["status"]),
+                        "previous_hashes": previous_hashes,
+                        "new_hashes": hashes,
+                    }
+                )
+    return {
+        "schema": "experiment_queue_definition_drift.v1",
+        "read_only": True,
+        "missing_step_count": len(missing_steps),
+        "changed_step_count": len(changed_steps),
+        "missing_hash_step_count": len(missing_hash_steps),
+        "missing_steps": missing_steps,
+        "changed_steps": changed_steps,
+        "missing_hash_steps": missing_hash_steps,
+    }
+
+
 __all__ = [
     "ExperimentQueueError",
     "ReadyStep",
     "assert_canonical_state_for_execution",
     "assert_no_orphaned_steps_for_execution",
     "connect_state",
+    "connect_state_readonly",
     "default_state_path",
     "initialize_queue_state",
     "load_queue_definition",
     "normalize_queue_definition",
     "orphaned_step_rows",
+    "queue_definition_drift",
     "queue_summary",
     "ready_steps",
     "retire_orphaned_steps",

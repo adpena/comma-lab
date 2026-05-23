@@ -128,6 +128,61 @@ def test_mlx_scorer_response_cli_rejects_unaudited_candidate_cache(tmp_path: Pat
     assert CANDIDATE_CACHE_TRANSFER_BLOCKER in completed.stderr
 
 
+def test_mlx_scorer_response_local_advisory_identity_has_limited_allowed_uses(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(
+        tmp_path / "reference",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    candidate_dir = _write_test_cache(
+        tmp_path / "candidate",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+        audited=False,
+    )
+    _stamp_local_cpu_advisory_identity(candidate_dir)
+    output = tmp_path / "mlx_response.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_mlx_scorer_response_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            "1",
+            "--output",
+            str(output),
+            "--repo-root",
+            str(REPO),
+            "--allow-local-cpu-advisory-cache-identity",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(completed.stdout)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    contract = payload["device_contract"]
+    assert stdout["score_claim"] is False
+    assert contract["candidate_cache_identity_mode"] == "local_cpu_advisory_identity"
+    assert contract["allowed_uses"] == [
+        "local_mlx_debug_against_matching_local_cpu_advisory_raw",
+        "local_speed_quality_delta_measurement",
+    ]
+    assert "prepaid_dispatch_spend_filter_after_score_calibration" not in contract["allowed_uses"]
+
+
 def test_mlx_scorer_response_cli_rejects_mutated_cache_after_manifest_stamp(
     tmp_path: Path,
 ) -> None:
@@ -399,3 +454,22 @@ def _write_test_cache(
         raw_sha256="c" * 64,
     )
     return path
+
+
+def _stamp_local_cpu_advisory_identity(path: Path) -> None:
+    manifest_path = path / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["eligible_for_local_mlx_local_advisory_debug"] = True
+    manifest["eligible_for_local_mlx_transfer_calibration"] = False
+    manifest["local_cpu_advisory_cache_identity_audit"] = {
+        "schema_version": "mlx_scorer_input_cache_local_cpu_advisory_audit.v1",
+        "verdict": "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
+        "passed": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")

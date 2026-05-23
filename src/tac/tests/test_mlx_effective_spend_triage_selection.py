@@ -31,10 +31,12 @@ def _row(
     row_id: str,
     *,
     gain: float,
+    normalized_gain: float | None = None,
     family: str = "mlx_decoder_q",
     predicted: float = 1.0e-4,
     score_claim: bool = False,
 ) -> dict:
+    full_gain = gain if normalized_gain is None else normalized_gain
     return {
         "schema": "scorer_response_row.v1",
         **_false_authority(),
@@ -57,6 +59,10 @@ def _row(
         "observed_scorer_gain_vs_baseline": gain,
         "byte_budget_margin_vs_break_even": gain * 1000.0,
         "break_even_added_bytes_from_scorer_gain": gain * 1000.0,
+        "full_video_denominator": 600,
+        "normalized_full_video_scorer_gain_vs_baseline": full_gain,
+        "projected_full_video_delta_vs_baseline_score": -full_gain,
+        "normalized_full_video_byte_budget_margin_vs_break_even": full_gain * 1000.0,
         "added_archive_bytes": 0,
         "ll_predicted_delta_vs_baseline_score": predicted,
         "archive_sha256": "a" * 64,
@@ -155,7 +161,7 @@ def test_selection_uses_observed_strict_gated_rows_not_positive_predictions() ->
         "second",
     ]
     assert selection["selected_rows"][0]["selection_basis"] == (
-        "observed_strict_gated_mlx_singleton_response_gain"
+        "normalized_full_video_mlx_singleton_response_gain"
     )
 
 
@@ -193,6 +199,27 @@ def test_selection_min_observed_gain_can_only_raise_calibrated_gap() -> None:
 
     assert selection["selection_policy"]["min_observed_gain"] == pytest.approx(0.0015)
     assert [row["row_id"] for row in selection["selected_rows"]] == ["best"]
+
+
+def test_selection_blocks_raw_singleton_gain_when_normalized_full_video_gain_fails() -> None:
+    dataset = _dataset()
+    dataset["rows"][0] = _row("raw_only", gain=0.002, normalized_gain=0.000001)
+
+    selection = build_mlx_effective_spend_triage_selection(dataset, _plan(), top_k=4)
+
+    assert [row["row_id"] for row in selection["selected_rows"]] == ["second"]
+    assert (
+        selection["summary"]["rejection_counts"][
+            "normalized_full_video_gain_below_calibrated_gap"
+        ]
+        >= 1
+    )
+    assert (
+        selection["summary"]["rejection_counts"][
+            "projected_full_video_delta_not_calibrated_improvement"
+        ]
+        >= 1
+    )
 
 
 def test_selection_blocks_non_oof_or_failed_effective_gate() -> None:

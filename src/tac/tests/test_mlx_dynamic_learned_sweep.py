@@ -42,6 +42,9 @@ def _selector_pareto() -> dict:
                 "payload_bytes": 43,
                 "pair_encoding": "sorted_gap_uleb",
                 "non_authoritative_mlx_gain_sum": 0.03,
+                "non_authoritative_normalized_full_video_gain_sum": 0.03,
+                "non_authoritative_mlx_window_gain_sum": 18.0,
+                "full_video_denominator": 600,
                 "orthogonality_score": 0.25,
                 "master_gradient_priority": 0.5,
                 "component_axis_context": {"seg": 0.7, "pose": 0.2, "rate": 0.1},
@@ -70,6 +73,9 @@ def _selector_pareto() -> dict:
                 "payload_bytes": 27,
                 "pair_encoding": "sorted_gap_uleb",
                 "non_authoritative_mlx_gain_sum": 0.02,
+                "non_authoritative_normalized_full_video_gain_sum": 0.02,
+                "non_authoritative_mlx_window_gain_sum": 12.0,
+                "full_video_denominator": 600,
                 "exact_cpu_calibrated_estimate": {
                     "schema": "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1",
                     **_false_authority(),
@@ -213,6 +219,9 @@ def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
     best = next(row for row in plan["ranked_sweep_rows"] if row["candidate_id"] == "prefix_k032")
     assert best["optimization_pass_id"] in {"smoke", "micro", "intermediate", "macro"}
     assert best["geometry_multiplier"] == pytest.approx(1.75)
+    assert best["non_authoritative_normalized_full_video_gain_sum"] == pytest.approx(0.03)
+    assert best["non_authoritative_mlx_window_gain_sum"] == pytest.approx(18.0)
+    assert best["full_video_denominator"] == 600
     assert best["component_axis_context"]["seg"] == 0.7
     assert best["canonical_equation_provenance"]["canonical_equation_id"].endswith("_v1")
     assert best["frozen_config_contract"]["score_claim"] is False
@@ -227,6 +236,45 @@ def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
         "same_config_different_candidate",
         "local_axis_then_exact_axis_anchor",
     ]
+
+
+def test_dynamic_sweep_does_not_treat_inherited_exact_estimate_as_candidate_specific() -> None:
+    plan = build_mlx_dynamic_learned_sweep_plan(
+        incumbent_score=0.1920513168811056,
+        candidate_payloads=[
+            {
+                "schema": "decoder_q_pairset_acquisition.v1",
+                "candidates": [
+                    {
+                        "schema": "decoder_q_pairset_acquisition_candidate.v1",
+                        **_false_authority(),
+                        "candidate_id": "drop_one_child",
+                        "family": "decoder_q_selective_dqs1",
+                        "predicted_score_mean": 0.19203,
+                        "predicted_score_source": "source_selector_inherited_non_authoritative",
+                        "predicted_score_scope": "source_selector_scope_not_child_candidate",
+                        "exact_cpu_calibrated_estimate_scope": (
+                            "source_selector_scope_not_child_candidate"
+                        ),
+                        "exact_cpu_calibrated_estimate": {
+                            "schema": "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1",
+                            **_false_authority(),
+                            "predicted_score": 0.19203,
+                            "predicted_delta_vs_base": -0.01,
+                        },
+                    }
+                ],
+            }
+        ],
+        top_k=1,
+        default_score_variance=2.5e-10,
+    )
+
+    row = plan["ranked_sweep_rows"][0]
+    assert row["candidate_id"] == "drop_one_child"
+    assert row["prediction_source"] == "source_selector_inherited_non_authoritative"
+    assert row["prediction_scope"] == "source_selector_scope_not_child_candidate"
+    assert row["predicted_score_variance"] == pytest.approx(2.5e-10)
 
 
 def test_dynamic_sweep_rejects_authoritative_candidate_rows() -> None:

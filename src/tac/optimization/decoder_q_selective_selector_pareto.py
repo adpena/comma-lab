@@ -103,14 +103,27 @@ def _bridge_units(bridge_plan: dict[str, Any]) -> list[dict[str, Any]]:
         if pair in seen:
             raise DecoderQSelectiveSelectorParetoError(f"duplicate pair window: {pair}")
         seen.add(pair)
+        denominator = _as_int(
+            unit.get("full_video_denominator"),
+            label=f"work unit {index} full_video_denominator",
+        )
+        if denominator != FEC6_PAIR_COUNT:
+            raise DecoderQSelectiveSelectorParetoError(
+                f"work unit {index} full_video_denominator must be {FEC6_PAIR_COUNT}"
+            )
         normalized.append(
             {
                 "rank": _as_int(unit.get("rank", index + 1), label=f"work unit {index} rank"),
                 "pair_index": pair,
-                "observed_mlx_gain": _as_float(
-                    unit.get("observed_mlx_gain", 0.0),
-                    label=f"work unit {index} observed_mlx_gain",
+                "observed_mlx_window_gain": _as_float(
+                    unit.get("observed_mlx_window_gain"),
+                    label=f"work unit {index} observed_mlx_window_gain",
                 ),
+                "normalized_full_video_gain": _as_float(
+                    unit.get("normalized_full_video_gain"),
+                    label=f"work unit {index} normalized_full_video_gain",
+                ),
+                "full_video_denominator": denominator,
                 "unit_id": unit.get("unit_id"),
             }
         )
@@ -150,21 +163,25 @@ def _calibration(
     base_score: float | None,
     reference_score: float | None,
     reference_rate_delta: float,
-    reference_observed_gain: float,
+    reference_normalized_gain: float,
+    reference_window_gain: float,
 ) -> dict[str, Any] | None:
     if base_score is None or reference_score is None:
         return None
     base = _as_float(base_score, label="base score")
     reference = _as_float(reference_score, label="reference score")
     gain = base + float(reference_rate_delta) - reference
-    scale = gain / reference_observed_gain if reference_observed_gain > 0.0 else None
+    scale = gain / reference_normalized_gain if reference_normalized_gain > 0.0 else None
     return {
         "schema": "decoder_q_selective_selector_exact_cpu_top32_calibration.v1",
         "base_score": base,
         "reference_score": reference,
         "reference_rate_delta": reference_rate_delta,
-        "reference_observed_mlx_gain_sum": reference_observed_gain,
+        "reference_observed_mlx_window_gain_sum": reference_window_gain,
+        "reference_normalized_full_video_gain_sum": reference_normalized_gain,
+        "reference_observed_mlx_gain_sum": reference_normalized_gain,
         "exact_component_gain": gain,
+        "component_gain_per_normalized_full_video_gain": scale,
         "component_gain_per_mlx_gain": scale,
         "score_axis": "contest_cpu",
         "evidence_grade": "contest-CPU",
@@ -180,11 +197,13 @@ def _candidate_row(
     pair_indices: Sequence[int],
     rank_order_pairs: Sequence[int],
     gain_by_pair: dict[int, float],
+    window_gain_by_pair: dict[int, float],
     frame_policy: str,
     calibration: dict[str, Any] | None,
 ) -> dict[str, Any]:
     stats = _payload_stats(pair_indices, frame_policy=frame_policy)
-    observed_gain = sum(gain_by_pair[pair] for pair in stats["pair_indices"])
+    normalized_gain = sum(gain_by_pair[pair] for pair in stats["pair_indices"])
+    window_gain = sum(window_gain_by_pair[pair] for pair in stats["pair_indices"])
     row: dict[str, Any] = {
         "schema": "decoder_q_selective_selector_candidate.v1",
         "selector_id": selector_id,
@@ -197,14 +216,22 @@ def _candidate_row(
         "pair_encoding": stats["pair_encoding"],
         "pair_index_payload_bytes": stats["pair_index_payload_bytes"],
         "rate_delta": stats["rate_delta"],
-        "non_authoritative_mlx_gain_sum": observed_gain,
-        "net_mlx_gain_after_rate_non_authoritative": observed_gain - stats["rate_delta"],
+        "non_authoritative_mlx_window_gain_sum": window_gain,
+        "non_authoritative_normalized_full_video_gain_sum": normalized_gain,
+        "non_authoritative_mlx_gain_sum": normalized_gain,
+        "net_normalized_full_video_gain_after_rate_non_authoritative": (
+            normalized_gain - stats["rate_delta"]
+        ),
+        "net_mlx_gain_after_rate_non_authoritative": (
+            normalized_gain - stats["rate_delta"]
+        ),
+        "full_video_denominator": FEC6_PAIR_COUNT,
         "pair_encoding_candidates": stats["pair_encoding_candidates"],
         **FALSE_AUTHORITY,
     }
     if calibration is not None and calibration.get("component_gain_per_mlx_gain") is not None:
         scale = float(calibration["component_gain_per_mlx_gain"])
-        predicted_component_gain = observed_gain * scale
+        predicted_component_gain = normalized_gain * scale
         predicted_score = float(calibration["base_score"]) - predicted_component_gain + stats["rate_delta"]
         row["exact_cpu_calibrated_estimate"] = {
             "schema": "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1",
@@ -281,18 +308,26 @@ def build_selector_pareto_plan(
     units = _bridge_units(bridge_plan)
     ranked_pairs = [int(unit["pair_index"]) for unit in units]
     gain_by_pair = {
-        int(unit["pair_index"]): float(unit["observed_mlx_gain"])
+        int(unit["pair_index"]): float(unit["normalized_full_video_gain"])
+        for unit in units
+    }
+    window_gain_by_pair = {
+        int(unit["pair_index"]): float(unit["observed_mlx_window_gain"])
         for unit in units
     }
     prefix_values = _parse_positive_ints(prefix_ks, max_count=len(units))
     full_pair_set = ranked_pairs
     reference_stats = _payload_stats(full_pair_set, frame_policy=frame_policy)
     reference_gain = sum(gain_by_pair[pair] for pair in reference_stats["pair_indices"])
+    reference_window_gain = sum(
+        window_gain_by_pair[pair] for pair in reference_stats["pair_indices"]
+    )
     calibration = _calibration(
         base_score=base_score,
         reference_score=reference_score,
         reference_rate_delta=float(reference_stats["rate_delta"]),
-        reference_observed_gain=reference_gain,
+        reference_normalized_gain=reference_gain,
+        reference_window_gain=reference_window_gain,
     )
 
     rows: list[dict[str, Any]] = []
@@ -310,6 +345,7 @@ def build_selector_pareto_plan(
                 pair_indices=key,
                 rank_order_pairs=list(selected_rank_order),
                 gain_by_pair=gain_by_pair,
+                window_gain_by_pair=window_gain_by_pair,
                 frame_policy=frame_policy,
                 calibration=calibration,
             )
@@ -368,6 +404,8 @@ def build_selector_pareto_plan(
             "last_rank_pair": ranked_pairs[-1],
             "full_payload_bytes": reference_stats["payload_bytes"],
             "full_rate_delta": reference_stats["rate_delta"],
+            "full_non_authoritative_mlx_window_gain_sum": reference_window_gain,
+            "full_non_authoritative_normalized_full_video_gain_sum": reference_gain,
             "full_non_authoritative_mlx_gain_sum": reference_gain,
         },
         "exact_cpu_calibration": calibration,

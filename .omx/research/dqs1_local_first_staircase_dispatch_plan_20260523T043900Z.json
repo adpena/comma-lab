@@ -1,0 +1,200 @@
+{
+  "blocked_count": 1,
+  "blocked_nodes": [
+    {
+      "dependencies": [
+        "pairset_drop_two_r028_026_p0257_0320.local_cpu_advisory"
+      ],
+      "node_id": "pairset_drop_two_r028_026_p0257_0320.local_cpu_contest_drift_eureka",
+      "reason": "dependencies_not_succeeded"
+    }
+  ],
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dag_hash": "194630030e1bb50d41eec9d6c68825c888ca212c767f02d2983783a0b73eb11d",
+  "dag_id": "dqs1_pairset_local_first_staircase",
+  "dask_task_specs": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/submission_dir/archive.zip",
+        "--inflate-sh",
+        "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/submission_dir/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--video-names-file",
+        "upstream/public_test_video_names.txt",
+        "--device",
+        "cpu",
+        "--work-dir",
+        "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory_work",
+        "--json-out",
+        "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory.json",
+        "--inflate-timeout",
+        "600",
+        "--evaluate-timeout",
+        "900",
+        "--keep-work-dir"
+      ],
+      "key": "dqs1_pairset_local_first_staircase:pairset_drop_two_r028_026_p0257_0320.local_cpu_advisory",
+      "machine_hint": "m5_max_128gb",
+      "pure": false,
+      "resources": {
+        "local_cpu": 1
+      }
+    }
+  ],
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "staircase_dispatch_plan_is_planning_only",
+    "executor_must_update_canonical_queue_state",
+    "score_authority_requires_exact_auth_eval_axis"
+  ],
+  "exact_cuda_auth_eval": false,
+  "executor_boundary": "planning_only_dask_or_local_executor_must_write_back_to_queue_state",
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "plan_hash": "128e36ac6f736774e2afc5ca091873e2bf53f146abe328c35cdd4e3905021521",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_count": 1,
+  "ready_for_exact_eval_dispatch": false,
+  "resource_pools": [
+    {
+      "disk_gb": 80.0,
+      "id": "m5_max_128gb",
+      "label": "M5 Max local workstation",
+      "memory_gb": 128.0,
+      "slots": {
+        "local_cpu": 8,
+        "local_mlx": 1
+      },
+      "tags": [
+        "darwin",
+        "arm64",
+        "unified_memory",
+        "primary"
+      ]
+    },
+    {
+      "disk_gb": 12.0,
+      "id": "m1_macbook_pro_8gb",
+      "label": "M1 MacBook Pro",
+      "memory_gb": 8.0,
+      "slots": {
+        "local_cpu": 2,
+        "local_mlx": 1
+      },
+      "tags": [
+        "darwin",
+        "arm64",
+        "edge"
+      ]
+    },
+    {
+      "disk_gb": 8.0,
+      "id": "raspberry_pi4_8gb",
+      "label": "Raspberry Pi 4",
+      "memory_gb": 8.0,
+      "slots": {
+        "local_cpu": 1
+      },
+      "tags": [
+        "linux",
+        "aarch64",
+        "edge",
+        "slow"
+      ]
+    },
+    {
+      "disk_gb": 16.0,
+      "id": "intel_mac_mini_8gb",
+      "label": "Intel Mac mini",
+      "memory_gb": 8.0,
+      "slots": {
+        "local_cpu": 2
+      },
+      "tags": [
+        "darwin",
+        "x86_64",
+        "edge"
+      ]
+    },
+    {
+      "disk_gb": 64.0,
+      "id": "ryzen_3900x_rtx2070s",
+      "label": "Ryzen 3900X + RTX 2070 Super",
+      "memory_gb": 32.0,
+      "slots": {
+        "cuda_gpu": 1,
+        "local_cpu": 8
+      },
+      "tags": [
+        "linux",
+        "x86_64",
+        "cuda",
+        "lan"
+      ]
+    }
+  ],
+  "schema": "staircase_dispatch_plan.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "selected_count": 1,
+  "selected_nodes": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/submission_dir/archive.zip",
+        "--inflate-sh",
+        "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/submission_dir/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--video-names-file",
+        "upstream/public_test_video_names.txt",
+        "--device",
+        "cpu",
+        "--work-dir",
+        "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory_work",
+        "--json-out",
+        "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r028_026_p0257_0320/local_cpu_advisory.json",
+        "--inflate-timeout",
+        "600",
+        "--evaluate-timeout",
+        "900",
+        "--keep-work-dir"
+      ],
+      "dependencies": [
+        "pairset_drop_two_r028_026_p0257_0320.locality_controls"
+      ],
+      "family": "lane_dqs1_pairset_drop_two_r028_026_p0257_0320_local_first_20260522",
+      "machine_id": "m5_max_128gb",
+      "node_id": "pairset_drop_two_r028_026_p0257_0320.local_cpu_advisory",
+      "priority": 27,
+      "resource_kind": "local_cpu",
+      "stage": "local_cpu_advisory",
+      "utility": 1.0
+    }
+  ],
+  "source_refs": [
+    {
+      "kind": "experiment_queue",
+      "path": "configs/experiment_queues/dqs1_pairset_local_first.yaml",
+      "queue_hash": "01141963df3e808fbf1f4d76ee43449d588f0cc8878a1d1d085a36c8d0066239",
+      "queue_id": "dqs1_pairset_local_first"
+    }
+  ],
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

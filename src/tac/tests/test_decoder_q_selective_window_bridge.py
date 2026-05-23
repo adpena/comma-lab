@@ -47,13 +47,19 @@ def _row(tmp_path: Path, *, rank: int, start: int, gain: float) -> dict:
         "candidate_generation_only": True,
         "archive_materialization_required": True,
         "requires_exact_auth_eval_before_score_claim": True,
-        "selection_basis": "observed_strict_gated_mlx_singleton_response_gain",
+        "selection_basis": "normalized_full_video_mlx_singleton_response_gain",
         "rank": rank,
         "row_id": f"row-{rank}",
         "family": "mlx_decoder_q",
         "candidate_id": f"mlx_scorer_response:window:{start}:{start + 1}",
         "pair_indices": [start, start + 1],
         "source_pair_window": [start, start + 1],
+        "source_n_samples": 1,
+        "source_batch_pairs": 1,
+        "full_video_denominator": 600,
+        "normalized_full_video_scorer_gain_vs_baseline": gain / 600.0,
+        "projected_full_video_delta_vs_baseline_score": 0.0,
+        "normalized_full_video_byte_budget_margin_vs_break_even": gain,
         "source_path": str(candidate_path),
         "window_baseline_source_path": str(baseline_path),
         "archive_sha256": "a" * 64,
@@ -150,7 +156,12 @@ def test_bridge_plan_preserves_false_authority_and_requires_dqs1_materialization
     assert plan["summary"]["all_units_prediction_disagree_count"] == 3
     assert plan["materialized_decoder_q_candidate"]["mutation"]["tensor_name"] == "rgb_1.weight"
     assert plan["work_units"][0]["pair_window"] == [10, 11]
+    assert plan["work_units"][0]["observed_mlx_window_gain"] == pytest.approx(0.002)
+    assert plan["work_units"][0]["normalized_full_video_gain"] == pytest.approx(0.002 / 600.0)
     assert plan["coalesced_runs"][0]["pair_window"] == [10, 12]
+    assert plan["coalesced_runs"][0]["normalized_full_video_gain_sum_non_authoritative"] == pytest.approx(
+        0.003 / 600.0
+    )
     assert "DQS1 packet materialization not run for this bridge plan" in plan["dispatch_blockers"]
     assert (
         plan["bridge_policy"]["runtime_strategy"]

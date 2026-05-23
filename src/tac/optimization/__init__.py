@@ -116,6 +116,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.byte_shaving_campaign",
         "build_byte_shaving_campaign_plan",
     ),
+    "build_byte_shaving_signal_surface": (
+        "tac.optimization.byte_shaving_signal_surface_builder",
+        "build_byte_shaving_signal_surface",
+    ),
     "build_signal_surface_from_candidate_queue": (
         "tac.optimization.byte_shaving_campaign",
         "build_signal_surface_from_candidate_queue",

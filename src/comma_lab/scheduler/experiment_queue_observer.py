@@ -11,8 +11,8 @@ from typing import Any
 from comma_lab.scheduler.experiment_queue import (
     ExperimentQueueError,
     _condition_passes,
-    connect_state,
-    initialize_queue_state,
+    connect_state_readonly,
+    queue_definition_drift,
     queue_summary,
 )
 
@@ -237,9 +237,36 @@ def observe_experiment_queue(
 ) -> dict[str, Any]:
     """Return a compact operator-facing observation for a queue."""
 
-    with connect_state(state_path) as conn:
-        initialize_queue_state(conn, queue)
-        summary = queue_summary(conn, queue)
+    try:
+        with connect_state_readonly(state_path) as conn:
+            summary = queue_summary(conn, queue)
+            definition_drift = queue_definition_drift(conn, queue)
+    except ExperimentQueueError:
+        summary = {
+            "queue_id": str(queue["queue_id"]),
+            "mode": str(queue.get("controls", {}).get("mode") or "unknown"),
+            "status_counts": {},
+            "step_count": 0,
+            "orphaned_step_count": 0,
+            "ready_steps": [],
+            "steps": [],
+            "orphaned_steps": [],
+        }
+        definition_drift = {
+            "schema": "experiment_queue_definition_drift.v1",
+            "read_only": True,
+            "state_missing": True,
+            "missing_step_count": sum(
+                len(experiment.get("steps") or [])
+                for experiment in queue.get("experiments", [])
+                if isinstance(experiment, Mapping)
+            ),
+            "changed_step_count": 0,
+            "missing_hash_step_count": 0,
+            "missing_steps": [],
+            "changed_steps": [],
+            "missing_hash_steps": [],
+        }
     lookup = _experiment_lookup(queue)
     processes = _process_table()
     active_steps: list[dict[str, Any]] = []
@@ -285,6 +312,8 @@ def observe_experiment_queue(
         "mode": summary["mode"],
         "state": _repo_rel(state_path, repo_root),
         "status_counts": summary.get("status_counts", {}),
+        "observe_read_only": True,
+        "definition_drift": definition_drift,
         "step_count": summary.get("step_count"),
         "orphaned_step_count": summary.get("orphaned_step_count"),
         "ready_steps": summary.get("ready_steps", []),

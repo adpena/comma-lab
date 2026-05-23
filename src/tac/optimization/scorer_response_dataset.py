@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_production_contract import (
     BUNDLE_PASS_VERDICT as MLX_PRODUCTION_CONTRACT_BUNDLE_PASS_VERDICT,
@@ -980,6 +981,26 @@ def normalize_response_row(
         elif required_scorer_gain_for_added_bytes is not None:
             observed_scorer_gain = 0.0
             scorer_gain_shortfall_to_break_even = required_scorer_gain_for_added_bytes
+    source_n_samples = _as_int(_first_present(parent.get("n_samples"), candidate.get("n_samples")))
+    normalized_full_video_scorer_gain = None
+    projected_full_video_delta = None
+    normalized_break_even_added_bytes = None
+    normalized_byte_budget_margin = None
+    if observed_scorer_gain is not None and source_n_samples is not None:
+        normalized_full_video_scorer_gain = (
+            observed_scorer_gain
+            * float(source_n_samples)
+            / float(CONTEST_EXACT_SAMPLE_COUNT)
+        )
+        if rate_delta is not None:
+            projected_full_video_delta = rate_delta - normalized_full_video_scorer_gain
+        normalized_break_even_added_bytes = (
+            normalized_full_video_scorer_gain / RATE_SCORE_PER_BYTE
+        )
+        if added_archive_bytes is not None:
+            normalized_byte_budget_margin = (
+                normalized_break_even_added_bytes - float(added_archive_bytes)
+            )
     local = _local_pair_summary(candidate)
     return {
         "schema": ROW_SCHEMA,
@@ -1003,6 +1024,17 @@ def normalize_response_row(
         "rate_delta_vs_baseline": rate_delta,
         "scorer_delta_vs_baseline": scorer_delta,
         "observed_scorer_gain_vs_baseline": observed_scorer_gain,
+        "full_video_denominator": CONTEST_EXACT_SAMPLE_COUNT,
+        "normalized_full_video_scorer_gain_vs_baseline": (
+            normalized_full_video_scorer_gain
+        ),
+        "projected_full_video_delta_vs_baseline_score": projected_full_video_delta,
+        "break_even_added_bytes_from_normalized_full_video_gain": (
+            normalized_break_even_added_bytes
+        ),
+        "normalized_full_video_byte_budget_margin_vs_break_even": (
+            normalized_byte_budget_margin
+        ),
         "required_scorer_gain_for_added_bytes": required_scorer_gain_for_added_bytes,
         "scorer_gain_shortfall_to_break_even": scorer_gain_shortfall_to_break_even,
         "break_even_added_bytes_from_scorer_gain": break_even_added_bytes,
@@ -1027,7 +1059,7 @@ def normalize_response_row(
         "source_evidence_tag": parent.get("evidence_tag"),
         "source_hardware_substrate": parent.get("hardware_substrate"),
         "source_batch_pairs": _as_int(_first_present(parent.get("batch_pairs"), candidate.get("batch_pairs"))),
-        "source_n_samples": _as_int(_first_present(parent.get("n_samples"), candidate.get("n_samples"))),
+        "source_n_samples": source_n_samples,
         "source_pair_window": _first_present(parent.get("pair_window"), candidate.get("pair_window")),
         "source_start_pair": _as_int(_first_present(parent.get("start_pair"), candidate.get("start_pair"))),
         "source_max_pairs": _as_int(_first_present(parent.get("max_pairs"), candidate.get("max_pairs"))),
@@ -1133,7 +1165,7 @@ def build_windowed_mlx_response_dataset(
     *,
     candidate_paths: list[Path],
     baseline_paths: list[Path],
-    require_auth_audited_windows: bool = False,
+    require_auth_audited_windows: bool = True,
 ) -> dict[str, Any]:
     """Build response rows with one MLX baseline per scorer-pair window.
 
@@ -4042,14 +4074,16 @@ def build_next_probe_plan(
     for row in rows:
         if not isinstance(row, dict):
             continue
-        total_delta = _as_float(row.get("delta_vs_baseline_score"))
-        scorer_delta = _as_float(row.get("scorer_delta_vs_baseline"))
-        margin = _as_float(row.get("byte_budget_margin_vs_break_even"))
+        total_delta = _planning_delta_vs_baseline(row)
+        scorer_delta = _planning_scorer_delta_vs_baseline(row)
+        margin = _planning_byte_budget_margin(row)
+        planning_scope = _planning_scope(row)
         if total_delta is not None and (best_total is None or total_delta < best_total["delta_vs_baseline_score"]):
             best_total = {
                 "row_id": row.get("row_id"),
                 "family": row.get("family"),
                 "delta_vs_baseline_score": total_delta,
+                "planning_value_scope": planning_scope,
                 "added_archive_bytes": row.get("added_archive_bytes"),
             }
         if scorer_delta is not None and (best_scorer is None or scorer_delta < best_scorer["scorer_delta_vs_baseline"]):
@@ -4057,8 +4091,9 @@ def build_next_probe_plan(
                 "row_id": row.get("row_id"),
                 "family": row.get("family"),
                 "scorer_delta_vs_baseline": scorer_delta,
-                "observed_scorer_gain_vs_baseline": row.get("observed_scorer_gain_vs_baseline"),
-                "break_even_added_bytes_from_scorer_gain": row.get("break_even_added_bytes_from_scorer_gain"),
+                "observed_scorer_gain_vs_baseline": _planning_scorer_gain(row),
+                "break_even_added_bytes_from_scorer_gain": _planning_break_even_bytes(row),
+                "planning_value_scope": planning_scope,
                 "added_archive_bytes": row.get("added_archive_bytes"),
             }
         if margin is not None and (best_margin is None or margin > best_margin["byte_budget_margin_vs_break_even"]):
@@ -4066,7 +4101,8 @@ def build_next_probe_plan(
                 "row_id": row.get("row_id"),
                 "family": row.get("family"),
                 "byte_budget_margin_vs_break_even": margin,
-                "break_even_added_bytes_from_scorer_gain": row.get("break_even_added_bytes_from_scorer_gain"),
+                "break_even_added_bytes_from_scorer_gain": _planning_break_even_bytes(row),
+                "planning_value_scope": planning_scope,
                 "added_archive_bytes": row.get("added_archive_bytes"),
             }
 
@@ -4888,6 +4924,49 @@ def _require_present_false_authority(payload: dict[str, Any], *, label: str) -> 
             raise ScorerResponseDatasetError(f"{label} {key} must be false")
 
 
+def _planning_scope(row: dict[str, Any]) -> str:
+    return "normalized_full_video" if _is_mlx_scorer_response_row(row) else "native_row"
+
+
+def _planning_delta_vs_baseline(row: dict[str, Any]) -> float | None:
+    if _is_mlx_scorer_response_row(row):
+        value = _as_float(row.get("projected_full_video_delta_vs_baseline_score"))
+        if value is not None:
+            return value
+    return _as_float(row.get("delta_vs_baseline_score"))
+
+
+def _planning_scorer_gain(row: dict[str, Any]) -> float | None:
+    if _is_mlx_scorer_response_row(row):
+        value = _as_float(row.get("normalized_full_video_scorer_gain_vs_baseline"))
+        if value is not None:
+            return value
+    return _as_float(row.get("observed_scorer_gain_vs_baseline"))
+
+
+def _planning_scorer_delta_vs_baseline(row: dict[str, Any]) -> float | None:
+    gain = _planning_scorer_gain(row)
+    if gain is not None:
+        return -gain
+    return _as_float(row.get("scorer_delta_vs_baseline"))
+
+
+def _planning_break_even_bytes(row: dict[str, Any]) -> float | None:
+    if _is_mlx_scorer_response_row(row):
+        value = _as_float(row.get("break_even_added_bytes_from_normalized_full_video_gain"))
+        if value is not None:
+            return value
+    return _as_float(row.get("break_even_added_bytes_from_scorer_gain"))
+
+
+def _planning_byte_budget_margin(row: dict[str, Any]) -> float | None:
+    if _is_mlx_scorer_response_row(row):
+        value = _as_float(row.get("normalized_full_video_byte_budget_margin_vs_break_even"))
+        if value is not None:
+            return value
+    return _as_float(row.get("byte_budget_margin_vs_break_even"))
+
+
 def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     by_family: dict[str, int] = {}
     improved = 0
@@ -4898,8 +4977,8 @@ def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     best_margin = None
     for row in rows:
         by_family[row["family"]] = by_family.get(row["family"], 0) + 1
-        delta = row.get("delta_vs_baseline_score")
-        scorer_delta = row.get("scorer_delta_vs_baseline")
+        delta = _planning_delta_vs_baseline(row)
+        scorer_delta = _planning_scorer_delta_vs_baseline(row)
         if isinstance(delta, (int, float)) and delta < 0:
             improved += 1
         if isinstance(scorer_delta, (int, float)) and scorer_delta < 0:
@@ -4917,9 +4996,10 @@ def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "row_id": row["row_id"],
                 "family": row["family"],
                 "scorer_delta_vs_baseline": scorer_delta,
-                "break_even_added_bytes_from_scorer_gain": row.get("break_even_added_bytes_from_scorer_gain"),
+                "break_even_added_bytes_from_scorer_gain": _planning_break_even_bytes(row),
+                "planning_value_scope": _planning_scope(row),
             }
-        margin = row.get("byte_budget_margin_vs_break_even")
+        margin = _planning_byte_budget_margin(row)
         if isinstance(margin, (int, float)) and (
             best_margin is None
             or margin > best_margin["byte_budget_margin_vs_break_even"]
@@ -4928,6 +5008,7 @@ def summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "row_id": row["row_id"],
                 "family": row["family"],
                 "byte_budget_margin_vs_break_even": margin,
+                "planning_value_scope": _planning_scope(row),
             }
     return {
         "row_count": len(rows),

@@ -278,9 +278,21 @@ def _mlx_candidate_rows(
         _require_false_authority(row, label=f"MLX selected row {index}")
         candidate_id = str(row.get("candidate_id") or row.get("row_id") or f"mlx_row_{index:04d}")
         family = str(row.get("family") or "mlx_decoder_q")
+        if row.get("full_video_denominator") != 600:
+            raise CrossFamilyCandidatePortfolioError(
+                f"{candidate_id}.full_video_denominator must be 600"
+            )
         observed_delta = _finite_float(
-            row.get("observed_delta_vs_baseline_score"),
-            label=f"{candidate_id}.observed_delta_vs_baseline_score",
+            row.get("projected_full_video_delta_vs_baseline_score"),
+            label=f"{candidate_id}.projected_full_video_delta_vs_baseline_score",
+        )
+        normalized_gain = _finite_float(
+            row.get("normalized_full_video_scorer_gain_vs_baseline"),
+            label=f"{candidate_id}.normalized_full_video_scorer_gain_vs_baseline",
+        )
+        normalized_margin = _finite_float(
+            row.get("normalized_full_video_byte_budget_margin_vs_break_even"),
+            label=f"{candidate_id}.normalized_full_video_byte_budget_margin_vs_break_even",
         )
         predicted_delta = row.get("predicted_delta_vs_baseline_score")
         disagreement = 0.0
@@ -320,11 +332,11 @@ def _mlx_candidate_rows(
                 source_metadata={
                     "selection_basis": row.get("selection_basis"),
                     "pair_indices": row.get("pair_indices"),
-                    "observed_delta_vs_baseline_score": observed_delta,
+                    "projected_full_video_delta_vs_baseline_score": observed_delta,
+                    "normalized_full_video_scorer_gain_vs_baseline": normalized_gain,
                     "predicted_delta_vs_baseline_score": predicted_delta,
-                    "byte_budget_margin_vs_break_even": row.get(
-                        "byte_budget_margin_vs_break_even"
-                    ),
+                    "normalized_full_video_byte_budget_margin_vs_break_even": normalized_margin,
+                    "planning_value_scope": "normalized_full_video",
                     "requires_exact_auth_eval_before_score_claim": row.get(
                         "requires_exact_auth_eval_before_score_claim"
                     ),
