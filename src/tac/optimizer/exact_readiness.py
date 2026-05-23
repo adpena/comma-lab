@@ -30,6 +30,7 @@ from tac.hnerv_frontier_defaults import (
     ACTIVE_SCORE_FRONTIER_LABEL,
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
+from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.zipwire_archive import inspect_zip_headers
 
 QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
@@ -146,6 +147,25 @@ BYTE_DIFF_FIELD_PAIRS = (
     ("source_charged_bytes", "candidate_charged_bytes"),
     ("old_archive_bytes", "new_archive_bytes"),
     ("input_archive_bytes", "output_archive_bytes"),
+)
+INVERSE_SCORER_CHAIN_SCHEMA = "inverse_scorer_cell_candidate_chain_v1"
+INVERSE_SCORER_CHAIN_KIND = "inverse_scorer_cell_candidate_chain"
+INVERSE_SCORER_EXACT_AUTH_BOUNDARY_TOKENS = frozenset(
+    {
+        "contest_auth_eval",
+        "exact_auth_eval_required_before_score_claim",
+    }
+)
+INVERSE_SCORER_CLEARABLE_SOURCE_BLOCKERS = frozenset(
+    {
+        "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization",
+        "exact_auth_eval_required_before_score_claim",
+    }
+)
+INVERSE_SCORER_REQUIRED_FALSE_AUTHORITY_FIELDS = tuple(
+    field
+    for field in PROXY_FALSE_AUTHORITY_FIELDS
+    if field not in {"score_affecting_payload_changed", "charged_bits_changed"}
 )
 
 
@@ -380,6 +400,125 @@ def source_blockers(row: Mapping[str, Any]) -> list[str]:
     if isinstance(blockers, list | tuple):
         return [str(item) for item in blockers if str(item)]
     return []
+
+
+def _as_text_values(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, Mapping):
+        return []
+    if isinstance(value, Iterable) and not isinstance(value, (bytes, bytearray)):
+        return [str(item) for item in value if str(item)]
+    return [str(value)]
+
+
+def _is_inverse_scorer_cell_candidate_chain(row: Mapping[str, Any]) -> bool:
+    return (
+        row.get("schema") == INVERSE_SCORER_CHAIN_SCHEMA
+        or row.get("kind") == INVERSE_SCORER_CHAIN_KIND
+    )
+
+
+def _has_strict_inverse_scorer_full_frame_parity(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> bool:
+    if row.get("inflate_parity_satisfied") is not True:
+        return False
+    steps = row.get("chain_steps")
+    if not isinstance(steps, list):
+        return False
+    for step in steps:
+        if not isinstance(step, Mapping):
+            continue
+        if step.get("step_id") != "build_inflate_parity_probe":
+            continue
+        if step.get("full_frame_inflate_output_parity_claim") is not True:
+            continue
+        step_blockers = _as_text_values(step.get("blockers"))
+        if not step_blockers and _has_verified_inverse_scorer_parity_artifact(
+            step,
+            repo_root=repo_root,
+            queue_dir=queue_dir,
+        ):
+            return True
+    return False
+
+
+def _has_verified_inverse_scorer_parity_artifact(
+    step: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> bool:
+    if step.get("schema") != "inverse_scorer_cell_inflate_parity_probe_v1":
+        return False
+    artifact = step.get("artifact")
+    if not isinstance(artifact, Mapping):
+        return False
+    expected_sha = artifact.get("sha256")
+    if not is_sha256(expected_sha):
+        return False
+    artifact_path = resolve_path(artifact.get("path"), repo_root=repo_root, queue_dir=queue_dir)
+    if artifact_path is None or not artifact_path.is_file() or artifact_path.is_symlink():
+        return False
+    return sha256_file(artifact_path) == str(expected_sha).lower()
+
+
+def _has_inverse_scorer_exact_auth_boundary(row: Mapping[str, Any]) -> bool:
+    if (
+        row.get("exact_auth_eval_required_before_score_claim") is True
+        or row.get("requires_exact_auth_eval_before_score_claim") is True
+    ):
+        return True
+    for key in (
+        "readiness_blockers",
+        "dispatch_blockers",
+        "score_claim_blockers",
+        "promotion_blockers",
+        "next_required_gates",
+    ):
+        for item in _as_text_values(row.get(key)):
+            if item in INVERSE_SCORER_EXACT_AUTH_BOUNDARY_TOKENS:
+                return True
+    return False
+
+
+def inverse_scorer_chain_authority_blockers(
+    row: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    queue_dir: Path | None,
+) -> list[str]:
+    """Return fail-closed exact-readiness blockers for IAS1 chain rows.
+
+    IAS1 chain artifacts can prove descriptor consumption and, later, full-frame
+    inflate parity. They are never score or promotion evidence by themselves.
+    """
+
+    if not _is_inverse_scorer_cell_candidate_chain(row):
+        return []
+    blockers: list[str] = []
+    for key in INVERSE_SCORER_REQUIRED_FALSE_AUTHORITY_FIELDS:
+        if row.get(key) is not False:
+            blockers.append(f"inverse_scorer_cell_candidate_chain_{key}_not_false")
+    if not _has_strict_inverse_scorer_full_frame_parity(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    ):
+        blockers.append(
+            "inverse_scorer_cell_candidate_chain_strict_full_frame_inflate_parity_missing"
+        )
+    if not _has_inverse_scorer_exact_auth_boundary(row):
+        blockers.append(
+            "inverse_scorer_cell_candidate_chain_exact_auth_eval_boundary_missing"
+        )
+    return blockers
 
 
 def source_blocker_violations(
@@ -733,10 +872,21 @@ def readiness_blockers(
     for key in PREDICTED_SCORE_FIELDS:
         if key in row:
             facts.setdefault("stripped_source_score_fields", []).append(key)
+    inverse_scorer_blockers = inverse_scorer_chain_authority_blockers(
+        row,
+        repo_root=repo_root,
+        queue_dir=queue_dir,
+    )
+    blockers.extend(inverse_scorer_blockers)
+    effective_clearable_source_blockers = list(extra_clearable_source_blockers)
+    if _is_inverse_scorer_cell_candidate_chain(row) and not inverse_scorer_blockers:
+        effective_clearable_source_blockers.extend(
+            sorted(INVERSE_SCORER_CLEARABLE_SOURCE_BLOCKERS)
+        )
     blockers.extend(
         source_blocker_violations(
             row,
-            extra_clearable_source_blockers=extra_clearable_source_blockers,
+            extra_clearable_source_blockers=effective_clearable_source_blockers,
         )
     )
 

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import json
 import stat
@@ -98,12 +99,16 @@ def _write_claims(path: Path, rows: list[tuple[str, str, str, str]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _recent_claim_timestamp() -> str:
+    return dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def test_exact_dispatch_authority_preclaim_policy_treats_active_claim_as_conflict(
     tmp_path: Path,
 ) -> None:
     row = _ready_row(tmp_path)
     claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
-    _write_claims(claims, [("2026-05-17T12:00:00Z", "lightning", "job-1", "running")])
+    _write_claims(claims, [(_recent_claim_timestamp(), "lightning", "job-1", "running")])
 
     verdict = exact_dispatch_authority(
         row,
@@ -149,7 +154,7 @@ def test_exact_dispatch_authority_require_active_claim_accepts_matching_claim(
 ) -> None:
     row = _ready_row(tmp_path)
     claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
-    _write_claims(claims, [("2026-05-17T12:00:00Z", "lightning", "job-1", "running")])
+    _write_claims(claims, [(_recent_claim_timestamp(), "lightning", "job-1", "running")])
 
     verdict = exact_dispatch_authority(
         row,

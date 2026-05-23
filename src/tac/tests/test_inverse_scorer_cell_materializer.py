@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+import stat
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -646,6 +648,307 @@ def test_inflate_parity_probe_from_archives_runs_shell_runtime(
     assert not work_dir.exists()
 
 
+def test_inflate_parity_work_dir_refuses_existing_directory_without_deleting_sentinel(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_dir = tmp_path / "runtime"
+    work_dir = tmp_path / "existing_work"
+    sentinel = work_dir / "sentinel.txt"
+    _write_template_archive(template)
+    _write_fake_inflate_runtime(runtime_dir)
+    write_json(action, _action_functional())
+    work_dir.mkdir()
+    sentinel.write_text("keep", encoding="utf-8")
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    with pytest.raises(ValueError, match="work_dir already exists"):
+        build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+            candidate_manifest=candidate_manifest,
+            inflate_runtime_dir=runtime_dir,
+            repo_root=tmp_path,
+            work_dir=work_dir,
+        )
+
+    assert sentinel.read_text(encoding="utf-8") == "keep"
+
+
+def test_inflate_parity_from_archives_does_not_execute_on_archive_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_dir = tmp_path / "runtime"
+    marker = tmp_path / "runtime_executed.marker"
+    _write_template_archive(template)
+    runtime_dir.mkdir()
+    inflate = runtime_dir / "inflate.sh"
+    inflate.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                f"touch {marker.as_posix()!r}",
+                "mkdir -p \"$2/frames\"",
+                "printf frame-bytes > \"$2/frames/000000.raw\"",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    inflate.chmod(0o755)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+        candidate_manifest=candidate_manifest,
+        inflate_runtime_dir=runtime_dir,
+        candidate_archive=template,
+        repo_root=tmp_path,
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is False
+    assert "candidate_inflate_archive_sha_mismatch" in parity["blockers"]
+    assert parity["candidate_inflate_run"]["preflight_blocked"] is True
+    assert not marker.exists()
+
+
+def test_inflate_parity_refuses_symlinked_inflate_sh(tmp_path: Path) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_dir = tmp_path / "runtime"
+    target_inflate = tmp_path / "real_inflate.sh"
+    _write_template_archive(template)
+    runtime_dir.mkdir()
+    target_inflate.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    target_inflate.chmod(0o755)
+    (runtime_dir / "inflate.sh").symlink_to(target_inflate)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    with pytest.raises(ValueError, match=r"inflate\.sh is a symlink"):
+        build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+            candidate_manifest=candidate_manifest,
+            inflate_runtime_dir=runtime_dir,
+            repo_root=tmp_path,
+        )
+
+
+def test_precomputed_inflate_output_root_symlink_blocks_parity(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    source_real = tmp_path / "source_real"
+    source_link = tmp_path / "source_link"
+    candidate_out = tmp_path / "candidate_out"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    _write_output_tree(source_real)
+    _write_output_tree(candidate_out)
+    source_link.symlink_to(source_real, target_is_directory=True)
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        source_output_dir=source_link,
+        candidate_output_dir=candidate_out,
+        repo_root=tmp_path,
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is False
+    assert "source_inflate_output_dir_is_symlink" in parity["blockers"]
+    assert parity["score_claim"] is False
+
+
+def test_inflate_parity_noncanonical_file_list_does_not_clear_full_frame_claim(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_dir = tmp_path / "runtime"
+    _write_template_archive(template)
+    _write_fake_inflate_runtime(runtime_dir)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+        candidate_manifest=candidate_manifest,
+        inflate_runtime_dir=runtime_dir,
+        repo_root=tmp_path,
+        file_list_entries=("debug-only.mkv",),
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is False
+    assert "source_inflate_file_list_not_full_frame" in parity["blockers"]
+    assert "candidate_inflate_file_list_not_full_frame" in parity["blockers"]
+
+
+def test_extract_archive_rejects_duplicate_member_names(tmp_path: Path) -> None:
+    template = tmp_path / "template.zip"
+    duplicate_template = tmp_path / "duplicate_template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_dir = tmp_path / "runtime"
+    _write_template_archive(template)
+    with zipfile.ZipFile(duplicate_template, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", b"one")
+        zf.writestr("x", b"two")
+    _write_fake_inflate_runtime(runtime_dir)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    manifest["template_archive"].update(
+        {
+            "path": "duplicate_template.zip",
+            "bytes": duplicate_template.stat().st_size,
+            "sha256": sha256_file(duplicate_template),
+        }
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+        candidate_manifest=candidate_manifest,
+        inflate_runtime_dir=runtime_dir,
+        repo_root=tmp_path,
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is False
+    assert "source_inflate_runtime_failed" in parity["blockers"]
+    assert "unsafe archive member" in parity["source_inflate_run"]["error"]
+
+
+def test_extract_archive_rejects_zip_symlink_entries(tmp_path: Path) -> None:
+    template = tmp_path / "template.zip"
+    symlink_template = tmp_path / "symlink_template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    candidate_manifest = tmp_path / "candidate_manifest.json"
+    runtime_dir = tmp_path / "runtime"
+    _write_template_archive(template)
+    info = zipfile.ZipInfo("x")
+    info.create_system = 3
+    info.external_attr = (stat.S_IFLNK | 0o777) << 16
+    with zipfile.ZipFile(symlink_template, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, b"outside")
+    _write_fake_inflate_runtime(runtime_dir)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=tmp_path,
+    )
+    manifest["template_archive"].update(
+        {
+            "path": "symlink_template.zip",
+            "bytes": symlink_template.stat().st_size,
+            "sha256": sha256_file(symlink_template),
+        }
+    )
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+        candidate_manifest=candidate_manifest,
+        inflate_runtime_dir=runtime_dir,
+        repo_root=tmp_path,
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is False
+    assert "source_inflate_runtime_failed" in parity["blockers"]
+    assert "unsafe archive symlink member" in parity["source_inflate_run"]["error"]
+
+
+def test_materializer_refuses_output_archive_symlink(tmp_path: Path) -> None:
+    template = tmp_path / "template.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    output.symlink_to(tmp_path / "missing_candidate.zip")
+
+    with pytest.raises(ValueError, match="output path must not be a symlink"):
+        materialize_inverse_scorer_cell_candidate(
+            raw_contest_video_digest="a" * 64,
+            candidate_archive_template=template,
+            inverse_action_functional=action,
+            output_archive=output,
+            repo_root=tmp_path,
+        )
+
+
+def test_materializer_refuses_template_archive_symlink(tmp_path: Path) -> None:
+    template = tmp_path / "template.zip"
+    template_link = tmp_path / "template_link.zip"
+    action = tmp_path / "action.json"
+    output = tmp_path / "candidate.zip"
+    _write_template_archive(template)
+    template_link.symlink_to(template)
+    write_json(action, _action_functional())
+
+    with pytest.raises(ValueError, match="path is a symlink"):
+        materialize_inverse_scorer_cell_candidate(
+            raw_contest_video_digest="a" * 64,
+            candidate_archive_template=template_link,
+            inverse_action_functional=action,
+            output_archive=output,
+            repo_root=tmp_path,
+        )
+
+
 def test_runtime_adapter_manifest_fails_closed_on_descriptor_sha_mismatch(
     tmp_path: Path,
 ) -> None:
@@ -748,6 +1051,151 @@ def test_runtime_adapter_manifest_resolves_archive_relative_to_manifest(
     assert adapter["runtime_consumption_probe"]["passed"] is True
     assert adapter["descriptor_consumption"]["passed"] is True
     assert adapter["candidate_archive"]["member_sha256"] == manifest["candidate_archive"]["member_sha256"]
+
+
+def test_runtime_adapter_manifest_blocks_parent_traversal_candidate_archive(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    template = repo / "template.zip"
+    action = repo / "action.json"
+    output = repo / "candidate.zip"
+    escaped = tmp_path / "escaped_candidate.zip"
+    candidate_manifest = repo / "candidate_manifest.json"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=repo,
+    )
+    escaped.write_bytes(output.read_bytes())
+    manifest["candidate_archive"]["path"] = "../escaped_candidate.zip"
+    write_json(candidate_manifest, manifest)
+
+    adapter = build_inverse_scorer_cell_runtime_adapter_manifest(
+        candidate_manifest=candidate_manifest,
+        repo_root=repo,
+        runtime_source_paths=[__file__],
+    )
+
+    assert adapter["runtime_consumption_probe"]["passed"] is False
+    assert adapter["descriptor_consumption"]["passed"] is False
+    assert "candidate_archive_path_unsafe_parent_reference" in adapter["readiness_blockers"]
+    assert adapter["ready_for_exact_eval_runtime"] is False
+    assert adapter["score_claim"] is False
+
+
+def test_receiver_proof_rejects_parent_traversal_candidate_manifest_ref(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    adapter_dir = repo / "adapter_dir"
+    repo.mkdir()
+    adapter_dir.mkdir()
+    template = repo / "template.zip"
+    action = repo / "action.json"
+    output = repo / "candidate.zip"
+    candidate_manifest = repo / "candidate_manifest.json"
+    adapter_manifest = adapter_dir / "runtime_adapter.json"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=repo,
+    )
+    write_json(candidate_manifest, manifest)
+    adapter = build_inverse_scorer_cell_runtime_adapter_manifest(
+        candidate_manifest=candidate_manifest,
+        repo_root=repo,
+        runtime_source_paths=[__file__],
+    )
+    adapter["candidate_manifest"]["path"] = "../candidate_manifest.json"
+    write_json(adapter_manifest, adapter)
+
+    with pytest.raises(ValueError, match=r"candidate_manifest\.path contains parent traversal"):
+        build_inverse_scorer_cell_receiver_proof(
+            runtime_adapter_manifest=adapter_manifest,
+            repo_root=repo,
+        )
+
+
+def test_inflate_parity_probe_blocks_parent_traversal_archive_path(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    template = repo / "template.zip"
+    action = repo / "action.json"
+    output = repo / "candidate.zip"
+    candidate_manifest = repo / "candidate_manifest.json"
+    source_out = repo / "source_out"
+    candidate_out = repo / "candidate_out"
+    _write_template_archive(template)
+    write_json(action, _action_functional())
+    _write_output_tree(source_out)
+    _write_output_tree(candidate_out)
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=repo,
+    )
+    manifest["candidate_archive"]["path"] = "../candidate.zip"
+    write_json(candidate_manifest, manifest)
+
+    parity = build_inverse_scorer_cell_inflate_parity_probe(
+        candidate_manifest=candidate_manifest,
+        source_output_dir=source_out,
+        candidate_output_dir=candidate_out,
+        repo_root=repo,
+    )
+
+    assert parity["full_frame_inflate_output_parity_claim"] is False
+    assert "candidate_archive_path_unsafe_parent_reference" in parity["blockers"]
+    assert parity["score_claim"] is False
+    assert parity["ready_for_exact_eval_dispatch"] is False
+
+
+def test_inflate_parity_probe_from_archives_rejects_manifest_parent_traversal_fallback(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    template = repo / "template.zip"
+    escaped_template = tmp_path / "template.zip"
+    action = repo / "action.json"
+    output = repo / "candidate.zip"
+    candidate_manifest = repo / "candidate_manifest.json"
+    runtime_dir = repo / "runtime"
+    _write_template_archive(template)
+    escaped_template.write_bytes(template.read_bytes())
+    _write_fake_inflate_runtime(runtime_dir)
+    write_json(action, _action_functional())
+    manifest = materialize_inverse_scorer_cell_candidate(
+        raw_contest_video_digest="a" * 64,
+        candidate_archive_template=template,
+        inverse_action_functional=action,
+        output_archive=output,
+        repo_root=repo,
+    )
+    manifest["template_archive"]["path"] = "../template.zip"
+    write_json(candidate_manifest, manifest)
+
+    with pytest.raises(ValueError, match="source archive path contains parent traversal"):
+        build_inverse_scorer_cell_inflate_parity_probe_from_archives(
+            candidate_manifest=candidate_manifest,
+            inflate_runtime_dir=runtime_dir,
+            repo_root=repo,
+            timeout_seconds=30,
+        )
 
 
 def test_inverse_scorer_cell_materializer_cli_writes_manifest(tmp_path: Path) -> None:

@@ -1101,6 +1101,7 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
         lane_id="lane_inverse_cell_chain_exec_fixture",
         source_work_queue_path=tmp_path / "work_queue.json",
         local_cpu_concurrency=2,
+        resource_concurrency={"local_mlx": 3},
         step_timeout_seconds=600,
     )
     dag = build_staircase_dag_from_experiment_queue(
@@ -1115,6 +1116,7 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
         "tools/run_inverse_scorer_cell_candidate_chain.py",
     ]
     assert task["target_kind"] == INVERSE_SCORER_CELL_TARGET_KIND
+    assert execution_queue["controls"]["max_concurrency"]["local_mlx"] == 3
     assert task["materializer_id"] == INVERSE_SCORER_CELL_MATERIALIZER
     assert task["receiver_contract_id"] == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID
     assert task["receiver_contract_kind"] == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND
@@ -1680,6 +1682,8 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
             "lane_materializer_exec_fixture",
             "--materializer-execution-timeout-seconds",
             "600",
+            "--materializer-resource-concurrency",
+            "local_cpu=4",
             "--repo-root",
             str(tmp_path),
             "--candidate-limit",
@@ -1706,6 +1710,7 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
     assert row["ready_for_exact_eval_dispatch"] is False
     loaded_execution_queue = load_queue_definition(execution_queue)
     assert loaded_execution_queue["queue_id"] == "materializer_exec_fixture"
+    assert loaded_execution_queue["controls"]["max_concurrency"]["local_cpu"] == 4
     experiment = loaded_execution_queue["experiments"][0]
     assert experiment["lane_id"] == "lane_materializer_exec_fixture"
     assert experiment["metadata"]["schema"] == MATERIALIZER_EXECUTION_EXPERIMENT_METADATA_SCHEMA

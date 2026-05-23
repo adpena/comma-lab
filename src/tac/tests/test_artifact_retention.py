@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -167,6 +168,171 @@ def _write_mlx_delta_cache(root: Path, *, stamp: bool = True) -> Path:
         }
     (cache / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     return cache
+
+
+def _proxy_false_authority() -> dict[str, bool]:
+    return {
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "score_claim_eligible": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "field_selection_ready_for_exact_eval_dispatch": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+    }
+
+
+def _relative(path: Path, repo_root: Path) -> str:
+    return path.relative_to(repo_root).as_posix()
+
+
+def _inverse_tree_record(path: Path, repo_root: Path) -> dict[str, object]:
+    files: list[dict[str, object]] = []
+    for file_path in sorted(item for item in path.rglob("*") if item.is_file()):
+        files.append(
+            {
+                "path": file_path.relative_to(path).as_posix(),
+                "bytes": file_path.stat().st_size,
+                "sha256": sha256_file(file_path),
+            }
+        )
+    tree_sha = hashlib.sha256(
+        json.dumps(
+            {"files": files},
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+    return {
+        "path": _relative(path, repo_root),
+        "exists": True,
+        "file_count": len(files),
+        "total_bytes": sum(int(item["bytes"]) for item in files),
+        "tree_sha256": tree_sha,
+        "files": files,
+        "blockers": [],
+    }
+
+
+def _write_inverse_scorer_parity_fixture(
+    repo_root: Path,
+    *,
+    proof_mutation: dict[str, object] | None = None,
+) -> tuple[Path, Path, Path]:
+    chain = repo_root / "chain"
+    work = chain / "inflate_work"
+    source_out = work / "source" / "out"
+    candidate_out = work / "candidate" / "out"
+    _write(source_out / "0.raw", b"frame-bytes")
+    _write(candidate_out / "0.raw", b"frame-bytes")
+    source_archive = chain / "source.zip"
+    candidate_archive = chain / "candidate.zip"
+    candidate_manifest = chain / "candidate_manifest.json"
+    runtime = chain / "runtime"
+    inflate_sh = runtime / "inflate.sh"
+    _write(source_archive, b"source-zip")
+    _write(candidate_archive, b"candidate-zip")
+    _write(inflate_sh, b"#!/bin/sh\n")
+    candidate_manifest_payload = {
+        "schema": "inverse_scorer_cell_candidate_v1",
+        **_proxy_false_authority(),
+    }
+    candidate_manifest.write_text(
+        json.dumps(candidate_manifest_payload),
+        encoding="utf-8",
+    )
+    proof = {
+        "schema": "inverse_scorer_cell_inflate_parity_probe_v1",
+        "proof_scope": "full_frame_inflate_output_tree",
+        "candidate_manifest": {
+            "provided_inline": False,
+            "path": _relative(candidate_manifest, repo_root),
+            "bytes": candidate_manifest.stat().st_size,
+            "sha256": sha256_file(candidate_manifest),
+        },
+        "source_archive": {
+            "path": _relative(source_archive, repo_root),
+            "bytes": source_archive.stat().st_size,
+            "sha256": sha256_file(source_archive),
+        },
+        "candidate_archive": {
+            "path": _relative(candidate_archive, repo_root),
+            "bytes": candidate_archive.stat().st_size,
+            "sha256": sha256_file(candidate_archive),
+            "member_sha256": "d" * 64,
+        },
+        "inverse_scorer_cell_descriptor": {
+            "schema": "inverse_scorer_cell_descriptor_v1",
+            "packet_offset": 12,
+            "packet_bytes": 34,
+            "packet_sha256": "a" * 64,
+            "json_sha256": "b" * 64,
+        },
+        "source_output_tree": _inverse_tree_record(source_out, repo_root),
+        "candidate_output_tree": _inverse_tree_record(candidate_out, repo_root),
+        "output_contract_paths_match": True,
+        "output_contract_nonempty": True,
+        "expect_output_byte_identical": True,
+        "output_bytes_identical": True,
+        "full_frame_inflate_output_parity_claim": True,
+        "cleared_blockers": ["candidate_inflate_output_parity_missing"],
+        "differing_paths_sample": [],
+        "differing_path_count": 0,
+        "missing_from_candidate": [],
+        "extra_in_candidate": [],
+        "blockers": [],
+        "dispatch_blockers": [
+            "inverse_scorer_cell_inflate_parity_is_not_score_authority",
+            "exact_auth_eval_required_before_score_claim",
+        ],
+        "inflate_runtime": {
+            "path": _relative(runtime, repo_root),
+            "inflate_sh": _relative(inflate_sh, repo_root),
+            "inflate_sh_sha256": sha256_file(inflate_sh),
+            "timeout_seconds": 30,
+            "file_list_entries": ["0.mkv"],
+            "full_frame_file_list_claim": True,
+        },
+        "source_inflate_run": {
+            "returncode": 0,
+            "timeout_seconds": 30,
+            "file_list_entries": ["0.mkv"],
+            "full_frame_file_list_claim": True,
+            "output_dir": _relative(source_out, repo_root),
+        },
+        "candidate_inflate_run": {
+            "returncode": 0,
+            "timeout_seconds": 30,
+            "file_list_entries": ["0.mkv"],
+            "full_frame_file_list_claim": True,
+            "output_dir": _relative(candidate_out, repo_root),
+        },
+        "source_archive_inflated": {
+            "path": _relative(source_archive, repo_root),
+            "bytes": source_archive.stat().st_size,
+            "sha256": sha256_file(source_archive),
+        },
+        "candidate_archive_inflated": {
+            "path": _relative(candidate_archive, repo_root),
+            "bytes": candidate_archive.stat().st_size,
+            "sha256": sha256_file(candidate_archive),
+        },
+        "work_dir": _relative(work, repo_root),
+        "work_dir_retained": True,
+        **_proxy_false_authority(),
+    }
+    if proof_mutation:
+        proof.update(proof_mutation)
+    proof_path = chain / "inflate_parity_probe.json"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+    return source_out, candidate_out, proof_path
 
 
 def test_retention_deletes_only_certified_locality_raw(tmp_path: Path) -> None:
@@ -466,6 +632,146 @@ def test_retention_blocks_mlx_cache_without_identity_stamp(tmp_path: Path) -> No
     assert len(plan.blocked_candidates) == 1
     assert plan.blocked_candidates[0].path == cache.relative_to(tmp_path).as_posix()
     assert "mlx_cache_identity_audit_stamp_missing" in plan.blocked_candidates[0].blockers
+
+
+def test_retention_certifies_inverse_scorer_strict_inflate_parity_raw_outputs(
+    tmp_path: Path,
+) -> None:
+    source_out, candidate_out, proof_path = _write_inverse_scorer_parity_fixture(tmp_path)
+
+    plan = build_retention_plan([tmp_path / "chain"], repo_root=tmp_path, min_bytes=1)
+
+    assert plan.blocked_candidates == []
+    assert [row.kind for row in plan.candidates] == [
+        "inverse_scorer_inflate_parity_raw_output",
+        "inverse_scorer_inflate_parity_raw_output",
+    ]
+    assert {row.certificate["role"] for row in plan.candidates} == {"source", "candidate"}
+    assert all(row.certificate["proof_sha256"] == sha256_file(proof_path) for row in plan.candidates)
+    assert all(row.certificate["descriptor_packet_sha256"] == "a" * 64 for row in plan.candidates)
+
+    execution = execute_retention_plan(plan, action="delete")
+
+    assert execution["executed_count"] == 2
+    assert not source_out.exists()
+    assert not candidate_out.exists()
+    assert proof_path.is_file()
+    assert (tmp_path / "chain" / "candidate_manifest.json").is_file()
+    assert (tmp_path / "chain" / "runtime" / "inflate.sh").is_file()
+
+
+def test_retention_blocks_inverse_scorer_parity_raw_with_truthy_authority(
+    tmp_path: Path,
+) -> None:
+    source_out, candidate_out, _proof_path = _write_inverse_scorer_parity_fixture(
+        tmp_path,
+        proof_mutation={"score_claim": True},
+    )
+
+    plan = build_retention_plan([tmp_path / "chain"], repo_root=tmp_path, min_bytes=1)
+
+    assert plan.candidates == []
+    assert {row.path for row in plan.blocked_candidates} == {
+        source_out.relative_to(tmp_path).as_posix(),
+        candidate_out.relative_to(tmp_path).as_posix(),
+    }
+    assert all(
+        "inverse_scorer_parity_probe_score_claim_not_false" in row.blockers
+        for row in plan.blocked_candidates
+    )
+
+
+def test_retention_blocks_inverse_scorer_parity_raw_when_proof_not_strict(
+    tmp_path: Path,
+) -> None:
+    _source_out, _candidate_out, _proof_path = _write_inverse_scorer_parity_fixture(
+        tmp_path,
+        proof_mutation={
+            "full_frame_inflate_output_parity_claim": False,
+            "cleared_blockers": [],
+            "blockers": ["inflate_output_bytes_not_identical"],
+        },
+    )
+
+    plan = build_retention_plan([tmp_path / "chain"], repo_root=tmp_path, min_bytes=1)
+
+    assert plan.candidates == []
+    assert len(plan.blocked_candidates) == 2
+    assert all(
+        "inverse_scorer_full_frame_parity_claim_not_true" in row.blockers
+        and "inverse_scorer_parity_probe_has_blockers" in row.blockers
+        for row in plan.blocked_candidates
+    )
+
+
+def test_retention_blocks_inverse_scorer_parity_raw_without_runtime_rebuild_contract(
+    tmp_path: Path,
+) -> None:
+    _source_out, _candidate_out, _proof_path = _write_inverse_scorer_parity_fixture(
+        tmp_path,
+        proof_mutation={
+            "inflate_runtime": None,
+            "source_archive_inflated": None,
+            "candidate_archive_inflated": None,
+        },
+    )
+
+    plan = build_retention_plan([tmp_path / "chain"], repo_root=tmp_path, min_bytes=1)
+
+    assert plan.candidates == []
+    assert len(plan.blocked_candidates) == 2
+    assert all("inverse_scorer_inflate_runtime_missing" in row.blockers for row in plan.blocked_candidates)
+    assert all("inverse_scorer_source_archive_inflated_missing" in row.blockers for row in plan.blocked_candidates)
+    assert all("inverse_scorer_candidate_archive_inflated_missing" in row.blockers for row in plan.blocked_candidates)
+
+
+def test_retention_blocks_inverse_scorer_parity_raw_with_symlink_reference(
+    tmp_path: Path,
+) -> None:
+    _source_out, _candidate_out, proof_path = _write_inverse_scorer_parity_fixture(tmp_path)
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    link = tmp_path / "chain" / "candidate-link.zip"
+    try:
+        link.symlink_to(tmp_path / "chain" / "candidate.zip")
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlink unsupported: {exc}")
+    proof["candidate_archive_inflated"]["path"] = _relative(link, tmp_path)
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+
+    plan = build_retention_plan([tmp_path / "chain"], repo_root=tmp_path, min_bytes=1)
+
+    assert plan.candidates == []
+    assert len(plan.blocked_candidates) == 2
+    assert all(
+        "inverse_scorer_candidate_archive_inflated_path_is_symlink" in row.blockers
+        for row in plan.blocked_candidates
+    )
+
+
+def test_retention_blocks_inverse_scorer_parity_raw_with_tree_blockers(
+    tmp_path: Path,
+) -> None:
+    _source_out, _candidate_out, _proof_path = _write_inverse_scorer_parity_fixture(
+        tmp_path,
+        proof_mutation={
+            "source_output_tree": {
+                **_inverse_tree_record(
+                    tmp_path / "chain" / "inflate_work" / "source" / "out",
+                    tmp_path,
+                ),
+                "blockers": ["source_inflate_output_tree_contains_symlink"],
+            }
+        },
+    )
+
+    plan = build_retention_plan([tmp_path / "chain"], repo_root=tmp_path, min_bytes=1)
+
+    assert plan.candidates == []
+    assert len(plan.blocked_candidates) == 2
+    assert all(
+        "inverse_scorer_source_output_tree_has_blockers" in row.blockers
+        for row in plan.blocked_candidates
+    )
 
 
 def test_retention_reports_unknown_raw_surface(tmp_path: Path) -> None:

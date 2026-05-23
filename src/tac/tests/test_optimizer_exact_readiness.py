@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import importlib.util
 import json
 import os
@@ -124,6 +125,74 @@ def _make_queue(repo: Path, submission: Path, archive_bytes: int, archive_sha: s
             "dispatch_ready": [],
         },
     )
+
+
+def _mark_queue_row_as_inverse_scorer_chain(
+    queue: Path,
+    *,
+    strict_full_frame_parity: bool,
+    exact_auth_boundary: bool,
+    proof_backed: bool = True,
+) -> None:
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    proof_path = queue.parent / "inflate_parity_probe.json"
+    proof_payload = b'{"schema":"inverse_scorer_cell_inflate_parity_probe_v1"}\n'
+    if proof_backed:
+        proof_path.write_bytes(proof_payload)
+    false_authority = {
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "score_claim_eligible": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+        "field_selection_ready_for_exact_eval_dispatch": False,
+        "exact_cuda_auth_eval": False,
+        "contest_cuda_auth_eval": False,
+    }
+    row.update(
+        {
+            **false_authority,
+            "schema": "inverse_scorer_cell_candidate_chain_v1",
+            "kind": "inverse_scorer_cell_candidate_chain",
+            "receiver_contract_satisfied": True,
+            "inflate_parity_satisfied": True,
+            "dispatch_blockers": [
+                "inverse_scorer_cell_candidate_chain_is_not_dispatch_authorization",
+                *(
+                    ["exact_auth_eval_required_before_score_claim"]
+                    if exact_auth_boundary
+                    else []
+                ),
+            ],
+            "chain_steps": [
+                {
+                    "step_id": "build_inflate_parity_probe",
+                    "status": "succeeded",
+                    "schema": "inverse_scorer_cell_inflate_parity_probe_v1",
+                    "artifact": {
+                        "path": proof_path.relative_to(queue.parent).as_posix(),
+                        "bytes": len(proof_payload),
+                        "sha256": hashlib.sha256(proof_payload).hexdigest(),
+                    },
+                    "full_frame_inflate_output_parity_claim": strict_full_frame_parity,
+                    "blockers": []
+                    if strict_full_frame_parity
+                    else ["candidate_inflate_output_parity_missing"],
+                }
+            ],
+            "score_claim_blockers": [
+                "exact_auth_eval_required_before_score_claim"
+            ]
+            if exact_auth_boundary
+            else [],
+            "next_required_gates": ["contest_auth_eval"] if exact_auth_boundary else [],
+        }
+    )
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _hdm8_selector_gate(
@@ -262,6 +331,139 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert row["cpu_or_proxy_score_not_cuda_evidence"] is True
     assert row["cuda_gap_review_required_before_promotion"] is True
     assert promoted["evidence_boundary"]["cpu_or_proxy_score_not_cuda_evidence"] is True
+
+
+def test_refuses_inverse_scorer_chain_without_strict_full_frame_parity(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _mark_queue_row_as_inverse_scorer_chain(
+        queue,
+        strict_full_frame_parity=False,
+        exact_auth_boundary=True,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert (
+        "inverse_scorer_cell_candidate_chain_strict_full_frame_inflate_parity_missing"
+        in result["report"]["blockers"]
+    )
+
+
+def test_refuses_inverse_scorer_chain_without_exact_auth_score_boundary(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _mark_queue_row_as_inverse_scorer_chain(
+        queue,
+        strict_full_frame_parity=True,
+        exact_auth_boundary=False,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert (
+        "inverse_scorer_cell_candidate_chain_exact_auth_eval_boundary_missing"
+        in result["report"]["blockers"]
+    )
+
+
+def test_refuses_inverse_scorer_chain_with_self_asserted_unbacked_parity(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _mark_queue_row_as_inverse_scorer_chain(
+        queue,
+        strict_full_frame_parity=True,
+        exact_auth_boundary=True,
+        proof_backed=False,
+    )
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    payload["top_k"][0]["full_frame_inflate_output_parity_claim"] = True
+    payload["top_k"][0]["strict_full_frame_inflate_parity_satisfied"] = True
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert (
+        "inverse_scorer_cell_candidate_chain_strict_full_frame_inflate_parity_missing"
+        in result["report"]["blockers"]
+    )
+
+
+def test_refuses_inverse_scorer_chain_with_truthy_false_authority_fields(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _mark_queue_row_as_inverse_scorer_chain(
+        queue,
+        strict_full_frame_parity=True,
+        exact_auth_boundary=True,
+    )
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    payload["top_k"][0]["score_claim_valid"] = True
+    payload["top_k"][0]["promotable"] = True
+    queue.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "inverse_scorer_cell_candidate_chain_score_claim_valid_not_false" in result["report"]["blockers"]
+    assert "inverse_scorer_cell_candidate_chain_promotable_not_false" in result["report"]["blockers"]
+
+
+def test_promotes_inverse_scorer_chain_only_after_parity_and_auth_boundary(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    _mark_queue_row_as_inverse_scorer_chain(
+        queue,
+        strict_full_frame_parity=True,
+        exact_auth_boundary=True,
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    row = result["promoted_queue"]["dispatch_ready"][0]
+    assert row["ready_for_exact_eval_dispatch"] is True
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["cuda_gap_review_required_before_promotion"] is True
 
 
 def test_refuses_hdm8_selector_without_passing_cuda_component_gate(tmp_path: Path) -> None:

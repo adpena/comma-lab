@@ -23,6 +23,16 @@ SCHEMA = "comma_lab.artifact_retention_plan.v1"
 EXECUTION_SCHEMA = "comma_lab.artifact_retention_execution.v1"
 EXECUTION_JOURNAL_SCHEMA = "comma_lab.artifact_retention_execution_journal.v1"
 UNKNOWN_RAW_KIND = "blocked_unknown_raw_surface"
+INVERSE_SCORER_INFLATE_PARITY_RAW_KIND = "inverse_scorer_inflate_parity_raw_output"
+INVERSE_SCORER_INFLATE_PARITY_PROBE_SCHEMA = "inverse_scorer_cell_inflate_parity_probe_v1"
+INVERSE_SCORER_INFLATE_PARITY_SCOPE = "full_frame_inflate_output_tree"
+INVERSE_SCORER_PARITY_BLOCKER = "candidate_inflate_output_parity_missing"
+INVERSE_SCORER_PARITY_PROOF_NAMES = frozenset(
+    {
+        "inflate_parity_probe.json",
+        "inverse_scorer_cell_inflate_parity_probe.json",
+    }
+)
 KNOWN_RAW_WORKDIR_NAMES = frozenset(
     {
         "auth_eval_work",
@@ -39,6 +49,7 @@ DEFAULT_RETENTION_KINDS = frozenset(
         "locality_inflated_raw",
         "local_cpu_advisory_inflated_raw",
         "local_cpu_advisory_extracted_scratch",
+        INVERSE_SCORER_INFLATE_PARITY_RAW_KIND,
     }
 )
 AUTHORITY_FALSE_FIELDS = (
@@ -48,6 +59,16 @@ AUTHORITY_FALSE_FIELDS = (
     "promotable",
     "rank_or_kill_eligible",
     "ready_for_exact_eval_dispatch",
+)
+INVERSE_SCORER_AUTHORITY_FALSE_FIELDS = (
+    *AUTHORITY_FALSE_FIELDS,
+    "dispatch_attempted",
+    "score_claim_eligible",
+    "field_selection_ready_for_exact_eval_dispatch",
+    "exact_cuda_auth_eval",
+    "contest_cuda_auth_eval",
+    "score_affecting_payload_changed",
+    "charged_bits_changed",
 )
 
 
@@ -443,6 +464,439 @@ def _certify_mlx_cache(path: Path, repo_root: Path) -> RetentionCandidate | None
     )
 
 
+def _certify_inverse_scorer_inflate_parity_raw(
+    path: Path,
+    repo_root: Path,
+) -> RetentionCandidate | None:
+    if not path.is_dir() or not _contains_raw_file(path):
+        return None
+    proof_paths = _candidate_inverse_scorer_parity_proofs(path, repo_root)
+    if not proof_paths:
+        return None
+
+    blocked: list[RetentionCandidate] = []
+    for proof_path in proof_paths:
+        try:
+            proof = load_json_object(proof_path)
+        except (OSError, json.JSONDecodeError, ArtifactRetentionError):
+            continue
+        role = _inverse_scorer_parity_output_role(
+            proof,
+            output_path=path,
+            repo_root=repo_root,
+        )
+        if role is None:
+            continue
+        candidate = _inverse_scorer_parity_candidate(
+            output_path=path,
+            repo_root=repo_root,
+            proof_path=proof_path,
+            proof=proof,
+            role=role,
+        )
+        if candidate.certified_rebuildable:
+            return candidate
+        blocked.append(candidate)
+
+    if blocked:
+        blockers = _ordered_unique(
+            blocker
+            for candidate in blocked
+            for blocker in candidate.blockers
+        )
+        certificate = dict(blocked[0].certificate)
+        certificate["matching_proof_count"] = len(blocked)
+        return RetentionCandidate(
+            path=_rel(path, repo_root),
+            kind=INVERSE_SCORER_INFLATE_PARITY_RAW_KIND,
+            bytes=directory_size_bytes(path),
+            certified_rebuildable=False,
+            certificate=certificate,
+            blockers=blockers,
+        )
+    return None
+
+
+def _candidate_inverse_scorer_parity_proofs(path: Path, repo_root: Path) -> list[Path]:
+    candidates: list[Path] = []
+    seen: set[Path] = set()
+    ancestors = [path, *path.parents]
+    for depth, ancestor in enumerate(ancestors):
+        if depth > 8:
+            break
+        try:
+            entries = list(ancestor.iterdir())
+        except OSError:
+            continue
+        for entry in entries:
+            if not entry.is_file():
+                continue
+            if entry.is_symlink():
+                continue
+            name = entry.name
+            if name in INVERSE_SCORER_PARITY_PROOF_NAMES or (
+                "inflate_parity" in name
+                and "probe" in name
+                and name.endswith(".json")
+            ):
+                resolved = entry.resolve()
+                if resolved in seen:
+                    continue
+                seen.add(resolved)
+                candidates.append(entry)
+        try:
+            ancestor.resolve().relative_to(repo_root.resolve())
+        except ValueError:
+            continue
+        if ancestor.resolve() == repo_root.resolve():
+            break
+    return sorted(candidates)
+
+
+def _inverse_scorer_parity_output_role(
+    proof: dict[str, Any],
+    *,
+    output_path: Path,
+    repo_root: Path,
+) -> str | None:
+    for role in ("source", "candidate"):
+        tree = proof.get(f"{role}_output_tree")
+        tree_path = tree.get("path") if isinstance(tree, dict) else None
+        if _referenced_path_matches(tree_path, output_path, repo_root=repo_root):
+            return role
+        run = proof.get(f"{role}_inflate_run")
+        run_path = run.get("output_dir") if isinstance(run, dict) else None
+        if _referenced_path_matches(run_path, output_path, repo_root=repo_root):
+            return role
+    return None
+
+
+def _inverse_scorer_parity_candidate(
+    *,
+    output_path: Path,
+    repo_root: Path,
+    proof_path: Path,
+    proof: dict[str, Any],
+    role: str,
+) -> RetentionCandidate:
+    blockers: list[str] = []
+    proof_sha = sha256_file(proof_path)
+    source_tree = proof.get("source_output_tree")
+    candidate_tree = proof.get("candidate_output_tree")
+    tree = proof.get(f"{role}_output_tree")
+    certificate: dict[str, Any] = {
+        "kind": INVERSE_SCORER_INFLATE_PARITY_RAW_KIND,
+        "role": role,
+        "proof_path": _rel(proof_path, repo_root),
+        "proof_sha256": proof_sha,
+        "proof_schema": proof.get("schema"),
+    }
+
+    _append_inverse_scorer_strict_proof_blockers(blockers, proof, proof_path=proof_path)
+    _append_inverse_scorer_runtime_rebuild_blockers(
+        blockers,
+        proof,
+        repo_root=repo_root,
+        output_path=output_path,
+    )
+    _append_inverse_scorer_output_tree_blockers(
+        blockers,
+        tree,
+        output_path=output_path,
+        repo_root=repo_root,
+        prefix=f"inverse_scorer_{role}_output_tree",
+    )
+    _append_inverse_scorer_tree_pair_blockers(blockers, source_tree, candidate_tree)
+    _append_preserved_reference_blockers(
+        blockers,
+        proof_path,
+        output_path=output_path,
+        prefix="inverse_scorer_parity_probe",
+    )
+
+    if isinstance(tree, dict):
+        certificate["output_tree_sha256"] = tree.get("tree_sha256")
+        certificate["output_tree_total_bytes"] = tree.get("total_bytes")
+        certificate["output_tree_file_count"] = tree.get("file_count")
+    descriptor = proof.get("inverse_scorer_cell_descriptor")
+    if isinstance(descriptor, dict):
+        certificate["descriptor_packet_sha256"] = descriptor.get("packet_sha256")
+        certificate["descriptor_packet_offset"] = descriptor.get("packet_offset")
+        certificate["descriptor_packet_bytes"] = descriptor.get("packet_bytes")
+    for key in ("source_archive_inflated", "candidate_archive_inflated", "inflate_runtime"):
+        value = proof.get(key)
+        if isinstance(value, dict):
+            certificate[key] = {
+                item_key: value.get(item_key)
+                for item_key in ("path", "sha256", "inflate_sh", "inflate_sh_sha256")
+                if item_key in value
+            }
+    return RetentionCandidate(
+        path=_rel(output_path, repo_root),
+        kind=INVERSE_SCORER_INFLATE_PARITY_RAW_KIND,
+        bytes=directory_size_bytes(output_path),
+        certified_rebuildable=not blockers,
+        certificate=certificate,
+        blockers=blockers,
+    )
+
+
+def _append_inverse_scorer_strict_proof_blockers(
+    blockers: list[str],
+    proof: dict[str, Any],
+    *,
+    proof_path: Path,
+) -> None:
+    if proof.get("schema") != INVERSE_SCORER_INFLATE_PARITY_PROBE_SCHEMA:
+        blockers.append("inverse_scorer_parity_probe_schema_mismatch")
+    if proof.get("proof_scope") != INVERSE_SCORER_INFLATE_PARITY_SCOPE:
+        blockers.append("inverse_scorer_parity_scope_not_full_frame")
+    if proof.get("full_frame_inflate_output_parity_claim") is not True:
+        blockers.append("inverse_scorer_full_frame_parity_claim_not_true")
+    if proof.get("output_contract_paths_match") is not True:
+        blockers.append("inverse_scorer_output_contract_paths_not_matched")
+    if proof.get("output_contract_nonempty") is not True:
+        blockers.append("inverse_scorer_output_contract_empty")
+    if proof.get("output_bytes_identical") is not True:
+        blockers.append("inverse_scorer_output_bytes_not_identical")
+    if INVERSE_SCORER_PARITY_BLOCKER not in set(proof.get("cleared_blockers") or []):
+        blockers.append("inverse_scorer_parity_blocker_not_cleared")
+    if proof.get("work_dir_retained") is not True:
+        blockers.append("inverse_scorer_work_dir_retained_not_true")
+    proof_blockers = proof.get("blockers")
+    if not isinstance(proof_blockers, list):
+        blockers.append("inverse_scorer_parity_probe_blockers_not_list")
+    elif proof_blockers:
+        blockers.append("inverse_scorer_parity_probe_has_blockers")
+    dispatch_blockers = {str(item) for item in proof.get("dispatch_blockers") or []}
+    for required in (
+        "inverse_scorer_cell_inflate_parity_is_not_score_authority",
+        "exact_auth_eval_required_before_score_claim",
+    ):
+        if required not in dispatch_blockers:
+            blockers.append(f"inverse_scorer_parity_dispatch_blocker_missing:{required}")
+    _append_required_false_blockers(
+        blockers,
+        proof,
+        prefix="inverse_scorer_parity_probe",
+        fields=INVERSE_SCORER_AUTHORITY_FALSE_FIELDS,
+    )
+    _append_recursive_truthy_authority_blockers(
+        blockers,
+        proof,
+        prefix="inverse_scorer_parity_probe",
+        fields=set(INVERSE_SCORER_AUTHORITY_FALSE_FIELDS),
+    )
+    if not proof_path.is_file():
+        blockers.append("inverse_scorer_parity_probe_file_missing")
+    if proof_path.is_symlink():
+        blockers.append("inverse_scorer_parity_probe_is_symlink")
+
+
+def _append_inverse_scorer_runtime_rebuild_blockers(
+    blockers: list[str],
+    proof: dict[str, Any],
+    *,
+    repo_root: Path,
+    output_path: Path,
+) -> None:
+    for key in ("source_inflate_run", "candidate_inflate_run"):
+        run = proof.get(key)
+        if not isinstance(run, dict):
+            blockers.append(f"inverse_scorer_{key}_missing")
+            continue
+        if run.get("returncode") != 0:
+            blockers.append(f"inverse_scorer_{key}_returncode_nonzero")
+        if run.get("full_frame_file_list_claim") is not True:
+            blockers.append(f"inverse_scorer_{key}_full_frame_file_list_claim_not_true")
+        entries = run.get("file_list_entries")
+        if not isinstance(entries, list) or not entries:
+            blockers.append(f"inverse_scorer_{key}_file_list_entries_missing")
+
+    runtime = proof.get("inflate_runtime")
+    if not isinstance(runtime, dict):
+        blockers.append("inverse_scorer_inflate_runtime_missing")
+    else:
+        inflate_sh = _resolve_referenced_path_preserving_leaf(
+            runtime.get("inflate_sh"),
+            repo_root=repo_root,
+            cache_root=output_path,
+        )
+        expected_sha = runtime.get("inflate_sh_sha256")
+        if inflate_sh is None or not inflate_sh.is_file():
+            blockers.append("inverse_scorer_inflate_runtime_inflate_sh_missing")
+        elif inflate_sh.is_symlink():
+            blockers.append("inverse_scorer_inflate_runtime_inflate_sh_path_is_symlink")
+        elif not isinstance(expected_sha, str) or len(expected_sha) != 64:
+            blockers.append("inverse_scorer_inflate_runtime_inflate_sh_sha256_missing")
+        elif sha256_file(inflate_sh) != expected_sha:
+            blockers.append("inverse_scorer_inflate_runtime_inflate_sh_sha256_mismatch")
+        else:
+            _append_preserved_reference_blockers(
+                blockers,
+                inflate_sh,
+                output_path=output_path,
+                prefix="inverse_scorer_inflate_runtime_inflate_sh",
+            )
+        if runtime.get("full_frame_file_list_claim") is not True:
+            blockers.append("inverse_scorer_inflate_runtime_full_frame_file_list_claim_not_true")
+
+    for key in ("source_archive_inflated", "candidate_archive_inflated"):
+        _append_inverse_scorer_file_record_blockers(
+            blockers,
+            proof.get(key),
+            repo_root=repo_root,
+            output_path=output_path,
+            prefix=f"inverse_scorer_{key}",
+        )
+    _append_inverse_scorer_file_record_blockers(
+        blockers,
+        proof.get("candidate_manifest"),
+        repo_root=repo_root,
+        output_path=output_path,
+        prefix="inverse_scorer_candidate_manifest",
+    )
+
+    descriptor = proof.get("inverse_scorer_cell_descriptor")
+    if not isinstance(descriptor, dict):
+        blockers.append("inverse_scorer_descriptor_missing")
+    else:
+        for key in ("packet_sha256", "json_sha256"):
+            value = descriptor.get(key)
+            if not isinstance(value, str) or len(value) != 64:
+                blockers.append(f"inverse_scorer_descriptor_{key}_missing")
+        if not isinstance(descriptor.get("packet_offset"), int):
+            blockers.append("inverse_scorer_descriptor_packet_offset_missing")
+        if not isinstance(descriptor.get("packet_bytes"), int) or descriptor.get("packet_bytes") <= 0:
+            blockers.append("inverse_scorer_descriptor_packet_bytes_missing")
+
+
+def _append_inverse_scorer_file_record_blockers(
+    blockers: list[str],
+    record: Any,
+    *,
+    repo_root: Path,
+    output_path: Path,
+    prefix: str,
+) -> None:
+    if not isinstance(record, dict):
+        blockers.append(f"{prefix}_missing")
+        return
+    path = _resolve_referenced_path_preserving_leaf(
+        record.get("path"),
+        repo_root=repo_root,
+        cache_root=output_path,
+    )
+    expected_sha = record.get("sha256")
+    if path is None or not path.is_file():
+        blockers.append(f"{prefix}_path_missing_or_not_found")
+        return
+    if path.is_symlink():
+        blockers.append(f"{prefix}_path_is_symlink")
+        return
+    if not isinstance(expected_sha, str) or len(expected_sha) != 64:
+        blockers.append(f"{prefix}_sha256_missing")
+    elif sha256_file(path) != expected_sha:
+        blockers.append(f"{prefix}_sha256_mismatch")
+    _append_preserved_reference_blockers(
+        blockers,
+        path,
+        output_path=output_path,
+        prefix=prefix,
+    )
+
+
+def _append_inverse_scorer_output_tree_blockers(
+    blockers: list[str],
+    tree: Any,
+    *,
+    output_path: Path,
+    repo_root: Path,
+    prefix: str,
+) -> None:
+    if not isinstance(tree, dict):
+        blockers.append(f"{prefix}_missing")
+        return
+    if not _referenced_path_matches(tree.get("path"), output_path, repo_root=repo_root):
+        blockers.append(f"{prefix}_path_mismatch")
+    if tree.get("exists") is not True:
+        blockers.append(f"{prefix}_exists_not_true")
+    tree_blockers = tree.get("blockers")
+    if not isinstance(tree_blockers, list):
+        blockers.append(f"{prefix}_blockers_not_list")
+    elif tree_blockers:
+        blockers.append(f"{prefix}_has_blockers")
+    if not isinstance(tree.get("tree_sha256"), str) or len(tree.get("tree_sha256")) != 64:
+        blockers.append(f"{prefix}_tree_sha256_missing")
+    files = tree.get("files")
+    if not isinstance(files, list) or not files:
+        blockers.append(f"{prefix}_files_missing")
+    else:
+        _append_manifest_file_hash_blockers(
+            blockers,
+            root=output_path,
+            files=files,
+            prefix=prefix,
+        )
+    raw_count = _raw_file_count(output_path)
+    if raw_count <= 0:
+        blockers.append(f"{prefix}_raw_files_missing")
+    if tree.get("file_count") != len(files or []):
+        blockers.append(f"{prefix}_file_count_mismatch")
+    if int(tree.get("total_bytes") or -1) != directory_size_bytes(output_path):
+        blockers.append(f"{prefix}_total_bytes_mismatch")
+
+
+def _append_inverse_scorer_tree_pair_blockers(
+    blockers: list[str],
+    source_tree: Any,
+    candidate_tree: Any,
+) -> None:
+    if not isinstance(source_tree, dict) or not isinstance(candidate_tree, dict):
+        blockers.append("inverse_scorer_output_tree_pair_missing")
+        return
+    for label, tree in (("source", source_tree), ("candidate", candidate_tree)):
+        tree_blockers = tree.get("blockers")
+        if not isinstance(tree_blockers, list):
+            blockers.append(f"inverse_scorer_{label}_output_tree_blockers_not_list")
+        elif tree_blockers:
+            blockers.append(f"inverse_scorer_{label}_output_tree_has_blockers")
+    if not isinstance(source_tree.get("files"), list) or not isinstance(candidate_tree.get("files"), list):
+        blockers.append("inverse_scorer_output_tree_pair_files_missing")
+        return
+    if source_tree.get("file_count") != candidate_tree.get("file_count"):
+        blockers.append("inverse_scorer_output_tree_pair_file_count_mismatch")
+    if source_tree.get("total_bytes") != candidate_tree.get("total_bytes"):
+        blockers.append("inverse_scorer_output_tree_pair_total_bytes_mismatch")
+    if source_tree.get("tree_sha256") != candidate_tree.get("tree_sha256"):
+        blockers.append("inverse_scorer_output_tree_pair_tree_sha256_mismatch")
+
+
+def _append_preserved_reference_blockers(
+    blockers: list[str],
+    reference: Path,
+    *,
+    output_path: Path,
+    prefix: str,
+) -> None:
+    try:
+        reference.resolve().relative_to(output_path.resolve())
+    except ValueError:
+        return
+    blockers.append(f"{prefix}_would_be_removed_with_raw_output")
+
+
+def _contains_raw_file(path: Path) -> bool:
+    return _raw_file_count(path) > 0
+
+
+def _raw_file_count(path: Path) -> int:
+    try:
+        return sum(1 for item in path.rglob("*.raw") if item.is_file() and not item.is_symlink())
+    except OSError:
+        return 0
+
+
 def _mlx_cache_artifact_hashes(
     manifest: dict[str, Any],
     blockers: list[str],
@@ -643,6 +1097,26 @@ def _resolve_referenced_path(
     return None
 
 
+def _resolve_referenced_path_preserving_leaf(
+    value: Any,
+    *,
+    repo_root: Path,
+    cache_root: Path,
+) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = Path(value)
+    candidates = [raw] if raw.is_absolute() else [
+        repo_root / raw,
+        cache_root / raw,
+        raw,
+    ]
+    for candidate in candidates:
+        if candidate.exists() or candidate.is_symlink():
+            return candidate
+    return None
+
+
 def _append_authority_false_blockers(
     blockers: list[str],
     payload: dict[str, Any],
@@ -652,6 +1126,71 @@ def _append_authority_false_blockers(
     for name in AUTHORITY_FALSE_FIELDS:
         if payload.get(name) is not False:
             blockers.append(f"{prefix}_{name}_not_false")
+
+
+def _append_required_false_blockers(
+    blockers: list[str],
+    payload: dict[str, Any],
+    *,
+    prefix: str,
+    fields: Iterable[str],
+) -> None:
+    for name in fields:
+        if payload.get(name) is not False:
+            blockers.append(f"{prefix}_{name}_not_false")
+
+
+def _append_recursive_truthy_authority_blockers(
+    blockers: list[str],
+    payload: Any,
+    *,
+    prefix: str,
+    fields: set[str],
+) -> None:
+    def walk(value: Any, parts: tuple[str, ...]) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                key_text = str(key)
+                next_parts = (*parts, key_text)
+                if key_text in fields and item is not False:
+                    blockers.append(f"{prefix}_authority_field_not_false:{'.'.join(next_parts)}")
+                walk(item, next_parts)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                walk(item, (*parts, str(index)))
+
+    walk(payload, ())
+
+
+def _ordered_unique(items: Iterable[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def _referenced_path_matches(
+    actual: Any,
+    expected: Path,
+    *,
+    repo_root: Path,
+) -> bool:
+    if not isinstance(actual, str) or not actual:
+        return False
+    raw = Path(actual)
+    candidates = [raw] if raw.is_absolute() else [repo_root / raw, raw]
+    for candidate in candidates:
+        try:
+            if candidate.resolve() == expected.resolve():
+                return True
+        except OSError:
+            if candidate == expected:
+                return True
+    return False
 
 
 def _append_manifest_file_hash_blockers(
@@ -673,7 +1212,11 @@ def _append_manifest_file_hash_blockers(
         if not isinstance(raw_sha, str) or len(raw_sha) != 64:
             blockers.append(f"{prefix}_file_{index}_sha256_missing")
             continue
-        file_path = (root / raw_path).resolve()
+        raw_file_path = root / raw_path
+        if raw_file_path.is_symlink():
+            blockers.append(f"{prefix}_file_{index}_is_symlink")
+            continue
+        file_path = raw_file_path.resolve()
         try:
             file_path.relative_to(root.resolve())
         except ValueError:
@@ -807,6 +1350,7 @@ def build_retention_plan(
         _certify_locality_inflated,
         _certify_local_cpu_advisory,
         _certify_mlx_cache,
+        _certify_inverse_scorer_inflate_parity_raw,
     )
     for root in roots:
         for path in _iter_candidate_dirs(root):
@@ -1227,6 +1771,7 @@ def _execution_revalidation_blockers(
         "local_cpu_advisory_inflated_raw": _certify_local_cpu_advisory,
         "local_cpu_advisory_extracted_scratch": _certify_local_cpu_advisory,
         "mlx_scorer_input_cache": _certify_mlx_cache,
+        INVERSE_SCORER_INFLATE_PARITY_RAW_KIND: _certify_inverse_scorer_inflate_parity_raw,
     }.get(candidate.kind)
     if certifier is None:
         blockers.append(f"unknown_candidate_kind:{candidate.kind}")

@@ -1014,11 +1014,26 @@ def _candidate_archive_custody(
     repo: Path,
     resolved_path: Path | None = None,
 ) -> dict[str, Any]:
-    path = resolved_path or _resolve_optional_path(record.get("path"), repo)
     blockers: list[str] = []
+    path_text = _clean_str(record.get("path"))
+    if _manifest_ref_has_parent_traversal(path_text):
+        blockers.append("candidate_archive_path_unsafe_parent_reference")
+        return {
+            "path": path_text,
+            "exists": False,
+            "blockers": ordered_unique(blockers),
+        }
+    path = resolved_path or _resolve_optional_path(record.get("path"), repo)
     if path is None:
         blockers.append("candidate_archive_path_missing_or_unreadable")
         return {"path": _clean_str(record.get("path")), "exists": False, "blockers": blockers}
+    if path.is_symlink():
+        blockers.append("candidate_archive_path_is_symlink")
+        return {
+            "path": repo_relative(path, repo),
+            "exists": True,
+            "blockers": ordered_unique(blockers),
+        }
     actual_sha = sha256_file(path)
     actual_bytes = path.stat().st_size
     expected_sha = _clean_str(record.get("sha256"))
@@ -1191,18 +1206,22 @@ def _candidate_manifest_path_from_adapter_record(
     path = Path(path_text)
     if path.is_absolute():
         return path
-    repo_path = repo / path
-    if repo_path.exists():
+    if _manifest_ref_has_parent_traversal(path_text):
+        raise InverseScorerCellMaterializerError(
+            "runtime adapter candidate_manifest.path contains parent traversal"
+        )
+    repo_path = _safe_existing_child(repo, path)
+    if repo_path is not None:
         return repo_path
     adapter_path_text = _clean_str(adapter_record.get("path"))
     if adapter_path_text:
         adapter_path = Path(adapter_path_text)
         if not adapter_path.is_absolute():
             adapter_path = repo / adapter_path
-        sibling_path = adapter_path.parent / path
-        if sibling_path.exists():
+        sibling_path = _safe_existing_child(adapter_path.parent, path)
+        if sibling_path is not None:
             return sibling_path
-    return repo_path
+    return repo / path
 
 
 def _candidate_archive_path_from_manifest_record(
@@ -1217,18 +1236,42 @@ def _candidate_archive_path_from_manifest_record(
     path = Path(path_text)
     if path.is_absolute():
         return path if path.exists() else None
-    repo_path = repo / path
-    if repo_path.exists():
+    if _manifest_ref_has_parent_traversal(path_text):
+        return None
+    repo_path = _safe_existing_child(repo, path)
+    if repo_path is not None:
         return repo_path
     manifest_path_text = _clean_str(manifest_record.get("path"))
     if manifest_path_text:
         manifest_path = Path(manifest_path_text)
         if not manifest_path.is_absolute():
             manifest_path = repo / manifest_path
-        sibling_path = manifest_path.parent / path
-        if sibling_path.exists():
+        sibling_path = _safe_existing_child(manifest_path.parent, path)
+        if sibling_path is not None:
             return sibling_path
-    return repo_path if repo_path.exists() else None
+    return None
+
+
+def _manifest_ref_has_parent_traversal(path_text: str) -> bool:
+    if not path_text:
+        return False
+    path = Path(path_text)
+    return not path.is_absolute() and ".." in path.parts
+
+
+def _safe_existing_child(base: Path, relative_path: Path) -> Path | None:
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        return None
+    candidate = base / relative_path
+    if not candidate.exists():
+        return None
+    if candidate.is_symlink():
+        return None
+    try:
+        candidate.resolve().relative_to(base.resolve())
+    except ValueError:
+        return None
+    return candidate
 
 
 def _resolve_existing_path(value: str | Path, repo: Path) -> Path:
@@ -1237,6 +1280,8 @@ def _resolve_existing_path(value: str | Path, repo: Path) -> Path:
         path = repo / path
     if not path.exists():
         raise InverseScorerCellMaterializerError(f"path does not exist: {path}")
+    if path.is_symlink():
+        raise InverseScorerCellMaterializerError(f"path is a symlink: {path}")
     return path
 
 
@@ -1261,6 +1306,8 @@ def _refuse_overwrite_unless_expected(
     allow_overwrite: bool,
     expected_sha256: str | None,
 ) -> None:
+    if path.is_symlink():
+        raise InverseScorerCellMaterializerError(f"{path}: output path must not be a symlink")
     if not path.exists():
         return
     if not allow_overwrite:

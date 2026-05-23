@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -64,6 +65,8 @@ def build_inverse_scorer_cell_inflate_parity_probe(
         blockers.append("source_archive_sha256_missing")
     if not candidate_archive.get("sha256"):
         blockers.append("candidate_archive_sha256_missing")
+    blockers.extend(_archive_record_path_blockers(source_archive, label="source_archive"))
+    blockers.extend(_archive_record_path_blockers(candidate_archive, label="candidate_archive"))
 
     source_tree: dict[str, Any] = _missing_tree_record("source_inflate_output_dir_missing")
     candidate_tree: dict[str, Any] = _missing_tree_record("candidate_inflate_output_dir_missing")
@@ -169,20 +172,24 @@ def build_inverse_scorer_cell_inflate_parity_probe_from_archives(
     """
 
     repo = Path(repo_root) if repo_root is not None else Path.cwd()
-    candidate, _candidate_record = _load_candidate(candidate_manifest, repo=repo)
+    candidate, candidate_record = _load_candidate(candidate_manifest, repo=repo)
     runtime = _resolve_existing_dir(inflate_runtime_dir, repo)
     inflate_sh = runtime / "inflate.sh"
     if not inflate_sh.is_file():
         raise InverseScorerCellInflateParityError(f"inflate.sh missing from runtime dir: {runtime}")
+    if inflate_sh.is_symlink():
+        raise InverseScorerCellInflateParityError(f"inflate.sh is a symlink: {inflate_sh}")
     source_archive_path = _resolve_archive_for_parity(
         source_archive,
         fallback=_archive_record(candidate.get("template_archive")),
+        candidate_record=candidate_record,
         repo=repo,
         label="source archive",
     )
     candidate_archive_path = _resolve_archive_for_parity(
         candidate_archive,
         fallback=_archive_record(candidate.get("candidate_archive")),
+        candidate_record=candidate_record,
         repo=repo,
         label="candidate archive",
     )
@@ -199,6 +206,33 @@ def build_inverse_scorer_cell_inflate_parity_probe_from_archives(
         _archive_record(candidate.get("candidate_archive")).get("sha256"),
         "candidate_inflate_archive_sha_mismatch",
     )
+    if archive_blockers:
+        proof = _blocked_archive_parity_probe(
+            candidate_manifest=candidate_manifest,
+            candidate=candidate,
+            repo=repo,
+            proof_scope=proof_scope,
+            runtime=runtime,
+            source_archive_path=source_archive_path,
+            candidate_archive_path=candidate_archive_path,
+            source_run=_preflight_blocked_inflate_run(
+                label="source",
+                timeout_seconds=timeout_seconds,
+                file_list_entries=file_list_entries,
+                blockers=archive_blockers,
+            ),
+            candidate_run=_preflight_blocked_inflate_run(
+                label="candidate",
+                timeout_seconds=timeout_seconds,
+                file_list_entries=file_list_entries,
+                blockers=archive_blockers,
+            ),
+            blockers=archive_blockers,
+            expect_output_byte_identical=expect_output_byte_identical,
+        )
+        proof["work_dir"] = ""
+        proof["work_dir_retained"] = False
+        return proof
 
     temp_root: Path | None = None
     if work_dir is None:
@@ -206,8 +240,10 @@ def build_inverse_scorer_cell_inflate_parity_probe_from_archives(
         root = temp_root
     else:
         root = _repo_path(Path(work_dir), repo)
-        if root.exists():
-            shutil.rmtree(root)
+        if root.exists() or root.is_symlink():
+            raise InverseScorerCellInflateParityError(
+                f"inflate parity work_dir already exists: {root}"
+            )
         root.mkdir(parents=True)
     source_run = _run_inflate(
         inflate_sh=inflate_sh,
@@ -228,6 +264,10 @@ def build_inverse_scorer_cell_inflate_parity_probe_from_archives(
         run_blockers.append("source_inflate_runtime_failed")
     if candidate_run["returncode"] != 0:
         run_blockers.append("candidate_inflate_runtime_failed")
+    if source_run.get("full_frame_file_list_claim") is not True:
+        run_blockers.append("source_inflate_file_list_not_full_frame")
+    if candidate_run.get("full_frame_file_list_claim") is not True:
+        run_blockers.append("candidate_inflate_file_list_not_full_frame")
 
     if run_blockers:
         proof = _blocked_archive_parity_probe(
@@ -373,6 +413,16 @@ def verify_inverse_scorer_cell_inflate_parity_probe(
 def _output_tree_record(path: Path | None, *, repo: Path, label: str) -> dict[str, Any]:
     if path is None:
         return _missing_tree_record(f"{label}_inflate_output_dir_missing")
+    if path.is_symlink():
+        return {
+            "path": repo_relative(path, repo),
+            "exists": True,
+            "file_count": 0,
+            "total_bytes": 0,
+            "tree_sha256": "",
+            "files": [],
+            "blockers": [f"{label}_inflate_output_dir_is_symlink"],
+        }
     records: list[dict[str, Any]] = []
     blockers: list[str] = []
     total_bytes = 0
@@ -503,6 +553,8 @@ def _resolve_optional_dir(value: str | Path, repo: Path) -> Path | None:
     path = Path(value)
     if not path.is_absolute():
         path = repo / path
+    if path.is_symlink():
+        return path
     return path if path.is_dir() else None
 
 
@@ -512,6 +564,8 @@ def _resolve_existing_path(value: str | Path, repo: Path) -> Path:
         path = repo / path
     if not path.exists():
         raise InverseScorerCellInflateParityError(f"path does not exist: {path}")
+    if path.is_symlink():
+        raise InverseScorerCellInflateParityError(f"path is a symlink: {path}")
     return path
 
 
@@ -637,7 +691,7 @@ def _run_inflate(
             "returncode": proc.returncode,
             "timeout_seconds": timeout_seconds,
             "file_list_entries": entries,
-            "full_frame_file_list_claim": True,
+            "full_frame_file_list_claim": _full_frame_file_list_claim(entries),
             "stdout_tail": proc.stdout[-2000:],
             "stderr_tail": proc.stderr[-2000:],
             "output_dir": str(output_dir),
@@ -647,7 +701,7 @@ def _run_inflate(
             "returncode": 124,
             "timeout_seconds": timeout_seconds,
             "file_list_entries": entries,
-            "full_frame_file_list_claim": True,
+            "full_frame_file_list_claim": _full_frame_file_list_claim(entries),
             "stdout_tail": (exc.stdout or "")[-2000:] if isinstance(exc.stdout, str) else "",
             "stderr_tail": (exc.stderr or "")[-2000:] if isinstance(exc.stderr, str) else "",
             "output_dir": str(output_dir),
@@ -658,7 +712,7 @@ def _run_inflate(
             "returncode": 1,
             "timeout_seconds": timeout_seconds,
             "file_list_entries": entries,
-            "full_frame_file_list_claim": True,
+            "full_frame_file_list_claim": _full_frame_file_list_claim(entries),
             "stdout_tail": "",
             "stderr_tail": "",
             "output_dir": str(output_dir),
@@ -666,14 +720,54 @@ def _run_inflate(
         }
 
 
+def _preflight_blocked_inflate_run(
+    *,
+    label: str,
+    timeout_seconds: int,
+    file_list_entries: Sequence[str],
+    blockers: Sequence[str],
+) -> dict[str, Any]:
+    entries = [str(item) for item in file_list_entries if str(item)]
+    return {
+        "returncode": 1,
+        "timeout_seconds": timeout_seconds,
+        "file_list_entries": entries,
+        "full_frame_file_list_claim": _full_frame_file_list_claim(entries),
+        "stdout_tail": "",
+        "stderr_tail": "",
+        "output_dir": "",
+        "preflight_blocked": True,
+        "label": label,
+        "blockers": [str(item) for item in blockers],
+    }
+
+
+def _full_frame_file_list_claim(entries: Sequence[str]) -> bool:
+    return [str(item) for item in entries] == ["0.mkv"]
+
+
 def _extract_archive(archive: Path, data_dir: Path) -> None:
+    seen: set[str] = set()
     with zipfile.ZipFile(archive) as zf:
         for info in zf.infolist():
             name = info.filename
-            if not name or name.startswith("/") or ".." in Path(name).parts:
+            mode = (info.external_attr >> 16) & 0o170000
+            if mode == stat.S_IFLNK:
+                raise InverseScorerCellInflateParityError(
+                    f"unsafe archive symlink member for inflate parity: {name!r}"
+                )
+            if (
+                not name
+                or name in seen
+                or "\\" in name
+                or name.startswith("/")
+                or (len(name) >= 3 and name[1] == ":" and name[2] in {"/", "\\"})
+                or ".." in Path(name).parts
+            ):
                 raise InverseScorerCellInflateParityError(
                     f"unsafe archive member for inflate parity: {name!r}"
                 )
+            seen.add(name)
             target = data_dir / name
             target.parent.mkdir(parents=True, exist_ok=True)
             if name.endswith("/"):
@@ -688,6 +782,8 @@ def _resolve_existing_dir(value: str | Path, repo: Path) -> Path:
         path = repo / path
     if not path.is_dir():
         raise InverseScorerCellInflateParityError(f"directory does not exist: {path}")
+    if path.is_symlink():
+        raise InverseScorerCellInflateParityError(f"directory is a symlink: {path}")
     return path
 
 
@@ -695,6 +791,7 @@ def _resolve_archive_for_parity(
     value: str | Path | None,
     *,
     fallback: Mapping[str, Any],
+    candidate_record: Mapping[str, Any],
     repo: Path,
     label: str,
 ) -> Path:
@@ -703,7 +800,71 @@ def _resolve_archive_for_parity(
     path_text = str(fallback.get("path") or "")
     if not path_text:
         raise InverseScorerCellInflateParityError(f"{label} path missing")
-    return _resolve_existing_path(path_text, repo)
+    return _resolve_manifest_archive_ref(
+        path_text,
+        repo=repo,
+        candidate_record=candidate_record,
+        label=label,
+    )
+
+
+def _archive_record_path_blockers(record: Mapping[str, Any], *, label: str) -> list[str]:
+    path_text = str(record.get("path") or "")
+    if _manifest_ref_has_parent_traversal(path_text):
+        return [f"{label}_path_unsafe_parent_reference"]
+    return []
+
+
+def _resolve_manifest_archive_ref(
+    path_text: str,
+    *,
+    repo: Path,
+    candidate_record: Mapping[str, Any],
+    label: str,
+) -> Path:
+    path = Path(path_text)
+    if path.is_absolute():
+        if not path.exists():
+            raise InverseScorerCellInflateParityError(f"{label} path does not exist: {path}")
+        if path.is_symlink():
+            raise InverseScorerCellInflateParityError(f"{label} path is a symlink: {path}")
+        return path
+    if _manifest_ref_has_parent_traversal(path_text):
+        raise InverseScorerCellInflateParityError(f"{label} path contains parent traversal")
+    repo_path = _safe_existing_child(repo, path)
+    if repo_path is not None:
+        return repo_path
+    manifest_path_text = str(candidate_record.get("path") or "")
+    if manifest_path_text:
+        manifest_path = Path(manifest_path_text)
+        if not manifest_path.is_absolute():
+            manifest_path = repo / manifest_path
+        sibling_path = _safe_existing_child(manifest_path.parent, path)
+        if sibling_path is not None:
+            return sibling_path
+    raise InverseScorerCellInflateParityError(f"{label} path does not exist: {path_text}")
+
+
+def _manifest_ref_has_parent_traversal(path_text: str) -> bool:
+    if not path_text:
+        return False
+    path = Path(path_text)
+    return not path.is_absolute() and ".." in path.parts
+
+
+def _safe_existing_child(base: Path, relative_path: Path) -> Path | None:
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        return None
+    candidate = base / relative_path
+    if not candidate.exists():
+        return None
+    if candidate.is_symlink():
+        return None
+    try:
+        candidate.resolve().relative_to(base.resolve())
+    except ValueError:
+        return None
+    return candidate
 
 
 def _archive_path_record(path: Path, *, repo: Path) -> dict[str, Any]:

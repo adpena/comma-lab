@@ -73,6 +73,31 @@ def _parse_pair_indices(value: str | None) -> list[int] | None:
     return out
 
 
+def _parse_resource_concurrency(values: list[str]) -> dict[str, int]:
+    parsed: dict[str, int] = {}
+    for raw in values:
+        if "=" not in raw:
+            raise SystemExit(
+                "--materializer-resource-concurrency entries must be KIND=LIMIT"
+            )
+        key, value = raw.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise SystemExit("--materializer-resource-concurrency KIND must be non-empty")
+        try:
+            limit = int(value)
+        except ValueError as exc:
+            raise SystemExit(
+                f"--materializer-resource-concurrency has non-integer limit: {raw!r}"
+            ) from exc
+        if limit < 1:
+            raise SystemExit(
+                f"--materializer-resource-concurrency limit must be >= 1: {raw!r}"
+            )
+        parsed[key] = limit
+    return parsed
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=Path, required=True)
@@ -115,6 +140,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--materializer-execution-lane-id", default=None)
     parser.add_argument("--materializer-execution-limit", type=int, default=None)
     parser.add_argument("--materializer-execution-timeout-seconds", type=int, default=0)
+    parser.add_argument(
+        "--materializer-resource-concurrency",
+        action="append",
+        default=[],
+        metavar="KIND=LIMIT",
+        help=(
+            "Override materializer execution concurrency by resource kind, "
+            "for example local_cpu=8 or local_mlx=2."
+        ),
+    )
     parser.add_argument("--results-root", default=DEFAULT_RESULTS_ROOT)
     parser.add_argument("--completed-results-root", action="append", default=[])
     parser.add_argument("--local-cpu-concurrency", type=int, default=2)
@@ -219,6 +254,9 @@ def main(argv: list[str] | None = None) -> int:
                 lane_id=args.materializer_execution_lane_id,
                 source_work_queue_path=args.materializer_work_queue_out,
                 local_cpu_concurrency=args.local_cpu_concurrency,
+                resource_concurrency=_parse_resource_concurrency(
+                    args.materializer_resource_concurrency
+                ),
                 step_timeout_seconds=args.materializer_execution_timeout_seconds,
                 limit=args.materializer_execution_limit,
             )
