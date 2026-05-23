@@ -484,6 +484,27 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+            "optimizer_scheduler_candidates": [
+                {
+                    "schema": "optimizer_scheduler_descriptor.v1",
+                    "descriptor_id": "muon_adamw_cosine_representation",
+                    "optimizer": "tac.optimization.muon.MuonOptimizer+torch.optim.AdamW",
+                    "scheduler": "cosine_warmup",
+                    "config_sha256": "a" * 64,
+                    "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+                    "parameter_group_lr_policy": {
+                        "schema": "parameter_group_lr_policy.v1",
+                        "policy_id": "embedding_theta1_hidden_muon_adamw",
+                    },
+                    "allowed_axis_tags": ["[macOS-MLX research-signal]"],
+                    "allowed_target_modes": ["mlx_research_signal"],
+                    "rank_score_field": "planner_priority_not_score",
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
             "ranked_sweep_rows": [
                 {
                     "schema": "mlx_dynamic_learned_sweep_row.v1",
@@ -530,6 +551,66 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
         "prefix_k032"
     )
     assert validate_proxy_candidate(row) == []
+    recipe = next(
+        item
+        for item in queue["top_k"]
+        if item["candidate_id"] == "optimizer_scheduler::muon_adamw_cosine_representation"
+    )
+    assert recipe["parameter_group_lr_policy_id"] == "embedding_theta1_hidden_muon_adamw"
+    assert recipe["ready_for_exact_eval_dispatch"] is False
+    assert recipe["score_claim"] is False
+    assert recipe["consumer_payload"]["optimizer_scheduler_recipe"]["config_sha256"] == "a" * 64
+    assert "requires_training_telemetry_before_candidate_selection" in recipe["dispatch_blockers"]
+    assert validate_proxy_candidate(recipe) == []
+
+
+def test_candidate_queue_sorts_mixed_ranked_and_planning_only_rows(
+    tmp_path: Path,
+) -> None:
+    plan = _write_json(
+        tmp_path / "mixed_rows.json",
+        {
+            "schema": "mlx_dynamic_learned_sweep_plan.v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "optimizer_scheduler_candidates": [
+                {
+                    "schema": "optimizer_scheduler_descriptor.v1",
+                    "descriptor_id": "adamw_cosine_micro",
+                    "optimizer": "torch.optim.AdamW",
+                    "scheduler": "cosine_warmup",
+                    "config_sha256": "b" * 64,
+                    "rank_score_field": "planner_priority_not_score",
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+            "ranked_sweep_rows": [
+                {
+                    "schema": "mlx_dynamic_learned_sweep_row.v1",
+                    "candidate_id": "ranked",
+                    "sweep_config_id": "local",
+                    "optimization_pass_id": "micro",
+                    "acquisition_value": 0.01,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+        },
+    )
+
+    queue = build_candidate_queue([plan], repo_root=tmp_path)
+
+    assert [row["candidate_id"] for row in queue["top_k"]] == [
+        "ranked::local::micro",
+        "optimizer_scheduler::adamw_cosine_micro",
+    ]
 
 
 def test_candidate_queue_rejects_mlx_dynamic_sweep_nested_authority(
@@ -669,14 +750,14 @@ def test_sort_key_ignores_unadapted_proxy_score_fields() -> None:
             "predicted_score": 0.0001,
             "macos_cpu_score": 0.0001,
         }
-    ) == (4, "bare_proxy_score")
+    ) == (4, 1, "bare_proxy_score")
     assert candidate_queue_module._candidate_sort_key(
         {
             "candidate_id": "adapted_proxy_score",
             "proxy_score": 0.0001,
             "rank_score": 0.0001,
         }
-    ) == (4, 0.0001, "adapted_proxy_score")
+    ) == (4, 0, 0.0001, "adapted_proxy_score")
 
 
 def test_kaggle_proxy_manifest_becomes_canonical_non_dispatchable_queue_row(

@@ -227,8 +227,8 @@ def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
     for key in ("predicted_contest_cpu_gha", "rank_score", "fitness"):
         value = _as_float(row.get(key))
         if value is not None:
-            return (class_rank, value, str(row.get("candidate_id") or ""))
-    return (class_rank, str(row.get("candidate_id") or ""))
+            return (class_rank, 0, value, str(row.get("candidate_id") or ""))
+    return (class_rank, 1, str(row.get("candidate_id") or ""))
 
 
 def _json_safe(value: Any) -> Any:
@@ -593,6 +593,66 @@ def _mlx_dynamic_learned_sweep_candidates(
     payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    for recipe in payload.get("optimizer_scheduler_candidates") or []:
+        if not isinstance(recipe, Mapping):
+            continue
+        require_no_truthy_authority_fields(
+            recipe,
+            context="mlx_dynamic_learned_sweep_optimizer_scheduler_candidate",
+        )
+        if recipe.get("schema") != "optimizer_scheduler_descriptor.v1":
+            continue
+        descriptor_id = str(recipe.get("descriptor_id") or "")
+        if not descriptor_id:
+            continue
+        row = {
+            "candidate_id": f"optimizer_scheduler::{descriptor_id}",
+            "source_paths": [_repo_rel(source_path, repo_root)],
+            "lane_id": "optimizer_scheduler_registry_planning",
+            "lane_class": "optimizer_scheduler_recipe",
+            "candidate_family": "optimizer_scheduler_recipe",
+            "optimizer_tool": payload.get("tool") or "tools/plan_mlx_dynamic_learned_sweep.py",
+            "descriptor_id": descriptor_id,
+            "optimizer": recipe.get("optimizer"),
+            "scheduler": recipe.get("scheduler"),
+            "config_sha256": recipe.get("config_sha256"),
+            "parameter_group_lr_policy_id": recipe.get("parameter_group_lr_policy_id"),
+            "rank_score": None,
+            "rank_score_field": recipe.get("rank_score_field")
+            or "planner_priority_not_score",
+            "evidence_semantics": (
+                "optimizer_scheduler_registry_recipe_proxy_not_exact_auth_eval"
+            ),
+            "evidence_grade": "[offline-proxy-planning-only]",
+            "consumer_payload": {
+                "schema": "optimizer_scheduler_recipe_candidate_payload.v1",
+                "optimizer_scheduler_recipe": {
+                    "descriptor_id": descriptor_id,
+                    "optimizer": recipe.get("optimizer"),
+                    "scheduler": recipe.get("scheduler"),
+                    "config_sha256": recipe.get("config_sha256"),
+                    "parameter_group_lr_policy": recipe.get("parameter_group_lr_policy"),
+                    "allowed_axis_tags": list(recipe.get("allowed_axis_tags") or []),
+                    "allowed_target_modes": list(recipe.get("allowed_target_modes") or []),
+                    "solver_stack_wire_in": recipe.get("solver_stack_wire_in"),
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotable": False,
+            },
+        }
+        row = apply_proxy_evidence_boundary(
+            row,
+            dispatch_blockers=[
+                "optimizer_scheduler_recipe_is_planning_only",
+                "requires_training_telemetry_before_candidate_selection",
+                "requires_byte_closed_archive_export_before_dispatch_readiness",
+                "requires_exact_auth_eval_result_before_score_claim",
+            ],
+        )
+        rows.append(row)
     for source in payload.get("ranked_sweep_rows") or []:
         if not isinstance(source, Mapping):
             continue
