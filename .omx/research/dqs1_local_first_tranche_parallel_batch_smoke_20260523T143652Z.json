@@ -1,0 +1,403 @@
+{
+  "created_at_utc": "20260523T143654Z",
+  "execute": false,
+  "executor_mode": "dqs1_local_first",
+  "frontier_scan_schema": "pact_frontier_scan_v1",
+  "frontier_scores": {
+    "contest_cpu": 0.19202828295713675,
+    "contest_cuda": 0.20533002902019143
+  },
+  "incumbent_score": "0.20533002902019143",
+  "incumbent_score_by_axis": [
+    "contest_cpu=0.19202828295713675",
+    "contest_cuda=0.20533002902019143"
+  ],
+  "pairset_acquisition": "/Users/adpena/Projects/pact/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/pairset_acquisition/dqs1_pairset_acquisition_full_drop_two_20260523T121036Z.json",
+  "pairset_acquisition_root": "/Users/adpena/Projects/pact/experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+  "portfolio_root": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/cross_family_candidate_portfolio",
+  "promotion_eligible": false,
+  "queue_path": "/Volumes/VertigoDataTier/pact/queues/dqs1_pairset_local_first.yaml",
+  "queue_storage": {
+    "expected_existing_sha256": "63bb26607cb45ffe07f5443244f2538db1d7d821e157bb56b16e77ac70ab6bd0",
+    "mode": "storage_working_queue",
+    "promotion_eligible": false,
+    "queue_id": "dqs1_pairset_local_first_storage",
+    "queue_path": "/Volumes/VertigoDataTier/pact/queues/dqs1_pairset_local_first.yaml",
+    "queue_root": "/Volumes/VertigoDataTier/pact/queues",
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "refresh_command": [
+      ".venv/bin/python",
+      "tools/build_dqs1_local_first_queue.py",
+      "--action-summary",
+      "latest",
+      "--output",
+      "/Volumes/VertigoDataTier/pact/queues/dqs1_pairset_local_first.yaml",
+      "--queue-id",
+      "dqs1_pairset_local_first_storage",
+      "--write",
+      "--results-root",
+      "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+      "--completed-results-root",
+      "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+      "--completed-results-root",
+      "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+      "--completed-results-root",
+      "/Volumes/APDataStore/pact/experiments/results/dqs1_local_first",
+      "--completed-results-root",
+      "/Users/adpena/Projects/pact/experiments/results/dqs1_local_first",
+      "--candidate-limit",
+      "2",
+      "--local-cpu-concurrency",
+      "2",
+      "--include-scheduler-preflight",
+      "--scheduler-storage-workload-subdir",
+      "experiments/results/dqs1_local_first",
+      "--scheduler-storage-expected-workload-root",
+      "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+      "--scheduler-storage-reserve-free-gb",
+      "40.0",
+      "--scheduler-storage-expected-bytes",
+      "0",
+      "--scheduler-proactive-cleanup-action",
+      "move",
+      "--scheduler-proactive-cleanup-min-bytes",
+      "1073741824",
+      "--scheduler-proactive-cleanup-cold-store-reserve-gb",
+      "40.0",
+      "--scheduler-proactive-cleanup-root",
+      "experiments/results",
+      "--scheduler-proactive-cleanup-root",
+      ".omx/tmp",
+      "--scheduler-proactive-cleanup-root",
+      "submissions/robust_current/eval_runs",
+      "--scheduler-proactive-cleanup-cold-store-root",
+      "/Volumes/VertigoDataTier/pact/cold_store",
+      "--scheduler-proactive-cleanup-cold-store-root",
+      "/Volumes/APDataStore/pact/cold_store",
+      "--overwrite-output",
+      "--expected-output-sha256",
+      "63bb26607cb45ffe07f5443244f2538db1d7d821e157bb56b16e77ac70ab6bd0"
+    ],
+    "refresh_elapsed_seconds": 1.4746996669564396,
+    "refresh_result": {
+      "action_summary": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+      "output": "/Volumes/VertigoDataTier/pact/queues/dqs1_pairset_local_first.yaml",
+      "output_allow_overwrite": true,
+      "output_bytes": 32031,
+      "output_free_bytes_before": 1864755576832,
+      "output_sha256": "ea43456d9f893a047fe09dfc7603ce6bcd2fb502b5cd064fd376b5751579d421",
+      "portfolio": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+      "queue_id": "dqs1_pairset_local_first_storage",
+      "selected_candidate_id": "pairset_drop_two_r010_001_p0376_0501",
+      "selected_candidate_ids": [
+        "pairset_drop_two_r010_001_p0376_0501",
+        "pairset_drop_two_r009_005_p0459_0467"
+      ],
+      "selected_pair_indices": [
+        26,
+        59,
+        68,
+        98,
+        109,
+        112,
+        134,
+        151,
+        167,
+        229,
+        242,
+        257,
+        259,
+        296,
+        320,
+        327,
+        371,
+        378,
+        412,
+        430,
+        440,
+        459,
+        467,
+        479,
+        492,
+        496,
+        520,
+        544,
+        555,
+        588
+      ],
+      "skipped_candidates": [
+        {
+          "candidate_id": "pairset_drop_one_rank023_pair0440",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank024_pair0112",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank018_pair0588",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank017_pair0242",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank016_pair0229",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank025_pair0026",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank015_pair0068",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank001_pair0501",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank002_pair0109",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank003_pair0479",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank004_pair0098",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank005_pair0467",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank006_pair0544",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank014_pair0492",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank007_pair0059",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank029_pair0259",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank008_pair0496",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank028_pair0257",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank030_pair0412",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank012_pair0134",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank011_pair0555",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_one_rank009_pair0459",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_two_r010_009_p0376_0459",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_two_r010_005_p0376_0467",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_two_r010_003_p0376_0479",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        },
+        {
+          "candidate_id": "pairset_drop_two_r010_008_p0376_0496",
+          "completed_results_root": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb",
+          "reason": "local_advisory_exists"
+        }
+      ]
+    },
+    "score_claim": false,
+    "source_queue_path": "/Users/adpena/Projects/pact/configs/experiment_queues/dqs1_pairset_local_first.yaml"
+  },
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "results_root": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+  "retention_cold_store_root": "/Volumes/VertigoDataTier/pact/cold_store",
+  "round_limit": 1,
+  "rounds": [
+    {
+      "autopilot": {
+        "candidates_harvested": 0,
+        "command": [
+          ".venv/bin/python",
+          "tools/run_dqs1_local_first_autopilot.py",
+          "--queue",
+          "/Volumes/VertigoDataTier/pact/queues/dqs1_pairset_local_first.yaml",
+          "--max-candidates",
+          "2",
+          "--max-total-steps",
+          "16",
+          "--max-steps-per-worker",
+          "16",
+          "--max-worker-experiments",
+          "2",
+          "--min-free-disk-gb",
+          "40.0",
+          "--retention-action",
+          "move",
+          "--retention-min-bytes",
+          "1",
+          "--retention-cold-store-root",
+          "/Volumes/VertigoDataTier/pact/cold_store",
+          "--retention-cold-store-root",
+          "/Volumes/APDataStore/pact/cold_store",
+          "--results-root",
+          "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first"
+        ],
+        "elapsed_seconds": 0.5397102909628302,
+        "stop_reason": "dry_run",
+        "total_steps_started": 0
+      },
+      "harvest": null,
+      "harvest_count": 0,
+      "harvests": [],
+      "post_harvest_retention": null,
+      "proactive_cleanup": null,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "round_index": 0,
+      "score_claim": false,
+      "terminal": "no_harvest"
+    }
+  ],
+  "rounds_completed": 1,
+  "schema": "dqs1_local_first_tranche_result.v1",
+  "score_claim": false,
+  "source_families": [
+    "decoder_q_pairset",
+    "nerv_family_ready",
+    "non_nerv_ready"
+  ],
+  "stop_reason": "dry_run",
+  "storage": {
+    "executor_mode": "dqs1_local_first",
+    "generated_at_utc": "20260523T143653Z",
+    "min_free_bytes": 42949672960,
+    "mode": "storage_waterfall",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "requested_bytes": 0,
+    "schema": "comma_lab.experiment_storage_tier_plan.v1",
+    "score_claim": false,
+    "selected_root": "/Volumes/VertigoDataTier/pact",
+    "selected_tier": "vertigo",
+    "selected_workload_root": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+    "source_families": [
+      "decoder_q_pairset",
+      "nerv_family_ready",
+      "non_nerv_ready"
+    ],
+    "tiers": [
+      {
+        "allow_local_disk": false,
+        "blockers": [],
+        "eligible": true,
+        "exists": true,
+        "free_bytes": 1864755589120,
+        "name": "vertigo",
+        "parent_exists": true,
+        "priority": 0,
+        "requested_bytes": 0,
+        "reserve_free_bytes": 42949672960,
+        "root": "/Volumes/VertigoDataTier/pact",
+        "total_bytes": 2000189177856,
+        "usable_bytes": 1821805916160,
+        "workload_root": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+        "writable": true
+      },
+      {
+        "allow_local_disk": false,
+        "blockers": [],
+        "eligible": true,
+        "exists": false,
+        "free_bytes": 1491334332416,
+        "name": "apdatastore",
+        "parent_exists": true,
+        "priority": 1,
+        "requested_bytes": 0,
+        "reserve_free_bytes": 42949672960,
+        "root": "/Volumes/APDataStore/pact",
+        "total_bytes": 2000333438976,
+        "usable_bytes": 1448384659456,
+        "workload_root": "/Volumes/APDataStore/pact/experiments/results/dqs1_local_first",
+        "writable": true
+      },
+      {
+        "allow_local_disk": false,
+        "blockers": [
+          "local_disk_tier_disabled",
+          "insufficient_free_bytes:72584052736<85899345920"
+        ],
+        "eligible": false,
+        "exists": true,
+        "free_bytes": 72584052736,
+        "name": "local",
+        "parent_exists": true,
+        "priority": 2,
+        "requested_bytes": 0,
+        "reserve_free_bytes": 42949672960,
+        "root": "/Users/adpena/Projects/pact",
+        "total_bytes": 1995165736960,
+        "usable_bytes": 29634379776,
+        "workload_root": "/Users/adpena/Projects/pact/experiments/results/dqs1_local_first",
+        "writable": true
+      }
+    ],
+    "workload_subdir": "experiments/results/dqs1_local_first"
+  }
+}

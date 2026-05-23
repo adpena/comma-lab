@@ -121,6 +121,7 @@ def _contest_observation(
     axis: str = "contest_cpu",
     evidence_grade: str = "contest-CPU",
     evidence_tag: str = "[contest-CPU]",
+    baseline_score: float | None = None,
 ) -> dict[str, object]:
     source = tmp_path / f"{candidate_id}_{axis}_{archive_char}_contest_auth_eval.json"
     archive_sha = archive_char * 64
@@ -165,6 +166,8 @@ def _contest_observation(
     }
     if selected_pair_indices is not None:
         row["selected_pair_indices"] = selected_pair_indices
+    if baseline_score is not None:
+        row["baseline_score"] = baseline_score
     return row
 
 
@@ -497,6 +500,55 @@ def test_portfolio_uses_exact_pairset_observations_as_planning_prior(
     assert prefix_model["inactive_reason"] == "no_exact_observations_for_selector_kind"
 
 
+def test_portfolio_uses_macos_advisory_pairset_observations_for_local_planning(
+    tmp_path: Path,
+) -> None:
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.195,
+        pairset_acquisitions=[_pairset_acquisition_with_response_candidates()],
+        observations=[
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_diversity_k002",
+                score=0.193,
+                archive_char="a",
+                raw_char="b",
+                selected_pair_indices=[26, 588],
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_diversity_k004",
+                score=0.1928,
+                archive_char="d",
+                raw_char="e",
+                selected_pair_indices=[26, 109, 501, 588],
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+            ),
+        ],
+        top_k=8,
+    )
+
+    model = portfolio["observation_feedback"]["pairset_observation_response_model"]
+    assert model["active"] is True
+    assert model["axis"] == "macos_cpu_advisory"
+    assert model["score_claim"] is False
+    unobserved = next(
+        row
+        for row in portfolio["ranked_rows"]
+        if row["candidate_id"] == "pairset_diversity_k008"
+    )
+    assert unobserved["prediction_source"] == (
+        "exact_pairset_observation_response_model_planning_prior"
+    )
+    assert unobserved["source_metadata"]["observation_response_model"]["active"] is True
+    assert unobserved["ready_for_exact_eval_dispatch"] is False
+
+
 def test_pairset_response_model_requires_selected_pair_identity(tmp_path: Path) -> None:
     portfolio = build_cross_family_candidate_portfolio(
         incumbent_score=0.195,
@@ -655,6 +707,61 @@ def test_portfolio_builds_component_marginal_model_and_axis_transfer_diagnostics
         portfolio["operator_action_rows"][0]["candidate_id"]
         != "pairset_drop_one_rank004_pair0376"
     )
+
+
+def test_portfolio_synthesizes_learned_multi_drop_candidates_from_local_component_marginals(
+    tmp_path: Path,
+) -> None:
+    portfolio = build_cross_family_candidate_portfolio(
+        incumbent_score=0.226190435402,
+        pairset_acquisitions=[_pairset_acquisition_with_component_candidates()],
+        observations=[
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank002_pair0327",
+                score=0.19202928,
+                archive_char="a",
+                raw_char="b",
+                selected_pair_indices=[101, 371, 376],
+                segnet_delta=0.0,
+                rate_delta=-0.00000066585895312,
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+                baseline_score=0.19203,
+            ),
+            _contest_observation(
+                tmp_path,
+                candidate_id="pairset_drop_one_rank003_pair0371",
+                score=0.19202828,
+                archive_char="d",
+                raw_char="e",
+                selected_pair_indices=[101, 327, 376],
+                segnet_delta=0.0,
+                rate_delta=-0.00000066585895312,
+                axis="macos_cpu_advisory",
+                evidence_grade="macOS-CPU-advisory",
+                evidence_tag="[macOS-CPU advisory only]",
+                baseline_score=0.19203,
+            ),
+        ],
+        top_k=16,
+    )
+
+    learned = next(
+        row
+        for row in portfolio["ranked_rows"]
+        if row["candidate_id"] == "pairset_learned_drop_combo_k002_p0327_p0371"
+    )
+    metadata = learned["source_metadata"]
+    assert learned["source_kind"] == "decoder_q_pairset_acquisition"
+    assert learned["operator_next_action"] == "materialize_pairset_archive_and_run_local_controls"
+    assert metadata["selector_kind"] == "learned_component_marginal_combo"
+    assert metadata["selected_pair_indices"] == [101, 376]
+    assert metadata["acquisition_operation"]["op"] == "learned_multi_drop"
+    assert metadata["component_marginal_model"]["source_axis"] == "macos_cpu_advisory"
+    assert learned["score_claim"] is False
+    assert learned["ready_for_exact_eval_dispatch"] is False
 
 
 def test_portfolio_preserves_custody_readiness_as_advisory_only(

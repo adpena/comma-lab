@@ -28,9 +28,9 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from comma_lab.artifact_retention import DEFAULT_RETENTION_KINDS  # noqa: E402
 from comma_lab.scheduler.dqs1_local_first_harvest import DEFAULT_QUEUE_PATH  # noqa: E402
 from comma_lab.scheduler.dqs1_local_first_queue import DEFAULT_RESULTS_ROOT  # noqa: E402
-from comma_lab.artifact_retention import DEFAULT_RETENTION_KINDS  # noqa: E402
 from comma_lab.storage_tiers import (  # noqa: E402
     DEFAULT_RESERVE_FREE_GB,
     StorageTierError,
@@ -443,14 +443,15 @@ def _run_proactive_cleanup(
     if args.proactive_cleanup_include_mlx_cache:
         for kind in sorted(set(DEFAULT_RETENTION_KINDS) | {"mlx_scorer_input_cache"}):
             command.extend(["--include-kind", kind])
+    if args.execute:
+        command.extend(["--execute", "--action", args.proactive_cleanup_action])
+    if args.proactive_cleanup_action == "move":
+        cold_roots = _cold_store_roots(args)
         if args.execute:
-            command.extend(["--execute", "--action", args.proactive_cleanup_action])
-        if args.proactive_cleanup_action == "move":
-            cold_roots = _cold_store_roots(args)
             _ensure_directories(cold_roots)
-            command.extend(["--cold-store-reserve-gb", str(args.storage_reserve_gb)])
-            for root in cold_roots:
-                command.extend(["--cold-store-root", str(root)])
+        command.extend(["--cold-store-reserve-gb", str(args.storage_reserve_gb)])
+        for root in cold_roots:
+            command.extend(["--cold-store-root", str(root)])
     result = _run(command)
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -468,16 +469,24 @@ def _run_proactive_cleanup(
 
 
 def _round_harvest(autopilot_payload: dict[str, Any]) -> dict[str, Any] | None:
+    harvests = _round_harvests(autopilot_payload)
+    return harvests[0] if harvests else None
+
+
+def _round_harvests(autopilot_payload: dict[str, Any]) -> list[dict[str, Any]]:
     rounds = autopilot_payload.get("rounds")
     if not isinstance(rounds, list):
-        return None
+        return []
     for round_payload in reversed(rounds):
         if not isinstance(round_payload, dict):
             continue
+        harvests = round_payload.get("harvests")
+        if isinstance(harvests, list):
+            return [row for row in harvests if isinstance(row, dict)]
         harvest = round_payload.get("harvest")
         if isinstance(harvest, dict):
-            return harvest
-    return None
+            return [harvest]
+    return []
 
 
 def _round_retention(autopilot_payload: dict[str, Any]) -> dict[str, Any] | None:
@@ -515,7 +524,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--rounds", type=int, default=4)
     parser.add_argument("--max-steps-per-worker", type=int, default=8)
     parser.add_argument("--min-free-disk-gb", type=float, default=40.0)
-    parser.add_argument("--retention-action", choices=("delete", "move"), default="delete")
+    parser.add_argument("--retention-action", choices=("delete", "move"), default="move")
     parser.add_argument(
         "--retention-cold-store-root",
         action="append",
@@ -647,8 +656,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--top-k", type=int, default=96)
     parser.add_argument("--top-actions", type=int, default=64)
-    parser.add_argument("--queue-candidate-limit", type=int, default=1)
-    parser.add_argument("--local-cpu-concurrency", type=int, default=1)
+    parser.add_argument("--queue-candidate-limit", type=int, default=2)
+    parser.add_argument("--local-cpu-concurrency", type=int, default=2)
     parser.add_argument("--json-out", default=None)
     parser.add_argument(
         "--stop-on-eureka",
@@ -663,10 +672,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.rounds < 1:
         raise SystemExit("--rounds must be >= 1")
-    if args.queue_candidate_limit != 1:
-        raise SystemExit(
-            "--queue-candidate-limit currently must remain 1 so retention runs after each candidate"
-        )
+    if args.queue_candidate_limit < 1:
+        raise SystemExit("--queue-candidate-limit must be >= 1")
+    if args.local_cpu_concurrency < 1:
+        raise SystemExit("--local-cpu-concurrency must be >= 1")
     queue_path = _resolve(args.queue)
     frontier_scores, frontier_payload = _frontier_scores()
     incumbent_score = args.incumbent_score or str(frontier_scores["contest_cuda"])
@@ -730,17 +739,20 @@ def main(argv: list[str] | None = None) -> int:
                 )
             stop_reason = "insufficient_free_disk"
             break
+        worker_step_budget = args.max_steps_per_worker * args.queue_candidate_limit
         autopilot_cmd = [
             ".venv/bin/python",
             "tools/run_dqs1_local_first_autopilot.py",
             "--queue",
             _display_path(queue_path),
             "--max-candidates",
-            "1",
+            str(args.queue_candidate_limit),
             "--max-total-steps",
-            str(args.max_steps_per_worker),
+            str(worker_step_budget),
             "--max-steps-per-worker",
-            str(args.max_steps_per_worker),
+            str(worker_step_budget),
+            "--max-worker-experiments",
+            str(args.queue_candidate_limit),
             "--min-free-disk-gb",
             str(args.min_free_disk_gb),
             "--retention-action",
@@ -755,7 +767,8 @@ def main(argv: list[str] | None = None) -> int:
         autopilot_cmd.extend(["--results-root", str(results_root)])
         autopilot_result = _run(autopilot_cmd)
         autopilot_payload = _json_from_stdout(autopilot_result, label="autopilot")
-        harvest = _round_harvest(autopilot_payload)
+        harvests = _round_harvests(autopilot_payload)
+        harvest = harvests[0] if harvests else None
         retention = _round_retention(autopilot_payload)
         round_record: dict[str, Any] = {
             "round_index": index,
@@ -767,6 +780,8 @@ def main(argv: list[str] | None = None) -> int:
                 "candidates_harvested": autopilot_payload.get("candidates_harvested"),
             },
             "harvest": harvest,
+            "harvests": harvests,
+            "harvest_count": len(harvests),
             "proactive_cleanup": proactive_cleanup,
             "post_harvest_retention": retention,
             "score_claim": False,
@@ -774,7 +789,7 @@ def main(argv: list[str] | None = None) -> int:
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
-        if not harvest:
+        if not harvests:
             round_record["terminal"] = "no_harvest"
             rounds.append(round_record)
             stop_reason = str(autopilot_payload.get("stop_reason") or "no_harvest")
@@ -896,7 +911,9 @@ def main(argv: list[str] | None = None) -> int:
         round_record["queue_rebuild"] = queue_payload
         round_record["queue_validate"] = validate_payload
         rounds.append(round_record)
-        if args.stop_on_eureka and harvest.get("exact_auth_request_path"):
+        if args.stop_on_eureka and any(
+            row.get("exact_auth_request_path") for row in harvests
+        ):
             stop_reason = "exact_auth_anchor_request_created"
             break
     payload = {

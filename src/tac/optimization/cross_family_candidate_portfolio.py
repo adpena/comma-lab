@@ -17,6 +17,7 @@ from tac.optimization.bayesian_experimental_design import (
     BayesianExperimentalDesignError,
     rank_exact_eval_candidates,
 )
+from tac.optimization.decoder_q_selective_runtime_packet import choose_dqs1_pair_encoding
 from tac.optimization.mlx_dynamic_sweep_observations import (
     normalize_observation_row,
     summarize_observations,
@@ -26,6 +27,8 @@ from tac.optimization.normalized_objective import (
     require_normalized_full_video_objective,
 )
 from tac.optimization.pairset_component_marginal import (
+    CONTEST_RATE_DENOMINATOR_BYTES,
+    CONTEST_RATE_MULTIPLIER,
     PAIRSET_COMPONENT_MARGINAL_MODEL_SCHEMA,
     build_component_score_delta_payload,
     canonical_signal_refs,
@@ -44,6 +47,7 @@ DEFAULT_MLX_VARIANCE_FLOOR = 1e-8
 DEFAULT_PAIRSET_VARIANCE = 2.5e-8
 DEFAULT_PAIRSET_OBSERVATION_MODEL_VARIANCE_FLOOR = 2.5e-9
 DEFAULT_OUTSIDE_CLASS_VARIANCE = 1e-3
+DEFAULT_COMPONENT_COMBO_VARIANCE_PER_PAIR = 7.5e-9
 _EXACT_AXIS_ALIASES = {
     "contest_cpu": "contest_cpu",
     "contest-CPU": "contest_cpu",
@@ -51,6 +55,20 @@ _EXACT_AXIS_ALIASES = {
     "contest_cuda": "contest_cuda",
     "contest-CUDA": "contest_cuda",
     "[contest-CUDA]": "contest_cuda",
+}
+_PAIRSET_PLANNING_AXIS_ALIASES = {
+    **_EXACT_AXIS_ALIASES,
+    "macos_cpu_advisory": "macos_cpu_advisory",
+    "macOS-CPU-advisory": "macos_cpu_advisory",
+    "macOS-CPU advisory": "macos_cpu_advisory",
+    "[macOS-CPU advisory]": "macos_cpu_advisory",
+    "[macOS-CPU advisory only]": "macos_cpu_advisory",
+    "cpu_advisory": "macos_cpu_advisory",
+}
+_PAIRSET_AXIS_AUTHORITY = {
+    "contest_cpu": "contest_auth_axis",
+    "contest_cuda": "contest_auth_axis",
+    "macos_cpu_advisory": "local_advisory_axis",
 }
 _NORMALIZED_OBJECTIVE_FIELDS = (
     "normalized_full_video_scorer_gain_vs_baseline",
@@ -675,13 +693,30 @@ def _observation_axis_is_exact(row: Mapping[str, Any]) -> bool:
     return _exact_observation_axis(row) is not None
 
 
+def _pairset_planning_observation_axis(row: Mapping[str, Any]) -> str | None:
+    axes = {
+        _PAIRSET_PLANNING_AXIS_ALIASES.get(str(row.get("observed_axis") or "")),
+        _PAIRSET_PLANNING_AXIS_ALIASES.get(str(row.get("evidence_grade") or "")),
+        _PAIRSET_PLANNING_AXIS_ALIASES.get(str(row.get("evidence_tag") or "")),
+    }
+    axes.discard(None)
+    if not axes:
+        return None
+    if len(axes) != 1:
+        raise CrossFamilyCandidatePortfolioError(
+            "pairset planning observation axis labels disagree across "
+            "observed_axis/evidence_grade/evidence_tag"
+        )
+    return next(iter(axes))
+
+
 def _normalize_incumbent_scores_by_axis(
     incumbent_score: float,
     incumbent_scores_by_axis: Mapping[str, Any] | None,
 ) -> dict[str, float]:
     scores = {"contest_cuda": _finite_float(incumbent_score, label="incumbent_score")}
     for key, value in (incumbent_scores_by_axis or {}).items():
-        axis = _EXACT_AXIS_ALIASES.get(str(key))
+        axis = _PAIRSET_PLANNING_AXIS_ALIASES.get(str(key))
         if axis is None:
             raise CrossFamilyCandidatePortfolioError(
                 f"unsupported incumbent score axis: {key!r}"
@@ -839,7 +874,7 @@ def _build_pairset_component_marginal_model(
     }
     training_rows: list[dict[str, Any]] = []
     for observation in observations:
-        axis = _exact_observation_axis(observation)
+        axis = _pairset_planning_observation_axis(observation)
         if axis is None:
             continue
         candidate_id = str(observation.get("candidate_id") or "")
@@ -868,11 +903,17 @@ def _build_pairset_component_marginal_model(
             label=f"{candidate_id}.observed_score_or_delta",
         )
         baseline = incumbent_scores_by_axis.get(axis)
+        if baseline is None and observation.get("baseline_score") is not None:
+            baseline = _finite_float(
+                observation.get("baseline_score"),
+                label=f"{candidate_id}.baseline_score",
+            )
         observed_delta = None if baseline is None else observed_score - baseline
         training_rows.append(
             {
                 "candidate_id": candidate_id,
                 "axis": axis,
+                "axis_authority": _PAIRSET_AXIS_AUTHORITY.get(axis, "unknown_axis"),
                 "selector_kind": _candidate_selector_kind(candidate),
                 "selected_pair_count": _candidate_selected_pair_count(candidate),
                 "selected_pair_indices": observed_indices,
@@ -884,6 +925,13 @@ def _build_pairset_component_marginal_model(
                 ),
                 "observed_score": observed_score,
                 "axis_baseline_score": baseline,
+                "baseline_score_source": (
+                    "incumbent_scores_by_axis"
+                    if axis in incumbent_scores_by_axis
+                    else "observation_baseline_score"
+                    if baseline is not None
+                    else None
+                ),
                 "observed_delta_vs_axis_baseline": observed_delta,
                 "score_delta_status": _score_delta_status(observed_delta),
                 "observed_at_utc": observation.get("observed_at_utc"),
@@ -904,7 +952,7 @@ def _build_pairset_component_marginal_model(
         return {
             **base,
             "active": False,
-            "inactive_reason": "no_exact_pairset_observations_with_component_deltas",
+            "inactive_reason": "no_pairset_planning_observations_with_component_deltas",
         }
 
     axis_models: dict[str, dict[str, Any]] = {}
@@ -926,6 +974,8 @@ def _build_pairset_component_marginal_model(
             pair = int(operation["dropped_pair_index"])
             rank = int(operation["dropped_pair_rank"])
             component_deltas = dict(row["component_deltas"])
+            selected_pair_indices = [int(value) for value in row["selected_pair_indices"]]
+            base_pair_indices = sorted({*selected_pair_indices, pair})
             scorer_penalty = component_deltas["segnet_delta"] + component_deltas["posenet_delta"]
             rate_credit = -component_deltas["rate_delta"]
             component_payload = build_component_score_delta_payload(
@@ -942,8 +992,12 @@ def _build_pairset_component_marginal_model(
                     "pair_index": pair,
                     "dropped_pair_rank": rank,
                     "candidate_id": row["candidate_id"],
+                    "axis_authority": row["axis_authority"],
+                    "selected_pair_indices": selected_pair_indices,
+                    "base_pair_indices": base_pair_indices,
                     "observed_score": row["observed_score"],
                     "axis_baseline_score": row["axis_baseline_score"],
+                    "baseline_score_source": row["baseline_score_source"],
                     "observed_delta_vs_axis_baseline": row[
                         "observed_delta_vs_axis_baseline"
                     ],
@@ -964,6 +1018,7 @@ def _build_pairset_component_marginal_model(
         ]
         axis_models[axis] = {
             "axis": axis,
+            "axis_authority": _PAIRSET_AXIS_AUTHORITY.get(axis, "unknown_axis"),
             "training_row_count": len(axis_rows),
             "drop_one_training_row_count": len(drop_one_rows),
             "drop_two_training_row_count": len(drop_two_rows),
@@ -984,6 +1039,7 @@ def _build_pairset_component_marginal_model(
                     "dropped_pair_ranks": row["operation"].get("dropped_pair_ranks"),
                     "observed_score": row["observed_score"],
                     "axis_baseline_score": row["axis_baseline_score"],
+                    "baseline_score_source": row["baseline_score_source"],
                     "observed_delta_vs_axis_baseline": row[
                         "observed_delta_vs_axis_baseline"
                     ],
@@ -1041,7 +1097,7 @@ def _build_pairset_component_marginal_model(
     return {
         **base,
         "active": True,
-        "model_kind": "exact_axis_component_marginal_ledger",
+        "model_kind": "pairset_planning_axis_component_marginal_ledger",
         "axes": sorted(axis_models),
         "axis_models": axis_models,
         "cross_axis_transfer_diagnostics": cross_axis,
@@ -1214,6 +1270,218 @@ def _component_marginal_action_prior(
     }
 
 
+def _component_combo_counts(max_count: int) -> list[int]:
+    if max_count < 2:
+        return []
+    base = (2, 3, 4, 5, 8, 13)
+    counts = {value for value in base if 2 <= value <= max_count}
+    counts.add(min(max_count, 16))
+    return sorted(counts)
+
+
+def _component_combo_candidate_id(dropped_pairs: Sequence[int]) -> str:
+    pairs = sorted(int(pair) for pair in dropped_pairs)
+    suffix = "_".join(f"p{pair:04d}" for pair in pairs[:6])
+    if len(pairs) > 6:
+        suffix = f"{suffix}_plus{len(pairs) - 6:02d}"
+    return f"pairset_learned_drop_combo_k{len(pairs):03d}_{suffix}"
+
+
+def _selected_pair_payload_bytes(selected_pair_indices: Sequence[int]) -> int:
+    encoding = choose_dqs1_pair_encoding(sorted(int(pair) for pair in selected_pair_indices))
+    selected = encoding["selected"]
+    return int(selected["descriptor_bytes"])
+
+
+def _selected_pair_rate_delta(selected_pair_indices: Sequence[int]) -> float:
+    return (
+        CONTEST_RATE_MULTIPLIER
+        * float(_selected_pair_payload_bytes(selected_pair_indices))
+        / float(CONTEST_RATE_DENOMINATOR_BYTES)
+    )
+
+
+def _component_combo_primary_axis(component_model: Mapping[str, Any]) -> str | None:
+    axes = [str(axis) for axis in component_model.get("axes") or []]
+    for preferred in ("contest_cpu", "macos_cpu_advisory", "contest_cuda"):
+        if preferred in axes:
+            return preferred
+    return sorted(axes)[0] if axes else None
+
+
+def _component_combo_candidate_rows(
+    candidates: Sequence[Mapping[str, Any]],
+    component_model: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Synthesize learned multi-drop pairset candidates from observed marginals.
+
+    These rows deliberately stay in the existing DQS1 pairset materialization
+    path: the only operation they require downstream is selecting a computed
+    pair set. Unsupported archive/tensor operations remain outside this helper.
+    """
+
+    if component_model.get("active") is not True:
+        return []
+    axis_models = component_model.get("axis_models")
+    if not isinstance(axis_models, Mapping):
+        return []
+    primary_axis = _component_combo_primary_axis(component_model)
+    if primary_axis is None:
+        return []
+    axis_model = axis_models.get(primary_axis)
+    if not isinstance(axis_model, Mapping):
+        return []
+    raw_marginals = axis_model.get("drop_one_pair_marginals")
+    if not isinstance(raw_marginals, list):
+        return []
+
+    existing_ids = {str(row.get("candidate_id") or "") for row in candidates}
+    existing_pairsets = {
+        tuple(_candidate_selected_pair_indices(row) or ())
+        for row in candidates
+        if _candidate_selected_pair_indices(row) is not None
+    }
+    grouped: dict[tuple[int, ...], list[Mapping[str, Any]]] = {}
+    for raw in raw_marginals:
+        if not isinstance(raw, Mapping):
+            continue
+        net_delta = _finite_float(
+            raw.get("net_component_delta"),
+            label=f"{raw.get('candidate_id')}.net_component_delta",
+        )
+        if net_delta >= 0.0:
+            continue
+        base_pairs = raw.get("base_pair_indices")
+        if not isinstance(base_pairs, Sequence) or isinstance(base_pairs, (str, bytes)):
+            continue
+        base_key = tuple(sorted({int(pair) for pair in base_pairs}))
+        if len(base_key) < 3:
+            continue
+        grouped.setdefault(base_key, []).append(raw)
+
+    out: list[dict[str, Any]] = []
+    source_rank = 900_000
+    for base_pairs, rows in sorted(grouped.items()):
+        ranked = sorted(
+            rows,
+            key=lambda row: (
+                _finite_float(
+                    row.get("net_component_delta"),
+                    label=f"{row.get('candidate_id')}.net_component_delta",
+                ),
+                int(row.get("dropped_pair_rank") or 0),
+                int(row.get("pair_index") or 0),
+            ),
+        )
+        for count in _component_combo_counts(min(len(ranked), len(base_pairs) - 1)):
+            selected_rows = ranked[:count]
+            dropped_pairs = sorted({int(row["pair_index"]) for row in selected_rows})
+            if len(dropped_pairs) != count:
+                continue
+            selected_pairs = sorted(pair for pair in base_pairs if pair not in set(dropped_pairs))
+            selected_key = tuple(selected_pairs)
+            if not selected_pairs or selected_key in existing_pairsets:
+                continue
+            candidate_id = _component_combo_candidate_id(dropped_pairs)
+            if candidate_id in existing_ids:
+                continue
+            baselines = [
+                _finite_float(
+                    row.get("axis_baseline_score"),
+                    label=f"{row.get('candidate_id')}.axis_baseline_score",
+                )
+                for row in selected_rows
+                if row.get("axis_baseline_score") is not None
+            ]
+            if not baselines:
+                continue
+            baseline = min(baselines)
+            expected_net_delta = sum(
+                _finite_float(
+                    row.get("net_component_delta"),
+                    label=f"{row.get('candidate_id')}.net_component_delta",
+                )
+                for row in selected_rows
+            )
+            component_deltas = {
+                key: sum(
+                    _finite_float(
+                        (row.get("component_deltas") or {}).get(key),
+                        label=f"{row.get('candidate_id')}.{key}",
+                    )
+                    for row in selected_rows
+                    if isinstance(row.get("component_deltas"), Mapping)
+                )
+                for key in ("segnet_delta", "posenet_delta", "rate_delta")
+            }
+            payload_bytes = _selected_pair_payload_bytes(selected_pairs)
+            metadata = {
+                "selector_kind": "learned_component_marginal_combo",
+                "selected_pair_count": len(selected_pairs),
+                "selected_pair_indices": selected_pairs,
+                "payload_bytes": payload_bytes,
+                "rate_delta": _selected_pair_rate_delta(selected_pairs),
+                "acquisition_operation": {
+                    "op": "learned_multi_drop",
+                    "dropped_pair_indices": dropped_pairs,
+                    "dropped_pair_count": count,
+                    "source_axis": primary_axis,
+                    "source_axis_authority": axis_model.get("axis_authority"),
+                    "base_pair_indices": list(base_pairs),
+                    "source_candidate_ids": sorted(
+                        {str(row.get("candidate_id") or "") for row in selected_rows}
+                    ),
+                },
+                "component_marginal_model": {
+                    "schema": "pairset_component_marginal_combo_feedback.v1",
+                    "active": True,
+                    "model_kind": component_model.get("model_kind"),
+                    "source_axis": primary_axis,
+                    "source_axis_authority": axis_model.get("axis_authority"),
+                    "expected_net_component_delta": expected_net_delta,
+                    "expected_component_deltas": component_deltas,
+                    "source_drop_one_rows": [
+                        {
+                            "source_candidate_id": row.get("candidate_id"),
+                            "pair_index": row.get("pair_index"),
+                            "dropped_pair_rank": row.get("dropped_pair_rank"),
+                            "net_component_delta": row.get("net_component_delta"),
+                            "component_marginal_status": row.get("component_marginal_status"),
+                            **FALSE_AUTHORITY,
+                        }
+                        for row in selected_rows
+                    ],
+                    "canonical_signal_refs": component_model.get("canonical_signal_refs"),
+                    "allowed_use": "learned_local_pairset_batch_planning_only",
+                    **FALSE_AUTHORITY,
+                },
+            }
+            out.append(
+                _candidate(
+                    candidate_id=candidate_id,
+                    family="decoder_q_selective_dqs1",
+                    predicted_score_mean=baseline + expected_net_delta,
+                    predicted_score_variance=max(
+                        DEFAULT_PAIRSET_VARIANCE,
+                        DEFAULT_COMPONENT_COMBO_VARIANCE_PER_PAIR * float(count * count),
+                    ),
+                    source_kind="decoder_q_pairset_acquisition",
+                    source_rank=source_rank,
+                    source_artifact_path=None,
+                    family_couplings={
+                        "fec6_decoder_q": 0.9,
+                        "mlx_decoder_q": 0.7,
+                        "score_surface_stack": 0.3,
+                    },
+                    source_metadata=metadata,
+                )
+            )
+            existing_ids.add(candidate_id)
+            existing_pairsets.add(selected_key)
+            source_rank += 1
+    return out
+
+
 def _apply_pairset_component_marginal_feedback(
     candidates: Sequence[Mapping[str, Any]],
     component_model: Mapping[str, Any],
@@ -1313,7 +1581,7 @@ def _pairset_observation_training_rows(
         "selected_pair_indices_mismatch_count": 0,
     }
     for observation in observations:
-        axis = _exact_observation_axis(observation)
+        axis = _pairset_planning_observation_axis(observation)
         if axis is None:
             continue
         candidate_id = str(observation.get("candidate_id") or "")
@@ -1826,6 +2094,11 @@ def build_cross_family_candidate_portfolio(
         normalized_observations,
         incumbent_scores_by_axis=axis_incumbents,
     )
+    component_combo_candidates = _component_combo_candidate_rows(
+        candidates,
+        pairset_component_marginal_model,
+    )
+    candidates.extend(component_combo_candidates)
     candidates = _apply_pairset_component_marginal_feedback(
         candidates,
         pairset_component_marginal_model,

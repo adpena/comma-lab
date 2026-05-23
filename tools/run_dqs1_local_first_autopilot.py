@@ -33,6 +33,7 @@ from comma_lab.scheduler.dqs1_local_first_harvest import (  # noqa: E402
     Dqs1HarvestResult,
     ExperimentQueueError,
     build_dqs1_harvest_result,
+    candidate_experiment_ids,
 )
 from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     assert_canonical_state_for_execution,
@@ -319,6 +320,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-candidates", type=int, default=8)
     parser.add_argument("--max-total-steps", type=int, default=64)
     parser.add_argument("--max-steps-per-worker", type=int, default=64)
+    parser.add_argument(
+        "--max-worker-experiments",
+        type=int,
+        default=1,
+        help=(
+            "maximum independent candidate experiments one worker round may "
+            "advance concurrently; keep at 1 for legacy serial harvest/reroute"
+        ),
+    )
     parser.add_argument("--idle-sleep-seconds", type=float, default=0.0)
     parser.add_argument("--max-idle-cycles", type=int, default=1)
     parser.add_argument("--action-summary", default="latest")
@@ -333,7 +343,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--retention-action",
         choices=("delete", "move"),
-        default="delete",
+        default="move",
         help="post-harvest action for certified rebuildable raw/cache artifacts",
     )
     parser.add_argument(
@@ -378,6 +388,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("--max-total-steps must be >= 1")
     if args.max_steps_per_worker < 1:
         raise SystemExit("--max-steps-per-worker must be >= 1")
+    if args.max_worker_experiments < 1:
+        raise SystemExit("--max-worker-experiments must be >= 1")
 
     queue_path = Path(args.queue)
     if not queue_path.is_absolute():
@@ -445,7 +457,7 @@ def main(argv: list[str] | None = None) -> int:
                     log_root=args.log_root,
                     stop_requested=lambda: bool(stop_signals),
                     reload_queue=lambda: load_queue_definition(queue_path),
-                    max_experiments=1,
+                    max_experiments=args.max_worker_experiments,
                 )
                 summary = queue_summary(conn, queue)
             total_steps += int(worker.get("steps_started") or 0)
@@ -475,57 +487,86 @@ def main(argv: list[str] | None = None) -> int:
 
             prior_queue_text = queue_path.read_text(encoding="utf-8") if queue_path.is_file() else ""
             stamp = _utc_stamp()
-            harvest_kwargs: dict[str, Any] = {
-                "queue_path": queue_path,
-                "repo_root": REPO_ROOT,
-                "timestamp": stamp,
-                "reroute_observe_only": True,
-                "output_queue_path": queue_path,
-                "expected_output_queue_sha256": _sha256_text(prior_queue_text)
-                if prior_queue_text
-                else None,
-                "action_summary": args.action_summary,
-            }
-            if args.results_root is not None:
-                harvest_kwargs["results_root"] = args.results_root
-            harvest = build_dqs1_harvest_result(**harvest_kwargs)
-            artifact_paths = _write_harvest_artifacts(
-                harvest,
-                queue_path=queue_path,
-                prior_queue_text=prior_queue_text,
-                stamp=stamp,
-            )
-            candidates_harvested += 1
-            round_record["harvest"] = {
-                "candidate_id": harvest.harvest_record["candidate_id"],
-                "recommended_action": harvest.harvest_record["recommended_action"],
-                "eureka_trigger": harvest.harvest_record["eureka_trigger"],
-                "local_score": harvest.harvest_record["local_score"],
-                "conservative_projected_contest_score": harvest.harvest_record[
-                    "conservative_projected_contest_score"
-                ],
-                **artifact_paths,
-            }
-            if args.execute and args.post_harvest_retention:
-                retention = _execute_candidate_artifact_retention(
-                    candidate_root=_candidate_root_from_harvest(harvest, repo_root=REPO_ROOT),
-                    candidate_id=str(harvest.harvest_record["candidate_id"]),
+            batch_mode = args.max_worker_experiments > 1
+            ids = candidate_experiment_ids(queue) if batch_mode else [""]
+            ids = ids[: max(0, args.max_candidates - candidates_harvested)]
+            harvest_summaries: list[dict[str, Any]] = []
+            retention_summaries: list[dict[str, Any]] = []
+            rerouted = False
+            exact_request_created = False
+            for candidate_id in ids:
+                harvest_kwargs: dict[str, Any] = {
+                    "queue_path": queue_path,
+                    "repo_root": REPO_ROOT,
+                    "candidate_id": candidate_id or None,
+                    "timestamp": stamp,
+                    "reroute_observe_only": not batch_mode,
+                    "output_queue_path": None if batch_mode else queue_path,
+                    "expected_output_queue_sha256": (
+                        None
+                        if batch_mode or not prior_queue_text
+                        else _sha256_text(prior_queue_text)
+                    ),
+                    "action_summary": args.action_summary,
+                }
+                if args.results_root is not None:
+                    harvest_kwargs["results_root"] = args.results_root
+                harvest = build_dqs1_harvest_result(**harvest_kwargs)
+                artifact_paths = _write_harvest_artifacts(
+                    harvest,
+                    queue_path=queue_path,
+                    prior_queue_text=prior_queue_text,
                     stamp=stamp,
-                    action=args.retention_action,
-                    cold_store_roots=args.retention_cold_store_root,
-                    min_bytes=args.retention_min_bytes,
-                    include_mlx_cache=args.include_mlx_cache_retention,
-                    repo_root=REPO_ROOT,
                 )
-                round_record["post_harvest_retention"] = retention
+                candidates_harvested += 1
+                exact_request_created = exact_request_created or harvest.exact_auth_request is not None
+                rerouted = rerouted or harvest.rerouted_queue is not None
+                harvest_summaries.append(
+                    {
+                        "candidate_id": harvest.harvest_record["candidate_id"],
+                        "recommended_action": harvest.harvest_record["recommended_action"],
+                        "eureka_trigger": harvest.harvest_record["eureka_trigger"],
+                        "local_score": harvest.harvest_record["local_score"],
+                        "conservative_projected_contest_score": harvest.harvest_record[
+                            "conservative_projected_contest_score"
+                        ],
+                        **artifact_paths,
+                    }
+                )
+                if args.execute and args.post_harvest_retention:
+                    retention_summaries.append(
+                        _execute_candidate_artifact_retention(
+                            candidate_root=_candidate_root_from_harvest(harvest, repo_root=REPO_ROOT),
+                            candidate_id=str(harvest.harvest_record["candidate_id"]),
+                            stamp=stamp,
+                            action=args.retention_action,
+                            cold_store_roots=args.retention_cold_store_root,
+                            min_bytes=args.retention_min_bytes,
+                            include_mlx_cache=args.include_mlx_cache_retention,
+                            repo_root=REPO_ROOT,
+                        )
+                    )
+            round_record["harvests"] = harvest_summaries
+            if len(harvest_summaries) == 1:
+                round_record["harvest"] = harvest_summaries[0]
+            if retention_summaries:
+                round_record["post_harvest_retention"] = {
+                    "mode": "batch" if batch_mode else "single",
+                    "candidate_count": len(retention_summaries),
+                    "items": retention_summaries,
+                    "executed_bytes": sum(int(row.get("executed_bytes") or 0) for row in retention_summaries),
+                }
                 round_record["preflight"]["free_disk_gb_after_post_harvest_retention"] = _free_disk_gb(
                     results_root
                 )
             rounds.append(round_record)
-            if harvest.exact_auth_request is not None:
+            if exact_request_created:
                 stop_reason = "exact_auth_anchor_request_created"
                 break
-            if harvest.rerouted_queue is None:
+            if batch_mode:
+                stop_reason = "batch_harvested_waiting_for_portfolio_rebuild"
+                break
+            if not rerouted:
                 stop_reason = "no_reroute_available"
                 break
         else:
@@ -542,6 +583,7 @@ def main(argv: list[str] | None = None) -> int:
             "state": str(state),
             "execute": args.execute,
             "allow_cloud": args.allow_cloud,
+            "max_worker_experiments": args.max_worker_experiments,
             "stop_reason": stop_reason,
             "total_steps_started": total_steps,
             "candidates_harvested": candidates_harvested,

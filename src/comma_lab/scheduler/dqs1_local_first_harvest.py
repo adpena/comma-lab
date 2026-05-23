@@ -65,7 +65,20 @@ def _arg_after(command: list[Any], flag: str, *, step_id: str) -> str:
     return value
 
 
-def _single_experiment(queue: dict[str, Any]) -> dict[str, Any]:
+def candidate_experiment_ids(queue: dict[str, Any]) -> list[str]:
+    experiments = queue.get("experiments")
+    if not isinstance(experiments, list):
+        raise ExperimentQueueError("DQS1 local-first harvest expects an experiment list")
+    return [
+        str(experiment.get("id"))
+        for experiment in experiments
+        if isinstance(experiment, dict)
+        and experiment.get("id") != "dqs1_scheduler_preflight"
+        and str(experiment.get("id") or "").strip()
+    ]
+
+
+def _single_experiment(queue: dict[str, Any], *, candidate_id: str | None = None) -> dict[str, Any]:
     experiments = queue.get("experiments")
     if not isinstance(experiments, list):
         raise ExperimentQueueError("DQS1 local-first harvest expects an experiment list")
@@ -75,6 +88,18 @@ def _single_experiment(queue: dict[str, Any]) -> dict[str, Any]:
         if isinstance(experiment, dict)
         and experiment.get("id") != "dqs1_scheduler_preflight"
     ]
+    if candidate_id is not None:
+        matches = [
+            experiment
+            for experiment in candidate_experiments
+            if str(experiment.get("id") or "") == candidate_id
+        ]
+        if len(matches) != 1:
+            raise ExperimentQueueError(
+                f"DQS1 local-first harvest expected one candidate experiment "
+                f"{candidate_id!r}; found {len(matches)}"
+            )
+        return matches[0]
     if len(candidate_experiments) != 1:
         raise ExperimentQueueError("DQS1 local-first harvest expects exactly one candidate experiment")
     experiment = candidate_experiments[0]
@@ -177,6 +202,7 @@ def build_dqs1_harvest_result(
     *,
     queue_path: str | Path = DEFAULT_QUEUE_PATH,
     repo_root: str | Path,
+    candidate_id: str | None = None,
     timestamp: str | None = None,
     reroute_observe_only: bool = False,
     output_queue_path: str | Path | None = None,
@@ -190,9 +216,9 @@ def build_dqs1_harvest_result(
     repo = Path(repo_root)
     queue_file = _resolve(queue_path, repo_root=repo)
     queue = load_queue_definition(queue_file)
-    experiment = _single_experiment(queue)
-    candidate_id = str(experiment.get("id") or "")
-    if not candidate_id:
+    experiment = _single_experiment(queue, candidate_id=candidate_id)
+    resolved_candidate_id = str(experiment.get("id") or "")
+    if not resolved_candidate_id:
         raise ExperimentQueueError("DQS1 experiment id is required")
 
     advisory_step = _step_by_id(experiment, "local_cpu_advisory")
@@ -217,7 +243,7 @@ def build_dqs1_harvest_result(
     advisory = _validate_advisory(advisory_path)
     eureka = _validate_eureka(
         eureka_path,
-        candidate_id=candidate_id,
+        candidate_id=resolved_candidate_id,
         advisory_path=advisory_path,
         repo_root=repo,
     )
@@ -227,7 +253,7 @@ def build_dqs1_harvest_result(
     harvest = apply_proxy_evidence_boundary(
         {
             "schema": HARVEST_SCHEMA,
-            "candidate_id": candidate_id,
+            "candidate_id": resolved_candidate_id,
             "queue_path": str(queue_file),
             "local_cpu_advisory_path": str(advisory_path),
             "eureka_signal_path": str(eureka_path),
@@ -257,7 +283,7 @@ def build_dqs1_harvest_result(
         exact_request = apply_proxy_evidence_boundary(
             {
                 "schema": EXACT_AUTH_ANCHOR_REQUEST_SCHEMA,
-                "candidate_id": candidate_id,
+                "candidate_id": resolved_candidate_id,
                 "request_reason": "positive_local_cpu_contest_drift_eureka",
                 "candidate_archive_path": harvest["candidate_archive_path"],
                 "candidate_archive_sha256": harvest["candidate_archive_sha256"],
@@ -278,6 +304,12 @@ def build_dqs1_harvest_result(
 
     rerouted_queue = None
     if reroute_observe_only and recommended_action == "observe_only":
+        if candidate_id is not None and len(candidate_experiment_ids(queue)) != 1:
+            raise ExperimentQueueError(
+                "per-candidate harvest from a multi-candidate queue cannot "
+                "reroute the queue in-place; harvest the batch first and rebuild "
+                "from canonical observations"
+            )
         summary_path = (
             find_latest_cross_family_action_summary(repo)
             if str(action_summary) == "latest"
@@ -331,4 +363,5 @@ __all__ = [
     "HARVEST_SCHEMA",
     "Dqs1HarvestResult",
     "build_dqs1_harvest_result",
+    "candidate_experiment_ids",
 ]

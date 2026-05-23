@@ -11,6 +11,7 @@ from src.comma_lab.scheduler.dqs1_local_first_harvest import (
     EXACT_AUTH_ANCHOR_REQUEST_SCHEMA,
     HARVEST_SCHEMA,
     build_dqs1_harvest_result,
+    candidate_experiment_ids,
 )
 from src.comma_lab.scheduler.dqs1_local_first_queue import (
     build_queue_from_action_summary,
@@ -635,6 +636,67 @@ def test_dqs1_harvest_observe_only_reroutes_queue(tmp_path: Path) -> None:
     assert written["experiments"][0]["id"] == "pairset_drop_one_rank024_pair0112"
 
 
+def test_dqs1_harvest_selects_candidate_from_multi_candidate_batch(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+    result = build_queue_from_action_summary(
+        summary,
+        repo_root=tmp_path,
+        results_root="results",
+        candidate_limit=2,
+        include_scheduler_preflight=True,
+        eureka_run_id="20260522T000000Z",
+    )
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(json.dumps(result.queue))
+    candidate_ids = candidate_experiment_ids(result.queue)
+    assert candidate_ids == [
+        "pairset_drop_one_rank023_pair0440",
+        "pairset_drop_one_rank024_pair0112",
+    ]
+    for candidate_id in candidate_ids:
+        advisory, _archive, archive_sha = _write_completed_local_advisory(
+            tmp_path,
+            candidate_id=candidate_id,
+        )
+        _write_eureka_signal(
+            tmp_path,
+            candidate_id=candidate_id,
+            advisory=advisory,
+            archive_sha=archive_sha,
+        )
+
+    prior_queue_sha = sha256(queue_path.read_bytes()).hexdigest()
+    harvest = build_dqs1_harvest_result(
+        queue_path=queue_path,
+        repo_root=tmp_path,
+        candidate_id="pairset_drop_one_rank024_pair0112",
+        timestamp="20260523T010203Z",
+        reroute_observe_only=False,
+        results_root="results",
+    )
+
+    assert harvest.harvest_record["schema"] == HARVEST_SCHEMA
+    assert harvest.harvest_record["candidate_id"] == "pairset_drop_one_rank024_pair0112"
+    assert harvest.harvest_record["recommended_action"] == "observe_only"
+    assert harvest.exact_auth_request is None
+    assert harvest.rerouted_queue is None
+    assert sha256(queue_path.read_bytes()).hexdigest() == prior_queue_sha
+
+    with pytest.raises(ExperimentQueueError, match="multi-candidate queue"):
+        build_dqs1_harvest_result(
+            queue_path=queue_path,
+            repo_root=tmp_path,
+            candidate_id="pairset_drop_one_rank024_pair0112",
+            timestamp="20260523T010204Z",
+            reroute_observe_only=True,
+            output_queue_path=queue_path,
+            expected_output_queue_sha256=prior_queue_sha,
+            results_root="results",
+        )
+
+
 def test_dqs1_harvest_observe_only_all_candidates_consumed_returns_no_reroute(
     tmp_path: Path,
 ) -> None:
@@ -945,25 +1007,26 @@ def test_checked_in_dqs1_queue_keeps_eureka_append_only_contract() -> None:
         for experiment in queue["experiments"]
         if experiment["id"] != "dqs1_scheduler_preflight"
     ]
-    assert len(candidate_experiments) == 1
-    experiment = candidate_experiments[0]
-    candidate_id = experiment["id"]
-    steps = {step["id"]: step for step in experiment["steps"]}
-    eureka = steps["local_cpu_contest_drift_eureka"]
-    command = eureka["command"]
-    eureka_out = command[command.index("--eureka-out") + 1]
-    assert eureka_out.startswith(f".omx/research/local_cpu_contest_drift_eureka_{candidate_id}_")
-    assert eureka_out.endswith("Z.json")
-    assert "20260522T224218Z" not in eureka_out
+    assert len(candidate_experiments) >= 2
+    assert queue["controls"]["max_concurrency"]["local_cpu"] >= 2
+    for experiment in candidate_experiments:
+        candidate_id = experiment["id"]
+        steps = {step["id"]: step for step in experiment["steps"]}
+        eureka = steps["local_cpu_contest_drift_eureka"]
+        command = eureka["command"]
+        eureka_out = command[command.index("--eureka-out") + 1]
+        assert eureka_out.startswith(f".omx/research/local_cpu_contest_drift_eureka_{candidate_id}_")
+        assert eureka_out.endswith("Z.json")
+        assert "20260522T224218Z" not in eureka_out
 
-    false_authority = next(
-        condition
-        for condition in eureka["postconditions"]
-        if condition["type"] == "json_false_authority"
-    )
-    assert false_authority["path"] == eureka_out
-    assert false_authority["required_false"] == list(EUREKA_FALSE_AUTHORITY_FIELDS)
-    assert false_authority["false_or_missing"] == []
+        false_authority = next(
+            condition
+            for condition in eureka["postconditions"]
+            if condition["type"] == "json_false_authority"
+        )
+        assert false_authority["path"] == eureka_out
+        assert false_authority["required_false"] == list(EUREKA_FALSE_AUTHORITY_FIELDS)
+        assert false_authority["false_or_missing"] == []
 
 
 def test_dqs1_queue_builder_fails_closed_on_authority_fields(tmp_path: Path) -> None:
