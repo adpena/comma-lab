@@ -1794,6 +1794,46 @@ def test_json_completion_contract_required_less_than_is_strict(
     assert _condition_passes(condition, repo_root=tmp_path) is False
 
 
+def test_materializer_chain_complete_allows_downstream_readiness_blockers(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "chain.json"
+    archive = _postcondition_artifact(tmp_path / "candidate.zip", b"candidate")
+    proof = _postcondition_artifact(tmp_path / "receiver_proof.json", b"proof")
+    payload = {
+        "schema": "chain.v1",
+        "candidate_archive": archive,
+        "candidate_archive_sha256": archive["sha256"],
+        "candidate_archive_bytes": archive["bytes"],
+        "byte_closed_candidate_emitted": True,
+        "runtime_adapter_ready": True,
+        "receiver_contract_satisfied": True,
+        "candidate_runtime_adapter_blocker_cleared": True,
+        "readiness_blockers": [
+            "candidate_inflate_output_parity_missing",
+            "exact_auth_eval_required_before_score_claim",
+        ],
+        "artifacts": {"receiver_proof": proof},
+        "chain_steps": [{"status": "succeeded", "artifact": proof}],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    condition = {
+        "type": "materializer_chain_complete",
+        "path": manifest.name,
+        "schema": "chain.v1",
+    }
+
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+
+    strict_condition = dict(condition)
+    strict_condition["forbid_readiness_blockers"] = True
+    assert _condition_passes(strict_condition, repo_root=tmp_path) is False
+
+
 def test_materializer_chain_complete_requires_serialized_archive_saving_status(
     tmp_path: Path,
 ) -> None:

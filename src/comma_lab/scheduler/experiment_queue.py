@@ -1269,7 +1269,9 @@ def _materializer_chain_complete(
         return False
     if payload.get("candidate_runtime_adapter_blocker_cleared") is not True:
         return False
-    if payload.get("readiness_blockers"):
+    if bool(condition.get("forbid_readiness_blockers")) and payload.get(
+        "readiness_blockers"
+    ):
         return False
     if not _is_sha256(payload.get("candidate_archive_sha256")):
         return False
