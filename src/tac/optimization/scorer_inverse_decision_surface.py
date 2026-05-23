@@ -15,8 +15,9 @@ import statistics
 from collections.abc import Mapping
 from typing import Any
 
-from tac.optimization.byte_shaving_campaign import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import (
+    PROXY_FALSE_AUTHORITY_FIELDS,
+    apply_proxy_evidence_boundary,
     ordered_unique,
     require_no_truthy_authority_fields,
 )
@@ -94,7 +95,19 @@ def build_inverse_scorer_decision_surface(
         ),
     )[:max_units]
     units = [_unit_from_cell(cell) for cell in ranked_cells]
-    return {
+    blockers = [
+        "inverse_scorer_surface_is_planning_only",
+        *(
+            ["native_mlx_window_objective_not_full_video_normalized"]
+            if allow_native_mlx_window_objective
+            else []
+        ),
+        "requires_byte_closed_materializer_before_candidate_archive",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim",
+    ]
+    return apply_proxy_evidence_boundary(
+        {
         "schema": SCHEMA,
         "source_label": source_label,
         "source_schema": normalized.get("schema") or normalized.get("schema_version"),
@@ -109,19 +122,11 @@ def build_inverse_scorer_decision_surface(
         ),
         "cells": ranked_cells,
         "units": units,
-        "blockers": [
-            "inverse_scorer_surface_is_planning_only",
-            *(
-                ["native_mlx_window_objective_not_full_video_normalized"]
-                if allow_native_mlx_window_objective
-                else []
-            ),
-            "requires_byte_closed_materializer_before_candidate_archive",
-            "requires_same_runtime_locality_or_inflate_parity_check",
-            "requires_exact_auth_eval_before_score_claim",
-        ],
-        **FALSE_AUTHORITY,
-    }
+        "blockers": blockers,
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+        },
+        dispatch_blockers=blockers,
+    )
 
 
 def _sample_from_row(
@@ -333,6 +338,9 @@ def _aggregate_cells(samples: list[dict[str, Any]]) -> dict[str, dict[str, Any]]
             "median_scorer_delta_vs_baseline": float(statistics.median(scorer_delta)),
             "best_projected_delta_vs_baseline_score": float(min(projected)),
             "worst_projected_delta_vs_baseline_score": float(max(projected)),
+            "native_mlx_window_objective": any(
+                bool(row.get("native_mlx_window_objective")) for row in rows
+            ),
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
@@ -351,6 +359,8 @@ def _unit_from_cell(cell: Mapping[str, Any]) -> dict[str, Any]:
         "operation_family": OPERATION_PROBE,
         "candidate_saved_bytes": saved_bytes,
         "predicted_quality_score_delta": quality_delta,
+        "materializer": "inverse_scorer_action_functional_adapter",
+        "target_kind": "inverse_scorer_action_functional_v1",
         "params": {
             "cell_id": cell["cell_id"],
             "coordinate_key": cell["coordinate_key"],
@@ -358,35 +368,70 @@ def _unit_from_cell(cell: Mapping[str, Any]) -> dict[str, Any]:
             "dominant_receiver_axis": cell["dominant_receiver_axis"],
             "source_row_ids": list(cell.get("source_row_ids") or []),
         },
+        "blockers": [],
+    }
+    materialize_operation = {
+        "operation_id": OPERATION_MATERIALIZE,
+        "operation_family": OPERATION_MATERIALIZE,
+        "candidate_saved_bytes": saved_bytes,
+        "predicted_quality_score_delta": quality_delta,
+        "materializer": "inverse_scorer_cell_candidate_adapter",
+        "target_kind": "inverse_scorer_cell_candidate_v1",
+        "params": {
+            "cell_id": cell["cell_id"],
+            "coordinate_key": cell["coordinate_key"],
+            "decision_surface_class": cell["decision_surface_class"],
+            "dominant_receiver_axis": cell["dominant_receiver_axis"],
+            "source_row_ids": list(cell.get("source_row_ids") or []),
+            "planning_value_scope": (
+                "native_mlx_window"
+                if cell.get("native_mlx_window_objective")
+                else "normalized_full_video"
+            ),
+        },
         "blockers": [
-            "inverse_surface_cell_requires_materializer",
+            "inverse_surface_cell_requires_deterministic_materializer",
             "inverse_surface_cell_requires_runtime_consumption_proof",
             "inverse_surface_cell_requires_exact_auth_eval_before_score_claim",
         ],
     }
-    return {
+    blockers = [
+        "inverse_surface_unit_is_planning_only",
+        *(
+            ["native_mlx_window_objective_not_full_video_normalized"]
+            if cell.get("native_mlx_window_objective")
+            else []
+        ),
+        "requires_materializer_before_candidate_archive",
+        "requires_exact_auth_eval_before_score_claim",
+    ]
+    unit = {
         "unit_id": f"inverse_surface_{cell['cell_id']}",
         "unit_kind": UNIT_KIND,
         "candidate_saved_bytes": saved_bytes,
         "predicted_quality_score_delta": quality_delta,
         "confidence": _confidence(cell),
         "operation_families": [OPERATION_PROBE, OPERATION_MATERIALIZE],
-        "operations": [operation],
+        "operations": [operation, materialize_operation],
         "decision_surface_class": cell["decision_surface_class"],
         "dominant_receiver_axis": cell["dominant_receiver_axis"],
         "source_row_ids": list(cell.get("source_row_ids") or []),
         "source_candidate_ids": list(cell.get("source_candidate_ids") or []),
         "evidence_semantics": "inverse_scorer_decision_surface_planning_cell",
-        "planning_value_scope": "compressed_scorer_coordinate",
-        "projected_full_video_delta_vs_baseline_score": projected_delta,
+        "planning_value_scope": (
+            "native_mlx_window"
+            if cell.get("native_mlx_window_objective")
+            else "normalized_full_video"
+        ),
         "median_scorer_delta_vs_baseline": cell["median_scorer_delta_vs_baseline"],
-        "blockers": [
-            "inverse_surface_unit_is_planning_only",
-            "requires_materializer_before_candidate_archive",
-            "requires_exact_auth_eval_before_score_claim",
-        ],
-        **FALSE_AUTHORITY,
+        "blockers": blockers,
+        **PROXY_FALSE_AUTHORITY_FIELDS,
     }
+    if cell.get("native_mlx_window_objective"):
+        unit["native_window_delta_vs_baseline_score"] = projected_delta
+    else:
+        unit["projected_full_video_delta_vs_baseline_score"] = projected_delta
+    return apply_proxy_evidence_boundary(unit, dispatch_blockers=blockers)
 
 
 def _confidence(cell: Mapping[str, Any]) -> float:

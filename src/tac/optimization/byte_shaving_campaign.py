@@ -29,6 +29,7 @@ from tac.optimization.proxy_candidate_contract import (
 SIGNAL_SURFACE_SCHEMA = "byte_shaving_signal_surface.v1"
 PLAN_SCHEMA = "byte_shaving_campaign_plan.v1"
 TOOL_NAME = "tools/plan_byte_shaving_campaign.py"
+INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 RATE_MULTIPLIER = 25.0
 ENGINEERED_CORRECTION_TARGETING_SCHEMA = (
     "master_gradient_consumer_engineered_correction_targeting_v1"
@@ -327,6 +328,9 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
         expected_delta = rate_delta + quality_cost
         gain = -expected_delta
         confidence = _operation_confidence(operation, unit)
+        blockers = ordered_unique(
+            str(item) for item in _as_list(operation.get("blockers"))
+        )
         out.append({
             "operation_id": str(
                 operation.get("operation_id")
@@ -342,12 +346,11 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
             "confidence": confidence,
             "confidence_adjusted_gain": gain * confidence,
             "gain_per_byte": gain / float(saved_bytes) if saved_bytes > 0 else 0.0,
+            "operation_priority": int(DEFAULT_OPERATION_ORDER_PRIORS.get(family, 100)),
             "materializer": operation.get("materializer"),
             "target_kind": _operation_target_kind(operation),
             "operation_params": dict(_mapping(operation.get("params"))),
-            "blockers": ordered_unique(
-                str(item) for item in _as_list(operation.get("blockers"))
-            ),
+            "blockers": blockers,
         })
     return sorted(
         out,
@@ -356,6 +359,8 @@ def _operation_candidates(unit: Mapping[str, Any], unit_saved_bytes: int) -> lis
             -float(row["expected_score_gain"]),
             float(row["quality_cost_score"]),
             -int(row["candidate_saved_bytes"]),
+            int(row["operation_priority"]),
+            len(_as_list(row.get("blockers"))),
             str(row["operation_family"]),
             str(row["operation_id"]),
         ),
@@ -426,7 +431,16 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
     confidence = float(best_operation["confidence"])
     density = float(best_operation["gain_per_byte"])
     adjusted_gain = float(best_operation["confidence_adjusted_gain"])
-    return {
+    blockers = ordered_unique(
+        [
+            *[str(item) for item in _as_list(unit.get("blockers"))],
+            *[
+                str(item)
+                for item in _as_list(best_operation.get("blockers"))
+            ],
+        ]
+    )
+    row = {
         "unit_id": str(unit.get("unit_id") or unit.get("id")),
         "unit_kind": _unit_kind(unit),
         "source_index": unit.get("source_index"),
@@ -443,6 +457,7 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_operation_family": best_operation["operation_family"],
         "recommended_operation_materializer": best_operation["materializer"],
         "recommended_operation_target_kind": best_operation["target_kind"],
+        "recommended_operation_priority": best_operation["operation_priority"],
         "recommended_operation_params": best_operation["operation_params"],
         "operation_families": ordered_unique(
             str(row["operation_family"]) for row in operation_candidates
@@ -471,16 +486,9 @@ def normalize_unit_signal(unit: Mapping[str, Any]) -> dict[str, Any]:
             str(item) for item in _as_list(unit.get("candidate_trust_region_blockers"))
         ),
         "paired_control_required": bool(unit.get("paired_control_required", True)),
-        "blockers": ordered_unique(
-            [
-                *[str(item) for item in _as_list(unit.get("blockers"))],
-                *[
-                    str(item)
-                    for item in _as_list(best_operation.get("blockers"))
-                ],
-            ]
-        ),
+        "blockers": blockers,
     }
+    return apply_proxy_evidence_boundary(row, dispatch_blockers=blockers)
 
 
 def _rank_units(units: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -540,6 +548,12 @@ def _interaction_rows(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def _selection_from_unit(unit: Mapping[str, Any], operation: Mapping[str, Any]) -> dict[str, Any]:
+    blockers = ordered_unique(
+        [
+            *[str(item) for item in _as_list(unit.get("blockers"))],
+            *[str(item) for item in _as_list(operation.get("blockers"))],
+        ]
+    )
     return {
         "unit_id": str(unit["unit_id"]),
         "unit_kind": str(unit["unit_kind"]),
@@ -551,12 +565,8 @@ def _selection_from_unit(unit: Mapping[str, Any], operation: Mapping[str, Any]) 
         "materializer": operation.get("materializer"),
         "target_kind": operation.get("target_kind"),
         "params": operation.get("operation_params") or {},
-        "blockers": ordered_unique(
-            [
-                *[str(item) for item in _as_list(unit.get("blockers"))],
-                *[str(item) for item in _as_list(operation.get("blockers"))],
-            ]
-        ),
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
     }
 
 
@@ -625,6 +635,7 @@ def _combo_row(
                 "target_kind": selection.get("target_kind"),
                 "params": selection.get("params") or {},
                 "blockers": _as_list(selection.get("blockers")),
+                **FALSE_AUTHORITY,
             }
             for selection in selections
         ],
@@ -935,6 +946,7 @@ def _prefix_rows(
                     "target_kind": row.get("recommended_operation_target_kind"),
                     "params": row.get("recommended_operation_params") or {},
                     "blockers": _as_list(row.get("blockers")),
+                    **FALSE_AUTHORITY,
                 }
                 for row in selected
             ],
@@ -1593,6 +1605,118 @@ def build_signal_surface_from_master_gradient_anchor(
     }
 
 
+def build_signal_surface_from_inverse_action_functional(
+    action_payload: Mapping[str, Any],
+    *,
+    campaign_id: str = "inverse_steganalysis_action_byte_shaving_surface",
+) -> dict[str, Any]:
+    """Bridge inverse-action water buckets into the byte-shaving planner."""
+
+    if action_payload.get("schema") != INVERSE_ACTION_FUNCTIONAL_SCHEMA:
+        raise ByteShavingCampaignError(f"expected {INVERSE_ACTION_FUNCTIONAL_SCHEMA}")
+    try:
+        require_no_truthy_authority_fields(
+            action_payload,
+            context="inverse_action_functional_byte_shaving_surface",
+        )
+    except ValueError as exc:
+        raise ByteShavingCampaignError(str(exc)) from exc
+    water_bucket = _mapping(action_payload.get("water_bucket"))
+    selected_cells = [
+        item
+        for item in _as_list(water_bucket.get("selected_cells"))
+        if isinstance(item, Mapping)
+    ]
+    full_cells_by_atom = {
+        str(item.get("atom_id") or ""): item
+        for item in _as_list(action_payload.get("cells"))
+        if isinstance(item, Mapping)
+    }
+    units: list[dict[str, Any]] = []
+    for index, selected in enumerate(selected_cells):
+        atom_id = str(selected.get("atom_id") or f"inverse_action_cell_{index}")
+        full_cell = full_cells_by_atom.get(atom_id, {})
+        expected_gain = _finite_float(selected.get("expected_score_gain")) or 0.0
+        if expected_gain <= 0.0:
+            continue
+        operation = {
+            "operation_id": "materialize_inverse_scorer_cell_candidate",
+            "operation_family": "materialize_inverse_scorer_cell_candidate",
+            "candidate_saved_bytes": 0,
+            "predicted_quality_score_delta": -expected_gain,
+            "materializer": "inverse_scorer_cell_candidate_adapter",
+            "target_kind": "inverse_scorer_cell_candidate_v1",
+            "params": {
+                "atom_id": atom_id,
+                "candidate_id": selected.get("candidate_id"),
+                "scope_axis": selected.get("scope_axis"),
+                "component": selected.get("component"),
+                "euler_lagrange_residual": selected.get("euler_lagrange_residual"),
+                "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+            },
+            "blockers": [
+                "inverse_action_cell_requires_deterministic_materializer",
+                "inverse_action_cell_requires_runtime_consumption_proof",
+                "inverse_action_cell_requires_exact_auth_eval_before_score_claim",
+            ],
+        }
+        units.append(
+            {
+                "unit_id": f"inverse_action_{atom_id}",
+                "unit_kind": "scorer_inverse_surface_cell",
+                "source_index": index,
+                "candidate_saved_bytes": 0,
+                "predicted_quality_score_delta": -expected_gain,
+                "confidence": 0.5,
+                "operation_families": ["materialize_inverse_scorer_cell_candidate"],
+                "operations": [operation],
+                "score_axis": selected.get("component") or full_cell.get("component"),
+                "evidence_grade": "[planning-only inverse-steganalysis action]",
+                "evidence_semantics": "discrete_action_water_bucket_selection",
+                "source_candidate_id": selected.get("candidate_id"),
+                "atom_ids": [atom_id],
+                "inverse_action_cell": {
+                    "euler_lagrange_residual": selected.get("euler_lagrange_residual"),
+                    "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+                    "scope_axis": selected.get("scope_axis"),
+                    "component": selected.get("component"),
+                },
+                "blockers": [
+                    "inverse_action_unit_is_planning_only",
+                    "requires_inverse_scorer_cell_materializer",
+                    "requires_byte_closed_archive_before_dispatch",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+            }
+        )
+    if not units:
+        raise ByteShavingCampaignError("inverse action functional produced no selected cells")
+    return {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": campaign_id,
+        "candidate_id": water_bucket.get("schema") or "inverse_steganalysis_action",
+        "lane_id": "inverse_steganalysis_action_byte_shaving",
+        "frontier_axis": "[planning-only inverse-steganalysis action]",
+        "source_signal_refs": [
+            {
+                "kind": "inverse_steganalysis_action_functional",
+                "schema": action_payload.get("schema"),
+                "cell_count": _mapping(action_payload.get("integral_totals")).get(
+                    "cell_count"
+                ),
+                "selected_count": water_bucket.get("selected_count"),
+                "selected_expected_score_gain": water_bucket.get(
+                    "selected_expected_score_gain"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        ],
+        "units": units,
+        "blockers": _as_list(action_payload.get("dispatch_blockers")),
+        **FALSE_AUTHORITY,
+    }
+
+
 def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -1606,6 +1730,7 @@ __all__ = [
     "build_byte_shaving_campaign_plan",
     "build_signal_surface_from_candidate_queue",
     "build_signal_surface_from_engineered_correction_targeting",
+    "build_signal_surface_from_inverse_action_functional",
     "build_signal_surface_from_master_gradient_anchor",
     "normalize_unit_signal",
     "validate_signal_surface",

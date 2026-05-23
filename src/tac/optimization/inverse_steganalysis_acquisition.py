@@ -17,6 +17,8 @@ from typing import Any
 from tac.optimization.candidate_evidence_contract import is_sha256_hex
 from tac.optimization.proxy_candidate_contract import (
     CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+    CONTEST_AUTH_SCORE_AXES,
+    CONTEST_AUTH_SCORE_AXIS_PREFIXES,
     PROXY_FALSE_AUTHORITY_FIELDS,
     apply_proxy_evidence_boundary,
     ordered_unique,
@@ -26,9 +28,11 @@ from tac.optimization.proxy_candidate_contract import (
 SCHEMA = "inverse_steganalysis_acquisition_plan.v1"
 ATOM_SCHEMA = "inverse_steganalysis_atom.v1"
 OBSERVATION_SCHEMA = "inverse_steganalysis_observation.v1"
+QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary.v1"
 PRIORITY_SCHEMA = "inverse_steganalysis_acquisition_priority.v1"
 ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 ACTION_CELL_SCHEMA = "inverse_steganalysis_action_cell.v1"
+INVERSE_SCORER_SURFACE_SCHEMA = "scorer_inverse_decision_surface.v1"
 TOOL = "tac.optimization.inverse_steganalysis_acquisition"
 CONTEST_RATE_SCORE_PER_BYTE = 25.0 / 50_000_000.0
 
@@ -201,13 +205,39 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
     _reject_truthy_authority(row, label="inverse-steganalysis observation")
     candidate_id = _text(row.get("candidate_id"), "candidate_id")
     axis = _text(_first(row.get("axis"), row.get("score_axis")), "axis")
+    axis_normalized = _token(axis).replace("_", "-")
+    resource_kind = _resource(row.get("resource_kind", "local_cpu"))
+    if _looks_like_contest_auth_axis(axis_normalized) or resource_kind == "contest_exact_eval":
+        raise InverseSteganalysisAcquisitionError(
+            "inverse-steganalysis observations must not masquerade as contest "
+            "auth evidence; use auth-eval payload validation for contest axes"
+        )
     out = {
         "schema": OBSERVATION_SCHEMA,
         "observation_id": _optional_text(row.get("observation_id")) or f"obs_{_slug(candidate_id)}_{_slug(axis)}",
+        "observation_kind": _optional_text(row.get("observation_kind")),
         "candidate_id": candidate_id,
         "axis": axis,
-        "axis_normalized": _token(axis),
+        "axis_normalized": axis_normalized,
         "source_path": _optional_text(row.get("source_path")),
+        "queue_id": _optional_text(row.get("queue_id")),
+        "experiment_id": _optional_text(row.get("experiment_id")),
+        "step_id": _optional_text(row.get("step_id")),
+        "performance_bucket_key": _optional_text(row.get("performance_bucket_key")),
+        "performance_summary_schema": _optional_text(row.get("performance_summary_schema")),
+        "run_count": _optional_int(row.get("run_count"), "run_count", minimum=0),
+        "success_count": _optional_int(row.get("success_count"), "success_count", minimum=0),
+        "failure_count": _optional_int(row.get("failure_count"), "failure_count", minimum=0),
+        "artifact_record_count": _optional_int(
+            row.get("artifact_record_count"),
+            "artifact_record_count",
+            minimum=0,
+        ),
+        "artifact_record_raw_bytes_mean": _float_or_none(
+            row.get("artifact_record_raw_bytes_mean"),
+            "artifact_record_raw_bytes_mean",
+            minimum=0.0,
+        ),
         "runtime_identity": _identity(row.get("runtime_identity"), RUNTIME_IDENTITY_KEYS, "runtime_identity"),
         "cache_identity": _identity(row.get("cache_identity"), CACHE_IDENTITY_KEYS, "cache_identity"),
         "observed_score_gain": _float_or_none(
@@ -231,7 +261,7 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         ),
         "elapsed_seconds": _float_or_none(row.get("elapsed_seconds"), "elapsed_seconds", minimum=0.0, exclusive=True),
         "artifact_bytes": _int(_first(row.get("artifact_bytes"), row.get("source_artifact_bytes"), 0), "artifact_bytes", minimum=0),
-        "resource_kind": _resource(row.get("resource_kind", "local_cpu")),
+        "resource_kind": resource_kind,
         "candidate_generation_only": True,
         "planning_only": True,
         "allowed_use": "local_or_proxy_acquisition_ranking_only",
@@ -243,6 +273,99 @@ def normalize_inverse_steganalysis_observation(row: Mapping[str, Any]) -> dict[s
         "inverse_steganalysis_observation_is_not_score_authority",
         "local_or_proxy_observation_requires_exact_auth_eval_before_promotion",
     )
+
+
+def observations_from_queue_performance_summary(
+    summary: Mapping[str, Any],
+    *,
+    runtime_identity: Mapping[str, Any],
+    cache_identity: Mapping[str, Any],
+    axis: str = "[local-queue-performance advisory]",
+    source_path: str | None = None,
+    candidate_id_by_experiment: Mapping[str, str] | None = None,
+) -> list[dict[str, Any]]:
+    """Convert queue timing/artifact telemetry into planning-only observations.
+
+    Queue performance rows do not carry scorer deltas. They only calibrate the
+    acquisition denominator: seconds, artifact footprint, and resource class.
+    Runtime/cache identity remains required so the observation cannot silently
+    cross into score or promotion authority.
+    """
+
+    _reject_truthy_authority(summary, label="queue performance summary")
+    if summary.get("schema") != QUEUE_PERFORMANCE_SUMMARY_SCHEMA:
+        raise InverseSteganalysisAcquisitionError(
+            f"summary schema must be {QUEUE_PERFORMANCE_SUMMARY_SCHEMA}"
+        )
+    queue_id = _text(summary.get("queue_id"), "summary.queue_id")
+    by_step = summary.get("by_step")
+    if not isinstance(by_step, Mapping):
+        raise InverseSteganalysisAcquisitionError("summary.by_step must be an object")
+    candidate_lookup = {
+        _text(key, "candidate_id_by_experiment key"): _text(
+            value,
+            "candidate_id_by_experiment value",
+        )
+        for key, value in dict(candidate_id_by_experiment or {}).items()
+    }
+
+    observations: list[dict[str, Any]] = []
+    for bucket_key, bucket in sorted(by_step.items(), key=lambda item: str(item[0])):
+        if not isinstance(bucket, Mapping):
+            raise InverseSteganalysisAcquisitionError("summary.by_step values must be objects")
+        experiment_id, step_id = _split_performance_step_key(bucket_key)
+        run_count = _int(
+            bucket.get("run_count", 0),
+            f"summary.by_step[{bucket_key!r}].run_count",
+            minimum=0,
+        )
+        if run_count == 0:
+            continue
+        candidate_id = candidate_lookup.get(experiment_id, experiment_id)
+        resource_kind = _resource(
+            bucket.get("dominant_resource_kind")
+            or _dominant_resource_from_counts(bucket.get("resource_kind_counts"))
+            or "local_cpu"
+        )
+        elapsed_seconds = _float_or_none(
+            bucket.get("elapsed_seconds_mean"),
+            f"summary.by_step[{bucket_key!r}].elapsed_seconds_mean",
+            minimum=0.0,
+            exclusive=True,
+        )
+        artifact_bytes = _queue_performance_artifact_bytes(bucket)
+        observations.append(
+            normalize_inverse_steganalysis_observation(
+                {
+                    "observation_id": (
+                        f"queue_perf_{_slug(queue_id)}_"
+                        f"{_slug(experiment_id)}_{_slug(step_id)}"
+                    ),
+                    "observation_kind": "queue_performance_step",
+                    "candidate_id": candidate_id,
+                    "axis": axis,
+                    "source_path": source_path,
+                    "queue_id": queue_id,
+                    "experiment_id": experiment_id,
+                    "step_id": step_id,
+                    "performance_bucket_key": str(bucket_key),
+                    "performance_summary_schema": QUEUE_PERFORMANCE_SUMMARY_SCHEMA,
+                    "runtime_identity": runtime_identity,
+                    "cache_identity": cache_identity,
+                    "elapsed_seconds": elapsed_seconds,
+                    "artifact_bytes": artifact_bytes,
+                    "resource_kind": resource_kind,
+                    "run_count": run_count,
+                    "success_count": bucket.get("success_count"),
+                    "failure_count": bucket.get("failure_count"),
+                    "artifact_record_count": bucket.get("artifact_record_count"),
+                    "artifact_record_raw_bytes_mean": bucket.get(
+                        "artifact_record_raw_bytes_mean"
+                    ),
+                }
+            )
+        )
+    return observations
 
 
 def compute_acquisition_priority(
@@ -558,13 +681,146 @@ def build_discrete_scorer_action_functional(
     )
 
 
+def action_atoms_from_inverse_scorer_surface(
+    surface: Mapping[str, Any],
+    *,
+    candidate_id: str | None = None,
+    elapsed_seconds: float | None = None,
+    artifact_bytes: int | None = None,
+    resource_kind: str = "local_mlx",
+) -> list[dict[str, Any]]:
+    """Convert inverse scorer decision cells into normalized action atoms."""
+
+    _reject_truthy_authority(surface, label="inverse scorer decision surface")
+    if surface.get("schema") != INVERSE_SCORER_SURFACE_SCHEMA:
+        raise InverseSteganalysisAcquisitionError(
+            f"surface schema must be {INVERSE_SCORER_SURFACE_SCHEMA}"
+        )
+    cells = surface.get("cells")
+    if not isinstance(cells, list) or not cells:
+        raise InverseSteganalysisAcquisitionError("surface.cells must be a non-empty list")
+    if elapsed_seconds is not None:
+        elapsed_seconds = _float(
+            elapsed_seconds,
+            "elapsed_seconds",
+            minimum=0.0,
+            exclusive=True,
+        )
+    if artifact_bytes is not None:
+        artifact_bytes = _int(artifact_bytes, "artifact_bytes", minimum=0)
+
+    atoms: list[dict[str, Any]] = []
+    for index, cell in enumerate(cells):
+        if not isinstance(cell, Mapping):
+            raise InverseSteganalysisAcquisitionError("surface.cells rows must be objects")
+        atoms.append(
+            normalize_inverse_steganalysis_atom(
+                _action_atom_from_inverse_cell(
+                    cell,
+                    index=index,
+                    default_candidate_id=candidate_id,
+                    elapsed_seconds=elapsed_seconds,
+                    artifact_bytes=artifact_bytes,
+                    resource_kind=resource_kind,
+                )
+            )
+        )
+    return atoms
+
+
+def _action_atom_from_inverse_cell(
+    cell: Mapping[str, Any],
+    *,
+    index: int,
+    default_candidate_id: str | None,
+    elapsed_seconds: float | None,
+    artifact_bytes: int | None,
+    resource_kind: str,
+) -> dict[str, Any]:
+    cell_id = _text(cell.get("cell_id"), "cell.cell_id")
+    source_candidates = cell.get("source_candidate_ids")
+    source_candidate_id = (
+        str(source_candidates[0])
+        if isinstance(source_candidates, list) and source_candidates
+        else None
+    )
+    candidate_id = (
+        default_candidate_id
+        or source_candidate_id
+        or f"inverse_surface_candidate_{_slug(cell_id)}"
+    )
+    decision_class = _text(
+        cell.get("decision_surface_class"),
+        "cell.decision_surface_class",
+    )
+    dominant_axis = _token(cell.get("dominant_receiver_axis") or "mixed")
+    pair_indices = _pair_indices_from_bucket(cell.get("pair_bucket"))
+    saved_bytes = _int(cell.get("candidate_saved_bytes", 0), "candidate_saved_bytes", minimum=0)
+    median_delta = _float(
+        cell.get("median_projected_delta_vs_baseline_score"),
+        "median_projected_delta_vs_baseline_score",
+    )
+    best_delta = _float(
+        cell.get("best_projected_delta_vs_baseline_score", median_delta),
+        "best_projected_delta_vs_baseline_score",
+    )
+    worst_delta = _float(
+        cell.get("worst_projected_delta_vs_baseline_score", median_delta),
+        "worst_projected_delta_vs_baseline_score",
+    )
+    scorer_delta = _float(
+        cell.get("median_scorer_delta_vs_baseline", 0.0),
+        "median_scorer_delta_vs_baseline",
+    )
+    predicted_gain = max(0.0, -median_delta)
+    best_gain = max(0.0, -best_delta)
+    rate_gain = CONTEST_RATE_SCORE_PER_BYTE * float(saved_bytes)
+    receiver_gain = max(0.0, predicted_gain - rate_gain, -scorer_delta)
+    second_order = max(0.0, best_gain - predicted_gain)
+    spread = abs(worst_delta - best_delta)
+    component = _component_from_dominant_axis(dominant_axis)
+    seg_gain = receiver_gain if component == "segnet" else 0.0
+    pose_gain = receiver_gain if component == "posenet" else 0.0
+    risk = _decision_surface_risk(decision_class)
+    return {
+        "atom_id": f"inverse_surface_{_slug(cell_id)}_{index:04d}",
+        "candidate_id": candidate_id,
+        "scale": "pair" if pair_indices else "component",
+        "scope_axis": "pairs" if pair_indices else "full_video",
+        "parent_unit_id": f"inverse_surface_{cell_id}",
+        "pair_indices": pair_indices,
+        "component": component,
+        "frequency_band": decision_class,
+        "coherence_group": str(cell.get("coordinate_key") or cell_id),
+        "sparsity_prior": 1.0 if decision_class == "rate_only_null_space" else 0.5,
+        "predicted_segnet_gain": seg_gain,
+        "predicted_posenet_gain": pose_gain,
+        "predicted_rate_gain": rate_gain,
+        "predicted_rate_cost": 0.0,
+        "predicted_score_gain": predicted_gain,
+        "first_order_marginal_effect": predicted_gain,
+        "second_order_interaction_effect": second_order,
+        "discontinuity_risk": risk,
+        "discontinuity_threshold": 0.75,
+        "uncertainty": spread,
+        "calibration_error": spread * 0.25,
+        "elapsed_seconds": elapsed_seconds,
+        "artifact_bytes": (
+            artifact_bytes if artifact_bytes is not None else max(1, saved_bytes)
+        ),
+        "resource_kind": resource_kind,
+    }
+
+
 def _best_observation(atom: Mapping[str, Any], observations: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
     if not observations:
         return None
 
-    def key(row: Mapping[str, Any]) -> tuple[float, float, float, str]:
+    def key(row: Mapping[str, Any]) -> tuple[int, float, float, float, str]:
         priority = compute_acquisition_priority(atom, row)
+        has_score_observation = row.get("observed_score_gain") is not None
         return (
+            int(has_score_observation),
             float(priority["acquisition_priority"]),
             float(priority["expected_score_gain"]),
             -float(priority["elapsed_seconds"]),
@@ -769,6 +1025,84 @@ def _interaction_kind(value: float) -> str:
     return "neutral"
 
 
+def _split_performance_step_key(value: Any) -> tuple[str, str]:
+    text = _text(value, "performance bucket key")
+    if "." not in text:
+        raise InverseSteganalysisAcquisitionError(
+            "performance bucket key must be experiment_id.step_id"
+        )
+    experiment_id, step_id = text.split(".", 1)
+    return _text(experiment_id, "performance experiment_id"), _text(
+        step_id,
+        "performance step_id",
+    )
+
+
+def _dominant_resource_from_counts(value: Any) -> str | None:
+    if not isinstance(value, Mapping):
+        return None
+    counts: list[tuple[str, int]] = []
+    for key, item in value.items():
+        count = _int(item, "resource_kind_counts value", minimum=0)
+        if count > 0:
+            counts.append((_resource(key), count))
+    if not counts:
+        return None
+    return sorted(counts, key=lambda item: (-item[1], item[0]))[0][0]
+
+
+def _queue_performance_artifact_bytes(bucket: Mapping[str, Any]) -> int:
+    for key in (
+        "artifact_record_bytes_mean",
+        "artifact_record_raw_bytes_mean",
+        "artifact_record_bytes_sum",
+    ):
+        value = _float_or_none(bucket.get(key), key, minimum=0.0)
+        if value is not None:
+            return math.ceil(value)
+    return 0
+
+
+def _pair_indices_from_bucket(value: Any) -> list[int] | None:
+    if not isinstance(value, str) or not value.startswith("pair_"):
+        return None
+    indices: list[int] = []
+    for token in value.removeprefix("pair_").split("_"):
+        if not token:
+            continue
+        try:
+            indices.append(int(token))
+        except ValueError:
+            return None
+    return indices or None
+
+
+def _component_from_dominant_axis(axis: str) -> str:
+    if axis == "seg":
+        return "segnet"
+    if axis == "pose":
+        return "posenet"
+    if axis == "rate":
+        return "rate"
+    return "scorer"
+
+
+def _decision_surface_risk(decision_class: str) -> float:
+    if decision_class == "rate_only_null_space":
+        return 0.05
+    if decision_class == "receiver_sufficient_statistic":
+        return 0.2
+    if decision_class == "fragile_boundary":
+        return 1.0
+    return 0.4
+
+
+def _looks_like_contest_auth_axis(axis: str) -> bool:
+    return axis in CONTEST_AUTH_SCORE_AXES or any(
+        axis.startswith(prefix) for prefix in CONTEST_AUTH_SCORE_AXIS_PREFIXES
+    )
+
+
 def _identity(value: Any, keys: frozenset[str], label: str) -> dict[str, Any]:
     if not isinstance(value, Mapping) or not value:
         raise InverseSteganalysisAcquisitionError(f"{label} must be a non-empty object")
@@ -888,6 +1222,12 @@ def _int(value: Any, label: str, *, minimum: int | None = None) -> int:
     return result
 
 
+def _optional_int(value: Any, label: str, *, minimum: int | None = None) -> int | None:
+    if value is None:
+        return None
+    return _int(value, label, minimum=minimum)
+
+
 def _float_or_none(
     value: Any,
     label: str,
@@ -934,18 +1274,22 @@ __all__ = [
     "ALLOWED_SCALES",
     "ATOM_SCHEMA",
     "CONTEST_RATE_SCORE_PER_BYTE",
+    "INVERSE_SCORER_SURFACE_SCHEMA",
     "OBSERVATION_SCHEMA",
     "PRIORITY_SCHEMA",
+    "QUEUE_PERFORMANCE_SUMMARY_SCHEMA",
     "RESOURCE_MULTIPLIERS",
     "SCHEMA",
     "SCOPE_AXES",
     "TOOL",
     "AcquisitionPriorityTerms",
     "InverseSteganalysisAcquisitionError",
+    "action_atoms_from_inverse_scorer_surface",
     "action_surface_terms",
     "build_discrete_scorer_action_functional",
     "build_inverse_steganalysis_acquisition_plan",
     "compute_acquisition_priority",
     "normalize_inverse_steganalysis_atom",
     "normalize_inverse_steganalysis_observation",
+    "observations_from_queue_performance_summary",
 ]

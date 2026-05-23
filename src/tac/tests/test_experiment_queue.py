@@ -220,7 +220,15 @@ def test_experiment_queue_accepts_legacy_json_file_key_equals_postcondition(
     assert records["artifact_dir"]["recursive_bytes"] >= 5
     assert records["artifact_dir/manifest.json"]["bytes"] > 0
     assert performance["schema"] == "experiment_queue_performance_summary.v1"
+    assert performance["telemetry_only"] is True
+    assert performance["score_claim"] is False
+    assert performance["promotion_eligible"] is False
+    assert performance["rank_or_kill_eligible"] is False
     assert performance["by_resource_kind"]["local_cpu"]["run_count"] == 1
+    assert (
+        performance["by_resource_kind"]["local_cpu"]["dominant_resource_kind"]
+        == "local_cpu"
+    )
     assert performance["by_resource_kind"]["local_cpu"]["artifact_record_count"] == 2
     assert performance["by_resource_kind"]["local_cpu"]["artifact_record_bytes_sum"] >= 5
     assert (

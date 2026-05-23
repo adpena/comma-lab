@@ -29,6 +29,14 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (
     DQS1_PAIRSET_TARGET_KIND,
     DQS1_RECEIVER_CONTRACT_ID,
     DQS1_RECEIVER_CONTRACT_KIND,
+    INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
+    INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID,
+    INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND,
+    INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
+    INVERSE_SCORER_CELL_MATERIALIZER,
+    INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID,
+    INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND,
+    INVERSE_SCORER_CELL_TARGET_KIND,
     registry_manifest,
     resolve_materializer,
     suggest_materializer_adapters,
@@ -145,6 +153,40 @@ def _byte_range_entropy_plan() -> dict[str, object]:
     return build_byte_shaving_campaign_plan(surface, max_k=1)
 
 
+def _inverse_surface_plan() -> dict[str, object]:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "inverse_surface_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_inverse_surface_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "inverse_surface_pair_0007",
+                "unit_kind": "scorer_inverse_surface_cell",
+                "candidate_saved_bytes": 32,
+                "predicted_quality_score_delta": -0.0001,
+                "confidence": 0.6,
+                "operations": [
+                    {
+                        "operation_id": "probe_inverse_surface_pair_0007",
+                        "operation_family": "probe_inverse_scorer_surface_cell",
+                        "target_kind": INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
+                    }
+                ],
+                "blockers": [
+                    "inverse_surface_unit_is_planning_only",
+                    "requires_materializer_before_candidate_archive",
+                    "requires_exact_auth_eval_before_score_claim",
+                ],
+            }
+        ],
+        **_false_authority(),
+    }
+    return build_byte_shaving_campaign_plan(surface, max_k=1)
+
+
 def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contracts() -> None:
     manifest = registry_manifest()
 
@@ -152,6 +194,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
     assert manifest["known_target_kinds"] == [
         BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
         DQS1_PAIRSET_TARGET_KIND,
+        INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
+        INVERSE_SCORER_CELL_TARGET_KIND,
     ]
     adapters = {row["materializer_id"]: row for row in manifest["adapters"]}
     assert adapters[DQS1_DROP_PAIR_MATERIALIZER] == {
@@ -200,6 +244,60 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         ],
         "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
         "unit_kind": "byte_range",
+    }
+    assert adapters[INVERSE_SCORER_CELL_MATERIALIZER] == {
+        "description": (
+            "Fail-closed contract for inverse-scorer coordinate cells; requires "
+            "a deterministic pixel/byte materializer and runtime-consumption proof "
+            "before queue execution."
+        ),
+        "executable": False,
+        "cooperative_receiver_required": True,
+        "materializer_id": INVERSE_SCORER_CELL_MATERIALIZER,
+        "materialization_resource_kind": "local_mlx",
+        "implementation_module": "tac.optimization.inverse_steganalysis_acquisition",
+        "plan_function": "build_discrete_scorer_action_functional",
+        "materialize_function": "materialize_inverse_scorer_cell_candidate",
+        "receiver_proof_function": "build_inverse_scorer_cell_receiver_proof",
+        "receiver_verify_function": "verify_inverse_scorer_cell_receiver_contract",
+        "operation_family": "materialize_inverse_scorer_cell_candidate",
+        "receiver_contract_id": INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND,
+        "required_context_fields": [
+            "raw_contest_video_digest",
+            "candidate_archive_template",
+            "inverse_action_functional",
+            "runtime_consumption_proof",
+        ],
+        "target_kind": INVERSE_SCORER_CELL_TARGET_KIND,
+        "unit_kind": "scorer_inverse_surface_cell",
+    }
+    assert adapters[INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER] == {
+        "description": (
+            "Compile inverse-scorer cells into a local planning-only discrete "
+            "action functional artifact. This proof-chain probe is not a "
+            "candidate archive materializer."
+        ),
+        "executable": True,
+        "cooperative_receiver_required": False,
+        "materializer_id": INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
+        "materialization_resource_kind": "local_cpu",
+        "implementation_module": "comma_lab.scheduler.byte_shaving_campaign_queue",
+        "plan_function": "build_inverse_steganalysis_action_functional",
+        "materialize_function": "",
+        "receiver_proof_function": "",
+        "receiver_verify_function": "",
+        "operation_family": "probe_inverse_scorer_surface_cell",
+        "receiver_contract_id": INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": (
+            INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND
+        ),
+        "required_context_fields": [
+            "output",
+            "scorer_response_or_inverse_scorer_surface",
+        ],
+        "target_kind": INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
+        "unit_kind": "scorer_inverse_surface_cell",
     }
     grammar_registry = manifest["cooperative_receiver_grammar_registry"]
     assert (
@@ -260,6 +358,34 @@ def test_byte_shaving_materializer_registry_allows_explicit_dqs1_target_kind() -
     assert resolved.blockers == ()
 
 
+def test_byte_shaving_materializer_registry_allows_inverse_action_probe_target_kind() -> None:
+    resolved = resolve_materializer(
+        operation={
+            "unit_id": "inverse_surface_pair_0007",
+            "operation_id": "probe_inverse_surface_pair_0007",
+            "operation_family": "probe_inverse_scorer_surface_cell",
+            "target_kind": INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
+        },
+        unit={
+            "unit_id": "inverse_surface_pair_0007",
+            "unit_kind": "scorer_inverse_surface_cell",
+        },
+    )
+
+    assert resolved.executable is True
+    assert resolved.materializer_id == INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER
+    assert resolved.target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
+    assert resolved.receiver_contract_id == (
+        INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID
+    )
+    assert resolved.receiver_contract_kind == (
+        INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND
+    )
+    assert resolved.cooperative_receiver_required is False
+    assert resolved.materialization_resource_kind == "local_cpu"
+    assert resolved.blockers == ()
+
+
 def test_byte_shaving_materializer_registry_registers_byte_range_entropy_fail_closed() -> None:
     resolved = resolve_materializer(
         operation={
@@ -291,6 +417,31 @@ def test_byte_shaving_materializer_registry_registers_byte_range_entropy_fail_cl
     assert [adapter.materializer_id for adapter in suggestions] == [
         BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER
     ]
+
+
+def test_byte_shaving_materializer_registry_registers_inverse_scorer_fail_closed() -> None:
+    resolved = resolve_materializer(
+        operation={
+            "unit_id": "inverse_surface_pair0007",
+            "operation_id": "materialize_inverse_scorer_cell_candidate",
+            "operation_family": "materialize_inverse_scorer_cell_candidate",
+            "target_kind": INVERSE_SCORER_CELL_TARGET_KIND,
+        },
+        unit={
+            "unit_id": "inverse_surface_pair0007",
+            "unit_kind": "scorer_inverse_surface_cell",
+        },
+    )
+
+    assert resolved.executable is False
+    assert resolved.materializer_id == INVERSE_SCORER_CELL_MATERIALIZER
+    assert resolved.target_kind == INVERSE_SCORER_CELL_TARGET_KIND
+    assert resolved.receiver_contract_id == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID
+    assert resolved.receiver_contract_kind == INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND
+    assert resolved.materialization_resource_kind == "local_mlx"
+    assert resolved.blockers == (
+        f"materializer_not_executable:{INVERSE_SCORER_CELL_MATERIALIZER}",
+    )
 
 
 def test_compile_dqs1_byte_shaving_plan_preserves_explicit_target_kind(
@@ -717,6 +868,85 @@ def test_materializer_work_queue_builds_byte_range_chain_command(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_inverse_surface_cells_compile_to_action_functional_work_queue(
+    tmp_path: Path,
+) -> None:
+    scorer_response = tmp_path / "scorer_response.json"
+    action_output = tmp_path / "inverse_action.json"
+    action_md = tmp_path / "inverse_action.md"
+    scorer_response.write_text(
+        json.dumps({"schema": "scorer_response_dataset.v1", "rows": []}),
+        encoding="utf-8",
+    )
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _inverse_surface_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+
+    assert compiled["executable_row_count"] == 0
+    backlog_row = compiled["materializer_backlog"]["rows"][0]
+    assert backlog_row["unit_kind"] == "scorer_inverse_surface_cell"
+    assert backlog_row["operation_family"] == "probe_inverse_scorer_surface_cell"
+    assert backlog_row["target_kind"] == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
+    assert backlog_row["materializer_id"] == (
+        INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER
+    )
+
+    missing_context_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+    )
+    assert missing_context_queue["executable_row_count"] == 0
+    assert any(
+        blocker.startswith("materializer_context_missing:")
+        for blocker in missing_context_queue["rows"][0]["materialization_blockers"]
+    )
+
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND: {
+                "scorer_response": str(scorer_response),
+                "output": str(action_output),
+                "md_out": str(action_md),
+                "total_byte_budget": 64,
+                "resource_kind": "local_mlx",
+                "inverse_scorer_allow_native_mlx_window_objective": True,
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    assert work_queue["schema"] == MATERIALIZER_WORK_QUEUE_SCHEMA
+    assert work_queue["executable_row_count"] == 1
+    row = work_queue["rows"][0]
+    assert row["executable"] is True
+    assert row["tool"] == "tools/build_inverse_steganalysis_action_functional.py"
+    assert row["command"][:4] == [
+        ".venv/bin/python",
+        "tools/build_inverse_steganalysis_action_functional.py",
+        "--output",
+        str(action_output),
+    ]
+    assert ["--scorer-response", str(scorer_response)] == row["command"][4:6]
+    assert "--inverse-scorer-allow-native-mlx-window-objective" in row["command"]
+    assert row["postconditions"] == [
+        {
+            "type": "json_equals",
+            "path": str(action_output),
+            "key": "schema",
+            "equals": "inverse_steganalysis_discrete_action_functional.v1",
+        }
+    ]
+    assert row["telemetry"]["artifact_paths"] == [str(action_output), str(action_md)]
+    assert "inverse_action_functional_is_not_candidate_archive" in row["dispatch_blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_materializer_execution_queue_runs_executable_work_rows(
     tmp_path: Path,
 ) -> None:
@@ -779,6 +1009,64 @@ def test_materializer_execution_queue_runs_executable_work_rows(
             "path": str(output_dir / CHAIN_MANIFEST_NAME),
             "key": "schema",
             "equals": CHAIN_SCHEMA,
+        }
+    ]
+
+
+def test_materializer_execution_queue_wraps_inverse_action_work_rows(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _inverse_surface_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    action_output = tmp_path / "inverse_action.json"
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND: {
+                "inverse_scorer_surface": "surface.json",
+                "output": str(action_output),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    execution_queue = build_materializer_execution_queue(
+        work_queue,
+        queue_id="inverse_action_exec_fixture",
+        repo_root=tmp_path,
+        lane_id="lane_inverse_action_exec_fixture",
+        source_work_queue_path=tmp_path / "work_queue.json",
+        local_cpu_concurrency=2,
+        step_timeout_seconds=300,
+    )
+
+    assert execution_queue["schema"] == "experiment_queue.v1"
+    assert execution_queue["controls"]["max_concurrency"] == {"local_cpu": 2}
+    experiment = execution_queue["experiments"][0]
+    assert experiment["metadata"]["target_kind"] == (
+        INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
+    )
+    assert experiment["metadata"]["score_claim"] is False
+    assert experiment["metadata"]["ready_for_exact_eval_dispatch"] is False
+    step = experiment["steps"][0]
+    assert step["resources"]["kind"] == "local_cpu"
+    assert step["command"][:4] == [
+        ".venv/bin/python",
+        "tools/build_inverse_steganalysis_action_functional.py",
+        "--output",
+        str(action_output),
+    ]
+    assert step["postconditions"] == [
+        {
+            "type": "json_equals",
+            "path": str(action_output),
+            "key": "schema",
+            "equals": "inverse_steganalysis_discrete_action_functional.v1",
         }
     ]
 

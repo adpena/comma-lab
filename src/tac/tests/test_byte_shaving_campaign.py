@@ -15,6 +15,7 @@ from tac.optimization.byte_shaving_campaign import (
     build_byte_shaving_campaign_plan,
     build_signal_surface_from_candidate_queue,
     build_signal_surface_from_engineered_correction_targeting,
+    build_signal_surface_from_inverse_action_functional,
     build_signal_surface_from_master_gradient_anchor,
     validate_signal_surface,
 )
@@ -93,6 +94,41 @@ def _surface() -> dict[str, object]:
             }
         ],
         "conflicts": [{"unit_ids": ["pair0371", "tensor_head7"]}],
+        **_false_authority(),
+    }
+
+
+def _inverse_action_payload() -> dict[str, object]:
+    return {
+        "schema": "inverse_steganalysis_discrete_action_functional.v1",
+        "tool": "tac.optimization.inverse_steganalysis_acquisition",
+        "math_model": {
+            "representation": "discrete_riemann_sum_with_second_order_interactions",
+            "stationarity_rule": "select positive euler_lagrange_residual cells",
+            "lambda_rate": 0.0000005,
+        },
+        "integral_totals": {"cell_count": 1, "blocked_cell_count": 0},
+        "water_bucket": {
+            "schema": "inverse_steganalysis_water_bucket_plan.v1",
+            "selected_count": 1,
+            "selected_expected_score_gain": 0.0004,
+            "selected_cells": [
+                {
+                    "atom_id": "inverse_surface_pair0007",
+                    "candidate_id": "candidate_pair0007",
+                    "scope_axis": "pairs",
+                    "component": "posenet",
+                    "water_fill_cost_bytes": 32,
+                    "expected_score_gain": 0.0004,
+                    "euler_lagrange_residual": 0.00039,
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "cells": [],
         **_false_authority(),
     }
 
@@ -228,6 +264,29 @@ def test_candidate_queue_surface_preserves_calibration_and_rejects_authority() -
         build_signal_surface_from_candidate_queue(queue)
 
 
+def test_inverse_action_functional_converts_to_plannable_surface() -> None:
+    surface = build_signal_surface_from_inverse_action_functional(_inverse_action_payload())
+    plan = build_byte_shaving_campaign_plan(surface)
+    ranked = plan["ranked_units"][0]
+
+    assert surface["units"][0]["unit_kind"] == "scorer_inverse_surface_cell"
+    assert surface["units"][0]["candidate_saved_bytes"] == 0
+    assert ranked["expected_delta_score"] == pytest.approx(-0.0004)
+    assert ranked["recommended_operation_family"] == (
+        "materialize_inverse_scorer_cell_candidate"
+    )
+    assert ranked["recommended_operation_materializer"] == (
+        "inverse_scorer_cell_candidate_adapter"
+    )
+    assert ranked["recommended_operation_target_kind"] == (
+        "inverse_scorer_cell_candidate_v1"
+    )
+    assert plan["recommended_prefix"]["selected_unit_ids"] == [
+        "inverse_action_inverse_surface_pair0007"
+    ]
+    assert plan["score_claim"] is False
+
+
 def test_engineered_correction_targeting_subsumes_legacy_sidecar() -> None:
     sidecar = {
         "schema": "master_gradient_consumer_engineered_correction_targeting_v1",
@@ -302,6 +361,36 @@ def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["combination_ladder"]
     assert "Recommended Combination" in md_out.read_text(encoding="utf-8")
+
+
+def test_cli_can_plan_from_inverse_action_functional(tmp_path: Path) -> None:
+    source = tmp_path / "inverse_action.json"
+    output = tmp_path / "plan.json"
+    source.write_text(json.dumps(_inverse_action_payload()), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--source",
+            str(source),
+            "--from-inverse-action-functional",
+            "--output",
+            str(output),
+            "--repo-root",
+            str(tmp_path),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["schema"] == "byte_shaving_campaign_plan.v1"
+    assert payload["ranked_units"][0]["recommended_operation_family"] == (
+        "materialize_inverse_scorer_cell_candidate"
+    )
+    assert payload["score_claim"] is False
 
 
 def test_master_gradient_anchor_builds_planning_only_byte_surface(tmp_path: Path) -> None:

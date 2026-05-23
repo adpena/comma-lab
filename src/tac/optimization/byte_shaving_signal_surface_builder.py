@@ -524,6 +524,8 @@ def _inverse_scorer_surface(
         "decision_surface_classes": list(surface["decision_surface_classes"]),
         "allow_native_mlx_window_objective": surface["allow_native_mlx_window_objective"],
         "planning_scope": "compressed_scorer_coordinate",
+        "blockers": _as_list(surface.get("blockers")),
+        "dispatch_blockers": _as_list(surface.get("dispatch_blockers")),
         "score_claim": False,
         "score_claim_valid": False,
         "promotion_eligible": False,
@@ -718,6 +720,7 @@ def build_byte_shaving_signal_surface(
     scorer_response_refs: list[dict[str, Any]] = []
     inverse_scorer_surface_refs: list[dict[str, Any]] = []
     engineered_correction_refs: list[dict[str, Any]] = []
+    surface_blockers: list[str] = []
 
     for index, raw_path in enumerate(candidate_queue_paths):
         path = _resolve_path(raw_path, repo)
@@ -823,6 +826,13 @@ def build_byte_shaving_signal_surface(
         )
         inverse_scorer_surface_refs.append(inverse_ref)
         for unit in inverse_units:
+            unit["blockers"] = ordered_unique(
+                [
+                    *[str(item) for item in _as_list(unit.get("blockers"))],
+                    *[str(item) for item in _as_list(inverse_ref.get("blockers"))],
+                    *[str(item) for item in _as_list(inverse_ref.get("dispatch_blockers"))],
+                ]
+            )
             units.append(
                 _dedupe_unit_id(
                     unit,
@@ -830,6 +840,10 @@ def build_byte_shaving_signal_surface(
                     seen=seen_unit_ids,
                 )
             )
+        surface_blockers.extend(str(item) for item in _as_list(inverse_ref.get("blockers")))
+        surface_blockers.extend(
+            str(item) for item in _as_list(inverse_ref.get("dispatch_blockers"))
+        )
 
     payload = {
         "schema": SIGNAL_SURFACE_SCHEMA,
@@ -860,6 +874,7 @@ def build_byte_shaving_signal_surface(
         "blockers": [
             "byte_shaving_signal_surface_is_planning_only",
             "source_refs_are_not_score_authority",
+            *ordered_unique(surface_blockers),
             "requires_materializer_before_candidate_archive",
             "requires_locality_controls_before_exact_eval",
             "requires_exact_auth_eval_before_score_claim",

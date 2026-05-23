@@ -23,6 +23,7 @@ from tac.optimization.byte_shaving_campaign import (  # noqa: E402
     ByteShavingCampaignError,
     build_byte_shaving_campaign_plan,
     build_signal_surface_from_candidate_queue,
+    build_signal_surface_from_inverse_action_functional,
     build_signal_surface_from_master_gradient_anchor,
 )
 
@@ -137,6 +138,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="convert optimizer_candidate_queue_v1 saved-byte rows into a signal surface first",
     )
+    parser.add_argument(
+        "--from-inverse-action-functional",
+        action="store_true",
+        help=(
+            "convert inverse_steganalysis_discrete_action_functional.v1 "
+            "water buckets into a byte-shaving signal surface first"
+        ),
+    )
     parser.add_argument("--campaign-id", default="byte_shaving_campaign")
     parser.add_argument("--max-k", type=int, default=None)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
@@ -155,8 +164,19 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.max_k is not None and args.max_k < 1:
         raise SystemExit("--max-k must be >= 1 when provided")
-    if args.from_candidate_queue and args.from_master_gradient_archive_sha:
-        raise SystemExit("--from-candidate-queue and --from-master-gradient-archive-sha are mutually exclusive")
+    conversion_modes = sum(
+        bool(value)
+        for value in (
+            args.from_candidate_queue,
+            args.from_inverse_action_functional,
+            args.from_master_gradient_archive_sha,
+        )
+    )
+    if conversion_modes > 1:
+        raise SystemExit(
+            "choose at most one of --from-candidate-queue, "
+            "--from-inverse-action-functional, or --from-master-gradient-archive-sha"
+        )
     if args.from_master_gradient_archive_sha:
         if args.source is not None:
             raise SystemExit("--source is not used with --from-master-gradient-archive-sha")
@@ -181,6 +201,11 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit(f"{args.source}: expected object")
         if args.from_candidate_queue:
             payload = build_signal_surface_from_candidate_queue(
+                payload,
+                campaign_id=args.campaign_id,
+            )
+        elif args.from_inverse_action_functional:
+            payload = build_signal_surface_from_inverse_action_functional(
                 payload,
                 campaign_id=args.campaign_id,
             )

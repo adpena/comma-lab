@@ -16,6 +16,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (
     compute_acquisition_priority,
     normalize_inverse_steganalysis_atom,
     normalize_inverse_steganalysis_observation,
+    observations_from_queue_performance_summary,
 )
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 
@@ -143,6 +144,13 @@ def test_observation_requires_axis_candidate_runtime_and_cache_identity() -> Non
             _observation(cache_identity={"note": "not identity"})
         )
 
+    with pytest.raises(InverseSteganalysisAcquisitionError, match="contest auth evidence"):
+        normalize_inverse_steganalysis_observation(_observation(axis="[contest-CUDA]"))
+    with pytest.raises(InverseSteganalysisAcquisitionError, match="contest auth evidence"):
+        normalize_inverse_steganalysis_observation(
+            _observation(resource_kind="contest_exact_eval")
+        )
+
 
 def test_calibrated_observations_rank_acquisition_candidates() -> None:
     atoms = [
@@ -222,6 +230,124 @@ def test_local_proxy_observations_never_become_promotion_or_rank_authority() -> 
         normalize_inverse_steganalysis_observation(
             _observation(rank_or_kill_eligible=True)
         )
+
+
+def test_queue_performance_observations_calibrate_acquisition_denominator() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {
+        "cache_sha256": "e" * 64,
+    }
+    performance = {
+        "schema": "experiment_queue_performance_summary.v1",
+        "queue_id": "byte_shave_queue",
+        "event_count": 2,
+        "by_resource_kind": {},
+        "by_step": {
+            "candidate_a.materialize": {
+                "run_count": 2,
+                "success_count": 2,
+                "failure_count": 0,
+                "resource_kind_counts": {"local_mlx": 2},
+                "dominant_resource_kind": "local_mlx",
+                "elapsed_seconds_mean": 3.5,
+                "artifact_record_count": 4,
+                "artifact_record_bytes_mean": 2_250_000.1,
+                "artifact_record_raw_bytes_mean": 9_000_000.0,
+            }
+        },
+    }
+
+    observations = observations_from_queue_performance_summary(
+        performance,
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+        source_path="configs/experiment_queues/byte_shave.yaml",
+    )
+    plan = build_inverse_steganalysis_acquisition_plan(
+        [
+            _atom(
+                "candidate_a",
+                predicted_score_gain=0.001,
+                elapsed_seconds=99.0,
+                artifact_bytes=99_000_000,
+                resource_kind="local_cpu",
+            )
+        ],
+        observations=observations,
+    )
+    top = plan["ranked_atoms"][0]
+
+    assert observations[0]["schema"] == OBSERVATION_SCHEMA
+    assert observations[0]["observation_kind"] == "queue_performance_step"
+    assert observations[0]["observed_score_gain"] is None
+    assert observations[0]["queue_id"] == "byte_shave_queue"
+    assert observations[0]["step_id"] == "materialize"
+    assert observations[0]["run_count"] == 2
+    assert observations[0]["artifact_bytes"] == 2_250_001
+    assert top["best_observation_id"] == (
+        "queue_perf_byte_shave_queue_candidate_a_materialize"
+    )
+    assert top["priority"]["elapsed_seconds"] == pytest.approx(3.5)
+    assert top["priority"]["artifact_bytes"] == 2_250_001
+    assert top["priority"]["resource_kind"] == "local_mlx"
+    assert top["score_claim"] is False
+
+    with pytest.raises(InverseSteganalysisAcquisitionError, match="runtime_identity"):
+        observations_from_queue_performance_summary(
+            performance,
+            runtime_identity={"note": "missing identity key"},
+            cache_identity=cache_identity,
+        )
+
+
+def test_queue_performance_observations_do_not_override_scorer_observations() -> None:
+    runtime_identity = {
+        "runtime_tree_sha256": "d" * 64,
+        "scorer_version": "local_scheduler.v1",
+    }
+    cache_identity = {
+        "cache_sha256": "e" * 64,
+    }
+    queue_observations = observations_from_queue_performance_summary(
+        {
+            "schema": "experiment_queue_performance_summary.v1",
+            "queue_id": "byte_shave_queue",
+            "event_count": 1,
+            "by_resource_kind": {},
+            "by_step": {
+                "candidate_a.materialize": {
+                    "run_count": 1,
+                    "success_count": 1,
+                    "failure_count": 0,
+                    "resource_kind_counts": {"local_mlx": 1},
+                    "elapsed_seconds_mean": 1.0,
+                    "artifact_record_bytes_mean": 1.0,
+                }
+            },
+        },
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
+    )
+    scorer_observation = _observation(
+        "candidate_a",
+        observation_id="obs_scorer_candidate_a",
+        observed_score_gain=0.0002,
+        elapsed_seconds=30.0,
+        artifact_bytes=5_000_000,
+        resource_kind="local_cpu",
+    )
+
+    plan = build_inverse_steganalysis_acquisition_plan(
+        [_atom("candidate_a", predicted_score_gain=0.001)],
+        observations=[*queue_observations, scorer_observation],
+    )
+
+    assert plan["ranked_atoms"][0]["best_observation_id"] == "obs_scorer_candidate_a"
+    assert plan["ranked_atoms"][0]["priority"]["elapsed_seconds"] == pytest.approx(30.0)
+    assert plan["ranked_atoms"][0]["priority"]["resource_kind"] == "local_cpu"
 
 
 def test_discrete_action_functional_water_fills_positive_euler_cells() -> None:

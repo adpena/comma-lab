@@ -2435,6 +2435,7 @@ def _new_performance_bucket() -> dict[str, Any]:
         "run_count": 0,
         "success_count": 0,
         "failure_count": 0,
+        "resource_kind_counts": {},
         "elapsed_seconds_sum": 0.0,
         "elapsed_seconds_min": None,
         "elapsed_seconds_max": None,
@@ -2449,6 +2450,7 @@ def _add_performance_sample(
     bucket: dict[str, Any],
     *,
     succeeded: bool,
+    resource_kind: str,
     elapsed_seconds: float | None,
     artifact_count: int,
     artifact_bytes: int,
@@ -2460,6 +2462,8 @@ def _add_performance_sample(
         bucket["success_count"] += 1
     else:
         bucket["failure_count"] += 1
+    resource_counts = bucket.setdefault("resource_kind_counts", {})
+    resource_counts[resource_kind] = int(resource_counts.get(resource_kind, 0)) + 1
     if elapsed_seconds is not None:
         bucket["elapsed_seconds_sum"] += elapsed_seconds
         current_min = bucket["elapsed_seconds_min"]
@@ -2480,8 +2484,20 @@ def _add_performance_sample(
 def _finalize_performance_bucket(bucket: dict[str, Any]) -> dict[str, Any]:
     run_count = int(bucket["run_count"])
     elapsed_sum = float(bucket["elapsed_seconds_sum"])
+    resource_counts = {
+        str(key): int(value)
+        for key, value in dict(bucket.get("resource_kind_counts") or {}).items()
+    }
+    dominant_resource_kind = None
+    if resource_counts:
+        dominant_resource_kind = sorted(
+            resource_counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )[0][0]
     return {
         **bucket,
+        "resource_kind_counts": resource_counts,
+        "dominant_resource_kind": dominant_resource_kind,
         "elapsed_seconds_mean": elapsed_sum / run_count if run_count else None,
         "artifact_record_bytes_mean": (
             int(bucket["artifact_record_bytes_sum"]) / run_count if run_count else None
@@ -2587,6 +2603,7 @@ def queue_performance_summary(
             _add_performance_sample(
                 bucket,
                 succeeded=succeeded,
+                resource_kind=resource_kind,
                 elapsed_seconds=elapsed,
                 artifact_count=artifact_count,
                 artifact_bytes=artifact_bytes,
@@ -2596,6 +2613,12 @@ def queue_performance_summary(
     return {
         "schema": "experiment_queue_performance_summary.v1",
         "queue_id": queue_id,
+        "telemetry_only": True,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
         "event_count": len(rows),
         "by_resource_kind": {
             key: _finalize_performance_bucket(value)

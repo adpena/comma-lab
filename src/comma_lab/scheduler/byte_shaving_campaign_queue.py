@@ -31,6 +31,7 @@ from tac.optimization.proxy_candidate_contract import (
 
 from .byte_shaving_materializer_registry import (
     DQS1_PAIRSET_TARGET_KIND,
+    INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
     REGISTRY_SCHEMA,
     known_materializer_target_kinds,
     registry_manifest,
@@ -51,7 +52,9 @@ ACTION_SUMMARY_SCHEMA = "cross_family_candidate_portfolio_action_summary.v1"
 PORTFOLIO_SCHEMA = "byte_shaving_campaign_dqs1_operator_portfolio.v1"
 TOOL_NAME = "comma_lab.scheduler.byte_shaving_campaign_queue"
 BYTE_RANGE_CHAIN_TOOL = "tools/run_byte_range_entropy_recode_chain.py"
+INVERSE_ACTION_FUNCTIONAL_TOOL = "tools/build_inverse_steganalysis_action_functional.py"
 BYTE_RANGE_CHAIN_MANIFEST = CHAIN_MANIFEST_NAME
+INVERSE_ACTION_FUNCTIONAL_SCHEMA = "inverse_steganalysis_discrete_action_functional.v1"
 MATERIALIZER_EXECUTION_STEP_ID = "materialize_local_proof_chain"
 
 
@@ -681,6 +684,106 @@ def _byte_range_chain_command(context: Mapping[str, Any]) -> tuple[list[str], li
     return command, []
 
 
+def _inverse_scorer_action_functional_command(
+    context: Mapping[str, Any],
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    blockers: list[str] = []
+    output = _path_context_value(context, "output")
+    if output is None:
+        blockers.append("materializer_context_missing:output")
+    scorer_responses = _path_list_context_value(context, "scorer_response")
+    scorer_responses.extend(_path_list_context_value(context, "scorer_responses"))
+    inverse_surfaces = _path_list_context_value(context, "inverse_scorer_surface")
+    inverse_surfaces.extend(_path_list_context_value(context, "inverse_scorer_surfaces"))
+    if not scorer_responses and not inverse_surfaces:
+        blockers.append(
+            "materializer_context_missing:scorer_response_or_inverse_scorer_surface"
+        )
+    if blockers:
+        return [], blockers, {}
+
+    assert output is not None
+    command = [
+        ".venv/bin/python",
+        INVERSE_ACTION_FUNCTIONAL_TOOL,
+        "--output",
+        output,
+    ]
+    for path in scorer_responses:
+        command.extend(["--scorer-response", path])
+    for path in inverse_surfaces:
+        command.extend(["--inverse-scorer-surface", path])
+
+    optional_path_flags = (
+        ("md_out", "--md-out"),
+        ("queue_performance_runtime_identity", "--queue-performance-runtime-identity"),
+        ("queue_performance_cache_identity", "--queue-performance-cache-identity"),
+        ("queue_performance_candidate_map", "--queue-performance-candidate-map"),
+    )
+    for key, flag in optional_path_flags:
+        value = _path_context_value(context, key)
+        if value is not None:
+            command.extend([flag, value])
+    for path in _path_list_context_value(context, "queue_performance_summary"):
+        command.extend(["--queue-performance-summary", path])
+
+    optional_text_flags = (
+        ("candidate_id", "--candidate-id"),
+        ("resource_kind", "--resource-kind"),
+        ("queue_performance_axis", "--queue-performance-axis"),
+    )
+    for key, flag in optional_text_flags:
+        value = context.get(key)
+        if isinstance(value, str) and value.strip():
+            command.extend([flag, value])
+    optional_int_flags = (
+        ("artifact_bytes", "--artifact-bytes"),
+        ("total_byte_budget", "--total-byte-budget"),
+        ("inverse_scorer_max_units", "--inverse-scorer-max-units"),
+    )
+    for key, flag in optional_int_flags:
+        value = _finite_int(context.get(key))
+        if value is not None:
+            command.extend([flag, str(value)])
+    optional_float_flags = (
+        ("elapsed_seconds", "--elapsed-seconds"),
+        ("lambda_rate", "--lambda-rate"),
+        ("inverse_scorer_null_delta_epsilon", "--inverse-scorer-null-delta-epsilon"),
+        (
+            "inverse_scorer_fragile_delta_threshold",
+            "--inverse-scorer-fragile-delta-threshold",
+        ),
+    )
+    for key, flag in optional_float_flags:
+        value = _finite_float(context.get(key))
+        if value is not None:
+            command.extend([flag, str(value)])
+    if context.get("inverse_scorer_allow_native_mlx_window_objective") is True:
+        command.append("--inverse-scorer-allow-native-mlx-window-objective")
+
+    telemetry_paths = [output]
+    md_out = _path_context_value(context, "md_out")
+    if md_out is not None:
+        telemetry_paths.append(md_out)
+    return command, [], {
+        "artifact_paths": telemetry_paths,
+        "include_postcondition_paths": True,
+    }
+
+
+def _materializer_work_dispatch_blockers(target_kind: str) -> tuple[str, ...]:
+    blockers = ["materializer_work_queue_local_proof_chain_only"]
+    if target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND:
+        blockers.extend(
+            [
+                "local_inverse_action_functional_proof_chain_only",
+                "inverse_action_functional_is_not_candidate_archive",
+            ]
+        )
+    blockers.append("exact_auth_eval_required_before_score_claim")
+    return tuple(blockers)
+
+
 def build_materializer_work_queue(
     backlog: Mapping[str, Any],
     *,
@@ -753,6 +856,23 @@ def build_materializer_work_queue(
                     "max_recursive_entries": 512,
                     "include_postcondition_paths": True,
                 }
+        elif (
+            unit_kind == "scorer_inverse_surface_cell"
+            and operation_family == "probe_inverse_scorer_surface_cell"
+            and target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
+        ):
+            command, command_blockers, telemetry = (
+                _inverse_scorer_action_functional_command(context)
+            )
+            blockers.extend(command_blockers)
+            output = _path_context_value(context, "output")
+            if command and output is not None:
+                postcondition = {
+                    "type": "json_equals",
+                    "path": output,
+                    "key": "schema",
+                    "equals": INVERSE_ACTION_FUNCTIONAL_SCHEMA,
+                }
         else:
             blockers.append(
                 f"materializer_work_queue_adapter_missing:{unit_kind}:{operation_family}:{target_kind or '<target_tbd>'}"
@@ -783,7 +903,7 @@ def build_materializer_work_queue(
                         row.get("receiver_contract_kind")
                         or suggestion.get("receiver_contract_kind")
                     ),
-                    "tool": BYTE_RANGE_CHAIN_TOOL if command else None,
+                    "tool": command[1] if command else None,
                     "command": command,
                     "postconditions": [] if postcondition is None else [postcondition],
                     "telemetry": telemetry,
@@ -799,10 +919,7 @@ def build_materializer_work_queue(
                     **FALSE_AUTHORITY,
                 },
                 dispatch_blockers=(
-                    (
-                        "materializer_work_queue_local_proof_chain_only",
-                        "exact_auth_eval_required_before_score_claim",
-                    )
+                    _materializer_work_dispatch_blockers(target_kind)
                     if executable
                     else blockers
                 ),

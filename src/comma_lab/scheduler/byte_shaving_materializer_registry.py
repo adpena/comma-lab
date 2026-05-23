@@ -25,6 +25,22 @@ DQS1_DROP_PAIR_MATERIALIZER = "dqs1_pairset_drop_pair_adapter"
 DQS1_PAIRSET_TARGET_KIND = "dqs1_pairset_drop_pair"
 DQS1_RECEIVER_CONTRACT_ID = "dqs1_pairset_decoderq_receiver.v1"
 DQS1_RECEIVER_CONTRACT_KIND = "archive_charged_pairset_runtime_selector"
+INVERSE_SCORER_CELL_MATERIALIZER = "inverse_scorer_cell_candidate_adapter"
+INVERSE_SCORER_CELL_TARGET_KIND = "inverse_scorer_cell_candidate_v1"
+INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID = "inverse_scorer_cell_receiver.v1"
+INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND = "inverse_scorer_coordinate_candidate"
+INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER = (
+    "inverse_scorer_action_functional_adapter"
+)
+INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND = (
+    "inverse_scorer_action_functional_v1"
+)
+INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID = (
+    "inverse_scorer_action_functional_receiver.v1"
+)
+INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND = (
+    "planning_only_inverse_scorer_action_functional"
+)
 
 
 @dataclass(frozen=True)
@@ -112,6 +128,57 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         materialization_resource_kind="local_cpu",
         required_context_fields=("dqs1_base_pair_indices",),
         implementation_module="comma_lab.scheduler.byte_shaving_campaign_queue",
+    ),
+    MaterializerAdapter(
+        materializer_id=INVERSE_SCORER_CELL_MATERIALIZER,
+        unit_kind="scorer_inverse_surface_cell",
+        operation_family="materialize_inverse_scorer_cell_candidate",
+        target_kind=INVERSE_SCORER_CELL_TARGET_KIND,
+        executable=False,
+        description=(
+            "Fail-closed contract for inverse-scorer coordinate cells; requires "
+            "a deterministic pixel/byte materializer and runtime-consumption proof "
+            "before queue execution."
+        ),
+        receiver_contract_id=INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID,
+        receiver_contract_kind=INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND,
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_mlx",
+        required_context_fields=(
+            "raw_contest_video_digest",
+            "candidate_archive_template",
+            "inverse_action_functional",
+            "runtime_consumption_proof",
+        ),
+        implementation_module="tac.optimization.inverse_steganalysis_acquisition",
+        plan_function="build_discrete_scorer_action_functional",
+        materialize_function="materialize_inverse_scorer_cell_candidate",
+        receiver_proof_function="build_inverse_scorer_cell_receiver_proof",
+        receiver_verify_function="verify_inverse_scorer_cell_receiver_contract",
+    ),
+    MaterializerAdapter(
+        materializer_id=INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
+        unit_kind="scorer_inverse_surface_cell",
+        operation_family="probe_inverse_scorer_surface_cell",
+        target_kind=INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND,
+        executable=True,
+        description=(
+            "Compile inverse-scorer cells into a local planning-only discrete "
+            "action functional artifact. This proof-chain probe is not a "
+            "candidate archive materializer."
+        ),
+        receiver_contract_id=INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID,
+        receiver_contract_kind=(
+            INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND
+        ),
+        cooperative_receiver_required=False,
+        materialization_resource_kind="local_cpu",
+        required_context_fields=(
+            "output",
+            "scorer_response_or_inverse_scorer_surface",
+        ),
+        implementation_module="comma_lab.scheduler.byte_shaving_campaign_queue",
+        plan_function="build_inverse_steganalysis_action_functional",
     ),
 )
 
@@ -336,6 +403,14 @@ __all__ = [
     "DQS1_PAIRSET_TARGET_KIND",
     "DQS1_RECEIVER_CONTRACT_ID",
     "DQS1_RECEIVER_CONTRACT_KIND",
+    "INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER",
+    "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID",
+    "INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND",
+    "INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND",
+    "INVERSE_SCORER_CELL_MATERIALIZER",
+    "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_ID",
+    "INVERSE_SCORER_CELL_RECEIVER_CONTRACT_KIND",
+    "INVERSE_SCORER_CELL_TARGET_KIND",
     "KNOWN_OPERATION_FAMILIES",
     "REGISTRY_SCHEMA",
     "MaterializerAdapter",

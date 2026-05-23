@@ -386,6 +386,15 @@ def test_builder_promotes_inverse_scorer_surface_cells_to_ranked_units(
     assert unit["candidate_saved_bytes"] == 32
     assert plan["ranked_units"][0]["unit_kind"] == "scorer_inverse_surface_cell"
     assert plan["ranked_units"][0]["expected_delta_score"] == pytest.approx(-0.0001)
+    assert plan["ranked_units"][0]["recommended_operation_family"] == (
+        "probe_inverse_scorer_surface_cell"
+    )
+    assert plan["ranked_units"][0]["recommended_operation_materializer"] == (
+        "inverse_scorer_action_functional_adapter"
+    )
+    assert plan["ranked_units"][0]["recommended_operation_target_kind"] == (
+        "inverse_scorer_action_functional_v1"
+    )
     assert plan["score_claim"] is False
 
 
@@ -411,8 +420,20 @@ def test_builder_inverse_surface_can_use_native_mlx_window_with_blocker(
     )
 
     ref = surface["inverse_scorer_surface_refs"][0]
+    plan = build_byte_shaving_campaign_plan(surface, repo_root=tmp_path)
+    ranked = plan["ranked_units"][0]
+    selected = plan["recommended_prefix"]["selected_operations"][0]
+
     assert ref["allow_native_mlx_window_objective"] is True
+    assert "native_mlx_window_objective_not_full_video_normalized" in ref["blockers"]
+    assert "native_mlx_window_objective_not_full_video_normalized" in surface["blockers"]
     assert surface["units"][0]["unit_kind"] == "scorer_inverse_surface_cell"
+    assert surface["units"][0]["planning_value_scope"] == "native_mlx_window"
+    assert "native_window_delta_vs_baseline_score" in surface["units"][0]
+    assert "projected_full_video_delta_vs_baseline_score" not in surface["units"][0]
+    assert "native_mlx_window_objective_not_full_video_normalized" in surface["units"][0]["blockers"]
+    assert "native_mlx_window_objective_not_full_video_normalized" in ranked["blockers"]
+    assert "native_mlx_window_objective_not_full_video_normalized" in selected["blockers"]
     assert surface["score_claim"] is False
 
 

@@ -13,6 +13,7 @@ from comma_lab.scheduler.experiment_queue import (
     _condition_passes,
     connect_state_readonly,
     queue_definition_drift,
+    queue_performance_summary,
     queue_resource_kinds,
     queue_summary,
     resolve_worker_max_parallel,
@@ -285,6 +286,7 @@ def observe_experiment_queue(
         with connect_state_readonly(state_path) as conn:
             summary = queue_summary(conn, queue, repo_root=repo_root)
             definition_drift = queue_definition_drift(conn, queue)
+            performance = queue_performance_summary(conn, queue)
     except ExperimentQueueError:
         summary = {
             "queue_id": str(queue["queue_id"]),
@@ -310,6 +312,20 @@ def observe_experiment_queue(
             "missing_steps": [],
             "changed_steps": [],
             "missing_hash_steps": [],
+        }
+        performance = {
+            "schema": "experiment_queue_performance_summary.v1",
+            "queue_id": str(queue["queue_id"]),
+            "state_missing": True,
+            "telemetry_only": True,
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "event_count": 0,
+            "by_resource_kind": {},
+            "by_step": {},
         }
     lookup = _experiment_lookup(queue)
     processes = _process_table()
@@ -358,6 +374,7 @@ def observe_experiment_queue(
         "status_counts": summary.get("status_counts", {}),
         "observe_read_only": True,
         "definition_drift": definition_drift,
+        "performance": performance,
         "auto_parallelism": _auto_parallelism_observation(queue),
         "step_count": summary.get("step_count"),
         "orphaned_step_count": summary.get("orphaned_step_count"),
@@ -389,6 +406,7 @@ def render_observation_markdown(observation: Mapping[str, Any]) -> str:
         f"- state: `{observation.get('state')}`",
         f"- status_counts: `{observation.get('status_counts')}`",
         f"- auto_parallelism: `{observation.get('auto_parallelism')}`",
+        f"- performance: `{_performance_markdown_summary(observation.get('performance'))}`",
         f"- orphaned_step_count: `{observation.get('orphaned_step_count')}`",
         "",
         "| status | experiment | step | log | artifacts | processes |",
@@ -421,6 +439,25 @@ def render_observation_markdown(observation: Mapping[str, Any]) -> str:
             )
         )
     return "\n".join(lines) + "\n"
+
+
+def _performance_markdown_summary(value: object) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        return {}
+    return {
+        "event_count": value.get("event_count"),
+        "telemetry_only": value.get("telemetry_only"),
+        "score_claim": value.get("score_claim"),
+        "by_resource_kind": {
+            str(key): {
+                "runs": bucket.get("run_count"),
+                "successes": bucket.get("success_count"),
+                "mean_seconds": bucket.get("elapsed_seconds_mean"),
+            }
+            for key, bucket in dict(value.get("by_resource_kind") or {}).items()
+            if isinstance(bucket, Mapping)
+        },
+    }
 
 
 __all__ = [
