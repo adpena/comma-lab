@@ -19,8 +19,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 from tac.optimization.proxy_candidate_contract import (
+    CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
     PROXY_FALSE_AUTHORITY_FIELDS,
     apply_proxy_evidence_boundary,
+    truthy_authority_field_violations,
 )
 
 TRUST_REGION_DQS1_FEC6 = "dqs1_fec6_like_same_archive_segnet_rounding"
@@ -53,6 +55,8 @@ LOCAL_CPU_ADVISORY_AXIS_LABELS = frozenset(
         "macos cpu advisory",
     }
 )
+LOCAL_CPU_ADVISORY_EVIDENCE_SEMANTICS = "non_contest_cpu_auth_eval_advisory"
+LOCAL_CPU_ADVISORY_EXPECTED_SAMPLES = 600
 
 
 class LocalCPUContestDriftError(ValueError):
@@ -477,7 +481,39 @@ def _payload_axis_label(payload: Mapping[str, Any]) -> str:
 
 
 def _normalize_axis_label(value: str) -> str:
-    return value.strip().replace("_", "-").lower()
+    return value.strip().strip("[]").replace("_", "-").replace(" ", "-").lower()
+
+
+def local_cpu_advisory_payload_blockers(payload: Mapping[str, Any]) -> list[str]:
+    """Return fail-closed blockers for local macOS-CPU advisory eureka inputs."""
+
+    blockers: list[str] = []
+    local_axis = _payload_axis_label(payload)
+    if not local_axis:
+        blockers.append("candidate_local_axis_missing")
+    elif _normalize_axis_label(local_axis) not in LOCAL_CPU_ADVISORY_AXIS_LABELS:
+        blockers.append("candidate_local_axis_not_macos_cpu_advisory")
+
+    evidence_semantics = payload.get("evidence_semantics")
+    if evidence_semantics != LOCAL_CPU_ADVISORY_EVIDENCE_SEMANTICS:
+        blockers.append("candidate_local_evidence_semantics_not_cpu_advisory")
+
+    n_samples = payload.get("n_samples")
+    if (
+        isinstance(n_samples, bool)
+        or not isinstance(n_samples, int)
+        or n_samples != LOCAL_CPU_ADVISORY_EXPECTED_SAMPLES
+    ):
+        blockers.append("candidate_local_not_full_public_sample")
+
+    blockers.extend(
+        "candidate_local_payload_truthy_authority:" + violation
+        for violation in truthy_authority_field_violations(
+            payload,
+            fields=CONSUMER_PAYLOAD_FORBIDDEN_TRUE_AUTHORITY_FIELDS,
+        )
+    )
+    return blockers
 
 
 def build_eureka_signal_from_local_payload(
@@ -493,12 +529,9 @@ def build_eureka_signal_from_local_payload(
     """Build a false-authority eureka signal directly from local eval JSON."""
 
     local_axis = _payload_axis_label(local_payload)
-    blockers: list[str] = []
     if not local_axis:
-        blockers.append("candidate_local_axis_missing")
         local_axis = "unknown-local-axis"
-    elif _normalize_axis_label(local_axis) not in LOCAL_CPU_ADVISORY_AXIS_LABELS:
-        blockers.append("candidate_local_axis_not_macos_cpu_advisory")
+    blockers = local_cpu_advisory_payload_blockers(local_payload)
     return build_eureka_signal(
         candidate_id=candidate_id,
         local_score=_score(local_payload),
@@ -547,7 +580,7 @@ def _load_json(path: Path) -> Mapping[str, Any]:
 def _score(payload: Mapping[str, Any]) -> float:
     for key in ("score_recomputed_from_components", "canonical_score", "final_score"):
         value = payload.get(key)
-        if isinstance(value, int | float):
+        if isinstance(value, int | float) and not isinstance(value, bool):
             return float(value)
     raise LocalCPUContestDriftError("payload missing score field")
 
@@ -566,7 +599,7 @@ def _archive_sha256(payload: Mapping[str, Any]) -> str:
 
 def _optional_float(payload: Mapping[str, Any], key: str) -> float | None:
     value = payload.get(key)
-    if isinstance(value, int | float):
+    if isinstance(value, int | float) and not isinstance(value, bool):
         return float(value)
     return None
 
@@ -621,6 +654,7 @@ __all__ = [
     "eureka_false_authority_violations",
     "fit_drift_calibration",
     "load_calibration_json",
+    "local_cpu_advisory_payload_blockers",
     "paired_anchor_from_json_files",
     "require_eureka_false_authority",
 ]

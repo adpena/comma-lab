@@ -204,6 +204,8 @@ def test_eureka_from_calibration_and_local_json_file(tmp_path: Path) -> None:
         json.dumps(
             {
                 "score_recomputed_from_components": 0.192010,
+                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+                "n_samples": 600,
                 "score_axis": "cpu_advisory",
                 "provenance": {"archive_sha256": "d" * 64},
             }
@@ -221,6 +223,84 @@ def test_eureka_from_calibration_and_local_json_file(tmp_path: Path) -> None:
     assert signal["candidate_archive_sha256"] == "d" * 64
     assert signal["candidate_trust_region_matches_calibration"] is True
     assert signal["score_claim"] is False
+
+
+def test_eureka_from_local_json_file_blocks_partial_or_authority_payload(
+    tmp_path: Path,
+) -> None:
+    calibration = fit_drift_calibration(
+        [
+            _anchor("a" * 64, 0.000010),
+            _anchor("b" * 64, 0.000011),
+            _anchor("c" * 64, 0.000012),
+        ]
+    )
+    candidate_json = tmp_path / "candidate_partial.json"
+    candidate_json.write_text(
+        json.dumps(
+            {
+                "score_recomputed_from_components": 0.192010,
+                "score_axis": "cpu_advisory",
+                "promotion_eligible": True,
+                "provenance": {"archive_sha256": "d" * 64},
+            }
+        )
+    )
+
+    signal = build_eureka_signal_from_local_json_file(
+        candidate_id="candidate",
+        local_path=candidate_json,
+        auth_frontier_score=0.192028,
+        calibration=calibration,
+    )
+
+    assert signal["eureka_trigger"] is False
+    assert signal["recommended_action"] == "observe_only"
+    assert "candidate_local_evidence_semantics_not_cpu_advisory" in signal[
+        "candidate_trust_region_blockers"
+    ]
+    assert "candidate_local_not_full_public_sample" in signal[
+        "candidate_trust_region_blockers"
+    ]
+    assert (
+        "candidate_local_payload_truthy_authority:promotion_eligible=truthy"
+        in signal["candidate_trust_region_blockers"]
+    )
+    assert signal["score_claim"] is False
+
+
+def test_eureka_from_local_json_file_accepts_bracketed_macos_cpu_axis(
+    tmp_path: Path,
+) -> None:
+    calibration = fit_drift_calibration(
+        [
+            _anchor("a" * 64, 0.000010),
+            _anchor("b" * 64, 0.000011),
+            _anchor("c" * 64, 0.000012),
+        ]
+    )
+    candidate_json = tmp_path / "candidate_bracketed_axis.json"
+    candidate_json.write_text(
+        json.dumps(
+            {
+                "score_recomputed_from_components": 0.192010,
+                "evidence_grade": "[macOS-CPU advisory]",
+                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+                "n_samples": 600,
+                "provenance": {"archive_sha256": "d" * 64},
+            }
+        )
+    )
+
+    signal = build_eureka_signal_from_local_json_file(
+        candidate_id="candidate",
+        local_path=candidate_json,
+        auth_frontier_score=0.192028,
+        calibration=calibration,
+    )
+
+    assert signal["eureka_trigger"] is True
+    assert signal["candidate_trust_region_blockers"] == []
 
 
 def test_cli_auth_frontier_score_can_come_from_canonical_pointer(tmp_path: Path) -> None:
@@ -303,6 +383,8 @@ def test_eureka_from_local_json_file_refuses_mps_axis(tmp_path: Path) -> None:
         json.dumps(
             {
                 "score_recomputed_from_components": 0.192010,
+                "evidence_semantics": "non_contest_cpu_auth_eval_advisory",
+                "n_samples": 600,
                 "score_axis": "mps_advisory",
                 "provenance": {"archive_sha256": "d" * 64},
             }
