@@ -525,6 +525,62 @@ def test_candidate_queue_rejects_mlx_dynamic_sweep_nested_authority(
         build_candidate_queue([plan], repo_root=tmp_path)
 
 
+def test_unknown_candidates_schema_is_not_ranked_by_generic_numeric_fields(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_json(
+        tmp_path / "unknown_candidate_rows.json",
+        {
+            "schema": "future_optimizer_rows_without_adapter_v1",
+            "candidates": [
+                {
+                    "candidate_id": "looks_good_but_unknown",
+                    "predicted_score": 0.0001,
+                    "proxy_score": 0.0001,
+                    "macos_cpu_score": 0.0001,
+                    "score_claim": True,
+                    "ready_for_exact_eval_dispatch": True,
+                }
+            ],
+        },
+    )
+
+    queue = build_candidate_queue([manifest], repo_root=tmp_path)
+
+    assert queue["n_candidates"] == 0
+    assert queue["top_k"] == []
+    assert queue["unsupported_sources"] == [
+        {
+            "path": "unknown_candidate_rows.json",
+            "schema": "future_optimizer_rows_without_adapter_v1",
+            "reason": (
+                "unsupported_candidates_schema_requires_explicit_adapter_or_"
+                "codec_op_param_sweep_manifest_v1"
+            ),
+        }
+    ]
+    assert queue["source_schemas"][0]["status"] == "unsupported"
+    assert queue["source_schemas"][0]["extracted_candidate_count"] == 0
+
+
+def test_sort_key_ignores_unadapted_proxy_score_fields() -> None:
+    assert candidate_queue_module._candidate_sort_key(
+        {
+            "candidate_id": "bare_proxy_score",
+            "proxy_score": 0.0001,
+            "predicted_score": 0.0001,
+            "macos_cpu_score": 0.0001,
+        }
+    ) == (4, "bare_proxy_score")
+    assert candidate_queue_module._candidate_sort_key(
+        {
+            "candidate_id": "adapted_proxy_score",
+            "proxy_score": 0.0001,
+            "rank_score": 0.0001,
+        }
+    ) == (4, 0.0001, "adapted_proxy_score")
+
+
 def test_kaggle_proxy_manifest_becomes_canonical_non_dispatchable_queue_row(
     tmp_path: Path,
 ) -> None:

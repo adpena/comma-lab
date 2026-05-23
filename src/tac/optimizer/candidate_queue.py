@@ -14,6 +14,7 @@ import json
 import math
 import time
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +62,17 @@ SCORE_AFFECTING_BOOLEAN_FIELDS: frozenset[str] = frozenset(
         "score_affecting_runtime_changed",
     }
 )
+UNKNOWN_CANDIDATES_REASON = (
+    "unsupported_candidates_schema_requires_explicit_adapter_or_"
+    "codec_op_param_sweep_manifest_v1"
+)
+
+
+@dataclass(frozen=True)
+class SourceExtraction:
+    schema: str
+    rows: list[dict[str, Any]]
+    unsupported_reason: str | None = None
 
 
 def _utc_now() -> str:
@@ -207,14 +219,7 @@ def _candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
         class_rank = 3
     else:
         class_rank = 4
-    for key in (
-        "predicted_contest_cpu_gha",
-        "rank_score",
-        "fitness",
-        "predicted_score",  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
-        "proxy_score",
-        "macos_cpu_score",
-    ):
+    for key in ("predicted_contest_cpu_gha", "rank_score", "fitness"):
         value = _as_float(row.get(key))
         if value is not None:
             return (class_rank, value, str(row.get("candidate_id") or ""))
@@ -882,79 +887,122 @@ def _pr103_hidden_gem_candidates(
     return [row]
 
 
-def extract_candidates_from_source(path: Path, *, repo_root: Path) -> tuple[str, list[dict[str, Any]]]:
+def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtraction:
     payload = _load_json(path)
     schema = _source_schema(payload)
     if not isinstance(payload, Mapping):
-        return schema, []
+        return SourceExtraction(schema=schema, rows=[])
     if schema == "constrained_coord_search_rollup_v1":
-        return schema, _a1_rollup_candidates(payload, source_path=path, repo_root=repo_root)
+        return SourceExtraction(
+            schema=schema,
+            rows=_a1_rollup_candidates(payload, source_path=path, repo_root=repo_root),
+        )
     if payload.get("tool") == "tools/sweep_m5max_hnerv_cluster.py":
-        return schema, _m5max_candidates(payload, source_path=path, repo_root=repo_root)
+        return SourceExtraction(
+            schema=schema,
+            rows=_m5max_candidates(payload, source_path=path, repo_root=repo_root),
+        )
     if schema in {"codec_op_cma_search_report_v1", "codec_op_optuna_search_report_v1"}:
-        return schema, _codec_search_report_candidates(payload, source_path=path, repo_root=repo_root)
+        return SourceExtraction(
+            schema=schema,
+            rows=_codec_search_report_candidates(payload, source_path=path, repo_root=repo_root),
+        )
     if schema == "codec_op_param_sweep_manifest.v1":
-        return schema, _codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root)
+        return SourceExtraction(
+            schema=schema,
+            rows=_codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root),
+        )
     if schema == "meta_lagrangian_search_v1":
-        return schema, _meta_lagrangian_candidates(payload, source_path=path, repo_root=repo_root)
+        return SourceExtraction(
+            schema=schema,
+            rows=_meta_lagrangian_candidates(payload, source_path=path, repo_root=repo_root),
+        )
     if schema == "optimizer_guided_candidate_queue_v1":
-        return schema, _optimizer_guided_queue_candidates(
-            payload,
-            source_path=path,
-            repo_root=repo_root,
+        return SourceExtraction(
+            schema=schema,
+            rows=_optimizer_guided_queue_candidates(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            ),
         )
     if schema == "mlx_dynamic_learned_sweep_plan.v1":
-        return schema, _mlx_dynamic_learned_sweep_candidates(
-            payload,
-            source_path=path,
-            repo_root=repo_root,
+        return SourceExtraction(
+            schema=schema,
+            rows=_mlx_dynamic_learned_sweep_candidates(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            ),
         )
     if schema in {PR95_LOCAL_TRAINING_SCHEMA, PR95_LOCAL_TRAINING_PLAN_SCHEMA}:
-        return schema, [
-            adapt_pr95_local_training_manifest_to_candidate(
-                payload,
-                source_path=path,
-                repo_root=repo_root,
-            )
-        ]
+        return SourceExtraction(
+            schema=schema,
+            rows=[
+                adapt_pr95_local_training_manifest_to_candidate(
+                    payload,
+                    source_path=path,
+                    repo_root=repo_root,
+                )
+            ],
+        )
     if schema in {REPRESENTATION_TRAINING_SCHEMA, REPRESENTATION_TRAINING_PLAN_SCHEMA}:
-        return schema, [
-            adapt_representation_training_manifest_to_candidate(
+        return SourceExtraction(
+            schema=schema,
+            rows=[
+                adapt_representation_training_manifest_to_candidate(
+                    payload,
+                    source_path=path,
+                    repo_root=repo_root,
+                )
+            ],
+        )
+    if schema == "pr101_kaggle_proxy_sweep_v1":
+        return SourceExtraction(
+            schema=schema,
+            rows=_kaggle_proxy_sweep_candidates(payload, source_path=path, repo_root=repo_root),
+        )
+    if schema == "pr101_kaggle_proxy_runtime_packet_v1":
+        return SourceExtraction(
+            schema=schema,
+            rows=_pr101_kaggle_proxy_runtime_packet_candidates(
                 payload,
                 source_path=path,
                 repo_root=repo_root,
-            )
-        ]
-    if schema == "pr101_kaggle_proxy_sweep_v1":
-        return schema, _kaggle_proxy_sweep_candidates(payload, source_path=path, repo_root=repo_root)
-    if schema == "pr101_kaggle_proxy_runtime_packet_v1":
-        return schema, _pr101_kaggle_proxy_runtime_packet_candidates(
-            payload,
-            source_path=path,
-            repo_root=repo_root,
+            ),
         )
     if schema in {
         "hnerv_lowlevel_exact_eval_candidate_manifest_v1",
         "hnerv_lowlevel_exact_eval_operator_packet_v1",
         "hnerv_lowlevel_release_surface_manifest_v1",
     }:
-        return schema, _hnerv_lowlevel_exact_eval_candidates(
-            payload,
-            source_path=path,
-            repo_root=repo_root,
+        return SourceExtraction(
+            schema=schema,
+            rows=_hnerv_lowlevel_exact_eval_candidates(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            ),
         )
     if (
         schema == "pr103_hidden_gem_release_surface_manifest_v1"
         or payload.get("tool") == "inline_local_materialize_pr103_ac_hidden_gem_candidate"
     ):
-        return schema, _pr103_hidden_gem_candidates(
-            payload,
-            source_path=path,
-            repo_root=repo_root,
+        return SourceExtraction(
+            schema=schema,
+            rows=_pr103_hidden_gem_candidates(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            ),
         )
     if isinstance(payload.get("candidates"), list):
-        return schema, _codec_param_manifest_candidates(payload, source_path=path, repo_root=repo_root)
-    return schema, []
+        return SourceExtraction(
+            schema=schema,
+            rows=[],
+            unsupported_reason=UNKNOWN_CANDIDATES_REASON,
+        )
+    return SourceExtraction(schema=schema, rows=[])
 
 
 def build_candidate_queue(
@@ -964,11 +1012,27 @@ def build_candidate_queue(
     top_k: int | None = None,
 ) -> dict[str, Any]:
     merged: dict[tuple[str, ...], dict[str, Any]] = {}
-    source_schemas: list[dict[str, str]] = []
+    source_schemas: list[dict[str, Any]] = []
+    unsupported_sources: list[dict[str, str]] = []
     for path in source_paths:
-        schema, rows = extract_candidates_from_source(path, repo_root=repo_root)
-        source_schemas.append({"path": _repo_rel(path, repo_root), "schema": schema})
-        for row in rows:
+        extraction = extract_candidates_from_source(path, repo_root=repo_root)
+        source_entry: dict[str, Any] = {
+            "path": _repo_rel(path, repo_root),
+            "schema": extraction.schema,
+            "extracted_candidate_count": len(extraction.rows),
+        }
+        if extraction.unsupported_reason:
+            source_entry["status"] = "unsupported"
+            source_entry["unsupported_reason"] = extraction.unsupported_reason
+            unsupported_sources.append({
+                "path": _repo_rel(path, repo_root),
+                "schema": extraction.schema,
+                "reason": extraction.unsupported_reason,
+            })
+        else:
+            source_entry["status"] = "supported"
+        source_schemas.append(source_entry)
+        for row in extraction.rows:
             cid = str(row.get("candidate_id") or "")
             if not cid:
                 continue
@@ -989,6 +1053,7 @@ def build_candidate_queue(
         "tool": TOOL_NAME,
         "generated_at_utc": _utc_now(),
         "source_schemas": source_schemas,
+        "unsupported_sources": unsupported_sources,
         "n_candidates": len(merged),
         "top_k_count": len(sorted_rows),
         "dispatch_ready_count": len(dispatch_ready),
