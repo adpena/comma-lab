@@ -21,6 +21,12 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from comma_lab.artifact_retention import (  # noqa: E402
+    DEFAULT_RETENTION_KINDS,
+    ArtifactRetentionError,
+    build_retention_plan,
+    execute_retention_plan,
+)
 from comma_lab.scheduler.dqs1_local_first_harvest import (  # noqa: E402
     DEFAULT_QUEUE_PATH,
     DEFAULT_RESULTS_ROOT,
@@ -37,14 +43,11 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     queue_summary,
     run_queue_worker,
 )
-from tac.optimization.local_cpu_contest_drift import (  # noqa: E402
-    local_cpu_advisory_payload_blockers,
-)
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 AUTOPILOT_SCHEMA = "dqs1_local_first_autopilot_result.v1"
 REROUTE_LEDGER_SCHEMA = "dqs1_local_first_queue_reroute_record.v1"
-SCRATCH_CLEANUP_SCHEMA = "dqs1_local_first_scratch_cleanup.v1"
+ARTIFACT_RETENTION_SCHEMA = "dqs1_local_first_artifact_retention.v1"
 
 
 def _json_print(payload: object) -> None:
@@ -64,6 +67,23 @@ def _artifact_token(value: object) -> str:
     return "".join(c if c.isalnum() or c in {"_", "-"} else "_" for c in text)
 
 
+def _parse_bytes(value: str) -> int:
+    raw = value.strip().lower()
+    units = {
+        "b": 1,
+        "kb": 1000,
+        "mb": 1000**2,
+        "gb": 1000**3,
+        "kib": 1024,
+        "mib": 1024**2,
+        "gib": 1024**3,
+    }
+    for suffix, multiplier in sorted(units.items(), key=lambda item: -len(item[0])):
+        if raw.endswith(suffix):
+            return int(float(raw[: -len(suffix)]) * multiplier)
+    return int(raw)
+
+
 def _write_json_new(path: Path, payload: object) -> None:
     try:
         write_json_artifact(path, payload)
@@ -71,89 +91,105 @@ def _write_json_new(path: Path, payload: object) -> None:
         raise ExperimentQueueError(str(exc)) from exc
 
 
-def _path_size_bytes(path: Path) -> int:
-    if not path.exists():
-        return 0
-    if path.is_file():
-        try:
-            return path.stat().st_size
-        except OSError:
-            return 0
-    total = 0
-    for child in path.rglob("*"):
-        if child.is_file():
-            try:
-                total += child.stat().st_size
-            except OSError:
-                continue
-    return total
+def _default_retention_path(candidate_id: str, stamp: str, *, repo_root: Path = REPO_ROOT) -> Path:
+    return (
+        repo_root
+        / ".omx/research"
+        / f"dqs1_artifact_retention_{_artifact_token(candidate_id)}_{stamp}.json"
+    )
 
 
-def _json_load_object(path: Path) -> dict[str, Any] | None:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return None
-    return payload if isinstance(payload, dict) else None
+def _candidate_root_from_harvest(result: Dqs1HarvestResult, *, repo_root: Path) -> Path:
+    advisory_path = Path(str(result.harvest_record["local_cpu_advisory_path"]))
+    if not advisory_path.is_absolute():
+        advisory_path = repo_root / advisory_path
+    return advisory_path.parent
 
 
-def _cleanup_completed_local_cpu_scratch(
+def _execute_candidate_artifact_retention(
     *,
-    results_root: Path,
+    candidate_root: Path,
+    candidate_id: str,
     stamp: str,
+    action: str,
+    cold_store_root: Path | None,
+    min_bytes: int,
+    include_mlx_cache: bool,
+    repo_root: Path = REPO_ROOT,
 ) -> dict[str, Any]:
-    """Delete rebuildable inflate scratch only after advisory custody exists."""
+    """Plan and execute retention for one harvested DQS1 candidate.
 
-    materialized = results_root / "materialized"
-    deleted: list[dict[str, Any]] = []
-    skipped: list[dict[str, str]] = []
-    if not materialized.is_dir():
-        return {
-            "schema": SCRATCH_CLEANUP_SCHEMA,
-            "timestamp_utc": stamp,
-            "results_root": str(results_root),
-            "deleted_path_count": 0,
-            "deleted_bytes": 0,
-            "deleted": [],
-            "skipped": [{"path": str(materialized), "reason": "materialized_dir_missing"}],
-        }
-    for candidate_dir in sorted(path for path in materialized.iterdir() if path.is_dir()):
-        advisory_path = candidate_dir / "local_cpu_advisory.json"
-        advisory = _json_load_object(advisory_path)
-        if advisory is None:
-            skipped.append({"path": str(candidate_dir), "reason": "local_cpu_advisory_json_missing_or_invalid"})
-            continue
-        blockers = local_cpu_advisory_payload_blockers(advisory)
-        if blockers:
-            skipped.append({"path": str(candidate_dir), "reason": "local_cpu_advisory_contract_blocked:" + ",".join(blockers)})
-            continue
-        work = candidate_dir / "local_cpu_advisory_work"
-        for scratch_name in ("inflated", "extracted"):
-            scratch = work / scratch_name
-            if not scratch.exists():
-                continue
-            size = _path_size_bytes(scratch)
-            shutil.rmtree(scratch)
-            deleted.append(
-                {
-                    "candidate_id": candidate_dir.name,
-                    "path": str(scratch),
-                    "bytes": size,
-                    "reason": "rebuildable_after_local_cpu_advisory_json_contract_validated",
-                }
-            )
-    return {
-        "schema": SCRATCH_CLEANUP_SCHEMA,
+    The queue already creates a raw-retention plan after local CPU advisory. This
+    helper is the actuator: it re-plans immediately before moving/deleting so
+    stale plans cannot authorize a destructive operation.
+    """
+
+    include_kinds = set(DEFAULT_RETENTION_KINDS)
+    if include_mlx_cache:
+        include_kinds.add("mlx_scorer_input_cache")
+    output_path = _default_retention_path(candidate_id, stamp, repo_root=repo_root)
+    journal_path = output_path.with_suffix(output_path.suffix + ".journal.jsonl")
+    plan = build_retention_plan(
+        [candidate_root],
+        repo_root=repo_root,
+        include_kinds=include_kinds,
+        min_bytes=min_bytes,
+    )
+    payload: dict[str, Any] = {
+        "schema": ARTIFACT_RETENTION_SCHEMA,
+        "candidate_id": candidate_id,
+        "candidate_root": str(candidate_root),
         "timestamp_utc": stamp,
-        "results_root": str(results_root),
-        "deleted_path_count": len(deleted),
-        "deleted_bytes": sum(int(row["bytes"]) for row in deleted),
-        "deleted": deleted,
-        "skipped": skipped,
+        "action": action,
+        "include_mlx_cache": include_mlx_cache,
+        "plan": plan.to_dict(),
+        "execution": None,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+    }
+    if plan.blocked_candidates:
+        _write_json_new(output_path, payload)
+        blockers = [
+            f"{candidate.path}:{','.join(candidate.blockers)}"
+            for candidate in plan.blocked_candidates
+        ]
+        raise ExperimentQueueError(
+            f"{candidate_id}: artifact retention blocked; wrote {output_path}: {blockers}"
+        )
+    if plan.candidates:
+        try:
+            payload["execution"] = execute_retention_plan(
+                plan,
+                action=action,
+                cold_store_root=cold_store_root,
+                journal_path=journal_path,
+            )
+        except ArtifactRetentionError as exc:
+            _write_json_new(output_path, payload)
+            raise ExperimentQueueError(str(exc)) from exc
+    _write_json_new(output_path, payload)
+    return {
+        "path": str(output_path),
+        "candidate_count": plan.to_dict()["candidate_count"],
+        "blocked_candidate_count": plan.to_dict()["blocked_candidate_count"],
+        "total_reclaimable_bytes": plan.total_reclaimable_bytes,
+        "executed_count": (
+            int(payload["execution"]["executed_count"])
+            if isinstance(payload.get("execution"), dict)
+            else 0
+        ),
+        "executed_bytes": (
+            int(payload["execution"]["executed_bytes"])
+            if isinstance(payload.get("execution"), dict)
+            else 0
+        ),
+        "journal_path": (
+            payload["execution"].get("journal_path")
+            if isinstance(payload.get("execution"), dict)
+            else None
+        ),
     }
 
 
@@ -251,6 +287,19 @@ def _has_active_work(summary: dict[str, Any]) -> bool:
     return any(int(counts.get(status) or 0) > 0 for status in ("queued", "running", "failed", "blocked"))
 
 
+def _compact_queue_summary(summary: dict[str, Any]) -> dict[str, Any]:
+    """Keep autopilot output readable even when queue state has many orphans."""
+
+    ready_steps = summary.get("ready_steps")
+    status_counts = summary.get("status_counts")
+    return {
+        "mode": summary.get("mode"),
+        "status_counts": status_counts if isinstance(status_counts, dict) else {},
+        "ready_step_count": len(ready_steps) if isinstance(ready_steps, list) else 0,
+        "orphaned_step_count": int(summary.get("orphaned_step_count") or 0),
+    }
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", default=DEFAULT_QUEUE_PATH)
@@ -272,9 +321,40 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="fail closed before launching another worker round below this free-space floor",
     )
     parser.add_argument(
-        "--no-cleanup-completed-scratch",
+        "--retention-action",
+        choices=("delete", "move"),
+        default="delete",
+        help="post-harvest action for certified rebuildable raw/cache artifacts",
+    )
+    parser.add_argument(
+        "--retention-cold-store-root",
+        type=Path,
+        default=None,
+        help="external cold-store root required when --retention-action=move",
+    )
+    parser.add_argument(
+        "--retention-min-bytes",
+        type=_parse_bytes,
+        default=1,
+        help="minimum candidate size for post-harvest artifact retention",
+    )
+    parser.add_argument(
+        "--include-mlx-cache-retention",
         action="store_true",
-        help="keep completed local_cpu_advisory_work inflated/extracted directories",
+        help="also compact certified MLX scorer input caches for harvested candidates",
+    )
+    parser.add_argument(
+        "--no-post-harvest-retention",
+        dest="post_harvest_retention",
+        action="store_false",
+        default=True,
+        help="do not execute post-harvest artifact retention",
+    )
+    parser.add_argument(
+        "--no-cleanup-completed-scratch",
+        dest="post_harvest_retention",
+        action="store_false",
+        help=argparse.SUPPRESS,
     )
     return parser.parse_args(argv)
 
@@ -326,25 +406,7 @@ def main(argv: list[str] | None = None) -> int:
                 "free_disk_gb_before_worker": _free_disk_gb(results_root),
                 "min_free_disk_gb": args.min_free_disk_gb,
             }
-            if args.execute and not args.no_cleanup_completed_scratch:
-                cleanup_stamp = _utc_stamp()
-                cleanup = _cleanup_completed_local_cpu_scratch(
-                    results_root=results_root,
-                    stamp=cleanup_stamp,
-                )
-                preflight["scratch_cleanup"] = {
-                    "deleted_path_count": cleanup["deleted_path_count"],
-                    "deleted_bytes": cleanup["deleted_bytes"],
-                }
-                if cleanup["deleted_path_count"]:
-                    cleanup_path = _default_cleanup_path(cleanup_stamp)
-                    _write_json_new(cleanup_path, cleanup)
-                    preflight["scratch_cleanup_path"] = str(cleanup_path)
-                preflight["free_disk_gb_after_cleanup"] = _free_disk_gb(results_root)
-            free_after_cleanup = float(
-                preflight.get("free_disk_gb_after_cleanup", preflight["free_disk_gb_before_worker"])
-            )
-            if free_after_cleanup < args.min_free_disk_gb:
+            if preflight["free_disk_gb_before_worker"] < args.min_free_disk_gb:
                 rounds.append(
                     {
                         "queue_id": queue["queue_id"],
@@ -379,7 +441,7 @@ def main(argv: list[str] | None = None) -> int:
                 "queue_id": queue["queue_id"],
                 "preflight": preflight,
                 "worker": worker,
-                "summary": summary,
+                "summary": _compact_queue_summary(summary),
             }
             if worker.get("failure_count"):
                 round_record["terminal"] = "worker_failure"
@@ -432,6 +494,21 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 **artifact_paths,
             }
+            if args.execute and args.post_harvest_retention:
+                retention = _execute_candidate_artifact_retention(
+                    candidate_root=_candidate_root_from_harvest(harvest, repo_root=REPO_ROOT),
+                    candidate_id=str(harvest.harvest_record["candidate_id"]),
+                    stamp=stamp,
+                    action=args.retention_action,
+                    cold_store_root=args.retention_cold_store_root,
+                    min_bytes=args.retention_min_bytes,
+                    include_mlx_cache=args.include_mlx_cache_retention,
+                    repo_root=REPO_ROOT,
+                )
+                round_record["post_harvest_retention"] = retention
+                round_record["preflight"]["free_disk_gb_after_post_harvest_retention"] = _free_disk_gb(
+                    results_root
+                )
             rounds.append(round_record)
             if harvest.exact_auth_request is not None:
                 stop_reason = "exact_auth_anchor_request_created"
