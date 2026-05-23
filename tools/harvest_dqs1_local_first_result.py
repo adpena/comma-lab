@@ -26,6 +26,8 @@ from comma_lab.scheduler.dqs1_local_first_harvest import (  # noqa: E402
 
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        raise FileExistsError(f"refusing to overwrite existing artifact: {path}")
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n")
 
 
@@ -93,10 +95,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FATAL: {exc}", file=sys.stderr)
         return 2
 
-    if args.harvest_out is not None:
-        _write_json(args.harvest_out, result.harvest_record)
-    if result.exact_auth_request is not None and args.exact_auth_request_out is not None:
-        _write_json(args.exact_auth_request_out, result.exact_auth_request)
+    try:
+        if args.harvest_out is not None:
+            _write_json(args.harvest_out, result.harvest_record)
+        if result.exact_auth_request is not None and args.exact_auth_request_out is not None:
+            _write_json(args.exact_auth_request_out, result.exact_auth_request)
+    except FileExistsError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 2
 
     summary = {
         "candidate_id": result.harvest_record["candidate_id"],

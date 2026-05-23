@@ -304,6 +304,14 @@ def runtime_profiles_from_training_manifest(
 ) -> list[dict[str, Any]]:
     """Extract normalized runtime profiles embedded in a training manifest."""
 
+    try:
+        require_no_truthy_authority_fields(
+            payload,
+            context="training_manifest_runtime_profile_root",
+        )
+    except ValueError as exc:
+        raise LocalTrainingRuntimeProfileError(str(exc)) from exc
+
     raw_profiles: list[Mapping[str, Any]] = []
     single = payload.get("runtime_profile")
     if isinstance(single, Mapping):

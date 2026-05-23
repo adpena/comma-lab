@@ -55,6 +55,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.optimizer_signal_atoms",
         "OptimizerSignalAtomError",
     ),
+    "ByteShavingCampaignError": (
+        "tac.optimization.byte_shaving_campaign",
+        "ByteShavingCampaignError",
+    ),
     "LocalTrainingRuntimeProfileError": (
         "tac.optimization.local_training_runtime_profile",
         "LocalTrainingRuntimeProfileError",
@@ -107,6 +111,18 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "build_optimizer_signal_atom_ledger": (
         "tac.optimization.optimizer_signal_atoms",
         "build_optimizer_signal_atom_ledger",
+    ),
+    "build_byte_shaving_campaign_plan": (
+        "tac.optimization.byte_shaving_campaign",
+        "build_byte_shaving_campaign_plan",
+    ),
+    "build_signal_surface_from_candidate_queue": (
+        "tac.optimization.byte_shaving_campaign",
+        "build_signal_surface_from_candidate_queue",
+    ),
+    "build_signal_surface_from_master_gradient_anchor": (
+        "tac.optimization.byte_shaving_campaign",
+        "build_signal_surface_from_master_gradient_anchor",
     ),
     "adapt_runtime_profile_observation_to_candidate": (
         "tac.optimization.local_training_runtime_profile",

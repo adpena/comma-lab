@@ -17,6 +17,10 @@ from .experiment_queue import (
     run_ready_step,
     set_control_mode,
 )
+from .experiment_queue_observer import (
+    observe_experiment_queue,
+    render_observation_markdown,
+)
 from .models import (
     BudgetReport,
     BudgetSpec,
@@ -50,9 +54,11 @@ __all__ = [
     "initialize_queue_state",
     "load_queue_definition",
     "normalize_queue_definition",
+    "observe_experiment_queue",
     "orphaned_step_rows",
     "queue_summary",
     "ready_steps",
+    "render_observation_markdown",
     "retire_orphaned_steps",
     "rewind_step",
     "run_queue_worker",

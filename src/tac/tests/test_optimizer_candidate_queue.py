@@ -801,6 +801,133 @@ def test_candidate_queue_accepts_local_cpu_eureka_as_spend_triage_only(
     assert validate_proxy_candidate(row) == []
 
 
+def test_candidate_queue_accepts_byte_shaving_campaign_plan_as_planning_only(
+    tmp_path: Path,
+) -> None:
+    plan = _write_json(
+        tmp_path / "byte_shaving_plan.json",
+        {
+            "schema": "byte_shaving_campaign_plan.v1",
+            "tool": "tools/plan_byte_shaving_campaign.py",
+            "campaign_id": "seed7_post_train_shave",
+            "candidate_id": "seed7",
+            "lane_id": "boostnerv_post_train_shave",
+            "frontier_axis": "[macOS-MLX research-signal]",
+            "source_signal_refs": [{"kind": "master_gradient_anchor", "archive_sha256": "a" * 64}],
+            "auth_eval_refs": [{"kind": "contest_cpu_anchor", "path": "auth.json"}],
+            "mlx_calibration_refs": [{"kind": "strict_calibration", "path": "mlx_cal.json"}],
+            "scorer_response_refs": [{"kind": "scorer_response_dataset", "path": "rows.json"}],
+            "dispatch_blockers": ["requires_byte_closed_materialization_before_dispatch"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "sweep_ladder": [
+                {
+                    "sweep_id": "top_0001",
+                    "unit_count": 1,
+                    "candidate_saved_bytes": 50,
+                    "expected_delta_score": -0.00002,
+                    "expected_score_gain": 0.00002,
+                    "operation_families": ["entropy_recode"],
+                    "selected_unit_ids": ["span_a"],
+                    "selected_operations": [
+                        {
+                            "unit_id": "span_a",
+                            "operation_id": "entropy_recode",
+                            "operation_family": "entropy_recode",
+                        }
+                    ],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+            "combination_ladder": [
+                {
+                    "combo_id": "combo_0001",
+                    "unit_count": 2,
+                    "candidate_saved_bytes": 120,
+                    "expected_delta_score": -0.00005,
+                    "expected_score_gain": 0.00005,
+                    "confidence": 0.6,
+                    "confidence_adjusted_gain": 0.00003,
+                    "operation_families": ["entropy_recode", "drop_pair"],
+                    "selected_unit_ids": ["span_a", "pair0371"],
+                    "selected_operations": [
+                        {
+                            "unit_id": "span_a",
+                            "operation_id": "entropy_recode",
+                            "operation_family": "entropy_recode",
+                        },
+                        {
+                            "unit_id": "pair0371",
+                            "operation_id": "drop_pair",
+                            "operation_family": "drop_pair",
+                        },
+                    ],
+                    "active_interactions": [{"interaction_id": "shared_header"}],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+        },
+    )
+
+    queue = build_candidate_queue([plan], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["candidate_id"] == "seed7_post_train_shave::combo::combo_0001"
+    assert row["selection_kind"] == "combo"
+    assert row["rank_score"] == -0.00005
+    assert row["candidate_saved_bytes"] == 120
+    assert row["source_signal_refs"][0]["kind"] == "master_gradient_anchor"
+    assert row["mlx_calibration_refs"][0]["kind"] == "strict_calibration"
+    assert row["consumer_payload"]["selected_unit_ids"] == [
+        "span_a",
+        "pair0371",
+    ]
+    assert "selected_operations_require_materializer" in row["dispatch_blockers"]
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["score_claim"] is False
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_rejects_byte_shaving_campaign_nested_authority(
+    tmp_path: Path,
+) -> None:
+    plan = _write_json(
+        tmp_path / "unsafe_byte_shaving_plan.json",
+        {
+            "schema": "byte_shaving_campaign_plan.v1",
+            "campaign_id": "unsafe",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "combination_ladder": [
+                {
+                    "combo_id": "combo_0001",
+                    "candidate_saved_bytes": 1,
+                    "expected_delta_score": -0.1,
+                    "selected_unit_ids": ["x"],
+                    "selected_operations": [{"unit_id": "x", "promotable": True}],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(ValueError, match=r"selected_operations\[0\]\.promotable=truthy"):
+        build_candidate_queue([plan], repo_root=tmp_path)
+
+
 def test_candidate_queue_rejects_truthy_local_cpu_eureka_authority(
     tmp_path: Path,
 ) -> None:

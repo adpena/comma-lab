@@ -3,8 +3,8 @@
 """Build a fail-closed ``top_k`` queue from optimizer/sweep artifacts.
 
 This is an adapter, not a dispatcher. It accepts local planning artifacts from
-CMA-ES/Optuna CodecOp searches, A1/PR101 bias-coordinate sweeps, and existing
-meta-Lagrangian reports, then emits the JSON shape consumed by
+CMA-ES/Optuna CodecOp searches, A1/PR101 bias-coordinate sweeps, local training
+runtime profiles, and existing meta-Lagrangian reports, then emits the JSON shape consumed by
 ``tools/parallel_dispatch_top_k.py``. Rows stay
 ``ready_for_exact_eval_dispatch=false`` unless a separate exact-readiness gate
 has already promoted them; proxy, macOS CPU, and forensic rankings are never
@@ -35,7 +35,9 @@ def main(argv: list[str] | None = None) -> int:
             "JSON source artifact. May be repeated. Supported sources include "
             "constrained_coord_search rollup.json, sweep_m5max_hnerv_cluster "
             "manifest, codec_op_cma/optuna reports, codec_op_param_sweep "
-            "manifests, and meta_lagrangian reports."
+            "manifests, trainer_runtime_profile_observation.v1, representation "
+            "training manifests with runtime_profile/runtime_profiles, "
+            "byte_shaving_campaign_plan.v1, and meta_lagrangian reports."
         ),
     )
     parser.add_argument("--output", type=Path, required=True)

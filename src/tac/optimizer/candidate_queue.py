@@ -98,6 +98,12 @@ def _repo_rel(path: Path, repo_root: Path) -> str:
 
 
 def _load_json(path: Path) -> Any:
+    if path.suffix.lower() in {".yaml", ".yml"}:
+        try:
+            import yaml  # type: ignore[import-not-found]
+        except ImportError as exc:  # pragma: no cover
+            raise ValueError(f"YAML source requires PyYAML: {path}") from exc
+        return yaml.safe_load(path.read_text(encoding="utf-8"))
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -890,6 +896,120 @@ def _local_cpu_drift_eureka_candidates(
     return [row]
 
 
+def _byte_shaving_campaign_candidates(
+    payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    require_no_truthy_authority_fields(payload, context="byte_shaving_campaign_plan")
+    campaign_id = str(payload.get("campaign_id") or "byte_shaving_campaign")
+    lane_id = str(payload.get("lane_id") or "byte_shaving_campaign")
+    source_candidate_id = str(payload.get("candidate_id") or campaign_id)
+    source_refs = list(payload.get("source_signal_refs") or [])
+    auth_eval_refs = list(payload.get("auth_eval_refs") or [])
+    mlx_calibration_refs = list(payload.get("mlx_calibration_refs") or [])
+    scorer_response_refs = list(payload.get("scorer_response_refs") or [])
+    plan_blockers = [str(item) for item in payload.get("dispatch_blockers", []) if str(item)]
+    rows: list[dict[str, Any]] = []
+
+    def append_plan_row(kind: str, item: Mapping[str, Any]) -> None:
+        row_id = str(item.get("combo_id") or item.get("sweep_id") or "")
+        if not row_id:
+            return
+        require_no_truthy_authority_fields(
+            item,
+            context=f"byte_shaving_campaign_plan.{kind}.{row_id}",
+        )
+        selected_operations = list(item.get("selected_operations") or [])
+        selected_unit_ids = [str(value) for value in item.get("selected_unit_ids", []) if str(value)]
+        candidate_id = f"{campaign_id}::{kind}::{row_id}"
+        expected_delta = _as_float(item.get("expected_delta_score"))
+        candidate_saved_bytes = _as_int(item.get("candidate_saved_bytes"))
+        row = {
+            "candidate_id": candidate_id,
+            "source_candidate_id": source_candidate_id,
+            "source_paths": [_repo_rel(source_path, repo_root)],
+            "lane_id": lane_id,
+            "lane_class": "byte_shaving_campaign",
+            "candidate_family": "post_training_byte_shaving_plan",
+            "param_schema": "byte_shaving_campaign_operation_selection_v1",
+            "optimizer_tool": payload.get("tool") or "tools/plan_byte_shaving_campaign.py",
+            "selection_kind": kind,
+            "selection_id": row_id,
+            "candidate_params": {
+                "selection_kind": kind,
+                "selection_id": row_id,
+                "selected_unit_ids": selected_unit_ids,
+                "selected_operations": selected_operations,
+                "active_interactions": list(item.get("active_interactions") or []),
+            },
+            "op_params": {
+                "selected_operations": selected_operations,
+                "operation_families": list(item.get("operation_families") or []),
+            },
+            "selected_unit_ids": selected_unit_ids,
+            "selected_operations": selected_operations,
+            "active_interactions": list(item.get("active_interactions") or []),
+            "operation_families": list(item.get("operation_families") or []),
+            "unit_count": _as_int(item.get("unit_count")),
+            "candidate_saved_bytes": candidate_saved_bytes,
+            "predicted_saved_bytes": candidate_saved_bytes,
+            "expected_delta_score": expected_delta,
+            "expected_score_gain": _as_float(item.get("expected_score_gain")),
+            "confidence": _as_float(item.get("confidence")),
+            "confidence_adjusted_gain": _as_float(item.get("confidence_adjusted_gain")),
+            "rank_score": expected_delta,
+            "rank_score_field": "expected_delta_score_planning_only",
+            "evidence_semantics": (
+                "byte_shaving_campaign_plan_proxy_not_exact_auth_eval"
+            ),
+            "evidence_grade": payload.get("frontier_axis") or "[planning-only]",
+            "planned_score_affecting_payload_change": True,
+            "source_signal_refs": source_refs,
+            "auth_eval_refs": auth_eval_refs,
+            "mlx_calibration_refs": mlx_calibration_refs,
+            "scorer_response_refs": scorer_response_refs,
+            "consumer_payload": {
+                "schema": "byte_shaving_campaign_candidate_payload.v1",
+                "campaign_id": campaign_id,
+                "selection_kind": kind,
+                "selection_id": row_id,
+                "source_candidate_id": source_candidate_id,
+                "selected_unit_ids": selected_unit_ids,
+                "selected_operations": selected_operations,
+                "active_interactions": list(item.get("active_interactions") or []),
+                "source_signal_refs": source_refs,
+                "auth_eval_refs": auth_eval_refs,
+                "mlx_calibration_refs": mlx_calibration_refs,
+                "scorer_response_refs": scorer_response_refs,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "promotable": False,
+            },
+        }
+        row = apply_proxy_evidence_boundary(
+            row,
+            dispatch_blockers=[
+                *plan_blockers,
+                *[str(item) for item in item.get("dispatch_blockers", []) if str(item)],
+                "byte_shaving_campaign_plan_is_planning_only",
+                "selected_operations_require_materializer",
+                "materialized_archive_runtime_custody_required",
+                "locality_controls_required_before_exact_eval",
+                "exact_auth_eval_result_required_before_score_claim",
+            ],
+        )
+        rows.append(row)
+
+    for item in payload.get("sweep_ladder") or []:
+        if isinstance(item, Mapping):
+            append_plan_row("prefix", item)
+    for item in payload.get("combination_ladder") or []:
+        if isinstance(item, Mapping):
+            append_plan_row("combo", item)
+    return rows
+
+
 def _kaggle_proxy_sweep_candidates(
     payload: Mapping[str, Any], *, source_path: Path, repo_root: Path
 ) -> list[dict[str, Any]]:
@@ -1201,6 +1321,15 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
         return SourceExtraction(
             schema=schema,
             rows=_mlx_dynamic_learned_sweep_candidates(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            ),
+        )
+    if schema == "byte_shaving_campaign_plan.v1":
+        return SourceExtraction(
+            schema=schema,
+            rows=_byte_shaving_campaign_candidates(
                 payload,
                 source_path=path,
                 repo_root=repo_root,

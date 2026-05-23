@@ -39,6 +39,10 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     run_ready_step,
     set_control_mode,
 )
+from comma_lab.scheduler.experiment_queue_observer import (  # noqa: E402
+    observe_experiment_queue,
+    render_observation_markdown,
+)
 
 _PLACEHOLDER_RATIONALES = {"", "n/a", "na", "none", "test", "true", "yes", "because"}
 
@@ -90,6 +94,22 @@ def cmd_status(args: argparse.Namespace) -> int:
         initialize_queue_state(conn, queue)
         summary = queue_summary(conn, queue)
     _json_print({"state": str(state), **summary})
+    return 0
+
+
+def cmd_observe(args: argparse.Namespace) -> int:
+    queue, state = _load(args)
+    observation = observe_experiment_queue(
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        tail_lines=args.tail_lines,
+        include_orphans=args.include_orphans,
+    )
+    if args.format == "markdown":
+        print(render_observation_markdown(observation), end="")
+    else:
+        _json_print({"state": str(state), **observation})
     return 0
 
 
@@ -257,6 +277,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     sp = sub.add_parser("status")
     sp.set_defaults(func=cmd_status)
+
+    sp = sub.add_parser("observe", help="compact live queue telemetry and artifact view")
+    sp.add_argument("--tail-lines", type=int, default=20)
+    sp.add_argument("--include-orphans", action="store_true")
+    sp.add_argument("--format", choices=["json", "markdown"], default="json")
+    sp.set_defaults(func=cmd_observe)
 
     sp = sub.add_parser("next")
     sp.add_argument("--allow-cloud", action="store_true", help="include cloud resource steps")

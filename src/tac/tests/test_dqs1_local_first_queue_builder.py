@@ -19,6 +19,7 @@ from src.comma_lab.scheduler.dqs1_local_first_queue import (
 )
 from src.comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
 from src.tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
+from tools.harvest_dqs1_local_first_result import _write_json as write_harvest_json
 
 
 def _false_authority() -> dict[str, object]:
@@ -325,6 +326,16 @@ def test_dqs1_harvest_positive_eureka_creates_exact_auth_request(tmp_path: Path)
     assert request["score_claim"] is False
     assert request["promotion_eligible"] is False
     assert request["ready_for_exact_eval_dispatch"] is False
+
+
+def test_dqs1_harvest_json_writer_refuses_overwrite(tmp_path: Path) -> None:
+    path = tmp_path / "harvest.json"
+    write_harvest_json(path, {"schema": "first"})
+
+    with pytest.raises(FileExistsError, match="refusing to overwrite"):
+        write_harvest_json(path, {"schema": "second"})
+
+    assert json.loads(path.read_text()) == {"schema": "first"}
 
 
 def test_dqs1_queue_builder_fails_closed_on_incomplete_eureka_authority(
