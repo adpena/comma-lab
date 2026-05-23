@@ -617,6 +617,9 @@ def _mlx_dynamic_learned_sweep_candidates(
             "scheduler": recipe.get("scheduler"),
             "config_sha256": recipe.get("config_sha256"),
             "parameter_group_lr_policy_id": recipe.get("parameter_group_lr_policy_id"),
+            "parameter_group_lr_policy_sha256": recipe.get(
+                "parameter_group_lr_policy_sha256"
+            ),
             "rank_score": None,
             "rank_score_field": recipe.get("rank_score_field")
             or "planner_priority_not_score",
@@ -632,6 +635,9 @@ def _mlx_dynamic_learned_sweep_candidates(
                     "scheduler": recipe.get("scheduler"),
                     "config_sha256": recipe.get("config_sha256"),
                     "parameter_group_lr_policy": recipe.get("parameter_group_lr_policy"),
+                    "parameter_group_lr_policy_sha256": recipe.get(
+                        "parameter_group_lr_policy_sha256"
+                    ),
                     "allowed_axis_tags": list(recipe.get("allowed_axis_tags") or []),
                     "allowed_target_modes": list(recipe.get("allowed_target_modes") or []),
                     "solver_stack_wire_in": recipe.get("solver_stack_wire_in"),
@@ -647,6 +653,85 @@ def _mlx_dynamic_learned_sweep_candidates(
             row,
             dispatch_blockers=[
                 "optimizer_scheduler_recipe_is_planning_only",
+                "requires_training_telemetry_before_candidate_selection",
+                "requires_byte_closed_archive_export_before_dispatch_readiness",
+                "requires_exact_auth_eval_result_before_score_claim",
+            ],
+        )
+        rows.append(row)
+    for source in payload.get("optimizer_scheduler_pairings") or []:
+        if not isinstance(source, Mapping):
+            continue
+        require_no_truthy_authority_fields(
+            source,
+            context="mlx_dynamic_learned_sweep_optimizer_scheduler_pairing",
+        )
+        if source.get("schema") != "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing.v1":
+            continue
+        queue_candidate_id = str(source.get("queue_candidate_id") or "")
+        if not queue_candidate_id:
+            continue
+        row = dict(source)
+        row.update(
+            {
+                "candidate_id": queue_candidate_id,
+                "source_candidate_id": source.get("candidate_id"),
+                "source_paths": [_repo_rel(source_path, repo_root)],
+                "lane_id": source.get("lane_id") or "mlx_dynamic_optimizer_scheduler_pairing",
+                "lane_class": source.get("family") or "optimizer_scheduler_pairing",
+                "candidate_family": "optimizer_scheduler_paired_sweep_recipe",
+                "optimizer_tool": payload.get("tool") or "tools/plan_mlx_dynamic_learned_sweep.py",
+                "descriptor_id": source.get("optimizer_scheduler_descriptor_id"),
+                "optimizer": source.get("optimizer"),
+                "scheduler": source.get("scheduler"),
+                "config_sha256": source.get("optimizer_scheduler_config_sha256"),
+                "parameter_group_lr_policy_id": source.get("parameter_group_lr_policy_id"),
+                "parameter_group_lr_policy_sha256": source.get(
+                    "parameter_group_lr_policy_sha256"
+                ),
+                "rank_score": _as_float(source.get("rank_score")),
+                "rank_score_field": source.get("rank_score_field")
+                or "parent_negative_acquisition_value_plus_recipe_tiebreak_not_score",
+                "evidence_semantics": (
+                    "optimizer_scheduler_pairing_proxy_not_exact_auth_eval"
+                ),
+                "evidence_grade": payload.get("evidence_grade")
+                or "[offline-proxy-planning-only]",
+                "consumer_payload": {
+                    "schema": "optimizer_scheduler_pairing_candidate_payload.v1",
+                    "optimizer_scheduler_pairing": {
+                        "parent_queue_candidate_id": source.get("parent_queue_candidate_id"),
+                        "source_candidate_id": source.get("candidate_id"),
+                        "sweep_config_id": source.get("sweep_config_id"),
+                        "optimization_pass_id": source.get("optimization_pass_id"),
+                        "optimizer_scheduler_descriptor_id": source.get(
+                            "optimizer_scheduler_descriptor_id"
+                        ),
+                        "optimizer_scheduler_config_sha256": source.get(
+                            "optimizer_scheduler_config_sha256"
+                        ),
+                        "parameter_group_lr_policy_id": source.get(
+                            "parameter_group_lr_policy_id"
+                        ),
+                        "parameter_group_lr_policy_sha256": source.get(
+                            "parameter_group_lr_policy_sha256"
+                        ),
+                        "paired_ablation_contract": source.get("paired_ablation_contract"),
+                        "solver_stack_wire_in": source.get("solver_stack_wire_in"),
+                    },
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "promotable": False,
+                },
+            }
+        )
+        row = apply_proxy_evidence_boundary(
+            row,
+            dispatch_blockers=[
+                "optimizer_scheduler_pairing_is_planning_only",
+                "requires_same_seed_local_ablation_before_recipe_posterior_update",
                 "requires_training_telemetry_before_candidate_selection",
                 "requires_byte_closed_archive_export_before_dispatch_readiness",
                 "requires_exact_auth_eval_result_before_score_claim",

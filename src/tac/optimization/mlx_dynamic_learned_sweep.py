@@ -759,6 +759,21 @@ def _row_for_config(
         "expected_improvement": expected_improvement,
         "learning_value_per_cost": learning_value,
         "geometry_multiplier": geometry_multiplier,
+        "acquisition_terms": {
+            "schema": "mlx_dynamic_learned_sweep_acquisition_terms.v1",
+            "expected_improvement_per_cost": expected_improvement / cost,
+            "weighted_expected_improvement_per_cost": (
+                pass_expected_weight * expected_improvement / cost
+            ),
+            "learning_value_per_cost": learning_value,
+            "weighted_learning_value_per_cost": pass_exploration_weight * learning_value,
+            "geometry_multiplier": geometry_multiplier,
+            "orthogonality_score": orthogonality_score,
+            "master_gradient_priority": master_gradient_priority,
+            "score_sigma": sigma,
+            "cost_units": cost,
+            **FALSE_AUTHORITY,
+        },
         "orthogonality_score": orthogonality_score,
         "master_gradient_priority": master_gradient_priority,
         "acquisition_value": acquisition_value,
@@ -976,6 +991,189 @@ def _apply_observation_feedback(
     return kept, suppressed
 
 
+def _optimizer_scheduler_pairings(
+    rows: Sequence[dict[str, Any]],
+    optimizer_scheduler_rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    pairings: list[dict[str, Any]] = []
+    for parent in rows:
+        if parent.get("ready_for_local_sweep") is not True:
+            continue
+        for recipe_index, recipe in enumerate(optimizer_scheduler_rows, start=1):
+            descriptor_id = str(recipe.get("descriptor_id") or "")
+            if not descriptor_id:
+                continue
+            parent_queue_id = str(parent["queue_candidate_id"])
+            queue_candidate_id = f"{parent_queue_id}::optimizer_scheduler::{descriptor_id}"
+            blockers = [
+                "optimizer_scheduler_pairing_is_planning_only",
+                "same_seed_local_ablation_required_before_recipe_posterior_update",
+                "training_telemetry_required_before_candidate_selection",
+                "archive_export_required_before_exact_eval_readiness",
+                "exact_auth_eval_result_required_before_score_claim",
+            ]
+            solver_stack_wire_in = build_optimizer_training_signal_wire_in(
+                candidate_id=queue_candidate_id,
+                profile_id="mlx_dynamic_learned_sweep_optimizer_pairing",
+                lane_id="mlx_dynamic_learned_sweep_planning",
+                lane_class=str(parent["family"]),
+                candidate_family=str(parent["family"]),
+                representation_family=str(parent.get("family") or "unspecified"),
+                substrate_family=str(parent.get("substrate") or "unspecified"),
+                training_signal_kind="optimizer_scheduler_pairing_proxy",
+                param_schema="mlx_dynamic_optimizer_scheduler_pairing_params_v1",
+                candidate_params={
+                    "parent_queue_candidate_id": parent_queue_id,
+                    "source_candidate_id": parent["candidate_id"],
+                    "sweep_config_id": parent["sweep_config_id"],
+                    "optimization_pass_id": parent["optimization_pass_id"],
+                    "optimizer_scheduler_descriptor_id": descriptor_id,
+                    "optimizer_scheduler_config_sha256": recipe.get("config_sha256"),
+                    "parameter_group_lr_policy_id": recipe.get(
+                        "parameter_group_lr_policy_id"
+                    ),
+                    "parameter_group_lr_policy_sha256": recipe.get(
+                        "parameter_group_lr_policy_sha256"
+                    ),
+                    "sample_budget": parent.get("sample_budget"),
+                },
+                source_anchor=str(parent.get("source_schema") or "mlx dynamic learned sweep row"),
+                score_lowering_hypothesis=(
+                    "Run same-candidate, same-config, same-pass optimizer/scheduler "
+                    "ablations so optimizer recipes become measured posterior signal "
+                    "instead of disconnected static config names."
+                ),
+                dispatch_blockers=blockers,
+                variant_axes=[
+                    "optimizer_scheduler_recipe",
+                    "parameter_group_lr_policy",
+                    "same_candidate_config_pass",
+                    "same_seed_budget",
+                    "training_telemetry",
+                ],
+                paired_modes=[
+                    "same_candidate_config_pass_different_optimizer_scheduler",
+                    "same_optimizer_scheduler_different_candidate",
+                    "same_optimizer_scheduler_different_execution_substrate",
+                ],
+            )
+            acquisition_value = float(parent["acquisition_value"])
+            tool_wiring = {
+                "schema": "optimizer_scheduler_pairing_tool_wiring.v1",
+                "ablation_surfaces": [
+                    "src/tac/findings_lagrangian/phase_2_ablation/ablation_framework.py",
+                    "tools/dispatch_phase_a_track_1_ablations.py",
+                ],
+                "xray_surfaces": [
+                    "tools/master_gradient_xray.py",
+                    "tools/xray_hardpair_hitlist.py",
+                    "tools/xray_paired_cpu_cuda_axis_delta.py",
+                ],
+                "atom_surfaces": [
+                    "src/tac/atom/ledger.py",
+                    "tools/build_cross_paradigm_atom_ledger.py",
+                    "tools/meta_lagrangian_atom_ledger_adapter.py",
+                ],
+                "materialization_surfaces": [
+                    "tools/materialize_decoder_q_selective_runtime_candidate.py",
+                    "tools/materialize_codec_op_bitstream.py",
+                ],
+                "freezing_surfaces": [
+                    "src/tac/freezing/frozen_teacher_distillation.py",
+                    "src/tac/freezing/swa_checkpoint_averaging.py",
+                    "src/tac/freezing/lottery_ticket_extraction.py",
+                    "src/tac/freezing/compress_time_scorer_freeze.py",
+                ],
+                "observation_surfaces": [
+                    "tools/append_mlx_dynamic_sweep_observation.py",
+                    "src/tac/optimization/mlx_dynamic_sweep_observations.py",
+                    "src/tac/optimization/optimizer_scheduler_registry.py",
+                ],
+                **FALSE_AUTHORITY,
+            }
+            pairings.append(
+                {
+                    "schema": "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing.v1",
+                    "queue_candidate_id": queue_candidate_id,
+                    "candidate_id": parent["candidate_id"],
+                    "parent_queue_candidate_id": parent_queue_id,
+                    "parent_rank": parent.get("rank"),
+                    "sweep_config_id": parent["sweep_config_id"],
+                    "optimization_pass_id": parent["optimization_pass_id"],
+                    "optimization_scale": parent["optimization_scale"],
+                    "family": parent["family"],
+                    "substrate": parent["substrate"],
+                    "execution_layer": parent["execution_layer"],
+                    "sample_budget": parent["sample_budget"],
+                    "optimizer_scheduler_descriptor_id": descriptor_id,
+                    "optimizer_scheduler_config_sha256": recipe.get("config_sha256"),
+                    "optimizer": recipe.get("optimizer"),
+                    "scheduler": recipe.get("scheduler"),
+                    "parameter_group_lr_policy_id": recipe.get(
+                        "parameter_group_lr_policy_id"
+                    ),
+                    "parameter_group_lr_policy_sha256": recipe.get(
+                        "parameter_group_lr_policy_sha256"
+                    ),
+                    "rank_score": -acquisition_value + recipe_index * 1e-12,
+                    "rank_score_field": "parent_negative_acquisition_value_plus_recipe_tiebreak_not_score",
+                    "pairing_acquisition_value": acquisition_value,
+                    "pairing_recipe_rank": recipe_index,
+                    "dispatch_blockers": blockers,
+                    "next_action": "run_same_seed_local_optimizer_ablation_then_append_observation",
+                    "paired_ablation_contract": {
+                        "schema": "optimizer_scheduler_paired_ablation_contract.v1",
+                        "control_fields": [
+                            "source_candidate_id",
+                            "sweep_config_id",
+                            "optimization_pass_id",
+                            "sample_budget",
+                            "seed",
+                            "archive_export_contract",
+                        ],
+                        "treatment_fields": [
+                            "optimizer_scheduler_descriptor_id",
+                            "optimizer_scheduler_config_sha256",
+                            "parameter_group_lr_policy_id",
+                            "parameter_group_lr_policy_sha256",
+                        ],
+                        "required_observation_fields": [
+                            "seconds_per_candidate",
+                            "best_proxy_loss_or_score",
+                            "state_bytes",
+                            "archive_ready",
+                            "export_ready",
+                            "component_axis_deltas",
+                        ],
+                        "tool_wiring": tool_wiring,
+                        "no_orphan_signal_contract": (
+                            "Every optimizer pairing observation must append through "
+                            "the observation surface, update the queue row, or carry "
+                            "an explicit research_only=true rationale."
+                        ),
+                        **FALSE_AUTHORITY,
+                    },
+                    "tool_wiring": tool_wiring,
+                    "solver_stack_wire_in": solver_stack_wire_in,
+                    "candidate_generation_only": True,
+                    "dispatch_attempted": False,
+                    "gpu_launched": False,
+                    **FALSE_AUTHORITY,
+                }
+            )
+    sorted_pairings = sorted(
+        pairings,
+        key=lambda item: (
+            item["parent_rank"] or 10**9,
+            item["pairing_recipe_rank"],
+            item["queue_candidate_id"],
+        ),
+    )
+    for index, row in enumerate(sorted_pairings, start=1):
+        row["pairing_rank"] = index
+    return sorted_pairings
+
+
 def build_mlx_dynamic_learned_sweep_plan(
     *,
     incumbent_score: float,
@@ -1062,6 +1260,10 @@ def build_mlx_dynamic_learned_sweep_plan(
     local_rows = [row for row in rows if row["ready_for_local_sweep"] is True]
     exact_rows = [row for row in rows if row["exact_eval_candidate"] is True]
     freeze_rows = [row for row in rows if row["freeze_candidate"] is True]
+    optimizer_scheduler_pairings = _optimizer_scheduler_pairings(
+        rows,
+        optimizer_scheduler_rows,
+    )
     observation_summary = summarize_observations(observation_rows)
     return {
         "schema": SCHEMA,
@@ -1127,6 +1329,9 @@ def build_mlx_dynamic_learned_sweep_plan(
                 "tac.optimization.optimizer_scheduler_registry."
                 "build_optimizer_scheduler_telemetry_record"
             ),
+            "optimizer_scheduler_pairing_surface": (
+                "optimizer_scheduler_pairings[].paired_ablation_contract"
+            ),
             **FALSE_AUTHORITY,
         },
         "summary": {
@@ -1140,10 +1345,12 @@ def build_mlx_dynamic_learned_sweep_plan(
             "local_ready_row_count": len(local_rows),
             "exact_candidate_row_count": len(exact_rows),
             "freeze_candidate_row_count": len(freeze_rows),
+            "optimizer_scheduler_pairing_count": len(optimizer_scheduler_pairings),
             "score_claim": False,
             "ready_for_exact_eval_dispatch": False,
         },
         "ranked_sweep_rows": rows,
+        "optimizer_scheduler_pairings": optimizer_scheduler_pairings,
         "suppressed_observed_sweep_rows": suppressed_rows,
     }
 
@@ -1159,6 +1366,7 @@ def render_mlx_dynamic_learned_sweep_markdown(plan: Mapping[str, Any]) -> str:
         f"- Local ready rows: `{summary.get('local_ready_row_count') if isinstance(summary, Mapping) else None}`",
         f"- Observation rows: `{summary.get('observation_row_count') if isinstance(summary, Mapping) else None}`",
         f"- Suppressed observed rows: `{summary.get('suppressed_observed_row_count') if isinstance(summary, Mapping) else None}`",
+        f"- Optimizer pairings: `{summary.get('optimizer_scheduler_pairing_count') if isinstance(summary, Mapping) else None}`",
         "",
         "| rank | candidate | config | pass | acq | mean | lcb | local ready | next action |",
         "|---:|---|---|---|---:|---:|---:|---|---|",

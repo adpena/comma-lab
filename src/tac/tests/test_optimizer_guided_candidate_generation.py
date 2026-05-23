@@ -213,6 +213,16 @@ def test_pr95_hnerv_muon_profile_emits_full_solver_stack_wire_in() -> None:
     assert row["rank_score_field"] == "proxy_objective_not_score"
     assert row["representation_family"] == "hnerv"
     assert row["substrate_family"] == "nerv_family"
+    assert row["embedding_lr_scaling_policy"] == "theta_1_not_inverse_width"
+    assert len(row["parameter_group_lr_policy_sha256"]) == 64
+    assert len(row["parameter_group_fingerprint_sha256"]) == 64
+    assert row["parameter_group_fingerprint"]["fingerprint_sha256"] == row[
+        "parameter_group_fingerprint_sha256"
+    ]
+    assert row["parameter_group_fingerprint"]["fingerprint_status"] == (
+        "pending_model_parameter_shape_manifest"
+    )
+    assert row["parameter_group_fingerprint"]["score_claim"] is False
     assert row["candidate_params"].keys() == {
         "muon_ns_steps",
         "muon_momentum",
@@ -232,6 +242,11 @@ def test_pr95_hnerv_muon_profile_emits_full_solver_stack_wire_in() -> None:
     assert wire["representation_family"] == "hnerv"
     assert wire["substrate_family"] == "nerv_family"
     assert "optimizer_recipe" in wire["variant_axes"]
+    assert "embedding_lr_scaling_policy" in wire["variant_axes"]
+    assert "parameter_group_fingerprint" in wire["variant_axes"]
+    assert "embedding_lr_scaling_policy_variant" in wire["probe_disambiguator_wire_in"][
+        "paired_modes"
+    ]
     assert validate_optimizer_training_signal_wire_in(wire) == []
     assert wire["false_authority"]["ready_for_exact_eval_dispatch"] is False
     assert wire["cathedral_autopilot_wire_in"]["dispatch_ready"] is False

@@ -17,6 +17,13 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
+from tac.optimization.parameter_group_lr_policy import (
+    DEFAULT_PARAMETER_GROUP_LR_POLICY,
+    EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
+    PARAMETER_GROUP_LR_POLICY_SCHEMA,
+    parameter_group_lr_policy_sha256,
+    validate_parameter_group_lr_policy,
+)
 from tac.optimization.proxy_candidate_contract import (
     PROXY_DISPATCH_BLOCKERS,
     PROXY_FALSE_AUTHORITY_FIELDS,
@@ -29,7 +36,6 @@ from tac.xray.base import CANONICAL_WIRE_IN_HOOKS
 REGISTRY_SCHEMA = "optimizer_scheduler_registry.v1"
 DESCRIPTOR_SCHEMA = "optimizer_scheduler_descriptor.v1"
 TELEMETRY_SCHEMA = "optimizer_scheduler_telemetry.v1"
-PARAMETER_GROUP_LR_POLICY_SCHEMA = "parameter_group_lr_policy.v1"
 
 KNOWN_TARGET_MODES: frozenset[str] = frozenset(
     {
@@ -76,45 +82,6 @@ DEFAULT_PARETO_OBJECTIVES: tuple[str, ...] = (
     "state_bytes",
     "seconds_per_candidate",
 )
-DEFAULT_PARAMETER_GROUP_LR_POLICY: dict[str, Any] = {
-    "schema": PARAMETER_GROUP_LR_POLICY_SCHEMA,
-    "policy_id": "single_group_baseline",
-    "embedding_lr_scaling_policy": "same_as_base_lr",
-    "width_basis": "not_width_scaled",
-    "embedding_param_patterns": [],
-    "hidden_param_patterns": ["*"],
-    "optimizer_assignment": {"all_params": "primary_optimizer"},
-    "source_refs": [],
-    "falsification_probe": "paired_same_seed_parameter_group_lr_ablation",
-}
-EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY: dict[str, Any] = {
-    "schema": PARAMETER_GROUP_LR_POLICY_SCHEMA,
-    "policy_id": "embedding_theta1_hidden_muon_adamw",
-    "embedding_lr_scaling_policy": "theta_1_not_inverse_width",
-    "width_basis": "hidden_width_or_latent_channel_count",
-    "embedding_param_patterns": [
-        "embed",
-        "embedding",
-        "latent",
-        "codebook",
-        "pos",
-        "position",
-        "frame_embedding",
-        "pair_embedding",
-    ],
-    "hidden_param_patterns": ["matrix_param_ndim_ge_2_non_embedding"],
-    "optimizer_assignment": {
-        "embedding_like": "AdamW",
-        "hidden_matrix": "Muon",
-        "head_scalar_norm": "AdamW",
-    },
-    "source_refs": [
-        "x:maximelabonne/status/2057602654151364899",
-        "arxiv:2605.21486",
-        "github:KellerJordan/modded-nanogpt/records/track_3_optimization",
-    ],
-    "falsification_probe": "switch_embedding_lr_same_seed_archive_aware_smoke",
-}
 
 
 class OptimizerSchedulerRegistryError(ValueError):
@@ -317,29 +284,10 @@ class OptimizerSchedulerDescriptor:
         object.__setattr__(self, "config_sha256", config_sha256(self.config_payload()))
 
     def _validate_parameter_group_lr_policy(self, policy: Mapping[str, Any]) -> None:
-        _require_false_authority(policy, label=f"{self.descriptor_id} parameter_group_lr_policy")
-        if policy.get("schema") != PARAMETER_GROUP_LR_POLICY_SCHEMA:
-            raise OptimizerSchedulerRegistryError("parameter_group_lr_policy schema mismatch")
-        for key in (
-            "policy_id",
-            "embedding_lr_scaling_policy",
-            "width_basis",
-            "falsification_probe",
-        ):
-            if not isinstance(policy.get(key), str) or not str(policy.get(key)).strip():
-                raise OptimizerSchedulerRegistryError(
-                    f"parameter_group_lr_policy {key} must be a non-empty string"
-                )
-        for key in ("embedding_param_patterns", "hidden_param_patterns", "source_refs"):
-            value = policy.get(key)
-            if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
-                raise OptimizerSchedulerRegistryError(
-                    f"parameter_group_lr_policy {key} must be a list of strings"
-                )
-        if not isinstance(policy.get("optimizer_assignment"), Mapping):
-            raise OptimizerSchedulerRegistryError(
-                "parameter_group_lr_policy optimizer_assignment must be a mapping"
-            )
+        try:
+            validate_parameter_group_lr_policy(policy)
+        except ValueError as exc:
+            raise OptimizerSchedulerRegistryError(str(exc)) from exc
 
     def config_payload(self) -> dict[str, Any]:
         """Return the canonical payload covered by ``config_sha256``."""
@@ -373,6 +321,9 @@ class OptimizerSchedulerDescriptor:
             "parameter_group_lr_policy": _thaw_json(self.parameter_group_lr_policy),
             "parameter_group_lr_policy_id": str(
                 _thaw_json(self.parameter_group_lr_policy)["policy_id"]
+            ),
+            "parameter_group_lr_policy_sha256": parameter_group_lr_policy_sha256(
+                _thaw_json(self.parameter_group_lr_policy)
             ),
             "config_sha256": self.config_sha256,
             "substrate": self.substrate,

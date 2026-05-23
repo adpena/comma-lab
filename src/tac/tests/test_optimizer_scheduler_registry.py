@@ -32,6 +32,7 @@ def test_default_registry_enumerates_hashed_planning_only_candidates() -> None:
         assert validate_proxy_candidate(row) == []
         assert row["parameter_group_lr_policy"]["schema"] == PARAMETER_GROUP_LR_POLICY_SCHEMA
         assert row["parameter_group_lr_policy_id"] == row["parameter_group_lr_policy"]["policy_id"]
+        assert len(row["parameter_group_lr_policy_sha256"]) == 64
         assert row["false_authority"] == FALSE_AUTHORITY_FIELDS
         for key, expected in FALSE_AUTHORITY_FIELDS.items():
             assert row[key] is expected

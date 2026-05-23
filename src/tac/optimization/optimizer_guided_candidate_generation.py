@@ -29,6 +29,11 @@ from tac.optimization.optimizer_training_signal_bridge import (
     DEFAULT_XRAY_PRIMITIVES,
     build_optimizer_training_signal_wire_in,
 )
+from tac.optimization.parameter_group_lr_policy import (
+    EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
+    build_parameter_group_lr_policy_fingerprint,
+    canonical_json,
+)
 from tac.optimization.proxy_candidate_contract import apply_proxy_evidence_boundary
 
 QUEUE_SCHEMA = "optimizer_guided_candidate_queue_v1"
@@ -735,6 +740,7 @@ def _candidate_row(
     optimizer_status: str,
     seed: int,
 ) -> dict[str, Any]:
+    parameter_group_fingerprint = _parameter_group_fingerprint_ref()
     solver_stack_wire_in = build_optimizer_training_signal_wire_in(
         candidate_id=draft.candidate_id,
         profile_id=profile.profile_id,
@@ -768,6 +774,15 @@ def _candidate_row(
         "param_schema": profile.param_schema,
         "optimizer": optimizer,
         "optimizer_status": optimizer_status,
+        "embedding_lr_scaling_policy": parameter_group_fingerprint[
+            "embedding_lr_scaling_policy"
+        ],
+        "parameter_group_lr_policy_id": parameter_group_fingerprint["policy_id"],
+        "parameter_group_lr_policy_sha256": parameter_group_fingerprint["policy_sha256"],
+        "parameter_group_fingerprint": parameter_group_fingerprint,
+        "parameter_group_fingerprint_sha256": parameter_group_fingerprint[
+            "fingerprint_sha256"
+        ],
         "seed": seed,
         "trial_index": draft.trial_index,
         "generation": draft.generation,
@@ -809,6 +824,30 @@ def _candidate_row(
         row,
         dispatch_blockers=[*BASE_DISPATCH_BLOCKERS, *profile.dispatch_blockers],
     )
+
+
+def _parameter_group_fingerprint_ref() -> dict[str, Any]:
+    fingerprint = build_parameter_group_lr_policy_fingerprint(
+        (),
+        policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
+    )
+    fingerprint.update(
+        {
+            "fingerprint_status": "pending_model_parameter_shape_manifest",
+            "fingerprint_scope": "policy_only_no_model_parameter_shapes_yet",
+            "classification_records": [],
+            "record_count": 0,
+            "unknown_shape_count": 0,
+            "embedding_lr_scaling_policy": EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY[
+                "embedding_lr_scaling_policy"
+            ],
+        }
+    )
+    fingerprint.pop("fingerprint_sha256", None)
+    fingerprint["fingerprint_sha256"] = hashlib.sha256(
+        canonical_json(fingerprint).encode("utf-8")
+    ).hexdigest()
+    return fingerprint
 
 
 def _finite_float(value: Any, name: str) -> float:
@@ -1072,6 +1111,8 @@ _DEFAULT_PROFILE_PAYLOADS: dict[str, dict[str, Any]] = {
         "variant_axes": [
             "pr95_source_faithful_control",
             "optimizer_recipe",
+            "embedding_lr_scaling_policy",
+            "parameter_group_fingerprint",
             "scheduler_recipe",
             "normalization_or_weight_decay",
             "training_curriculum",
@@ -1080,6 +1121,8 @@ _DEFAULT_PROFILE_PAYLOADS: dict[str, dict[str, Any]] = {
         "paired_modes": [
             "pr95_faithful_control",
             "optimizer_variant",
+            "embedding_lr_scaling_policy_variant",
+            "parameter_group_fingerprint_variant",
             "scheduler_variant",
             "normalization_or_weight_decay_variant",
             "archive_export_variant",

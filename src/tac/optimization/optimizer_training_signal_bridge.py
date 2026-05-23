@@ -52,6 +52,8 @@ DEFAULT_DETERMINISTIC_SOLUTION_REFS: tuple[str, ...] = (
 DEFAULT_VARIANT_AXES: tuple[str, ...] = (
     "source_faithful_control",
     "optimizer_recipe",
+    "embedding_lr_scaling_policy",
+    "parameter_group_fingerprint",
     "scheduler_recipe",
     "normalization_or_weight_decay",
     "training_curriculum",
@@ -62,6 +64,8 @@ DEFAULT_VARIANT_AXES: tuple[str, ...] = (
 DEFAULT_PAIRED_MODES: tuple[str, ...] = (
     "source_faithful_control",
     "optimizer_variant",
+    "embedding_lr_scaling_policy_variant",
+    "parameter_group_fingerprint_variant",
     "scheduler_variant",
     "normalization_or_weight_decay_variant",
     "substrate_variant",

@@ -161,6 +161,7 @@ def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
     assert plan["summary"]["candidate_count"] == 2
     assert plan["summary"]["config_count"] == 2
     assert plan["summary"]["optimizer_scheduler_candidate_count"] >= 3
+    assert plan["summary"]["optimizer_scheduler_pairing_count"] > 0
     assert plan["summary"]["optimization_pass_count"] == 4
     assert plan["recursive_learning_contract"]["optimizer_scheduler_registry_surface"].endswith(
         "enumerate_optimizer_scheduler_candidates"
@@ -178,6 +179,26 @@ def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
         row["rank_score_field"] == "planner_priority_not_score"
         for row in plan["optimizer_scheduler_candidates"]
     )
+    pairing = plan["optimizer_scheduler_pairings"][0]
+    assert pairing["schema"] == "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing.v1"
+    assert pairing["parent_queue_candidate_id"] in {
+        row["queue_candidate_id"] for row in plan["ranked_sweep_rows"]
+    }
+    assert pairing["optimizer_scheduler_descriptor_id"]
+    assert len(pairing["parameter_group_lr_policy_sha256"]) == 64
+    assert pairing["paired_ablation_contract"]["score_claim"] is False
+    assert "tools/master_gradient_xray.py" in pairing["tool_wiring"]["xray_surfaces"]
+    assert "src/tac/atom/ledger.py" in pairing["tool_wiring"]["atom_surfaces"]
+    assert "src/tac/freezing/swa_checkpoint_averaging.py" in pairing["tool_wiring"][
+        "freezing_surfaces"
+    ]
+    assert pairing["solver_stack_wire_in"]["probe_disambiguator_wire_in"][
+        "paired_modes"
+    ] == [
+        "same_candidate_config_pass_different_optimizer_scheduler",
+        "same_optimizer_scheduler_different_candidate",
+        "same_optimizer_scheduler_different_execution_substrate",
+    ]
     assert {row["candidate_id"] for row in plan["ranked_sweep_rows"]} == {
         "prefix_k032",
         "prefix_k016",

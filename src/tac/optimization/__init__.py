@@ -20,6 +20,14 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.info_geom_langevin",
         "InfoGeomLangevinConfig",
     ),
+    "DEFAULT_PARAMETER_GROUP_LR_POLICY": (
+        "tac.optimization.parameter_group_lr_policy",
+        "DEFAULT_PARAMETER_GROUP_LR_POLICY",
+    ),
+    "EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY": (
+        "tac.optimization.parameter_group_lr_policy",
+        "EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY",
+    ),
     "InfoGeomLangevinOptimizer": (
         "tac.optimization.info_geom_langevin",
         "InfoGeomLangevinOptimizer",
@@ -42,6 +50,26 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "OptimizerSchedulerTelemetryRecord": (
         "tac.optimization.optimizer_scheduler_registry",
         "OptimizerSchedulerTelemetryRecord",
+    ),
+    "ParameterClassification": (
+        "tac.optimization.parameter_group_lr_policy",
+        "ParameterClassification",
+    ),
+    "ParameterGroupLRPolicyError": (
+        "tac.optimization.parameter_group_lr_policy",
+        "ParameterGroupLRPolicyError",
+    ),
+    "ParameterShapeRecord": (
+        "tac.optimization.parameter_group_lr_policy",
+        "ParameterShapeRecord",
+    ),
+    "PARAMETER_GROUP_LR_POLICY_FINGERPRINT_SCHEMA": (
+        "tac.optimization.parameter_group_lr_policy",
+        "PARAMETER_GROUP_LR_POLICY_FINGERPRINT_SCHEMA",
+    ),
+    "PARAMETER_GROUP_LR_POLICY_SCHEMA": (
+        "tac.optimization.parameter_group_lr_policy",
+        "PARAMETER_GROUP_LR_POLICY_SCHEMA",
     ),
     "ScorerSurfacePlanError": (
         "tac.optimization.scorer_surface_shaking",
@@ -67,6 +95,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "build_optimizer_scheduler_telemetry_record": (
         "tac.optimization.optimizer_scheduler_registry",
         "build_optimizer_scheduler_telemetry_record",
+    ),
+    "build_parameter_group_lr_policy_fingerprint": (
+        "tac.optimization.parameter_group_lr_policy",
+        "build_parameter_group_lr_policy_fingerprint",
     ),
     "TernaryCalibration": (
         "tac.optimization.ternary_qat",
@@ -112,6 +144,14 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "onsager_importance_weights",
     ),
     "pack_ternary_tensor": ("tac.optimization.ternary_qat", "pack_ternary_tensor"),
+    "parameter_group_lr_policy_fingerprint_sha256": (
+        "tac.optimization.parameter_group_lr_policy",
+        "parameter_group_lr_policy_fingerprint_sha256",
+    ),
+    "parameter_group_lr_policy_sha256": (
+        "tac.optimization.parameter_group_lr_policy",
+        "parameter_group_lr_policy_sha256",
+    ),
     "partition_params_for_muon": (
         "tac.optimization.muon",
         "partition_params_for_muon",
@@ -123,6 +163,14 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "quantize_ternary_tensor": (
         "tac.optimization.ternary_qat",
         "quantize_ternary_tensor",
+    ),
+    "classify_parameter_record": (
+        "tac.optimization.parameter_group_lr_policy",
+        "classify_parameter_record",
+    ),
+    "classify_parameter_records": (
+        "tac.optimization.parameter_group_lr_policy",
+        "classify_parameter_records",
     ),
     "sinkhorn_transport_plan": (
         "tac.optimization.zen_state_frontier",

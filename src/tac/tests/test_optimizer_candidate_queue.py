@@ -475,6 +475,38 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
         score_lowering_hypothesis="fixture",
         dispatch_blockers=["score_claim_requires_exact_auth_eval_result"],
     )
+    pairing_wire_in = build_optimizer_training_signal_wire_in(
+        candidate_id=(
+            "prefix_k032::mlx_local_response::micro::optimizer_scheduler::"
+            "muon_adamw_cosine_representation"
+        ),
+        profile_id="mlx_dynamic_learned_sweep_optimizer_pairing",
+        lane_id="mlx_dynamic_learned_sweep_planning",
+        lane_class="decoder_q_selective_dqs1",
+        candidate_family="decoder_q_selective_dqs1",
+        representation_family="decoder_q_selective_dqs1",
+        substrate_family="[macOS-MLX research-signal]",
+        training_signal_kind="optimizer_scheduler_pairing_proxy",
+        param_schema="mlx_dynamic_optimizer_scheduler_pairing_params_v1",
+        candidate_params={
+            "source_candidate_id": "prefix_k032",
+            "sweep_config_id": "mlx_local_response",
+            "optimization_pass_id": "micro",
+            "optimizer_scheduler_descriptor_id": "muon_adamw_cosine_representation",
+        },
+        source_anchor="fixture",
+        score_lowering_hypothesis="fixture",
+        dispatch_blockers=["optimizer_scheduler_pairing_is_planning_only"],
+        variant_axes=[
+            "optimizer_scheduler_recipe",
+            "parameter_group_lr_policy",
+            "same_candidate_config_pass",
+        ],
+        paired_modes=[
+            "same_candidate_config_pass_different_optimizer_scheduler",
+            "same_optimizer_scheduler_different_candidate",
+        ],
+    )
     plan = _write_json(
         tmp_path / "mlx_dynamic_plan.json",
         {
@@ -527,6 +559,66 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
                     "solver_stack_wire_in": solver_stack_wire_in,
                 }
             ],
+            "optimizer_scheduler_pairings": [
+                {
+                    "schema": "mlx_dynamic_learned_sweep_optimizer_scheduler_pairing.v1",
+                    "queue_candidate_id": (
+                        "prefix_k032::mlx_local_response::micro::optimizer_scheduler::"
+                        "muon_adamw_cosine_representation"
+                    ),
+                    "candidate_id": "prefix_k032",
+                    "parent_queue_candidate_id": "prefix_k032::mlx_local_response::micro",
+                    "sweep_config_id": "mlx_local_response",
+                    "optimization_pass_id": "micro",
+                    "optimization_scale": "micro",
+                    "family": "decoder_q_selective_dqs1",
+                    "optimizer_scheduler_descriptor_id": "muon_adamw_cosine_representation",
+                    "optimizer_scheduler_config_sha256": "a" * 64,
+                    "optimizer": "tac.optimization.muon.MuonOptimizer+torch.optim.AdamW",
+                    "scheduler": "cosine_warmup",
+                    "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+                    "parameter_group_lr_policy_sha256": "b" * 64,
+                    "rank_score": -0.012499999999,
+                    "rank_score_field": (
+                        "parent_negative_acquisition_value_plus_recipe_tiebreak_not_score"
+                    ),
+                    "paired_ablation_contract": {
+                        "schema": "optimizer_scheduler_paired_ablation_contract.v1",
+                        "tool_wiring": {
+                            "schema": "optimizer_scheduler_pairing_tool_wiring.v1",
+                            "ablation_surfaces": [
+                                "src/tac/findings_lagrangian/phase_2_ablation/ablation_framework.py"
+                            ],
+                            "xray_surfaces": ["tools/master_gradient_xray.py"],
+                            "atom_surfaces": ["src/tac/atom/ledger.py"],
+                            "materialization_surfaces": [
+                                "tools/materialize_decoder_q_selective_runtime_candidate.py"
+                            ],
+                            "freezing_surfaces": [
+                                "src/tac/freezing/swa_checkpoint_averaging.py"
+                            ],
+                            "observation_surfaces": [
+                                "tools/append_mlx_dynamic_sweep_observation.py"
+                            ],
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "rank_or_kill_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        },
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                    "solver_stack_wire_in": pairing_wire_in,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "dispatch_attempted": False,
+                    "gpu_launched": False,
+                }
+            ],
         },
     )
 
@@ -562,6 +654,30 @@ def test_candidate_queue_accepts_mlx_dynamic_learned_sweep_plan_as_planning_only
     assert recipe["consumer_payload"]["optimizer_scheduler_recipe"]["config_sha256"] == "a" * 64
     assert "requires_training_telemetry_before_candidate_selection" in recipe["dispatch_blockers"]
     assert validate_proxy_candidate(recipe) == []
+    pairing = next(
+        item
+        for item in queue["top_k"]
+        if item["candidate_family"] == "optimizer_scheduler_paired_sweep_recipe"
+    )
+    assert pairing["candidate_id"].endswith(
+        "::optimizer_scheduler::muon_adamw_cosine_representation"
+    )
+    assert pairing["source_candidate_id"] == "prefix_k032"
+    assert pairing["config_sha256"] == "a" * 64
+    assert pairing["parameter_group_lr_policy_sha256"] == "b" * 64
+    assert pairing["consumer_payload"]["optimizer_scheduler_pairing"][
+        "parent_queue_candidate_id"
+    ] == "prefix_k032::mlx_local_response::micro"
+    assert pairing["consumer_payload"]["optimizer_scheduler_pairing"][
+        "paired_ablation_contract"
+    ]["tool_wiring"]["freezing_surfaces"] == ["src/tac/freezing/swa_checkpoint_averaging.py"]
+    assert "requires_same_seed_local_ablation_before_recipe_posterior_update" in pairing[
+        "dispatch_blockers"
+    ]
+    assert validate_optimizer_training_signal_wire_in(
+        pairing["consumer_payload"]["optimizer_scheduler_pairing"]["solver_stack_wire_in"]
+    ) == []
+    assert validate_proxy_candidate(pairing) == []
 
 
 def test_candidate_queue_sorts_mixed_ranked_and_planning_only_rows(
