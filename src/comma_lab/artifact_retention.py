@@ -696,6 +696,7 @@ def execute_retention_plan(
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "action": action,
         "cold_store_root": None if cold_store_root is None else str(cold_store_root),
+        "journal_path": None if journal_path is None else str(journal_path),
         "executed_count": sum(1 for row in rows if row.get("status") in {"deleted", "moved"}),
         "executed_bytes": sum(
             int(row.get("bytes") or 0)

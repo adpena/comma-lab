@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from comma_lab.artifact_retention import (
     load_json_object,
     sha256_file,
 )
+
+REPO = Path(__file__).resolve().parents[3]
 
 
 def _write(path: Path, data: bytes = b"x") -> None:
@@ -23,6 +26,18 @@ def _false_authority() -> dict[str, bool]:
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _load_compact_tool():
+    spec = importlib.util.spec_from_file_location(
+        "compact_experiment_artifacts_under_test",
+        REPO / "tools" / "compact_experiment_artifacts.py",
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _write_locality_candidate(
@@ -92,6 +107,42 @@ def test_retention_deletes_only_certified_locality_raw(tmp_path: Path) -> None:
     assert not inflated.exists()
     assert (tmp_path / "candidate_a" / "locality_controls.json").is_file()
     assert (tmp_path / "candidate_a" / "submission_dir" / "archive.zip").is_file()
+
+
+def test_compact_cli_execute_stdout_writes_default_journal(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    inflated = _write_locality_candidate(tmp_path)
+    tool = _load_compact_tool()
+
+    rc = tool.main(
+        [
+            str(tmp_path),
+            "--repo-root",
+            str(tmp_path),
+            "--min-bytes",
+            "1",
+            "--execute",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    journal_path = Path(payload["execution"]["journal_path"])
+    assert rc == 0
+    assert not inflated.exists()
+    assert journal_path.is_file()
+    assert journal_path.relative_to(tmp_path).parts[:3] == (
+        ".omx",
+        "state",
+        "artifact_retention_journals",
+    )
+    events = [
+        json.loads(line)["event"]
+        for line in journal_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert events == ["start", "candidate_start", "candidate_end"]
 
 
 def test_retention_blocks_failed_locality_control(tmp_path: Path) -> None:

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -57,10 +58,34 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--min-bytes", type=_parse_bytes, default=1 << 30)
     parser.add_argument("--exclude", action="append", type=Path, default=[])
     parser.add_argument("--json-output", type=Path)
+    parser.add_argument(
+        "--journal-output",
+        type=Path,
+        help=(
+            "Durable JSONL execution journal. Defaults to a sibling of "
+            "--json-output, or .omx/state/artifact_retention_journals when "
+            "executing to stdout."
+        ),
+    )
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--action", choices=("delete", "move"), default="delete")
     parser.add_argument("--cold-store-root", type=Path)
     return parser.parse_args(argv)
+
+
+def _default_execution_journal_path(args: argparse.Namespace) -> Path:
+    if args.journal_output is not None:
+        return args.journal_output
+    if args.json_output is not None:
+        return args.json_output.with_suffix(args.json_output.suffix + ".journal.jsonl")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return (
+        args.repo_root
+        / ".omx"
+        / "state"
+        / "artifact_retention_journals"
+        / f"artifact_retention_execute_{stamp}.jsonl"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -78,11 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         "execution": None,
     }
     if args.execute:
-        journal_path = (
-            None
-            if args.json_output is None
-            else args.json_output.with_suffix(args.json_output.suffix + ".journal.jsonl")
-        )
+        journal_path = _default_execution_journal_path(args)
         payload["execution"] = execute_retention_plan(
             plan,
             action=args.action,
