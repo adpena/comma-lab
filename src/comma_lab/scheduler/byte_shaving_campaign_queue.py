@@ -28,6 +28,7 @@ from tac.optimization.proxy_candidate_contract import (
 from .byte_shaving_materializer_registry import (
     DQS1_PAIRSET_TARGET_KIND,
     REGISTRY_SCHEMA,
+    known_materializer_target_kinds,
     registry_manifest,
     resolve_materializer,
     suggest_materializer_adapters,
@@ -564,8 +565,9 @@ def _materialize_row(
         for resolution in materializer_resolutions
         if resolution["target_kind"]
     )
+    known_target_kinds = known_materializer_target_kinds()
     unsupported_targets = [
-        target for target in target_kinds if target != DQS1_PAIRSET_TARGET_KIND
+        target for target in target_kinds if target not in known_target_kinds
     ]
     if unsupported_targets:
         blockers.append("unsupported_materializer_target:" + ",".join(unsupported_targets))

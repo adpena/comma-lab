@@ -105,6 +105,10 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
     manifest = registry_manifest()
 
     assert manifest["schema"] == "byte_shaving_materializer_registry.v1"
+    assert manifest["known_target_kinds"] == [
+        BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+        DQS1_PAIRSET_TARGET_KIND,
+    ]
     adapters = {row["materializer_id"]: row for row in manifest["adapters"]}
     assert adapters[DQS1_DROP_PAIR_MATERIALIZER] == {
         "description": "Compile pair-unit drop operations into DQS1 pairset local-first queue rows.",
@@ -465,6 +469,11 @@ def test_compile_dqs1_byte_shaving_plan_classifies_byte_range_entropy_contract_g
 
     assert compiled["executable_row_count"] == 0
     assert compiled["queueable_row_count"] == 0
+    assert all(
+        f"unsupported_materializer_target:{BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND}"
+        not in row["materialization_blockers"]
+        for row in compiled["blocked_rows"]
+    )
     assert any(
         f"materializer_not_executable:{BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER}"
         in row["materialization_blockers"]

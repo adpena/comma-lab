@@ -120,6 +120,9 @@ _ADAPTERS_BY_UNIT_FAMILY: dict[tuple[str, str], tuple[MaterializerAdapter, ...]]
         for adapter in _ADAPTERS
     }
 }
+_KNOWN_TARGET_KINDS: frozenset[str] = frozenset(
+    adapter.target_kind for adapter in _ADAPTERS
+)
 KNOWN_OPERATION_FAMILIES: frozenset[str] = frozenset(
     family
     for families in DEFAULT_OPERATION_FAMILIES.values()
@@ -264,6 +267,12 @@ def suggest_materializer_adapters(
     )
 
 
+def known_materializer_target_kinds() -> frozenset[str]:
+    """Return every target kind registered with the materializer boundary."""
+
+    return _KNOWN_TARGET_KINDS
+
+
 def registry_manifest() -> dict[str, Any]:
     """Return a machine-readable registry view for tests and runbooks."""
 
@@ -286,6 +295,7 @@ def registry_manifest() -> dict[str, Any]:
             }
             for adapter in _ADAPTERS
         ],
+        "known_target_kinds": sorted(_KNOWN_TARGET_KINDS),
         "cooperative_receiver_grammar_registry": {
             "schema": "cooperative_receiver_packet_grammar_registry_hook.v1",
             "known_grammar_count": len(cooperative_receiver_hooks),
@@ -310,6 +320,7 @@ __all__ = [
     "REGISTRY_SCHEMA",
     "MaterializerAdapter",
     "MaterializerResolution",
+    "known_materializer_target_kinds",
     "registry_manifest",
     "resolve_materializer",
     "suggest_materializer_adapters",
