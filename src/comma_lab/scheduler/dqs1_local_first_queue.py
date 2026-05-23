@@ -23,9 +23,14 @@ DEFAULT_QUEUE_ID = "dqs1_pairset_local_first"
 DEFAULT_RESULTS_ROOT = (
     "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb"
 )
-DEFAULT_BRIDGE_PLAN = (
+DEFAULT_MLX_EFFECTIVE_SELECTION = (
     "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/"
-    "decoder_q_selective_window_bridge_plan_top32.json"
+    "mlx_effective_spend_triage_observed_window_selection_top32.json"
+)
+DEFAULT_DECODER_Q_CANDIDATE_MANIFEST = (
+    "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/"
+    "contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/"
+    "d1f1e56e042692f2/mutation_manifest.json"
 )
 DEFAULT_BASE_SUBMISSION_DIR = (
     "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/"
@@ -573,7 +578,8 @@ def build_dqs1_local_first_queue(
     lane_date: str | None = None,
     queue_id: str = DEFAULT_QUEUE_ID,
     results_root: str = DEFAULT_RESULTS_ROOT,
-    bridge_plan: str = DEFAULT_BRIDGE_PLAN,
+    mlx_effective_selection: str = DEFAULT_MLX_EFFECTIVE_SELECTION,
+    decoder_q_candidate_manifest: str = DEFAULT_DECODER_Q_CANDIDATE_MANIFEST,
     base_submission_dir: str = DEFAULT_BASE_SUBMISSION_DIR,
     global_mutated_archive: str = DEFAULT_GLOBAL_MUTATED_ARCHIVE,
     upstream_dir: str = DEFAULT_UPSTREAM_DIR,
@@ -619,6 +625,8 @@ def build_dqs1_local_first_queue(
     date = lane_date or _lane_date_from_summary_path(selection.action_summary_path)
     selected_pairs = ",".join(str(index) for index in selection.selected_pair_indices)
     materialized_root = f"{results_root}/materialized/{selection.candidate_slug}"
+    bridge_plan = f"{materialized_root}/decoder_q_selective_window_bridge_plan.json"
+    bridge_plan_md = f"{materialized_root}/decoder_q_selective_window_bridge_plan.md"
     packet_plan = f"{results_root}/selector_pareto/packet_plans/{selection.candidate_slug}.json"
     packet_plan_md = f"{results_root}/selector_pareto/packet_plans/{selection.candidate_slug}.md"
     eureka_signal = _eureka_signal_path(
@@ -639,7 +647,29 @@ def build_dqs1_local_first_queue(
 
     steps: list[dict[str, Any]] = [
         {
+            "id": "build_bridge_plan",
+            "command": [
+                ".venv/bin/python",
+                "tools/build_decoder_q_selective_window_bridge_plan.py",
+                "--selection",
+                mlx_effective_selection,
+                "--candidate-manifest",
+                decoder_q_candidate_manifest,
+                "--lane-id",
+                f"lane_dqs1_{experiment_id}_local_first_{date}",
+                "--json-out",
+                bridge_plan,
+                "--md-out",
+                bridge_plan_md,
+            ],
+            "resources": {"kind": "local_cpu"},
+            "postconditions": [
+                _false_authority_postcondition(bridge_plan),
+            ],
+        },
+        {
             "id": "plan_packet",
+            "requires": ["build_bridge_plan"],
             "command": [
                 ".venv/bin/python",
                 "tools/plan_decoder_q_selective_runtime_packet.py",
@@ -941,7 +971,8 @@ def build_dqs1_local_first_queue_from_selections(
     lane_date: str | None = None,
     queue_id: str = DEFAULT_QUEUE_ID,
     results_root: str = DEFAULT_RESULTS_ROOT,
-    bridge_plan: str = DEFAULT_BRIDGE_PLAN,
+    mlx_effective_selection: str = DEFAULT_MLX_EFFECTIVE_SELECTION,
+    decoder_q_candidate_manifest: str = DEFAULT_DECODER_Q_CANDIDATE_MANIFEST,
     base_submission_dir: str = DEFAULT_BASE_SUBMISSION_DIR,
     global_mutated_archive: str = DEFAULT_GLOBAL_MUTATED_ARCHIVE,
     upstream_dir: str = DEFAULT_UPSTREAM_DIR,
@@ -967,7 +998,8 @@ def build_dqs1_local_first_queue_from_selections(
             lane_date=lane_date,
             queue_id=queue_id,
             results_root=results_root,
-            bridge_plan=bridge_plan,
+            mlx_effective_selection=mlx_effective_selection,
+            decoder_q_candidate_manifest=decoder_q_candidate_manifest,
             base_submission_dir=base_submission_dir,
             global_mutated_archive=global_mutated_archive,
             upstream_dir=upstream_dir,
@@ -1001,7 +1033,8 @@ def build_queue_from_action_summary(
     *,
     repo_root: str | Path,
     results_root: str = DEFAULT_RESULTS_ROOT,
-    bridge_plan: str = DEFAULT_BRIDGE_PLAN,
+    mlx_effective_selection: str = DEFAULT_MLX_EFFECTIVE_SELECTION,
+    decoder_q_candidate_manifest: str = DEFAULT_DECODER_Q_CANDIDATE_MANIFEST,
     base_submission_dir: str = DEFAULT_BASE_SUBMISSION_DIR,
     global_mutated_archive: str = DEFAULT_GLOBAL_MUTATED_ARCHIVE,
     upstream_dir: str = DEFAULT_UPSTREAM_DIR,
@@ -1034,7 +1067,8 @@ def build_queue_from_action_summary(
         queue=build_dqs1_local_first_queue_from_selections(
             selections,
             results_root=results_root,
-            bridge_plan=bridge_plan,
+            mlx_effective_selection=mlx_effective_selection,
+            decoder_q_candidate_manifest=decoder_q_candidate_manifest,
             base_submission_dir=base_submission_dir,
             global_mutated_archive=global_mutated_archive,
             upstream_dir=upstream_dir,

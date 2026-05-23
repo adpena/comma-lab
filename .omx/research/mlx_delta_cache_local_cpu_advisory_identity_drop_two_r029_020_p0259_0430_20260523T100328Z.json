@@ -1,0 +1,54 @@
+{
+  "allowed_use": [
+    "local_mlx_debug_against_matching_local_cpu_advisory_raw",
+    "local_speed_quality_delta_measurement"
+  ],
+  "authority_status": "This audit proves local advisory raw/cache identity only. It is not a contest auth-axis cache identity and must not unlock score claims or exact-eval spend triage.",
+  "blockers": [],
+  "cache": {
+    "archive_sha256": "f01df6da2ba1e277797d9dd73ec0deedfa14c379e42e2841c4a3e92ff14da437",
+    "array_sha256": {
+      "pair_indices": "b5d8a47e63045d3032bdc9da91c26e221e453a89f13c94049c6f5e850e49ba81",
+      "posenet_yuv6_pair": "f7870954ae59c0047ebe12a21411ea98464d0d5e9a15eb7cf978034461ee6bec",
+      "segnet_last_rgb": "baf4e028cff3faa95fa86b16286c22e9870d9940878bda7979beafacdf4ac654"
+    },
+    "hash_domain": "_array_sha256(dtype_string + json_shape + contiguous_bytes)",
+    "inflated_outputs_aggregate_sha256": "4ca54877651791ec1941252594c47e0ad9ed1b5509b436a4c13305af983f600f",
+    "pair_count": 600,
+    "raw_sha256": "e991569e13647c64457a86a3ae98391021f5fe4fbea74de6f43d131377d203d1"
+  },
+  "eligible_for_local_mlx_local_advisory_debug": true,
+  "eligible_for_local_mlx_transfer_calibration": false,
+  "evidence_grade": "macOS-MLX-research-signal",
+  "evidence_tag": "[macOS-MLX research-signal]",
+  "forbidden_use": [
+    "auth_eval",
+    "score_claim",
+    "promotion",
+    "rank_or_kill",
+    "exact_eval_spend_triage_calibration",
+    "replacement_for_contest_cpu_or_cuda_auth_eval"
+  ],
+  "local_cpu_advisory": {
+    "archive_sha256": "f01df6da2ba1e277797d9dd73ec0deedfa14c379e42e2841c4a3e92ff14da437",
+    "evidence_grade": "macOS-CPU advisory",
+    "inflated_outputs_aggregate_sha256": "4ca54877651791ec1941252594c47e0ad9ed1b5509b436a4c13305af983f600f",
+    "n_samples": 600,
+    "platform_machine": "arm64",
+    "platform_system": "Darwin",
+    "pose_avg": 2.943e-05,
+    "raw_file_sha256": "e991569e13647c64457a86a3ae98391021f5fe4fbea74de6f43d131377d203d1",
+    "score": 0.19204061709818365,
+    "score_axis": "cpu_advisory",
+    "seg_avg": 0.00055991
+  },
+  "passed": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "mlx_scorer_input_cache_local_cpu_advisory_audit.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "verdict": "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
+}

@@ -18,8 +18,10 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from comma_lab.scheduler.dqs1_local_first_queue import (  # noqa: E402
+    DEFAULT_DECODER_Q_CANDIDATE_MANIFEST,
     DEFAULT_DRIFT_CALIBRATION_JSON,
     DEFAULT_EUREKA_OUTPUT_DIR,
+    DEFAULT_MLX_EFFECTIVE_SELECTION,
     DEFAULT_MLX_REFERENCE_CACHE_DIR,
     DEFAULT_QUEUE_ID,
     DEFAULT_RESULTS_ROOT,
@@ -72,7 +74,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_RESULTS_ROOT,
         help="DQS1 result root used for materialized candidate paths",
     )
-    parser.add_argument("--bridge-plan", default=None, help="decoder-q bridge plan path")
+    parser.add_argument(
+        "--mlx-effective-selection",
+        default=DEFAULT_MLX_EFFECTIVE_SELECTION,
+        help=(
+            "observed MLX candidate-selection artifact used to rebuild the "
+            "decoder-q bridge plan with normalized full-video objective fields"
+        ),
+    )
+    parser.add_argument(
+        "--decoder-q-candidate-manifest",
+        default=DEFAULT_DECODER_Q_CANDIDATE_MANIFEST,
+        help="materialized decoder-q mutation manifest used to rebuild the bridge plan",
+    )
     parser.add_argument("--base-submission-dir", default=None, help="parent submission runtime path")
     parser.add_argument(
         "--global-mutated-archive",
@@ -166,7 +180,8 @@ def main(argv: list[str] | None = None) -> int:
         **{
             key: value
             for key, value in {
-                "bridge_plan": args.bridge_plan,
+                "mlx_effective_selection": args.mlx_effective_selection,
+                "decoder_q_candidate_manifest": args.decoder_q_candidate_manifest,
                 "base_submission_dir": args.base_submission_dir,
                 "global_mutated_archive": args.global_mutated_archive,
                 "upstream_dir": args.upstream_dir,

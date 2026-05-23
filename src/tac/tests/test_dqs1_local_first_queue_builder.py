@@ -203,13 +203,16 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
     assert {step["resources"]["kind"] for step in experiment["steps"]} == {"local_cpu"}
     steps_by_id = {step["id"]: step for step in experiment["steps"]}
     assert list(steps_by_id) == [
+        "build_bridge_plan",
         "plan_packet",
         "materialize",
         "locality_controls",
         "local_cpu_advisory",
         "local_cpu_contest_drift_eureka",
     ]
-    selected_pairs_arg = experiment["steps"][0]["command"][-1]
+    assert steps_by_id["build_bridge_plan"]["requires"] == []
+    assert steps_by_id["plan_packet"]["requires"] == ["build_bridge_plan"]
+    selected_pairs_arg = steps_by_id["plan_packet"]["command"][-1]
     assert selected_pairs_arg == "1,2,112"
     eureka_step = steps_by_id["local_cpu_contest_drift_eureka"]
     assert eureka_step["requires"] == ["local_cpu_advisory"]
@@ -254,6 +257,21 @@ def test_dqs1_queue_builder_can_emit_multiple_local_first_candidates(
         "pairset_drop_one_rank023_pair0440",
         "pairset_drop_one_rank024_pair0112",
     ]
+    bridge_outputs = {
+        experiment["id"]: {
+            step["id"]: step["command"]
+            for step in experiment["steps"]
+        }["build_bridge_plan"]
+        for experiment in result.queue["experiments"]
+    }
+    assert any(
+        "materialized/drop_rank023_pair0440/decoder_q_selective_window_bridge_plan.json" in part
+        for part in bridge_outputs["pairset_drop_one_rank023_pair0440"]
+    )
+    assert any(
+        "materialized/drop_rank024_pair0112/decoder_q_selective_window_bridge_plan.json" in part
+        for part in bridge_outputs["pairset_drop_one_rank024_pair0112"]
+    )
     materialize_commands = {
         experiment["id"]: {
             step["id"]: step["command"]
@@ -297,6 +315,7 @@ def test_dqs1_queue_builder_can_emit_local_mlx_advisory_debug_steps(
     experiment = result.queue["experiments"][0]
     steps_by_id = {step["id"]: step for step in experiment["steps"]}
     assert list(steps_by_id) == [
+        "build_bridge_plan",
         "plan_packet",
         "materialize",
         "locality_controls",
@@ -673,10 +692,11 @@ def test_dqs1_queue_builder_routes_group_pairset_candidates(tmp_path: Path) -> N
     assert experiment["lane_id"] == (
         "lane_dqs1_pairset_drop_two_r001_002_p0371_0320_local_first_20260522"
     )
-    assert experiment["steps"][0]["command"][-1] == "26,59,68,98,109,112"
+    steps = {step["id"]: step["command"] for step in experiment["steps"]}
+    assert steps["plan_packet"][-1] == "26,59,68,98,109,112"
     assert any(
         "materialized/drop_two_r001_002_p0371_0320/submission_dir" in part
-        for part in experiment["steps"][1]["command"]
+        for part in steps["materialize"]
     )
 
 
@@ -687,7 +707,8 @@ def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:
         summary,
         repo_root=tmp_path,
         results_root="results",
-        bridge_plan="bridge/custom.json",
+        mlx_effective_selection="mlx/effective_selection.json",
+        decoder_q_candidate_manifest="decoder_q/mutation_manifest.json",
         base_submission_dir="base/submission_dir",
         global_mutated_archive="mutated/archive.zip",
         upstream_dir="custom_upstream",
@@ -699,7 +720,9 @@ def test_dqs1_queue_builder_threads_runtime_overrides(tmp_path: Path) -> None:
     )
 
     steps = {step["id"]: step["command"] for step in result.queue["experiments"][0]["steps"]}
-    assert "bridge/custom.json" in steps["plan_packet"]
+    assert "mlx/effective_selection.json" in steps["build_bridge_plan"]
+    assert "decoder_q/mutation_manifest.json" in steps["build_bridge_plan"]
+    assert "results/materialized/drop_rank023_pair0440/decoder_q_selective_window_bridge_plan.json" in steps["plan_packet"]
     assert "base/submission_dir/archive.zip" in steps["plan_packet"]
     assert "base/submission_dir" in steps["materialize"]
     assert "mutated/archive.zip" in steps["locality_controls"]

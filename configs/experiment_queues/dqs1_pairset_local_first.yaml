@@ -19,9 +19,48 @@
         {
           "command": [
             ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r029_020_p0259_0430_local_first_20260522",
+            "--json-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "command": [
+            ".venv/bin/python",
             "tools/plan_decoder_q_selective_runtime_packet.py",
             "--bridge-plan",
-            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/decoder_q_selective_window_bridge_plan_top32.json",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/decoder_q_selective_window_bridge_plan.json",
             "--base-archive",
             "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
             "--json-out",
@@ -51,7 +90,9 @@
               "type": "json_false_authority"
             }
           ],
-          "requires": [],
+          "requires": [
+            "build_bridge_plan"
+          ],
           "resources": {
             "kind": "local_cpu"
           },
@@ -214,7 +255,7 @@
             "--output-cache-dir",
             "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/mlx_delta_cache",
             "--audit-output",
-            ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+            ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T100328Z.json",
             "--expected-pair-count",
             "600",
             "--batch-pairs",
@@ -228,7 +269,7 @@
             {
               "equals": true,
               "key": "passed",
-              "path": ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+              "path": ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T100328Z.json",
               "type": "json_equals"
             },
             {
@@ -237,7 +278,7 @@
                 "dispatch_attempted",
                 "gpu_launched"
               ],
-              "path": ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+              "path": ".omx/research/mlx_delta_cache_local_cpu_advisory_identity_drop_two_r029_020_p0259_0430_20260523T100328Z.json",
               "required_false": [
                 "score_claim",
                 "promotion_eligible",
@@ -373,7 +414,7 @@
             "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/pareto_gap_uleb/materialized/drop_two_r029_020_p0259_0430/local_cpu_advisory.json",
             "--auth-frontier-score-from-pointer",
             "--eureka-out",
-            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T100328Z.json",
             "--min-margin",
             "0.0"
           ],
@@ -383,12 +424,12 @@
             {
               "equals": "local_cpu_contest_drift_eureka_signal.v1",
               "key": "schema",
-              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T100328Z.json",
               "type": "json_equals"
             },
             {
               "false_or_missing": [],
-              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T092500Z.json",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T100328Z.json",
               "required_false": [
                 "ready_for_exact_eval_dispatch",
                 "dispatch_attempted",

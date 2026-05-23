@@ -186,6 +186,43 @@ def test_bridge_plan_preserves_false_authority_and_requires_dqs1_materialization
     assert "[macOS-MLX research-signal]" in markdown
 
 
+def test_bridge_backfills_legacy_observed_selection_rows_to_normalized_objective(
+    tmp_path: Path,
+) -> None:
+    selection = _selection(tmp_path)
+    manifest = _manifest(tmp_path)
+    for row in selection["selected_rows"]:
+        row["archive_sha256"] = manifest["archive_zip_sha256"]
+        row["selection_basis"] = "observed_strict_gated_mlx_singleton_response_gain"
+        for key in (
+            "source_n_samples",
+            "full_video_denominator",
+            "normalized_full_video_scorer_gain_vs_baseline",
+            "projected_full_video_delta_vs_baseline_score",
+            "break_even_added_bytes_from_normalized_full_video_gain",
+            "normalized_full_video_byte_budget_margin_vs_break_even",
+        ):
+            row.pop(key)
+
+    plan = build_decoder_q_selective_window_bridge_plan(
+        selection,
+        manifest,
+        repo_root=tmp_path,
+        lane_id="lane_decoder_q_bridge_test",
+    )
+
+    unit = plan["work_units"][0]
+    assert unit["source_selection_basis"] == "normalized_full_video_mlx_singleton_response_gain"
+    assert unit["legacy_selection_basis"] == "observed_strict_gated_mlx_singleton_response_gain"
+    assert unit["normalized_objective_backfilled"] is True
+    assert unit["source_n_samples"] == 1
+    assert unit["full_video_denominator"] == 600
+    assert unit["normalized_full_video_gain"] == pytest.approx(0.002 / 600.0)
+    assert unit["break_even_added_bytes_from_normalized_full_video_gain"] == pytest.approx(
+        (0.002 / 600.0) / RATE_SCORE_PER_BYTE
+    )
+
+
 def test_bridge_rejects_archive_sha_mismatch(tmp_path: Path) -> None:
     selection = _selection(tmp_path)
     manifest = _manifest(tmp_path)

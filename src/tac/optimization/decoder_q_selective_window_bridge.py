@@ -17,7 +17,9 @@ from typing import Any
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
 from tac.optimization.decoder_q_selective_runtime_packet import FEC6_PAIR_COUNT
 from tac.optimization.normalized_objective import (
+    RATE_SCORE_PER_BYTE,
     NormalizedObjectiveError,
+    compute_normalized_full_video_gain,
     require_normalized_full_video_objective,
 )
 from tac.optimization.scorer_response_dataset import render_authority_markdown_block
@@ -27,6 +29,16 @@ TOOL = "tac.optimization.decoder_q_selective_window_bridge"
 SELECTION_SCHEMA = "mlx_effective_spend_triage_candidate_selection.v1"
 SELECTION_ROW_SCHEMA = "mlx_effective_spend_triage_candidate_row.v1"
 CANDIDATE_MANIFEST_SCHEMA = "fec6_decoder_q_materialized_candidate_v1"
+CANONICAL_SELECTION_BASIS = "normalized_full_video_mlx_singleton_response_gain"
+LEGACY_OBSERVED_SELECTION_BASIS = "observed_strict_gated_mlx_singleton_response_gain"
+_NORMALIZED_OBJECTIVE_FIELDS = (
+    "source_n_samples",
+    "full_video_denominator",
+    "normalized_full_video_scorer_gain_vs_baseline",
+    "projected_full_video_delta_vs_baseline_score",
+    "break_even_added_bytes_from_normalized_full_video_gain",
+    "normalized_full_video_byte_budget_margin_vs_break_even",
+)
 
 _STRICT_FALSE_AUTHORITY_FIELDS = (
     "score_claim",
@@ -125,6 +137,70 @@ def _validate_pair_window(row: dict[str, Any], *, label: str) -> tuple[int, int]
     return start, end
 
 
+def _canonicalize_selection_row_objective(
+    row: dict[str, Any],
+    *,
+    label: str,
+) -> dict[str, Any]:
+    start, end = _validate_pair_window(row, label=label)
+    basis = row.get("selection_basis")
+    if basis not in {
+        CANONICAL_SELECTION_BASIS,
+        LEGACY_OBSERVED_SELECTION_BASIS,
+    }:
+        raise DecoderQSelectiveWindowBridgeError(f"{label} selection_basis mismatch")
+
+    canonical = dict(row)
+    if basis != CANONICAL_SELECTION_BASIS:
+        canonical["legacy_selection_basis"] = basis
+        canonical["selection_basis"] = CANONICAL_SELECTION_BASIS
+        canonical["selection_planning_value_scope"] = "normalized_full_video"
+
+    missing_normalized_fields = any(canonical.get(key) is None for key in _NORMALIZED_OBJECTIVE_FIELDS)
+    if missing_normalized_fields:
+        source_n_samples = end - start
+        canonical.setdefault("source_n_samples", source_n_samples)
+        canonical.setdefault("full_video_denominator", FEC6_PAIR_COUNT)
+        source_n_samples = _as_int(
+            canonical.get("source_n_samples"),
+            label=f"{label} source_n_samples",
+        )
+        denominator = _as_int(
+            canonical.get("full_video_denominator"),
+            label=f"{label} full_video_denominator",
+        )
+        observed_gain = _as_float(
+            canonical.get("observed_scorer_gain_vs_baseline"),
+            label=f"{label} observed_scorer_gain_vs_baseline",
+        )
+        added_archive_bytes = _as_float(
+            canonical.get("added_archive_bytes"),
+            label=f"{label} added_archive_bytes",
+        )
+        normalized_gain = compute_normalized_full_video_gain(
+            observed_gain,
+            source_n_samples,
+            full_video_denominator=denominator,
+        )
+        break_even_bytes = normalized_gain / RATE_SCORE_PER_BYTE
+        canonical["normalized_full_video_scorer_gain_vs_baseline"] = normalized_gain
+        canonical["projected_full_video_delta_vs_baseline_score"] = (
+            RATE_SCORE_PER_BYTE * added_archive_bytes - normalized_gain
+        )
+        canonical["break_even_added_bytes_from_normalized_full_video_gain"] = (
+            break_even_bytes
+        )
+        canonical["normalized_full_video_byte_budget_margin_vs_break_even"] = (
+            break_even_bytes - added_archive_bytes
+        )
+        canonical["normalized_objective_backfilled"] = True
+        canonical["normalized_objective_backfill_source"] = (
+            "decoder_q_selective_window_bridge.v1"
+        )
+
+    return canonical
+
+
 def _validate_selection(selection: dict[str, Any]) -> list[dict[str, Any]]:
     if selection.get("schema") != SELECTION_SCHEMA:
         raise DecoderQSelectiveWindowBridgeError("selection schema mismatch")
@@ -169,8 +245,7 @@ def _validate_selection(selection: dict[str, Any]) -> list[dict[str, Any]]:
             )
         if row.get("family") != "mlx_decoder_q":
             raise DecoderQSelectiveWindowBridgeError(f"{label} family must be mlx_decoder_q")
-        if row.get("selection_basis") != "normalized_full_video_mlx_singleton_response_gain":
-            raise DecoderQSelectiveWindowBridgeError(f"{label} selection_basis mismatch")
+        row = _canonicalize_selection_row_objective(row, label=label)
         _validate_pair_window(row, label=label)
         if _as_float(row.get("observed_scorer_gain_vs_baseline"), label=f"{label} gain") <= 0:
             raise DecoderQSelectiveWindowBridgeError(f"{label} gain must be positive")
@@ -378,6 +453,15 @@ def _build_window_unit(
         "rank": rank,
         "source_row_id": row.get("row_id"),
         "source_candidate_id": row.get("candidate_id"),
+        "source_selection_basis": row.get("selection_basis"),
+        "legacy_selection_basis": row.get("legacy_selection_basis"),
+        "normalized_objective_backfilled": row.get(
+            "normalized_objective_backfilled",
+            False,
+        ),
+        "normalized_objective_backfill_source": row.get(
+            "normalized_objective_backfill_source"
+        ),
         "pair_window": [start, end],
         "materialized_decoder_q_candidate_id": candidate["candidate_id"],
         "archive_sha256": archive_sha,
