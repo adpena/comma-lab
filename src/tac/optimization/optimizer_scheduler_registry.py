@@ -360,6 +360,12 @@ class OptimizerSchedulerTelemetryRecord:
     allowed_target_modes: Sequence[str]
     seconds_per_epoch: float | None = None
     seconds_per_candidate: float | None = None
+    backend: str | None = None
+    kernel_fusion_strategy_id: str | None = None
+    backend_kernel_contract: Mapping[str, Any] = field(default_factory=dict)
+    operator_mix: Mapping[str, Any] = field(default_factory=dict)
+    numerical_drift_profile: Mapping[str, Any] = field(default_factory=dict)
+    ineligible_reason: str | None = None
     archive_ready: bool = False
     export_ready: bool = False
     archive_export_blockers: Sequence[str] = ()
@@ -403,6 +409,8 @@ class OptimizerSchedulerTelemetryRecord:
                 raise OptimizerSchedulerRegistryError(f"{name} must be numeric")
             if not math.isfinite(float(value)) or float(value) <= 0.0:
                 raise OptimizerSchedulerRegistryError(f"{name} must be positive finite")
+        if self.backend is not None and not str(self.backend).strip():
+            raise OptimizerSchedulerRegistryError("backend must be non-empty when provided")
         object.__setattr__(
             self,
             "allowed_target_modes",
@@ -416,6 +424,17 @@ class OptimizerSchedulerTelemetryRecord:
         metadata = _freeze_json(self.metadata)
         _require_false_authority(_thaw_json(metadata), label=self.descriptor_id)
         object.__setattr__(self, "metadata", metadata)
+        for name in (
+            "backend_kernel_contract",
+            "operator_mix",
+            "numerical_drift_profile",
+        ):
+            value = _freeze_json(getattr(self, name))
+            _require_false_authority(
+                _thaw_json(value),
+                label=f"{self.descriptor_id}.{name}",
+            )
+            object.__setattr__(self, name, value)
 
     def _auto_archive_export_blockers(self) -> list[str]:
         blockers = [str(item) for item in self.archive_export_blockers if str(item)]
@@ -440,6 +459,12 @@ class OptimizerSchedulerTelemetryRecord:
             "slice_budget": self.slice_budget,
             "seconds_per_epoch": self.seconds_per_epoch,
             "seconds_per_candidate": self.seconds_per_candidate,
+            "backend": self.backend,
+            "kernel_fusion_strategy_id": self.kernel_fusion_strategy_id,
+            "backend_kernel_contract": _thaw_json(self.backend_kernel_contract),
+            "operator_mix": _thaw_json(self.operator_mix),
+            "numerical_drift_profile": _thaw_json(self.numerical_drift_profile),
+            "ineligible_reason": self.ineligible_reason,
             "archive_ready": self.archive_ready,
             "export_ready": self.export_ready,
             "archive_export_readiness": {
@@ -607,6 +632,12 @@ def build_optimizer_scheduler_telemetry_record(
     state_bytes: int,
     seconds_per_epoch: float | None = None,
     seconds_per_candidate: float | None = None,
+    backend: str | None = None,
+    kernel_fusion_strategy_id: str | None = None,
+    backend_kernel_contract: Mapping[str, Any] | None = None,
+    operator_mix: Mapping[str, Any] | None = None,
+    numerical_drift_profile: Mapping[str, Any] | None = None,
+    ineligible_reason: str | None = None,
     archive_ready: bool = False,
     export_ready: bool = False,
     archive_export_blockers: Sequence[str] = (),
@@ -630,6 +661,12 @@ def build_optimizer_scheduler_telemetry_record(
         allowed_target_modes=descriptor.allowed_target_modes,
         seconds_per_epoch=seconds_per_epoch,
         seconds_per_candidate=seconds_per_candidate,
+        backend=backend,
+        kernel_fusion_strategy_id=kernel_fusion_strategy_id,
+        backend_kernel_contract=backend_kernel_contract or {},
+        operator_mix=operator_mix or {},
+        numerical_drift_profile=numerical_drift_profile or {},
+        ineligible_reason=ineligible_reason,
         archive_ready=archive_ready,
         export_ready=export_ready,
         archive_export_blockers=archive_export_blockers,

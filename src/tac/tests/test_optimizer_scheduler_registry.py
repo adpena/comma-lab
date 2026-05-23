@@ -127,6 +127,12 @@ def test_telemetry_record_contains_required_timing_state_and_authority_fields() 
         seed_budget=2,
         slice_budget=16,
         seconds_per_candidate=0.75,
+        backend="mlx",
+        kernel_fusion_strategy_id="measured_mlx_conv_profile",
+        backend_kernel_contract={"backend": "mlx", "score_claim": False},
+        operator_mix={"conv2d": 0.7, "gemm": 0.2},
+        numerical_drift_profile={"max_abs_delta": 1e-5, "score_claim": False},
+        ineligible_reason="coda_cuda_hopper_path_not_applicable_to_mlx",
         state_bytes=4096,
         archive_ready=True,
         export_ready=False,
@@ -144,6 +150,11 @@ def test_telemetry_record_contains_required_timing_state_and_authority_fields() 
     assert row["slice_budget"] == 16
     assert row["seconds_per_epoch"] is None
     assert row["seconds_per_candidate"] == 0.75
+    assert row["backend"] == "mlx"
+    assert row["kernel_fusion_strategy_id"] == "measured_mlx_conv_profile"
+    assert row["operator_mix"]["conv2d"] == 0.7
+    assert row["numerical_drift_profile"]["max_abs_delta"] == 1e-5
+    assert row["ineligible_reason"] == "coda_cuda_hopper_path_not_applicable_to_mlx"
     assert row["state_bytes"] == 4096
     assert row["archive_ready"] is True
     assert row["export_ready"] is False
@@ -189,6 +200,20 @@ def test_telemetry_fails_closed_without_timing_or_with_truthy_authority() -> Non
             slice_budget=1,
             seconds_per_epoch=0.5,
             state_bytes=0,
+        )
+
+    with pytest.raises(
+        OptimizerSchedulerRegistryError,
+        match=r"backend_kernel_contract.*score_claim",
+    ):
+        build_optimizer_scheduler_telemetry_record(
+            descriptor=descriptor,
+            axis_tag="[macOS-CPU advisory]",
+            seed=1,
+            slice_budget=1,
+            seconds_per_epoch=0.5,
+            state_bytes=0,
+            backend_kernel_contract={"score_claim": True},
         )
 
 

@@ -55,6 +55,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.optimizer_signal_atoms",
         "OptimizerSignalAtomError",
     ),
+    "LocalTrainingRuntimeProfileError": (
+        "tac.optimization.local_training_runtime_profile",
+        "LocalTrainingRuntimeProfileError",
+    ),
     "ParameterClassification": (
         "tac.optimization.parameter_group_lr_policy",
         "ParameterClassification",
@@ -104,6 +108,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
         "tac.optimization.optimizer_signal_atoms",
         "build_optimizer_signal_atom_ledger",
     ),
+    "adapt_runtime_profile_observation_to_candidate": (
+        "tac.optimization.local_training_runtime_profile",
+        "adapt_runtime_profile_observation_to_candidate",
+    ),
     "build_atoms_from_optimizer_signal_source": (
         "tac.optimization.optimizer_signal_atoms",
         "build_atoms_from_optimizer_signal_source",
@@ -140,6 +148,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "enumerate_optimizer_scheduler_candidates": (
         "tac.optimization.optimizer_scheduler_registry",
         "enumerate_optimizer_scheduler_candidates",
+    ),
+    "normalize_runtime_profile_observation": (
+        "tac.optimization.local_training_runtime_profile",
+        "normalize_runtime_profile_observation",
     ),
     "fisher_diagonal_ema": (
         "tac.optimization.info_geom_langevin",
@@ -187,6 +199,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "sinkhorn_transport_plan": (
         "tac.optimization.zen_state_frontier",
         "sinkhorn_transport_plan",
+    ),
+    "runtime_profile_summary_from_training_manifest": (
+        "tac.optimization.local_training_runtime_profile",
+        "runtime_profile_summary_from_training_manifest",
     ),
     "ternary_ste": ("tac.optimization.ternary_qat", "ternary_ste"),
     "tropical_lora_forward": (

@@ -14,6 +14,10 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.local_training_runtime_profile import (
+    LocalTrainingRuntimeProfileError,
+    runtime_profile_summary_from_training_manifest,
+)
 from tac.optimization.optimizer_training_signal_bridge import (
     build_optimizer_training_signal_wire_in,
 )
@@ -163,6 +167,10 @@ def adapt_pr95_local_training_manifest_to_candidate(
     best_score = _best_training_score(payload)
     latest_score = _latest_training_score(payload)
     auth_score = _auth_eval_score(payload)
+    try:
+        runtime_profile_summary = runtime_profile_summary_from_training_manifest(payload)
+    except LocalTrainingRuntimeProfileError as exc:
+        raise PR95MuonLocalTrainingIntegrationError(str(exc)) from exc
     archive_zip = _archive_zip(payload)
     bridge = _auth_eval_bridge(payload)
     seed = _finite_int(payload.get("seed"))
@@ -190,6 +198,11 @@ def adapt_pr95_local_training_manifest_to_candidate(
         *([] if has_archive else ["local_training_probe_archive_export_missing"]),
         *([] if has_auth_bridge else ["local_training_probe_auth_eval_bridge_missing"]),
         *([] if best_score is not None else ["local_training_probe_best_score_missing"]),
+        *[
+            str(item)
+            for item in runtime_profile_summary.get("blockers", [])
+            if str(item)
+        ],
     ]
     optimizer_params = {
         "stage_count": stage_count,
@@ -200,6 +213,21 @@ def adapt_pr95_local_training_manifest_to_candidate(
         "archive_exported": has_archive,
         "auth_eval_bridge_present": has_auth_bridge,
     }
+    if runtime_profile_summary.get("profile_count"):
+        optimizer_params.update(
+            {
+                "best_local_backend": runtime_profile_summary.get("best_local_backend"),
+                "best_runtime_timing_field": runtime_profile_summary.get(
+                    "best_timing_field"
+                ),
+                "best_runtime_timing_value_seconds": runtime_profile_summary.get(
+                    "best_timing_value_seconds"
+                ),
+                "kernel_fusion_strategy_ids": runtime_profile_summary.get(
+                    "kernel_fusion_strategy_ids"
+                ),
+            }
+        )
     consumer_payload = {
         "schema": CANDIDATE_PAYLOAD_SCHEMA,
         "pr95_muon_local_training": {
@@ -212,6 +240,7 @@ def adapt_pr95_local_training_manifest_to_candidate(
             },
             "timing_smoke": {
                 "wall_seconds": _finite_float(payload.get("wall_seconds")),
+                "runtime_profile_summary": dict(runtime_profile_summary),
                 "results": [
                     {
                         "stage_index": result.get("stage_index"),
@@ -242,6 +271,13 @@ def adapt_pr95_local_training_manifest_to_candidate(
             "source_tree_sha256": payload.get("source_tree_sha256"),
             "torch_version": payload.get("torch_version"),
             "platform": payload.get("platform"),
+            "packet_compiler_bridge": (
+                runtime_profile_summary.get("profiles", [{}])[0].get(
+                    "packet_compiler_bridge"
+                )
+                if runtime_profile_summary.get("profile_count")
+                else None
+            ),
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,

@@ -15,6 +15,10 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.local_training_runtime_profile import (
+    LocalTrainingRuntimeProfileError,
+    runtime_profile_summary_from_training_manifest,
+)
 from tac.optimization.optimizer_training_signal_bridge import (
     build_optimizer_training_signal_wire_in,
     ordered_unique,
@@ -161,22 +165,43 @@ def validate_representation_training_manifest(payload: Mapping[str, Any]) -> Non
             raise RepresentationTrainingProbeIntegrationError(f"{attr} is required")
 
 
-def _candidate_params(payload: Mapping[str, Any]) -> dict[str, Any]:
+def _candidate_params(
+    payload: Mapping[str, Any],
+    *,
+    runtime_profile_summary: Mapping[str, Any],
+) -> dict[str, Any]:
     explicit = payload.get("candidate_params")
     if isinstance(explicit, Mapping):
-        return dict(explicit)
-    optimizer_recipe = _mapping(payload.get("optimizer_recipe"))
-    scheduler_recipe = _mapping(payload.get("scheduler_recipe"))
-    training_recipe = _mapping(payload.get("training_recipe"))
-    stage_count = _finite_int(payload.get("stage_count")) or len(_stage_modules(payload))
-    return {
-        "stage_count": stage_count,
-        "seed": _finite_int(payload.get("seed")),
-        "device": payload.get("device_selected") or payload.get("device_requested"),
-        "optimizer_recipe_id": optimizer_recipe.get("id"),
-        "scheduler_recipe_id": scheduler_recipe.get("id"),
-        "training_recipe_id": training_recipe.get("id"),
-    }
+        params = dict(explicit)
+    else:
+        optimizer_recipe = _mapping(payload.get("optimizer_recipe"))
+        scheduler_recipe = _mapping(payload.get("scheduler_recipe"))
+        training_recipe = _mapping(payload.get("training_recipe"))
+        stage_count = _finite_int(payload.get("stage_count")) or len(_stage_modules(payload))
+        params = {
+            "stage_count": stage_count,
+            "seed": _finite_int(payload.get("seed")),
+            "device": payload.get("device_selected") or payload.get("device_requested"),
+            "optimizer_recipe_id": optimizer_recipe.get("id"),
+            "scheduler_recipe_id": scheduler_recipe.get("id"),
+            "training_recipe_id": training_recipe.get("id"),
+        }
+    if runtime_profile_summary.get("profile_count"):
+        params.update(
+            {
+                "best_local_backend": runtime_profile_summary.get("best_local_backend"),
+                "best_runtime_timing_field": runtime_profile_summary.get(
+                    "best_timing_field"
+                ),
+                "best_runtime_timing_value_seconds": runtime_profile_summary.get(
+                    "best_timing_value_seconds"
+                ),
+                "kernel_fusion_strategy_ids": runtime_profile_summary.get(
+                    "kernel_fusion_strategy_ids"
+                ),
+            }
+        )
+    return params
 
 
 def _extra_blockers(payload: Mapping[str, Any]) -> list[str]:
@@ -249,12 +274,17 @@ def adapt_representation_training_manifest_to_candidate(
     stage_count = _finite_int(payload.get("stage_count")) or len(stages)
     archive_zip = _mapping(payload.get("archive_zip"))
     bridge = _mapping(payload.get("auth_eval_bridge"))
+    try:
+        runtime_profile_summary = runtime_profile_summary_from_training_manifest(payload)
+    except LocalTrainingRuntimeProfileError as exc:
+        raise RepresentationTrainingProbeIntegrationError(str(exc)) from exc
     best_score = _best_training_score(payload)
     latest_score = _latest_training_score(payload)
     auth_score = _auth_eval_score(payload)
     has_archive = bool(archive_zip.get("sha256") and archive_zip.get("bytes"))
     has_auth_bridge = bool(bridge.get("ok") is True and bridge.get("auth_eval_json_sha256"))
     blockers = _extra_blockers(payload)
+    blockers.extend(_str_list(runtime_profile_summary.get("blockers")))
     if not has_archive:
         blockers.append("representation_training_archive_export_missing")
     if not has_auth_bridge:
@@ -271,7 +301,10 @@ def adapt_representation_training_manifest_to_candidate(
     candidate_family = str(payload.get("candidate_family") or f"{representation_family}_training_probe")
     profile = str(payload.get("profile") or "representation_training_probe")
     param_schema = str(payload.get("param_schema") or "representation_training_manifest_params_v1")
-    params = _candidate_params(payload)
+    params = _candidate_params(
+        payload,
+        runtime_profile_summary=runtime_profile_summary,
+    )
     rankable_auth_score = (
         auth_score if auth_score is not None and auth_bridge_score_rankable(bridge) else None
     )
@@ -300,6 +333,7 @@ def adapt_representation_training_manifest_to_candidate(
             "timing_smoke": {
                 "wall_seconds": _finite_float(payload.get("wall_seconds")),
                 "memory_peak_bytes": _finite_int(payload.get("memory_peak_bytes")),
+                "runtime_profile_summary": dict(runtime_profile_summary),
                 "results": [
                     {
                         "stage_index": result.get("stage_index"),
@@ -329,6 +363,13 @@ def adapt_representation_training_manifest_to_candidate(
             "missing_blockers": blockers,
             "source_tree_sha256": payload.get("source_tree_sha256"),
             "runtime_tree_sha256": payload.get("runtime_tree_sha256"),
+            "packet_compiler_bridge": (
+                runtime_profile_summary.get("profiles", [{}])[0].get(
+                    "packet_compiler_bridge"
+                )
+                if runtime_profile_summary.get("profile_count")
+                else None
+            ),
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,

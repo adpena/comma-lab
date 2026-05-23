@@ -142,6 +142,47 @@ def test_generic_representation_training_manifest_is_substrate_agnostic_proxy(
     assert validate_proxy_candidate(row) == []
 
 
+def test_generic_representation_training_manifest_carries_runtime_profile(
+    tmp_path: Path,
+) -> None:
+    payload = _manifest()
+    payload["runtime_profile"] = {
+        "schema": "trainer_runtime_profile_observation.v1",
+        "training_backend": "mlx",
+        "seconds_per_epoch": 5.5,
+        "peak_memory_bytes": 1_000_000,
+        "kernel_fusion_strategy_id": "measured_mlx_conv_profile",
+        "operator_mix": {"conv2d": 0.81, "gemm": 0.07},
+        "packet_compiler_bridge": {
+            "packet_compiler_target_declared": True,
+            "archive_export_schema": "generic_representation_archive_v1",
+            "runtime_consumption_proof_required": True,
+            "runtime_consumption_proof_present": False,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = adapt_representation_training_manifest_to_candidate(
+        payload,
+        source_path=tmp_path / "manifest.json",
+        repo_root=tmp_path,
+    )
+
+    runtime_summary = row["consumer_payload"]["representation_training_probe"][
+        "timing_smoke"
+    ]["runtime_profile_summary"]
+    assert runtime_summary["profile_count"] == 1
+    assert runtime_summary["best_local_backend"] == "mlx"
+    assert runtime_summary["best_timing_value_seconds"] == 5.5
+    assert row["candidate_params"]["best_local_backend"] == "mlx"
+    assert row["candidate_params"]["best_runtime_timing_value_seconds"] == 5.5
+    assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
+    assert validate_proxy_candidate(row) == []
+
+
 def test_generic_representation_training_manifest_rejects_truthy_authority() -> None:
     payload = _manifest()
     payload["auth_eval_bridge"]["promotable"] = True  # type: ignore[index]

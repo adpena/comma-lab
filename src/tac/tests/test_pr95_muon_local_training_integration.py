@@ -146,6 +146,44 @@ def test_pr95_manifest_adapter_emits_consumer_payload_for_cathedral_and_mlx_swee
     ]
 
 
+def test_pr95_manifest_adapter_carries_local_runtime_profile(tmp_path: Path) -> None:
+    manifest = _manifest()
+    manifest["runtime_profile"] = {
+        "schema": "trainer_runtime_profile_observation.v1",
+        "training_backend": "mlx",
+        "seconds_per_epoch": 12.0,
+        "peak_memory_bytes": 4_000_000,
+        "kernel_fusion_strategy_id": "pr95_mlx_stage8_profile",
+        "operator_mix": {"conv2d": 0.76, "gemm": 0.11, "norm": 0.02},
+        "packet_compiler_bridge": {
+            "packet_compiler_target_declared": True,
+            "archive_export_schema": "pr95_hnerv_archive",
+            "runtime_consumption_proof_required": True,
+            "runtime_consumption_proof_present": False,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = adapt_pr95_local_training_manifest_to_candidate(
+        manifest,
+        source_path=tmp_path / "manifest.json",
+        repo_root=tmp_path,
+    )
+
+    runtime_summary = row["consumer_payload"]["pr95_muon_local_training"][
+        "timing_smoke"
+    ]["runtime_profile_summary"]
+    assert runtime_summary["profile_count"] == 1
+    assert runtime_summary["best_local_backend"] == "mlx"
+    assert runtime_summary["best_timing_value_seconds"] == 12.0
+    assert row["candidate_params"]["best_local_backend"] == "mlx"
+    assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
+    assert validate_proxy_candidate(row) == []
+
+
 def test_candidate_queue_accepts_pr95_local_training_manifest_as_planning_only(
     tmp_path: Path,
 ) -> None:

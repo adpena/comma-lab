@@ -23,6 +23,12 @@ from tac.optimization.local_cpu_contest_drift import (
     LocalCPUContestDriftError,
     require_eureka_false_authority,
 )
+from tac.optimization.local_training_runtime_profile import (
+    SCHEMA as TRAINER_RUNTIME_PROFILE_SCHEMA,
+)
+from tac.optimization.local_training_runtime_profile import (
+    adapt_runtime_profile_observation_to_candidate,
+)
 from tac.optimization.pr95_muon_local_training_integration import (
     PLAN_SCHEMA as PR95_LOCAL_TRAINING_PLAN_SCHEMA,
 )
@@ -1225,6 +1231,17 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
             schema=schema,
             rows=[
                 adapt_representation_training_manifest_to_candidate(
+                    payload,
+                    source_path=path,
+                    repo_root=repo_root,
+                )
+            ],
+        )
+    if schema == TRAINER_RUNTIME_PROFILE_SCHEMA:
+        return SourceExtraction(
+            schema=schema,
+            rows=[
+                adapt_runtime_profile_observation_to_candidate(
                     payload,
                     source_path=path,
                     repo_root=repo_root,
