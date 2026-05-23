@@ -1,4 +1,8 @@
 from .byte_shaving_materializer_registry import (
+    BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
+    BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
+    BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
+    BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
     DQS1_DROP_PAIR_MATERIALIZER,
     DQS1_PAIRSET_TARGET_KIND,
     DQS1_RECEIVER_CONTRACT_ID,
@@ -6,6 +10,7 @@ from .byte_shaving_materializer_registry import (
     REGISTRY_SCHEMA,
     registry_manifest,
     resolve_materializer,
+    suggest_materializer_adapters,
 )
 from .experiment_queue import (
     ExperimentQueueError,
@@ -44,6 +49,10 @@ from .models import (
 )
 
 __all__ = [
+    "BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER",
+    "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID",
+    "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND",
+    "BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND",
     "DQS1_DROP_PAIR_MATERIALIZER",
     "DQS1_PAIRSET_TARGET_KIND",
     "DQS1_RECEIVER_CONTRACT_ID",
@@ -80,4 +89,5 @@ __all__ = [
     "run_queue_worker",
     "run_ready_step",
     "set_control_mode",
+    "suggest_materializer_adapters",
 ]

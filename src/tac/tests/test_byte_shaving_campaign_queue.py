@@ -14,12 +14,17 @@ from comma_lab.scheduler.byte_shaving_campaign_queue import (
     compile_dqs1_byte_shaving_campaign,
 )
 from comma_lab.scheduler.byte_shaving_materializer_registry import (
+    BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
+    BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
+    BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
+    BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
     DQS1_DROP_PAIR_MATERIALIZER,
     DQS1_PAIRSET_TARGET_KIND,
     DQS1_RECEIVER_CONTRACT_ID,
     DQS1_RECEIVER_CONTRACT_KIND,
     registry_manifest,
     resolve_materializer,
+    suggest_materializer_adapters,
 )
 from comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
 from tac.optimization.byte_shaving_campaign import (
@@ -96,25 +101,44 @@ def _pair_drop_plan() -> dict[str, object]:
     return build_byte_shaving_campaign_plan(surface, max_k=3)
 
 
-def test_byte_shaving_materializer_registry_exposes_only_dqs1_drop_pair_adapter() -> None:
+def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contracts() -> None:
     manifest = registry_manifest()
 
     assert manifest["schema"] == "byte_shaving_materializer_registry.v1"
-    assert manifest["adapters"] == [
-        {
-            "description": "Compile pair-unit drop operations into DQS1 pairset local-first queue rows.",
-            "executable": True,
-            "cooperative_receiver_required": True,
-            "materializer_id": DQS1_DROP_PAIR_MATERIALIZER,
-            "materialization_resource_kind": "local_cpu",
-            "operation_family": "drop_pair",
-            "receiver_contract_id": DQS1_RECEIVER_CONTRACT_ID,
-            "receiver_contract_kind": DQS1_RECEIVER_CONTRACT_KIND,
-            "required_context_fields": ["dqs1_base_pair_indices"],
-            "target_kind": DQS1_PAIRSET_TARGET_KIND,
-            "unit_kind": "pair",
-        }
-    ]
+    adapters = {row["materializer_id"]: row for row in manifest["adapters"]}
+    assert adapters[DQS1_DROP_PAIR_MATERIALIZER] == {
+        "description": "Compile pair-unit drop operations into DQS1 pairset local-first queue rows.",
+        "executable": True,
+        "cooperative_receiver_required": True,
+        "materializer_id": DQS1_DROP_PAIR_MATERIALIZER,
+        "materialization_resource_kind": "local_cpu",
+        "operation_family": "drop_pair",
+        "receiver_contract_id": DQS1_RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": DQS1_RECEIVER_CONTRACT_KIND,
+        "required_context_fields": ["dqs1_base_pair_indices"],
+        "target_kind": DQS1_PAIRSET_TARGET_KIND,
+        "unit_kind": "pair",
+    }
+    assert adapters[BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER] == {
+        "description": (
+            "Fail-closed contract for byte-range entropy recode work; requires "
+            "archive-member mapping and runtime-consumption proof before queue execution."
+        ),
+        "executable": False,
+        "cooperative_receiver_required": True,
+        "materializer_id": BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
+        "materialization_resource_kind": "local_cpu",
+        "operation_family": "entropy_recode",
+        "receiver_contract_id": BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
+        "required_context_fields": [
+            "archive_member_name",
+            "archive_byte_range",
+            "runtime_consumption_proof",
+        ],
+        "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+        "unit_kind": "byte_range",
+    }
     grammar_registry = manifest["cooperative_receiver_grammar_registry"]
     assert (
         grammar_registry["schema"]
@@ -172,6 +196,39 @@ def test_byte_shaving_materializer_registry_allows_explicit_dqs1_target_kind() -
     assert resolved.materializer_id == DQS1_DROP_PAIR_MATERIALIZER
     assert resolved.target_kind == DQS1_PAIRSET_TARGET_KIND
     assert resolved.blockers == ()
+
+
+def test_byte_shaving_materializer_registry_registers_byte_range_entropy_fail_closed() -> None:
+    resolved = resolve_materializer(
+        operation={
+            "unit_id": "zip_member_range_a",
+            "operation_id": "entropy_recode_a",
+            "operation_family": "entropy_recode",
+            "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+        },
+        unit={"unit_id": "zip_member_range_a", "unit_kind": "byte_range"},
+    )
+
+    assert resolved.executable is False
+    assert resolved.materializer_id == BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER
+    assert resolved.target_kind == BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND
+    assert resolved.receiver_contract_id == BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID
+    assert (
+        resolved.receiver_contract_kind
+        == BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND
+    )
+    assert resolved.cooperative_receiver_required is True
+    assert resolved.materialization_resource_kind == "local_cpu"
+    assert resolved.blockers == (
+        f"materializer_not_executable:{BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER}",
+    )
+    suggestions = suggest_materializer_adapters(
+        unit_kind="byte_range",
+        operation_family="entropy_recode",
+    )
+    assert [adapter.materializer_id for adapter in suggestions] == [
+        BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER
+    ]
 
 
 def test_compile_dqs1_byte_shaving_plan_preserves_explicit_target_kind(
@@ -317,6 +374,196 @@ def test_compile_dqs1_byte_shaving_plan_emits_action_summary_and_blocks_unknown_
         "pair0371",
     }
     assert portfolio_row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_compile_dqs1_byte_shaving_plan_suggests_registered_byte_range_contract(
+    tmp_path: Path,
+) -> None:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "byte_range_entropy_suggestion_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_byte_range_entropy_suggestion_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "zip_member_range_a",
+                "unit_kind": "byte_range",
+                "candidate_saved_bytes": 777,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operation_families": ["entropy_recode"],
+            },
+        ],
+        **_false_authority(),
+    }
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+
+    entropy_backlog = next(
+        row
+        for row in compiled["materializer_backlog"]["rows"]
+        if row["unit_kind"] == "byte_range"
+        and row["operation_family"] == "entropy_recode"
+    )
+    assert entropy_backlog["gap_class"] == "target_kind_required"
+    assert entropy_backlog["receiver_contract_status"] == (
+        "receiver_target_contract_required"
+    )
+    assert entropy_backlog["suggested_materializers"][0]["materializer_id"] == (
+        BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER
+    )
+    assert entropy_backlog["suggested_materializers"][0]["target_kind"] == (
+        BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND
+    )
+    assert entropy_backlog["suggested_materializers"][0]["executable"] is False
+
+
+def test_compile_dqs1_byte_shaving_plan_classifies_byte_range_entropy_contract_gap(
+    tmp_path: Path,
+) -> None:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "byte_range_entropy_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_byte_range_entropy_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "zip_member_range_a",
+                "unit_kind": "byte_range",
+                "candidate_saved_bytes": 777,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operations": [
+                    {
+                        "operation_id": "entropy_recode_zip_member_range_a",
+                        "operation_family": "entropy_recode",
+                        "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+                    }
+                ],
+            },
+        ],
+        **_false_authority(),
+    }
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+
+    assert compiled["executable_row_count"] == 0
+    assert compiled["queueable_row_count"] == 0
+    assert any(
+        f"materializer_not_executable:{BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER}"
+        in row["materialization_blockers"]
+        for row in compiled["blocked_rows"]
+    )
+    backlog_row = next(
+        row
+        for row in compiled["materializer_backlog"]["rows"]
+        if row["unit_kind"] == "byte_range"
+        and row["operation_family"] == "entropy_recode"
+    )
+    assert backlog_row["gap_class"] == "adapter_not_executable"
+    assert backlog_row["target_kind"] == BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND
+    assert backlog_row["materializer_id"] == BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER
+    assert (
+        backlog_row["receiver_contract_id"]
+        == BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID
+    )
+    assert (
+        backlog_row["receiver_contract_kind"]
+        == BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND
+    )
+    assert (
+        backlog_row["receiver_contract_status"]
+        == "receiver_contract_registered_but_adapter_not_executable"
+    )
+    assert backlog_row["cooperative_receiver_required"] is True
+    assert backlog_row["materialization_resource_kind"] == "local_cpu"
+    assert backlog_row["suggested_materializers"][0]["materializer_id"] == (
+        BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER
+    )
+    assert "zip_member_range_a" in backlog_row["source_unit_ids"]
+    assert backlog_row["blocked_resolution_count"] == 1
+    assert backlog_row["selected_operation_count"] == 1
+    assert backlog_row["blocker_counts"] == {
+        f"materializer_not_executable:{BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER}": 1
+    }
+
+
+def test_compile_dqs1_byte_shaving_plan_suggests_byte_range_entropy_target_kind(
+    tmp_path: Path,
+) -> None:
+    surface = {
+        "schema": SIGNAL_SURFACE_SCHEMA,
+        "campaign_id": "byte_range_entropy_suggestion_fixture",
+        "candidate_id": "fixture_seed",
+        "lane_id": "lane_byte_range_entropy_suggestion_fixture",
+        "combo_beam_width": 4,
+        "max_combo_count": 4,
+        "units": [
+            {
+                "unit_id": "zip_member_range_a",
+                "unit_kind": "byte_range",
+                "candidate_saved_bytes": 777,
+                "predicted_quality_score_cost": 0.0,
+                "confidence": 0.8,
+                "operation_families": ["entropy_recode"],
+            },
+        ],
+        **_false_authority(),
+    }
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+
+    compiled = compile_dqs1_byte_shaving_campaign(
+        plan,
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+
+    backlog_row = next(
+        row
+        for row in compiled["materializer_backlog"]["rows"]
+        if row["unit_kind"] == "byte_range"
+        and row["operation_family"] == "entropy_recode"
+    )
+    assert backlog_row["gap_class"] == "target_kind_required"
+    assert backlog_row["receiver_contract_status"] == "receiver_target_contract_required"
+    assert backlog_row["suggested_materializer_count"] == 1
+    assert backlog_row["suggested_materializers"] == [
+        {
+            "description": (
+                "Fail-closed contract for byte-range entropy recode work; requires "
+                "archive-member mapping and runtime-consumption proof before queue execution."
+            ),
+            "executable": False,
+            "cooperative_receiver_required": True,
+            "materializer_id": BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
+            "materialization_resource_kind": "local_cpu",
+            "receiver_contract_id": BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
+            "receiver_contract_kind": BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
+            "required_context_fields": [
+                "archive_member_name",
+                "archive_byte_range",
+                "runtime_consumption_proof",
+            ],
+            "target_kind": BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+        }
+    ]
 
 
 def test_compile_dqs1_byte_shaving_plan_blocks_drop_pair_on_non_pair_unit(

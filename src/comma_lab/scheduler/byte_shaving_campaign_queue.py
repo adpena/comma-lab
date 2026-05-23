@@ -30,6 +30,7 @@ from .byte_shaving_materializer_registry import (
     REGISTRY_SCHEMA,
     registry_manifest,
     resolve_materializer,
+    suggest_materializer_adapters,
 )
 from .dqs1_local_first_queue import SAFE_OPERATOR_ACTION, candidate_slug
 from .experiment_queue import ExperimentQueueError
@@ -187,6 +188,8 @@ def _resolution_gap_class(resolution: Mapping[str, Any], blockers: Sequence[str]
         return "adapter_operation_family_mismatch"
     if "materializer_target_kind_mismatch:" in joined:
         return "adapter_target_kind_mismatch"
+    if "materializer_not_executable:" in joined:
+        return "adapter_not_executable"
     if "operation_family_missing:" in joined:
         return "operation_family_missing"
     if "unknown_operation_family:" in joined:
@@ -204,6 +207,28 @@ def _backlog_key(resolution: Mapping[str, Any], gap_class: str) -> str:
     return f"{gap_class}:{target}:{unit_kind}:{family}:{materializer}"
 
 
+def _suggested_materializer_rows(
+    resolution: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "materializer_id": adapter.materializer_id,
+            "target_kind": adapter.target_kind,
+            "executable": adapter.executable,
+            "receiver_contract_id": adapter.receiver_contract_id,
+            "receiver_contract_kind": adapter.receiver_contract_kind,
+            "cooperative_receiver_required": adapter.cooperative_receiver_required,
+            "materialization_resource_kind": adapter.materialization_resource_kind,
+            "required_context_fields": list(adapter.required_context_fields),
+            "description": adapter.description,
+        }
+        for adapter in suggest_materializer_adapters(
+            unit_kind=str(resolution.get("unit_kind") or ""),
+            operation_family=str(resolution.get("operation_family") or ""),
+        )
+    ]
+
+
 def _receiver_contract_status(resolution: Mapping[str, Any], gap_class: str) -> str:
     if resolution.get("receiver_contract_id") and gap_class == "source_unit_blocked":
         return "receiver_contract_registered_but_source_blocked"
@@ -213,6 +238,8 @@ def _receiver_contract_status(resolution: Mapping[str, Any], gap_class: str) -> 
         return "receiver_target_contract_required"
     if gap_class == "adapter_not_registered":
         return "receiver_adapter_contract_missing"
+    if resolution.get("receiver_contract_id") and gap_class == "adapter_not_executable":
+        return "receiver_contract_registered_but_adapter_not_executable"
     if gap_class in {
         "adapter_unit_kind_mismatch",
         "adapter_operation_family_mismatch",
@@ -279,6 +306,7 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
                 continue
             gap_class = _resolution_gap_class(resolution, resolution_blockers)
             receiver_contract_status = _receiver_contract_status(resolution, gap_class)
+            suggested_materializers = _suggested_materializer_rows(resolution)
             key = _backlog_key(resolution, gap_class)
             current = rows.get(key)
             if current is None:
@@ -297,6 +325,8 @@ def build_materializer_backlog(compiled_rows: Sequence[Mapping[str, Any]]) -> di
                     "materialization_resource_kind": resolution.get(
                         "materialization_resource_kind"
                     ),
+                    "suggested_materializer_count": len(suggested_materializers),
+                    "suggested_materializers": suggested_materializers,
                     "unit_kind": resolution.get("unit_kind"),
                     "operation_family": resolution.get("operation_family"),
                     "blocked_row_count": 0,
@@ -402,6 +432,10 @@ def summarize_materializer_backlog(backlog: Mapping[str, Any], *, limit: int = 8
                     "materialization_resource_kind": row.get(
                         "materialization_resource_kind"
                     ),
+                    "suggested_materializer_count": row.get(
+                        "suggested_materializer_count"
+                    ),
+                    "suggested_materializers": row.get("suggested_materializers"),
                     "blocked_row_count": row.get("blocked_row_count"),
                     "blocked_resolution_count": row.get("blocked_resolution_count"),
                     "selected_operation_count": row.get("selected_operation_count"),

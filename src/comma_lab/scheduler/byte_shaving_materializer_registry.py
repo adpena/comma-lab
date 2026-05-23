@@ -17,6 +17,10 @@ from tac.optimization.proxy_candidate_contract import ordered_unique
 from tac.packet_compiler.cooperative_receiver_grammars import compiler_hook_rows
 
 REGISTRY_SCHEMA = "byte_shaving_materializer_registry.v1"
+BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER = "byte_range_entropy_recode_adapter"
+BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID = "byte_range_entropy_recode_receiver.v1"
+BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND = "archive_charged_byte_range_entropy_recode"
+BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND = "byte_range_entropy_recode_v1"
 DQS1_DROP_PAIR_MATERIALIZER = "dqs1_pairset_drop_pair_adapter"
 DQS1_PAIRSET_TARGET_KIND = "dqs1_pairset_drop_pair"
 DQS1_RECEIVER_CONTRACT_ID = "dqs1_pairset_decoderq_receiver.v1"
@@ -62,6 +66,26 @@ class MaterializerResolution:
 
 _ADAPTERS: tuple[MaterializerAdapter, ...] = (
     MaterializerAdapter(
+        materializer_id=BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
+        unit_kind="byte_range",
+        operation_family="entropy_recode",
+        target_kind=BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND,
+        executable=False,
+        description=(
+            "Fail-closed contract for byte-range entropy recode work; requires "
+            "archive-member mapping and runtime-consumption proof before queue execution."
+        ),
+        receiver_contract_id=BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID,
+        receiver_contract_kind=BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
+        cooperative_receiver_required=True,
+        materialization_resource_kind="local_cpu",
+        required_context_fields=(
+            "archive_member_name",
+            "archive_byte_range",
+            "runtime_consumption_proof",
+        ),
+    ),
+    MaterializerAdapter(
         materializer_id=DQS1_DROP_PAIR_MATERIALIZER,
         unit_kind="pair",
         operation_family="drop_pair",
@@ -83,6 +107,18 @@ _ADAPTERS_BY_TARGET_KEY: dict[tuple[str, str, str], MaterializerAdapter] = {
 _ADAPTERS_BY_ID: dict[str, MaterializerAdapter] = {
     adapter.materializer_id: adapter
     for adapter in _ADAPTERS
+}
+_ADAPTERS_BY_UNIT_FAMILY: dict[tuple[str, str], tuple[MaterializerAdapter, ...]] = {
+    (unit_kind, operation_family): tuple(
+        adapter
+        for adapter in _ADAPTERS
+        if adapter.unit_kind == unit_kind
+        and adapter.operation_family == operation_family
+    )
+    for unit_kind, operation_family in {
+        (adapter.unit_kind, adapter.operation_family)
+        for adapter in _ADAPTERS
+    }
 }
 KNOWN_OPERATION_FAMILIES: frozenset[str] = frozenset(
     family
@@ -210,6 +246,24 @@ def resolve_materializer(
     )
 
 
+def suggest_materializer_adapters(
+    *,
+    unit_kind: str,
+    operation_family: str,
+) -> tuple[MaterializerAdapter, ...]:
+    """Return registered adapters matching a unit/family pair.
+
+    Suggestions are not resolution authority. They exist so backlog artifacts
+    can say which receiver/materializer contract to build next while still
+    requiring an explicit target/materializer before queue execution.
+    """
+
+    return _ADAPTERS_BY_UNIT_FAMILY.get(
+        (_nonempty_str(unit_kind), _nonempty_str(operation_family)),
+        (),
+    )
+
+
 def registry_manifest() -> dict[str, Any]:
     """Return a machine-readable registry view for tests and runbooks."""
 
@@ -244,6 +298,10 @@ def registry_manifest() -> dict[str, Any]:
 
 
 __all__ = [
+    "BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER",
+    "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_ID",
+    "BYTE_RANGE_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND",
+    "BYTE_RANGE_ENTROPY_RECODE_TARGET_KIND",
     "DQS1_DROP_PAIR_MATERIALIZER",
     "DQS1_PAIRSET_TARGET_KIND",
     "DQS1_RECEIVER_CONTRACT_ID",
@@ -254,4 +312,5 @@ __all__ = [
     "MaterializerResolution",
     "registry_manifest",
     "resolve_materializer",
+    "suggest_materializer_adapters",
 ]
