@@ -242,6 +242,8 @@ def _resolution_gap_class(resolution: Mapping[str, Any], blockers: Sequence[str]
     joined = "\n".join(blockers)
     if "non_dqs1_target_requires_materializer_work_queue:" in joined:
         return "materializer_work_queue_required"
+    if "planning_only_materializer_not_candidate_archive:" in joined:
+        return "materializer_work_queue_required"
     if "materializer_target_kind_required:" in joined:
         return "target_kind_required"
     if "materializer_not_registered:" in joined:
@@ -279,6 +281,8 @@ def _suggested_materializer_rows(
             "materializer_id": adapter.materializer_id,
             "target_kind": adapter.target_kind,
             "executable": adapter.executable,
+            "emits_candidate_archive": adapter.emits_candidate_archive,
+            "planning_only": adapter.planning_only,
             "receiver_contract_id": adapter.receiver_contract_id,
             "receiver_contract_kind": adapter.receiver_contract_kind,
             "cooperative_receiver_required": adapter.cooperative_receiver_required,
@@ -978,7 +982,24 @@ def _materializer_chain_postconditions(
     *,
     manifest_path: str,
     schema: str,
+    require_serialized_archive_saving: bool = False,
 ) -> list[dict[str, Any]]:
+    required_positive_int = ["candidate_archive_bytes"]
+    required_less_than: list[dict[str, str]] = []
+    required_equals: dict[str, Any] = {"schema": schema}
+    if require_serialized_archive_saving:
+        required_positive_int.append("source_archive_bytes")
+        required_less_than.append(
+            {"left": "candidate_archive_bytes", "right": "source_archive_bytes"}
+        )
+        required_equals["serialized_archive_delta.status"] = "realized_saving"
+    chain_contract: dict[str, Any] = {
+        "type": "materializer_chain_complete",
+        "path": manifest_path,
+        "schema": schema,
+    }
+    if require_serialized_archive_saving:
+        chain_contract["required_serialized_archive_saving"] = True
     return [
         {
             "type": "json_equals",
@@ -989,7 +1010,7 @@ def _materializer_chain_postconditions(
         {
             "type": "json_completion_contract",
             "path": manifest_path,
-            "required_equals": {"schema": schema},
+            "required_equals": required_equals,
             "required_true": [
                 "byte_closed_candidate_emitted",
                 "runtime_adapter_ready",
@@ -1008,15 +1029,12 @@ def _materializer_chain_postconditions(
                 "gpu_launched",
             ],
             "required_sha256": ["candidate_archive_sha256"],
-            "required_positive_int": ["candidate_archive_bytes"],
+            "required_positive_int": required_positive_int,
             "required_artifact_records": ["candidate_archive"],
+            "required_less_than": required_less_than,
             "forbidden_statuses": ["failed"],
         },
-        {
-            "type": "materializer_chain_complete",
-            "path": manifest_path,
-            "schema": schema,
-        },
+        chain_contract,
     ]
 
 
@@ -1152,6 +1170,7 @@ def build_materializer_work_queue(
                         Path(context["output_dir"]) / BYTE_RANGE_CHAIN_MANIFEST
                     ),
                     schema=CHAIN_SCHEMA,
+                    require_serialized_archive_saving=True,
                 )
                 telemetry = {
                     "artifact_paths": [str(context["output_dir"])],

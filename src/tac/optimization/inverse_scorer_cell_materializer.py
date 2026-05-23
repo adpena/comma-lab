@@ -1003,6 +1003,7 @@ def _normalize_selected_cell(row: Mapping[str, Any]) -> dict[str, Any]:
         "scope_axis": _clean_str(row.get("scope_axis")),
         "component": _clean_str(row.get("component")),
         "water_fill_cost_bytes": _int(row.get("water_fill_cost_bytes"), "water_fill_cost_bytes", minimum=1),
+        "water_fill_cost_bytes_semantics": "planner_budget_cost_not_serialized_savings",
         "expected_score_gain": _float(row.get("expected_score_gain"), "expected_score_gain", minimum=0.0),
         "euler_lagrange_residual": _float(row.get("euler_lagrange_residual"), "euler_lagrange_residual"),
     }

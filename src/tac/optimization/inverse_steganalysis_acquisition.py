@@ -1172,6 +1172,9 @@ def _cell_measure(atom: Mapping[str, Any]) -> dict[str, Any]:
         "region_area": region_area,
         "component_count": component_count,
         "water_fill_cost_bytes": water_fill_cost_bytes,
+        "water_fill_cost_bytes_semantics": (
+            "planner_budget_cost_not_serialized_savings"
+        ),
     }
 
 
@@ -1203,6 +1206,9 @@ def _water_bucket_fill(
                 "scope_axis": row["scope_axis"],
                 "component": row["component"],
                 "water_fill_cost_bytes": cost,
+                "water_fill_cost_bytes_semantics": (
+                    "planner_budget_cost_not_serialized_savings"
+                ),
                 "expected_score_gain": row["expected_score_gain"],
                 "euler_lagrange_residual": row["euler_lagrange_residual"],
             }

@@ -24,6 +24,9 @@ from tac.optimization.byte_range_entropy_recode_materializer import (
     materialize_byte_range_entropy_recode_candidate,
     verify_byte_range_entropy_recode_candidate_manifest,
 )
+from tac.optimization.serialized_archive_economics import (
+    build_serialized_archive_delta_contract,
+)
 from tac.pr103_arithmetic_transform_plan import Pr103ArithmeticTransformPlanError
 from tac.pr103_lc_ac_runtime_adapter import (
     Pr103RuntimeAdapterError,
@@ -176,9 +179,21 @@ def _chain_manifest(
     verified: Mapping[str, Any],
 ) -> dict[str, Any]:
     candidate_archive = _mapping(candidate.get("candidate_archive"))
+    source_archive = _mapping(candidate.get("source_archive"))
+    serialized_archive_delta = build_serialized_archive_delta_contract(
+        source_archive=source_archive,
+        candidate_archive=candidate_archive,
+        require_realized_saving=True,
+    )
     adapter_blockers = _string_list(adapter.get("readiness_blockers"))
     verified_blockers = _string_list(verified.get("readiness_blockers"))
-    readiness_blockers = _ordered_unique([*verified_blockers, *adapter_blockers])
+    readiness_blockers = _ordered_unique(
+        [
+            *verified_blockers,
+            *adapter_blockers,
+            *serialized_archive_delta["blockers"],
+        ]
+    )
     candidate_runtime_blocker_cleared = (
         "candidate_runtime_adapter_missing" not in verified_blockers
         and verified.get("receiver_contract_satisfied") is True
@@ -186,10 +201,17 @@ def _chain_manifest(
     return {
         "schema": CHAIN_SCHEMA,
         "output_dir": repo_relative(output_dir, repo),
+        "source_archive": source_archive,
+        "source_archive_sha256": source_archive.get("sha256")
+        or source_archive.get("archive_sha256")
+        or "",
+        "source_archive_bytes": source_archive.get("bytes")
+        or source_archive.get("archive_bytes"),
         "candidate_archive": candidate_archive,
         "candidate_archive_sha256": candidate_archive.get("sha256") or "",
         "candidate_archive_bytes": candidate_archive.get("bytes"),
         "candidate_member_sha256": candidate_archive.get("member_sha256") or "",
+        "serialized_archive_delta": serialized_archive_delta,
         "byte_closed_candidate_emitted": candidate.get("byte_closed_candidate_emitted")
         is True,
         "runtime_adapter_ready": not adapter_blockers,

@@ -1112,6 +1112,36 @@ def test_refuses_unrelated_nested_provenance_diff_as_change_proof(
     assert "score_affecting_change_proof_missing" in result["report"]["blockers"]
 
 
+def test_archive_manifest_rejects_generic_nested_hash_as_archive_authority(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    (submission / "archive_manifest.json").write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "diagnostic_artifact": {
+                    "sha256": archive_sha,
+                    "bytes": archive_bytes,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert f"archive_manifest_sha_mismatch:None!={archive_sha}" in result["report"]["blockers"]
+    assert f"archive_manifest_size_mismatch:None!={archive_bytes}" in result["report"]["blockers"]
+
+
 def test_accepts_named_score_affecting_change_proof_object(tmp_path: Path) -> None:
     submission, archive_bytes, archive_sha = _make_submission(tmp_path)
     queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)

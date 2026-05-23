@@ -197,6 +197,10 @@ def test_materializer_appends_ias1_descriptor_and_keeps_false_authority(
     assert descriptor["schema"] == DESCRIPTOR_SCHEMA
     assert descriptor["raw_contest_video_digest"] == "a" * 64
     assert descriptor["selected_cells"][0]["atom_id"] == "inverse_surface_pair0007"
+    assert descriptor["selected_cells"][0]["water_fill_cost_bytes"] == 32
+    assert descriptor["selected_cells"][0]["water_fill_cost_bytes_semantics"] == (
+        "planner_budget_cost_not_serialized_savings"
+    )
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
 
@@ -1407,6 +1411,12 @@ def test_inverse_scorer_cell_chain_clears_receiver_blockers_only(
     assert chain["receiver_proof_ready"] is True
     assert chain["receiver_contract_satisfied"] is True
     assert chain["candidate_runtime_adapter_blocker_cleared"] is True
+    assert chain["source_archive_bytes"] == template.stat().st_size
+    assert chain["candidate_archive_bytes"] > 0
+    assert chain["serialized_archive_delta"]["modeled_cost_bytes"] == 32
+    assert chain["serialized_archive_delta"]["require_realized_saving"] is False
+    assert chain["serialized_archive_delta"]["blockers"] == []
+    assert chain["serialized_archive_delta"]["score_claim"] is False
     assert "runtime_consumption_proof_missing" not in chain["readiness_blockers"]
     assert "inverse_scorer_cell_receiver_contract_not_satisfied" not in chain["readiness_blockers"]
     assert "candidate_inflate_output_parity_missing" in chain["readiness_blockers"]

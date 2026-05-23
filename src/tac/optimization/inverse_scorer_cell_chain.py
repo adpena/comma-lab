@@ -23,6 +23,9 @@ from tac.optimization.inverse_scorer_cell_materializer import (
     materialize_inverse_scorer_cell_candidate,
     verify_inverse_scorer_cell_candidate_manifest,
 )
+from tac.optimization.serialized_archive_economics import (
+    build_serialized_archive_delta_contract,
+)
 from tac.repo_io import (
     ArtifactWriteError,
     repo_relative,
@@ -191,6 +194,12 @@ def _chain_manifest(
     verified: Mapping[str, Any],
 ) -> dict[str, Any]:
     candidate_archive = _mapping(candidate.get("candidate_archive"))
+    source_archive = _mapping(candidate.get("template_archive"))
+    serialized_archive_delta = build_serialized_archive_delta_contract(
+        source_archive=source_archive,
+        candidate_archive=candidate_archive,
+        modeled_cost_bytes=_selected_cell_cost_bytes(candidate.get("selected_cells")),
+    )
     adapter_blockers = _string_list(adapter.get("readiness_blockers"))
     proof_blockers = _string_list(receiver_proof.get("blockers"))
     parity_blockers = _string_list((inflate_parity_probe or {}).get("blockers"))
@@ -266,10 +275,14 @@ def _chain_manifest(
     return {
         "schema": CHAIN_SCHEMA,
         "output_dir": repo_relative(output_dir, repo),
+        "source_archive": source_archive,
+        "source_archive_sha256": source_archive.get("sha256") or "",
+        "source_archive_bytes": source_archive.get("bytes"),
         "candidate_archive": candidate_archive,
         "candidate_archive_sha256": candidate_archive.get("sha256") or "",
         "candidate_archive_bytes": candidate_archive.get("bytes"),
         "candidate_member_sha256": candidate_archive.get("member_sha256") or "",
+        "serialized_archive_delta": serialized_archive_delta,
         "byte_closed_candidate_emitted": candidate.get("byte_closed_candidate_emitted") is True,
         "runtime_adapter_ready": not adapter_blockers,
         "receiver_proof_ready": receiver_proof.get("ready_for_receiver_verification") is True,
@@ -367,6 +380,27 @@ def _mapping(value: Any) -> Mapping[str, Any]:
 
 def _string_list(value: Any) -> list[str]:
     return [str(item) for item in value or [] if str(item)]
+
+
+def _selected_cell_cost_bytes(value: Any) -> int | None:
+    if not isinstance(value, Sequence) or isinstance(value, str | bytes):
+        return None
+    total = 0
+    seen = False
+    for item in value:
+        if not isinstance(item, Mapping):
+            continue
+        raw = item.get("water_fill_cost_bytes")
+        if isinstance(raw, bool) or raw is None:
+            continue
+        try:
+            parsed = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if parsed > 0:
+            total += parsed
+            seen = True
+    return total if seen else None
 
 
 def _ordered_unique(values: Sequence[str]) -> list[str]:

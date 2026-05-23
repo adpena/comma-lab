@@ -1577,6 +1577,9 @@ def build_signal_surface_from_inverse_action_functional(
                 "component": selected.get("component"),
                 "euler_lagrange_residual": selected.get("euler_lagrange_residual"),
                 "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+                "water_fill_cost_bytes_semantics": (
+                    "planner_budget_cost_not_serialized_savings"
+                ),
             },
             "blockers": [
                 "inverse_action_cell_requires_deterministic_materializer",
@@ -1602,6 +1605,9 @@ def build_signal_surface_from_inverse_action_functional(
                 "inverse_action_cell": {
                     "euler_lagrange_residual": selected.get("euler_lagrange_residual"),
                     "water_fill_cost_bytes": selected.get("water_fill_cost_bytes"),
+                    "water_fill_cost_bytes_semantics": (
+                        "planner_budget_cost_not_serialized_savings"
+                    ),
                     "scope_axis": selected.get("scope_axis"),
                     "component": selected.get("component"),
                 },

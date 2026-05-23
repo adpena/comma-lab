@@ -395,7 +395,7 @@ def score_affecting_change_proof(row: Mapping[str, Any]) -> tuple[bool, list[str
 
 
 def manifest_sha(payload: Mapping[str, Any]) -> str | None:
-    for mapping in iter_mappings(payload):
+    for mapping in _manifest_archive_authority_mappings(payload):
         for key in ("candidate_archive_sha256", "archive_sha256", "sha256"):
             value = mapping.get(key)
             if is_sha256(value):
@@ -404,7 +404,7 @@ def manifest_sha(payload: Mapping[str, Any]) -> str | None:
 
 
 def manifest_size(payload: Mapping[str, Any]) -> int | None:
-    for mapping in iter_mappings(payload):
+    for mapping in _manifest_archive_authority_mappings(payload):
         for key in (
             "candidate_archive_bytes",
             "candidate_archive_size_bytes",
@@ -416,6 +416,23 @@ def manifest_size(payload: Mapping[str, Any]) -> int | None:
             if parsed is not None:
                 return parsed
     return None
+
+
+def _manifest_archive_authority_mappings(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Return only mappings whose schema/position can describe the archive."""
+
+    mappings: list[Mapping[str, Any]] = [payload]
+    for key in (
+        "archive",
+        "archive_zip",
+        "candidate_archive",
+        "packet_archive",
+        "submission_archive",
+    ):
+        value = payload.get(key)
+        if isinstance(value, Mapping):
+            mappings.append(value)
+    return mappings
 
 
 def manifest_member_names(payload: Mapping[str, Any]) -> list[str]:

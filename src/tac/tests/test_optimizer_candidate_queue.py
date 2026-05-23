@@ -985,6 +985,17 @@ def test_candidate_queue_accepts_byte_shaving_campaign_plan_as_planning_only(
     assert row["selection_kind"] == "combo"
     assert row["rank_score"] == -0.00005
     assert row["candidate_saved_bytes"] == 120
+    assert row["predicted_saved_bytes"] == 120
+    assert row["predicted_saved_bytes_semantics"] == (
+        "planner_model_only_not_serialized_archive_delta"
+    )
+    assert row["serialized_archive_delta"]["status"] == "missing_archive_bytes"
+    assert row["serialized_archive_delta"]["modeled_saved_bytes"] == 120
+    assert "serialized_archive_delta_bytes_missing" in row["dispatch_blockers"]
+    assert (
+        "modeled_savings_without_realized_serialized_savings"
+        in row["dispatch_blockers"]
+    )
     assert row["source_signal_refs"][0]["kind"] == "master_gradient_anchor"
     assert row["mlx_calibration_refs"][0]["kind"] == "strict_calibration"
     assert row["consumer_payload"]["selected_unit_ids"] == [

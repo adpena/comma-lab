@@ -288,6 +288,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
     assert adapters[DQS1_DROP_PAIR_MATERIALIZER] == {
         "description": "Compile pair-unit drop operations into DQS1 pairset local-first queue rows.",
         "executable": True,
+        "emits_candidate_archive": True,
+        "planning_only": False,
         "cooperative_receiver_required": True,
         "materializer_id": DQS1_DROP_PAIR_MATERIALIZER,
         "materialization_resource_kind": "local_cpu",
@@ -309,6 +311,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
             "archive-member mapping and runtime-consumption proof before queue execution."
         ),
         "executable": False,
+        "emits_candidate_archive": True,
+        "planning_only": False,
         "cooperative_receiver_required": True,
         "materializer_id": BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
         "materialization_resource_kind": "local_cpu",
@@ -335,6 +339,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
             "before queue execution."
         ),
         "executable": False,
+        "emits_candidate_archive": True,
+        "planning_only": False,
         "cooperative_receiver_required": True,
         "materializer_id": INVERSE_SCORER_CELL_MATERIALIZER,
         "materialization_resource_kind": "local_mlx",
@@ -364,6 +370,8 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
             "candidate archive materializer."
         ),
         "executable": True,
+        "emits_candidate_archive": False,
+        "planning_only": True,
         "cooperative_receiver_required": False,
         "materializer_id": INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER,
         "materialization_resource_kind": "local_cpu",
@@ -452,14 +460,16 @@ def test_byte_shaving_materializer_registry_allows_inverse_action_probe_target_k
         },
     )
 
-    assert resolved.executable is True
+    assert resolved.executable is False
     assert resolved.materializer_id == INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER
     assert resolved.target_kind == INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND
     assert resolved.receiver_contract_id == (INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_ID)
     assert resolved.receiver_contract_kind == (INVERSE_SCORER_ACTION_FUNCTIONAL_RECEIVER_CONTRACT_KIND)
     assert resolved.cooperative_receiver_required is False
     assert resolved.materialization_resource_kind == "local_cpu"
-    assert resolved.blockers == ()
+    assert resolved.blockers == (
+        f"planning_only_materializer_not_candidate_archive:{INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER}",
+    )
 
 
 def test_byte_shaving_materializer_registry_registers_byte_range_entropy_fail_closed() -> None:
@@ -806,6 +816,8 @@ def test_compile_dqs1_byte_shaving_plan_suggests_byte_range_entropy_target_kind(
                 "archive-member mapping and runtime-consumption proof before queue execution."
             ),
             "executable": False,
+            "emits_candidate_archive": True,
+            "planning_only": False,
             "cooperative_receiver_required": True,
             "materializer_id": BYTE_RANGE_ENTROPY_RECODE_MATERIALIZER,
             "materialization_resource_kind": "local_cpu",
@@ -882,6 +894,58 @@ def test_materializer_work_queue_builds_byte_range_chain_command(
     assert _condition_passes(row["postconditions"][0], repo_root=Path("/")) is True
     assert _condition_passes(row["postconditions"][1], repo_root=Path("/")) is False
     assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is False
+
+    archive = _write_artifact(output_dir / "candidate_archive.zip", b"candidate")
+    candidate_manifest = _write_artifact(output_dir / "candidate_manifest.json")
+    receiver_proof = _write_artifact(output_dir / "receiver_proof.json")
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": CHAIN_SCHEMA,
+                "source_archive_bytes": archive["bytes"] - 1,
+                "candidate_archive": archive,
+                "candidate_archive_sha256": archive["sha256"],
+                "candidate_archive_bytes": archive["bytes"],
+                "serialized_archive_delta": {"status": "realized_cost"},
+                "byte_closed_candidate_emitted": True,
+                "runtime_adapter_ready": True,
+                "receiver_proof_ready": True,
+                "receiver_contract_satisfied": True,
+                "candidate_runtime_adapter_blocker_cleared": True,
+                "readiness_blockers": [],
+                "artifacts": {
+                    "candidate_manifest": candidate_manifest,
+                    "receiver_proof": receiver_proof,
+                },
+                "chain_steps": [
+                    {
+                        "step_id": "materialize_candidate",
+                        "status": "succeeded",
+                        "artifact": candidate_manifest,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert _condition_passes(row["postconditions"][1], repo_root=Path("/")) is False
+    assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is False
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["source_archive_bytes"] = archive["bytes"] + 1
+    payload.pop("serialized_archive_delta")
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    assert _condition_passes(row["postconditions"][1], repo_root=Path("/")) is False
+    assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is False
+
+    payload["serialized_archive_delta"] = {"status": "realized_saving"}
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    assert _condition_passes(row["postconditions"][1], repo_root=Path("/")) is True
+    assert _condition_passes(row["postconditions"][2], repo_root=Path("/")) is True
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
@@ -1090,7 +1154,7 @@ def test_non_dqs1_executable_materializers_do_not_emit_dqs1_portfolio_rows(
     assert compiled["portfolio"]["operator_action_rows"] == []
     assert compiled["action_summary"]["top_operator_actions"] == []
     assert any(
-        f"non_dqs1_target_requires_materializer_work_queue:{INVERSE_SCORER_ACTION_FUNCTIONAL_TARGET_KIND}"
+        f"planning_only_materializer_not_candidate_archive:{INVERSE_SCORER_ACTION_FUNCTIONAL_MATERIALIZER}"
         in row["materialization_blockers"]
         for row in compiled["blocked_rows"]
     )
@@ -1269,6 +1333,13 @@ def test_inverse_action_cells_compile_to_candidate_chain_work_queue(
         schema="inverse_scorer_cell_candidate_chain_v1",
         chain=True,
     )
+    completion_contract = row["postconditions"][1]
+    chain_contract = row["postconditions"][2]
+    assert completion_contract.get("required_equals") == {
+        "schema": "inverse_scorer_cell_candidate_chain_v1"
+    }
+    assert completion_contract.get("required_less_than") == []
+    assert chain_contract.get("required_serialized_archive_saving") in (None, False)
     assert row["telemetry"]["artifact_paths"] == [
         str(output_dir),
         str(source_inflate_output_dir),

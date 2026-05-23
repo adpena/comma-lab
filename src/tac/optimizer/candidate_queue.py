@@ -56,6 +56,10 @@ from tac.optimization.representation_training_probe_integration import (
 from tac.optimization.representation_training_probe_integration import (
     adapt_representation_training_manifest_to_candidate,
 )
+from tac.optimization.serialized_archive_economics import (
+    build_serialized_archive_delta_contract,
+    serialized_archive_delta_blockers,
+)
 
 QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 TOOL_NAME = "tools/build_optimizer_candidate_queue.py"
@@ -1013,6 +1017,10 @@ def _byte_shaving_campaign_candidates(
         candidate_id = f"{campaign_id}::{kind}::{row_id}"
         expected_delta = _as_float(item.get("expected_delta_score"))
         candidate_saved_bytes = _as_int(item.get("candidate_saved_bytes"))
+        serialized_archive_delta = build_serialized_archive_delta_contract(
+            modeled_saved_bytes=candidate_saved_bytes,
+            require_realized_saving=True,
+        )
         row = {
             "candidate_id": candidate_id,
             "source_candidate_id": source_candidate_id,
@@ -1042,6 +1050,10 @@ def _byte_shaving_campaign_candidates(
             "unit_count": _as_int(item.get("unit_count")),
             "candidate_saved_bytes": candidate_saved_bytes,
             "predicted_saved_bytes": candidate_saved_bytes,
+            "predicted_saved_bytes_semantics": (
+                "planner_model_only_not_serialized_archive_delta"
+            ),
+            "serialized_archive_delta": serialized_archive_delta,
             "expected_delta_score": expected_delta,
             "expected_score_gain": _as_float(item.get("expected_score_gain")),
             "confidence": _as_float(item.get("confidence")),
@@ -1082,6 +1094,7 @@ def _byte_shaving_campaign_candidates(
             dispatch_blockers=[
                 *plan_blockers,
                 *[str(item) for item in item.get("dispatch_blockers", []) if str(item)],
+                *serialized_archive_delta_blockers(serialized_archive_delta),
                 "byte_shaving_campaign_plan_is_planning_only",
                 "selected_operations_require_materializer",
                 "materialized_archive_runtime_custody_required",

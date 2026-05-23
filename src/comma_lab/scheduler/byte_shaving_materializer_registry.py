@@ -63,6 +63,8 @@ class MaterializerAdapter:
     materialize_function: str = ""
     receiver_proof_function: str = ""
     receiver_verify_function: str = ""
+    emits_candidate_archive: bool = True
+    planning_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -181,6 +183,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="comma_lab.scheduler.byte_shaving_campaign_queue",
         plan_function="build_inverse_steganalysis_action_functional",
+        emits_candidate_archive=False,
+        planning_only=True,
     ),
 )
 
@@ -305,6 +309,10 @@ def resolve_materializer(
             )
         if not adapter.executable:
             blockers.append(f"materializer_not_executable:{adapter.materializer_id}")
+        if adapter.planning_only or not adapter.emits_candidate_archive:
+            blockers.append(
+                f"planning_only_materializer_not_candidate_archive:{adapter.materializer_id}"
+            )
 
     blockers = ordered_unique(blockers)
     return MaterializerResolution(
@@ -327,7 +335,13 @@ def resolve_materializer(
         materialization_resource_kind=(
             adapter.materialization_resource_kind if adapter is not None else None
         ),
-        executable=adapter is not None and adapter.executable and not blockers,
+        executable=(
+            adapter is not None
+            and adapter.executable
+            and adapter.emits_candidate_archive
+            and not adapter.planning_only
+            and not blockers
+        ),
         blockers=tuple(blockers),
         adapter=adapter,
     )
@@ -370,6 +384,8 @@ def registry_manifest() -> dict[str, Any]:
                 "operation_family": adapter.operation_family,
                 "target_kind": adapter.target_kind,
                 "executable": adapter.executable,
+                "emits_candidate_archive": adapter.emits_candidate_archive,
+                "planning_only": adapter.planning_only,
                 "receiver_contract_id": adapter.receiver_contract_id,
                 "receiver_contract_kind": adapter.receiver_contract_kind,
                 "cooperative_receiver_required": adapter.cooperative_receiver_required,

@@ -1226,6 +1226,26 @@ def _json_completion_contract(
             return False
         if not _artifact_record_valid(record, repo_root=repo_root):
             return False
+    for index, raw_pair in enumerate(condition.get("required_less_than", []) or []):
+        if not isinstance(raw_pair, Mapping):
+            raise ExperimentQueueError(
+                f"postcondition.required_less_than[{index}] must be an object"
+            )
+        left_key = _require_text(
+            raw_pair.get("left"),
+            f"postcondition.required_less_than[{index}].left",
+        )
+        right_key = _require_text(
+            raw_pair.get("right"),
+            f"postcondition.required_less_than[{index}].right",
+        )
+        try:
+            left = _finite_int(_json_pointer(payload, left_key))
+            right = _finite_int(_json_pointer(payload, right_key))
+        except ExperimentQueueError:
+            return False
+        if left is None or right is None or left >= right:
+            return False
     return True
 
 
@@ -1257,6 +1277,14 @@ def _materializer_chain_complete(
         return False
     if not _artifact_record_valid(payload.get("candidate_archive"), repo_root=repo_root):
         return False
+    if bool(condition.get("required_serialized_archive_saving")):
+        source_bytes = _positive_int(payload.get("source_archive_bytes"))
+        candidate_bytes = _positive_int(payload.get("candidate_archive_bytes"))
+        if source_bytes is None or candidate_bytes is None or candidate_bytes >= source_bytes:
+            return False
+        delta = payload.get("serialized_archive_delta")
+        if not isinstance(delta, Mapping) or delta.get("status") != "realized_saving":
+            return False
     artifacts = payload.get("artifacts")
     if not isinstance(artifacts, Mapping) or not artifacts:
         return False
