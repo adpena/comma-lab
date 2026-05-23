@@ -1,0 +1,19 @@
+{
+  "blocked_row_count": 36,
+  "campaign_id": "byte_shaving_campaign",
+  "dispatch_attempted": false,
+  "executable_row_count": 0,
+  "generated_at_utc": "2026-05-23T14:47:18Z",
+  "gpu_launched": false,
+  "lane_id": "master_gradient_byte_shaving_planning",
+  "portfolio_json": ".omx/research/byte_shaving_campaign_master_gradient_portfolio_20260523T144718Z.json",
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "cross_family_candidate_portfolio_action_summary.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue",
+  "top_operator_actions": []
+}

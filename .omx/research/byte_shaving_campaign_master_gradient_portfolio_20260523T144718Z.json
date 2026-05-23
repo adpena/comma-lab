@@ -1,0 +1,3923 @@
+{
+  "blocked_rows": [
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0001",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0001",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode"
+      ],
+      "operator_action_rank": 1,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0055",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0055",
+        "selection_id": "combo_0055",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0002",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0002",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 2,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0056",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0056",
+        "selection_id": "combo_0056",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0003",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0003",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 3,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0058",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0058",
+        "selection_id": "combo_0058",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0004",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0004",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 4,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0059",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0059",
+        "selection_id": "combo_0059",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0005",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0005",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 5,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0061",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0061",
+        "selection_id": "combo_0061",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0006",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0006",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 6,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0062",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0062",
+        "selection_id": "combo_0062",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0007",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0007",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 7,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0064",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0064",
+        "selection_id": "combo_0064",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0008",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0008",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 8,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0065",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0065",
+        "selection_id": "combo_0065",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0009",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0009",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode"
+      ],
+      "operator_action_rank": 9,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0067",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0067",
+        "selection_id": "combo_0067",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0010",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0010",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode"
+      ],
+      "operator_action_rank": 10,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0068",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0068",
+        "selection_id": "combo_0068",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0011",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0011",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode"
+      ],
+      "operator_action_rank": 11,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0070",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0070",
+        "selection_id": "combo_0070",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0012",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0012",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode"
+      ],
+      "operator_action_rank": 12,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0071",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0071",
+        "selection_id": "combo_0071",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0013",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0013",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode"
+      ],
+      "operator_action_rank": 13,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0073",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0073",
+        "selection_id": "combo_0073",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0014",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0014",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode"
+      ],
+      "operator_action_rank": 14,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0074",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0074",
+        "selection_id": "combo_0074",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0015",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0015",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode"
+      ],
+      "operator_action_rank": 15,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0076",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0076",
+        "selection_id": "combo_0076",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0016",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_combo_0016",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422795,
+      "expected_score_gain": 0.010817544552422795,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 16,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0077",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0077",
+        "selection_id": "combo_0077",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0017",
+      "candidate_saved_bytes": 14267,
+      "candidate_slug": "byte_shave_combo_0017",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009499809684194019,
+      "expected_score_gain": 0.009499809684194019,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "delta_encode"
+      ],
+      "operator_action_rank": 17,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0057",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0057",
+        "selection_id": "combo_0057",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0018",
+      "candidate_saved_bytes": 14267,
+      "candidate_slug": "byte_shave_combo_0018",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009499809684194019,
+      "expected_score_gain": 0.009499809684194019,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed",
+        "delta_encode"
+      ],
+      "operator_action_rank": 18,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0060",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0060",
+        "selection_id": "combo_0060",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0019",
+      "candidate_saved_bytes": 14267,
+      "candidate_slug": "byte_shave_combo_0019",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009499809684194019,
+      "expected_score_gain": 0.009499809684194019,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed",
+        "delta_encode"
+      ],
+      "operator_action_rank": 19,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0063",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0063",
+        "selection_id": "combo_0063",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0020",
+      "candidate_saved_bytes": 14267,
+      "candidate_slug": "byte_shave_combo_0020",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009499809684194019,
+      "expected_score_gain": 0.009499809684194019,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed",
+        "delta_encode"
+      ],
+      "operator_action_rank": 20,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0066",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0066",
+        "selection_id": "combo_0066",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0021",
+      "candidate_saved_bytes": 14267,
+      "candidate_slug": "byte_shave_combo_0021",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009499809684194019,
+      "expected_score_gain": 0.009499809684194019,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode",
+        "delta_encode"
+      ],
+      "operator_action_rank": 21,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0069",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0069",
+        "selection_id": "combo_0069",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0022",
+      "candidate_saved_bytes": 14267,
+      "candidate_slug": "byte_shave_combo_0022",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009499809684194019,
+      "expected_score_gain": 0.009499809684194019,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode",
+        "delta_encode"
+      ],
+      "operator_action_rank": 22,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0072",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0072",
+        "selection_id": "combo_0072",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0023",
+      "candidate_saved_bytes": 14267,
+      "candidate_slug": "byte_shave_combo_0023",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009499809684194019,
+      "expected_score_gain": 0.009499809684194019,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode",
+        "delta_encode"
+      ],
+      "operator_action_rank": 23,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0075",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0075",
+        "selection_id": "combo_0075",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0024",
+      "candidate_saved_bytes": 14267,
+      "candidate_slug": "byte_shave_combo_0024",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009499809684194019,
+      "expected_score_gain": 0.009499809684194019,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "delta_encode"
+      ],
+      "operator_action_rank": 24,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0078",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0078",
+        "selection_id": "combo_0078",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0025",
+      "candidate_saved_bytes": 14198,
+      "candidate_slug": "byte_shave_combo_0025",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009453865416428588,
+      "expected_score_gain": 0.009453865416428588,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "delta_encode"
+      ],
+      "operator_action_rank": 25,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0079",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0079",
+        "selection_id": "combo_0079",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0026",
+      "candidate_saved_bytes": 14198,
+      "candidate_slug": "byte_shave_combo_0026",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009453865416428588,
+      "expected_score_gain": 0.009453865416428588,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "delta_encode",
+        "null_remove_or_seed"
+      ],
+      "operator_action_rank": 26,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0080",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0080",
+        "selection_id": "combo_0080",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0027",
+      "candidate_saved_bytes": 14198,
+      "candidate_slug": "byte_shave_combo_0027",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009453865416428588,
+      "expected_score_gain": 0.009453865416428588,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed",
+        "delta_encode"
+      ],
+      "operator_action_rank": 27,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0082",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0082",
+        "selection_id": "combo_0082",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0028",
+      "candidate_saved_bytes": 14198,
+      "candidate_slug": "byte_shave_combo_0028",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009453865416428588,
+      "expected_score_gain": 0.009453865416428588,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode",
+        "null_remove_or_seed",
+        "delta_encode"
+      ],
+      "operator_action_rank": 28,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0083",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0083",
+        "selection_id": "combo_0083",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0029",
+      "candidate_saved_bytes": 14198,
+      "candidate_slug": "byte_shave_combo_0029",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009453865416428588,
+      "expected_score_gain": 0.009453865416428588,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode",
+        "delta_encode"
+      ],
+      "operator_action_rank": 29,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0085",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0085",
+        "selection_id": "combo_0085",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0030",
+      "candidate_saved_bytes": 14198,
+      "candidate_slug": "byte_shave_combo_0030",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009453865416428588,
+      "expected_score_gain": 0.009453865416428588,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "entropy_recode",
+        "delta_encode"
+      ],
+      "operator_action_rank": 30,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0086",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0086",
+        "selection_id": "combo_0086",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0031",
+      "candidate_saved_bytes": 14198,
+      "candidate_slug": "byte_shave_combo_0031",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009453865416428588,
+      "expected_score_gain": 0.009453865416428588,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,entropy_recode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "delta_encode",
+        "entropy_recode"
+      ],
+      "operator_action_rank": 31,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0088",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0088",
+        "selection_id": "combo_0088",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_combo_0032",
+      "candidate_saved_bytes": 14198,
+      "candidate_slug": "byte_shave_combo_0032",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:delta_encode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.009453865416428588,
+      "expected_score_gain": 0.009453865416428588,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:delta_encode,null_remove_or_seed",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "null_remove_or_seed",
+        "delta_encode"
+      ],
+      "operator_action_rank": 32,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "delta_encode",
+          "operation_id": "delta_encode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "null_remove_or_seed",
+          "operation_id": "null_remove_or_seed",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "combo_0089",
+      "selection_kind": "combo",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": "combo_0089",
+        "selection_id": "combo_0089",
+        "selection_kind": "combo",
+        "sweep_id": null
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_prefix_0033",
+      "candidate_saved_bytes": 4096,
+      "candidate_slug": "byte_shave_prefix_0033",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.002727358271988414,
+      "expected_score_gain": 0.002727358271988414,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267"
+      ],
+      "operation_families": [
+        "entropy_recode"
+      ],
+      "operator_action_rank": 33,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267"
+      ],
+      "selection_id": "top_0001",
+      "selection_kind": "prefix",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": null,
+        "selection_id": "top_0001",
+        "selection_kind": "prefix",
+        "sweep_id": "top_0001"
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_prefix_0034",
+      "candidate_saved_bytes": 8192,
+      "candidate_slug": "byte_shave_prefix_0034",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.005454716543976828,
+      "expected_score_gain": 0.005454716543976828,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363"
+      ],
+      "operation_families": [
+        "entropy_recode"
+      ],
+      "operator_action_rank": 34,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363"
+      ],
+      "selection_id": "top_0002",
+      "selection_kind": "prefix",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": null,
+        "selection_id": "top_0002",
+        "selection_kind": "prefix",
+        "sweep_id": "top_0002"
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_prefix_0035",
+      "candidate_saved_bytes": 12288,
+      "candidate_slug": "byte_shave_prefix_0035",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.008182074815965243,
+      "expected_score_gain": 0.008182074815965243,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459"
+      ],
+      "operation_families": [
+        "entropy_recode"
+      ],
+      "operator_action_rank": 35,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459"
+      ],
+      "selection_id": "top_0003",
+      "selection_kind": "prefix",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": null,
+        "selection_id": "top_0003",
+        "selection_kind": "prefix",
+        "sweep_id": "top_0003"
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "base_pair_indices": [],
+      "campaign_id": "byte_shaving_campaign",
+      "candidate_id": "pairset_byte_shave_prefix_0036",
+      "candidate_saved_bytes": 16246,
+      "candidate_slug": "byte_shave_prefix_0036",
+      "charged_bits_changed": false,
+      "contest_cuda_auth_eval": false,
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "dropped_pair_indices": [],
+      "exact_cuda_auth_eval": false,
+      "executable": false,
+      "expected_delta_score": -0.010817544552422797,
+      "expected_score_gain": 0.010817544552422797,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "lane_id": "master_gradient_byte_shaving_planning",
+      "materialization_blockers": [
+        "unsupported_operation_family:entropy_recode",
+        "dqs1_base_pair_indices_required",
+        "pair_index_missing:mg_byte_span_0162171_0166267",
+        "pair_index_missing:mg_byte_span_0166267_0170363",
+        "pair_index_missing:mg_byte_span_0170363_0174459",
+        "pair_index_missing:mg_byte_span_0174459_0178417"
+      ],
+      "operation_families": [
+        "entropy_recode"
+      ],
+      "operator_action_rank": 36,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "byte_shaving_campaign_materialization_row.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "selected_operations": [
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0162171_0166267"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0166267_0170363"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0170363_0174459"
+        },
+        {
+          "materializer": null,
+          "operation_family": "entropy_recode",
+          "operation_id": "entropy_recode",
+          "params": {},
+          "unit_id": "mg_byte_span_0174459_0178417"
+        }
+      ],
+      "selected_pair_count": 0,
+      "selected_pair_indices": [],
+      "selected_unit_ids": [
+        "mg_byte_span_0162171_0166267",
+        "mg_byte_span_0166267_0170363",
+        "mg_byte_span_0170363_0174459",
+        "mg_byte_span_0174459_0178417"
+      ],
+      "selection_id": "top_0004",
+      "selection_kind": "prefix",
+      "source_dispatch_blockers": [
+        "byte_shaving_plan_is_planning_only",
+        "requires_byte_closed_materialization_before_dispatch",
+        "requires_runtime_consumption_proof_before_exact_eval",
+        "requires_same_runtime_locality_or_inflate_parity_check",
+        "requires_exact_auth_eval_before_score_claim"
+      ],
+      "source_plan_schema": "byte_shaving_campaign_plan.v1",
+      "source_row": {
+        "combo_id": null,
+        "selection_id": "top_0004",
+        "selection_kind": "prefix",
+        "sweep_id": "top_0004"
+      },
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    }
+  ],
+  "dispatch_attempted": false,
+  "generated_at_utc": "2026-05-23T14:47:18Z",
+  "gpu_launched": false,
+  "operator_action_rows": [],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "byte_shaving_campaign_dqs1_operator_portfolio.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_plan_path": ".omx/research/byte_shaving_campaign_master_gradient_plan_20260523T144718Z.json",
+  "tool": "comma_lab.scheduler.byte_shaving_campaign_queue"
+}
