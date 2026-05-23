@@ -428,10 +428,12 @@ def _adjudication_from_args(args: argparse.Namespace) -> LightningAdjudicationSp
         max_sane_score=args.max_sane_score,
         required_device=args.eval_device,
         allow_component_gate_forensic_success=(
-            not args.fail_job_on_component_gate
+            args.allow_component_gate_forensic_success
+            and not args.fail_job_on_component_gate
         ),
         allow_sane_score_forensic_success=(
-            not args.fail_job_on_sane_score_gate
+            args.allow_sane_score_forensic_success
+            and not args.fail_job_on_sane_score_gate
         ),
     )
 
@@ -2821,9 +2823,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--fail-job-on-component-gate",
         action="store_true",
         help=(
-            "Return a failed Lightning job on component-gate violation. By "
-            "default exact-eval jobs complete with non-promotable forensic "
-            "artifacts when CUDA custody and adjudication succeeded."
+            "Return a failed Lightning job on component-gate violation. This "
+            "is the default; the flag remains accepted for explicitness."
+        ),
+    )
+    exact.add_argument(
+        "--allow-component-gate-forensic-success",
+        action="store_true",
+        help=(
+            "Explicit forensic-only escape hatch: return success for "
+            "component-gate-only failures after writing non-promotable custody "
+            "artifacts."
         ),
     )
     exact.add_argument(
@@ -2831,9 +2841,17 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Return a failed Lightning job when a finite exact-CUDA score is "
-            "outside --max-sane-score. By default exact-eval jobs complete "
-            "with non-promotable forensic artifacts when CUDA custody and "
-            "adjudication succeeded."
+            "outside --max-sane-score. This is the default; the flag remains "
+            "accepted for explicitness."
+        ),
+    )
+    exact.add_argument(
+        "--allow-sane-score-forensic-success",
+        action="store_true",
+        help=(
+            "Explicit forensic-only escape hatch: return success for "
+            "sane-score-gate failures after writing non-promotable custody "
+            "artifacts."
         ),
     )
     exact.add_argument("--dry-run", action="store_true")

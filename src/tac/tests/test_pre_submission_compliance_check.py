@@ -322,6 +322,296 @@ def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
     assert report["contest_cpu_auth_eval"]["record"]["promotion_eligible"] is False
 
 
+def test_contest_final_accepts_explicit_score_that_matches_auth_artifact(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    auth_payload = json.loads((submission / "contest_auth_eval.json").read_text())
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--auth-eval-json",
+                str(submission / "contest_auth_eval.json"),
+                "--contest-final",
+                "--submission-score",
+                f"{auth_payload['canonical_score']:.15g}",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    failed = _failed_check_names(report)
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    assert "contest_final_selected_axis_auth_score_available" not in failed
+    assert "contest_final_explicit_score_matches_auth_artifact" not in failed
+    assert report["frontier_baseline"]["candidate"]["score_source"] == "strict_formula"
+
+
+def test_contest_final_rejects_explicit_score_that_disagrees_with_auth_artifact(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--submission-score",
+                "0.0",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert (
+        "contest_final_explicit_score_matches_auth_artifact"
+        in _failed_check_names(report)
+    )
+    assert (
+        "contest_final_selected_axis_auth_score_available"
+        not in _failed_check_names(report)
+    )
+    assert report["frontier_baseline"]["candidate"]["score_source"] == "strict_formula"
+
+
+def test_contest_final_rejects_raw_promotion_blockers_in_auth_eval(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    auth_path = submission / "contest_auth_eval.json"
+    payload = json.loads(auth_path.read_text(encoding="utf-8"))
+    payload["promotion_blockers"] = ["pre_submission_compliance_check_not_recorded"]
+    auth_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--auth-eval-json",
+                str(auth_path),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "auth_eval_raw_promotion_policy_blockers_absent" in _failed_check_names(report)
+
+
+def test_contest_final_rejects_malformed_raw_rank_blockers(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    auth_path = submission / "contest_auth_eval.json"
+    payload = json.loads(auth_path.read_text(encoding="utf-8"))
+    payload["rank_or_kill_blockers"] = {"unexpected": "shape"}
+    auth_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--auth-eval-json",
+                str(auth_path),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "auth_eval_raw_promotion_policy_blockers_absent" in _failed_check_names(report)
+
+
+def test_contest_final_rejects_adjudicated_raw_policy_gate_trigger(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    submission = tmp_path / "submission"
+    expected = _write_submission(submission)
+    auth_path = submission / "contest_auth_eval.json"
+    payload = json.loads(auth_path.read_text(encoding="utf-8"))
+    payload["raw_promotion_policy_gate_triggered"] = True
+    payload["scientific_score_eligible"] = False
+    auth_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(submission),
+                "--auth-eval-json",
+                str(auth_path),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "auth_eval_adjudicated_raw_policy_clean" in _failed_check_names(report)
+
+
+def test_contest_final_frontier_scan_error_fails_closed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_module()
+    import tac.frontier_scan as frontier_scan
+
+    def _boom(_repo_root):
+        raise RuntimeError("synthetic frontier scan failure")
+
+    monkeypatch.setattr(frontier_scan, "collect_all_anchors", _boom)
+    expected = _write_submission(tmp_path / "submission")
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "frontier_scan_helper_available" in _failed_check_names(report)
+
+
 def test_strict_contest_final_requires_hosted_archive_manifest(tmp_path: Path) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")

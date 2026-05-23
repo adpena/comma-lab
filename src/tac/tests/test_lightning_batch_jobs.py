@@ -1989,8 +1989,8 @@ def test_exact_cuda_eval_command_wires_expected_archive_and_adjudication() -> No
     assert "--max-posenet-relative 1.5" in command
     assert "--max-segnet-relative 1.2" in command
     assert "--component-reference-label frontier" in command
-    assert "--allow-component-gate-forensic-success" in command
-    assert "--allow-sane-score-forensic-success" in command
+    assert "--allow-component-gate-forensic-success" not in command
+    assert "--allow-sane-score-forensic-success" not in command
     assert "adjudication_provenance.json" in command
 
 
@@ -2013,7 +2013,7 @@ def test_exact_cuda_eval_command_can_fail_job_on_component_gate() -> None:
 
     assert "scripts/adjudicate_contest_auth_eval.py" in command
     assert "--allow-component-gate-forensic-success" not in command
-    assert "--allow-sane-score-forensic-success" in command
+    assert "--allow-sane-score-forensic-success" not in command
 
 
 def test_exact_cuda_eval_command_can_fail_job_on_sane_score_gate() -> None:
@@ -2034,8 +2034,30 @@ def test_exact_cuda_eval_command_can_fail_job_on_sane_score_gate() -> None:
     )
 
     assert "scripts/adjudicate_contest_auth_eval.py" in command
-    assert "--allow-component-gate-forensic-success" in command
+    assert "--allow-component-gate-forensic-success" not in command
     assert "--allow-sane-score-forensic-success" not in command
+
+
+def test_exact_cuda_eval_command_requires_explicit_forensic_success() -> None:
+    adjudication = LightningAdjudicationSpec(
+        baseline_score=1.2,
+        predicted_band_low=1.0,
+        predicted_band_high=1.4,
+        regression_threshold=1.6,
+        allow_component_gate_forensic_success=True,
+        allow_sane_score_forensic_success=True,
+    )
+    command = exact_cuda_eval_command(
+        repo_dir="/repo",
+        archive_path="/repo/archive.zip",
+        upstream_dir="/upstream",
+        output_dir="/out",
+        adjudication=adjudication,
+        **_expected_archive_kwargs(),
+    )
+
+    assert "--allow-component-gate-forensic-success" in command
+    assert "--allow-sane-score-forensic-success" in command
 
 
 def test_exact_eval_spec_is_fail_closed() -> None:
@@ -4278,10 +4300,10 @@ def test_batch_job_cli_dry_run(tmp_path: Path) -> None:
     assert payload["spec"]["adjudication"]["max_posenet_relative"] == 1.5
     assert payload["spec"]["adjudication"]["max_segnet_relative"] == 1.2
     assert payload["spec"]["adjudication"]["component_reference_label"] == "frontier"
-    assert payload["spec"]["adjudication"]["allow_component_gate_forensic_success"] is True
-    assert payload["spec"]["adjudication"]["allow_sane_score_forensic_success"] is True
-    assert "--allow-component-gate-forensic-success" in payload["spec"]["command"]
-    assert "--allow-sane-score-forensic-success" in payload["spec"]["command"]
+    assert payload["spec"]["adjudication"]["allow_component_gate_forensic_success"] is False
+    assert payload["spec"]["adjudication"]["allow_sane_score_forensic_success"] is False
+    assert "--allow-component-gate-forensic-success" not in payload["spec"]["command"]
+    assert "--allow-sane-score-forensic-success" not in payload["spec"]["command"]
     assert "experiments/contest_component_trace.py" in payload["spec"]["command"]
     assert "--top-k 17" in payload["spec"]["command"]
     assert payload["submit_readiness"]["ok"] is False
@@ -4481,8 +4503,57 @@ def test_batch_job_cli_can_force_component_gate_job_failure(tmp_path: Path) -> N
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["spec"]["adjudication"]["allow_component_gate_forensic_success"] is False
-    assert payload["spec"]["adjudication"]["allow_sane_score_forensic_success"] is True
+    assert payload["spec"]["adjudication"]["allow_sane_score_forensic_success"] is False
     assert "--allow-component-gate-forensic-success" not in payload["spec"]["command"]
+    assert "--allow-sane-score-forensic-success" not in payload["spec"]["command"]
+
+
+def test_batch_job_cli_requires_explicit_forensic_success_opt_in(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "exact-eval",
+            "--state-path",
+            str(tmp_path / "jobs.json"),
+            "--job-name",
+            "cli-dry-forensic",
+            "--archive",
+            "/repo/archive.zip",
+            "--repo-dir",
+            "/repo",
+            "--upstream-dir",
+            "/upstream",
+            "--studio",
+            "pact",
+            "--expected-archive-sha256",
+            "d" * 64,
+            "--expected-archive-size-bytes",
+            "789",
+            "--adjudicate",
+            "--baseline-score",
+            "1.2",
+            "--predicted-band",
+            "1.0",
+            "1.4",
+            "--regression-threshold",
+            "1.6",
+            "--allow-component-gate-forensic-success",
+            "--allow-sane-score-forensic-success",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+        cwd=tmp_path,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["spec"]["adjudication"]["allow_component_gate_forensic_success"] is True
+    assert payload["spec"]["adjudication"]["allow_sane_score_forensic_success"] is True
+    assert "--allow-component-gate-forensic-success" in payload["spec"]["command"]
     assert "--allow-sane-score-forensic-success" in payload["spec"]["command"]
 
 

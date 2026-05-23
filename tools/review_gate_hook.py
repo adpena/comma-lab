@@ -41,10 +41,10 @@ Lock-contention behavior (lane
   ``review_tracker._connect_duckdb`` retry helper with a
   ``retry_seconds=1.5`` budget. On exhaustion, fall through to
   :func:`review_tracker.load_entities_from_json_snapshot` for entity-status
-  enforcement (the strongest signal: needs_fix / unreviewed / stale).
-  Full policy check (consecutive-clean-passes + distinct-approvers) is
-  downgraded to a warning when only the JSON path is available, because
-  the snapshot does not contain the ``reviews`` table.
+  enforcement (the strongest signal: needs_fix / unreviewed / stale). For
+  critical/standard files, the missing full policy evidence itself blocks:
+  the JSON snapshot does not contain the ``reviews`` table, so it cannot prove
+  consecutive clean passes or distinct approvers.
 """
 
 from __future__ import annotations
@@ -130,7 +130,7 @@ def _try_connect_tracker_db(rt_module, retry_seconds: float):
             TRACKER_DB, read_only=True, retry_seconds=retry_seconds
         )
         return con, None
-    except Exception as exc:  # noqa: BLE001 — any duckdb error => fallback path
+    except Exception as exc:
         return None, exc
 
 
@@ -214,14 +214,13 @@ def _check_staged_via_json_snapshot(
 
     Used when the DuckDB lock cannot be acquired inside the hook's retry
     budget. Enforces the strongest signal (needs_fix / unreviewed / stale)
-    but cannot run the full policy check (consecutive-clean-passes +
-    distinct-approvers) because the JSON snapshot omits the ``reviews``
-    table. Policy-check enforcement is downgraded to a WARNING.
+    and fails closed for critical/standard files whose reviewed entities cannot
+    be proven against the full DuckDB policy.
 
-    NOTE: this preserves the commit-blocking strength for the most
-    important entity statuses (needs_fix entities still block) while
-    avoiding the false-positive failure mode where sister-subagent
-    DuckDB writers stall the operator's commit indefinitely.
+    NOTE: this preserves the short hook wait while avoiding a false green.
+    If DuckDB is locked, critical/standard code waits for a real policy check;
+    lower-rigor files get an explicit warning rather than pretending the JSON
+    snapshot proved the full review contract.
     """
     blocking: list[str] = []
     warnings: list[str] = []
@@ -272,12 +271,21 @@ def _check_staged_via_json_snapshot(
                 )
                 continue
 
-            # status == "reviewed": policy-check is downgraded to a warning
-            # because the JSON snapshot does not contain the reviews table.
-            stats["compliant"] += 1
-            # Intentionally no per-entity warning here — adding ~50k warnings
-            # would be operator-hostile; the global JSON-degraded banner
-            # below conveys the relevant context once.
+            # status == "reviewed": JSON proves only entity status. It cannot
+            # prove consecutive clean passes or distinct approvers because the
+            # snapshot omits the reviews table.
+            if rigor_name in ("critical", "standard"):
+                stats["violations"] += 1
+                file_violations.append(
+                    "    [POLICY_UNPROVEN_JSON_FALLBACK] "
+                    f"{etype} {name} ({lc}L, C={cx})"
+                )
+            else:
+                stats["compliant"] += 1
+                file_warnings.append(
+                    "    [POLICY_UNPROVEN_JSON_FALLBACK] "
+                    f"{etype} {name} ({lc}L, C={cx})"
+                )
 
         if file_violations:
             header = f"  [{rigor_name.upper()}] {fp} (JSON-snapshot mode)"
@@ -324,7 +332,7 @@ def check_staged_files(staged_files: list[str]) -> tuple[list[str], list[str], d
         finally:
             try:
                 con.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
 
     # DuckDB unavailable — fall back to JSON snapshot.
@@ -349,8 +357,8 @@ def check_staged_files(staged_files: list[str]) -> tuple[list[str], list[str], d
     warnings.insert(
         0,
         "[review-gate] DuckDB locked by sister process — using JSON snapshot "
-        f"(retry budget: {retry_seconds:.1f}s). Policy check downgraded to "
-        "entity-status enforcement only.",
+        f"(retry budget: {retry_seconds:.1f}s). Critical/standard files block "
+        "until full DuckDB policy evidence is available.",
     )
     return blocking, warnings, stats
 
@@ -380,8 +388,11 @@ def main() -> int:
         return 0
 
     # ANSI colors
-    RED = "\033[31m"; YELLOW = "\033[33m"; GREEN = "\033[32m"; CYAN = "\033[36m"
-    BOLD = "\033[1m"; RST = "\033[0m"
+    RED = "\033[31m"
+    YELLOW = "\033[33m"
+    GREEN = "\033[32m"
+    BOLD = "\033[1m"
+    RST = "\033[0m"
 
     total = stats.get("total", 0)
     compliant = stats.get("compliant", 0)

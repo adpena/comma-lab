@@ -19,6 +19,15 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+FALSE_AUTHORITY_FIELDS = (
+    "score_claim",
+    "score_claim_valid",
+    "promotion_eligible",
+    "ready_for_exact_eval_dispatch",
+    "rank_or_kill_eligible",
+    "promotable",
+)
+
 
 def _read_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -62,10 +71,62 @@ def _target_mass(row: dict[str, Any]) -> float:
     return 0.0
 
 
-def _advisory_rows(summary: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+def _false_authority_blockers(payload: dict[str, Any], *, label: str) -> list[str]:
+    blockers: list[str] = []
+    for field in FALSE_AUTHORITY_FIELDS:
+        if payload.get(field) is not False:
+            blockers.append(f"{label}_{field}_missing_or_not_false")
+    return blockers
+
+
+def _advisory_custody_blockers(
+    row: dict[str, Any],
+    advisory: dict[str, Any],
+    manifest: dict[str, Any],
+    mutation_row: dict[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    blockers.extend(_false_authority_blockers(row, label="row"))
+    blockers.extend(_false_authority_blockers(advisory, label="advisory_eval"))
+    if advisory.get("returncode") != 0:
+        blockers.append("advisory_eval_returncode_not_zero")
+    if advisory.get("canonical_score") is None:
+        blockers.append("advisory_eval_canonical_score_missing")
+    if not advisory.get("score_axis"):
+        blockers.append("advisory_eval_score_axis_missing")
+    if not (advisory.get("evidence_grade") or advisory.get("evidence_tag")):
+        blockers.append("advisory_eval_evidence_grade_missing")
+    if not (
+        advisory.get("archive_sha256")
+        or manifest.get("archive_sha256")
+        or row.get("archive_sha256")
+    ):
+        blockers.append("archive_sha256_missing")
+    if not (
+        advisory.get("runtime_tree_sha256")
+        or advisory.get("runtime_sha256")
+        or manifest.get("runtime_tree_sha256")
+        or row.get("runtime_tree_sha256")
+    ):
+        blockers.append("runtime_tree_sha256_missing")
+    if not (advisory.get("n_samples") or advisory.get("samples")):
+        blockers.append("sample_count_missing")
+    manifest_id = str(mutation_row.get("mutation_id") or row.get("candidate_id") or "")
+    if manifest_id and str(row.get("candidate_id")) != manifest_id:
+        blockers.append(
+            "mutation_identity_mismatch:"
+            f"row={row.get('candidate_id')} manifest={manifest_id}"
+        )
+    return blockers
+
+
+def _advisory_rows(
+    summary: dict[str, Any] | None,
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
     if not summary:
-        return {}
+        return {}, []
     rows: dict[str, dict[str, Any]] = {}
+    skipped: list[dict[str, Any]] = []
     for row in summary.get("candidates", []):
         if not isinstance(row, dict):
             continue
@@ -76,6 +137,15 @@ def _advisory_rows(summary: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
             continue
         mutation_row = manifest.get("mutation_row")
         if not isinstance(mutation_row, dict):
+            continue
+        blockers = _advisory_custody_blockers(row, advisory, manifest, mutation_row)
+        if blockers:
+            skipped.append(
+                {
+                    "candidate_id": str(candidate_id),
+                    "blockers": blockers,
+                }
+            )
             continue
         rows[str(candidate_id)] = {
             "candidate_id": str(candidate_id),
@@ -88,7 +158,7 @@ def _advisory_rows(summary: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
             "delta_vs_baseline_score": row.get("delta_vs_baseline_score"),
             "raw_comparison": row.get("raw_comparison"),
         }
-    return rows
+    return rows, skipped
 
 
 def _attach_advisory(
@@ -265,7 +335,7 @@ def build_selection(args: argparse.Namespace) -> dict[str, Any]:
         for row in feasibility.get("fixed_length_runtime_compatible_rows", [])
         if isinstance(row, dict) and row.get("fixed_length_runtime_compatible")
     ]
-    advisory_by_id = _advisory_rows(advisory)
+    advisory_by_id, skipped_advisory_rows = _advisory_rows(advisory)
     advisory_by_key = _attach_advisory(fixed_rows, advisory_by_id)
     models = _outcome_models(fixed_rows, advisory_by_key, args.baseline_score)
     exploit = _rank_exploit_candidates(fixed_rows, models, advisory_by_key)
@@ -294,11 +364,13 @@ def build_selection(args: argparse.Namespace) -> dict[str, Any]:
         "summary": {
             "fixed_length_candidate_count": len(fixed_rows),
             "advisory_candidate_count": len(advisory_by_id),
+            "skipped_advisory_candidate_count": len(skipped_advisory_rows),
             "measured_key_count": len(advisory_by_key),
             "outcome_model_count": len(models),
             "signed_slope_model_count": sum(1 for model in models if model.get("signed_score_slope_per_q_step") is not None),
             "queue_count": len(queue),
         },
+        "skipped_advisory_rows": skipped_advisory_rows,
         "outcome_models": models,
         "queue": queue,
         "authority": {

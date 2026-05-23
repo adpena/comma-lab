@@ -383,8 +383,6 @@ def _variance_from_candidate(
 
 def _exact_estimate_is_candidate_specific(row: Mapping[str, Any]) -> bool:
     scope = row.get("exact_cpu_calibrated_estimate_scope")
-    if scope is None:
-        return True
     return str(scope) == "candidate_specific"
 
 

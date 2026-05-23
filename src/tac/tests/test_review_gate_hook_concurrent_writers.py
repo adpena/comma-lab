@@ -31,14 +31,12 @@ import json
 import multiprocessing as mp
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
 import unittest
 from pathlib import Path
 from unittest import mock
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 HOOK_PATH = REPO_ROOT / "tools" / "review_gate_hook.py"
@@ -86,7 +84,7 @@ def _reader_attempt_connect(db_path: str, retry_seconds: float, result_queue):
     sys.path.insert(0, str(REPO_ROOT / "tools"))
     try:
         import review_tracker as rt
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         result_queue.put(("import_err", str(exc)))
         return
     t0 = time.monotonic()
@@ -96,7 +94,7 @@ def _reader_attempt_connect(db_path: str, retry_seconds: float, result_queue):
         )
         con.close()
         result_queue.put(("ok", time.monotonic() - t0))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # Classify
         if rt._is_duckdb_lock_error(exc):
             result_queue.put(("lock_err", str(exc)[:200]))
@@ -392,7 +390,7 @@ def _ten_concurrent_readers_one_writer(db_path: str, results: list):
     for q in qs:
         try:
             results.append(q.get(timeout=2))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             results.append(("queue_err", str(exc)))
 
 
@@ -480,11 +478,11 @@ class HookCheckStagedFilesFallbackTests(unittest.TestCase):
             },
         }))
 
-    def _run_hook_with_fake_paths(self, staged_files: list[str]):
+    def _run_hook_with_fake_paths(self, staged_files: list[str], policy: dict | None = None):
         """Patch the hook module's TRACKER_DB and TRACKER_JSON for isolated tests."""
         with mock.patch.object(self.hook, "TRACKER_DB", self.fake_db), \
              mock.patch.object(self.hook, "TRACKER_JSON", self.fake_json), \
-             mock.patch.object(self.hook, "load_policy", return_value={}):
+             mock.patch.object(self.hook, "load_policy", return_value=policy or {}):
             return self.hook.check_staged_files(staged_files)
 
     def test_falls_back_to_json_when_db_missing(self):
@@ -549,7 +547,7 @@ class HookCheckStagedFilesFallbackTests(unittest.TestCase):
         self.assertEqual(stats.get("violations"), 1)
 
     def test_json_path_reviewed_entity_counted_compliant(self):
-        """Reviewed status counts as compliant under JSON-degraded mode."""
+        """Reviewed relaxed entities remain advisory under JSON-degraded mode."""
         self.fake_json.write_text(json.dumps({
             "version": 3,
             "entity_count": 1,
@@ -568,6 +566,41 @@ class HookCheckStagedFilesFallbackTests(unittest.TestCase):
         _, _, stats = self._run_hook_with_fake_paths(["src/tac/x.py"])
         self.assertEqual(stats.get("compliant"), 1)
         self.assertEqual(stats.get("violations"), 0)
+
+    def test_json_path_blocks_reviewed_standard_entity_without_full_policy(self):
+        """Reviewed critical/standard entities need DuckDB policy evidence."""
+        self.fake_json.write_text(json.dumps({
+            "version": 3,
+            "entity_count": 1,
+            "entities": {
+                "src.tac.x::func_d": {
+                    "module": "src.tac.x",
+                    "file_path": "src/tac/x.py",
+                    "entity_type": "function",
+                    "name": "func_d",
+                    "start_line": 1, "end_line": 2, "line_count": 2,
+                    "complexity": 1,
+                    "review_status": "reviewed",
+                },
+            },
+        }))
+        policy = {
+            "rigor": {"standard": {"min_consecutive_clean_passes": 2}},
+            "file_policies": [
+                {"pattern": "src/tac/*.py", "rigor": "standard"},
+            ],
+        }
+
+        blocking, warnings, stats = self._run_hook_with_fake_paths(
+            ["src/tac/x.py"],
+            policy=policy,
+        )
+
+        self.assertEqual(stats.get("violations"), 1)
+        self.assertTrue(
+            any("POLICY_UNPROVEN_JSON_FALLBACK" in line for line in blocking),
+            msg=f"blocking={blocking}, warnings={warnings}",
+        )
 
     def test_corrupt_json_treated_as_missing(self):
         """A corrupt JSON snapshot is treated like missing (degraded skip)."""

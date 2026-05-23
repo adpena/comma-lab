@@ -94,7 +94,10 @@ def test_build_queue_dag_plans_executor_specs_without_authority(tmp_path: Path) 
     assert plan["promotion_eligible"] is False
     assert set(selected) == {"cand_a.plan", "cand_b.plan"}
     assert all(task["pure"] is False for task in plan["dask_task_specs"])
-    assert plan["dask_task_specs"][0]["resources"] == {"local_cpu": 1}
+    assert plan["dask_task_specs"][0]["resources"] == {
+        "local_cpu": 1,
+        "machine:m5": 1,
+    }
     assert plan["dask_task_specs"][0]["queue_id"] == "staircase_fixture"
     assert plan["dask_task_specs"][0]["experiment_id"] in {"cand_a", "cand_b"}
     assert plan["dask_task_specs"][0]["step_id"] == "plan"
@@ -154,7 +157,10 @@ def test_plan_uses_queue_state_and_unblocks_successors(tmp_path: Path) -> None:
     plan = plan_staircase_dispatch(dag, status_map=status_map)
 
     assert [node["node_id"] for node in plan["selected_nodes"]] == ["cand_a.score", "cand_b.plan"]
-    assert plan["dask_task_specs"][0]["resources"] == {"local_mlx": 1}
+    assert plan["dask_task_specs"][0]["resources"] == {
+        "local_mlx": 1,
+        "machine:m5": 1,
+    }
 
 
 def test_staircase_dag_preserves_cross_experiment_dependencies() -> None:
@@ -260,6 +266,137 @@ def test_staircase_dag_respects_queue_control_pause() -> None:
     assert plan["selected_count"] == 0
     assert {row["reason"] for row in plan["blocked_nodes"]} == {"queue_control_not_running"}
     assert {row["mode"] for row in plan["blocked_nodes"]} == {"paused"}
+
+
+def _storage_preflight_queue(tmp_path: Path) -> tuple[dict[str, object], dict[str, str], Path, Path]:
+    storage_plan = tmp_path / "storage_plan.json"
+    cleanup_plan = tmp_path / "cleanup_plan.json"
+    queue = {
+        "schema": "experiment_queue.v1",
+        "queue_id": "staircase_storage_fixture",
+        "controls": {"mode": "running"},
+        "experiments": [
+            {
+                "id": "scheduler_preflight",
+                "status": "queued",
+                "priority": 0,
+                "tags": ["scheduler-preflight", "storage", "cleanup"],
+                "steps": [
+                    {
+                        "id": "storage_tier_plan",
+                        "kind": "command",
+                        "command": [
+                            "python",
+                            "tools/plan_experiment_storage.py",
+                            "--output",
+                            str(storage_plan),
+                        ],
+                        "resources": {"kind": "local_cpu"},
+                    },
+                    {
+                        "id": "proactive_cleanup",
+                        "kind": "command",
+                        "requires": ["storage_tier_plan"],
+                        "command": [
+                            "python",
+                            "tools/compact_experiment_artifacts.py",
+                            "--json-output",
+                            str(cleanup_plan),
+                        ],
+                        "resources": {"kind": "local_io_heavy"},
+                    },
+                ],
+            },
+            {
+                "id": "materialize",
+                "status": "queued",
+                "priority": 1,
+                "steps": [
+                    {
+                        "id": "run",
+                        "kind": "command",
+                        "requires": ["scheduler_preflight.proactive_cleanup"],
+                        "command": ["python", "-c", "print('materialize')"],
+                        "resources": {"kind": "local_cpu"},
+                    }
+                ],
+            },
+        ],
+    }
+    status_map = {
+        "scheduler_preflight.storage_tier_plan": "succeeded",
+        "scheduler_preflight.proactive_cleanup": "succeeded",
+        "materialize.run": "queued",
+    }
+    return queue, status_map, storage_plan, cleanup_plan
+
+
+def test_staircase_dag_blocks_succeeded_preflight_with_missing_artifacts(
+    tmp_path: Path,
+) -> None:
+    queue, status_map, _storage_plan, _cleanup_plan = _storage_preflight_queue(tmp_path)
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="fixture_storage_preflight_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 1, "local_io_heavy": 1}, "memory_gb": 128, "disk_gb": 80}
+        ],
+    )
+
+    plan = plan_staircase_dispatch(dag, status_map=status_map)
+
+    assert plan["selected_count"] == 0
+    assert plan["blocked_nodes"][0]["reason"] == "storage_preflight_artifacts_not_valid"
+    assert any(
+        blocker.startswith("storage_plan_artifact_missing")
+        for blocker in plan["blocked_nodes"][0]["blockers"]
+    )
+
+
+def test_staircase_dag_accepts_succeeded_preflight_with_valid_artifacts(
+    tmp_path: Path,
+) -> None:
+    queue, status_map, storage_plan, cleanup_plan = _storage_preflight_queue(tmp_path)
+    storage_plan.write_text(
+        json.dumps(
+            {
+                "selected_workload_root": str(tmp_path / "workload"),
+                "selected_workload_root_matches_expected": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    cleanup_plan.write_text(
+        json.dumps(
+            {
+                "plan": {
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "executed_count": 0,
+                "local_bytes_reclaimed": 0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    dag = build_staircase_dag_from_experiment_queue(
+        queue,
+        dag_id="fixture_storage_preflight_dag",
+        resource_pools=[
+            {"id": "m5", "slots": {"local_cpu": 1, "local_io_heavy": 1}, "memory_gb": 128, "disk_gb": 80}
+        ],
+    )
+
+    plan = plan_staircase_dispatch(dag, status_map=status_map)
+
+    assert plan["selected_count"] == 1
+    task = plan["dask_task_specs"][0]
+    assert task["experiment_id"] == "materialize"
+    assert task["storage_preflight_dependencies"][0]["storage_plan_artifact_path"] == str(
+        storage_plan
+    )
 
 
 def test_staircase_storage_plan_blocks_when_no_tier_selected(tmp_path: Path) -> None:

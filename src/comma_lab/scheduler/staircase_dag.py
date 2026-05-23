@@ -767,6 +767,76 @@ def _running_counts(
     return out
 
 
+def _load_json_artifact(path_text: object) -> tuple[dict[str, Any] | None, str | None]:
+    if not isinstance(path_text, str) or not path_text.strip():
+        return None, "artifact_path_missing"
+    path = Path(path_text).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    if not path.is_file():
+        return None, f"artifact_missing:{path_text}"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"artifact_unreadable:{path_text}:{type(exc).__name__}"
+    if not isinstance(payload, dict):
+        return None, f"artifact_not_json_object:{path_text}"
+    return payload, None
+
+
+def _storage_preflight_artifact_blockers(
+    metadata: Mapping[str, Any],
+) -> list[str]:
+    deps = metadata.get("storage_preflight_dependencies")
+    if not isinstance(deps, list):
+        return []
+    blockers: list[str] = []
+    for index, dep in enumerate(deps):
+        if not isinstance(dep, Mapping):
+            blockers.append(f"dependency_{index}_not_object")
+            continue
+        storage_payload, storage_error = _load_json_artifact(
+            dep.get("storage_plan_artifact_path")
+        )
+        if storage_error is not None:
+            blockers.append(f"storage_plan_{storage_error}")
+        elif storage_payload is not None:
+            storage_blockers = storage_payload.get("blockers")
+            if isinstance(storage_blockers, list) and storage_blockers:
+                blockers.append(f"storage_plan_blockers_present:{storage_blockers!r}")
+            elif storage_blockers not in (None, []):
+                blockers.append(
+                    f"storage_plan_blockers_malformed:{type(storage_blockers).__name__}"
+                )
+            if not isinstance(storage_payload.get("selected_workload_root"), str):
+                blockers.append("storage_plan_selected_workload_root_missing")
+            if storage_payload.get("selected_workload_root_matches_expected") is not True:
+                blockers.append("storage_plan_selected_workload_root_not_expected")
+
+        cleanup_payload, cleanup_error = _load_json_artifact(
+            dep.get("cleanup_plan_artifact_path")
+        )
+        if cleanup_error is not None:
+            blockers.append(f"cleanup_plan_{cleanup_error}")
+        elif cleanup_payload is not None:
+            plan = cleanup_payload.get("plan")
+            if isinstance(plan, Mapping):
+                for field in (
+                    "score_claim",
+                    "promotion_eligible",
+                    "ready_for_exact_eval_dispatch",
+                ):
+                    if plan.get(field) is not False:
+                        blockers.append(f"cleanup_plan_{field}_missing_or_not_false")
+            else:
+                blockers.append("cleanup_plan_plan_object_missing")
+            if "executed_count" not in cleanup_payload:
+                blockers.append("cleanup_plan_executed_count_missing")
+            if "local_bytes_reclaimed" not in cleanup_payload:
+                blockers.append("cleanup_plan_local_bytes_reclaimed_missing")
+    return blockers
+
+
 def plan_staircase_dispatch(
     dag: Mapping[str, Any],
     *,
@@ -862,6 +932,18 @@ def plan_staircase_dispatch(
         if missing_deps:
             blocked.append({"node_id": node_id, "reason": "dependencies_not_succeeded", "dependencies": missing_deps})
             continue
+        preflight_blockers = _storage_preflight_artifact_blockers(
+            node.get("metadata") if isinstance(node.get("metadata"), Mapping) else {}
+        )
+        if preflight_blockers:
+            blocked.append(
+                {
+                    "node_id": node_id,
+                    "reason": "storage_preflight_artifacts_not_valid",
+                    "blockers": preflight_blockers,
+                }
+            )
+            continue
         ready_candidates.append(dict(node))
 
     ready_candidates.sort(
@@ -946,7 +1028,7 @@ def plan_staircase_dispatch(
         task = {
             "key": f"{normalized['dag_id']}:{node.node_id}",
             "command": list(node.command),
-            "resources": {node.resource_kind: 1},
+            "resources": {node.resource_kind: 1, f"machine:{node.machine_id}": 1},
             "machine_hint": node.machine_id,
             "pure": False,
             "queue_id": metadata.get("queue_id"),

@@ -137,6 +137,14 @@ experiments/results/lightning_batch/**/eval_provenance.json
 experiments/results/lightning_batch/**/lightning_*.json
 experiments/results/lightning_batch/**/lightning_dali_requirements.txt
 experiments/results/lightning_batch/**/report.txt
+# Exact-eval custody anchors are small authority-bearing evidence. Keep raw
+# experiment roots ignored, but let intentionally curated Lightning anchors
+# surface in normal git review instead of disappearing behind broad ignores.
+!experiments/results/lightning_batch/
+experiments/results/lightning_batch/**
+!experiments/results/lightning_batch/**/
+!experiments/results/lightning_batch/**/custody_anchor.json
+!experiments/results/lightning_batch/**/git_review_anchor.json
 
 # Secrets and credentials
 .env

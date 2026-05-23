@@ -56,6 +56,7 @@ def _selector_pareto() -> dict:
                     "archive_sha256": "a" * 64,
                     "gradient_tensor_kind": "per_pair_per_byte_v1",
                 },
+                "exact_cpu_calibrated_estimate_scope": "candidate_specific",
                 "exact_cpu_calibrated_estimate": {
                     "schema": "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1",
                     **_false_authority(),
@@ -76,6 +77,7 @@ def _selector_pareto() -> dict:
                 "non_authoritative_normalized_full_video_gain_sum": 0.02,
                 "non_authoritative_mlx_window_gain_sum": 12.0,
                 "full_video_denominator": 600,
+                "exact_cpu_calibrated_estimate_scope": "candidate_specific",
                 "exact_cpu_calibrated_estimate": {
                     "schema": "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1",
                     **_false_authority(),
@@ -343,6 +345,46 @@ def test_dynamic_sweep_does_not_treat_inherited_exact_estimate_as_candidate_spec
     assert row["candidate_id"] == "drop_one_child"
     assert row["prediction_source"] == "source_selector_inherited_non_authoritative"
     assert row["prediction_scope"] == "source_selector_scope_not_child_candidate"
+    assert row["predicted_score_variance"] == pytest.approx(2.5e-10)
+
+
+def test_dynamic_sweep_missing_exact_estimate_scope_is_not_candidate_specific() -> None:
+    plan = build_mlx_dynamic_learned_sweep_plan(
+        incumbent_score=0.1920513168811056,
+        selector_pareto={
+            "schema": "decoder_q_selective_selector_pareto.v1",
+            **_false_authority(),
+            "candidates": [
+                {
+                    "schema": "decoder_q_selective_selector_candidate.v1",
+                    **_false_authority(),
+                    "selector_id": "prefix_unscoped",
+                    "selector_kind": "top_rank_prefix",
+                    "selected_pair_count": 8,
+                    "selected_pair_indices": [1],
+                    "payload_bytes": 9,
+                    "pair_encoding": "sorted_gap_uleb",
+                    "predicted_score_mean": 0.193,
+                    "non_authoritative_normalized_full_video_gain_sum": 0.01,
+                    "non_authoritative_mlx_window_gain_sum": 6.0,
+                    "full_video_denominator": 600,
+                    "exact_cpu_calibrated_estimate": {
+                        "schema": "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1",
+                        **_false_authority(),
+                        "predicted_score": 0.100,
+                        "predicted_delta_vs_base": -0.09,
+                    },
+                }
+            ],
+        },
+        top_k=1,
+        default_score_variance=2.5e-10,
+    )
+
+    row = plan["ranked_sweep_rows"][0]
+    assert row["candidate_id"] == "prefix_unscoped"
+    assert row["predicted_score_mean"] == pytest.approx(0.193)
+    assert row["prediction_source"] == "predicted_score_mean"
     assert row["predicted_score_variance"] == pytest.approx(2.5e-10)
 
 

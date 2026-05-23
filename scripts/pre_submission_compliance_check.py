@@ -72,6 +72,10 @@ SUCCESSFUL_CPU_EVAL_TERMINAL_STATUS_PREFIXES = (
     "completed_contest_cpu",
     "completed_modal_cpu_auth_eval",
 )
+RAW_PROMOTION_BLOCKER_FIELDS = (
+    "promotion_blockers",
+    "rank_or_kill_blockers",
+)
 PRIVATE_SURFACE_RE = re.compile(
     r"(/Users/|ssh\d+\.vast\.ai|fc-[A-Z0-9]{20,}|ap-[A-Za-z0-9]{12,}|sk-[A-Za-z0-9_-]{20,})"
 )
@@ -222,14 +226,51 @@ def _score_for_submission_gate(
     return None, "missing"
 
 
+def _as_blocker_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value if str(item)]
+    if isinstance(value, str):
+        return [value] if value else []
+    return [f"malformed_blocker_field:{type(value).__name__}:{value!r}"]
+
+
+def _raw_promotion_policy_blockers(payload: dict[str, Any]) -> dict[str, list[str]]:
+    blockers: dict[str, list[str]] = {}
+    for field in RAW_PROMOTION_BLOCKER_FIELDS:
+        field_blockers = _as_blocker_list(payload.get(field))
+        if field_blockers:
+            blockers[field] = field_blockers
+    return blockers
+
+
+def _adjudicated_raw_policy_clean(payload: dict[str, Any]) -> tuple[bool, str]:
+    has_adjudication_fields = (
+        "raw_promotion_policy_gate_triggered" in payload
+        or "scientific_score_eligible" in payload
+    )
+    if not has_adjudication_fields:
+        return True, "raw auth-eval payload without adjudication fields"
+    clean = (
+        payload.get("raw_promotion_policy_gate_triggered") is False
+        and payload.get("scientific_score_eligible") is True
+    )
+    return (
+        clean,
+        "raw_promotion_policy_gate_triggered="
+        f"{payload.get('raw_promotion_policy_gate_triggered')} "
+        f"scientific_score_eligible={payload.get('scientific_score_eligible')}",
+    )
+
+
 def _selected_axis_submission_score(
     *,
     explicit_score: float | None,
     selected_axis: str,
     sections: dict[str, Any],
+    allow_explicit_score: bool = True,
 ) -> tuple[float | None, str]:
-    if explicit_score is not None:
-        return float(explicit_score), "explicit_cli"
     section_name = (
         "contest_cpu_auth_eval"
         if selected_axis == "contest_cpu"
@@ -242,12 +283,19 @@ def _selected_axis_submission_score(
     record_score = None
     if isinstance(record, dict) and record.get("score") is not None:
         record_score = float(record["score"])
-    return _score_for_submission_gate(
+    derived_score, derived_source = _score_for_submission_gate(
         record_score=record_score,
         strict_formula=section.get("strict_formula")
         if isinstance(section.get("strict_formula"), dict)
         else None,
     )
+    if explicit_score is not None and allow_explicit_score:
+        return float(explicit_score), "explicit_cli"
+    if explicit_score is not None:
+        if derived_score is None:
+            return None, f"explicit_cli_ignored:{derived_source}"
+        return derived_score, derived_source
+    return derived_score, derived_source
 
 
 def unsafe_zip_name(name: str) -> str | None:
@@ -1589,6 +1637,24 @@ def inspect_auth_eval(
             "in the auth-eval JSON; promotion eligibility is decided by this "
             "compliance gate, not raw contest_auth_eval.py",
         )
+        raw_policy_blockers = _raw_promotion_policy_blockers(payload)
+        _add(
+            checks,
+            "auth_eval_raw_promotion_policy_blockers_absent",
+            (not args.contest_final) or not raw_policy_blockers,
+            (
+                json.dumps(raw_policy_blockers, sort_keys=True)
+                if raw_policy_blockers
+                else "no raw promotion/rank blockers"
+            ),
+        )
+        adjudicated_clean, adjudicated_detail = _adjudicated_raw_policy_clean(payload)
+        _add(
+            checks,
+            "auth_eval_adjudicated_raw_policy_clean",
+            (not args.contest_final) or adjudicated_clean,
+            adjudicated_detail,
+        )
 
     runtime_candidates = _runtime_tree_candidates(payload)
     runtime_pruned_candidates = _pruned_runtime_tree_candidates(payload)
@@ -1799,6 +1865,24 @@ def inspect_contest_cpu_auth_eval(
                 "cpu_leaderboard_reproduction_eligible="
                 f"{payload.get('cpu_leaderboard_reproduction_eligible')}"
             ),
+        )
+        raw_policy_blockers = _raw_promotion_policy_blockers(payload)
+        _add(
+            checks,
+            "contest_cpu_auth_eval_raw_promotion_policy_blockers_absent",
+            (not contest_final) or not raw_policy_blockers,
+            (
+                json.dumps(raw_policy_blockers, sort_keys=True)
+                if raw_policy_blockers
+                else "no raw promotion/rank blockers"
+            ),
+        )
+        adjudicated_clean, adjudicated_detail = _adjudicated_raw_policy_clean(payload)
+        _add(
+            checks,
+            "contest_cpu_auth_eval_adjudicated_raw_policy_clean",
+            (not contest_final) or adjudicated_clean,
+            adjudicated_detail,
         )
         gate_score, gate_score_source = _score_for_submission_gate(
             record_score=float(record.score),
@@ -3036,14 +3120,15 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     # 2026-05-17 directive: submission + final conformance review must
     # apples-to-apples the candidate against the canonical best-anchor
     # state so a regression cannot ship by mistake. Compares the
-    # submission's chosen-axis score (--submission-score) against
+    # submission's chosen-axis auth-eval score against
     # tac.frontier_scan.best_per_axis() and refuses (error severity in
     # --contest-final) if the candidate is strictly worse than the
     # current best on the same axis. Surfaces the canonical citation in
     # the report so reviewers see at-a-glance what frontier they're
-    # comparing against. If --submission-score is omitted, derive the
-    # candidate score from the selected-axis auth-eval record so the gate
-    # cannot fail open through a missing optional CLI argument. Fail-OPEN
+    # comparing against. Non-final reviews may still use --submission-score
+    # for ad hoc advisory checks, but --contest-final always derives from the
+    # selected-axis auth-eval artifact so a hand-supplied CLI score cannot
+    # hide a frontier regression. Fail-OPEN
     # if tac.frontier_scan is unavailable
     # (sister Catalog #279 fail-open pattern — the gate is a tripwire,
     # not the load-bearing custody surface).
@@ -3085,10 +3170,35 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             explicit_score=args.submission_score,
             selected_axis=candidate_axis,
             sections=sections,
+            allow_explicit_score=not args.contest_final,
         )
         frontier_section["candidate"]["score"] = cand
         frontier_section["candidate"]["score_source"] = cand_source
         sections["frontier_baseline"] = frontier_section
+        if args.contest_final:
+            _add(
+                checks,
+                "contest_final_selected_axis_auth_score_available",
+                cand is not None and "explicit_cli" not in cand_source,
+                (
+                    f"axis={candidate_axis} score_source={cand_source}; "
+                    "contest-final must use selected-axis auth-eval artifact, "
+                    "not --submission-score"
+                ),
+                severity="error",
+            )
+            if cand is not None and args.submission_score is not None:
+                explicit_matches = abs(float(args.submission_score) - cand) <= 1e-6
+                _add(
+                    checks,
+                    "contest_final_explicit_score_matches_auth_artifact",
+                    explicit_matches,
+                    (
+                        f"explicit={args.submission_score:.15g} "
+                        f"auth_artifact={cand:.15g} source={cand_source}"
+                    ),
+                    severity="error",
+                )
         best_list = best.get(candidate_axis) or best.get(
             "contest_cpu" if candidate_axis == "cpu" else "contest_cuda"
             if candidate_axis == "cuda"
@@ -3120,7 +3230,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             "frontier_scan_helper_available",
             False,
             "tac.frontier_scan not importable; frontier-regression check SKIPPED",
-            severity="warning",
+            severity="error" if args.contest_final else "warning",
         )
     except Exception as exc:
         _add(
@@ -3128,7 +3238,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             "frontier_scan_helper_available",
             False,
             f"tac.frontier_scan errored: {exc!r}; frontier-regression check SKIPPED",
-            severity="warning",
+            severity="error" if args.contest_final else "warning",
         )
 
     passed = all(check.passed or check.severity != "error" for check in checks)

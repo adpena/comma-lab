@@ -1083,8 +1083,8 @@ class LightningAdjudicationSpec:
     required_device: str = "cuda"
     result_copy_name: str = "contest_auth_eval.adjudicated.json"
     provenance_name: str = "adjudication_provenance.json"
-    allow_component_gate_forensic_success: bool = True
-    allow_sane_score_forensic_success: bool = True
+    allow_component_gate_forensic_success: bool = False
+    allow_sane_score_forensic_success: bool = False
 
     def validate(self) -> None:
         for field in ("baseline_score", "predicted_band_low", "predicted_band_high", "regression_threshold"):

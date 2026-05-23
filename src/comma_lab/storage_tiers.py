@@ -48,6 +48,7 @@ class StorageTierStatus:
     name: str
     root: str
     workload_root: str
+    workload_root_exists: bool
     priority: int
     exists: bool
     parent_exists: bool
@@ -270,8 +271,11 @@ def _status_for_tier(
         except OSError as exc:
             blockers.append(f"mkdir_failed:{type(exc).__name__}")
     exists = root.exists()
+    workload_root_exists = workload_root.exists()
+    if not workload_root_exists:
+        blockers.append("workload_root_missing")
     parent_exists = parent is not None
-    usage_path = workload_root if workload_root.exists() else parent
+    usage_path = workload_root if workload_root_exists else parent
     total_bytes: int | None = None
     free_bytes: int | None = None
     if usage_path is not None:
@@ -283,7 +287,7 @@ def _status_for_tier(
             blockers.append(f"disk_usage_failed:{type(exc).__name__}")
     writable = False
     if probe_writable and usage_path is not None:
-        writable = _probe_write(workload_root if workload_root.exists() else usage_path)
+        writable = _probe_write(workload_root if workload_root_exists else usage_path)
         if not writable:
             blockers.append("write_probe_failed")
     elif usage_path is not None:
@@ -301,6 +305,7 @@ def _status_for_tier(
         name=spec.name,
         root=str(root),
         workload_root=str(workload_root),
+        workload_root_exists=workload_root_exists,
         priority=spec.priority,
         exists=exists,
         parent_exists=parent_exists,

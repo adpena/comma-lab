@@ -1301,12 +1301,10 @@ def cmd_greenup_import(pass_file: str) -> None:
     content = path.read_text()
     pass_name = path.stem
 
-    clean_files = re.findall(r"-\s+(\S+\.py)\s+.*CLEAN", content)
-    if not clean_files:
-        clean_files = re.findall(r"-\s+(\S+\.py)", content)
+    clean_files = re.findall(r"-\s+(\S+\.py)\s+.*\bCLEAN\b", content)
 
     if not clean_files:
-        print("No files found in pass file")
+        print("No CLEAN verdict files found in pass file")
         return
 
     con = _init_db()
