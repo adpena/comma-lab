@@ -228,6 +228,9 @@ def build_mlx_scorer_response_payload(
         seg_distortion=seg_distortion,
     )
     elapsed = time.time() - started
+    reference_cache_identity = _cache_identity(reference)
+    candidate_cache_identity = _cache_identity(candidate)
+    candidate_cache_identity["candidate_cache_identity_mode"] = candidate_cache_identity_mode
     return {
         "schema_version": SCHEMA_VERSION,
         "evidence_grade": EVIDENCE_GRADE_MLX,
@@ -268,8 +271,8 @@ def build_mlx_scorer_response_payload(
             "artifacts": artifacts,
         },
         "cache_identity": {
-            "reference": _cache_identity(reference),
-            "candidate": _cache_identity(candidate),
+            "reference": reference_cache_identity,
+            "candidate": candidate_cache_identity,
             "pair_indices_equal": True,
         },
         "cache_integrity": {
@@ -609,6 +612,12 @@ def _cache_identity(cache: ScorerInputCache) -> dict[str, Any]:
             manifest.get("eligible_for_local_mlx_transfer_calibration")
         ),
         "auth_eval_identity_audit": manifest.get("auth_eval_identity_audit"),
+        "eligible_for_local_mlx_local_advisory_debug": bool(
+            manifest.get("eligible_for_local_mlx_local_advisory_debug")
+        ),
+        "local_cpu_advisory_cache_identity_audit": manifest.get(
+            "local_cpu_advisory_cache_identity_audit"
+        ),
         "cache_integrity": cache.cache_integrity,
     }
 

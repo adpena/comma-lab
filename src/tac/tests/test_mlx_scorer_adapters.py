@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 import torch
@@ -154,6 +156,20 @@ def test_posenet_stem_mobileone_block0_matches_torch_on_mlx_cpu() -> None:
 
     assert actual.shape == expected.shape
     assert _max_abs(actual, expected) < 1.0e-4
+
+
+def test_mobileone_block_rejects_empty_branch_structure() -> None:
+    block = SimpleNamespace(
+        reparam_conv=None,
+        se=None,
+        identity=None,
+        conv_scale=None,
+        conv_kxk=[],
+        act=nn.Identity(),
+    )
+
+    with pytest.raises(NotImplementedError, match="no active identity, scale, or kxk branches"):
+        torch_mobileone_block_to_mlx(block)
 
 
 def test_posenet_stem_mobileone_block0_gpu_drift_is_measured() -> None:

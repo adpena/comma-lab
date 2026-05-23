@@ -272,8 +272,15 @@ def test_mlx_scorer_response_local_advisory_identity_has_limited_allowed_uses(
     stdout = json.loads(completed.stdout)
     payload = json.loads(output.read_text(encoding="utf-8"))
     contract = payload["device_contract"]
+    candidate_identity = payload["cache_identity"]["candidate"]
     assert stdout["score_claim"] is False
     assert contract["candidate_cache_identity_mode"] == "local_cpu_advisory_identity"
+    assert candidate_identity["candidate_cache_identity_mode"] == "local_cpu_advisory_identity"
+    assert candidate_identity["eligible_for_local_mlx_local_advisory_debug"] is True
+    assert (
+        candidate_identity["local_cpu_advisory_cache_identity_audit"]["verdict"]
+        == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
+    )
     assert contract["allowed_uses"] == [
         "local_mlx_debug_against_matching_local_cpu_advisory_raw",
         "local_speed_quality_delta_measurement",

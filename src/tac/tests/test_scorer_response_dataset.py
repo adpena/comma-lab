@@ -574,6 +574,19 @@ def _response_dataset_with_rows(rows: list[dict]) -> dict:
     }
 
 
+def _source_authority(**overrides) -> dict:
+    payload = {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    payload.update(overrides)
+    return payload
+
+
 def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
     path = tmp_path / "scorer_gradient.json"
     payload = {
@@ -597,7 +610,7 @@ def test_build_response_dataset_normalizes_single_candidate(tmp_path) -> None:
                 }
             ],
         },
-        "authority": {"score_claim": False, "promotion_blockers": ["advisory"]},
+        "authority": _source_authority(promotion_blockers=["advisory"]),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
     baseline = ResponseBaseline(score=1.0, archive_bytes=100)
@@ -2419,7 +2432,7 @@ def test_build_response_dataset_rejects_source_score_claim_true(tmp_path) -> Non
 
     assert dataset["rows"] == []
     assert dataset["skipped"]
-    assert "source score_claim must be false" in dataset["skipped"][0]["reason"]
+    assert "parent authority score_claim must be false" in dataset["skipped"][0]["reason"]
 
 
 def test_build_response_dataset_requires_explicit_source_score_claim_false(
@@ -2442,6 +2455,27 @@ def test_build_response_dataset_requires_explicit_source_score_claim_false(
     assert "source score_claim must be explicit false" in dataset["skipped"][0]["reason"]
 
 
+def test_build_response_dataset_requires_complete_source_false_authority(
+    tmp_path,
+) -> None:
+    path = tmp_path / "incomplete_source_authority.json"
+    payload = {
+        "schema": "scorer_gradient_sparse_residual_smoke.v1",
+        "candidate": {"advisory_eval": _advisory(1.25, 110, 0.004, 0.010)},
+        "authority": {"score_claim": False},
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    dataset = build_response_dataset(
+        [path],
+        baseline=ResponseBaseline(score=1.0, archive_bytes=100),
+    )
+
+    assert dataset["rows"] == []
+    assert dataset["skipped"]
+    assert "score_claim_valid must be explicit false" in dataset["skipped"][0]["reason"]
+
+
 def test_build_response_dataset_rejects_present_optional_authority_true(
     tmp_path,
 ) -> None:
@@ -2450,7 +2484,7 @@ def test_build_response_dataset_rejects_present_optional_authority_true(
         "schema": "scorer_gradient_sparse_residual_smoke.v1",
         "candidate": {"advisory_eval": _advisory(1.25, 110, 0.004, 0.010)},
         "authority": {
-            "score_claim": False,
+            **_source_authority(),
             "ready_for_exact_eval_dispatch": True,
         },
     }
@@ -2477,7 +2511,7 @@ def test_build_response_dataset_distilled_vs_direct_rows_are_opt_in(tmp_path) ->
             "advisory_eval": _advisory(0.99, 99, 0.003, 0.009),
             "summary": {"component": "distilled_scorer"},
         },
-        "authority": {"score_claim": False},
+        "authority": _source_authority(),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
     baseline = ResponseBaseline(score=1.0, archive_bytes=100)
@@ -2505,7 +2539,7 @@ def test_scorer_response_consumer_routing_invokes_opt_in_consumers(tmp_path) -> 
             "candidate_id": "pds_stage1_smoke",
             "advisory_eval": _advisory(0.99, 99, 0.003, 0.009),
         },
-        "authority": {"score_claim": False},
+        "authority": _source_authority(),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
     dataset = build_response_dataset(
@@ -3745,7 +3779,7 @@ def test_build_response_dataset_normalizes_candidate_list_and_correlations(tmp_p
             }
             for i in range(4)
         ],
-        "authority": {"score_claim": False},
+        "authority": _source_authority(),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -3774,7 +3808,7 @@ def test_response_dataset_computes_break_even_bytes_for_scorer_gain(tmp_path) ->
             "advisory_eval": _advisory(score, 102, 0.001, 0.01),
             "plan": {"packed_bytes": 2},
         },
-        "authority": {"score_claim": False},
+        "authority": _source_authority(),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -3807,7 +3841,7 @@ def test_next_probe_plan_blocks_overbudget_coordinate_residual(tmp_path) -> None
     payload = {
         "schema": "scorer_gradient_sparse_residual_smoke.v1",
         "candidate": {"advisory_eval": _advisory(score, 103, 0.001, 0.01)},
-        "authority": {"score_claim": False},
+        "authority": _source_authority(),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
     dataset = build_response_dataset([path], baseline=ResponseBaseline(score=1.0, archive_bytes=100))
@@ -3967,7 +4001,7 @@ def test_next_probe_plan_consumes_null_byte_matrix_as_first_probe(tmp_path) -> N
     payload = {
         "schema": "scorer_gradient_sparse_residual_smoke.v1",
         "candidate": {"advisory_eval": _advisory(score, 103, 0.001, 0.01)},
-        "authority": {"score_claim": False},
+        "authority": _source_authority(),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
     dataset = build_response_dataset([path], baseline=ResponseBaseline(score=1.0, archive_bytes=100))
@@ -3988,7 +4022,7 @@ def test_next_probe_plan_consumes_pair4_seed_boundary_as_prohibition(tmp_path) -
     payload = {
         "schema": "scorer_gradient_sparse_residual_smoke.v1",
         "candidate": {"advisory_eval": _advisory(score, 103, 0.001, 0.01)},
-        "authority": {"score_claim": False},
+        "authority": _source_authority(),
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
     dataset = build_response_dataset([path], baseline=ResponseBaseline(score=1.0, archive_bytes=100))

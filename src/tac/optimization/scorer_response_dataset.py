@@ -199,34 +199,30 @@ def _require_source_advisory_authority_false(
 ) -> None:
     """Fail closed when advisory source evidence carries score authority.
 
-    Historical scorer-response inputs did not consistently carry every
-    promotion flag, so optional flags may be absent. But a source score claim
-    must be explicit false, and any present authority flag must be false. This
-    prevents LL training-data rows from laundering score-bearing evidence into
-    a non-promotional normalized row.
+    Advisory source evidence must carry explicit false authority fields before
+    it can be normalized into dataset rows. Missing source authority is not
+    equivalent to verified false authority.
     """
 
-    score_claim_values = [
-        value
-        for value in (
-            parent_authority.get("score_claim"),
-            candidate_authority.get("score_claim"),
-        )
-        if value is not None
-    ]
-    if not score_claim_values:
-        raise ScorerResponseDatasetError(
-            f"{label} source score_claim must be explicit false"
-        )
-    if any(value is not False for value in score_claim_values):
-        raise ScorerResponseDatasetError(f"{label} source score_claim must be false")
-
-    for key in _SOURCE_OPTIONAL_FALSE_AUTHORITY_FIELDS:
+    source_authorities = [
+        (source_label, authority)
         for source_label, authority in (
             ("parent", parent_authority),
             ("candidate", candidate_authority),
-        ):
-            if key in authority and authority.get(key) is not False:
+        )
+        if authority
+    ]
+    if not source_authorities:
+        raise ScorerResponseDatasetError(
+            f"{label} source score_claim must be explicit false"
+        )
+    for source_label, authority in source_authorities:
+        for key in ("score_claim", *_SOURCE_OPTIONAL_FALSE_AUTHORITY_FIELDS):
+            if key not in authority or authority.get(key) is None:
+                raise ScorerResponseDatasetError(
+                    f"{label} {source_label} authority {key} must be explicit false"
+                )
+            if authority.get(key) is not False:
                 raise ScorerResponseDatasetError(
                     f"{label} {source_label} authority {key} must be false"
                 )

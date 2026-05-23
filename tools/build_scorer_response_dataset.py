@@ -70,6 +70,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "family=distilled_vs_direct_scorer_paired_smoke."
         ),
     )
+    parser.add_argument(
+        "--allow-skipped",
+        action="store_true",
+        help=(
+            "Allow requested inputs to be skipped. Without this, skipped rows "
+            "make the CLI fail closed after writing the diagnostic dataset."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -113,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
             "row_count": routing["row_count"],
             "verdict_count": routing["verdict_count"],
         }
+    skipped = dataset.get("skipped") if isinstance(dataset.get("skipped"), list) else []
     print(
         json.dumps(
             {
@@ -121,12 +130,20 @@ def main(argv: list[str] | None = None) -> int:
                 "consumer_routing_json_out": consumer_routing_out,
                 "consumer_routing_summary": consumer_routing_summary,
                 "summary": dataset["summary"],
+                "skipped_count": len(skipped),
                 "score_claim": False,
             },
             indent=2,
             sort_keys=True,
         )
     )
+    if skipped and not args.allow_skipped:
+        print(
+            "FATAL: scorer-response dataset skipped requested input(s); "
+            "rerun with --allow-skipped only for an audited diagnostic build",
+            file=sys.stderr,
+        )
+        return 3
     return 0
 
 

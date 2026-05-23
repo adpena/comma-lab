@@ -103,6 +103,36 @@ def _mlx_response(
 
 def _calibration() -> dict[str, object]:
     return {
+        "schema_version": "mlx_score_calibration.v1",
+        "rows": [{}, {}, {}, {}],
+        "summary": {
+            "recommended_min_mlx_gap_for_spend_triage": 1.0e-4,
+            "calibration_uncertainty_score": 2.0e-5,
+            "mlx_minus_cpu_max_abs": 2.0e-5,
+            "mlx_minus_local_cpu_max_abs": 2.0e-6,
+            "mlx_cpu_rank_inversions": 0,
+            "cuda_cpu_rank_inversions": 0,
+            "mlx_spend_triage_pairwise_uncertain_count": 0,
+            "mlx_spend_triage_pairwise_certified_count": 3,
+        },
+        "decision_policy": {
+            "allowed_use": "local_spend_triage_only_after_strict_auth_axis_calibration",
+            "recommended_min_mlx_gap_for_spend_triage": 1.0e-4,
+            "calibration_uncertainty_score": 2.0e-5,
+            "forbidden_use": "score_claim_or_rank_or_kill_or_promotion",
+        },
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_generation_only": True,
+    }
+
+
+def _weak_calibration() -> dict[str, object]:
+    return {
         "schema_version": "mlx_public_frontier_score_calibration.v1",
         "rows": [{}, {}, {}, {}],
         "summary": {
@@ -135,6 +165,20 @@ def test_quality_speed_delta_allows_audited_cpu_singleton_inside_band() -> None:
     assert manifest["calibration"]["decision_band"] == 1.0e-4
 
 
+def test_quality_speed_delta_blocks_weak_calibration_for_spend_triage() -> None:
+    manifest = build_quality_speed_delta_manifest(
+        anchor_payload=_anchor(),
+        mlx_payloads=[_mlx_response(score_offset=5.0e-5)],
+        calibration_payload=_weak_calibration(),
+        calibration_safety_factor=5.0,
+    )
+
+    row = manifest["rows"][0]
+    assert row["spend_triage_allowed"] is False
+    assert "strict_cuda_auth_axis_calibration_missing" in row["blockers"]
+    assert manifest["calibration"]["decision_band"] is None
+
+
 def test_quality_speed_delta_blocks_gpu_batch_and_unaudited_out_of_band() -> None:
     manifest = build_quality_speed_delta_manifest(
         anchor_payload=_anchor(),
@@ -156,6 +200,28 @@ def test_quality_speed_delta_blocks_gpu_batch_and_unaudited_out_of_band() -> Non
     assert "mlx_non_singleton_batch_shape_requires_passing_invariance_gate" in row["blockers"]
     assert "score_delta_exceeds_calibration_decision_band" in row["blockers"]
     assert manifest["summary"]["all_rows_blocked_for_spend_triage"] is True
+
+
+def test_quality_speed_delta_labels_local_advisory_identity_as_non_auth_axis() -> None:
+    mlx = _mlx_response(audited=False)
+    candidate = mlx["cache_identity"]["candidate"]  # type: ignore[index]
+    candidate["eligible_for_local_mlx_transfer_calibration"] = False
+    candidate["eligible_for_local_mlx_local_advisory_debug"] = True
+    candidate["local_cpu_advisory_cache_identity_audit"] = {
+        "verdict": "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY",
+        "passed": True,
+    }
+
+    manifest = build_quality_speed_delta_manifest(
+        anchor_payload=_anchor(),
+        mlx_payloads=[mlx],
+        calibration_payload=_calibration(),
+    )
+
+    row = manifest["rows"][0]
+    assert row["spend_triage_allowed"] is False
+    assert "local_advisory_cache_identity_not_auth_axis" in row["blockers"]
+    assert "candidate_cache_missing_pass_cache_auth_eval_identity" not in row["blockers"]
 
 
 def test_quality_speed_delta_blocks_identity_and_sample_mismatch() -> None:

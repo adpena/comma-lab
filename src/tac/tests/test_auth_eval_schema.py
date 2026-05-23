@@ -319,6 +319,23 @@ def test_required_contest_auth_axis_payload_blockers_accept_strict_cuda_and_cpu(
     ) == []
 
 
+def test_required_contest_auth_axis_payload_blockers_requires_false_authority_flags() -> None:
+    for payload_factory in (_strict_contest_cuda_payload, _strict_contest_cpu_payload):
+        for key, blocker in (
+            ("promotion_eligible", "promotion_eligible_missing_or_not_false"),
+            ("rank_or_kill_eligible", "rank_or_kill_eligible_missing_or_not_false"),
+        ):
+            payload = payload_factory()
+            payload.pop(key)
+
+            blockers = required_contest_auth_axis_payload_blockers(
+                payload,
+                eval_metric_summary(payload),
+            )
+
+            assert blocker in blockers
+
+
 def test_required_contest_auth_axis_payload_blockers_rejects_forged_cuda_labels() -> None:
     payload = _strict_contest_cuda_payload(
         exact_cuda_eval_complete=False,

@@ -6,8 +6,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _source_authority() -> dict:
+    return {
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
 
 
 def _write_distilled_vs_direct_smoke(path: Path) -> None:
@@ -29,7 +39,7 @@ def _write_distilled_vs_direct_smoke(path: Path) -> None:
                         "raw": {"sha256": "b" * 64},
                     },
                 },
-                "authority": {"score_claim": False},
+                "authority": _source_authority(),
             }
         ),
         encoding="utf-8",
@@ -58,7 +68,23 @@ def test_build_scorer_response_dataset_cli_distilled_rows_are_opt_in(
         "--consumer-routing-json-out",
         str(routing_out),
     ]
-    subprocess.run(base_cmd, cwd=REPO_ROOT, check=True, text=True, capture_output=True)
+    strict = subprocess.run(
+        base_cmd,
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    assert strict.returncode == 3
+    assert "skipped requested input" in strict.stderr
+
+    subprocess.run(
+        [*base_cmd, "--allow-skipped"],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
     skipped = json.loads(json_out.read_text(encoding="utf-8"))
     assert skipped["rows"] == []
     assert "requires include_distilled_vs_direct_rows" in skipped["skipped"][0]["reason"]
@@ -67,7 +93,7 @@ def test_build_scorer_response_dataset_cli_distilled_rows_are_opt_in(
     assert skipped_routing["score_claim"] is False
 
     subprocess.run(
-        base_cmd + ["--include-distilled-vs-direct-rows"],
+        [*base_cmd, "--include-distilled-vs-direct-rows"],
         cwd=REPO_ROOT,
         check=True,
         text=True,
@@ -86,3 +112,41 @@ def test_build_scorer_response_dataset_cli_distilled_rows_are_opt_in(
         verdict["consumer_name"] == "distilled_scorer_surrogate_canonical_equation_consumer"
         for verdict in included_routing["verdicts"]
     )
+
+
+def test_build_scorer_response_dataset_cli_fails_on_malformed_input_by_default(
+    tmp_path: Path,
+) -> None:
+    valid = tmp_path / "valid.json"
+    bad = tmp_path / "bad.json"
+    json_out = tmp_path / "dataset.json"
+    _write_distilled_vs_direct_smoke(valid)
+    bad.write_text("{not json", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "build_scorer_response_dataset.py"),
+            "--input",
+            str(valid),
+            "--input",
+            str(bad),
+            "--include-distilled-vs-direct-rows",
+            "--json-out",
+            str(json_out),
+            "--baseline-score",
+            "1.0",
+            "--baseline-archive-bytes",
+            "100",
+        ],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 3
+    assert "skipped requested input" in result.stderr
+    dataset = json.loads(json_out.read_text(encoding="utf-8"))
+    assert dataset["summary"]["row_count"] == 1
+    assert dataset["skipped"]

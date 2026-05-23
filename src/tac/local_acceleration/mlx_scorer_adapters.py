@@ -501,6 +501,14 @@ class MLXMobileOneBlockAdapter:
             MLXConvNormAct2dAdapter(branch)
             for branch in (getattr(torch_block, "conv_kxk", None) or [])
         ]
+        if (
+            self.identity is None
+            and self.conv_scale is None
+            and not self.conv_kxk
+        ):
+            raise NotImplementedError(
+                "unsupported MobileOneBlock with no active identity, scale, or kxk branches"
+            )
         self.use_gelu_tanh = _class_path(getattr(torch_block, "act", None)) == (
             "timm.layers.activations.GELUTanh"
         )
@@ -510,8 +518,6 @@ class MLXMobileOneBlockAdapter:
             raise NotImplementedError(f"unsupported MobileOne activation: {_class_path(torch_block.act)}")
 
     def __call__(self, x_nhwc: Any) -> Any:
-        import mlx.core as mx
-
         out = None
         if self.identity is not None:
             out = self.identity(x_nhwc)
@@ -522,7 +528,7 @@ class MLXMobileOneBlockAdapter:
             branch = branch_adapter(x_nhwc)
             out = branch if out is None else out + branch
         if out is None:
-            out = mx.zeros_like(x_nhwc)
+            raise RuntimeError("MobileOneBlock adapter has no active branches")
         if self.se is not None:
             out = self.se(out)
         return mlx_gelu_tanh(out) if self.use_gelu_tanh else out

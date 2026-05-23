@@ -16,6 +16,12 @@ from typing import Any
 
 from tac.auth_eval_schema import eval_metric_summary
 from tac.local_acceleration import EVIDENCE_GRADE_MLX, EVIDENCE_TAG_MLX
+from tac.local_acceleration.mlx_score_calibration import (
+    SCHEMA_VERSION as MLX_SCORE_CALIBRATION_SCHEMA_VERSION,
+)
+from tac.local_acceleration.mlx_score_calibration import (
+    STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE,
+)
 
 SCHEMA_VERSION = "mlx_quality_speed_delta.v1"
 
@@ -194,6 +200,7 @@ def _mlx_row(
         device_type=device_type,
         batch_pairs=batch_pairs,
         candidate_cache_audited=audited,
+        candidate_identity=candidate_identity,
         score_delta=score_delta,
         calibration=calibration,
     )
@@ -317,6 +324,7 @@ def _mlx_blockers(
     device_type: str,
     batch_pairs: int,
     candidate_cache_audited: bool,
+    candidate_identity: dict[str, Any],
     score_delta: float,
     calibration: dict[str, Any],
 ) -> list[str]:
@@ -331,12 +339,16 @@ def _mlx_blockers(
         if payload.get(field) is True:
             blockers.append(f"mlx_payload_attempts_{field}")
     if not candidate_cache_audited:
-        blockers.append("candidate_cache_missing_pass_cache_auth_eval_identity")
+        if _candidate_cache_local_advisory_identity(candidate_identity):
+            blockers.append("local_advisory_cache_identity_not_auth_axis")
+        else:
+            blockers.append("candidate_cache_missing_pass_cache_auth_eval_identity")
     if device_type == "gpu":
         blockers.append("mlx_gpu_response_requires_separate_cpu_transfer_calibration")
     if batch_pairs != 1:
         blockers.append("mlx_non_singleton_batch_shape_requires_passing_invariance_gate")
     band = calibration.get("decision_band")
+    blockers.extend(str(blocker) for blocker in calibration.get("blockers", []))
     if isinstance(band, (int, float)) and math.isfinite(float(band)):
         if abs(score_delta) > float(band):
             blockers.append("score_delta_exceeds_calibration_decision_band")
@@ -356,27 +368,32 @@ def _calibration_summary(
             "path": None if calibration_path is None else str(calibration_path),
             "available": False,
             "decision_band": None,
-            "blockers": ["calibration_payload_missing"],
+            "blockers": [
+                "calibration_payload_missing",
+                "strict_cuda_auth_axis_calibration_missing",
+            ],
+        }
+    blockers = _strict_calibration_blockers(payload)
+    if blockers:
+        return {
+            "path": None if calibration_path is None else str(calibration_path),
+            "available": False,
+            "schema_version": payload.get("schema_version"),
+            "row_count": payload.get("row_count") or len(payload.get("rows") or []),
+            "safety_factor": safety_factor,
+            "decision_band": None,
+            "decision_band_basis": None,
+            "blockers": sorted(set(blockers)),
         }
     summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
     policy = payload.get("decision_policy") if isinstance(payload.get("decision_policy"), dict) else {}
-    max_abs_local = _first_finite(
-        summary.get("max_abs_mlx_minus_local_cpu"),
-        summary.get("mlx_minus_local_cpu_max_abs"),
-    )
-    max_abs_cpu = _first_finite(
-        summary.get("max_abs_mlx_minus_cpu"),
-        summary.get("mlx_minus_cpu_max_abs"),
-    )
+    max_abs_local = _first_finite(summary.get("mlx_minus_local_cpu_max_abs"))
+    max_abs_cpu = _first_finite(summary.get("mlx_minus_cpu_max_abs"))
     decision_band = _first_finite(
         summary.get("recommended_min_mlx_gap_for_spend_triage"),
         policy.get("recommended_min_mlx_gap_for_spend_triage"),
     )
     basis = "reported"
-    if decision_band is None:
-        basis_value = max_abs_cpu if max_abs_cpu is not None else max_abs_local
-        decision_band = None if basis_value is None else float(basis_value) * safety_factor
-        basis = "safety_factor_times_max_abs_mlx_minus_cpu_or_local"
     return {
         "path": None if calibration_path is None else str(calibration_path),
         "available": True,
@@ -396,6 +413,45 @@ def _calibration_summary(
         },
         "blockers": [] if decision_band is not None else ["calibration_decision_band_missing"],
     }
+
+
+def _strict_calibration_blockers(payload: dict[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if payload.get("schema_version") != MLX_SCORE_CALIBRATION_SCHEMA_VERSION:
+        blockers.append(
+            "strict_cuda_auth_axis_calibration_missing:"
+            f"schema_version={payload.get('schema_version')}"
+        )
+    for field in AUTHORITY_FALSE_FIELDS:
+        if payload.get(field) is not False:
+            blockers.append(f"score_calibration_{field}_not_false")
+    if payload.get("candidate_generation_only") is not True:
+        blockers.append("score_calibration_candidate_generation_only_not_true")
+    policy = payload.get("decision_policy")
+    if not isinstance(policy, dict):
+        blockers.append("score_calibration_decision_policy_missing")
+        policy = {}
+    if policy.get("allowed_use") != STRICT_AUTH_AXIS_SPEND_TRIAGE_ALLOWED_USE:
+        blockers.append("strict_cuda_auth_axis_calibration_missing")
+    if policy.get("forbidden_use") != "score_claim_or_rank_or_kill_or_promotion":
+        blockers.append("score_calibration_forbidden_use_missing")
+    if not _finite_positive(policy.get("recommended_min_mlx_gap_for_spend_triage")):
+        blockers.append("score_calibration_recommended_min_gap_missing")
+    if not _finite_positive(policy.get("calibration_uncertainty_score")):
+        blockers.append("score_calibration_uncertainty_missing")
+    summary = payload.get("summary")
+    if not isinstance(summary, dict):
+        blockers.append("score_calibration_summary_missing")
+        summary = {}
+    uncertain = summary.get("mlx_spend_triage_pairwise_uncertain_count")
+    if not isinstance(uncertain, int) or isinstance(uncertain, bool):
+        blockers.append("score_calibration_uncertain_pairwise_count_missing")
+    elif uncertain > 0:
+        blockers.append("score_calibration_uncertain_pairwise_triage")
+    certified = summary.get("mlx_spend_triage_pairwise_certified_count")
+    if not isinstance(certified, int) or isinstance(certified, bool) or certified <= 0:
+        blockers.append("score_calibration_certified_pairwise_count_missing")
+    return blockers
 
 
 def _frontier_block(
@@ -481,6 +537,16 @@ def _candidate_cache_audited(candidate_identity: dict[str, Any]) -> bool:
     )
 
 
+def _candidate_cache_local_advisory_identity(candidate_identity: dict[str, Any]) -> bool:
+    audit = candidate_identity.get("local_cpu_advisory_cache_identity_audit")
+    return bool(
+        candidate_identity.get("eligible_for_local_mlx_local_advisory_debug") is True
+        and isinstance(audit, dict)
+        and audit.get("verdict") == "PASS_CACHE_LOCAL_CPU_ADVISORY_IDENTITY"
+        and audit.get("passed") is True
+    )
+
+
 def _public_cache_identity(identity: dict[str, Any]) -> dict[str, Any]:
     return {
         key: identity.get(key)
@@ -492,6 +558,9 @@ def _public_cache_identity(identity: dict[str, Any]) -> dict[str, Any]:
             "hash_domain",
             "pair_count",
             "eligible_for_local_mlx_transfer_calibration",
+            "eligible_for_local_mlx_local_advisory_debug",
+            "candidate_cache_identity_mode",
+            "local_cpu_advisory_cache_identity_audit",
         )
         if key in identity
     }
@@ -529,6 +598,15 @@ def _gap_ratio(value: float, band: Any) -> float | None:
     if not isinstance(band, (int, float)) or float(band) <= 0:
         return None
     return float(value) / float(band)
+
+
+def _finite_positive(value: Any) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+        and float(value) > 0.0
+    )
 
 
 def _none_to_neg_inf(value: Any) -> float:

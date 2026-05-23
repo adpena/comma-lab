@@ -485,10 +485,10 @@ def required_contest_auth_axis_payload_blockers(
         blockers.append("score_claim_not_true")
     if eval_data.get("score_claim_valid") is not True:
         blockers.append("score_claim_valid_not_true")
-    if eval_data.get("promotion_eligible") is True:
-        blockers.append("promotion_eligible_unexpected_true")
-    if eval_data.get("rank_or_kill_eligible") is True:
-        blockers.append("rank_or_kill_eligible_unexpected_true")
+    if eval_data.get("promotion_eligible") is not False:
+        blockers.append("promotion_eligible_missing_or_not_false")
+    if eval_data.get("rank_or_kill_eligible") is not False:
+        blockers.append("rank_or_kill_eligible_missing_or_not_false")
     return blockers
 
 
