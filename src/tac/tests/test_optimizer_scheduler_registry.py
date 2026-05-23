@@ -5,7 +5,9 @@ import pytest
 
 from tac.optimization.optimizer_scheduler_registry import (
     DESCRIPTOR_SCHEMA,
+    EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
     FALSE_AUTHORITY_FIELDS,
+    PARAMETER_GROUP_LR_POLICY_SCHEMA,
     TELEMETRY_SCHEMA,
     OptimizerSchedulerDescriptor,
     OptimizerSchedulerRegistry,
@@ -28,6 +30,8 @@ def test_default_registry_enumerates_hashed_planning_only_candidates() -> None:
         assert row["rank_score_field"] == "planner_priority_not_score"
         assert row["target_modes"] == ["contest_exact_eval_planning"]
         assert validate_proxy_candidate(row) == []
+        assert row["parameter_group_lr_policy"]["schema"] == PARAMETER_GROUP_LR_POLICY_SCHEMA
+        assert row["parameter_group_lr_policy_id"] == row["parameter_group_lr_policy"]["policy_id"]
         assert row["false_authority"] == FALSE_AUTHORITY_FIELDS
         for key, expected in FALSE_AUTHORITY_FIELDS.items():
             assert row[key] is expected
@@ -69,6 +73,16 @@ def test_descriptor_config_sha256_is_stable_and_config_sensitive() -> None:
     assert first.config_sha256 == reordered.config_sha256
     assert first.config_sha256 != changed.config_sha256
 
+    policy_changed = OptimizerSchedulerDescriptor(
+        descriptor_id="unit_adamw_policy_changed",
+        optimizer="torch.optim.AdamW",
+        scheduler="constant",
+        optimizer_config={"lr": 0.001, "betas": [0.9, 0.999]},
+        scheduler_config={"factor": 1.0},
+        parameter_group_lr_policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
+    )
+    assert first.config_sha256 != policy_changed.config_sha256
+
 
 def test_registry_filters_by_declared_target_axis_and_substrate() -> None:
     registry = default_optimizer_scheduler_registry()
@@ -80,6 +94,13 @@ def test_registry_filters_by_declared_target_axis_and_substrate() -> None:
     assert macos_rows
     assert mlx_rows
     assert all("mlx_research_signal" in row["allowed_target_modes"] for row in mlx_rows)
+    muon_row = next(row for row in mlx_rows if row["descriptor_id"] == "muon_adamw_cosine_representation")
+    assert muon_row["parameter_group_lr_policy_id"] == "embedding_theta1_hidden_muon_adamw"
+    assert muon_row["parameter_group_lr_policy"]["embedding_lr_scaling_policy"] == (
+        "theta_1_not_inverse_width"
+    )
+    assert "latent" in muon_row["parameter_group_lr_policy"]["embedding_param_patterns"]
+    assert "arxiv:2605.21486" in muon_row["parameter_group_lr_policy"]["source_refs"]
     assert other_substrate_rows == []
     with pytest.raises(OptimizerSchedulerRegistryError, match="unknown target_mode"):
         registry.enumerate_candidates(target_mode="contest_exact_eval")
@@ -191,4 +212,20 @@ def test_descriptor_rejects_authority_and_unknown_target_modes() -> None:
             optimizer_config={"lr": 0.001},
             scheduler_config={},
             allowed_target_modes=("contest_exact_eval",),
+        )
+
+    with pytest.raises(
+        OptimizerSchedulerRegistryError,
+        match=r"parameter_group_lr_policy.*score_claim",
+    ):
+        OptimizerSchedulerDescriptor(
+            descriptor_id="unsafe_policy",
+            optimizer="torch.optim.AdamW",
+            scheduler="constant",
+            optimizer_config={"lr": 0.001},
+            scheduler_config={},
+            parameter_group_lr_policy={
+                **EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
+                "score_claim": True,
+            },
         )

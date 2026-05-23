@@ -170,6 +170,10 @@ def test_dynamic_sweep_ranks_configs_without_dispatch_authority() -> None:
     )
     assert plan["optimizer_scheduler_candidates"]
     assert all(row["score_claim"] is False for row in plan["optimizer_scheduler_candidates"])
+    assert any(
+        row["parameter_group_lr_policy_id"] == "embedding_theta1_hidden_muon_adamw"
+        for row in plan["optimizer_scheduler_candidates"]
+    )
     assert all(
         row["rank_score_field"] == "planner_priority_not_score"
         for row in plan["optimizer_scheduler_candidates"]

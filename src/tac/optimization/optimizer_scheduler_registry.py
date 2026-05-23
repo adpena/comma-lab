@@ -29,6 +29,7 @@ from tac.xray.base import CANONICAL_WIRE_IN_HOOKS
 REGISTRY_SCHEMA = "optimizer_scheduler_registry.v1"
 DESCRIPTOR_SCHEMA = "optimizer_scheduler_descriptor.v1"
 TELEMETRY_SCHEMA = "optimizer_scheduler_telemetry.v1"
+PARAMETER_GROUP_LR_POLICY_SCHEMA = "parameter_group_lr_policy.v1"
 
 KNOWN_TARGET_MODES: frozenset[str] = frozenset(
     {
@@ -75,6 +76,45 @@ DEFAULT_PARETO_OBJECTIVES: tuple[str, ...] = (
     "state_bytes",
     "seconds_per_candidate",
 )
+DEFAULT_PARAMETER_GROUP_LR_POLICY: dict[str, Any] = {
+    "schema": PARAMETER_GROUP_LR_POLICY_SCHEMA,
+    "policy_id": "single_group_baseline",
+    "embedding_lr_scaling_policy": "same_as_base_lr",
+    "width_basis": "not_width_scaled",
+    "embedding_param_patterns": [],
+    "hidden_param_patterns": ["*"],
+    "optimizer_assignment": {"all_params": "primary_optimizer"},
+    "source_refs": [],
+    "falsification_probe": "paired_same_seed_parameter_group_lr_ablation",
+}
+EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY: dict[str, Any] = {
+    "schema": PARAMETER_GROUP_LR_POLICY_SCHEMA,
+    "policy_id": "embedding_theta1_hidden_muon_adamw",
+    "embedding_lr_scaling_policy": "theta_1_not_inverse_width",
+    "width_basis": "hidden_width_or_latent_channel_count",
+    "embedding_param_patterns": [
+        "embed",
+        "embedding",
+        "latent",
+        "codebook",
+        "pos",
+        "position",
+        "frame_embedding",
+        "pair_embedding",
+    ],
+    "hidden_param_patterns": ["matrix_param_ndim_ge_2_non_embedding"],
+    "optimizer_assignment": {
+        "embedding_like": "AdamW",
+        "hidden_matrix": "Muon",
+        "head_scalar_norm": "AdamW",
+    },
+    "source_refs": [
+        "x:maximelabonne/status/2057602654151364899",
+        "arxiv:2605.21486",
+        "github:KellerJordan/modded-nanogpt/records/track_3_optimization",
+    ],
+    "falsification_probe": "switch_embedding_lr_same_seed_archive_aware_smoke",
+}
 
 
 class OptimizerSchedulerRegistryError(ValueError):
@@ -201,6 +241,9 @@ class OptimizerSchedulerDescriptor:
     optimizer_config: Mapping[str, Any]
     scheduler_config: Mapping[str, Any]
     training_config: Mapping[str, Any] = field(default_factory=dict)
+    parameter_group_lr_policy: Mapping[str, Any] = field(
+        default_factory=lambda: dict(DEFAULT_PARAMETER_GROUP_LR_POLICY)
+    )
     substrate: str = "representation_training"
     allowed_target_modes: Sequence[str] = DEFAULT_ALLOWED_TARGET_MODES
     allowed_axis_tags: Sequence[str] = DEFAULT_ALLOWED_AXIS_TAGS
@@ -226,13 +269,20 @@ class OptimizerSchedulerDescriptor:
         optimizer_config = _freeze_json(self.optimizer_config)
         scheduler_config = _freeze_json(self.scheduler_config)
         training_config = _freeze_json(self.training_config)
+        parameter_group_lr_policy = _freeze_json(self.parameter_group_lr_policy)
         _require_false_authority(_thaw_json(optimizer_config), label=self.descriptor_id)
         _require_false_authority(_thaw_json(scheduler_config), label=self.descriptor_id)
         _require_false_authority(_thaw_json(training_config), label=self.descriptor_id)
+        self._validate_parameter_group_lr_policy(_thaw_json(parameter_group_lr_policy))
 
         object.__setattr__(self, "optimizer_config", optimizer_config)
         object.__setattr__(self, "scheduler_config", scheduler_config)
         object.__setattr__(self, "training_config", training_config)
+        object.__setattr__(
+            self,
+            "parameter_group_lr_policy",
+            parameter_group_lr_policy,
+        )
         object.__setattr__(
             self,
             "allowed_target_modes",
@@ -266,12 +316,38 @@ class OptimizerSchedulerDescriptor:
         )
         object.__setattr__(self, "config_sha256", config_sha256(self.config_payload()))
 
+    def _validate_parameter_group_lr_policy(self, policy: Mapping[str, Any]) -> None:
+        _require_false_authority(policy, label=f"{self.descriptor_id} parameter_group_lr_policy")
+        if policy.get("schema") != PARAMETER_GROUP_LR_POLICY_SCHEMA:
+            raise OptimizerSchedulerRegistryError("parameter_group_lr_policy schema mismatch")
+        for key in (
+            "policy_id",
+            "embedding_lr_scaling_policy",
+            "width_basis",
+            "falsification_probe",
+        ):
+            if not isinstance(policy.get(key), str) or not str(policy.get(key)).strip():
+                raise OptimizerSchedulerRegistryError(
+                    f"parameter_group_lr_policy {key} must be a non-empty string"
+                )
+        for key in ("embedding_param_patterns", "hidden_param_patterns", "source_refs"):
+            value = policy.get(key)
+            if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+                raise OptimizerSchedulerRegistryError(
+                    f"parameter_group_lr_policy {key} must be a list of strings"
+                )
+        if not isinstance(policy.get("optimizer_assignment"), Mapping):
+            raise OptimizerSchedulerRegistryError(
+                "parameter_group_lr_policy optimizer_assignment must be a mapping"
+            )
+
     def config_payload(self) -> dict[str, Any]:
         """Return the canonical payload covered by ``config_sha256``."""
 
         return {
             "optimizer": self.optimizer,
             "optimizer_config": _thaw_json(self.optimizer_config),
+            "parameter_group_lr_policy": _thaw_json(self.parameter_group_lr_policy),
             "scheduler": self.scheduler,
             "scheduler_config": _thaw_json(self.scheduler_config),
             "training_config": _thaw_json(self.training_config),
@@ -294,6 +370,10 @@ class OptimizerSchedulerDescriptor:
             "optimizer_config": _thaw_json(self.optimizer_config),
             "scheduler_config": _thaw_json(self.scheduler_config),
             "training_config": _thaw_json(self.training_config),
+            "parameter_group_lr_policy": _thaw_json(self.parameter_group_lr_policy),
+            "parameter_group_lr_policy_id": str(
+                _thaw_json(self.parameter_group_lr_policy)["policy_id"]
+            ),
             "config_sha256": self.config_sha256,
             "substrate": self.substrate,
             "allowed_axis_tags": list(self.allowed_axis_tags),
@@ -523,6 +603,7 @@ def default_optimizer_scheduler_descriptors() -> tuple[OptimizerSchedulerDescrip
                 "polyak_swa_fraction": 0.15,
             },
             training_config={"full_renderer_required": True, "score_aware_loss_required": True},
+            parameter_group_lr_policy=EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY,
             intended_use="representation_training_smoke_recipe",
         ),
         OptimizerSchedulerDescriptor(
@@ -610,11 +691,14 @@ __all__ = [
     "DEFAULT_ALLOWED_TARGET_MODES",
     "DEFAULT_CANONICAL_EQUATION_REFS",
     "DEFAULT_MASTER_GRADIENT_FEATURES",
+    "DEFAULT_PARAMETER_GROUP_LR_POLICY",
     "DEFAULT_PARETO_OBJECTIVES",
     "DEFAULT_SCORE_CLAIM_BLOCKERS",
     "DESCRIPTOR_SCHEMA",
+    "EMBEDDING_THETA1_PARAMETER_GROUP_LR_POLICY",
     "FALSE_AUTHORITY_FIELDS",
     "KNOWN_TARGET_MODES",
+    "PARAMETER_GROUP_LR_POLICY_SCHEMA",
     "REGISTRY_SCHEMA",
     "TELEMETRY_SCHEMA",
     "OptimizerSchedulerDescriptor",
