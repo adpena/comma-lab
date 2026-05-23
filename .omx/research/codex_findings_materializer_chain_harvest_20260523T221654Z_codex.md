@@ -22,7 +22,10 @@ Added `tac.optimizer.materializer_chain_harvest` as a fail-closed adapter for
 - candidate archive path, SHA-256, and byte count against disk;
 - source archive path, SHA-256, and byte count against disk;
 - canonical `serialized_archive_delta_contract.v1` against live archive bytes;
+- serialized source/candidate byte deltas against the live source/candidate
+  archive records;
 - chain artifact records and step artifact records against disk;
+- symlink records fail closed rather than becoming movable custody aliases;
 - chain completion booleans without treating completion as exact readiness;
 - false-authority boundaries, rejecting truthy score/promotion/eval claims.
 
@@ -42,9 +45,13 @@ separate.
 ## Verification
 
 - `.venv/bin/python -m pytest src/tac/tests/test_optimizer_candidate_queue.py -q`
-  - 31 passed
+  - 34 passed
+- `PYTHONPATH=. .venv/bin/pytest src/tac/tests/test_optimizer_candidate_queue.py src/tac/tests/test_experiment_queue.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_optimizer_exact_readiness.py src/tac/tests/test_serialized_archive_economics.py -q`
+  - 164 passed
 - `.venv/bin/python -m ruff check src/tac/optimizer/materializer_chain_harvest.py src/tac/optimizer/candidate_queue.py src/tac/tests/test_optimizer_candidate_queue.py tools/build_optimizer_candidate_queue.py`
   - passed
+- `.venv/bin/python tools/build_optimizer_candidate_queue.py --source experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/inverse_action_functional_autosaturated_queue_20260523T220300Z/chain_output/inverse_scorer_cell_candidate_chain_manifest.json --output /tmp/pact_materializer_chain_live_candidate_queue.json`
+  - harvested 1 planning-only candidate, `dispatch_ready_count=0`
 
 ## Next Gate
 
