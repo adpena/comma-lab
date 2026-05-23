@@ -1,0 +1,16 @@
+{
+  "candidate_id": "pairset_drop_two_r029_020_p0259_0430",
+  "harvest_record_path": ".omx/research/dqs1_local_first_harvest_pairset_drop_two_r029_020_p0259_0430_20260523T102416Z.json",
+  "new_queue_sha256": "830064c7a14dd9d1cd656b262033225569ad64258428493a197ba29b939db668",
+  "previous_queue_sha256": "f857ba304e11ab4f8cfe2927d12db0da92b8128798b44543a2d91e4035eafbb9",
+  "promotion_eligible": false,
+  "queue_path": "configs/experiment_queues/dqs1_pairset_local_first.yaml",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rerouted_queue_experiment_ids": [
+    "pairset_drop_two_r028_020_p0257_0430"
+  ],
+  "schema": "dqs1_local_first_queue_reroute_record.v1",
+  "score_claim": false,
+  "source_eureka_signal_path": "/Users/adpena/Projects/pact/.omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r029_020_p0259_0430_20260523T100328Z.json"
+}

@@ -208,6 +208,7 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
         "materialize",
         "locality_controls",
         "local_cpu_advisory",
+        "plan_raw_artifact_retention",
         "local_cpu_contest_drift_eureka",
     ]
     assert steps_by_id["build_bridge_plan"]["requires"] == []
@@ -230,6 +231,20 @@ def test_dqs1_queue_builder_skips_completed_local_advisory_candidate(tmp_path: P
         condition["type"] == "json_false_authority"
         for step in experiment["steps"]
         for condition in step["postconditions"]
+    )
+    raw_retention = steps_by_id["plan_raw_artifact_retention"]
+    assert raw_retention["requires"] == ["local_cpu_advisory"]
+    assert "tools/compact_experiment_artifacts.py" in raw_retention["command"]
+    assert "results/materialized/drop_rank024_pair0112/raw_artifact_retention_plan.json" in raw_retention["command"]
+    assert "--include-kind" not in raw_retention["command"]
+    assert any(
+        condition == {
+            "type": "json_equals",
+            "path": "results/materialized/drop_rank024_pair0112/raw_artifact_retention_plan.json",
+            "key": "plan.blocked_candidate_count",
+            "equals": 0,
+        }
+        for condition in raw_retention["postconditions"]
     )
 
 
@@ -320,6 +335,7 @@ def test_dqs1_queue_builder_can_emit_local_mlx_advisory_debug_steps(
         "materialize",
         "locality_controls",
         "local_cpu_advisory",
+        "plan_raw_artifact_retention",
         "build_mlx_local_advisory_cache",
         "local_mlx_advisory_response",
         "plan_mlx_delta_cache_retention",
