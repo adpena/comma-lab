@@ -33,6 +33,7 @@ from comma_lab.scheduler.experiment_queue import (  # noqa: E402
     load_queue_definition,
     queue_summary,
     ready_steps,
+    resolve_worker_max_parallel,
     retire_orphaned_steps,
     rewind_step,
     run_queue_worker,
@@ -68,12 +69,32 @@ def _rationale_text(value: str | None, *, label: str) -> str | None:
 
 def cmd_validate(args: argparse.Namespace) -> int:
     queue, _state = _load(args)
+    local_parallel, local_limits = resolve_worker_max_parallel(
+        queue,
+        0,
+        allow_cloud=False,
+    )
+    cloud_parallel, cloud_limits = resolve_worker_max_parallel(
+        queue,
+        0,
+        allow_cloud=True,
+    )
     _json_print(
         {
             "valid": True,
             "queue_id": queue["queue_id"],
             "experiment_count": len(queue["experiments"]),
             "step_count": sum(len(exp["steps"]) for exp in queue["experiments"]),
+            "auto_parallelism": {
+                "local_only": {
+                    "max_parallel": local_parallel,
+                    "resource_limits": local_limits,
+                },
+                "with_cloud": {
+                    "max_parallel": cloud_parallel,
+                    "resource_limits": cloud_limits,
+                },
+            },
         }
     )
     return 0
@@ -330,8 +351,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     sp.add_argument(
         "--max-parallel",
         type=int,
-        default=1,
-        help="maximum subprocesses to keep running concurrently",
+        default=0,
+        help=(
+            "maximum subprocesses to keep running concurrently; 0 auto-sums "
+            "queue controls.max_concurrency for allowed resource kinds"
+        ),
     )
     sp.add_argument(
         "--no-reload-definition",

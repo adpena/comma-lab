@@ -13,7 +13,9 @@ from comma_lab.scheduler.experiment_queue import (
     _condition_passes,
     connect_state_readonly,
     queue_definition_drift,
+    queue_resource_kinds,
     queue_summary,
+    resolve_worker_max_parallel,
 )
 
 OBSERVATION_SCHEMA = "experiment_queue_observation.v1"
@@ -182,6 +184,44 @@ def _expected_artifacts(
     return artifacts
 
 
+def _positive_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _auto_parallelism_observation(queue: Mapping[str, Any]) -> dict[str, Any]:
+    local_parallel, local_limits = resolve_worker_max_parallel(queue, 0, allow_cloud=False)
+    cloud_parallel, cloud_limits = resolve_worker_max_parallel(queue, 0, allow_cloud=True)
+    controls = queue.get("controls")
+    configured = controls.get("max_concurrency") if isinstance(controls, Mapping) else {}
+    configured = configured if isinstance(configured, Mapping) else {}
+    used_kinds = queue_resource_kinds(queue)
+    used = set(used_kinds)
+    idle_declared_resources: dict[str, int] = {}
+    for kind, raw_limit in configured.items():
+        kind_text = str(kind)
+        limit = _positive_int(raw_limit)
+        if limit is not None and kind_text not in used:
+            idle_declared_resources[kind_text] = limit
+    return {
+        "local_only": {
+            "max_parallel": local_parallel,
+            "resource_limits": local_limits,
+        },
+        "with_cloud": {
+            "max_parallel": cloud_parallel,
+            "resource_limits": cloud_limits,
+        },
+        "used_resource_kinds": used_kinds,
+        "idle_declared_resources": idle_declared_resources,
+    }
+
+
 def _step_observation(
     step_state: Mapping[str, Any],
     step_definition: Mapping[str, Any] | None,
@@ -318,6 +358,7 @@ def observe_experiment_queue(
         "status_counts": summary.get("status_counts", {}),
         "observe_read_only": True,
         "definition_drift": definition_drift,
+        "auto_parallelism": _auto_parallelism_observation(queue),
         "step_count": summary.get("step_count"),
         "orphaned_step_count": summary.get("orphaned_step_count"),
         "ready_steps": summary.get("ready_steps", []),
@@ -347,6 +388,7 @@ def render_observation_markdown(observation: Mapping[str, Any]) -> str:
         f"- mode: `{observation.get('mode')}`",
         f"- state: `{observation.get('state')}`",
         f"- status_counts: `{observation.get('status_counts')}`",
+        f"- auto_parallelism: `{observation.get('auto_parallelism')}`",
         f"- orphaned_step_count: `{observation.get('orphaned_step_count')}`",
         "",
         "| status | experiment | step | log | artifacts | processes |",

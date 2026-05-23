@@ -16,13 +16,16 @@ from src.comma_lab.scheduler.experiment_queue import (
     default_state_path,
     initialize_queue_state,
     normalize_queue_definition,
+    queue_resource_kinds,
     queue_summary,
     ready_steps,
+    resolve_worker_max_parallel,
     retire_orphaned_steps,
     rewind_step,
     run_queue_worker,
     run_ready_step,
     set_control_mode,
+    worker_resource_limits,
 )
 
 
@@ -503,6 +506,125 @@ def test_experiment_queue_worker_respects_resource_limits_under_parallelism(
         ]
 
 
+def test_experiment_queue_worker_auto_parallelism_sums_local_resource_limits(
+    tmp_path: Path,
+) -> None:
+    cpu_a = tmp_path / "cpu_a.txt"
+    cpu_b = tmp_path / "cpu_b.txt"
+    mlx = tmp_path / "mlx.txt"
+    cloud = tmp_path / "cloud.txt"
+    queue = normalize_queue_definition(
+        {
+            "schema": "experiment_queue.v1",
+            "queue_id": "auto_parallel_queue",
+            "controls": {
+                "mode": "running",
+                "max_concurrency": {
+                    "local_cpu": 2,
+                    "local_mlx": 1,
+                    "modal_gpu": 4,
+                },
+            },
+            "experiments": [
+                {
+                    "id": "candidate_auto_parallel",
+                    "steps": [
+                        {
+                            "id": "cpu_a",
+                            "resources": {"kind": "local_cpu"},
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib, time; time.sleep(0.2); "
+                                    f"pathlib.Path({str(cpu_a)!r}).write_text('ok')"
+                                ),
+                            ],
+                        },
+                        {
+                            "id": "cpu_b",
+                            "resources": {"kind": "local_cpu"},
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib, time; time.sleep(0.2); "
+                                    f"pathlib.Path({str(cpu_b)!r}).write_text('ok')"
+                                ),
+                            ],
+                        },
+                        {
+                            "id": "mlx",
+                            "resources": {"kind": "local_mlx"},
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                (
+                                    "import pathlib, time; time.sleep(0.2); "
+                                    f"pathlib.Path({str(mlx)!r}).write_text('ok')"
+                                ),
+                            ],
+                        },
+                        {
+                            "id": "cloud",
+                            "resources": {"kind": "modal_gpu"},
+                            "command": [
+                                sys.executable,
+                                "-c",
+                                f"import pathlib; pathlib.Path({str(cloud)!r}).write_text('ok')",
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert worker_resource_limits(queue) == {"local_cpu": 2, "local_mlx": 1}
+    assert queue_resource_kinds(queue) == ["local_cpu", "local_mlx", "modal_gpu"]
+    assert resolve_worker_max_parallel(queue, 0) == (
+        3,
+        {"local_cpu": 2, "local_mlx": 1},
+    )
+    assert resolve_worker_max_parallel(queue, 0, allow_cloud=True) == (
+        7,
+        {"local_cpu": 2, "local_mlx": 1, "modal_gpu": 4},
+    )
+
+    with connect_state(tmp_path / "queue.sqlite") as conn:
+        initialize_queue_state(conn, queue)
+        result = run_queue_worker(
+            conn,
+            queue,
+            repo_root=tmp_path,
+            execute=True,
+            max_steps=3,
+            max_parallel=0,
+            poll_interval_seconds=0.01,
+            idle_sleep_seconds=0,
+            max_idle_cycles=0,
+            log_root=tmp_path / "logs",
+        )
+
+        assert result["requested_max_parallel"] == 0
+        assert result["max_parallel"] == 3
+        assert result["resource_limits"] == {"local_cpu": 2, "local_mlx": 1}
+        assert result["success_count"] == 3
+        assert result["failure_count"] == 0
+        assert cpu_a.read_text() == "ok"
+        assert cpu_b.read_text() == "ok"
+        assert mlx.read_text() == "ok"
+        assert not cloud.exists()
+
+        started = [
+            row["step_id"]
+            for row in conn.execute(
+                "SELECT step_id FROM queue_events WHERE event_type = 'step_process_started'"
+            ).fetchall()
+        ]
+        assert sorted(started) == ["cpu_a", "cpu_b", "mlx"]
+
+
 def test_experiment_queue_parallel_worker_finalizes_timeout_without_blocking_success(
     tmp_path: Path,
 ) -> None:
@@ -836,6 +958,76 @@ def test_experiment_queue_cli_requires_noncanonical_state_rationale(
     )
     assert allowed.returncode == 0, allowed.stderr
     assert "isolated cli unit test state" in allowed.stdout
+
+
+def test_experiment_queue_cli_validate_reports_auto_parallelism(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps(
+            {
+                "schema": "experiment_queue.v1",
+                "queue_id": "cli_auto_parallel",
+                "controls": {
+                    "mode": "running",
+                    "max_concurrency": {
+                        "local_cpu": 2,
+                        "local_mlx": 1,
+                        "modal_gpu": 4,
+                    },
+                },
+                "experiments": [
+                    {
+                        "id": "candidate",
+                        "steps": [
+                            {
+                                "id": "cpu",
+                                "resources": {"kind": "local_cpu"},
+                                "command": [sys.executable, "-c", "print('cpu')"],
+                            },
+                            {
+                                "id": "mlx",
+                                "resources": {"kind": "local_mlx"},
+                                "command": [sys.executable, "-c", "print('mlx')"],
+                            },
+                            {
+                                "id": "gpu",
+                                "resources": {"kind": "modal_gpu"},
+                                "command": [sys.executable, "-c", "print('gpu')"],
+                            },
+                        ],
+                    }
+                ],
+            }
+        )
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "experiment_queue.py"),
+            "--queue",
+            str(queue_path),
+            "validate",
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["auto_parallelism"] == {
+        "local_only": {
+            "max_parallel": 3,
+            "resource_limits": {"local_cpu": 2, "local_mlx": 1},
+        },
+        "with_cloud": {
+            "max_parallel": 7,
+            "resource_limits": {"local_cpu": 2, "local_mlx": 1, "modal_gpu": 4},
+        },
+    }
 
 
 def test_experiment_queue_worker_stops_cleanly_between_steps(tmp_path: Path) -> None:

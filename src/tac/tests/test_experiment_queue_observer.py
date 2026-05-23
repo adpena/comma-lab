@@ -18,7 +18,10 @@ def _queue(artifact_path: Path) -> dict[str, object]:
     return {
         "schema": "experiment_queue.v1",
         "queue_id": "observer_test",
-        "controls": {"mode": "running", "max_concurrency": {"local_cpu": 1}},
+        "controls": {
+            "mode": "running",
+            "max_concurrency": {"local_cpu": 1, "local_mlx": 1},
+        },
         "experiments": [
             {
                 "id": "exp0",
@@ -94,6 +97,11 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     running = observation["running_steps"][0]
 
     assert observation["schema"] == "experiment_queue_observation.v1"
+    assert observation["auto_parallelism"]["local_only"] == {
+        "max_parallel": 1,
+        "resource_limits": {"local_cpu": 1},
+    }
+    assert observation["auto_parallelism"]["idle_declared_resources"] == {"local_mlx": 1}
     assert running["pid"] == 12345
     assert running["worker_run_id"] == "workerabc"
     assert running["timeout_seconds"] == 60
@@ -104,6 +112,7 @@ def test_observer_surfaces_running_step_log_tail_and_artifacts(tmp_path: Path) -
     assert running["expected_artifacts"][0]["postcondition_passed"] is True
     markdown = render_observation_markdown(observation)
     assert "observer_test" in markdown
+    assert "local_mlx" in markdown
     assert "smoke" in markdown
 
 

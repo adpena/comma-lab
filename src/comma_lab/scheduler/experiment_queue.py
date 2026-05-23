@@ -563,6 +563,68 @@ def _is_cloud_resource(kind: str) -> bool:
     return kind in CLOUD_RESOURCE_KINDS or kind.startswith("cloud_")
 
 
+def queue_resource_kinds(queue: Mapping[str, Any]) -> list[str]:
+    """Return resource kinds consumed by steps in a queue definition."""
+
+    return sorted(
+        {
+            _resource_kind(step)
+            for experiment in queue.get("experiments", [])
+            if isinstance(experiment, Mapping)
+            for step in experiment.get("steps", [])
+            if isinstance(step, Mapping)
+        }
+    )
+
+
+def worker_resource_limits(
+    queue: Mapping[str, Any],
+    *,
+    allow_cloud: bool = False,
+) -> dict[str, int]:
+    """Return positive per-resource caps that the worker may use.
+
+    Queue definitions already carry resource-level concurrency in
+    ``controls.max_concurrency``. This helper turns that declaration into the
+    worker's global parallelism budget so local CPU/MLX queues can saturate
+    declared resources without requiring a second hand-tuned ``--max-parallel``
+    value.
+    """
+
+    configured = dict(queue.get("controls", {}).get("max_concurrency") or {})
+    limits: dict[str, int] = {}
+    for kind in queue_resource_kinds(queue):
+        if _is_cloud_resource(kind) and not allow_cloud:
+            continue
+        limit = int(configured.get(kind, 1))
+        if limit > 0:
+            limits[kind] = limit
+    return limits
+
+
+def resolve_worker_max_parallel(
+    queue: Mapping[str, Any],
+    requested_max_parallel: int | None,
+    *,
+    allow_cloud: bool = False,
+) -> tuple[int, dict[str, int]]:
+    """Resolve worker-level process parallelism from queue resource controls.
+
+    ``None`` or ``0`` means "auto": sum the positive resource caps visible to
+    this worker, excluding cloud resources unless ``allow_cloud`` is explicit.
+    A positive requested value remains an operator override.
+    """
+
+    if isinstance(requested_max_parallel, bool):
+        raise ExperimentQueueError("max_parallel must be an integer")
+    resource_limits = worker_resource_limits(queue, allow_cloud=allow_cloud)
+    if requested_max_parallel in (None, 0):
+        return max(1, sum(resource_limits.values())), resource_limits
+    if requested_max_parallel < 0:
+        raise ExperimentQueueError("max_parallel must be non-negative or 0 for auto")
+    return requested_max_parallel, resource_limits
+
+
 def ready_steps(
     conn: sqlite3.Connection,
     queue: Mapping[str, Any],
@@ -1263,7 +1325,7 @@ def run_queue_worker(
     max_steps: int,
     idle_sleep_seconds: float = 5.0,
     max_idle_cycles: int = 1,
-    max_parallel: int = 1,
+    max_parallel: int | None = 0,
     poll_interval_seconds: float = 0.25,
     stop_policy: str = "drain",
     shutdown_grace_seconds: float = 5.0,
@@ -1285,8 +1347,10 @@ def run_queue_worker(
         raise ExperimentQueueError("max_idle_cycles must be a non-negative integer")
     if idle_sleep_seconds < 0:
         raise ExperimentQueueError("idle_sleep_seconds must be non-negative")
-    if isinstance(max_parallel, bool) or not isinstance(max_parallel, int) or max_parallel <= 0:
-        raise ExperimentQueueError("max_parallel must be a positive integer")
+    if max_parallel is not None and (
+        isinstance(max_parallel, bool) or not isinstance(max_parallel, int) or max_parallel < 0
+    ):
+        raise ExperimentQueueError("max_parallel must be a non-negative integer or None for auto")
     if poll_interval_seconds < 0:
         raise ExperimentQueueError("poll_interval_seconds must be non-negative")
     if stop_policy not in {"drain", "terminate"}:
@@ -1296,9 +1360,15 @@ def run_queue_worker(
 
     queue_id = str(queue["queue_id"])
     active_queue: Mapping[str, Any] = queue
+    requested_max_parallel = max_parallel
+    max_parallel, resource_limits = resolve_worker_max_parallel(
+        active_queue,
+        requested_max_parallel,
+        allow_cloud=allow_cloud,
+    )
 
     def _active_queue() -> Mapping[str, Any]:
-        nonlocal active_queue
+        nonlocal active_queue, max_parallel, resource_limits
         if reload_queue is None:
             return active_queue
         refreshed = reload_queue()
@@ -1309,6 +1379,14 @@ def run_queue_worker(
         initialize_queue_state(conn, refreshed)
         assert_no_orphaned_steps_for_execution(conn, refreshed, allow_orphaned_state=allow_orphaned_state)
         active_queue = refreshed
+        if requested_max_parallel in (None, 0):
+            max_parallel, resource_limits = resolve_worker_max_parallel(
+                active_queue,
+                requested_max_parallel,
+                allow_cloud=allow_cloud,
+            )
+        else:
+            resource_limits = worker_resource_limits(active_queue, allow_cloud=allow_cloud)
         return active_queue
 
     assert_no_orphaned_steps_for_execution(conn, active_queue, allow_orphaned_state=allow_orphaned_state)
@@ -1322,7 +1400,9 @@ def run_queue_worker(
         payload={
             "execute": execute,
             "max_steps": max_steps,
+            "requested_max_parallel": requested_max_parallel,
             "max_parallel": max_parallel,
+            "resource_limits": resource_limits,
             "max_idle_cycles": max_idle_cycles,
             "idle_sleep_seconds": idle_sleep_seconds,
             "poll_interval_seconds": poll_interval_seconds,
@@ -1365,6 +1445,8 @@ def run_queue_worker(
             "execute": False,
             "allow_cloud": allow_cloud,
             "max_parallel": max_parallel,
+            "requested_max_parallel": requested_max_parallel,
+            "resource_limits": resource_limits,
             "orphaned_state_rationale": orphaned_state_rationale,
             "noncanonical_state_rationale": noncanonical_state_rationale,
             "started_at_utc": started_at,
@@ -1531,7 +1613,9 @@ def run_queue_worker(
         payload={
             "stop_reason": stop_reason,
             "steps_started": steps_started,
+            "requested_max_parallel": requested_max_parallel,
             "max_parallel": max_parallel,
+            "resource_limits": resource_limits,
             "success_count": success_count,
             "failure_count": failure_count,
             "claim_refused_count": claim_refused_count,
@@ -1545,6 +1629,8 @@ def run_queue_worker(
         "execute": True,
         "allow_cloud": allow_cloud,
         "max_parallel": max_parallel,
+        "requested_max_parallel": requested_max_parallel,
+        "resource_limits": resource_limits,
         "orphaned_state_rationale": orphaned_state_rationale,
         "noncanonical_state_rationale": noncanonical_state_rationale,
         "started_at_utc": started_at,
@@ -1758,11 +1844,14 @@ __all__ = [
     "normalize_queue_definition",
     "orphaned_step_rows",
     "queue_definition_drift",
+    "queue_resource_kinds",
     "queue_summary",
     "ready_steps",
+    "resolve_worker_max_parallel",
     "retire_orphaned_steps",
     "rewind_step",
     "run_queue_worker",
     "run_ready_step",
     "set_control_mode",
+    "worker_resource_limits",
 ]
