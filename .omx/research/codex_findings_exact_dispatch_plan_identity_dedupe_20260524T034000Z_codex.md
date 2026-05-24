@@ -8,8 +8,11 @@ Lane: `codex_exact_dispatch_plan_identity_dedupe_20260524`
 
 The materializer exact-ready consumer and exact-eval dispatch planner were too
 dependent on `candidate_id` and loose exact-ready queue shape. Candidate ids are
-operator-facing labels; the dispatch identity that matters is archive SHA,
-runtime content SHA, runtime tree SHA, and explicit score axis when present.
+operator-facing labels; the dispatch identity that matters for duplicate
+paid-eval suppression is canonical candidate archive SHA, consumed runtime
+content SHA, and score axis. Runtime-tree SHA remains custody metadata and an
+exact-readiness requirement, but wrapper-tree churn alone must not create a
+second dispatch identity when consumed runtime content is identical.
 
 ## Landing
 
@@ -17,8 +20,10 @@ runtime content SHA, runtime tree SHA, and explicit score axis when present.
 `build_materializer_exact_eval_consumer_queue` now compute stable handoff
 identity for every exact-ready row, block missing or inconsistent identity
 metadata before authority checks, validate dispatch-ready/top-k queue shape, and
-reject duplicate stable identities when candidate ids differ. Runtime-tree
-differences remain distinct custody packets rather than inferred equivalents.
+reject duplicate stable identities when candidate ids differ. SHA alias fields
+now fail closed when `candidate_archive_sha256`, `archive_sha256`, and
+`expected_archive_sha256` disagree, with canonical precedence matching the
+exact-readiness/audit path.
 
 Plan rows, consumer rows, and queue metadata carry explicit false-authority
 fields so dry-run and execute-plan artifacts cannot be mistaken for score or
