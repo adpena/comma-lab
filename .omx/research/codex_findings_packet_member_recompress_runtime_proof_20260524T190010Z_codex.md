@@ -43,7 +43,7 @@ paid-dispatch authority.
 ## Verification
 
 - `.venv/bin/python -m pytest src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_materializer_chain_harvest_scheduler.py::test_harvest_family_agnostic_packet_recompress_payload_identity_proof src/tac/tests/test_materializer_chain_harvest_scheduler.py::test_harvest_work_queue_family_agnostic_candidate_manifest src/tac/tests/test_optimizer_exact_readiness.py::test_promotes_family_agnostic_packet_member_proof_with_member_binding src/tac/tests/test_optimizer_exact_readiness.py::test_family_agnostic_packet_member_proof_rejects_member_sha_mismatch src/tac/tests/test_optimizer_exact_readiness.py::test_promotes_family_agnostic_candidate_with_receiver_proof src/tac/tests/test_optimizer_exact_readiness.py::test_family_agnostic_runtime_proof_fails_closed_on_invalid_evidence -q`
-  - `23 passed`
+  - `22 passed`
 - `.venv/bin/python -m pytest src/tac/tests/test_staircase_dag.py src/tac/tests/test_byte_shaving_campaign_queue.py src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_materializer_chain_harvest_scheduler.py src/tac/tests/test_byte_shaving_materializer_campaign_runner.py src/tac/tests/test_optimizer_exact_readiness.py -q`
   - `217 passed`
 - `.venv/bin/python -m ruff check src/tac/optimization/family_agnostic_materializers.py src/tac/optimizer/materializer_chain_harvest.py src/tac/optimizer/exact_readiness.py tools/run_family_agnostic_materializer.py src/comma_lab/scheduler/byte_shaving_campaign_queue.py src/tac/tests/test_family_agnostic_materializers.py src/tac/tests/test_materializer_chain_harvest_scheduler.py src/tac/tests/test_optimizer_exact_readiness.py src/tac/tests/test_byte_shaving_campaign_queue.py`
