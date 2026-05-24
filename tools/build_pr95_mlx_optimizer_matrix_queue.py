@@ -30,6 +30,8 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     FALSE_AUTHORITY,
     LANE_ID,
     PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY,
+    PR95_MLX_LOSS_SURFACE_RGB_MSE,
+    PR95_MLX_LOSS_SURFACES,
     PR95_STAGE_MODULES,
     Pr95HNeRVMlxError,
     pr95_mlx_optimizer_config_from_descriptor,
@@ -132,6 +134,7 @@ def _matrix_cell_id(
     latent_dim: int,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
+    source_video_loss_surface: str,
     source_video_path: Path,
     source_video_upstream_dir: Path,
     source_video_pair_indices: list[int],
@@ -153,6 +156,7 @@ def _matrix_cell_id(
             {
                 "write_source_video_preprocess_smoke": write_source_video_preprocess_smoke,
                 "train_on_source_video_pairs": train_on_source_video_pairs,
+                "source_video_loss_surface": source_video_loss_surface,
                 "source_video_path": str(source_video_path),
                 "source_video_upstream_dir": str(source_video_upstream_dir),
                 "source_video_pair_indices": source_video_pair_indices,
@@ -194,6 +198,7 @@ def _emit_plan(
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
+    source_video_loss_surface: str,
     source_preprocess_shape: str,
     source_preprocess_camera_hw: str,
     source_preprocess_gradient_shape: str,
@@ -262,6 +267,7 @@ def _emit_plan(
             command.extend(["--source-video-pair-index", str(pair_index)])
     if train_on_source_video_pairs:
         command.append("--train-on-source-video-pairs")
+        command.extend(["--source-video-loss-surface", source_video_loss_surface])
     if write_pr95_public_archive_export or prove_pr95_runtime_consumption:
         command.append("--write-pr95-public-archive-export")
     if prove_pr95_runtime_consumption:
@@ -315,6 +321,7 @@ def build_pr95_mlx_optimizer_matrix_queue(
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
+    source_video_loss_surface: str,
     source_preprocess_shape: str,
     source_preprocess_camera_hw: str,
     source_preprocess_gradient_shape: str,
@@ -346,6 +353,14 @@ def build_pr95_mlx_optimizer_matrix_queue(
     )
     if source_video_config_requested and not selected_source_video_pair_indices:
         selected_source_video_pair_indices = [0]
+    if (
+        not train_on_source_video_pairs
+        and source_video_loss_surface != PR95_MLX_LOSS_SURFACE_RGB_MSE
+    ):
+        raise ExperimentQueueError(
+            "--source-video-loss-surface other than rgb_mse requires "
+            "--train-on-source-video-pairs"
+        )
     if not selected_seeds:
         raise ExperimentQueueError("at least one seed is required")
     output_root.mkdir(parents=True, exist_ok=True)
@@ -387,6 +402,7 @@ def build_pr95_mlx_optimizer_matrix_queue(
                         write_source_video_preprocess_smoke
                     ),
                     train_on_source_video_pairs=train_on_source_video_pairs,
+                    source_video_loss_surface=source_video_loss_surface,
                     source_video_path=source_video_path,
                     source_video_upstream_dir=source_video_upstream_dir,
                     source_video_pair_indices=selected_source_video_pair_indices,
@@ -427,6 +443,7 @@ def build_pr95_mlx_optimizer_matrix_queue(
                         write_source_video_preprocess_smoke
                     ),
                     train_on_source_video_pairs=train_on_source_video_pairs,
+                    source_video_loss_surface=source_video_loss_surface,
                     source_preprocess_shape=source_preprocess_shape,
                     source_preprocess_camera_hw=source_preprocess_camera_hw,
                     source_preprocess_gradient_shape=source_preprocess_gradient_shape,
@@ -510,6 +527,7 @@ def build_pr95_mlx_optimizer_matrix_queue(
             write_source_video_preprocess_smoke
         ),
         "train_on_source_video_pairs": train_on_source_video_pairs,
+        "source_video_loss_surface": source_video_loss_surface,
         "source_video_path": _rel(source_video_path, repo_root),
         "source_video_upstream_dir": _rel(source_video_upstream_dir, repo_root),
         "source_video_pair_indices": selected_source_video_pair_indices,
@@ -644,6 +662,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "source-video RGB pairs. Local MLX research signal only."
         ),
     )
+    parser.add_argument(
+        "--source-video-loss-surface",
+        choices=PR95_MLX_LOSS_SURFACES,
+        default=PR95_MLX_LOSS_SURFACE_RGB_MSE,
+        help=(
+            "Loss surface for generated --train-on-source-video-pairs plans. "
+            "rgb_yuv6_mse adds scorer-preprocess YUV6 MSE to RGB MSE."
+        ),
+    )
     parser.add_argument("--write-pr95-public-archive-export", action="store_true")
     parser.add_argument("--prove-pr95-runtime-consumption", action="store_true")
     parser.add_argument("--runtime-proof-timeout-seconds", type=float, default=900.0)
@@ -694,6 +721,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.write_source_video_preprocess_smoke
             ),
             train_on_source_video_pairs=args.train_on_source_video_pairs,
+            source_video_loss_surface=args.source_video_loss_surface,
             source_preprocess_shape=args.source_preprocess_shape,
             source_preprocess_camera_hw=args.source_preprocess_camera_hw,
             source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,

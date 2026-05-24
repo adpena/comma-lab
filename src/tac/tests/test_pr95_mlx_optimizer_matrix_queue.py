@@ -319,6 +319,8 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
             "0",
             "--source-video-output-hw",
             "384,512",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -408,13 +410,17 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
     assert candidate_queue["rank_or_kill_eligible"] is False
     assert candidate_queue["ready_for_exact_eval_dispatch"] is False
     candidate = candidate_queue["top_k"][0]
-    assert candidate["candidate_id"].endswith("_seed29_steps1_c36_source_video_rgb")
+    assert candidate["candidate_id"].endswith(
+        "_seed29_steps1_c36_source_video_rgb_yuv6"
+    )
     assert candidate["candidate_params"]["optimizer_descriptor_id"] == (
         "pr95_stage1_adamw_baseline_mlx"
     )
     assert candidate["candidate_params"]["stage_index"] == 1
     assert candidate["candidate_params"]["seed"] == 29
     assert candidate["candidate_params"]["source_video_training"] is True
+    assert candidate["candidate_params"]["training_loss_surface"] == "rgb_yuv6_mse"
+    assert candidate["candidate_params"]["target_yuv6_shape"] == [1, 2, 192, 256, 6]
     assert candidate["candidate_params"]["target_source_kind"] == (
         "pr95_source_video_rgb_pairs"
     )
@@ -428,7 +434,10 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
     assert "pr95_training_loop_not_yet_source_faithful" in (
         preprocess_signal["exact_readiness_blockers"]
     )
-    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" in (
+    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" not in (
+        candidate["dispatch_blockers"]
+    )
+    assert "pr95_segnet_posenet_network_loss_not_wired_to_mlx" in (
         candidate["dispatch_blockers"]
     )
     assert candidate["ready_for_exact_eval_dispatch"] is False

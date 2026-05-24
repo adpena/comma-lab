@@ -53024,6 +53024,47 @@
         }
       },
       "notes": "Wire optional RGB+YUV6 scorer-preprocess-coupled MLX loss for source-video timing smokes; local MLX research-signal only."
+    },
+    {
+      "id": "codex_pr95_mlx_rgb_yuv6_loss_surface_20260524",
+      "name": "PR95 MLX RGB+YUV6 source-video loss surface",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/local_acceleration/pr95_hnerv_mlx.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_pr95_mlx_rgb_yuv6_loss_surface_20260524T204816Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -53033,5 +53074,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T20:40:18Z"
+  "updated_at": "2026-05-24T20:48:40Z"
 }

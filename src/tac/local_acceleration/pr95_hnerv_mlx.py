@@ -73,6 +73,15 @@ PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY = "synthetic_timing_only"
 PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY = (
     "source_video_rgb_timing_only"
 )
+PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY = (
+    "source_video_rgb_yuv6_preprocess_coupled_timing_only"
+)
+PR95_MLX_LOSS_SURFACE_RGB_MSE = "rgb_mse"
+PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE = "rgb_yuv6_mse"
+PR95_MLX_LOSS_SURFACES = (
+    PR95_MLX_LOSS_SURFACE_RGB_MSE,
+    PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
+)
 PR95_MLX_SOURCE_FAITHFUL_BLOCKERS: tuple[str, ...] = (
     "pr95_source_video_loader_not_ported_to_mlx",
     "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
@@ -83,6 +92,13 @@ PR95_MLX_SOURCE_FAITHFUL_BLOCKERS: tuple[str, ...] = (
 PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS: tuple[str, ...] = (
     "pr95_source_video_rgb_targets_are_not_full_scorer_loss",
     "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
+    "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
+    "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
+    "pr95_export_forward_parity_not_established",
+)
+PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS: tuple[str, ...] = (
+    "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
+    "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
     "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
     "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
     "pr95_export_forward_parity_not_established",
@@ -1336,6 +1352,7 @@ def _exact_readiness_blockers_for_timing_smoke(
     *,
     source_video_training: bool,
     source_faithfulness_blockers: Sequence[str],
+    training_loss_surface: str,
 ) -> list[str]:
     blockers = [
         blocker
@@ -1351,10 +1368,21 @@ def _exact_readiness_blockers_for_timing_smoke(
         blockers = [
             blocker
             for blocker in blockers
-            if blocker != "synthetic_targets_do_not_establish_contest_quality"
+            if blocker
+            not in {
+                "synthetic_targets_do_not_establish_contest_quality",
+                "pr95_hnerv_mlx_training_is_synthetic_timing_only_not_source_faithful",
+            }
         ]
-        blockers.append("source_video_rgb_targets_do_not_establish_full_scorer_quality")
-        blockers.append("source_video_rgb_timing_smoke_is_not_score_authority")
+        if training_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE:
+            blockers.append(
+                "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority"
+            )
+        else:
+            blockers.append(
+                "source_video_rgb_targets_do_not_establish_full_scorer_quality"
+            )
+            blockers.append("source_video_rgb_timing_smoke_is_not_score_authority")
     return list(dict.fromkeys(blockers))
 
 
@@ -1511,6 +1539,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
     pr95_public_archive_export_path: Path | None = None,
     target_pairs_n2chw: Any | None = None,
     target_source: Mapping[str, Any] | None = None,
+    training_loss_surface: str = PR95_MLX_LOSS_SURFACE_RGB_MSE,
 ) -> dict[str, Any]:
     """Run a local MLX timing smoke against synthetic or supplied RGB targets."""
 
@@ -1520,8 +1549,20 @@ def run_pr95_mlx_synthetic_timing_smoke(
     if batch_size < 1:
         raise ValueError("batch_size must be positive")
 
+    loss_surface = str(training_loss_surface).strip()
+    if loss_surface not in PR95_MLX_LOSS_SURFACES:
+        raise ValueError(
+            "training_loss_surface must be one of "
+            f"{', '.join(PR95_MLX_LOSS_SURFACES)}; got {training_loss_surface!r}"
+        )
+
     source_video_training = target_pairs_n2chw is not None
     target_source_payload = dict(target_source or {})
+    target_yuv6 = None
+    target_yuv6_shape: list[int] | None = None
+    yuv6_preprocess_kind: str | None = None
+    rgb_to_yuv6_loss_fn = None
+    loss_surface_weights: dict[str, float] = {"rgb_mse": 1.0}
     if source_video_training:
         target_np = np.asarray(target_pairs_n2chw, dtype=np.float32)
         if target_np.ndim != 5 or target_np.shape[1:] != (2, 3, 384, 512):
@@ -1535,10 +1576,31 @@ def run_pr95_mlx_synthetic_timing_smoke(
         target_kind = str(
             target_source_payload.get("kind") or "pr95_source_video_rgb_pairs"
         )
-        training_fidelity = PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY
-        source_faithfulness_blockers = list(PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS)
         target = mx.array(target_np)  # type: ignore[union-attr]
+        if loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE:
+            from tac.local_acceleration.pr95_hnerv_mlx_training import (
+                rgb_to_yuv6_mlx as rgb_to_yuv6_loss_fn,
+            )
+
+            training_fidelity = (
+                PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY
+            )
+            source_faithfulness_blockers = list(
+                PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS
+            )
+            target_nhwc = mx.transpose(target, (0, 1, 3, 4, 2))  # type: ignore[union-attr]
+            target_yuv6 = rgb_to_yuv6_loss_fn(target_nhwc)
+            target_yuv6_shape = [int(dim) for dim in target_yuv6.shape]
+            yuv6_preprocess_kind = "pr95_mlx_rgb_to_yuv6_scorer_preprocess"
+            loss_surface_weights = {"rgb_mse": 0.5, "yuv6_mse": 0.5}
+        else:
+            training_fidelity = PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY
+            source_faithfulness_blockers = list(PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS)
     else:
+        if loss_surface != PR95_MLX_LOSS_SURFACE_RGB_MSE:
+            raise ValueError(
+                "non-source-video timing smokes only support rgb_mse loss surface"
+            )
         if synthetic_pairs < batch_size:
             raise ValueError("synthetic_pairs must be >= batch_size")
         training_pair_count = synthetic_pairs
@@ -1575,7 +1637,15 @@ def run_pr95_mlx_synthetic_timing_smoke(
         pred = model(indices)
         selected = mx.take(target, indices, axis=0)  # type: ignore[union-attr]
         residual = (pred - selected) / 255.0
-        return mx.mean(residual * residual)  # type: ignore[union-attr]
+        rgb_loss = mx.mean(residual * residual)  # type: ignore[union-attr]
+        if target_yuv6 is None:
+            return rgb_loss
+        pred_nhwc = mx.transpose(pred, (0, 1, 3, 4, 2))  # type: ignore[union-attr]
+        pred_yuv6 = rgb_to_yuv6_loss_fn(pred_nhwc)
+        selected_yuv6 = mx.take(target_yuv6, indices, axis=0)  # type: ignore[union-attr]
+        yuv6_residual = (pred_yuv6 - selected_yuv6) / 255.0
+        yuv6_loss = mx.mean(yuv6_residual * yuv6_residual)  # type: ignore[union-attr]
+        return 0.5 * rgb_loss + 0.5 * yuv6_loss
 
     loss_and_grad = nn.value_and_grad(bundle, loss_fn)  # type: ignore[union-attr]
     last_loss = None
@@ -1607,7 +1677,9 @@ def run_pr95_mlx_synthetic_timing_smoke(
         f"pr95_hnerv_mlx_stage{stage_index}_{descriptor_fragment}"
         f"_seed{seed}_steps{steps}_c{base_channels}"
     )
-    if source_video_training:
+    if source_video_training and loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE:
+        profile_id += "_source_video_rgb_yuv6"
+    elif source_video_training:
         profile_id += "_source_video_rgb"
     runtime_profile = {
         "schema": "trainer_runtime_profile_observation.v1",
@@ -1621,6 +1693,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "source_faithful_training": False,
         "source_video_training": source_video_training,
         "source_faithfulness_blockers": source_faithfulness_blockers,
+        "training_loss_surface": loss_surface,
+        "loss_surface_weights": loss_surface_weights,
+        "target_yuv6_shape": target_yuv6_shape,
+        "yuv6_preprocess_kind": yuv6_preprocess_kind,
         "target_source_kind": target_kind,
         "target_source": target_source_payload,
         "device": "mlx",
@@ -1682,6 +1758,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "source_faithful_training": False,
         "source_video_training": source_video_training,
         "source_faithfulness_blockers": source_faithfulness_blockers,
+        "training_loss_surface": loss_surface,
+        "loss_surface_weights": loss_surface_weights,
+        "target_yuv6_shape": target_yuv6_shape,
+        "yuv6_preprocess_kind": yuv6_preprocess_kind,
         "target_source_kind": target_kind,
         "target_source": target_source_payload,
         "evidence_grade": "[macOS-MLX research-signal]",
@@ -1702,6 +1782,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
             "source_faithful_training": False,
             "source_video_training": source_video_training,
             "source_faithfulness_blockers": source_faithfulness_blockers,
+            "training_loss_surface": loss_surface,
+            "loss_surface_weights": loss_surface_weights,
+            "target_yuv6_shape": target_yuv6_shape,
+            "yuv6_preprocess_kind": yuv6_preprocess_kind,
             "parameter_group_lr_policy_id": stage.parameter_group_lr_policy_id,
             "parameter_group_lr_policy_sha256": stage.parameter_group_lr_policy_sha256,
             "parameter_group_fingerprint_sha256": parameter_group_fingerprint[
@@ -1730,6 +1814,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
             "blockers": _exact_readiness_blockers_for_timing_smoke(
                 source_video_training=source_video_training,
                 source_faithfulness_blockers=source_faithfulness_blockers,
+                training_loss_surface=loss_surface,
             ),
         },
         "pytorch_export_parity": {
@@ -1751,6 +1836,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
                 "base_channels": base_channels,
                 "eval_size": [384, 512],
                 "training_fidelity": training_fidelity,
+                "training_loss_surface": loss_surface,
                 "target_source_kind": target_kind,
             },
             output_zip_path=Path(pr95_public_archive_export_path),
@@ -1831,9 +1917,14 @@ __all__ = [
     "PR95_ARCHIVE_EXPORT_SCHEMA",
     "PR95_ARCHIVE_N_QUANT",
     "PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY",
+    "PR95_MLX_LOSS_SURFACES",
+    "PR95_MLX_LOSS_SURFACE_RGB_MSE",
+    "PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE",
     "PR95_MLX_SOURCE_FAITHFUL_BLOCKERS",
     "PR95_MLX_SOURCE_VIDEO_RGB_BLOCKERS",
+    "PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS",
     "PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY",
+    "PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY",
     "PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY",
     "PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS",
     "PR95_STAGE_MODULES",

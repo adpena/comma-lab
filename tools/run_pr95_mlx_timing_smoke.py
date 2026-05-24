@@ -23,7 +23,11 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     EXACT_READINESS_REFUSAL_BLOCKERS,
     FALSE_AUTHORITY,
     LANE_ID,
+    PR95_MLX_LOSS_SURFACE_RGB_MSE,
+    PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
+    PR95_MLX_LOSS_SURFACES,
     PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY,
+    PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY,
     PR95_STAGE_MODULES,
     SMOKE_MANIFEST_SCHEMA,
     pr95_default_optimizer_descriptor_id,
@@ -136,6 +140,7 @@ def _load_source_video_training_targets_n2chw(
         "source_frame_pair_shape": [int(dim) for dim in source_pairs.shape],
         "target_shape_n2chw": [int(dim) for dim in target_n2chw.shape],
         "output_hw": list(output_hw),
+        "training_loss_surface": args.source_video_loss_surface,
     }
 
 
@@ -173,6 +178,7 @@ def _exact_readiness_blockers(
     source_faithful_preprocess_smoke: dict[str, Any] | None = None,
     source_video_preprocess_smoke: dict[str, Any] | None = None,
     source_video_training: bool = False,
+    training_loss_surface: str = PR95_MLX_LOSS_SURFACE_RGB_MSE,
 ) -> list[str]:
     blockers = [
         blocker
@@ -216,14 +222,29 @@ def _exact_readiness_blockers(
             not in {
                 "pr95_source_video_loader_not_ported_to_mlx",
                 "synthetic_targets_do_not_establish_contest_quality",
+                "pr95_hnerv_mlx_training_is_synthetic_timing_only_not_source_faithful",
             }
         ]
-        blockers.extend(
-            [
-                "source_video_rgb_targets_do_not_establish_full_scorer_quality",
-                "source_video_rgb_timing_smoke_is_not_score_authority",
+        if training_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE:
+            blockers = [
+                blocker
+                for blocker in blockers
+                if blocker != SOURCE_PREPROCESS_PORTED_LOSS_UNWIRED_BLOCKER
             ]
-        )
+            blockers.extend(
+                [
+                    "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
+                    "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
+                    "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority",
+                ]
+            )
+        else:
+            blockers.extend(
+                [
+                    "source_video_rgb_targets_do_not_establish_full_scorer_quality",
+                    "source_video_rgb_timing_smoke_is_not_score_authority",
+                ]
+            )
     if runtime_consumption_proven:
         blockers.extend(
             [
@@ -242,13 +263,21 @@ def _candidate_id(
     base_channels: int,
     optimizer_descriptor_id: str,
     train_on_source_video_pairs: bool = False,
+    source_video_loss_surface: str = PR95_MLX_LOSS_SURFACE_RGB_MSE,
 ) -> str:
     descriptor = _slug(optimizer_descriptor_id)
     candidate = (
         f"pr95_hnerv_mlx_stage{stage}_{descriptor}"
         f"_seed{seed}_steps{steps}_c{base_channels}"
     )
-    return candidate + ("_source_video_rgb" if train_on_source_video_pairs else "")
+    if not train_on_source_video_pairs:
+        return candidate
+    suffix = (
+        "_source_video_rgb_yuv6"
+        if source_video_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+        else "_source_video_rgb"
+    )
+    return candidate + suffix
 
 
 def _stage_module(stage: int) -> str:
@@ -274,6 +303,7 @@ def _recommended_execution_command(
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
+    source_video_loss_surface: str,
     source_preprocess_shape: str,
     source_preprocess_camera_hw: str,
     source_preprocess_gradient_shape: str,
@@ -354,6 +384,7 @@ def _recommended_execution_command(
             command.extend(["--source-video-pair-index", str(pair_index)])
     if train_on_source_video_pairs:
         command.append("--train-on-source-video-pairs")
+        command.extend(["--source-video-loss-surface", source_video_loss_surface])
     return command
 
 
@@ -377,6 +408,7 @@ def _extra_artifact_postconditions(
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
+    source_video_loss_surface: str,
 ) -> list[dict[str, Any]]:
     postconditions: list[dict[str, Any]] = []
     if train_on_source_video_pairs:
@@ -398,6 +430,11 @@ def _extra_artifact_postconditions(
                     target_path,
                     "target_source.kind",
                     "pr95_source_video_rgb_pairs",
+                ),
+                _json_equals_postcondition(
+                    target_path,
+                    "training_loss_surface",
+                    source_video_loss_surface,
                 ),
                 _json_false_authority_postcondition(target_path),
             ]
@@ -530,6 +567,7 @@ def _build_representation_training_plan(
     write_source_faithful_preprocess_smoke: bool,
     write_source_video_preprocess_smoke: bool,
     train_on_source_video_pairs: bool,
+    source_video_loss_surface: str,
     source_preprocess_shape: str,
     source_preprocess_camera_hw: str,
     source_preprocess_gradient_shape: str,
@@ -564,6 +602,7 @@ def _build_representation_training_plan(
             base_channels=base_channels,
             optimizer_descriptor_id=optimizer_descriptor_id,
             train_on_source_video_pairs=train_on_source_video_pairs,
+            source_video_loss_surface=source_video_loss_surface,
         ),
         lane_id=LANE_ID,
         lane_class="pr95_hnerv_mlx_reproduction_local_training_proxy",
@@ -581,9 +620,14 @@ def _build_representation_training_plan(
         stages=[{"index": stage, "module": stage_module}],
         training_recipe={
             "id": (
-                "pr95_hnerv_mlx_source_video_rgb_timing_smoke"
+                "pr95_hnerv_mlx_source_video_rgb_yuv6_timing_smoke"
                 if train_on_source_video_pairs
-                else "pr95_hnerv_mlx_synthetic_stage_timing_smoke"
+                and source_video_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+                else (
+                    "pr95_hnerv_mlx_source_video_rgb_timing_smoke"
+                    if train_on_source_video_pairs
+                    else "pr95_hnerv_mlx_synthetic_stage_timing_smoke"
+                )
             ),
             "source_pr": 95,
             "stage_module": stage_module,
@@ -591,6 +635,7 @@ def _build_representation_training_plan(
             "batch_size": batch_size,
             "synthetic_pairs": synthetic_pairs,
             "source_video_training_requested": train_on_source_video_pairs,
+            "training_loss_surface": source_video_loss_surface,
             "target_source_kind": (
                 "pr95_source_video_rgb_pairs"
                 if train_on_source_video_pairs
@@ -657,6 +702,7 @@ def _build_representation_training_plan(
             "source_video_output_hw": source_video_output_hw,
             "source_video_gradient_shape": source_video_gradient_shape,
             "train_on_source_video_pairs": train_on_source_video_pairs,
+            "training_loss_surface": source_video_loss_surface,
             "target_source_kind": (
                 "pr95_source_video_rgb_pairs"
                 if train_on_source_video_pairs
@@ -718,6 +764,14 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
     if args.train_on_source_video_pairs and _source_video_output_hw(args) != (384, 512):
         raise ValueError(
             "--train-on-source-video-pairs requires --source-video-output-hw 384,512"
+        )
+    if (
+        not args.train_on_source_video_pairs
+        and args.source_video_loss_surface != PR95_MLX_LOSS_SURFACE_RGB_MSE
+    ):
+        raise ValueError(
+            "--source-video-loss-surface other than rgb_mse requires "
+            "--train-on-source-video-pairs"
         )
     optimizer_descriptor_id = (
         args.optimizer_descriptor_id or pr95_default_optimizer_descriptor_id(stage)
@@ -796,6 +850,9 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "train_on_source_video_pairs": args.train_on_source_video_pairs
         if args.train_on_source_video_pairs
         else None,
+        "source_video_loss_surface": args.source_video_loss_surface
+        if args.train_on_source_video_pairs
+        else None,
         "extra_artifact_postconditions": _extra_artifact_postconditions(
             output_dir=output_dir,
             write_pr95_public_archive_export=(
@@ -810,6 +867,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
                 args.write_source_video_preprocess_smoke
             ),
             train_on_source_video_pairs=args.train_on_source_video_pairs,
+            source_video_loss_surface=args.source_video_loss_surface,
         ),
         "optimizer_descriptor_id": optimizer_descriptor_id,
         "optimizer_config_sha256": optimizer_descriptor["config_sha256"],
@@ -842,6 +900,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
                 args.write_source_video_preprocess_smoke
             ),
             train_on_source_video_pairs=args.train_on_source_video_pairs,
+            source_video_loss_surface=args.source_video_loss_surface,
             source_preprocess_shape=args.source_preprocess_shape,
             source_preprocess_camera_hw=args.source_preprocess_camera_hw,
             source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
@@ -880,6 +939,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         ),
         write_source_video_preprocess_smoke=args.write_source_video_preprocess_smoke,
         train_on_source_video_pairs=args.train_on_source_video_pairs,
+        source_video_loss_surface=args.source_video_loss_surface,
         source_preprocess_shape=args.source_preprocess_shape,
         source_preprocess_camera_hw=args.source_preprocess_camera_hw,
         source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
@@ -901,6 +961,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             base_channels=args.base_channels,
             optimizer_descriptor_id=optimizer_descriptor_id,
             train_on_source_video_pairs=args.train_on_source_video_pairs,
+            source_video_loss_surface=args.source_video_loss_surface,
         ),
         "candidate_family": "pr95_hnerv_mlx_reproduction_timing_smoke",
         "representation_family": "hnerv",
@@ -940,6 +1001,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             args.write_source_video_preprocess_smoke
         ),
         "train_on_source_video_pairs": bool(args.train_on_source_video_pairs),
+        "source_video_loss_surface": args.source_video_loss_surface,
         "source_video_path": _rel(args.source_video_path),
         "source_video_upstream_dir": _rel(args.source_video_upstream_dir),
         "source_video_pair_indices": source_video_pair_indices,
@@ -989,16 +1051,25 @@ def _representation_manifest(
         and runtime_consumption_proof.get("runtime_consumption_proven") is True
     )
     source_video_training = manifest.get("source_video_training") is True
+    training_loss_surface = str(
+        manifest.get("training_loss_surface") or PR95_MLX_LOSS_SURFACE_RGB_MSE
+    )
     training_recipe_id = (
-        "pr95_hnerv_mlx_source_video_rgb_timing_smoke"
+        "pr95_hnerv_mlx_source_video_rgb_yuv6_timing_smoke"
         if source_video_training
-        else "pr95_hnerv_mlx_synthetic_stage_timing_smoke"
+        and training_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+        else (
+            "pr95_hnerv_mlx_source_video_rgb_timing_smoke"
+            if source_video_training
+            else "pr95_hnerv_mlx_synthetic_stage_timing_smoke"
+        )
     )
     exact_blockers = _exact_readiness_blockers(
         runtime_consumption_proven=runtime_consumption_proven,
         source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
         source_video_preprocess_smoke=source_video_preprocess_smoke,
         source_video_training=source_video_training,
+        training_loss_surface=training_loss_surface,
     )
     return write_representation_training_probe_manifest(
         sidecar_path,
@@ -1038,6 +1109,10 @@ def _representation_manifest(
             "synthetic_pairs": manifest.get("synthetic_pairs"),
             "training_pair_count": manifest.get("training_pair_count"),
             "source_video_training": source_video_training,
+            "training_loss_surface": training_loss_surface,
+            "loss_surface_weights": manifest.get("loss_surface_weights"),
+            "target_yuv6_shape": manifest.get("target_yuv6_shape"),
+            "yuv6_preprocess_kind": manifest.get("yuv6_preprocess_kind"),
             "target_source_kind": manifest.get("target_source_kind"),
             "quality_comparable": False,
             "full_scorer_gradient_path": False,
@@ -1076,6 +1151,10 @@ def _representation_manifest(
             "pr95_public_archive_export_emitted": public_archive_export is not None,
             "pr95_runtime_consumption_proof_present": runtime_consumption_proven,
             "source_video_training": source_video_training,
+            "training_loss_surface": training_loss_surface,
+            "loss_surface_weights": manifest.get("loss_surface_weights"),
+            "target_yuv6_shape": manifest.get("target_yuv6_shape"),
+            "yuv6_preprocess_kind": manifest.get("yuv6_preprocess_kind"),
             "target_source_kind": manifest.get("target_source_kind"),
             "target_source": manifest.get("target_source"),
             "source_faithful_preprocess_smoke_present": (
@@ -1276,6 +1355,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--source-video-loss-surface",
+        choices=PR95_MLX_LOSS_SURFACES,
+        default=PR95_MLX_LOSS_SURFACE_RGB_MSE,
+        help=(
+            "Loss surface for --train-on-source-video-pairs. rgb_yuv6_mse "
+            "adds native MLX scorer-preprocess YUV6 MSE to RGB MSE but is "
+            "still not full scorer-loss authority."
+        ),
+    )
+    parser.add_argument(
         "--allow-existing-output-dir",
         action="store_true",
         help="Allow writing into an existing output directory.",
@@ -1334,16 +1423,31 @@ def main(argv: list[str] | None = None) -> int:
             "schema": "pr95_hnerv_mlx_source_video_training_target.v1",
             "lane_id": LANE_ID,
             "source_video_training_ready": True,
-            "training_fidelity": PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY,
+            "training_fidelity": (
+                PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY
+                if args.source_video_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+                else PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY
+            ),
+            "training_loss_surface": args.source_video_loss_surface,
             "target_source": target_source,
             "target_shape_n2chw": [int(dim) for dim in target_pairs_n2chw.shape],
             "exact_readiness_refusal": {
                 "ready": False,
-                "blockers": [
-                    "source_video_rgb_targets_do_not_establish_full_scorer_quality",
-                    "source_video_rgb_timing_smoke_is_not_score_authority",
-                    "requires_exact_cpu_cuda_auth_eval_before_score_claim",
-                ],
+                "blockers": (
+                    [
+                        "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss",
+                        "pr95_segnet_posenet_network_loss_not_wired_to_mlx",
+                        "source_video_rgb_yuv6_preprocess_loss_is_not_score_authority",
+                        "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+                    ]
+                    if args.source_video_loss_surface
+                    == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+                    else [
+                        "source_video_rgb_targets_do_not_establish_full_scorer_quality",
+                        "source_video_rgb_timing_smoke_is_not_score_authority",
+                        "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+                    ]
+                ),
             },
             **FALSE_AUTHORITY,
         }
@@ -1369,6 +1473,7 @@ def main(argv: list[str] | None = None) -> int:
         ),
         target_pairs_n2chw=target_pairs_n2chw,
         target_source=target_source,
+        training_loss_surface=args.source_video_loss_surface,
     )
     validate_runtime_profile_observation(manifest["runtime_profile"])
     archive_summary = (
@@ -1513,6 +1618,9 @@ def main(argv: list[str] | None = None) -> int:
         source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
         source_video_preprocess_smoke=source_video_preprocess_smoke,
         source_video_training=manifest.get("source_video_training") is True,
+        training_loss_surface=str(
+            manifest.get("training_loss_surface") or PR95_MLX_LOSS_SURFACE_RGB_MSE
+        ),
     )
 
     _write_json(output_dir / "runtime_profile.json", manifest["runtime_profile"])

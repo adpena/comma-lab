@@ -12,7 +12,8 @@ pytest.importorskip("mlx.core")
 
 from tac.local_acceleration.pr95_hnerv_mlx import (
     FALSE_AUTHORITY,
-    PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY,
+    PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE,
+    PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY,
 )
 from tac.optimization.representation_training_probe_integration import (
     adapt_representation_training_manifest_to_candidate,
@@ -65,6 +66,8 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
             "0",
             "--source-video-output-hw",
             "384,512",
+            "--source-video-loss-surface",
+            "rgb_yuv6_mse",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -107,8 +110,11 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert preprocess_smoke["gradient_probe"]["gradient_reachable"] is True
     assert manifest["stage_module"] == "stage1_v328_ce"
     assert manifest["training_fidelity"] == (
-        PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_TIMING_ONLY
+        PR95_MLX_TRAINING_FIDELITY_SOURCE_VIDEO_RGB_YUV6_TIMING_ONLY
     )
+    assert manifest["training_loss_surface"] == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+    assert manifest["loss_surface_weights"] == {"rgb_mse": 0.5, "yuv6_mse": 0.5}
+    assert manifest["target_yuv6_shape"] == [1, 2, 192, 256, 6]
     assert manifest["source_video_training"] is True
     assert manifest["target_source"]["kind"] == "pr95_source_video_rgb_pairs"
     assert manifest["target_source"]["target_shape_n2chw"] == [1, 2, 3, 384, 512]
@@ -126,13 +132,21 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx" not in (
         manifest["exact_readiness_refusal"]["blockers"]
     )
-    assert "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx" in (
-        manifest["exact_readiness_refusal"]["blockers"]
+    assert (
+        "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
+        not in manifest["exact_readiness_refusal"]["blockers"]
     )
     assert "synthetic_targets_do_not_establish_contest_quality" not in (
         manifest["exact_readiness_refusal"]["blockers"]
     )
-    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" in (
+    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" not in (
+        manifest["exact_readiness_refusal"]["blockers"]
+    )
+    assert (
+        "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss"
+        in manifest["exact_readiness_refusal"]["blockers"]
+    )
+    assert "pr95_segnet_posenet_network_loss_not_wired_to_mlx" in (
         manifest["exact_readiness_refusal"]["blockers"]
     )
     assert manifest["pr95_public_archive_export"]["sha256"] == export_summary["sha256"]
@@ -146,12 +160,19 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert runtime_profile["training_backend"] == "mlx"
     assert runtime_profile["source_video_training"] is True
     assert runtime_profile["target_source_kind"] == "pr95_source_video_rgb_pairs"
+    assert runtime_profile["training_loss_surface"] == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
     assert runtime_profile["optimizer_descriptor_id"] == (
         "pr95_stage1_adamw_baseline_mlx"
     )
     assert representation["training_recipe"]["quality_comparable"] is False
     assert representation["training_recipe"]["source_video_training"] is True
+    assert representation["training_recipe"]["training_loss_surface"] == (
+        PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+    )
     assert representation["candidate_params"]["source_video_training"] is True
+    assert representation["candidate_params"]["training_loss_surface"] == (
+        PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+    )
     assert representation["candidate_params"]["target_source_kind"] == (
         "pr95_source_video_rgb_pairs"
     )
@@ -182,9 +203,10 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx" not in row[
         "dispatch_blockers"
     ]
-    assert "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx" in row[
-        "dispatch_blockers"
-    ]
+    assert (
+        "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
+        not in row["dispatch_blockers"]
+    )
     assert "full_frame_inflate_parity_against_source_runtime_not_run" in row[
         "dispatch_blockers"
     ]
@@ -195,7 +217,10 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert "synthetic_targets_do_not_establish_contest_quality" not in row[
         "dispatch_blockers"
     ]
-    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" in row[
+    assert "source_video_rgb_targets_do_not_establish_full_scorer_quality" not in row[
+        "dispatch_blockers"
+    ]
+    assert "pr95_segnet_posenet_network_loss_not_wired_to_mlx" in row[
         "dispatch_blockers"
     ]
     preprocess_signal = row["consumer_payload"]["representation_training_probe"][
