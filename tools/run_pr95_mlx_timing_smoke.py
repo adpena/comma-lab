@@ -28,11 +28,22 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     run_pr95_mlx_synthetic_timing_smoke,
     write_pr95_mlx_byte_closed_smoke_archive,
 )
+from tac.local_acceleration.pr95_hnerv_mlx_training import (  # noqa: E402
+    SOURCE_FAITHFUL_PREPROCESS_SCHEMA,
+    run_pr95_mlx_source_faithful_smoke,
+)
 from tac.optimization.local_training_runtime_profile import (  # noqa: E402
     validate_runtime_profile_observation,
 )
 from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
     write_representation_training_probe_manifest,
+)
+
+SOURCE_PREPROCESS_CONFLATED_BLOCKER = (
+    "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx"
+)
+SOURCE_PREPROCESS_PORTED_LOSS_UNWIRED_BLOCKER = (
+    "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
 )
 
 
@@ -53,6 +64,66 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 
 def _slug(value: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in value.lower()).strip("_")
+
+
+def _parse_int_tuple(value: str, *, field: str, expected_len: int | None = None) -> tuple[int, ...]:
+    try:
+        parsed = tuple(int(part.strip()) for part in value.split(",") if part.strip())
+    except ValueError as exc:
+        raise ValueError(f"{field} must be comma-separated integers") from exc
+    if expected_len is not None and len(parsed) != expected_len:
+        raise ValueError(f"{field} must have {expected_len} comma-separated integers")
+    if not parsed or any(dim < 1 for dim in parsed):
+        raise ValueError(f"{field} dimensions must all be positive")
+    return parsed
+
+
+def _source_preprocess_gradient_ready(
+    source_faithful_preprocess_smoke: dict[str, Any] | None,
+) -> bool:
+    if not isinstance(source_faithful_preprocess_smoke, dict):
+        return False
+    grad_probe = source_faithful_preprocess_smoke.get("gradient_probe")
+    return (
+        source_faithful_preprocess_smoke.get("source_faithful_preprocess_ready")
+        is True
+        and isinstance(grad_probe, dict)
+        and grad_probe.get("gradient_reachable") is True
+    )
+
+
+def _exact_readiness_blockers(
+    *,
+    runtime_consumption_proven: bool = False,
+    source_faithful_preprocess_smoke: dict[str, Any] | None = None,
+) -> list[str]:
+    blockers = [
+        blocker
+        for blocker in EXACT_READINESS_REFUSAL_BLOCKERS
+        if not (
+            runtime_consumption_proven
+            and blocker
+            in {
+                "byte_closed_smoke_archive_not_consumed_by_pr95_runtime",
+                "runtime_consumption_proof_missing",
+            }
+        )
+    ]
+    if _source_preprocess_gradient_ready(source_faithful_preprocess_smoke):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != SOURCE_PREPROCESS_CONFLATED_BLOCKER
+        ]
+        blockers.append(SOURCE_PREPROCESS_PORTED_LOSS_UNWIRED_BLOCKER)
+    if runtime_consumption_proven:
+        blockers.extend(
+            [
+                "runtime_consumption_smoke_is_not_score_authority",
+                "full_frame_inflate_parity_against_source_runtime_not_run",
+            ]
+        )
+    return list(dict.fromkeys(blockers))
 
 
 def _candidate_id(
@@ -90,6 +161,10 @@ def _recommended_execution_command(
     write_byte_closed_smoke: bool,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_source_faithful_preprocess_smoke: bool,
+    source_preprocess_shape: str,
+    source_preprocess_camera_hw: str,
+    source_preprocess_gradient_shape: str,
     runtime_proof_timeout_seconds: float,
     runtime_proof_max_output_bytes: int,
     optimizer_descriptor_id: str,
@@ -131,11 +206,27 @@ def _recommended_execution_command(
                 str(runtime_proof_max_output_bytes),
             ]
         )
+    if write_source_faithful_preprocess_smoke:
+        command.extend(
+            [
+                "--write-source-faithful-preprocess-smoke",
+                "--source-preprocess-shape",
+                source_preprocess_shape,
+                "--source-preprocess-camera-hw",
+                source_preprocess_camera_hw,
+                "--source-preprocess-gradient-shape",
+                source_preprocess_gradient_shape,
+            ]
+        )
     return command
 
 
 def _json_equals_postcondition(path: str, key: str, value: Any) -> dict[str, Any]:
     return {"type": "json_equals", "path": path, "key": key, "equals": value}
+
+
+def _json_array_contains_postcondition(path: str, key: str, value: Any) -> dict[str, Any]:
+    return {"type": "json_array_contains", "path": path, "key": key, "contains": value}
 
 
 def _json_false_authority_postcondition(path: str) -> dict[str, Any]:
@@ -147,8 +238,42 @@ def _extra_artifact_postconditions(
     output_dir: Path,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_source_faithful_preprocess_smoke: bool,
 ) -> list[dict[str, Any]]:
     postconditions: list[dict[str, Any]] = []
+    if write_source_faithful_preprocess_smoke:
+        smoke_path = _rel(output_dir / "source_faithful_preprocess_smoke.json")
+        postconditions.extend(
+            [
+                {"type": "path_exists", "path": smoke_path},
+                _json_equals_postcondition(
+                    smoke_path,
+                    "schema",
+                    SOURCE_FAITHFUL_PREPROCESS_SCHEMA,
+                ),
+                _json_equals_postcondition(
+                    smoke_path,
+                    "source_faithful_preprocess_ready",
+                    True,
+                ),
+                _json_equals_postcondition(
+                    smoke_path,
+                    "gradient_probe.gradient_reachable",
+                    True,
+                ),
+                _json_equals_postcondition(
+                    smoke_path,
+                    "exact_readiness_refusal.ready",
+                    False,
+                ),
+                _json_array_contains_postcondition(
+                    smoke_path,
+                    "exact_readiness_refusal.blockers",
+                    "pr95_training_loop_not_yet_source_faithful",
+                ),
+                _json_false_authority_postcondition(smoke_path),
+            ]
+        )
     if write_pr95_public_archive_export:
         export_path = _rel(output_dir / "pr95_public_archive_export.json")
         archive_path = _rel(output_dir / "pr95_public_archive.zip")
@@ -203,6 +328,10 @@ def _build_representation_training_plan(
     write_byte_closed_smoke: bool,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_source_faithful_preprocess_smoke: bool,
+    source_preprocess_shape: str,
+    source_preprocess_camera_hw: str,
+    source_preprocess_gradient_shape: str,
     recommended_execution: dict[str, Any],
     optimizer_descriptor: dict[str, Any],
 ) -> dict[str, Any]:
@@ -296,6 +425,12 @@ def _build_representation_training_plan(
             "byte_closed_smoke_archive_requested": write_byte_closed_smoke,
             "pr95_public_archive_export_requested": write_pr95_public_archive_export,
             "pr95_runtime_consumption_proof_requested": prove_pr95_runtime_consumption,
+            "source_faithful_preprocess_smoke_requested": (
+                write_source_faithful_preprocess_smoke
+            ),
+            "source_preprocess_shape": source_preprocess_shape,
+            "source_preprocess_camera_hw": source_preprocess_camera_hw,
+            "source_preprocess_gradient_shape": source_preprocess_gradient_shape,
             "quality_comparable": False,
             "score_claim": False,
         },
@@ -383,6 +518,20 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "runtime_consumption_proof": _rel(output_dir / "runtime_consumption_proof.json")
         if args.prove_pr95_runtime_consumption
         else None,
+        "source_faithful_preprocess_smoke": _rel(
+            output_dir / "source_faithful_preprocess_smoke.json"
+        )
+        if args.write_source_faithful_preprocess_smoke
+        else None,
+        "source_preprocess_shape": args.source_preprocess_shape
+        if args.write_source_faithful_preprocess_smoke
+        else None,
+        "source_preprocess_camera_hw": args.source_preprocess_camera_hw
+        if args.write_source_faithful_preprocess_smoke
+        else None,
+        "source_preprocess_gradient_shape": args.source_preprocess_gradient_shape
+        if args.write_source_faithful_preprocess_smoke
+        else None,
         "extra_artifact_postconditions": _extra_artifact_postconditions(
             output_dir=output_dir,
             write_pr95_public_archive_export=(
@@ -390,6 +539,9 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
                 or args.prove_pr95_runtime_consumption
             ),
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+            write_source_faithful_preprocess_smoke=(
+                args.write_source_faithful_preprocess_smoke
+            ),
         ),
         "optimizer_descriptor_id": optimizer_descriptor_id,
         "optimizer_config_sha256": optimizer_descriptor["config_sha256"],
@@ -415,6 +567,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
                 or args.prove_pr95_runtime_consumption
             ),
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+            write_source_faithful_preprocess_smoke=(
+                args.write_source_faithful_preprocess_smoke
+            ),
+            source_preprocess_shape=args.source_preprocess_shape,
+            source_preprocess_camera_hw=args.source_preprocess_camera_hw,
+            source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
             runtime_proof_timeout_seconds=args.runtime_proof_timeout_seconds,
             runtime_proof_max_output_bytes=args.runtime_proof_max_output_bytes,
             optimizer_descriptor_id=optimizer_descriptor_id,
@@ -440,6 +598,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             or args.prove_pr95_runtime_consumption
         ),
         prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+        write_source_faithful_preprocess_smoke=(
+            args.write_source_faithful_preprocess_smoke
+        ),
+        source_preprocess_shape=args.source_preprocess_shape,
+        source_preprocess_camera_hw=args.source_preprocess_camera_hw,
+        source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
         recommended_execution=recommended_execution,
         optimizer_descriptor=optimizer_descriptor,
     )
@@ -481,6 +645,12 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
             args.write_pr95_public_archive_export or args.prove_pr95_runtime_consumption
         ),
         "prove_pr95_runtime_consumption": bool(args.prove_pr95_runtime_consumption),
+        "write_source_faithful_preprocess_smoke": bool(
+            args.write_source_faithful_preprocess_smoke
+        ),
+        "source_preprocess_shape": args.source_preprocess_shape,
+        "source_preprocess_camera_hw": args.source_preprocess_camera_hw,
+        "source_preprocess_gradient_shape": args.source_preprocess_gradient_shape,
         "recommended_execution": recommended_execution,
         "representation_training_plan": _rel(
             output_dir / "representation_training_plan.json"
@@ -502,6 +672,7 @@ def _representation_manifest(
     output_dir: Path,
     archive_summary: dict[str, Any] | None,
     runtime_consumption_proof: dict[str, Any] | None,
+    source_faithful_preprocess_smoke: dict[str, Any] | None,
 ) -> dict[str, Any]:
     stage_index = int(manifest["stage_index"])
     stage_module = str(manifest["stage_module"])
@@ -522,25 +693,10 @@ def _representation_manifest(
         runtime_consumption_proof
         and runtime_consumption_proof.get("runtime_consumption_proven") is True
     )
-    exact_blockers = [
-        blocker
-        for blocker in EXACT_READINESS_REFUSAL_BLOCKERS
-        if not (
-            runtime_consumption_proven
-            and blocker
-            in {
-                "byte_closed_smoke_archive_not_consumed_by_pr95_runtime",
-                "runtime_consumption_proof_missing",
-            }
-        )
-    ]
-    if runtime_consumption_proven:
-        exact_blockers.extend(
-            [
-                "runtime_consumption_smoke_is_not_score_authority",
-                "full_frame_inflate_parity_against_source_runtime_not_run",
-            ]
-        )
+    exact_blockers = _exact_readiness_blockers(
+        runtime_consumption_proven=runtime_consumption_proven,
+        source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
+    )
     return write_representation_training_probe_manifest(
         sidecar_path,
         candidate_id=candidate_id,
@@ -613,6 +769,14 @@ def _representation_manifest(
             "byte_closed_smoke_archive_emitted": archive_summary is not None,
             "pr95_public_archive_export_emitted": public_archive_export is not None,
             "pr95_runtime_consumption_proof_present": runtime_consumption_proven,
+            "source_faithful_preprocess_smoke_present": (
+                source_faithful_preprocess_smoke is not None
+            ),
+            "source_preprocess_shape": manifest.get("source_preprocess_shape"),
+            "source_preprocess_camera_hw": manifest.get("source_preprocess_camera_hw"),
+            "source_preprocess_gradient_shape": manifest.get(
+                "source_preprocess_gradient_shape"
+            ),
             "quality_comparable": False,
             "score_claim": False,
         },
@@ -649,6 +813,9 @@ def _representation_manifest(
             "byte_closed_smoke_archive": archive_summary,
             "pr95_public_archive_export": public_archive_export,
             "runtime_consumption_proof": runtime_consumption_proof or {},
+            "source_faithful_preprocess_smoke": (
+                source_faithful_preprocess_smoke or {}
+            ),
             "authority_contract": {
                 "score_claim": False,
                 "quality_authority": False,
@@ -715,6 +882,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--runtime-proof-max-output-bytes",
         type=int,
         default=64 * 1024 * 1024,
+    )
+    parser.add_argument(
+        "--write-source-faithful-preprocess-smoke",
+        action="store_true",
+        help=(
+            "Emit native MLX eval-roundtrip/YUV6 preprocessing smoke with "
+            "gradient reachability proof. Local training signal only."
+        ),
+    )
+    parser.add_argument(
+        "--source-preprocess-shape",
+        default="1,2,384,512,3",
+        help="Comma-separated RGB NHWC-ish smoke input shape.",
+    )
+    parser.add_argument(
+        "--source-preprocess-camera-hw",
+        default="874,1164",
+        help="Comma-separated camera H,W for preprocessing smoke.",
+    )
+    parser.add_argument(
+        "--source-preprocess-gradient-shape",
+        default="1,2,16,20,3",
+        help="Comma-separated RGB shape for preprocessing gradient probe.",
     )
     parser.add_argument(
         "--allow-existing-output-dir",
@@ -844,6 +1034,47 @@ def main(argv: list[str] | None = None) -> int:
             if blocker != "runtime_consumption_proof_missing"
         ]
 
+    source_faithful_preprocess_smoke: dict[str, Any] | None = None
+    if args.write_source_faithful_preprocess_smoke:
+        camera_hw = _parse_int_tuple(
+            args.source_preprocess_camera_hw,
+            field="source-preprocess-camera-hw",
+            expected_len=2,
+        )
+        source_faithful_preprocess_smoke = run_pr95_mlx_source_faithful_smoke(
+            input_shape=_parse_int_tuple(
+                args.source_preprocess_shape,
+                field="source-preprocess-shape",
+            ),
+            camera_hw=(camera_hw[0], camera_hw[1]),
+            seed=args.seed,
+            gradient_probe_shape=_parse_int_tuple(
+                args.source_preprocess_gradient_shape,
+                field="source-preprocess-gradient-shape",
+            ),
+        )
+        _write_json(
+            output_dir / "source_faithful_preprocess_smoke.json",
+            source_faithful_preprocess_smoke,
+        )
+        manifest["source_faithful_preprocess_smoke"] = source_faithful_preprocess_smoke
+        manifest["source_faithful_preprocess_smoke_path"] = _rel(
+            output_dir / "source_faithful_preprocess_smoke.json"
+        )
+        manifest["source_preprocess_shape"] = args.source_preprocess_shape
+        manifest["source_preprocess_camera_hw"] = args.source_preprocess_camera_hw
+        manifest["source_preprocess_gradient_shape"] = (
+            args.source_preprocess_gradient_shape
+        )
+
+    manifest["exact_readiness_refusal"]["blockers"] = _exact_readiness_blockers(
+        runtime_consumption_proven=(
+            runtime_consumption_proof is not None
+            and runtime_consumption_proof.get("runtime_consumption_proven") is True
+        ),
+        source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
+    )
+
     _write_json(output_dir / "runtime_profile.json", manifest["runtime_profile"])
     _write_json(output_dir / "manifest.json", manifest)
     representation = _representation_manifest(
@@ -851,6 +1082,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=output_dir,
         archive_summary=archive_summary,
         runtime_consumption_proof=runtime_consumption_proof,
+        source_faithful_preprocess_smoke=source_faithful_preprocess_smoke,
     )
     summary = {
         "schema": "pr95_hnerv_mlx_timing_smoke_run_summary_v1",
@@ -863,6 +1095,7 @@ def main(argv: list[str] | None = None) -> int:
         "byte_closed_smoke_archive": archive_summary,
         "pr95_public_archive_export": public_archive_export,
         "runtime_consumption_proof": runtime_consumption_proof,
+        "source_faithful_preprocess_smoke": source_faithful_preprocess_smoke,
         "candidate_id": manifest["candidate_id"],
         "seconds_per_step": manifest["timing"]["seconds_per_step"],
         "representation_manifest_schema": representation["schema"],

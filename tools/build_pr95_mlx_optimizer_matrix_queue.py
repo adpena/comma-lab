@@ -172,6 +172,10 @@ def _emit_plan(
     write_byte_closed_smoke: bool,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_source_faithful_preprocess_smoke: bool,
+    source_preprocess_shape: str,
+    source_preprocess_camera_hw: str,
+    source_preprocess_gradient_shape: str,
     runtime_proof_timeout_seconds: float,
     runtime_proof_max_output_bytes: int,
     allow_existing_plan_dirs: bool,
@@ -201,6 +205,18 @@ def _emit_plan(
     ]
     if write_byte_closed_smoke:
         command.append("--write-byte-closed-smoke")
+    if write_source_faithful_preprocess_smoke:
+        command.extend(
+            [
+                "--write-source-faithful-preprocess-smoke",
+                "--source-preprocess-shape",
+                source_preprocess_shape,
+                "--source-preprocess-camera-hw",
+                source_preprocess_camera_hw,
+                "--source-preprocess-gradient-shape",
+                source_preprocess_gradient_shape,
+            ]
+        )
     if write_pr95_public_archive_export or prove_pr95_runtime_consumption:
         command.append("--write-pr95-public-archive-export")
     if prove_pr95_runtime_consumption:
@@ -251,6 +267,10 @@ def build_pr95_mlx_optimizer_matrix_queue(
     write_byte_closed_smoke: bool,
     write_pr95_public_archive_export: bool,
     prove_pr95_runtime_consumption: bool,
+    write_source_faithful_preprocess_smoke: bool,
+    source_preprocess_shape: str,
+    source_preprocess_camera_hw: str,
+    source_preprocess_gradient_shape: str,
     runtime_proof_timeout_seconds: float,
     runtime_proof_max_output_bytes: int,
     local_cpu_concurrency: int,
@@ -329,6 +349,12 @@ def build_pr95_mlx_optimizer_matrix_queue(
                     write_byte_closed_smoke=write_byte_closed_smoke,
                     write_pr95_public_archive_export=write_pr95_public_archive_export,
                     prove_pr95_runtime_consumption=prove_pr95_runtime_consumption,
+                    write_source_faithful_preprocess_smoke=(
+                        write_source_faithful_preprocess_smoke
+                    ),
+                    source_preprocess_shape=source_preprocess_shape,
+                    source_preprocess_camera_hw=source_preprocess_camera_hw,
+                    source_preprocess_gradient_shape=source_preprocess_gradient_shape,
                     runtime_proof_timeout_seconds=runtime_proof_timeout_seconds,
                     runtime_proof_max_output_bytes=runtime_proof_max_output_bytes,
                     allow_existing_plan_dirs=allow_existing_plan_dirs,
@@ -394,6 +420,12 @@ def build_pr95_mlx_optimizer_matrix_queue(
             write_pr95_public_archive_export or prove_pr95_runtime_consumption
         ),
         "prove_pr95_runtime_consumption": prove_pr95_runtime_consumption,
+        "write_source_faithful_preprocess_smoke": (
+            write_source_faithful_preprocess_smoke
+        ),
+        "source_preprocess_shape": source_preprocess_shape,
+        "source_preprocess_camera_hw": source_preprocess_camera_hw,
+        "source_preprocess_gradient_shape": source_preprocess_gradient_shape,
         "runtime_proof_timeout_seconds": runtime_proof_timeout_seconds,
         "runtime_proof_max_output_bytes": runtime_proof_max_output_bytes,
         "plan_count": len(plan_records),
@@ -456,6 +488,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--base-channels", type=int, default=36)
     parser.add_argument("--latent-dim", type=int, default=28)
     parser.add_argument("--write-byte-closed-smoke", action="store_true")
+    parser.add_argument(
+        "--write-source-faithful-preprocess-smoke",
+        action="store_true",
+        help=(
+            "Ask each timing-smoke plan to emit the native MLX "
+            "source-faithful PR95 eval-roundtrip/YUV6 preprocess smoke."
+        ),
+    )
+    parser.add_argument(
+        "--source-preprocess-shape",
+        default="1,2,384,512,3",
+        help="Synthetic RGB NHWC fixture shape for source preprocess smoke.",
+    )
+    parser.add_argument(
+        "--source-preprocess-camera-hw",
+        default="874,1164",
+        help="Camera-space H,W for source preprocess eval-roundtrip smoke.",
+    )
+    parser.add_argument(
+        "--source-preprocess-gradient-shape",
+        default="1,2,16,20,3",
+        help="Small synthetic RGB NHWC shape for source preprocess gradient probe.",
+    )
     parser.add_argument("--write-pr95-public-archive-export", action="store_true")
     parser.add_argument("--prove-pr95-runtime-consumption", action="store_true")
     parser.add_argument("--runtime-proof-timeout-seconds", type=float, default=900.0)
@@ -499,6 +554,12 @@ def main(argv: list[str] | None = None) -> int:
                 or args.prove_pr95_runtime_consumption
             ),
             prove_pr95_runtime_consumption=args.prove_pr95_runtime_consumption,
+            write_source_faithful_preprocess_smoke=(
+                args.write_source_faithful_preprocess_smoke
+            ),
+            source_preprocess_shape=args.source_preprocess_shape,
+            source_preprocess_camera_hw=args.source_preprocess_camera_hw,
+            source_preprocess_gradient_shape=args.source_preprocess_gradient_shape,
             runtime_proof_timeout_seconds=args.runtime_proof_timeout_seconds,
             runtime_proof_max_output_bytes=args.runtime_proof_max_output_bytes,
             local_cpu_concurrency=args.local_cpu_concurrency,

@@ -87,7 +87,7 @@ PR95_MLX_BACKEND_STATUS_SYNTHETIC_TIMING_ONLY = "implemented_mlx_synthetic_timin
 PR95_MLX_TRAINING_FIDELITY_SYNTHETIC_TIMING_ONLY = "synthetic_timing_only"
 PR95_MLX_SOURCE_FAITHFUL_BLOCKERS: tuple[str, ...] = (
     "pr95_source_video_loader_not_ported_to_mlx",
-    "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx",
+    "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx",
     "pr95_stage_hparams_and_cosine_schedules_not_all_source_matched",
     "pr95_qat_c1a_and_resume_semantics_not_ported_to_mlx",
     "pr95_export_forward_parity_not_established",

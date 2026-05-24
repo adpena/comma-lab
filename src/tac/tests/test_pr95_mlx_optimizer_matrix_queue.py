@@ -46,6 +46,13 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
             "--prove-pr95-runtime-consumption",
             "--runtime-proof-max-output-bytes",
             "7000000",
+            "--write-source-faithful-preprocess-smoke",
+            "--source-preprocess-shape",
+            "1,2,8,10,3",
+            "--source-preprocess-camera-hw",
+            "11,13",
+            "--source-preprocess-gradient-shape",
+            "1,2,8,10,3",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -69,6 +76,10 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["write_pr95_public_archive_export"] is True
     assert manifest["prove_pr95_runtime_consumption"] is True
+    assert manifest["write_source_faithful_preprocess_smoke"] is True
+    assert manifest["source_preprocess_shape"] == "1,2,8,10,3"
+    assert manifest["source_preprocess_camera_hw"] == "11,13"
+    assert manifest["source_preprocess_gradient_shape"] == "1,2,8,10,3"
     assert manifest["queue_output_sha256"] == summary["queue_sha256"]
     assert {row["stage_index"] for row in manifest["plans"]} == {1, 8}
     assert all(len(row["matrix_cell_id"]) == 64 for row in manifest["plans"])
@@ -87,6 +98,17 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
         assert plan["recommended_execution"]["runtime_consumption_proof"].endswith(
             "runtime_consumption_proof.json"
         )
+        assert plan["recommended_execution"][
+            "source_faithful_preprocess_smoke"
+        ].endswith("source_faithful_preprocess_smoke.json")
+        assert "--write-source-faithful-preprocess-smoke" in plan[
+            "recommended_execution"
+        ]["python_command_args"]
+        assert "--source-preprocess-shape" in plan["recommended_execution"][
+            "python_command_args"
+        ]
+        assert "1,2,8,10,3" in plan["recommended_execution"]["python_command_args"]
+        assert "11,13" in plan["recommended_execution"]["python_command_args"]
 
     assert queue["schema"] == "experiment_queue.v1"
     assert queue["queue_id"] == "pr95_mlx_matrix_fixture"
@@ -102,6 +124,36 @@ def test_pr95_mlx_optimizer_matrix_cli_emits_queueable_plans(
             and condition["path"].endswith("runtime_consumption_proof.json")
             and condition["key"] == "runtime_consumption_proven"
             and condition["equals"] is True
+            for condition in experiment["steps"][0]["postconditions"]
+        )
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        any(
+            condition["type"] == "json_equals"
+            and condition["path"].endswith("source_faithful_preprocess_smoke.json")
+            and condition["key"] == "source_faithful_preprocess_ready"
+            and condition["equals"] is True
+            for condition in experiment["steps"][0]["postconditions"]
+        )
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        any(
+            condition["type"] == "json_equals"
+            and condition["path"].endswith("source_faithful_preprocess_smoke.json")
+            and condition["key"] == "gradient_probe.gradient_reachable"
+            and condition["equals"] is True
+            for condition in experiment["steps"][0]["postconditions"]
+        )
+        for experiment in queue["experiments"]
+    )
+    assert all(
+        any(
+            condition["type"] == "json_array_contains"
+            and condition["path"].endswith("source_faithful_preprocess_smoke.json")
+            and condition["key"] == "exact_readiness_refusal.blockers"
+            and condition["contains"] == "pr95_training_loop_not_yet_source_faithful"
             for condition in experiment["steps"][0]["postconditions"]
         )
         for experiment in queue["experiments"]
@@ -207,6 +259,13 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
             queue_id,
             "--local-mlx-concurrency",
             "1",
+            "--write-source-faithful-preprocess-smoke",
+            "--source-preprocess-shape",
+            "1,2,8,10,3",
+            "--source-preprocess-camera-hw",
+            "11,13",
+            "--source-preprocess-gradient-shape",
+            "1,2,8,10,3",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -302,6 +361,16 @@ def test_pr95_mlx_optimizer_matrix_queue_executes_and_harvests_one_cell(
     )
     assert candidate["candidate_params"]["stage_index"] == 1
     assert candidate["candidate_params"]["seed"] == 29
+    assert candidate["candidate_params"]["source_faithful_preprocess_smoke_present"] is True
+    assert candidate["candidate_params"]["source_preprocess_camera_hw"] == "11,13"
+    preprocess_signal = candidate["consumer_payload"]["representation_training_probe"][
+        "source_faithful_preprocess"
+    ]
+    assert preprocess_signal["present"] is True
+    assert preprocess_signal["gradient_reachable"] is True
+    assert "pr95_training_loop_not_yet_source_faithful" in (
+        preprocess_signal["exact_readiness_blockers"]
+    )
     assert candidate["ready_for_exact_eval_dispatch"] is False
 
 

@@ -420,6 +420,13 @@ def test_synthetic_timing_smoke_emits_runtime_profile_and_refusal() -> None:
     assert manifest["source_faithfulness_blockers"] == list(
         PR95_MLX_SOURCE_FAITHFUL_BLOCKERS
     )
+    assert "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx" not in (
+        manifest["source_faithfulness_blockers"]
+    )
+    assert (
+        "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
+        in manifest["source_faithfulness_blockers"]
+    )
     assert manifest["optimizer_recipe"]["stage_uses_muon"] is True
     assert manifest["optimizer_recipe"]["source_faithful_training"] is False
     assert manifest["exact_readiness_refusal"]["ready"] is False

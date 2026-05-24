@@ -122,6 +122,13 @@ def test_registry_exposes_pr95_mlx_optimizer_descriptors_fail_closed() -> None:
     assert stage8["parameter_group_lr_policy_id"] == (
         "embedding_theta1_hidden_muon_adamw"
     )
+    assert "pr95_eval_roundtrip_scorer_preprocess_loss_not_ported_to_mlx" not in (
+        stage8["training_config"]["source_faithfulness_blockers"]
+    )
+    assert (
+        "pr95_eval_roundtrip_yuv6_preprocess_ported_but_scorer_loss_not_wired_to_mlx"
+        in stage8["training_config"]["source_faithfulness_blockers"]
+    )
     assert descriptor_only["training_config"]["backend_status"] == (
         "optimizer_backend_missing"
     )

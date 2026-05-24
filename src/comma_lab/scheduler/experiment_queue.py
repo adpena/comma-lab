@@ -1461,6 +1461,15 @@ def _condition_passes(condition: Mapping[str, Any], *, repo_root: Path) -> bool:
         expected = condition.get("value")
         payload = json.loads(_resolve_postcondition_path(rel_path, repo_root=repo_root).read_text())
         return _json_pointer(payload, key) == expected
+    if condition_type == "json_array_contains":
+        rel_path = _require_text(condition.get("path"), "postcondition.path")
+        key = _require_text(condition.get("key"), "postcondition.key")
+        if "contains" not in condition:
+            raise ExperimentQueueError("postcondition.contains is required")
+        expected = condition.get("contains")
+        payload = json.loads(_resolve_postcondition_path(rel_path, repo_root=repo_root).read_text())
+        actual = _json_pointer(payload, key)
+        return isinstance(actual, list) and expected in actual
     if condition_type == "json_false_authority":
         rel_path = _require_text(condition.get("path"), "postcondition.path")
         payload = json.loads(_resolve_postcondition_path(rel_path, repo_root=repo_root).read_text())

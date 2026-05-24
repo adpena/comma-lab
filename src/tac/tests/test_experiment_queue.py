@@ -2305,6 +2305,37 @@ def test_json_false_authority_explicit_false_or_missing_override_is_exact(
     assert _condition_passes(condition, repo_root=tmp_path) is True
 
 
+def test_json_array_contains_postcondition_checks_dotted_list_value(
+    tmp_path: Path,
+) -> None:
+    advisory = tmp_path / "preprocess.json"
+    advisory.write_text(
+        json.dumps(
+            {
+                "exact_readiness_refusal": {
+                    "ready": False,
+                    "blockers": [
+                        "pr95_training_loop_not_yet_source_faithful",
+                        "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+                    ],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    condition = {
+        "type": "json_array_contains",
+        "path": advisory.name,
+        "key": "exact_readiness_refusal.blockers",
+        "contains": "pr95_training_loop_not_yet_source_faithful",
+    }
+    missing = {**condition, "contains": "missing_blocker"}
+
+    assert _condition_passes(condition, repo_root=tmp_path) is True
+    assert _condition_passes(missing, repo_root=tmp_path) is False
+
+
 def test_jsonl_false_authority_blocks_truthy_rows(tmp_path: Path) -> None:
     advisory = tmp_path / "observations.jsonl"
     advisory.write_text(
