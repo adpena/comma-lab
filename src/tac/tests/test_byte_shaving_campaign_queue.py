@@ -1593,6 +1593,43 @@ def test_materializer_execution_queue_can_gate_work_on_storage_preflight(
     assert task["experiment_metadata"]["ready_for_exact_eval_dispatch"] is False
 
 
+def test_materializer_execution_queue_move_preflight_requires_cold_store_root(
+    tmp_path: Path,
+) -> None:
+    compiled = compile_dqs1_byte_shaving_campaign(
+        _byte_range_entropy_plan(),
+        repo_root=tmp_path,
+        candidate_limit=4,
+        portfolio_json="portfolio.json",
+    )
+    work_queue = build_materializer_work_queue(
+        compiled["materializer_backlog"],
+        repo_root=tmp_path,
+        contexts={
+            "zip_member_range_a": {
+                "schema_manifest": "schema.json",
+                "beam_probe_reports": ["beam_a.json"],
+                "source_runtime_dir": "runtime",
+                "output_dir": str(tmp_path / "materializer_results" / "materializer_out"),
+            }
+        },
+        source_plan_path="plan.json",
+    )
+
+    with pytest.raises(ExperimentQueueError, match="cold_store_roots is required"):
+        build_materializer_execution_queue(
+            work_queue,
+            queue_id="materializer_storage_preflight_fixture",
+            repo_root=tmp_path,
+            include_scheduler_preflight=True,
+            scheduler_results_root=str(tmp_path / "materializer_results"),
+            scheduler_storage_workload_subdir="materializer_results",
+            scheduler_storage_expected_workload_root=str(tmp_path / "materializer_results"),
+            scheduler_proactive_cleanup_execute=True,
+            scheduler_proactive_cleanup_action="move",
+        )
+
+
 def test_materializer_execution_queue_blocks_outputs_outside_storage_root(
     tmp_path: Path,
 ) -> None:
@@ -1625,6 +1662,7 @@ def test_materializer_execution_queue_blocks_outputs_outside_storage_root(
             scheduler_results_root=str(tmp_path / "materializer_results"),
             scheduler_storage_expected_workload_root=str(tmp_path / "materializer_results"),
             scheduler_proactive_cleanup_execute=True,
+            scheduler_proactive_cleanup_action="delete",
         )
 
 
@@ -1662,6 +1700,7 @@ def test_materializer_execution_queue_requires_bound_storage_root_for_preflight(
             include_scheduler_preflight=True,
             scheduler_results_root="experiments/results",
             scheduler_proactive_cleanup_execute=True,
+            scheduler_proactive_cleanup_action="delete",
         )
 
 
@@ -2331,6 +2370,8 @@ def test_byte_shaving_campaign_queue_cli_writes_dqs1_queue(tmp_path: Path) -> No
             "--scheduler-proactive-cleanup-root",
             "experiments/results",
             "--scheduler-proactive-cleanup-execute",
+            "--scheduler-proactive-cleanup-cold-store-root",
+            str(tmp_path / "cold_store"),
         ],
         check=True,
         text=True,
@@ -2441,6 +2482,8 @@ def test_byte_shaving_campaign_queue_cli_loads_materializer_contexts(
             "--materializer-scheduler-proactive-cleanup-root",
             "experiments/results",
             "--materializer-scheduler-proactive-cleanup-execute",
+            "--materializer-scheduler-proactive-cleanup-cold-store-root",
+            str(tmp_path / "cold_store"),
             "--include-materializer-exact-readiness-followup",
             "--repo-root",
             str(tmp_path),

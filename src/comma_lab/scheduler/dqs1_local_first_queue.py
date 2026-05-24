@@ -19,7 +19,10 @@ from tac.optimization.local_cpu_contest_drift import (
 )
 
 from .experiment_queue import QUEUE_SCHEMA, ExperimentQueueError, normalize_queue_definition
-from .storage_preflight import build_scheduler_storage_preflight_experiment
+from .storage_preflight import (
+    build_scheduler_storage_preflight_experiment,
+    validate_scheduler_storage_preflight_config,
+)
 
 DEFAULT_QUEUE_ID = "dqs1_pairset_local_first"
 DEFAULT_RESULTS_ROOT = (
@@ -1213,6 +1216,14 @@ def build_dqs1_local_first_queue_from_selections(
             "scheduler preflight gates DQS1 queue execution"
         )
     if include_scheduler_preflight:
+        try:
+            validate_scheduler_storage_preflight_config(
+                proactive_cleanup_execute=scheduler_proactive_cleanup_execute,
+                proactive_cleanup_action=scheduler_proactive_cleanup_action,
+                proactive_cleanup_cold_store_roots=scheduler_proactive_cleanup_cold_store_roots,
+            )
+        except ValueError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
         _require_dqs1_outputs_under_storage_root(
             repo_root=Path(repo_root),
             results_root=results_root,

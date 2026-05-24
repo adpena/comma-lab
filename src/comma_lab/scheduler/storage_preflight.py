@@ -9,6 +9,27 @@ from typing import Any
 from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB, DEFAULT_TIERS
 
 
+def validate_scheduler_storage_preflight_config(
+    *,
+    proactive_cleanup_execute: bool,
+    proactive_cleanup_action: str,
+    proactive_cleanup_cold_store_roots: tuple[str, ...],
+) -> None:
+    """Fail closed before emitting an impossible cleanup step."""
+
+    if proactive_cleanup_action not in {"move", "delete"}:
+        raise ValueError("proactive_cleanup_action must be move or delete")
+    if (
+        proactive_cleanup_execute
+        and proactive_cleanup_action == "move"
+        and not proactive_cleanup_cold_store_roots
+    ):
+        raise ValueError(
+            "proactive_cleanup_cold_store_roots is required when "
+            "proactive cleanup move execution is enabled"
+        )
+
+
 def _false_authority_postcondition(path: str) -> dict[str, Any]:
     return {
         "type": "json_false_authority",
@@ -72,6 +93,11 @@ def build_scheduler_storage_preflight_experiment(
     postconditions so downstream work can depend on the preflight succeeding.
     """
 
+    validate_scheduler_storage_preflight_config(
+        proactive_cleanup_execute=proactive_cleanup_execute,
+        proactive_cleanup_action=proactive_cleanup_action,
+        proactive_cleanup_cold_store_roots=proactive_cleanup_cold_store_roots,
+    )
     storage_plan = f".omx/research/{artifact_prefix}_storage_plan_{date}.json"
     cleanup_plan = f".omx/research/{artifact_prefix}_proactive_cleanup_{date}.json"
     workload_subdir = _results_root_storage_workload_subdir(

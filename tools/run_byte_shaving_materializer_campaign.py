@@ -35,6 +35,9 @@ from comma_lab.scheduler.staircase_dag import (  # noqa: E402
     parse_resource_pool_spec,
     plan_staircase_dispatch,
 )
+from comma_lab.scheduler.storage_preflight import (  # noqa: E402
+    validate_scheduler_storage_preflight_config,
+)
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
 RUN_SCHEMA = "byte_shaving_materializer_campaign_run.v1"
@@ -274,6 +277,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _build_queue_command(args: argparse.Namespace, *, run_dir: Path) -> list[str]:
+    if args.include_storage_preflight:
+        try:
+            validate_scheduler_storage_preflight_config(
+                proactive_cleanup_execute=True,
+                proactive_cleanup_action=args.proactive_cleanup_action,
+                proactive_cleanup_cold_store_roots=tuple(
+                    args.proactive_cleanup_cold_store_root
+                ),
+            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
     materialization = run_dir / "materialization.json"
     portfolio = run_dir / "portfolio.json"
     action_summary = run_dir / "action_summary.json"

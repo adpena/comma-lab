@@ -36,6 +36,8 @@ def test_materializer_campaign_runner_builds_queue_owned_followup_command(
             "work",
             "--proactive-cleanup-root",
             "experiments/results",
+            "--proactive-cleanup-cold-store-root",
+            str(tmp_path / "cold_store"),
         ]
     )
 
@@ -51,8 +53,29 @@ def test_materializer_campaign_runner_builds_queue_owned_followup_command(
     assert "local_mlx=2" in command
     assert "--include-materializer-scheduler-preflight" in command
     assert "--materializer-scheduler-proactive-cleanup-execute" in command
+    assert "--materializer-scheduler-proactive-cleanup-cold-store-root" in command
+    assert str(tmp_path / "cold_store") in command
     assert "--dispatch-mode" not in command
     assert "--allow-paid-dispatch-queue" not in command
+
+
+def test_materializer_campaign_runner_requires_cold_store_for_move_preflight(
+    tmp_path: Path,
+) -> None:
+    args = runner.parse_args(
+        [
+            "--plan",
+            str(tmp_path / "plan.json"),
+            "--run-dir",
+            str(tmp_path / "campaign"),
+            "--include-storage-preflight",
+            "--storage-expected-workload-root",
+            str(tmp_path / "campaign" / "work"),
+        ]
+    )
+
+    with pytest.raises(SystemExit, match="cold_store_roots is required"):
+        runner._build_queue_command(args, run_dir=tmp_path / "campaign")
 
 
 def test_materializer_campaign_runner_emits_staircase_artifacts(tmp_path: Path) -> None:

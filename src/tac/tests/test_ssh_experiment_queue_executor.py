@@ -41,7 +41,7 @@ class FakeSshRunner:
     def __call__(self, argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
         self.calls.append(list(argv))
         remote_script = str(argv[-1])
-        if "git rev-parse HEAD" in remote_script:
+        if _is_preflight_only(remote_script):
             return subprocess.CompletedProcess(argv, 0, stdout="preflight ok\n")
         if self.artifact is not None and self.create_artifact:
             self.artifact.write_text(
@@ -56,6 +56,14 @@ class FakeSshRunner:
                 encoding="utf-8",
             )
         return subprocess.CompletedProcess(argv, 0, stdout="remote ok\n")
+
+
+def _is_preflight_only(remote_script: str) -> bool:
+    return (
+        "git rev-parse HEAD" in remote_script
+        and " && python " not in remote_script
+        and " && .venv/bin/python " not in remote_script
+    )
 
 
 def _queue(artifact: Path, *, artifact_mobility: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -145,6 +153,20 @@ def test_remote_shell_command_uses_queue_argv_shape() -> None:
     assert command == "cd '/tmp/pact repo' && python -c 'print('\"'\"'ok'\"'\"')'"
 
 
+def test_remote_shell_command_rechecks_git_head_in_execution_call() -> None:
+    command = build_remote_shell_command(
+        remote_repo_root="/tmp/pact repo",
+        command=["python", "-c", "print('ok')"],
+        expected_head="b" * 40,
+        require_clean=True,
+    )
+
+    assert command.startswith("cd '/tmp/pact repo' && test -d .git")
+    assert 'test "$(git rev-parse HEAD)" = bbbbb' in command
+    assert "git diff --quiet" in command
+    assert command.endswith("&& python -c 'print('\"'\"'ok'\"'\"')'")
+
+
 def test_remote_git_preflight_command_checks_head_and_cleanliness() -> None:
     preflight = build_remote_git_preflight_command(
         remote_repo_root="/tmp/pact repo",
@@ -169,6 +191,11 @@ def test_rsync_pull_command_uses_remote_source_and_local_destination() -> None:
     assert command == [
         "rsync",
         "-a",
+        "-e",
+        (
+            "ssh -o ConnectTimeout=10 -o BatchMode=yes -o ConnectionAttempts=1 "
+            "-o ServerAliveInterval=15 -o ServerAliveCountMax=2"
+        ),
         "--",
         "user@host:/remote/pact/out/result.json",
         "/local/pact/out/result.json",
@@ -341,6 +368,7 @@ def test_ssh_executor_pulls_back_artifacts_before_local_postconditions(
     last_event = json.loads(row["last_event_json"])
     assert last_event["artifact_mobility"]["mode"] == "rsync_pull"
     assert last_event["artifact_mobility"]["succeeded"] is True
+    assert last_event["elapsed_seconds"] >= last_event["remote_elapsed_seconds"]
 
 
 def test_ssh_executor_pulls_back_mapped_telemetry_artifacts(
@@ -351,6 +379,10 @@ def test_ssh_executor_pulls_back_mapped_telemetry_artifacts(
     queue = _queue(artifact)
     step = queue["experiments"][0]["steps"][0]
     step["telemetry"]["artifact_paths"] = [str(artifact), str(telemetry_artifact)]
+    step["telemetry"]["pullback_artifact_paths"] = [
+        str(artifact),
+        str(telemetry_artifact),
+    ]
     plan = _plan(queue)
     state = tmp_path / "queue.sqlite"
     calls: list[list[str]] = []
@@ -399,6 +431,37 @@ def test_ssh_executor_pulls_back_mapped_telemetry_artifacts(
     } == {artifact.as_posix(), telemetry_artifact.as_posix()}
 
 
+def test_ssh_executor_does_not_pull_recursive_telemetry_without_explicit_pullback(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "out" / "done.json"
+    telemetry_dir = tmp_path / "out" / "inflated"
+    queue = _queue(artifact)
+    step = queue["experiments"][0]["steps"][0]
+    step["telemetry"]["artifact_paths"] = [str(telemetry_dir)]
+    step["telemetry"]["recursive"] = True
+    step["telemetry"]["max_recursive_entries"] = 512
+    plan = _plan(queue)
+    state = tmp_path / "queue.sqlite"
+    with connect_state(state) as conn:
+        initialize_queue_state(conn, queue)
+        ready = ready_steps(conn, queue, repo_root=REPO_ROOT)
+
+    selection = select_ssh_tasks(
+        plan,
+        queue,
+        ready=ready,
+        repo_root=REPO_ROOT,
+        artifact_path_maps={tmp_path.as_posix(): "/remote/tmp"},
+        require_artifact_mobility=True,
+    )[0]
+
+    assert (
+        "recursive_telemetry_artifact_paths_are_not_pullback_authority"
+        in selection.blockers
+    )
+
+
 def test_ssh_executor_fails_remote_success_when_artifact_pullback_fails(
     tmp_path: Path,
 ) -> None:
@@ -444,7 +507,7 @@ def test_ssh_executor_skips_pullback_when_remote_command_fails(
         if str(argv[0]).endswith("rsync"):
             raise AssertionError("pullback must not run after remote command failure")
         remote_script = str(argv[-1])
-        if "git rev-parse HEAD" in remote_script:
+        if _is_preflight_only(remote_script):
             return subprocess.CompletedProcess(argv, 0, stdout="preflight ok\n")
         return subprocess.CompletedProcess(argv, 9, stdout="remote failed\n")
 
@@ -495,6 +558,25 @@ def test_ssh_executor_preflight_failure_leaves_step_queued(tmp_path: Path) -> No
     assert row["attempts"] == 0
 
 
+def test_ssh_executor_dry_run_does_not_create_or_mutate_state(tmp_path: Path) -> None:
+    artifact = tmp_path / "done.json"
+    queue = _queue(artifact)
+    state = tmp_path / "missing.sqlite"
+
+    result = run_staircase_ssh_executor(
+        _plan(queue),
+        queue,
+        state_path=state,
+        repo_root=REPO_ROOT,
+        execute=False,
+        allow_noncanonical_state=True,
+    )
+
+    assert result["dry_run_state_mode"] == "ephemeral_initialized_state"
+    assert result["selected_count"] == 1
+    assert not state.exists()
+
+
 def test_ssh_executor_ignores_mutated_plan_command_and_uses_queue_command(tmp_path: Path) -> None:
     artifact = tmp_path / "done.json"
     queue = _queue(artifact)
@@ -517,6 +599,7 @@ def test_ssh_executor_ignores_mutated_plan_command_and_uses_queue_command(tmp_pa
     assert result["success_count"] == 1
     assert "rm -rf" not in "\n".join(remote_scripts)
     assert "done.json" in "\n".join(remote_scripts)
+    assert "git rev-parse HEAD" in "\n".join(remote_scripts)
     row = _step_row(state)
     assert row["status"] == "succeeded"
     assert row["attempts"] == 1

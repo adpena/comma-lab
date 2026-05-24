@@ -565,6 +565,23 @@ def test_dqs1_queue_builder_rejects_dry_run_scheduler_preflight_cleanup(
         )
 
 
+def test_dqs1_scheduler_preflight_move_cleanup_requires_cold_store_root(
+    tmp_path: Path,
+) -> None:
+    summary = _write_summary(tmp_path)
+
+    with pytest.raises(ExperimentQueueError, match="cold_store_roots is required"):
+        build_queue_from_action_summary(
+            summary,
+            repo_root=tmp_path,
+            results_root=str(tmp_path / "dqs1_local_first"),
+            include_scheduler_preflight=True,
+            scheduler_storage_expected_workload_root=str(tmp_path / "dqs1_local_first"),
+            scheduler_proactive_cleanup_execute=True,
+            scheduler_proactive_cleanup_action="move",
+        )
+
+
 def test_dqs1_queue_builder_rejects_preflight_outputs_outside_workload_root(
     tmp_path: Path,
 ) -> None:
@@ -578,6 +595,7 @@ def test_dqs1_queue_builder_rejects_preflight_outputs_outside_workload_root(
             include_scheduler_preflight=True,
             scheduler_storage_expected_workload_root=str(tmp_path / "inside"),
             scheduler_proactive_cleanup_execute=True,
+            scheduler_proactive_cleanup_action="delete",
         )
 
 
@@ -710,6 +728,7 @@ def test_dqs1_harvest_selects_candidate_from_multi_candidate_batch(
         include_scheduler_preflight=True,
         scheduler_storage_expected_workload_root=str(tmp_path / "results"),
         scheduler_proactive_cleanup_execute=True,
+        scheduler_proactive_cleanup_action="delete",
         eureka_run_id="20260522T000000Z",
     )
     queue_path = tmp_path / "queue.json"

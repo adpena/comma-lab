@@ -52,7 +52,10 @@ from .experiment_queue import (
     ExperimentQueueError,
     normalize_queue_definition,
 )
-from .storage_preflight import build_scheduler_storage_preflight_experiment
+from .storage_preflight import (
+    build_scheduler_storage_preflight_experiment,
+    validate_scheduler_storage_preflight_config,
+)
 
 MATERIALIZATION_SCHEMA = "byte_shaving_campaign_materialization.v1"
 MATERIALIZER_BACKLOG_SCHEMA = "byte_shaving_materializer_backlog.v1"
@@ -836,6 +839,7 @@ def _inverse_scorer_action_functional_command(
         telemetry_paths.append(md_out)
     return command, [], {
         "artifact_paths": telemetry_paths,
+        "pullback_artifact_paths": telemetry_paths,
         "include_postcondition_paths": True,
     }
 
@@ -958,6 +962,9 @@ def _inverse_scorer_cell_candidate_command(
                 artifact_paths.append(optional_path)
         return command, [], {
             "artifact_paths": artifact_paths,
+            "pullback_artifact_paths": [output_dir],
+            "pullback_recursive": True,
+            "pullback_max_recursive_entries": 512,
             "recursive": True,
             "max_recursive_entries": 512,
             "include_postcondition_paths": True,
@@ -969,6 +976,7 @@ def _inverse_scorer_cell_candidate_command(
         }
     return command, [], {
         "artifact_paths": [output_archive, manifest_out],
+        "pullback_artifact_paths": [output_archive, manifest_out],
         "include_postcondition_paths": True,
     }
 
@@ -1189,6 +1197,9 @@ def build_materializer_work_queue(
                 )
                 telemetry = {
                     "artifact_paths": [str(context["output_dir"])],
+                    "pullback_artifact_paths": [str(context["output_dir"])],
+                    "pullback_recursive": True,
+                    "pullback_max_recursive_entries": 512,
                     "recursive": True,
                     "max_recursive_entries": 512,
                     "include_postcondition_paths": True,
@@ -1580,6 +1591,17 @@ def build_materializer_execution_queue(
         raise ExperimentQueueError("scheduler_storage_expected_bytes must be non-negative")
     if scheduler_proactive_cleanup_action not in {"move", "delete"}:
         raise ExperimentQueueError("scheduler_proactive_cleanup_action must be move or delete")
+    if include_scheduler_preflight:
+        try:
+            validate_scheduler_storage_preflight_config(
+                proactive_cleanup_execute=scheduler_proactive_cleanup_execute,
+                proactive_cleanup_action=scheduler_proactive_cleanup_action,
+                proactive_cleanup_cold_store_roots=tuple(
+                    scheduler_proactive_cleanup_cold_store_roots
+                ),
+            )
+        except ValueError as exc:
+            raise ExperimentQueueError(str(exc)) from exc
     if exact_eval_dispatch_provider not in {"lightning", "vastai"}:
         raise ExperimentQueueError("exact_eval_dispatch_provider must be lightning or vastai")
     if exact_eval_dispatch_max_total_cost <= 0:
