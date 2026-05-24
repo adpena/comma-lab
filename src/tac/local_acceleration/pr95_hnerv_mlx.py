@@ -147,9 +147,9 @@ def pixel_shuffle_2x_nhwc(x: Any, *, upscale_factor: int = 2) -> Any:
     out_channels = channels // block
     y = mx.reshape(  # type: ignore[union-attr]
         x,
-        (batch, height, width, upscale_factor, upscale_factor, out_channels),
+        (batch, height, width, out_channels, upscale_factor, upscale_factor),
     )
-    y = mx.transpose(y, (0, 1, 3, 2, 4, 5))  # type: ignore[union-attr]
+    y = mx.transpose(y, (0, 1, 4, 2, 5, 3))  # type: ignore[union-attr]
     return mx.reshape(  # type: ignore[union-attr]
         y,
         (batch, height * upscale_factor, width * upscale_factor, out_channels),

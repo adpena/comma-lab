@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import importlib.util
 import json
+import sys
 import zipfile
 from pathlib import Path
 
@@ -16,6 +18,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     HNeRVDecoderMLX,
     HNeRVSyntheticTrainingBundleMLX,
     bilinear_resize2x_align_corners_false_nhwc,
+    load_pytorch_state_dict_into_mlx,
     partition_pr95_mlx_parameter_names,
     pixel_shuffle_2x_nhwc,
     pytorch_state_dict_from_mlx,
@@ -25,6 +28,13 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
 )
 from tac.optimization.local_training_runtime_profile import (  # noqa: E402
     normalize_runtime_profile_observation,
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PR95_SOURCE_MODEL = (
+    REPO_ROOT
+    / "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto"
+    / "source/submissions/hnerv_muon/src/model.py"
 )
 
 
@@ -41,6 +51,25 @@ def test_pixel_shuffle_2x_nhwc_matches_pr95_layout() -> None:
 
     assert y.shape == (1, 2, 2, 1)
     np.testing.assert_array_equal(np.asarray(y)[0, :, :, 0], np.array([[0.0, 1.0], [2.0, 3.0]]))
+
+
+def test_pixel_shuffle_2x_nhwc_matches_pytorch_channel_major_order() -> None:
+    x = mx.array(np.arange(8, dtype=np.float32).reshape(1, 1, 1, 8))
+
+    y = pixel_shuffle_2x_nhwc(x)
+    mx.eval(y)
+
+    assert y.shape == (1, 2, 2, 2)
+    np.testing.assert_array_equal(
+        np.asarray(y)[0],
+        np.array(
+            [
+                [[0.0, 4.0], [1.0, 5.0]],
+                [[2.0, 6.0], [3.0, 7.0]],
+            ],
+            dtype=np.float32,
+        ),
+    )
 
 
 def test_bilinear_resize2x_matches_align_corners_false_scale_two() -> None:
@@ -84,6 +113,39 @@ def test_decoder_output_shape_and_pytorch_state_names() -> None:
     assert exported["rgb_0.weight"].shape == (3, 2, 3, 3)
     assert "skips.0.weight" not in exported
     assert "skips.2.weight" in exported
+
+
+def test_public_pr95_pytorch_state_load_matches_mlx_forward() -> None:
+    torch = pytest.importorskip("torch")
+    if not PR95_SOURCE_MODEL.is_file():
+        pytest.skip("public PR95 source model.py is unavailable")
+    spec = importlib.util.spec_from_file_location(
+        "public_pr95_hnerv_model_for_mlx_parity",
+        PR95_SOURCE_MODEL,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    torch.manual_seed(123)
+    torch_model = module.HNeRVDecoder(
+        latent_dim=28,
+        base_channels=4,
+        eval_size=(384, 512),
+    ).eval()
+    mlx_model = HNeRVDecoderMLX(latent_dim=28, base_channels=4)
+    load_pytorch_state_dict_into_mlx(mlx_model, torch_model.state_dict())
+    z_torch = torch.randn(1, 28)
+
+    with torch.no_grad():
+        torch_output = torch_model(z_torch).detach().cpu().numpy()
+    mlx_output = mlx_model(mx.array(z_torch.detach().cpu().numpy()))
+    mx.eval(mlx_output)
+
+    diff = np.abs(torch_output - np.asarray(mlx_output))
+    assert diff.max() <= 1e-4
+    assert diff.mean() <= 1e-5
 
 
 def test_pr95_stage8_partition_keeps_muon_off_latents_stem_and_rgb_heads() -> None:

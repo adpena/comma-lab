@@ -33,6 +33,24 @@ Stage 1 includes the first compile/warmup cost in this run; Stage 5/8 reused war
 
 Rows carry `best_local_backend=mlx` and remain planning-only.
 
+## PyTorch Export Parity Proof
+
+The first implementation pass exposed a real parity bug: the MLX pixel-shuffle
+reshape used spatial-major channel ordering, while PyTorch `PixelShuffle(2)`
+uses channel-major ordering (`c * r^2 + i * r + j`). The fix is covered by
+`test_pixel_shuffle_2x_nhwc_matches_pytorch_channel_major_order`.
+
+`test_public_pr95_pytorch_state_load_matches_mlx_forward` now loads the public
+PR95 `HNeRVDecoder` source model with `base_channels=4`, transfers its PyTorch
+`state_dict` into `HNeRVDecoderMLX`, and verifies a paired forward pass:
+
+- max absolute output drift <= `1e-4`
+- mean absolute output drift <= `1e-5`
+- output layout `(B, 2, 3, 384, 512)` matches PR95 PyTorch
+
+This is source-model forward parity for the decoder topology and state layout.
+It is still not a public checkpoint/runtime/score proof.
+
 ## Authority Boundary
 
 The smoke archive is byte-closed for queue plumbing but intentionally refuses exact readiness:
