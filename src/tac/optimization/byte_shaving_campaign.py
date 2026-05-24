@@ -1262,8 +1262,20 @@ def _combo_ladder(
                 if _violates_conflict(unit_ids, conflicts):
                     continue
                 candidate_state = [*state, selection]
-                if len(candidate_state) >= 2:
-                    key = tuple(sorted((str(item["unit_id"]), str(item["operation_id"])) for item in candidate_state))
+                singleton_compiled_inverse_action = (
+                    len(candidate_state) == 1
+                    and "compiled_from_inverse_action_operation_set_compiler"
+                    in _as_list(selection.get("blockers"))
+                    and str(selection.get("target_kind") or "")
+                    in INVERSE_ACTION_COMPILER_TARGET_DEFAULTS
+                )
+                if len(candidate_state) >= 2 or singleton_compiled_inverse_action:
+                    key = tuple(
+                        sorted(
+                            (str(item["unit_id"]), str(item["operation_id"]))
+                            for item in candidate_state
+                        )
+                    )
                     row = _combo_row(
                         candidate_state,
                         interactions=interactions,
