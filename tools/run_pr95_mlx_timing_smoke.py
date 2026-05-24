@@ -298,6 +298,31 @@ def _stage_module(stage: int) -> str:
         raise ValueError(f"unsupported PR95 stage {stage!r}") from exc
 
 
+def _effective_optimizer_blockers_for_target(
+    blockers: list[Any],
+    *,
+    train_on_source_video_pairs: bool,
+    source_video_loss_surface: str,
+) -> list[str]:
+    effective = [str(item) for item in blockers]
+    if train_on_source_video_pairs:
+        effective = [
+            blocker
+            for blocker in effective
+            if blocker != PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER
+        ]
+    if (
+        train_on_source_video_pairs
+        and source_video_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
+    ):
+        effective = [
+            blocker
+            for blocker in effective
+            if blocker != PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER
+        ]
+    return effective
+
+
 def _recommended_execution_command(
     *,
     stage: int,
@@ -603,22 +628,11 @@ def _build_representation_training_plan(
         if isinstance(optimizer_training_config, dict)
         else []
     )
-    effective_optimizer_blockers = [str(item) for item in optimizer_blockers]
-    if train_on_source_video_pairs:
-        effective_optimizer_blockers = [
-            blocker
-            for blocker in effective_optimizer_blockers
-            if blocker != PR95_SOURCE_VIDEO_LOADER_UNPORTED_BLOCKER
-        ]
-    if (
-        train_on_source_video_pairs
-        and source_video_loss_surface == PR95_MLX_LOSS_SURFACE_RGB_YUV6_MSE
-    ):
-        effective_optimizer_blockers = [
-            blocker
-            for blocker in effective_optimizer_blockers
-            if blocker != PR95_YUV6_SCORER_LOSS_UNWIRED_BLOCKER
-        ]
+    effective_optimizer_blockers = _effective_optimizer_blockers_for_target(
+        optimizer_blockers,
+        train_on_source_video_pairs=train_on_source_video_pairs,
+        source_video_loss_surface=source_video_loss_surface,
+    )
     exact_blockers = _exact_readiness_blockers(
         source_video_training=train_on_source_video_pairs,
         training_loss_surface=source_video_loss_surface,
@@ -818,6 +832,11 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         optimizer_training_config.get("dispatch_blockers", [])
         if isinstance(optimizer_training_config, dict)
         else []
+    )
+    effective_optimizer_blockers = _effective_optimizer_blockers_for_target(
+        optimizer_blockers,
+        train_on_source_video_pairs=bool(args.train_on_source_video_pairs),
+        source_video_loss_surface=args.source_video_loss_surface,
     )
     recommended_execution = {
         "schema": "local_training_recommended_execution.v1",
@@ -1049,7 +1068,7 @@ def _build_plan(args: argparse.Namespace, *, output_dir: Path) -> dict[str, Any]
         "representation_training_plan_schema": representation_plan["schema"],
         "dispatch_blockers": [
             "pr95_hnerv_mlx_timing_smoke_plan_is_proxy_signal",
-            *[str(item) for item in optimizer_blockers],
+            *effective_optimizer_blockers,
             *exact_blockers,
         ],
         "evidence_grade": "[macOS-MLX research-signal]",
