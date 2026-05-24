@@ -239,6 +239,25 @@ INVERSE_ACTION_COMPILER_TARGET_REQUIRED_CONTEXT_FIELDS: dict[str, tuple[str, ...
         "runtime_consumption_proof",
     ),
 }
+INVERSE_ACTION_IMPLICIT_COMPILER_PARAM_KEYS: tuple[str, ...] = (
+    "archive_section",
+    "section_name",
+    "target_section",
+    "target_sections",
+    "section_manifest",
+    "packet_member",
+    "packet_member_manifest",
+    "member_name",
+    "tensor_name",
+    "tensor_path",
+    "tensor_manifest",
+    "rank",
+    "max_rank",
+    "factorization_rank",
+    "brotli_quality",
+    "compression_method",
+    "codec",
+)
 RATE_MULTIPLIER = 25.0
 ENGINEERED_CORRECTION_TARGETING_SCHEMA = "master_gradient_consumer_engineered_correction_targeting_v1"
 OPERATION_METADATA_KEYS: tuple[str, ...] = (
@@ -2898,7 +2917,94 @@ def _compiler_mapping(
         value = full_cell.get(key)
         if isinstance(value, Mapping):
             return value
-    return {}
+    return _implicit_compiler_mapping(selected=selected, full_cell=full_cell)
+
+
+def _explicit_cell_value(
+    selected: Mapping[str, Any],
+    full_cell: Mapping[str, Any],
+    *keys: str,
+) -> Any:
+    for key in keys:
+        value = selected.get(key)
+        if value not in (None, ""):
+            return value
+        value = full_cell.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _implicit_compiler_mapping(
+    *,
+    selected: Mapping[str, Any],
+    full_cell: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    raw_operation: dict[str, Any] = {}
+    target_kind = _explicit_cell_value(
+        selected,
+        full_cell,
+        "operation_set_target_kind",
+        "target_kind",
+    )
+    operation_family = _explicit_cell_value(
+        selected,
+        full_cell,
+        "operation_set_operation_family",
+        "operation_family",
+    )
+    if target_kind not in (None, ""):
+        raw_operation["target_kind"] = target_kind
+    if operation_family not in (None, ""):
+        raw_operation["operation_family"] = operation_family
+    resolved_target = _compiler_target_kind(raw_operation, raw_operation)
+    defaults = _compiler_target_defaults(resolved_target)
+    if not defaults:
+        return {}
+    resolved_target = str(defaults.get("target_kind") or resolved_target)
+    if resolved_target not in INVERSE_ACTION_EXECUTABLE_COMPILER_TARGETS:
+        return {}
+
+    params: dict[str, Any] = {
+        **dict(_mapping(full_cell.get("operation_set_params"))),
+        **dict(_mapping(selected.get("operation_set_params"))),
+        **dict(_mapping(full_cell.get("params"))),
+        **dict(_mapping(selected.get("params"))),
+    }
+    for key in INVERSE_ACTION_IMPLICIT_COMPILER_PARAM_KEYS:
+        value = _explicit_cell_value(selected, full_cell, key)
+        if value is not None and key not in params:
+            params[key] = value
+    atom_id = str(
+        _explicit_cell_value(selected, full_cell, "atom_id") or "implicit_cell"
+    )
+    operation = {
+        "unit_id": _explicit_cell_value(selected, full_cell, "unit_id")
+        or f"{atom_id}_explicit_target",
+        "operation_id": _explicit_cell_value(selected, full_cell, "operation_id")
+        or f"{defaults['operation_family']}_{atom_id}_explicit_target",
+        "target_kind": resolved_target,
+        "operation_family": operation_family or defaults["operation_family"],
+        "candidate_saved_bytes": selected.get("water_fill_cost_bytes")
+        or _mapping(full_cell.get("measure")).get("water_fill_cost_bytes")
+        or 0,
+        "params": params,
+        "representation_family_class": _explicit_cell_value(
+            selected,
+            full_cell,
+            "representation_family_class",
+            "coherence_group",
+        ),
+        "compiler_synthesis_source": "explicit_inverse_action_target_metadata",
+    }
+    return {
+        "schema": "inverse_action_operation_set_compiler_hint.v1",
+        "operation_set_id": f"implicit_compiled_{atom_id}",
+        "candidate_saved_bytes": operation["candidate_saved_bytes"],
+        "operation_portability": "family_agnostic",
+        "compiler_synthesis_source": "explicit_inverse_action_target_metadata",
+        "selected_operations": [operation],
+    }
 
 
 def _compiler_target_defaults(target_kind: Any) -> Mapping[str, Any]:

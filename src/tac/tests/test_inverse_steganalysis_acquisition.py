@@ -435,6 +435,21 @@ def test_action_functional_preserves_operation_set_compiler_hint() -> None:
     assert action["score_claim"] is False
 
 
+def test_action_functional_preserves_explicit_target_metadata_for_compiler() -> None:
+    atom = _atom(
+        operation_set_target_kind="archive_section_entropy_recode_v1",
+        operation_set_params={"section_name": "decoder_blob"},
+    )
+    action = build_discrete_scorer_action_functional([atom])
+    cell = action["cells"][0]
+
+    assert cell["operation_set_target_kind"] == (
+        "archive_section_entropy_recode_v1"
+    )
+    assert cell["operation_set_params"] == {"section_name": "decoder_blob"}
+    assert action["score_claim"] is False
+
+
 def test_mlx_acquisition_batch_compiler_hint_survives_to_action_cell() -> None:
     selection = _mlx_selection()
     row = selection["selected_rows"][0]
@@ -1327,6 +1342,67 @@ def test_discrete_action_functional_water_fills_positive_euler_cells() -> None:
     )
     for key, value in PROXY_FALSE_AUTHORITY_FIELDS.items():
         assert functional[key] is value
+
+
+def test_water_bucket_uses_portfolio_search_not_scalar_greedy() -> None:
+    atoms = [
+        _atom(
+            "greedy_single",
+            atom_id="atom_greedy_single",
+            byte_range=[0, 60],
+            predicted_score_gain=0.00018,
+            first_order_marginal_effect=0.00018,
+            second_order_interaction_effect=0.0,
+            uncertainty=0.0,
+            calibration_error=0.0,
+            fragility_penalty=0.0,
+            discontinuity_risk=0.0,
+        ),
+        _atom(
+            "portfolio_a",
+            atom_id="atom_portfolio_a",
+            byte_range=[60, 110],
+            predicted_score_gain=0.00014,
+            first_order_marginal_effect=0.00014,
+            second_order_interaction_effect=0.0,
+            uncertainty=0.0,
+            calibration_error=0.0,
+            fragility_penalty=0.0,
+            discontinuity_risk=0.0,
+        ),
+        _atom(
+            "portfolio_b",
+            atom_id="atom_portfolio_b",
+            byte_range=[110, 160],
+            predicted_score_gain=0.00014,
+            first_order_marginal_effect=0.00014,
+            second_order_interaction_effect=0.0,
+            uncertainty=0.0,
+            calibration_error=0.0,
+            fragility_penalty=0.0,
+            discontinuity_risk=0.0,
+        ),
+    ]
+
+    functional = build_discrete_scorer_action_functional(
+        atoms,
+        total_byte_budget=100,
+    )
+    bucket = functional["water_bucket"]
+
+    assert bucket["selection_strategy"] == "bounded_lagrangian_portfolio_search"
+    assert bucket["greedy_baseline_atom_ids"] == ["atom_greedy_single"]
+    assert [row["atom_id"] for row in bucket["selected_cells"]] == [
+        "atom_portfolio_a",
+        "atom_portfolio_b",
+    ]
+    assert bucket["selected_water_fill_cost_bytes"] == 100
+    assert bucket["selected_expected_score_gain"] > bucket[
+        "greedy_baseline_expected_score_gain"
+    ]
+    assert bucket["selected_lagrangian_gain"] > 0.0
+    assert bucket["score_claim"] is False
+    assert bucket["ready_for_exact_eval_dispatch"] is False
 
 
 def test_discrete_action_functional_uses_canonical_contest_rate_denominator() -> None:

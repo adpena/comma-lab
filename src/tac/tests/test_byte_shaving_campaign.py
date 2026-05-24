@@ -1012,6 +1012,79 @@ def test_direct_mlx_spend_triage_compiler_hint_lowers_to_packet_ir() -> None:
     assert bridge["ready_for_exact_eval_dispatch"] is False
 
 
+@pytest.mark.parametrize(
+    ("target_kind", "operation_family", "param_key", "param_value"),
+    [
+        (
+            "archive_section_entropy_recode_v1",
+            None,
+            "section_name",
+            "decoder_blob",
+        ),
+        (
+            None,
+            "member_recompress",
+            "member_name",
+            "0.bin",
+        ),
+        (
+            "tensor_factorize_v1",
+            None,
+            "tensor_name",
+            "decoder.overlay",
+        ),
+    ],
+)
+def test_inverse_action_explicit_target_metadata_synthesizes_compiler_hint(
+    target_kind: str | None,
+    operation_family: str | None,
+    param_key: str,
+    param_value: str,
+) -> None:
+    payload = _inverse_action_payload()
+    cell: dict[str, object] = {
+        "atom_id": "explicit_target_cell",
+        "candidate_id": "explicit_target_candidate",
+        "scope_axis": "bytes",
+        "component": "rate",
+        param_key: param_value,
+    }
+    if target_kind is not None:
+        cell["operation_set_target_kind"] = target_kind
+    if operation_family is not None:
+        cell["operation_set_operation_family"] = operation_family
+    payload["cells"] = [cell]
+    payload["water_bucket"]["selected_cells"][0]["atom_id"] = "explicit_target_cell"
+
+    surface = build_signal_surface_from_inverse_action_functional(payload)
+    plan = build_byte_shaving_campaign_plan(surface, max_k=1)
+    packet_ir = plan["packet_ir_operation_sets"][0]
+    bridge = plan["materialization_bridge"]
+    operation = packet_ir["operations"][0]
+
+    assert surface["water_bucket_materialization_portfolio"]["actuation_modes"] == [
+        "compiled_operation_set"
+    ]
+    assert surface["source_signal_refs"][0]["compiled_operation_set_count"] == 1
+    assert surface["source_signal_refs"][0][
+        "high_level_operation_compiler_required_count"
+    ] == 0
+    assert operation["materializer_executable"] is True
+    assert operation["materializer_execution_status"] == (
+        "registered_executable_after_materializer_contexts"
+    )
+    assert operation["params"][param_key] == param_value
+    assert packet_ir["byte_closed_operation_count"] == 1
+    assert "packetir_operation_set_requires_materializer_contexts" in packet_ir[
+        "blockers"
+    ]
+    assert bridge["compiled_operation_set_count"] == 1
+    assert bridge["high_level_operation_compiler_required_count"] == 0
+    assert bridge["queue_consumable_packet_ir_operation_set_count"] == 1
+    assert bridge["score_claim"] is False
+    assert bridge["ready_for_exact_eval_dispatch"] is False
+
+
 def test_inverse_action_compiler_hint_unsupported_target_fails_closed() -> None:
     payload = _inverse_action_payload()
     payload["cells"] = [

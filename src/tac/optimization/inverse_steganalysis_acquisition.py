@@ -237,6 +237,16 @@ def normalize_inverse_steganalysis_atom(row: Mapping[str, Any]) -> dict[str, Any
             row.get("operation_set_compiler"),
             "operation_set_compiler",
         ),
+        "operation_set_target_kind": _optional_text(
+            _first(row.get("operation_set_target_kind"), row.get("target_kind"))
+        ),
+        "operation_set_operation_family": _optional_text(
+            _first(row.get("operation_set_operation_family"), row.get("operation_family"))
+        ),
+        "operation_set_params": _optional_mapping(
+            _first(row.get("operation_set_params"), row.get("params")),
+            "operation_set_params",
+        ),
         "candidate_generation_only": True,
         "planning_only": True,
         "allowed_use": "planning_rank_for_candidate_generation_or_exact_eval_followup",
@@ -876,6 +886,11 @@ def build_discrete_scorer_action_functional(
                     ),
                     "source_provenance": atom.get("source_provenance"),
                     "operation_set_compiler": atom.get("operation_set_compiler"),
+                    "operation_set_target_kind": atom.get("operation_set_target_kind"),
+                    "operation_set_operation_family": atom.get(
+                        "operation_set_operation_family"
+                    ),
+                    "operation_set_params": atom.get("operation_set_params"),
                     "priority": priority,
                 },
                 "inverse_steganalysis_action_cell_is_planning_only",
@@ -2690,43 +2705,151 @@ def _water_bucket_fill(
             str(row["atom_id"]),
         ),
     )
-    selected: list[dict[str, Any]] = []
-    used_bytes = 0
-    expected_gain = 0.0
+    greedy_selected: list[dict[str, Any]] = []
+    greedy_used_bytes = 0
+    greedy_expected_gain = 0.0
     for row in ordered:
         cost = int(row["measure"]["water_fill_cost_bytes"])
-        if total_byte_budget is not None and used_bytes + cost > total_byte_budget:
+        if total_byte_budget is not None and greedy_used_bytes + cost > total_byte_budget:
             continue
-        selected.append(
-            {
-                "atom_id": row["atom_id"],
-                "candidate_id": row["candidate_id"],
-                "candidate_generation_only": True,
-                "planning_only": True,
-                "scope_axis": row["scope_axis"],
-                "component": row["component"],
-                "water_fill_cost_bytes": cost,
-                "water_fill_cost_bytes_semantics": (
-                    "planner_budget_cost_not_serialized_savings"
-                ),
-                "expected_score_gain": row["expected_score_gain"],
-                "euler_lagrange_residual": row["euler_lagrange_residual"],
-            }
-        )
-        used_bytes += cost
-        expected_gain += float(row["expected_score_gain"])
+        greedy_selected.append(dict(row))
+        greedy_used_bytes += cost
+        greedy_expected_gain += float(row["expected_score_gain"])
+    selected_rows, frontier_state_count = _water_bucket_portfolio_search(
+        ordered,
+        total_byte_budget=total_byte_budget,
+    )
+    selected = [_water_bucket_selection_row(row) for row in selected_rows]
+    used_bytes = sum(int(row["water_fill_cost_bytes"]) for row in selected)
+    expected_gain = sum(float(row["expected_score_gain"]) for row in selected)
+    selected_lagrangian_gain = sum(
+        float(row["portfolio_objective_gain"]) for row in selected
+    )
+    strategy = (
+        "positive_residual_unbounded_select_all"
+        if total_byte_budget is None
+        else "bounded_lagrangian_portfolio_search"
+    )
     return {
         "schema": "inverse_steganalysis_water_bucket_plan.v1",
+        "selection_strategy": strategy,
         "total_byte_budget": total_byte_budget,
+        "candidate_pool_count": len(ordered),
+        "frontier_state_count": frontier_state_count,
         "selected_count": len(selected),
         "selected_water_fill_cost_bytes": used_bytes,
         "selected_expected_score_gain": expected_gain,
+        "selected_lagrangian_gain": selected_lagrangian_gain,
+        "greedy_baseline_selected_count": len(greedy_selected),
+        "greedy_baseline_water_fill_cost_bytes": greedy_used_bytes,
+        "greedy_baseline_expected_score_gain": greedy_expected_gain,
+        "greedy_baseline_atom_ids": [
+            str(row["atom_id"]) for row in greedy_selected
+        ],
         "selected_cells": selected,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _water_bucket_selection_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    measure = row.get("measure")
+    if not isinstance(measure, Mapping):
+        raise InverseSteganalysisAcquisitionError(
+            "water bucket cell measure missing"
+        )
+    cost = int(measure["water_fill_cost_bytes"])
+    lambda_rate = float(row["lambda_rate"])
+    expected_gain = float(row["expected_score_gain"])
+    return {
+        "atom_id": row["atom_id"],
+        "candidate_id": row["candidate_id"],
+        "candidate_generation_only": True,
+        "planning_only": True,
+        "scope_axis": row["scope_axis"],
+        "component": row["component"],
+        "water_fill_cost_bytes": cost,
+        "water_fill_cost_bytes_semantics": (
+            "planner_budget_cost_not_serialized_savings"
+        ),
+        "expected_score_gain": expected_gain,
+        "euler_lagrange_residual": row["euler_lagrange_residual"],
+        "portfolio_objective_gain": expected_gain - lambda_rate * float(cost),
+    }
+
+
+def _water_bucket_portfolio_search(
+    ordered: Sequence[Mapping[str, Any]],
+    *,
+    total_byte_budget: int | None,
+) -> tuple[list[dict[str, Any]], int]:
+    if total_byte_budget is None:
+        return [dict(row) for row in ordered], 1 if ordered else 0
+    if not ordered:
+        return [], 0
+
+    max_frontier_states = 4096
+    states: list[tuple[tuple[int, ...], int, float, float]] = [((), 0, 0.0, 0.0)]
+    for index, row in enumerate(ordered):
+        cost = int(row["measure"]["water_fill_cost_bytes"])
+        expected_gain = float(row["expected_score_gain"])
+        lambda_rate = float(row["lambda_rate"])
+        objective_gain = expected_gain - lambda_rate * float(cost)
+        if cost > total_byte_budget or objective_gain <= 0.0:
+            continue
+        candidates = list(states)
+        for selected_indices, used_bytes, gain, objective in states:
+            next_cost = used_bytes + cost
+            if next_cost > total_byte_budget:
+                continue
+            candidates.append(
+                (
+                    (*selected_indices, index),
+                    next_cost,
+                    gain + expected_gain,
+                    objective + objective_gain,
+                )
+            )
+        states = _water_bucket_pruned_frontier(
+            candidates,
+            max_frontier_states=max_frontier_states,
+        )
+    best = max(states, key=_water_bucket_state_sort_key)
+    selected = [dict(ordered[index]) for index in best[0]]
+    return selected, len(states)
+
+
+def _water_bucket_pruned_frontier(
+    states: Sequence[tuple[tuple[int, ...], int, float, float]],
+    *,
+    max_frontier_states: int,
+) -> list[tuple[tuple[int, ...], int, float, float]]:
+    best_by_cost: dict[int, tuple[tuple[int, ...], int, float, float]] = {}
+    for state in states:
+        prior = best_by_cost.get(state[1])
+        if prior is None or _water_bucket_state_sort_key(state) > _water_bucket_state_sort_key(prior):
+            best_by_cost[state[1]] = state
+    frontier = sorted(
+        best_by_cost.values(),
+        key=_water_bucket_state_sort_key,
+        reverse=True,
+    )
+    return frontier[:max_frontier_states]
+
+
+def _water_bucket_state_sort_key(
+    state: tuple[tuple[int, ...], int, float, float],
+) -> tuple[float, float, int, int, tuple[int, ...]]:
+    selected_indices, used_bytes, expected_gain, objective_gain = state
+    return (
+        objective_gain,
+        expected_gain,
+        -used_bytes,
+        -len(selected_indices),
+        tuple(-index for index in selected_indices),
+    )
 
 
 def _span(value: Any) -> int:
