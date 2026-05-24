@@ -51430,15 +51430,15 @@
       "id": "lane_pr95_hnerv_mlx_reproduction",
       "name": "PR95 HNeRV MLX reproduction lane",
       "phase": 0.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/local_acceleration/pr95_hnerv_mlx.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/pr95_public_archive_mlx_parity_20260524T083932Z/forward_parity_probe.json"
         },
         "contest_cuda": {
           "status": false,
@@ -51449,16 +51449,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/tests/test_pr95_hnerv_mlx.py"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/codex_findings_pr95_public_archive_mlx_parity_probe_20260524T083949Z_codex.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -51475,5 +51475,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T08:12:45Z"
+  "updated_at": "2026-05-24T08:40:24Z"
 }

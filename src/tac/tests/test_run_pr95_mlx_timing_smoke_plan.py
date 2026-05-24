@@ -61,10 +61,17 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
     assert plan["representation_family_class"] == "hnerv_variant"
     assert plan["stage_count"] == 1
     assert plan["stage_index"] == 8
+    assert plan["optimizer_descriptor_id"] == "pr95_stage8_muon_adamw_mlx"
+    assert len(plan["optimizer_config_sha256"]) == 64
+    assert plan["parameter_group_lr_policy_id"] == (
+        "embedding_theta1_hidden_muon_adamw"
+    )
     execution = plan["recommended_execution"]
     assert execution["tool"] == "tools/run_pr95_mlx_timing_smoke.py"
     assert execution["training_backend"] == "mlx"
     assert execution["resource_kind"] == "local_mlx"
+    assert execution["optimizer_descriptor_id"] == "pr95_stage8_muon_adamw_mlx"
+    assert "--optimizer-descriptor-id" in execution["python_command_args"]
     assert "--allow-existing-output-dir" in execution["python_command_args"]
     assert "--write-byte-closed-smoke" in execution["python_command_args"]
     assert representation_plan["schema"] == "representation_training_probe_plan_v1"
@@ -72,6 +79,9 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         "stage8_muon_finetune"
     )
     assert representation_plan["candidate_params"]["stage_count"] == 1
+    assert representation_plan["candidate_params"]["optimizer_descriptor_id"] == (
+        "pr95_stage8_muon_adamw_mlx"
+    )
     assert representation_plan["recommended_execution"] == execution
 
     queue = build_local_training_execution_queue(
@@ -84,6 +94,9 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
 
     assert queue["schema"] == "experiment_queue.v1"
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 4
+    assert queue["experiments"][0]["metadata"]["optimizer_descriptor_id"] == (
+        "pr95_stage8_muon_adamw_mlx"
+    )
     step = queue["experiments"][0]["steps"][0]
     assert step["resources"]["kind"] == "local_mlx"
     assert "tools/run_pr95_mlx_timing_smoke.py" in step["command"]
@@ -100,6 +113,9 @@ def test_pr95_mlx_plan_only_cli_builds_queueable_local_mlx_plan(
         repo_root=REPO_ROOT,
     )
     assert row["representation_family"] == "hnerv"
+    assert row["candidate_params"]["optimizer_descriptor_id"] == (
+        "pr95_stage8_muon_adamw_mlx"
+    )
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "runtime_consumption_proof_missing" in row["dispatch_blockers"]
     assert "requires_lane_claim_before_dispatch" in row["dispatch_blockers"]

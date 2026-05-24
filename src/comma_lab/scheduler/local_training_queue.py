@@ -128,6 +128,36 @@ def _same_path(left: Path, right: Path) -> bool:
     return left.expanduser().resolve(strict=False) == right.expanduser().resolve(strict=False)
 
 
+def _identity_from_plan(
+    plan: Mapping[str, Any],
+    execution: Mapping[str, Any],
+) -> dict[str, Any]:
+    optimizer_recipe = plan.get("optimizer_recipe")
+    if not isinstance(optimizer_recipe, Mapping):
+        optimizer_recipe = {}
+    candidate_params = plan.get("candidate_params")
+    if not isinstance(candidate_params, Mapping):
+        candidate_params = {}
+    out: dict[str, Any] = {}
+    for key in (
+        "optimizer_descriptor_id",
+        "optimizer_config_sha256",
+        "optimizer_backend_status",
+        "parameter_group_lr_policy_id",
+        "parameter_group_lr_policy_sha256",
+        "parameter_group_fingerprint_sha256",
+    ):
+        value = (
+            candidate_params.get(key)
+            or optimizer_recipe.get(key)
+            or execution.get(key)
+            or plan.get(key)
+        )
+        if value is not None:
+            out[key] = value
+    return out
+
+
 def _resolve_command_path(value: str, *, repo_root: Path) -> Path:
     path = Path(value).expanduser()
     return path if path.is_absolute() else repo_root / path
@@ -289,6 +319,7 @@ def build_local_training_execution_queue(
                 ]
             )
         resource_kind = _resource_kind(execution)
+        optimizer_identity = _identity_from_plan(plan, execution)
         input_artifact_paths = [
             str(value)
             for value in (plan.get("source_dir"), plan.get("source_tree_sha256"))
@@ -311,6 +342,7 @@ def build_local_training_execution_queue(
                     "device": execution.get("device"),
                     "candidate_generation_only": True,
                     "requires_exact_eval_before_promotion": True,
+                    **optimizer_identity,
                     **FALSE_AUTHORITY,
                 },
                 "steps": [

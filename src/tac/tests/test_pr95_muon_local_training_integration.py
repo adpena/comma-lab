@@ -105,6 +105,40 @@ def test_pr95_manifest_adapter_stamps_false_authority(tmp_path: Path) -> None:
     assert row["solver_stack_wire_in"]["atom_wire_in"]["atom_kind"] == "meta_lagrangian"
 
 
+def test_pr95_manifest_adapter_preserves_optimizer_descriptor_identity(
+    tmp_path: Path,
+) -> None:
+    payload = _manifest()
+    payload["optimizer_recipe"] = {
+        "id": "pr95_stage8_muon_adamw_mlx",
+        "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+        "optimizer_config_sha256": "a" * 64,
+        "optimizer_backend_status": "implemented_mlx_source_faithful",
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "b" * 64,
+        "parameter_group_fingerprint_sha256": "c" * 64,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = adapt_pr95_local_training_manifest_to_candidate(
+        payload,
+        source_path=tmp_path / "manifest.json",
+        repo_root=tmp_path,
+    )
+
+    params = row["candidate_params"]
+    assert params["optimizer_descriptor_id"] == "pr95_stage8_muon_adamw_mlx"
+    assert params["optimizer_config_sha256"] == "a" * 64
+    assert params["optimizer_backend_status"] == "implemented_mlx_source_faithful"
+    assert params["parameter_group_lr_policy_id"] == (
+        "embedding_theta1_hidden_muon_adamw"
+    )
+    assert params["parameter_group_fingerprint_sha256"] == "c" * 64
+
+
 def test_pr95_manifest_adapter_rejects_truthy_authority() -> None:
     payload = _manifest()
     payload["rank_or_kill_eligible"] = True

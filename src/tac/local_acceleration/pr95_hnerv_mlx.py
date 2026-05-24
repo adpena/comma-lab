@@ -11,17 +11,28 @@ runtime consumes them and exact CPU/CUDA auth eval anchors them.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import math
 import platform
+import struct
 import time
 import zipfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+from tac.optimization.optimizer_scheduler_registry import (
+    OptimizerSchedulerRegistryError,
+    default_optimizer_scheduler_registry,
+)
+from tac.optimization.parameter_group_lr_policy import (
+    build_parameter_group_lr_policy_fingerprint,
+)
 
 try:  # pragma: no cover - exercised in environments with MLX installed.
     import mlx.core as mx
@@ -40,11 +51,20 @@ else:
 LANE_ID = "lane_pr95_hnerv_mlx_reproduction"
 SMOKE_MANIFEST_SCHEMA = "pr95_hnerv_mlx_timing_smoke_manifest_v1"
 SMOKE_ARCHIVE_SCHEMA = "pr95_hnerv_mlx_byte_closed_smoke_archive_v1"
+PUBLIC_ARCHIVE_PACKET_SCHEMA = "pr95_hnerv_public_archive_packet.v1"
+PUBLIC_ARCHIVE_FORWARD_PARITY_SCHEMA = "pr95_hnerv_public_archive_mlx_forward_parity.v1"
+PR95_ARCHIVE_EXPORT_SCHEMA = "pr95_hnerv_archive_export.v1"
+PR95_ARCHIVE_N_QUANT = 127
 
 PR95_STAGE_MODULES: dict[int, str] = {
     1: "stage1_v328_ce",
     5: "stage5_c1a_l7",
     8: "stage8_muon_finetune",
+}
+PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS: dict[int, str] = {
+    1: "pr95_stage1_adamw_baseline_mlx",
+    5: "pr95_stage5_adamw_baseline_mlx",
+    8: "pr95_stage8_muon_adamw_mlx",
 }
 
 FALSE_AUTHORITY: dict[str, bool] = {
@@ -75,6 +95,38 @@ class Pr95HNeRVMlxError(RuntimeError):
     """Raised when the PR95 MLX lane cannot execute faithfully."""
 
 
+@dataclass(frozen=True)
+class Pr95PublicArchivePacket:
+    """Decoded public PR95 archive packet plus byte custody metadata."""
+
+    archive_zip_path: Path
+    archive_zip_sha256: str
+    member_name: str
+    member_bytes: int
+    member_sha256: str
+    member_compress_type: int
+    state_dict: dict[str, np.ndarray]
+    latents: np.ndarray
+    meta: dict[str, Any]
+
+    def custody_manifest(self) -> dict[str, Any]:
+        return {
+            "schema": PUBLIC_ARCHIVE_PACKET_SCHEMA,
+            "archive_zip_path": self.archive_zip_path.as_posix(),
+            "archive_zip_sha256": self.archive_zip_sha256,
+            "member_name": self.member_name,
+            "member_bytes": self.member_bytes,
+            "member_sha256": self.member_sha256,
+            "member_compress_type": self.member_compress_type,
+            "meta": dict(self.meta),
+            "latent_shape": [int(dim) for dim in self.latents.shape],
+            "state_dict_tensor_count": len(self.state_dict),
+            "source_pr": 95,
+            "submission": "hnerv_muon",
+            **FALSE_AUTHORITY,
+        }
+
+
 def require_mlx() -> None:
     """Fail clearly when imported on a machine without MLX."""
 
@@ -94,6 +146,452 @@ def _sha256_file(path: Path) -> str:
         while chunk := fh.read(1 << 20):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _numpy_float32_from_any(value: Any) -> np.ndarray:
+    if hasattr(value, "detach") and hasattr(value, "cpu"):
+        value = value.detach().cpu().numpy()
+    return np.asarray(value, dtype=np.float32)
+
+
+def _brotli_decompress(data: bytes) -> bytes:
+    try:
+        import brotli
+    except Exception as exc:  # pragma: no cover - dependency guard.
+        raise Pr95HNeRVMlxError("brotli is required to parse PR95 archives") from exc
+    return brotli.decompress(data)
+
+
+def _read_exact(buffer: io.BytesIO, size: int, *, field: str) -> bytes:
+    data = buffer.read(size)
+    if len(data) != size:
+        raise Pr95HNeRVMlxError(
+            f"truncated PR95 archive while reading {field}: expected {size} bytes, "
+            f"got {len(data)}"
+        )
+    return data
+
+
+def _read_u32(buffer: io.BytesIO, *, field: str) -> int:
+    return struct.unpack("<I", _read_exact(buffer, 4, field=field))[0]
+
+
+def _decode_pr95_zigzag_u8(data: bytes) -> np.ndarray:
+    arr = np.frombuffer(data, dtype=np.uint8).astype(np.int32)
+    return np.where(arr % 2 == 0, arr // 2, -(arr // 2) - 1).astype(np.int8)
+
+
+def _encode_pr95_zigzag_i8(values: np.ndarray) -> bytes:
+    arr = values.astype(np.int32, copy=False)
+    encoded = np.where(arr >= 0, 2 * arr, -2 * arr - 1).astype(np.uint8)
+    return encoded.tobytes()
+
+
+def _brotli_compress(data: bytes, *, quality: int = 11) -> bytes:
+    try:
+        import brotli
+    except Exception as exc:  # pragma: no cover - dependency guard.
+        raise Pr95HNeRVMlxError("brotli is required to build PR95 archives") from exc
+    return brotli.compress(data, quality=quality)
+
+
+def _decode_pr95_decoder_blob(data: bytes) -> dict[str, np.ndarray]:
+    raw = _brotli_decompress(data)
+    buffer = io.BytesIO(raw)
+    tensor_count = _read_u32(buffer, field="decoder.tensor_count")
+    state_dict: dict[str, np.ndarray] = {}
+    for index in range(tensor_count):
+        name_len = _read_u32(buffer, field=f"decoder.{index}.name_len")
+        name = _read_exact(buffer, name_len, field=f"decoder.{index}.name").decode(
+            "utf-8"
+        )
+        ndim = _read_u32(buffer, field=f"decoder.{name}.ndim")
+        shape = tuple(
+            _read_u32(buffer, field=f"decoder.{name}.shape.{axis}")
+            for axis in range(ndim)
+        )
+        scale = struct.unpack(
+            "<f", _read_exact(buffer, 4, field=f"decoder.{name}.scale")
+        )[0]
+        flat_size = _read_u32(buffer, field=f"decoder.{name}.flat_size")
+        flat = _decode_pr95_zigzag_u8(
+            _read_exact(buffer, flat_size, field=f"decoder.{name}.quantized")
+        )
+        expected = math.prod(shape) if shape else 1
+        if flat.size != expected:
+            raise Pr95HNeRVMlxError(
+                f"decoder tensor {name!r} has {flat.size} values but shape {shape} "
+                f"requires {expected}"
+            )
+        state_dict[name] = flat.astype(np.float32).reshape(shape) * float(scale)
+    trailing = buffer.read()
+    if trailing:
+        raise Pr95HNeRVMlxError(
+            f"decoder blob has {len(trailing)} trailing byte(s) after state dict"
+        )
+    return state_dict
+
+
+def _encode_pr95_decoder_blob(
+    state_dict: Mapping[str, Any],
+    *,
+    n_quant: int = PR95_ARCHIVE_N_QUANT,
+    brotli_quality: int = 11,
+) -> bytes:
+    buffer = io.BytesIO()
+    buffer.write(struct.pack("<I", len(state_dict)))
+    for name, value in state_dict.items():
+        tensor = _numpy_float32_from_any(value)
+        if not np.isfinite(tensor).all():
+            raise Pr95HNeRVMlxError(f"decoder tensor {name!r} contains non-finite values")
+        max_abs = float(np.max(np.abs(tensor))) if tensor.size else 0.0
+        scale = max_abs / n_quant if max_abs > 0 else 1.0
+        quantized = (
+            np.rint(tensor / scale)
+            .clip(-n_quant, n_quant)
+            .astype(np.int8)
+            .reshape(-1)
+        )
+        name_bytes = str(name).encode("utf-8")
+        buffer.write(struct.pack("<I", len(name_bytes)))
+        buffer.write(name_bytes)
+        buffer.write(struct.pack("<I", tensor.ndim))
+        for dim in tensor.shape:
+            buffer.write(struct.pack("<I", int(dim)))
+        buffer.write(struct.pack("<f", float(scale)))
+        buffer.write(struct.pack("<I", int(quantized.size)))
+        buffer.write(_encode_pr95_zigzag_i8(quantized))
+    return _brotli_compress(buffer.getvalue(), quality=brotli_quality)
+
+
+def _decode_pr95_latents_payload(raw: bytes) -> np.ndarray:
+    buffer = io.BytesIO(raw)
+    n_pairs = _read_u32(buffer, field="latents.n_pairs")
+    latent_dim = _read_u32(buffer, field="latents.latent_dim")
+    mins = np.frombuffer(
+        _read_exact(buffer, latent_dim * 2, field="latents.mins_fp16"),
+        dtype=np.float16,
+    ).astype(np.float32)
+    scales = np.frombuffer(
+        _read_exact(buffer, latent_dim * 2, field="latents.scales_fp16"),
+        dtype=np.float16,
+    ).astype(np.float32)
+    total = n_pairs * latent_dim
+    lo = np.frombuffer(
+        _read_exact(buffer, total, field="latents.delta_lo"),
+        dtype=np.uint8,
+    ).astype(np.uint16)
+    hi = np.frombuffer(
+        _read_exact(buffer, total, field="latents.delta_hi"),
+        dtype=np.uint8,
+    ).astype(np.uint16)
+    trailing = buffer.read()
+    if trailing:
+        raise Pr95HNeRVMlxError(
+            f"latent payload has {len(trailing)} trailing byte(s)"
+        )
+    delta_zz = ((hi << 8) | lo).reshape(n_pairs, latent_dim)
+    delta = np.where(
+        delta_zz % 2 == 0,
+        delta_zz.astype(np.int32) // 2,
+        -(delta_zz.astype(np.int32) // 2) - 1,
+    ).astype(np.int16)
+    quantized = np.empty_like(delta, dtype=np.int32)
+    quantized[0] = delta[0]
+    for index in range(1, n_pairs):
+        quantized[index] = quantized[index - 1] + delta[index]
+    return quantized.astype(np.uint8).astype(np.float32) * scales[None, :] + mins[None, :]
+
+
+def _encode_pr95_latents_payload(latents: Any) -> bytes:
+    tensor = _numpy_float32_from_any(latents)
+    if tensor.ndim != 2:
+        raise Pr95HNeRVMlxError(
+            f"PR95 latents must be rank-2 (n_pairs, latent_dim), got {tensor.shape}"
+        )
+    n_pairs, latent_dim = (int(dim) for dim in tensor.shape)
+    mins = tensor.min(axis=0)
+    maxs = tensor.max(axis=0)
+    scales = np.maximum((maxs - mins) / 254.0, 1e-10).astype(np.float32)
+    quantized = np.rint((tensor - mins[None, :]) / scales[None, :]).clip(0, 254)
+    quantized_u8 = quantized.astype(np.uint8)
+    delta = np.empty_like(quantized_u8, dtype=np.int16)
+    delta[0] = quantized_u8[0]
+    delta[1:] = quantized_u8[1:].astype(np.int16) - quantized_u8[:-1].astype(np.int16)
+    delta_zz = np.where(delta >= 0, 2 * delta, -2 * delta - 1).astype(np.uint16)
+    lo = (delta_zz & 0xFF).astype(np.uint8)
+    hi = (delta_zz >> 8).astype(np.uint8)
+    return b"".join(
+        [
+            struct.pack("<II", n_pairs, latent_dim),
+            mins.astype(np.float16).tobytes(),
+            scales.astype(np.float16).tobytes(),
+            lo.tobytes(),
+            hi.tobytes(),
+        ]
+    )
+
+
+def _normalize_pr95_archive_meta(
+    meta: Mapping[str, Any] | None,
+    *,
+    latents: np.ndarray,
+) -> dict[str, Any]:
+    n_pairs, latent_dim = (int(dim) for dim in latents.shape)
+    source = dict(meta or {})
+    normalized = {
+        "n_pairs": int(source.get("n_pairs", n_pairs)),
+        "latent_dim": int(source.get("latent_dim", latent_dim)),
+        "base_channels": int(source.get("base_channels", 36)),
+        "eval_size": [int(dim) for dim in source.get("eval_size", [384, 512])],
+    }
+    if normalized["n_pairs"] != n_pairs or normalized["latent_dim"] != latent_dim:
+        raise Pr95HNeRVMlxError(
+            f"PR95 meta {normalized!r} does not match latent shape {latents.shape}"
+        )
+    if normalized["eval_size"] != [384, 512]:
+        raise Pr95HNeRVMlxError(
+            f"PR95 export currently supports eval_size [384, 512], got "
+            f"{normalized['eval_size']}"
+        )
+    return normalized
+
+
+def _expected_pr95_state_shapes(
+    *,
+    latent_dim: int,
+    base_channels: int,
+) -> dict[str, tuple[int, ...]]:
+    channels = [
+        base_channels,
+        base_channels,
+        base_channels,
+        int(base_channels * 0.75),
+        int(base_channels * 0.58),
+        int(base_channels * 0.5),
+        int(base_channels * 0.5),
+    ]
+    shapes: dict[str, tuple[int, ...]] = {
+        "stem.weight": (channels[0] * 6 * 8, latent_dim),
+        "stem.bias": (channels[0] * 6 * 8,),
+    }
+    for index in range(6):
+        in_ch = channels[index]
+        out_ch = channels[index + 1]
+        shapes[f"blocks.{index}.weight"] = (out_ch * 4, in_ch, 3, 3)
+        shapes[f"blocks.{index}.bias"] = (out_ch * 4,)
+        if in_ch != out_ch:
+            shapes[f"skips.{index}.weight"] = (out_ch, in_ch, 1, 1)
+            shapes[f"skips.{index}.bias"] = (out_ch,)
+    final_ch = channels[-1]
+    shapes.update(
+        {
+            "refine.0.weight": (final_ch // 2, final_ch, 3, 3),
+            "refine.0.bias": (final_ch // 2,),
+            "refine.1.weight": (final_ch, final_ch // 2, 3, 3),
+            "refine.1.bias": (final_ch,),
+            "rgb_0.weight": (3, final_ch, 3, 3),
+            "rgb_0.bias": (3,),
+            "rgb_1.weight": (3, final_ch, 3, 3),
+            "rgb_1.bias": (3,),
+        }
+    )
+    return shapes
+
+
+def _validate_pr95_state_dict_shapes(
+    state_dict: Mapping[str, Any],
+    *,
+    latent_dim: int,
+    base_channels: int,
+) -> None:
+    expected = _expected_pr95_state_shapes(
+        latent_dim=latent_dim,
+        base_channels=base_channels,
+    )
+    actual_keys = set(state_dict)
+    expected_keys = set(expected)
+    missing = sorted(expected_keys - actual_keys)
+    extra = sorted(actual_keys - expected_keys)
+    if missing or extra:
+        raise Pr95HNeRVMlxError(
+            "PR95 state_dict key mismatch"
+            f"; missing={missing or []}; extra={extra or []}"
+        )
+    for name, expected_shape in expected.items():
+        actual_shape = tuple(
+            int(dim) for dim in _numpy_float32_from_any(state_dict[name]).shape
+        )
+        if actual_shape != expected_shape:
+            raise Pr95HNeRVMlxError(
+                f"PR95 tensor {name!r} shape {actual_shape} does not match "
+                f"expected {expected_shape}"
+            )
+
+
+def build_pr95_public_archive_member(
+    state_dict: Mapping[str, Any],
+    latents: Any,
+    *,
+    meta: Mapping[str, Any] | None = None,
+    brotli_quality: int = 11,
+) -> bytes:
+    """Build a source-compatible PR95 ``0.bin`` archive member."""
+
+    latents_np = _numpy_float32_from_any(latents)
+    if latents_np.ndim != 2:
+        raise Pr95HNeRVMlxError(
+            f"PR95 latents must be rank-2 (n_pairs, latent_dim), got {latents_np.shape}"
+        )
+    if min(latents_np.shape) < 1:
+        raise Pr95HNeRVMlxError(f"PR95 latents must be non-empty, got {latents_np.shape}")
+    if not np.isfinite(latents_np).all():
+        raise Pr95HNeRVMlxError("PR95 latents contain non-finite values")
+    normalized_meta = _normalize_pr95_archive_meta(meta, latents=latents_np)
+    _validate_pr95_state_dict_shapes(
+        state_dict,
+        latent_dim=int(normalized_meta["latent_dim"]),
+        base_channels=int(normalized_meta["base_channels"]),
+    )
+    meta_blob = _brotli_compress(
+        json.dumps(normalized_meta).encode("utf-8"),
+        quality=brotli_quality,
+    )
+    decoder_blob = _encode_pr95_decoder_blob(
+        state_dict,
+        brotli_quality=brotli_quality,
+    )
+    latents_blob = _brotli_compress(
+        _encode_pr95_latents_payload(latents_np),
+        quality=brotli_quality,
+    )
+    output = io.BytesIO()
+    output.write(struct.pack("<I", len(meta_blob)))
+    output.write(meta_blob)
+    output.write(struct.pack("<I", len(decoder_blob)))
+    output.write(decoder_blob)
+    output.write(struct.pack("<I", len(latents_blob)))
+    output.write(latents_blob)
+    return output.getvalue()
+
+
+def parse_pr95_public_archive_member(
+    archive_bytes: bytes,
+) -> tuple[dict[str, np.ndarray], np.ndarray, dict[str, Any]]:
+    """Parse the public PR95 ``0.bin`` member without importing the source tree."""
+
+    buffer = io.BytesIO(archive_bytes)
+    meta_len = _read_u32(buffer, field="archive.meta_len")
+    meta = json.loads(_brotli_decompress(_read_exact(buffer, meta_len, field="archive.meta")))
+    decoder_len = _read_u32(buffer, field="archive.decoder_len")
+    state_dict = _decode_pr95_decoder_blob(
+        _read_exact(buffer, decoder_len, field="archive.decoder_blob")
+    )
+    latent_len = _read_u32(buffer, field="archive.latents_len")
+    latents = _decode_pr95_latents_payload(
+        _brotli_decompress(_read_exact(buffer, latent_len, field="archive.latents_blob"))
+    )
+    trailing = buffer.read()
+    if trailing:
+        raise Pr95HNeRVMlxError(
+            f"PR95 archive member has {len(trailing)} trailing byte(s)"
+        )
+    return state_dict, latents.astype(np.float32, copy=False), meta
+
+
+def parse_pr95_public_archive_zip(
+    archive_zip_path: Path,
+    *,
+    member_name: str = "0.bin",
+) -> Pr95PublicArchivePacket:
+    """Load the public PR95 ZIP and decode its HNeRV state/latent packet."""
+
+    archive_zip_path = Path(archive_zip_path)
+    if not archive_zip_path.is_file():
+        raise Pr95HNeRVMlxError(f"PR95 archive ZIP not found: {archive_zip_path}")
+    archive_zip_sha256 = _sha256_file(archive_zip_path)
+    with zipfile.ZipFile(archive_zip_path) as zf:
+        try:
+            info = zf.getinfo(member_name)
+        except KeyError as exc:
+            names = ", ".join(zf.namelist())
+            raise Pr95HNeRVMlxError(
+                f"PR95 archive ZIP is missing member {member_name!r}; members: {names}"
+            ) from exc
+        archive_bytes = zf.read(member_name)
+    state_dict, latents, meta = parse_pr95_public_archive_member(archive_bytes)
+    if tuple(latents.shape) != (
+        int(meta.get("n_pairs", -1)),
+        int(meta.get("latent_dim", -1)),
+    ):
+        raise Pr95HNeRVMlxError(
+            f"latent shape {latents.shape} does not match PR95 meta {meta!r}"
+        )
+    return Pr95PublicArchivePacket(
+        archive_zip_path=archive_zip_path,
+        archive_zip_sha256=archive_zip_sha256,
+        member_name=member_name,
+        member_bytes=len(archive_bytes),
+        member_sha256=_sha256_bytes(archive_bytes),
+        member_compress_type=int(info.compress_type),
+        state_dict=state_dict,
+        latents=latents,
+        meta=meta,
+    )
+
+
+def write_pr95_public_archive_zip(
+    state_dict: Mapping[str, Any],
+    latents: Any,
+    *,
+    meta: Mapping[str, Any] | None,
+    output_zip_path: Path,
+    member_name: str = "0.bin",
+    brotli_quality: int = 11,
+) -> dict[str, Any]:
+    """Write a deterministic PR95-compatible single-member ZIP archive."""
+
+    output_zip_path = Path(output_zip_path)
+    output_zip_path.parent.mkdir(parents=True, exist_ok=True)
+    member_bytes = build_pr95_public_archive_member(
+        state_dict,
+        latents,
+        meta=meta,
+        brotli_quality=brotli_quality,
+    )
+    info = zipfile.ZipInfo(member_name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    info.external_attr = 0o100644 << 16
+    info.extra = b""
+    with zipfile.ZipFile(output_zip_path, "w") as zf:
+        zf.comment = b""
+        zf.writestr(info, member_bytes)
+    reparsed = parse_pr95_public_archive_zip(output_zip_path, member_name=member_name)
+    return {
+        "schema": PR95_ARCHIVE_EXPORT_SCHEMA,
+        "archive_zip_path": output_zip_path.as_posix(),
+        "archive_zip_bytes": output_zip_path.stat().st_size,
+        "archive_zip_sha256": _sha256_file(output_zip_path),
+        "member_name": member_name,
+        "member_bytes": len(member_bytes),
+        "member_sha256": _sha256_bytes(member_bytes),
+        "member_compress_type": int(zipfile.ZIP_STORED),
+        "parsed_meta": reparsed.meta,
+        "parsed_latent_shape": [int(dim) for dim in reparsed.latents.shape],
+        "parsed_state_dict_tensor_count": len(reparsed.state_dict),
+        "runtime_consumption_proof_present": False,
+        "receiver_proof_present": False,
+        "exact_readiness_refusal": {
+            "schema": "exact_readiness_refusal.v1",
+            "ready": False,
+            "blockers": [
+                "pr95_archive_export_is_byte_closed_but_not_runtime_consumed",
+                "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+                "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+            ],
+        },
+        **FALSE_AUTHORITY,
+    }
 
 
 def _param_count_from_tree(tree: Any) -> int:
@@ -419,6 +917,135 @@ def pytorch_state_dict_from_mlx(
     return {name: torch.from_numpy(value.copy()) for name, value in exported.items()}
 
 
+def _sample_indices_for_pr95_packet(
+    total: int,
+    sample_indices: Sequence[int] | None,
+) -> list[int]:
+    if total < 1:
+        raise Pr95HNeRVMlxError("PR95 packet has no latent rows")
+    if sample_indices is None:
+        sample_indices = (0, total // 2, total - 1)
+    out: list[int] = []
+    for raw_index in sample_indices:
+        index = int(raw_index)
+        if index < 0 or index >= total:
+            raise Pr95HNeRVMlxError(
+                f"sample index {index} out of range for {total} PR95 latent rows"
+            )
+        if index not in out:
+            out.append(index)
+    return out
+
+
+def _mlx_device_from_name(device: str) -> Any:
+    require_mlx()
+    normalized = device.lower()
+    if normalized == "cpu":
+        return mx.cpu  # type: ignore[union-attr]
+    if normalized == "gpu":
+        return mx.gpu  # type: ignore[union-attr]
+    raise ValueError("mlx_device must be 'cpu' or 'gpu'")
+
+
+def compare_pr95_public_archive_forward_with_pytorch(
+    packet: Pr95PublicArchivePacket,
+    torch_decoder_cls: Any,
+    *,
+    sample_indices: Sequence[int] | None = None,
+    mlx_device: str = "cpu",
+    atol_max: float = 2e-3,
+    atol_mean: float = 1e-4,
+) -> dict[str, Any]:
+    """Compare MLX against PyTorch on decoded public PR95 packet state.
+
+    The result is a local implementation-parity probe.  It deliberately remains
+    non-promotable and cannot claim contest score authority.
+    """
+
+    require_mlx()
+    try:
+        import torch
+    except Exception as exc:  # pragma: no cover - dependency guard.
+        raise Pr95HNeRVMlxError("torch is required for PR95 parity probes") from exc
+
+    meta = packet.meta
+    indices = _sample_indices_for_pr95_packet(int(packet.latents.shape[0]), sample_indices)
+    z_np = packet.latents[indices].astype(np.float32, copy=False)
+    torch_state_dict = {
+        name: torch.from_numpy(value.astype(np.float32, copy=True))
+        for name, value in packet.state_dict.items()
+    }
+    torch_model = torch_decoder_cls(
+        latent_dim=int(meta["latent_dim"]),
+        base_channels=int(meta["base_channels"]),
+        eval_size=tuple(int(dim) for dim in meta["eval_size"]),
+    ).eval()
+    torch_model.load_state_dict(torch_state_dict)
+
+    previous_device = mx.default_device()  # type: ignore[union-attr]
+    mx.set_default_device(_mlx_device_from_name(mlx_device))  # type: ignore[union-attr]
+    try:
+        mlx_model = HNeRVDecoderMLX(
+            latent_dim=int(meta["latent_dim"]),
+            base_channels=int(meta["base_channels"]),
+            eval_size=tuple(int(dim) for dim in meta["eval_size"]),
+        )
+        load_pytorch_state_dict_into_mlx(mlx_model, packet.state_dict)
+        started = time.perf_counter()
+        with torch.no_grad():
+            torch_output = torch_model(torch.from_numpy(z_np)).detach().cpu().numpy()
+        mlx_output = mlx_model(mx.array(z_np))  # type: ignore[union-attr]
+        mx.eval(mlx_output)  # type: ignore[union-attr]
+        elapsed = time.perf_counter() - started
+        mlx_output_np = np.asarray(mlx_output)
+    finally:
+        mx.set_default_device(previous_device)  # type: ignore[union-attr]
+
+    diff = np.abs(torch_output - mlx_output_np)
+    max_abs = float(diff.max()) if diff.size else 0.0
+    mean_abs = float(diff.mean()) if diff.size else 0.0
+    p99_abs = float(np.quantile(diff, 0.99)) if diff.size else 0.0
+    p999_abs = float(np.quantile(diff, 0.999)) if diff.size else 0.0
+    passed = max_abs <= float(atol_max) and mean_abs <= float(atol_mean)
+    blockers = [
+        "local_mlx_forward_parity_probe_is_not_contest_auth_eval",
+        "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
+        "requires_exact_cpu_cuda_auth_eval_before_score_claim",
+    ]
+    if not passed:
+        blockers.append("pytorch_mlx_forward_drift_exceeds_configured_tolerance")
+    return {
+        "schema": PUBLIC_ARCHIVE_FORWARD_PARITY_SCHEMA,
+        "generated_utc": datetime.now(UTC).isoformat(),
+        "lane_id": LANE_ID,
+        "source_pr": 95,
+        "submission": "hnerv_muon",
+        "evidence_grade": "[macOS-MLX research-signal]",
+        "mlx_device": mlx_device,
+        "sample_indices": indices,
+        "sample_count": len(indices),
+        "elapsed_seconds": elapsed,
+        "torch_output_shape": [int(dim) for dim in torch_output.shape],
+        "mlx_output_shape": [int(dim) for dim in mlx_output_np.shape],
+        "parity": {
+            "passed": passed,
+            "max_abs": max_abs,
+            "mean_abs": mean_abs,
+            "p99_abs": p99_abs,
+            "p999_abs": p999_abs,
+            "atol_max": float(atol_max),
+            "atol_mean": float(atol_mean),
+        },
+        "archive_packet": packet.custody_manifest(),
+        "exact_readiness_refusal": {
+            "schema": "exact_readiness_refusal.v1",
+            "ready": False,
+            "blockers": blockers,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
 def partition_pr95_mlx_parameter_names(params: Any) -> dict[str, list[str]]:
     """Return the source-faithful PR95 stage-8 Muon/AdamW parameter split."""
 
@@ -439,6 +1066,19 @@ def partition_pr95_mlx_parameter_names(params: Any) -> dict[str, list[str]]:
         else:
             adamw.append(name)
     return {"muon": sorted(muon), "adamw": sorted(adamw)}
+
+
+def pr95_mlx_parameter_shape_records(params: Any) -> list[dict[str, Any]]:
+    """Return framework-neutral shape records for MLX parameter grouping."""
+
+    require_mlx()
+    return [
+        {
+            "name": str(name),
+            "shape": [int(dim) for dim in getattr(value, "shape", ())],
+        }
+        for name, value in tree_flatten(params)  # type: ignore[misc]
+    ]
 
 
 def zeropower_via_newtonschulz5_mlx(
@@ -469,6 +1109,67 @@ def zeropower_via_newtonschulz5_mlx(
     return x.astype(original_dtype)
 
 
+def _safe_descriptor_fragment(value: str) -> str:
+    return "".join(ch if ch.isalnum() else "_" for ch in value.lower()).strip("_")
+
+
+def pr95_default_optimizer_descriptor_id(stage_index: int) -> str:
+    """Return the executable source-faithful descriptor for a PR95 stage."""
+
+    try:
+        return PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS[int(stage_index)]
+    except KeyError as exc:
+        raise ValueError("supported PR95 MLX timing stages are 1, 5, and 8") from exc
+
+
+def pr95_mlx_optimizer_descriptor_row(descriptor_id: str) -> dict[str, Any]:
+    """Return a planning descriptor row from the canonical optimizer registry."""
+
+    try:
+        return default_optimizer_scheduler_registry().get(descriptor_id).to_planner_candidate()
+    except OptimizerSchedulerRegistryError as exc:
+        raise Pr95HNeRVMlxError(str(exc)) from exc
+
+
+def _descriptor_stage_indices(descriptor: Mapping[str, Any]) -> list[int]:
+    training_config = descriptor.get("training_config")
+    if not isinstance(training_config, Mapping):
+        return []
+    indices = training_config.get("pr95_stage_indices")
+    if not isinstance(indices, Sequence) or isinstance(indices, str | bytes):
+        return []
+    out: list[int] = []
+    for index in indices:
+        try:
+            out.append(int(index))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _as_bool(value: Any, *, default: bool = False) -> bool:
+    return default if value is None else bool(value)
+
+
+def _as_float(value: Any, *, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return _as_float(value, default=0.0)
+
+
+def _as_betas(value: Any) -> tuple[float, float]:
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes) and len(value) == 2:
+        return (_as_float(value[0], default=0.9), _as_float(value[1], default=0.999))
+    return (0.9, 0.999)
+
+
 @dataclass(frozen=True)
 class Pr95MlxOptimizerConfig:
     use_muon: bool
@@ -487,6 +1188,64 @@ class Pr95MlxOptimizerConfig:
     cast_muon_float32_to_bfloat16: bool = True
 
 
+def pr95_mlx_optimizer_config_from_descriptor(
+    descriptor_id: str,
+    *,
+    stage_index: int,
+) -> Pr95MlxOptimizerConfig:
+    """Lower an executable PR95 descriptor into the MLX optimizer config."""
+
+    descriptor = pr95_mlx_optimizer_descriptor_row(descriptor_id)
+    training_config = descriptor.get("training_config")
+    if not isinstance(training_config, Mapping):
+        raise Pr95HNeRVMlxError(f"{descriptor_id}: descriptor missing training_config")
+    backend_status = str(training_config.get("backend_status") or "")
+    if backend_status != "implemented_mlx_source_faithful":
+        raise Pr95HNeRVMlxError(
+            f"{descriptor_id}: optimizer descriptor is not executable on MLX "
+            f"(backend_status={backend_status or 'missing'})"
+        )
+    allowed_stages = _descriptor_stage_indices(descriptor)
+    if int(stage_index) not in allowed_stages:
+        raise Pr95HNeRVMlxError(
+            f"{descriptor_id}: descriptor does not support PR95 stage {stage_index}"
+        )
+    optimizer_config = descriptor.get("optimizer_config")
+    if not isinstance(optimizer_config, Mapping):
+        raise Pr95HNeRVMlxError(f"{descriptor_id}: descriptor missing optimizer_config")
+    return Pr95MlxOptimizerConfig(
+        use_muon=_as_bool(optimizer_config.get("use_muon")),
+        adamw_lr=_as_float(optimizer_config.get("adamw_lr"), default=3e-5),
+        latent_lr_mult=_as_float(
+            optimizer_config.get("latent_lr_mult"),
+            default=10.0,
+        ),
+        muon_lr=_as_float(optimizer_config.get("muon_lr"), default=2e-4),
+        muon_momentum=_as_float(
+            optimizer_config.get("muon_momentum"),
+            default=0.95,
+        ),
+        muon_nesterov=_as_bool(optimizer_config.get("muon_nesterov"), default=True),
+        muon_ns_steps=int(optimizer_config.get("muon_ns_steps") or 5),
+        muon_weight_decay=_as_float(
+            optimizer_config.get("muon_weight_decay"),
+            default=0.0,
+        ),
+        adamw_betas=_as_betas(optimizer_config.get("adamw_betas")),
+        adamw_eps=_as_float(optimizer_config.get("adamw_eps"), default=1e-8),
+        adamw_weight_decay=_as_float(
+            optimizer_config.get("adamw_weight_decay"),
+            default=0.0,
+        ),
+        grad_clip=_as_optional_float(optimizer_config.get("grad_clip")),
+        grad_clip_muon=_as_optional_float(optimizer_config.get("grad_clip_muon")),
+        cast_muon_float32_to_bfloat16=_as_bool(
+            optimizer_config.get("cast_muon_float32_to_bfloat16"),
+            default=True,
+        ),
+    )
+
+
 @dataclass
 class Pr95MlxOptimizerState:
     step: int = 0
@@ -500,36 +1259,47 @@ class Pr95MlxStageSmokeConfig:
     stage_index: int
     stage_module: str
     optimizer: Pr95MlxOptimizerConfig
+    optimizer_descriptor_id: str
+    optimizer_config_sha256: str
+    parameter_group_lr_policy: Mapping[str, Any]
+    parameter_group_lr_policy_id: str
+    parameter_group_lr_policy_sha256: str
+    optimizer_backend_status: str
     synthetic_loss: str = "normalized_rgb_pair_mse"
 
 
-def stage_smoke_config(stage_index: int) -> Pr95MlxStageSmokeConfig:
+def stage_smoke_config(
+    stage_index: int,
+    *,
+    optimizer_descriptor_id: str | None = None,
+) -> Pr95MlxStageSmokeConfig:
     """Return a faithful optimizer switch for PR95 stages 1, 5, and 8."""
 
     if stage_index not in PR95_STAGE_MODULES:
         raise ValueError("supported PR95 MLX timing stages are 1, 5, and 8")
-    if stage_index == 8:
-        optimizer = Pr95MlxOptimizerConfig(
-            use_muon=True,
-            adamw_lr=1e-5,
-            muon_lr=2e-4,
-            muon_weight_decay=5e-4,
-            latent_lr_mult=10.0,
-            grad_clip=1.0,
-            grad_clip_muon=1.0,
-        )
-    else:
-        optimizer = Pr95MlxOptimizerConfig(
-            use_muon=False,
-            adamw_lr=3e-5,
-            latent_lr_mult=10.0,
-            grad_clip=1.0,
-            grad_clip_muon=None,
-        )
+    descriptor_id = optimizer_descriptor_id or pr95_default_optimizer_descriptor_id(
+        stage_index
+    )
+    descriptor = pr95_mlx_optimizer_descriptor_row(descriptor_id)
+    optimizer = pr95_mlx_optimizer_config_from_descriptor(
+        descriptor_id,
+        stage_index=stage_index,
+    )
+    policy = descriptor["parameter_group_lr_policy"]
     return Pr95MlxStageSmokeConfig(
         stage_index=stage_index,
         stage_module=PR95_STAGE_MODULES[stage_index],
         optimizer=optimizer,
+        optimizer_descriptor_id=descriptor_id,
+        optimizer_config_sha256=str(descriptor["config_sha256"]),
+        parameter_group_lr_policy=policy,
+        parameter_group_lr_policy_id=str(descriptor["parameter_group_lr_policy_id"]),
+        parameter_group_lr_policy_sha256=str(
+            descriptor["parameter_group_lr_policy_sha256"]
+        ),
+        optimizer_backend_status=str(
+            descriptor.get("training_config", {}).get("backend_status")
+        ),
     )
 
 
@@ -563,12 +1333,22 @@ def apply_pr95_mlx_optimizer_step(
     gradients: Any,
     state: Pr95MlxOptimizerState,
     config: Pr95MlxOptimizerConfig,
+    parameter_group_fingerprint: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Apply one source-faithful PR95 optimizer step to an MLX module."""
 
     require_mlx()
     params_flat = dict(tree_flatten(module.parameters()))  # type: ignore[misc]
     grads_flat = dict(tree_flatten(gradients))  # type: ignore[misc]
+    if parameter_group_fingerprint is None:
+        parameter_group_fingerprint = build_parameter_group_lr_policy_fingerprint(
+            pr95_mlx_parameter_shape_records(module.parameters())
+        )
+    parameter_classes = {
+        str(record.get("name")): str(record.get("parameter_class"))
+        for record in parameter_group_fingerprint.get("classification_records", [])
+        if isinstance(record, Mapping)
+    }
     split = partition_pr95_mlx_parameter_names(module.parameters())
     muon_names = split["muon"] if config.use_muon else []
     adamw_names = list(split["adamw"] + ([] if config.use_muon else split["muon"]))
@@ -623,10 +1403,10 @@ def apply_pr95_mlx_optimizer_step(
             updated[name] = base - config.muon_lr * update
             continue
 
-        lr = (
-            config.adamw_lr * config.latent_lr_mult
-            if "latents" in name.lower()
-            else config.adamw_lr
+        lr = config.adamw_lr * (
+            config.latent_lr_mult
+            if parameter_classes.get(name) == "embedding_like"
+            else 1.0
         )
         base = (
             param * (1.0 - lr * config.adamw_weight_decay)
@@ -657,6 +1437,9 @@ def apply_pr95_mlx_optimizer_step(
         "adamw_tensor_count": len(adamw_names),
         "muon_parameter_names": muon_names,
         "adamw_parameter_names": sorted(adamw_names),
+        "parameter_group_fingerprint_sha256": parameter_group_fingerprint.get(
+            "fingerprint_sha256"
+        ),
     }
 
 
@@ -669,6 +1452,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
     seed: int,
     base_channels: int = 36,
     latent_dim: int = 28,
+    optimizer_descriptor_id: str | None = None,
 ) -> dict[str, Any]:
     """Run a local MLX timing smoke against synthetic targets."""
 
@@ -680,7 +1464,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
     if synthetic_pairs < batch_size:
         raise ValueError("synthetic_pairs must be >= batch_size")
 
-    stage = stage_smoke_config(stage_index)
+    stage = stage_smoke_config(
+        stage_index,
+        optimizer_descriptor_id=optimizer_descriptor_id,
+    )
     mx.random.seed(seed)  # type: ignore[union-attr]
     bundle = HNeRVSyntheticTrainingBundleMLX(
         latent_count=synthetic_pairs,
@@ -697,6 +1484,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
         key=target_key,
     )
     optimizer_state = Pr95MlxOptimizerState()
+    parameter_group_fingerprint = build_parameter_group_lr_policy_fingerprint(
+        pr95_mlx_parameter_shape_records(bundle.parameters()),
+        policy=stage.parameter_group_lr_policy,
+    )
 
     def loss_fn(model: Any, indices: Any) -> Any:
         pred = model(indices)
@@ -718,6 +1509,7 @@ def run_pr95_mlx_synthetic_timing_smoke(
             grads,
             optimizer_state,
             stage.optimizer,
+            parameter_group_fingerprint=parameter_group_fingerprint,
         )
         mx.eval(loss, bundle.parameters())  # type: ignore[union-attr]
         last_loss = float(loss)
@@ -726,7 +1518,10 @@ def run_pr95_mlx_synthetic_timing_smoke(
     seconds_per_step = elapsed / steps
 
     split = partition_pr95_mlx_parameter_names(bundle.parameters())
-    profile_id = f"pr95_hnerv_mlx_stage{stage_index}_seed{seed}_steps{steps}"
+    descriptor_fragment = _safe_descriptor_fragment(stage.optimizer_descriptor_id)
+    profile_id = (
+        f"pr95_hnerv_mlx_stage{stage_index}_{descriptor_fragment}_seed{seed}_steps{steps}"
+    )
     runtime_profile = {
         "schema": "trainer_runtime_profile_observation.v1",
         "profile_id": profile_id,
@@ -740,6 +1535,13 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "seed": seed,
         "stage_id": stage.stage_module,
         "stage_index": stage.stage_index,
+        "optimizer_descriptor_id": stage.optimizer_descriptor_id,
+        "optimizer_config_sha256": stage.optimizer_config_sha256,
+        "parameter_group_lr_policy_id": stage.parameter_group_lr_policy_id,
+        "parameter_group_lr_policy_sha256": stage.parameter_group_lr_policy_sha256,
+        "parameter_group_fingerprint_sha256": parameter_group_fingerprint[
+            "fingerprint_sha256"
+        ],
         "seconds_per_step": seconds_per_step,
         "examples_per_second": batch_size / seconds_per_step if seconds_per_step else None,
         "state_bytes": _param_count_from_tree(bundle.parameters()) * 4,
@@ -792,6 +1594,16 @@ def run_pr95_mlx_synthetic_timing_smoke(
         "architecture": bundle.decoder.architecture_manifest(),
         "optimizer_recipe": {
             "schema": "pr95_hnerv_mlx_optimizer_recipe_v1",
+            "id": stage.optimizer_descriptor_id,
+            "optimizer_descriptor_id": stage.optimizer_descriptor_id,
+            "optimizer_config_sha256": stage.optimizer_config_sha256,
+            "optimizer_backend_status": stage.optimizer_backend_status,
+            "parameter_group_lr_policy_id": stage.parameter_group_lr_policy_id,
+            "parameter_group_lr_policy_sha256": stage.parameter_group_lr_policy_sha256,
+            "parameter_group_fingerprint_sha256": parameter_group_fingerprint[
+                "fingerprint_sha256"
+            ],
+            "parameter_group_fingerprint": parameter_group_fingerprint,
             "stage_uses_muon": stage.optimizer.use_muon,
             "muon_lr": stage.optimizer.muon_lr if stage.optimizer.use_muon else None,
             "adamw_lr": stage.optimizer.adamw_lr,
@@ -877,7 +1689,12 @@ __all__ = [
     "EXACT_READINESS_REFUSAL_BLOCKERS",
     "FALSE_AUTHORITY",
     "LANE_ID",
+    "PR95_ARCHIVE_EXPORT_SCHEMA",
+    "PR95_ARCHIVE_N_QUANT",
+    "PR95_STAGE_DEFAULT_OPTIMIZER_DESCRIPTOR_IDS",
     "PR95_STAGE_MODULES",
+    "PUBLIC_ARCHIVE_FORWARD_PARITY_SCHEMA",
+    "PUBLIC_ARCHIVE_PACKET_SCHEMA",
     "SMOKE_ARCHIVE_SCHEMA",
     "SMOKE_MANIFEST_SCHEMA",
     "HNeRVDecoderMLX",
@@ -885,15 +1702,25 @@ __all__ = [
     "Pr95HNeRVMlxError",
     "Pr95MlxOptimizerConfig",
     "Pr95MlxOptimizerState",
+    "Pr95PublicArchivePacket",
     "apply_pr95_mlx_optimizer_step",
     "bilinear_resize2x_align_corners_false_nhwc",
+    "build_pr95_public_archive_member",
+    "compare_pr95_public_archive_forward_with_pytorch",
     "load_pytorch_state_dict_into_mlx",
+    "parse_pr95_public_archive_member",
+    "parse_pr95_public_archive_zip",
     "partition_pr95_mlx_parameter_names",
     "pixel_shuffle_2x_nhwc",
+    "pr95_default_optimizer_descriptor_id",
+    "pr95_mlx_optimizer_config_from_descriptor",
+    "pr95_mlx_optimizer_descriptor_row",
+    "pr95_mlx_parameter_shape_records",
     "pytorch_state_dict_from_mlx",
     "require_mlx",
     "run_pr95_mlx_synthetic_timing_smoke",
     "stage_smoke_config",
     "write_pr95_mlx_byte_closed_smoke_archive",
+    "write_pr95_public_archive_zip",
     "zeropower_via_newtonschulz5_mlx",
 ]

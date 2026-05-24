@@ -86,6 +86,10 @@ def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
 def _stage_modules(payload: Mapping[str, Any]) -> list[str]:
     modules: list[str] = []
     for stage in _as_list(payload.get("stages")):
@@ -214,6 +218,7 @@ def adapt_pr95_local_training_manifest_to_candidate(
             if str(item)
         ],
     ]
+    optimizer_recipe = _mapping(payload.get("optimizer_recipe"))
     optimizer_params = {
         "stage_count": stage_count,
         "seed": seed,
@@ -223,6 +228,16 @@ def adapt_pr95_local_training_manifest_to_candidate(
         "archive_exported": has_archive,
         "auth_eval_bridge_present": has_auth_bridge,
     }
+    for key in (
+        "optimizer_descriptor_id",
+        "optimizer_config_sha256",
+        "optimizer_backend_status",
+        "parameter_group_lr_policy_id",
+        "parameter_group_lr_policy_sha256",
+        "parameter_group_fingerprint_sha256",
+    ):
+        if optimizer_recipe.get(key) is not None:
+            optimizer_params[key] = optimizer_recipe[key]
     if runtime_profile_summary.get("profile_count"):
         optimizer_params.update(
             {

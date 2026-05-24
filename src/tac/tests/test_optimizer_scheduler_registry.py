@@ -107,6 +107,33 @@ def test_registry_filters_by_declared_target_axis_and_substrate() -> None:
         registry.enumerate_candidates(target_mode="contest_exact_eval")
 
 
+def test_registry_exposes_pr95_mlx_optimizer_descriptors_fail_closed() -> None:
+    registry = default_optimizer_scheduler_registry()
+    stage1 = registry.get("pr95_stage1_adamw_baseline_mlx").to_planner_candidate()
+    stage8 = registry.get("pr95_stage8_muon_adamw_mlx").to_planner_candidate()
+    descriptor_only = registry.get(
+        "pr95_langevin_stage8_polish_descriptor_only"
+    ).to_planner_candidate()
+
+    assert stage1["optimizer_config"]["use_muon"] is False
+    assert stage1["training_config"]["pr95_stage_indices"] == [1]
+    assert stage8["optimizer_config"]["use_muon"] is True
+    assert stage8["training_config"]["pr95_stage_indices"] == [8]
+    assert stage8["parameter_group_lr_policy_id"] == (
+        "embedding_theta1_hidden_muon_adamw"
+    )
+    assert descriptor_only["training_config"]["backend_status"] == (
+        "optimizer_backend_missing"
+    )
+    assert "optimizer_backend_missing" in descriptor_only["training_config"][
+        "dispatch_blockers"
+    ]
+    for row in (stage1, stage8, descriptor_only):
+        assert validate_proxy_candidate(row) == []
+        for key, expected in FALSE_AUTHORITY_FIELDS.items():
+            assert row[key] is expected
+
+
 def test_registry_rejects_duplicate_descriptors_and_unknown_lookup() -> None:
     descriptor = default_optimizer_scheduler_registry().descriptors[0]
 

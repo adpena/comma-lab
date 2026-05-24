@@ -118,6 +118,39 @@ def test_generic_representation_training_manifest_is_substrate_agnostic_proxy(
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["rank_or_kill_eligible"] is False
+
+
+def test_generic_manifest_merges_optimizer_identity_into_explicit_params(
+    tmp_path: Path,
+) -> None:
+    payload = _manifest()
+    payload["optimizer_recipe"] = {
+        "id": "pr95_stage8_muon_adamw_mlx",
+        "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+        "optimizer_config_sha256": "a" * 64,
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "b" * 64,
+        "parameter_group_fingerprint_sha256": "c" * 64,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = adapt_representation_training_manifest_to_candidate(
+        payload,
+        source_path=tmp_path / "manifest.json",
+        repo_root=tmp_path,
+    )
+
+    params = row["candidate_params"]
+    assert params["lr_log10_delta"] == -0.2
+    assert params["optimizer_descriptor_id"] == "pr95_stage8_muon_adamw_mlx"
+    assert params["optimizer_config_sha256"] == "a" * 64
+    assert params["parameter_group_lr_policy_id"] == (
+        "embedding_theta1_hidden_muon_adamw"
+    )
+    assert params["parameter_group_fingerprint_sha256"] == "c" * 64
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_affecting_payload_changed"] is False
     assert row["charged_bits_changed"] is False

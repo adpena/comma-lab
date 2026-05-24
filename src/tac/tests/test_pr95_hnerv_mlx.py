@@ -17,13 +17,21 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     FALSE_AUTHORITY,
     HNeRVDecoderMLX,
     HNeRVSyntheticTrainingBundleMLX,
+    Pr95HNeRVMlxError,
     bilinear_resize2x_align_corners_false_nhwc,
+    build_pr95_public_archive_member,
+    compare_pr95_public_archive_forward_with_pytorch,
     load_pytorch_state_dict_into_mlx,
+    parse_pr95_public_archive_member,
+    parse_pr95_public_archive_zip,
     partition_pr95_mlx_parameter_names,
     pixel_shuffle_2x_nhwc,
+    pr95_mlx_parameter_shape_records,
     pytorch_state_dict_from_mlx,
     run_pr95_mlx_synthetic_timing_smoke,
+    stage_smoke_config,
     write_pr95_mlx_byte_closed_smoke_archive,
+    write_pr95_public_archive_zip,
     zeropower_via_newtonschulz5_mlx,
 )
 from tac.optimization.local_training_runtime_profile import (  # noqa: E402
@@ -36,11 +44,30 @@ PR95_SOURCE_MODEL = (
     / "experiments/results/public_pr_intake_full/public_pr95_intake_20260505_auto"
     / "source/submissions/hnerv_muon/src/model.py"
 )
+PR95_RELEASE_ARCHIVE = (
+    REPO_ROOT
+    / "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto"
+    / "archive.zip"
+)
 
 
 def _assert_false_authority(payload: dict) -> None:
     for key in FALSE_AUTHORITY:
         assert payload[key] is False
+
+
+def _load_public_pr95_model_module():
+    if not PR95_SOURCE_MODEL.is_file():
+        pytest.skip("public PR95 source model.py is unavailable")
+    spec = importlib.util.spec_from_file_location(
+        "public_pr95_hnerv_model_for_mlx_parity",
+        PR95_SOURCE_MODEL,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_pixel_shuffle_2x_nhwc_matches_pr95_layout() -> None:
@@ -117,16 +144,7 @@ def test_decoder_output_shape_and_pytorch_state_names() -> None:
 
 def test_public_pr95_pytorch_state_load_matches_mlx_forward() -> None:
     torch = pytest.importorskip("torch")
-    if not PR95_SOURCE_MODEL.is_file():
-        pytest.skip("public PR95 source model.py is unavailable")
-    spec = importlib.util.spec_from_file_location(
-        "public_pr95_hnerv_model_for_mlx_parity",
-        PR95_SOURCE_MODEL,
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    module = _load_public_pr95_model_module()
 
     torch.manual_seed(123)
     torch_model = module.HNeRVDecoder(
@@ -146,6 +164,106 @@ def test_public_pr95_pytorch_state_load_matches_mlx_forward() -> None:
     diff = np.abs(torch_output - np.asarray(mlx_output))
     assert diff.max() <= 1e-4
     assert diff.mean() <= 1e-5
+
+
+def test_parse_public_pr95_archive_packet_bytes() -> None:
+    if not PR95_RELEASE_ARCHIVE.is_file():
+        pytest.skip("public PR95 archive.zip is unavailable")
+
+    packet = parse_pr95_public_archive_zip(PR95_RELEASE_ARCHIVE)
+    with zipfile.ZipFile(PR95_RELEASE_ARCHIVE) as zf:
+        source_member = zf.read("0.bin")
+    member_state, member_latents, member_meta = parse_pr95_public_archive_member(
+        source_member
+    )
+    custody = packet.custody_manifest()
+
+    assert packet.archive_zip_sha256 == (
+        "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a"
+    )
+    assert packet.member_sha256 == (
+        "4b8013fb1168e21b12fc7ee6c395e032660d88daded48a0b845085e7d5eb11c4"
+    )
+    assert packet.member_bytes == 178_309
+    assert packet.meta == {
+        "n_pairs": 600,
+        "latent_dim": 28,
+        "base_channels": 36,
+        "eval_size": [384, 512],
+    }
+    assert packet.latents.shape == (600, 28)
+    assert len(packet.state_dict) == 28
+    assert member_meta == packet.meta
+    assert member_latents.shape == packet.latents.shape
+    assert member_state.keys() == packet.state_dict.keys()
+    assert custody["schema"] == "pr95_hnerv_public_archive_packet.v1"
+    assert custody["state_dict_tensor_count"] == 28
+    _assert_false_authority(custody)
+
+
+def test_public_pr95_archive_packet_mlx_cpu_forward_parity_probe() -> None:
+    pytest.importorskip("torch")
+    if not PR95_RELEASE_ARCHIVE.is_file():
+        pytest.skip("public PR95 archive.zip is unavailable")
+    module = _load_public_pr95_model_module()
+    packet = parse_pr95_public_archive_zip(PR95_RELEASE_ARCHIVE)
+
+    result = compare_pr95_public_archive_forward_with_pytorch(
+        packet,
+        module.HNeRVDecoder,
+        sample_indices=[0],
+        mlx_device="cpu",
+    )
+
+    assert result["schema"] == "pr95_hnerv_public_archive_mlx_forward_parity.v1"
+    assert result["sample_indices"] == [0]
+    assert result["mlx_device"] == "cpu"
+    assert result["parity"]["passed"] is True
+    assert result["parity"]["max_abs"] <= 2e-3
+    assert result["parity"]["mean_abs"] <= 1e-4
+    assert result["exact_readiness_refusal"]["ready"] is False
+    assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in result[
+        "exact_readiness_refusal"
+    ]["blockers"]
+    _assert_false_authority(result)
+
+
+def test_build_public_pr95_archive_member_round_trips_packet_grammar(
+    tmp_path: Path,
+) -> None:
+    if not PR95_RELEASE_ARCHIVE.is_file():
+        pytest.skip("public PR95 archive.zip is unavailable")
+    packet = parse_pr95_public_archive_zip(PR95_RELEASE_ARCHIVE)
+
+    rebuilt_member = build_pr95_public_archive_member(
+        packet.state_dict,
+        packet.latents,
+        meta=packet.meta,
+    )
+    rebuilt_state, rebuilt_latents, rebuilt_meta = parse_pr95_public_archive_member(
+        rebuilt_member
+    )
+    summary = write_pr95_public_archive_zip(
+        packet.state_dict,
+        packet.latents,
+        meta=packet.meta,
+        output_zip_path=tmp_path / "archive.zip",
+    )
+    reparsed_zip = parse_pr95_public_archive_zip(tmp_path / "archive.zip")
+
+    assert rebuilt_meta == packet.meta
+    assert rebuilt_latents.shape == packet.latents.shape
+    assert rebuilt_state.keys() == packet.state_dict.keys()
+    assert np.isfinite(rebuilt_latents).all()
+    assert abs(float(rebuilt_latents[0, 0]) - float(packet.latents[0, 0])) < 0.05
+    assert summary["schema"] == "pr95_hnerv_archive_export.v1"
+    assert summary["member_name"] == "0.bin"
+    assert summary["member_compress_type"] == zipfile.ZIP_STORED
+    assert summary["parsed_latent_shape"] == [600, 28]
+    assert summary["runtime_consumption_proof_present"] is False
+    assert summary["exact_readiness_refusal"]["ready"] is False
+    assert reparsed_zip.meta == packet.meta
+    _assert_false_authority(summary)
 
 
 def test_pr95_stage8_partition_keeps_muon_off_latents_stem_and_rgb_heads() -> None:
@@ -198,6 +316,31 @@ def test_synthetic_timing_smoke_emits_runtime_profile_and_refusal() -> None:
     assert normalized["training_backend"] == "mlx"
     assert normalized["scheduler_resource_kind"] == "local_mlx"
     _assert_false_authority(manifest)
+
+
+def test_pr95_optimizer_descriptor_drives_stage8_partition() -> None:
+    stage = stage_smoke_config(8)
+
+    assert stage.optimizer_descriptor_id == "pr95_stage8_muon_adamw_mlx"
+    assert stage.optimizer.use_muon is True
+    assert stage.optimizer_config_sha256
+    assert stage.parameter_group_lr_policy_id == "embedding_theta1_hidden_muon_adamw"
+    assert stage.optimizer_backend_status == "implemented_mlx_source_faithful"
+
+    bundle = HNeRVSyntheticTrainingBundleMLX(
+        latent_count=2,
+        latent_dim=4,
+        base_channels=4,
+        seed=3,
+    )
+    fingerprint_records = pr95_mlx_parameter_shape_records(bundle.parameters())
+    assert any(record["name"].endswith("latents") for record in fingerprint_records)
+
+    with pytest.raises(Pr95HNeRVMlxError, match="not executable on MLX"):
+        stage_smoke_config(
+            8,
+            optimizer_descriptor_id="pr95_langevin_stage8_polish_descriptor_only",
+        )
 
 
 def test_byte_closed_smoke_archive_is_deterministic_and_not_exact_ready(tmp_path: Path) -> None:

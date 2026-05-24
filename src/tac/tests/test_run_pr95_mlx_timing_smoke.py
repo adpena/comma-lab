@@ -63,8 +63,18 @@ def test_run_pr95_mlx_timing_smoke_cli_writes_queueable_manifests(tmp_path: Path
     assert summary["ok"] is True
     assert summary["byte_closed_smoke_archive"]["member"] == "0.bin"
     assert manifest["stage_module"] == "stage1_v328_ce"
+    assert manifest["optimizer_recipe"]["optimizer_descriptor_id"] == (
+        "pr95_stage1_adamw_baseline_mlx"
+    )
+    assert len(manifest["optimizer_recipe"]["parameter_group_fingerprint_sha256"]) == 64
     assert runtime_profile["training_backend"] == "mlx"
+    assert runtime_profile["optimizer_descriptor_id"] == (
+        "pr95_stage1_adamw_baseline_mlx"
+    )
     assert representation["training_recipe"]["quality_comparable"] is False
+    assert representation["candidate_params"]["optimizer_descriptor_id"] == (
+        "pr95_stage1_adamw_baseline_mlx"
+    )
     assert representation["runtime_profile"]["profile_id"] == runtime_profile["profile_id"]
     assert representation["byte_closed_smoke_archive"]["sha256"] == summary[
         "byte_closed_smoke_archive"

@@ -170,11 +170,11 @@ def _candidate_params(
     *,
     runtime_profile_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
+    optimizer_recipe = _mapping(payload.get("optimizer_recipe"))
     explicit = payload.get("candidate_params")
     if isinstance(explicit, Mapping):
         params = dict(explicit)
     else:
-        optimizer_recipe = _mapping(payload.get("optimizer_recipe"))
         scheduler_recipe = _mapping(payload.get("scheduler_recipe"))
         training_recipe = _mapping(payload.get("training_recipe"))
         stage_count = _finite_int(payload.get("stage_count")) or len(_stage_modules(payload))
@@ -186,6 +186,16 @@ def _candidate_params(
             "scheduler_recipe_id": scheduler_recipe.get("id"),
             "training_recipe_id": training_recipe.get("id"),
         }
+    for key in (
+        "optimizer_descriptor_id",
+        "optimizer_config_sha256",
+        "optimizer_backend_status",
+        "parameter_group_lr_policy_id",
+        "parameter_group_lr_policy_sha256",
+        "parameter_group_fingerprint_sha256",
+    ):
+        if params.get(key) is None and optimizer_recipe.get(key) is not None:
+            params[key] = optimizer_recipe[key]
     if runtime_profile_summary.get("profile_count"):
         params.update(
             {

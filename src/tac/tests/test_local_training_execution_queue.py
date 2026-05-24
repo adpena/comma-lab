@@ -60,8 +60,15 @@ def _plan(tmp_path: Path, *, backend: str = "mlx", device: str = "gpu") -> dict:
 
 
 def test_local_training_queue_compiles_mlx_plan(tmp_path: Path) -> None:
+    plan = _plan(tmp_path)
+    plan["candidate_params"] = {
+        "optimizer_descriptor_id": "pr95_stage8_muon_adamw_mlx",
+        "optimizer_config_sha256": "a" * 64,
+        "parameter_group_lr_policy_id": "embedding_theta1_hidden_muon_adamw",
+        "parameter_group_lr_policy_sha256": "b" * 64,
+    }
     queue = build_local_training_execution_queue(
-        [_plan(tmp_path)],
+        [plan],
         queue_id="local_training_fixture",
         repo_root=tmp_path,
         local_cpu_concurrency=8,
@@ -73,6 +80,12 @@ def test_local_training_queue_compiles_mlx_plan(tmp_path: Path) -> None:
     assert queue["controls"]["max_concurrency"]["local_mlx"] == 2
     experiment = queue["experiments"][0]
     assert experiment["metadata"]["training_backend"] == "mlx"
+    assert experiment["metadata"]["optimizer_descriptor_id"] == (
+        "pr95_stage8_muon_adamw_mlx"
+    )
+    assert experiment["metadata"]["parameter_group_lr_policy_id"] == (
+        "embedding_theta1_hidden_muon_adamw"
+    )
     assert experiment["metadata"]["score_claim"] is False
     step = experiment["steps"][0]
     assert step["resources"]["kind"] == "local_mlx"
