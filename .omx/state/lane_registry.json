@@ -52368,6 +52368,88 @@
         }
       },
       "notes": "Generate local queue runtime/cache identities so queue-performance feedback can replan without ad hoc identity files"
+    },
+    {
+      "id": "codex_materializer_feedback_followup_queue_20260524",
+      "name": "Materializer feedback followup queue",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Alias placeholder superseded by codex_materializer_runner_feedback_followup_queue_20260524; do not dispatch separately."
+    },
+    {
+      "id": "codex_materializer_runner_feedback_followup_queue_20260524",
+      "name": "Materializer runner feedback follow-up queue",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_byte_shaving_materializer_campaign.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_byte_shaving_materializer_campaign_runner.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_materializer_runner_feedback_followup_queue_20260524T183136Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Emit paused experiment_queue follow-up for queue-performance inverse-action replans"
     }
   ],
   "level_rules": {
@@ -52377,5 +52459,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-24T18:26:18Z"
+  "updated_at": "2026-05-24T18:32:43Z"
 }

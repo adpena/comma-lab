@@ -695,6 +695,11 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert summary["queue_feedback_replan_request_path"] == str(
         run_dir / "queue_feedback_replan_request.json"
     )
+    assert summary["queue_feedback_replan_followup_queue_path"] == str(
+        run_dir / "queue_feedback_replan_followup_queue.json"
+    )
+    assert summary["queue_feedback_replan_followup_queue_emitted"] is True
+    assert summary["queue_feedback_replan_followup_queue_blockers"] == []
     assert summary["queue_performance_runtime_identity_path"] == str(
         run_dir / "queue_performance_runtime_identity.json"
     )
@@ -730,6 +735,11 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     replan_request = json.loads(
         (run_dir / "queue_feedback_replan_request.json").read_text(encoding="utf-8")
     )
+    feedback_queue = json.loads(
+        (run_dir / "queue_feedback_replan_followup_queue.json").read_text(
+            encoding="utf-8"
+        )
+    )
     runtime_identity = json.loads(
         (run_dir / "queue_performance_runtime_identity.json").read_text(
             encoding="utf-8"
@@ -757,6 +767,11 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert replan_request["ready_for_action_functional_feedback"] is True
     assert replan_request["score_claim"] is False
     assert replan_request["blockers"] == []
+    assert replan_request["queue_owned_followup_queue_emitted"] is True
+    assert replan_request["queue_owned_followup_queue_path"] == str(
+        run_dir / "queue_feedback_replan_followup_queue.json"
+    )
+    assert replan_request["queue_owned_followup_queue_blockers"] == []
     assert replan_request["suggested_action_functional_command"] == replan_request[
         "command_template"
     ]
@@ -764,6 +779,21 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert "--queue-performance-summary" in replan_request["command_template"]
     assert "--queue-performance-runtime-identity" in replan_request["command_template"]
     assert "--queue-performance-cache-identity" in replan_request["command_template"]
+    assert feedback_queue["schema"] == "experiment_queue.v1"
+    assert feedback_queue["controls"]["mode"] == "paused"
+    assert feedback_queue["controls"]["max_concurrency"] == {"local_cpu": 1}
+    feedback_experiment = feedback_queue["experiments"][0]
+    assert feedback_experiment["metadata"]["schema"] == (
+        runner.QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA
+    )
+    assert feedback_experiment["metadata"]["score_claim"] is False
+    assert feedback_experiment["metadata"]["promotion_eligible"] is False
+    assert feedback_experiment["metadata"]["ready_for_exact_eval_dispatch"] is False
+    feedback_step = feedback_experiment["steps"][0]
+    assert feedback_step["id"] == "build_feedback_action_functional"
+    assert feedback_step["command"] == replan_request["command_template"]
+    assert feedback_step["resources"]["kind"] == "local_cpu"
+    assert feedback_step["postconditions"][1]["type"] == "json_completion_contract"
     assert runtime_identity["schema"] == (
         "byte_shaving_materializer_campaign_queue_runtime_identity.v1"
     )

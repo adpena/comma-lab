@@ -36,7 +36,12 @@ from comma_lab.scheduler.byte_shaving_materializer_registry import (  # noqa: E4
     PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
     TENSOR_FACTORIZE_TARGET_KIND,
 )
-from comma_lab.scheduler.experiment_queue import default_state_path, load_queue_definition  # noqa: E402
+from comma_lab.scheduler.experiment_queue import (  # noqa: E402
+    QUEUE_SCHEMA,
+    default_state_path,
+    load_queue_definition,
+    normalize_queue_definition,
+)
 from comma_lab.scheduler.staircase_dag import (  # noqa: E402
     build_staircase_dag_from_experiment_queue,
     experiment_queue_status_map,
@@ -58,6 +63,9 @@ RESPONSE_UPDATE_PLACEHOLDER_SCHEMA = "byte_shaving_campaign_response_update_plac
 QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary.v1"
 UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary_unavailable.v1"
 QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA = "byte_shaving_materializer_campaign_feedback_replan_request.v1"
+QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA = (
+    "byte_shaving_materializer_campaign_feedback_replan_experiment_metadata.v1"
+)
 _RUN_CONFIG_METADATA_KEYS = frozenset({"schema", "notes", "description", "owner"})
 QUEUE_RUNTIME_IDENTITY_FILE_PATHS = (
     "tools/run_byte_shaving_materializer_campaign.py",
@@ -242,6 +250,10 @@ def _false_authority_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _as_sequence(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
 
 
 def _text_excerpt(text: str, *, limit: int = 4096) -> str:
@@ -432,6 +444,166 @@ def _queue_feedback_replan_request_payload(
             "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
         }
     )
+
+
+def _command_path_arg(command: Sequence[str], flag: str) -> Path | None:
+    try:
+        index = list(command).index(flag)
+    except ValueError:
+        return None
+    value_index = index + 1
+    if value_index >= len(command):
+        return None
+    return _resolve(str(command[value_index]))
+
+
+def _queue_feedback_replan_followup_queue_payload(
+    args: argparse.Namespace,
+    *,
+    queue_feedback_replan_request: Mapping[str, Any],
+    queue_feedback_replan_request_path: Path,
+    run_dir: Path,
+    execution_queue: Path,
+    state_path: Path,
+    source_queue: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    blockers = [str(item) for item in _as_sequence(queue_feedback_replan_request.get("blockers"))]
+    if queue_feedback_replan_request.get("ready_for_action_functional_feedback") is not True:
+        blockers.append("queue_feedback_replan_request_not_ready")
+    command = queue_feedback_replan_request.get("command_template")
+    if not isinstance(command, list) or not command:
+        blockers.append("queue_feedback_replan_command_missing")
+        command_items: list[str] = []
+    else:
+        command_items = [str(item) for item in command]
+    output_path = _command_path_arg(command_items, "--output") if command_items else None
+    md_path = _command_path_arg(command_items, "--md-out") if command_items else None
+    if output_path is None:
+        blockers.append("queue_feedback_replan_output_path_missing")
+    if blockers:
+        return None, list(dict.fromkeys(blockers))
+
+    input_artifacts = [
+        queue_feedback_replan_request_path,
+        queue_feedback_replan_request.get("plan_path"),
+        queue_feedback_replan_request.get("queue_performance_summary_path"),
+        queue_feedback_replan_request.get("queue_performance_runtime_identity_path"),
+        queue_feedback_replan_request.get("queue_performance_cache_identity_path"),
+        execution_queue,
+        state_path,
+    ]
+    artifact_paths = [output_path]
+    if md_path is not None:
+        artifact_paths.append(md_path)
+    experiment_id = "queue_feedback_replan_action_functional"
+    step_id = "build_feedback_action_functional"
+    queue_id = f"{source_queue.get('queue_id', 'materializer_campaign')}_feedback_replan"
+    metadata = _false_authority_payload(
+        {
+            "schema": QUEUE_FEEDBACK_REPLAN_EXPERIMENT_METADATA_SCHEMA,
+            "source_run_dir": _display_path(run_dir),
+            "source_queue_id": source_queue.get("queue_id"),
+            "source_queue_path": _display_path(execution_queue),
+            "source_queue_state_path": _display_path(state_path),
+            "queue_feedback_replan_request_path": _display_path(queue_feedback_replan_request_path),
+            "queue_performance_summary_path": queue_feedback_replan_request.get(
+                "queue_performance_summary_path"
+            ),
+            "queue_performance_runtime_identity_path": queue_feedback_replan_request.get(
+                "queue_performance_runtime_identity_path"
+            ),
+            "queue_performance_cache_identity_path": queue_feedback_replan_request.get(
+                "queue_performance_cache_identity_path"
+            ),
+            "queue_performance_runtime_identity_generated": queue_feedback_replan_request.get(
+                "queue_performance_runtime_identity_generated"
+            ),
+            "queue_performance_cache_identity_generated": queue_feedback_replan_request.get(
+                "queue_performance_cache_identity_generated"
+            ),
+            "ready_for_action_functional_feedback": True,
+            "allowed_use": "paused_local_feedback_replan_only",
+            "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+            "dispatch_blockers": [
+                "paused_followup_queue_requires_explicit_operator_or_autopilot_resume",
+                "exact_auth_eval_required_before_score_claim",
+            ],
+        }
+    )
+    queue = normalize_queue_definition(
+        {
+            "schema": QUEUE_SCHEMA,
+            "queue_id": queue_id,
+            "controls": {
+                "mode": "paused",
+                "local_first": True,
+                "max_concurrency": {"local_cpu": 1},
+            },
+            "experiments": [
+                {
+                    "id": experiment_id,
+                    "lane_id": args.lane_id,
+                    "priority": 90,
+                    "status": "queued",
+                    "tags": [
+                        "byte-shaving",
+                        "inverse-steganalysis",
+                        "queue-feedback",
+                        "paused-followup",
+                        "no-score-authority",
+                    ],
+                    "metadata": metadata,
+                    "steps": [
+                        {
+                            "id": step_id,
+                            "kind": "command",
+                            "command": command_items,
+                            "requires": [],
+                            "resources": {"kind": "local_cpu"},
+                            "timeout_seconds": 0,
+                            "telemetry": {
+                                "artifact_paths": [_display_path(path) for path in artifact_paths],
+                                "input_artifact_paths": [
+                                    _display_path(_resolve(str(path)))
+                                    for path in input_artifacts
+                                    if path is not None
+                                ],
+                                "recursive": False,
+                            },
+                            "postconditions": [
+                                {
+                                    "type": "path_exists",
+                                    "path": _display_path(output_path),
+                                },
+                                {
+                                    "type": "json_completion_contract",
+                                    "path": _display_path(output_path),
+                                    "required_equals": {
+                                        "schema": "inverse_steganalysis_discrete_action_functional.v1"
+                                    },
+                                    "required_false": [
+                                        "score_claim",
+                                        "promotion_eligible",
+                                        "rank_or_kill_eligible",
+                                        "ready_for_exact_eval_dispatch",
+                                    ],
+                                    "false_or_missing": [
+                                        "score_claim_valid",
+                                        "score_claim_eligible",
+                                        "promotable",
+                                        "dispatch_ready",
+                                        "exact_eval_ready",
+                                        "ready_for_exact_eval_dispatch",
+                                    ],
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    return queue, []
 
 
 def _git_head_sha() -> str | None:
@@ -2239,6 +2411,7 @@ def main(argv: list[str] | None = None) -> int:
     summary_path = run_dir / "materializer_campaign_run.json"
     queue_performance_summary_path = run_dir / "queue_performance_summary.json"
     queue_feedback_replan_request_path = run_dir / "queue_feedback_replan_request.json"
+    queue_feedback_replan_followup_queue_path = run_dir / "queue_feedback_replan_followup_queue.json"
     generated_runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
     generated_cache_identity_path = run_dir / "queue_performance_cache_identity.json"
     response_update_placeholder_path = run_dir / "canonical_response_update_placeholder.json"
@@ -2305,7 +2478,35 @@ def main(argv: list[str] | None = None) -> int:
         execution_queue=execution_queue,
         state_path=state_path,
     )
+    (
+        queue_feedback_replan_followup_queue,
+        queue_feedback_replan_followup_blockers,
+    ) = _queue_feedback_replan_followup_queue_payload(
+        args,
+        queue_feedback_replan_request=queue_feedback_replan_request,
+        queue_feedback_replan_request_path=queue_feedback_replan_request_path,
+        run_dir=run_dir,
+        execution_queue=execution_queue,
+        state_path=state_path,
+        source_queue=queue,
+    )
+    queue_feedback_replan_request.update(
+        {
+            "queue_owned_followup_queue_path": (
+                _display_path(queue_feedback_replan_followup_queue_path)
+                if queue_feedback_replan_followup_queue is not None
+                else None
+            ),
+            "queue_owned_followup_queue_emitted": queue_feedback_replan_followup_queue is not None,
+            "queue_owned_followup_queue_blockers": queue_feedback_replan_followup_blockers,
+        }
+    )
     _write_json(queue_feedback_replan_request_path, queue_feedback_replan_request)
+    if queue_feedback_replan_followup_queue is not None:
+        _write_json(
+            queue_feedback_replan_followup_queue_path,
+            queue_feedback_replan_followup_queue,
+        )
     exact_readiness_handoffs = _exact_readiness_handoff_paths(
         run_dir=run_dir,
         queue=queue,
@@ -2355,6 +2556,13 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "queue_performance_summary_path": _display_path(queue_performance_summary_path),
         "queue_feedback_replan_request_path": _display_path(queue_feedback_replan_request_path),
+        "queue_feedback_replan_followup_queue_path": (
+            _display_path(queue_feedback_replan_followup_queue_path)
+            if queue_feedback_replan_followup_queue is not None
+            else None
+        ),
+        "queue_feedback_replan_followup_queue_emitted": queue_feedback_replan_followup_queue is not None,
+        "queue_feedback_replan_followup_queue_blockers": queue_feedback_replan_followup_blockers,
         "queue_performance_runtime_identity_path": _display_path(runtime_identity_path),
         "queue_performance_cache_identity_path": _display_path(cache_identity_path),
         "response_update_placeholder_path": _display_path(response_update_placeholder_path),
