@@ -59,6 +59,17 @@ QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary.v1"
 UNAVAILABLE_QUEUE_PERFORMANCE_SUMMARY_SCHEMA = "experiment_queue_performance_summary_unavailable.v1"
 QUEUE_FEEDBACK_REPLAN_REQUEST_SCHEMA = "byte_shaving_materializer_campaign_feedback_replan_request.v1"
 _RUN_CONFIG_METADATA_KEYS = frozenset({"schema", "notes", "description", "owner"})
+QUEUE_RUNTIME_IDENTITY_FILE_PATHS = (
+    "tools/run_byte_shaving_materializer_campaign.py",
+    "tools/experiment_queue.py",
+    "tools/run_family_agnostic_materializer.py",
+    "tools/run_inverse_scorer_cell_candidate_chain.py",
+    "src/comma_lab/scheduler/experiment_queue.py",
+    "src/comma_lab/scheduler/byte_shaving_campaign_queue.py",
+    "src/comma_lab/scheduler/final_byte_operation_contexts.py",
+    "src/tac/optimization/family_agnostic_materializers.py",
+    "src/tac/optimization/inverse_scorer_cell_chain.py",
+)
 
 
 @dataclass(frozen=True)
@@ -108,6 +119,15 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _sha256_json(payload: Mapping[str, Any]) -> str:
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+def _optional_sha256_file(path: Path) -> str | None:
+    return _sha256_file(path) if path.exists() and path.is_file() else None
 
 
 def _load_run_config(path: Path) -> dict[str, Any]:
@@ -279,15 +299,17 @@ def _queue_performance_replan_blockers(
     args: argparse.Namespace,
     *,
     queue_performance_summary: Mapping[str, Any],
+    runtime_identity_path: Path | None,
+    cache_identity_path: Path | None,
 ) -> list[str]:
     blockers: list[str] = []
     if queue_performance_summary.get("schema") != QUEUE_PERFORMANCE_SUMMARY_SCHEMA:
         blockers.append("queue_performance_summary_not_consumable")
     if int(queue_performance_summary.get("event_count") or 0) < 1:
         blockers.append("queue_performance_summary_has_no_completed_step_events")
-    if args.queue_performance_runtime_identity is None:
+    if runtime_identity_path is None or not runtime_identity_path.exists():
         blockers.append("queue_performance_runtime_identity_missing")
-    if args.queue_performance_cache_identity is None:
+    if cache_identity_path is None or not cache_identity_path.exists():
         blockers.append("queue_performance_cache_identity_missing")
     return blockers
 
@@ -298,6 +320,8 @@ def _feedback_action_functional_command_hint(
     plan_path: Path,
     run_dir: Path,
     queue_performance_summary_path: Path,
+    runtime_identity_path: Path | None,
+    cache_identity_path: Path | None,
 ) -> list[str]:
     command = [
         sys.executable,
@@ -317,18 +341,18 @@ def _feedback_action_functional_command_hint(
         "--queue-performance-axis",
         str(args.queue_performance_axis),
     ]
-    if args.queue_performance_runtime_identity is not None:
+    if runtime_identity_path is not None:
         command.extend(
             [
                 "--queue-performance-runtime-identity",
-                _display_path(_resolve(args.queue_performance_runtime_identity)),
+                _display_path(runtime_identity_path),
             ]
         )
-    if args.queue_performance_cache_identity is not None:
+    if cache_identity_path is not None:
         command.extend(
             [
                 "--queue-performance-cache-identity",
-                _display_path(_resolve(args.queue_performance_cache_identity)),
+                _display_path(cache_identity_path),
             ]
         )
     if args.queue_performance_candidate_map is not None:
@@ -352,6 +376,10 @@ def _queue_feedback_replan_request_payload(
     plan_path: Path,
     queue_performance_summary_path: Path,
     queue_performance_summary: Mapping[str, Any],
+    runtime_identity_path: Path | None,
+    cache_identity_path: Path | None,
+    generated_runtime_identity: bool,
+    generated_cache_identity: bool,
     run_dir: Path,
     execution_queue: Path,
     state_path: Path,
@@ -359,12 +387,16 @@ def _queue_feedback_replan_request_payload(
     blockers = _queue_performance_replan_blockers(
         args,
         queue_performance_summary=queue_performance_summary,
+        runtime_identity_path=runtime_identity_path,
+        cache_identity_path=cache_identity_path,
     )
     command_hint = _feedback_action_functional_command_hint(
         args,
         plan_path=plan_path,
         run_dir=run_dir,
         queue_performance_summary_path=queue_performance_summary_path,
+        runtime_identity_path=runtime_identity_path,
+        cache_identity_path=cache_identity_path,
     )
     return _false_authority_payload(
         {
@@ -375,6 +407,14 @@ def _queue_feedback_replan_request_payload(
             "queue_path": _display_path(execution_queue),
             "queue_state_path": _display_path(state_path),
             "queue_performance_summary_path": _display_path(queue_performance_summary_path),
+            "queue_performance_runtime_identity_path": (
+                None if runtime_identity_path is None else _display_path(runtime_identity_path)
+            ),
+            "queue_performance_cache_identity_path": (
+                None if cache_identity_path is None else _display_path(cache_identity_path)
+            ),
+            "queue_performance_runtime_identity_generated": generated_runtime_identity,
+            "queue_performance_cache_identity_generated": generated_cache_identity,
             "performance_schema": queue_performance_summary.get("schema"),
             "performance_event_count": queue_performance_summary.get("event_count"),
             "ready_for_action_functional_feedback": not blockers,
@@ -390,6 +430,93 @@ def _queue_feedback_replan_request_payload(
             "command_template": command_hint,
             "allowed_use": "next_inverse_action_replan_input_only",
             "forbidden_use": "score_claim_or_promotion_or_paid_dispatch_authority",
+        }
+    )
+
+
+def _git_head_sha() -> str | None:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    text = result.stdout.strip()
+    return text or None
+
+
+def _queue_runtime_identity_payload(
+    *,
+    run_dir: Path,
+    execution_queue: Path,
+    state_path: Path,
+    queue: Mapping[str, Any],
+    runtime_policy_output_path: Path | None,
+    runtime_policy_applied_queue_path: Path | None,
+) -> dict[str, Any]:
+    runtime_file_sha256 = {
+        relative_path: _sha256_file(REPO_ROOT / relative_path)
+        for relative_path in QUEUE_RUNTIME_IDENTITY_FILE_PATHS
+        if (REPO_ROOT / relative_path).is_file()
+    }
+    runtime_tree_sha256 = _sha256_json(runtime_file_sha256)
+    return _false_authority_payload(
+        {
+            "schema": "byte_shaving_materializer_campaign_queue_runtime_identity.v1",
+            "identity_kind": "local_runner_queue_runtime",
+            "runner_tool": "tools/run_byte_shaving_materializer_campaign.py",
+            "repo_root": REPO_ROOT.as_posix(),
+            "git_head_sha": _git_head_sha(),
+            "runtime_tree_sha256": runtime_tree_sha256,
+            "runtime_content_tree_sha256": runtime_tree_sha256,
+            "runtime_file_sha256": runtime_file_sha256,
+            "python_executable": sys.executable,
+            "python_version": sys.version,
+            "platform": sys.platform,
+            "run_dir": _display_path(run_dir),
+            "queue_id": queue.get("queue_id"),
+            "queue_path": _display_path(execution_queue),
+            "queue_state_path": _display_path(state_path),
+            "runtime_policy_path": (
+                None if runtime_policy_output_path is None else _display_path(runtime_policy_output_path)
+            ),
+            "runtime_policy_applied_queue_path": (
+                None if runtime_policy_applied_queue_path is None else _display_path(runtime_policy_applied_queue_path)
+            ),
+            "allowed_use": "queue_performance_observation_runtime_identity_only",
+            "forbidden_use": "score_claim_or_promotion_or_dispatch_authority",
+        }
+    )
+
+
+def _queue_cache_identity_payload(
+    *,
+    run_dir: Path,
+    execution_queue: Path,
+    state_path: Path,
+    queue_performance_summary_path: Path,
+    queue: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _false_authority_payload(
+        {
+            "schema": "byte_shaving_materializer_campaign_queue_cache_identity.v1",
+            "identity_kind": "local_runner_queue_cache",
+            "runner_tool": "tools/run_byte_shaving_materializer_campaign.py",
+            "run_dir": _display_path(run_dir),
+            "queue_id": queue.get("queue_id"),
+            "queue_path": _display_path(execution_queue),
+            "queue_definition_sha256": _sha256_file(execution_queue),
+            "queue_state_path": _display_path(state_path),
+            "queue_state_exists": state_path.exists(),
+            "queue_state_sha256": _optional_sha256_file(state_path),
+            "queue_performance_summary_path": _display_path(queue_performance_summary_path),
+            "queue_performance_summary_sha256": _sha256_file(queue_performance_summary_path),
+            "cache_sha256": _sha256_file(queue_performance_summary_path),
+            "allowed_use": "queue_performance_observation_cache_identity_only",
+            "forbidden_use": "score_claim_or_promotion_or_dispatch_authority",
         }
     )
 
@@ -2112,6 +2239,8 @@ def main(argv: list[str] | None = None) -> int:
     summary_path = run_dir / "materializer_campaign_run.json"
     queue_performance_summary_path = run_dir / "queue_performance_summary.json"
     queue_feedback_replan_request_path = run_dir / "queue_feedback_replan_request.json"
+    generated_runtime_identity_path = run_dir / "queue_performance_runtime_identity.json"
+    generated_cache_identity_path = run_dir / "queue_performance_cache_identity.json"
     response_update_placeholder_path = run_dir / "canonical_response_update_placeholder.json"
     queue_performance_summary = _queue_performance_summary_payload(
         performance_result,
@@ -2129,12 +2258,49 @@ def main(argv: list[str] | None = None) -> int:
         }
     )
     _write_json(queue_performance_summary_path, queue_performance_summary)
+    runtime_identity_path = (
+        _resolve(args.queue_performance_runtime_identity)
+        if args.queue_performance_runtime_identity is not None
+        else generated_runtime_identity_path
+    )
+    cache_identity_path = (
+        _resolve(args.queue_performance_cache_identity)
+        if args.queue_performance_cache_identity is not None
+        else generated_cache_identity_path
+    )
+    if args.queue_performance_runtime_identity is None:
+        _write_json(
+            runtime_identity_path,
+            _queue_runtime_identity_payload(
+                run_dir=run_dir,
+                execution_queue=execution_queue,
+                state_path=state_path,
+                queue=queue,
+                runtime_policy_output_path=runtime_policy_output_path,
+                runtime_policy_applied_queue_path=runtime_policy_applied_queue_path,
+            ),
+        )
+    if args.queue_performance_cache_identity is None:
+        _write_json(
+            cache_identity_path,
+            _queue_cache_identity_payload(
+                run_dir=run_dir,
+                execution_queue=execution_queue,
+                state_path=state_path,
+                queue_performance_summary_path=queue_performance_summary_path,
+                queue=queue,
+            ),
+        )
     queue_feedback_replan_request = _queue_feedback_replan_request_payload(
         args,
         summary_path=summary_path,
         plan_path=plan_path,
         queue_performance_summary_path=queue_performance_summary_path,
         queue_performance_summary=queue_performance_summary,
+        runtime_identity_path=runtime_identity_path,
+        cache_identity_path=cache_identity_path,
+        generated_runtime_identity=args.queue_performance_runtime_identity is None,
+        generated_cache_identity=args.queue_performance_cache_identity is None,
         run_dir=run_dir,
         execution_queue=execution_queue,
         state_path=state_path,
@@ -2189,6 +2355,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "queue_performance_summary_path": _display_path(queue_performance_summary_path),
         "queue_feedback_replan_request_path": _display_path(queue_feedback_replan_request_path),
+        "queue_performance_runtime_identity_path": _display_path(runtime_identity_path),
+        "queue_performance_cache_identity_path": _display_path(cache_identity_path),
         "response_update_placeholder_path": _display_path(response_update_placeholder_path),
         "response_update_applied": False,
         "replan_required": True,

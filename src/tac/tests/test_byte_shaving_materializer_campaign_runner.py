@@ -695,18 +695,19 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert summary["queue_feedback_replan_request_path"] == str(
         run_dir / "queue_feedback_replan_request.json"
     )
+    assert summary["queue_performance_runtime_identity_path"] == str(
+        run_dir / "queue_performance_runtime_identity.json"
+    )
+    assert summary["queue_performance_cache_identity_path"] == str(
+        run_dir / "queue_performance_cache_identity.json"
+    )
     assert summary["response_update_placeholder_path"] == str(
         run_dir / "canonical_response_update_placeholder.json"
     )
     assert summary["response_update_applied"] is False
     assert summary["replan_required"] is True
-    assert summary["queue_feedback_replan_ready"] is False
-    assert "queue_performance_runtime_identity_missing" in summary[
-        "queue_feedback_replan_blockers"
-    ]
-    assert "queue_performance_cache_identity_missing" in summary[
-        "queue_feedback_replan_blockers"
-    ]
+    assert summary["queue_feedback_replan_ready"] is True
+    assert summary["queue_feedback_replan_blockers"] == []
     assert summary["runtime_policy"]["schema"] == "scheduler_runtime_policy.v1"
     assert summary["runtime_policy"]["score_claim"] is False
     assert summary["performance"]["schema"] == runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA
@@ -729,6 +730,14 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     replan_request = json.loads(
         (run_dir / "queue_feedback_replan_request.json").read_text(encoding="utf-8")
     )
+    runtime_identity = json.loads(
+        (run_dir / "queue_performance_runtime_identity.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    cache_identity = json.loads(
+        (run_dir / "queue_performance_cache_identity.json").read_text(encoding="utf-8")
+    )
     assert performance == summary["performance"]
     assert performance["schema"] == runner.QUEUE_PERFORMANCE_SUMMARY_SCHEMA
     assert performance["queue_id"] == "inverse_scorer_runner_e2e_fixture"
@@ -737,12 +746,36 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert replan_request["queue_performance_summary_path"] == str(
         run_dir / "queue_performance_summary.json"
     )
-    assert replan_request["ready_for_action_functional_feedback"] is False
+    assert replan_request["queue_performance_runtime_identity_path"] == str(
+        run_dir / "queue_performance_runtime_identity.json"
+    )
+    assert replan_request["queue_performance_cache_identity_path"] == str(
+        run_dir / "queue_performance_cache_identity.json"
+    )
+    assert replan_request["queue_performance_runtime_identity_generated"] is True
+    assert replan_request["queue_performance_cache_identity_generated"] is True
+    assert replan_request["ready_for_action_functional_feedback"] is True
     assert replan_request["score_claim"] is False
-    assert "queue_performance_runtime_identity_missing" in replan_request["blockers"]
-    assert "queue_performance_cache_identity_missing" in replan_request["blockers"]
+    assert replan_request["blockers"] == []
+    assert replan_request["suggested_action_functional_command"] == replan_request[
+        "command_template"
+    ]
     assert replan_request["command_template"][1] == "tools/build_inverse_steganalysis_action_functional.py"
     assert "--queue-performance-summary" in replan_request["command_template"]
+    assert "--queue-performance-runtime-identity" in replan_request["command_template"]
+    assert "--queue-performance-cache-identity" in replan_request["command_template"]
+    assert runtime_identity["schema"] == (
+        "byte_shaving_materializer_campaign_queue_runtime_identity.v1"
+    )
+    assert runtime_identity["score_claim"] is False
+    assert runtime_identity["queue_id"] == "inverse_scorer_runner_e2e_fixture"
+    assert cache_identity["schema"] == (
+        "byte_shaving_materializer_campaign_queue_cache_identity.v1"
+    )
+    assert cache_identity["score_claim"] is False
+    assert cache_identity["queue_performance_summary_path"] == str(
+        run_dir / "queue_performance_summary.json"
+    )
     assert placeholder["schema"] == runner.RESPONSE_UPDATE_PLACEHOLDER_SCHEMA
     assert placeholder["queue_performance_summary_path"] == str(
         run_dir / "queue_performance_summary.json"
@@ -757,13 +790,11 @@ def test_materializer_campaign_runner_executes_no_paid_inverse_scorer_chain_and_
     assert placeholder["response_update_applied"] is False
     assert placeholder["replan_required"] is True
     assert "placeholder_not_scorer_response_dataset" in placeholder["blockers"]
-    assert "queue_performance_runtime_identity_missing" in placeholder["blockers"]
-    assert "queue_performance_cache_identity_missing" in placeholder["blockers"]
     assert placeholder["score_claim"] is False
     observations = observations_from_queue_performance_summary(
         performance,
-        runtime_identity={"runtime_tree_sha256": "d" * 64},
-        cache_identity={"cache_sha256": "e" * 64},
+        runtime_identity=runtime_identity,
+        cache_identity=cache_identity,
         source_path=summary["queue_performance_summary_path"],
     )
     assert observations
@@ -942,6 +973,8 @@ def test_materializer_campaign_runner_executes_no_paid_packet_member_handoff(
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert (run_dir / "queue_performance_summary.json").exists()
     assert (run_dir / "queue_feedback_replan_request.json").exists()
+    assert (run_dir / "queue_performance_runtime_identity.json").exists()
+    assert (run_dir / "queue_performance_cache_identity.json").exists()
     assert (run_dir / "canonical_response_update_placeholder.json").exists()
     assert summary["next_run_hint"] == [
         "--queue-performance-summary",
